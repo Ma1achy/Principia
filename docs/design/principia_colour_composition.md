@@ -627,13 +627,36 @@ A **fixed terminal stage** applied to the finished output, **as settings, not no
 never sees them and they are not part of any occupant or preset:
 
 ```
-style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
+[lines through]  →  print graph  →  render→display scale  →  gamut_clamp  →  [lines over]  →  cvd_sim(mode)  →  screen
 ```
+
+*(Was, before R-531: `[lines through]  →  print graph  →  [lines over: RQ-395]  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+*(Was, before R-485 and R-487: `style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+**The Print graph (R-485 to R-492; `principia_print_graph.md`)** stands where style was. It is a node graph of its own,
+after the stain and separate from it: its registry, its codegen and its WGSL are its own, the stain's codegen never sees
+it, and it is no stain occupant or preset; its settings are `RenderState.print` (R-491). Its default, **Plain**, is the
+bitwise identity. It reads the stain's finished colours and, as read-only maps, payload fields normalised by the stain's
+own window rule (`principia_print_graph.md` §4.4); nothing reads its output but the stages after it, so measurement,
+the legend, the readout and every scientific check read the stain (R-489). Debug views bypass it (R-487 K1: View › Debug
+view and every `debug/` occupant), and are never styled.
+
+**The two line passes (R-487).** One line renderer is called twice with complementary filters on `LineStyle.through_medium`
+(`principia_lines.md` §3): the line sets marked through are composited onto the stain's output **before** the Print
+graph, so the medium draws them; the rest are drawn **after** it, crisp on any medium, in R-476 M2's place, the next
+paragraph's: after the gamut clamp and before the colour-vision simulation (R-531, ruling RQ-395, the design doc §2's
+diagram corrected to match). Smart ink for a line drawn over reads the figure to the clamp, the Print graph's output
+included; for a line drawn through, the stain's output (`principia_lines.md` §6). A pixel that is not a system takes the
+Print graph's sheet, never its marks (R-533). *Was:* "Where the pass drawn over sits is RQ-395: the design doc §2 puts
+it before the display scale, R-476 M2 after the gamut clamp; until RQ-395 is ruled it keeps R-476 M2's place, the next
+paragraph's."
 
 **Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system (R-476)** draws its lines after the gamut clamp and
 before the colour-vision simulation, which sees them as it sees the rest of the figure (`principia_lines.md` §2;
 applied per R-369). **Style** is optional and applies to
-the figure only; scientific checks run with plain. *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
+the figure only; scientific checks run with plain. *(R-485: style is the Print graph, above; its default is Plain,
+and goldens and scientific checks run under Plain, R-489.)* *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
 
 **CVD is here, not in the pipeline, and this is a category correction, not a convenience.** CVD
 simulation asks "what does this *finished encoding* look like to a deuteranope/protanope/…?" — it
@@ -781,6 +804,13 @@ preset ships with a **golden-image test** against the corresponding reference ou
 independent-integrator convergence reference): the composition engine and the reference artefact are
 two implementations of the same maps, and agreement to tolerance certifies the port. A preset is not
 "done" until its golden image matches.
+
+**The Print graph's goldens (R-489, R-492).** Every stain golden and every scientific check renders with the Print graph
+set to **Plain** explicitly, never the user's. The Print graph's own nodes and presets have a golden obligation of their
+own, against the lab rather than the two HTML files: each node at its defaults and each preset on the bundled source
+image, matched to `docs/gui/reference/print_graph/images/nodes/` and `images/presets/` within the ΔE (OKLab, median
+and p99) tolerance the first port task sets, each deviation the design requires listed in its registry entry, never
+tuned (`principia_print_graph.md` §10, §11 test 9).
 
 **Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
 golden test. §7.1 is the checklist; the two reference HTML files are the oracle for each entry (R-122).

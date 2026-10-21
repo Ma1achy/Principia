@@ -169,6 +169,18 @@ pub const STATE_SIM_FAILED: u32 = 4;
 /// The `state` code of decode_failed (payload §2).
 pub const STATE_DECODE_FAILED: u32 = 5;
 
+/// `decode_failed`'s `detail` code 0: non-finite decode output (payload §2).
+pub const DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT: u32 = 0;
+
+/// `decode_failed`'s `detail` code 1: degenerate configuration (payload §2).
+pub const DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION: u32 = 1;
+
+/// `decode_failed`'s `detail` code 2: invalid mass construction (payload §2).
+pub const DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION: u32 = 2;
+
+/// `decode_failed`'s `detail` code 3: other/reserved (payload §2).
+pub const DETAIL_DECODE_FAILED_OTHER_RESERVED: u32 = 3;
+
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;
 

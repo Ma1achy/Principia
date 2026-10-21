@@ -9,6 +9,7 @@
 //! 0  SCALE   I_in = Σ mᵢ‖rᵢ‖² in the CoM frame;  r ← r/√I_in,  p ← I_in^{1/4}·p;  λ = I_in^{−1/2} recorded
 //! 1b BOOST   p ← p − mᵢ·P_tot                      P_tot = Σ pᵢ    (M = 1)
 //! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped (R-13)
+//!            R(−φ)'s cos φ and sin φ formed as ρ/‖ρ‖, the same in exact arithmetic (rotation)
 //! 3  MIRROR  iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ):  y → −y on every rᵢ and pᵢ;  lookup_mirrored;
 //!            |λ̃_y| ≤ δ_λ → no mirror (R-82)
 //! ```
@@ -192,6 +193,33 @@ pub fn coincident<R: LinkReal>(rho: [R; 2]) -> bool {
 #[inline]
 pub fn rotation_angle<R: LinkReal>(rho: [R; 2]) -> R {
     select(coincident(rho), R::zero(), Float::atan2(rho[1], rho[0]))
+}
+
+/// Step 2's turn `(c, s) = (cos φ, sin φ)` for `φ` = [`rotation_angle`]`(ρ)`, formed as `ρ̂ = ρ/‖ρ‖`, not through `φ`;
+/// at `ρ = 0`, `(1, 0)`, so `R(−φ)` is the identity there (R-437). In exact arithmetic `ρ̂` is `(cos φ, sin φ)`. In
+/// rounded arithmetic `sin` and `cos` of a rounded `atan2` turn `ρ` off `+x` by their error in `φ`, which WGSL bounds
+/// only loosely (`atan2` to 4096 ulp, `sin` and `cos` to an absolute `2⁻¹¹`) and `R(−φ)` multiplies by each `‖rᵢ‖`; a
+/// light body is far out at `I = 1` (`‖r₁‖ ≈ 27` at `m₁ ≈ 1.2·10⁻³`), and through the sines CI's lavapipe put that
+/// body's `r_y` 273.88 eps from the f64 decode where the native f32 decode is 1.12 (PR #262). `ρ̂`'s direction is
+/// rounded only by the two products `ρ_x·k` and `ρ_y·k`, half an ulp each, the error of `k = 1/√(ρ_x² + ρ_y²)`
+/// scaling both alike. `ρ` is first scaled by `2^−e`, `e` its larger component's exponent, in two exact steps that keep
+/// each factor normal (`2^−⌊e/2⌋`, then `2^(⌊e/2⌋−e)`), taking that component into `[1, 2)` (from a subnormal, at
+/// least `2⁻²²` at f32), so `ρ_x² + ρ_y²` neither overflows nor underflows for a finite `ρ`, and is 0 only at `ρ = 0`
+/// (or where a GPU flushes a subnormal `ρ` to 0, RQ-298).
+#[inline]
+pub fn rotation<R: LinkReal + IeeeBits>(rho: [R; 2]) -> (R, R) {
+    let (ex, ey) = (rho[0].exponent(), rho[1].exponent());
+    let e = select(ex > ey, ex, ey);
+    let h = e >> 1;
+    let (a, b) = (R::pow2(-h), R::pow2(h - e));
+    let (x, y) = (rho[0] * a * b, rho[1] * a * b);
+    let n2 = Float::mul_add(x, x, y * y);
+    let pole = n2 == R::zero();
+    let k = R::one() / Float::sqrt(select(pole, R::one(), n2));
+    (
+        select(pole, R::one(), x * k),
+        select(pole, R::zero(), y * k),
+    )
 }
 
 /// `R(−φ)·v` with `c = cos φ`, `s = sin φ`: `(c·v_x + s·v_y, c·v_y − s·v_x)`, each an explicit `fma`.
@@ -390,8 +418,8 @@ pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
         unboost(p[1], m[1]),
         unboost(p[2], m[2]),
     ];
-    // 2: ρ onto +x.
-    let (s, c) = (Float::sin(phi), Float::cos(phi));
+    // 2: ρ onto +x, by ρ̂, `φ`'s cosine and sine.
+    let (c, s) = rotation(rho);
     let r = [rotate(r[0], c, s), rotate(r[1], c, s), rotate(r[2], c, s)];
     let p = [rotate(p[0], c, s), rotate(p[1], c, s), rotate(p[2], c, s)];
     // 3: the mirror, in encode's frame, as decided above; λ̃_y recorded.

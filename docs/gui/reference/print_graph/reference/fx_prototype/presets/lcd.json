@@ -1,0 +1,54 @@
+{
+ "name": "Old LCD",
+ "doc": "A coarse panel of RGB sub-pixels with the screen door, few colour bits dithered, edge backlight bleed, off-axis wash.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pd": {
+   "op": "pixelate_down",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "size": 6,
+    "rounding": "floor"
+   }
+  },
+  "thr": {
+   "op": "bayer",
+   "in": {
+    "like": "pd.out"
+   },
+   "p": {
+    "n": 4
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 80,
+    "octaves": 2,
+    "seed": "$seed"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "small": "pd.out",
+    "thr": "thr",
+    "n0": "n0"
+   },
+   "p": {
+    "f": "cell = 6; lv = 2**5 - 1\nsmall = floor(small*lv + thr[..., None])/lv\ngh, gw = small.shape[:2]\ngy = np.mgrid[0:gh, 0:gw][0]\nsmall = small**(0.75 + 0.25*(gy/gh))[..., None]\nbig = np.repeat(np.repeat(small, cell, 0), cell, 1)\nbig = np.pad(big, ((0, H-big.shape[0]), (0, W-big.shape[1]), (0, 0)), mode='edge')\nsub = np.zeros((H, W, 3)); xs = np.arange(W) % cell; ys = np.arange(H) % cell\nw = cell/3\nfor c in range(3):\n    sub[:, (xs >= c*w+0.5) & (xs < (c+1)*w-0.4), c] = 1\nsub[ys >= cell-1, :, :] = 0\nsub = gaussian(sub, (0.35, 0.35, 0))\nout = big*sub*2.9\nout = blur(out, 0.45) + 0.30*blur(out, 2.5)\nedge = minimum(minimum(xx, W-1-xx), minimum(yy, H-1-yy))/min(H, W)\nbleed = 0.05*exp(-edge/0.06)*(1+0.5*n0)\nout = out + bleed[..., None]*array([0.85, 0.9, 1.0])"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

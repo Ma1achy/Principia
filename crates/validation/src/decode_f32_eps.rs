@@ -45,6 +45,78 @@
 //! small `K_0` over cancelling momenta (`virial_ratio`). 256 covers the sweep's worst by a factor of 1.46; the perturbed
 //! input (`perturbed.json`, 10⁻⁴ on the first latent component) measures ≈ 2235 eps and fails.
 //!
+//! **Its use across the chart registry** (decoder test 12, `engine/tests/decode_cross_backend.rs`; TASK-M2-24, physics
+//! review 5593488673 F3). The test holds the same factor, by the same measure, on every chart's own fuzzed interior,
+//! each decoded on the GPU through its stage variant from f32 `(u, v)` and parameters, `η_E` off and toward targets
+//! `0, −0.3, −40, 1.5` where the chart allows it. That widens the domain above, the defaults' latent interior, to these
+//! domains, and the confirmation at the M2 gate covers them. Worst over the 27 values, against the f64 decode and
+//! against the native f32 decode (rustc's, the backend's own share), in eps:
+//!
+//! | domain | Metal (M3 Pro), against f64 | Metal, against native f32 | lavapipe, against f64 | lavapipe, against native f32 |
+//! |---|---|---|---|---|
+//! | latent, defaults links (golden, interior seed 24, rest starts) | 12.43 | 19.22 | 14.51 | 19.11 |
+//! | latent, `stick_breaking`, interior (`q` on `[−½, ½]`) | 21.57 | 15.50 | 25.66 | 20.00 |
+//! | `(L_z, E)` / `(L_z, K)`, `s ∈ [0.01, 0.99]` | 4.67 / 4.53 | 5.21 / 7.63 | 11.07 / 9.00 | 11.65 / 9.60 |
+//! | ternary mass plot | 9.91 | 16.00 | 25.91 | 7.19 |
+//! | `(ν, K)` Burrau / Euclid plane | 4.43 / 3.64 | 6.61 / 2.72 | 7.61 / 7.44 | 7.41 / 7.23 |
+//! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.57 / 9.70 / 22.12 | 9.56 / 8.50 / 15.44 | 7.68 / 9.34 / 8.73 | 7.17 / 7.40 / 7.38 |
+//! | mixed `(z_μ1, α)` | 9.76 | 12.82 | 17.50 | 24.10 |
+//! | shape sphere, both maps, off its poles | 10.89 | 12.64 | 45.07 | 44.57 |
+//!
+//! Outside the domain, measured and reported, not held to the factor:
+//!
+//! | domain | Metal, against f64 | Metal, against native f32 | lavapipe, against f64 | lavapipe, against native f32 | why |
+//! |---|---|---|---|---|---|
+//! | `stick_breaking` at saturated controls (`q` on `[−20, 20]`) | 1.58e10 | 7.40e6 | 1.58e10 | 4.16e6 | f32's own conditioning, as above |
+//! | `(L_z, E)` / `(L_z, K)` edge columns `s ∈ {0, 1}` | 1119.6 / 885.3 | 686.1 / 523.1 | 1276.3 / 795.3 | 978.6 / 746.3 | `a = √(2(K* − L_z²/2))` of a rounding-sized radicand amplifies a one-ulp difference in a backend's `sqrt` by about `1/√eps` (TASK-M2-12's stepped `L_max`); the feasibility tag there is held bitwise |
+//! | `(L_z, E)` / `(L_z, K)` past the square in `s` | 4.34 / 4.52 | 5.71 / 5.84 | 10.53 / 9.00 | 11.52 / 9.60 | every pixel `INVARIANT_INFEASIBLE`, the rigid rotation; outside the chart's view |
+//! | shape sphere's `n₀ = ±1` poles, `(s, t) = (½, ½), (0, ½), (1, ½)` | 4.12e6 | 3.94e6 | 1.61e6 | 2.88e6 | `BC₀₁` (`ρ̃ = 0`) and `λ̃ = 0`, reached only to each precision's rounding of `sin π` and `cos(π/2)` |
+//!
+//! The lavapipe columns are the `gpu-kernel` job's (Mesa's lavapipe, llvmpipe on LLVM 20.1.2, Vulkan; PR #262, CI run
+//! 39568757113, on the code of commit 7fbf8653), which shows the test's report on success (`.config/nextest.toml`); the
+//! Metal columns the same code's run on the build machine. Each row is measured at the chart's default parameters, the
+//! shape sphere's at its default frame (`n₀ = +w`), scale 1.2, `I = 1` and `φ_f = 0`, only its held blocks drawn.
+//! There the worst is 45.07 (the shape sphere's `virial_ratio` on lavapipe), 5.7 below 256.
+//!
+//! **Off the defaults** (qa's `qa_m224_gpu_new_charts`, `engine/tests/qa_TASK-M2-24_gpu.rs`): the `(θ, K)`, `(θ, L_z)`
+//! and `(θ, Δm)` strips with drawn ranges, warps and targets, and the shape sphere with `n₀ = (0, 0.6, 0.8)` and its
+//! scale, `I`, `φ_f` and held blocks drawn, which reach masses as light as `m₁ ≈ 1.2·10⁻³`, off its poles; `η_E` off and
+//! toward 0 and 1.5. Worst against f64, in eps:
+//!
+//! | domain | Metal (M3 Pro) | lavapipe |
+//! |---|---|---|
+//! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.68 / 5.62 / 3.03 | 7.54 / 7.52 / 7.52 |
+//! | shape sphere, spherical / exponential map | 13.76 / 27.11 | 72.81 / 58.62 |
+//!
+//! Off the defaults the lavapipe worst is 72.81 (`r2x`, the spherical map, `z_mass = (−0.490, −0.724)`, at
+//! `(0.484, 0.249)`, where the native f32 decode is 3.06), 3.5 below 256 (CI run 39572746056's `gpu-kernel` job, a
+//! diagnostic on the code of 7fbf8653). Before 7fbf8653 the lavapipe decode exceeded the factor there: `r1y` 273.88
+//! eps from f64 at `(0.9118395, 0.6456125)` (masses about `(0.0514, 0.00124, 0.947)`, native f32 1.12), the light
+//! body's `‖r₁‖ ≈ 27` multiplying the error of `C`'s turn by `sin` and `cos` of a rounded `atan2`. `C` now turns by
+//! `ρ/‖ρ‖` (`kernel::canon::rotation`), and that value is 12.12 (native f32 2.62).
+//!
+//! **`C` alone** (qa's `qa_m224_gpu_canon_turn`, `engine/tests/qa_TASK-M2-24_gpu.rs`; physics review 5599301723 F1).
+//! The test holds the same factor, by the same measure, on `C`'s `(m, r, p)` (`kernel::canon`, the decode's last step)
+//! from f32 states, against f64 `C` on the same states widened: 4096 states at every orientation (a turn drawn on
+//! `[−3.2, 3.2]` rad); scale `2^k` with `k` on `[−19, 19]`, `k = 0` drawn twice as often as each other value (`k` is a
+//! draw on `[−20, 20]` truncated toward zero); a light body (its index cycling 0, 1, 2) of mass `10^−3.5` to `10^−2` at
+//! 4 to 40 from the origin, the heavy two in `[−1, 1]²` with masses splitting `1 − m_light` in ratio `w₀ : w₁`, each
+//! `w` on `[0.3, 1]`; input momenta on `[−0.5, 0.5]²`, not scaled with `r`, which step 0 multiplies by `I_in^{1/4}`, so
+//! the canonical momenta reach about 10³. Worst against f64, in eps:
+//!
+//! | domain | Metal (M3 Pro) | CPU, f32 (native) | lavapipe |
+//! |---|---|---|---|
+//! | `C` alone, the domain above | 81.29 (in `p`) | 81.29 | 162.71 |
+//!
+//! The lavapipe value is the `gpu-kernel` job's (llvmpipe on LLVM 20.1.2; PR #262, CI run 39599090423, job
+//! 119219350820, on commit 43164ef3, whose code is 8666c7bd's), which shows the test's report on success
+//! (`.config/nextest.toml`); the Metal and CPU values are the same code's run on the build machine, the Metal value's
+//! place, in `p`, physics review 5599301723's reading. The test reports its worst over `(m, r, p)`, not where it lies
+//! nor its distance from the native f32 `C` on the same state; lavapipe's worst is twice the CPU's f32 worst over the
+//! same states. Over the domains TASK-M2-24 adds (the chart registry, off the defaults, `C` alone) the worst is this
+//! 162.71, 1.57 below 256; over every domain this record holds the factor on, the proposal sweep's 175.21
+//! (`virial_ratio`, seed 7, Metal) remains the worst, 1.46 below 256.
+//!
 //! An input may perturb one latent component of the f64 reference by `perturb` before measuring, so the gate shows that
 //! a decode that is not the kernel's fails it (pitfalls §3: check the measurement can fire); and record a measurement
 //! made on that input (`recorded`), set beside the one made here in the report.

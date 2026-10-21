@@ -793,8 +793,18 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 
 **Schema v1 (R-56):** telemetry §2's frame record and its **five stages** (integrate / reduce / colour / upload / present)
 at the top level; nested scopes, GPU passes, allocations and events beneath them. JSON. Leak flags and hot-path summaries
-are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain + style,
-IC decode, readback, egui) are scopes nested under the five stages.
+are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain, IC
+decode, readback, egui) are scopes nested under the five stages, the stain under `colour`; under schema v2 the stages
+are six, `post` among them, and the Print graph's own scopes nest under `post` (telemetry §5, R-534). *Was:*
+"(quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five stages" (stale value, replaced
+by R-485 and R-534; telemetry §5's "stain + style" is "stain").
+
+**The print stage (R-488, R-497).** The Print graph is a stage of its own in the frame record, `stage_ms.post`, with the
+degrade level that ran, `post_level` (`full`, `reduced` or `plain`), per frame; the profiler shows it beside the five.
+It bumps the schema to v2, `principia-profile-v2`, and every reader accepts v1, a file written before it read as
+telemetry §5 says (R-534; R-497, K3). *Was:* "It bumps the schema, whose version is RQ-399's; a file written before it
+is read as telemetry §5 says (R-497, K3)." The profiler names the stage "print stage" (the human's ruling on RQ-497, 21 Oct 2026), its key `post`
+(applied per R-369). *Was:* "The post stage".
 
 **For agents, the same data structured:**
 ```
@@ -805,15 +815,39 @@ prin profile query "top 10 scopes by p95" --live                        # query 
 Scenarios are deterministic. Buttons: Export trace (JSON; it also writes the Chrome Trace Event format for Perfetto
 and `chrome://tracing`, R-207), Open in Tracy, Headless render….
 
+**Run benchmark… (R-493 to R-499; `principia_benchmark.md` §5.1).** A button of the Profiler window, beside Export trace.
+- **The dialog:** the mode, Quick, Full or Soak, each with its estimated time (the design doc §4's, until the first Full
+  run on the reference machine measures them, R-495); a plain statement of what is recorded, "device, OS, driver,
+  build, the scenarios' settings and the timings", then "Nothing about you or your files. You can read the file before
+  sending it."; **Plug in**, for Soak and, on battery, recommended for Full, the power source and low-power mode
+  recorded; Cancel and Run.
+- **During the run:** the chrome is hidden and the scenarios draw into a fixed-size offscreen surface in Fit, the same
+  on every device, which the window shows scaled to fit and letterboxed, so the window's size never changes the work
+  (R-535; *was:* "the figure fills the window (the window's size and the work, RQ-400)"); on a phone the run records
+  the visual-viewport size, requests a wake lock and is marked "mobile, best effort" (R-530); a thin progress strip shows the scenario's name, `n of N` and the time remaining; **Esc aborts**, the file still
+  written, marked `"complete": false`, every finished scenario intact; every other input is ignored (R-496).
+- **The results sheet:** per scenario p50, p95 and p99 frame time during motion, frac over 41.7 ms, time to settle and
+  which axis bound; the suggested tier, "the highest `eps` and budget that held 16.7 ms"; **Save file…**, **Copy
+  summary** and **Apply suggested tier**, applying it one undo entry and never automatic. The file is one plain-text
+  JSON Lines file with no score (R-497). The look is `docs/gui/reference/print_graph/boards/bench.png` (layout only; no
+  value in it is a measurement; its IBM Plex is not copied, the dev GUI being Ubuntu and Ubuntu Mono, §G1 and §G13).
+- **First launch:** an opt-in prompt offers the Quick suite once; nothing runs unless the user accepts, and declining
+  leaves the default tier (R-528).
+- **Collecting results:** by hand, the saved file or the copied summary; there is no upload (R-529).
+- **From the command line** the same runner (R-493): `prin bench run [--mode quick|full|soak] [--scenario ID...]
+  [--out FILE]`, `prin bench show FILE [--pretty]`, `prin bench report FILE [FILE...] [--format md|json]` (R-498) and
+  `prin bench compare A B [--threshold ...]`.
+
 **What `prin profile diff` compares (REQ-TOOL-119, R-72).** Each scope's p95 in NEW against its p95 in BASE. A scope
 regresses when NEW's p95 is more than P% above BASE's, `(p95_NEW − p95_BASE) / p95_BASE × 100 > P`, or, where BASE's
 p95 is 0, when NEW's is above 0. The diff exits 1 when any scope regresses, 0 when none does, and 2 when it cannot read
-either file as schema v1.
+either file as schema v1 or v2 (R-534; *was:* "as schema v1").
 - **The statistic.** A scope's p95 is the nearest-rank 95th percentile of its per-frame ms over the file's frames: the
   samples sorted ascending, the ⌈0.95 n⌉-th, counted from 1 (telemetry §3: percentiles, not means). `prin` and the
   interactive path share the percentile code (telemetry §5.5).
-- **The scope set.** The frame (its `frame_ms`); each of the five stages (its `stage_ms`, in the frames where it is not
-  `null`); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
+- **The scope set.** The frame (its `frame_ms`); each of the file's schema's stages, five in v1 and six in v2, `post`
+  compared wherever both files have it (its `stage_ms`, in the frames where it is not `null`; R-534, applied per R-369,
+  perf review 5596612647 of PR #268, F3; *was:* "each of the five stages"); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
   GPU pass, by its stage and name. A scope that occurs more than once in a frame gives that frame the sum of its ms; a
   frame where it does not occur gives it no sample.
 - **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
@@ -840,6 +874,9 @@ either file as schema v1.
 
 - **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
   picture carries its own settings, so opening it recreates the view exactly (§G9).
+  **Styled / Plain (R-489):** with a Print graph active the dialog offers the figure styled or plain, and figure export
+  defaults to **Plain**, a scientific figure being the renderer's pixels (`principia_dd_image_embedding.md` §9); the
+  Print graph travels in the record either way (`RenderState.print`, R-491).
 - **State:** copy snapshot (JSON), save snapshot, load; a share link (`principia://view?…`). The spec is the object and the
   picture is its shadow (`principia_export_animation_contract.md` Part 6).
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
@@ -862,10 +899,32 @@ either file as schema v1.
 
 ### Display — the last stages
 
-**Order is fixed (R-67):** SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it,
+**Order is fixed (R-67, R-487, R-531):** SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (R-111): the lines drawn over keep the line system's place after the gamut clamp (R-476 M2; R-531, ruling RQ-395). *Was:* "SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → colour-vision simulation → screen (R-111), the lines drawn over coming after the Print graph (R-487; where exactly is RQ-395, and until it is ruled they keep the line system's place after the gamut clamp, R-476 M2)." The stain colours the data, the Print graph prints it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
-simulation sees the final in-gamut colours.
-- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
+simulation sees the final in-gamut colours. *Was (R-67, before R-485 and R-487):* "SimState → stain → style → display
+scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it".
+- **Print** (R-485 to R-492; `principia_print_graph.md` §7.1) replaces Style: the **Print panel**, Display › Print.
+  - A **Plain / Print** toggle at the top. Plain is the default and the identity.
+  - **Slots**, top to bottom: Palette, Medium (the preset families as groups), Ground, On the ground, Unfinished, Age,
+    Viewing (design doc §5), each a dropdown with a small live thumbnail of the current view in that choice, and the
+    slot graph's **settings** beneath it, not its node parameters; and **Boil** (off, per frame, every N frames; off
+    by default, R-490). Palette acts on the finished colour (R-524). While the Medium is a screen medium, Viewing is
+    off by default and the panel shows why, "Viewing assumes a sheet: off by default for a screen medium" (R-525).
+  - A **preset gallery**: the 111 presets as live thumbnails of the current view, grouped in 12 families, the lab's 103
+    in its 11 and R-130's eight in a twelfth, labelled "Poster", its "Default" always shown as "Poster › Default", never
+    a bare "Default" (R-532; *was:* "the 103 presets … grouped by the lab's 11 families");
+    picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
+  - **Edit graph…** opens the graph editor, the Stain's node editor reused (same wiring, typed ports, undo and keyboard
+    scopes) on the same graph the slots show (design doc §7.2).
+  - **Reset to Plain**, one undo entry.
+  - While any Print graph but Plain is active, a badge names it ("Print: Linocut", R-489) in the figure's header strip,
+    above the plot, never over the figure (R-523, ruling RQ-397; *was:* "its place on the canvas is RQ-397"). Measurement never reads the print, and goldens and scientific checks run under Plain (R-489). The look is
+    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485), with three departures (§G13): its canvas
+    corner badge is the header strip's (R-523), its "103 in 11 families" is 111 in 12 (R-532), and its IBM Plex is not
+    copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1).
+- *Was (before R-485, which with R-486 supersedes R-130; R-130's eight styles are ported as additional Print graph
+  presets, R-532, ruling RQ-396, where this note read "R-130's styles are kept as RQ-396 decides"):*
+  **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
   (`workbench/principia_poster_both_sides.html` and its press module; ✱ R-130). **Watercolour & pencil** is its painted
   treatment (`window.stainPaint`, :2375–2388: a slight blur and desaturation, a soft graphite line where the colour
   changes, and the paper grain when Paper is on). **Print** is paper.design's CMYK halftone shader (Paper Shaders,
@@ -1318,6 +1377,12 @@ corpus, the spec follows the authority:
   (`N_max`, default 64), and the sound mapping (R-540's signal, `principia_listen.md` §1; *was (before R-540):*
   "`θ(t), φ(t)` → spectrum"). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
+- **The Print graph and benchmark boards** (R-485, R-496; `docs/gui/reference/print_graph/boards/`). `panel.png`'s
+  footer, "Canvas corner badge while active", is overridden by R-523: the print badge sits in the figure's header strip,
+  never over the figure; its gallery header, "103 in 11 families", is 111 in 12 by R-532 (R-130's eight in a family of
+  their own, "Poster"). `panel.png` and `bench.png` are drawn in IBM Plex (`boards/source/boards.html`); their fonts
+  are not copied, the dev GUI's being Ubuntu and Ubuntu Mono (§G1). (gui review 5596618095 of PR #268, G4, applied per
+  R-369.)
 
 ## G14. Settled by the notes (record)
 
@@ -1390,8 +1455,8 @@ Overlays menu (R-67).*
   (§10).
 - **Node inspector** (right) — the editor for the selected node; morphs to the node/source type;
   Advanced-WGSL at the bottom (§9).
-- **Display window + Overlays menu** (R-67; was the global display bar, top) — style / render-scale / gamut / CVD; applied to `OUT`,
-  *outside* the pipeline (§12).
+- **Display window + Overlays menu** (R-67; was the global display bar, top) — the Print graph (R-485) / render-scale / gamut / CVD; applied to `OUT`,
+  *outside* the pipeline (§12). *(Was: "style / render-scale / gamut / CVD"; R-485 puts the Print graph where style was.)*
 
 A live **preview** (shape-sphere or illustrative slice, toggle) renders the current `OUT`.
 
@@ -1772,12 +1837,18 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
 
 ## 12. Display stage — global, outside the pipeline
 
-*Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.*
+*Order (R-67, R-487, R-531): stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.* *(Was: "Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display).")*
 
-Applied to `OUT` after the graph, as **settings, never nodes** (no OUT-downstream graph):
+Applied to `OUT` after the graph, as **settings, never nodes** of the stain graph (no OUT-downstream node in it):
 
-- **style** (optional, figure only), **render→display scale**, **gamut clamp**, **CVD simulation** (models the viewer,
-  not the visualisation) — in that order (R-67). *(Was: gamut clamp, CVD simulation, render→display scale.)*
+- **the Print graph** (R-485; `principia_print_graph.md`; Plain, the identity, by default; figure only), **render→display
+  scale**, **gamut clamp**, **CVD simulation** (models the viewer, not the visualisation) — in that order (R-67, R-487).
+  *(Was: gamut clamp, CVD simulation, render→display scale.)* *(Was, before R-485: "**style** (optional, figure only)".)*
+- **The Print graph is a node graph of its own** (R-485), as `principia_colour_composition.md` §4.3 has it: its registry,
+  codegen and WGSL are its own, the stain's codegen never sees it, and it is no stain occupant or preset, so the stain
+  graph still has nothing downstream of `OUT`; in the stain graph's terms the Print graph is a display setting,
+  `RenderState.print` (R-491). *(Was: "Applied to `OUT` after the graph, as **settings, never nodes** (no
+  OUT-downstream graph):"; R-485's node graph is a separate graph, so "never nodes" holds for the stain graph only.)*
 
 ### 12.1 Structural overlays and tile debug shaders
 
@@ -1899,8 +1970,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
    can't be reconstructed from dissolved code.
 10. **Presets are whole graphs**; catalogue default-composition = preset payload; debug locked →
     fork-on-edit.
-11. **Display stage (style / scale / gamut / CVD, in that order — R-67) is global**, outside the pipeline; its controls are
-    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)*
+11. **Display stage (Print graph / scale / gamut / CVD, in that order — R-67, R-485; the lines drawn over after the gamut clamp, R-531) is global**, outside the pipeline; its controls are
+    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)* *(Was, before R-485 and R-531: "style / scale / gamut / CVD, in that order — R-67".)*
 
 ---
 

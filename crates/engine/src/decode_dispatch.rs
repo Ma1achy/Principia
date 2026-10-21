@@ -2,9 +2,10 @@
 //! `kernel::stage::decode`):
 //! - [`DecodeStage`]: the decode-only GPU dispatch of one [`DecodeVariant`], a chart and link set, over a list of
 //!   `(u, v)` points, for tests and the gates. Its pipeline is created once, by [`DecodeStage::new`], through the compute
-//!   entry point (R-297); each [`DecodeStage::run`] writes the uniform, the chart's parameters and the quad's
-//!   `DECODE_MODE`, and dispatches, creating no pipeline (REQ-DEC-007). It reads back the `(m, r, p)`, the `DEGENERATE`
-//!   tag and the `ICDescriptor` of every point.
+//!   entry point (R-297); each [`DecodeStage::run_with`] writes the uniform, the chart's parameters, the quad's
+//!   `DECODE_MODE` and `η_E`'s target, an `Option` (dd_decoder §3.7, R-25), and dispatches, creating no pipeline
+//!   (REQ-DEC-007); [`DecodeStage::run`] is it with `η_E` off. It reads back the `(m, r, p)`, the `DEGENERATE` tag and
+//!   the `ICDescriptor` of every point.
 //! - [`describe_gpu`]: the stage's descriptor writer alone, on given `(m, r, p)`, for the pole inputs the f32 decode
 //!   need not reach (R-436).
 //! - [`canonicalise_gpu`]: canonicalisation `C` on given `(m, r, p)`, `kernel::stage::canon::canonicalise`, for the
@@ -12,8 +13,9 @@
 //! - [`encode_gpu`] and [`beta_gpu`]: encode `E` on given `(m, r, p)`, `kernel::stage::encode::encode`, and its `β` on
 //!   given operands, `kernel::stage::encode::beta`, for the cross-backend checks of their selects and notices at the
 //!   poles and on the `−x` half-axis (REQ-ENC-007, REQ-DEC-014).
-//! - [`decode_only`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
-//!   instantiation of the same source, `kernel::stage::decode::sample` at f64 (R-118, R-265).
+//! - [`decode_only_with`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
+//!   instantiation of the same source, `kernel::stage::decode::sample_with` at f64 (R-118, R-265), with the same
+//!   `Option` target as the dispatch; [`decode_only`] is it with `η_E` off.
 //!
 //! **Domain** (pitfalls §10): a decode, its inputs fixed; no trajectory.
 
@@ -82,13 +84,14 @@ pub fn check_samples(n: usize, limits: &wgpu::Limits) -> Result<u32, ComputeErro
     u32::try_from(n).map_err(|_| ComputeError(format!("{n} samples: over u32")))
 }
 
-/// The uniform's words: the chart's six rows, then the flags word and its padding.
+/// The uniform's words: the chart's six rows, then the flags word and its padding, then the energy row.
 pub fn uniform_words(u: &DecodeUniforms) -> Vec<u32> {
     u.chart
         .iter()
         .flat_map(|r| r.to_array())
         .map(f32::to_bits)
         .chain(u.flags.to_array())
+        .chain(u.energy.to_array())
         .collect()
 }
 
@@ -202,10 +205,7 @@ impl<V: DecodeVariant> DecodeStage<V> {
         self.kernel.mode()
     }
 
-    /// Dispatches the stage once over `uv`, one invocation per point, with `chart`'s parameters and the flags word
-    /// `flags` as the uniform, and reads every buffer back: the `(m, r, p)` and descriptors filled with NaN and the tags
-    /// with [`UNWRITTEN`] before the dispatch, so what the kernel did not write stays visible. No pipeline is created.
-    /// An empty `uv` dispatches nothing.
+    /// [`DecodeStage::dispatch_with`] with `η_E` off.
     pub fn dispatch(
         &self,
         device: &wgpu::Device,
@@ -214,9 +214,27 @@ impl<V: DecodeVariant> DecodeStage<V> {
         flags: u32,
         uv: &[[f32; 2]],
     ) -> Result<Words, ComputeError> {
+        self.dispatch_with(device, queue, chart, flags, None, uv)
+    }
+
+    /// Dispatches the stage once over `uv`, one invocation per point, with `chart`'s parameters, the flags word `flags`
+    /// and the energy target `e_star` (`None` off, R-25; `kernel::stage::decode::energy`) as the uniform, and reads
+    /// every buffer back: the `(m, r, p)` and descriptors filled with NaN and the tags with [`UNWRITTEN`] before the
+    /// dispatch, so what the kernel did not write stays visible. No pipeline is created. An empty `uv` dispatches
+    /// nothing.
+    pub fn dispatch_with(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        chart: &V::Chart,
+        flags: u32,
+        e_star: Option<f32>,
+        uv: &[[f32; 2]],
+    ) -> Result<Words, ComputeError> {
         let uniforms = DecodeUniforms {
             chart: chart.uniform(),
             flags: [flags, 0, 0, 0].into(),
+            energy: stage::energy(e_star),
         };
         self.dispatch_uniforms(device, queue, &uniforms, uv)
     }
@@ -276,9 +294,7 @@ impl<V: DecodeVariant> DecodeStage<V> {
         })
     }
 
-    /// Decodes `uv` with `chart` under `mode`, on the GPU: each point's `(m, r, p)`, `ICDescriptor` and `DEGENERATE`
-    /// tag, in order. The linearised decoder lands in M6 (REQ-DEC-033), so `DecodeMode::Linearised` is refused; a tag
-    /// word the kernel never writes, a sample it left unwritten among them, is an error.
+    /// [`DecodeStage::run_with`] with `η_E` off.
     pub fn run(
         &self,
         device: &wgpu::Device,
@@ -287,13 +303,29 @@ impl<V: DecodeVariant> DecodeStage<V> {
         mode: DecodeMode,
         uv: &[[f32; 2]],
     ) -> Result<Vec<DecodeOut<f32>>, ComputeError> {
+        self.run_with(device, queue, chart, mode, None, uv)
+    }
+
+    /// Decodes `uv` with `chart` under `mode` toward the energy target `e_star` (`None` off, R-25), on the GPU: each
+    /// point's `(m, r, p)`, `ICDescriptor` and `DEGENERATE` tag, in order. The linearised decoder lands in M6
+    /// (REQ-DEC-033), so `DecodeMode::Linearised` is refused; a tag word the kernel never writes, a sample it left
+    /// unwritten among them, is an error.
+    pub fn run_with(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        chart: &V::Chart,
+        mode: DecodeMode,
+        e_star: Option<f32>,
+        uv: &[[f32; 2]],
+    ) -> Result<Vec<DecodeOut<f32>>, ComputeError> {
         if mode != DecodeMode::Full {
             return Err(ComputeError(
                 "DECODE_MODE linearised: the linearised decoder lands in M6 (deep_zoom §2; REQ-DEC-033)"
                     .to_owned(),
             ));
         }
-        let words = self.dispatch(device, queue, chart, stage::flags(mode), uv)?;
+        let words = self.dispatch_with(device, queue, chart, stage::flags(mode), e_star, uv)?;
         (0..uv.len())
             .map(|i| {
                 let degenerate = stage::untag(words.tags[i]).map_err(|w| {
@@ -524,18 +556,37 @@ pub fn beta_gpu(
     Ok(read.into_iter().map(f32::from_bits).collect())
 }
 
-/// parity_contract §1's `decodeOnly(chart, uv, simKey)`: the decode stage's source at f64, `chart` under the selection
-/// `S` at `uv`, giving the `(m, r, p)`, the `ICDescriptor` and the `DEGENERATE` tag. `chart`'s parameters are widened
-/// to f64, never narrowed, so a chart held at f32, the GPU's, decodes here from exactly the parameters the kernel reads.
-///
-/// From the sim key it reads what binds a decode: the kernel variant, which must be the physics kernel, since the
-/// bring-up mode writes a pattern and decodes nothing (R-75). The chart and the plane are `chart` itself (for the
-/// latent chart, `sim_key.plane`'s `z₀, q₁, q₂`), and the link set is `S`: the sim key's chart and links groups are empty
-/// until the requirements that fill them (R-133).
+/// [`decode_only_with`] with `η_E` off.
 pub fn decode_only<C, S>(
     chart: &C,
     uv: [f64; 2],
     sim_key: &SimConfig,
+) -> Result<DecodeOut<f64>, ComputeError>
+where
+    C: ChartDecode,
+    S: Selection,
+    f64: From<C::Param>,
+{
+    decode_only_with::<C, S>(chart, uv, sim_key, None)
+}
+
+/// parity_contract §1's `decodeOnly(chart, uv, simKey)`: the decode stage's source at f64, `chart` under the selection
+/// `S` at `uv` toward the energy target `e_star` (`None` off, R-25), giving the `(m, r, p)`, the `ICDescriptor` and the
+/// `DEGENERATE` tag. `chart`'s parameters are widened to f64, never narrowed, so a chart held at f32, the GPU's, decodes
+/// here from exactly the parameters the kernel reads; `uv` and `e_star` are f64, as the CPU path's own values are, and
+/// the dispatch's f32 point and target, widened, decode here from exactly the values the kernel reads. The `Option` is
+/// the dispatch's: `None` off, `Some(0)` a real target (R-25).
+///
+/// From the sim key it reads what binds a decode: the kernel variant, which must be the physics kernel, since the
+/// bring-up mode writes a pattern and decodes nothing (R-75). The chart and the plane are `chart` itself (for the
+/// latent chart, `sim_key.plane`'s `z₀, q₁, q₂`), and the link set is `S`: the sim key's chart and links groups are empty
+/// until the requirements that fill them (R-133). `E*` changes the decoded IC, so it is on the sim key, among the
+/// chart's params (gui_state_contract §2); it is passed here as the chart is, `e_star`, for the same reason.
+pub fn decode_only_with<C, S>(
+    chart: &C,
+    uv: [f64; 2],
+    sim_key: &SimConfig,
+    e_star: Option<f64>,
 ) -> Result<DecodeOut<f64>, ComputeError>
 where
     C: ChartDecode,
@@ -548,5 +599,5 @@ where
             sim_key.kernel_variant
         )));
     }
-    Ok(stage::sample::<C, S, f64>(chart, uv[0], uv[1]))
+    Ok(stage::sample_with::<C, S, f64>(chart, uv[0], uv[1], e_star))
 }

@@ -1,0 +1,83 @@
+{
+ "name": "Thread painting",
+ "doc": "Long-and-short satin stitches along the forms in floss colours, sheen changing with direction.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "q": {
+   "op": "quantize",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": 26
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 4
+   }
+  },
+  "cv": {
+   "op": "canvas",
+   "p": {
+    "period": 6,
+    "seed": "$seed",
+    "scale": 2
+   }
+  },
+  "base": {
+   "op": "expr",
+   "in": {
+    "cv": "cv"
+   },
+   "p": {
+    "f": "array([0.84, 0.80, 0.72])[None, None]*(1+0.08*cv[..., None])"
+   }
+  },
+  "jp": {
+   "op": "jitter_points",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "spacing": 3.2,
+    "jitter": 0.5
+   }
+  },
+  "sh": {
+   "op": "shuffle",
+   "in": {
+    "points": "jp.points",
+    "rng": "jp.rng"
+   }
+  },
+  "out": {
+   "op": "stitches",
+   "in": {
+    "points": "sh.points",
+    "rng": "sh.rng",
+    "tx": "f.tx",
+    "ty": "f.ty",
+    "labels": "q.labels",
+    "palette": "q.palette",
+    "base": "base"
+   },
+   "p": {
+    "SS": 2
+   }
+  }
+ },
+ "out": "out.out"
+}
