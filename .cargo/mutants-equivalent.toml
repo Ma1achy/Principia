@@ -226,3 +226,7 @@ justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_
 [[equivalent]]
 mutant = "crates/validation/src/roundtrip.rs:218:43: replace | with ^ in Sides::of"
 justification = "the fold ORs in 1 << k once for each distinct index k from enumerate, so bit k is always clear in b and b ^ (1 << k) equals b | (1 << k)"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass/views.rs:199:19: replace / with * in gauge"
+justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x * 1.0 are both x for every f64"

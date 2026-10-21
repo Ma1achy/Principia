@@ -616,6 +616,149 @@ fn mock_keyboard_key_table() {
     });
 }
 
+// --- Ctrl+Z: the contract's undo -------------------------------------------------------------------------------------
+
+/// The mock app with two undoable `SetField`s applied, z₀ moved twice: the app, its headless, and z₀ before each.
+fn edited() -> (
+    crate::app::App<crate::side::MockSide>,
+    Headless,
+    [engine::contract::sim_config::Latent; 2],
+) {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let first = app.snapshot().sim.plane.z0;
+    let mut second = first;
+    second[0] += 0.25;
+    let mut third = second;
+    third[0] += 0.25;
+    for z0 in [second, third] {
+        app.set_field(crate::explore::manifold_view::z0_edit(z0));
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    assert_eq!(
+        app.snapshot().history.undo_depth,
+        2,
+        "the edits are undoable"
+    );
+    (app, h, [first, second])
+}
+
+/// The undo depth after `events`, one frame each, then a frame to read the snapshot.
+fn depth_after(
+    h: &mut Headless,
+    app: &mut crate::app::App<crate::side::MockSide>,
+    events: Vec<Vec<Event>>,
+) -> u32 {
+    for e in events {
+        let _ = h.frame(app, e);
+    }
+    let _ = h.frame(app, Vec::new());
+    app.snapshot().history.undo_depth
+}
+
+/// A press (`true`) or release (`false`) of Z with `modifiers`, as one frame's events. egui marks a press of a key
+/// already down as the system's repeat.
+fn z(modifiers: Modifiers, pressed: bool) -> Vec<Event> {
+    vec![Event::Key {
+        key: Key::Z,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers,
+    }]
+}
+
+/// A press and release of Z with `modifiers`, a frame each.
+fn z_press(modifiers: Modifiers) -> Vec<Vec<Event>> {
+    vec![z(modifiers, true), z(modifiers, false)]
+}
+
+/// Ctrl+Z (Cmd+Z on macOS) undoes from the contract's history, one step a press, in either keyboard mode (§G3;
+/// R-409 G5; R-52): Ctrl, Command and Cmd each with Z; not Z alone, not with Shift or Alt, not another letter with
+/// Ctrl, not the system's repeats of a held press, and not while the `?` overlay, which takes every key, is open.
+#[test]
+fn mock_keyboard_ctrl_z_undoes_from_the_contract() {
+    for (key, modifiers, undoes) in [
+        (Key::Z, Modifiers::CTRL, true),
+        (Key::Z, Modifiers::COMMAND, true),
+        (Key::Z, Modifiers::MAC_CMD, true),
+        (Key::Z, NONE, false),
+        (Key::Z, SHIFT, false),
+        (Key::Z, Modifiers::CTRL | SHIFT, false),
+        (Key::Z, Modifiers::CTRL | ALT, false),
+        (Key::Y, Modifiers::CTRL, false),
+    ] {
+        assert_eq!(
+            keymap::undoes(key, modifiers),
+            undoes,
+            "{key:?} {modifiers:?}"
+        );
+    }
+    for modifiers in [Modifiers::CTRL, Modifiers::COMMAND, Modifiers::MAC_CMD] {
+        let (mut app, mut h, [first, second]) = edited();
+        // Neither a frame without the key, nor Z alone or with Shift or Alt, nor the key under the overlay undoes.
+        let idle = depth_after(&mut h, &mut app, Vec::new());
+        assert_eq!(idle, 2);
+        rejects("a frame without Ctrl+Z that undid", || assert_eq!(idle, 1));
+        let others = depth_after(
+            &mut h,
+            &mut app,
+            [
+                z_press(NONE),
+                z_press(modifiers | SHIFT),
+                z_press(modifiers | ALT),
+            ]
+            .concat(),
+        );
+        assert_eq!(others, 2, "{modifiers:?}: Z alone, Shift or Alt undid");
+        press(&mut h, &mut app, Key::Questionmark, SHIFT);
+        assert!(app.keyboard.shortcuts_open);
+        let under = depth_after(&mut h, &mut app, z_press(modifiers));
+        assert_eq!(under, 2, "{modifiers:?}: Ctrl+Z under the overlay undid");
+        press(&mut h, &mut app, Key::Escape, NONE);
+        assert!(!app.keyboard.shortcuts_open);
+        // Held, with the system's repeats: one undo, the second edit's z₀ undone.
+        let held = depth_after(
+            &mut h,
+            &mut app,
+            vec![
+                z(modifiers, true),
+                z(modifiers, true),
+                z(modifiers, true),
+                z(modifiers, false),
+            ],
+        );
+        assert_eq!(held, 1, "{modifiers:?}: a held Ctrl+Z, one undo");
+        assert_eq!(app.snapshot().sim.plane.z0, second);
+        // Pressed again: one undo more, z₀ back where it started, in navigation mode.
+        let again = depth_after(&mut h, &mut app, z_press(modifiers));
+        assert_eq!(again, 0, "{modifiers:?}: one Ctrl+Z, one undo");
+        assert_eq!(app.snapshot().sim.plane.z0, first);
+        assert_eq!(app.view.focus.mode, KeyMode::Navigation);
+    }
+    // In interaction mode on Centre z₀'s first slider, as in navigation mode.
+    let (mut app, mut h, [_, second]) = edited();
+    keys(
+        &mut h,
+        &mut app,
+        &[
+            (Key::Tab, NONE),
+            (Key::Tab, NONE),
+            (Key::Enter, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::Enter, NONE),
+            (Key::Enter, NONE),
+        ],
+    );
+    assert_eq!(app.view.focus.mode, KeyMode::Interaction);
+    let depth = depth_after(&mut h, &mut app, z_press(Modifiers::CTRL));
+    assert_eq!(depth, 1, "Ctrl+Z in interaction mode");
+    assert_eq!(app.snapshot().sim.plane.z0, second);
+    assert_eq!(app.view.focus.mode, KeyMode::Interaction);
+}
+
 // --- Held keys: delay, then repeat -----------------------------------------------------------------------------------
 
 /// The repeats `due` gives, polled at each of `times`, after a press at 1000 ms.
@@ -1735,7 +1878,11 @@ fn mock_keyboard_manifold_view_scopes() {
         [
             crate::explore::COMPASS_VIEW,
             crate::explore::COMPASS_TILT,
-            crate::explore::COMPASS_SLICE
+            crate::explore::COMPASS_SLICE,
+            crate::explore::COMPASS_CUBE,
+            crate::explore::COMPASS_PLUCKER,
+            crate::explore::COMPASS_JACOBI,
+            crate::explore::COMPASS_SHAPE
         ]
     );
     assert_eq!(
