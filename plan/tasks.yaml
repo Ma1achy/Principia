@@ -2320,7 +2320,7 @@
 - id: TASK-M8-13
   milestone: M8
   title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
-  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03, TASK-M6-25, TASK-M6-28]
+  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-03, TASK-M6-25, TASK-M6-28]  # PR #267 (code review F5, applied per R-369): TASK-M8-12 dropped, L being REQ-GUI-334's (TASK-M8-64)
   needs: [REQ-GUI-002, REQ-GUI-003]
   requirements: [REQ-GUI-096, REQ-GUI-097]
   reviewers: [code, qa, gui]

@@ -614,7 +614,8 @@ Overlays ▾ › Trace's toggles, and L turns the sound on or off (R-541 G2); R-
 is Space here, K staying the lock (RQ-449, its option (a) applied meanwhile). T, ⇧T, Y and L, with Space and K, are on
 the shortcuts sheet (`?`). *Was:* "All five are on the shortcuts sheet (`?`)." (gui review 5595359543 of PR #267, G6;
 applied per R-369).
-Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs, the two views, the Trace, Listen and
+Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs and `+ keep`, the two views with
+`sphere / unwrapped` and `turn` (gui review 5595467390 of PR #267, H4; applied per R-369), the Trace, Listen and
 Numbers sections (each its row, then, expanded, its controls in the section's order), the playhead, unpin, Open full
 viewer… and IC Inspector… (*was:* "Enter reaches the tabs, the Trace, Listen and Numbers sections (R-541 G4), the
 playhead, listen, kept orbits, unpin and its two views", listen and kept orbits being the Listen section and the tabs;

@@ -17074,7 +17074,10 @@ read the words:*
   REQ-GUI-334 and REQ-GUI-327) and **TASK-M8-65** (G6, `Listen…`) follow TASK-M8-12, TASK-M8-59 and TASK-M8-60, and so
   wait on RQ-440 and RQ-442; **TASK-M8-63** follows TASK-M8-64 and TASK-M8-65. The ramp control is TASK-M8-58's widget,
   hosted by TASK-M8-61's Trace section and TASK-M8-62's `Trace…` (gui review G7). The text above is P15 as first
-  applied.
+  applied. *Completed in PR #267's second round (code review 5595481919, F5; the orchestrator's decision, applied per
+  R-369):* L is REQ-GUI-334's only, so TASK-M8-13 (the keyboard scopes) no longer depends on TASK-M8-12; a walk of
+  `depends_on` finds none of TASK-M8-12, TASK-M8-59 and TASK-M8-60 among the ancestors of TASK-M8-13, TASK-M8-42,
+  TASK-M8-58, TASK-M8-61 or TASK-M8-62.
 
 *Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the file
 assumes:* RQ-447 to RQ-449 and RQ-460 to RQ-463 are queued, not ruled. G4's tabs agree with §G2's (R-453's pin, the

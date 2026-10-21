@@ -1899,7 +1899,8 @@ before Listen is built.*
   against prin-rs (this entry).
 - **Found by physics review 5595386853 of PR #267, P1 (facts beside both sides; nothing chosen):**
   - Equal-mass Lagrange is linearly unstable: Routh's 27(m₁m₂ + m₂m₃ + m₃m₁)/M² = 9 > 1, so any seed, integration error
-    or f64 rounding, grows exponentially (an e-fold about every 0.31 time units). The reviewer's port (DOP853, rtol
+    or f64 rounding, grows exponentially, as e^{0.31 t}, ω/√2 (an e-fold about every 3.2 time units; *was:* "an
+    e-fold about every 0.31 time units", physics review 5595462873 of PR #267, P5, applied per R-369). The reviewer's port (DOP853, rtol
     10⁻¹²) measured max |n⊥| at 4.0e-13 for t ≤ 20, 9.8e-8 for t ≤ 60, 2.4e-2 for t ≤ 100, and broken up by t ≈ 150;
     the Angles-only rms 1.7e-7 over [0, 60], 3.0e-2 over [0, 100] and 0.87 over [0, 400].
   - A floor no integrator lowers: an exactly rotating triangle in f64 reads an Angles-only rms of 4.9e-8, φ = acos(n3)
