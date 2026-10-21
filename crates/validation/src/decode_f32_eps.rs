@@ -40,6 +40,11 @@
 //! not 2.53e6, so the backend adds nothing there; a factor for saturated controls, or for another link set, would be
 //! measured on its own domain.
 //!
+//! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
+//! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
+//! small `K_0` over cancelling momenta (`virial_ratio`). 256 covers the sweep's worst by a factor of 1.46; the perturbed
+//! input (`perturbed.json`, 10⁻⁴ on the first latent component) measures ≈ 2235 eps and fails.
+//!
 //! **Its use across the chart registry** (decoder test 12, `engine/tests/decode_cross_backend.rs`; TASK-M2-24, physics
 //! review 5593488673 F3). The test holds the same factor, by the same measure, on every chart's own fuzzed interior,
 //! each decoded on the GPU through its stage variant from f32 `(u, v)` and parameters, `η_E` off and toward targets
@@ -111,11 +116,6 @@
 //! same states. Over the domains TASK-M2-24 adds (the chart registry, off the defaults, `C` alone) the worst is this
 //! 162.71, 1.57 below 256; over every domain this record holds the factor on, the proposal sweep's 175.21
 //! (`virial_ratio`, seed 7, Metal) remains the worst, 1.46 below 256.
-//!
-//! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
-//! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
-//! small `K_0` over cancelling momenta (`virial_ratio`). 256 covers the sweep's worst by a factor of 1.46; the perturbed
-//! input (`perturbed.json`, 10⁻⁴ on the first latent component) measures ≈ 2235 eps and fails.
 //!
 //! An input may perturb one latent component of the f64 reference by `perturb` before measuring, so the gate shows that
 //! a decode that is not the kernel's fails it (pitfalls §3: check the measurement can fire); and record a measurement
