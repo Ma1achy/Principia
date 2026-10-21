@@ -402,14 +402,19 @@ negative_control!(
 // ── The DEGENERATE tag word ──────────────────────────────────────────────────────────────────────────────────
 
 /// Every reason the type holds, and none.
-const REASONS: [Option<Degenerate>; 4] = [
+///
+/// TASK-M2-24 closed the set (dd_decoder §2, "The `DEGENERATE` cause set"): `INVARIANT_INFEASIBLE` and
+/// `NO_QUALIFYING_SEED` joined it, so they write tag words too.
+const REASONS: [Option<Degenerate>; 6] = [
     None,
     Some(Degenerate::M01Tiny),
     Some(Degenerate::EnergyInfeasible),
     Some(Degenerate::EnergyUnscalable),
+    Some(Degenerate::InvariantInfeasible),
+    Some(Degenerate::NoQualifyingSeed),
 ];
 
-/// Each reason round-trips; the four words are distinct; every other word, 0 … 2¹⁶ and the top of the range, is
+/// Each reason round-trips; the six words are distinct; every other word, 0 … 2¹⁶ and the top of the range, is
 /// refused with the word itself.
 fn check_tags(to: fn(Option<Degenerate>) -> u32) {
     let words: Vec<u32> = REASONS.iter().map(|&r| to(r)).collect();
