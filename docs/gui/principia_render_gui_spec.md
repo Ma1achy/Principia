@@ -1021,8 +1021,13 @@ channel colours. The full key is `Trace… › key…`. The block is a key of fi
 stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 
 **The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
-base and layers, drawn over the target chart's square, with a ring at the hovered system where it is now, drawn on the
-edge when it has left (board 6).
+base and layers, drawn with no brightness over the target chart in the chart's own aspect ratio (2 : 1 on the sphere,
+the triangle on the simplex, `rgb(18, 19, 21)` past it), with a 6 px ring at the hovered system where it is now: white
+inside the chart, grey `#a8a8a8` and pinned 5 px inside the edge when the system is past it, and not drawn under
+"none", the readout saying why (SM9's transcription of `smLegend`; board 6). It is the stain's own colour key, first;
+the brightness key follows where a brightness node is bound, then R-541 P13's trace block, then the debug view's key
+(applied per R-369). *Was:* "drawn over the target chart's square, with a ring at the hovered system where it is now,
+drawn on the edge when it has left (board 6)".
 
 ## G7. Chart builder (`03_chartbuilder.png`)
 
@@ -1295,6 +1300,19 @@ corpus, the spec follows the authority:
   labels kept off the plot (§G1), the icons themselves being figure marks (R-539); the demos' mock menu bars with
   `Lines ▾` and `Listen ▾` (R-541 G2, RQ-448); the boards' kept #2 in `#5ab4ff` (RQ-447); the boards' numbers (legend
   shares, readouts), illustrative (the bundle's README).
+- **The state map's art boards** (R-542; `docs/gui/reference/state_map/boards/`). They are read for their new elements
+  only: the Chart position node, its inspectors, ports and presets, the legend's colour block and the Problems rows; the
+  shell follows `02_stain.png` and `01_main.png`, and the hover trace and its label stay as R-541 and §G2 give them
+  (RQ-501). Their fonts (Ubuntu, Ubuntu Mono) conform, and they badge nothing over the figure. Where they depart, the
+  spec stands: board 1's top bar (a stain-name dropdown, "Compile", "Apply to view" and the Graph / Pipeline WGSL / Node
+  WGSL tabs), its library groups (Sources / Colour·Base / Colour·Layers) and its Problems pane spanning the window with a
+  WGSL tab; board 1's two nodes BASE and LAYERS (RQ-502); board 6's floating legend over the figure's edge, its
+  placeholder compass, its status box beside the figure, its top-bar "Stain [Chart position]" and "Edit graph…" (RQ-500),
+  and its ring with no hover trace (RQ-501); board 4's "Shape n̂ already is one — point(sphere)" and its row "Shape n̂'s
+  nodes | point(sphere)" (RQ-497 (a): Shape n̂ stays `vector`), its "at: … fixed t" (RQ-489) and its last paragraph
+  (RQ-497); board 3's header promising Position ↔ Gradient and Bands ↔ Palette (RQ-497 (a): Site blend ↔ Site blend
+  only). Board 1's Problems-row buttons ("Use Multiply", "Show as grey", "Use outcome colour") and board 4's "Set both to
+  this chart" are not in SM15's text and are board-only, not built (applied per R-369).
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
   (`N_max`, default 64), and the sound mapping (R-540's signal, `principia_listen.md` §1; *was (before R-540):*
   "`θ(t), φ(t)` → spectrum"). The Run window exposes the parameters the
@@ -1429,7 +1447,8 @@ composition.md` §5).
 
 **Chart position (R-542).** A `source` whose out-port is `point⟨q⟩`. Its params are the chart (default: the view's
 own), at (playhead · `t = 0`), when it leaves the chart (clamp · none) and after its run ends (hold · outcome colour)
-(state map SM15; SM15's "a fixed t" waits on RQ-489). Its layers are combinators inside the colour occupant (colour
+(state map SM15; SM15's "a fixed t" waits on RQ-489). The graph draws one colour node for the base and its layers
+(RQ-502, (a) applied meanwhile). Its layers are combinators inside the colour occupant (colour
 composition §1.3, §1.5), not `post` nodes. That this table gives `source` one param, and that SM15 seats the layers in
 the colour slot, are in RQ-497; they apply meanwhile as written here.
 
@@ -1743,8 +1762,10 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
 - **State map presets (R-542; state map SM15, board 5).** Classic shape colour (Shape n̂ → Site blend, as today), and
-  on Chart position, on any chart: Where, Graph paper, Basins, Displacement, Flow and Mixing. Each inserts an ordinary
-  editable graph; the prototype's labels and settings are in state map SM15 (the names differ: RQ-499).
+  on Chart position, on any chart: Where now, Graph paper, Basin tiles, Displacement, Picture flow and Mixing, the
+  prototype's labels (RQ-499 (a); the file's names, Where, Basins and Flow, are the queued alternative). Each inserts an
+  ordinary editable graph; the settings are in state map SM15. *Was:* "Where, Graph paper, Basins, Displacement, Flow and
+  Mixing … (the names differ: RQ-499)"
 
 ---
 

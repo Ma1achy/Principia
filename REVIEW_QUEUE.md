@@ -2839,8 +2839,9 @@ field, stop and queue it; do not add one"): no field is added.*
     DECODE view, its agreement presets and ROUNDTRIP, which read `ctx.chart.z`", each "excepted by the task that builds
     it".
   - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract", "Fragment-side recompute": the fragment can
-    "recompute cheap quantities (decode `z` → shape/energy; `encode(decode(z))` residual)" — the encode and the decode,
-    not a chart's inverse.
+    "recompute cheap quantities (decode `z` → shape/energy; `encode(decode(z))` residual)". The encode is
+    `E = (block/chart inverses) ∘ C` (`principia_dd_encode.md` § "2. Consolidated contract"), so ROUNDTRIP already runs
+    the view chart's inverse per pixel.
   - `docs/design/principia_state_map.md` § "SM2": "the encode, including the chart inverses | WGSL generated from the
     one Rust source (R-116); `ROUNDTRIP` already runs it per pixel"; "It is live-compatible: only the playhead state is
     read." § "SM11" and § "SM15": "at (playhead · t = 0 · a fixed t)". The human's message: "position on a chosen chart
@@ -2848,8 +2849,10 @@ field, stop and queue it; do not add one"): no field is added.*
     fragment stage from data it already has (`r, p` at the playhead, the masses, the `state` lane, the WGSL encode)."
 - **The conflict:**
   - Chart position is a source, so a colour occupant; its projection `P_T` reads the target chart (its id, params and
-    inverse), which seam 6 forbids an occupant and the lint fails. No exception names it, and the chart inverses are not
-    yet in fragment WGSL (`ROUNDTRIP` runs the encode).
+    inverse), which seam 6 forbids an occupant and the lint fails. No exception names it. The view chart's inverse is
+    already in the encode `ROUNDTRIP` runs (dd_encode §2); only a target other than the view's chart (Q1, RQ-480) needs
+    a second inverse in the fragment. *Was (before PR #270's physics review, P5):* "and the chart inverses are not yet
+    in fragment WGSL (`ROUNDTRIP` runs the encode)".
   - "A fixed t" other than `0` and the playhead needs the state at that t. `SimState` holds the playhead's only (payload
     §1), the prototype offers no fixed t (its menu: playhead, `t = 0`), and the state there is not data the fragment
     already has: it needs a stored field (which SM2 forbids) or a second march.
@@ -2895,6 +2898,9 @@ field, stop and queue it; do not add one"): no field is added.*
   - (b) The chroma scaling for every stain, as SM15 has it, with dd_colouring §3.5, its test 6 and the §4.1 truth table
     re-ruled, and SM15's backwards-compatibility test narrowed to stains without a brightness node.
   - (c) No chroma scaling; the 0.30 level's near-black left to the Problems warning.
+- **A consequence for the ruling** (PR #270's gui review, note): under main's Replace-L the Mixing preset's "stayed"
+  level (`B = 0.30`) clips toward near-black, close to the undetermined `#141418`; TASK-M7-51 builds Mixing before this
+  is ruled.
 - **Applied meanwhile:** main's Replace-L, unscaled, for every stain; SM2 item 3 read as (a)'s first half (colour
   composition §4.1's R-542 paragraph). The scaling requirement carries `rq: RQ-496`, and TASK-M7-50, which builds it,
   waits on this.
@@ -2940,19 +2946,29 @@ field, stop and queue it; do not add one"): no field is added.*
   - (b) Shape n̂ re-typed `point⟨sphere⟩`, with its Position and Bands nodes added to §7.1 and the golden suite (a change
     to Shape n̂, which §0 keeps "exactly as it is").
   - (c) Each part ruled separately.
-- **Applied meanwhile:** (a), in render GUI spec Part II §3, §3.1, §6 and §9 (R-542). TASK-M7-51 builds to it; the
-  Shape n̂ unchanged requirement carries `rq: RQ-497`.
+- **Applied meanwhile:** (a), in render GUI spec Part II §3, §3.1, §6 and §9 (R-542), except the qualified names, which
+  wait for the ruling: the GUI uses the file's names ("Palette") and the code's preset names (RQ-499) meanwhile (PR #270's
+  gui review, G2). TASK-M7-51 builds to it; the Shape n̂ unchanged requirement carries `rq: RQ-497`. Whether the graph
+  draws the layers as their own node is RQ-502.
 
-## RQ-498: Where Chart position draws a system that is not at a plain chart point: the encode folds the mirror, so on the shape sphere it and Shape n̂ read different points; mirror pixels inside the square are equal to rounding, not bitwise; the trace draws a left or past-the-end sample as no value, where SM5a clamps; and on an affine chart there is no navigation edge *(conflict: the human's design against rulings, a design doc and an open branch; R-542, R-141, R-412, R-469, R-470, R-503, R-537 EX3 and EX7, R-538 TF1; context: TASK-M7-47, TASK-M7-48, TASK-M8-66)*
+## RQ-498: Where Chart position draws a system that is not at a plain chart point: SM1 folds the mirror where SM4 and the prototype's code read the signed n̂, and R-141's decode gauge puts a lower-hemisphere pixel's system on the upper one; mirror pixels inside the square are equal to rounding, not bitwise; the trace draws a left or past-the-end sample as no value, where SM5a clamps; and on an affine chart there is no navigation edge *(conflict: the file against itself and its code, and against rulings, a design doc and an open branch; R-542, R-141, R-412, R-469, R-470, R-503, R-537 EX3 and EX7, R-538 TF1; context: TASK-M7-47, TASK-M7-48, TASK-M7-52, TASK-M8-66)*
 
-*Found by R-542's port and its check of `task/TASK-M2-24` (PR #262), `task/TASK-M2-28` and main. Nothing is ruled.*
+*Found by R-542's port and its check of `task/TASK-M2-24` (PR #262), `task/TASK-M2-28` and main; the mirror part
+restated and R-141's gauge added after PR #270's physics review (5598441029, P1 and P2). Nothing is ruled.*
 
 - **File, section:**
-  - **The mirror.** `docs/design/principia_chart_reference.md`: "encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`", so
-    `E(x)` lies on one hemisphere; `docs/design/principia_dd_simstate_payload.md` § "5": "| `n` (shape) | `shape(r)` or
-    `shape(r, masses)` |", signed. `principia_state_map.md` § "SM11": "On the shape sphere chart the two read the same
-    point"; § "SM12" Same site blend: "worst difference **exactly 0** over 300 random shapes"; Identity at `t = 0`: "on
-    every chart, target = view".
+  - **The mirror, in the file and the code.** `docs/design/principia_state_map.md` § "SM1. Definition": "`E` is the
+    encode …: scale and rotation are removed, mirror images identified." § "SM4. Destination side": "| the shape sphere
+    (θ, φ with pole crossing) | the sphere, via `n̂` | be a function of `n̂`, never of (θ, φ) |", the unfolded row; only
+    "| the hemisphere (R-412) | the sphere mod the mirror |" folds. The prototype's code
+    (`docs/gui/reference/state_map/state_flow.html`, `encode`, "shape sphere, before any canonicalisation (§3.1)", and
+    `smWhere` case 'B'): `(θ, φ)` from the signed `n̂`, over both hemispheres. Main: `principia_chart_reference.md`,
+    "encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`" (the encode's chart point folds); payload §5's derived `n`,
+    "`shape(r)` or `shape(r, masses)`", keeps its sign.
+  - **R-141's decode gauge.** `decisions.md` § R-141: "the canonical decode gauges λ̃_y → −λ̃_y, so both hemispheres
+    decode to the same system". On main a lower-hemisphere pixel decodes to a system with `n₃ ≥ 0`; the prototype's
+    `decodeShape` does not gauge (`ψ = atan2(n₃/2, n₂/2)`), so its lower hemisphere decodes to the true mirror system,
+    which is where SM7's "sphere 1.5e-6" was measured.
   - **Mirror pixels in the square.** R-141 (the spherical map's two hemispheres decode to one system) and R-503 (the
     exponential map's cap: "a pixel counts once unless its mirror `w → −w` is in view"): each pixel is decoded from its
     own coordinate. R-537 EX7(b)'s canonical address covers repeats outside the primary range. `principia_state_map.md`
@@ -2969,23 +2985,34 @@ field, stop and queue it; do not add one"): no field is added.*
     `validate`"; R-537 EX3: "The only navigation limit is R-469's … **Affine latent axes:** no stop at all."
     `principia_state_map.md` § "SM3": "on an affine chart it is the navigation limit"; § "SM11": "A system that has left
     the chart takes the cell at the navigation edge it left by".
-- **The conflict:** on the lower hemisphere (`n₃ < 0`) Chart position ⟨shape sphere⟩ through `E` and Shape n̂ through
-  the signed `n` read mirror points, so SM11's "same point", SM12's Same site blend (for a site set that is not
-  mirror-symmetric, `axes6` included) and SM7's identity on a both-hemispheres view fail; SM3's and SM12's bitwise
-  identity holds for EX7 repeats only; SM5a's default draws as a colour what the trace draws as no value, and SM12's
-  Four results test says the opposite of SM5a; the latent charts have no navigation edge to clamp to.
+- **The conflict:**
+  - SM1's fold against SM4's unfolded shape-sphere row and the code's signed `n̂`. Under the fold, Chart position ⟨shape
+    sphere⟩ and Shape n̂ (signed `n`) read mirror points where `n₃ < 0`, and SM11's "the two read the same point" and
+    SM12's Same site blend (for `axes6`, not mirror-symmetric) fail; under the code's reading both hold as written.
+  - R-141's gauge: on a both-hemispheres view a lower-hemisphere pixel's system lies on the upper hemisphere, so its
+    Chart position at `t = 0` is the mirror of its own pixel's point under either reading, and SM7's identity holds there
+    only modulo the mirror; the prototype, which does not gauge, does not show it.
+  - SM3's and SM12's bitwise identity holds for EX7 repeats only.
+  - SM5a's default draws as a colour what the trace draws as no value, and SM12's Four results test says the opposite
+    of SM5a.
+  - The latent charts have no navigation edge to clamp to.
 - **Options seen:**
-  - (a) The shape-sphere target is the hemisphere (`E`'s fold), the identity and site-blend tests compare folded points,
-    SM11's sentence read for `n₃ ≥ 0`; bitwise copies for EX7 repeats, rounding-level for in-square mirrors; the clamp
-    kept as the default, SM9 read for on-chart samples, Four results run under "when it leaves: none",
-    where its arm holds as written;
-    the clamp's edge the compacted edge `s = ±1`, and the prototype's base grid a demo device (the app's fill is EX4's
-    coarse ancestor and EX7(a)'s roots).
-  - (b) Chart position on the sphere reads payload §5's signed `n`, not `E` (a departure from SM1); "no value" the
-    default, as the trace has it, the clamp an option.
+  - (a) The code's reading: Chart position ⟨shape sphere⟩ reads the signed `n̂` (payload §5's `n`, no stored field) over
+    the full sphere, SM1's "mirror images identified" read for the encode's other coordinates; the `t = 0` identity on
+    the sphere stated modulo the mirror (a lower-hemisphere pixel compared with its mirror point, R-141); bitwise copies
+    for EX7 repeats, rounding-level for in-square mirrors; the clamp kept as the default, SM9 read for on-chart samples,
+    Four results run under "when it leaves: none", where its arm holds as written; the clamp's edge the compacted edge
+    `s = ±1` (where main's clamped encode puts it, `|z| ≈ logit(1 − 10⁻⁶)`), and the prototype's base grid a demo device
+    (the app's fill is EX4's coarse ancestor and EX7(a)'s roots).
+  - (b) SM1's fold: the shape-sphere target is the hemisphere (`E`'s fold), the identity and site-blend tests compare
+    folded points and SM11's sentence is read for `n₃ ≥ 0`; "no value" the default, as the trace has it, the clamp an
+    option.
   - (c) Each part ruled separately.
-- **Applied meanwhile:** (a). The requirements on the identity, the copies, the clamp, the four results and the sphere's
-  site blend carry `rq: RQ-498`; their tests run as (a) reads them.
+- **Applied meanwhile:** (a), the code's reading (the human's message: "Where the md and the code disagree, the code
+  wins and the disagreement is queued"). *Was (before PR #270's physics review):* the meanwhile folded the shape-sphere
+  target onto the hemisphere, the identity and site-blend tests measured there. The requirements on the identity, the
+  copies, the clamp, the four results and the sphere's site blend carry `rq: RQ-498`; their tests run as (a) reads them.
+  The hemisphere view's target is RQ-504.
 
 ## RQ-499: The prototype's code and the state map's text disagree: preset names, the triangle palette's lightness, Picture under a brightness node, the fade's function, and the Fibonacci cells' swatches *(conflict: the file against its transcription source; R-542; context: TASK-M7-48, TASK-M7-49, TASK-M7-51)*
 
@@ -3012,3 +3039,102 @@ Nothing is ruled.*
   - (c) Each ruled separately.
 - **Applied meanwhile:** (a), the code (the human's message). The presets requirement carries `rq: RQ-499` for the
   names; TASK-M7-48, TASK-M7-49 and TASK-M7-51 build the code's behaviour.
+
+## RQ-500: Board 6's "Edit graph…" in Explore's top bar is the label PR #268 gives the Print panel's button *(conflict: the human's board against an open branch; R-542, PR #268; context: TASK-M8-66)*
+
+*Found by PR #270's gui review (5598419574, G1). Nothing is ruled.*
+
+- **File, section:** `docs/gui/reference/state_map/boards/` board 6 (Explore): the top bar's "Stain [Chart position]"
+  and "Edit graph…", which opens the stain editor. PR #268 (`rulings/print-graph`), the Print panel: its button "Edit
+  graph…" opens the Print graph's editor.
+- **The conflict:** one label, two editors, both reachable from Explore.
+- **Options seen:**
+  - (a) Each qualified by its graph: "Edit stain…" in the stain's place, the Print panel's "Edit graph…" as PR #268 has
+    it (or "Edit print graph…").
+  - (b) Board 6's label kept, PR #268's renamed.
+  - (c) Board 6's button not built: the stain editor is reached as it is on main (§G2, `02_stain.png`).
+- **Applied meanwhile:** (c) until ruled: the shell follows `01_main.png` (render GUI spec §G13, R-542's bullet), so no
+  "Edit graph…" is added to Explore's top bar by the state map.
+
+## RQ-501: Board 6 draws a ring on the hovered pixel with no hover trace, and its hover label has no "L listen", where R-541 and §G2 keep both *(conflict: the human's board against rulings; R-542, R-540, R-541, §G2; context: TASK-M8-66)*
+
+*Found by PR #270's gui review (5598419574, G1). Nothing is ruled.*
+
+- **File, section:** board 6 (Explore): the figure shows a ring at the hovered pixel and no trace; the hover label
+  reads the system without "L listen". `principia_state_map.md` § "SM9": "The prototype draws no trace, only a ring on
+  the hovered pixel" (it does not say the app drops the trace). `docs/gui/principia_render_gui_spec.md` § "G2. Explore —
+  the everyday view (`01_main.png`)": the hover trace and its label; R-541 G1–G4 and R-540: the label's listen hint.
+- **The conflict:** the board, read as a layout, would drop the hover trace and the listen hint under a Chart position
+  stain.
+- **Options seen:**
+  - (a) The hover trace and its label stay as R-541 and §G2 give them; the ring is added on the hovered pixel beside
+    them, and the legend's ring marks the system (SM9).
+  - (b) Under a Chart position stain the trace is hidden and the ring replaces it, as board 6 draws.
+- **Applied meanwhile:** (a).
+
+## RQ-502: Whether the stain graph draws Chart position's layers as their own LAYERS node, as boards 1 and 4 do, or inside the colour occupant, as render GUI spec §3.1 and §9 now say *(conflict: the human's boards against the applied text; R-542, R-64; context: TASK-M7-51)*
+
+*Found by PR #270's gui review (5598419574, G4). Nothing is ruled.*
+
+- **File, section:** board 1 (editor) draws BASE and LAYERS as two graph nodes, LAYERS with in-ports `base` (vec3) and
+  `point`; board 4 (ports) lists "Layer … base: vec3 · point → vec3". `docs/gui/principia_render_gui_spec.md` Part II
+  § "3.1 Node kinds" (R-542 paragraph): "Its layers are combinators inside the colour occupant (colour composition
+  §1.3, §1.5), not `post` nodes"; § "9. Node inspector — morphing editors": one base-and-layers editor (board 3). §3.1's
+  table has no kind with a `vec3` in-port ahead of the combiner. `principia_state_map.md` § "SM15": "the inspector shows
+  them as a stack under the base, reorderable, each removable."
+- **The conflict:** the graph either shows one colour node with the stack in its inspector, or a base node feeding a
+  layers node with a `vec3` in-port, a node kind §3.1 does not have.
+- **Options seen:**
+  - (a) One colour node; the base and the layer stack in its inspector (§3.1, §9, board 3, SM15's text), boards 1 and
+    4's LAYERS node read as a drawing of that stack.
+  - (b) A LAYERS node kind with a `vec3` in-port ahead of the combiner, added to §3.1 (an extension of R-64).
+- **Applied meanwhile:** (a): the graph draws one colour node for the base and its layers; REQ-GUI-335's screenshot
+  is read against board 3's inspector and board 1's library and Problems rows, not board 1's two nodes.
+
+## RQ-503: The prototype's latent chart uses `AMIN = 0.05`, where R-21 sets `α_min = 0`, so SM5a's latent-chart figures and "it leaves because α passes the decoder's limit" describe the prototype, not the app *(conflict: the transcription source against a ruling; R-542, R-21; context: TASK-M7-47, TASK-M7-52)*
+
+*Found by PR #270's physics review (5598441029, P3). Nothing is ruled.*
+
+- **File, section:** `docs/gui/reference/state_map/state_flow.html`: `AMIN = 0.05`, its latent decode and encode
+  `α = AMIN + (π/2 − 2·AMIN)·σ(z_α)`. `decisions.md` § R-21 and `docs/design/principia_chart_reference.md` § 0.2: `α_min
+  = 0` ("full-sphere coverage"); main's latent α axis runs out only at α = 0 or π/2 (λ̃ = 0 or ρ̃ = 0), within
+  `ε_z = 10⁻⁶`. `principia_state_map.md` § "SM5a": "On the latent chart it leaves because α passes the decoder's limit";
+  "On the latent chart at `t = 8`, 400 random systems, 129 of them left"; "On the latent chart, 3186 of 9216 have
+  **left**".
+- **The conflict:** on main almost no system leaves the latent chart off a collision, so SM5a's latent figures and a
+  test built on them (a population of left systems on the latent chart) would be empty and could not fire.
+- **Options seen:**
+  - (a) Main's `α_min = 0` stands; SM5a's latent figures are the prototype's, reference only; the edge-clamp test runs
+    on a target that leaves on main (the latent momenta at the clamp, or the `z_q3` tilt), its figures measured on the
+    app; the latent α case is tested on a constructed state (λ̃ or ρ̃ within `ε_z` of 0).
+  - (b) Chart position's latent target uses the prototype's `α_min = 0.05` (a second latent chart, a chart change).
+- **Applied meanwhile:** (a). REQ-COL-116's verify is on the latent momenta; REQ-COL-113 constructs the α case.
+
+## RQ-504: The one-hemisphere view's Chart position target: the prototype targets the full sphere, SM4 the sphere mod the mirror *(conflict: the file against its code; R-542, R-412; context: TASK-M7-47)*
+
+*Found by PR #270's physics review (5598441029, P1). Nothing is ruled.*
+
+- **File, section:** `principia_state_map.md` § "SM4. Destination side": "| the hemisphere (R-412) | the sphere mod the
+  mirror | be a function of the canonical (folded) `n̂` |". The prototype's `smTarget`: "the view's own" on the
+  one-hemisphere view resolves to the full sphere (transcribed in SM1's *Transcribed from the prototype* paragraph).
+- **The conflict:** the code colours a hemisphere view's systems by their signed `n̂` on the full sphere; the file folds
+  them.
+- **Options seen:**
+  - (a) The code's: the one-hemisphere view targets the full sphere, signed `n̂` (with RQ-498 (a)).
+  - (b) The file's: the sphere mod the mirror, the canonical folded `n̂`.
+- **Applied meanwhile:** (a), the code (the human's message).
+
+## RQ-505: "'none' must be available as a debug option" (the bundle's draft requirement) against SM5, SM11 and SM15, which offer "none" as an ordinary setting of the node *(conflict: the human's draft against the file and its code; R-542; REQ-COL-116; context: TASK-M7-47, TASK-M7-51)*
+
+*Found by PR #270's code review (5598464229, 3). Nothing is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-21_state_map/requirements_patch.yaml`, the edge-clamp draft: "A system that
+  has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as a debug
+  option." `principia_state_map.md` § "SM5": "**at the edge it left by** (default, SM5a); or no value, in its own
+  style"; § "SM11" and § "SM15": "when it leaves the chart (clamp to the edge · none)", a node setting; the prototype's
+  "When it leaves" control offers both.
+- **The conflict:** debug-only, or an ordinary node setting.
+- **Options seen:**
+  - (a) An ordinary setting of the node, as the file and the code have it (which includes the debug use).
+  - (b) Debug only: offered in the debug views, not in the node's inspector.
+- **Applied meanwhile:** (a), the code. REQ-COL-116 keeps the draft's words, its note citing this entry.

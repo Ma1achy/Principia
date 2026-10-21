@@ -134,8 +134,8 @@ Three things it adds, none of them a sim struct:
 any layout; a need for a stored field is stopped and queued, never added. Two places the port found where the field
 reads what main does not yet give a colour occupant are queued, not resolved: a colour occupant may not reference the
 chart (`principia_dd_colouring.md` §4, seam 6; render contract Part 4), where Chart position reads the target chart and
-its inverse, and `ROUNDTRIP` runs the encode, not a chart's inverse; and SM11's "a fixed t" needs a state other than
-the playhead's, which `SimState` does not hold (both RQ-489). Item 3's "the brightness slot is None" meets L-ownership
+its inverse (the view chart's inverse is already in the encode `ROUNDTRIP` runs, dd_encode §2; only a target other
+than the view's chart needs a second one); and SM11's "a fixed t" needs a state other than the playhead's, which `SimState` does not hold (both RQ-489). Item 3's "the brightness slot is None" meets L-ownership
 (render contract Part 4: "resolved by combiner choice") and SM11 and SM15, which let a brightness node follow an L-fixed
 base (RQ-496). The prototype offers no fixed t; meanwhile Chart position reads the playhead or `t = 0` only.
 
@@ -199,6 +199,12 @@ defined on the target's quotient, and `C_T` must be invariant under the target's
 | bounded (ν, a mass) | the interval | map linearly |
 | a tilted axis (E, F) | not periodic and multi-valued in θ | take the branch nearest the slice (smallest out-of-plane `w`); this is a choice, Q2 |
 
+*Port's note (R-542).* The prototype's code reads the shape sphere target from the signed `n̂`, computed before the
+encode canonicalises, over both hemispheres, as this table's shape-sphere row has it; SM1's "mirror images identified"
+folds it. The code is applied meanwhile (RQ-498). The code's one-hemisphere view targets the full sphere, where this
+table's hemisphere row folds (RQ-504; the code meanwhile). On main R-141's decode gauge puts a lower-hemisphere pixel's
+system on the upper hemisphere, so on a both-hemispheres view SM7's identity holds modulo the mirror (RQ-498).
+
 ## SM5. The four results of a projection
 
 | Result | When | Drawn as |
@@ -257,7 +263,11 @@ not stored (§0, R-542).
 §8: "not drawn there, the line broken"), where SM5a's default clamps; SM9's "the trace is this field for one pixel"
 holds for on-chart samples only; "past a bounded edge" is R-470 N1's and R-472's term for a source pixel drawn blank;
 and on the latent chart "the navigation edge it left by" (SM11) can only be the compacted edge `s = ±1`. Queued as
-RQ-498; meanwhile the clamp is the default, as the file and the prototype have it.
+RQ-498; meanwhile the clamp is the default, as the file and the prototype have it. The latent-chart figures above are
+the prototype's, whose latent chart has `AMIN = 0.05` where R-21 sets `α_min = 0`, so on main a system leaves the latent
+chart almost only at a collision (RQ-503); main's encode clamps and never returns a non-finite `z`, so the app's "left"
+is read from a shown coordinate's clamp (REQ-COL-133). Whether "none" is an ordinary setting or a debug option is
+RQ-505.
 
 ## SM6. Colour maps: one-to-one on the quotient, so they own lightness
 
@@ -364,10 +374,12 @@ the second invented separate node kinds and mixed the source and brightness node
 to Shape n̂. This one: Chart position is one node, on any chart including the shape sphere, and its colour slot is
 colour composition §1 as it stands — a base and layers — with the chart's point where Shape n̂ has n̂.*
 
-*Port's note (R-542).* The encode folds the mirror (`principia_chart_reference.md`: "encode's `β = atan2(|λ̃_y|, λ̃_x)`
-reads `|λ̃_y|`"), so `E(x)` lies on one hemisphere, while Shape n̂'s `n` (payload §5) keeps its sign: on the shape sphere
-the two nodes read the same point only where `n₃ ≥ 0`, and SM12's "Same site blend" and SM7's identity are measured
-there until RQ-498 is ruled. Main's Shape n̂ is a `vector` subtype, its colour node the SiteBlend editor (render GUI
+*Port's note (R-542).* The prototype's code reads the shape sphere target from the signed `n̂` (payload §5's `n`), so on
+the shape sphere the two nodes read the same point, as this section says, and SM12's "Same site blend" holds as
+written; SM1's fold, under which they would read mirror points where `n₃ < 0`, is queued against SM4 and the code
+(RQ-498, the code applied meanwhile). *Was:* "The encode folds the mirror …, so `E(x)` lies on one hemisphere, while
+Shape n̂'s `n` (payload §5) keeps its sign: on the shape sphere the two nodes read the same point only where `n₃ ≥ 0`,
+and SM12's "Same site blend" and SM7's identity are measured there until RQ-498 is ruled." Main's Shape n̂ is a `vector` subtype, its colour node the SiteBlend editor (render GUI
 spec Part II §3, §6, where a subtype is no hard gate and the inspector morphs) (RQ-497).
 
 **Two different nodes.** *Shape n̂* is the existing node: the shape of the system, coloured by its own nodes (Site blend,

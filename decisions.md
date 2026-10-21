@@ -18397,7 +18397,10 @@ list, with its earlier words kept), § "3.1 Node kinds", § "5. Sources & multi-
 the stain (`06_legend.png`)" (added), `docs/read_first/principia_INDEX.md` (rows), RQ-480 to RQ-489 and RQ-496 to RQ-499
 (new), REQ-COL-112 to REQ-COL-132, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-339 (reqio, new), TASK-M7-46 (done) and
 TASK-M7-47 to TASK-M7-51 and TASK-M8-66 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-47 to
-TASK-M7-51 and TASK-M8-66, TASK-M7-47 waiting on RQ-489 and TASK-M7-50 on RQ-496*
+TASK-M7-51 and TASK-M8-66, TASK-M7-47 waiting on RQ-489 and TASK-M7-50 on RQ-496; after PR #270's review,
+RQ-500 to RQ-505 (new), RQ-489, RQ-496, RQ-497 and RQ-498 (restated), REQ-COL-133, REQ-COL-134 and REQ-GUI-340 (reqio,
+new), TASK-M7-52 (new, built before TASK-M7-47 and TASK-M8-58), TASK-M8-58 (a dependency) and
+`docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden" (a bullet)*
 
 The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
 
@@ -18940,16 +18943,37 @@ edge clamp is the behaviour.
   or M8 (Explore and the extension, § "M8"); every source heading is checked with `plan/tools/sections.py`; each verify
   is completed with its cargo test and SM12's arm as written, the copies test the bitwise IC identity. Requirements are
   added for the SM12 rows the draft lacked (Invariance, Conserved axes, Four results), for SM7's frame, SM8's Picture,
-  SM10's fade and ensemble, SM11's brightness occupants, SM15's tests (1) to (3), and the docs port.
+  SM10's fade and ensemble, SM11's brightness occupants, SM15's tests (1) to (3), and the docs port. Each draft
+  statement the port reworded keeps the draft's words as a *Was* in its requirement's note (PR #270's code review, 3);
+  the edge-clamp requirement keeps the draft's "'none' must be available as a debug option", its difference from SM5,
+  SM11 and SM15 queued (RQ-505).
 - **H9. The tasks.** TASK-M7-46, the docs port, is done, closed by this ruling's PR. The colour pipeline: TASK-M7-47
   (Chart position: SM1 to SM5, SM7; physics review on SM1, SM4 and SM5; waits on RQ-489), TASK-M7-48 (the bases, layers
   and brightness occupants: SM6, SM11). The GUI: TASK-M7-49 (Picture, fade and ensemble: SM8, SM10), TASK-M7-50 (Replace-L's
   chroma scaling, SM15; waits on RQ-496), TASK-M7-51 (the stain editor: SM15; the gui reviewer with `boards/`) and
   TASK-M8-66 (Explore: the legend and ring of SM9, SM3's never-a-gap and copies, the firewall). The stain editor is
   M7's (TASK-M7-22 to TASK-M7-24), so its state map work is M7's; the Explore legend is M8's (TASK-M8-22). Each
-  pipeline task states SM2's constraint.
+  pipeline task states SM2's constraint. TASK-M7-49 has the gui reviewer, and its controls (the picture's choice and
+  upload, the fade's toggle, SM7's colour frame) are REQ-GUI-340's (PR #270's code review, 2).
 - **H10. The queue.** Q1 to Q9 are RQ-480 to RQ-488, each with its recommendation as option (a), each (a) applied
   meanwhile; Q4 is recorded in dd_colouring §3.2 and nothing in the vMF colouring changes.
+- **H11. One projection (PR #270's code review, 1).** SM1's `P_T` is "the target chart's projection, the one the trace
+  uses", so the target projections, the leaving rule and the curve axis's nearest point are one Rust source, built by
+  TASK-M7-52 and reused by TASK-M7-47 (generated to WGSL for the fragment, R-116) and by TASK-M8-58's trace, which
+  depends on it. It reads no chart from a colour occupant, so it does not wait on RQ-489.
+- **H12. "Left" on main's encode (PR #270's physics review, P4).** Main's encode clamps (inverse encode contract Part 3)
+  and never returns a non-finite `z`, so the prototype's "both finite" test never fires there; the app's left status is
+  read from a shown coordinate's clamp, a definition TASK-M7-52 writes (R-72; REQ-COL-133), the clamp's margin
+  (`|q| ≥ q_max(1 − 2ε_q)`) stated in the four results' verify.
+- **H13. The tolerances (PR #270's qa review, F2; physics review, P2).** The `t = 0` identity's tolerances on the sphere
+  (the prototype's 1.5e-6, measured without R-141's gauge) and on ν × h (the prototype's 4.9e-4, its 1/1000 curve table)
+  join the calibration requirement, proposed with their measurement on the app by TASK-M7-47, never chosen by the test.
+- **H14. The boards (PR #270's gui review, G1 and G5).** The state map's boards are read for their new elements only, the
+  shell following `02_stain.png` and `01_main.png` (render GUI spec §G13's R-542 bullet, which names each departure).
+  Board 1's Problems-row buttons and board 4's "Set both to this chart" are not in SM15's text and are board-only, not
+  built. The Problems counts reach the GUI from the engine through the snapshot, never computed in the GUI
+  (gui_state_contract §1). The legend's colour block is the stain's own key, first, then the brightness key, R-541
+  P13's trace block and the debug view's key (§G6).
 
 *Checked against `main` (4a32decf), `rulings/print-graph` (PR #268, 1b7ca0ed), `task/TASK-M2-24` (PR #262, 8096650d),
 `task/TASK-M2-34` (PR #269, a0cf17c5), `task/TASK-M2-28` (495deb17) and the rulings the file assumes (the human's
@@ -18967,13 +18991,25 @@ queue it rather than resolving it"):* five conflicts are queued, not ruled:
   the prototype's; §6's morphing against SM15's gate; §3.1's one-param source and band-masks as posts; board 4's sphere
   paragraph against SM11; PR #268's Print graph sharing "Palette", "Flow", "field" and "post", and that branch's queued range
   question for a payload field input. Meanwhile (a).
-- **RQ-498:** the encode folds the mirror, so on the shape sphere Chart position and Shape n̂ read mirror points where
-  `n₃ < 0` (PR #262's shape-sphere docs, R-141); in-square mirror pixels (R-141, R-503 on `task/TASK-M2-28`) agree to
-  rounding, not bitwise; the trace draws a left or past-the-end sample as no value (R-538 TF1), where SM5a clamps, and
-  SM12's Four results says the opposite of SM5a; the latent charts have no navigation edge (R-469, R-537 EX3).
-  Meanwhile (a).
+- **RQ-498:** SM1 folds the mirror where SM4's shape-sphere row and the prototype's code read the signed `n̂`
+  (payload §5's `n`), and R-141's decode gauge puts a lower-hemisphere pixel's system on the upper hemisphere, so the
+  `t = 0` identity on a both-hemispheres view holds modulo the mirror; in-square mirror pixels (R-141, R-503 on
+  `task/TASK-M2-28`) agree to rounding, not bitwise; the trace draws a left or past-the-end sample as no value (R-538
+  TF1), where SM5a clamps, and SM12's Four results says the opposite of SM5a; the latent charts have no navigation edge
+  (R-469, R-537 EX3). Meanwhile (a), the code's reading. *Was (before PR #270's physics review, P1):* "the encode folds
+  the mirror, so on the shape sphere Chart position and Shape n̂ read mirror points where `n₃ < 0` …", the meanwhile
+  folding the target.
 - **RQ-499:** the code against the file: the preset names, the triangle palette's L, Picture under brightness, the fade
   and the Fibonacci cells' swatches. Meanwhile the code.
+
+*Found by PR #270's review, queued, not ruled:* RQ-500 (gui G1), board 6's "Edit graph…" against PR #268's Print panel
+button, (c) applied meanwhile, no such button; RQ-501 (gui G1), board 6's ring with no hover trace or listen hint
+against R-541 and §G2, (a) applied, the trace kept; RQ-502 (gui G4), the layers as their own graph node (boards 1, 4)
+against §3.1 and §9, (a) applied, one colour node; RQ-503 (physics P3), the prototype's `AMIN = 0.05` against R-21's
+`α_min = 0`, main's applied; RQ-504 (physics P1), the one-hemisphere view's target, the code's full sphere applied;
+RQ-505 (code 3), "none" as a debug option (the draft) against an ordinary setting (SM5, SM11, SM15, the code), the code
+applied. RQ-489's statement is corrected: the view chart's inverse is already in the encode `ROUNDTRIP` runs; only
+another target needs a second inverse (physics P5).
 
 What agrees: R-407's four extension types and R-412's mirror hemisphere (SM3, SM4); R-537 EX7(b)'s canonical quad and
 EX4's coarse-ancestor fill (SM3); R-470's blank for not a system and R-511's for `decode_failed`, as PR #269 draws them
@@ -18988,4 +19024,4 @@ Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412
 
 R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 
-Adds REQ-COL-112 to REQ-COL-132, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-339.
+Adds REQ-COL-112 to REQ-COL-134, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
