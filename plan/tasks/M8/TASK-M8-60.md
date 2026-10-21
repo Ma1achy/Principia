@@ -32,4 +32,4 @@
 ## Notes
 - **Waits on RQ-440 and RQ-442** (R-540 H14). The task does not start until they are ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first).
 - **Applied meanwhile (R-540 H8):** RQ-464 (a): the moving hover to the map's own horizon under pointer_channels §3's step budget, on to Listen's `Horizon` on dwell or pin, the map unchanged. A ruling other than this is a follow-up change.
-- Where the spectrum and the spectrogram sit in the GUI is TASK-M8-61's and TASK-M8-63's (R-541 G4, G7); this task draws them.
+- Where the spectrum and the spectrogram sit in the GUI is TASK-M8-64's and TASK-M8-63's (R-541 G4, G7; *was:* "TASK-M8-61's and TASK-M8-63's", before PR #267's split); this task draws them.

@@ -105,6 +105,9 @@ t_c = (2|E|)^{−3/2}  if E < 0,   else  I^{3/4}       (G = 1, total mass 1; E a
   **It is chosen once per run, from the whole run**, so the pitch does not jump as the head moves, and an octave keeps
   every ratio. Off, `shift = 0`.
 - **Only lines strictly between 30 Hz and 6 kHz are voiced.**
+- `t_c` grows without bound as `E → 0⁻` while the fit stops at ±8 octaves, so a moving bound run with small `|E|` can
+  voice nothing, and the pitch jumps by about 19 octaves across `E = 0`; against S2's "A run that moves at all makes a
+  sound" this is RQ-467, the code applied meanwhile (physics review 5595386853 of PR #267, P2).
 
 Measured in the demo (its own integrator, Dormand–Prince 5(4) at relative tolerance 10⁻¹¹; the figure-eight from its
 standard ICs, `t ≤ 60`, the defaults): 262.6, 131.3, 393.9 and 525.2 Hz, in 2:1, 3:2 and 4:3 against the 131.3 line; the
@@ -192,7 +195,11 @@ reached at a time constant of 50 ms, and 0 while the sound is off. `Volume` scal
 level (§9).
 
 **The floor is there so that a system that does not move is silent rather than normalised up to its rounding noise.**
-The demo's floor is set against its own integrator; prin-rs's is far quieter, and the floor is set against it (RQ-442).
+The demo's floor is set against its own integrator; the human's file says the shipped integrator's drift is quieter
+and asks for the floor to be set against it (Q3, RQ-442). The physics review of PR #267 found that the equal-mass
+Lagrange triangle is linearly unstable, its shape rms growing with the horizon under any integrator, with an f64 floor of
+4.9e-8 under *Angles only* (RQ-442 records the measurements); the value waits on RQ-442. *Was:* "prin-rs's is far
+quieter, and the floor is set against it (RQ-442)." (physics review 5595386853 of PR #267, P1; applied per R-369).
 
 ## 8. Instruments
 
@@ -396,7 +403,9 @@ ended at t = … by …").
   - **Burrau 3:4:5**: masses `(3, 4, 5)/12` at `(1, 3)`, `(−2, −1)`, `(1, −1)`, less their centre of mass, at rest;
   - **Lagrange rotating**: equal masses at `(cos 2πi/3, sin 2πi/3)`, each moving at `ω(−y, x)`, `ω = √(1/(3√3))`.
 
-  These are the calibration set for the tests.
+  These are the calibration set for the tests. Lagrange rotating is linearly unstable with equal masses (Routh's
+  27Σm_im_j/M² = 9 > 1) and breaks up by t ≈ 150 under any integrator, so it is calibration only before that: its tests
+  state t ≤ 60 or wait on RQ-442 (physics review 5595386853 of PR #267, P1; applied per R-369).
 
 ## 13. Tests (each with the arm that fires)
 
@@ -413,10 +422,16 @@ ended at t = … by …").
 | Silence after the end | follow mode past `t_end` voices nothing | a held chord | REQ-GUI-314 |
 | Spectrogram is display-only | the voiced peaks are identical with the spectrogram on and off and under any display mode | the contrast step leaking into analysis | REQ-GUI-322 |
 
+The requirements carry three test details the physics review of PR #267 added (applied per R-369): Winding sign
+asserts the side levels and that the sides differ (P3); Scale invariance gains a known-answer arm, Lagrange's line at
+181.94 Hz at shift 0 within ±5 cents (P4); and the Lagrange tests state their horizon or wait on RQ-442 (P1). No silent
+run excepts the silences RQ-467 queues (P2).
+
 ## 14. What the demo is not
 
 The demo is Web Audio in a browser: its time constants are `setTargetAtTime`'s, which the app's backend reproduces
 (RQ-440); its integrator (Dormand–Prince 5(4), relative tolerance 10⁻¹¹, steps at most 0.004, a 400 000-step budget), its
 escape test and its precomputed maps are its own, and the app's are `computeIC`'s and the run's. Where the analysis runs
 is RQ-441. The questions the human queued are RQ-440 to RQ-447; the conflicts and silences the port found, RQ-448 to
-RQ-464 (R-540, R-541).
+RQ-467 (R-540, R-541; RQ-465 from merging main, RQ-466 and RQ-467 from PR #267's review). *Was:* "RQ-448 to RQ-464"
+(code review 5595371779 of PR #267, F4; applied per R-369).

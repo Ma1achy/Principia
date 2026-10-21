@@ -2687,26 +2687,42 @@
   pitfalls: []
 - id: TASK-M8-61
   milestone: M8
-  title: "The trace and Listen in Explore, 1: the Trajectory panel's tabs and sections, Overlays ▾ › Trace, the keys, the window highlight and the trace's look (R-541 G1 to G4, G9)"
-  depends_on: [TASK-M8-58, TASK-M8-11, TASK-M8-12, TASK-M8-13]
+  title: "The trace in Explore, 1: the Trajectory panel's tabs, previews, Trace and Numbers sections, Overlays ▾ › Trace, T, ⇧T and Y, and the trace's look (R-541 G1 to G4, G9)"
+  depends_on: [TASK-M8-58, TASK-M8-11, TASK-M8-13]  # PR #267's split (code review F2, applied per R-369): the trace's GUI does not wait on Listen
   needs: []
-  requirements: [REQ-GUI-324, REQ-GUI-325, REQ-GUI-326, REQ-GUI-327, REQ-GUI-333]
+  requirements: [REQ-GUI-324, REQ-GUI-325, REQ-GUI-326, REQ-GUI-333]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-62
   milestone: M8
-  title: "The trace and Listen in Explore, 2: the Trace… and Listen… windows (R-541 G5, G6)"
-  depends_on: [TASK-M8-61, TASK-M8-58, TASK-M8-59, TASK-M8-60]
+  title: "The trace in Explore, 2: the Trace… window (R-541 G5)"
+  depends_on: [TASK-M8-61, TASK-M8-58]  # PR #267's split: Listen… is TASK-M8-65's
   needs: []
-  requirements: [REQ-GUI-328, REQ-GUI-329]
+  requirements: [REQ-GUI-328]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-63
   milestone: M8
   title: "The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)"
-  depends_on: [TASK-M8-61, TASK-M8-60, TASK-M8-07, TASK-M8-22]
+  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # waits on RQ-440 and RQ-442 through TASK-M8-60 and TASK-M8-64
   needs: []
   requirements: [REQ-GUI-330, REQ-GUI-331, REQ-GUI-332]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-64
+  milestone: M8
+  title: "Listen in Explore, 1: the Trajectory panel's Listen section, the Figure's L and the window highlight (R-541 G2, G4)"
+  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  needs: []
+  requirements: [REQ-GUI-334, REQ-GUI-327]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-65
+  milestone: M8
+  title: "Listen in Explore, 2: the Listen… window (R-541 G6)"
+  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  needs: []
+  requirements: [REQ-GUI-329]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35

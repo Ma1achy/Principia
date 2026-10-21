@@ -29,11 +29,12 @@
 - `docs/design/principia_listen.md` § "4. Follow the head, or the whole run"
 - `docs/design/principia_listen.md` § "6. Channels"
 - `docs/design/principia_listen.md` § "7. Loudness"
+- `docs/design/principia_listen.md` § "9. Events and effects"
 - `docs/design/principia_listen.md` § "13. Tests (each with the arm that fires)"
 - `docs/design/principia_listen.md` § "14. What the demo is not"
 
 ## Deliverables
-- `crates/engine/src/inspector/sonify.rs` — spectrum of θ(t), φ(t), 1/t_c scaling, spectral entropy; runs in the inspector worker. Under R-540: the signal (§1), the spectrum, peaks, fallback, entropy and interval (§2), the pitch (§3), the windows and frames (§4), the channels (§6) and the loudness (§7), as `principia_listen.md` transcribes the demo's code.
+- `crates/engine/src/inspector/sonify.rs` — spectrum of θ(t), φ(t), 1/t_c scaling, spectral entropy; runs in the inspector worker. Under R-540: the signal (§1), the spectrum, peaks, fallback, entropy and interval (§2), the pitch (§3), the windows and frames (§4), the channels (§6) and the loudness (§7), as `principia_listen.md` transcribes the demo's code; and §9's four effect inputs, R/R₀, Ṙ t_c/R, H and √(L_z²|E|), computed here for REQ-GUI-313's scale arm, their mappings and the audio graph TASK-M8-59's (code review 5595371779 of PR #267, F3; applied per R-369).
 - `crates/gui/src/listen.rs` — audio out with cross-fade (native: an audio-output backend; browser: WebAudio in TASK-M8-38's shell).
 - `crates/validation/src/sonify_anchor.rs` — the entropy gate and the minimum-t measurement.
 - Doc changes: `docs/design/principia_scratchpad_pointer_channels.md` §4 (the two open choices); `docs/design/principia_trajectory_viewing.md` §1 (the chaotic IC and horizon).
@@ -67,3 +68,5 @@
 - **Applied meanwhile (R-540):** RQ-451 (the default adds the rotation), RQ-450 (the fallback; REQ-VAL-103's measured minimum sets the readout's warning), RQ-453 (REQ-VAL-102 stays a check of θ(t)'s spectrum), RQ-455 and RQ-458 (the code's last-half window and channels), RQ-443 (the selector's row stale), and RQ-441 (a), the analysis on the CPU in the inspector worker, unless it is ruled first. REQ-GUI-144's choices are defined by R-540; this task's doc change to pointer_channels §4 is made (R-540's port), so its doc review checks the build against it. A ruling other than these is a follow-up change.
 - The S3 measurements are the demo's, evidence, not values (R-540 H12); the tests measure prin-rs.
 - **RQ-465, (a) applied meanwhile** (found merging main, 7daf689b): paused, Follow the head plays the whole run as one chord whatever the trace's length; a `Window` or `LastDt` trace is drawn as chosen (RQ-427 (a), PR #263). A ruling other than (a) is a follow-up change.
+- **RQ-467, (a) applied meanwhile** (physics review 5595386853 of PR #267, P2): the code's silences, a bound run with small |E| out of the fitted band and runs too short to analyse, stand; REQ-GUI-312's test does not assert them.
+- **PR #267's physics review (applied per R-369):** REQ-GUI-309's Lagrange arm states t ≤ 60 and REQ-GUI-316's horizon waits on RQ-442 (P1); REQ-GUI-310 asserts the side levels (P3); REQ-GUI-313 gains the known-answer arm, 181.94 Hz (P4). RQ-466 (a): listen in the Trajectory panel only, none in the Inspector.

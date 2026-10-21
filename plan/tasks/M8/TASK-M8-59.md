@@ -36,4 +36,4 @@
 - **Waits on RQ-440 and RQ-442** (R-540 H14). The task does not start until they are ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first).
 - **Applied meanwhile (R-540 H2):** RQ-452 (a struck chord on each new hovered run), RQ-454 (the code's defaults: Sine (pure), reverb and width off), RQ-456 (the strike's `strike/3`), RQ-457 (the line-change strike in every mode) and RQ-444 (the close-approach parameters). A ruling other than these is a follow-up change.
 - perf reviews the audio graph's cost: it runs off the frame loop, as TASK-M8-12's audio out does (REQ-SYS-060).
-- Which instrument is in which menu family is TASK-M8-62's (RQ-459).
+- Which instrument is in which menu family is TASK-M8-65's (RQ-459; *was:* "TASK-M8-62's", before PR #267's split).

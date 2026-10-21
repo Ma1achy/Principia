@@ -375,7 +375,10 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
    being heard is visible.
 4. **Three collapsible sections**, each a single row when collapsed:
    - **Trace** (collapsed by default). Collapsed: a switch, the line's colour swatch, a summary (`to the head · ticks 2
-     · left 0×`) and `⋯`, which opens `Trace…`. Expanded: show (up to the head / tail only, `Δt`), colour and swatch,
+     · left 0×`) and `⋯`, which opens `Trace…`. The switch sets, on the under-cursor tab, Overlays ▾ › Trace's
+     trace-under-cursor field (`T`'s), and on a kept tab that kept trace's own visibility, its line's visible field in
+     `Lines`' state, `⇧T` showing or hiding all kept traces (gui review 5595359543 of PR #267, G5; applied per R-369, a
+     mechanical reading of G2 and G4). Expanded: show (up to the head / tail only, `Δt`), colour and swatch,
      ramp, width, time ticks and labels, arrows, then the **marker chips**, then the icon set. The marker chips are
      toggle buttons that show the icon they draw: end event, syzygies, leaving the chart, off-screen pins, wrapped
      copies, head marker.
@@ -608,14 +611,21 @@ text field is being typed in (R-409).
 Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4), P pins the sample under the pointer
 in the Trajectory panel (R-453). T shows or hides the trace under the cursor, ⇧T the kept traces and Y the syzygies,
 Overlays ▾ › Trace's toggles, and L turns the sound on or off (R-541 G2); R-541 G2's "`K` keep the current trajectory"
-is Space here, K staying the lock (RQ-449, its option (a) applied meanwhile). All five are on the shortcuts sheet (`?`).
-Trajectory — Enter reaches the tabs, the Trace, Listen and Numbers sections (R-541 G4), the
-playhead, listen, kept orbits, unpin and its two views; on the real-space view in interaction mode the arrows pan by
+is Space here, K staying the lock (RQ-449, its option (a) applied meanwhile). T, ⇧T, Y and L, with Space and K, are on
+the shortcuts sheet (`?`). *Was:* "All five are on the shortcuts sheet (`?`)." (gui review 5595359543 of PR #267, G6;
+applied per R-369).
+Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs, the two views, the Trace, Listen and
+Numbers sections (each its row, then, expanded, its controls in the section's order), the playhead, unpin, Open full
+viewer… and IC Inspector… (*was:* "Enter reaches the tabs, the Trace, Listen and Numbers sections (R-541 G4), the
+playhead, listen, kept orbits, unpin and its two views", listen and kept orbits being the Listen section and the tabs;
+gui review 5595359543 of PR #267, G2; applied per R-369); on the real-space view in interaction mode the arrows pan by
 R-404's `Pan` step and + / − zoom by its `ZoomLog2` step, and on the sphere the arrows orbit by its `Angle` step (1°)
 and + / − zoom; the unwrapped view, while shown in the sphere's place, is that element and takes the real-space view's
 keys (R-453, D6). Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
 plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
-step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
+step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1); with sound on, Enter
+reaches the `♪ strip ⏶` (`⏷` while expanded) and, expanded, its `Listen…` after the scrubber (R-541 G7; gui review
+5595359543 of PR #267, G2; applied per R-369). Legend is
 read-only.
 
 What the user sees, while keyboard navigation is on (R-460): a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
@@ -1008,7 +1018,9 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   transform" shows what the gauge buttons did.
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
-  f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too.
+  f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's
+one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
+holds no sound control. Gui review 5595359543 of PR #267, G1.)
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
   doesn't move.
 - **Readouts:** latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error

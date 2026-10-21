@@ -1897,6 +1897,19 @@ before Listen is built.*
   is Dormand–Prince 5(4) (`// integrator: Dormand–Prince 5(4), adaptive`), where Q3 says "its own RK4's drift". With the
   demo's floor S13's Lagrange (angles only) test fails by S7's own measurement; it passes only once the floor is set
   against prin-rs (this entry).
+- **Found by physics review 5595386853 of PR #267, P1 (facts beside both sides; nothing chosen):**
+  - Equal-mass Lagrange is linearly unstable: Routh's 27(m₁m₂ + m₂m₃ + m₃m₁)/M² = 9 > 1, so any seed, integration error
+    or f64 rounding, grows exponentially (an e-fold about every 0.31 time units). The reviewer's port (DOP853, rtol
+    10⁻¹²) measured max |n⊥| at 4.0e-13 for t ≤ 20, 9.8e-8 for t ≤ 60, 2.4e-2 for t ≤ 100, and broken up by t ≈ 150;
+    the Angles-only rms 1.7e-7 over [0, 60], 3.0e-2 over [0, 100] and 0.87 over [0, 400].
+  - A floor no integrator lowers: an exactly rotating triangle in f64 reads an Angles-only rms of 4.9e-8, φ = acos(n3)
+    being quantised at √(2·2⁻⁵³) = 1.49e-8 at the pole and the pole weight multiplying it by 10. Under Shape vector it
+    reads 4.9e-9 (the code forms sin φ from acos(n3)).
+  - So Q3's (a) as worded, "over `t ≤ 400` … 10× its maximum", gives a floor of about 9, which silences every run; the
+    demo's 2.65e-7 is the instability's growth by t = 60, neither "its own RK4's drift" nor a steady integrator floor;
+    and the code comment's "~1e-11" matches neither signal.
+  - Meanwhile REQ-GUI-316's arm has no fixed horizon and waits here (`rq: RQ-442`), REQ-GUI-309's Lagrange arm states
+    t ≤ 60, and `principia_listen.md` §7 no longer asserts that prin-rs's integrator is "far quieter".
 - **Options seen:** (a) measure as the file says and set the floor at 10× the maximum (the file's recommendation);
   (b) keep 10⁻⁷.
 - **Applied meanwhile:** nothing is built; `principia_listen.md` §7 carries 10⁻⁷ as the demo's value and points here.
@@ -1939,6 +1952,7 @@ follow-up's F7 Q5 and Q6, RQ-421 and RQ-422). For the human: no for (a).*
   collapsed.
 - **Applied meanwhile:** (a) (R-541 P11): remembered in the GUI's own settings, as a window's place is (R-461), never the
   contract. Nothing waits.
+- **See also:** since PR #267's split (applied per R-369) the Listen section is REQ-GUI-334's, TASK-M8-64's.
 
 ## RQ-446: The expanded strip's spectrum takes the Legend's column, or the Legend stays and the spectrum stacks under the spectrogram (the band ≈ 520 px) *(the human's queued question, R-541 Q7, G7; REQ-GUI-330; context: TASK-M8-63)*
 
@@ -2190,6 +2204,7 @@ human wants to.*
 - **Options seen:** (a) TASK-M8-62 writes the assignment (R-72), meeting the counts (the electric piano among keys, the
   chiptune, raw saw and sub drone among synths, say), reviewed by gui; (b) the human gives it.
 - **Applied meanwhile:** (a) (R-541 P8). Nothing waits.
+- **See also:** since PR #267's split (applied per R-369) the assignment is TASK-M8-65's (`Listen…`).
 
 ## RQ-460: R-541 G1's "Every setting appears in at most two places", where G2, G4 and G5 put the syzygies, the end event icon, the off-screen pins and the wrapped copies in three: `Overlays ▾ › Trace`, the Trajectory panel's marker chips and `Trace…` *(conflict: the applied text against itself, R-541 G1, G2, G4, G5; REQ-GUI-324; context: TASK-M8-61, TASK-M8-62)*
 
@@ -2205,6 +2220,7 @@ human wants to.*
   toggles of the same fields, a third route to the same `SetField`; (b) the panel's chips lose the items `Overlays ▾`
   has; (c) `Overlays ▾ › Trace` keeps only the trace, kept traces and `Trace…`.
 - **Applied meanwhile:** (a) (R-541 P4). Nothing waits.
+- **See also:** RQ-466, the Inspector's listen, a third place for sound (gui review 5595359543 of PR #267, G1).
 
 ## RQ-461: R-541 G2 and G5 turn "outline the chart's square" on by default in `Overlays ▾ › Trace` and `Trace…`, where RQ-408 (R-537 Q3) is open, nothing built meanwhile, its recommendation an Overlays › Chart toggle, off by default *(conflict: the applied text against an open entry, R-541 G2, G5, R-537 Q3; REQ-GUI-324, REQ-GUI-328; context: TASK-M8-61, TASK-M8-62, TASK-M8-55)*
 
@@ -2309,6 +2325,59 @@ RQ-427; RQ-427 itself said the orchestrator may rule it.*
   Listen's paused chord follows the trace's drawn span.
 - **Applied meanwhile:** (a): main's text and tests stand; `principia_render_gui_spec.md`'s `Trace…` footer and
   `principia_listen.md` S4 carry "of the default length (RQ-427 (a), RQ-465)". Nothing waits.
+
+## RQ-466: render_gui_spec §G8 puts listen in the Inspector ("**listen** is here too") and REQ-GUI-090 says "listen (in the Trajectory panel and the Inspector)", where R-541 G1 puts everything about one trajectory, its sound included, in the Trajectory panel, and REQ-GUI-324's One place test fails a sound control anywhere else *(conflict: the applied text against the GUI spec and a requirement, R-541 G1, R-65, R-109; REQ-GUI-090, REQ-GUI-324; context: TASK-M8-12, TASK-M8-61)*
+
+*Found by gui review 5595359543 of PR #267, G1. Nothing is chosen. For the human: no; the orchestrator may decide it
+as a routine design choice, unless the human wants it.*
+
+- **File, section:**
+  - `principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)":
+    "Integration is `computeIC` on the CPU in f64 (trajectory_viewing §1); the engine is reached only through it (§6).
+    **listen** is here too."
+  - REQ-GUI-090's statement: "listen (in the Trajectory panel and the Inspector) must sonify the corpus's mapping".
+  - `decisions.md` § "R-541 — …", G1 (`principia_trace_listen_gui.md` §G1): "**Everything about one trajectory lives in
+    one place: the Trajectory panel.** That covers its previews, its trace and its sound." and "**Every setting appears
+    in at most two places**: an everyday control in the panel, and the full set in a window (`Trace…`, `Listen…`)".
+  - REQ-GUI-324's verify (R-541 G10 One place): "walking the widget tree finds no trace or sound control outside the
+    Trajectory panel, Overlays ▾ › Trace, Trace…, Listen… and the Time column".
+- **The conflict:** the Inspector's listen either fails the One place test or is dropped against REQ-GUI-090.
+- **Options seen:** (a) R-541 G1 holds: listen in the Trajectory panel only; the Inspector holds no sound control, and
+  REQ-GUI-090's "and the Inspector" and §G8's sentence are stale; (b) the Inspector keeps listen as a view of the same
+  Listen state, and the One place test's list adds the Inspector window (a third place for sound, see RQ-460).
+- **Applied meanwhile:** (a) (applied per R-369, PR #267's fix round): §G8 and REQ-GUI-090's note carry it, and
+  REQ-GUI-324's control fails a listen control in the Inspector. A ruling for (b) is a follow-up change to REQ-GUI-324,
+  TASK-M8-61 and §G8.
+
+## RQ-467: Listen's pitch silences moving runs, against R-540 S2's "A run that moves at all makes a sound" and S13's "No silent run": a bound run with small |E| (t_c = (2|E|)^{−3/2} unbounded as E → 0⁻, Fit to hearing capped at ±8 octaves), and the code's runs with `t_end ≤ 10⁻⁶` or fewer than three samples *(conflict: the transcription source against the human's file, physics, R-540 S2, S3, S13, R-109; REQ-GUI-312, REQ-GUI-313; context: TASK-M8-12)*
+
+*Found by physics review 5595386853 of PR #267, P2. Nothing is chosen. For the human: yes; it changes what is heard
+along the bound / escape boundary (physics, CLAUDE.md "When to ask the human").*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", S2 (`principia_listen.md` S2): "**No run is too short to hear.** … A run that moves at
+    all makes a sound."; S13: "| No silent run | every run with `t_end > 0` that moves has at least one voiced line
+    (fallback included) | the fallback missing |".
+  - The transcription source, `docs/gui/reference/trace/trace_sound.html` v9:
+    `return E < 0 ? Math.pow(2 * -E, -1.5) : Math.pow(I, 0.75);` (`crossingTime`);
+    `while (f * 2 ** k > 880 && k > -8) k--; while (f * 2 ** k < 110 && k < 8) k++;` (`fitShift`);
+    `if (!(tEnd > 1e-6) || sim.samples.length < 3) return null;` (`analyseSound`); and only lines strictly between
+    30 Hz and 6 kHz voiced (`principia_listen.md` §3).
+- **The physics review's measurements** (figure-eight ICs with the velocities scaled to a target E, t ≤ 20, the
+  defaults): E = −1e-3, t_c 1.1e4, shift −8, 8 lines voiced; E = −3e-4, t_c 6.8e4, shift −8, 0 lines (the strongest at
+  11.4 kHz); E = −1e-4, t_c 3.5e5, shift −8, 0 lines; E = +1e-4, t_c 0.74, shift +2, 16 lines. The fallback never fires,
+  because mono peaks exist, only out of band. Across E = 0 the pitch mapping jumps by about 19 octaves. With Fit off,
+  lines outside 30 Hz to 6 kHz are silent too.
+- **The conflict:** a moving bound run near E = 0, which a hover crosses at the bound / escape boundary, makes no sound,
+  as does a moving run too short to analyse.
+- **Options seen:** the file recommends none. (a) the code as transcribed: the silences stand, REQ-GUI-312's test
+  excepts them, and the readout names the reason; (b) Fit to hearing uncapped, any whole number of octaves, so every
+  moving run with a peak is brought into 110–880 Hz (the jump across E = 0 stays); (c) a crossing time continuous across
+  E = 0, a scale-free definition to be given (R-72), removing the silence and the jump; (d) as (a), (b) or (c), and a
+  run with `t_end ≤ 10⁻⁶` or fewer than three samples that moves plays its mean rates from the samples it has.
+- **Applied meanwhile:** (a) (R-540 H2, the code wins): REQ-GUI-312's verify names the gap and does not assert it;
+  `principia_listen.md` §3 points here. TASK-M8-12 waits on RQ-440 and RQ-442 already; a ruling other than (a) is a
+  follow-up change to §3 and REQ-GUI-312 / -313.
 
 ## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
 

@@ -16802,6 +16802,11 @@ kept as chosen; S4's "matching the trace being drawn whole" is queued against it
 this port's REQ-GUI-283 to REQ-GUI-307 are REQ-GUI-309 to REQ-GUI-333 (applied per R-369). Nothing else in PR #263
 reaches the sound.
 
+*Found by PR #267's review, queued, not ruled:* RQ-467 (physics P2), a moving bound run with small |E| silent under the
+code's `t_c` and ±8-octave fit, and the code's runs too short to analyse, against S2 and S13's "No silent run", the code
+applied meanwhile (H2). The physics review's measurements of the equal-mass Lagrange triangle's instability are recorded
+in RQ-442 (P1).
+
 *What it extends:* **R-109** (pointer_channels §4's open points are defined, and the mapping gains the rotation, RQ-451).
 Read with R-144, R-538 and R-541.
 
@@ -17062,6 +17067,14 @@ read the words:*
   sections, Overlays ▾ › Trace, the keys, the window highlight, the trace's look), **TASK-M8-62** (G5 and G6: `Trace…`
   and `Listen…`) and **TASK-M8-63** (G7 and G8: the bottom band and the legend's block), each reviewed by code, qa and
   gui. TASK-M8-58's settings stay its own as `Lines`' state; their controls are TASK-M8-61's and TASK-M8-62's.
+  *Split, applied per R-369 (code review 5595371779 of PR #267, F2; the orchestrator's decision), so that the trace's
+  GUI does not wait on Listen's RQs:* **TASK-M8-61** (G1 to G4 and G9, the trace's half: the panel's tabs, previews,
+  Trace and Numbers sections, Overlays ▾ › Trace, T, ⇧T and Y, the trace's look) and **TASK-M8-62** (G5, `Trace…`)
+  follow only TASK-M8-58, TASK-M8-11 and TASK-M8-13; **TASK-M8-64** (the Listen section, L and the window highlight,
+  REQ-GUI-334 and REQ-GUI-327) and **TASK-M8-65** (G6, `Listen…`) follow TASK-M8-12, TASK-M8-59 and TASK-M8-60, and so
+  wait on RQ-440 and RQ-442; **TASK-M8-63** follows TASK-M8-64 and TASK-M8-65. The ramp control is TASK-M8-58's widget,
+  hosted by TASK-M8-61's Trace section and TASK-M8-62's `Trace…` (gui review G7). The text above is P15 as first
+  applied.
 
 *Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the file
 assumes:* RQ-447 to RQ-449 and RQ-460 to RQ-463 are queued, not ruled. G4's tabs agree with §G2's (R-453's pin, the
@@ -17076,6 +17089,9 @@ of PR #263), which G1 to G9 do not touch; G5's footer, "the whole trace to the h
 reach and order arm on the trace's `Lines ▾` entry (gui review G3), which G2 withdraws (RQ-448 (a)), so the arm and its
 presence screenshot move to REQ-GUI-328, `Trace…`, read on G5's table order (TASK-M8-62; applied per R-369); the
 `trace/` INDEX line keeps PR #263's note that the demos load Google Fonts (here the dev GUI's Ubuntu and Ubuntu Mono).
+
+*Found by PR #267's review, queued, not ruled:* RQ-466 (gui G1), the Inspector's listen (render_gui_spec §G8, REQ-GUI-090)
+against G1's one place, (a) applied meanwhile, listen in the Trajectory panel only.
 
 *What it amends:* **R-476** (Lines ▾ no longer lists the traces, RQ-448) and **R-538** (I2: the trace settings' place
 in the GUI). Read with R-409, R-453, R-461, R-462, R-509, R-539 and R-540.
