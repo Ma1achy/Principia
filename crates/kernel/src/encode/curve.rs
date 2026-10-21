@@ -44,9 +44,10 @@
 //! kind: `K` by the warp's inverse, `L_z` by the band's, δm by the blend's least squares, the Euclid plane's `m` an
 //! annotation. Then `by_kind::encode_into_within`'s comparison, Part 6 step 4's `‖·‖_phys ≤ ε_phys`, decides chart
 //! against latent, as for every chart: `d` does not see the momentum. A chart landing needs both. The curve encode,
-//! `past_fold` among it, goes to the caller in `ChartEncoded::curve`; `by_kind::encode_into` is `tol = 0`. The δm
-//! strip, whose masses leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not
-//! apply there.
+//! `past_fold` among it, goes to the caller in `ChartEncoded::curve`; `by_kind::encode_into` is `tol = 0`, where
+//! rounding alone puts `d > 0` on the curve and a curve chart places essentially no state, so the lookup calls the
+//! `_within` forms at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4). The δm strip, whose masses
+//! leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not apply there.
 //!
 //! **The branch inputs** (gpu_determinism_note, "The discipline"; the human's ruling on RQ-298, 21 Oct 2026: a branch
 //! input that must agree across backends is built only from operations every IEEE backend rounds alike, with no
@@ -410,6 +411,8 @@ impl<P: Copy> ByKind for Burrau<P>
 where
     f64: From<P>,
 {
+    /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
+    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -458,6 +461,8 @@ impl<P: Copy> ByKind for EuclidPlane<P>
 where
     f64: From<P>,
 {
+    /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
+    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -507,6 +512,8 @@ impl<P: Copy> ByKind for BurrauThetaK<P>
 where
     f64: From<P>,
 {
+    /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
+    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -559,6 +566,8 @@ impl<P: Copy> ByKind for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
+    /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
+    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
