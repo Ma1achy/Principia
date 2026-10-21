@@ -106,7 +106,9 @@
 //! (`.config/nextest.toml`); the Metal and CPU values are the same code's run on the build machine, the Metal value's
 //! place, in `p`, physics review 5599301723's reading. The test reports its worst over `(m, r, p)`, not where it lies
 //! nor its distance from the native f32 `C` on the same state; lavapipe's worst is twice the CPU's f32 worst over the
-//! same states. Over every domain this record holds the factor on, the worst is now this 162.71, 1.57 below 256.
+//! same states. Over the domains TASK-M2-24 adds (the chart registry, off the defaults, `C` alone) the worst is this
+//! 162.71, 1.57 below 256; over every domain this record holds the factor on, the proposal sweep's 175.21
+//! (`virial_ratio`, seed 7, Metal) remains the worst, 1.46 below 256.
 //!
 //! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
 //! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
