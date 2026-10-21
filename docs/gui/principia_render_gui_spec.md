@@ -211,9 +211,10 @@ view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory 
 the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
   an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
-  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
-  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
-  hemisphere drawn, φ's span runs from the pole to the equator (R-412).
+  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) —
+  `principia_chart_reference.md` §3.3 (R-113). There is no hemisphere toggle: the shape sphere chart is the whole sphere,
+  always (R-544). *Was (R-113, R-412, the toggle removed by R-544):* "and the **hemisphere toggle** (one hemisphere, or
+  both with the redundancy flagged) …; with one hemisphere drawn, φ's span runs from the pole to the equator (R-412)".
   **Save view as chart** (R-475), a button after Chart builder… (and on View ›), commits the current view as a named
   custom chart: a latent view as the oblique chart `(z₀, q₁, q₂)`, a curved one as its parent chart, slice centre and
   tilt (map, angles, targets). It is one undo entry, makes the saved chart active (reproducing the view bitwise at zero
@@ -317,8 +318,8 @@ edge: <check> (validate layer <n>)" until the next edit. Undo and the contract h
 with the controls shown or hidden, pan moves the window and zoom scales it past `[0,1]²` in any direction, and F3's
 Extend only adds window area; Fit scales the view's own square, wherever it sits (R-468 E2; RQ-416). What is drawn past
 the square is the axes' types (`principia_chart_decoder_contract.md` Part 3): an affine chart continues, a periodic axis
-repeats, a pole-crossing one continues over the pole with θ shifted by half its period, the hemisphere's fold shows the
-mirror hemisphere, and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
+repeats, a pole-crossing one continues over the pole with θ shifted by half its period (the shape sphere has no fold at the
+equator, R-544; *was:* "the hemisphere's fold shows the mirror hemisphere"), and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
 Overlays › Chart › forbidden region. The only navigation limit is the stop above, judged on the centre after the types
 fold it: a pan across a seam or a pole never stops. **Never any gaps:** every visible point is drawn at whatever
 resolution is available, a quad not yet computed showing its nearest computed ancestor; the only blank pixels are not
@@ -1200,6 +1201,41 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
   transform" shows what the gauge buttons did.
+- **The initial-condition constructor's shape sphere (R-544).** Pane 2's sphere, beside the triangle and the bodies, is
+  the constructor's: it shows where the IC being built sits, and it is a different thing from the shape sphere chart.
+  Its point is the IC's **signed** `n̂`, and it reaches every point of both halves, with no limit and nothing blocked
+  off; dragging the point sets the IC's shape to it, as the shape sphere chart places a shape (its masses and its
+  momenta in the frame `ρ̃` on `+x` held; `principia_chart_reference.md` §3, the held values), so a drag across the
+  equator flips the triangle's orientation in the triangle view (pane 1), which is correct. The **mirror twin** is shown,
+  not enforced: a faint marker at `(θ, π − φ)`, never a snap, a limit or a shaded half, and the inspector notes it,
+  "mirror twin of the system at (θ, π − φ)": the IC reflected, positions and momenta, which ends the same way (R-544).
+  The bodies view may stay the canonical representative; the sphere's path is never folded.
+  Applied per R-369 (PR #273, gui review 5603356729, G1, G2, G5; physics reviews 5603309678, P5, and 5603529679, P8):
+  - **Which drag moves the point.** A press within 8 logical px of the point, on the 3D sphere or on the unwrap,
+    drags the point; any other drag orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it.
+  - **What a drag holds.** Only the shape changes: the IC keeps its own `√I`, the direction of `ρ`, its CoM position
+    and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`. So pane 1's triangle changes shape, and flips
+    when the point crosses the equator, but does not jump in size or turn; the gauge buttons' Scale, Rotate and Boost
+    survive a drag.
+  - **The twin** is `Π·x`, positions and momenta reflected, `L_z` opposite, its shape at `(θ, π − φ)`. When the held
+    momenta have a `y`-component, dragging the point onto the marker reaches a different system, not the twin, and the
+    readout does not call it the twin.
+  - **A binary-collision landmark** on the equator is reachable like every other point. The constructor sets the IC
+    through the chart's decode, never through the lookup, with no NaN anywhere. At an exact `n̂ = (−1, 0, 0)` the
+    decode emits `ρ̃ = 0`, `r₀ = r₁` exactly, so the descriptor stores `V₀` and `E₀` as `−∞`, as computed
+    (`principia_dd_decoder.md` §3.6, R-436). A drag does not reach that `n̂` exactly: the unwrap's `(π, π/2)` decodes
+    to `‖ρ̃‖ ≈ 6.8e−17`, and a 3D pick gives a generic `n̂`, so at a dragged landmark `V₀` and `E₀` are `−∞` where
+    the emitted `r₀ = r₁` and finite otherwise. No snap is added (physics review 5603638748 of PR #273, P10, its
+    option (ii), applied per R-369). The readout draws a non-finite `V₀` or `E₀` as R-436 and R-467 draw a non-finite
+    value. Either way the run ends `collision` at `t = 0`, its bodies within `r_coll`, the one valid `t = 0` terminal
+    (R-60; `principia_integrator_contract.md` Part 5). The
+    constructor never looks that IC up; a lookup of it elsewhere reads `lookup_clamped` (R-13;
+    `principia_inverse_encode_contract.md` Part 6, step 2).
+  - **The frame at `ρ̃ = 0`** (a definition, R-72, applied per R-369; physics review 5603529679 of PR #273, P8). There
+    the direction of `ρ` is undefined, so the constructor keeps the frame angle, the direction of `ρ`, from the IC's
+    last point with `ρ̃ ≠ 0` and holds the Jacobi momenta in that frame; a drag off the landmark restores `ρ` along
+    it, with `√I` and the momenta continuous. An IC that has never had `ρ̃ ≠ 0` takes the decode's frame angle 0
+    (R-437).
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
   f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's

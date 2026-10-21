@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120
-- **Depends on:** TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11
+- **Depends on:** TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11, TASK-M2-43
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -23,6 +23,7 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules"
 - `docs/design/principia_lines.md` § "8. Traces"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - The Chart position source occupant and its `point⟨q⟩` output (`crates/render/`), each target's projection and fold, generated from the one Rust source where it reads a chart (R-116, R-542 H6).
@@ -42,7 +43,8 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 ## Notes
 - **Waits on RQ-489** (the chart read from a colour occupant; a fixed t; R-542 H9).
 - **⚑ Physics review is required** on SM1, SM4 and SM5 (the human's message): this task does not merge on the code reviewer's word alone.
-- **Applied meanwhile:** RQ-480 to RQ-482 and RQ-485 (a); RQ-498 (a), the code's reading: the shape-sphere target reads the signed n̂ (payload §5's `n`) over both hemispheres, the `t = 0` identity on the sphere modulo the mirror (R-141's gauge), Four results run under "none"; RQ-503 (a), main's `α_min = 0`, the edge-clamp test on the latent momenta; RQ-504 (a), the one-hemisphere view targets the full sphere; RQ-505 (a), "none" an ordinary setting. A fixed t is not built (RQ-489). *Was:* "RQ-498 (a): the shape-sphere target is the folded hemisphere, Four results run under \"none\"." (PR #270's physics review, P1).
+- **Applied meanwhile:** RQ-480 to RQ-482 and RQ-485 (a); RQ-498 (a), the code's reading: the shape-sphere target reads the signed n̂ (payload §5's `n`) over the whole sphere, the `t = 0` identity on the sphere point for point (R-544; *was:* "modulo the mirror (R-141's gauge)", superseded by the human's second addendum), Four results run under "none"; RQ-503 (a), main's `α_min = 0`, the edge-clamp test on the latent momenta; RQ-504 (a), the one-hemisphere view targets the full sphere (R-544: there is no one-hemisphere view now); RQ-505 (a), "none" an ordinary setting. A fixed t is not built (RQ-489). *Was:* "RQ-498 (a): the shape-sphere target is the folded hemisphere, Four results run under \"none\"." (PR #270's physics review, P1).
 - **The one projection (R-542 H11):** the target projections, the leaving rule and the curve axis's nearest point are TASK-M7-52's Rust source, shared with TASK-M8-58's trace; this task wraps them as the fragment occupant and adds the fold, the statuses' colours and SM7's frame.
 - **The tolerances** of the identity are proposed here, measured on the app, as REQ-COL-129's calibration values (R-542 H13).
 - The prototype's per-target projection is transcribed in `principia_state_map.md` SM1's table (`smWhere`); its compaction in SM6's.
+- **R-544 (21 Oct 2026)** settles RQ-498 and RQ-504 where they turn on the hemisphere: the shape-sphere target is the whole sphere with the signed `n̂`, and REQ-COL-115's identity holds point for point on the shape sphere, a lower-hemisphere pixel against its own point (REQ-COL-113, REQ-COL-115). It needs TASK-M2-43's signed decode and lookup, hence that dependency (applied per R-369). RQ-498's other parts stay open.
