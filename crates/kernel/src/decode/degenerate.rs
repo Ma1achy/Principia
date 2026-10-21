@@ -15,18 +15,14 @@
 //!
 //! No reason writes `detail` 0, a non-finite decode output: the decode of a finite input is finite, and that is
 //! asserted, not tagged (`kernel/tests/decode_totality.rs`). [`ALL`] lists the set, and [`Degenerate::detail`]'s match
-//! is exhaustive, so a reason added to the type fails the build until it has its code.
+//! is exhaustive, so a reason added to the type fails the build until it has its code. The codes are payload §2's, the
+//! ledger's `detail_meanings` generated into [`crate::payload`] (`DETAIL_DECODE_FAILED_*`), never literals here.
 
 use crate::payload::STATE_DECODE_FAILED;
-
-/// `decode_failed`'s `detail` 0: a non-finite decode output (payload §2).
-pub const DETAIL_NON_FINITE: u32 = 0;
-/// `decode_failed`'s `detail` 1: a degenerate configuration (payload §2).
-pub const DETAIL_DEGENERATE_CONFIGURATION: u32 = 1;
-/// `decode_failed`'s `detail` 2: an invalid mass construction, a mass → 0, the mass-simplex boundary (payload §2).
-pub const DETAIL_INVALID_MASS: u32 = 2;
-/// `decode_failed`'s `detail` 3: other (payload §2).
-pub const DETAIL_OTHER: u32 = 3;
+pub use crate::payload::{
+    DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION, DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION,
+    DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT, DETAIL_DECODE_FAILED_OTHER_RESERVED,
+};
 
 /// Why a decode is `DEGENERATE`. Its discriminant is a `u32`: the kernel's SPIR-V has no 8-bit integers (no
 /// `OpCapability Int8`), and with more than one reason the default discriminant would be a `u8`.
@@ -64,11 +60,11 @@ impl Degenerate {
     #[inline]
     pub fn detail(self) -> u32 {
         match self {
-            Degenerate::M01Tiny => DETAIL_INVALID_MASS,
-            Degenerate::NoQualifyingSeed => DETAIL_DEGENERATE_CONFIGURATION,
+            Degenerate::M01Tiny => DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION,
+            Degenerate::NoQualifyingSeed => DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION,
             Degenerate::InvariantInfeasible
             | Degenerate::EnergyInfeasible
-            | Degenerate::EnergyUnscalable => DETAIL_OTHER,
+            | Degenerate::EnergyUnscalable => DETAIL_DECODE_FAILED_OTHER_RESERVED,
         }
     }
 

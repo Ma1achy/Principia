@@ -29,8 +29,9 @@ use kernel::chart::{
     MassSimplex, Mixed, ShapeMap, ShapeSphere, ValidationResult, REGISTRY,
 };
 use kernel::decode::degenerate::{
-    Degenerate, ALL, DETAIL_DEGENERATE_CONFIGURATION, DETAIL_INVALID_MASS, DETAIL_NON_FINITE,
-    DETAIL_OTHER,
+    Degenerate, ALL, DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION,
+    DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION, DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT,
+    DETAIL_DECODE_FAILED_OTHER_RESERVED,
 };
 use kernel::decode::energy_norm::{self, largest};
 use kernel::decode::invariant::{construct_by_norms, infeasible, Outcome};
@@ -329,25 +330,29 @@ fn index(d: Degenerate) -> usize {
 
 /// dd_decoder §2's map of each reason onto `decode_failed`'s detail codes, and its name.
 const MAP: [(Degenerate, u32, &str); 5] = [
-    (Degenerate::M01Tiny, DETAIL_INVALID_MASS, "M01_TINY"),
+    (
+        Degenerate::M01Tiny,
+        DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION,
+        "M01_TINY",
+    ),
     (
         Degenerate::EnergyInfeasible,
-        DETAIL_OTHER,
+        DETAIL_DECODE_FAILED_OTHER_RESERVED,
         "ENERGY_INFEASIBLE",
     ),
     (
         Degenerate::EnergyUnscalable,
-        DETAIL_OTHER,
+        DETAIL_DECODE_FAILED_OTHER_RESERVED,
         "ENERGY_UNSCALABLE",
     ),
     (
         Degenerate::InvariantInfeasible,
-        DETAIL_OTHER,
+        DETAIL_DECODE_FAILED_OTHER_RESERVED,
         "INVARIANT_INFEASIBLE",
     ),
     (
         Degenerate::NoQualifyingSeed,
-        DETAIL_DEGENERATE_CONFIGURATION,
+        DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION,
         "NO_QUALIFYING_SEED",
     ),
 ];
@@ -370,7 +375,8 @@ fn check_closed(detail: fn(Degenerate) -> u32) {
         );
         assert_eq!(d.name(), name, "the reason's name");
         assert!(
-            code <= DETAIL_OTHER && code != DETAIL_NON_FINITE,
+            code <= DETAIL_DECODE_FAILED_OTHER_RESERVED
+                && code != DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT,
             "{name}'s code {code}"
         );
         assert_eq!(untag(stage::tag(Some(d))), Ok(Some(d)), "{name}'s tag word");
@@ -387,7 +393,7 @@ negative_control!(
     "a map that records M01_TINY as a degenerate configuration must fail",
     expected = "M01_TINY's decode_failed detail",
     check_closed(|d| match d {
-        Degenerate::M01Tiny => DETAIL_DEGENERATE_CONFIGURATION,
+        Degenerate::M01Tiny => DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION,
         other => other.detail(),
     })
 );
