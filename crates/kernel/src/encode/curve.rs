@@ -214,11 +214,8 @@ impl<R: Float> Projection<R> {
 /// `(ν, f)` where `f` is less than `best`'s, or `best`'s is NaN; else `best`: ties keep `best`.
 #[inline]
 fn better<R: Float>(best: (R, R), candidate: (R, R)) -> (R, R) {
-    select(
-        (candidate.1 < best.1) | Float::is_nan(best.1),
-        candidate,
-        best,
-    )
+    let less = select(candidate.1 < best.1, candidate, best);
+    select(Float::is_nan(best.1), candidate, less)
 }
 
 /// `ν*`, the curve's nearest point to `x` over `span = [lo, hi]`, `lo ≤ hi` (the module's note): the grid, then the
