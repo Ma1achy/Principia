@@ -211,6 +211,10 @@ and the disagreement is queued. Nothing is ruled.*
   and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56), with the neighbours and the statistics read through
   them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
   Each carries `rq: RQ-508`.
+- **21 Oct 2026, R-554 (PR #274):** R-554 records the human's ruling on RQ-472. Its pole-map clause is applied (the
+  pole maps on a tilted view only where `N_a = 0` and `N_b = 0`, decided on the stored angles); its equator clause and
+  its last sentence (§3.3's pixel fold for the statistics) are left unapplied pending this entry. Only the equator arms
+  on a tilted view wait; the options above are unchanged (physics re-check 5606508368 of PR #274, P6).
 
 ## RQ-520: The frame record's `substep_histogram` is ruled `[u32; 16]` with "equal bins of width `N_max/16`" and "cap hits as their own last bin", but sixteen bins of width `N_max/16` fill `[0, N_max]` and leave no entry for a separate cap bin *(conflict within the human's ruling on RQ-286; R-545, R-288, REQ-TOOL-098, REQ-TOOL-187; context: TASK-M5-28, TASK-M8-28)*
 

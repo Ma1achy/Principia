@@ -21967,7 +21967,7 @@ The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_r
 > - RQ-474 (T15's physical-momentum arm needs a target): (a). "The shape sphere offers the physical `p_λ` components as tilt targets, defined by TASK-M8-58 (R-72) as demo tab F builds them, and T15's second arm runs on that target."
 
 These five entries touch the shape sphere chart, and RQ-470 to RQ-472 its hemisphere and mirror. The human's shape
-sphere ruling of the same day, ported on its own branch and not yet merged here, makes the shape sphere chart the whole
+sphere ruling of the same day, R-544 (*was:* "ported on its own branch and not yet merged here"), makes the shape sphere chart the whole
 sphere, with no fold, toggle or hemisphere mode, and changes no other chart. The orchestrator's instruction for this
 port, from the human: these entries are recorded and applied verbatim, except that a clause which would put a fold or
 a hemisphere back onto the shape sphere chart is left unapplied, what is not hemisphere-specific applied, the shape
@@ -22870,8 +22870,8 @@ Four results under "none"; the clamp's edge `s = ±1` on an affine chart, the ba
   gaps with EX4's coarse ancestor.
 - **Superseded, not applied:** "The t = 0 identity on the sphere is stated modulo the mirror, under R-141." and "in-square
   mirrors match to rounding". The human's second addendum to the shape sphere ruling supersedes both ("On the shape
-  sphere there is no mirror identification now, so the identity holds point for point"). That ruling's own port (on its
-  own branch, not yet merged) governs the shape sphere chart's identity and its mirror pixels and writes them where they
+  sphere there is no mirror identification now, so the identity holds point for point"). That ruling's own port (R-544; *was:* "on its
+  own branch, not yet merged") governs the shape sphere chart's identity and its mirror pixels and writes them where they
   apply; this port writes neither clause anywhere and edits none of that ruling's sites. The text applied meanwhile
   that still states them (REQ-COL-115's "on the shape sphere modulo the mirror", REQ-COL-121's note, TASK-M7-47's and
   TASK-M8-66's notes, and state map SM3, SM4 and SM7's notes) is marked superseded where it is a note here, and left for
