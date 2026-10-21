@@ -1410,7 +1410,6 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
 
-
 ## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
 
 *Queued by the human (the round-trip rule, "Queue, don't rule"). For the human: yes, it changes what a small image
@@ -1433,6 +1432,443 @@ carries.*
   stays open, waiting on TASK-M7-44's capacity re-measure (REQ-TOOL-174), which reports tier 2's own size and, at
   64² and 128², whether tiers 1 and 2 fit; it then returns to the human with those numbers. Meanwhile (a), tier 2
   whole, stands, and nothing else waits.
+
+## RQ-406: On a periodic axis, whether the view centre is stored unwrapped (continuous pan, an unbounded number) or canonicalised after each gesture (bounded, with an invisible jump of one period) *(the human's queued question, R-537 Q1, EX9; REQ-GUI-270; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q1). For the human: yes, it changes what the view state
+records.*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q1.** On a periodic axis, is the view
+  centre stored unwrapped (continuous pan, unbounded number) or canonicalised after each gesture (bounded, with an
+  invisible jump of one period)? *Recommendation:* unwrapped in the view state, canonical in keys and addresses."; EX9:
+  "The view state (centre, zoom, and on a periodic axis the unwrapped centre, Q1) is recorded as it is."
+- **Options seen:** (a) unwrapped in the view state, canonical in keys and addresses (the file's recommendation);
+  (b) canonicalised after each gesture, the view state bounded, the pan jumping by one period invisibly; (c) unwrapped,
+  and canonicalised only on export.
+- **Applied meanwhile:** (a), which EX9 assumes (R-537 U14). A ruling other than (a) is a follow-up change to
+  REQ-GUI-270. Nothing waits.
+
+## RQ-407: Whether repeats of the field are drawn at full strength *(the human's queued question, R-537 Q2, EX2, EX6; REQ-GUI-268; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q2). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q2.** Are repeats of the field drawn at
+  full strength? *Recommendation:* yes; they are the same systems. Repeats of a trace are fainter, as in the demo."
+- **Options seen:** (a) yes, the field's repeats at full strength, a trace's repeats fainter (the file's
+  recommendation); (b) the field's repeats dimmed too, so the primary range reads first; (c) a setting, full strength
+  by default.
+- **Applied meanwhile:** (a) (R-537 U14). Nothing waits.
+
+## RQ-408: An outline of the chart's primary square when the view goes past it *(the human's queued question, R-537 Q3; context: TASK-M8-55, TASK-M8-08)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q3). For the human: yes, it adds an overlay.*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q3.** An outline of the chart's primary
+  square when the view goes past it. *Recommendation:* an Overlays › Chart toggle, off by default and on in the debug
+  view. The demo has it on."
+- **Options seen:** (a) an Overlays › Chart toggle, off by default and on in the debug view (the file's
+  recommendation); (b) always drawn while the view shows past the square; (c) none.
+- **Applied meanwhile:** nothing is built: no outline is drawn and Overlays › Chart gains no toggle until this is ruled
+  (R-537 U14). Nothing else waits.
+
+## RQ-409: A zoom-out limit on periodic charts, how many periods may show *(the human's queued question, R-537 Q4; REQ-GUI-267; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q4). For the human: yes, it changes navigation.*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q4.** A zoom-out limit on periodic charts
+  (how many periods may show). *Recommendation:* none beyond the frame budget and baseline cover. The demo caps at 3×
+  for its fixed maps."
+- **Options seen:** (a) none beyond the frame budget and the baseline cover (the file's recommendation); (b) a fixed
+  number of periods; (c) a limit set by the baseline cover's depth (REQ-SCHED-074).
+- **Applied meanwhile:** (a) (R-537 U14). Nothing waits.
+
+## RQ-410: The level-0 pole repeat: drawn from its two level-1 halves, or the bootstrap raised to `L ≥ 1` on every chart with a pole-crossing axis *(the human's queued question, R-537 Q5, EX7(b); REQ-SCHED-101; context: TASK-M8-56)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q5). For the human: yes (physics: the quadtree's
+addressing).*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, EX7(b): "At `L = 0` the half-period shift splits
+  the root, so **a level-0 repeat across a pole is drawn from its two level-1 halves** (Q5)."; `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q5.** The level-0
+  pole repeat: draw it from its two level-1 halves, or raise the bootstrap to `L ≥ 1` on every chart with a
+  pole-crossing axis? *Recommendation:* draw from the children; the bootstrap is already ≥ 2 in practice."
+- **Options seen:** (a) draw it from its two level-1 children (the file's recommendation); (b) raise the bootstrap to
+  `L ≥ 1` on every chart with a pole-crossing axis.
+- **Applied meanwhile:** (a), as EX7(b) says (R-537 U14). Nothing waits.
+
+## RQ-411: Whether a comment pinned in a repeat attaches to the canonical point, so that it appears in every image *(the human's queued question, R-537 Q6, EX5; context: TASK-M8-55; waits with RQ-420)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q6). For the human: yes; it needs RQ-420 first.*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q6.** Does a comment pinned in a repeat
+  attach to the canonical point, so that it appears in every image? *Recommendation:* yes."
+- **Options seen:** (a) yes, to the canonical point, shown in every image (the file's recommendation); (b) to the
+  pixel's own place, shown in that image only.
+- **Applied meanwhile:** (a) is the reading, but nothing is built: the corpus defines no comment on the figure
+  (RQ-420). Nothing else waits.
+
+## RQ-412: Repeats of a trace at half strength or full *(the human's queued question, R-538 Q1, TM7, R-537 EX6; REQ-GUI-275; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q1). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM7: "the trace is drawn **in every image of the
+  chart in view**, with every marker and icon …, at half strength"; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q1.** Repeats of a trace at half strength
+  or full. *Recommendation:* half, so the primary reads first."
+- **Options seen:** (a) half strength (the file's recommendation); (b) full strength; (c) a setting, half by default.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+- **Note (R-538's follow-up, J8):** along an axis that mixes θ with a non-periodic coordinate (a tilted chart) there
+  are no images (TF2.2; RQ-430), so this entry applies to the images of untilted periodic, pole-crossing and fold
+  charts; the other θ branches of a tilted chart are RQ-421's.
+
+## RQ-413: The start icon: the star in every set, or Pictures' initial-triangle glyph as an option elsewhere *(the human's queued question, R-538 Q2, TM4; REQ-GUI-272; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q2). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM4's table, Start: "star | star | the initial
+  triangle in body colours | star"; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q2.** Start icon: the star in every set, or Pictures' initial-triangle glyph
+  as an option elsewhere. *Recommendation:* star by default, the triangle as Pictures'."
+- **Options seen:** (a) the star by default, the triangle as Pictures' (the file's recommendation); (b) the star in
+  every set; (c) the triangle offered as a start option in every set.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-414: Where a syzygy and an end event coincide in time, which draws on top *(the human's queued question, R-538 Q3, TM5; REQ-GUI-273; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q3). For the human: yes (look).*
+
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q3.** Where a syzygy and an end event
+  coincide in time, which draws on top? *Recommendation:* the end event."
+- **Options seen:** (a) the end event on top (the file's recommendation); (b) the syzygy on top; (c) the syzygy
+  hidden where they coincide.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-415: Whether "Leaves / enters the window" chevrons and edge-pinned icons merge into one edge treatment *(the human's queued question, R-538 Q4, TM6; REQ-GUI-274; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q4). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM6; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q4.** Should "Leaves / enters the
+  window" chevrons and edge-pinned icons merge into one edge treatment? *Recommendation:* keep them separate; pins are
+  events, chevrons are the line."
+- **Options seen:** (a) keep them separate (the file's recommendation); (b) one edge treatment, a pinned icon drawn
+  with the chevron's direction.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-416: F3's Fit scales "the view's own square, wherever the view sits, not the chart's `[0,1]²`" (R-537 EX1), where R-472 X2, the human's words, scales "the chart's `[0,1]²` … with no extension" *(conflict: the human's words against a ruling, R-537 EX1, R-472 X2, R-468 E2; REQ-GUI-230, REQ-GUI-267; context: TASK-M8-46, TASK-M8-55)*
+
+*Found by the port of R-537 (the instruction: "If anything in these files contradicts main or that branch, or my words
+contradict a ruling, tell me and queue it rather than resolving it"). Nothing is chosen. For the human: yes, it changes
+what Fit shows once the view can sit past the chart's square.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX1: "F3 Fit scales the window's square to the screen (R-468). Its
+    "square" is the view's own square, wherever the view sits, not the chart's `[0,1]²`."
+  - `decisions.md` § "R-472 — …", the human's words, X2: "**Fit**: the chart's `[0,1]²` is scaled to fill the window,
+    with no extension."; § "R-468 — …", the human's words, clause 2: "Fit: the chart is scaled up to fill the window."
+  - `decisions.md` § "R-468 — …", E2 (applied per R-369): ""The chart square" is the view's square, `UV ∈ [0,1]²`, the
+    depth-0 root the figure shows at the current `(z₀, q₁, q₂)`, the chart's own `[0,1]²` at the preset's window … so
+    Fit shows the view's square and nothing beyond it."
+  - `docs/gui/principia_render_gui_spec.md` § "G1. …", the F3 bullet: "**Fit**: the view's square, `UV ∈ [0,1]²` at
+    the current `(z₀, q₁, q₂)`, is scaled uniformly to the window's shorter side".
+- **The conflict:** until R-537 the view's square sat inside the chart's square whenever the controls were shown, so
+  "the chart's `[0,1]²`" and "the view's square" did not part. With pan and zoom reaching past the square (EX1), they
+  do: EX1 scales the view's square, which may then hold extension, blank or repeats; R-472 X2's words scale the chart's
+  own `[0,1]²`, "with no extension".
+- **Options seen:**
+  - (a) EX1: Fit scales the view's own square wherever it sits, drawing whatever it holds, extension included; "with no
+    extension" read as no window area beyond that square (R-468 E2's reading).
+  - (b) R-472 X2 literally: Fit scales the chart's own `[0,1]²`, the preset's window at the plane anchor, wherever the
+    view sits, so pressing F3 in Fit can change what is shown.
+  - (c) Fit scales the view's square, and the extension inside it draws as the canvas background under Fit.
+- **Applied meanwhile:** (a), R-468 E2's reading, which EX1 states (R-537 U4). Nothing waits; a ruling for (b) or (c)
+  is a follow-up change to REQ-GUI-230 and REQ-GUI-267.
+
+## RQ-417: R-537 EX5 and R-538 TM8 put `decode_failed`, its detail and "forbidden" in the readout of a pixel that is not a system, where R-470 N3, the human's words, shows them only in the debug views *(conflict: the human's words against a ruling, R-537 EX5, R-538 TM8, R-470 N3, R-467; REQ-GUI-269, REQ-GUI-276; context: TASK-M8-55, TASK-M8-58)*
+
+*Found by the port of R-537 and R-538. Nothing is chosen. For the human: yes, it changes what a presentation view
+shows.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX5: "The readout says "not a system", names the check that
+    failed (for example "a mass ≤ 0") and gives the label (`decode_failed`, its detail)."
+  - `decisions.md` § "R-538 — …", the applied text, TM8: "**Readout:** the readout says "forbidden: not integrated",
+    why (for example "a mass is ≤ 0, so this is not a three-body system"), the label `decode_failed`, detail 2, and
+    the masses."
+  - `decisions.md` § "R-470 — …", the human's words, N3: "NaN, Inf, `sim_failed`, `decode_failed`, and the
+    classification behind the hatch are shown **only in the debug views** (R-41's baked variants)."; § "R-467 — …",
+    its heading: "Forbidden pixels and non-finite values are debug-only".
+- **The conflict:** the newer words show the label, its detail and the word "forbidden" in the readout of any view;
+  N3 shows `decode_failed` and the classification behind the hatch only in the debug views, and R-467 keeps "forbidden"
+  to the debug view.
+- **Options seen:**
+  - (a) EX5 and TM8 as written: the readout shows "not a system" (or "forbidden: not integrated"), the failed check, the
+    label and its detail in every view; N3 read as about drawing, not the readout.
+  - (b) N3 holds for the readout: in a presentation view it says "not a system" and names the failed check, and the
+    label, its detail and "forbidden" appear only while a debug view is the figure.
+  - (c) The readout as (b), the label and detail behind a "details" toggle in the readout.
+- **Applied meanwhile:** (b) (R-537 U7), the reading that keeps both texts' common part: "not a system" and the failed
+  check, as R-469 A5's readout names a stop. A ruling for (a) or (c) is a follow-up change to REQ-GUI-269 and
+  REQ-GUI-276. Nothing waits.
+- **Note (R-538's follow-up, J5):** the trace's readout gains a second count on a curve axis, "past the domain's end:
+  N samples", which is not a bug and logs no warning (RQ-425). It is a readout line of the trace, as "in forbidden"
+  is, and follows whichever option this entry takes. TF1 does not otherwise touch this entry.
+
+## RQ-418: R-538 TM9's guard (b) ends a run whose step size is not finite "as incomplete", where the integrator contract labels NaN/Inf during integration `sim_failed` *(conflict: the human's instruction against a contract, R-538 TM9, R-445; REQ-INT-096, REQ-EVT-002, REQ-SYS-017; context: TASK-M8-58)*
+
+*Found by the port of R-538. Nothing is chosen. For the human: yes (physics: what a run's label means).*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the applied text, TM9: "`computeIC` needs both guards: … **(b)** a step size that is
+    not finite ends the run as incomplete."; TM3: "**Incomplete** | the hover's step budget ran out".
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer" (the terminal states): "`sim_failed` (NaN/Inf during
+    integration) and `decode_failed` …"; REQ-SYS-017: the CPU f64 instance of the kernel is the one `computeIC` runs.
+- **The conflict:** "incomplete" is the hover's step budget running out, a run cut short but sound; a non-finite step
+  is a run that failed, which the contract labels `sim_failed`. The trace file uses "incomplete" for both.
+- **Options seen:**
+  - (a) `sim_failed`, as the contract says; the trace still ends with the "?" icon, since it is not whole.
+  - (b) incomplete, as TM9 says: a hover-only state, the kernel's label unchanged.
+  - (c) `sim_failed` with its own end icon, distinct from incomplete's "?".
+- **Applied meanwhile:** (a) (R-538 I8): the run ends at once and never loops, which both texts require. A ruling for
+  (b) or (c) is a follow-up change to REQ-INT-096. Nothing waits.
+
+## RQ-419: R-537 EX4's "never any gaps … raw canvas background where a system exists is a bug, never a loading state" leaves open the frames before any ancestor exists: launch, or a cold cache with no backdrop and no snapshot *(silence, R-537 EX4, R-72; REQ-GUI-268, REQ-SCHED-056; context: TASK-M8-55, TASK-M5-15)*
+
+*Found by the port of R-537. Nothing is chosen. For the human: no; the orchestrator may rule it, as a mechanical
+consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX4: "Every visible point of the window is drawn, at whatever
+    resolution is available. Until a quad is computed it shows its nearest computed ancestor … Raw canvas background
+    where a system exists is a bug, never a loading state."
+  - `docs/contracts/principia_caching_contract.md` § "Part 4 — …": "Something low-resolution appears in one or two
+    dispatches; refinement then proceeds beneath it."; § "Part 5 — …", the fallback: "When there are **no payloads
+    behind the picture** — the spotlight-reel handoff … or a cold cache — the original screen-texture snapshot applies".
+- **The question:** at launch, on a chart switch with no backdrop, or on a cold cache with no snapshot, no ancestor
+  exists for the first dispatches; EX4 does not say what those frames draw.
+- **Options seen:** (a) those frames are excepted: the background until the first baseline cover lands, which EX4's
+  checks follow; (b) the first frame waits for the baseline cover (a blocking first dispatch); (c) a neutral loading
+  fill drawn as a figure mark until then.
+- **Applied meanwhile:** (a) (R-537 U6). Nothing waits.
+
+## RQ-420: R-537 EX5 names "comments" and "the console's pick" among the interactions that must work at every visible pixel, and the corpus defines neither *(silence, R-537 EX5 and Q6, R-72; REQ-GUI-269; context: TASK-M8-55; RQ-411 waits on it)*
+
+*Found by the port of R-537. Nothing is chosen. For the human: yes; a definition is a design choice.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX5: "That means hover, click and pin (R-453), lock, the IC
+    inspector, the trace, keep, readouts, comments and the console's pick."; §4, Q6: "Does a comment pinned in a repeat
+    attach to the canonical point".
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": the console's controls, which include
+    no pick; no section of the spec or of the GUI state contract defines a comment on the figure.
+- **The question:** what a comment on the figure is (where it is stored, how it is placed, whether it is exported), and
+  what the console's pick is (a console command that picks a pixel or an IC), so that EX5 can apply to them.
+- **Options seen:** (a) a definition requirement for each (R-72), written by the GUI tasks that need them, EX5 applying
+  when they exist; (b) the words read as naming features not yet in the corpus, to be specified by the human; (c) both
+  dropped from EX5.
+- **Applied meanwhile:** EX5 is built for the interactions the corpus defines (R-537 U9). Nothing waits; RQ-411 is
+  answered with it.
+
+## RQ-421: On a tilted chart with a periodic parameter, whether the other θ branches (θ ± 2π) are also drawn, each faded by its own out-of-plane distance *(the human's queued question, R-538 TF7 Q5, TF2.2; REQ-GUI-278; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_followup.md` F7, Q5). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `decisions.md` § "R-538 — …", the follow-up's applied text, TF7: "**Q5.** On a tilted chart with a
+  periodic parameter, should the other θ branches (θ ± 2π) also be drawn, each faded by its own out-of-plane distance,
+  since they are the same system projected at different distances? *Recommendation:* no by default; an option. The
+  demo draws the continuous branch only."
+- **Options seen:** (a) no by default; an option (the file's recommendation); (b) always drawn, faded; (c) never drawn.
+- **Applied meanwhile:** (a) (R-538 J13): the continuous branch only. The option fades each branch by its own
+  out-of-plane distance, which exists today only as R-509's proxy on the shape chart; it is built when REQ-GUI-266's
+  distance lands (RQ-341). Flagged. Nothing waits.
+
+## RQ-422: The time ramp's default: Sunset, as the mock-ups, or a perceptually uniform one (Viridis) *(the human's queued question, R-538 TF7 Q6, TF4; REQ-GUI-282; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_followup.md` F7, Q6). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the follow-up's applied text, TF7: "**Q6.** The ramp's default:
+  Sunset, as the mock-ups, or a perceptually uniform one (Viridis)? *Recommendation:* Sunset, which reads on the dark
+  field; Viridis's dark end vanishes on it."; TF4: "**Presets:** Sunset (the default, `#FFF27A #FF8A5B #E0457B #7A4CFF
+  #3BC7FF`), Viridis, …".
+- **Options seen:** (a) Sunset (the file's recommendation); (b) Viridis.
+- **Applied meanwhile:** (a) (R-538 J12, J13). Nothing waits.
+
+## RQ-423: The follow-up names text the delivered bundle does not have ("§3a", the superseded message's "T13") and says F2 "adds two bug classes" while listing three *(conflict of wording: the human's words against the delivered bundle and against themselves, R-538 TF1, TF2; REQ-GUI-272, REQ-GUI-277 to REQ-GUI-279; context: TASK-M8-58)*
+
+*Found by the port of the follow-up into R-538. Nothing is chosen. For the human: no; nothing built depends on it, and
+the reading applied is the one the human's message gives.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-20_trace_followup/principia_trace_followup.md`, the preface: "It amends that bundle's
+    `principia_trace_markers.md`: F1 replaces its §3a, F2 adds two bug classes, F3 and F4 change §1 and §2"; the
+    heading "## F1. Where a trace can leave a chart (replaces §3a)"; "## F2. Two bug classes this rule exposes (new,
+    with tests)", then items 1, 2 and 3.
+  - The human's message (R-538, the follow-up): "F1 replaces §3a." and "F2 adds three bug classes, each with a test".
+  - The superseded message (R-538, history): "One correction, in principia_trace_markers.md §3a and T13".
+  - `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md`, as delivered: its sections are "## 3. The
+    markers" (no §3a) and its tests "T1" to "T12" (no T13); the leaving text is §3's row "**Leaves the chart's reach** |
+    the state leaves what the chart can show (on the latent chart: a momentum past `q_max`, or α past its limits)".
+- **The conflict:** "§3a" and "T13" name sections of an updated bundle that was never sent; the file's "two" and its
+  three items disagree.
+- **Options seen:** (a) F1 replaces what the delivered bundle says on leaving (§3's row, I5 of R-538), and three bug
+  classes, as the human's message says; (b) an updated bundle with a §3a and a T13 is still to come and is ported when
+  it arrives.
+- **Applied meanwhile:** (a) (R-538 J2). Nothing waits.
+
+## RQ-424: T15 leaves "while the target's `|q| ≥ q_max`", where the demo's tab E leaves "while `|p_λ,y| > q_max`": the boundary and the quantity differ *(conflict: the human's test against the demo the human sent, R-538 TF6 T15, TF1; REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no for the quantity (one component, read as the
+same); yes for the boundary only if it matters which way a sample exactly at `q_max` falls.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF6, T15: "A latent-momentum tilt leaves exactly while the target's `|q| ≥ q_max`;
+    the physical-momentum tilt never does, over 100 runs".
+  - `docs/incoming/2026-10-20_trace_followup/principia_trace_followup.md` § "F5", tab E: "A trace leaves (dotted
+    ring, dashed line) while `|p_λ,y| > q_max` and comes back."; the demo, `docs/gui/reference/trace/trace_markers.html`,
+    E's note: "a trace whose p_λ,y passes q_max = 2 has no point on this chart".
+  - TF1: "**A trace leaves only where a coordinate entering a shown axis with non-zero weight has no value.** That
+    means: ±∞ from a saturated link; NaN; a bounded axis's inverse outside its domain."
+  - The superseded message (R-538, history): "The fade uses R-509's proxy |q|."; R-509 Y3: the proxy is "the
+    scale-normalised Jacobi momentum magnitude".
+- **The conflict:** `≥` against `>` at the boundary; "the target's `|q|`" against `|p_λ,y|`, where `|q|` is also the
+  superseded message's name for R-509's proxy, a magnitude over all four momenta.
+- **Options seen:** (a) the target component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019), leaving at `|q₃| ≥ q_max`, where
+  the link's inverse is ±∞ (TF1); (b) the same quantity, leaving at `|q₃| > q_max`, the boundary sample kept; (c) the
+  proxy's magnitude.
+- **Applied meanwhile:** (a) (R-538 J4). Nothing waits.
+
+## RQ-425: A trace sample whose projection falls past a bounded edge: TF1's rule 2 says it leaves, its curve-axis row says it is not drawn and "counted apart from the not-a-system count", R-538 TM8 counts not-a-system samples in one count that must read 0, and R-470 N1 calls a bounded axis past its edge "not a system" *(conflict: the human's words against themselves and against rulings, R-538 TF1, TM8, R-470 N1, R-512 F3; REQ-GUI-276, REQ-GUI-280; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it changes what is drawn and counted.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF1, rule 2: "A trace leaves only where … That means: … a bounded axis's inverse
+    outside its domain."; its table, the curve-axis row: "**No.** The encode projects onto the nearest point of the
+    curve …, and the distance to the curve is fade. If the nearest point lies past a bounded edge, the point is not
+    drawn there: those are real systems the bounded axis does not show (§8, the domain's end). They are counted apart
+    from the not-a-system count, whose non-zero value is a bug; this one is not."
+  - The same ruling, TM8: "A sample whose chart point is not a system (fails `validate` layers 2 and 3) is not drawn …
+    The readout counts such samples ("in forbidden: N samples"). It reads 0 on every run tried. A non-zero count is a
+    bug in the encode or the chart map".
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 6 — …", "Chart-aware validation", layer 2: "Burrau
+    charts: $\nu \in (0,1)$."
+  - `decisions.md` § "R-470 — …", N1: "A pixel that is not a system draws **blank** … This covers: a bounded axis past
+    its edge; …"; § "R-512 — …", F3: "A blank pixel past a bounded edge inside the window is the domain's end".
+  - The demo (version 27), tab H, readout: "in forbidden 4718 samples" (`docs/incoming/2026-10-20_trace_followup/images/ramp.png`).
+- **The conflict:** for one sample past a curve axis's bounded edge, rule 2 says the trace leaves (rings, dashed);
+  the row says it is only not drawn and counted apart; TM8 and layer 2 put it in the forbidden count that must read 0;
+  R-470 N1 names the place "not a system", R-512 F3 "the domain's end"; the demo counts it as forbidden.
+- **Options seen:**
+  - (a) The row on a curve axis: not drawn, the line broken, no ring, counted in its own readout line ("past the
+    domain's end"), never a bug; rule 2 on every other bounded axis (leaves, with rings); TM8's count keeps only samples
+    whose chart point is not a system.
+  - (b) Rule 2 everywhere: past any bounded edge the trace leaves, with rings, counted apart from TM8's.
+  - (c) TM8 as written: past a bounded edge is not a system, in the forbidden count, which then is not always 0.
+- **Applied meanwhile:** (a) (R-538 J5). Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-276
+  and REQ-GUI-280.
+
+## RQ-426: TF1's curve row and T18 make the distance to the curve the trace's fade, where R-509 fades only by the proxy where it is defined, the shape chart, and draws no fade elsewhere *(conflict: the human's words against a ruling, R-538 TF1, TF6 T18, R-509 Y3; REQ-GUI-280, REQ-GUI-249, REQ-GUI-266; context: TASK-M8-58, TASK-M8-54)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it changes what a test asserts.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF1's table, the curve-axis row: "the distance to the curve is fade"; rule 1:
+    "Anything orthogonal to the chart's plane feeds only the off-slice distance, so it shows as the fade. Where that
+    distance has no value, R-509 applies: no fade, and the GUI says so."; TF6, T18: "The curve chart's trace is the
+    nearest ν: perturb a run's shape off the curve, the point stays and the fade grows".
+  - `decisions.md` § "R-509 — …", (3): "The trace fade uses the proxy where it is defined; elsewhere there is no fade,
+    and the GUI says so. The real off-plane distance waits on RQ-341."; Y3: "It is "defined" on a chart whose plane
+    holds it at zero, the shape chart of the mock-ups, …; on every other chart the trace draws at full opacity".
+  - The demo (version 27), the Trace panel: "Fade off the slice (momentum proxy |q|, R-509; floor 0.18)".
+- **The conflict:** on the ν × dilation chart, whose shown axis carries a momentum, R-509's proxy is not defined, so
+  there is no fade and T18's "the fade grows" cannot hold; TF1 rule 1 defers to R-509, its row and T18 do not.
+- **Options seen:** (a) T18's fade arm runs only where an off-plane distance is defined (R-509's proxy now,
+  REQ-GUI-266's distance when RQ-341 is ruled); elsewhere its point-stays arm runs and the settings line says there is
+  no fade; (b) the distance to the curve is a defined off-plane distance on a curve chart now, a second proxy beside
+  R-509's; (c) T18 waits on RQ-341 whole.
+- **Applied meanwhile:** (a) (R-538 J6). Nothing waits.
+
+## RQ-427: TF3 draws a trace that is not being played or scrubbed "from `t = 0` to its end", and does not say what becomes of a chosen `Window` or `LastDt` length, or of the own clock's "Once" *(silence, R-538 TF3, R-476 §8, R-72; REQ-GUI-281, REQ-GUI-271; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no; the orchestrator may rule it, as a
+mechanical consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF3: "**Not playing or scrubbed:** when the playhead is not playing and is not being
+    scrubbed, every trace is drawn from `t = 0` to its end (its event, or the horizon). … **The own-clock mode** is
+    always animated."
+  - `docs/design/principia_lines.md` § "8. Traces", Length: "To the playhead (the default), a fixed window, or the last
+    `Δt`."; Animation: "Own clock: the trace plays over its own window at its own speed …: once, looped, or back and
+    forth."
+- **The question:** whether "every trace … to its end" overrides a fixed window or the last `Δt` while paused, and what
+  the own clock draws once a "Once" play has finished.
+- **Options seen:** (a) TF3 is the default length's (`ToPlayhead`): a fixed window or the last `Δt` is kept as chosen,
+  and "Once" holds its last frame, the whole trace; (b) TF3 for every length: paused, every trace is drawn whole;
+  (c) the last `Δt` is measured back from the trace's end while paused.
+- **Applied meanwhile:** (a) (R-538 J11). Nothing waits.
+
+## RQ-428: TF4 and T20 keep a trace's ramp "with kept orbits" through save and load, where the GUI state contract puts the kept orbits in `ViewUI`, which is never serialised with `SimConfig` and `RenderState` *(conflict: the human's words against a contract, R-538 TF4, TF6 T20, R-453 D5; REQ-GUI-282; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it decides whether a saved view holds its
+kept orbits.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF4: "It is part of the trace style, so it is kept with kept orbits, saved with the
+    view, and travels in exports (the round-trip rule's tier 2)."; T20: "The ramp round-trips: a kept orbit's ramp
+    survives save and load, and Reverse reverses it | a ramp held only in GUI state".
+  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface":
+    "ViewUI (pure UI) … kept orbits … — never read by the engine"; "Provenance already serialises `SimConfig +
+    RenderState`".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. …", the Trajectory panel: "The pin, like the kept orbits, is
+    `ViewUI` state, never undoable"; `decisions.md` § "R-453 — …", D5.
+  - `docs/design/principia_lines.md` § "3. The data model": "`Trace { kind: Hover | Pinned | Kept(id), ic: …, … }`" and
+    "`Lines { …, traces: [Trace], … } // part of the exported view state`".
+- **The conflict:** a kept orbit's `Trace`, its IC and its ramp, sits in `Lines` (exported); the kept orbit itself is
+  `ViewUI` (not exported). T20's "survives save and load" needs the first; the contract says the second.
+- **Options seen:** (a) a kept orbit's `Trace` (its IC and style, the ramp included) is `Lines`' state and round-trips
+  with `RenderState`; reopened, the view redraws it; the Trajectory panel's kept-orbit tabs stay `ViewUI`; (b) the kept
+  orbits move into `RenderState` whole; (c) only the ramp round-trips, as a style in the library, and kept orbits are not
+  saved.
+- **Applied meanwhile:** (a) (R-538 J12). Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-282.
+
+## RQ-429: TF2.1 forbids the trace to reuse the lookup and lock validation (inverse encode Part 6), where R-538 TM8 decides a sample is not a system by `validate`'s layers 2 and 3, one of whose checks is "θ ∈ [0, 2π)" *(conflict: the human's words against themselves and a contract, R-538 TF2.1, TM8, inverse encode Part 6; REQ-GUI-276, REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no if (a), which keeps both texts; yes otherwise.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF2.1: "The inverse encode contract's validation (Part 6, the three layers) is
+    written for lookup and lock: it clamps, projects or rejects the whole state if any component fails. **The trace must
+    not reuse it.** … The trace checks each shown axis on its own (F1)."
+  - The same ruling, TM8: "A sample whose chart point is not a system (fails `validate` layers 2 and 3) is not drawn".
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 6 — …", "Chart-aware validation": "Lookup and lock
+    validate against the **active chart's** constraints before committing."; layer 2: "Shape sphere: $\theta \in [0,
+    2\pi)$ (azimuth) and $\varphi \in [0, \pi]$"; "Mixed-axis charts inherit both axes' constraints."
+- **The conflict:** TM8 runs two of Part 6's layers on each sample; TF2.1 says the trace must not reuse Part 6 and must
+  check per shown axis; layer 2's θ range would fail a branch-continuous θ (TF2.2).
+- **Options seen:** (a) TM8's test is the not-a-system test of the sample's chart point on the shown axes, after the
+  types fold it, never Part 6's ladder on the sample's whole state (TF2.1); (b) TM8 as written, Part 6's layers 2 and 3
+  on the whole state, with θ folded first; (c) TM8 dropped, TF1's per-axis check alone.
+- **Applied meanwhile:** (a) (R-538 J10). Nothing waits.
+
+## RQ-430: TF2.2 says a tilted chart with a periodic parameter "is affine along that axis and does not repeat", where R-537 EX2 says "Periodic (θ): the chart repeats" and EX7(b)'s canonical addresses fold θ with no word on tilt *(silence: R-537 EX2 and EX7(b) on a tilted chart, R-538 TF2.2, TF6 T17, R-472 X3a; REQ-CHART-080, REQ-SCHED-101, REQ-GUI-278; context: TASK-M8-56, TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no; it follows from R-472 X3a (the types act on
+the chart's own parameters `(a, b)`, the tilt target's `d` not folded), and the orchestrator may rule it as a
+mechanical consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF2.2: "On a tilted chart those branches are **not** repeats of one image. θ wraps
+    but the target does not, so a shift of `2π / cos τ` along the tilted axis is a different system. Such a chart is
+    affine along that axis and does not repeat."; T17: "The tilted chart does not repeat: the systems at `s` and
+    `s + 2π/cos τ` differ | drawing it with periodic repeats".
+  - `decisions.md` § "R-537 — …", EX2: "**Periodic** (θ): the chart repeats."; EX7(b): "On the shape sphere at level
+    `L` … **θ period:** `ix' = ix mod n`."
+  - `decisions.md` § "R-472 — …", X3a, and R-473 V5: on a tilted chart the types act on the chart's own parameters
+    `(a, b)`.
+- **The question:** whether EX2's and EX7(b)'s folding applies along an axis that mixes θ with a non-periodic
+  coordinate.
+- **Options seen:** (a) it does not: canonical folding applies along an axis only where every term with non-zero weight
+  has that period, so a tilted θ axis is affine (TF2.2); the untilted sphere's maps stand; (b) EX7(b) folds the
+  window's quad addresses on every chart whose parameter is periodic.
+- **Applied meanwhile:** (a) (R-538 J8). Nothing waits.
+- **See also:** RQ-472, EX7(b)'s pole and equator maps on a tilted view against chart_reference §3.3's tilted fold
+  (found merging main into this branch).
 
 ## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
 
@@ -1520,3 +1956,104 @@ dividing by `N_d`. Nothing is chosen.*
 - **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
 - **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
   ruled); TASK-M2-36 does not wait for the rest.
+
+## RQ-472: R-537 EX7(b) folds the shape sphere's quads over the poles and at the equator with no word on tilt, and RQ-430 (a) narrows only the θ period, where chart_reference §3.3 (#255) keeps the mirror fold under a tilt only where `N_b = 0`, decided exactly on the stored angles, and makes the tilted view bijective elsewhere *(conflict: a ruling against a design doc's applied rule, and silence, R-537 EX2, EX7(b) to (d) and (g), R-538 TF2.2 and J8, R-412, R-473, R-474; REQ-CHART-062, REQ-CHART-079, REQ-CHART-080, REQ-SCHED-101, REQ-GUI-278; context: TASK-M8-56, TASK-M8-58, TASK-M2-36)*
+
+*Found merging main (8484e2f1, PR #255's final rounds) into PR rulings/R-537 (PR #263). Nothing is chosen. For the
+human: no unless the human wants it; on a tilted view the fold changes which system a pixel shows, not only the area
+statistics, and the orchestrator may rule it as a mechanical consequence of §3.3 and R-472 X3a. *Was:* "it is physics
+only in that the fold changes area statistics" (physics review 5594430380 of PR #263, P6).*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", EX2: "**Pole-crossing** (φ): the chart continues over the pole, with θ shifted by
+    half its period." and "**The hemisphere's fold at the equator** (R-412): the mirror hemisphere, the same systems.";
+    EX7(b): "**Pole `φ = 0` (`t = 1`):** `iy' = 2n − 1 − iy`, and `ix' = (ix + n/2) mod n`." … "**Hemisphere fold at
+    the equator** (R-412, equator at `t = 0`): `iy' = −1 − iy`, `ix` unchanged."; EX7(c): "A canonical quad is in view
+    if any of its images is."; EX7(d): "Neighbours cross seams, poles and folds through the same map."
+  - `decisions.md` § "R-538 — …", J8: "R-537 EX7(b)'s canonical address applies along an axis only where every term
+    with non-zero weight has that period; the untilted sphere's maps stand." (RQ-430 (a), applied meanwhile, which
+    asks about θ's period only).
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (#255, applied per R-369): "Two
+    pixels fold only when their full `(a, b, d)` decode to the same system."; "A pixel's mirror lies on that plane, and
+    the pair keeps its fold, exactly when the tilt adds no hidden offset that depends on the mirrored axis:
+    **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its mirrored `(a, b)` differ in `d` and are distinct
+    systems: the tilted view is **bijective** there"; "It is an exact comparison on the stored tilt angles": Tip as
+    sheet `τ₂ == 0` or `m == 180`, Lean each axis `τ₁ == ±90` or `τ₂ == 0`, two targets `τ₂ ∈ {0, ±180}`.
+  - `docs/design/principia_chart_reference.md` § 5.4's table, the exponential map's row (§3.3's tilted fold, read for either map): "under a tilt the fold is the
+    tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored
+    axis".
+- **The conflict:** on a tilted shape-sphere view, EX7(b)'s equator map (`ix` unchanged, `iy' = −1 − iy`) folds the
+  mirror hemisphere's quads onto the canonical ones whatever the tilt, so the repeat draws, schedules and counts the
+  canonical quad's systems; where `N_b ≠ 0` §3.3 makes those pixels distinct systems, each its own. The pole maps,
+  a half-period shift of `ix` with a reflection of `iy`, are covered by J8 only in so far as the shift is a period;
+  their reflection, like the equator's, is not. The two rules also differ in kind: §3.3 pairs a pixel with whichever
+  pixel of the view carries the mirrored `(a, b)` and the same `d` (at Lean each axis's `|τ₁| = 90°` that pixel is at
+  another `u`), while EX7(b) maps a quad to the one at the same `ix`.
+- **Options seen:**
+  - (a) On a tilted view the equator fold (a reflection along `b`) is kept iff §3.3's exact `N_b = 0` condition holds
+    on the stored angles; the pole maps (a shift along `a` and a reflection along `b`) are kept only if `d` depends on
+    neither window axis, `N_a = 0` and `N_b = 0`, decided the same way; elsewhere the tilted view is affine along that
+    axis, no image drawn, as TF2.2 has it for θ; §3.3's pixel fold stands for the statistics (EX7(g)). *Was:* "apply
+    only where they are a symmetry of the full `(a, b, d)` at the same window address, decided exactly on the stored
+    angles as §3.3 decides its fold" (physics review 5594430380 of PR #263, P6: the pole maps move the address).
+  - (b) EX7(b)'s maps apply on every view, tilted or not, and §3.3's tilted fold is read as the in-square statistics
+    only.
+  - (c) RQ-430 is widened to every map of EX7(b) and ruled with it.
+- **Applied meanwhile:** nothing; no task has built EX7(b), and the untilted maps (U10) and RQ-430 (a) for θ stand.
+- **Waits:** TASK-M8-56's pole and equator maps on a tilted view (REQ-SCHED-101, `rq: RQ-472`; REQ-REF-054's
+  neighbours and REQ-CHART-079's statistics through them, noted), and TASK-M8-58's trace images there (REQ-GUI-278,
+  `rq: RQ-472`); neither task waits for the rest. TASK-M2-36's §3.3 fold does not wait. The decoder contract's
+  "Repeats and the canonical point" paragraph names this entry (applied per R-369, PR #263's fix round).
+
+## RQ-473: T16 and T16b hold the trace's screen step "within 3× the median" at a θ wrap, a pole passage and a syzygy, where TF2.3 measures correct code at 5–97× the median, genuine fast motion at close approach *(conflict: the human's tests against the human's own measurement, R-538 TF6 T16 and T16b, TF2.3; REQ-GUI-278, REQ-GUI-279, REQ-GUI-283; context: TASK-M8-58)*
+
+*Found by physics review 5594430380 of PR #263 (P1). Nothing is chosen. For the human: no unless the human wants it;
+the threshold is a value, and R-71 makes it a calibration requirement meanwhile.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the follow-up's applied text, F6's table: "T16b | Frame: on the sphere tilted toward
+    `p_y`, the trace's screen step at a syzygy is within 3× the median | reading `p_y` in the canonical (mirrored) frame
+    flips it at every syzygy" and "T16 | No false jumps: on the tilted chart, the trace's screen step at a θ wrap and at
+    a pole passage is within 3× the median step | per-sample `[0, 2π)` θ gives a jump of `2π·cos τ`".
+  - The same, F2, item 3: "Mixing the two flipped the sign of `p_y` at every syzygy, so the tilted trace jumped there: up to
+    ~2000× the median step." and "Read in the sphere's own frame (`ρ` along `+x`, no mirror), the worst jump falls to
+    5–97× the median, the size of genuine fast motion at close approach."
+- **The conflict:** T16b's fixture, Burrau 3:4:5 to `t = 70`, is full of close approaches near syzygies; read in the
+  right frame its worst step is up to ~97× the median by the follow-up's own measurement, so a correct implementation
+  fails "within 3×". T16's tilted runs fail it on the same grounds: genuine fast motion at close approach, which F2
+  item 3 measures as "5–97× the median, the size of genuine fast motion at close approach", can fall at a θ wrap or a
+  pole passage, as it falls at T16b's syzygies. (A pole passage itself keeps the step small: REQ-GUI-278 takes each
+  sample on the branch nearest the previous one, over a pole θ + π with φ reflected; TF1's "passes as a jump" is the
+  unbranched coordinate's.) The artefacts the tests exist for are far larger (~2000× for the
+  frame flip; `2π·cos τ` for the wrap).
+- **Options seen:** (a) the threshold is set from the measured gap between genuine motion (≤ ~97× the median, TF2.3)
+  and the artefacts (the `2π·cos τ` wrap jump, the ~2000× flip), an R-71 calibration value (REQ-GUI-283); (b) the step
+  is compared with the same run read in the chart's own untilted frame, not with the median; (c) 3× as written, on a
+  fixture with no close approach.
+- **Applied meanwhile:** (a): REQ-GUI-278's and REQ-GUI-279's verifies hold the step within REQ-GUI-283's calibrated
+  threshold, their controls unchanged.
+- **Waits:** nothing; the threshold is proposed by TASK-M8-58 with its measurement and confirmed at the M8 gate.
+- *Was (physics review 5594542116 of PR #263, P8: wrong for the branch-continuous trace T16 tests):* the heading's "and
+  TF1 passes θ's pole singularity as a jump" and its "TF1;"; the File, section line "The same, F1's table, θ or φ of the
+  shape sphere: "θ is undefined at the poles, a coordinate singularity the line passes as a jump.""; and "A pole
+  passage resolved at polar distance `ε` steps θ by about `Δ/ε`, more than 3× the median for small `ε`, so T16's pole
+  arm fails correct code too."
+
+## RQ-474: T15's second arm runs "the same tilt toward `p_λ,y`", the physical momentum, where R-473 tilts the shape sphere only toward its latent controls, so no chart offers that target *(conflict: the human's test against a ruling, R-538 TF1 and TF6 T15, R-473 J1 and J2; REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by physics review 5594430380 of PR #263 (P5). Nothing is chosen. For the human: yes if the answer is a new tilt
+target; it changes what the Tilt section offers.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the follow-up's applied text, F1: "**Tilted toward the physical momentum:** the same
+    tilt never leaves." … "The demo's tabs E and F are that pair."; F6's table: "T15 | A latent-momentum tilt leaves exactly
+    while the target's `|q| ≥ q_max`; the physical-momentum tilt never does, over 100 runs".
+  - `decisions.md` § "R-473 — …", J1: "on the shape sphere the four momentum controls and the two mass logits"; J2:
+    "every hidden coordinate is set and tilted through its latent control (a mass through its logit)".
+- **The conflict:** under R-473 J1 and J2 the shape sphere's tilt targets are its latent controls, so a tilt toward the
+  physical `p_λ,y` exists on no chart in the corpus; the demo's tab F builds one. T15's second arm has nothing to run on.
+- **Options seen:** (a) a physical-momentum tilt target, its definition a requirement (R-72), the arm run on it; (b) the
+  arm run on a chart whose shown axis is the physical momentum (a mixed-axis chart, chart_reference §1.3), untilted; (c) the arm
+  dropped, TF1's row kept as the reason.
+- **Applied meanwhile:** nothing; REQ-GUI-277's latent-momentum arm and its controls stand.
+- **Waits:** REQ-GUI-277's physical-momentum arm (`rq: RQ-474`); TASK-M8-58 does not wait for the rest.

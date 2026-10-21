@@ -48,3 +48,4 @@ camera paths produce byte-identical payloads for every common quad.
 - REQ-SCHED-074 is an R-71 calibration: the PR carries the proposed level count and its evidence; the human confirms
   it at the M5 gate and it is recorded in `decisions.md`.
 - R-133: REQ-SCHED-045 compares no layout, so no artboard is needed; its verify method is a property test.
+- **R-537 EX4 (20 Oct 2026):** past the chart's `[0,1]²` the baseline cover is the coarsest cover of the whole viewport, extension included, its ancestor chain evict-exempt there too (caching contract Part 4); this task's tier is unchanged, and TASK-M8-56 and TASK-M8-55 extend it past the root (REQ-SCHED-101, REQ-GUI-268).
