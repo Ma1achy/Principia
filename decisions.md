@@ -18398,8 +18398,9 @@ the stain (`06_legend.png`)" (added), `docs/read_first/principia_INDEX.md` (rows
 (new), REQ-COL-112 to REQ-COL-132, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-339 (reqio, new), TASK-M7-46 (done) and
 TASK-M7-47 to TASK-M7-51 and TASK-M8-66 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-47 to
 TASK-M7-51 and TASK-M8-66, TASK-M7-47 waiting on RQ-489 and TASK-M7-50 on RQ-496; after PR #270's review,
-RQ-500 to RQ-505 (new), RQ-489, RQ-496, RQ-497 and RQ-498 (restated), REQ-COL-133, REQ-COL-134 and REQ-GUI-340 (reqio,
-new), TASK-M7-52 (new, built before TASK-M7-47 and TASK-M8-58), TASK-M8-58 (a dependency) and
+RQ-500 to RQ-505 (new), RQ-489, RQ-496, RQ-497, RQ-498 and RQ-501 (restated), REQ-COL-133 to REQ-COL-135 and
+REQ-GUI-340 (reqio, new), TASK-M7-52 (new, built before every projection's consumer), TASK-M8-10, TASK-M8-49 and
+TASK-M8-58 (a dependency each) and
 `docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden" (a bullet)*
 
 The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
@@ -18953,14 +18954,22 @@ edge clamp is the behaviour.
   chroma scaling, SM15; waits on RQ-496), TASK-M7-51 (the stain editor: SM15; the gui reviewer with `boards/`) and
   TASK-M8-66 (Explore: the legend and ring of SM9, SM3's never-a-gap and copies, the firewall). The stain editor is
   M7's (TASK-M7-22 to TASK-M7-24), so its state map work is M7's; the Explore legend is M8's (TASK-M8-22). Each
-  pipeline task states SM2's constraint. TASK-M7-49 has the gui reviewer, and its controls (the picture's choice and
-  upload, the fade's toggle, SM7's colour frame) are REQ-GUI-340's (PR #270's code review, 2).
+  pipeline task states SM2's constraint. The inspector's controls for the picture's choice and upload, the fade's
+  toggle and SM7's colour frame are REQ-GUI-340's (PR #270's code review, 2), closed by TASK-M7-51, which builds the
+  inspector (gui re-review G6); TASK-M7-49 keeps the gui reviewer, the picture's and the fade's look on the figure
+  being GUI-facing. *Was:* "TASK-M7-49 has the gui reviewer, and its controls (…) are REQ-GUI-340's".
 - **H10. The queue.** Q1 to Q9 are RQ-480 to RQ-488, each with its recommendation as option (a), each (a) applied
   meanwhile; Q4 is recorded in dd_colouring §3.2 and nothing in the vMF colouring changes.
-- **H11. One projection (PR #270's code review, 1).** SM1's `P_T` is "the target chart's projection, the one the trace
-  uses", so the target projections, the leaving rule and the curve axis's nearest point are one Rust source, built by
-  TASK-M7-52 and reused by TASK-M7-47 (generated to WGSL for the fragment, R-116) and by TASK-M8-58's trace, which
-  depends on it. It reads no chart from a colour occupant, so it does not wait on RQ-489.
+- **H11. One projection (PR #270's code review, 1; re-review C1 to C3).** SM1's `P_T` is "the target chart's
+  projection, the one the trace uses", so the target projections, the leaving rule and the curve axis's nearest point
+  are one Rust source in `crates/kernel`, beside the encode (the only crate rust-gpu compiles), its WGSL emitted to
+  `crates/render/wgsl/` as TASK-M2-25's decode and encode are. TASK-M7-52 builds it and tests its native build against
+  its generated WGSL (REQ-COL-134). Every consumer calls it, never a second implementation: Chart position (TASK-M7-47),
+  the hover trace's `z(t)` projection (TASK-M8-10), the line system's trace projection and its breaks (TASK-M8-49) and
+  the follow-up's per-axis leaving and curve projection (TASK-M8-58), each depending on TASK-M7-52 and each carrying a
+  check with a second implementation as its failing control (REQ-COL-135, closed by TASK-M8-58, the last). It reads no
+  chart from a colour occupant, so it does not wait on RQ-489. *Was:* "one Rust source, built by TASK-M7-52 and reused
+  by TASK-M7-47 (generated to WGSL for the fragment, R-116) and by TASK-M8-58's trace, which depends on it".
 - **H12. "Left" on main's encode (PR #270's physics review, P4).** Main's encode clamps (inverse encode contract Part 3)
   and never returns a non-finite `z`, so the prototype's "both finite" test never fires there; the app's left status is
   read from a shown coordinate's clamp, a definition TASK-M7-52 writes (R-72; REQ-COL-133), the clamp's margin
@@ -19004,7 +19013,7 @@ queue it rather than resolving it"):* five conflicts are queued, not ruled:
 
 *Found by PR #270's review, queued, not ruled:* RQ-500 (gui G1), board 6's "Edit graph…" against PR #268's Print panel
 button, (c) applied meanwhile, no such button; RQ-501 (gui G1), board 6's ring with no hover trace or listen hint
-against R-541 and §G2, (a) applied, the trace kept; RQ-502 (gui G4), the layers as their own graph node (boards 1, 4)
+against R-541 and §G2, (a) applied, the trace kept and no figure ring while it is shown (re-review G7); RQ-502 (gui G4), the layers as their own graph node (boards 1, 4)
 against §3.1 and §9, (a) applied, one colour node; RQ-503 (physics P3), the prototype's `AMIN = 0.05` against R-21's
 `α_min = 0`, main's applied; RQ-504 (physics P1), the one-hemisphere view's target, the code's full sphere applied;
 RQ-505 (code 3), "none" as a debug option (the draft) against an ordinary setting (SM5, SM11, SM15, the code), the code
@@ -19024,4 +19033,4 @@ Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412
 
 R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 
-Adds REQ-COL-112 to REQ-COL-134, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
+Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.

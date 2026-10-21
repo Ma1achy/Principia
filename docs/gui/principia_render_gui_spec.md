@@ -1022,7 +1022,8 @@ stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 
 **The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
 base and layers, drawn with no brightness over the target chart in the chart's own aspect ratio (2 : 1 on the sphere,
-the triangle on the simplex, `rgb(18, 19, 21)` past it), with a 6 px ring at the hovered system where it is now: white
+the triangle on the simplex, `rgb(18, 19, 21)` past it), with a 6 px ring (a 1.6 px stroke over a 3 px `#0b0b0e` outline,
+legible on light bases) at the hovered system where it is now: white
 inside the chart, grey `#a8a8a8` and pinned 5 px inside the edge when the system is past it, and not drawn under
 "none", the readout saying why (SM9's transcription of `smLegend`; board 6). It is the stain's own colour key, first;
 the brightness key follows where a brightness node is bound, then R-541 P13's trace block, then the debug view's key

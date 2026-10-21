@@ -3067,10 +3067,16 @@ Nothing is ruled.*
 - **The conflict:** the board, read as a layout, would drop the hover trace and the listen hint under a Chart position
   stain.
 - **Options seen:**
-  - (a) The hover trace and its label stay as R-541 and §G2 give them; the ring is added on the hovered pixel beside
-    them, and the legend's ring marks the system (SM9).
-  - (b) Under a Chart position stain the trace is hidden and the ring replaces it, as board 6 draws.
-- **Applied meanwhile:** (a).
+  - (a) The hover trace and its label stay as R-541 and §G2 give them, and the figure gets no ring while the trace is
+    shown: the trace's start star marks the pixel, and SM9's marker is the legend's ring (render GUI spec §G13's R-542
+    bullet; TASK-M8-66).
+  - (b) Board 6's ring on the hovered pixel: under a Chart position stain the trace is hidden and the ring replaces it,
+    as board 6 draws.
+  - (c) Both: the ring added on the figure beside the trace, written into §G2 with its key entry (a figure mark under
+    R-539, in R-541 P13's trace block).
+- **Applied meanwhile:** (a). *Was (before PR #270's gui re-review, G7):* "(a) The hover trace and its label stay as
+  R-541 and §G2 give them; the ring is added on the hovered pixel beside them, and the legend's ring marks the system
+  (SM9)."
 
 ## RQ-502: Whether the stain graph draws Chart position's layers as their own LAYERS node, as boards 1 and 4 do, or inside the colour occupant, as render GUI spec §3.1 and §9 now say *(conflict: the human's boards against the applied text; R-542, R-64; context: TASK-M7-51)*
 
