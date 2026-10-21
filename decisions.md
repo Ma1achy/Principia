@@ -11511,6 +11511,11 @@ slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section
 Adds REQ-GUI-191 to REQ-GUI-193.
 
 ## R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice
+*Amended in part by R-550 (21 Oct 2026; RQ-341 to RQ-346 ruled: the physical views' Jacobian is the eight-column
+`∂x/∂z` read after `η_E`, the Jacobi and Shape sets are the full-rank ones, the steer is `J⁻¹` with the projector
+test's refusal, and each physical coordinate is divided by a fixed reference range).*
+*Still in force: all of it but 3.2's proposed Jacobi and Shape sets, the views' "J_D machinery", the stretch on the
+un-orthonormalised `q`, 3.4's `J_D⁺` and its rank test, and C4's "until RQ-341 is ruled", which R-550 settles.*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new), § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the Compass scope) and § "G13. Where the artboards are overridden" (the references),
@@ -20841,3 +20846,149 @@ R-549 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022 (statement or verify, rulings, `rq` removed, note),
 REQ-GUI-054 and REQ-GUI-087 (statement, verify, rulings, note) and REQ-GUI-188, REQ-SYS-016, REQ-GEN-036,
 REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-341.
+
+## R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
+Jacobi and Shape bullet and the steer bullet reworded, with their earlier words kept) and § "G2. Explore — the everyday
+view (`01_main.png`)" (the line system's fade clause), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder —
+IC precision" (a paragraph added, "The latent Jacobian"), R-452's heading block, REQ-DEC-049 (reqio, new,
+definition), REQ-GUI-342 (reqio, new, calibration), REQ-GUI-343 (reqio, new, definition), REQ-GUI-199 and
+REQ-GUI-200 (reqio: statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (reqio: statement, `rq`
+RQ-341 replaced by RQ-522, note), REQ-GUI-244 (reqio, note), TASK-M6-35 (no longer waiting; three
+requirements added; its goal, deliverables, acceptance and notes), TASK-M8-54 (now waiting on RQ-522),
+`plan/tasks.yaml`, `plan/rule_groups.yaml`, RQ-522 (new) and `docs/archive/review_queue/M0.md` (RQ-341 to
+RQ-346, moved with their rulings); built by TASK-M6-35 (physics-reviewed)*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 44–58), which R-545 quotes in its opening:
+
+> - RQ-341 (An eight-column decoder Jacobian for the physical views): (a). Add an M6 definition requirement beside REQ-DEC-033 that shares its method: a CPU, f64, central-difference Jacobian `∂x/∂z` with 8 columns.
+>   - It is taken of the decoder's output in the view's coordinates, after canonicalisation and the scale gauge. Whether that is before or after `η_E` is RQ-345.
+>   - The views read `J q̂₁` and `J q̂₂` from it.
+>   - The area stretch is `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on the orthonormalised pair, so it does not move with zoom σ or tilt shear.
+>
+> - RQ-342 (The Jacobi view's coordinate set): (b). The eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each named as the decoder writes it. (c) is not adopted: it leaves the rank at 6 on its own, and weighting is the metric's job (RQ-346).
+>
+> - RQ-343 (The Shape view's coordinate set): (b). The eight are `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`.
+>   - `θ, φ` follow R-14's convention, with `φ` the polar angle from +w.
+>   - The rates are `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃, λ̃`.
+>   - The poles are named as the chart's singularities.
+>
+> - RQ-344 (The physical steer: inverse, rank test and refusals): (a) with the (a2) test.
+>   - The steer uses the full-rank sets of RQ-342 and RQ-343 (b), so `J⁺ = J⁻¹` and no metric on `z` enters.
+>   - A click is refused, with the reason logged, where the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is below a stated tolerance.
+>   - The Manifold view's sliders follow as after the Chart builder's Apply (§G7).
+>
+> - RQ-345 (Read the state before or after η_E): (b). The physical views and the steer read the state after `η_E`, the state the integrator starts from. On an `E*`-normalised chart, the steer refuses a cell whose plane needs the direction normal to the energy shell and logs "normal to the energy shell". The (a2) test of RQ-344 detects it.
+>
+> - RQ-346 (A metric on the physical coordinates): (c), with fixed ranges. Each coordinate is divided by a stated, fixed reference range: angles by their domain, masses by 1, and momenta by the decoder's momentum saturation bound. The grid uses that metric, and the help text names it.
+
+The six entries are R-452's physics review of the compass's Jacobi and Shape views (3.2) and its physical steer
+(3.4), which the human asked for before they are built; TASK-M6-35 waited on all six.
+
+**RQ-341** asked which Jacobian the physical views read: the corpus's `J_D` is `∂physical/∂(u, v)`, two columns into
+the particle frame (deep_zoom §2, REQ-DEC-033), not the eight-column `∂(view coordinates)/∂z` the views and the steer
+need, and no Gram factor was defined for it; its option (a) was a definition requirement for a CPU, f64,
+central-difference `∂x/∂z` with 8 columns beside REQ-DEC-033, the stretch read on the orthonormalised pair; (b) was to
+read the views off `J_D` by the chain rule and drop or rebuild the steer.
+
+*What it decides:* **option (a).**
+- **A new M6 definition requirement beside REQ-DEC-033, sharing its method:** a CPU, f64, central-difference Jacobian
+  `∂x/∂z` with 8 columns, one per latent direction (REQ-DEC-049).
+- **It is taken of the decoder's output in the view's coordinates, after canonicalisation and the scale gauge**; the
+  stage relative to `η_E` is RQ-345's, after it.
+- **The views read `J q̂₁` and `J q̂₂`**, `q̂₁`, `q̂₂` the slice plane's pair orthonormalised.
+- **The area stretch is `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on the orthonormalised pair,** so it does not move with
+  the zoom σ (`|q| = σ`, R-83) or the tilts' shear (`u₁ · u₂ = sin τ₁ sin τ₂`).
+
+**RQ-342** asked about the Jacobi view's proposed eight, `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`: `ρ̃ᵧ ≡ 0` on the
+decoder's image, the positions carry two degrees of freedom, the masses move none of them (rank 6). Its options: (a)
+keep them; (b) eight coordinates that chart the image, the full-rank set; (c) the momenta mass-weighted as well.
+
+*What it decides:* **option (b).** **The Jacobi view's eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each
+named as the decoder writes it.** **(c) is not adopted:** it leaves the rank at 6 on its own, and weighting is the
+metric's job (RQ-346).
+
+**RQ-343** asked about the Shape view's proposed eight, `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`: `n̂` is three numbers for two
+degrees of freedom, `R = 1` on the image, `ṅ` and `Ṙ` undefined, the masses and the rotation rate missing (rank 5).
+Its options: (a) keep them with the rates defined; (b) a chart of the image, the full-rank set; (c) drop the view.
+
+*What it decides:* **option (b).** **The Shape view's eight are `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`.**
+- **`θ, φ` follow R-14's convention, with `φ` the polar angle from `+w`.**
+- **The rates are `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃, λ̃`** (`ρ̃̇ = p_ρ/√μ_ρ`,
+  `λ̃̇ = p_λ/√μ_λ`).
+- **The poles are named as the chart's singularities.**
+
+**RQ-344** asked how the physical steer's latent preimage `q ∝ J⁺ e` is built: the Jacobian, a metric on `z`, a rank
+test and a rule for a coordinate outside `J`'s range. Its options: (a) as written, with a rank test, (a1) the smaller
+singular value of `[J⁺e_i, J⁺e_j]` or (a2) that of `[P e_i, P e_j]` with `P = J J⁺`, which lies in [0, 1] and is
+scale-free; (b) a weighted pseudo-inverse; (c) only the latent steer.
+
+*What it decides:* **option (a) with the (a2) test.**
+- **The steer uses the full-rank sets of RQ-342 and RQ-343 (b), so `J⁺ = J⁻¹` and no metric on `z` enters.**
+- **A click is refused, with the reason logged, where the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is
+  below a stated tolerance.** The tolerance is a calibration value (R-71), REQ-GUI-342.
+- **The Manifold view's sliders follow as after the Chart builder's Apply (§G7).**
+
+**RQ-345** asked whether the physical views and the steer read the state before or after the energy normalisation
+`η_E`, since with `E*` set every physical Jacobian has rank at most 7. Its options: (a) before `η_E`; (b) after it, the
+steer refusing the direction normal to the energy shell; (c) after it, with 7-coordinate sets on the level set.
+
+*What it decides:* **option (b).** **The physical views and the steer read the state after `η_E`, the state the
+integrator starts from.** **On an `E*`-normalised chart the steer refuses a cell whose plane needs the direction normal
+to the energy shell and logs "normal to the energy shell"**; RQ-344's (a2) test detects it (`P e` loses that direction).
+
+**RQ-346** asked which metric on the physical coordinates the grid and the steer use, their units differing. Its
+options: (a) the Euclidean metric in the coordinates as named; (b) the canonical pairing for Jacobi; (c) each
+coordinate scaled by a stated reference range.
+
+*What it decides:* **option (c), with fixed ranges.** **Each coordinate is divided by a stated, fixed reference range:
+angles by their domain, masses by 1, and momenta by the decoder's momentum saturation bound** (`q_max`, R-10, R-481).
+**The grid uses that metric, and the help text names it.** With the full-rank sets the steer is `J⁻¹` (RQ-344), which a
+fixed diagonal scaling leaves the same plane, so the grid shows the planes the steer reaches.
+
+*Where the words leave a choice, decided per R-369 (mechanical or routine; the Jacobian, the sets and the steer under
+physics review, as R-452 asks):*
+- **J1. Who writes the Jacobian.** REQ-DEC-049 is closed by TASK-M6-35, the task that needs it (R-72), on the
+  decoder's own CPU f64 path, with the central-difference rule REQ-DEC-034's `J_D` uses (two decode evaluations per
+  direction, deep_zoom §2); it is a separate Jacobian from `J_D`, which the linear path keeps (TASK-M6-07), and the
+  linear path does not read it. The definition is written into deep_zoom §2 as "The latent Jacobian".
+- **J2. The hovered pixel (R-452 C4) stands:** on an affine chart the pixel's latent point `z₀ + (2s−1)q₁ + (2t−1)q₂`;
+  on a nonlinear chart `z₀`, the help text saying so. C4's "until RQ-341 is ruled" no longer applies: RQ-341's
+  Jacobian is taken at a latent point, which a nonlinear chart's pixel does not have.
+- **J3. The tolerance** of RQ-344's (a2) test is a calibration (R-71), REQ-GUI-342: TASK-M6-35 proposes it from the
+  measured smaller singular value over the decoder's image (`E*` unset and set), and it is
+  confirmed at the M6 gate.
+- **J4. The reference ranges RQ-346's three classes do not name.** Shape's `θ̇`, `φ̇`, `L_z` and `Ṙ` are neither angles,
+  masses nor Jacobi momenta, and the ruling's words give no range for them. It is a missing definition, REQ-GUI-343
+  (R-72), written by TASK-M6-35 under physics review into render_gui_spec's compass section, each a fixed, stated range
+  derived from the decoder's own bounds (`q_max`, the masses' and the angles' domains), never a spread measured over the
+  chart's image (RQ-346's "fixed"). Flagged.
+- **J5. "Angles by their domain"** is each angle divided by the length of its domain: `α` and `β` as the decoder gives
+  them (dd_decoder §3.2), `θ` by 2π and `φ` by π (R-14).
+- **J6. The refusals' reasons.** A refusal names its cause in the console: "normal to the energy shell" (RQ-345), a pole
+  of the Shape view's sphere ("the chart's pole", RQ-343), or a saturated link; R-452's degenerate-pushforward message
+  (`J q̂₁ ∧ J q̂₂ = 0`, said, not drawn) stays for the views.
+- **J7. The trace fade's general distance (REQ-GUI-266).** R-509 Y3 has it wait on RQ-341 ("the real distance waits on
+  RQ-341"), REQ-GUI-266 naming "the distance in z … in the metric RQ-341 rules". RQ-341's ruling gives the eight-column
+  Jacobian and no metric on `z` (RQ-344's steer needs none), and RQ-346's metric is on the physical coordinates. Which
+  metric measures the distance from a trajectory's encoded point to the slice plane is not settled by these texts, and
+  it is physics (it changes what fades): **RQ-522** (new). REQ-GUI-266's `rq` moves to it; TASK-M8-54 waits on
+  it; meanwhile nothing changes (no fade on a chart with no proxy, its settings line saying so, REQ-GUI-249).
+- **J8. RQ-378.** R-510 parked it until RQ-341 is ruled, to return to the human then. RQ-341 is ruled here; the batch
+  leaves RQ-378 open ("Left open, not ruled (3): RQ-378, RQ-386, RQ-391. They stay in REVIEW_QUEUE.md."), so it stays
+  open in `REVIEW_QUEUE.md`, now with the human, its option (a) still applied (REQ-GUI-244's note).
+- **J9. TASK-M6-35 no longer waits.** It closes REQ-GUI-199, REQ-GUI-200 and REQ-DEC-049 to REQ-GUI-343, reviewed
+  by code, qa, gui and physics as before; its linear-decoder fixture stays, and its controls gain the un-orthonormalised
+  stretch (which moves with σ) and a reading before `η_E` (which differs on an `E*` chart).
+
+*What it amends:* **R-452** (3.2's proposed Jacobi and Shape sets, "proposed, not settled", now settled; the views'
+Jacobian, "the J_D machinery", now the eight-column `∂x/∂z`; the stretch, on the orthonormalised pair; 3.4's `J_D⁺`,
+now `J⁻¹` with the (a2) refusal; C4's "until RQ-341 is ruled"). Read with R-14 (the sphere's convention), R-83 (σ),
+R-509 (Y3's distance, J7) and R-510 (RQ-378, J8). It closes **RQ-341 to RQ-346**.
+
+R-550 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-DEC-049 (the eight-column Jacobian, definition), REQ-GUI-342 (the steer's tolerance, calibration) and
+REQ-GUI-343 (the reference ranges the ruling's classes do not name, definition); changes REQ-GUI-199 and REQ-GUI-200
+(statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (statement, `rq`, note) and REQ-GUI-244 (note).

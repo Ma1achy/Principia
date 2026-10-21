@@ -173,7 +173,8 @@ Editing a line is one undoable
 `SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are ruled (R-509,
 ruling RQ-377): a contour expression is typed in the stain's expression syntax; the playhead reads any payload field
 the generation root's ledger declares; a trace fades off the plane by the proxy where the chart defines one, and
-elsewhere does not fade and its settings say so (the general distance waits on RQ-341); a trace's tick labels win
+elsewhere does not fade and its settings say so (the general distance waits on RQ-522, its metric on `z`,
+which RQ-341's ruling, R-550, leaves open; *was:* "waits on RQ-341"); a trace's tick labels win
 over contour labels; class edges are a Lines preset; a new contour set takes Screen contour, smart ink opt-in.
 *Was:* "Its six open questions are RQ-377." In the keyboard tree Lines ▾ follows Overlays ▾ in the top bar's scope
 and opens as it does; the contour-set editor and the style library are windows (§G5), their sections reached with
@@ -606,19 +607,37 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   and `Σ p²`: "strongest: z_a × z_b +0.993 · Σ p² 1.000". It shows heading, not position.
 - **Position readout,** under the Plücker view: `z₀` as one signed bar per latent coordinate, the slice axis
   highlighted (`principia_compass_charts.html`, "position gauge"). A readout, not a view.
-- **Jacobi and Shape (the decoded heading).** The plane pushed through the decoder's Jacobian at `z₀`, or at the
-  hovered pixel while the pointer is over the figure: `u₁ = J q₁`, `u₂ = J q₂`, orthonormalised, drawn as the same
-  grid over eight physical coordinates; the readout gives the dominant pair and the area stretch
-  `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder
-  writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and which Jacobian (the corpus's `J_D` is
-  `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and wait on RQ-341 to RQ-343, RQ-345 and
-  RQ-346; the
-  reference's Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the
-  slice moves, because the Jacobian depends on `z₀`, while the Plücker view does not.
+- **Jacobi and Shape (the decoded heading; R-550).** The plane pushed through the decoder's Jacobian at `z₀`, or at
+  the hovered pixel while the pointer is over the figure (on an affine chart; on a nonlinear chart `z₀`, the help text
+  saying so). `J` is the latent Jacobian, the eight-column, f64, central-difference `∂x/∂z` of the decoder's output in
+  the view's coordinates, after canonicalisation, the scale gauge and `η_E`, the state the integrator starts from
+  (`principia_deep_zoom.md` §2; RQ-341 (a), RQ-345 (b)), never `J_D`. `u₁ = J q̂₁`, `u₂ = J q̂₂`, with `q̂₁`, `q̂₂` the
+  slice plane's pair orthonormalised, drawn as the same grid over eight physical coordinates, each divided by its fixed
+  reference range: angles by the length of their domain, masses by 1, momenta by the decoder's momentum saturation bound
+  `q_max`, and Shape's rates and `L_z` by the fixed ranges this section states (RQ-346 (c)); the help text names that
+  metric. The readout gives the dominant pair and the area stretch `√(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²)` on the
+  orthonormalised pair, so it does not move with the zoom σ or the tilts' shear; where `J q̂₁ ∧ J q̂₂` vanishes the view
+  says so rather than draw. Jacobi's eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each named as the decoder
+  writes it (RQ-342 (b)); Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`, `θ` and `φ` in R-14's convention (`φ` the polar
+  angle from `+w`), the rates `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃`, `λ̃`, and the sphere's poles
+  named as the chart's singularities (RQ-343 (b)). Both sets have full rank on the decoder's image; with `E*` set
+  every physical Jacobian has rank 7, the direction normal to the energy shell out of reach (RQ-345). The reference's
+  Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the slice moves,
+  because the Jacobian depends on `z₀`, while the Plücker view does not. *Was (before R-550):* "`u₁ = J q₁`,
+  `u₂ = J q₂`, orthonormalised, … the area stretch `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ,
+  λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and
+  which Jacobian (the corpus's `J_D` is `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and
+  wait on RQ-341 to RQ-343, RQ-345 and RQ-346".
 - **Click to steer.** A click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` reset to 0,
-  the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁺ e_i`,
-  `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and is refused, with the reason logged to the console, where the
-  preimage is no 2-plane; the construction waits on RQ-344 to RQ-346. Every steer is one `SetField` on the basis through the
+  the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁻¹ e_i`,
+  `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised: both sets have full rank, so `J⁺ = J⁻¹` and no metric on `z` enters
+  (RQ-344 (a)). It is refused, with the reason logged to the console, where the smaller singular value of
+  `[P e_i, P e_j]`, `P = J J⁺`, is below a calibrated tolerance (RQ-344's (a2) test, R-71): at a chart singularity (the
+  Shape view's poles, a saturated link) and, on an `E*`-normalised chart, where the plane needs the direction normal to
+  the energy shell, logged "normal to the energy shell" (RQ-345 (b)). The Manifold view's sliders follow as after the
+  Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
+  is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
+  to RQ-346." Every steer is one `SetField` on the basis through the
   contract: undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
 - **Keys:** the Compass scope's siblings are the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape (§G3).
 
