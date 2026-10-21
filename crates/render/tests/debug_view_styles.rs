@@ -402,8 +402,8 @@ mod debug_view_styles_over_the_stains_controls {
 // ── The twin's order and the key ────────────────────────────────────────────────────────────────────────────────
 
 /// Checks `category` over every `state` 0 to 7, `detail` 0 to 3, the lane and the stain's note: the lane first, then
-/// non-finiteness (`sim_failed` 0, 1 and 2, `decode_failed` 0, or the stain's note), then any other failure; and the
-/// key's labels.
+/// non-finiteness (`sim_failed` 0, 1 and 2, `decode_failed` 0, or the stain's note), then any other failure, each drawn
+/// over a stain's colour in its category's style, a system's the stain's; and the key's labels.
 fn check_order(category: fn(Sample) -> Option<Category>) {
     for state in 0..8 {
         for detail in 0..4 {
@@ -428,6 +428,12 @@ fn check_order(category: fn(Sample) -> Option<Category>) {
                         None
                     };
                     assert_eq!(category(s), want, "{s:?}");
+                    let (stain, frag) = ([0.25, 0.5, 0.75], [1.5, 6.5]);
+                    assert_eq!(
+                        debug_view::colour(s, stain, frag),
+                        want.map_or(stain, |c| c.colour(frag)),
+                        "{s:?}: the colour over the stain's"
+                    );
                 }
             }
         }

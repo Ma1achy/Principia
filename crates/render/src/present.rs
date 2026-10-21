@@ -211,10 +211,11 @@ pub const NAN_INF_SRGB8: [[u8; 3]; 2] = [[0x60, 0x00, 0xf4], [0x00, 0x40, 0x00]]
 pub const NAN_INF_CELL: i64 = 4;
 
 /// Which of the NaN / Inf style's two colours `debug_nan_inf` draws at the pixel `frag_xy`: 0, indigo, where
-/// `⌊x⌋ / NAN_INF_CELL` and `⌊y⌋ / NAN_INF_CELL` have one parity, 1, green, where they differ.
+/// `⌊x⌋ / NAN_INF_CELL` and `⌊y⌋ / NAN_INF_CELL` have one parity, 1, green, where they differ: the low bits'
+/// exclusive or, as `present.wgsl` takes it.
 pub fn nan_inf_square(frag_xy: [f64; 2]) -> usize {
     let [x, y] = frag_xy.map(|c| (c.floor() as i64).div_euclid(NAN_INF_CELL));
-    (x + y).rem_euclid(2) as usize
+    ((x ^ y) & 1) as usize
 }
 
 /// `debug_nan_inf(frag_xy)`: the debug view's style for a non-finite sample (R-467 D6; REQ-COL-110), the

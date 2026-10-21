@@ -4,7 +4,8 @@
 //! `d_min`'s unset value its own case (`field_ramp_scalar_*`); the `lin` compaction clamps to its range
 //! (`field_ramp_compaction_*`); the ramp's WGSL declares its invalid lane's uniforms, the override off and R-16's
 //! magenta by default (`field_ramp_declares_*`), and its CPU twin orders the unset grey before the invalid lane
-//! (`field_ramp_shown_*`). The renders are `numeric_views.rs`'s.
+//! (`field_ramp_shown_*`); a float field's non-finite twin, which the debug view reads, is its NaN and `±∞` under its gate
+//! (`field_ramp_non_finite_*`; REQ-COL-109). The renders are `numeric_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -313,4 +314,34 @@ negative_control!(
         f.valid = "true".to_owned();
         Ok(f)
     })
+);
+
+/// Checks `is_non_finite`, the twin of a field's non-finite test (`ScalarField::is_non_finite`; R-436, REQ-COL-109):
+/// `d_min`'s NaN, `+∞` and `−∞` are non-finite under its gate and nothing is with the gate closed; its finite values,
+/// `f32::MAX` among them, are not; `length`, a word count, has no non-finite value and no WGSL test for one.
+fn check_non_finite(is_non_finite: fn(&ScalarField, f32, bool) -> bool) {
+    let d = ScalarField::payload("d_min").unwrap_or_else(|e| panic!("{e}"));
+    assert!(d.non_finite.is_some(), "d_min has a non-finite test");
+    for x in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        assert!(is_non_finite(&d, x, true), "{x} is non-finite");
+        assert!(!is_non_finite(&d, x, false), "{x}, the gate closed");
+    }
+    for x in [0.0, 0.6, -1.0, f32::MAX] {
+        assert!(!is_non_finite(&d, x, true), "{x} is finite");
+    }
+    let l = ScalarField::payload("length").unwrap_or_else(|e| panic!("{e}"));
+    assert!(l.non_finite.is_none(), "length has a non-finite test");
+    assert!(!is_non_finite(&l, 127.0, true), "length's 127 is finite");
+}
+
+#[test]
+fn field_ramp_non_finite_is_the_bits() {
+    check_non_finite(ScalarField::is_non_finite);
+}
+
+negative_control!(
+    field_ramp_non_finite_is_the_bits,
+    "a twin taking every value its gate admits as non-finite fails",
+    expected = "0 is finite",
+    check_non_finite(|_, _, gate| gate)
 );

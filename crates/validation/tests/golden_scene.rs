@@ -965,3 +965,124 @@ negative_control!(
     expected = "`debug/overlays` is a structural view's id",
     check_structural(&["debug/overlays"], &[])
 );
+
+// ── The render's inputs: the canvas background and the debug view (R-467; REQ-COL-108, REQ-COL-109) ───────────────
+
+/// The debug view's counts of `s` as its CPU twin gives them (`render::debug_view::counts`): each pixel's sample, its
+/// lane and payload, the outcome palette noting no non-finite value; `r408`, a control's count, leaves the forbidden
+/// pixels out, as R-408's statistic does.
+fn twin_counts(s: &Scene, r408: bool) -> [u32; 3] {
+    let mut pixels = Vec::new();
+    for i in 0..s.context.grid.sample_count() {
+        let read = s.read(i);
+        let sample = render::debug_view::Sample {
+            forbidden: s.set.forbidden(i),
+            state: read.state,
+            detail: read.detail,
+            stain_non_finite: false,
+        };
+        for _ in s.pixels(i) {
+            if !(r408 && sample.forbidden) {
+                pixels.push(sample);
+            }
+        }
+    }
+    render::debug_view::counts(pixels)
+}
+
+/// The `outcome` scene through [`golden_scene::render_stain_with`]: by default, the full tier, a presentation view and
+/// the recorded background, exactly [`Scene::render`]'s image and no counts; with another background, the samples the
+/// scene shows as the background in it and every other pixel unchanged; as View › Debug view, the counts its twin gives
+/// (`r408`: the control's), and [`golden_scene::render_fragment`] of the debug variant the same render.
+fn check_inputs(r408: bool) {
+    use render::assemble::{self, Tier, View};
+    use validation::golden_scene::{render_fragment, render_stain_with, Inputs, BACKGROUND};
+    let recorded = render::present::srgb8(BACKGROUND).map(|c| c as f32);
+    assert_eq!(
+        Inputs::default(),
+        Inputs {
+            tier: Tier::FULL,
+            view: View::Presentation,
+            background: recorded,
+        }
+    );
+    let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let s = named("outcome");
+    let stain = s.stain().unwrap_or_else(|e| panic!("{e}"));
+    let with = |inputs: Inputs| {
+        render_stain_with(
+            h.device(),
+            h.queue(),
+            &stain,
+            &s.set,
+            &s.context,
+            &|_, _| None,
+            inputs,
+        )
+        .unwrap_or_else(|e| panic!("{e}"))
+    };
+    let base = with(Inputs::default());
+    assert_eq!(base.counts, None, "a presentation view counts nothing");
+    assert!(
+        base.pixels
+            == s.render(h.device(), h.queue())
+                .unwrap_or_else(|e| panic!("{e}")),
+        "the default inputs are not the scene's render"
+    );
+    let other = [0.5, 0.25, 0.125];
+    let moved = with(Inputs {
+        background: other,
+        ..Inputs::default()
+    });
+    let width = s.size().0;
+    for i in 0..s.context.grid.sample_count() {
+        let blank = s.look(i).unwrap_or_else(|e| panic!("{e}")) == Look::Background;
+        for (x, y) in s.pixels(i) {
+            let k = (y * width + x) as usize;
+            let want = if blank {
+                [other[0], other[1], other[2], 1.0]
+            } else {
+                base.pixels[k]
+            };
+            assert_eq!(
+                moved.pixels[k], want,
+                "sample {i} pixel ({x}, {y}) with another background"
+            );
+        }
+    }
+    let debug = with(Inputs {
+        view: View::Debug,
+        ..Inputs::default()
+    });
+    assert_eq!(
+        debug.counts,
+        Some(twin_counts(&s, r408)),
+        "the debug view's counts"
+    );
+    let fragment =
+        assemble::assemble_view(&stain, Tier::FULL, View::Debug).unwrap_or_else(|e| panic!("{e}"));
+    let again = render_fragment(
+        h.device(),
+        h.queue(),
+        &fragment,
+        Tier::FULL,
+        &s.set,
+        &s.context,
+        &|_, _| None,
+        recorded,
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(again, debug, "the debug variant's fragment, rendered");
+}
+
+#[test]
+fn golden_scene_render_inputs() {
+    check_inputs(false);
+}
+
+negative_control!(
+    golden_scene_render_inputs,
+    "counts taken as R-408's statistic, the forbidden pixels out of them, are not the debug view's",
+    expected = "the debug view's counts",
+    check_inputs(true)
+);
