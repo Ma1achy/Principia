@@ -10,7 +10,10 @@
 # largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each
 # position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024
 # draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone
-# would land at the closed form. Every share is compared within 0.02.
+# would land at the closed form. Every share is compared within 0.02. On the curve
+# too, the largest d(ν(θ)) at ν > 0.9 and at ν ≤ 0.9 apart, and step 4's residual ‖D(Φ(c(x))) − C(x)‖_phys
+# in ε_R at the quantiles 0.99, 0.999 and 1, held below 256 and at most twice its value here, with the ν of
+# its largest, held above 0.9: REQ-ENC-024's evidence for the M2 gate's ε_phys (physics review P4).
 k_curve = 1.28e2  # the proposed tolerance's k: d(ν*) ≤ k·ε_R lands (REQ-ENC-026, provisional until the M2 gate)
 on_euclid_f64_d_closed_q50 = 1.3339257513655887e0  # d(ν(θ)) on the curve at the quantile 0.5, euclid span, f64, in ε_R
 on_euclid_f64_d_closed_q90 = 3.3260336739125176e0  # d(ν(θ)) on the curve at the quantile 0.9, euclid span, f64, in ε_R
@@ -20,6 +23,12 @@ on_euclid_f64_d_closed_max = 2.2986550088809576e1  # d(ν(θ)) on the curve at t
 on_euclid_f64_d_star_max = 2.282221305687677e1  # largest d(ν*) on the curve, euclid span, f64, in ε_R
 on_euclid_f64_nu_gap_max = 3.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f64, in ε_R
 on_euclid_f64_step4_frac = 9.9993896484375e-1  # on the curve, euclid span, f64: the share step 4 lands on the chart at tol and ε_phys
+on_euclid_f64_d_closed_max_nu_end = 2.2986550088809576e1  # largest d(ν(θ)) on the curve at ν > 0.9, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_max_nu_rest = 1.9548017802324612e1  # largest d(ν(θ)) on the curve at ν ≤ 0.9, euclid span, f64, in ε_R
+on_euclid_f64_step4_residual_q99 = 1.893723851435898e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.99, euclid span, f64, in ε_R (REQ-ENC-024's evidence)
+on_euclid_f64_step4_residual_q999 = 4.498382916495727e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.999, euclid span, f64, in ε_R (REQ-ENC-024's evidence)
+on_euclid_f64_step4_residual_max = 8.735837051072386e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 1, euclid span, f64, in ε_R (REQ-ENC-024's evidence)
+nu_euclid_f64_step4_residual_max = 9.557520992524332e-1  # the ν of step 4's largest residual on the curve, euclid span, f64
 on_fold_f64_d_closed_q50 = 1.3050383136138188e0  # d(ν(θ)) on the curve at the quantile 0.5, fold span, f64, in ε_R
 on_fold_f64_d_closed_q90 = 3.4118360159890453e0  # d(ν(θ)) on the curve at the quantile 0.9, fold span, f64, in ε_R
 on_fold_f64_d_closed_q99 = 8.426627833280937e0  # d(ν(θ)) on the curve at the quantile 0.99, fold span, f64, in ε_R
@@ -28,6 +37,12 @@ on_fold_f64_d_closed_max = 2.4181382778312926e1  # d(ν(θ)) on the curve at the
 on_fold_f64_d_star_max = 2.3839034707925236e1  # largest d(ν*) on the curve, fold span, f64, in ε_R
 on_fold_f64_nu_gap_max = 4e0  # largest |ν* − ν(θ)| on the curve, fold span, f64, in ε_R
 on_fold_f64_step4_frac = 9.996337890625e-1  # on the curve, fold span, f64: the share step 4 lands on the chart at tol and ε_phys
+on_fold_f64_d_closed_max_nu_end = 2.4181382778312926e1  # largest d(ν(θ)) on the curve at ν > 0.9, fold span, f64, in ε_R
+on_fold_f64_d_closed_max_nu_rest = 1.4983487004449264e1  # largest d(ν(θ)) on the curve at ν ≤ 0.9, fold span, f64, in ε_R
+on_fold_f64_step4_residual_q99 = 2.192579033523875e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.99, fold span, f64, in ε_R (REQ-ENC-024's evidence)
+on_fold_f64_step4_residual_q999 = 4.7553025257513625e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.999, fold span, f64, in ε_R (REQ-ENC-024's evidence)
+on_fold_f64_step4_residual_max = 8.543164591633281e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 1, fold span, f64, in ε_R (REQ-ENC-024's evidence)
+nu_fold_f64_step4_residual_max = 9.617730789689405e-1  # the ν of step 4's largest residual on the curve, fold span, f64
 on_euclid_f64_d_closed_max_seed27 = 2.855694806587206e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 27, 4096 draws, in ε_R
 on_fold_f64_d_closed_max_seed27 = 1.843736923947276e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 27, 4096 draws, in ε_R
 on_euclid_f64_d_closed_max_seed28 = 1.9978308549524407e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 28, 4096 draws, in ε_R
@@ -83,6 +98,12 @@ on_euclid_f32_d_closed_max = 5.151692199707031e1  # d(ν(θ)) on the curve at th
 on_euclid_f32_d_star_max = 5.1390281677246094e1  # largest d(ν*) on the curve, euclid span, f32, in ε_R
 on_euclid_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f32, in ε_R
 on_euclid_f32_step4_frac = 9.991455078125e-1  # on the curve, euclid span, f32: the share step 4 lands on the chart at tol and ε_phys
+on_euclid_f32_d_closed_max_nu_end = 5.151692199707031e1  # largest d(ν(θ)) on the curve at ν > 0.9, euclid span, f32, in ε_R
+on_euclid_f32_d_closed_max_nu_rest = 2.7725372314453125e1  # largest d(ν(θ)) on the curve at ν ≤ 0.9, euclid span, f32, in ε_R
+on_euclid_f32_step4_residual_q99 = 2.6122209548950195e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.99, euclid span, f32, in ε_R (REQ-ENC-024's evidence)
+on_euclid_f32_step4_residual_q999 = 5.8778656005859375e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.999, euclid span, f32, in ε_R (REQ-ENC-024's evidence)
+on_euclid_f32_step4_residual_max = 1.685265350341797e2  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 1, euclid span, f32, in ε_R (REQ-ENC-024's evidence)
+nu_euclid_f32_step4_residual_max = 9.557520992524332e-1  # the ν of step 4's largest residual on the curve, euclid span, f32
 on_fold_f32_d_closed_q50 = 1.4903662204742432e0  # d(ν(θ)) on the curve at the quantile 0.5, fold span, f32, in ε_R
 on_fold_f32_d_closed_q90 = 4.516221523284912e0  # d(ν(θ)) on the curve at the quantile 0.9, fold span, f32, in ε_R
 on_fold_f32_d_closed_q99 = 1.240244197845459e1  # d(ν(θ)) on the curve at the quantile 0.99, fold span, f32, in ε_R
@@ -91,6 +112,12 @@ on_fold_f32_d_closed_max = 4.01219367980957e1  # d(ν(θ)) on the curve at the q
 on_fold_f32_d_star_max = 3.9903564453125e1  # largest d(ν*) on the curve, fold span, f32, in ε_R
 on_fold_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, fold span, f32, in ε_R
 on_fold_f32_step4_frac = 9.9859619140625e-1  # on the curve, fold span, f32: the share step 4 lands on the chart at tol and ε_phys
+on_fold_f32_d_closed_max_nu_end = 4.01219367980957e1  # largest d(ν(θ)) on the curve at ν > 0.9, fold span, f32, in ε_R
+on_fold_f32_d_closed_max_nu_rest = 2.5930967330932617e1  # largest d(ν(θ)) on the curve at ν ≤ 0.9, fold span, f32, in ε_R
+on_fold_f32_step4_residual_q99 = 3.24233283996582e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.99, fold span, f32, in ε_R (REQ-ENC-024's evidence)
+on_fold_f32_step4_residual_q999 = 6.858568572998047e1  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 0.999, fold span, f32, in ε_R (REQ-ENC-024's evidence)
+on_fold_f32_step4_residual_max = 1.3595936584472656e2  # step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile 1, fold span, f32, in ε_R (REQ-ENC-024's evidence)
+nu_fold_f32_step4_residual_max = 9.56921169788351e-1  # the ν of step 4's largest residual on the curve, fold span, f32
 on_euclid_f32_d_closed_max_seed27 = 3.5872657775878906e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 27, 4096 draws, in ε_R
 on_fold_f32_d_closed_max_seed27 = 2.6076791763305664e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 27, 4096 draws, in ε_R
 on_euclid_f32_d_closed_max_seed28 = 3.804032516479492e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 28, 4096 draws, in ε_R

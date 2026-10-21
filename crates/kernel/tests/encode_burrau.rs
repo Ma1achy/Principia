@@ -521,6 +521,27 @@ where
     matches!(into(chart, x).landing, Landing::Chart { .. })
 }
 
+/// The on-curve collision end's lower edge: the measurement reports `d(ν(θ))`'s maximum above it and at or below it
+/// apart (physics review P4).
+const NU_END: f64 = 0.9;
+
+/// The bound the fixture's on-curve step-4 residuals in `ε_R` are held below: four times `ε_phys`'s provisional `k` of
+/// 64 (physics review P4). The largest measured is 169 `ε_R`, at f32; the residual is evidence for `ε_phys`, which the
+/// M2 gate decides, so the test bounds its tail without proposing a value.
+const STEP4_BOUND: f64 = 256.0;
+
+/// [`lands`] with step 4's residual `‖D(Φ(c(x))) − C(x)‖_phys` in `ε_R`, `None` where an axis placed nothing.
+fn step4<R: Precision, C: CurveChart<Param = R>>(chart: &C, x: &Ic<f64>) -> (bool, Option<f64>)
+where
+    f64: From<R>,
+{
+    let ce = into(chart, x);
+    (
+        matches!(ce.landing, Landing::Chart { .. }),
+        ce.residual.map(|d| f(d) / R::EPS),
+    )
+}
+
 /// One precision's measurement: `(key, value, what)`.
 fn measure<R: Precision>(label: &str, out: &mut Vec<(String, f64, String)>)
 where
@@ -536,6 +557,7 @@ where
         let (lo, hi) = (f(span[0]), f(span[1]));
         let (mut closed, mut star, mut gap, mut accepted) =
             (Vec::with_capacity(ON), 0.0f64, 0.0f64, 0usize);
+        let (mut residuals, mut end, mut rest) = (Vec::with_capacity(ON), 0.0f64, 0.0f64);
         for _ in 0..ON {
             let nu = uniform(&mut r, lo, hi);
             let x = gauged(&burrau(nu), &mut r);
@@ -543,16 +565,28 @@ where
             let p = state_point(&e.canonical.ic);
             let cf = closed_form(&e.canonical.ic);
             let n = nearest(&p, span);
-            closed.push(f(Float::sqrt(curve_distance2(&p, cf.nu))) / R::EPS);
+            let dc = f(Float::sqrt(curve_distance2(&p, cf.nu))) / R::EPS;
+            closed.push(dc);
+            if nu > NU_END {
+                end = end.max(dc);
+            } else {
+                rest = rest.max(dc);
+            }
             star = star.max(f(n.distance()) / R::EPS);
             gap = gap.max((f(n.nu) - f(cf.nu)).abs() / R::EPS);
-            accepted += usize::from(if name == "euclid" {
-                lands(&euclid::<R>(), &x)
+            let (landed, residual) = if name == "euclid" {
+                step4(&euclid::<R>(), &x)
             } else {
-                lands(&theta_k::<R>(), &x)
-            });
+                step4(&theta_k::<R>(), &x)
+            };
+            accepted += usize::from(landed);
+            residuals.push((
+                residual.expect("an on-curve state is placed at the curve tolerance"),
+                nu,
+            ));
         }
         closed.sort_by(f64::total_cmp);
+        residuals.sort_by(|a, b| a.0.total_cmp(&b.0));
         for (q, qn) in QUANTILES {
             out.push((
                 format!("on_{name}_{label}_d_closed_{qn}"),
@@ -574,6 +608,29 @@ where
             format!("on_{name}_{label}_step4_frac"),
             accepted as f64 / ON as f64,
             format!("on the curve, {name} span, {label}: the share step 4 lands on the chart at tol and ε_phys"),
+        ));
+        out.push((
+            format!("on_{name}_{label}_d_closed_max_nu_end"),
+            end,
+            format!("largest d(ν(θ)) on the curve at ν > {NU_END}, {name} span, {label}, in ε_R"),
+        ));
+        out.push((
+            format!("on_{name}_{label}_d_closed_max_nu_rest"),
+            rest,
+            format!("largest d(ν(θ)) on the curve at ν ≤ {NU_END}, {name} span, {label}, in ε_R"),
+        ));
+        let r: Vec<f64> = residuals.iter().map(|v| v.0).collect();
+        for (q, qn) in &QUANTILES[2..] {
+            out.push((
+                format!("on_{name}_{label}_step4_residual_{qn}"),
+                quantile(&r, *q),
+                format!("step 4's ‖D(Φ(c(x))) − C(x)‖_phys on the curve at the quantile {q}, {name} span, {label}, in ε_R (REQ-ENC-024's evidence)"),
+            ));
+        }
+        out.push((
+            format!("nu_{name}_{label}_step4_residual_max"),
+            residuals[ON - 1].1,
+            format!("the ν of step 4's largest residual on the curve, {name} span, {label}"),
         ));
     }
     for seed in SEEDS {
@@ -688,7 +745,10 @@ fn text(values: &[(String, f64, String)]) -> String {
          # largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each\n\
          # position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024\n\
          # draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone\n\
-         # would land at the closed form. Every share is compared within 0.02.\n",
+         # would land at the closed form. Every share is compared within 0.02. On the curve\n\
+         # too, the largest d(ν(θ)) at ν > 0.9 and at ν ≤ 0.9 apart, and step 4's residual ‖D(Φ(c(x))) − C(x)‖_phys\n\
+         # in ε_R at the quantiles 0.99, 0.999 and 1, held below 256 and at most twice its value here, with the ν of\n\
+         # its largest, held above 0.9: REQ-ENC-024's evidence for the M2 gate's ε_phys (physics review P4).\n",
     );
     for (k, v, what) in values {
         s.push_str(&format!("{k} = {v:e}  # {what}\n"));
@@ -710,10 +770,12 @@ fn held(text: &str, k: &str) -> f64 {
 }
 
 /// The fixture `text` is the measurement `values`' evidence: the proposal is the tests' `k`; each share is the
-/// fixture's within 0.02, a platform rounding a draw near an edge the other way; each on-curve value is below `k` and
-/// at most twice the fixture's; each off-curve value is the fixture's within a relative 10⁻⁶ plus `k·ε_R` of its
-/// precision, a platform's `sin`, `cos` and `atan2` rounding differently; and each off-curve minimum lies above `k·ε_R`,
-/// so those draws fall back: at f64 from `δ = 10⁻⁶`, at f32 from `δ = 10⁻²`.
+/// fixture's within 0.02, a platform rounding a draw near an edge the other way;
+/// each on-curve step-4 residual is below [`STEP4_BOUND`] and at most twice the fixture's, and the `ν` of the largest
+/// lies above [`NU_END`]; each other on-curve value is below `k` and at most twice the fixture's; each off-curve value
+/// is the fixture's within a relative 10⁻⁶ plus `k·ε_R` of its precision, a platform's `sin`, `cos` and `atan2`
+/// rounding differently; and each off-curve minimum lies above `k·ε_R`, so those draws fall back: at f64 from
+/// `δ = 10⁻⁶`, at f32 from `δ = 10⁻²`.
 fn check_measurement(text: &str, values: &[(String, f64, String)]) {
     for (k, v, _) in values {
         let h = held(text, k);
@@ -721,6 +783,14 @@ fn check_measurement(text: &str, values: &[(String, f64, String)]) {
             assert!(*v == h, "{DIR}: k_curve {h} is not the tests' {v}");
         } else if k.ends_with("_frac") {
             assert!((v - h).abs() <= 0.02, "{k} = {v}, the fixture holds {h}");
+        } else if k.starts_with("nu_") {
+            assert!(
+                *v > NU_END && *v < 1.0,
+                "{k} = {v} is not at the collision end, ν > {NU_END}"
+            );
+        } else if k.contains("_step4_residual_") {
+            assert!(*v < STEP4_BOUND, "{k} = {v} is not below {STEP4_BOUND}");
+            assert!(*v <= 2.0 * h, "{k} = {v} is above twice the fixture's {h}");
         } else if k.starts_with("on_") {
             assert!(*v < K_CURVE, "{k} = {v} is not below k = {K_CURVE}");
             assert!(*v <= 2.0 * h, "{k} = {v} is above twice the fixture's {h}");
