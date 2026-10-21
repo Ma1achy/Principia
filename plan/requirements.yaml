@@ -4883,14 +4883,17 @@
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel compute_ic_guards (R-538 T11): computeIC on coincident bodies 1 and 2 (the shape sphere's θ = π, φ = π/2) returns within its step budget with a collision 1–2 at t = 0; a run fed a NaN step returns at once, sim_failed; controls: the guard removed loops (the test's own step bound trips) and fails; a NaN compared with < instead of is_finite never ends and fails; review (physics)"
   rulings:
   - R-445
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TM9 (I8). Closed by TASK-M8-58. RQ-418 (a) applied meanwhile: sim_failed, the trace ending with \"?\". Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-538 TM9 (I8). Closed by TASK-M8-58. RQ-418 (a), ruled by R-553 as applied meanwhile: sim_failed, the trace ending with \"?\"; \"incomplete\" means only that the hover's step budget ran out. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -14636,7 +14639,7 @@
   - R-545
   - R-548
   milestone: M7
-  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. The comparison is a render-side previous-class texture (R-548, RQ-320); the latch's storage is RQ-310."
+  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. The comparison is a render-side previous-class texture (R-548, RQ-320). R-545 (21 Oct 2026, RQ-310): the \"when it was decided\" view is offline only in v1, so no latch is stored; its lightness by time is still calibrated here."
 - id: REQ-COL-107
   area: COL
   kind: definition
@@ -20022,8 +20025,9 @@
   - R-470
   - R-537
   - R-552
+  - R-553
   milestone: M8
-  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; R-552 rules RQ-420 (b) and RQ-411 (a): the human will define comments on the figure and the console's pick, and EX5 applies to each once defined, a comment in a repeat attaching to the canonical point; nothing is built for them and the verify has no arm for them until then. *Was:* \"RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it).\" Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6\". The method is now GUI screenshot, for the presence screenshot."
+  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b), ruled by R-553; R-552 rules RQ-420 (b) and RQ-411 (a): the human will define comments on the figure and the console's pick, and EX5 applies to each once defined, a comment in a repeat attaching to the canonical point; nothing is built for them and the verify has no arm for them until then. *Was:* \"RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it).\" Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6\". The method is now GUI screenshot, for the presence screenshot."
 - id: REQ-GUI-270
   area: GUI
   statement: "The view state must record the centre and zoom as they are, on a periodic axis the unwrapped centre (R-537 EX9; R-552, RQ-406 (a)), keys and quad addresses taking the canonical value, so that an image export, its JSON state and its embedded payload, reopened, reproduce the same window, repeats included."
@@ -20076,6 +20080,8 @@
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_markers (R-538 T2): for one run of each of the nine outcome classes and an incomplete run, the end icon is that class's in its palette colour (and R-447's OKLab colour under that preset), triple ejection and triple collision read detail = 3, and each icon set draws every marker; controls: one icon for every outcome, or a double-escape icon, fail"
@@ -20084,8 +20090,9 @@
   - R-445
   - R-449
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a) applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's."
+  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's."
 - id: REQ-GUI-273
   area: GUI
   statement: "When syzygy markers are on (R-538 TM5), each syzygy, a sign change of R-14's w between consecutive states, must be marked where the drawn line crosses w = 0, interpolated between the two samples, never at a sample; Principia's and Arrows' o–o–o must draw three discs in the body colours in the order the bodies lie on the line (the outer pair lowest-numbered first, the middle body in the centre), on a line #D6D3CB, dark-haloed; a stutter (the same middle body twice running) must be drawn faded unless that option is off; on a chart that carries the y-momenta a marker must be drawn at both ends of the jump; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a))."
@@ -20094,14 +20101,17 @@
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_syzygy (R-538 T3, T4): on Burrau 3:4:5 to t = 70, at every syzygy (75) the marker's centre lies on the drawn line within 0.5 px, and its discs are in the bodies' actual collinear order, the middle body's in the centre; controls: placing the marker at a sample point is off the line by up to a segment and fails T3; a fixed 1-2-3 order fails T4; review (physics) of the w = 0 test"
   rulings:
   - R-14
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TM5 (I9). Closed by TASK-M8-58. RQ-414 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-538 TM5 (I9). Closed by TASK-M8-58. RQ-414 (a), ruled by R-553 as applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-GUI-274
   area: GUI
   statement: "An icon of the primary trace whose point is outside the view must be drawn faint, pinned to the nearest point just inside the view's edge, while \"Off-screen icons: pin to the edge (faint)\" is on, and not drawn when it is off (R-538 TM6); join jumps (off) must join a break with a dotted line and window chevrons (off) mark where the line crosses the view's edge, kept separate from the pins (RQ-415 (a))."
@@ -20110,13 +20120,16 @@
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_edge_pins (R-538 T5): an event off screen draws one faint icon pinned just inside the edge; with the option off it draws none; controls: no icon off screen, or an icon at the true (invisible) point, fail"
   rulings:
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TM6. Closed by TASK-M8-58. RQ-415 (a) applied meanwhile."
+  note: "R-538 TM6. Closed by TASK-M8-58. RQ-415 (a), ruled by R-553 as applied meanwhile."
 - id: REQ-GUI-275
   area: GUI
   statement: "Traces must repeat (R-537 EX6, R-538 TM7): on an affine chart the trace must run on past the square like the field; on a periodic, pole-crossing or fold chart the hovered, pinned and kept traces must be drawn in every image of the chart in view, with every marker and icon (start, events, rings, ticks, arrows, head), at half strength (RQ-412 (a)), a repeat's icons never pinned to the edge (only the primary copy pins); a hover or click in a repeat must integrate the canonical system bitwise, so the trace is identical in every image; with the hemisphere toggle on the trace must fold at the equator and its repeats continue into the mirror hemisphere."
@@ -20127,31 +20140,37 @@
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_repeats (R-538 T6, T7, T12): on the shape sphere at a zoom with 4 images, each image carries the start star and the end icon; no repeat's icon is drawn at the view's edge; a pick in a repeat integrates the canonical IC bitwise; controls: lines only in the repeats fail T6; duplicates stacked at the edge fail T7; an unfolded decode fails T12"
   rulings:
   - R-537
   - R-538
+  - R-553
   milestone: M8
-  note: "R-537 EX6, R-538 TM7 (I10). Closed by TASK-M8-58, after TASK-M8-55's repeats. RQ-412 (a) applied meanwhile."
+  note: "R-537 EX6, R-538 TM7 (I10). Closed by TASK-M8-58, after TASK-M8-55's repeats. RQ-412 (a), ruled by R-553 as applied meanwhile."
 - id: REQ-GUI-276
   area: GUI
-  statement: "A trace must never be drawn through or started in a pixel that is not a system (R-538 TM8): every sample encoded into the chart, a sample whose chart point, on the shown axes after the types fold it, fails validate's layers 2 and 3 (never the lookup ladder on the sample's whole state, RQ-429 (a)) not drawn and the line broken there, the readout counting such samples (\"in forbidden: N samples\") and a non-zero count logged as an encode or chart-map bug in the console, a sample projected past a curve axis's bounded edge counted apart (REQ-GUI-280, RQ-425 (a)); a click on such a pixel must integrate nothing and draw the red ✕ (R-537), and hover there show the readout (RQ-417 (b) meanwhile) and no trace; on the mass simplex a run's chart point must not move (its masses constant), its trace a fading dot."
+  statement: "A trace must never be drawn through or started in a pixel that is not a system (R-538 TM8): every sample encoded into the chart, a sample whose chart point, on the shown axes after the types fold it, fails validate's layers 2 and 3 (never the lookup ladder on the sample's whole state, RQ-429 (a)) not drawn and the line broken there, the readout counting such samples (\"not a system: N samples\" in a presentation view, reading \"in forbidden: N samples\" only while a debug view is the figure, R-553 K1) and a non-zero count logged as an encode or chart-map bug in the console, a sample projected past a curve axis's bounded edge counted apart (REQ-GUI-280, RQ-425 (a)); a click on such a pixel must integrate nothing and draw the red ✕ (R-537), and hover there show the readout (RQ-417 (b), R-553: the label decode_failed, its detail and the word \"forbidden\" only while a debug view is the figure) and no trace; on the mass simplex a run's chart point must not move (its masses constant), its trace a fading dot."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
   - file: docs/design/principia_lines.md
     section: 8. Traces
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_not_a_system (R-538 T8, T9, T10): across 1000 random runs on the mass simplex the forbidden-sample count is 0, and a constructed sample past the edge breaks the line there and logs the warning; a start in a not-a-system pixel draws the ✕ and computeIC is not called; the chart point's spread over a simplex run is 0; controls: a line drawn through blank pixels fails T8; a fallback integration fails T9; an encode that drifts the masses fails T10"
+    detail: "cargo test -p render trace_not_a_system (R-538 T8, T9, T10): across 1000 random runs on the mass simplex the forbidden-sample count is 0, and a constructed sample past the edge breaks the line there and logs the warning; a start in a not-a-system pixel draws the ✕ and computeIC is not called; the chart point's spread over a simplex run is 0; the count line reads \"not a system: N samples\" in a presentation view and \"in forbidden: N samples\" with View › Debug view on (R-553 K1); controls: a line drawn through blank pixels fails T8; a fallback integration fails T9; an encode that drifts the masses fails T10; the word \"forbidden\" in a presentation view's readout fails"
   rulings:
   - R-469
   - R-470
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TM8 (I7, I11). Closed by TASK-M8-58. RQ-417 (b) applied meanwhile to the readout. R-538 TF2.1, TF1 (J5, J10): RQ-425 (a) and RQ-429 (a) applied meanwhile."
+  note: "R-538 TM8 (I7, I11). Closed by TASK-M8-58. RQ-417 (b) to the readout, RQ-425 (a) and RQ-429 (a) (R-538 TF2.1, TF1; J5, J10), ruled by R-553 as applied meanwhile; the count line's wording is R-553 K1. *Was:* \"(\\\"in forbidden: N samples\\\")\" and \"(RQ-417 (b) meanwhile)\"."
 - id: REQ-GUI-277
   area: GUI
   statement: "A trace must leave a chart only where a coordinate entering a shown axis with non-zero weight has no value (R-538 TF1): ±∞ from a saturated link, NaN, or a bounded axis's inverse outside its domain; hidden coordinates never make it leave, they are fade, and moving off the slice is never leaving; θ and φ of the shape sphere, alone or in any mix, a mass, and a physical quantity whose warp's inverse has a value never make it leave; a latent coordinate behind a saturating link makes it leave exactly when it has non-zero weight in a shown axis (on a tilt toward z_q, while the target's |q₃| ≥ q_max, RQ-424 (a)), and never on the latent z_α × z_β chart through a momentum; where it leaves, the reach rings mark it and the line is dashed until it re-enters; the trace must never run the inverse encode contract's lookup and lock validation (Part 6) on a sample's state, but encode the shown coordinates without clamping and check each shown axis on its own (TF2.1; RQ-429 (a))."
@@ -20229,14 +20248,17 @@
     section: 8. Traces
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: Part 5 — Inverse by axis kind (completing the four kinds)
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_curve_axis (R-538 T18): on the right-triangle ν × dilation-rate chart, a run's shape perturbed off the curve keeps its point at the nearest ν, and where an off-plane distance is defined the fade grows with the perturbation (elsewhere the settings line says there is no fade, RQ-426 (a)); a sample whose nearest ν lies past ν's edge is not drawn, draws no ring and counts in \"past the domain's end\", not \"in forbidden\"; control: dropping or clamping the point fails; review (physics)"
+    detail: "cargo test -p render trace_curve_axis (R-538 T18): on the right-triangle ν × dilation-rate chart, a run's shape perturbed off the curve keeps its point at the nearest ν, and where an off-plane distance is defined the fade grows with the perturbation (elsewhere the settings line says there is no fade, RQ-426 (a)); a sample whose nearest ν lies past ν's edge is not drawn, draws no ring and counts in \"past the domain's end\", not in the not-a-system count; control: dropping or clamping the point fails; review (physics)"
   rulings:
   - R-509
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TF1 (J5, J6). Closed by TASK-M8-58. RQ-425 (a) and RQ-426 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-538 TF1 (J5, J6). Closed by TASK-M8-58. RQ-425 (a) and RQ-426 (a), ruled by R-553 as applied meanwhile. *Was (verify):* \"not \\\"in forbidden\\\"\" (R-553 K1). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-GUI-281
   area: GUI
   statement: "With a trace animated with the playhead, the trace must be drawn from t = 0 to its end (its event or the horizon), with no head marker, whenever the playhead is not playing and its scrubber is not being dragged, and to the head, with the head marker, while it plays or is scrubbed (R-538 TF3); the static mode draws the whole trace and the own clock is always animated; a fixed window or last-Δt length is kept as chosen (RQ-427 (a)); the GUI passes the drawn extent to the line pass each frame, so the engine reads no ViewUI state."
@@ -20253,10 +20275,11 @@
   rulings:
   - R-476
   - R-538
+  - R-553
   milestone: M8
   rq:
   - RQ-465
-  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile. Gui review 5594407176 of PR #263, G2: the Window and LastDt arm, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails\". RQ-465 (found merging main into rulings/R-540): R-541 G5's footer and R-540 S4 restate TF3 for every trace; (a) applied meanwhile, this arm stands."
+  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a), ruled by R-553 as applied meanwhile (a finished own-clock \"Once\" holds its last frame, the whole trace). Gui review 5594407176 of PR #263, G2: the Window and LastDt arm, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails\". RQ-465 (found merging main into rulings/R-540): R-541 G5's footer and R-540 S4 restate TF3 for every trace; (a) applied meanwhile, this arm stands."
 - id: REQ-GUI-282
   area: GUI
   statement: "A trace's colour along time must be a TimeRamp held in its Trace (R-538 TF4): the presets Sunset (the default once the ramp is chosen, RQ-422 (a)), Viridis, Magma, Ice, Ember, Aurora and Mono with R-538 J12's stops, Custom with three stops, Reverse and a preview bar; the stops evenly spaced and interpolated linearly over t ∈ [0, t_max]; it colours the line, its time ticks, the start star and the direction arrows, the event icons keeping the outcome palette; it is Lines' state in RenderState, never the stain graph's palette, each control one undoable SetField that re-integrates nothing, saved with the view and exported (the round-trip rule's tier 2 once it merges), a kept orbit's ramp travelling with its Trace (RQ-428 (a))."
@@ -20269,14 +20292,17 @@
     section: 3. The data model
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
   verify:
     method: unit test
     detail: "cargo test -p gui trace_ramp_round_trip (R-538 T20): a kept orbit's ramp (a preset, then Custom stops) survives save and load bitwise in the canonical serialisation, Reverse reverses it (its colour at t equals the unreversed colour at t_max − t), and an edit leaves the sim key and the quad requests unchanged; control: a ramp held only in GUI state fails"
   rulings:
   - R-476
   - R-538
+  - R-553
   milestone: M8
-  note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a) applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
+  note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a), ruled by R-553 as applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
 - id: REQ-GUI-283
   area: GUI
   kind: calibration
