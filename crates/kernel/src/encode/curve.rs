@@ -43,15 +43,17 @@
 //!
 //! **The branch inputs** (gpu_determinism_note, "The discipline"; the human's ruling on RQ-298, 21 Oct 2026: a branch
 //! input that must agree across backends is built only from operations every IEEE backend rounds alike, with no
-//! intermediate that can be subnormal, `IeeeBits::product`'s form the pattern). Every comparison here reads a squared
-//! distance or a squared length built by [`sq`]: a difference below [`floor`], `2^⌊e/4⌋` for the precision's least
-//! normal exponent `e` (`2⁻³¹` at f32), is taken as 0, so its square's partial products are normal, then the square is
-//! `IeeeBits::product`, and the squares are added in one fixed order. No `fma` is written. They are: the search's
-//! `f < best` and the golden step's `f(c) < f(d)`; the landings' `d² ≤ tol²`, `tol² = product(tol, tol)`; the span
-//! test on `ν(θ)`, a lone comparison; [`ClosedForm::past_fold`]'s `a² > b²`; and the selects' guards, a squared norm
-//! against 0. The values the distances are formed from are the decode's own (the embed's divisions, the weighting's
-//! `sqrt`) and `C`'s, which a backend rounds within its own bounds; two backends can differ on a comparison only where
-//! the two distances lie within those roundings of each other.
+//! intermediate that can be subnormal, `IeeeBits::product`'s form the pattern). Every distance a comparison reads is a
+//! squared distance or a squared length built by [`sq`]: a difference below [`floor`], `2^⌊e/4⌋` for the precision's
+//! least normal exponent `e` (`2⁻³¹` at f32), is taken as 0, so its square's partial products are normal, then the
+//! square is `IeeeBits::product`, and the squares are added in one fixed order. No `fma` is written. They are: the
+//! search's `f < best` and the golden step's `f(c) < f(d)`; the landings' `d² ≤ tol²`, `tol² = product(tol, tol)`;
+//! [`ClosedForm::past_fold`]'s `a² > b²`; and the δm strip's guard, `‖m_t − m_B‖²` against 0. The other comparisons
+//! read a value directly, with no arithmetic between: the span test on `ν(θ)`, the grid's last point and the edge flag
+//! (`ν* = lo` or `hi`, exact), and `Φ_θ,L_z`'s band width against 0, which is 0 exactly where `K` or `λ_L` is. The
+//! values the distances are formed from are the decode's own (the embed's divisions, the weighting's `sqrt`) and `C`'s,
+//! which a backend rounds within its own bounds; two backends can differ on a comparison only where the two distances
+//! lie within those roundings of each other.
 
 use spirv_std::num_traits::Float;
 
