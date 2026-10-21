@@ -232,6 +232,9 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
+- **Which `DEGENERATE` reason writes which `decode_failed` code** (R-72; REQ-DEC-038): `principia_dd_decoder.md` §2's
+  closed cause set maps `M01_TINY` to `2`; `NO_QUALIFYING_SEED` to `1`; `INVARIANT_INFEASIBLE`, `ENERGY_INFEASIBLE`
+  and `ENERGY_UNSCALABLE` to `3`. No reason writes `0`: it is a non-finite decode output, which is not a reason.
 - **Body and pair ids (R-22).** Bodies are 0-based (`0, 1, 2`), as the decode is. **Pair id `k` names the side opposite body `k`:**
   pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
 - **What a person reads (R-449).** The ids above are internal: the payload, `detail`, the pair map, the code, the WGSL
@@ -504,6 +507,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | reduced crossing count | `fgw_reduced_length` — **valid only if `fgw_reduced_length_valid`** | **net branch-cut crossings** (free reduction); **INVALID for truncated samples** (later cancellations untracked after the cap — §3). `fgw_retained_prefix_length` (=76 when truncated) is a debug/export quantity, NOT the reduced count; never expose `127` |
 | `total_substeps_log2` | `total_substeps` (exact u32) via `countLeadingZeros` | complexity proxy derived at read, not stored (§2) |
 | `n` (shape) | `shape(r)` or `shape(r, masses)` | current shape-sphere point (`r` mass-weighted, or pass masses); NOT `shape(r,p)` |
+| chart position at the playhead (R-542) | `r, p` at the playhead (or the pixel's own IC, at `t = 0`), the `ICDescriptor`'s masses and the target chart, through the encode, the target chart's projection and its quotient fold (`principia_state_map.md` SM1, SM2) | the Chart position node's `point⟨q⟩` and its four-result status (state map SM5); stores nothing, adds no field, accumulator or kernel change; a target other than the view's chart, and the chart it reads, wait on RQ-489 |
 | current substep count | live read off the march | animated integrator-effort heatmap (Part-5 live view) |
 
 **The Chazy final-motion fields** (`chazy_class`, `chazy_final`, `chazy_status`, `chazy_structure`, `chazy_q`) are derived here too, from the live state, the masses, `E_0`, `R_0` and one running latch, `I_max` (R-442; `principia_dd_chazy_final_motion.md` §5–§6). Where `I_max` is stored is open: the spec proposes §2's reserved descriptor bits 10–14, which this file holds reserved (RQ-310).

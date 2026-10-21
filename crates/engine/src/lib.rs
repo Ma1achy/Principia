@@ -32,6 +32,11 @@ pub mod contract {
     pub mod store;
     pub mod view_ui;
 
+    /// The display names, the one conversion module (R-449; REQ-GUI-188): what a person reads for a body, a pair, a
+    /// sample's `state` and `detail` and an outcome class, 1-based, re-exported so the GUI names every body, pair and
+    /// fate through it.
+    pub use ledger::display;
+
     /// A stain node's colour occupant as the occupant algebra's typed expression tree (colour_composition §1;
     /// TASK-M7-03).
     pub mod stain {
@@ -114,6 +119,10 @@ pub mod compute;
 /// The CPU validation pass's view-level check: a chart that forbids energy normalisation with any `Some(E*)`, and a
 /// non-finite `E*`, are refused before anything decodes (chart_reference §0.6; R-25, R-124; TASK-M2-12).
 pub mod chart_validate;
+
+// The chart authoring layer: the four axis kinds and their metadata, the per-chart descriptors and the well-posedness
+// validator, before resolution (chart_decoder_contract Part 5; TASK-M2-14): documented in the module itself.
+pub mod chart_authoring;
 
 // Navigation as chart construction: pan, slice, zoom and tilt as typed `SetField` edits of `SimConfig`'s `z₀`, `q₁` and
 // `q₂`, and the direction library (chart_decoder_contract Part 4; TASK-M2-22): documented in the module itself, whose

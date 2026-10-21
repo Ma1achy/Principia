@@ -1,9 +1,9 @@
 # TASK-M5-06 — Sim key, render key, cache identity and the payload compatibility signature
 
 - **Milestone:** M5
-- **Closes:** REQ-SCHED-048, REQ-SCHED-014, REQ-SCHED-015, REQ-SCHED-027, REQ-GEN-017, REQ-SCHED-018
-- **Depends on:** TASK-M5-03
-- **Needs (earlier milestones):** REQ-SCHED-005, REQ-SCHED-007, REQ-GEN-008, REQ-RENDER-075, REQ-SYS-021, REQ-INT-026
+- **Closes:** REQ-SCHED-048, REQ-SCHED-014, REQ-SCHED-015, REQ-SCHED-027, REQ-GEN-017, REQ-SCHED-018, REQ-SCHED-100
+- **Depends on:** TASK-M5-03, TASK-M2-21
+- **Needs (earlier milestones):** REQ-SCHED-005, REQ-SCHED-007, REQ-GEN-008, REQ-RENDER-075, REQ-SYS-021, REQ-INT-026, REQ-SYS-083
 - **Reviewers:** code, qa
 - **Pitfalls:** PIT-9
 - **Size:** ~400 lines
@@ -45,9 +45,11 @@ E) and the ledger content hash; lookup requires identity and signature match. v1
 - `cargo test -p engine signature_occupant` — change only the occupant (or the regularisation) -> compatibility hash changes -> payload re-integrated (REQ-SCHED-027).
 - `cargo test -p engine stale_schema` — flip one bit offset → hash and signature change; the cache test serves zero stale-schema payloads (REQ-GEN-017).
 - Review checklist (code) — no IC-keyed lookup in v1 (REQ-SCHED-018).
+- `cargo test -p engine sim_key_link_params` — REQ-SCHED-100's verify (C13).
 
 ## Notes
 - Each per-component test must be shown to fail when that component is dropped from the hash (pitfalls §9).
 - REQ-GEN-017's "the cache test serves zero stale-schema payloads" is asserted again end to end once the cache exists
   (TASK-M5-08 reuses this test's fixture).
 - RQ-93 ruled: R-113 — REQ-GEN-008 (M0) verifies only the schema version; the compatibility signature carrying it is REQ-GEN-017, closed here.
+- R-483 X8 (20 Oct 2026): the sim key and the compatibility signature hold each block's link id and parameter values; REQ-SCHED-048's statement gains them.

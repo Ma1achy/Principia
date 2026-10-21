@@ -478,23 +478,33 @@ previous-shape latch.
 
 - **Running samples hold a value.** The class is a label as of t, so it never draws the not-yet stipple. This is
   colour_composition §4.1's case of a field that holds a value for a `running` sample, rendered in every mode.
-- **`sim_failed` or NaN** draws the invalid hatch, as everywhere (render contract, presentation layer; R-136).
+- **`sim_failed` or NaN** draws `#141418`, B's black, as every presentation view draws a failure and a non-finite
+  value (R-467); View › Debug view shows it, `debug_invalid` or the NaN / Inf style. *Was (R-136):* "draws the invalid
+  hatch, as everywhere (render contract, presentation layer; R-136)".
 - **Collision-terminated** has no final motion. It reads `collision` in `chazy_final` and `chazy_status`, never a
   motion class, and draws in the collision colour (§10.1) in every stain: a pair collision, a triple collision and a
   collision at `t = 0` alike.
 - **Escape-terminated**: the production loop stops at escape fire, so the class freezes at the fire-time state. It can
   then read excursion or B where the event stain reads escape (§9, RQ-313).
 - **A pixel the chart hatches** (`principia_chart_decoder_contract.md` Part 3: the types, `validate`'s layers 2 and 3,
-  a failed `Φ`) keeps the chart's hatch, `debug_invalid`, in every stain, decided from the chart alone, never from the
-  payload's `decode_failed` detail (Part 3; R-446).
+  a failed `Φ`) is not part of the chart: it draws the plain canvas background in every Chazy stain, with no key, decided
+  from the chart alone, never from the payload's `decode_failed` detail (Part 3; R-446, R-467). Only the debug view
+  hatches it.
 - **The decoder's own `decode_failed`** samples (its `DEGENERATE` tags and a non-finite decode) have no state to
-  classify, and draw the invalid hatch, `debug_invalid`, in every stain, as `sim_failed` does (RQ-319, decided per
-  R-369: option (a), on gui review 5555494498 of PR #223). The spec does not say what they draw. Under R-446 the
-  outcome view draws them black `#141418`, which here is B (§10.1), "bound, or nobody has left yet". So a free-fall
-  slice under `η_E` reads hatched in the Chazy stains and black in the outcome view, the same split `sim_failed`
-  already has, and this hatch cannot be told apart from a chart's hatch. A reserved `state` code draws the hatch too
-  (colour_composition §4.1). Every sample with no motion to classify thus draws the hatch: `sim_failed`, a reserved
-  `state` code, a pixel the chart hatches and the decoder's own `decode_failed`.
+  classify, and draw blank, the canvas background, in every Chazy stain, as a pixel that is not a system does, with no
+  key or share, as the outcome view draws them (R-511, ruling RQ-379). `sim_failed` draws `#141418` here: the human's
+  ruling R-467 names the Chazy stains among the presentation views, where a failure "keeps R-446's black #141418"
+  (ruling RQ-319, option (b)), and R-511 keeps it for `sim_failed`. That black is B (§10.1), "bound, or nobody has left
+  yet", so in the figure a `sim_failed` sample reads as B, as the outcome view's read as its bounded / nothing yet; a
+  free-fall slice under `η_E` reads blank in both systems. A reserved `state` code draws `#141418` too. Every system
+  sample with no motion to classify thus draws B's black, and a `decode_failed` sample and a pixel the chart hatches the
+  background; View › Debug view tells them apart, each under its own key with a count (R-467 D5). *Was (R-467):* "draw
+  `#141418` in every Chazy stain, as the outcome view draws them (R-446) and as `sim_failed` draws here"; "so in the
+  figure a failure reads as B, as the outcome view's failures read as its bounded / nothing yet; a free-fall slice under
+  `η_E` reads black in both systems"; "Every sample with no motion to classify thus draws B's black, and a pixel the
+  chart hatches the background". *Was (RQ-319, decided per R-369, option (a)):* "draw the invalid hatch,
+  `debug_invalid`, in every stain, as `sim_failed` does"; "Every sample with no motion to classify thus draws the
+  hatch".
 
 ---
 
@@ -540,7 +550,10 @@ another field, and a stain that uses lightness uses it for a named field (energy
   that under Replace-L it becomes neutral grey at the brightness field's lightness, still the one class with no hue.
   `#141418` is not quite neutral (OKLab `a ≈ 0.002`, `b ≈ −0.008`, chroma ≈ 0.008): RQ-317.
 
-The not-yet stipple never appears (§7). The invalid hatch draws `sim_failed` and NaN as everywhere.
+The not-yet stipple never appears (§7). `sim_failed` and NaN draw B's `#141418`, as in every
+presentation view (R-467; §7), and `decode_failed` draws blank (R-511; *was:* "`sim_failed`, NaN and `decode_failed` draw
+B's `#141418`"); the hatch is the debug view's. *Was:* "The invalid hatch draws `sim_failed` and NaN as
+everywhere".
 
 ### 10.2 Final motion: Chazy's seven (the default)
 
@@ -679,14 +692,24 @@ A stain with the energy channel (§10.5, §10.11.2) has §G6's separate key for 
 (or `q_k`) through `b = q/(1 + q)`, parabolic marked at ½, beside the hue swatches (applied per R-369, §G6's rule).
 Bodies are named 1, 2, 3 in every legend (§0).
 
+**B's share counts the failures (R-467), `decode_failed` apart (R-511).** A `sim_failed` sample, a reserved `state`
+code and a NaN draw B's black in every Chazy stain and are no category of their own (§7), so B's share of the view
+counts them, as the outcome view's black share counts its failures (R-446; `principia_render_gui_spec.md` §G6), and
+where they are many B's share is not a bound fraction. A `decode_failed` sample draws blank and leaves every share and
+its total (R-511 Z1), so on a free-fall slice under `η_E` the shares count only the pixels that integrate. *Was
+(R-467):* "A `sim_failed` or `decode_failed` sample, a reserved `state` code and a NaN draw B's black …; B's share is
+then not a bound fraction: on a free-fall slice under `η_E` it reads near 100 %". View › Debug view's counts ("decode or sim
+failure", "NaN / Inf") separate them (physics review 5585225466 of PR #253, P7; applied per R-369).
+
 ### 10.11 One body at a time (R-443)
 
 Spec 03 §10, the human's follow-up of 16 October 2026, transcribed. Which body escapes is never drawn in the
 final-motion maps (the event stain carries escape of body k). These views follow one body, so the detail stays
 legible. Collision is magenta `#DA85B6` and bound is black `#141418` throughout, as everywhere else (§10.1). Like every
 stain in §10, each is a composition on the backbone, its palette a user-editable default; §7's validity rules hold in
-each (running samples hold a value; `sim_failed` and NaN the hatch; `decode_failed` the hatch too, RQ-319 decided per
-R-369). The fields are §5.6's.
+each (running samples hold a value; `sim_failed` and NaN `#141418`, `decode_failed` and a pixel the chart hatches
+the canvas background, R-467, ruling RQ-319, and R-511, ruling RQ-379 (*was:* "`sim_failed`, NaN and `decode_failed`
+`#141418`, a pixel the chart hatches the canvas background"); *was:* "`sim_failed` and NaN the hatch; `decode_failed` the hatch too"). The fields are §5.6's.
 
 #### 10.11.1 Body lens
 

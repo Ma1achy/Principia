@@ -172,3 +172,6 @@ TASK-M2-31.
   details, not a stored NaN (P3).
 - The outcome × `t_end` bivariate preset (R-445) is TASK-M7-17's; the preset library's entry for the OKLab-uniform set
   is TASK-M7-17's too.
+- **R-511 (20 Oct 2026; merged task, a note):** a presentation `decode_failed` sample now draws blank, not `#141418`;
+  `sim_failed` keeps `#141418`. TASK-M2-34 changes what this task built (REQ-COL-108), re-checked at the M2 gate; the
+  text above is kept as built (gui review 5587650119 of PR #255, G11).

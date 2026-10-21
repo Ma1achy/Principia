@@ -16,17 +16,18 @@ use render::present::{self, Rgb};
 use validation::negative_control;
 
 /// The nine outcome classes of colour_composition §1.4's default palette as the proposal measured them (TASK-M1-09),
-/// 8-bit sRGB: the record R-433 confirmed. R-444 to R-446 have since removed "degenerate" and "collision @ t=0" from
-/// the outcome view; [`R_444_CLASSES`] is the palette now.
+/// 8-bit sRGB: the record R-433 confirmed, its colours as measured and its classes named as shown (R-449: the record
+/// wrote them 0-based, "collision 0–1", "body 0 escape"). R-444 to R-446 have since removed "degenerate" and
+/// "collision @ t=0" from the outcome view; [`R_444_CLASSES`] is the palette now.
 const M1_CLASSES: [(&str, u32); 9] = [
-    ("collision 0–1", 0xDE2D2D),
-    ("collision 0–2", 0x2EBC4E),
-    ("collision 1–2", 0x3462E0),
+    ("collision 1–2", 0xDE2D2D),
+    ("collision 1–3", 0x2EBC4E),
+    ("collision 2–3", 0x3462E0),
     ("bounded", 0x141418),
     ("degenerate", 0xECECF0),
-    ("body 0 escape", 0xF0DE32),
-    ("body 1 escape", 0xE034C6),
-    ("body 2 escape", 0x30C8DC),
+    ("escape body 1", 0xF0DE32),
+    ("escape body 2", 0xE034C6),
+    ("escape body 3", 0x30C8DC),
     ("collision @ t=0", 0xF29620),
 ];
 

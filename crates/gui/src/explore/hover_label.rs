@@ -26,8 +26,9 @@ pub const BACKING: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 200);
 pub const LISTEN_HINT: &str = "L listen";
 
 /// The label of `sample` with the playhead at `t` and the horizon `t_max`: undecided, "undecided · still interacting at
-/// t 12.4 of 50"; decided, its fate and `t_end`, "body 1 escape · t_end 31.2" (applied per R-369: the decided wording,
-/// a look silence under R-390). Each ends with the listen hint.
+/// t 12.4 of 50"; decided, its fate, the one conversion function's name of its `state` and `detail` (R-449;
+/// `engine::contract::display::name`), and `t_end`, "escape body 1 · t_end 31.2" (applied per R-369: the decided
+/// wording, a look silence under R-390). Each ends with the listen hint.
 pub fn text(sample: &Sample, t: f64, t_max: f64) -> String {
     let fate = match (&sample.fate, sample.t_end) {
         (Some(fate), Some(t_end)) => format!("{fate} · t_end {t_end:.1}"),

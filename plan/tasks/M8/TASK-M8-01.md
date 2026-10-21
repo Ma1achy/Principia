@@ -44,3 +44,4 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - The fixed small bound on the serialised snapshot size (REQ-PERF-071's verify) is not given by the corpus.
 - RQ-93 ruled: R-113 — REQ-TOOL-002 (M0) records the M0 contract skeleton's config; the profiler file's header config being this task's REQ-GUI-039 provenance object is verified by REQ-TOOL-098 (TASK-M8-28).
 - Closes, for gaps the corpus leaves open: REQ-PERF-091 (R-71 calibration) (classification accepted by R-132).
+- R-484 (20 Oct 2026): filling the state contract's groups clears T2's empty structs (Slice, Integrator, Collision, Quality, Palette); each new field gets its tier in `crates/engine/src/contract/tiers.rs` once TASK-M7-44 has merged (T4).

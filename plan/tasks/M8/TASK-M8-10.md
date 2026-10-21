@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156
-- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33
+- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33, TASK-M7-52
 - **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-2.4
@@ -23,6 +23,7 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 
 ## Deliverables
+- `trace_layer.rs` projects `z(t)` onto the chart by calling TASK-M7-52's shared projection (`crates/kernel`), never its own (R-542 H11).
 - `crates/render/src/compositor/trace_layer.rs` — the trace as a compositor layer above the stain output; suppressed over non-current-identity regions.
 - `crates/gui/src/explore/hover_label.rs`, the track's hover label (TASK-M6-27, R-390) wired to the real engine — label strings from the snapshot's sample under the cursor.
 - The legend, Trajectory panel and Inspector labels from TASK-M2-33's conversion function (R-449), with no label function of the GUI's own.
@@ -35,6 +36,7 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - `cargo test -p gui labels_one_based` — on the real engine the hover label, the legend, the Trajectory panel and the Inspector name an escape of body 0 "escape body 1" and collisions of pairs 2, 1 and 0 "collision 1–2", "collision 1–3" and "collision 2–3", each through TASK-M2-33's function; no label reads "body 0" or a pair id (REQ-GUI-087, as R-449 changes it).
 - `cargo xtask screenshot 01_main` (hover over stale and current regions) — hover over a stale backdrop region: no trace; over a current region: trace drawn above the composite (REQ-RENDER-073).
 - Definition: the hover path's out-of-plane distance and opacity fall-off written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-156).
+- `cargo test -p render shared_projection_callers` (the hover trace arm) — REQ-COL-135's arm for this consumer: it calls the kernel function on the CPU, its projected points and statuses bitwise equal to REQ-COL-134's shared source's; controls: a copied projection with one constant changed fails, and a hand-written projection defined outside `crates/kernel` fails the symbol check, the snippet `cargo xtask build-kernel` emits to `crates/render/wgsl/` exempt. *Was (PR #270 code re-review, C4, applied per R-369):* "`cargo test -p render shared_projection_callers` (the hover trace arm) — REQ-COL-135's arm for this consumer: its projection is REQ-COL-134's shared source (control: a copied projection with one constant changed, and a projection defined outside `crates/kernel`, each fail)."
 
 ## Notes
 - The opacity fall-off with distance from the slice has no stated function or distance measure.
@@ -42,3 +44,5 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (classification accepted by R-132).
 - R-390: TASK-M6-27 builds the hover path and label on mock data, the path drawn by the mock into its stand-in (applied per R-369, review 5434766412 on PR #157); this task depends on it, draws the real path with the compositor's trace layer and the label from the real sample, and keeps REQ-GUI-085 and REQ-GUI-086. The mock's fall-off is a stand-in; REQ-GUI-156's definition is written here.
 - R-449 (16 Oct 2026): the labels are 1-based, in place of R-22's 0-based ones (was `labels_zero_based`, "labels for body 0 escape read 'body 0' … no '1–2' style collision label"); the shared `crates/gui/src/labels.rs` is replaced by TASK-M2-33's conversion function, which the render crate's legends use too (applied per R-369).
+- **R-476 M4 (20 Oct 2026):** TASK-M8-49 moves this task's trace drawing onto the line system (REQ-GUI-245); the hover label is unchanged.
+- **The one projection (R-542 H11; PR #270's code re-review, C1; applied per R-369):** this task depends on TASK-M7-52 and calls its shared projection. *Was:* "- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33".

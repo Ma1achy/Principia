@@ -589,7 +589,8 @@ const R433: &str = "R-433 — ";
 /// (REQ-CHART-044), `burrau_nu_half_tol` (REQ-VAL-118), the acute-angle Burrau charts' `burrau_theta_min` and
 /// `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046),
 /// [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
-/// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
+/// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), and the round trip's `eps_phys`
+/// (REQ-ENC-024), for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
 /// names the six floors' entries.
 fn check_list_by_gate(register: &[ConstantBuilder]) {
@@ -616,7 +617,8 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             UNTIL_M2[0],
             UNTIL_M2[1],
             "shape_vec_js_tol",
-            "shape_roundtrip_bound"
+            "shape_roundtrip_bound",
+            "eps_phys"
         ],
         "the entries provisional until M2"
     );

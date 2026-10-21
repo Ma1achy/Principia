@@ -50,7 +50,8 @@
 //! **The infeasible pixel** (chart_reference §2.2, R-72; REQ-DEC-040): `K* < K_min` is
 //! `DEGENERATE(INVARIANT_INFEASIBLE)`, recorded as `decode_failed`, detail 3 (other) ([`infeasible_label`]); an earlier
 //! block's tag (the mass block's `M01_TINY`) is kept over it, and it takes precedence over the seed rule's
-//! `DEGENERATE`. The member joins [`crate::decode::degenerate::Degenerate`] with its full set (TASK-M2-24). It is kept,
+//! `DEGENERATE(NO_QUALIFYING_SEED)`. Both are members of [`crate::decode::degenerate::Degenerate`]'s closed set
+//! ([`Outcome::tag`]), and a chart's decode carries them in its `degenerate` ([`crate::decode::Blocks::tag`]). It is kept,
 //! never dropped, and its momenta are finite: `a` is selected as 0, so `pᵢ = mᵢvᵢ⁽ᴸ⁾`, the rigid rotation. A
 //! `DEGENERATE` pixel likewise keeps `w = 0`, selected, so nothing divides by its zero norm.
 //!
@@ -88,9 +89,9 @@ use spirv_std::num_traits::Float;
 use spirv_std::spirv;
 
 use crate::decode::config::{self, Config};
+use crate::decode::degenerate::Degenerate;
 use crate::decode::mass::{self, Masses};
 use crate::generated::links::{Defaults, LinkReal};
-use crate::payload::STATE_DECODE_FAILED;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -228,7 +229,7 @@ pub fn infeasible<R: ExactSign>(i: R, k: R, l: R) -> bool {
 /// `sample_descriptor`: `decode_failed` (5), detail 3 (other) (chart_reference §2.2; REQ-DEC-040).
 #[inline]
 pub fn infeasible_label() -> (u32, u32) {
-    (STATE_DECODE_FAILED, 3)
+    Degenerate::InvariantInfeasible.label()
 }
 
 /// `J v = (−v_y, v_x)`.
@@ -261,6 +262,19 @@ pub enum Outcome {
     Infeasible,
     /// Feasible, but no seed has `‖w⁽²⁾‖²_m > ε_w`: `DEGENERATE` (R-82), momenta the rigid rotation.
     Degenerate,
+}
+
+impl Outcome {
+    /// The `DEGENERATE` reason the outcome raises: `INVARIANT_INFEASIBLE` where infeasible, `NO_QUALIFYING_SEED` where
+    /// no seed qualified, none where feasible.
+    #[inline]
+    pub fn tag(self) -> Option<Degenerate> {
+        match self {
+            Outcome::Feasible => None,
+            Outcome::Infeasible => Some(Degenerate::InvariantInfeasible),
+            Outcome::Degenerate => Some(Degenerate::NoQualifyingSeed),
+        }
+    }
 }
 
 /// The construction's output.

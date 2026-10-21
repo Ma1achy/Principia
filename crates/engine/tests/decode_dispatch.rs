@@ -2,7 +2,7 @@
 //! - `decode_dispatch_check_samples`: a dispatch covers `n` samples at 64 per workgroup within the device's workgroup
 //!   count and storage-binding size, each limit met exactly and refused one past it, and `n` within u32.
 //! - `decode_dispatch_uniform_words`: the uniform's words are the chart's six rows, in order, as f32 bits, then the
-//!   flags word and its padding.
+//!   flags word and its padding, then the energy row (`η_E`'s switch and `E*`'s bits).
 
 use engine::decode_dispatch::{check_samples, uniform_words};
 use kernel::chart::Latent;
@@ -73,6 +73,7 @@ fn check_words(words: fn(&DecodeUniforms) -> Vec<u32>) {
         ..DecodeUniforms::default()
     };
     u.flags.x = 1;
+    u.energy = kernel::stage::decode::energy(Some(2.5));
     let got = words(&u);
     let mut want: Vec<u32> = chart
         .z0
@@ -82,6 +83,7 @@ fn check_words(words: fn(&DecodeUniforms) -> Vec<u32>) {
         .map(|x| x.to_bits())
         .collect();
     want.extend([1, 0, 0, 0]);
+    want.extend([1, 2.5f32.to_bits(), 0, 0]);
     assert_eq!(got, want, "the uniform's words");
     assert_eq!(
         got.len() * 4,

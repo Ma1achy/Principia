@@ -647,6 +647,8 @@ pub fn fgw_identity() -> u32 {
 /// The word buffer's accessors, emitted from `fgw_w`'s `length` and `payload` entries (payload §3, §6; R-86's names),
 /// each taking the whole `vec4<u32>` as `[u32; 4]`, as §3's `fgw_length_raw(w: vec4u)` does:
 /// - `FGW_CAPACITY`, `length`'s range's greatest value, and `FGW_LENGTH_SENTINEL`, its sentinel;
+/// - `MAX_CROSSINGS_PER_SUBSTEP`, the register's `max_crossings_per_substep`, the capacity of the march's per-substep
+///   crossing list;
 /// - `fgw_length_raw`, `fgw_truncated`, `fgw_reduced_length_valid`, `fgw_reduced_length` and
 ///   `fgw_retained_prefix_length`, which read `.w` alone;
 /// - `fgw_payload`, the `payload` entry's accessor, which reads `.w` alone (render contract Part 5: one accessor per
@@ -672,6 +674,7 @@ pub fn fgw(entries: &[Entry]) -> String {
     let p_bits = format!("bits {p_offset}–{}", p_offset + p_width - 1);
     let no_symbol = fgw_no_symbol();
     let identity = fgw_identity();
+    let max_crossings = crate::constants::MAX_CROSSINGS_PER_SUBSTEP.number() as u32;
     format!(
         r#"
 /// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).
@@ -679,6 +682,10 @@ pub const FGW_CAPACITY: u32 = {capacity};
 
 /// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
 pub const FGW_LENGTH_SENTINEL: u32 = {sentinel};
+
+/// The most branch-cut crossings one accepted substep holds, one per cut (payload §3; symbolic_dynamics_contract §1;
+/// the register's `max_crossings_per_substep`): the capacity of the march's per-substep crossing list.
+pub const MAX_CROSSINGS_PER_SUBSTEP: u32 = {max_crossings};
 
 /// `length_raw`: {bits} of the word's `.w`, element 3 of its `vec4<u32>`; 0…{capacity} valid, {sentinel} truncated
 /// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
@@ -987,7 +994,36 @@ pub fn state_codes() -> String {
             name.to_uppercase()
         );
     }
+    out.push_str(&decode_failed_details());
     out
+}
+
+/// Payload §2's `detail` codes under `decode_failed`, its failure enum, as constants `DETAIL_DECODE_FAILED_<MEANING>`,
+/// each meaning at its code in the ledger's table ([`crate::payload::detail_meanings`]): the decode's `DEGENERATE`
+/// reasons map onto them (dd_decoder §2, "The `DEGENERATE` cause set"), never onto a literal code.
+fn decode_failed_details() -> String {
+    let mut out = String::new();
+    let failed = crate::payload::detail_meanings()
+        .into_iter()
+        .find(|(state, _)| *state == "decode_failed");
+    for (code, meaning) in failed.into_iter().flat_map(|(_, m)| m).enumerate() {
+        let _ = write!(
+            out,
+            "\n/// `decode_failed`'s `detail` code {code}: {meaning} (payload §2).\npub const DETAIL_DECODE_FAILED_{}: u32 = {code};\n",
+            slug(meaning)
+        );
+    }
+    out
+}
+
+/// `meaning` as a constant's name: upper case, each run of characters other than letters and digits one `_`.
+fn slug(meaning: &str) -> String {
+    meaning
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_ascii_uppercase)
+        .collect::<Vec<_>>()
+        .join("_")
 }
 
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /

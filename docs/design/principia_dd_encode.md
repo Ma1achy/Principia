@@ -14,7 +14,7 @@ The **only upward edge on the ladder**: `physical state → z`, the quotient map
 
 From the **inverse-encode contract** (all of it binds; headline clauses): `E = (block/chart inverses) ∘ C`; **T1** gauge-invariance (deterministic tie-breaks), **T2** right-inverse on the interior, **T3** left-inverse modulo gauge; rigid operations act on the **full phase-space state**; the canonicalisation order is **1a CoM → 0 scale → 1b boost → 2 rotate → 3 mirror** (R-23); the invariant fibre point is the chart's own forward construction (**encode reuses decode** — pending change 3 supersedes "smallest latent norm"); tolerances asserted in **physical units**; everything discarded is **reported** (`lookup_rescaled`, `lookup_mirrored`, `lookup_clamped`).
 
-From the **chart contract / generation root**: block inverses come from the **link registry** (never inlined); ε clamps are registry data (`ε_μ = ε_z = ε_q = 10⁻⁶`, `μ_max = 5`, `q_max = 2`).
+From the **chart contract / generation root**: block inverses come from the **link registry** (never inlined); ε clamps are registry data (`ε_μ = ε_z = ε_q = 10⁻⁶`, `μ_max = 5`, `q_max = 2`; the last two the defaults of tunable parameters, the active value read, R-481).
 
 From the **decoder dd**: decoded states are already canonical (§3.3 no-op property), so T2 exercises the block inverses and numerics only; body 0 is the softmax reference.
 

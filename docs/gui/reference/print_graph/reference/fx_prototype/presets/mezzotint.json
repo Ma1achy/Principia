@@ -1,0 +1,179 @@
+{
+ "name": "Mezzotint",
+ "doc": "A rocked plate printing velvet black, the lights burnished out; rocker grain in many directions.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "cx0": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(0)))"
+   }
+  },
+  "cy0": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(0)))"
+   }
+  },
+  "g0": {
+   "op": "strokes",
+   "in": {
+    "tx": "cx0",
+    "ty": "cy0"
+   },
+   "p": {
+    "width": 0.55,
+    "density": 0.05,
+    "length": 3,
+    "seed": "$seed",
+    "amp_var": 0.6
+   }
+  },
+  "cx1": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(37)))"
+   }
+  },
+  "cy1": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(37)))"
+   }
+  },
+  "g1": {
+   "op": "strokes",
+   "in": {
+    "tx": "cx1",
+    "ty": "cy1"
+   },
+   "p": {
+    "width": 0.55,
+    "density": 0.05,
+    "length": 3,
+    "seed": "$seed+1",
+    "amp_var": 0.6
+   }
+  },
+  "cx2": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(74)))"
+   }
+  },
+  "cy2": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(74)))"
+   }
+  },
+  "g2": {
+   "op": "strokes",
+   "in": {
+    "tx": "cx2",
+    "ty": "cy2"
+   },
+   "p": {
+    "width": 0.55,
+    "density": 0.05,
+    "length": 3,
+    "seed": "$seed+2",
+    "amp_var": 0.6
+   }
+  },
+  "cx3": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(111)))"
+   }
+  },
+  "cy3": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(111)))"
+   }
+  },
+  "g3": {
+   "op": "strokes",
+   "in": {
+    "tx": "cx3",
+    "ty": "cy3"
+   },
+   "p": {
+    "width": 0.55,
+    "density": 0.05,
+    "length": 3,
+    "seed": "$seed+3",
+    "amp_var": 0.6
+   }
+  },
+  "cx4": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(148)))"
+   }
+  },
+  "cy4": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(148)))"
+   }
+  },
+  "g4": {
+   "op": "strokes",
+   "in": {
+    "tx": "cx4",
+    "ty": "cy4"
+   },
+   "p": {
+    "width": 0.55,
+    "density": 0.05,
+    "length": 3,
+    "seed": "$seed+4",
+    "amp_var": 0.6
+   }
+  },
+  "n9": {
+   "op": "noise",
+   "p": {
+    "scale": 1.2,
+    "octaves": 1,
+    "seed": "$seed+9"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "g0": "g0",
+    "g1": "g1",
+    "g2": "g2",
+    "g3": "g3",
+    "g4": "g4",
+    "n9": "n9"
+   },
+   "p": {
+    "f": "L = stretch(blur(lum(I), 0.9)); T = (1-L)**0.85\ng = np.zeros((H, W))\nfor x in (g0, g1, g2, g3, g4): g = g + x\ng = (g-g.min())/(np.ptp(g)+1e-9)\ncov = sig((T - (1-g)*0.9 - 0.05)*9)\ncov = 0.85*cov + 0.15*gaussian(cov, 1.5)\nout = array([0.95, 0.93, 0.88])*(1-cov[..., None]) + array([0.10, 0.08, 0.08])*cov[..., None]\nout = out*(1+0.02*n9)[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

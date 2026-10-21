@@ -6,14 +6,25 @@
 //! generic over the chart `C` and the link selection `S`: each `(C, S)` is its own compiled variant, a
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
 //! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`], and the charts whose masses vary per
-//! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`])
-//! calling [`entry`]. Nothing at run
+//! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`],
+//! the acute Burrau strips, [`burrau_theta_k_defaults`], [`burrau_theta_lz_defaults`] and
+//! [`burrau_theta_delta_m_defaults`], and the shape sphere, [`shape_sphere_defaults`]) calling [`entry`]. Nothing at run
 //! time names a chart, a chart id or an axis kind: adding a chart is a `Φ` ([`crate::chart`]), its decode
 //! ([`ChartDecode`]), its [`UniformChart`] layout and one wrapper.
 //!
 //! **Uniforms, not code** (lowering Part 3; chart_decoder_contract Design axiom 6). The chart's parameters, `z₀`, `q₁`
 //! and `q₂` for the latent chart, the slice values among `z₀`'s components, are the dispatch's uniform
 //! ([`DecodeUniforms::chart`], [`UniformChart`]), so a navigation edit writes the uniform and recompiles nothing.
+//!
+//! **`η_E`** ([`DecodeUniforms::energy`], [`energy`], [`target`]; dd_decoder §3.7, R-25; lowering Part 3): the energy
+//! target `E*` is a chart parameter, an invariant target, so a uniform, never a baked variant, and its explicit off
+//! switch is a uniform flag beside it: the energy row's `x`, bit 0, on (1) or off (0), and its `y`, `E*`'s f32 bits.
+//! Off is the `None` of [`sample_with`]'s `Option`, and `Some(0)` is a real target (R-25). The rescale runs through the
+//! shared [`energy_norm`] after the chart's own decode, between the momentum block and the derived invariants, on a chart
+//! that allows it; on one that forbids it ([`crate::chart::Chart::forbids_energy_normalisation`]) the target is read as
+//! `None`, as chart-aware validation refuses such a view before anything decodes. The decode-only dispatch
+//! (`engine::decode_dispatch::DecodeStage::run_with`) and its CPU counterpart (`decode_only_with`) take the same
+//! `Option`.
 //!
 //! **`DECODE_MODE`** ([`DecodeUniforms::flags`], [`decode_mode`]): bit 0 of the quad's flags word, full (0) or
 //! linearised (1) (scheduler_contract Part 5, `QuadRequest.flags`; deep_zoom §2). It is read from the uniform, so the
@@ -38,16 +49,17 @@ use spirv_std::spirv;
 use crate::chart::invariant::{Invariant, WarpReal};
 use crate::chart::mixed::{Alpha, ZMu1};
 use crate::chart::{
-    Burrau, Chart, ChartDecode, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, EuclidPlane,
+    InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere,
 };
-use crate::decode::{descriptor, Degenerate, Ic};
+use crate::decode::{descriptor, energy_norm, Degenerate, Ic};
 use crate::generated::links::{
     tanh_sat, Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
     StickBreaking,
 };
 use crate::payload::{ICDescriptor, ICDescriptorOf, PayloadReal};
 
-/// The decode stage's per-dispatch uniform: the chart's parameters and the quad's flags word.
+/// The decode stage's per-dispatch uniform: the chart's parameters, the quad's flags word and the energy target.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(C)]
 pub struct DecodeUniforms {
@@ -55,6 +67,28 @@ pub struct DecodeUniforms {
     pub chart: [Vec4; 6],
     /// `x`: the quad's flags word, bit 0 `DECODE_MODE` ([`decode_mode`]); `y`, `z`, `w`: zero, padding to 16 bytes.
     pub flags: UVec4,
+    /// `η_E`'s target ([`energy`], [`target`]): `x` bit 0 the switch, 1 on and 0 off (R-25); `y` the bits of the f32
+    /// `E*`, read only where the switch is on; `z`, `w`: zero, padding to 16 bytes.
+    pub energy: UVec4,
+}
+
+/// The energy row of the target `e_star`: `(1, E*'s bits, 0, 0)` for `Some(E*)`, `(0, 0, 0, 0)` for `None`, off.
+#[inline]
+pub fn energy(e_star: Option<f32>) -> UVec4 {
+    match e_star {
+        Some(e) => UVec4::new(1, e.to_bits(), 0, 0),
+        None => UVec4::ZERO,
+    }
+}
+
+/// The target the energy row `row` holds: `Some(E*)` where the switch, `x`'s bit 0, is on, `None` where it is off.
+#[inline]
+pub fn target(row: UVec4) -> Option<f32> {
+    if row.x & 1 == 1 {
+        Some(f32::from_bits(row.y))
+    } else {
+        None
+    }
 }
 
 /// The decoder a quad runs (scheduler_contract Part 5, `QuadRequest.flags` bit 0).
@@ -280,6 +314,121 @@ impl UniformChart for Mixed<ZMu1, Alpha, f32> {
     }
 }
 
+/// A row of the acute Burrau strips' uniforms: `(θ_min, θ_max, a, b)`, the rest zero.
+#[inline]
+fn strip_rows(theta: [f32; 2], a: f32, b: f32) -> [Vec4; 6] {
+    let zero = Vec4::ZERO;
+    [
+        Vec4::new(theta[0], theta[1], a, b),
+        zero,
+        zero,
+        zero,
+        zero,
+        zero,
+    ]
+}
+
+/// The `(θ, K)` strip's uniform: row 0 `(θ_min, θ_max, K_max, γ_K)`, rows 1–5 zero.
+impl UniformChart for BurrauThetaK<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaK {
+            theta_range: [r[0].x, r[0].y],
+            k_max: r[0].z,
+            gamma_k: r[0].w,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        strip_rows(self.theta_range, self.k_max, self.gamma_k)
+    }
+}
+
+/// The `(θ, L_z)` strip's uniform: row 0 `(θ_min, θ_max, K, L_z fraction)`, rows 1–5 zero.
+impl UniformChart for BurrauThetaLz<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaLz {
+            theta_range: [r[0].x, r[0].y],
+            k: r[0].z,
+            lz_fraction: r[0].w,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        strip_rows(self.theta_range, self.k, self.lz_fraction)
+    }
+}
+
+/// The `(θ, Δm)` strip's uniform: row 0 `(θ_min, θ_max, 0, 0)`, row 1 `(m₀*, m₁*, m₂*, 0)`, rows 2–5 zero.
+impl UniformChart for BurrauThetaDeltaM<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaDeltaM {
+            theta_range: [r[0].x, r[0].y],
+            m_target: [r[1].x, r[1].y, r[1].z],
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let mut rows = strip_rows(self.theta_range, 0.0, 0.0);
+        let m = self.m_target;
+        rows[1] = Vec4::new(m[0], m[1], m[2], 0.0);
+        rows
+    }
+}
+
+/// The shape sphere's map as its uniform's word: 0 the spherical map, 1 the exponential.
+#[inline]
+fn map_word(map: ShapeMap) -> f32 {
+    match map {
+        ShapeMap::Spherical => 0.0,
+        ShapeMap::Exponential => 1.0,
+    }
+}
+
+/// The shape sphere's uniform: rows 0–2 `(n₀, s)`, `(e₁, I)` and `(e₂, φ_f)`, row 3 `z₀`'s momentum block, row 4
+/// `(z_μ1, z_μ2, map, 0)`, the map's word 0 spherical and any other exponential (`map_word`), row 5 zero. The map is a
+/// chart parameter (chart_reference §3.3, "state which is used"), so a uniform, as `DECODE_MODE` is, its branch uniform
+/// over the dispatch and taken before the decode (applied per R-369, TASK-M2-24).
+impl UniformChart for ShapeSphere<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        let three = |v: Vec4| [v.x, v.y, v.z];
+        ShapeSphere {
+            map: if r[4].z == 0.0 {
+                ShapeMap::Spherical
+            } else {
+                ShapeMap::Exponential
+            },
+            n0: three(r[0]),
+            e1: three(r[1]),
+            e2: three(r[2]),
+            scale: r[0].w,
+            inertia: r[1].w,
+            phase: r[2].w,
+            z_mom: [r[3].x, r[3].y, r[3].z, r[3].w],
+            z_mass: [r[4].x, r[4].y],
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let row = |v: [f32; 3], w: f32| Vec4::new(v[0], v[1], v[2], w);
+        [
+            row(self.n0, self.scale),
+            row(self.e1, self.inertia),
+            row(self.e2, self.phase),
+            Vec4::new(self.z_mom[0], self.z_mom[1], self.z_mom[2], self.z_mom[3]),
+            Vec4::new(self.z_mass[0], self.z_mass[1], map_word(self.map), 0.0),
+            Vec4::ZERO,
+        ]
+    }
+}
+
 /// One chart and link set the kernel is built for: the chart, the selection, and the name of its compute entry point
 /// in the WGSL, as naga names it from the wrapper's module path.
 pub trait DecodeVariant {
@@ -368,6 +517,42 @@ impl DecodeVariant for MixedMu1AlphaDefaults {
     const ENTRY: &'static str = "stage_decode_mixed_mu1_alpha_defaults";
 }
 
+/// The `(θ, K)` strip under the default links, which it does not read.
+pub struct BurrauThetaKDefaults;
+
+impl DecodeVariant for BurrauThetaKDefaults {
+    type Chart = BurrauThetaK<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_k_defaults";
+}
+
+/// The `(θ, L_z)` strip under the default links, which it does not read.
+pub struct BurrauThetaLzDefaults;
+
+impl DecodeVariant for BurrauThetaLzDefaults {
+    type Chart = BurrauThetaLz<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_lz_defaults";
+}
+
+/// The `(θ, Δm)` strip under the default links, which it does not read.
+pub struct BurrauThetaDeltaMDefaults;
+
+impl DecodeVariant for BurrauThetaDeltaMDefaults {
+    type Chart = BurrauThetaDeltaM<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_delta_m_defaults";
+}
+
+/// The shape sphere under the default links, which decode its held mass and momentum blocks.
+pub struct ShapeSphereDefaults;
+
+impl DecodeVariant for ShapeSphereDefaults {
+    type Chart = ShapeSphere<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_shape_sphere_defaults";
+}
+
 /// One sample's decode: the integrator's input and the payload side's record of it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DecodeOut<R: PayloadReal> {
@@ -379,9 +564,7 @@ pub struct DecodeOut<R: PayloadReal> {
     pub degenerate: Option<Degenerate>,
 }
 
-/// The decode stage at `(u, v)`: `D ∘ Φ` through the shared decoder, the chart's own ([`ChartDecode`]), under the chart
-/// `C` and the selection `S`, at the float type `R`: f32 in the kernel ([`entry`]) and f64 on the CPU
-/// (`engine::decode_dispatch::decode_only`), from this one source (R-118, R-265).
+/// The decode stage at `(u, v)` with `η_E` off: [`sample_with`] at `None`.
 #[inline]
 pub fn sample<C, S, R>(chart: &C, u: R, v: R) -> DecodeOut<R>
 where
@@ -389,7 +572,26 @@ where
     S: Selection,
     R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
 {
-    let d = chart.decode_at::<S, R>(u, v);
+    sample_with::<C, S, R>(chart, u, v, None)
+}
+
+/// The decode stage at `(u, v)` toward the energy target `e_star`: `D ∘ Φ` through the shared decoder, the chart's own
+/// ([`ChartDecode`]), then `η_E` through the shared [`energy_norm::apply_shared`] where the chart allows it (dd_decoder §3.7;
+/// the module's note), under the chart `C` and the selection `S`, at the float type `R`: f32 in the kernel ([`entry`])
+/// and f64 on the CPU (`engine::decode_dispatch::decode_only_with`), from this one source (R-118, R-265). `None` is off,
+/// and leaves the chart's decode untouched, bit for bit.
+#[inline]
+pub fn sample_with<C, S, R>(chart: &C, u: R, v: R, e_star: Option<R>) -> DecodeOut<R>
+where
+    C: ChartDecode,
+    S: Selection,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
+{
+    let (d, _) = energy_norm::apply_shared(
+        chart.decode_at::<S, R>(u, v),
+        e_star,
+        chart.forbids_energy_normalisation(),
+    );
     DecodeOut {
         ic: d.ic,
         descriptor: d.descriptor,
@@ -410,8 +612,10 @@ pub fn descriptor_words() -> usize {
     core::mem::size_of::<ICDescriptor>() / 4
 }
 
-/// The tag word of `degenerate`: 0 for none, 1 for `M01_TINY`, 2 for `ENERGY_INFEASIBLE`, 3 for `ENERGY_UNSCALABLE`.
-/// It is this dispatch's readback, not payload §2's `decode_failed` detail code, whose map is REQ-DEC-038's.
+/// The tag word of `degenerate`: 0 for none, 1 for `M01_TINY`, 2 for `ENERGY_INFEASIBLE`, 3 for `ENERGY_UNSCALABLE`, 4
+/// for `INVARIANT_INFEASIBLE`, 5 for `NO_QUALIFYING_SEED`: one word for each member of the closed set
+/// ([`crate::decode::degenerate::ALL`]). It is this dispatch's readback, not payload §2's `decode_failed` detail code,
+/// which is [`Degenerate::detail`] (dd_decoder §2's map, REQ-DEC-038).
 #[inline]
 pub fn tag(degenerate: Option<Degenerate>) -> u32 {
     match degenerate {
@@ -419,6 +623,8 @@ pub fn tag(degenerate: Option<Degenerate>) -> u32 {
         Some(Degenerate::M01Tiny) => 1,
         Some(Degenerate::EnergyInfeasible) => 2,
         Some(Degenerate::EnergyUnscalable) => 3,
+        Some(Degenerate::InvariantInfeasible) => 4,
+        Some(Degenerate::NoQualifyingSeed) => 5,
     }
 }
 
@@ -430,6 +636,8 @@ pub fn untag(word: u32) -> Result<Option<Degenerate>, u32> {
         1 => Ok(Some(Degenerate::M01Tiny)),
         2 => Ok(Some(Degenerate::EnergyInfeasible)),
         3 => Ok(Some(Degenerate::EnergyUnscalable)),
+        4 => Ok(Some(Degenerate::InvariantInfeasible)),
+        5 => Ok(Some(Degenerate::NoQualifyingSeed)),
         other => Err(other),
     }
 }
@@ -555,8 +763,9 @@ pub fn read_descriptor(words: &[u32], i: usize) -> ICDescriptor {
 }
 
 /// The decode stage's body for the variant `V`, invocation `i`: under `DECODE_MODE` full, sample `i`'s `(u, v)`, the
-/// pair `uv[2i], uv[2i + 1]`, decoded through `V`'s chart, its parameters read from `uniforms`, and its `(m, r, p)`,
-/// tag and descriptor written at sample `i` of `ic`, `tags` and `descriptors`. Invocations past the last sample write
+/// pair `uv[2i], uv[2i + 1]`, decoded through `V`'s chart, its parameters read from `uniforms`, toward the energy target
+/// the uniform's energy row holds ([`target`], [`sample_with`]), and its `(m, r, p)`, tag and descriptor written at
+/// sample `i` of `ic`, `tags` and `descriptors`. Invocations past the last sample write
 /// nothing, and so does a linearised quad, whose path lands in M6 (the module's note).
 #[inline]
 pub fn entry<V: DecodeVariant>(
@@ -570,7 +779,8 @@ pub fn entry<V: DecodeVariant>(
     let i = i as usize;
     if i < uv.len() / 2 && decode_mode(uniforms.flags.x) == DecodeMode::Full {
         let chart = V::Chart::from_uniform(&uniforms.chart);
-        let out = sample::<V::Chart, V::Links, f32>(&chart, uv[2 * i], uv[2 * i + 1]);
+        let e_star = target(uniforms.energy);
+        let out = sample_with::<V::Chart, V::Links, f32>(&chart, uv[2 * i], uv[2 * i + 1], e_star);
         write_ic(ic, i, &out.ic);
         tags[i] = tag(out.degenerate);
         write_descriptor(descriptors, i, &out.descriptor);
@@ -680,6 +890,58 @@ pub fn mixed_mu1_alpha_defaults(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
 ) {
     entry::<MixedMu1AlphaDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaKDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_k_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaKDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaLzDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_lz_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaLzDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaDeltaMDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_delta_m_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaDeltaMDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`ShapeSphereDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn shape_sphere_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<ShapeSphereDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
 }
 
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,

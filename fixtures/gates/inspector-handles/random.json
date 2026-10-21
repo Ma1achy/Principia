@@ -1,0 +1,10 @@
+{
+  "description": "REQ-VAL-021: 2×10⁴ random ICs, each g₀·D(z) with z uniform in the ball ‖z‖ < 4 and g₀ a random gauge element (scale 2^[−4, 4), any turn, either parity, offset s₀·[−1, 1)², boost s₀^{−1/2}·[−1, 1)², each up to the state's own size); each of translate-all, boost-all, rotate-all and scale-all applied at a size drawn alike, and ‖E(h·x) − E(x)‖ read on the f64 encode under the defaults links.",
+  "seed": 1,
+  "ics": 20000,
+  "radius": 4.0,
+  "span": 1.0,
+  "octaves": 4.0,
+  "leak": "none",
+  "expected": "pass"
+}

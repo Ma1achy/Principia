@@ -288,7 +288,8 @@ impl<P: Copy> ChartDecode for BurrauThetaK<P>
 where
     f64: From<P>,
 {
-    /// [`decode_theta_k`]: the construction's outcome is not part of [`Decoded`], as for the `(ν, K)` chart.
+    /// [`decode_theta_k`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`], as for the `(ν, K)` chart.
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -475,7 +476,8 @@ impl<P: Copy> ChartDecode for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
-    /// [`decode_theta_lz`]: the construction's outcome is not part of [`Decoded`], as for the `(ν, K)` chart.
+    /// [`decode_theta_lz`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`], as for the `(ν, K)` chart.
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where

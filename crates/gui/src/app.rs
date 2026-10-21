@@ -3,7 +3,9 @@
 //! figure, which takes 01_main.png's central rect with the layer shown and fills the window with it hidden, more of the
 //! field at the same scale, each point where the shown layout puts it (R-406); the toggle is `ViewUI`'s, sending no
 //! `SetField`. The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
-//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
+//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus; its ring and
+//! the breadcrumb's focus path are drawn only while keyboard navigation is on, which a key press turns on and a click
+//! or a drag off, a window the mouse opened taking the focus with no ring (R-460, R-464). The
 //! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control;
 //! a click on the figure, or P over it, pins the sample there in the Trajectory panel through the engine side's
 //! `computeIC`, sending none (R-453).
@@ -11,7 +13,9 @@
 //! their opener when they close; an error opens the console by itself, taking no focus (R-405). Export & share's
 //! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369), its figure filling
 //! the window as with F3 (R-406). Stain mode draws
-//! the node-graph editor (`crate::stain`), whose graph edits are `SetField`s as any control's.
+//! the node-graph editor (`crate::stain`), whose graph edits are `SetField`s as any control's. Every window but the
+//! console is moved and resized by the pointer, its place the GUI's own, saved to the GUI's settings as each drag ends
+//! and read back when the next GUI starts (R-461; `crate::settings`).
 
 use std::sync::Arc;
 
@@ -19,7 +23,7 @@ use eframe::egui::{self, Color32, Id, Key, LayerId, Order};
 use eframe::egui_wgpu;
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
-use engine::contract::log::{LogEntry, Severity};
+use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
@@ -32,6 +36,7 @@ use crate::explore;
 use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
 use crate::layout::Layout;
+use crate::settings::{Settings, Store};
 use crate::side::EngineSide;
 use crate::stain;
 use crate::windows;
@@ -102,6 +107,12 @@ pub struct App<S: EngineSide> {
     pub console_open: bool,
     /// The windows' own state: their drafts and choices.
     pub windows: windows::State,
+    /// The windows' places: each moved or resized, or remembered (R-461).
+    pub places: windows::place::Places,
+    /// Where the GUI's settings are kept (R-461 I4).
+    store: Store,
+    /// Whether a save of the settings has failed this session: it is logged once.
+    save_failed: bool,
     /// Whether Export & share's present mode hides all chrome (render_gui_spec §G5); Esc returns.
     pub present: bool,
     /// The keyboard layer.
@@ -114,8 +125,8 @@ pub struct App<S: EngineSide> {
     pub trajectory: explore::trajectory::Scratch,
     /// The Stain editor's own state.
     pub stain: stain::Scratch,
-    /// The overlay set Overlays ▾'s save as default kept, for the session (applied per R-369: the mock has no settings
-    /// store; every launch starts with every overlay off).
+    /// The overlay set Overlays ▾'s save as default kept, for the session (applied per R-369: it is not among the GUI's
+    /// settings, which keep the windows' places, R-461; every launch starts with every overlay off).
     pub overlay_default: engine::contract::render_state::Overlays,
     /// The hover last sent: the cursor's figure point, or none.
     hover_sent: Option<[f64; 2]>,
@@ -163,6 +174,9 @@ impl<S: EngineSide> App<S> {
             shown: true,
             console_open: errored,
             windows: windows::State::default(),
+            places: Default::default(),
+            store: Store::default(),
+            save_failed: false,
             present: false,
             scrolled_to: (Vec::new(), 0),
             keyboard: Keyboard::new(),
@@ -179,6 +193,49 @@ impl<S: EngineSide> App<S> {
             reread: false,
             format,
         }
+    }
+
+    /// The app on `side`, as [`App::new`], its settings kept in `store` and read from it now: each window at its
+    /// remembered place; a file that cannot be read ignored, with one line in the console (R-461 I4).
+    pub fn with_settings(side: S, format: wgpu::TextureFormat, store: Store) -> Self {
+        let mut app = Self::new(side, format);
+        let loaded = store.load();
+        app.places = loaded.settings.places;
+        app.store = store;
+        if let Some(line) = loaded.ignored {
+            app.log_warning(line);
+        }
+        app
+    }
+
+    /// The GUI's settings as they stand: what is saved.
+    pub fn settings(&self) -> Settings {
+        Settings {
+            places: self.places.clone(),
+        }
+    }
+
+    /// Saves the GUI's settings to its store; a failure is logged to the console, once a session.
+    pub fn save_settings(&mut self) {
+        if let Err(why) = self.store.save(&self.settings()) {
+            if !std::mem::replace(&mut self.save_failed, true) {
+                self.log_warning(why);
+            }
+        }
+    }
+
+    /// Logs `message` to the console as the app's warning, counted in the footer.
+    fn log_warning(&mut self, message: String) {
+        let at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+        self.console.push(LogEntry {
+            severity: Severity::Warn,
+            at,
+            source: Source::App,
+            message,
+        });
+        self.counts.warnings = self.counts.warnings.saturating_add(1);
     }
 
     /// The engine side.
@@ -283,10 +340,12 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Before each frame's egui pass: the keyboard layer takes its keys out of `raw` while the layer is shown, and not
-    /// in present mode, whose Esc is egui's to read.
+    /// in present mode, whose Esc is egui's to read; then it only follows keyboard navigation (R-460, R-464).
     pub fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
         if self.shown && !self.present {
             self.keyboard.take_keys(ctx, raw);
+        } else {
+            self.keyboard.follow_input(raw);
         }
     }
 
@@ -394,6 +453,10 @@ impl<S: EngineSide> App<S> {
             self.view.kept_orbits.orbits.len(),
         );
         explore::trajectory::join(self.keyboard.tree_mut(Mode::Explore), &self.trajectory);
+        explore::compass::join(
+            self.keyboard.tree_mut(Mode::Explore),
+            &self.manifold.compass,
+        );
         windows::chart_builder::join_presets(
             self.keyboard.tree_mut(self.view.mode),
             self.windows.chart.presets.len(),
@@ -409,6 +472,12 @@ impl<S: EngineSide> App<S> {
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
+        // The Plücker view's cell cursor follows interaction mode on the compass (R-452 C6).
+        explore::compass::follow_focus(
+            &self.view.focus,
+            &self.snapshot.sim.plane,
+            &mut self.manifold.compass,
+        );
         let mut window_edits = Vec::new();
         let mut acts = Acts::default();
         for scope in self.keyboard.left().to_vec() {
@@ -457,13 +526,19 @@ impl<S: EngineSide> App<S> {
         for scroll in self.keyboard.scrolled().to_vec() {
             windows::console::scroll(&scroll, &mut self.windows.console, &self.console);
         }
-        self.shortcuts(&ctx, &mut actions, &mut edits);
+        self.undo_keys(&ctx);
+        self.shortcuts(&ctx, &mut actions, &mut edits, &mut out);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
         }
         self.keyboard.clear_places();
         let tree = self.keyboard.tree(self.view.mode);
-        let breadcrumb = explore::breadcrumb::text(tree, &self.view.focus);
+        // The breadcrumb's focus path is drawn only while keyboard navigation is on, as the ring is (R-460 H4).
+        let breadcrumb = if self.keyboard.navigating() {
+            explore::breadcrumb::text(tree, &self.view.focus)
+        } else {
+            String::new()
+        };
         explore::top_bar::show(
             ui,
             layout.top_bar,
@@ -508,7 +583,12 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
-        let closed = self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
+        let (closed, held) =
+            self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
+        // A move or resize ended: the places are saved (R-461 I4).
+        if !held && self.places.release() {
+            self.save_settings();
+        }
         for window in closed {
             self.close_window(&ctx, window);
         }
@@ -645,9 +725,15 @@ impl<S: EngineSide> App<S> {
         }
         let ctx = ui.ctx().clone();
         let pointer = ctx.pointer_hover_pos();
-        let over_figure = pointer
-            .and_then(|p| ctx.layer_id_at(p))
-            .is_none_or(|layer| layer == ui.layer_id());
+        // A pointer carrying a window, by its title bar or an edge, hovers no figure point (R-461; gui_state_contract
+        // §2's hover is the figure point under the cursor).
+        let carrying = windows::REGISTRY
+            .iter()
+            .any(|e| windows::held(&ctx, e).is_some());
+        let over_figure = !carrying
+            && pointer
+                .and_then(|p| ctx.layer_id_at(p))
+                .is_none_or(|layer| layer == ui.layer_id());
         self.send_hover(explore::hover_label::figure_point(
             layout.figure,
             pointer,
@@ -743,14 +829,37 @@ impl<S: EngineSide> App<S> {
     }
 
     /// The letter, Space and Alt+digit shortcuts (render_gui_spec §G2, §G3; R-409 F1): with the focus in the Figure,
-    /// Space keeps the orbit under the cursor, or the pinned one, and L toggles listen; in Time, Space plays; anywhere,
-    /// Alt+digit toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
+    /// Space keeps the orbit under the cursor, or the pinned one, and L toggles listen; in Time, Space plays; on the
+    /// compass in the Plücker view's interaction mode, Space steers to the cell cursor (R-452 C6); anywhere, Alt+digit
+    /// toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
     /// overlay is open. And + and − zoom a Trajectory view in interaction mode on it (R-453 D6).
+    /// Ctrl+Z (Cmd+Z): one undo from the contract's history a press, on either page and in either keyboard mode,
+    /// except while a text field holds the keyboard, whose own edit it undoes, or while the `?` overlay, which takes
+    /// every key, is open (§G3; R-409 G5; R-52). The system's repeats of a held press are not presses.
+    fn undo_keys(&mut self, ctx: &egui::Context) {
+        if ctx.text_edit_focused() || self.keyboard.shortcuts_open {
+            return;
+        }
+        let presses = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| {
+                    matches!(e, egui::Event::Key { key, pressed: true, repeat: false, modifiers, .. }
+                        if crate::keyboard::keymap::undoes(*key, *modifiers))
+                })
+                .count()
+        });
+        for _ in 0..presses {
+            self.undo();
+        }
+    }
+
     fn shortcuts(
         &mut self,
         ctx: &egui::Context,
         actions: &mut Actions,
         edits: &mut Vec<engine::contract::set_field::SetField>,
+        out: &mut explore::manifold_view::Out,
     ) {
         if ctx.text_edit_focused()
             || self.keyboard.shortcuts_open
@@ -794,6 +903,12 @@ impl<S: EngineSide> App<S> {
                 Some(explore::time::TIME) => {
                     explore::time::toggle_play(&self.snapshot, &mut self.view.transport, edits)
                 }
+                Some(explore::COMPASS) => explore::compass::space(
+                    &self.view.focus,
+                    &self.snapshot.sim.plane,
+                    &mut self.manifold,
+                    out,
+                ),
                 _ => {}
             }
         }
@@ -820,7 +935,8 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// Draws the open windows, the console last; returns those closed by their ×.
+    /// Draws the open windows, the console last, each at its place (R-461): moved or resized by a drag on its title bar
+    /// or its edges. Returns those closed by their ×, and whether a drag holds one.
     fn draw_windows(
         &mut self,
         ctx: &egui::Context,
@@ -828,8 +944,9 @@ impl<S: EngineSide> App<S> {
         focused: Option<String>,
         edits: &mut Vec<SetField>,
         acts: &mut Acts,
-    ) -> Vec<Window> {
+    ) -> (Vec<Window>, bool) {
         let mut closed = Vec::new();
+        let mut held = false;
         let mut open = self.view.windows.open.clone();
         if self.console_open {
             open.push(Window::Console);
@@ -844,7 +961,21 @@ impl<S: EngineSide> App<S> {
         };
         for window in open {
             let e = windows::entry(window);
-            let rect = windows::rect(window, layout);
+            let default = windows::rect(window, layout);
+            let mut rect = if windows::place::movable(window) {
+                self.places.shown(window, default, layout.window)
+            } else {
+                default
+            };
+            // This frame's drag first, so the window is drawn under the pointer, never a frame behind it.
+            if let Some(grip) = windows::held(ctx, e) {
+                let total = ctx
+                    .input(|i| i.pointer.total_drag_delta())
+                    .unwrap_or_default();
+                self.places.drag(window, grip, rect, total, layout.window);
+                rect = self.places.shown(window, default, layout.window);
+                held = true;
+            }
             let w = &mut self.windows;
             let snapshot = &self.snapshot;
             let still = windows::frame(
@@ -902,7 +1033,7 @@ impl<S: EngineSide> App<S> {
                 closed.push(window);
             }
         }
-        closed
+        (closed, held)
     }
 
     /// Carries out what the windows' controls asked: a copy to the clipboard, the console's clear, present mode.
@@ -932,8 +1063,12 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// Draws the focus ring on the focused scope, where it was drawn this frame.
+    /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
+    /// (R-460 H4, R-464).
     fn draw_ring(&self, ctx: &egui::Context) {
+        if !self.keyboard.navigating() {
+            return;
+        }
         let tree = self.keyboard.tree(self.view.mode);
         let path = &self.view.focus.path;
         let Some(id) = path[..tree.valid_prefix(path)].last() else {

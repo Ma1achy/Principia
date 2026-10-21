@@ -69,6 +69,23 @@ pub use shape_sphere::{ShapeMap, ShapeSphere};
 use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
+use spirv_std::num_traits::FloatConst;
+
+/// The chart registry: every chart of this crate, by its [`Chart::name`], in chart_reference §5.1's order (the module's
+/// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`).
+pub const REGISTRY: [&str; 11] = [
+    "Latent",
+    "ShapeSphere",
+    "Burrau",
+    "EuclidPlane",
+    "BurrauThetaK",
+    "BurrauThetaLz",
+    "BurrauThetaDeltaM",
+    "InvariantLE",
+    "InvariantLK",
+    "MassSimplex",
+    "Mixed",
+];
 
 /// What `Φ` hands the shared decoder (chart_reference §5.1: `ChartOut` is whatever `D` consumes). The latent chart
 /// hands it the eight controls `z`; a chart that sets masses, `(α, β)`, an explicit `(ρ, λ)` or a `(L_z, K)` request
@@ -218,7 +235,8 @@ impl<P: Copy> ChartDecode for Latent<P> {
 }
 
 impl<P: Copy> ChartDecode for InvariantLE<P> {
-    /// [`invariant::decode`]: the construction's outcome is not part of [`Decoded`] (`invariant`'s note).
+    /// [`invariant::decode`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`] (`invariant`'s note).
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -241,11 +259,24 @@ impl<P: Copy> ChartDecode for InvariantLK<P> {
     }
 }
 
+impl<P: Copy + FloatConst> ChartDecode for ShapeSphere<P> {
+    /// The chart's own [`Chart::decode`]: the configuration set explicitly, then `C` (`shape_sphere`'s note).
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        Chart::decode::<S, R>(self, u, v)
+    }
+}
+
 impl<P: Copy> ChartDecode for Burrau<P>
 where
     f64: From<P>,
 {
-    /// [`burrau::decode`]: the construction's outcome is not part of [`Decoded`], as for the invariant charts.
+    /// [`burrau::decode`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`], as for the invariant charts.
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where

@@ -269,8 +269,10 @@ enum Stand {
 /// warp's `k_max` and `gamma_k`, proposed by TASK-M2-12 and provisional until the M2 gate, citing REQ-CHART-044; and
 /// the shape sphere's two tolerances, proposed by TASK-M2-08 and provisional until the M2 gate: `shape_vec_js_tol`,
 /// citing REQ-CHART-049, and `shape_roundtrip_bound`, citing REQ-CHART-053 (R-181); and the Burrau `ν = 1/2`
-/// tolerance `burrau_nu_half_tol`, proposed by TASK-M2-10 and provisional until the M2 gate, citing REQ-VAL-118.
-const TABLE: [(&str, Stand); 23] = [
+/// tolerance `burrau_nu_half_tol`, proposed by TASK-M2-10 and provisional until the M2 gate, citing REQ-VAL-118; and
+/// the round trip's `eps_phys`, `k` in `ε_phys = k·ε_R`, proposed by TASK-M2-16 and provisional until the M2 gate,
+/// citing REQ-ENC-024 (inverse-encode contract Part 4).
+const TABLE: [(&str, Stand); 24] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -289,6 +291,7 @@ const TABLE: [(&str, Stand); 23] = [
     ("diverging_x0_Lz_0", Stand::Until("M7", "REQ-COL-066")),
     ("shape_vec_js_tol", Stand::Until("M2", "REQ-CHART-049")),
     ("shape_roundtrip_bound", Stand::Until("M2", "REQ-CHART-053")),
+    ("eps_phys", Stand::Until("M2", "REQ-ENC-024")),
     ("burrau_nu_half_tol", Stand::Until("M2", "REQ-VAL-118")),
     ("burrau_theta_min", Stand::Until("M2", "REQ-CHART-045")),
     ("burrau_theta_max", Stand::Until("M2", "REQ-CHART-045")),

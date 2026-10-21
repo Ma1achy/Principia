@@ -25,7 +25,7 @@
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
-    Bound, Consumer, Entry, EntryBuilder, FieldType, Ledger, Location, Member, Overflow,
+    Bound, Consumer, Entry, EntryBuilder, FieldType, Indexed, Ledger, Location, Member, Overflow,
     Provenance, Range, RangeState, Scale, Span, Storage, Struct, Word,
 };
 
@@ -48,13 +48,17 @@ fn f32_at(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     entry(name, Location::Scalar(slot), FieldType::F32, scale)
 }
 
-/// Three CoM-frame particle vectors, `vector(f32, 6)` stored as `array<vec2<f32>, 3>` (§3.8, R-86).
+/// Three CoM-frame particle vectors, `vector(f32, 6)` stored as `array<vec2<f32>, 3>` (§3.8, R-86): slot `j` is
+/// body `j`'s (payload §1), so the field is body-indexed, its components `2j` and `2j + 1` body `j`'s (R-449).
 fn vec6_at(name: &'static str, slot: u32) -> EntryBuilder {
     let ty = FieldType::Vector {
         component: Box::new(FieldType::F32),
         k: 6,
     };
-    entry(name, Location::Scalar(slot), ty, Scale::Lin)
+    entry(name, Location::Scalar(slot), ty, Scale::Lin).index_base(
+        Indexed::Body,
+        "body index, 0-based: components 2j and 2j + 1 are body j's",
+    )
 }
 
 fn packed(word: &'static str, offset: u32, width: u32) -> Location {
@@ -420,10 +424,20 @@ fn entries() -> Vec<EntryBuilder> {
         f32_at("closure_min", 34, Scale::Log).range(from_zero),
         step("closure_step", Location::Scalar(35)),
         descriptor("state", 0, 3, Scale::Categorical(6), 5),
-        descriptor("detail", 3, 2, Scale::Categorical(4), 3),
+        // A body index under escape and a pair id under collision (payload §2; R-449).
+        descriptor("detail", 3, 2, Scale::Categorical(4), 3).index_base(
+            Indexed::BodyOrPair,
+            "under escape, body index, 0-based; under collision, pair id, 0-based; pair k is the side opposite \
+             body k; 3 all three under either; under sim_failed and decode_failed, the failure category",
+        ),
         descriptor("saturated", 5, 1, Scale::Flag, 1),
         // Pair ids 0–2 (R-22); the stored code 3 is "unset/invalid" (payload §2), so it is the sentinel.
-        descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2).sentinel(3.0),
+        descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2)
+            .sentinel(3.0)
+            .index_base(
+                Indexed::Pair,
+                "pair id, 0-based; pair k is the side opposite body k; 3 unset",
+            ),
         descriptor("last_symbol", 8, 2, Scale::Categorical(4), 3),
         // Unset, the minimum of an empty set, is f16 +∞: a failed sample's, and any sample's before its first step
         // (R-271, payload §1). A stored value is never 0.0: one below f16's smallest positive subnormal is stored as it.
@@ -453,9 +467,16 @@ fn entries() -> Vec<EntryBuilder> {
         shape_point(),
         // The masses are mass fractions in [0, 1], the magnitudes in [0, 1], and `K_0` and the virial ratio ≥ 0
         // ([`NON_NEGATIVE`]'s citations; R-400, R-403).
-        ic("m0", 0, Scale::Lin).range(fraction),
-        ic("m1", 1, Scale::Lin).range(fraction),
-        ic("m2", 2, Scale::Lin).range(fraction),
+        // `m0` is body 0's mass (R-449).
+        ic("m0", 0, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 0's mass"),
+        ic("m1", 1, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 1's mass"),
+        ic("m2", 2, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 2's mass"),
         // dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, declared [0, 1] from its formula (REQ-PAY-097; R-426).
         ic("q_mass", 3, Scale::Lin).range(fraction),
         // dd_decoder §3.6: the mass-weighted magnitudes, `rho_mag² + lambda_mag² = I = 1`, each in [0, 1].

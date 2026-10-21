@@ -772,6 +772,37 @@ fn mock_console_keys_a_click_elsewhere_lands_in_navigation() {
     assert_eq!(app.windows.console.text, "", "Ctrl+Z while typing");
 }
 
+/// Ctrl+Z while the search field is typed in undoes the text edit and not the contract's history; once a click
+/// elsewhere ends the typing, Ctrl+Z undoes from the contract (§G3; R-409 G5).
+#[test]
+fn mock_console_keys_ctrl_z_while_typing_is_the_fields() {
+    let (mut app, mut h) = open(Opened::Footer);
+    let mut moved = app.snapshot().sim.plane.z0;
+    moved[0] += 0.25;
+    app.set_field(crate::explore::manifold_view::z0_edit(moved));
+    let _ = h.frame(&mut app, Vec::new());
+    let depth = app.snapshot().history.undo_depth;
+    assert!(depth > 0, "the edit is undoable");
+    click_scope(&mut h, &mut app, SEARCH);
+    type_text(&mut h, &mut app, "y");
+    undo(&mut h, &mut app);
+    let _ = h.frame(&mut app, Vec::new());
+    assert_eq!(app.windows.console.text, "", "Ctrl+Z undid the text edit");
+    let typing = app.snapshot().history.undo_depth;
+    assert_eq!(typing, depth, "Ctrl+Z while typing undid the contract");
+    rejects("a Ctrl+Z while typing that undid the contract", || {
+        assert_eq!(typing, depth - 1)
+    });
+    click_away(&mut h, &mut app, Away::Figure);
+    undo(&mut h, &mut app);
+    let _ = h.frame(&mut app, Vec::new());
+    assert_eq!(
+        app.snapshot().history.undo_depth,
+        depth - 1,
+        "Ctrl+Z after typing"
+    );
+}
+
 /// Interaction mode on the log, then a click on the Figure, outside the console: navigation mode, the focus still on
 /// the log (R-456: a click off a text input lands in navigation mode; B6: it moves no focus), and ↓ no longer scrolls.
 #[test]

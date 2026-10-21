@@ -523,13 +523,15 @@ const PRESENTATION: [&str; 13] = [
 
 /// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that
 /// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
-/// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances.
-/// None is among the entries §3.8 hashes ("The hash"), so none is hashed.
-const CALIBRATIONS: [&str; 4] = [
+/// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances;
+/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance. None is
+/// among the entries §3.8 hashes ("The hash"), so none is hashed.
+const CALIBRATIONS: [&str; 5] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
     "shape_roundtrip_bound",
+    "eps_phys",
 ];
 
 /// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
@@ -553,6 +555,10 @@ const BURRAU: [&str; 10] = [
     "burrau_theta_lz_fraction",
 ];
 
+/// The march's per-substep crossing capacity (TASK-M3-15): one crossing per branch cut, the size of the per-substep
+/// crossing list the kernel's word path takes. It sizes a kernel-local list, never a stored bit, so it is not hashed.
+const MARCH: [&str; 1] = ["max_crossings_per_substep"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -565,7 +571,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
-    // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10).
+    // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
+    // capacity (TASK-M3-15).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -574,7 +581,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || PRESENTATION.contains(&k.name)
                 || CALIBRATIONS.contains(&k.name)
                 || WARP.contains(&k.name)
-                || BURRAU.contains(&k.name),
+                || BURRAU.contains(&k.name)
+                || MARCH.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -601,6 +609,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the Burrau entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in MARCH {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the march's entry `{name}` is not an unhashed register entry"
         );
     }
 }

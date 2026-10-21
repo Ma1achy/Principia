@@ -11,7 +11,7 @@ use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::Overlays;
 use engine::contract::sim_config::Plane;
 
-use super::support::{click, frame_texts, headless, mock_app, press, rejects, shapes};
+use super::support::{click, frame_texts, headless, keys_on, mock_app, press, rejects, shapes};
 use crate::app::{Actions, App};
 use crate::capture::{render_frame, Shot, FORMAT};
 use crate::explore::overlays_menu::{
@@ -177,6 +177,7 @@ fn mock_tile_bounds_menu_entries_act() {
 fn mock_tile_bounds_menu_is_reached_by_the_keys() {
     let (mut app, mut h) = fresh();
     app.view.focus.path = vec!["top_bar".to_owned(), "overlays".to_owned()];
+    keys_on(&mut h, &mut app);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(
         app.view.focus.path,

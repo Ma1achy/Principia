@@ -26,6 +26,14 @@ The boundary must stay a **data** boundary, not an **object** one — under *bot
 
 No GUI element ever holds sim logic, caches sim data, or computes anything the engine needs; it reads a snapshot and emits field edits, nothing more.
 
+**The link catalogue and evaluator (R-480, F2; decided per R-369).** The Decoder window's previews evaluate the
+generated link functions, the same code the kernel runs (`principia_render_gui_spec.md` §G7a, P4). The surface offers
+them as a pure function, `engine::contract::links`: the registry's catalogue (the entries onto each block's codomain,
+their display names, their tunable parameters with defaults and ranges) and an evaluator of an entry's forward,
+inverse and log-det at f64 for given parameter values. It is data in and data out, holds no engine state and reads none,
+so it is no handle into the engine; the mock calls the same function, and the TS binding reaches it as a plain call
+across the membrane.
+
 **The mock engine and the conformance suite (R-390).** The dev GUI is built first against a mock engine: a test double of this surface, in the gui crate, always compiled, the crate's `mock` feature choosing only that `main` runs on it (RQ-252 as amended per R-369), which serves plausible snapshots, applies `SetField` with undo and redo (R-69), emits events and runs a fake clock so the playhead moves. One conformance suite, defined beside the surface in the engine crate, runs every case against both the mock and the real engine, and both pass it; a change to the surface goes through review and re-runs it for both. The mock earns no privilege: the GUI reaches it only through this surface, as it reaches the real engine.
 
 ---
@@ -39,7 +47,7 @@ SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values �
                           (lock is chart construction, R-69) · link ids ·
                           integrator occupant · kernel variant (physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item", RQ-221) · compute fast-math setting (off by default, R-297) · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home)
 RenderState (render key)  the stain graph (nodes · wires · per-node params, §5) · overlay set ·
-                          palette/compaction params · playhead t
+                          palette/compaction params · playhead t · the Print graph (print, R-491)
 ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard focus scope · selection ·
                           kept orbits · inspector t_cursor · open windows · linked views for side by side (v2, R-106) ·
                           playback transport (play/pause/speed/loop — not undoable, not on the sim key, R-96; the
@@ -91,7 +99,103 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   entry and one undo restores every field it set; a command with nothing to change sends nothing. Its values are the
   chart preset's (its base point, centre and window, R-72, REQ-GUI-224), read by the GUI; the engine reads only the
   `z₀` and basis it is sent.
+- **The debug view and F3's fill mode (R-467, R-468; decided per R-369).** `RenderState`'s `debug_view: bool` is View ›
+  Debug view (`principia_render_gui_spec.md` §G2): the engine reads it to draw the figure's non-system, failed and
+  non-finite pixels in the debug styles and to count them for the legend's "Debug" key. Its `SetField` path is
+  `RenderField::DebugView`, undoable as an Overlays ▾ toggle is (R-69: every `RenderState` edit is undoable), one
+  history entry per toggle, a render key that re-integrates nothing, logged as "SetField DebugView before → after"; it
+  is off at launch (applied per R-369 on gui review 5585209592 of PR #253, G4). *Was (R-467 D5 as first ported):*
+  "always marked 'no history' as the hover's is, so it never enters undo". `ViewUI`'s
+  `F3Fill { Extend, Fit }` is View › "F3 fills by", Extend at each launch, the GUI's own state: never undoable, never
+  read by the engine, which reads only the figure's viewport, its size and scale (R-406), not kept across sessions.
+  The canvas background the presentation views draw for a pixel that is not part of the chart (R-467) is a render
+  uniform the GUI sets to the colour its window is cleared to, not a contract field.
+- **The tilt map, the energy-axis mappings, saved charts, the stop and the lines (R-469 to R-476; decided per R-369).**
+  - `SimConfig`'s slice frame gains `tilt_map: Sheet | Lean` (`SliceFrame { normal, tilt_x, tilt_y, tilt_map }`),
+    the map from `τ₁`, `τ₂` to the basis when both angles tilt into one target (R-474; `principia_chart_decoder_contract.md`
+    Part 4), default `Sheet`. It is chart construction, as the targets are: undoable, one history entry, sending the
+    basis with it where the basis changes; serialised as `tilt_map=sheet|lean`; a state, saved view or export with no
+    such field, from before R-474, reads as `Lean`, the map it was made with.
+  - A curved chart's tilt (R-473) is part of `SimConfig`'s chart params: the angles, the targets (indices of its hidden
+    coordinates) and the map, from which the CPU computes the rotation `R` the kernel reads. A sim key.
+  - Each energy-type axis's mapping, `warped | linear` (R-471), is part of `SimConfig`'s chart params, a sim key,
+    `warped` by default.
+  - A saved chart (R-475) is, while active, `SimConfig`'s chart id and params: the latent chart with the saved
+    `(z₀, q₁, q₂)`, or the parent chart's id and params with the saved slice centre and tilt. Saving is one `SetField`
+    on them, one history entry. The list of saved charts (the chart picker's "Saved" group, each with its name and
+    provenance) is the GUI's own settings, beside the Chart builder's presets, kept across sessions and never undoable.
+  - **The navigation stop (R-469).** The contract applies the stop to every navigation `SetField` (`z₀`, the basis,
+    the lock, a chart parameter that moves the centre) before it records the edit: the edit applied, the history's
+    after and the console's "SetField … before → after" line are the clamped value, never the requested one, and the
+    snapshot says which check stopped it, for the readout.
+  - `RenderState` gains `Lines` (R-476; `principia_lines.md` §3): the styles a view uses, its contour sets, its traces'
+    settings and its axes, exported with the view, each edit one undoable `SetField` (`RenderField::Lines`) that
+    re-integrates nothing (a render key). `Overlays` loses `grid` and `t_end_contours`, which become the Lines presets
+    Grid and t_end (R-476, L2), and `class_edges`, which becomes the preset Class edges (R-509). The personal style library is the GUI's own settings. A hover is never recorded.
+  - **The sidecar.** An export's provenance record (the pxpack, the snapshot JSON, the share link) carries, beside
+    `SimConfig` and `RenderState` in their canonical serialisation, `ViewUI`'s F3 fill mode as `f3_fill=extend|fit`
+    (R-472); `tilt_map`, the curved chart's tilt, the axis mappings and a saved chart's definition ride in `SimConfig`.
 - The keyboard navigation flag (on or off, `principia_render_gui_spec.md` §G3, R-460; turned off by any mouse click or drag and on by the next key press, R-464), the windows' positions and sizes (R-461) and the panel layout (R-462) are the GUI's own state, never the contract's: never undoable and never read by the engine. The positions, sizes and layout are kept across sessions in the GUI's own settings.
+
+**The links, the Decoder window and the round-trip rule (R-478 to R-484; decided per R-369).**
+- `SimConfig`'s links are `Links { mass, alpha, beta, momenta }`, one choice per row of the Decoder window
+  (`principia_render_gui_spec.md` §G7a), each a `LinkChoice { id, params }`: `id` the registry entry's name, `params` a
+  map from each tunable parameter of that entry to its value (`{"mu_max":5}`; `{}` for an entry with none). It is the
+  one place the links and their values live: the ViewState record, the sim key, the payload compatibility signature,
+  every export and every sidecar read it through the one canonical serialisation, and no second copy is kept (R-483,
+  X1). Every block's id and every parameter is written even at its default, with no `skip_serializing_if` and no serde
+  default on a link field: a record that omitted a default would read back under the receiver's default (X2). The
+  four momentum controls share the Momenta row's choice (R-479, E1). Its `SetField` path is `SimField::Links`, the
+  whole `Links` in one edit, a sim key that re-integrates and an undoable history entry (R-69), logged as "SetField
+  Links before → after" with each block's id and values; the Decoder window's staged edits are the GUI's own until its
+  Apply sends it (R-479, E4). No chart edit sends it (R-478, L2), but for one: loading a chart preset or a saved chart
+  that pins links sends the chart and the pinned `Links` together, a command of several edits, one history entry
+  (R-466's rule above), and the GUI posts a notice naming each block it changed (R-516); neither Home nor a section
+  reset sends it (R-479, D3). A preset's or saved chart's pin, the whole `Links` it stores, is that entry's, the GUI's
+  own settings beside the preset, never `SimConfig`'s, so no export carries a pin: it carries the links active
+  (R-516). *Was:* "No chart edit sends it (R-478, L2), and neither Home nor a section reset does (R-479, D3)." (stale
+  value, replaced by R-516). `ViewUI`'s open windows gain `Decoder`, listed after Chart builder (R-478, L4).
+- **The decoder's identity on import (R-483, X4, X5; R-521).** Every export carries, beside `SimConfig` and
+  `RenderState`, the build hash, the schema version and, per block, the recorded link's entry hash
+  (`principia_dd_image_embedding.md` §6; `principia_dd_generation_root.md` §3.9, "Each entry's own hash", which also
+  covers the registry constants the entry's decode reaches). One function of the
+  contract reads every path before anything renders: a link id the build's registry lacks is "state present, cannot
+  recreate", naming the link and its block; a block whose entry hash differs from the build's entry of that id is
+  refused the same way, naming exactly that link (R-521); when every block's hash matches, a schema version other than
+  the build's refuses nothing on the links' account, the schema version staying the whole-ledger check of what a
+  stored payload's bits mean, so a payload the record holds is not reused across it and the view re-integrates; the
+  build-hash component that detects a decoder or chart change (REQ-TOOL-112) still refuses what it detects. A record
+  that carries no entry hashes is read as before R-521: a schema version other than the build's is refused, naming its
+  links as possibly changed. No default link or default value ever stands in. *Was:* "the build hash and the schema
+  version (`principia_dd_image_embedding.md` §6)" and "meanwhile a schema version other than the build's is refused
+  the same way (whether each link carries its own entry hash is RQ-385); no default link or default value ever stands
+  in." (stale value, replaced by R-521). A record whose `links` is
+  `{}`, written before R-483, recreates under this build's defaults if its build hash is this build's, and otherwise
+  only on the user's explicit acceptance, labelled "links assumed".
+- **The round-trip rule (R-484).** Importing an export is the identity on `SimConfig` and `RenderState`, field for field
+  and bitwise in the canonical serialisation, on every path: snapshot JSON, share links, pxpack (a saved view's
+  snapshot), the profiler header's `config`, the animation spec object and the PNG `tEXt` chunk. `ViewUI` is not
+  exported; R-472's `f3_fill` rides beside the two as a sidecar field, outside the identity (R-484, J3). The one lossy
+  path is the image's low-bit embedding, which drops whole tiers, custom source first, then colour, never tier 1
+  (`principia_dd_image_embedding.md` §6). Every field of `SimConfig` and `RenderState` is assigned a tier in one table,
+  `crates/engine/src/contract/tiers.rs`: one function destructuring both structs and every group with no `..`, and
+  every enum by a `match` with no wildcard, so a field added without a tier does not compile; the embedding's writer
+  and the tests read it (R-484, J8). No struct of either type serialises to `{}` in a state whose every field is off
+  its default (R-484, T2; maps and lists may be empty).
+
+**The Print graph (R-485 to R-492; `principia_print_graph.md` §4, §9).**
+- `RenderState` gains `print: PrintGraph`, the Print graph the figure is printed through (R-491): the design doc §4.1's
+  graph object (`format` `principia.print/1`, `name`, `settings`, `nodes`, each `{ type, params, in }`, and `out`),
+  its preset, when it came from one, recorded **by value**, the graph it expanded to, with the preset's id as a label
+  (R-491). The default is Plain, the identity. It serialises with `RenderState` in the one canonical serialisation
+  (R-309, R-318), node ids sorted by JCS and carrying no meaning, so it travels everywhere `RenderState` goes and
+  round-trips bitwise (R-484, RT1). Its `SetField` path is `RenderField::Print`, the whole graph in one edit, a render
+  key that re-integrates nothing and never touches the sim key; it is undoable (R-69), a drag on one of its settings
+  coalescing into one entry (R-96), and Reset to Plain one entry. In R-484's tier table the graph with its built-in
+  nodes is tier 2 and a custom WGSL node's source tier 3 (R-491).
+- **Editor positions are `ViewUI`'s** (R-491; design doc §4.1): where each Print graph node sits on the graph editor's
+  canvas, its pan and zoom and the selection are the editor's own, never the graph's, so moving a node is no undo entry
+  and two equal graphs serialise equal, as the stain graph's are (below).
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).
 

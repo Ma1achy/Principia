@@ -1,0 +1,13 @@
+const {chromium}=require('playwright'); const fs=require('fs');
+fs.mkdirSync('boards/img',{recursive:true});
+(async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
+const p=await b.newPage({viewport:{width:1400,height:1000}}); await p.goto('http://localhost:'+(process.env.PORT||8766)+'/?'+Date.now());await p.waitForTimeout(6000);
+await p.evaluate(()=>{const i=IMAGES.findIndex(x=>x[0]==='b'); document.querySelectorAll('#thumbs button')[i].click();}); await p.waitForTimeout(2500);
+const shot=async f=>{await p.waitForTimeout(3200);const d=await p.evaluate(()=>{const c=[...document.querySelectorAll('canvas')].sort((a,b)=>b.width*b.height-a.width*a.height)[0];return c.toDataURL('image/png');});fs.writeFileSync('boards/img/c_'+f+'.png',Buffer.from(d.split(',')[1],'base64'));};
+await p.evaluate(()=>selectPreset('Watercolour pencil')); await shot('1_medium');
+const info=await p.evaluate(()=>{SL.palette=PALETTES.findIndex(x=>x.name==='Earth'||x.label==='Earth'); if(SL.palette<0) SL.palette=2; slotChanged(false); return [SL.palette, PALETTES.map(x=>x.name||x.label).slice(0,8)];}); console.log(info); await shot('2_palette');
+await p.evaluate(()=>{SL.ground=1; slotChanged(false);}); await shot('3_ground');
+await p.evaluate(()=>{SL.progress=.72; SL.progFrom=0; slotChanged(false);}); await shot('4_unfinished');
+await p.evaluate(()=>{SL.age.years=70; SL.age.fold=3; SL.age.foxing=1.2; slotChanged(false);}); await shot('5_age');
+await p.evaluate(()=>{SL.view.mode=1; slotChanged(false);}); await shot('6_view');
+await b.close();})();
