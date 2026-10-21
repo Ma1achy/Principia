@@ -18737,11 +18737,13 @@ Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).
 
 ## R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
 *Amended by R-555.*
+*Amended in part by R-556 (21 Oct 2026; RQ-465 (a): S4's second row reads "of the default length (RQ-427 (a))").*
 *Still in force: all of it, but where R-555 rules its queued entries: the defaults (Sine (pure) and sound off at
 launch, with reverb, Doppler and stereo width on), S2's short runs (a moving run too short to analyse plays its mean
 rates), S3's fit (any whole number of octaves), S4's last-half window, S6's `φ` sentence, S7's floor (10× the larger of
 4.9e-8 and Lagrange's measured shape rms to t ≤ 60), S8's strike, attack and strikes, S10's moving horizon (the sim
-key's `t_max`), and its build, which no longer waits on RQ-440 and RQ-442*
+key's `t_max`), and its build, which no longer waits on RQ-440 and RQ-442; and S4's second row qualified to the
+default length (R-556)*
 *21 Oct 2026 · applied in `docs/design/principia_listen.md` (new: the design, transcribed from the demo's code),
 `docs/incoming/2026-10-21_trace_listen/` (the bundle as delivered), `docs/gui/reference/trace/` (`trace_sound.html`,
 version 9, and its images), `docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4.
@@ -18920,7 +18922,7 @@ text; its preface and S1 to S14, verbatim:
 > | `Listen` | When | What plays |
 > |---|---|---|
 > | **Follow the head (default)** | while the trace is playing or being scrubbed | the spectrum of the window around the head, re-voiced as the head moves |
-> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3) |
+> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3), of the default length (RQ-427 (a)) |
 > | Whole run | always | the whole run as one chord |
 >
 > **Windows** (`Window`, in follow mode):
@@ -19211,8 +19213,14 @@ REQ-VAL-103 (notes).
 
 ## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
 *Amended by R-555.*
+*Amended in part by R-556 (21 Oct 2026; RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466 ruled: G1 reads "Every
+setting is set in at most two places", G2's keys "Space keep the current trajectory", G5's footer "of the default
+length (RQ-427 (a))" and G10's One place row "a `Lines ▾` that holds a trace control"; the outline of the chart's
+square is one toggle, in Overlays › Chart, on by default and reached from the Trace group and `Trace…`, whose entries
+no longer wait (P5); P2 to P4 and P6 to P11's meanwhiles stand as ruled).*
 *Still in force: all of it, but G6's defaults, which R-555 sets: sound off at launch, Sine (pure), and reverb, Doppler
-and width on; P8's code defaults stand for the rest*
+and width on; P8's code defaults stand for the rest; and G1, G2's keys, G5's footer and G10's One place row as
+R-556 rewords them, P5's outline entries built as one toggle with Overlays › Chart's (R-556)*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (Overlays ▾'s Trace group, Lines ▾'s list, the trace settings' place, the left panel, the Trajectory panel's kept
 orbits and its order, the bottom band's Listen, the legend's bullet; sentences and paragraphs added, the replaced words
@@ -19268,7 +19276,7 @@ text; its preface and G1 to G11, verbatim:
 > **Everything about one trajectory lives in one place: the Trajectory panel.** That covers its previews, its trace and
 > its sound. The view shows the trace, and the bottom band's Time column shows the trajectory over time.
 >
-> **Every setting appears in at most two places**: an everyday control in the panel, and the full set in a window
+> **Every setting is set in at most two places**: an everyday control in the panel, and the full set in a window
 > (`Trace…`, `Listen…`), opened like `Profiler…` and `Export…`. Nothing about a trajectory is in the left panel, which
 > is about the chart.
 >
@@ -19286,7 +19294,7 @@ text; its preface and G1 to G11, verbatim:
 >
 >   A trace is an overlay, so it lives with the overlays.
 > - **No `Lines ▾` and no `Listen ▾`.** An earlier art-board pass had both; they are withdrawn.
-> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, `K` keep the current trajectory, `L` sound on/off. Add them to
+> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, Space keep the current trajectory, `L` sound on/off. Add them to
 >   the keyboard sheet.
 >
 > ## G3. The left panel
@@ -19331,7 +19339,7 @@ text; its preface and G1 to G11, verbatim:
 > | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
 >
 > Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
-> (follow-up F3).
+> (follow-up F3), of the default length (RQ-427 (a)).
 >
 > ## G6. The `Listen…` window
 >
@@ -19392,7 +19400,7 @@ text; its preface and G1 to G11, verbatim:
 >
 > | Test | Passes when | Fires on |
 > |---|---|---|
-> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a surviving `Lines ▾`) |
+> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a `Lines ▾` that holds a trace control) |
 > | Band height | turning ♪ on changes no pixel of the view's size; expanding the strip changes it by exactly the band's growth | the strip pushing the view on sound-on |
 > | Shared axis | the spectrogram's playhead x equals the scrubber thumb's x at every `t` | two axes |
 > | Window highlight | the bright arc on the shape sphere covers exactly the samples in `windowAt(t)` | an off-by-window highlight |
@@ -21790,3 +21798,177 @@ rulings, note); REQ-GUI-050, REQ-GUI-090, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311,
 REQ-GUI-314, REQ-GUI-316, REQ-GUI-317, REQ-GUI-320 and REQ-GUI-329 (statement or verify as each needs, rulings,
 source, `rq` removed, note); REQ-VAL-114 and REQ-SYS-060 (statement or note, rulings); adds REQ-GUI-345 (the one
 synthesis graph, TASK-M8-59) and REQ-VAL-194 (Listen's entropy anchors, calibration, TASK-M8-12).
+
+## R-556 — The trace and Listen in the GUI, R-541's questions ruled: Listen's section collapsed until first used, then remembered per user; the expanded strip's spectrum in the Legend's column; R-538's six kept-trace colours, tested against the body colours and the stain classes; only the trace leaves Lines ▾; K the lock and Space keep; TASK-M8-65 writes the instrument families; every setting set in at most two places; one outline toggle, on by default; the Trajectory panel keeps its summary, playhead and buttons; the band's heights are splitter defaults; a paused trace drawn whole at the default length only; Listen in the Trajectory panel only *(closes RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466; amends R-540 and R-541)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Trace group: the outline's entry and the three routes; Lines ▾'s list; the Trajectory panel's status line,
+Listen section and playhead; the bottom band's heights, the cube-only compass and the strip's spectrum), § "G3.
+Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Figure's keys), § "Trace… — every trace setting
+(R-541 G5)" (the outline's entry, the footer, the kept colours), § "Listen… — every sound setting (R-541 G6)" (the
+families), § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" ("listen is here too"
+deleted, the earlier words kept) and § "G13. Where the artboards are overridden" (the mock menu bars, the kept #2),
+`docs/design/principia_lines.md` § "2. Where it sits" and § "8. Traces", `docs/design/principia_listen.md` § "4. Follow
+the head, or the whole run" and § "8. Instruments", `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday
+view", `docs/gui/reference/trace/artboards/Main.dc.html` (the top bar's keys), R-540's S4 row and R-541's G1, G2, G5 and
+G10 (reworded as the human says) and their heading blocks, `docs/archive/review_queue/M0.md` (RQ-445 to RQ-449, RQ-459
+to RQ-463, RQ-465 and RQ-466, moved with their rulings), REQ-GUI-324, REQ-GUI-328, REQ-GUI-330 and REQ-GUI-333 (reqio:
+statement, verify, rulings, source, `rq` removed, note), REQ-GUI-090 and REQ-GUI-329 (reqio: statement, rulings, source,
+`rq` removed, note), REQ-GUI-325 and REQ-GUI-334 (reqio: statement, rulings, `rq` removed, note), REQ-GUI-088,
+REQ-GUI-247, REQ-GUI-271, REQ-GUI-281, REQ-GUI-314 and REQ-GUI-326 (reqio: rulings, `rq` removed, note), TASK-M8-11,
+TASK-M8-12, TASK-M8-13, TASK-M8-50, TASK-M8-58, TASK-M8-61 to TASK-M8-65 (notes; TASK-M8-61's, TASK-M8-62's and
+TASK-M8-63's acceptance lines as the requirements now read) and `plan/rule_groups.yaml`; built by TASK-M8-61 to
+TASK-M8-65*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+100–104, 114–118, 120 and 121), which R-545 quotes in its opening:
+
+> - RQ-445 (Listen section collapsed until first used, then remembered): (a). "Listen is collapsed until first used, then remembered per user in the GUI's own settings, the same way R-461 remembers a window's place. It is never stored in the contract."
+> - RQ-446 (Expanded strip's spectrum borrows the Legend's column): (a). "When the strip is expanded (⏶), the spectrum at the head takes the Legend's column until `⏷`. The band stays at its expanded height (RQ-463) and does not grow to ≈520 px."
+> - RQ-447 (Kept-trace colours: R-538's six, checked against the stains): (b), with (a)'s check added as a test. "R-538 TM2's six (`#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2`) are the kept-trace cycle. A test checks them against the body colours and the stain classes, and only a colour that fails is replaced. The boards' `#5ab4ff` is illustrative and is never a trace colour, because it is Listen's left channel."
+> - RQ-448 (The trace leaves `Lines ▾`; the menu stays for other lines): (a). "Only the trace leaves `Lines ▾` (for `Overlays ▾ › Trace`, the Trajectory panel and `Trace…`). R-476's `Lines ▾` stays for contours, axes, grids, the presets and class edges. G10's 'a surviving `Lines ▾`' is reworded to 'a `Lines ▾` that holds a trace control'."
+> - RQ-449 (`K` stays lock, Space keeps; the new keys are Figure-scoped): (a). "`K` stays lock and Space stays keep (R-409, §G4). G2's 'K keep the current trajectory' is reworded to 'Space keep…', and the art board's top bar to '♪ L listen · T trace · Space keep'. `T`, `⇧T`, `Y` and `L` are Figure-scope shortcuts, as L already is."
+> - RQ-459 (The task assigns instruments to the menu families): (a). "TASK-M8-65 (`Listen…`) assigns the 39 instruments to the families and meets the counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2). gui reviews the assignment (R-72)."
+> - RQ-460 (Three routes to the same marker settings): (a). "Reword G1 to 'Every setting is set in at most two places'. `Overlays ▾ › Trace` holds view toggles of the same fields, with one state and one `SetField` behind all three routes."
+> - RQ-461 ("Outline the chart's square": one toggle, ruled with RQ-408): a reconciliation of RQ-408 (a) and this entry's (b). "There is one outline toggle with one state. It sits in Overlays › Chart and is reached also from the Trace group and `Trace…`. It is on by default, as R-541 and the demo have it, and on in the debug view."
+> - RQ-462 (The Trajectory panel keeps FTLE, `E₀`, playhead and buttons): (a). "The status line carries the summary (fate and `t_end`, FTLE, `E₀`) with G4's items. The panel's playhead and the Open full viewer… and IC Inspector… buttons stay after Numbers, as art board A has them. The kept list moves as G4 says."
+> - RQ-463 (Band sizes are splitter defaults; "cube only" hides buttons): (a). "196 px and 420 px are the band's default splitter heights, each remembered (R-462). While 'cube only' applies, the compass draws its cube in its current view, with its buttons hidden and out of the keyboard tree until `⏷`. Dragging the cube still works."
+> - RQ-465 (Paused trace drawn whole: default length only, or every length?): (a). "Paused, a trace of the default length (`ToPlayhead`) is drawn whole to its event or the horizon; a `Window` or `LastDt` trace stays as chosen. Listen's paused chord is the whole run whatever the trace length." Reword G5's footer and S4's row to "of the default length (RQ-427 (a))", as applied.
+> - RQ-466 (Listen lives in the Trajectory panel only): (a). "Listen is in the Trajectory panel and `Listen…` only. The Inspector holds no sound control." Delete "listen is here too" from §G8, and in REQ-GUI-090 change "(in the Trajectory panel and the Inspector)" to "(in the Trajectory panel)".
+
+Twelve of R-541's queued entries: the file's own questions Q6 to Q8 (RQ-445 to RQ-447) and the conflicts and silences
+its port and PR #267's review found (RQ-448, RQ-449, RQ-459 to RQ-463, RQ-465, RQ-466). Every one but RQ-461 is ruled
+as its option (a) or (b) was applied meanwhile (R-541 P2 to P11), the human adding words to some; RQ-461 reconciles
+two entries' options and settles RQ-408's default with it.
+
+**RQ-445** asked whether Listen's section in the Trajectory panel is (a) collapsed until first used, then remembered
+per user (the file's recommendation), or (b) always collapsed. *What it decides:* **option (a), as applied:** collapsed
+until first used, then remembered per user in the GUI's own settings, as R-461 remembers a window's place, **never in
+the contract**. REQ-GUI-334 (TASK-M8-64) carries it already; only its citations change.
+
+**RQ-446** asked whether the expanded strip's spectrum (a) borrows the Legend's column (G7) or (b) stacks under the
+spectrogram with the Legend kept, the band ≈ 520 px. *What it decides:*
+- **Option (a), as applied:** expanded (⏶), the spectrum at the head takes the Legend's column until `⏷`.
+- **The band stays at its expanded height** (RQ-463's second splitter height) **and never grows to ≈ 520 px.**
+  REQ-GUI-330's verify gains that control (*decided per R-369, reviewed by gui:* a band grown past its expanded height
+  to stack the spectrum fails).
+
+**RQ-447** asked whether the kept traces take (a) a new fixed cycle of six, distinct from the body colours and the
+stain classes and chosen against the stain palettes, replacing R-538's six if they fail that check, or (b) R-538 TM2's
+six, the boards' `#5ab4ff` illustrative. *What it decides:*
+- **Option (b), with (a)'s check added as a test.** R-538 TM2's six, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
+  #9EF0D2`, are the kept-trace cycle.
+- **A test checks them against the body colours and the stain classes; only a colour that fails is replaced.**
+- **The boards' `#5ab4ff` is illustrative and is never a trace colour**: it is Listen's left channel.
+
+*Where the words leave a choice, decided per R-369 (routine colour design, reviewed by gui):*
+- **K1. The check's criterion.** "Checks them against" is measured the way the corpus measures a categorical colour's
+  distinctness: OKLab distance, unsimulated, against τ = 0.101 (R-429, as REQ-COL-055 and REQ-COL-086 measure). Each of
+  the six must clear τ from each body colour (R-538 I3) and from each class colour of the categorical palettes the
+  corpus defines (colour_composition §1.4's outcome palette and the Chazy palettes, REQ-COL-086); the test prints each
+  colour's tightest distance. REQ-GUI-333's verify carries it.
+- **K2. A colour that fails.** It is replaced by a colour the task building the test (TASK-M8-61) proposes, clearing
+  the same check, reviewed by gui, and recorded in `principia_lines.md` §8 with the porting rule's note; the other five
+  are unchanged. None is replaced in this port: the check has not run.
+
+**RQ-448** asked whether, where R-541 G2 withdraws `Lines ▾`, (a) only the trace leaves it, (b) it is withdrawn whole,
+its lines moving to `Overlays ▾`, or (c) withdrawn with the line system's controls placed later. *What it decides:*
+- **Option (a), as applied:** only the trace leaves `Lines ▾`, for `Overlays ▾ › Trace`, the Trajectory panel and
+  `Trace…`. **R-476's `Lines ▾` stays** for contours, axes, grids, the presets and class edges.
+- **G10's "a surviving `Lines ▾`" is reworded to "a `Lines ▾` that holds a trace control"**: in R-541's G10 table, as
+  the human says, and in REQ-GUI-324's control.
+
+**RQ-449** asked whether (a) `K` stays lock and Space keep, G2's "K keep" read as Space, with `T`, `⇧T`, `Y` and `L`
+the Figure's scope shortcuts; (b) `K` becomes keep; or (c) the five keys are global. *What it decides:*
+- **Option (a), as applied:** `K` stays lock and Space stays keep (R-409, §G4). `T`, `⇧T`, `Y` and `L` are Figure-scope
+  shortcuts, as L already is.
+- **G2's "K keep the current trajectory" is reworded to "Space keep…"**, in R-541's G2 quote ("Space keep the current
+  trajectory"), and **the art board's top bar to "♪ L listen · T trace · Space keep"**, in
+  `docs/gui/reference/trace/artboards/Main.dc.html`, the trace bundle's reference board.
+
+**RQ-459** asked whether (a) the task that builds the instrument menu assigns the instruments to the families, meeting
+the counts, reviewed by gui (R-72), or (b) the human gives the assignment. *What it decides:* **option (a), as
+applied:** TASK-M8-65 (`Listen…`) assigns the 39 instruments to the families and meets the counts (pure 5, keys 3,
+struck 10, bowed and blown 7, voices 4, synths 8, textures 2); **gui reviews the assignment** (R-72). REQ-GUI-329's
+statement names the counts; `principia_listen.md` §8 says who writes it.
+
+**RQ-460** asked whether, where G1 says "Every setting appears in at most two places" and G2, G4 and G5 put some
+markers in three, (a) all three stay with one state behind them, (b) the panel's chips lose what `Overlays ▾` has, or
+(c) `Overlays ▾ › Trace` keeps only the trace, kept traces and `Trace…`. *What it decides:*
+- **Option (a), as applied.** **G1 is reworded to "Every setting is set in at most two places"**, in R-541's G1 quote.
+- **`Overlays ▾ › Trace` holds view toggles of the same fields, with one state and one `SetField` behind all three
+  routes.** REQ-GUI-324 says so already.
+
+**RQ-461** asked whether "outline the chart's square", on by default in R-541 G2 and G5, (a) waits on RQ-408 and is
+built as it rules, or (b) is R-541's answer to RQ-408, a toggle on by default in the Trace group and `Trace…`. RQ-408
+(R-537 Q3, ruled in R-552) asked for an outline of the chart's primary square, its option (a) an Overlays › Chart toggle,
+off by default and on in the debug view. *What it decides:* **a reconciliation of RQ-408 (a) and this entry's (b):**
+- **There is one outline toggle with one state.** It sits in Overlays › Chart (RQ-408 (a)'s place) and **is reached
+  also from the Trace group and `Trace…`**.
+- **It is on by default**, as R-541 and the demo have it, **and on in the debug view.** RQ-408's own words, "It is off
+  by default", are its option (a) as the human first ruled it; this entry, ruled with it, settles the default for both:
+  on. R-552 records RQ-408 and builds the toggle's state and its Overlays › Chart entry; this ruling's part is the
+  Trace group's and `Trace…`'s entries, which are now built (they no longer wait), each the same field.
+
+*Where the words leave a choice, decided per R-369 (mechanical, reviewed by gui):*
+- **O1. Where it is built.** The toggle's state and its Overlays › Chart entry are RQ-408's (R-552); TASK-M8-61 builds
+  the Trace group's entry (REQ-GUI-324) and TASK-M8-62 `Trace…`'s (REQ-GUI-328), each one `SetField` of that state.
+  Both follow TASK-M8-58, which follows the extension's GUI task, so the state exists before them.
+- **O2. The tests.** REQ-GUI-324's and REQ-GUI-328's verifies assert one field behind the three entries, on in a new
+  view state, with controls for a second state and for the outline off by default.
+
+**RQ-462** asked whether the Trajectory panel (a) keeps what G4 leaves out (the summary's FTLE and `E₀` on the status
+line, the panel's playhead and the two buttons after Numbers), (b) drops FTLE, `E₀` and the playhead, the buttons
+staying, or (c) drops the buttons too. *What it decides:* **option (a), as applied:** the status line carries the
+summary (fate and `t_end`, FTLE, `E₀`) with G4's items; the panel's playhead and the Open full viewer… and IC
+Inspector… buttons stay after Numbers, as art board A has them; the kept list moves as G4 says. REQ-GUI-088 and
+REQ-GUI-326 carry it; only their citations change.
+
+**RQ-463** asked whether G7's sizes are (a) defaults of R-462's splitters, the compass's buttons hidden and out of the
+keyboard tree while "cube only", a drag on it working as before; (b) fixed, the splitter disabled; or (c) the compass
+keeping its buttons. *What it decides:* **option (a), as applied:** 196 px and 420 px are the band's **default splitter
+heights, each remembered** (R-462); while "cube only" applies the compass draws its cube in its current view, **its
+buttons hidden and out of the keyboard tree until `⏷`**; **dragging the cube still works.** REQ-GUI-330 names the
+remembered heights and the drag (*decided per R-369, reviewed by gui:* its verify gains a dragged height surviving a
+restart and a drag on the cube-only compass moving the plane as before, each with a control).
+
+**RQ-465** asked whether R-541 G5's footer and R-540 S4, "the whole trace … is drawn" when nothing plays, mean (a) the
+default length's, as RQ-427 (a) and PR #263 apply it, Listen still playing the whole run; (b) every trace, reversing
+REQ-GUI-281's `Window` / `LastDt` arm; or (c) as (a), Listen's paused chord following the drawn span. *What it
+decides:*
+- **Option (a), as applied:** paused, a trace of the default length (`ToPlayhead`) is drawn whole to its event or the
+  horizon; a `Window` or `LastDt` trace stays as chosen. **Listen's paused chord is the whole run whatever the trace
+  length.**
+- **G5's footer and S4's row are reworded to "of the default length (RQ-427 (a))", as applied:** R-541's G5 footer
+  and R-540's S4 row in this file gain those words; render_gui_spec's `Trace…` footer and `principia_listen.md` S4
+  already read so and now cite this ruling. REQ-GUI-281's arm stands.
+
+**RQ-466** asked whether (a) listen is the Trajectory panel's only, the Inspector holding no sound control, or (b) the
+Inspector keeps listen as a view of the same state, the One place test adding it. *What it decides:*
+- **Option (a), as applied:** Listen is in the Trajectory panel and `Listen…` only. **The Inspector holds no sound
+  control.**
+- **"listen is here too" is deleted from §G8** (its earlier words kept as *Was*), **and REQ-GUI-090's "(in the
+  Trajectory panel and the Inspector)" becomes "(in the Trajectory panel)".**
+
+*Where the words leave a choice, decided per R-369 (mechanical, reviewed by gui):*
+- **M1. R-540's and R-541's quoted text.** R-541's G1 to G11 and R-540's S1 to S14 are the applied text (R-540, R-541:
+  "per R-369; the human may veto any"), not the human's words, so the rewordings the human names (G1, G2's keys, G5's
+  footer, G10's One place row, S4's row) are made in place in those quotes, the earlier words kept in this entry's
+  quotes of the entries and in the commit's Removed lines note. The human's own words in R-540 and R-541 (§0, "My
+  words") are untouched. `docs/incoming/2026-10-21_trace_listen/` is the bundle as delivered and is not edited.
+- **M2. The "applied meanwhile" notes.** Each doc, requirement and task line that called one of these entries "applied
+  meanwhile" now cites R-556 and the option; R-541's P2 to P11 stay as the record of what was applied, the forward line
+  under R-541's heading pointing here.
+- **M3. Nothing waits.** No task waited on these entries but the outline's two entries (RQ-461), now built by
+  TASK-M8-61 and TASK-M8-62.
+
+*What it amends:* **R-541** (G1's wording, G2's `K` key, G5's footer, G10's One place row; P5's meanwhile, the
+outline's two entries no longer waiting; P2 to P4 and P6 to P11's meanwhiles confirmed) and **R-540** (S4's row,
+qualified to the default length). Read with RQ-408 (R-552), RQ-427 (R-553), R-409, R-429, R-461, R-462, R-476 and
+R-538.
+
+R-556 is in the "design" group of `plan/rule_groups.yaml`, with R-541.
+
+Changes REQ-GUI-324, REQ-GUI-328, REQ-GUI-330 and REQ-GUI-333 (statement, verify, rulings, source, `rq` removed, note),
+REQ-GUI-090 and REQ-GUI-329 (statement, rulings, source, `rq` removed, note), REQ-GUI-325 and REQ-GUI-334 (statement,
+rulings, `rq` removed, note), and REQ-GUI-088, REQ-GUI-247, REQ-GUI-271, REQ-GUI-281, REQ-GUI-314 and REQ-GUI-326
+(rulings, `rq` removed, note). REQ-GUI-090's RQ-443 and RQ-451, REQ-GUI-314's RQ-455 and REQ-GUI-329's RQ-454 are R-555's.

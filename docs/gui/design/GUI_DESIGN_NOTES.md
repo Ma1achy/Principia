@@ -85,7 +85,7 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
     figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
     R-509)*. The traces' controls are not in it: they are Overlays ▾'s Trace group, the Trajectory panel and `Trace…`
-    *(conformed to R-541; RQ-448)*.
+    *(conformed to R-541; R-556, RQ-448 (a))*.
   - **Listen in the band:** with sound on, the Time column gains an event lane and a mini spectrogram, the band's
     height unchanged; expanded, the band grows upward, the spectrogram sharing the scrubber's time axis and the
     Legend's column showing the spectrum at the head *(conformed to R-541)*.

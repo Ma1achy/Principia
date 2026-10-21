@@ -60,7 +60,7 @@ stain  →  display chain  →  [ LINES ]  →  egui layer (chrome, hover label,
   chart's edge), no contour passes through it and a trace breaks.
 - One menu: **Lines ▾** beside Overlays ▾, with a count, `Alt+L` to show or hide all. The traces are not in it: they
   are in Overlays ▾ › Trace, the Trajectory panel and the `Trace…` window (R-541; render_gui_spec §G2, §G5), and
-  Lines ▾ holds the contour sets, the axes, the grids and the presets (RQ-448, its option (a) applied meanwhile).
+  Lines ▾ holds the contour sets, the axes, the grids and the presets (R-556, RQ-448 (a)).
 
 **Over the Print graph, or through it (R-487; `principia_print_graph.md` §2).** Lines are drawn **over** the Print
 graph by default, so they stay crisp and readable on any medium. A line set whose style has `through_medium` (§3; a
@@ -405,7 +405,9 @@ it:
 - **The look (R-541 G9).** Every art board and the build draw the trace one way, these defaults: the line `#FFF27A`,
   width 2.2, over the style's `outline` (§3), dark, of width `w + 2.2`, so it reads on any stain (the demo's halo);
   time ticks every 2, labelled; filled-triangle arrows every Δt 1.0, 8 px; the start a yellow star; the head a white
-  disc labelled with its time; icons at 1.4×; syzygies off. Kept traces take R-538's trace palette in turn (RQ-447).
+  disc labelled with its time; icons at 1.4×; syzygies off. Kept traces take R-538's trace palette in turn, each checked against the body colours and the
+  stain classes, a failing colour alone replaced; the boards' `#5ab4ff` is never a trace colour (R-556, RQ-447 (b);
+  REQ-GUI-333).
   While Listen is on, the hover or tab's trace on the shape-sphere preview is drawn brighter inside Listen's window
   (render_gui_spec §G2; `principia_listen.md` §4).
 

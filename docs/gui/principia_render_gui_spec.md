@@ -132,8 +132,11 @@ many are on; **Lines ▾** beside it, with a count, `Alt+L` showing or hiding al
   pinned to the edge, repeat in wrapped copies, outline the chart's square, and a **Trace…** button, which opens
   `Trace…` (§G5). A trace is an overlay, so it lives with the overlays. Each item is the trace's own setting in
   `Lines`' state (R-538 I1), the same field as `Trace…`'s and the Trajectory panel's marker chips, one undoable
-  `SetField` from any of the three, re-integrating nothing (RQ-460, its option (a) applied meanwhile, R-541 P4). The
-  outline's entry is built only once RQ-408 is ruled, and as it rules (RQ-461). The group comes after Chart: the Stain
+  `SetField` from any of the three, re-integrating nothing: every setting is set in at most two places, Overlays ▾ ›
+  Trace holding view toggles of the same fields (R-556, RQ-460 (a)). The outline's entry reaches Overlays › Chart's one
+  outline toggle, one state, on by default and on in the debug view (R-556, RQ-461; RQ-408, R-552). *Was:* "(RQ-460,
+  its option (a) applied meanwhile, R-541 P4). The outline's entry is built only once RQ-408 is ruled, and as it rules
+  (RQ-461)." The group comes after Chart: the Stain
   group it follows in the file has gone (R-509, above).
 
 *Was (before R-476):* "- Chart: forbidden region (the chart's domain function, R-26), grid, Burrau lattice (primitive
@@ -166,7 +169,7 @@ R-467 D8).
 graph, drawn over the finished figure: contours of any expression over chart, latent and payload quantities, the hover,
 pinned and kept traces, the axes (frame, ticks, labels, titles), grids and style presets. The menu lists the contour
 sets and axes with their visibility (the traces are in Overlays ▾ › Trace, the Trajectory panel and `Trace…`, R-541;
-RQ-448, its option (a) applied meanwhile), opens the contour-set editor and the style library, and holds the presets,
+R-556, RQ-448 (a), Lines ▾ keeping the rest), opens the contour-set editor and the style library, and holds the presets,
 among them **Grid** (contours of the chart's own axes), **t_end** (`t_end` at the playhead) and **Class edges**
 (contours of the stain's categorical field, the edges between pixels of different class, R-509), which were Overlays
 toggles. Lines belong to the figure: they stay with F3 and present mode and are in exports; wherever the view
@@ -419,8 +422,8 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
 **The panel from the top (R-541 G4).** The bullets above give each item's behaviour; this is their order.
 1. **Header**: `Trajectory`, then the tabs `under cursor` (`pinned` while a pin is held), `#1`, `#2`, …, `+ keep`.
    Switching tabs switches the trace, the previews and the sound together.
-2. **Status line**: running or pinned, the end event with its time, `|ΔE/E|`, and the summary's FTLE and `E₀` (RQ-462,
-   its option (a) applied meanwhile).
+2. **Status line**: running or pinned, the end event with its time, `|ΔE/E|`, and the summary's FTLE and `E₀` (R-556,
+   RQ-462 (a)).
 3. **Previews**: real space (bodies 1 yellow, 2 magenta, 3 cyan, R-538 I3's body colours) and the shape sphere, side by
    side, with `sphere / unwrapped` and `turn`. **While Listen is on, the stretch of the shape-sphere path inside the
    analysis window** (`windowAt(t)`, `principia_listen.md` §4) **is drawn brighter**, `#5ab4ff`, width 2.4, so what is
@@ -435,12 +438,12 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
      toggle buttons that show the icon they draw: end event, syzygies, leaving the chart, off-screen pins, wrapped
      copies, head marker.
    - **Listen** (collapsed until first used, then remembered per user, in the GUI's own settings as a window's place
-     is, never the contract; RQ-445, its option (a) applied). Collapsed: `♪` on / off, the instrument and `⋯`, which
+     is, never the contract; R-556, RQ-445 (a)). Collapsed: `♪` on / off, the instrument and `⋯`, which
      opens `Listen…`. Expanded: instrument, volume, listen mode, loudness, the event and effect chips (toggle buttons
      with short glyphs), a small spectrum at the head, the two strongest lines as notes with their sides, the interval
      and the entropy.
    - **Numbers** (collapsed). Expanded: the F₂ word, substeps, minimum separation.
-5. The panel's playhead, then **Open full viewer…** and **IC Inspector…** (RQ-462, applied meanwhile).
+5. The panel's playhead, then **Open full viewer…** and **IC Inspector…** (R-556, RQ-462 (a)).
 
 **Bottom.**
 - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
@@ -465,7 +468,7 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
   stored frames; the export contract's "no scrub" applies to exported animations only (R-66). While the scrubber is
   dragged the display time follows the drag every frame, the whole drag one undo entry (R-458).
 - **Listen in the band (R-541 G7).** The band is **Compass · Time · Legend**, 196 px high by default, the Compass at
-  the left panel's width and the Legend 360 px by default (R-462's splitters; RQ-463, its option (a) applied). Listen
+  the left panel's width and the Legend 360 px by default (R-462's splitters, each height remembered; R-556, RQ-463 (a)). Listen
   adds to the Time column and nothing else:
   - **Sound off**: as above.
   - **Sound on**: the band's height unchanged; an **event lane** and a **mini spectrogram** (≈54 px) fill the Time
@@ -473,8 +476,9 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
   - **Strip expanded (⏶)**: the band grows upward to its second height, 420 px by default, its own remembered splitter
     position, and the view gives up the height. The Time column shows the full spectrogram on the scrubber's own time
     axis, with the window, signal and channels shown, and `Listen…`. The Compass draws its cube only, in its current
-    view and mode, its buttons hidden and out of the keyboard tree until `⏷`, a drag on it working as before (RQ-463).
-    The Legend's column shows **the spectrum at the head** until `⏷` (RQ-446, its option (a) applied).
+    view and mode, its buttons hidden and out of the keyboard tree until `⏷`, a drag on it working as before (R-556,
+    RQ-463 (a)). The Legend's column shows **the spectrum at the head** until `⏷`, the band staying at its expanded
+    height, never growing to ≈ 520 px to stack it (R-556, RQ-446 (a)).
 
   The spectrogram and the scrubber **share one time axis**, so the playhead is one line through both. The spectrogram
   is blank past the run's end, which is labelled. F3 still hides the whole band. The spectrogram, the event lane and the
@@ -681,7 +685,8 @@ text field is being typed in (R-409).
 Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4), P pins the sample under the pointer
 in the Trajectory panel (R-453). T shows or hides the trace under the cursor, ⇧T the kept traces and Y the syzygies,
 Overlays ▾ › Trace's toggles, and L turns the sound on or off (R-541 G2); R-541 G2's "`K` keep the current trajectory"
-is Space here, K staying the lock (RQ-449, its option (a) applied meanwhile). T, ⇧T, Y and L, with Space and K, are on
+is Space here, K staying the lock: R-541's G2 now reads "Space keep the current trajectory" (R-556, RQ-449 (a)). T, ⇧T,
+Y and L are Figure-scope shortcuts, as L already was, and with Space and K are on
 the shortcuts sheet (`?`). *Was:* "All five are on the shortcuts sheet (`?`)." (gui review 5595359543 of PR #267, G6;
 applied per R-369).
 Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs and `+ keep`, the two views with
@@ -1008,14 +1013,15 @@ others (applied per R-369, R-541 P7).
 | Direction arrows | shape Off · **Filled triangle** · Open chevron · Half barb · Notched · Dot; size **8 px**; every N px of path · **Δt of time** · N per trace; value (**Δt 1.0**) |
 | Animation | mode Static · **With the playhead** · Own clock; repeat Once · **Loop** · Back and forth; speed **3 t/s**; tail only (off); tail Δt **3.0**; show the rest faintly (off); **head marker, labelled with its time** |
 | Markers | **end event icon**; syzygies, coloured by the middle body (**off**) with style From the icon set · o–o–o · Three in a row · Line and bead · Numeral tag · Crossing tick · Eclipse, and **fade stutters**; **leaving / re-entering the chart**; leaving / entering the window (off); seams (off); join jumps dotted (off) |
-| At the edges | **off-screen icons pinned (faint)**; **repeat in wrapped copies**; outline the chart's square (built once RQ-408 is ruled, as it rules; RQ-461); forbidden hatch (off, R-470) |
+| At the edges | **off-screen icons pinned (faint)**; **repeat in wrapped copies**; **outline the chart's square**, Overlays › Chart's one toggle (R-556, RQ-461; *was:* "(built once RQ-408 is ruled, as it rules; RQ-461)"); forbidden hatch (off, R-470) |
 | Icons | icon set **Principia** · Arrows · Pictures · Orbits, `key…` opens the icon key; icon size **1.4×** |
 | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
 
 Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
-(R-538 TF3), for a trace of the default length; a `Window` or `LastDt` length is kept as chosen (RQ-427 (a), RQ-465
-(a), applied meanwhile). The kept traces' colours are R-538's trace palette (RQ-447). The table is R-541 G5's, its
-outline entry excepted; the bold defaults are R-538's. *Was:* "the whole trace to the horizon is drawn (R-538 TF3).
+(R-538 TF3), for a trace of the default length; a `Window` or `LastDt` length is kept as chosen (RQ-427 (a); R-556, RQ-465
+(a)). The kept traces' colours are R-538's trace palette, each checked against the body colours and the stain classes,
+a failing colour alone replaced (R-556, RQ-447 (b); REQ-GUI-333). The table is R-541 G5's, the outline entry included
+(R-556, RQ-461; *was:* "its outline entry excepted"); the bold defaults are R-538's. *Was:* "the whole trace to the horizon is drawn (R-538 TF3).
 The kept traces' colours …" (merging main's PR #263, which applied RQ-427 (a); applied per R-369).
 
 ### Listen… — every sound setting (R-541 G6)
@@ -1039,7 +1045,7 @@ Sine (pure), but for reverb, Doppler and width, on by default, which the code ha
 on and width on (RQ-454, the code applied meanwhile)." and the Effects row "reverb ← spread (off, ×1.40), Doppler ←
 expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), width ← angular momentum (off, ×1.50)". **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and
 blown (7), voices (4), synths (8), textures (2), one instrument per row; which instrument is in which family is
-written by the task that builds the menu (RQ-459, R-72). The art board compresses rows to fit. Each control is a field
+written by TASK-M8-65, which builds the menu, meeting the counts, reviewed by gui (R-556, RQ-459 (a); R-72). The art board compresses rows to fit. Each control is a field
 of Listen's state, the GUI's own, never the sim key: none re-integrates but the horizon, which integrates the shown
 trajectory on (`principia_listen.md` §10).
 
@@ -1241,9 +1247,10 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   transform" shows what the gauge buttons did.
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
-  f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's
+  f64 (trajectory_viewing §1); the engine is reached only through it (§6). The Inspector holds no sound control: Listen
+is in the Trajectory panel and `Listen…` only (R-556, RQ-466 (a)). *Was:* "**listen** is here too. (Against R-541 G1's
 one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
-holds no sound control. Gui review 5595359543 of PR #267, G1.)
+holds no sound control. Gui review 5595359543 of PR #267, G1.)"
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
   doesn't move.
 - **Readouts:** latent `z`, `α, β`, masses (each body's mass beside its number, e.g. "body 1 (m = 5/12)", R-549),
@@ -1400,7 +1407,8 @@ corpus, the spec follows the authority:
   they differ from other rulings, the rulings stand: the step under the slice (R-457); the compass's orbit (R-409);
   labels drawn over the figure, such as "hover · trace to the playhead…" and "#2 start · off-screen", which are GUI
   labels kept off the plot (§G1), the icons themselves being figure marks (R-539); the demos' mock menu bars with
-  `Lines ▾` and `Listen ▾` (R-541 G2, RQ-448); the boards' kept #2 in `#5ab4ff` (RQ-447); the boards' numbers (legend
+  `Lines ▾` and `Listen ▾` (R-541 G2; R-556, RQ-448 (a)); the boards' kept #2 in `#5ab4ff`, never a trace colour (R-556,
+  RQ-447 (b)); the boards' numbers (legend
   shares, readouts), illustrative (the bundle's README).
 - **The state map's art boards** (R-542; `docs/gui/reference/state_map/boards/`). They are read for their new elements
   only: the Chart position node, its inspectors, ports and presets, the legend's colour block and the Problems rows; the

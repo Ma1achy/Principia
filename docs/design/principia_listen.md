@@ -133,7 +133,7 @@ default signal. These are evidence, not values (R-540 H12).
 | `Listen` | When | What plays |
 |---|---|---|
 | **Follow the head (default)** | while the trace is being played or scrubbed, or animates on its own clock (R-538 TF3) | the frame at the head, re-voiced as the head moves (the follow track, §5) |
-| Follow the head | otherwise | **the whole run as one chord**, as the trace of the default length is drawn whole (R-538 TF3; a `Window` or `LastDt` trace is drawn as chosen and the chord is still the whole run, RQ-427 (a), RQ-465 (a), applied meanwhile) |
+| Follow the head | otherwise | **the whole run as one chord**, as the trace of the default length is drawn whole (R-538 TF3; a `Window` or `LastDt` trace is drawn as chosen and the chord is still the whole run, RQ-427 (a); R-556, RQ-465 (a)) |
 | Whole run | always | the whole run as one chord |
 
 *Was:* "**the whole run as one chord**, as the trace is drawn whole (R-538 TF3)" in the second row (merging main's PR #263, which applied RQ-427 (a); RQ-465; applied per R-369).
@@ -330,7 +330,8 @@ bass; the gong has both):
   quarter-tone (`1/48` octave) since it last sounded (R-555, RQ-457 (a)).
 
 The menu groups them in families (§G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
-textures (2). Which instrument is in which family is RQ-459.
+textures (2). Which instrument is in which family is written by TASK-M8-65, which assigns the 39
+instruments meeting the counts, reviewed by gui (R-556, RQ-459 (a); R-72).
 
 ## 9. Events and effects
 
