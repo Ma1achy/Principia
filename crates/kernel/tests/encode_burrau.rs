@@ -1295,6 +1295,10 @@ fn encode_curve_primitives() {
     // Past the span the nearest point is its edge.
     assert_eq!(nearest(&curve_point(0.8), span).nu, 0.6);
     assert_eq!(nearest(&curve_point(0.1), span).nu, 0.2);
+    // The grid's last point is the span's upper edge exactly, though `lo + (hi − lo)` rounds past it at f64:
+    // 0.06 + (0.6 − 0.06) is the float above 0.6, which a state past the edge would otherwise take.
+    let s = nearest(&curve_point(0.7), [0.06, 0.6]);
+    assert!(s.nu == 0.6 && s.edge, "past the upper edge: {s:?}");
     // A NaN at the search's start (ν = 0, whose triangle has a zero leg) is not kept.
     assert!(curve_distance2(&curve_point(0.3), 0.0f64).is_nan());
     let s = nearest(&curve_point(0.3), [0.0, 0.5]);
