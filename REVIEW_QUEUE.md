@@ -3144,3 +3144,52 @@ Nothing is ruled.*
   - (a) An ordinary setting of the node, as the file and the code have it (which includes the debug use).
   - (b) Debug only: offered in the debug views, not in the node's inspector.
 - **Applied meanwhile:** (a), the code. REQ-COL-116 keeps the draft's words, its note citing this entry.
+
+## RQ-506: The prototype's code and R-543's text disagree: the legend states no Torus period, the hovered-pixel readout does not name the wrap mode, and the period counts the code uses go past the text's *(conflict: the ruling against its transcription source; R-543, R-542; context: TASK-M7-48, TASK-M7-51, TASK-M8-66)*
+
+*Found by R-543's port, reading `docs/gui/reference/state_map/state_flow.html` (version 9) as source (no browser was
+available). R-542's rule, which R-543 keeps: where the text and the code disagree, the code is the transcription source
+and the disagreement is queued. Nothing is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-21_state_map_tiling/INSTRUCTION.md` (the human's ruling, R-543) against
+  the prototype's code, each carried into `docs/design/principia_state_map.md`:
+  - **The legend's period** (§2.1; state map § "SM6"): "The legend states the period in chart units". The code's
+    `smLegend` draws the colour slot over the target's square and writes no period anywhere; only the comment above
+    `SM_TORUS` says "(the legend states the period; …)".
+  - **The hovered-pixel readout** (§2.2; state map § "SM8"): "The hovered-pixel readout and the graph strip name the
+    wrap mode ("Picture · repeat")". The code names it in the graph strip (`smSyncUI`'s "Picture · " + the wrap); its
+    `readout()` gives the pixel, the masses and the end, and no base or wrap mode.
+  - **The period counts** (§2.1; state map § "SM6", its *Transcribed* paragraph): "on the plane the y period count is
+    round(n · H / W)"; the code's is `max(1, round(n·H/W))`, round half up, which differs only where `n·H/W < ½`
+    (no prototype chart). "On the cylinder, X is θ itself once round …, and only s repeats" gives no count for `s`;
+    the code repeats `s` `n` times over the square's height whatever its aspect.
+- **Options seen:**
+  - (a) The ruling's text where the code is silent (the legend states the period in chart units, the readout names the
+    wrap mode), and the code's counts, which only fill what the text leaves open.
+  - (b) The code throughout: no period in the legend, the wrap mode in the graph strip only.
+  - (c) Each ruled separately.
+- **Applied meanwhile:** (a). REQ-GUI-339 carries the legend's period and the readout (TASK-M8-66), REQ-GUI-340 the
+  node's label (TASK-M7-51), each with `rq: RQ-506`; REQ-COL-136's verify uses the code's counts.
+
+## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, which separates systems one Torus period apart only when the Palette is at least as fine as the period, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
+
+*Found by R-543's port. Nothing is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-21_state_map_tiling/INSTRUCTION.md` §2.1 (R-543; state map § "SM6"): "The
+  honest cost: a system exactly one period away gets the same colour. The legend states the period in chart units;
+  "Left its starting tile" brightness already separates such systems." and "It spends L on position, so a brightness
+  node after it gets the existing "no longer one-to-one" warning." `docs/design/principia_state_map.md` § "SM11",
+  "Brightness, unchanged in meaning": "*left its starting tile*, which under Chart position compares the Palette's tile
+  now and at `t = 0`"; the prototype's graph strip: ""tile" is the Palette's tiling"; its Palette offers 4, 6, 8, 12, 18
+  or 24 tiles across and the Torus 1, 2, 3, 4, 6 or 8 periods.
+- **The conflict:** the tile is the Palette's, sized by its own count `m`, not the Torus's Repeats `n`. A move of one
+  period along an axis is `m/n` Palette tiles, so it always changes the tile when `m ≥ n`, but where `m < n` (`n = 6`
+  with `m = 4`; `n = 8` with `m = 4` or `6`) a system one period away can sit in the same tile and is not separated. And the separation is a brightness node,
+  which replaces the L the Torus spends on position, so it costs the one-to-one map within a period that the Torus is
+  for (the warning §2.1 names).
+- **Options seen:**
+  - (a) As the code has it: the Palette's tile, its count the Palette's; the separation holds where `m ≥ n`, and the
+    legend says which tile is compared.
+  - (b) Under a Torus base, Left its starting tile compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods.
+  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph.
+- **Applied meanwhile:** (a), the code. REQ-COL-128 is unchanged; REQ-COL-136's note cites this entry.

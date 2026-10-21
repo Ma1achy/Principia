@@ -18385,6 +18385,12 @@ Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-08
 REQ-GUI-097 (notes).
 
 ## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended in part by R-543 (21 Oct 2026; SM8's mirror-repeat and dimming past the Picture's square becomes the default of
+a wrap mode, Repeat, Mirror or Clamp, with a separate dim setting; SM6 and SM11 gain the Torus gradient, SM8 the tileable
+checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboard under Repeat, dimming off).*
+*Still in force: all of it but SM8's one fixed treatment past the Picture's square, which R-543 makes the default
+(Mirror, dimmed) of a wrap mode, and the Flow preset's picture and settings, which R-543 replaces; every saved stain
+renders as before.*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -19046,3 +19052,234 @@ Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412
 R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 
 Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
+
+## R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_state_map_tiling/` (the follow-up as delivered, and R-543's check
+`checks/r543_tiling_check.py` beside it), `docs/gui/reference/state_map/state_flow.html` (version 9 in place of version
+8), `docs/design/principia_state_map.md` (the header note; § "0. My words", the follow-up's words; § "SM6. Colour maps:
+one-to-one on the quotient, so they own lightness", § "SM8. Image mode", § "SM11. Colouring Chart position: a base, then
+layers", § "SM12. Tests (each with the arm that fires)" and § "SM15. In the stain graph editor", added to, no line
+changed), `docs/design/principia_colour_composition.md` § "1.5 A point on a chart: Chart position's colour slot (R-542)"
+(two sentences), `docs/read_first/principia_INDEX.md` (a row added, a row reworded), RQ-506 and RQ-507 (new),
+REQ-COL-136 to REQ-COL-138 (reqio, new), REQ-COL-129, REQ-COL-130, REQ-GUI-337, REQ-GUI-339 and REQ-GUI-340 (reqio,
+amended, each earlier text kept as its *Was*), TASK-M7-48, TASK-M7-49, TASK-M7-51 and TASK-M8-66 (closes, acceptance and
+notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-48 (the Torus), TASK-M7-49 (the wrap mode and the
+tileable checkerboard), TASK-M7-51 (the controls and the Flow preset) and TASK-M8-66 (the legend's period and the
+readout)*
+
+The human's words, a message of 21 Oct 2026, verbatim:
+
+> "Follow-up from me, Malachy, to the state map bundle (R-542). The attached INSTRUCTION.md is my ruling: colour maps
+> that tile the infinite plane (a Torus gradient, a wrap mode on the Picture base, a tileable checkerboard). Quote its
+> §0 verbatim, record it as a new ruling amending R-542, and apply it as its §6 says: spec, requirements, tests,
+> check_plan, one PR with the test output pasted in. Port from demo/state_flow.html. Queue anything it conflicts with
+> rather than resolving it."
+
+and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My words", verbatim, its spelling as written:
+
+> # State map follow-up: colour maps that tile the infinite plane
+>
+> A follow-up from me, Malachy, 21 Oct 2026, to the state map bundle (R-542, PR #270). This is a ruling of mine; quote
+> §0 verbatim wherever it is recorded.
+>
+> ## 0. My words
+>
+> > "i geuss what i'm reaching for are colour maps that tile cleanly over the whole infinire plane because the tiling is
+> > weird right now ?"
+>
+> To the proposal of a Torus gradient base and a Repeat wrap mode for the Picture base:
+>
+> > "yeah"
+>
+> And on the prototype built from it (`demo/state_flow.html` here, version 9 of the State Flow page):
+>
+> > "ok add this as follow up instructiosn bc i already sent of f that bundle"
+
+*The applied text (per R-369; the human may veto any).* `INSTRUCTION.md` §1 to §6, verbatim:
+
+> ## 1. What was wrong
+>
+> The Picture base is finite: it is laid on the target chart's home square, and SM8 extends it past the square by
+> **mirror-repeating and dimming** it. On a picture made of cells this does two bad things:
+>
+> - **The pattern breaks at every seam.** A mirror repeats the edge row, so the same cell appears on both sides of the
+>   square's edge (one bright, one dim) and a checkerboard stops being a checkerboard.
+> - **The colours fold back.** Past the edge the picture runs backwards, so a system far outside gets the colour of one
+>   just inside.
+>
+> Mirroring stays right for photos. For a cell picture it is wrong, and no base so far tiles the plane with no seam and
+> no special home square.
+>
+> ## 2. What to add
+>
+> ### 2.1 Torus gradient (a Gradient option, flat charts and the cylinder)
+>
+> A colour map periodic on the plane. Each period maps onto a torus inside OKLab:
+>
+> ```
+> X, Y  = position in periods, in CHART UNITS (never the squashed square), n periods across the home square;
+>         on the plane the y period count is round(n · H / W), as the Palette's tiling already does
+> θ = 2π X,  φ = 2π Y
+> (a, b) = (R + r cos φ) (cos θ, sin θ)
+> L      = L₀ + r_L sin φ
+> R = 0.074,  r = 0.037,  L₀ = 0.70,  r_L = 0.12
+> ```
+>
+> - On the cylinder, X is θ itself once round (wrap(θ)/2π), and only s repeats.
+> - A torus sits in 3-D colour without touching itself (R > r), so within one period the map is one-to-one and
+>   continuous; across periods it repeats exactly.
+> - Fixed shape, never clipped per pixel (SM6's rule). The constants are 0 out of gamut on a 240² sweep of (θ, φ), at
+>   0.975 of the largest scale that stays in gamut (`checks/torus_gam.js`). They are calibration values under R-71,
+>   confirmed at the M7 gate with the rest of SM6's.
+> - It spends L on position, so a brightness node after it gets the existing "no longer one-to-one" warning.
+> - The honest cost: a system exactly one period away gets the same colour. The legend states the period in chart
+>   units; "Left its starting tile" brightness already separates such systems.
+> - Setting: **Repeats** (1, 2, 3, 4, 6, 8 across the square; default 2). Shown only when Torus is chosen.
+> - SM6's table already lists circle × circle → torus; this realises it for the plane by making the plane periodic.
+>
+> ### 2.2 Picture wrap mode
+>
+> The Picture base gets **Past its square**: Repeat · Mirror · Clamp, and a separate tickbox **Dim past the square**.
+>
+> - Repeat: `s − floor(s)`. Mirror: the existing triangle wave. Clamp: the edge colour.
+> - **Defaults are Mirror with dimming on**, so every saved stain renders bitwise as before.
+> - The hovered-pixel readout and the graph strip name the wrap mode ("Picture · repeat").
+>
+> ### 2.3 A tileable built-in picture
+>
+> **Checkerboard, tileable**: 8 × 8 cells, cell (i, j) coloured by the torus at its centre
+> (θ = 2π(i + ½)/8, φ = 2π(j + ½)/8), chroma × 0.8, L × 0.8 about L₀, then ±0.07 L by parity. Its colours wrap, so under
+> Repeat it has no seam. 0 of 64 cells at a channel limit. The existing Checkerboard stays as it is: under Repeat its
+> parity holds but its colour ramp jumps at the seams, which is the picture's property, not the wrap mode's.
+>
+> ### 2.4 The Flow preset
+>
+> The Flow preset becomes **Checkerboard, tileable** with **Repeat** and dimming **off**. That is the one deliberate visual
+> change in this follow-up.
+>
+> ## 3. Spec changes (`docs/design/principia_state_map.md`)
+>
+> - **SM6:** add the Torus gradient to the plane and cylinder rows of the map table, with the constants and the
+>   periodicity cost above. Mark the circle × circle row as realised by it.
+> - **SM8:** replace "mirror-repeated and dimmed" with the wrap mode and the dim tickbox, defaults Mirror and on; say why
+>   Mirror is wrong for cell pictures (§1).
+> - **SM11:** add Torus to the Gradient row of the bases table (plane and cylinder); add the wrap setting to Picture;
+>   add "Checkerboard, tileable" to the built-in pictures.
+> - **SM11 lightness paragraph:** list the Torus gradient among the bases that spend L on position.
+> - **SM12:** add the tests in §5.
+> - **SM15:** the Flow preset as in §2.4. If my ruling on RQ-499 has renamed the presets by then, use the new name.
+> - Add a §0 entry quoting §0 here.
+>
+> ## 4. Requirements (via `plan/tools/reqio.py`, area COL; next free numbers)
+>
+> 1. "Chart position's Gradient base must offer a Torus gradient on flat charts and the cylinder: periodic in chart
+>    units with a set number of periods across the home square, one-to-one within a period, seamless across periods,
+>    and in gamut with no per-pixel clipping."
+> 2. "The Picture base must offer a wrap mode past its square (Repeat, Mirror or Clamp) and a separate dim setting; the
+>    defaults must be Mirror and dim on, so existing stains render unchanged."
+> 3. "The built-in pictures must include a tileable checkerboard whose colours wrap, so it tiles the plane with no seam
+>    under Repeat."
+>
+> Each cites the sections in §3, `rulings: [R-<this ruling>]`, milestone as the state map's own.
+>
+> ## 5. Tests (each with the arm that fires)
+>
+> | test | asserts | fires on |
+> |---|---|---|
+> | Torus seam | colour at (u, v) equals colour at (u + P, v) and (u, v + P_y) to 1e-12 over a sweep reaching well past the square (prototype: 2.7e-17) | a period computed in squashed or compacted units; an off-by-one in the period count |
+> | Torus one-to-one | within one period, distinct grid points have distinct colours (minimum OKLab separation > 0 on a 200² grid) | R ≤ r, or L and chroma swapped so the tube self-intersects |
+> | Torus gamut | 0 samples out of sRGB on a 240² (θ, φ) sweep, with no clipping in the shader path | constants raised past the gamut, or a per-pixel clamp added |
+> | Wrap defaults bitwise | a stain saved before this change renders bitwise identically (Gradient 2D, Picture, Palette hex; the prototype checks all three) | the default wrap or dim flipped |
+> | Wrap arm | the same Picture under Repeat and under Mirror differs past the square and is identical inside it | a wrap setting that is not wired through |
+> | Tileable checker seam | under Repeat, the cell across each seam has opposite parity and the colour difference across the seam equals that between neighbouring cells inside | the old checkerboard silently substituted |
+>
+> ## 6. How to apply
+>
+> - Record this as a new ruling in `decisions.md` from the next free R-number, quoting §0, naming R-542 as the ruling it
+>   amends.
+> - Spec, requirements and tests as above; then `check_plan`.
+> - Port from `demo/state_flow.html`: `SM_TORUS`, `smTorusXY`, `smTorusLab`, `smWrapFn`, and the `tchecker` branch of
+>   `smImage`. The constants are the prototype's; the algebra is short enough to transcribe, not re-derive.
+> - Where this conflicts with a ruling or a queue entry these texts do not address, queue it rather than resolving it.
+> - One PR. Paste the test output in it.
+> - The security rule stands: never delete or modify anything outside the repo and build/scratch directories without
+>   asking.
+
+*Decided per R-369 (mechanical consequences and routine choices; the human may veto any):*
+
+- **H1. The port adds only.** No line of `principia_state_map.md` is changed or removed: each R-543 rule is added beside
+  the line it amends, marked *(R-543)* or *Amended by R-543*, so R-542's port still holds the bundle's file as a
+  line-for-line subsequence (REQ-COL-112's verify). §3's "replace "mirror-repeated and dimmed"" is applied that way: SM8's
+  bullet stays and an *Amended by R-543* sub-bullet follows it. Colour composition §1.5 gains a sentence on the Torus
+  and one on the wrap mode.
+- **H2. The prototype.** `docs/gui/reference/state_map/state_flow.html` becomes version 9, the follow-up's
+  `demo/state_flow.html` byte for byte, so the spec's transcription source is the code it transcribes; its diff against
+  version 8 is the tiling only (51 lines), and version 8 stays in `docs/incoming/2026-10-21_state_map/demo/` as
+  delivered. The prototype was read as source; no browser was available to run it.
+- **H3. The check.** §5's numeric tests run on a transcription of the prototype in Python, standard library only, run
+  with `python3 -I`, reading and writing no file: `docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py`,
+  the port's own file beside the bundle's `torus_gam.js` (committed, not kept in a scratch directory, so a reviewer can
+  run it in their worktree; the bundle's four files are unchanged). It transcribes `SM_TORUS`, `smTorusXY` with
+  `smTileXY` and `smNTheta`, `smTorusLab`, `smWrapFn`, `smImage`'s `checker` and `tchecker` branches, `smPaint`'s Picture
+  look-up and `oklabToRgb`, and runs each test's passing arm and then its failing arm: 19 checks, 0 failed (Torus seam
+  1.6e-14; one-to-one 1.16e-3; gamut 0 of 240²; Wrap arm 0 inside, 19,200 of 24,000 past; tileable seam 6e-17; the
+  constants at 0.9745 of the largest in-gamut scale, §2.1's 0.975). Its output is in R-543's PR.
+- **H4. One-to-one's arms (state map SM12, its *Port's note (R-543)*).** "Minimum OKLab separation > 0 on a 200² grid"
+  fires on R = r (separation 0 on the grid's row φ = π) but not on R < r or on L and chroma swapped (2.1e-6 and 1.4e-5),
+  because the tube meets the L axis between grid rows. The test keeps its assertion and its arms and adds one: `R > r`
+  on the constants, the tube clear of the L axis, which fires on every arm. "L and chroma swapped" is read as the tube's
+  L amplitude `r_L` and chroma radius `r` exchanged.
+- **H5. The tileable seam's step along y.** Inside a column the step between neighbouring cells varies with φ, so "the
+  colour difference across the seam equals that between neighbouring cells inside" is held, along y, to the picture's
+  own rule from cell 7 to cell 8, which wraps to cell 0; along x every neighbouring step in a row is equal, the seam's
+  included. The old checkerboard fails along x (0.383 across against 0.321 inside).
+- **H6. The requirements.** §4's three statements, verbatim, are REQ-COL-136 (the Torus; TASK-M7-48, which builds the
+  Gradient base), REQ-COL-137 (the wrap mode and dim; TASK-M7-49, which builds the Picture base) and REQ-COL-138 (the
+  tileable checkerboard; TASK-M7-49), M7, `rulings: [R-543]`, their sources the §3 sections and this heading, each
+  verify §5's rows with their arms. The rest is carried by the requirements that already own it, each earlier text kept
+  as its *Was*: REQ-COL-130's mirror and dim read "by default"; REQ-GUI-337's Flow preset follows the prototype's
+  `smPreset`, now version 9 (TASK-M7-51); REQ-GUI-340's inspector gains the Repeats setting, Past its square and Dim
+  past the square, the node's label naming the wrap mode (TASK-M7-51); REQ-GUI-339's legend states the Torus's period
+  and the hovered-pixel readout names the wrap mode (TASK-M8-66; RQ-506).
+- **H7. The calibration values.** The Torus's `R = 0.074`, `r = 0.037`, `L₀ = 0.70`, `r_L = 0.12`, its default of 2
+  Repeats, and the tileable checkerboard's 0.8 (chroma), 0.8 (`r_L`) and ± 0.07 (`L` by parity) join REQ-COL-129, the
+  state map's calibration requirement (R-71), confirmed at the M7 gate with SM6's, the prototype's values the starting
+  values (RQ-487 (a)), as R-542 H7 placed SM6's.
+- **H8. Wrap defaults bitwise** needs the app: it is REQ-COL-137's verify, TASK-M7-49's. A stain saved without the wrap
+  and dim fields, as every stain before R-543, loads at Mirror with dimming on and renders bitwise as R-542's look-up;
+  Gradient 2D and Palette hex render bitwise with the fields present and absent. On the transcription version 9's
+  look-up at its defaults equals version 8's on every texel (H3).
+- **H9. Where the Torus is offered.** "Flat charts and the cylinder" (§2.1, §4) is read as §3 has it, the plane and
+  cylinder quotients, which is where the code offers it (`SM_GRAD`): not the sphere or the simplex. On the cylinder θ
+  is once round, a whole period as the 2D gradient's hue circle is; REQ-COL-127's multiple of 6 is the tilings' count,
+  which the Torus does not use.
+- **H10. Flow keeps its name.** §2.4's preset is SM15's Flow, the file's name; the prototype's button reads "Picture
+  flow", the difference RQ-499 holds. Nothing is renamed here.
+
+*Checked against `main` (a0a83ca3), `rulings/print-graph` (PR #268, 765fe6d0), `task/TASK-M2-28` (PR #271), `task/TASK-M2-34`
+(PR #269), `task/TASK-M2-24` (PR #262) and the open queue entries the follow-up touches (RQ-487, RQ-498, RQ-499):* two
+conflicts are queued, not ruled:
+
+- **RQ-506:** the code and the ruling's text: the legend states no period and the hovered-pixel readout does not name
+  the wrap mode in the prototype, and the code's period counts (`max(1, round(n·H/W))`; `s` `n` times over the
+  cylinder's square) go past the text's. Meanwhile (a): the ruling's text where the code is silent, the code's counts.
+- **RQ-507:** "Left its starting tile" separates systems one Torus period apart only when the Palette's count is at least
+  the Torus's Repeats, since under Chart position the tile is the Palette's (SM11), and the brightness node it needs
+  replaces the L the Torus spends. Meanwhile (a), the code.
+
+What agrees: SM6's rule, a fixed chroma never clipped per pixel (the Torus's gamut, 0 of 240²); SM6's circle × circle
+row, which the Torus realises; SM11's chart units by default and its whole periods on the cylinder; SM3's copies, which
+the Torus colours alike since it is a function of the chart point (θ wrapped on the cylinder); R-542 H5's picture as a
+`RenderState` field, the wrap mode and dim beside it, no sim struct (SM2); SM15's "every saved stain loads and renders as
+before", which the defaults keep. A system that has left takes the navigation edge it left by under the Torus as under
+the tilings, which RQ-498 already holds (no navigation edge on main's latent charts). No open branch adds an R, RQ, REQ
+or TASK id this port uses; the ruling and queue ids PR #268 holds, and the queue ids reserved for another agent, are
+left alone. The
+human's ruling on RQ-499, given the same day and not on `main`, keeps the file's preset names, as H10 does.
+
+*What it amends:* **R-542** (state map SM6, SM8, SM11, SM12 and SM15; SM8's fixed mirror and dim becomes a wrap mode's
+default, the Flow preset's picture and settings change). Read with R-71, R-369 and RQ-487, RQ-498 and RQ-499.
+
+R-543 is in the "design" group of `plan/rule_groups.yaml`, with R-542.
+
+Adds REQ-COL-136 to REQ-COL-138; amends REQ-COL-129, REQ-COL-130, REQ-GUI-337, REQ-GUI-339 and REQ-GUI-340.
