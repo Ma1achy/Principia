@@ -871,6 +871,10 @@
   reason: informative only
   note: "the human's message of 14 Oct 2026 (R-428 quotes it): no veto on #209 (the alias test on the workspace target in ci-workspace, gate.yml's cpu-workspace job), the constants lint's skip of #[cfg(test)] code, constants::MILESTONES's names M0 … M8, or the narrowed local mutants runs with CI's full run as the gate; an act, recorded only; changes no requirement"
 - file: decisions.md
+  section: "R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it"
+  reason: informative only
+  note: "the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked \"accepted by R-559\" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes"
+- file: decisions.md
   section: "R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts"
   reason: informative only
   note: "the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement"

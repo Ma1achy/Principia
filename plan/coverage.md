@@ -47,7 +47,7 @@ Of these: 144 calibration, 143 definition, 1422 obligation. Retired (kept for th
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 171 |
+| informative only | 172 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 45 |
@@ -198,7 +198,7 @@ Of these: 144 calibration, 143 definition, 1422 obligation. Retired (kept for th
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | planned (the plan PR) | R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement |
-| R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | **MISSING REASON** | |
+| R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -587,7 +587,3 @@ Of these: 144 calibration, 143 definition, 1422 obligation. Retired (kept for th
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
-
-## Errors
-
-- uncovered section with no reason: decisions.md § R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it
