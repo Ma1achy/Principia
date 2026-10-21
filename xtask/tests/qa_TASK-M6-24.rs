@@ -122,7 +122,8 @@ fn steps(c: &Case) -> Vec<GuiStep> {
 /// `mock_trajectory_unwrapped`, `mock_overlays_menu`, `mock_tile_bounds` and `mock_hover`; and, since TASK-M6-30,
 /// `mock_present` (REQ-GUI-179); and, since TASK-M6-33, R-451 B8's four cube cases, `mock_compass_cube_slice`,
 /// `mock_compass_cube_tilt_0`, `mock_compass_cube_tilt_rect` and `mock_compass_cube_tilt_hex` (REQ-GUI-191); and, since
-/// TASK-M6-36, `mock_trajectory_views` (REQ-GUI-202, R-453); and no other.
+/// TASK-M6-36, `mock_trajectory_views` (REQ-GUI-202, R-453); and, since TASK-M6-34, `mock_compass_views` and
+/// `mock_compass_plucker` (REQ-GUI-194, REQ-GUI-195, R-452); and no other.
 fn check_01_main(cases: &[Case]) {
     let mut names: Vec<&str> = cases.iter().map(|c| c.name.as_str()).collect();
     names.sort_unstable();
@@ -134,8 +135,10 @@ fn check_01_main(cases: &[Case]) {
             "mock_compass_cube_tilt_0",
             "mock_compass_cube_tilt_hex",
             "mock_compass_cube_tilt_rect",
+            "mock_compass_plucker",
             "mock_compass_slice",
             "mock_compass_tilt",
+            "mock_compass_views",
             "mock_f3_off",
             "mock_footer",
             "mock_hover",

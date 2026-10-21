@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080
-- **Depends on:** TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11
+- **Depends on:** TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11, TASK-M2-36
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -21,12 +21,12 @@ The quadtree covers the extended parameter plane and computes one system once (R
 - `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)"
 
 ## Deliverables
-- The root lattice, the canonical-address map per extension type and its composition, the union-of-images scheduling, and neighbour lookup through the map, in `crates/kernel/` and the scheduler.
-- Tests `quad_canonical`, `neighbours_across_seams` and `stats_canonical`.
+- The root lattice, the canonical-address map per extension type and its composition, the union-of-images scheduling, and neighbour lookup through the map: the pure canonical-address map in `crates/kernel/`, the scheduling and the neighbour reads in `crates/engine/` (the quad scheduler, `crates/engine/src/quad`, and the refinement policy).
+- Tests `quad_canonical` and `neighbours_across_seams` (`crates/engine`), `stats_canonical` and `tilted_periodic_not_folded` (`crates/kernel`).
 
 ## Acceptance tests
-- `cargo test -p kernel quad_canonical` — REQ-SCHED-101's verify (R-537 T2).
-- `cargo test -p kernel neighbours_across_seams` — REQ-REF-054's verify (R-537 T7, T8).
+- `cargo test -p engine quad_canonical` — REQ-SCHED-101's verify (R-537 T2).
+- `cargo test -p engine neighbours_across_seams` — REQ-REF-054's verify (R-537 T7, T8).
 - `cargo test -p kernel stats_canonical` — REQ-CHART-079's verify (R-537 T13).
 - `cargo test -p kernel tilted_periodic_not_folded` — REQ-CHART-080's verify (R-538 T17).
 
@@ -35,3 +35,7 @@ The quadtree covers the extended parameter plane and computes one system once (R
 - **2:1 balance** is the refinement policy's `BalanceForced`, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's (TASK-M6-04) (R-537 U11).
 - **RQ-410 (a)** applied meanwhile: a level-0 repeat across a pole is drawn from its two level-1 halves.
 - **R-538's follow-up (TF2.2, J8; RQ-430 (a) applied meanwhile):** along an axis that mixes a periodic parameter with a non-periodic coordinate (a tilt) the chart is affine: the canonical address folds an axis only where every term with non-zero weight has that period (REQ-CHART-080). Physics reviews it with the maps.
+- **The maps by hemispheres drawn (R-537 U10):** with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at `t = 1` and `t = 0`; with one hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and the fold at `t = 0`, past `t = −1` the fold then the `t = 1` pole map (REQ-SCHED-101).
+- **RQ-472 waits:** on a tilted view the pole maps and the equator fold are not built until RQ-472 is ruled (REQ-SCHED-101, `rq: RQ-472`; REQ-REF-054's neighbours and REQ-CHART-079's statistics through them); the rest does not wait.
+- **TASK-M2-36** builds the tilt (R-473) that REQ-CHART-080's test decodes, hence the dependency.
+- *Was:* Depends on without TASK-M2-36; acceptance `cargo test -p kernel quad_canonical` and `cargo test -p kernel neighbours_across_seams`; Deliverables "in `crates/kernel/` and the scheduler" and "Tests `quad_canonical`, `neighbours_across_seams` and `stats_canonical`" (code review 5594440613 of PR #263, F2, F3, F5; physics review 5594430380, P2, P3; applied per R-369).

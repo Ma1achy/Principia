@@ -1558,7 +1558,7 @@
   - R-113
   - R-141
   milestone: M2
-  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover. R-113 (RQ-95): verified at M2 by golden image; the hemisphere toggle is a separate M8 GUI requirement."
+  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover. R-113 (RQ-95): verified at M2 by golden image; the hemisphere toggle is a separate M8 GUI requirement. The n-to-1 value here is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\"."
 - id: REQ-CHART-003
   area: CHART
   statement: "A chart must be a map Φ : [0,1]² → Y followed by the shared decoder D and canonicaliser C, with the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ as one implementation of Φ — its scale living in q (zoom a common scale on q₁, q₂, no per-axis factors) — and nonlinear charts using the general Φ."
@@ -1758,7 +1758,7 @@
   - R-141
   - R-157
   milestone: M2
-  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4)."
+  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4). R-503 (closes RQ-371): the shape sphere's n-to-1 with n = 2 is its spherical map's value; the exponential map's, computed from its cap, is REQ-CHART-075 (TASK-M2-28). The shape sphere's n-to-1 is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\"."
 - id: REQ-CHART-015
   area: CHART
   statement: "D and C must be shared and written once, so adding a chart means adding only a Φ, and no chart may carry its own decoder, integrator or renderer."
@@ -2191,7 +2191,7 @@
   - R-117
   - R-141
   milestone: M4
-  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map."
+  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map. The appendix row's value is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\"."
 - id: REQ-CHART-038
   area: CHART
   statement: "Every navigation gesture must be a CPU-side edit of the one chart uniform (z₀, q₁, q₂) — pan/slice edit z₀, zoom/tilt edit the basis, the lock pins the centre — with non-raw slice/tilt directions taken as tangents at the centre, and the GPU must have no locked mode, view mode, camera object or second code path."
@@ -2672,7 +2672,7 @@
   note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9): under Tip as sheet with one target and both angles set a window pixel's (a, b) can leave the square; that case is RQ-402. *Was:* \"every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached\". R-512 (RQ-402 ruled): C6 reads over the chart's square, as narrowed. *Was:* \"what a pixel whose (a, b) leave the square draws is REQ-CHART-076, RQ-402\"."
 - id: REQ-CHART-062
   area: CHART
-  statement: "Tilt and slice must be available on every chart (latent, shape sphere, mass simplex, Burrau family, invariant charts, custom and saved charts): the tilt is a rotation R(τ₁, τ₂) in the 3-space of the two screen axes and the hidden target coordinate (with X ≠ Y the two-target form in the 4-space (a, b, d_X, d_Y)), applied to the chart's own parameters, a pixel at window offset (u, v) mapping to (a, b, d) = R·(u, v, 0), a and b through the chart map exactly and d added to the hidden coordinate's value at the slice centre; on the latent chart it must be exactly the decoder's basis edit; R must come from the active tilt map (REQ-GUI-231) and be computed on the CPU, the kernel receiving it in the chart's params; a chart's hidden coordinates are the latent controls its axes do not write; and untilted (τ = 0, under either map) the chart must take no tilt path and render bitwise today's (C2)."
+  statement: "Tilt and slice must be available on every chart (latent, shape sphere, mass simplex, Burrau family, invariant charts, custom and saved charts): the tilt is a rotation R(τ₁, τ₂) in the 3-space of the two screen axes and the hidden target coordinate (with X ≠ Y the two-target form in the 4-space (a, b, d_X, d_Y)), applied to the chart's own parameters, a pixel at window offset (u, v) mapping to (a, b, d) = R·(u, v, 0), a and b through the chart map exactly and d added to the hidden coordinate's value at the slice centre; on the latent chart it must be exactly the decoder's basis edit; R must come from the active tilt map (REQ-GUI-231) and be computed on the CPU, the kernel receiving it in the chart's params; a chart's hidden coordinates are the latent controls its axes do not write; and untilted (τ = 0, under either map) the chart must take no tilt path and render bitwise today's (C2); and a tilted chart's system_image must fold two pixels only when their full (a, b, d) decode to the same system, taken over the tilted view's pixels and recomputed when τ₁, τ₂ or the targets change, a pixel's mirror being the pixel with the mirrored (a, b) and the same d, so that on the shape sphere the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there (chart_reference §3.3, applied per R-369)."
   source:
   - file: decisions.md
     section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
@@ -2684,17 +2684,25 @@
     section: Directions are axis kinds — the unifying rule
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: "What the GPU knows about all of this: nothing"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
   verify:
     method: unit test
-    detail: "cargo test -p kernel tilt_every_chart: per gallery chart, τ₁ = τ₂ = 0 under both maps gives a decode bit-identical to the untilted chart at every pixel of a 33 × 33 grid and calls no tilt arithmetic; a tilt of 30° into a hidden coordinate moves a, b, d as R·(u, v, 0) to 1 ulp, a, b decoding through the chart's own map; the centre pixel is unchanged under every tilt (anchor-preserving); on the shape sphere a tilt composed with the pole-crossing extension decodes past the pole as REQ-CHART-054 has it; on the latent chart the result equals the decoder's basis edit bitwise; controls: a tilt applied to a tangent vector at the centre (it drifts off the chart map's axes away from the centre), a d added to a physical value, and an untilted path that multiplies by an identity R (not bitwise), each fail"
+    detail: "cargo test -p kernel tilt_every_chart: per gallery chart, τ₁ = τ₂ = 0 under both maps gives a decode bit-identical to the untilted chart at every pixel of a 33 × 33 grid and calls no tilt arithmetic; a tilt of 30° into a hidden coordinate moves a, b, d as R·(u, v, 0) to 1 ulp, a, b decoding through the chart's own map; the centre pixel is unchanged under every tilt (anchor-preserving); on the shape sphere a tilt composed with the pole-crossing extension decodes past the pole as REQ-CHART-054 has it; on the latent chart the result equals the decoder's basis edit bitwise; the shape sphere's spherical map and its exponential map on a cap straddling the equator with its frame aligned so the mirror is (u, v) ↔ (u, 1 − v), tilted into a momentum control: at τ₂ = 30° (τ₁ = 0) report system_image bijective and count every pixel of the tilted view once (control: a fold kept, which undercounts), and at τ₁ = 30° (τ₂ = 0) report n-to-1 with n = 2 on the spherical map and REQ-CHART-075's per-pixel fold on the aligned exponential frame (control: a fold dropped, which overcounts); under Tip as sheet at τ₁ = 0, τ₂ = 180° and at τ₁ = 108°, τ₂ = 144° (m = 180° exactly in f64, both angles non-zero) report n-to-1 with n = 2 on the spherical map, the fold kept (controls: a rule keyed on τ₂ ≠ 0, which drops the fold and overcounts, and a rule testing a computed N_b == 0 in floating point, which reports bijective at m = 180°, each fail), and one ulp off the boundary, at τ₁ = 108, τ₂ = nextafter(144, 0) and at τ₁ = 0, τ₂ = nextafter(180, 0), report bijective (computed |N_b| about 4.5e-16 and 5.7e-16; with the m = 180° arms' 9.8e-17 and 1.2e-16 a tolerance rule |N_b| < t passes all four only for t in about (1.2e-16, 4.5e-16], any t at or below 1.2e-16 failing an m = 180° arm and any t above 4.5e-16 an ulp arm; control: |N_b| < 1e-12, which keeps the fold, fails), and the code reviewer checks that the rule compares the stored angles with no tolerance on a computed N_b; under Lean each axis τ₁ = 90°, τ₂ = 30° keeps the fold, n = 2 (control: cos τ₁·sin τ₂ == 0 computed in floating point, which reports bijective, fails), and τ₁ = 89°, τ₂ = 30° reports bijective; with two targets over Tip as sheet's range τ₂ = 180° keeps the fold for d_Y (control: sin τ₂ == 0 tested in floating point, which reports bijective, fails); the Lean-each-axis corner |τ₁| = |τ₂| = 90° with one target is not tested until RQ-471 is ruled; a change of τ₁, τ₂ or the target recomputes it, and at τ = 0 it reports the untilted value; controls: a tilt applied to a tangent vector at the centre (it drifts off the chart map's axes away from the centre), a d added to a physical value, and an untilted path that multiplies by an identity R (not bitwise), each fail"
   rulings:
   - R-92
+  - R-141
   - R-457
   - R-473
   - R-474
   - R-477
+  - R-503
   milestone: M2
-  note: "R-473 (20 Oct 2026), T1, T2, J1 and J3 to J7; R-477 C2. Closed by TASK-M2-36. Units: REQ-CHART-064 (RQ-375); meanwhile the curved charts use the human's proposal and the latent chart the basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-471
+  note: "R-473 (20 Oct 2026), T1, T2, J1 and J3 to J7; R-477 C2. Closed by TASK-M2-36. Units: REQ-CHART-064 (RQ-375); meanwhile the curved charts use the human's proposal and the latent chart the basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5593301205 of PR #255, P1 (applied per R-369, flagged for the human's veto as it changes area statistics): the tilted fold and its arm; TASK-M2-36 depends on TASK-M2-28 for the exponential map's fold. *Was:* the statement ended at \"render bitwise today's (C2)\", and the verify's controls began \"a tilt applied to a tangent vector at the centre\". Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): the fold survives a tilt iff N_b = 0 (τ₂ = 0 on the spherical map), and the tilted arm is split by angle. *Was:* the statement's \"so that a tilted shape-sphere view, on either map, is generically bijective\", and the verify's single arm \"the shape sphere, spherical and exponential maps (the latter on a cap straddling the equator), tilted 30° into a momentum control, reports system_image bijective … controls: a fold that pairs a tilted pixel with its shape mirror (it undercounts)\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". The verify gains the Tip-as-sheet arms at τ₂ = 180° and on m = 180°. Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". The verify's m = 180° arm uses τ₁ = 108°, τ₂ = 144° (*was:* τ₁ = τ₂ = 180°/√2), with the floating-point control and the near-boundary arm (code review 5593479346). RQ-471 (P7): the Lean corner |τ₁| = |τ₂| = 90° waits; the rest does not. Physics review 5593531369 of PR #255, P8, P9: the ulp-off-boundary arms with the tolerance bounds, and the Lean and two-target arms. *Was:* \"and at τ₁ = 108°, τ₂ = 143.9° (m just short of 180°) report bijective (control: a tolerance rule that keeps the fold there fails)\"."
 - id: REQ-CHART-063
   area: CHART
   statement: "A mass hidden coordinate must be tilted in logits, d added to the mass logits, and every linked coordinate in its link's pre-image (its latent control), never in the physical value, so that a tilt of the shape-sphere chart into a mass keeps every pixel's masses positive and summing to 1 (C7)."
@@ -2915,6 +2923,26 @@
   - R-513
   milestone: M2
   note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
+- id: REQ-CHART-075
+  area: CHART
+  statement: "The shape sphere's exponential map must compute its system_image from its cap, the pixels of [0,1]² with r = ‖d‖ ≤ π: bijective when the cap lies within one closed hemisphere; when it straddles the equator, n-to-1 with a per-pixel fold, a pixel counting 1 if its w ≥ 0 or if its mirror point (w → −w) lies outside the cap, and 0 otherwise, w = 0 being the computed w as ±0.0 and \"the mirror is in view\" the log map about n0 of the mirrored point landing in [0,1]² with r ≤ π; and a pixel with r > π must be the domain's end, not a system, out of the count and the total (R-503). How pixels exactly on r = π count is REQ-CHART-078's."
+  source:
+  - file: decisions.md
+    section: "R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel exp_map_system_image: a cap inside w ≥ 0, one inside w ≤ 0 and one touching the equator from one side report bijective; a straddling cap on a grid symmetric under w → −w (n0 on the equator, e2 = ŵ, an odd resolution N, every pixel centre at least 10⁻⁶ from r = π, |r − π| > 10⁻⁶), whose mirrored pixels are the index pairs (i, j) and (i, N−1−j) and whose middle row lies at w = 0, reports the per-pixel fold and a counted total equal to the hand count by the per-pixel rule, N(N+1)/2 when s√2 < π; with s√2·(N−1)/N > π on the same grid, so at least one pixel centre in the counted half lies past r = π, the total equals the number of pixels with j ≥ (N−1)/2 and r ≤ π, enumerated from r alone; controls: a fold that counts a mirrored pair twice, one that drops the w = 0 row, one that reads a fixed n = 2 for a cap in one hemisphere, and one that counts the pixels with r > π each fail"
+  rulings:
+  - R-141
+  - R-503
+  milestone: M2
+  note: "R-503 (closes RQ-371). The spherical map keeps n-to-1 with n = 2 (R-141, REQ-CHART-014). Closed by TASK-M2-28. On review (PR #258: physics P5, P6; qa 4; applied per R-369): the per-pixel rule, the symmetric fixture and the r > π control. On review round 2 (physics P9, qa C, applied per R-369): the margin from r = π and a pixel past it in the counted half. The cap and the per-pixel fold are the untilted chart's (τ₁ = τ₂ = 0). Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\"."
 - id: REQ-CHART-076
   area: CHART
   statement: "Under Tip as sheet with one target and both angles set, a window pixel inside [−1, 1]² whose own chart parameters (a, b) leave the chart's square must be past the chart's edge (R-512): its axes' types act on (a, b) as past the window (R-472 X3a), so past a bounded edge (a warped L_z's s on either side, the warp's t < 0) it is not a system and draws blank, and past the energy warp's continuing t > 1 side (R-508) it is that side's system (R-512 F1)."
@@ -2960,6 +2988,25 @@
   - R-513
   milestone: M2
   note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
+- id: REQ-CHART-078
+  area: CHART
+  kind: definition
+  statement: "How pixels of the shape sphere's exponential map exactly on r = π count must be defined: every such pixel maps to the one point −n0, so the map is not injective there; counted once, like the equator, or as the domain's end. It is written into chart_reference §3.3 by the task that needs it and checked by the physics reviewer (R-72, R-503)."
+  source:
+  - file: decisions.md
+    section: "R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  verify:
+    method: review checklist
+    detail: "chart_reference §3.3 states the rule for r = π, and REQ-CHART-075's count follows it; physics reviewer approves before merge"
+  rulings:
+  - R-72
+  - R-503
+  milestone: M2
+  note: "R-503, review round 1 of PR #258 (physics P6, applied per R-369). Written by TASK-M2-28."
 - id: REQ-CHART-079
   area: CHART
   statement: "Past the chart's [0,1]², reached by navigation or by F3, the area statistics must be unchanged (R-537 EX7(g), R-408): each system counted once, at its canonical address, through the primary ranges, so that panning the view by one period changes neither \"forbidden in view\" nor W7's counts."
@@ -2975,7 +3022,7 @@
   - R-408
   - R-537
   milestone: M8
-  note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone. On a tilted view the canonical address over a pole or the equator fold waits on RQ-472 (REQ-SCHED-101's maps); RQ-430 (a) for θ's period (REQ-CHART-080). Physics review 5594430380 of PR #263, P2, applied per R-369."
 - id: REQ-CHART-080
   area: CHART
   statement: "Along an axis that mixes a periodic chart parameter with a non-periodic coordinate (a tilt, R-473), the chart must be affine (R-538 TF2.2; RQ-430 (a)): no image is drawn there and R-537 EX7(b)'s canonical address must not fold it, folding applying along an axis only where every term with non-zero weight has that period; the untilted shape sphere's maps stand."
@@ -3210,7 +3257,7 @@
   milestone: M3
 - id: REQ-INT-013
   area: INT
-  statement: "Every occupant must advertise a capability profile `{order, force_evals, symplectic, reversible, owns_time_mapping}` (plus the re-registration field of Part 2b), and downstream features must read the profile rather than assume occupant properties."
+  statement: "Every occupant must advertise a capability profile `{order, force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (plus the re-registration field of Part 2b), and downstream features must read the profile rather than assume occupant properties (R-500: `reversible` split into `step_reversible` and `run_reversible`)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -3220,17 +3267,20 @@
     section: 2. Consolidated contract
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: review checklist
-    detail: "profile struct exists with these fields for every composed occupant; energy-drift interpretation, the reversibility diagnostic and total_substeps_log2/FTLE confidence all read it (grep for occupant-name special cases outside the profile)"
+    detail: "profile struct exists with these fields for every composed occupant, and no `reversible` field; energy-drift interpretation, the reversibility diagnostic (step_reversible), the reversibility test (run_reversible) and total_substeps_log2/FTLE confidence all read it (grep for occupant-name special cases outside the profile)"
   rulings:
   - R-19
   - R-72
+  - R-500
   milestone: M3
-  note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
+  note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition). R-500 (closes RQ-369): the split flag, defined in Part 2."
 - id: REQ-INT-014
   area: INT
-  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168)."
+  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, step_reversible false, run_reversible false, debug only), KDK (2, 1, symplectic, step_reversible true, run_reversible false, Potato–Low default), Yoshida-4 (4, 3, symplectic, step_reversible true, run_reversible false, Medium–High default), Yoshida-6 (6, 7, symplectic, step_reversible true, run_reversible false, Ultra–Extreme default), RK4 (4, 4, not symplectic, step_reversible false, run_reversible false, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, step_reversible false, run_reversible false, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168). The regularised occupants' step_reversible is the one dd test 3 measures (REQ-VAL-190, R-500)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -3240,13 +3290,17 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: decisions.md
     section: "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: unit test
-    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables"
+    detail: "assert each built stepper occupant's advertised profile, both reversibility flags included, and default tier binding equals the Part 2 / Part 2a tables; controls: a table giving Yoshida-4 step_reversible false, or KDK run_reversible true, fails"
   rulings:
   - R-162
   - R-168
+  - R-500
   milestone: M3
+  note: "R-500 (closes RQ-369): the table's \"(see §4)\" reads step_reversible true and run_reversible false for KDK, Yoshida-4 and Yoshida-6."
 - id: REQ-INT-015
   area: INT
   statement: "The Euler occupant must be kept as a debug occupant only (profile `symplectic: false`), never offered as a production option."
@@ -3444,7 +3498,7 @@
   milestone: M3
 - id: REQ-INT-028
   area: INT
-  statement: "`N_sub` must be chosen by a generated comparison tree of `d²` against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)`, with no runtime sqrt, div, pow, loop or dynamic index, and must equal the specification `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`."
+  statement: "`N_sub` must be chosen by a generated comparison tree of the position-quantised `d²` against the sim key's f32 thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` (`(r_sub/n^{2/3})²` at γ_sub = 1.5), generated on the host for the sim key's r_sub, gamma_sub and N_max, shipped in SimUniforms as exact f32 bit patterns and read by constant index, with no runtime sqrt, div, pow, loop or dynamic index, `N_sub = min(bucket(d²), N_max)`, and must equal the specification `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` for every sim key (R-502)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 4 — Determinism, and the substep as the subtle seam
@@ -3458,14 +3512,17 @@
     section: 8. Locked vocabulary
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
   verify:
     method: property test
-    detail: "fuzz d² across and straddling every bucket edge; N_sub bit-identical on CPU-f64 and CPU-f32 (0 forks); table generated offline in f64 libm and only the f32 output ships"
+    detail: "fuzz d² across and straddling every bucket edge, at the default config and at configurations with r_sub, gamma_sub and N_max each changed (a non-power-of-two N_max among them): N_sub bit-identical on CPU-f64 and CPU-f32 (0 forks) and equal to the specification away from edges; control: the default config's table used under a changed r_sub or gamma_sub fails the specification check"
   rulings:
   - R-34
   - R-113
+  - R-502
   milestone: M3
-  note: "R-113 (RQ-97): the native-GPU leg is REQ-VAL-059's N_sub (M4); the browser leg is the M8 browser Tier-L requirement closed with REQ-VAL-116."
+  note: "R-113 (RQ-97): the native-GPU leg is REQ-VAL-059's N_sub (M4); the browser leg is the M8 browser Tier-L requirement closed with REQ-VAL-116. R-502 (closes RQ-370): the table is generated per sim key on the host (REQ-INT-091), the default reproduces the build-time table (REQ-INT-092), the wasm host's bits are REQ-INT-093's and the maximum length REQ-INT-094's."
 - id: REQ-INT-029
   area: INT
   statement: "The substep cap N_max must bound the substep count per macro-step without terminating: on N_sub == N_max the trajectory advances with the capped (under-resolved) step, identically on both pipelines, and the sticky saturated descriptor bit (bit 5) is set at that point and is never a state value."
@@ -3538,18 +3595,21 @@
   note: "The τ-sort, the tie tolerance and the sign convention: REQ-INT-079 (definition). R-113 (RQ-97): 'word identical CPU/GPU' is covered in M4 by REQ-VAL-072 (the word's integer arithmetic)."
 - id: REQ-INT-032
   area: INT
-  statement: "The reversibility diagnostic must either replay the recorded macro-step + substep schedule exactly in reverse or bind a fixed-step reversible occupant with COM projection disabled, and must be available only for occupants whose profile has `reversible: true`."
+  statement: "The reversibility diagnostic must either replay the recorded macro-step + substep schedule exactly in reverse or bind a fixed-step reversible occupant with COM projection disabled, and both routes must be available only for occupants whose profile has `step_reversible: true` (R-500)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: review checklist
-    detail: "reversibility diagnostic refuses an occupant with reversible=false; implementation uses one of the two named routes"
-  rulings: []
+    detail: "the reversibility diagnostic refuses an occupant with step_reversible = false (Euler, RK4, Aarseth–Zare + RK4) on either route, and accepts KDK, Yoshida-4 and Yoshida-6; implementation uses one of the two named routes; the guard reads step_reversible, not run_reversible or an occupant name"
+  rulings:
+  - R-500
   milestone: M3
-  note: Deferred work per Part 6 / dd §6.
+  note: "Deferred work per Part 6 / dd §6. R-500 (closes RQ-369): both routes gate on step_reversible; run_reversible is REQ-VAL-044's."
 - id: REQ-INT-033
   area: INT
   statement: "v1 must handle close approaches by substepping capped at `N_max` with the `saturated` flag, with Kustaanheimo–Stiefel regularisation deferred to v2."
@@ -3617,15 +3677,22 @@
   milestone: M3
 - id: REQ-INT-037
   area: INT
-  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})`, `w₀ = −2^{1/3}w₁`), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
+  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})` correctly rounded to f64, and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1` exactly, which stands in place of the closed form's `w₀ = −2^{1/3}w₁`, from which it differs by 9.9·10⁻¹⁷ relative; R-515), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.2 Occupants
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: decisions.md
+    section: "R-515 — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*"
   verify:
     method: unit test
-    detail: "coefficient constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃)"
-  rulings: []
+    detail: "coefficient constants equal §3.2 to all printed digits (each printed value parses to the shipped f64: Yoshida-4 w₁ = 1.3512071919596575, w₀ = −1.702414383919315); Yoshida-4 w₀ is bitwise the f64 result of 1 − 2w₁ and w₀ + 2w₁ evaluates to exactly 1.0 in f64 (R-515); control: RQ-405's interim digits (1.3512071919596578, −1.7024143839193157) give 0.9999999999999998 and fail; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃)"
+  rulings:
+  - R-501
+  - R-515
   milestone: M3
+  note: "R-515 (closes RQ-405): option (c), w₁ correctly rounded, w₀ = 1 − 2w₁. The identity is now exact in f64, not read within rounding; TASK-M3-02 builds the new digits and closes this requirement."
 - id: REQ-INT-038
   area: INT
   statement: "The horizon test must be an integer macro-step counter against `horizon_steps = ⌈T/dt_macro⌉`, never accumulated float time."
@@ -3942,7 +4009,7 @@
   note: "R-33: 'RK45 stays the inspector's reference.' trajectory_viewing calls computeIC the Precision-ring path."
 - id: REQ-INT-056
   area: INT
-  statement: "The Yoshida-6 coefficients must be checked against Yoshida (1990) Table 1 solution A, and the w₂ < 0 label fixed, before Yoshida-6 enters the shared source."
+  statement: "The Yoshida-4 and Yoshida-6 coefficients must carry their citation where dd_integrator §3.2 prints them and in the shared source (Yoshida 1990, Phys. Lett. A 150, 262–268; Yoshida-6 its Table 1, solution A), with no copy of the paper added to the corpus, and their transcription must be checked by REQ-INT-090's convergence-order test before Yoshida-6 enters the shared source; the negative weight's label is fixed (R-57, R-501)."
   source:
   - file: decisions.md
     section: "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
@@ -3952,13 +4019,18 @@
     section: 6. Deferred / flagged
   - file: open-questions.md
     section: Audit section C — transcription checks
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
   verify:
     method: unit test
-    detail: "Coefficients in the shared source equal the published digits; composition order test (6th-order convergence slope on a Kepler fixture)."
+    detail: "cargo test -p kernel yoshida6_published: the shared source's Yoshida-6 constants equal dd §3.2's printed digits and their block carries the citation (Yoshida 1990, Table 1, solution A); the Yoshida-4 block carries its citation (Yoshida 1990, the fourth-order closed form); REQ-INT-090's order test and order-condition check pass on them"
   rulings:
   - R-57
+  - R-501
   milestone: M3
-  note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation."
+  note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation; R-500 withdrew that sentence's claim. R-501: the paper is not added; the citation and the order test check the transcription."
 - id: REQ-INT-057
   area: INT
   statement: "With the compute shaders' fast-math off, the default (R-297), the wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
@@ -4053,7 +4125,7 @@
   milestone: M4
 - id: REQ-INT-061
   area: INT
-  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants, integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`)."
+  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants or against values every backend receives bit-identically (the sim key's N_sub threshold table, R-502), integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Rules the new kernel must hold by construction
@@ -4067,11 +4139,15 @@
     section: The discipline (each rule = one measured failure)
   - file: docs/contracts/principia_parity_contract.md
     section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
   verify:
     method: review checklist
     detail: "enumerate all branch inputs; none is fed by runtime pow/sqrt/div; the spike control (runtime ceil((r_sub/sqrt(d2))^1.5)) is absent"
-  rulings: []
+  rulings:
+  - R-502
   milestone: M4
+  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants."
 - id: REQ-INT-062
   area: INT
   statement: "Every march loop in the kernel must have a bound (no bare `loop {`)."
@@ -4572,6 +4648,116 @@
   - R-397
   milestone: M3
   note: "R-397 (RQ-226): the reason RQ-226 exists; built by TASK-M3-11."
+- id: REQ-INT-090
+  area: INT
+  statement: "Yoshida-4's and Yoshida-6's transcribed coefficients must pass a convergence-order test and an algebraic order-condition check that between them fail on a transcription error (R-501). The order test: on dd_integrator §5's Kepler-embedded fixture, the maximum relative energy error over one orbit, max_t |E(t) − E₀| / |E₀|, fitted against dt over a log–log ladder, gives a fitted order rounding to 4 (Yoshida-4) and 6 (Yoshida-6); each free coefficient with its 4th significant digit changed (w₀ recomputed from the consistency condition) gives one rounding lower; and the test measures and prints its detection floor, the smallest relative change it detects (estimated near 3·10⁻⁷ for Yoshida-4 and 10⁻⁹ for Yoshida-6 at f64). The algebraic check: evaluated exactly on the shipped f64 constants, the order conditions of a symmetric composition of a symmetric second-order step, |Σw − 1| and |Σw³| / Σ|w|³ (both) and, for Yoshida-6, the two fifth-order conditions |Σw⁵| / Σ|w|⁵ and the nested one (the coefficient of [A₁,[A₁,A₃]] in the composition's BCH logarithm at h⁵, divided by the same coefficient computed with |w|), complete to order 6, are at most 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); digits past the check's controls are REQ-INT-037's equality."
+  source:
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.2 Occupants
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: Yoshida-4 |Σw − 1| = 0 and 5.5·10⁻¹⁷ (R-515), and Yoshida-6 5.1·10⁻¹⁵ for Σw⁵ and 4.0·10⁻¹⁶ for the nested condition); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 9.9·10⁻¹⁵ and 2.8·10⁻¹³)"
+  rulings:
+  - R-57
+  - R-501
+  - R-515
+  milestone: M3
+  note: "R-501: stands in for checking the digits against the paper, which is cited, not held. Closed by TASK-M3-02. On review (PR #258: code C5, physics P1, qa 1; applied per R-369): the controls name the digits the ladder and the check resolve; the fitted quantity and the bounds are for the physics reviewer to confirm. The last printed digits are REQ-INT-037's alone: a change there can lower a residual (Table 1's truncation, f64 rounding) or parse to the same f64. On review round 2 (qa B, applied per R-369): the nested fifth-order condition is added, at rounding level on the shipped constants; physics confirms the set is complete to order 6. R-515: Yoshida-4's measured residuals and control floor are on its new digits (was 2.9·10⁻¹⁶ and 9.8·10⁻¹⁵ on RQ-405's interim digits); the bounds are unchanged."
+- id: REQ-INT-091
+  area: INT
+  statement: "The N_sub threshold table must be generated on the host per sim key: each THR[n], n = 1 … the table's maximum length (REQ-INT-094), computed in f64 with a pinned pure-software libm (no platform libm and no compiler intrinsic for pow) and rounded once to f32, emitted as exact f32 bit patterns for SimUniforms; and the generator must refuse an N_max above the maximum length or below 1 with a typed error, never truncating (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 4 — Determinism, and the substep as the subtle seam
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel nsub_table_host: the generator's bits for a committed fixture of configurations (the default and configurations with r_sub, gamma_sub and N_max each changed) equal the fixture's bit tables; the fixture is produced independently of the generator, by a checked-in reference script (fixtures/gates/nsub-table/reference.py) that evaluates (r_sub·n^(−1/γ_sub))² in Python's decimal at 50 digits and rounds it correctly to f32 straight from the decimal value (never through float() and f64), and any entry where the generator legitimately differs from the correctly rounded value, by a double rounding through f64 or by the pinned libm's sub-ulp f64 error, is listed in the fixture with that reason and checked against the generator's own rounding; the libm crate is pinned in Cargo.lock and the generator calls no std or platform pow (review); N_max = maximum length + 1 and N_max = 0 are refused with the typed error; control: a fixture entry one ulp off fails"
+  rulings:
+  - R-71
+  - R-502
+  milestone: M3
+  note: "R-502 (closes RQ-370). The fixture is the one REQ-INT-093's wasm leg reproduces. Closed by TASK-M3-03."
+- id: REQ-INT-092
+  area: INT
+  statement: "A test must assert that the host generator at the default configuration (r_sub = 0.05, γ_sub = 1.5, N_max = 64) reproduces the build-time threshold table, generated by `cargo xtask codegen` and checked in, bit for bit (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel nsub_default_table_bitwise: the host generator's 64 default entries equal the checked-in generated table's bits; control: the checked-in table with one bit flipped fails"
+  rulings:
+  - R-502
+  milestone: M3
+  note: R-502 (closes RQ-370). Closed by TASK-M3-03.
+- id: REQ-INT-093
+  area: INT
+  statement: "The wasm build's host threshold generator must give the same bits as the native one: run under wasm32 in the browser build, it must reproduce REQ-INT-091's committed fixture of threshold tables bit for bit (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate browser-nsub-table: in Chrome stable and Safari (R-110), the wasm host generator's tables for every configuration of REQ-INT-091's fixture equal the fixture's bits; control: the fixture with one entry one ulp off fails the gate"
+  rulings:
+  - R-110
+  - R-502
+  milestone: M8
+  note: "R-502 (closes RQ-370): the wasm leg, placed with the browser build as R-113 placed REQ-INT-028's. Closed by TASK-M8-40."
+- id: REQ-INT-094
+  area: INT
+  kind: calibration
+  statement: "The N_sub threshold table's maximum length, the largest N_max the host generator accepts, must be calibrated: proposed with its evidence (the SimUniforms size it takes on every backend, the comparison tree's size and depth, and the bound horizon_steps × N_max ≤ 2³²−1) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: review checklist
+    detail: "the proposal states the maximum length with its evidence; an N_max above it is refused (REQ-INT-091); recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  - R-502
+  milestone: M3
+  note: R-502 (closes RQ-370). Proposed by TASK-M3-03.
+- id: REQ-INT-095
+  area: INT
+  kind: definition
+  statement: "The time-reversal map of each regularised occupant's state must be defined, so that dd_integrator §5's test 3 can measure it (REQ-VAL-190): for Heggie, which regularised coordinates and momenta are negated and how physical time maps; for logH, its time variable and that variable's conjugate; for logH's TTL time mode, its auxiliary W as well; for Aarseth–Zare + RK4, its regularised pairs. It is written into integrator contract Part 2b by the task that needs it and checked by the physics reviewer (R-72, R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  verify:
+    method: review checklist
+    detail: "Part 2b gives each regularised occupant's reversal map, each an involution on its full state, with its derivation from the occupant's equations; physics reviewer approves before merge; REQ-VAL-190's test applies it"
+  rulings:
+  - R-72
+  - R-500
+  milestone: M3
+  note: "R-500, review round 1 of PR #258 (physics P3, applied per R-369). Written by TASK-M3-08."
 - id: REQ-INT-096
   area: INT
   statement: "computeIC must guard both ends of a degenerate start (R-538 TM9): a start already inside r_coll must end as an ordinary collision at t_end_step = 0 in its pair's colour (the integrator contract's t = 0 terminals, R-445), and a step size that is not finite must end the run at once, never looping, labelled sim_failed as the integrator contract has it, its trace ending with the \"?\" icon (RQ-418 (a)); is_finite is tested explicitly, never by a comparison that a NaN makes false."
@@ -9431,7 +9617,7 @@
   note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"cache-valid moves to the M5 cache task, which also decides whether per-quad schema version belongs with cache-valid\"; the M5 cache task is TASK-M5-08, whose lookup is identity + signature match (applied per R-369). At M1 the schema version cell is checked against the build's PAYLOAD_SCHEMA_VERSION (REQ-TOOL-011)."
 - id: REQ-SCHED-101
   area: SCHED
-  statement: "The quadtree must cover the extended parameter plane and compute one system once (R-537 EX7(a)–(c), (e), (f)): the level-0 cells of the root lattice must tile the whole parameter plane, every cell the view touches having a root, quad indices outside the depth-0 root negative or past 2^L − 1 and the address in the slice plane's own frame (R-97); a quad in a repeat must map to its canonical quad in the primary range by the type group (on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root), that quad alone requested, computed, cached and decided and every image drawing it, a reflection drawing the canonical samples mirrored without re-integrating, and a level-0 repeat across a pole drawn from its two level-1 halves (RQ-410 (a)); scheduling must read the union of images, a canonical quad in view if any image is, its screen size its images' size, decided once, its children shared, counted once by the frame quota, its payload, timeline and playhead shared; quads past the root on an affine chart must be scheduled, refined, floored and cached like any other; a quad wholly past a bounded edge must not be requested, and one straddling a validity boundary must integrate its valid footprints only, the rest labelled decode_failed."
+  statement: "The quadtree must cover the extended parameter plane and compute one system once (R-537 EX7(a)–(c), (e), (f)): the level-0 cells of the root lattice must tile the whole parameter plane, every cell the view touches having a root, quad indices outside the depth-0 root negative or past 2^L − 1 and the address in the slice plane's own frame (R-97); a quad in a repeat must map to its canonical quad in the primary range by the type group (on the shape sphere at level L, n = 2^L: ix' = ix mod n; with both hemispheres drawn, R-14's φ = π(1 − t), the pole maps at both edges, over the pole at t = 1 iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n, over the pole at t = 0 iy' = −1 − iy with the same shift; with one hemisphere drawn, R-412's φ = (π/2)(1 − t), the pole map at t = 1 and the fold at the equator, t = 0, iy' = −1 − iy with ix unchanged, past t = −1 the fold then the t = 1 pole map (R-537 U10); composed until inside the root; on a tilted view an axis that mixes θ with a non-periodic coordinate is affine and not folded (RQ-430 (a), REQ-CHART-080), and the pole maps and the equator fold are not built on a tilted view until RQ-472 is ruled), that quad alone requested, computed, cached and decided and every image drawing it, a reflection drawing the canonical samples mirrored without re-integrating, and a level-0 repeat across a pole drawn from its two level-1 halves (RQ-410 (a)); scheduling must read the union of images, a canonical quad in view if any image is, its screen size its images' size, decided once, its children shared, counted once by the frame quota, its payload, timeline and playhead shared; quads past the root on an affine chart must be scheduled, refined, floored and cached like any other; a quad wholly past a bounded edge must not be requested, and one straddling a validity boundary must integrate its valid footprints only, the rest labelled decode_failed."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
@@ -9443,14 +9629,17 @@
     section: "Part 4 — Baseline-first: an absolute tier, not a priority weight"
   verify:
     method: unit test
-    detail: "cargo test -p kernel quad_canonical (R-537 T2): with three images of one canonical quad in view on the shape sphere, the counter of integrations per canonical address reads 1 and every image draws the same payload frame; the maps above, property-tested at L = 1..12 over random quads, land inside the root and are involutions where they reflect; a reflected repeat's samples are the canonical ones mirrored, bitwise; every cell a random viewport touches, the latent chart panned to u ~ 10³ included, has a root; the frame quota counts the canonical quad once; a quad wholly past the warp's bounded edge is never requested and one straddling the simplex's edge integrates only its valid footprints; controls: computing a repeat by its own address reads 3 and fails T2; a lattice with only the depth-0 root leaves a visible cell with no ancestor and fails; review (physics) of the maps against R-14 and R-412"
+    detail: "cargo test -p engine quad_canonical (R-537 T2), the scheduler's own crate: with three images of one canonical quad in view on the shape sphere, the counter of integrations per canonical address reads 1 and every image draws the same payload frame; the maps above, property-tested at L = 1..12 over random quads, land inside the root and are involutions where they reflect; a reflected repeat's samples are the canonical ones mirrored, bitwise; every cell a random viewport touches, the latent chart panned to u ~ 10³ included, has a root; the frame quota counts the canonical quad once; a quad wholly past the warp's bounded edge is never requested and one straddling the simplex's edge integrates only its valid footprints; with both hemispheres drawn a quad past t = 0 maps by the pole map (ix shifted by n/2), with one hemisphere drawn by the fold (ix unchanged); controls: the fold applied on the two-hemisphere chart, or the pole map at t = 0 on the one-hemisphere chart, gives a different canonical quad and fails; computing a repeat by its own address reads 3 and fails T2; a lattice with only the depth-0 root leaves a visible cell with no ancestor and fails; review (physics) of the maps against R-14 and R-412"
   rulings:
   - R-97
   - R-407
   - R-408
+  - R-412
   - R-537
   milestone: M8
-  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) applied meanwhile."
+  rq:
+  - RQ-472
+  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) applied meanwhile. Physics review 5594430380 (P2, P3) and code review 5594440613 (F3, F4) of PR #263, applied per R-369: the maps split by hemispheres drawn (U10), the tilted case waiting on RQ-472 (`rq`), and the test in crates/engine, where the quad scheduler lives. *Was:* \"(on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root)\" and \"cargo test -p kernel quad_canonical (R-537 T2):\"."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -10322,11 +10511,11 @@
     section: Past the unit square — each axis's extension type (R-407)
   verify:
     method: unit test
-    detail: "cargo test -p kernel neighbours_across_seams (R-537 T7, T8): a footprint on the shape sphere's root edge at θ = 0 has 8 neighbours, those on the θ = 2π side, and its agreement arm matches an interior footprint's on a field smooth across the seam; an unbalanced pair of quads straddling a pole is balanced (BalanceForced), as an interior pair is; a footprint on the warp's bounded edge has no neighbour past it; controls: treating the edge as missing neighbours gives a different arm value and fails T7; per-root balance misses the pair across the pole and fails T8; review (physics)"
+    detail: "cargo test -p engine neighbours_across_seams (R-537 T7, T8), the refinement policy's own crate: a footprint on the shape sphere's root edge at θ = 0 has 8 neighbours, those on the θ = 2π side, and its agreement arm matches an interior footprint's on a field smooth across the seam; an unbalanced pair of quads straddling a pole is balanced (BalanceForced), as an interior pair is; a footprint on the warp's bounded edge has no neighbour past it; controls: treating the edge as missing neighbours gives a different arm value and fails T7; per-root balance misses the pair across the pole and fails T8; review (physics)"
   rulings:
   - R-537
   milestone: M8
-  note: "R-537 EX7(d) (U11). Closed by TASK-M8-56. 2:1 balance is the refinement policy's BalanceForced, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX7(d) (U11). Closed by TASK-M8-56. 2:1 balance is the refinement policy's BalanceForced, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Neighbours across a pole or the equator fold on a tilted view follow REQ-SCHED-101's maps, which wait on RQ-472 there. Code review 5594440613 of PR #263, F3, and physics review 5594430380, P2, applied per R-369. *Was:* \"cargo test -p kernel neighbours_across_seams (R-537 T7, T8):\"."
 - id: REQ-RENDER-001
   area: RENDER
   statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing. It must bind SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1), leaving group 0 to the assembler's per-frame uniforms, with the group and binding numbers generated constants from one ledger table; read either buffer only in the generated unpack layer, at the same sample index i for both, loading only the stored members each field needs, never the whole stored struct in one load (R-378); emit no setter; and test an unset value by its bit pattern (pa_d_min_is_unset against PA_D_MIN_UNSET = 0x7c00u), never by isinf, isnan or a float comparison standing in for them, which fast-math (R-297) may optimise away (R-343)."
@@ -14118,9 +14307,11 @@
     section: G1. Rules that hold everywhere
   - file: decisions.md
     section: "R-511 — A `decode_failed` sample the chart does not classify as not a system draws blank in a presentation view, as a not-a-system pixel, the forbidden-region overlay drawing over it too; `sim_failed` keeps `#141418` *(closes RQ-379; amends R-467 and R-470)*"
+  - file: decisions.md
+    section: "R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*"
   verify:
     method: unit test
-    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision; C9 (R-477): over the outcome view, a field ramp and a test stain, no presentation output draws a palette colour on a not-a-system pixel (each such pixel equals the background uniform, the blank of R-470); control: an occupant that maps the lane to a palette entry fails; R-511: a decode_failed sample of each tag (M01_TINY, ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, a non-finite decode) draws exactly the background uniform, outside every share, while REQ-COL-102's lane stays unset for it; controls: an occupant that draws decode_failed #141418, and one that draws sim_failed blank, each fail"
+    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists as changing (m1-outcome/outcome, m1-outcome/outcome_edited, m1-numeric/length_ramp, m1-numeric/d_min_ramp) are re-baselined under R-504, each BASELINES.md row leading with R-504, the outcome goldens' decode_failed tiles drawing the background as R-511 has them (Z5), and m1-synthetic/known_escaper, the _override twins and the debug catalogue's goldens pass unchanged; C9 (R-477): over the outcome view, a field ramp and a test stain, no presentation output draws a palette colour on a not-a-system pixel (each such pixel equals the background uniform, the blank of R-470); control: an occupant that maps the lane to a palette entry fails; R-511: a decode_failed sample of each tag (M01_TINY, ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, a non-finite decode) draws exactly the background uniform, outside every share, while REQ-COL-102's lane stays unset for it; controls: an occupant that draws decode_failed #141418, and one that draws sim_failed blank, each fail"
   rulings:
   - R-79
   - R-136
@@ -14129,11 +14320,10 @@
   - R-467
   - R-470
   - R-477
+  - R-504
   - R-511
   milestone: M2
-  rq:
-  - RQ-373
-  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's. R-470 (20 Oct 2026): the background is blank, never a palette colour, in every view (N1, G1); a sim_failed or non-finite sample of a system keeps #141418 (G2); whether a decode_failed sample the chart does not classify draws blank instead is RQ-379, #141418 meanwhile, nothing waiting. R-511 (RQ-379 ruled, option (b)): such a decode_failed sample draws blank; sim_failed keeps #141418; the outcome scene's decode_failed tile changes too, for RQ-373's gate decision (Z5). *Was:* \"a decode_failed sample of each detail and tag\" among what draws #141418."
+  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. R-504 (closes RQ-373): the goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) are re-baselined as TASK-M2-34 renders them, the canvas background's value and the changed tiles confirmed at the M2 gate with REQ-COL-110; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's. R-470 (20 Oct 2026): the background is blank, never a palette colour, in every view (N1, G1); a sim_failed or non-finite sample of a system keeps #141418 (G2); whether a decode_failed sample the chart does not classify draws blank instead is RQ-379, #141418 meanwhile, nothing waiting. R-511 (RQ-379 ruled, option (b)): such a decode_failed sample draws blank; sim_failed keeps #141418; the outcome scene's decode_failed tiles change too, re-baselined with the outcome goldens under R-504 and confirmed among the changed tiles at the M2 gate (Z5; merge of PR #258 into PR #255, applied per R-369). *Was:* \"a decode_failed sample of each detail and tag\" among what draws #141418. *Was:* \"The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision\" and \"the outcome scene's decode_failed tile changes too, for RQ-373's gate decision (Z5)\"; and in the verify, \"the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision\"."
 - id: REQ-COL-109
   area: COL
   statement: "The debug view (View › Debug view: the render's own debug-view flag, which its caller sets from RenderState's debug_view) must draw, over the active stain, every system pixel exactly as the stain draws it; a pixel REQ-COL-102's lane marks as not a system with the hatch, debug_invalid(frag_xy); a non-finite sample (a sim_failed with a non-finite detail: NaN in state, Inf or overflow in state, a non-finite derived quantity; a decode_failed of detail 0; a non-finite value the stain reads) with REQ-COL-110's NaN / Inf style; and any other sim_failed or decode_failed sample, a reserved state code included, with debug_invalid, reading the lane first, then non-finiteness, then the failure; and the render must count the figure's pixels drawn in each of the three categories, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", for the legend's \"Debug\" key (raw pixel counts, not R-408's statistic)."
@@ -14161,7 +14351,7 @@
 - id: REQ-COL-110
   area: COL
   kind: calibration
-  statement: "The NaN / Inf style of the debug view (R-467, clause 3: \"a separate style for NaN and Inf\") — a prelude function beside debug_invalid and debug_not_yet, drawing a pattern from the pixel position that is neither the hatch's diagonal stripes nor the stipple's dots — must be calibrated: its pattern and colours proposed with their evidence by the task that needs it, shown to collide with no palette entry and to be distinguishable from the hatch and the stipple as REQ-COL-055 measures (τ = 0.101, unsimulated and under each colour-vision simulation, R-429), checked by the gui reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The NaN / Inf style of the debug view (R-467, clause 3: \"a separate style for NaN and Inf\") — a prelude function beside debug_invalid and debug_not_yet, drawing a pattern from the pixel position that is neither the hatch's diagonal stripes nor the stipple's dots — must be calibrated: its pattern and colours proposed with their evidence by the task that needs it, not magenta (R-16's flat magenta #FF00FF sits at τ from escape body 2's #E034C6, R-505), so each of its colours farther than τ from #FF00FF, shown to collide with no palette entry and to be distinguishable from the hatch and the stipple as REQ-COL-055 measures (τ = 0.101, unsimulated and under each colour-vision simulation, R-429), checked by the gui reviewer, confirmed by the human at the M2 gate, with the canvas background's value and the tiles the re-baselined goldens change (R-504), and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
@@ -14171,15 +14361,21 @@
     section: "Presentation layer (hand-written, small, reused by every debug view)"
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-505 — The NaN / Inf style is proposed by the task that needs it, and it is not magenta, which sits at τ from escape body 2 *(extends R-467 D6)*"
+  - file: decisions.md
+    section: "R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the pattern and its colours, measured against the outcome palette (both presets), the dbg_* palettes, the LUTs, the Chazy palettes, the hatch and the stipple, unsimulated and under each simulation, with the tightest distances printed; recorded in decisions.md at the M2 gate"
+    detail: "the proposal gives the pattern and its colours, measured against the outcome palette (both presets), the dbg_* palettes, the LUTs, the Chazy palettes, the hatch, the stipple and #FF00FF, unsimulated and under each simulation, with the tightest distances printed; a colour within τ of #FF00FF fails the check; recorded in decisions.md at the M2 gate with the canvas background's value and the re-baselined goldens' changed tiles (R-504)"
   rulings:
   - R-71
   - R-429
   - R-467
+  - R-504
+  - R-505
   milestone: M2
-  note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34."
+  note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34. R-505: not magenta. R-504: confirmed at the M2 gate with the background and the changed tiles."
 - id: REQ-COL-111
   area: COL
   statement: "Overlays › Chart › forbidden region, off by default, must draw the hatch debug_invalid(frag_xy) over exactly the pixels the chart classifies as not a system (REQ-COL-102's lane) and the decode_failed samples (R-511), in any view, and nothing anywhere else (C9); Overlays › Integration › NaN / invalid pixels must draw only while a debug view is the figure (View › Debug view on, or a debug-catalogue stain), shown dimmed with a tooltip otherwise."
@@ -15309,7 +15505,7 @@
   rulings:
   - R-539
   milestone: M8
-  note: " R-539 (20 Oct 2026): \"the figure is never covered\" is about panels and chrome; figure marks may cover the figure."
+  note: "R-539 (20 Oct 2026): \"the figure is never covered\" is about panels and chrome; figure marks may cover the figure."
 - id: REQ-GUI-075
   area: GUI
   statement: "The dev GUI must use egui's dark default theme with the Ubuntu / Ubuntu Mono fonts and no styling beyond egui's own."
@@ -18143,6 +18339,8 @@
   rulings:
   - R-467
   milestone: M8
+  rq:
+  - RQ-470
   note: "R-467 (20 Oct 2026), D5, D7, D12. Closed by TASK-M8-46, physics-reviewed. A Chart-builder chart's warning is REQ-GUI-228 (RQ-372). The \"Debug\" key's legend check moved here from REQ-GUI-105 (code review 5585240188 of PR #253, F4, applied per R-369). RenderState's debug_view, TASK-M6-46's field, is wired here to TASK-M2-34's render flag."
 - id: REQ-GUI-228
   area: GUI
@@ -18684,15 +18882,15 @@
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
-    method: unit test
-    detail: "cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6"
+    method: GUI screenshot
+    detail: "cargo test -p gui extension_pick (R-537 T5, T6) and cargo xtask screenshot 01_main (real engine, extension_pick_x; presence only, no artboard, R-129): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; hover over a blank pixel draws no ✕ and starts no computeIC, its readout naming the failed check; the screenshot shows the ✕ at the click with the not-a-system readout; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6; a ✕ drawn on hover fails"
   rulings:
   - R-453
   - R-469
   - R-470
   - R-537
   milestone: M8
-  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it)."
+  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it). Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6\". The method is now GUI screenshot, for the presence screenshot."
 - id: REQ-GUI-270
   area: GUI
   statement: "The view state must record the centre and zoom as they are, on a periodic axis the unwrapped centre (R-537 EX9; RQ-406 (a)), keys and quad addresses taking the canonical value, so that an image export, its JSON state and its embedded payload, reopened, reproduce the same window, repeats included."
@@ -18724,8 +18922,8 @@
   - file: decisions.md
     section: "R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*"
   verify:
+    detail: "cargo test -p render trace_defaults (R-538 T1): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each setting's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail. The settings' keyboard reach and order and their presence screenshot are REQ-GUI-328's, in Trace… (R-541 G5; RQ-448 (a))"
     method: unit test
-    detail: "cargo test -p render trace_defaults (R-538 T1): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail"
   rulings:
   - R-476
   - R-538
@@ -18733,7 +18931,7 @@
   milestone: M8
   rq:
   - RQ-448
-  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing. R-541 P2 (21 Oct 2026): the settings' controls leave Lines ▾ for Trace…, the Trajectory panel's Trace section and Overlays ▾ › Trace (REQ-GUI-324, REQ-GUI-326, REQ-GUI-328; RQ-448, (a) applied meanwhile). *Was:* \"each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing.\""
+  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing. Gui review 5594407176 of PR #263, G3: the keyboard reach and order arm and the presence screenshot, modelled on REQ-GUI-247, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p render trace_defaults (R-538 T1): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail\". The method is now GUI screenshot, for the presence screenshot. R-541 P2 (21 Oct 2026): the settings' controls leave Lines ▾ for Trace…, the Trajectory panel's Trace section and Overlays ▾ › Trace (REQ-GUI-324, REQ-GUI-326, REQ-GUI-328; RQ-448, (a) applied meanwhile). *Was:* \"each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing.\" Merging main (7daf689b, PR #263) into rulings/R-540, applied per R-369: gui review 5594407176's G3 arm tested the trace's Lines ▾ entry, which R-541 P2 (RQ-448 (a)) withdraws; the arm and the presence screenshot move to REQ-GUI-328, where Trace… holds the controls (TASK-M8-62), restated on §G5's table order, and the method returns to unit test. *Was (verify, PR #263):* method GUI screenshot, \"cargo test -p render trace_defaults (R-538 T1), cargo test -p gui trace_settings_keys and cargo xtask screenshot 01_main (real engine, lines_trace_settings; presence only, no artboard, R-129): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail; the trace's Lines ▾ entry holds the settings in TM2's order, Tab and Enter reach each (the icon set, the syzygy style, the ramp preset, Custom's three stops, Reverse and the rest) in navigation mode and each is changed only in interaction mode (render_gui_spec §G3, R-409), and the screenshot shows the settings; controls: a setting outside the scope tree, a setting out of TM2's order, and a setting changed in navigation mode, each fail\""
 - id: REQ-GUI-272
   area: GUI
   statement: "A trace's markers must be drawn from the chosen icon set (Principia the default; Arrows, Pictures, Orbits; R-538 TM3, TM4): a star at the start (Pictures: the initial triangle in body colours, RQ-413 (a)), each end event its own icon in its outcome's colour from the active outcome palette (pair collision, triple collision with detail = 3, escape, triple ejection with detail = 3, horizon), \"?\" for an incomplete run with its last stretch dashed, the leave and re-enter rings of the chart's reach, where R-538 TF1 says the trace leaves (REQ-GUI-277), with the line dashed between them, the optional window chevrons and seam ticks, each icon over a dark halo #0B0B0E with light ink #F5F4F0; there must be no double-escape icon."
@@ -18832,13 +19030,15 @@
     section: Part 6 — The canonical inverse policy, completed
   verify:
     method: unit test
-    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
+    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15's second arm, waiting on RQ-474: R-473 offers no physical-momentum tilt target); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
   rulings:
   - R-473
   - R-509
   - R-538
   milestone: M8
-  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-474
+  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. T15's physical-momentum arm waits on RQ-474 (physics review 5594430380 of PR #263, P5, applied per R-369); the rest does not wait. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)\"."
 - id: REQ-GUI-278
   area: GUI
   statement: "Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a))."
@@ -18851,13 +19051,16 @@
     section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within 3× the median step (T16); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)"
+    detail: "cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within REQ-GUI-283's calibrated multiple of the median step (T16; RQ-473 (a)); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)"
   rulings:
   - R-473
   - R-537
   - R-538
   milestone: M8
-  note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-472
+  - RQ-473
+  note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a) applied meanwhile: the threshold is REQ-GUI-283's, set from the measured gap, not 3× (TF2.3 measures correct code at 5–97×). The trace's images over a pole or the equator fold on a tilted view wait on RQ-472. Physics review 5594430380 of PR #263, P1, P2; code review 5594440613, F4; applied per R-369. *Was:* \"is within 3× the median step (T16)\"."
 - id: REQ-GUI-279
   area: GUI
   statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5)."
@@ -18872,12 +19075,14 @@
     section: Part 6 — The canonical inverse policy, completed
   verify:
     method: unit test
-    detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within 3× the median step; control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
+    detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within REQ-GUI-283's calibrated multiple of the median step (RQ-473 (a)); control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
   rulings:
   - R-473
   - R-538
   milestone: M8
-  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-473
+  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a) applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\"."
 - id: REQ-GUI-280
   area: GUI
   statement: "On a curve axis (Burrau's ν) a trace's point must be the curve's nearest point (inverse encode Part 5(b)), never dropped or clamped, the distance to the curve the fade where an off-plane distance is defined (R-509; RQ-426 (a)); a point whose nearest ν lies past a bounded edge must not be drawn there, the line broken with no reach ring, and counted in the trace readout's \"past the domain's end: N samples\", apart from the not-a-system count and with no warning (R-538 TF1; RQ-425 (a))."
@@ -18908,12 +19113,12 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
     method: unit test
-    detail: "cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails"
+    detail: "cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails; paused, a Window(t0, t1) trace still draws exactly [t0, t1] and a LastDt trace its last Δt (RQ-427 (a)); control: either drawn whole while paused fails"
   rulings:
   - R-476
   - R-538
   milestone: M8
-  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile."
+  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile. Gui review 5594407176 of PR #263, G2: the Window and LastDt arm, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails\". RQ-465 (found merging main into rulings/R-540): R-541 G5's footer and R-540 S4 restate TF3 for every trace; (a) applied meanwhile, this arm stands."
 - id: REQ-GUI-282
   area: GUI
   statement: "A trace's colour along time must be a TimeRamp held in its Trace (R-538 TF4): the presets Sunset (the default once the ramp is chosen, RQ-422 (a)), Viridis, Magma, Ice, Ember, Aurora and Mono with R-538 J12's stops, Custom with three stops, Reverse and a preview bar; the stops evenly spaced and interpolated linearly over t ∈ [0, t_max]; it colours the line, its time ticks, the start star and the direction arrows, the event icons keeping the outcome palette; it is Lines' state in RenderState, never the stain graph's palette, each control one undoable SetField that re-integrates nothing, saved with the view and exported (the round-trip rule's tier 2 once it merges), a kept orbit's ramp travelling with its Trace (RQ-428 (a))."
@@ -18934,6 +19139,23 @@
   - R-538
   milestone: M8
   note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a) applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
+- id: REQ-GUI-283
+  area: GUI
+  kind: calibration
+  statement: "The trace's no-false-jump threshold, the multiple of a run's median screen step that a step at a θ wrap, a pole passage or a syzygy must stay within (R-538 T16 and T16b; RQ-473 (a)), must be calibrated: proposed with its evidence by the task that needs it, set from the measured gap between genuine fast motion at close approach (up to ~97× the median read in the chart's own frame, TF2.3) and the artefacts the tests catch (the 2π·cos τ wrap jump, the ~2000× frame flip), checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the threshold with the measured worst genuine step over REQ-GUI-278's and REQ-GUI-279's fixtures and the artefacts' steps, and the margin on each side; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-538
+  milestone: M8
+  note: "Physics review 5594430380 of PR #263, P1, applied per R-369; RQ-473. Closed by TASK-M8-58, with REQ-GUI-278 and REQ-GUI-279."
 - id: REQ-GUI-309
   area: GUI
   statement: "Listen's signal must be principia_listen.md §1's, computed per sample from the computeIC trajectory's mass-weighted Jacobi vectors with no canonical frame: Channel A w·e^{iθ}, Channel B φ, and, under the default Signal (Angles + rotation), the rotation e^{iψ} summed in power into A's two sides; Angles only and Shape vector selectable; the pole weight min(1, sin φ / 0.1) (sin φ under Shape vector)."
@@ -19027,7 +19249,7 @@
   - R-538
   - R-540
   milestone: M8
-  note: "R-540 S4; the last-half window is the code's, RQ-455. Closed by TASK-M8-12."
+  note: "R-540 S4; the last-half window is the code's, RQ-455. Closed by TASK-M8-12. RQ-465, (a) applied meanwhile: paused, the chord is the whole run whatever the trace's length; a Window or LastDt trace is drawn as chosen (RQ-427 (a), PR #263)."
 - id: REQ-GUI-315
   area: GUI
   statement: "Listen's voices must be principia_listen.md §5's: the whole run's chord one voice per peak at 0.22·a/Σa (×1.3 in stereo), a bank cross-faded in and out (140 ms on a new run) and never retriggered; the follow track a pool of 32 persistent voices tracking partials, each sounding voice gliding (35 ms) to the nearest unused peak within a semitone, each unclaimed peak taking a silent voice, the pan the peak's × 0.9 in stereo."
@@ -19245,13 +19467,13 @@
   - file: decisions.md
     section: "R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*"
   verify:
+    detail: "cargo xtask screenshot trace_window: every control of §G5's Trace… table present with its default, the preview strip matching the settings, all traces / current tab, reset and save as default; cargo test -p gui trace_window: each control's edit is one undo entry leaving the sim key unchanged, and a current-tab edit leaves the other tabs' traces unchanged; control: a trace setting of the demo missing from the window fails; cargo test -p gui trace_settings_keys: Tab and Enter reach each of Trace…'s controls (the icon set, the syzygy style, the ramp preset, Custom's three stops, Reverse and the rest) in §G5's table order in navigation mode and each is changed only in interaction mode (render_gui_spec §G3, R-409), and the trace_window screenshot shows the settings; controls: a setting outside the scope tree, a setting out of the table's order, and a setting changed in navigation mode, each fail"
     method: GUI screenshot
-    detail: "cargo xtask screenshot trace_window: every control of §G5's Trace… table present with its default, the preview strip matching the settings, all traces / current tab, reset and save as default; cargo test -p gui trace_window: each control's edit is one undo entry leaving the sim key unchanged, and a current-tab edit leaves the other tabs' traces unchanged; control: a trace setting of the demo missing from the window fails"
   rulings:
   - R-538
   - R-541
   milestone: M8
-  note: "R-541 G5, P7; the kept colours are R-538's (RQ-447); the outline's entry waits on RQ-408 (RQ-461). Closed by TASK-M8-62."
+  note: "R-541 G5, P7; the kept colours are R-538's (RQ-447); the outline's entry waits on RQ-408 (RQ-461). Closed by TASK-M8-62. Merging main (7daf689b, PR #263), applied per R-369: the keyboard reach and order arm and the presence screenshot of REQ-GUI-271 (gui review 5594407176 of PR #263, G3) move here with the controls (RQ-448 (a)); its \"the trace's Lines ▾ entry holds the settings in TM2's order\" reads as Trace…'s table order, R-541 G5 grouping the settings (Line, Direction arrows, Animation, Markers, At the edges, Icons). *Was (verify):* \"cargo xtask screenshot trace_window: every control of §G5's Trace… table present with its default, the preview strip matching the settings, all traces / current tab, reset and save as default; cargo test -p gui trace_window: each control's edit is one undo entry leaving the sim key unchanged, and a current-tab edit leaves the other tabs' traces unchanged; control: a trace setting of the demo missing from the window fails\" RQ-465, (a) applied meanwhile: the footer's whole trace is the default length's."
 - id: REQ-GUI-329
   area: GUI
   statement: "The Listen… window must hold every sound setting of render_gui_spec §G5's Listen… table with its default (the demo's code's), in two columns (Sound, Loudness, Listen; Pitch & analysis, Events, Effects) with the readout row under both, the instrument menu grouped by family, one instrument per row."
@@ -22122,13 +22344,30 @@
     section: "The three coordinate spaces (they nest; each is right for its job)"
   verify:
     method: unit test
-    detail: "cargo test -p kernel deep_zoom_extension (R-537 T9, T10): zoom 40 levels into a shape sphere pole repeat and into its canonical point: the ICs agree bitwise; on the latent chart at u = 10³ adjacent samples give distinct ICs to the same depth as at the root, within ±1 level, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u collapses about 10 levels early and fails T10; review (physics)"
+    detail: "cargo test -p kernel deep_zoom_extension (R-537 T9, T10): zoom 40 levels into a shape sphere pole repeat and into its canonical point: the ICs agree bitwise; on an affine fixture whose decode is not saturated at u ~ 10³ (its Jacobian along u non-zero there, which rules out the latent chart's α axes, σ(z_α) = 1 at z_α ≈ 2·10³), named by the task with |x₀| stated, adjacent samples give distinct ICs to the same depth as at the root, within REQ-TOOL-183's calibrated tolerance (the human's arm, T10), and the placement passes REQ-TOOL-158's criterion (c (f64) + δ against the f64 reference positions) to the same depth as at the root, within the same tolerance, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u fails the placement criterion about 10 levels sooner and fails T10's placement arm, the control shown to fire on that fixture (it fires on the placement arm only: the IC path x₀ + J_D·δ reads no f32 c_u); review (physics)"
   rulings:
   - R-97
   - R-395
   - R-537
   milestone: M8
-  note: "R-537 EX8 (U12). Closed by TASK-M8-57, on REQ-TOOL-158's per-quad local path (TASK-M5-04) and REQ-TOOL-159's routing (TASK-M6-08). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX8 (U12). Closed by TASK-M8-57, on REQ-TOOL-158's per-quad local path (TASK-M5-04) and REQ-TOOL-159's routing (TASK-M6-08). Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5594430380 of PR #263, P4, applied per R-369: T10 measured as placement on an unsaturated affine fixture; the tolerance is REQ-TOOL-183's calibration (R-71), the corpus stating none. *Was:* \"on the latent chart at u = 10³ adjacent samples give distinct ICs to the same depth as at the root, within ±1 level, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u collapses about 10 levels early and fails T10\". Physics review 5594542116 of PR #263, P7, applied per R-369: the human's distinct-ICs arm restored beside the placement arm, on the same fixture; the f32 c_u control fires on the placement arm only. *Was (7d65cc04):* the placement arm alone, \"the placement passes REQ-TOOL-158's criterion (c (f64) + δ against the f64 reference positions) to the same depth as at the root, within REQ-TOOL-183's calibrated tolerance,\"."
+- id: REQ-TOOL-183
+  area: TOOL
+  kind: calibration
+  statement: "The depth tolerance of deep zoom far from the root (R-537 T10's \"± the stated tolerance\"), the number of levels by which the placement depth on an affine extension at u ~ 10³ may differ from the root's, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance with the measured placement depth at the root and at u ~ 10³ on REQ-TOOL-182's fixture, its |x₀| at each, and the f32 ulp of x₀ there; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-537
+  milestone: M8
+  note: "Physics review 5594430380 of PR #263, P4, applied per R-369: the port's \"±1 level\" was a chosen value. Closed by TASK-M8-57, with REQ-TOOL-182."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -22652,15 +22891,21 @@
   milestone: M3
 - id: REQ-VAL-032
   area: VAL
-  statement: "For each symplectic occupant, `STEP(dt)`, momentum negation, `STEP(dt)`, negation must return the state to precision (without wrapper projection or substepping)."
+  statement: "For each step-reversible stepper (KDK, Yoshida-4 and Yoshida-6, R-500), `STEP(dt)`, momentum negation, `STEP(dt)`, negation must return the state to precision (without wrapper projection or substepping), negative composition weights included."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 5. Unit tests
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 2 — Occupants and the capability profile
   verify:
     method: unit test
-    detail: "dd test 3: residual at rounding level for KDK/Yoshida-4/Yoshida-6"
-  rulings: []
+    detail: "dd test 3: residual within REQ-VAL-191's rounding-level criterion for KDK/Yoshida-4/Yoshida-6; control: Yoshida-4 with its stages made asymmetric (w₁, w₁, w₀) shows a residual above it and fails"
+  rulings:
+  - R-500
   milestone: M3
+  note: "R-500 (closes RQ-369): this is what step_reversible means; the regularised occupants' measurement is REQ-VAL-190 (TASK-M3-08). The criterion is REQ-VAL-191 (R-71), proposed by TASK-M3-02."
 - id: REQ-VAL-033
   area: VAL
   statement: A close-encounter IC must show `max|ΔE| ≫ |ΔE_final|`.
@@ -22874,7 +23119,7 @@
   milestone: M3
 - id: REQ-VAL-044
   area: VAL
-  statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162)."
+  statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162), bound through the profile's `run_reversible`, which only that occupant carries (R-500)."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 3. Proposed suite
@@ -22886,14 +23131,17 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: numerical gate
-    detail: "runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`"
+    detail: "runs on logH-TTL, selected by run_reversible; asserts time symmetry via the reversibility measure `xi`; a request to run it on an occupant with run_reversible false is refused"
   rulings:
   - R-72
   - R-162
+  - R-500
   milestone: M3
-  note: "xi: REQ-VAL-134 (definition)."
+  note: "xi: REQ-VAL-134 (definition). R-500: run_reversible is logH-TTL only."
 - id: REQ-VAL-045
   area: VAL
   statement: "The two-body radial collision gate must be kept as the regularisation test, since collisionless periodic orbits do not exercise regularisation."
@@ -25370,6 +25618,47 @@
   rulings:
   - R-443
   milestone: M7
+- id: REQ-VAL-190
+  area: VAL
+  statement: "dd_integrator §5's test 3 must measure every built regularised occupant (Heggie, logH in each time mode, Aarseth–Zare + RK4): apply STEP(dt), the occupant's time-reversal map (REQ-INT-095), STEP(dt), the map again, record the residual, taken with its norm on the full extended state, the domain of REQ-INT-095's map, and set the occupant's step_reversible profile value from the measured verdict at REQ-VAL-191's rounding-level criterion; it asserts no rounding-level bound for them (R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 2 — Occupants and the capability profile
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel regularised_step_reversibility: prints each built regularised occupant's residual and verdict; fails if a built regularised occupant is missing from the measurement or its profile's step_reversible differs from its measured verdict; a verdict that differs from the values R-500 lists (Aarseth–Zare + RK4 false, logH's TTL time mode true) is reported for the review queue; controls: the measurement at the same dt on a known-asymmetric stepper (RK4 on the same fixture, and REQ-VAL-032's asymmetric Yoshida-4) must read not reversible; a profile with one regularised occupant's step_reversible flipped fails; a measurement set with one built occupant left out fails"
+  rulings:
+  - R-71
+  - R-72
+  - R-162
+  - R-500
+  milestone: M3
+  note: "R-500 (closes RQ-369): \"regularised occupants measured by dd test 3, not asserted\". Closed by TASK-M3-08. On review (PR #258: physics P3, P4; qa 3; applied per R-369): the reversal map is REQ-INT-095, the criterion REQ-VAL-191, and the controls are added."
+- id: REQ-VAL-191
+  area: VAL
+  kind: calibration
+  statement: "Test 3's rounding-level criterion, the residual below which STEP(dt), reversal, STEP(dt), reversal counts as returning the state (REQ-VAL-032, REQ-VAL-190), must be calibrated: proposed with its evidence (the residuals measured for KDK, Yoshida-4 and Yoshida-6 at f64 and f32 across the dt used, and for the asymmetric controls, scaled by the state norm; for a regularised occupant the residual and the norm are taken on its full extended state, the domain of REQ-INT-095's map, so that the criterion means the same thing for the steppers and the regularised occupants) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-71, R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  verify:
+    method: review checklist
+    detail: "the proposal states the criterion with the measured residuals, the step-reversible occupants below it and the asymmetric controls above it at the same dt; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  - R-500
+  milestone: M3
+  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08. On review round 2 (qa E, applied per R-369; physics to confirm): the extended state."
 - id: REQ-VAL-192
   area: VAL
   statement: "`render::pipeline_runtime`'s `node_failure_isolation_unexplained_failure_keeps_the_pipeline` must not die by a signal at teardown: its process must exit by status, never by SIGSEGV after its assertions pass, on lavapipe (PRIN_GPU_BACKEND=vulkan) under the parallel suite as in CI; the cause is found and fixed, not retried or ignored."

@@ -212,7 +212,7 @@ pub fn join(tree: &mut ScopeTree) {
 
 /// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope",
 /// read with R-409: the arrows need Enter; the letter shortcuts act in either mode).
-pub const SHORTCUTS: [(&str, &str); 6] = [
+pub const SHORTCUTS: [(&str, &str); 8] = [
     (
         "Enter on a value",
         "interact: the arrows adjust it; Enter or Esc, back to navigating",
@@ -225,6 +225,14 @@ pub const SHORTCUTS: [(&str, &str); 6] = [
         "after Enter: tilt in Tilt, move the slice along the normal in Slice; Shift ×10, Alt ×0.1",
     ),
     ("Compass: Tilt / Slice", "Enter on one sets the mode"),
+    (
+        "Compass: Cube / Plücker / Jacobi / Shape",
+        "Enter on one switches the view",
+    ),
+    (
+        "Compass: Plücker, after Enter",
+        "arrows move the cell cursor, Shift to the end; Space steers to it",
+    ),
 ];
 
 // --- the chart in a preset's frame ------------------------------------------------------------------------------------
@@ -267,6 +275,20 @@ pub fn dominant(v: &Latent) -> usize {
     )
 }
 
+/// The axes `(a, b)` of a basis along two axes alone, `q₁` with no component but on `e_a` and `q₂` none but on `e_b`,
+/// `a < b`, as a steer on the compass's Plücker grid sets it (R-452 C5); `None` for any other basis.
+pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
+    let only = |q: &Latent| {
+        let mut on = (0..LATENT_DIM).filter(|&i| q[i] != 0.0);
+        match (on.next(), on.next()) {
+            (Some(i), None) => Some(i),
+            _ => None,
+        }
+    };
+    let (a, b) = (only(q1)?, only(q2)?);
+    (a < b).then_some((a, b))
+}
+
 /// The chart, as the panel reads it in a preset's frame.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct View {
@@ -290,7 +312,9 @@ pub struct View {
 }
 
 impl View {
-    /// The view of `plane`'s basis: the first preset whose frame holds it, or its dominant axes' frame.
+    /// The view of `plane`'s basis: the first preset whose frame holds it, or its dominant axes' frame. A basis along
+    /// two axes alone, `q₁` along `e_a` and `q₂` along `e_b`, `a < b`, reads as that pair untilted, the plane a steer on
+    /// the compass's Plücker grid sets (R-452 C5); a preset's pair reads as before.
     pub fn of(plane: &Plane) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -303,6 +327,10 @@ impl View {
         let found = PRESETS.iter().position(|&(a, b)| {
             outside(a, b, slice_axis(a, b)) <= 1e-18 * total.max(f64::MIN_POSITIVE)
         });
+        if let Some((a, b)) = axis_pair(q1, q2) {
+            let preset = PRESETS.iter().position(|&p| p == (a, b));
+            return Self::in_frame(preset, a, b, slice_axis(a, b), q1, q2);
+        }
         let (a, b) = match found {
             Some(p) => PRESETS[p],
             None => {
@@ -400,7 +428,7 @@ pub fn plane_s(q1: &Latent, q2: &Latent) -> f64 {
 
 /// Whether the guards read `plane`'s basis as spanning no plane by [`plane_s`]: `s < `[`PLANE_S_CUT`]. Each guard keeps
 /// its own sine test beside it.
-fn spans_no_plane(plane: &Plane) -> bool {
+pub(crate) fn spans_no_plane(plane: &Plane) -> bool {
     plane_s(&plane.q1, &plane.q2) < PLANE_S_CUT
 }
 

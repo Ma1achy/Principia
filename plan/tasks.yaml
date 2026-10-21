@@ -674,7 +674,7 @@
   title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
   depends_on: [TASK-M2-08, TASK-M2-14]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047]
+  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075, REQ-CHART-078]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M2-29
@@ -736,7 +736,7 @@
 - id: TASK-M2-36
   milestone: M2
   title: "Tilt and slice on every chart: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3) ⚑"
-  depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22)
+  depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13, TASK-M2-28]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22); M2-28 for the exponential map's fold, which the tilted fold arm tests (physics review 5593301205 of PR #255, P1, applied per R-369)
   needs: []
   requirements: [REQ-CHART-062, REQ-CHART-063, REQ-CHART-064, REQ-CHART-065, REQ-CHART-066]  # REQ-CHART-064: R-507 (RQ-375 ruled), T2's scale
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -794,15 +794,15 @@
   title: Stepper occupants and the capability profile
   depends_on: [TASK-M3-01]
   needs: [REQ-INT-002]
-  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032]
+  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090, REQ-VAL-191]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-03
   milestone: M3
-  title: "Substep control: the frozen N_sub bucket table and total_substeps"
+  title: "Substep control: the per-sim-key N_sub threshold table, its bucket tree and total_substeps"
   depends_on: [TASK-M3-01]
   needs: [REQ-GEN-007, REQ-PAY-013, REQ-PAY-027, REQ-TOOL-003]
-  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034]
+  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034, REQ-INT-091, REQ-INT-092, REQ-INT-094]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M3-04
@@ -842,7 +842,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -2537,8 +2537,8 @@
   milestone: M8
   title: "Browser gates: Tier-N on real browsers, and the Playwright fragment goldens"
   depends_on: [TASK-M8-38, TASK-M7-18]
-  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059]
-  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144]
+  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059, REQ-INT-091]
+  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144, REQ-INT-093]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M8-41
@@ -2648,7 +2648,7 @@
 - id: TASK-M8-56
   milestone: M8
   title: "The quadtree past the square: roots tiling the plane, canonical addresses, neighbours across seams, poles and folds, scheduling by the union of images, the statistics unchanged (R-537 EX7) ⚑"
-  depends_on: [TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11]
+  depends_on: [TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11, TASK-M2-36]
   needs: []
   requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; perf for the frame quota (R-537 U2)
@@ -2658,7 +2658,7 @@
   title: "Deep zoom in repeats and far from the root, and seams between images with a shared edge (R-537 EX8) ⚑"
   depends_on: [TASK-M8-56, TASK-M6-08]
   needs: []
-  requirements: [REQ-TOOL-182, REQ-RENDER-100]
+  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-58
@@ -2666,7 +2666,7 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55]
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59

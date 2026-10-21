@@ -472,6 +472,10 @@ At the top level: telemetry §2's frame record and its five stages. Beneath them
 Files: dd_telemetry_and_tiers §2, §5, §5.5, §7; debug_tooling_plan; the step-6 GUI docs.
 
 ## R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*
+*Amended by R-500 and R-501.*
+*Still in force: the Yoshida-6 coefficients are checked before they enter the shared source, now by their citation and
+a convergence-order test, not against the paper (R-501); the negative weight's label is fixed, and Part 6's sentence
+that carried it is withdrawn (R-500).*
 *24 Sep 2026 · recorded; applied before Yoshida-6 enters the shared source*
 
 Files: dd_integrator :81–90, §6; integrator_contract :366.
@@ -1105,9 +1109,11 @@ All four readings in RQ-118 are accepted.
 25 Sep 2026.*
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
+*Amended by R-503 (the exponential map).*
 *25 Sep 2026 · applied in step 7 · amended by R-157*
-*Still in force: the shape sphere is 2-to-1 over its φ hemispheres, and `DoubleCover` is retired for the shape sphere
-only; it stays the full-range Burrau chart's value (R-157).*
+*Still in force: the shape sphere's spherical map is 2-to-1 over its φ hemispheres (its exponential map's value is
+computed from its cap, R-503), and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau
+chart's value (R-157).*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
@@ -1263,6 +1269,9 @@ code runs it. `FINDINGS.md:96`'s Eq. 20 statement is a documentation error, note
 as a selectable time mode. M3's re-run of the 32-case matrix confirms the default.
 
 ## R-162 — The reversible occupant is logH's TTL time mode
+*Refined by R-500.*
+*Still in force: all of it; "the reversible occupant" is the profile's `run_reversible` occupant, logH's TTL time mode
+only (R-500).*
 *25 Sep 2026 · applied in step 7*
 
 The reversible occupant is logH's TTL time mode (Mikkola–Tanikawa), as prin-rs built it. Aarseth–Zare with
@@ -12889,9 +12898,10 @@ while a debug view is the figure; D5's View › Debug view read as one of the de
 chart's in-square failure on a linear axis is not a system, blank and unwarned; RQ-372 closed).*
 *Amended in part by R-511 (20 Oct 2026; D4's `decode_failed` sample the chart does not classify draws blank, not
 `#141418`; `sim_failed` keeps `#141418`; RQ-379 closed).*
+*Extended by R-505.*
 *Still in force: all of it; R-470 rules D9's two toggles and reads D5 as a baked variant; R-511 draws D4's
 unclassified `decode_failed` blank, `sim_failed` and a system's non-finite values keeping `#141418`; R-506 limits
-clause 4's warning to a warped axis.*
+clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505).*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (a cell and the fallback's sentences reworded, two paragraphs added),
 `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)" (a
@@ -14466,6 +14476,338 @@ R-477 is in the "process" group of `plan/rule_groups.yaml`.
 Adds REQ-CHART-072 (C1, the one test with no requirement of its own to sit in); every other test is in the verify of
 the requirement named above.
 
+## R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*
+*20 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability
+profile" (the table's column split, a paragraph defining the flags, the profile and the reversibility bullet), § "Part
+2b — Regularisation is a SECOND swappable axis, not a property of the stepper" (logH's row), § "The table gains two
+rows" (the columns and the paragraph after them) and § "Part 6 — Three boundaries stated honestly (deferred work lands
+here)" (the reversibility paragraph), `docs/design/principia_dd_integrator.md` § "2. Consolidated contract" (the
+profile), § "3.2 Occupants" (Yoshida-4's and Yoshida-6's notes) and § "5. Unit tests" (test 3),
+`docs/design/principia_dd_validation_orbits.md` § "3. Proposed suite" (the reversibility row), R-57's and R-162's
+heading blocks (a forward line each), REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032 and REQ-VAL-044 (reqio),
+REQ-VAL-190 (new), TASK-M3-02, TASK-M3-07, TASK-M3-08 and TASK-M3-29, `plan/rule_groups.yaml`, and
+`docs/archive/review_queue/M0.md` (RQ-369, filed on TASK-M3-02's branch, taken from it unchanged with its ruling); built
+by TASK-M3-02, TASK-M3-07, TASK-M3-08 and TASK-M3-29*
+
+The human's words, a message of 20 Oct 2026, its first item (R-501 to R-505 quote the others):
+
+> RQ-369: (c). Split the flag. step_reversible: KDK, Yoshida-4, Yoshida-6 and TTL
+> leapfrog true; Euler, RK4, AZ+RK4 false; regularised occupants measured by dd test 3,
+> not asserted. run_reversible: logH-TTL only (R-162). Both diagnostic routes gate on
+> step_reversible. Fix Part 6 and dd §3.2: a symmetric composition with a negative
+> weight is still reversible at a fixed step. What breaks reversal is adaptive
+> substepping and COM projection.
+
+RQ-369 (filed by TASK-M3-02's implementer) gave three options: (a) `reversible: true` for KDK, Yoshida-4 and
+Yoshida-6, the flag meaning the `STEP`; (b) `reversible: false` for all three, the flag meaning the bound occupant;
+(c) "Split the flag's meaning in Part 2 (a `STEP`-level and an occupant-level reversibility), as a definition (R-72)
+TASK-M3-02 writes." The human chose (c) and gave the definition and the values; nothing is left for TASK-M3-02 to
+define.
+
+*What it decides:*
+- **The profile is `{order, force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}`** (with Part
+  2b's re-registration field). `reversible` leaves it.
+- **`step_reversible`** — the occupant's `STEP` is time-symmetric at a fixed step: `STEP(dt)`, momentum negation,
+  `STEP(dt)`, negation returns the state to rounding level, with no wrapper projection or substepping (dd_integrator §5,
+  test 3). True for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog; false for Euler, RK4 and Aarseth–Zare + RK4. For
+  the regularised occupants it is measured by dd test 3, not asserted: the test records each built one's residual and
+  its profile carries the measured verdict.
+- **`run_reversible`** — the bound occupant's whole run is time-symmetric, as the reversibility test binds it: logH's
+  TTL time mode only (R-162). Every other occupant is false.
+- **Both diagnostic routes gate on `step_reversible`:** Part 6's (a), the recorded schedule replayed in reverse, and
+  its (b), a fixed step with COM projection disabled. REQ-INT-032 reads `step_reversible: true`.
+- **Part 6 and dd §3.2 are fixed:** a symmetric composition with a negative weight is still reversible at a fixed
+  step; what breaks the reversal of a run is the wrapper's adaptive substepping and COM projection. Part 6's "Yoshida's
+  `w₂ < 0` middle step … break[s] naive integrate → negate → integrate" and dd §3.2's "is why naive time-reversal
+  fails" are kept as *Was:* notes.
+
+*Applied per R-369 (flagged):*
+- **"TTL leapfrog"** is read as both time-transformed leapfrogs the corpus names: logH's TTL time mode (Mikkola–Tanikawa,
+  R-162) and Aarseth–Zare + time-transformed leapfrog, the allowed future occupant (Part 2a, R-168). Both are
+  regularised, so their `step_reversible` is the measured one; the table shows "✓ (measured, dd test 3)", the value the
+  human expects, and a measurement that disagrees goes to the review queue.
+- **"Measured by dd test 3, not asserted"** is read as: dd test 3 runs each built regularised occupant's `STEP` (Heggie,
+  logH in each time mode, Aarseth–Zare + RK4), records the residual and sets the profile's `step_reversible` from it; it
+  asserts no rounding-level bound for them, as it does for KDK, Yoshida-4 and Yoshida-6. The failing arm is that a
+  built regularised occupant missing from the measurement, or a profile that differs from its measured verdict, fails
+  (REQ-VAL-190, TASK-M3-08, which builds logH and Heggie after TASK-M3-07's Aarseth–Zare + RK4). The verdict's
+  rounding-level criterion is test 3's own, the one TASK-M3-02 uses for the steppers. *Flagged:* the human listed
+  Aarseth–Zare + RK4 as false and the TTL leapfrog as true and also said the regularised occupants are measured; the two
+  agree only if the measurements do, which the review queue would take if they did not.
+- **`run_reversible`'s consumer** is REQ-VAL-044's reversibility test on the brake orbits (TASK-M3-29), which binds
+  logH-TTL; REQ-INT-032's diagnostic reads `step_reversible`.
+
+*What it refines:* **R-162**: its "the reversible occupant" is the `run_reversible` occupant. *What it amends:*
+**R-57**, as to integrator contract Part 6's sentence: R-57 fixed its label (`w₂` → the negative weight); R-500
+withdraws the claim the label was attached to.
+
+*Review round 1, PR #258 (physics review 5587467237 P3, P4; qa review 5587466555 item 3), applied per R-369:* on a
+regularised occupant's extended state, test 3's "momentum-negate" is the occupant's time-reversal map, a definition
+TASK-M3-08 writes and the physics reviewer checks (REQ-INT-095, R-72); "rounding level" is a calibration (REQ-VAL-191,
+R-71), proposed by TASK-M3-02 and used by REQ-VAL-032 and REQ-VAL-190; REQ-VAL-190 gains its controls (a known-asymmetric
+stepper at the same `dt` must read not reversible; a profile with one regularised occupant's flag flipped fails; a
+measurement missing one built occupant fails). Integrator contract Part 6 reads "the symmetric steppers" (P7).
+
+*Review round 2, PR #258 (qa review 5587775086 E), applied per R-369, physics to confirm:* for a regularised occupant,
+test 3's residual and its norm are taken on the full extended state, the domain of REQ-INT-095's map (REQ-VAL-190,
+REQ-VAL-191).
+
+R-500 is in the "physics" group of `plan/rule_groups.yaml`, with R-162.
+
+Adds REQ-VAL-190, and on review REQ-INT-095 and REQ-VAL-191; changes REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032 and REQ-VAL-044 (statement, verify,
+rulings, source, note).
+
+## R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*
+*Amended by R-515 (Yoshida-4's digits).*
+*Still in force: the coefficients carry their citation, the paper is not added, and the convergence-order test and the
+algebraic order-condition check guard the transcription; Yoshida-4's printed digits are R-515's, `w₁` correctly rounded
+and `w₀ = 1 − 2w₁` computed in f64.*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (the citations; Yoshida-6's
+transcription check), § "5. Unit tests" (test 1a) and § "6. Deferred / flagged" (the Yoshida-6 item settled), R-57's
+heading block (a forward line), REQ-INT-056 (reqio), REQ-INT-090 (new), TASK-M3-02 and `plan/rule_groups.yaml`; built
+by TASK-M3-02*
+
+The human's words (R-500 quotes the message's first item):
+
+> Yoshida Table 1: don't add the paper. Add the coefficients with the citation, and a
+> convergence-order test (4 and 6) that fails on a transcription error.
+
+*What it decides:*
+- **The paper is not added to the corpus.** dd §3.2's "the paper is in the lit-review set" had it; it is not in the
+  repository.
+- **The coefficients carry their citation** where the corpus prints them (dd §3.2) and in the shared source:
+  Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150, 262–268. Yoshida-6's
+  `w₁`, `w₂`, `w₃` are its Table 1, solution A; Yoshida-4's weights are the same paper's fourth-order closed form.
+- **A convergence-order test at orders 4 and 6** (dd §5, test 1a; REQ-INT-090): on the Kepler-embedded fixture, the
+  fitted orders of Yoshida-4 and Yoshida-6 over a dt ladder are 4 and 6, and each coefficient with one printed digit
+  changed fails the test. It takes the place of R-57's "checked against Yoshida (1990)" as the check of the
+  transcription.
+
+*Applied per R-369 (flagged):*
+- **Yoshida-4's citation.** The human's item is headed "Yoshida Table 1", which holds the sixth-order solutions;
+  Yoshida-4's weights are the closed form in the paper's text, so Yoshida-4 is cited to the paper, not to Table 1.
+- **The pass criterion** is the fitted order of the maximum relative energy error over one orbit rounding to 4 and to
+  6, and the control's to less; the dt ladder is TASK-M3-02's, named in its PR. The order test's controls change each
+  free coefficient's 4th significant digit, `w₀` recomputed; the test measures and prints its detection floor (estimated
+  at about the 7th significant digit for Yoshida-4 and the 10th for Yoshida-6 at f64). The later digits are REQ-INT-037's
+  equality and an algebraic check of the order conditions' residuals on the shipped f64 constants (at most `3·10⁻¹⁵` for
+  Yoshida-4 and `5·10⁻¹⁴` for Yoshida-6; controls at the 15th and the 13th significant digit; dd §5, test 1a). *As first
+  ported:* "A changed digit breaks the order conditions, … TASK-M3-02 chooses the ladder so that each control fails",
+  which review round 1 found unmeetable for the late digits (below). The fitted quantity and the bounds are put to the
+  physics reviewer to confirm.
+- REQ-INT-037's digit equality and REQ-INT-056's citation check stay; REQ-INT-090 is the order test.
+
+*What it amends:* **R-57**: the Yoshida-6 coefficients are checked by the citation and the convergence-order test, not
+against a copy of the paper; R-57's label fix stands (amended by R-500 as to Part 6's sentence).
+
+*Review round 1, PR #258 (code review 5587492719 C5, physics review 5587467237 P1, P2, qa review 5587466555 items 1 and
+6), applied per R-369:* the order test's controls, detection floor, fitted quantity and the algebraic check are as above;
+TASK-M3-02's acceptance checks Yoshida-4's citation as well. dd §3.2's sentence that the printed Yoshida-4 digits "are
+that closed form evaluated in f64" was false: they agree with it to 15 significant digits (`w₁` to 16; *as first corrected:* "to 16", physics review 5587771187 P8), are not its correctly rounded
+f64 values, and give `w₀ + 2w₁ = 0.9999999999999998` in f64. The sentence is corrected, and **RQ-405** was filed for the
+human; R-515 rules it, `w₁` printed correctly rounded and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1`
+exactly. *Was:* "whether the digits change is **RQ-405**, filed for the human, the printed digits standing meanwhile and
+REQ-INT-037 held on it."
+
+*Review round 2, PR #258 (code review 5587795260 C7, physics review 5587771187 P8, qa review 5587775086 A and B), applied
+per R-369:* TASK-M3-02's `occupant_coefficients` asserts `w₀ + 2w₁ = 1` exactly in f64, under R-515 (*was:* "asserts
+`|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`, REQ-INT-090's bound, under RQ-405's (a)"); RQ-405's interim Yoshida-4 digits agree with the closed form to 15 significant digits (`w₁` to 16), not 16; the
+algebraic check adds Yoshida-6's nested fifth-order condition (the coefficient of `[A₁,[A₁,A₃]]`), measured at
+`4.0·10⁻¹⁶` on the shipped constants, which makes the set complete to order 6, for physics to confirm.
+
+R-501 is in the "physics" group of `plan/rule_groups.yaml`, with R-57.
+
+Adds REQ-INT-090; changes REQ-INT-056 (statement, verify, rulings, note), and on review REQ-INT-037 (`rq: RQ-405`, which
+R-515 removes).
+
+## R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made
+concrete", `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" (`N_max`'s
+and `r_sub`'s rows) and § "Part 4 — Determinism, and the substep as the subtle seam" (the rule),
+`docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)" (rule 1),
+`docs/contracts/principia_lowering_contract.md` § "Part 3 — The baking rules (compile-time vs uniform)" (the wrapper
+config row), `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" and
+`docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)" (`saturated`), REQ-INT-028 (reqio),
+REQ-INT-091 to REQ-INT-094 (new), TASK-M3-03, TASK-M3-06, TASK-M8-40, `plan/MILESTONES.md` § "M3 — The integrator,
+events and physics validation (CPU, native)", `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-370,
+filed on TASK-M3-03's branch, taken from it unchanged with its ruling); built by TASK-M3-03, TASK-M3-06 and
+TASK-M8-40*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-370: (b). Thresholds generated per sim key on the host, shipped as exact f32 bits,
+> read by constant index. The pow is computed with a pinned pure-software libm so native
+> and wasm give identical bits. A maximum table length is a calibration value, refused
+> above it. A test asserts the default config reproduces the build-time table bitwise.
+
+RQ-370's option (b): "The thresholds are generated per configuration on the host, in f64 libm from the sim key's
+`r_sub`, `gamma_sub` and `N_max`, and shipped as f32 bit patterns in a uniform; the comparison tree reads them by
+constant index. … "frozen at build time" becomes "frozen per dispatch", the table needs a fixed largest length (a
+calibration value, R-71), and TASK-M3-03's generator moves from `cargo xtask codegen` into the host."
+
+*What it decides:*
+- **Per sim key, on the host.** The thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` are generated from the sim
+  key's `r_sub`, `gamma_sub` and `N_max` on the host and shipped in `SimUniforms` as exact f32 bit patterns; the
+  comparison tree reads them by constant index. `r_sub`, `gamma_sub` and `N_max` stay user-adjustable sim-key
+  uniforms (integrator contract Part 3, the Run window), and the tree equals `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1,
+  N_max)` for every sim key, not only the default.
+- **A pinned pure-software libm** computes the `pow` (in f64, rounded once to f32), so the native and the wasm hosts
+  give identical bits (REQ-INT-091; the wasm leg REQ-INT-093).
+- **The table's maximum length is a calibration value** (R-71, REQ-INT-094), proposed by TASK-M3-03 with its evidence
+  and confirmed at the M3 gate; an `N_max` above it is refused, never truncated.
+- **The default config reproduces the build-time table bitwise** (REQ-INT-092): at `r_sub = 0.05`, `γ_sub = 1.5`,
+  `N_max = 64`, the host generator's 64 entries equal the build-time table `cargo xtask codegen` generates and checks
+  in.
+
+*Applied per R-369 (flagged):*
+- **The formula for any `γ_sub`.** dd §3.3's `THR[n] = round_f32((r_sub/n^{2/3})²)` holds at `γ_sub = 1.5` only;
+  with `γ_sub` on the sim key it is written `round_f32((r_sub·n^{−1/γ_sub})²)`, the same at 1.5.
+- **The table's shape.** `SimUniforms` holds the maximum length's entries, all from the one formula, so the table is
+  monotone and the tree generated once over it reads constant indices; `N_sub = min(bucket(d²), N_max)`. The bits'
+  layout in `SimUniforms` and the crate that supplies the pure-software libm, pinned in `Cargo.lock`, are TASK-M3-03's,
+  named in its PR.
+- **The wasm leg** is checked where the browser build exists: TASK-M8-40 runs the wasm host's generator over
+  REQ-INT-091's fixture of configurations and compares the bits (REQ-INT-093), as R-113 placed the browser leg of
+  REQ-INT-028; TASK-M3-03 proves the native host and the pure-software build.
+- **The refusal** is the generator's typed error, which dispatch returns (TASK-M3-06 binds the table in
+  `SimUniforms`); `N_max < 1` is refused as well.
+
+*Review round 1, PR #258 (code review 5587492719 C2, C4; qa review 5587466555 items 2, 5 and 7), applied per R-369:*
+the sweep is finished in canonical_spec §2, parity_contract (Tier B), export_animation_contract Part 5,
+systems_architecture, integrator contract Part 2c rule 2, dd §3.3's rule, the determinism note's rule 1, REQ-INT-061 and
+the code and physics checklists; TASK-M3-06's binding gains an acceptance line (`sim_uniforms_nsub_table`, closing
+REQ-INT-028's "shipped in SimUniforms" in part); REQ-INT-093 is a numerical gate with a control that must fail;
+REQ-INT-091's fixture comes from an independent reference (Python's `decimal` at 50 digits, correctly rounded to f32),
+its entries where the generator's f64-then-f32 legitimately differs listed with the reason; `cargo xtask codegen`
+evaluates the default table on its own build-time path through the pinned libm, not the host generator's function.
+
+*Review round 2, PR #258 (qa review 5587775086 D), applied per R-369:* `reference.py` rounds the 50-digit decimal straight
+to f32, never through f64, and the fixture's listed exceptions cover the pinned libm's sub-ulp f64 error as well as a
+double rounding.
+
+R-502 is in the "physics" group of `plan/rule_groups.yaml`, with R-34.
+
+Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 (statement, verify, rulings, note), and on review REQ-INT-061 (statement).
+
+## R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*
+*20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the exponential map's
+radius, the hemisphere-redundancy paragraph) and § "5.4 Past the unit square — each axis's extension type (R-407)"
+(the exponential map's row), `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the
+validation contract" (n-to-1), R-141's heading block (a forward line, its "Still in force" line reworded), REQ-CHART-014
+(reqio, note), REQ-CHART-075 (new), TASK-M2-28, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-371,
+filed on PR #252's branch, taken from it unchanged with its ruling); built by TASK-M2-28*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-371: (b). Computed from the cap: bijective when the cap is within one closed
+> hemisphere; when it straddles, a per-pixel fold (count once unless the mirror is in
+> view; equator counts once). The map's radius is bounded at π; past it is the domain's
+> end.
+
+RQ-371's option (b): "Computed from the cap, as the `ν` charts' is from their range: bijective where the cap lies in one
+closed hemisphere, and a ruling for the straddling case."
+
+*What it decides:*
+- **Bijective** where the exponential map's cap lies within one closed hemisphere (`w ≥ 0` everywhere on it, or
+  `w ≤ 0`).
+- **A per-pixel fold** where the cap straddles the equator: a pixel counts once unless its mirror `w → −w` is in view,
+  when the pair counts once; an equator pixel counts once.
+- **The radius is bounded at π:** a pixel with `r = ‖d‖ > π` is the domain's end, not a system, out of the count and
+  the total (chart_reference §5.4).
+- The spherical map keeps n-to-1 with n = 2 (R-141).
+
+*Applied per R-369 (flagged):*
+- **The pair's representative** is its `w > 0` pixel, the canonical decode's hemisphere (`β ∈ [0, π]` keeps `w ≥ 0`).
+- **"In view"** is the cap: `[0,1]²`'s pixels with `r ≤ π`. Past the square the map is bounded (R-468 E7) and adds no
+  multiplicity, as chart_decoder_contract Part 5 says of every chart.
+- **The value's name.** chart_decoder_contract Part 5's n-to-1 reads "a fixed finite number of pixels share each
+  system"; the straddling cap's is n-to-1 with a per-pixel fold, at most 2, which the n-to-1 bullet now says. A new
+  fifth value is not added.
+- **Flagged, not ruled:** a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an in-square pixel that is not a
+  system; R-467 makes an in-square validity failure a decoder bug with a console warning, and RQ-372 (open, another
+  batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as the human wrote it: the domain's end.
+
+*What it amends:* **R-141**, for the exponential map: its "the shape sphere is 2-to-1 over its φ hemispheres" is the
+spherical map's value; the exponential map's is computed from its cap.
+
+*Review round 1, PR #258 (physics review 5587467237 P5, P6; qa review 5587466555 item 4), applied per R-369:* the
+per-pixel rule is stated (a pixel counts 1 if `w ≥ 0`, or if its mirror point lies outside the cap; `w = 0` is the
+computed ±0.0; "in view" is the log map of the mirrored point landing in `[0,1]²` with `r ≤ π`); REQ-CHART-075's
+fixture is a grid symmetric under `w → −w` (`n0` on the equator, `e2 = ŵ`, odd resolution, so mirrored pairs are index
+pairs and one row lies at `w = 0`), its expected total counted by that rule by hand, with a control on the `r > π`
+arm. How pixels on the `r = π` circle count, all mapping to `−n0`, is a definition TASK-M2-28 writes and the physics
+reviewer checks (REQ-CHART-078, R-72). The requirement keeps the id REQ-CHART-075, first added as REQ-CHART-060.
+
+*Review round 2, PR #258 (physics review 5587771187 P9, qa review 5587775086 C), applied per R-369:* REQ-CHART-075's
+fixture keeps every pixel centre at `|r − π| > 10⁻⁶`, and its `r > π` arm requires `s√2·(N−1)/N > π`, so that at least
+one pixel centre in the counted half lies past `r = π` and the control can fail.
+
+R-503 is in the "physics" group of `plan/rule_groups.yaml`, with R-141.
+
+*PR #252 merged before this port, carrying RQ-371 into `REVIEW_QUEUE.md` as an open entry; applied per R-369:* this
+branch's merge of `main` moves it out again, the archived copy in `docs/archive/review_queue/M0.md` (the same text,
+with R-503's ruling line) being the record. R-503 is built by TASK-M2-28, not TASK-M2-14, so TASK-M2-14's merge
+re-homes nothing.
+
+Adds REQ-CHART-075, and on review REQ-CHART-078; changes REQ-CHART-014 (note).
+
+## R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*
+*20 Oct 2026 · applied in REQ-COL-108 and REQ-COL-110 (reqio), TASK-M2-34 (the goldens deliverable, an acceptance
+line and the notes), `plan/MILESTONES.md` § "M2 — Charts, decode and encode", `plan/rule_groups.yaml`, `REVIEW_QUEUE.md`
+(RQ-373 moved out) and `docs/archive/review_queue/M0.md` (RQ-373, with its ruling); the `fixtures/golden/BASELINES.md`
+rows are TASK-M2-34's; built by TASK-M2-34*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-373: (a).
+
+RQ-373's option (a): "Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row
+leading with the ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with
+REQ-COL-110's NaN / Inf style."
+
+*What it decides:*
+- **R-504 is the gate decision R-110 asks for** ("no re-baselining without a gate decision"). TASK-M2-34 re-baselines
+  the goldens R-467 D15 lists as changing, `m1-outcome/outcome` and `m1-outcome/outcome_edited` (tile 22, the forbidden
+  sample, from the hatch to the canvas background) and `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp` (the ramp's
+  invalid value from the hatch to `#141418`), as it renders them; each row leads with R-504 and keeps its history.
+  `m1-synthetic/known_escaper` and the `_override` twins are expected unchanged, and the debug catalogue's goldens do
+  not change (D15); one that does change is reported, not re-baselined under R-504.
+- **The M2 gate confirms** the canvas background's value (the GUI's clear colour the golden harness records) and the
+  changed tiles, with REQ-COL-110's NaN / Inf style.
+- TASK-M2-34's PR no longer waits.
+
+*Applied per R-369:* the confirmation is recorded with REQ-COL-110's at the M2 gate (its verify names the background
+and the tiles), REQ-COL-110 being the M2 calibration the human named; `rq: RQ-373` leaves REQ-COL-108.
+
+R-504 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-467.
+
+Changes REQ-COL-108 (verify, rulings, rq, note) and REQ-COL-110 (verify, rulings, note).
+
+## R-505 — The NaN / Inf style is proposed by the task that needs it, and it is not magenta, which sits at τ from escape body 2 *(extends R-467 D6)*
+*20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "6. Debug views as presets" (the debug view's
+paragraph), `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every
+debug view)" (R-467's bullet), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (the debug view's paragraph), R-467's heading block (a forward line), REQ-COL-110 (reqio), TASK-M2-34
+and `plan/rule_groups.yaml`; built by TASK-M2-34*
+
+The human's words (R-500 quotes the message's first item):
+
+> REQ-COL-110: the task proposes it; not magenta, which sits at τ from escape body 2.
+
+*What it decides:* the NaN / Inf style (R-467 D6, REQ-COL-110) is proposed by TASK-M2-34, as filed, and is not
+magenta: R-16's flat magenta `#FF00FF` sits at τ = 0.101 from escape body 2's `#E034C6` (R-429; debug_tooling_plan
+§ "F. Structural views", its measurement), the outcome palette's swatch for an escape of body 2 (`detail` = 1).
+
+*Applied per R-369:* "not magenta" is checked as each of the style's colours lying farther than τ from `#FF00FF` in
+OKLab, unsimulated and under each simulation, beside REQ-COL-055's measurement against every palette entry; the gui
+reviewer checks it and the human confirms the style at the M2 gate (R-504).
+
+*What it extends:* **R-467 D6**, a constraint added to the style's calibration.
+
+R-505 is in the "design" group of `plan/rule_groups.yaml`, with R-467.
+
+Changes REQ-COL-110 (statement, verify, rulings, note).
+
 ## R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (RQ-372's sentence reworded, with its earlier words kept), `docs/design/principia_chart_reference.md`
@@ -14960,6 +15302,49 @@ It closes **RQ-404**.
 R-514 is in the "physics" group of `plan/rule_groups.yaml`, with R-474.
 
 Changes REQ-GUI-265 (statement, verify, rulings, `rq` removed, note) and REQ-GUI-240 (statement, verify, rulings,
+note).
+
+## R-515 — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (Yoshida-4's weights and their
+paragraph) and § "5. Unit tests" (test 1a's measured values), R-501's heading block (a forward line and its "Still in
+force" line) and its review-round text, REQ-INT-037 and REQ-INT-090 (reqio), TASK-M3-02, `plan/rule_groups.yaml`,
+`REVIEW_QUEUE.md` (RQ-405 moved out) and `docs/archive/review_queue/M0.md` (RQ-405, with its ruling); built by
+TASK-M3-02*
+
+The human's words (20 Oct 2026, in a message whose other items are ported on other branches):
+
+> RQ-405 (c): w₁ correctly rounded, w₀ = 1 − 2w₁.
+
+RQ-405's option (c): "Print `w₁` correctly rounded and `w₀ = 1 − 2w₁` as computed in f64 (`−1.702414383919315`), so
+that `w₀ + 2w₁ = 1` holds exactly in f64, as Yoshida-6's `w₀` is already computed from its consistency condition."
+
+*What it decides:*
+- **`w₁ = 1.3512071919596575`**, the closed form `1 / (2 − 2^{1/3})` (exact `1.351207191959657634…`) correctly rounded
+  to f64.
+- **`w₀ = −1.702414383919315`**, the f64 result of `1 − 2w₁`; the subtraction is exact, so `w₀ + 2w₁` is exactly 1 in
+  f64 and in real arithmetic on the shipped values. It stands for the closed form's `−2^{1/3} · w₁`
+  (`−1.702414383919315268…`), from which it differs by `9.9·10⁻¹⁷` relative.
+- **REQ-INT-037's `w₀ + 2w₁ = 1`** is an exact equality in f64, no longer read within rounding.
+
+*Applied per R-369:*
+- **The printed form.** Each weight is printed as the shortest decimal that parses to its f64 (`w₁` to 17 significant
+  digits, `w₀` to 16), and REQ-INT-037's "all printed digits" is read as the printed value parsing to the shipped f64.
+- **The test.** TASK-M3-02's `occupant_coefficients` asserts that `w₀` is bitwise `1 − 2w₁` in f64 and that `w₀ + 2w₁`
+  evaluates to exactly `1.0`; its control is RQ-405's interim digits (`1.3512071919596578`, `−1.7024143839193157`),
+  which give `0.9999999999999998` and must fail. It replaces the interim `|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`.
+- **REQ-INT-090's values on the new digits** (measured in exact rational arithmetic on the f64 values): Yoshida-4's
+  `|Σw − 1|` is 0 and `|Σw³| / Σ|w|³` is `5.5·10⁻¹⁷` (was `2.9·10⁻¹⁶`), and its one-unit-of-the-15th-digit controls
+  give at least `9.9·10⁻¹⁵` (was `9.8·10⁻¹⁵`), above the unchanged `3·10⁻¹⁵` bound. The convergence-order test's
+  controls are unchanged.
+- **The kick coefficients** `(w₀ + w₁)/2` stay as dd §3.2 writes them, evaluated in f64 from the shipped weights.
+
+*What it amends:* **R-501**, as to Yoshida-4's digits: its review rounds kept the printed digits under RQ-405's (a)
+with a rounding bound on `w₀ + 2w₁`; Yoshida-4's digits are now this ruling's, the identity exact. R-501's citation,
+order test and algebraic check stand.
+
+R-515 is in the "physics" group of `plan/rule_groups.yaml`, with R-501.
+
+Changes REQ-INT-037 (statement, verify, source, rulings, note; `rq: RQ-405` removed) and REQ-INT-090 (verify, rulings,
 note).
 
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
@@ -16410,6 +16795,13 @@ trace's projection from the chart's own frame. S4's whole-run chord when nothing
 centre clamp, R-470's blank-plus-overlay and R-509's fade do not reach the sound: a hover on a pixel that is not a
 system makes no run, and Listen reads out "not a system".
 
+*Re-checked against `main` (7daf689b), after `rulings/R-537` merged as PR #263 with two review rounds that changed it:*
+PR #263 applied RQ-427 (a), a trace of the default length drawn whole while paused and a `Window` or `LastDt` length
+kept as chosen; S4's "matching the trace being drawn whole" is queued against it as RQ-465, (a) applied meanwhile
+(`principia_listen.md` S4 qualified). PR #263's REQ-GUI-283 (RQ-473's threshold) took the id this port first used, so
+this port's REQ-GUI-283 to REQ-GUI-307 are REQ-GUI-309 to REQ-GUI-333 (applied per R-369). Nothing else in PR #263
+reaches the sound.
+
 *What it extends:* **R-109** (pointer_channels §4's open points are defined, and the mapping gains the rotation, RQ-451).
 Read with R-144, R-538 and R-541.
 
@@ -16677,6 +17069,13 @@ kept orbits); G3's Compass in the bottom band agrees with R-462's layout; G5's "
 the whole trace to the horizon is drawn" is R-538 TF3; G5's fade (the momentum proxy, R-509, floor 0.18) and forbidden
 hatch (off, R-470) agree with those rulings; R-469's centre clamp is not touched. The icons and the trace over the
 figure are figure marks (R-539), not a §G1 conflict.
+
+*Re-checked against `main` (7daf689b), after PR #263:* only a click draws the red ✕ (R-537 EX5, R-538 TM8; gui review G1
+of PR #263), which G1 to G9 do not touch; G5's footer, "the whole trace to the horizon is drawn", is queued against RQ-427
+(a), as PR #263 applied it, as RQ-465, (a) applied meanwhile (`Trace…`'s footer qualified); PR #263 gave REQ-GUI-271 a keyboard
+reach and order arm on the trace's `Lines ▾` entry (gui review G3), which G2 withdraws (RQ-448 (a)), so the arm and its
+presence screenshot move to REQ-GUI-328, `Trace…`, read on G5's table order (TASK-M8-62; applied per R-369); the
+`trace/` INDEX line keeps PR #263's note that the demos load Google Fonts (here the dev GUI's Ubuntu and Ubuntu Mono).
 
 *What it amends:* **R-476** (Lines ▾ no longer lists the traces, RQ-448) and **R-538** (I2: the trace settings' place
 in the GUI). Read with R-409, R-453, R-461, R-462, R-509, R-539 and R-540.

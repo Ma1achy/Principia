@@ -243,15 +243,26 @@ built by TASK-M8-44, REQ-CHART-057).
 hemisphere's fold) is the same system as its **canonical** point, the one inside every axis's primary range, which the
 types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
 naming the pixel a repeat. A pixel on an affine extension is that point of the plane. The quadtree follows the same
-fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`, `n = 2^L`,
-with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
-`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
-`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed until the address is inside the root), which is the one
+fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`,
+`n = 2^L`: θ's period `ix' = ix mod n`; with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at both
+edges, over the pole at `t = 1` `iy' = 2n − 1 − iy` and `ix' = (ix + n/2) mod n`, over the pole at `t = 0`
+`iy' = −1 − iy` and the same shift; with one hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and
+R-412's fold at the equator, `t = 0`, `iy' = −1 − iy` with `ix` unchanged, past `t = −1` the fold then the `t = 1` pole
+map (R-537 U10); composed until the address is inside the root), which is the one
 requested, computed, cached and decided, every image drawing it; neighbours (2:1 balance, the criterion's arms,
 contours, class edges, smoothing) cross seams, poles and folds through the same map, an affine neighbour is the real
 one, and past a bounded edge there is none. A quad wholly past a bounded edge is not requested; one straddling a
 validity boundary integrates its valid footprints only, the rest `decode_failed` and blank. The statistics above are
-unchanged: each system is counted once, at its canonical address (R-408).
+unchanged: each system is counted once, at its canonical address (R-408). **On a tilted view** a repeat is the same
+system only where the type group's map leaves the tilt's hidden offset `d` unchanged: along an axis that mixes θ with
+a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; RQ-430 (a) applied meanwhile);
+whether the pole maps and the equator fold apply on a tilted view, against chart_reference §3.3's tilted fold, is
+RQ-472, and they are not built on a tilted view until it is ruled.
+*Was:* "with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
+`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
+`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed" (physics review 5594430380 of PR #263, P3: two maps on one
+edge; applied per R-369).
+
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)
@@ -415,7 +426,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
 - `system_image` — how the address map (what you turn) folds onto distinct systems (what the physics feels). The chart is *always* a genuine 2D thing you explore by two knobs; this only records redundancy. Four values, replacing the old one-off `has_redundant_hemisphere`:
   - **bijective** — every pixel is a distinct system (most charts).
-  - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
+  - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141). That is the spherical map's value. The exponential map's is computed from its cap (R-503, closing RQ-371; `principia_chart_reference.md` §3.3): bijective where the cap lies within one closed hemisphere; where it straddles the equator, n-to-1 with a **per-pixel fold**, at most 2: a pixel counts once unless its mirror `w → −w` is in view, a mirrored pair counting once (its `w > 0` pixel the representative), and an equator pixel counts once. Its radius is bounded at π; past it is the domain's end. *Was:* "The shape sphere is n-to-1 with n = 2", for both maps. Both are the untilted chart's values: under a tilt (R-473) two pixels fold only when their full `(a, b, d)` decode to the same system, a pixel's mirror being the pixel with the mirrored `(a, b)` and the same `d`: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (`N_b = 0` for `N ∝ (R·e_a) × (R·e_b)` from the active tilt map's `R`, decided exactly on the stored angles, per map as chart_reference §3.3 gives it; *was:* "computed from the active tilt map's `R` with `N = R·e₃`"), and otherwise the tilted view is bijective there (*was*, physics review 5593414323 of PR #255, P4: "`N_b = 0` for the tilted plane's normal `N = R·e₃`: `τ₂ = 0` on the spherical map, the analogous condition on an exponential frame aligned so the mirror is `(u, v) ↔ (u, 1 − v)`"), its fold taken over the tilted view's pixels (`principia_chart_reference.md` §3.3; applied per R-369, flagged for the human's veto). *Was:* "so a tilted shape-sphere view is generically bijective" (physics review 5593377792 of PR #255, P3).
   - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
   - **ray-degenerate** — whole lines of pixels map to the same system (for example, a chart sweeping both `m` and `n` continuously: rays through the origin are similarity classes, so the picture bands along rays). §4.5's Euclid plane is not this case: it sweeps only `ν`, its `m` axis annotation-only (above), and its full range is `DoubleCover` (R-27, R-157). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
 

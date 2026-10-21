@@ -145,13 +145,14 @@ on, or a debug-catalogue stain), dimmed with a tooltip saying so otherwise (RQ-3
 **The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
 that shows what the presentation views leave out: every system pixel as the stain draws it; a pixel the chart
 classifies as not a system with the hatch, `debug_invalid`; a decode or sim failure with `debug_invalid`; NaN and `±∞`
-with a style of their own (REQ-COL-110). The legend gains a "Debug" key, its three entries "forbidden (chart)",
-"decode or sim failure" and "NaN / Inf", each with its count of the figure's pixels and their share, drawn always
-(§G6; colour_composition §6). It is a render-side toggle sent as a `SetField`, undoable as an Overlays ▾ toggle is
-(R-69), re-integrating nothing (gui_state_contract §2; applied per R-369). *Was (R-467 D5 as first ported):* "marked
-'no history': a view, not an edit, adding no undo entry". It is off at launch, keeps its state through
-F3, present mode and both fill modes, and has no key of its own; the View menu reaches it from the keyboard (§G3). On
-the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`, R-467 D8).
+with a style of their own (REQ-COL-110; not magenta, which sits at τ from escape body 2, R-505). The legend gains a
+"Debug" key, its three entries "forbidden (chart)", "decode or sim failure" and "NaN / Inf", each with its count of the
+figure's pixels and their share, drawn always (§G6; colour_composition §6). It is a render-side toggle sent as a
+`SetField`, undoable as an Overlays ▾ toggle is (R-69), re-integrating nothing (gui_state_contract §2; applied per
+R-369). *Was (R-467 D5 as first ported):* "marked 'no history': a view, not an edit, adding no undo entry". It is off at
+launch, keeps its state through F3, present mode and both fill modes, and has no key of its own; the View menu reaches
+it from the keyboard (§G3). On the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`,
+R-467 D8).
 
 **Lines ▾ (R-476).** The line system of `docs/design/principia_lines.md`, a separate system, not a node of the stain
 graph, drawn over the finished figure: contours of any expression over chart, latent and payload quantities, the hover,
@@ -187,14 +188,18 @@ ticks (every 2, labelled), direction arrows (filled triangle, 8 px, every Δt 1.
 and pinned trace fixed `#FFF27A`; kept traces the trace palette in turn, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
 #9EF0D2`; or **Ramp along time**, R-538 TF4: the ramp's preset, Sunset by default, Viridis, Magma, Ice, Ember, Aurora,
 Mono or Custom… with three colour stops, a Reverse toggle and a preview bar). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
-the keyboard tree as a window's or a panel's others are (§G3; R-541). The icons are figure marks (R-539). A click or hover on a pixel
-that is not a system starts no trace and draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole,
-to its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
-TF3). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+the keyboard tree as a window's or a panel's others are (§G3; R-541). The icons are figure marks (R-539). A click on a pixel
+that is not a system starts no trace and draws the red ✕; hover there shows the readout and no trace, and draws no ✕
+(R-537 EX5, R-538 TM8). A trace of the default length (to the head) not being played or scrubbed is drawn whole, to
+its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
+TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), applied meanwhile). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
 trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5). *Was:* "length (to the head,
 everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
-turn, …)", with no ramp control. *Was (R-538 I2, before R-541):* "Each trace's entry in Lines ▾ holds its settings, in
-this order," and "each control is in the keyboard tree as Lines ▾'s others are (R-476 M13)".
+turn, …)", with no ramp control. *Was:* "A click or hover on a pixel that is not a system starts no trace and
+draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole," (gui review 5594407176 of PR #263, G1
+and G2: only a click draws the ✕; RQ-427 (a); applied per R-369). *Was (R-538 I2, before R-541):* "Each trace's entry
+in Lines ▾ holds its settings, in this order," and "each control is in the keyboard tree as Lines ▾'s others are
+(R-476 M13)".
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
@@ -820,7 +825,7 @@ corpus's top display bar (R-67).
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
-  `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
+  `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
   default, Aarseth–Zare is kept for benchmarks; Part 2b).
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
@@ -856,8 +861,10 @@ others (applied per R-369, R-541 P7).
 | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
 
 Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
-(R-538 TF3). The kept traces' colours are R-538's trace palette (RQ-447). The table is R-541 G5's, its outline entry
-excepted; the bold defaults are R-538's.
+(R-538 TF3), for a trace of the default length; a `Window` or `LastDt` length is kept as chosen (RQ-427 (a), RQ-465
+(a), applied meanwhile). The kept traces' colours are R-538's trace palette (RQ-447). The table is R-541 G5's, its
+outline entry excepted; the bold defaults are R-538's. *Was:* "the whole trace to the horizon is drawn (R-538 TF3).
+The kept traces' colours …" (merging main's PR #263, which applied RQ-427 (a); applied per R-369).
 
 ### Listen… — every sound setting (R-541 G6)
 
@@ -964,7 +971,8 @@ stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
-  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  mapped linearly onto its range is affine, what fails validation not a system and blank (R-470; *was:* "the fallback
+  hatching what fails validation", a stale value, replaced by R-470), and one behind a nonlinear
   warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
   non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
   would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau

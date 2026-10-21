@@ -459,7 +459,11 @@ n(u,v) = cos(r)·n0 + sin(r)·(d/‖d‖)      d = (2u−1)·s·e1 + (2v−1)·s
 ```
 with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — use it wherever a
 linearised decoder is being tested, since an affine chart makes the curvature term identically
-zero.
+zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches
+where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
+count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
+exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
+R-72), and the fixtures avoid that circle.
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
@@ -471,8 +475,79 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
 the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). With
-one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
+one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The spherical map's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
 hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
+*Was:* "The chart's `system_image` is **n-to-1** with n = 2", for either map; R-503 gives the exponential map its own.
+
+**The exponential map's `system_image` is computed from its cap (R-503, closing RQ-371),** as the ν charts' is from
+their range (§4.5). Where the cap lies within one closed hemisphere (`w ≥ 0` everywhere on it, or `w ≤ 0`
+everywhere), no pixel's mirror `w → −w` is in view other than itself: **bijective**. Where the cap straddles the
+equator, the value is **n-to-1 with a per-pixel fold**: a pixel whose mirror is not in view counts once; a pixel whose
+mirror is in view counts once for the pair, its representative the pixel with `w > 0` (the canonical decode's
+hemisphere, Part 1 of the decoder contract); a pixel on the equator (`w = 0`) is its own mirror and counts once. "In
+view" is the cap, `[0,1]²`'s pixels with `r ≤ π`; past the square the map is bounded (§5.4) and adds no multiplicity.
+The chart computes the value whenever `n0`, `e1`, `e2` or `s` change, and its label shows it. Per pixel the rule is:
+a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; otherwise 0. "`w = 0`" is the computed
+`w` being ±0.0; "the mirror is in view" is the map's inverse (the log map about `n0`) of the mirrored point landing in
+`[0,1]²` with `r ≤ π` (physics review 5587467237 and qa review 5587466555 of PR #258, applied per R-369).
+
+**Under a tilt the fold is the tilted view's (R-473 T1, T2, J1; applied per R-369, from chart_decoder_contract Part
+5's definition of `system_image`, "how the address map … folds onto distinct systems"; flagged for the human's veto,
+as it changes area statistics).** The two values above, the spherical map's n-to-1 with n = 2 and the exponential
+map's cap and per-pixel fold, are the untilted chart's (`τ₁ = τ₂ = 0`). Two pixels fold only when their full
+`(a, b, d)` decode to the same system. Under a nonzero tilt a pixel at window offset `(u, v)` maps to
+`(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1). Under a tilt a pixel's
+**mirror** is the pixel of the tilted view with the mirrored `(a, b)` (on the spherical map `(a, b) ↔ (a, 1 − b)`,
+`φ → π − φ`, the vertical axis only; on the exponential map `w → −w`) and the same `d`. The tilted view's pixels
+lie on the plane through the slice centre spanned by `R·e_a` and `R·e_b`; its normal is defined once, for every map, as
+**`N ∝ (R·e_a) × (R·e_b)`** (with one target a vector in `(a, b, d)`; Tip as sheet's `R` is a rotation, so there
+`N = R·e_X`, while Lean each axis's basis is skewed; with two targets there is no single normal, and the rule is taken
+per hidden offset, below). A pixel's mirror lies on that plane, and the pair keeps its fold, exactly when the tilt adds
+no hidden offset that depends on the mirrored axis: **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its
+mirrored `(a, b)` differ in `d` and are distinct systems: the tilted view is **bijective** there; any pair of its
+pixels whose full `(a, b, d)` do decode to the same system counts once by the per-pixel rule above. The criterion
+solves for nothing and divides by nothing, so it holds for an edge-on view (`N_d = 0`, Tip as sheet at `m = 90°`,
+which R-474 does not lock) as for any other. Its conditions come from the active tilt map's `R`
+(chart_decoder_contract § "Tilt (basis edit)", R-474), never from a rule on `τ₂` alone:
+- **Tip as sheet** (the default; `m = √(τ₁² + τ₂²)`, the plane turned by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, each angle
+  in `[−180°, 180°]`): Rodrigues' formula gives `N = R·e_X = (−τ₁ sin m/m, −τ₂ sin m/m, cos m)`, so `N_b = −τ₂·sin m/m`
+  (the same after the wrap at `m > 180°`), and the fold is kept iff `τ₂ = 0` or `m = 180°`, where the plane is the
+  untilted one mirrored (`τ₁ = 0`, `τ₂ = 180°` gives `d = 0` at every pixel).
+- **Lean each axis** (`u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, each angle in `[−90°, 90°]`):
+  `N ∝ u₁ × u₂ = (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`, so the fold is kept iff `cos τ₁·sin τ₂ = 0`
+  (`τ₂ = 0`, or `|τ₁| = 90°`).
+- **Two targets** (`X ≠ Y`, J4; `d_X = sin τ₁·u`, `d_Y = sin τ₂·v`): per hidden offset, `d_X` never depends on the
+  vertical axis and `d_Y` does unless `sin τ₂ = 0`, so the fold is kept iff `sin τ₂ = 0`.
+
+**The decision is exact, on the stored angles (physics review 5593455102 of PR #255, P5; applied per R-369, a routine
+design choice that invents no calibration; flagged for the human's veto with the tilted fold above).** In f64 the
+computed `N_b` is not zero where the closed form is (at `m = 180°` it is about `−1e-16`, and `cos 90°` is about
+`6e-17`), so the fold is never decided by a tolerance on a computed `N_b`. It is an exact comparison on the stored tilt
+angles, in degrees as the view state holds them, from each map's closed form: Tip as sheet, `τ₂ == 0` or
+`m == 180`, with `m = √(τ₁² + τ₂²)` computed from the stored angles in degrees as the map computes it; Lean each axis,
+`τ₁ == ±90` or `τ₂ == 0` (`τ₂ = ±180°` lies outside its range); two targets, `τ₂ ∈ {0, ±180}`. A pair just short of
+`m = 180°` is bijective.
+
+A single `τ₁` (R-457: `τ₁` tilts the horizontal axis) gives `d = sin τ₁·u`, the same at a pixel and its mirror, on the
+spherical map and, on the exponential map, only on a frame aligned so that the mirror is `(u, v) ↔ (u, 1 − v)`; there
+n-to-1 with n = 2, or the per-pixel fold, is kept over the tilted view's pixels. On the exponential map the conditions
+above hold on that aligned frame. A view whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at
+`|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) is RQ-471's: TASK-M2-36 neither builds nor tests that corner until it
+is ruled. *Was (physics review 5593455102, P5 and P6, and code review 5593479346, 3):* "whose normal is `N = R·e₃`
+(`e₃` the hidden target)"; "`N_b` is computed from the active tilt map's `R` …, not keyed on an angle"; "A single `τ₁`
+(either map, …) gives `d = sin τ₁·u`, the same at a pixel and its mirror, so n-to-1 with n = 2 is kept over the tilted
+view's pixels. On the exponential map the same conditions hold on a frame aligned so that the mirror is
+`(u, v) ↔ (u, 1 − v)`, where the per-pixel fold is kept". *Was (physics review 5593414323 of PR #255, P4: keyed on `τ₂`, and dividing by `N_d`):* "On the tilted
+plane, whose normal is `N = R·e₃`, `d = −(N_a·a + N_b·b)/N_d`, so the mirror pair keeps its fold exactly where the
+tilt adds no hidden offset that depends on the mirrored axis: **`N_b = 0`**. On the spherical map that is `τ₂ = 0` …
+Otherwise (`N_b ≠ 0`, any `τ₂ ≠ 0` on the spherical map) … With two targets (J4) the same holds for each hidden
+offset." *Was:* "so a pixel and the pixel whose `(a, b)` is its shape mirror (`w → −w`) carry different `d` and
+are distinct systems: a tilted view is generically **bijective**, on either map, and any pair of its pixels whose
+full `(a, b, d)` do decode to the same system counts once by the per-pixel rule above" (physics review 5593377792 of
+PR #255, P3: wrong for a `τ₁`-only tilt; applied per R-369). The pixels "in view" are the tilted view's own pixels (blank past a bounded edge,
+R-512), not `[0,1]²`'s. The chart recomputes the value whenever `n0`, `e1`, `e2`, `s`, `τ₁`, `τ₂` or the tilt's
+targets change. *Was:* "The chart computes the value whenever `n0`, `e1`, `e2` or `s` change" (above, kept as the
+untilted rule).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
@@ -667,7 +742,8 @@ allows energy normalisation, as the Euclid plane does.
 written in §5.4 by TASK-M2-11 and physics-reviewed; until it is written each axis is bounded, the default. (`ν` past
 `(0,1)` gives `a = 1 − ν² ≤ 0` or `b ≤ 0`, a zero or negative mass, and the acute angle past `(0, π/4]` the same.) The
 ternary mass plot's axes are affine in R-407's sense (its formula continues; the map itself, `m₁ = u`,
-`m₂ = (1−u)v`, `m₀ = (1−u)(1−v)`, is bilinear), and the fallback hatches its negative-mass area (§5.4).
+`m₂ = (1−u)v`, `m₀ = (1−u)(1−v)`, is bilinear), and its negative-mass area is not a system, drawn blank (R-470; §5.4). *Was:* "and the fallback hatches its
+negative-mass area (§5.4)" (stale value, replaced by R-470).
 The types are now written in §5.4 (TASK-M2-11, REQ-CHART-055). The acute angle's axis has its edges at `θ_min` and
 `θ_max`, inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the chart does not
 show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`, the shapes of
@@ -797,24 +873,33 @@ across charts, not which chart looks best.
 
 The rule is `principia_chart_decoder_contract.md` Part 3's (§ "Past the unit square — each axis's extension type
 (R-407)"): each axis declares **affine** (continues), **periodic** (wraps), **pole-crossing** (continues over the pole,
-the partner axis shifted by half its period) or **bounded** (hatched past its edge, the default); outside `[0,1]²` a
-pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is hatched as forbidden and labelled
-`decode_failed`; inside `[0,1]²` nothing changes. The `Chart` trait (§5.1) declares each axis's type beside `map`. The
+the partner axis shifted by half its period) or **bounded** (not a system past its edge, drawn blank, the default);
+outside `[0,1]²` a pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is not a system, drawn
+blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views), and labelled
+`decode_failed`; inside `[0,1]²` nothing changes. *Was:* "**bounded** (hatched past its edge, the default)" and "is
+hatched as forbidden and labelled `decode_failed`" (stale values, replaced by R-470; applied per R-369). The `Chart` trait (§5.1) declares each axis's type beside `map`. The
 existing charts:
 
 | chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
 |---|---|---|---|---|
-| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
+| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; what fails validation is not a system, blank (R-470) | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (`N_b = 0` for `N ∝ (R·e_a) × (R·e_b)` from the active tilt map's `R`, decided exactly on the stored angles, per map as chart_reference §3.3 gives it; *was:* "computed from the active tilt map's `R` with `N = R·e₃`"), and otherwise the tilted view is bijective there (*was*, physics review 5593414323 of PR #255, P4: "`N_b = 0` for the tilted plane's normal `N = R·e₃`: `τ₂ = 0` on the spherical map, the analogous condition on an exponential frame aligned so the mirror is `(u, v) ↔ (u, 1 − v)`") (§3.3, applied per R-369). *Was:* "generically bijective" |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
-| `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
-| Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
+| `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the negative-mass area is not a system, blank (R-470), by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the blank starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
+| Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | blank on every side (R-470) | out of the count and the total (the domain's end) |
 | Burrau family: the `(ν, K)` chart (§4.3, §4.5) | `ν` bounded (declares nothing) | `K` bounded below `t = 0`, continuing past `t = 1` (the warp's `K(t)`, §2.1; R-508) | blank past `ν`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
 | Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` as on `(ν, K)` (R-508) | blank past `θ`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
-| Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | hatched past `θ`'s edges; past `L_z`'s the formula continues and the fallback hatches `L_z² > 2IK` by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
-| Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | hatched past `θ`'s edges; past δm's the blend continues, `Σmᵢ = 1` kept, and the fallback hatches the zero- or negative-mass area by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
+| Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | blank past `θ`'s edges (R-470); past `L_z`'s the formula continues and `L_z² > 2IK` is not a system, blank, by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the blank starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
+| Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | blank past `θ`'s edges (R-470); past δm's the blend continues, `Σmᵢ = 1` kept, and the zero- or negative-mass area is not a system, blank, by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
 | mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1; for an energy-type axis its linear option, R-471, whose default warp is bounded, §2.1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
+
+*Was (the "past `[0,1]²`" column; stale values, replaced by R-470, applied per R-369; the hatch is only the optional
+overlay Overlays › Chart › forbidden region and the debug views'):* `Latent`, "the fallback hatches what fails
+validation"; `MassSimplex`, "the fallback hatches the negative-mass area … so the hatch starts at the edge of `[0,1]²`
+with no band"; the Euclid plane, "hatched on every side"; `Φ_θ,L_z`, "hatched past `θ`'s edges; … the fallback
+hatches `L_z² > 2IK` …; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`"; the δm strip, "hatched
+past `θ`'s edges; … the fallback hatches the zero- or negative-mass area".
 
 **The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
 type per axis of every Burrau-family chart (§4.5), with the reasoning:
@@ -827,7 +912,8 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   chart's range, the formula would continue through the leg swap's fixed point `√2 − 1` onto the leg-swapped twins of
   shapes a one-sided range already shows, changing the chart's `system_image` past `[0,1]²`, where it must add no
   multiplicity (R-408). Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems
-  past the range are hatched and fall out of the count and the total with the domain's end. Nothing is declared.
+  past the range are not systems, drawn blank (R-470), and fall out of the count and the total with the domain's end.
+  Nothing is declared. *Was:* "are hatched and fall out" (stale value, replaced by R-470).
 - **`m`, bounded** (the Euclid plane's horizontal axis). An annotation axis behind the exponential warp
   `m(u) = m_min·(m_max/m_min)^u`, a quantity behind a nonlinear warp, which declares nothing: its continuation would
   draw the same `ν` family again, adding no system (the decoder ignores `u`), and below `u = 0` `m < m_min`, where the
@@ -849,15 +935,18 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   the fold's own: continuing would undo the fold the axis exists for and count each shape twice (R-27, R-408). On a δm
   strip with an asymmetric target the blended masses do not swap with the legs, and the systems past `π/4` are new.
   Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems between the axis's
-  edges and the domain's ends are hatched and fall out of the count and the total with the domain's end.
+  edges and the domain's ends are not systems, drawn blank (R-470), and fall out of the count and the total with the
+  domain's end. *Was:* "are hatched and fall out" (stale value, replaced by R-470).
 - **`L_z`, affine** (`Φ_θ,L_z`'s vertical axis). At fixed `K`, `L_z(v) = (2v − 1)·λ_L·L_max(K)` is linear in `v`: a
   physical-quantity axis mapped linearly onto its range (R-408's port, B1, the Chart builder's `L_z` axis). Past its edge
   the formula continues, with `λ_L < 1` through feasible systems (new `L_z`, not seen in `[0,1]²`) up to
-  `|L_z| = √(2IK)`; beyond, `K < K_min`, and the fallback hatches it as forbidden.
+  `|L_z| = √(2IK)`; beyond, `K < K_min`, forbidden, not a system, drawn blank (R-470). *Was:* "and the fallback
+  hatches it as forbidden" (stale value, replaced by R-470).
 - **δm, affine** (the δm strip's vertical axis). The blend `(1 − v)·m_Burrau + v·m_target` is linear in `v` and keeps
   `Σmᵢ = 1`, as the ternary plot's map continues (R-407, A7): past `v = 1` it runs on beyond `m_target`, past `v = 0`
-  back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the fallback
-  hatches the zero- or negative-mass area. No pixel past δm's edge is a twin of one inside: the leg swap changes the
+  back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the zero-
+  or negative-mass area is not a system, drawn blank (R-470; *was:* "the fallback hatches the zero- or negative-mass
+  area", a stale value, replaced by R-470). No pixel past δm's edge is a twin of one inside: the leg swap changes the
   triangle, which the column holds fixed (at `θ = π/4`, where it does not, `m₁ = m₂` on the whole column for a target
   symmetric in bodies 1 and 2, the default; with an asymmetric target the column's swapped masses lie off the column).
 
@@ -868,8 +957,9 @@ A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: 
 physical-quantity axis mapped linearly onto its range is affine, a Burrau dimension takes the Burrau family's types.
 B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
 affine would redraw systems and count them again (R-408), so it is typed only by a declaration under physics review.
-Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and the fallback hatches what cannot be reached
-(energy beyond what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
+Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and what cannot be reached is not a system, drawn
+blank (R-470; *was:* "the fallback hatches what cannot be reached", a stale value, replaced by R-470) (energy beyond
+what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
 as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
 R-369 and flagged to the human.) **Under R-471 an energy-type axis (energy, `L_z`) is warped by default** (§2.1) and
 so bounded past its edge, its pixels there the domain's end, out of the count and the total; B1's affine axis is its
