@@ -23329,7 +23329,9 @@ TASK-M3-41*
 > - **Energy.** The two-body collision gate (REQ-VAL-045) and any per-step suspect flag under a regularised occupant read
 >   the regularised energy. The Cartesian energy is for diagnostics, read only from runs that did not stop at an event.
 
-`INSTRUCTION.md` § "PR 1", its closing line, verbatim:
+`INSTRUCTION.md`'s closing paragraph (after § "PR 4 — Small things", closing the whole instruction), its first
+sentence, verbatim (*was:* "`INSTRUCTION.md` § "PR 1", its closing line, verbatim:"; code review 5607516021 of PR #277,
+F1):
 
 > One PR each, with the test output pasted into each.
 
