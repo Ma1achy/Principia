@@ -105,7 +105,7 @@ impl Stepper for Rk4 {
         let (k3r, k3p) = (velocity(m, &p3), force(m, &Geom::new(m, &r3).accel));
         let (r4, p4) = (axpy(&s.r, dt, &k3r), axpy(&s.p, dt, &k3p));
         let (k4r, k4p) = (velocity(m, &p4), force(m, &Geom::new(m, &r4).accel));
-        let sixth = dt / (two + two + two);
+        let sixth = dt / (two * (one + two));
         let r = axpy(&s.r, sixth, &weighted(two, &k1r, &k2r, &k3r, &k4r));
         let p = axpy(&s.p, sixth, &weighted(two, &k1p, &k2p, &k3p, &k4p));
         (State { m: *m, r, p }, Geom::new(m, &r))

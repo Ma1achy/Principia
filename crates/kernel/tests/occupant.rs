@@ -649,16 +649,20 @@ negative_control!(
 
 // ── capability_profile_readers (REQ-INT-013, REQ-INT-078) ───────────────────────────────────────────────────────
 
-/// The readings Part 2 defines, per row of [`EXPECTED`]: energy drift reads the dynamics (`symplectic`), the
+/// The readings Part 2 defines, per profile checked: energy drift reads the dynamics (`symplectic`), the
 /// reversibility diagnostic qualifies (`step_reversible`), the reversibility test binds it (`run_reversible`), the
-/// substep count is the wrapper's law (`!owns_time_mapping`), and the bits one doubling of the steps is worth (`order`).
-const READINGS: [(&str, bool, bool, bool, bool, u32); 7] = [
-    ("Euler", false, false, false, true, 1),
-    ("KDK leapfrog", true, true, false, true, 2),
-    ("Yoshida-4", true, true, false, true, 4),
-    ("Yoshida-6", true, true, false, true, 6),
-    ("RK4", false, false, false, true, 4),
-    ("Aarseth–Zare + RK4", false, false, false, false, 4),
+/// substep count is the wrapper's law (`!owns_time_mapping`), the bits one doubling of the steps is worth (`order`),
+/// and the force evaluations a step costs (`force_evals`).
+type Reading = (&'static str, bool, bool, bool, bool, u32, u32);
+
+/// [`EXPECTED`]'s rows' readings, then [`RUN_REVERSIBLE`]'s.
+const READINGS: [Reading; 8] = [
+    ("Euler", false, false, false, true, 1, 1),
+    ("KDK leapfrog", true, true, false, true, 2, 1),
+    ("Yoshida-4", true, true, false, true, 4, 3),
+    ("Yoshida-6", true, true, false, true, 6, 7),
+    ("RK4", false, false, false, true, 4, 4),
+    ("Aarseth–Zare + RK4", false, false, false, false, 4, 4),
     (
         "Aarseth–Zare + time-transformed leapfrog",
         true,
@@ -666,15 +670,40 @@ const READINGS: [(&str, bool, bool, bool, bool, u32); 7] = [
         false,
         false,
         2,
+        1,
     ),
+    ("a run-reversible profile", true, true, true, false, 2, 1),
 ];
 
-/// Checks each row's readings against [`READINGS`], and the resolution and cost readings at their edges: the floor
-/// difference `total_substeps_log2 − step_count_log2` at 3, 1, 0 and inverted (read 0), and the cost at no steps and
-/// at `u32::MAX` steps.
-fn check_readers(table: &[Row]) {
-    for (row, &(name, dynamics, diagnostic, test, wrapper, bits)) in table.iter().zip(&READINGS) {
-        let p = row.profile;
+/// A run-reversible profile, as logH's TTL time mode's is (R-162, R-500), which no row of Part 2's or Part 2a's
+/// table is: its other fields are illustrative, the reversibility test's reading is what it checks.
+const RUN_REVERSIBLE: CapabilityProfile = CapabilityProfile {
+    order: 2,
+    force_evals: 1,
+    symplectic: true,
+    step_reversible: true,
+    run_reversible: true,
+    owns_time_mapping: true,
+};
+
+/// The profiles the readings are checked on: the table's rows, then [`RUN_REVERSIBLE`].
+fn profiles(table: &[Row]) -> Vec<(&'static str, CapabilityProfile)> {
+    table
+        .iter()
+        .map(|r| (r.name, r.profile))
+        .chain([("a run-reversible profile", RUN_REVERSIBLE)])
+        .collect()
+}
+
+/// Checks each profile's readings against [`READINGS`], and the resolution and cost readings at their edges: the
+/// floor difference `total_substeps_log2 − step_count_log2` at 3, 1, 0 and inverted (read 0), and the cost at no steps
+/// and at `u32::MAX` steps.
+fn check_readers(profiles: &[(&str, CapabilityProfile)]) {
+    assert_eq!(profiles.len(), READINGS.len(), "the profiles checked");
+    for (&(got, p), &(name, dynamics, diagnostic, test, wrapper, bits, evals)) in
+        profiles.iter().zip(&READINGS)
+    {
+        assert_eq!(got, name, "the profiles' order");
         assert_eq!(p.drift_reads_dynamics(), dynamics, "{name}'s drift reading");
         assert_eq!(
             p.reversibility_diagnostic(),
@@ -712,7 +741,7 @@ fn check_readers(table: &[Row]) {
         assert_eq!(p.force_evaluations(0), 0, "{name}'s cost of no steps");
         assert_eq!(
             p.force_evaluations(u32::MAX),
-            u32::MAX as u64 * EXPECTED.iter().find(|e| e.0 == name).unwrap().2 as u64,
+            u32::MAX as u64 * evals as u64,
             "{name}'s cost of u32::MAX steps"
         );
     }
@@ -720,7 +749,7 @@ fn check_readers(table: &[Row]) {
 
 #[test]
 fn capability_profile_readers() {
-    check_readers(&table());
+    check_readers(&profiles(&table()));
 }
 
 negative_control!(
@@ -730,7 +759,7 @@ negative_control!(
     {
         let mut t = table();
         t[3].profile.order = 4;
-        check_readers(&t)
+        check_readers(&profiles(&t))
     }
 );
 
