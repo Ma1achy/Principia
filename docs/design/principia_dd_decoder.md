@@ -71,7 +71,7 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 | `NO_QUALIFYING_SEED` | each seed's computed `‖w⁽²⁾‖²_m` against `ε_w`, strict comparisons in seed order; reached only through the rule on computed norms, on a configuration not from the canonical decode, whose choice near a tie is not claimed branch-identical (§3.4) | `kernel::decode::invariant::choose` |
 | `η_E`'s outcome | `r_min_pair_0 = 0`, `E* < V₀`, `E* = V₀` and `s = 0`, comparisons of emitted values with no arithmetic at the decision (§3.7) | `kernel::decode::energy_norm::normalise` |
 | `η_E`'s switch | the energy target's `Option`: on the GPU a uniform flag beside `E*` (R-25), the same for the whole dispatch | `kernel::stage::decode::target` |
-| the mirror in `C` (the shape sphere's decode) | `λ̃_y < −δ_λ`, decided in exact mantissa-exponent arithmetic from the state's pair differences (§3.3; R-82) | `kernel::canon::mirror_decision` |
+| the mirror in `C` (the shape sphere's decode) | `λ̃_y < −δ_λ`, decided in exact mantissa-exponent arithmetic from the state's pair differences (§3.3; R-82). It writes no tag: its branch is compared bit for bit across backends by TASK-M2-07's `canon_gpu` (`canonicaliser_seam_sweep` at the seam states, `canonicaliser_mirror_tie` at the tie), and test 12 compares the shape sphere's decode it feeds | `kernel::canon::mirror_decision` |
 
 The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
 comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
