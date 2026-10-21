@@ -211,9 +211,11 @@ impl ScalarField {
     }
 
     /// Whether the stored value `x`, read with the read side's validity `gate`, is non-finite (R-436): the CPU twin of
-    /// [`ScalarField::non_finite`], for an `f32` field whose lane holds.
+    /// [`ScalarField::non_finite`], `(lane_valid) && bits`, for an `f32` field. The lane's predicate holds only where
+    /// `gate` does and `x` is not the lane's unset value (`d_min`'s `+∞`, R-271), which the predicate excludes; a stored
+    /// sentinel is finite, so the bits exclude it.
     pub fn is_non_finite(&self, x: f32, gate: bool) -> bool {
-        gate && self.float && non_finite(x)
+        gate && self.float && non_finite(x) && !self.is_unset(x)
     }
 }
 

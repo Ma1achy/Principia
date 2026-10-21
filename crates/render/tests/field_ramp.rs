@@ -317,12 +317,13 @@ negative_control!(
 );
 
 /// Checks `is_non_finite`, the twin of a field's non-finite test (`ScalarField::is_non_finite`; R-436, REQ-COL-109):
-/// `d_min`'s NaN, `+∞` and `−∞` are non-finite under its gate and nothing is with the gate closed; its finite values,
-/// `f32::MAX` among them, are not; `length`, a word count, has no non-finite value and no WGSL test for one.
+/// `d_min`'s NaN and `−∞` are non-finite under its gate and nothing is with the gate closed; its finite values,
+/// `f32::MAX` among them, are not ([`check_unset_outside_lane`] has its `+∞`); `length`, a word count, has no
+/// non-finite value and no WGSL test for one.
 fn check_non_finite(is_non_finite: fn(&ScalarField, f32, bool) -> bool) {
     let d = ScalarField::payload("d_min").unwrap_or_else(|e| panic!("{e}"));
     assert!(d.non_finite.is_some(), "d_min has a non-finite test");
-    for x in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+    for x in [f32::NAN, f32::NEG_INFINITY] {
         assert!(is_non_finite(&d, x, true), "{x} is non-finite");
         assert!(!is_non_finite(&d, x, false), "{x}, the gate closed");
     }
@@ -344,4 +345,31 @@ negative_control!(
     "a twin taking every value its gate admits as non-finite fails",
     expected = "0 is finite",
     check_non_finite(|_, _, gate| gate)
+);
+
+/// Checks that `is_non_finite` applies the lane's predicate, as the WGSL test does (`(lane_valid) && bits`,
+/// `ScalarField::non_finite`): `d_min`'s `+∞`, its unset value (R-271), which the lane excludes, is not non-finite,
+/// while `d_min`'s NaN and `−∞` are.
+fn check_unset_outside_lane(is_non_finite: fn(&ScalarField, f32, bool) -> bool) {
+    let d = ScalarField::payload("d_min").unwrap_or_else(|e| panic!("{e}"));
+    assert!(d.is_unset(f32::INFINITY), "d_min's +inf is its unset value");
+    for x in [f32::NAN, f32::NEG_INFINITY] {
+        assert!(is_non_finite(&d, x, true), "{x} is non-finite");
+    }
+    assert!(
+        !is_non_finite(&d, f32::INFINITY, true),
+        "d_min's unset +inf is outside its lane, not non-finite"
+    );
+}
+
+#[test]
+fn field_ramp_non_finite_excludes_the_unset() {
+    check_unset_outside_lane(ScalarField::is_non_finite);
+}
+
+negative_control!(
+    field_ramp_non_finite_excludes_the_unset,
+    "a twin that drops the lane's predicate, taking d_min's unset +inf as non-finite, fails",
+    expected = "d_min's unset +inf is outside its lane",
+    check_unset_outside_lane(|_, x, gate| gate && !x.is_finite())
 );
