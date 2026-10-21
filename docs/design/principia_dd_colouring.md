@@ -81,6 +81,12 @@ Six poles at `{±x̂, ±ŷ, ±ẑ}`, opposing poles complementary. Hue tables: *
 
 **Seamless LUT sphere**: `N_e = 16` colours sampled uniformly from the LUT placed as equatorial poles `p̂ᵢ = (cos 2πi/N_e, sin 2πi/N_e, 0)`, LUT endpoints at the N/S poles; the identical blend evaluated in RGB. Cyclic LUTs (Twilight) close exactly by construction.
 
+**Not one-to-one (R-542; RQ-483).** At a fixed L no continuous colouring of the sphere is one-to-one (invariance of
+domain): this blend gives the antipodal shapes `±(1,1,1)/√3` one colour at κ = 1, 3 and 6 (`principia_state_map.md`
+SM6). It stays the hue carrier it is, and nothing in it changes; the state map's one-to-one sphere map is Chart
+position's 3D gradient, a separate node. Whether colour composition §4.1 states this, or offers the alternative, is
+RQ-483.
+
 ### 3.3 Sphere sampling conventions
 
 Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(θ, φ)** ∈ [0, 2π]×[0, π] (R-14): θ the azimuth in the (u, v) plane on the horizontal axis, φ the polar angle from +w on the vertical axis, L⁺ (w = +1) at the top. `sph_uv` input is always the **config-space** normal (two-rotations rule).

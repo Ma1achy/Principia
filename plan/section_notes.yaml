@@ -1230,3 +1230,23 @@
   section: "12. Open questions (for the review queue, not the agent to settle)"
   reason: "gap (RQ-391)"
   note: "the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, planned (the plan PR); 4 deferred by the human's ruling (R-527), RQ-391 open"
+- file: docs/design/principia_listen.md
+  section: "Principia — Listen: the trajectory heard as sound"
+  reason: parent heading (obligations are in its subsections)
+  note: "§1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540)"
+- file: docs/design/principia_listen.md
+  section: "13. Tests (each with the arm that fires)"
+  reason: informative only
+  note: "a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322)"
+- file: docs/design/principia_listen.md
+  section: "14. What the demo is not"
+  reason: informative only
+  note: "where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries"
+- file: docs/design/principia_state_map.md
+  section: "The state map: every pixel coloured by where its system is now"
+  reason: informative only
+  note: preface and the port's header note (R-542); obligations in SM1 to SM15
+- file: docs/design/principia_state_map.md
+  section: 0. My words
+  reason: rationale
+  note: the human's words, quoted verbatim in R-542; the obligations they settle are in SM1 to SM15 and R-542

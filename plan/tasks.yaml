@@ -2261,6 +2261,63 @@
   requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M7-46
+  milestone: M7
+  title: "The state map's docs port: principia_state_map.md, SM14's rows, the ruling and the queue (R-542)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-COL-112]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+  status: done  # closed by R-542 (its PR, rulings/R-542), not by a task PR
+- id: TASK-M7-47
+  milestone: M7
+  title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
+  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # TASK-M7-52: the one projection (R-542 H11); waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9
+  needs: []
+  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M7-48
+  milestone: M7
+  title: "Chart position's colour slot: the bases (Gradient, Site blend, Palette), the layers, the brightness occupants and the calibrations (R-542 SM6, SM11)"
+  depends_on: [TASK-M7-47, TASK-M7-04, TASK-M7-05, TASK-M7-06, TASK-M7-08, TASK-M7-10]
+  needs: []
+  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M7-49
+  milestone: M7
+  title: "Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)"
+  depends_on: [TASK-M7-48, TASK-M7-44]  # TASK-M7-44: the picture's tier in R-484's table (R-542 H5)
+  needs: []
+  requirements: [REQ-COL-130, REQ-COL-131]
+  reviewers: [code, qa, gui]  # gui: SM8 and SM10 are the GUI's, the picture's and the fade's look (the human's message; PR #270 code review 2, gui re-review G6)
+  pitfalls: []
+- id: TASK-M7-50
+  milestone: M7
+  title: "Replace-L's chroma scaling, min(1, L/0.75, (1 − L)/0.35) (R-542 SM15)"
+  depends_on: [TASK-M7-04, TASK-M7-48]  # waits on RQ-496 (Replace-L as ruled, R-77), R-542 H9
+  needs: []
+  requirements: [REQ-COL-132]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M7-51
+  milestone: M7
+  title: "The stain editor's Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged (R-542 SM15)"
+  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]
+  needs: []
+  requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338, REQ-GUI-340]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M7-52
+  milestone: M7
+  title: "The one projection: each target chart's projection, the leaving rule on main's clamped encode and a curve axis's nearest point, one Rust source for Chart position and the trace (R-542 H11, H12) ⚑"
+  depends_on: [TASK-M2-25, TASK-M2-26]
+  needs: []
+  requirements: [REQ-COL-133, REQ-COL-134]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -2336,7 +2393,7 @@
 - id: TASK-M8-10
   milestone: M8
   title: The hover trace and label on the figure
-  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33]  # TASK-M2-33 for R-449's display names
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33, TASK-M7-52]  # TASK-M2-33 for R-449's display names; TASK-M7-52: the one projection (R-542 H11)
   needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188]
   requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156]
   reviewers: [code, qa, gui]
@@ -2351,16 +2408,16 @@
   pitfalls: []
 - id: TASK-M8-12
   milestone: M8
-  title: "listen: sonification of θ(t), φ(t) from the one computeIC integration"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]
+  title: "Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out (R-540 S1 to S4, S6, S7) ⚑"
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
   needs: [REQ-SYS-017, REQ-CHART-036, REQ-TOOL-028, REQ-VAL-041]
-  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060]
-  reviewers: [code, qa, physics, gui, perf]
+  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316]
+  reviewers: [code, qa, physics, gui, perf]  # ⚑ physics review required: the signal, the pitch's scale invariance, the floor (R-540 S1 to S3, S7)
   pitfalls: [PIT-3]
 - id: TASK-M8-13
   milestone: M8
   title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
-  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03, TASK-M6-25, TASK-M6-28]
+  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-03, TASK-M6-25, TASK-M6-28]  # PR #267 (code review F5, applied per R-369): TASK-M8-12 dropped, L being REQ-GUI-334's (TASK-M8-64)
   needs: [REQ-GUI-002, REQ-GUI-003]
   requirements: [REQ-GUI-096, REQ-GUI-097]
   reviewers: [code, qa, gui]
@@ -2648,7 +2705,7 @@
 - id: TASK-M8-49
   milestone: M8
   title: "Traces on the line system: the hover, pinned and kept traces drawn by §8, shared with the orbit viewer (R-476 L3)"
-  depends_on: [TASK-M7-42, TASK-M8-09, TASK-M8-10, TASK-M8-11]
+  depends_on: [TASK-M7-42, TASK-M8-09, TASK-M8-10, TASK-M8-11, TASK-M7-52]  # TASK-M7-52: the one projection (R-542 H11)
   needs: []
   requirements: [REQ-GUI-245]
   reviewers: [code, qa, gui, physics]
@@ -2720,10 +2777,74 @@
 - id: TASK-M8-58
   milestone: M8
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
-  depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55]
+  depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
+  pitfalls: []
+- id: TASK-M8-59
+  milestone: M8
+  title: "Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory's beats, the events and the effects (R-540 S5, S8, S9)"
+  depends_on: [TASK-M8-12]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  needs: []
+  requirements: [REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-60
+  milestone: M8
+  title: "Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits (R-540 S10 to S12)"
+  depends_on: [TASK-M8-12, TASK-M8-49]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  needs: []
+  requirements: [REQ-GUI-321, REQ-GUI-322, REQ-GUI-323]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-61
+  milestone: M8
+  title: "The trace in Explore, 1: the Trajectory panel's tabs, previews, Trace and Numbers sections, Overlays ▾ › Trace, T, ⇧T and Y, and the trace's look (R-541 G1 to G4, G9)"
+  depends_on: [TASK-M8-58, TASK-M8-11, TASK-M8-13]  # PR #267's split (code review F2, applied per R-369): the trace's GUI does not wait on Listen
+  needs: []
+  requirements: [REQ-GUI-324, REQ-GUI-325, REQ-GUI-326, REQ-GUI-333]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-62
+  milestone: M8
+  title: "The trace in Explore, 2: the Trace… window (R-541 G5)"
+  depends_on: [TASK-M8-61, TASK-M8-58]  # PR #267's split: Listen… is TASK-M8-65's
+  needs: []
+  requirements: [REQ-GUI-328]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-63
+  milestone: M8
+  title: "The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)"
+  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # waits on RQ-440 and RQ-442 through TASK-M8-60 and TASK-M8-64
+  needs: []
+  requirements: [REQ-GUI-330, REQ-GUI-331, REQ-GUI-332]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-64
+  milestone: M8
+  title: "Listen in Explore, 1: the Trajectory panel's Listen section, the Figure's L and the window highlight (R-541 G2, G4)"
+  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  needs: []
+  requirements: [REQ-GUI-334, REQ-GUI-327]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-65
+  milestone: M8
+  title: "Listen in Explore, 2: the Listen… window (R-541 G6)"
+  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  needs: []
+  requirements: [REQ-GUI-329]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-66
+  milestone: M8
+  title: "The state map in Explore: the legend and its ring, never a gap past the square, copies as the canonical sample and the scheduler's firewall (R-542 SM3, SM9)"
+  depends_on: [TASK-M7-51, TASK-M8-10, TASK-M8-22, TASK-M8-56]
+  needs: []
+  requirements: [REQ-COL-121, REQ-SCHED-102, REQ-GUI-339]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

@@ -331,6 +331,29 @@ its energy form, the escaper map and its mass-rank forms), with their palettes, 
 separate `escaper` field" above concerns the event outcome, whose escaping body is `detail`; `chazy_escaper` belongs to
 the separate Chazy system (R-443) and does not change it, and the escaper map is a Chazy stain, not this map filtered.
 
+### 1.5 A point on a chart: Chart position's colour slot (R-542)
+
+*Added by R-542 (`principia_state_map.md` SM11, SM14). Shape n̂'s nodes above are unchanged.*
+
+Beside n̂, a colour occupant may read **a point on a chart's quotient**: Chart position's `point⟨q⟩`, q ∈ sphere ·
+plane · cylinder · simplex (render GUI spec Part II §3), the place the sample's system has reached on a target chart,
+with its status (state map SM1, SM5). Its colour slot is a **base** and an ordered list of **layers**, the composition
+of §1.1 to §1.3:
+
+- **Gradient**: Family B over the point. The 2D and 3D gradients are one-to-one on the quotient (state map SM6); the 1D
+  gradients run one three-stop OKLab ramp; round θ is the hue circle.
+- **Site blend**: Family A. On the sphere it is the §2 static sets, one code path with Shape n̂'s Site blend; on a flat
+  point, §2's lattice sites, with flat distance `−|x − p|²`, the same kernels and the same blend spaces.
+- **Palette**: categorical by tile. Each tile of a tiling (square, hexagons, triangles, brick, stripes; on the sphere
+  latitude × longitude cells, Fibonacci cells, meridian wedges, latitude bands) takes one swatch, by index or by golden
+  angle.
+- **Picture**: an image pulled back through the flow (§3's image input; state map SM8).
+- **Layers**: `bandmask` with band patterns (grid lines, checkerboard, tile edges, stripes, rings; on the sphere its
+  own), and `site_overlay` for site dots, in order, each with its spacing, colour and opacity.
+
+The definitions, values and tests are state map SM6, SM8, SM11 and SM12. The tiling defaults are starting calibrations
+(R-71; RQ-487).
+
 ---
 
 ## 2. Site-set kinds
@@ -360,6 +383,11 @@ are constant across the slice; the codegen detects this and hoists physics sites
 **one mass point**. Default: the slice-centre masses `z₀`. When a pixel is inspected, the inspected
 pixel's masses. The preview must **state which mass point it is showing**, because physics landmarks
 (and any physics-dependent colouring) are only meaningful relative to it.
+
+**Flat lattice sites (R-542).** For a flat point (§1.5) the sites are a square or hexagonal lattice in the chart's tile
+coordinates, `n` across, a whole number of them round θ on a cylinder. They are static and uniform-hoistable, compared
+by flat distance `−|x − p|²` (state map SM11), and feed only Chart position's Site blend and its site-dot layer. The
+sphere's sets above are unchanged.
 
 ---
 
@@ -448,6 +476,13 @@ palette colour (R-470).
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
 (z))` residual). This is what dissolves most of the §A kernel modes (§6) and enables **agreement
 presets** (fragment-decode vs kernel-payload) as live checks of that translation.
+
+**Chart position's reads (R-542; `principia_state_map.md` SM2).** Chart position computes its point at read, from the
+payload lane's live state at the playhead and its masses, through the encode `ROUNDTRIP` already runs; it adds no
+field to any lane's buffer. A Picture base reads one image, a texture bound in a render-side bind group, never a sim
+struct. The uploaded picture is a `RenderState` field, assigned its tier in R-484's table by the task that builds it
+(applied per R-369). Chart position also reads the target chart and its inverse, which seam 6 and render contract
+Part 4 keep from a colour occupant; that is RQ-489, and the source waits on it.
 
 ---
 
@@ -560,6 +595,17 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   other sample's colour on unchanged.
   The Chazy fields hold a value for a `running` sample, so they never draw the "not yet" style
   (`principia_dd_chazy_final_motion.md` §7, R-442).
+
+**Chart position as a colour occupant (R-542; state map SM2, SM6, SM11).** Its 2D and 3D gradients carry position in
+all three OKLab axes, lightness included, which is what makes them one-to-one on the quotient. A brightness node after
+an L-spending base (a 1D gradient, the sphere's 3D gradient or the cylinder's 2D gradient), or under lightness layers,
+raises a Problems warning (render GUI spec Part II §1). The plane's 2D gradient, the sphere's longitude gradient, Site
+blend and the index Palette hold L fixed, so a brightness node can take it. SM2's "the brightness slot is None" meets
+the combiner choice of render contract Part 4 and SM11, and SM15's Replace-L chroma scaling meets the truth table
+above (RQ-496); meanwhile the truth table stands for every stain, Replace-L unscaled. Its statuses keep their own style
+in every mode, as above: a left or past-the-end sample under "none" its grey, `sim_failed` `#141418`, `decode_failed`
+and not a system blank (R-511, R-470); with a brightness node the stain ends in the one post that draws each style over
+the combiner's output, as greyscale mode does (applied per R-369).
 
 ### 4.2 Post chain
 

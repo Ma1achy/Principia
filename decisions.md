@@ -526,6 +526,10 @@ As written in payload §3: any change to the continuation table changes the sche
 
 ## R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*
 *25 Sep 2026 · applied in step 6*
+*Extended by R-542 (21 Oct 2026; the stain graph gains the `point⟨q⟩` field subtype and the Chart position source,
+`principia_state_map.md` SM15; render_gui_spec Part II §3, §3.1, §5, §6, §9 and §11).*
+*Still in force: the stain editor is a free, typed node graph, render_gui_spec Part II standing; R-542 adds a
+subtype and a source to it.*
 
 render_gui_spec Part II stands. gui_state_contract §5's four-slot, fixed-wiring description predates Part II and is
 updated to the graph. Files: gui_state_contract §5, §7; render_gui_spec Part II header.
@@ -869,9 +873,13 @@ override it.
 During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
+*Extended by R-540 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open points; the
+default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never retrigger" are read
+with it, RQ-450 and RQ-452).*
 *25 Sep 2026 · applied in step 7 · amended by R-144*
 *Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and
-R-72 requirements, and the rest stays working notes; §3 is normative too (R-144).*
+R-72 requirements, and the rest stays working notes; §3 is normative too (R-144); §4 is read with `principia_listen.md`,
+which defines its open points, the reference pitch's value staying a calibration (R-540).*
 
 Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
 windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
@@ -14296,8 +14304,11 @@ Screen contour the default; M3's class edges in Overlays ▾ and M10's meanwhile
 *Amended in part by R-538 (20 Oct 2026; `principia_lines.md` §8's markers become the icon sets, with syzygies,
 off-screen pinning, repeats and not-a-system handling, and its length and colour defaults are set; §3's `Trace`
 follows).*
-*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces, and
-§8's markers and trace defaults as adopted, which R-538 replaces.*
+*Amended in part by R-541 (21 Oct 2026; Lines ▾ no longer lists the traces, whose controls move to Overlays ▾ › Trace,
+the Trajectory panel and `Trace…`; whether Lines ▾ stays for the rest is RQ-448, its option (a) applied).*
+*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces,
+§8's markers and trace defaults as adopted, which R-538 replaces, and Lines ▾'s listing of the traces, which R-541
+replaces.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -17989,6 +18000,10 @@ Adds REQ-GUI-267 to REQ-GUI-270, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-
 REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 
 ## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
+*Amended in part by R-541 (21 Oct 2026; I2's place for the trace settings, the trace's entry in Lines ▾, becomes the
+`Trace…` window, the Trajectory panel's Trace section and Overlays ▾ › Trace).*
+*Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
+defaults stand.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -18650,3 +18665,1411 @@ R-537 and R-538.
 R-539 is in the "design" group of `plan/rule_groups.yaml`, with R-466.
 
 Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).
+
+## R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
+*21 Oct 2026 · applied in `docs/design/principia_listen.md` (new: the design, transcribed from the demo's code),
+`docs/incoming/2026-10-21_trace_listen/` (the bundle as delivered), `docs/gui/reference/trace/` (`trace_sound.html`,
+version 9, and its images), `docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4.
+Audio-specific constraints, which are NOT the frame budget", sentences added), `docs/design/principia_trajectory_viewing.md`
+§ "1. The single mechanism" (a sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday
+view (`01_main.png`)" (the Trajectory panel's listen bullet, reworded, with its earlier words kept) and § "G13. Where
+the artboards are overridden" (the sound mapping, with its earlier words kept), `docs/read_first/principia_INDEX.md`
+(rows), R-109's heading block, RQ-440 to RQ-444, RQ-450 to RQ-458 and RQ-464 (new), REQ-GUI-309 to REQ-GUI-323 (reqio,
+new), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and REQ-VAL-103 (reqio, notes),
+TASK-M8-12 (extended), TASK-M8-59 and TASK-M8-60 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M8-12, TASK-M8-59 and TASK-M8-60, which wait on RQ-440 and RQ-442*
+
+The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
+
+> Two new instructions from me, Malachy, 21 Oct 2026, in `principia_trace_listen_bundle.zip` (unzip it to
+> `docs/incoming/2026-10-21_trace_listen/` and commit the bundle as-is):
+>
+> 1. `principia_listen.md`: Listen, the trajectory heard as sound. It is new, and it is a feature of the trajectory
+>    viewer.
+> 2. `principia_trace_listen_gui.md`: where the trace and Listen sit in the dev GUI's Explore mode. It amends the dev-GUI
+>    sketch: the menu bar, the left panel, the Trajectory panel and the bottom band.
+>
+> Read both in full, with `README.md`, the demos `demo/trace_sound.html` and `demo/trace_markers.html` (open them in a
+> browser; turn Sound on), and the art boards in `artboards/`, before changing anything. Docs first, then plan, then
+> code.
+>
+> Port:
+> - Each file's §0 is my words: quote them verbatim in the rulings, never paraphrased. Take the next free R-numbers, one
+>   ruling per file, with their S and G items as the applied text per R-369 (mechanical consequences and routine
+>   choices; I may veto any).
+> - `principia_listen.md` treats the demo's code as the transcription source. Where the md and the code disagree, the
+>   code wins and the disagreement is queued, not resolved. Transcribe the signal, the spectrum, the pitch mapping, the
+>   windows, the partial tracking, `INSTRUMENTS`, `makeVoice`, the events and the effects; do not re-derive them.
+> - The GUI file supersedes the earlier art-board pass's `Lines ▾` and `Listen ▾` menus, and the sketch's
+>   "listen · separations → pitch" row (queued as Q4). Record each replaced line as "stale value, replaced by R-xxx".
+> - File each "Queue, don't rule" item (Q1–Q8) as an RQ with its recommendation as option (a). Do not rule them
+>   yourself. Q1 (the audio backend) and Q3 (`RMS_FLOOR` against our integrator) need answers before Listen is built.
+> - Requirements and tasks:
+>   - Listen (S1–S12) belongs to the trajectory viewer's tasks, with the physics reviewer on S1–S3 and S7 (the signal,
+>     the pitch's scale invariance, the floor).
+>   - G1–G9 belong to the GUI. They depend on the trace markers tasks from the earlier bundles.
+>   - Every test in both files (S13, G10) gets its failing arm, as written.
+> - Put both demos under `docs/gui/reference/trace/` and the art boards under `docs/gui/reference/trace/artboards/`, as
+>   reference mocks like the lines canvas. They are not ported as code.
+>
+> Check against what is open. These files assume:
+> - the earlier bundles' trace markers and follow-up (F1–F7);
+> - R-469's centre clamp, R-470's blank-plus-overlay and R-509's fade.
+>
+> If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and queue it
+> rather than resolving it.
+>
+> Open a PR for the docs port with the rulings, and paste the doc diffs' summary and any conflicts found in the
+> description. Do not touch anything outside the repo and build or scratch directories without asking.
+
+and `principia_listen.md`'s §0, "My words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "With this trace thing, can you create a second version of this, like a second version of this artifact that is like
+> > the sort of sound system? … converting the trajectory into sound and then potentially having that play as well as we
+> > hover and show the trac"
+>
+> > "Explain to me how you're producing the sound. Also, it'd be cool as well if you could listen to the sound of it
+> > evolve over time as you, the sort of like trace is drawn out…"
+>
+> > "Oh, also … the Lagrange one, you can't hear… maybe need to like clamp the volume / normalise it ? yeah maybe options
+> > to clamp min and max volume and or normalise all the volumes would be nice. also ability to change the instrument
+> > would be sick, have a fat collection of instruments"
+>
+> > "shouldn't you use the angles? i think those are more correct for you to use, you can probs account for the wrap.
+> > maybe need a larger window size idk think this could be improved."
+>
+> > "stereo by winding should be default... still can't here Lagrange btw. also maybe the window should get longer as the
+> > trajectory gets longer in time? idk could be a cool option? ah i don't like how some are too short to hear, that
+> > shouldn't be a thing."
+>
+> > "glass bell, marimba, music box, harp, analogue bass, acid, fm bass, and electric piano i don't think play correctly?
+> > they sound like a loop rather than a note?"
+>
+> > "the instruments that i listed that are broken now just play once and fade out"
+>
+> > "sound effect for close approach, collision types, ejection types, syzygy (optional can be disabled individually).
+> > yes again optional reverb on system spread, optional doppler pitch shift, option bit cruch, optional streo width.
+> > add all those other instruments"
+>
+> > "maybe the reverb should be increased along with the doppler shift and stero width effect ? make it adjustable."
+>
+> > "improve the appearance of the spectrograph and the graph above it."
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and S1 to S14, verbatim:
+
+> *20 Oct 2026. New. It specifies the sound system demonstrated in `demo/trace_sound.html` (version 9), which is the
+> reference implementation for every rule here: where this file and the demo disagree, the demo's code is the
+> transcription source and the disagreement is a bug in this file, to be queued. Its GUI is specified separately, in
+> `principia_trace_listen_gui.md`. Quote §0 verbatim in the ruling.*
+>
+> ## S1. What is heard
+>
+> **The sound is the spectrum of the motion of the triangle's shape, plus its rotation in space.** Nothing else drives
+> pitch. A periodic orbit is a set of lines, so it is a note or a chord; a chaotic run spreads its power, so it is
+> noise. The masses, the energy and the overall size only set the time unit (S3), so two systems that differ only by
+> scale sound identical.
+>
+> The **signal** is built from the shape vector `n̂ = (n₁, n₂, n₃)` on the shape sphere, computed straight from the
+> mass-weighted Jacobi vectors with no canonical frame (a canonical frame mirrors at every syzygy and would put a jump in
+> the signal):
+>
+> ```
+> ρ̃ = √μ_ρ ρ,  λ̃ = √μ_λ λ,   A = |ρ̃|², B = |λ̃|², I = A + B
+> n₁ = (A − B)/I,   n₂ = 2 ρ̃·λ̃ / I,   n₃ = 2 (ρ̃ × λ̃) / I
+> θ = atan2(n₂, n₁),   φ = acos(n₃),   ψ = atan2(ρ_y, ρ_x)     (ψ: the triangle's orientation in space)
+> ```
+>
+> Three signals are selectable (`Signal`):
+>
+> | Signal | Channel A (complex) | Channel B | Notes |
+> |---|---|---|---|
+> | **Angles + rotation (default)** | `w · e^{iθ}` and, summed in power, `e^{iψ}` | `φ` | Lagrange's shape is fixed and it still sounds, through `ψ` |
+> | Angles only | `w · e^{iθ}` | `φ` | Lagrange is silent: the shape does not move |
+> | Shape vector | `sin φ · e^{iθ} = n₁ + i n₂` | `cos φ = n₃` | the `sin φ` weight quietens `θ` near the poles |
+>
+> **The wrap is handled by using `e^{iθ}`, not `θ`.** `θ + 2π` is the same point, so `e^{iθ}` is exactly wrap-free; `θ`
+> itself would drift and put a sawtooth's harmonics into the spectrum. `φ` never wraps. **The pole weight**
+> `w = min(1, sin φ / 0.1)` fades `θ` within 0.1 rad of a pole, where it is undefined and swings fast (a coordinate
+> singularity, not motion).
+>
+> **The spectrum is complex, so it carries direction.** A complex FFT of `e^{iθ}` puts anticlockwise winding at positive
+> frequencies and clockwise at negative ones. That sign is what `Stereo by winding` uses (S6).
+>
+> ## S2. The spectrum
+>
+> For a window `[t₀, t₁]` of the run, `D = t₁ − t₀`:
+>
+> - **Resample** the run's samples to `N` uniform times by linear interpolation of the state (4096 for the displayed
+>   analysis, 1024 per frame of the follow track).
+> - **Detrend** (subtract the mean), **Hann-window**, **zero-pad** to `NF` (8192; 2048 per frame), FFT. `df = (N−1)/(D·NF)`
+>   cycles per unit time.
+> - **Peaks**: local maxima above `0.01 ×` the largest bin, refined by a parabola through the three bins, sorted by
+>   height, the top `K` kept (`Voices`, default 16). **Bins below 1.5 periods per window are ignored** (`k₀ =
+>   ⌈1.5/(D·df)⌉`, at least 2): a line needs one and a half cycles inside the window to be a line.
+> - **Left and right share one scale** (`ref` = the larger of the two channels' maxima), so a side with almost nothing
+>   stays almost silent instead of being normalised up to full level.
+> - **Entropy**: Shannon entropy of the normalised power spectrum over `log(bins)`, 0 for a pure line and 1 for white
+>   noise. It is read out and drives the bit-crush (S9).
+> - **Interval**: the ratio of the two strongest lines, folded below 4 and named against 13 just ratios if within 25
+>   cents (`7:5` is named, as a tritone).
+>
+> **No run is too short to hear.** Where no line clears the 1.5-period cut, the **mean rates** are played instead: the
+> winding rates of `θ` and `ψ` (unwrapped step by step, signed) and the rate of `φ` (unsigned), in cycles per unit time,
+> each at level `max(0.3, |f|/f_max)`, panned by sign. A run that moves at all makes a sound.
+>
+> ## S3. Pitch
+>
+> ```
+> Hz = f · t_c · f_ref · 2^shift
+> t_c = (2|E|)^{-3/2}   if E < 0,   else  I^{3/4}       (G = 1, total mass 1; evaluated at t = 0)
+> ```
+>
+> - `f` is in cycles per unit time, so `f · t_c` is cycles per crossing time and is **scale-free**: a system and its
+>   rescaled copy play the same notes.
+> - `f_ref` (`1/t_c is`) is 110, **220 (default)** or 440 Hz.
+> - **Fit to hearing** (default on): `shift` is the whole number of octaves that puts the whole run's strongest line in
+>   110–880 Hz. **It is chosen once per run, from the whole run**, so the pitch does not jump as the head moves, and an
+>   octave shift keeps every ratio.
+> - Lines outside 30 Hz–6 kHz are not voiced.
+>
+> Measured in the demo (its own integrator, figure-eight released from its standard ICs, `t ≤ 60`, defaults):
+> **262.6, 131.3, 393.9 and 525.2 Hz** — 2:1, 3:2 and 4:3 against the 131.3 line. The 1%-perturbed figure-eight reads
+> the same four to 0.1 Hz; Burrau 3:4:5 ends in a collision at `t = 54.84` with an unnamed ratio of 1.549 and entropy
+> 0.352 against the figure-eight's 0.309; Lagrange plays **one line at 181.7 Hz** under the default signal.
+>
+> ## S4. Follow the head, or the whole run
+>
+> | `Listen` | When | What plays |
+> |---|---|---|
+> | **Follow the head (default)** | while the trace is playing or being scrubbed | the spectrum of the window around the head, re-voiced as the head moves |
+> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3) |
+> | Whole run | always | the whole run as one chord |
+>
+> **Windows** (`Window`, in follow mode):
+>
+> | Window | Span at head time `t` |
+> |---|---|
+> | **Fixed, centred (default)** | `W = min(Fixed × t_c, t_end)` (default `6 t_c`), centred on `t`, shifted inside the run near its ends so every moment has a full window |
+> | Grows | `[0, t₁]`, everything drawn so far |
+> | Grows, last half | `[t₁/2, t₁]` |
+>
+> For the growing windows, `t₁ = min(t_end, max(t, min(t_end, 0.5 t_c)))`, so the window is never empty.
+>
+> **Frames.** In follow mode the run is pre-analysed into frames at a hop of `min(t_end/8, max(W/16, t_end/900))`. Each
+> frame holds its spectrum, its peaks in Hz with a pan (`(R−L)/(R+L)` at that bin) and its shape rms. The head reads the
+> frame at or before it.
+>
+> **After the run ends** (its event, or the horizon), follow mode is **silent**, not a held chord.
+>
+> ## S5. Voices
+>
+> - **Chord** (whole run): one voice per peak, cross-faded in as a bank over ~140 ms, and cross-faded out when the run
+>   changes. Level `0.22 × a / Σa`, ×1.3 in stereo. **Never retriggered.**
+> - **Follow track**: a pool of **32 persistent voices**. At each frame:
+>   1. Each sounding voice takes the nearest unused peak **within a semitone** and glides to it (35 ms); a voice with none
+>      fades out.
+>   2. Each unclaimed peak takes a silent voice: its pitch is set while silent, then it fades in.
+>   3. Pan follows the peak's pan × 0.9 in stereo, 0 in mono.
+>
+>   This is partial tracking: a line that drifts is heard as a glide, not as a sequence of re-attacks.
+>
+> ## S6. Channels
+>
+> | `Channels` | Left | Right |
+> |---|---|---|
+> | **Stereo by winding (default)** | anticlockwise winding (positive frequencies) | clockwise winding (negative frequencies) |
+> | Stereo | `θ` (both directions folded) | `φ` |
+> | Mono | everything summed in power | — |
+>
+> So in the default a system that winds one way round the sphere is heard on one side.
+>
+> ## S7. Loudness
+>
+> ```
+> rms = |(rms(Re A), rms(Im A), rms(B)/π [angles] or rms(B) [vector], |rms(e^{iψ})| [rotation signal only])|
+> level = 0                                    if rms ≤ RMS_FLOOR (1e-7)
+>       = clamp(√min(1, rms/0.1), min, max)    Loudness: follows the shape's movement (default)
+>       = clamp(1, min, max)                   Loudness: normalised, every system at full level
+> ```
+>
+> `Min level` defaults to 15%, `Max level` to 100%, `Volume` (the master) to 60%.
+>
+> **The floor is there so that a system that does not move is silent rather than normalised up to its rounding noise.**
+> Measured in the demo under *Angles only*: Lagrange's shape rms reads **2.65e-7**, just above the floor, so it plays at
+> the min level with lines at 181.5 Hz and above — that is the demo integrator's error, not motion. The floor was set
+> against the demo's integrator, and prin-rs's is far quieter (Q3).
+>
+> ## S8. Instruments
+>
+> **The spectrum decides the pitches and their weights; the instrument only decides the timbre each partial is voiced
+> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Warm sine**.
+> Transcribe `INSTRUMENTS` and `makeVoice` from the demo; a recipe has:
+>
+> | Field | Meaning |
+> |---|---|
+> | `a` | main oscillator: sine, square, sawtooth, triangle, or a harmonic list (a periodic wave) |
+> | `b`, `mix`, `ratio`, `det` | a second oscillator, mixed at `mix`, at `ratio × f`, detuned in cents |
+> | `fm`, `fmenv` | `b` as an FM modulator at depth `fm × f`; `fmenv` makes the index fall on each note |
+> | `lp`, `q`, `formant` | low-pass at `lp × f`, or fixed-Hz band-passes (vowels) |
+> | `fenv`, `fsweep` | filter opening on each note and settling; an LFO sweeping the filter |
+> | `vib`, `bvib`, `trem` | vibrato (rate, cents), vibrato on `b` alone, tremolo |
+> | `unison` | detuned copies of `a` |
+> | `breath` | band-passed noise tracking `f` |
+> | `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level |
+> | `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |
+> | `retrig` | a note event (filter or FM envelope) when the partial moves on, gain held |
+>
+> **Struck instruments** (glass bell, electric piano, marimba, music box, harp, kalimba, steel drum, vibraphone, celesta,
+> glockenspiel, tubular bells, gong; and, with `retrig` rather than `strike`, analogue bass, acid and FM bass):
+>
+> - They are **struck once and ring at their floor**. The first build re-struck them on a timer and they sounded like a
+>   loop; the second decayed to zero and they played once and died. The floor is the fix for both.
+> - **They are struck again on the trajectory's own beats** (`Strikes on`):
+>   - each syzygy the head passes (**default**);
+>   - every crossing time ÷ 1, 2 or 4;
+>   - only when a line changes, i.e. a voice's partial has moved more than a quarter-tone since it last sounded.
+>
+> Families, for the menu (GUI file G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
+> textures (2).
+>
+> ## S9. Events and effects
+>
+> **Events** are one-shot sounds fired when the head passes them, each optional (`Events`), at `Event level` (80%),
+> panned by the bodies involved (bodies 1, 2, 3 at −0.8, 0, +0.8):
+>
+> | Event | Detected | Sound |
+> |---|---|---|
+> | Close approach (on) | a pair's separation at a local minimum below `0.2 R` (`R = √I`), before the run's end | a band-passed noise whoosh, brighter and louder the deeper (`depth = min(1, log₁₀(0.2R/d)/2)`) |
+> | Collision (on) | the run's terminal collision | by pair: 1–2 low tom, 1–3 snare, 2–3 rimshot; triple: a crash |
+> | Escape / ejection (on) | the run's terminal escape | a falling glide towards the escaping body's ear; a triple ejection glides to all three, staggered |
+> | Syzygy tick (off) | each syzygy | a short click panned by the middle body |
+>
+> **Effects** each have a switch and an amount (×, default in brackets); they read the run at the head (follow) or its
+> mean (chord):
+>
+> | Effect | Driven by | Mapping |
+> |---|---|---|
+> | Reverb (on, ×1.40) | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
+> | Doppler (off, ×1.50) | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
+> | Bit-crush (off, ×0.60) | spectral entropy `H` | `bits = round(clamp(15 − 40 a · max(0, H − 0.12), 3, 16))`: a clean line stays clean, noise frays |
+> | Stereo width (on, ×1.50) | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
+>
+> All four inputs are scale-free, so the effects obey S1's scale invariance too. Chain: voices and events → bit-crush →
+> width matrix → dry + convolver → compressor → output.
+>
+> ## S10. Horizon and dwell
+>
+> - While the hover is moving, the run is integrated to `t ≤ 20` (the maps' horizon), so the sound is coarse.
+> - On dwell (280 ms) or pin, the same run is integrated on to the **horizon** (`Horizon`: 20, **60**, 150, 400), and the
+>   trace and the sound both switch to it and sharpen.
+> - A run ended early by its event is a short run, so a coarse spectrum; that is information, not a fault.
+>
+> ## S11. Display
+>
+> **Spectrum** (at the head, or the whole run):
+> - log frequency 30 Hz–6 kHz, gridded at the A of each octave (A1 55 … A7 3520);
+> - dB from 0 to −60 relative to the strongest bin;
+> - the 110–880 Hz fit band shaded;
+> - left channel blue `#5ab4ff` (anticlockwise), right amber `#e0a030` (clockwise), mono `#dcdcdc`, each a filled
+>   curve;
+> - the top peaks dotted, with chips showing note, cents and Hz;
+> - the strongest line's harmonics 2f–8f as dashed ticks.
+>
+> **Spectrogram** (the whole run, on the run's own time axis):
+> - the frames, magma palette;
+> - **each frame shown in dB above its own mean over ±½ octave**, range 14 dB. On raw dB the broad slope every run
+>   carries fills the panel and hides the lines; this keeps the lines and drops the slope. **Display only — the sound is
+>   untouched**, and the panel says so;
+> - bins below the fourth are left blank: they hold the window's own leakage, not lines;
+> - an **event lane** above: syzygies as ticks in the middle body's colour, close approaches as triangles, the end event
+>   as a diamond in its outcome colour;
+> - the playhead with a time chip; blank after the run's end.
+>
+> **Readout**:
+> - pitch mapping;
+> - window;
+> - top peaks as notes;
+> - the named interval;
+> - shape rms → loudness;
+> - entropy;
+> - periods per window;
+> - the reason for any silence ("not a system", "the run ended at t = … by …").
+>
+> ## S12. Sweep and known orbits
+>
+> - **Sweep a row**: the cursor moves along the current row of the chart over `Sweep` seconds (default 10), so the
+>   sound of a slice is heard as a gesture.
+> - **Known orbit** loads a named IC as the trace, with total mass 1 and `G = 1`: figure-eight, figure-eight perturbed
+>   1%, Burrau 3:4:5, Lagrange rotating. These are the calibration set for the tests.
+>
+> ## S13. Tests (each with the arm that fires)
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | Scale invariance | a system and its copy scaled by `α` (times by `α^{3/2}`) give the same peaks in Hz to 0.1 Hz | a `t_c` or `f_ref` slip; an effect input that is not scale-free |
+> | Winding sign | the figure-eight run forwards and time-reversed swap its lines between L and R under *Stereo by winding* | a real FFT, or the sign dropped |
+> | Wrap | the `θ` signal's spectrum has no lines at multiples of the winding rate that are absent from `e^{iθ}`'s | `θ` used instead of `e^{iθ}` |
+> | Figure-eight | lines in exact 2:1 / 3:2 / 4:3 ratios to ±5 cents | a windowing or peak-refinement error |
+> | Lagrange (default signal) | one line, level above the min clamp | the rotation channel dropped |
+> | Lagrange (angles only) | level 0, because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (Q3) |
+> | No silent run | every run with `t_end > 0` that moves has at least one voiced line (fallback included) | the fallback missing |
+> | Struck floor | a struck voice 10 s after its strike is at `sus × level`, not 0, and was struck exactly once without a beat | a timer re-strike, or decay to zero |
+> | Silence after the end | follow mode past `t_end` voices nothing | a held chord |
+> | Spectrogram is display-only | the voiced peaks are identical with the spectrogram on and off and under any display mode | the contrast step leaking into analysis |
+>
+> ## S14. Queue, don't rule
+>
+> - **Q1. Audio backend for prin-rs.** The demo is Web Audio. Recommendation (a): a Rust synthesis graph on
+>   `cpal` for output, with the voice and effects chain transcribed node for node. (b) Keep sound web-only.
+> - **Q2. Where the analysis runs.** Recommendation (a): on the CPU, from the trajectory viewer's own samples, at the
+>   sizes in S2; it is two FFTs per frame. (b) On the GPU with the integrator.
+> - **Q3. `RMS_FLOOR` against prin-rs's integrator.** Recommendation (a): measure Lagrange's shape rms under *Angles
+>   only* with the shipped integrator over `t ≤ 400`, and set the floor at 10× its maximum. The demo's 1e-7 is its own
+>   RK4's drift.
+> - **Q4. The superseded sketch row.** The dev-GUI sketch's "listen · separations → pitch" is replaced by this file's
+>   signal. Recommendation (a): mark it stale, replaced by this ruling. (b) Keep separations as a fourth `Signal`.
+> - **Q5. Close-approach threshold** `0.2 R` and the event depth scale are demo choices. Recommendation (a): keep them,
+>   stated as parameters.
+
+*Where the words leave a choice, or the file and the demo's code disagree, decided per R-369 (routine or mechanical;
+the human may veto any), flagged where they read the words:*
+- **H1. Where it lands.** A new design document, `docs/design/principia_listen.md`, normative, transcribed from the
+  demo's code as the human's message says ("Transcribe the signal, the spectrum, the pitch mapping, the windows, the
+  partial tracking, `INSTRUMENTS`, `makeVoice`, the events and the effects; do not re-derive them"): its §1 to §12
+  follow S1 to S12, §8 carrying `INSTRUMENTS`, its 39 recipes, and `makeVoice`'s steps as the code has them, §13 the
+  tests with their requirements, §14 what the demo is that the app is not. The file itself stays in the bundle, as
+  delivered. The demo is a reference mock in `docs/gui/reference/trace/`, not ported as code.
+- **H2. The code wins.** Where the file and the code disagree, the document carries the code and each disagreement is
+  queued, not resolved: the defaults (RQ-454), the last-half window (RQ-455), the strike's time constant (RQ-456), the
+  line-change strike in every mode (RQ-457), `φ` under *Stereo by winding* (RQ-458), and the floor's own comment and
+  the demo's integrator (RQ-442). A struck chord on each new hovered run, against pointer_channels §4's "never
+  retrigger", is the code too (RQ-452). Each is applied meanwhile; a ruling other than the code is a follow-up change.
+- **H3. A feature of the trajectory viewer.** Listen reads only the `computeIC` trajectory the trace draws, of the
+  hovered, pinned or kept trajectory the Trajectory panel's tab shows (R-541 G4), in the inspector worker
+  (REQ-SYS-060); `E`, `I` and `t_c` are the run's at `t = 0`. Nothing it does reaches the sim key, the figure or the
+  contract's history: its settings are the GUI's own, as a window's place is (R-461).
+- **H4. Numbering, syzygies and events.** Bodies are named and panned 1, 2, 3 (R-449), the formulas indexing them 0, 1,
+  2. A syzygy is R-538 I9's, a sign change of `w`, its middle body the one between the other two. The end event's
+  pair or body is the payload's (R-445), so the collision's drum is chosen by its pair and the escape's glide by its
+  body.
+- **H5. The signal (S1) adds `ψ`** to pointer_channels §4's `θ(t), φ(t)` (REQ-GUI-090): R-540 extends R-109, *Angles
+  only* being §4's mapping as it was; that is RQ-451, applied meanwhile.
+- **H6. Short runs and the entropy.** S2's fallback plays every run that moves, where pointer_channels §4 sets a
+  measured floor below which "the sound is meaningless" (REQ-VAL-103): that is RQ-450, applied meanwhile with the
+  measurement setting the readout's "too short to resolve a note" warning, not a silence. REQ-VAL-102's anchors (0.076
+  against 0.177, the spectrum of `θ(t)`) stay a check of `θ(t)`'s spectrum, separate from Listen's readout, whose
+  entropy is S2's over the selected signal (RQ-453).
+- **H7. The values.** Every constant in S1 to S12 is the demo's, transcribed as given: they are the design's, not
+  missing values, so no calibration follows from them, except `RMS_FLOOR`, which waits on RQ-442. S9's close-approach
+  threshold `0.2 R` and depth scale are stated as parameters (RQ-444). The reference pitch's calibration requirement
+  (REQ-GUI-143, R-71) gains S3's 110, 220 (the default) and 440 Hz as the human's proposal; it stands, its value
+  confirmed with the M8 gate's batch.
+- **H8. Horizon and dwell (S10).** While the hover moves, the run is integrated to the map's own horizon under
+  pointer_channels §3's step budget, S10's "20" being the demo's maps'; on dwell (280 ms) or a pin, on to Listen's
+  `Horizon` where it is longer, the trace and the sound both, the map unchanged: that is RQ-464, applied meanwhile.
+- **H9. The effects (S9)** read the run at the head in follow mode and its mean over the run in the chord, as S9 says;
+  `R₀` is the spread at `t = 0` and `L_z` the total angular momentum; the events go to the output beside the master
+  volume, as the code routes them (`principia_listen.md` §9).
+- **H10. The display (S11).** The spectrogram's contrast is display only (REQ-GUI-322); where the spectrum and the
+  spectrogram sit is R-541's (G4, G7).
+- **H11. Sweep and known orbits (S12).** The known orbits' ICs are the demo's, transcribed (`principia_listen.md` §12),
+  with total mass 1 and `G = 1`, and are the tests' calibration set. A sweep moves the hover along the current row of
+  the chart, as the pointer would, and sends no `SetField`.
+- **H12. S3's and S7's measurements** are evidence of the demo and its integrator, recorded with the ruling, not
+  values, and not re-measured by the port; S13's tests measure prin-rs.
+- **H13. The queue.** Q1 to Q5 are RQ-440 to RQ-444, each with the file's recommendation as option (a). Q4's (a) is
+  applied, as the human's message says: the sketch's "listen · separations → pitch" row is stale, replaced by R-540
+  (render_gui_spec §G2's listen bullet and §G13, each with its *Was*), and REQ-GUI-090's "must not be implemented"
+  stands. Q5's (a) is applied (H7). Q2's (a) is applied when the build starts, unless it is ruled first.
+- **H14. The tasks.** Q1 and Q3 need answers before Listen is built (the human's message), so TASK-M8-12 (extended to
+  S1 to S4, S6 and S7), TASK-M8-59 (new: S5's voices, S8 and S9) and TASK-M8-60 (new: S10 to S12) wait on RQ-440 and
+  RQ-442. They are the trajectory viewer's tasks, after TASK-M8-09 and TASK-M8-11. The physics reviewer is on
+  TASK-M8-12, which builds S1 to S3 and S7 (the signal, the pitch's scale invariance, the floor), as the message says.
+- **H15. The tests (S13).** Each is a requirement's verify with the arm the file gives: Wrap and Lagrange (default
+  signal) REQ-GUI-309's; Winding sign REQ-GUI-310's; Figure-eight REQ-GUI-311's; No silent run REQ-GUI-312's; Scale
+  invariance REQ-GUI-313's; Silence after the end REQ-GUI-314's; Lagrange (angles only) REQ-GUI-316's; Struck floor
+  REQ-GUI-317's; Spectrogram is display-only REQ-GUI-322's.
+
+*Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the files
+assume (the human's message: "If anything here contradicts main, an open branch or a ruling — or my words contradict a
+ruling — tell me and queue it rather than resolving it"):* RQ-450 to RQ-453 (against R-109 and its requirements) and
+RQ-464 (against R-144 and the Run window) are queued, not ruled; RQ-454 to RQ-458 are the file against the code. S1's
+"no canonical frame" agrees with R-538 TF2.3's frame rule: Listen's signal is computed from the Jacobi vectors, the
+trace's projection from the chart's own frame. S4's whole-run chord when nothing plays agrees with R-538 TF3. R-469's
+centre clamp, R-470's blank-plus-overlay and R-509's fade do not reach the sound: a hover on a pixel that is not a
+system makes no run, and Listen reads out "not a system".
+
+*Re-checked against `main` (7daf689b), after `rulings/R-537` merged as PR #263 with two review rounds that changed it:*
+PR #263 applied RQ-427 (a), a trace of the default length drawn whole while paused and a `Window` or `LastDt` length
+kept as chosen; S4's "matching the trace being drawn whole" is queued against it as RQ-465, (a) applied meanwhile
+(`principia_listen.md` S4 qualified). PR #263's REQ-GUI-283 (RQ-473's threshold) took the id this port first used, so
+this port's REQ-GUI-283 to REQ-GUI-307 are REQ-GUI-309 to REQ-GUI-333 (applied per R-369). Nothing else in PR #263
+reaches the sound.
+
+*Found by PR #267's review, queued, not ruled:* RQ-467 (physics P2), a moving bound run with small |E| silent under the
+code's `t_c` and ±8-octave fit, and the code's runs too short to analyse, against S2 and S13's "No silent run", the code
+applied meanwhile (H2). The physics review's measurements of the equal-mass Lagrange triangle's instability are recorded
+in RQ-442 (P1).
+
+*What it extends:* **R-109** (pointer_channels §4's open points are defined, and the mapping gains the rotation, RQ-451).
+Read with R-144, R-538 and R-541.
+
+R-540 is in the "design" group of `plan/rule_groups.yaml`, with R-109 and R-538.
+
+Adds REQ-GUI-309 to REQ-GUI-323; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and
+REQ-VAL-103 (notes).
+
+## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Trace group, Lines ▾'s list, the trace settings' place, the left panel, the Trajectory panel's kept
+orbits and its order, the bottom band's Listen, the legend's bullet; sentences and paragraphs added, the replaced words
+kept), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Figure's and the Trajectory's keys,
+sentences added), § "G5. Windows (`04_windows.png`)" (a sentence, and "Trace… — every trace setting (R-541 G5)" and
+"Listen… — every sound setting (R-541 G6)", new), § "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+(a paragraph, "The trace block") and § "G13. Where the artboards are overridden" (a bullet), `docs/design/principia_lines.md`
+§ "2. Where it sits" and § "8. Traces" (sentences added), `docs/gui/design/GUI_DESIGN_NOTES.md` (conformed),
+`docs/read_first/principia_INDEX.md` (rows), `docs/gui/reference/trace/` (`trace_markers.html` version 28, the
+art boards in `artboards/` and the images), R-476's and R-538's heading blocks, RQ-445 to RQ-449 and RQ-459 to RQ-463
+(new), REQ-GUI-324 to REQ-GUI-333 (reqio, new), REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (reqio: statement, note),
+REQ-GUI-079 and REQ-GUI-097 (reqio, notes), TASK-M8-61 to TASK-M8-63 (new), TASK-M8-58 (deliverables, notes),
+TASK-M8-11 and TASK-M8-50 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-61 to TASK-M8-63*
+
+The human's words: the second instruction of the message R-540 holds ("2. `principia_trace_listen_gui.md`: where the
+trace and Listen sit in the dev GUI's Explore mode. It amends the dev-GUI sketch: the menu bar, the left panel, the
+Trajectory panel and the bottom band.", with "The GUI file supersedes the earlier art-board pass's `Lines ▾` and
+`Listen ▾` menus, and the sketch's "listen · separations → pitch" row (queued as Q4)"), and that file's §0, "My
+words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "improve the gui of the trace sound and trace artefacts to better match the gui of principia (you made an artefact a
+> > while back that was a load of the art boards of the different gui elements / windows for principia (not the webpage
+> > version.. the dev gui) i need the trace and trace sound stuff to be properly integrated in and designed well with the
+> > rest of the gui"
+>
+> > "I don't know, with the like artboard stuff, should this be integrated with the trajectory viewer stuff potentially?
+> > … we already have that like trajectory viewer thing where like on hover it shows you the shape sphere in of the
+> > trajectory, and it also shows you the trajectory in real space in those two preview windows next to each other. So
+> > should we have the stuff to do with the trace below? Maybe either you click on it and it like expands, and then also
+> > as well we could have the sound thing as well as like a button, and when you click on that it then opens up a window
+> > where you can like do all the sound stuff, and then maybe as well it like changes the it like opens up another thing
+> > where like you can see like the spectrogram or something."
+>
+> > "Yeah, please redo the artboards along these lines and also make them look consistent with how the trace should look,
+> > along with also how, and also make sure it has all the features for the trace and all the features for the sound
+> > stuff."
+>
+> > "Just maybe it needs a slightly bit more work in just considering how it's going to fit in the explore mode with the
+> > rest of the GUI, such as the NavCube compass and the legend and play bar at the bottom."
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and G1 to G11, verbatim:
+
+> *21 Oct 2026. New. It places the trace (`principia_trace_markers.md` and its follow-up) and Listen
+> (`principia_listen.md`) in the egui dev GUI's Explore mode. The art boards in `artboards/` are the layout reference;
+> this file is the rule where they differ. It amends the dev-GUI sketch: the Trajectory panel, the menu bar, the left
+> panel and the bottom band. Quote §0 verbatim in the ruling.*
+>
+> ## G1. The principle
+>
+> **Everything about one trajectory lives in one place: the Trajectory panel.** That covers its previews, its trace and
+> its sound. The view shows the trace, and the bottom band's Time column shows the trajectory over time.
+>
+> **Every setting appears in at most two places**: an everyday control in the panel, and the full set in a window
+> (`Trace…`, `Listen…`), opened like `Profiler…` and `Export…`. Nothing about a trajectory is in the left panel, which
+> is about the chart.
+>
+> ## G2. Menus and keys
+>
+> - **`Overlays ▾` gains a Trace group**, after Quadtree, Integration, Chart and Stain, with these items:
+>   - trace under cursor (`T`);
+>   - kept traces (`⇧T`);
+>   - syzygies (`Y`);
+>   - end event icon;
+>   - off-screen icons, pinned to the edge;
+>   - repeat in wrapped copies;
+>   - outline the chart's square;
+>   - a `Trace…` button.
+>
+>   A trace is an overlay, so it lives with the overlays.
+> - **No `Lines ▾` and no `Listen ▾`.** An earlier art-board pass had both; they are withdrawn.
+> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, `K` keep the current trajectory, `L` sound on/off. Add them to
+>   the keyboard sheet.
+>
+> ## G3. The left panel
+>
+> Chart, Navigate, Centre `z₀`, Slice & tilt. **No trace controls.** The Compass moves back to the bottom band (G7),
+> where the sketch has it.
+>
+> ## G4. The Trajectory panel
+>
+> From the top:
+>
+> 1. **Header**: `Trajectory`, then tabs `under cursor`, `#1`, `#2`, …, `+ keep`. **Each kept trajectory is a tab**, with
+>    its own previews, trace and sound. The kept list moves here and into `Trace…`, and out of the left panel.
+> 2. **Status line**: running / pinned, the end event with its time, `|ΔE/E|`.
+> 3. **Previews**: real space (bodies coloured 1 yellow, 2 magenta, 3 cyan) and the shape sphere, side by side as in the
+>    sketch, with `sphere / unwrapped` and `turn`. **While Listen is on, the stretch of the shape-sphere path inside the
+>    analysis window is drawn brighter** (`#5ab4ff`, width 2.4), so what is being heard is visible.
+> 4. **Three collapsible sections**, each a single row when collapsed.
+>
+> | Section | Collapsed row | Expanded |
+> |---|---|---|
+> | **Trace** (collapsed by default) | switch · the line's colour swatch · summary (`to the head · ticks 2 · left 0×`) · `⋯` opens `Trace…` | show (up to the head / tail only, `Δt`), colour + swatch, ramp, width, time ticks + labels, arrows, then **marker chips**, then icon set |
+> | **Listen** (collapsed until first used, then remembered) | `♪` on/off · instrument · `⋯` opens `Listen…` | instrument, volume, listen mode, loudness, event and effect chips, a small spectrum at the head, the two strongest lines as notes with their sides, interval, entropy |
+> | **Numbers** (collapsed) | — | F₂ word, substeps, min sep (the sketch's existing numbers) |
+>
+> The marker chips are toggle buttons that show the icon they draw: end event, syzygies, leaving the chart, off-screen
+> pins, wrapped copies, head marker. Event and effect chips are the same idea, with short glyphs.
+>
+> ## G5. The `Trace…` window
+>
+> **Every trace setting** in `demo/trace_markers.html` and `demo/trace_sound.html`, with their defaults, under a
+> preview strip drawn with the current settings. It applies to `all traces` or to the current tab only.
+>
+> | Group | Controls (default **bold**) |
+> |---|---|
+> | Line | colour **Fixed** `#fff27a` / Ramp along time; ramp **Sunset** · Viridis · Magma · Ice · Ember · Aurora · Mono · Custom… (three stops), `rev`; width **2.2**; **fade off the slice** (momentum proxy, R-509, floor 0.18); time ticks Off · Every 1 · **Every 2** · Every 5, **labels** |
+> | Direction arrows | shape Off · **Filled triangle** · Open chevron · Half barb · Notched · Dot; size **8 px**; every N px of path · **Δt of time** · N per trace; value (**Δt 1.0**) |
+> | Animation | mode Static · **With the playhead** · Own clock; repeat Once · **Loop** · Back and forth; speed **3 t/s**; tail only (off); tail Δt **3.0**; show the rest faintly (off); **head marker, labelled with its time** |
+> | Markers | **end event icon**; syzygies, coloured by the middle body (**off**) with style From the icon set · o–o–o · Three in a row · Line and bead · Numeral tag · Crossing tick · Eclipse, and **fade stutters**; **leaving / re-entering the chart**; leaving / entering the window (off); seams (off); join jumps dotted (off) |
+> | At the edges | **off-screen icons pinned (faint)**; **repeat in wrapped copies**; **outline the chart's square**; forbidden hatch (off, R-470) |
+> | Icons | icon set **Principia** · Arrows · Pictures · Orbits, `key…` opens the icon key; icon size **1.4×** |
+> | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
+>
+> Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
+> (follow-up F3).
+>
+> ## G6. The `Listen…` window
+>
+> **Every sound setting** in `principia_listen.md`, in two columns:
+> - left: Sound, Loudness, Listen;
+> - right: Pitch & analysis, Events, Effects.
+>
+> A readout row runs under both.
+>
+> | Group | Controls (default **bold**) |
+> |---|---|
+> | Sound | **♪ sound on**, `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Warm sine**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
+> | Loudness | **follows the shape's movement** / normalised; min level **15%**; max **100%**; volume **60%** |
+> | Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
+> | Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
+> | Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
+> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, Doppler ← expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
+>
+> **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
+> textures (2), one instrument per row in the build. The art board compresses rows to fit.
+>
+> ## G7. The bottom band
+>
+> The sketch's band stays: **Compass · Time · Legend**, 196 px, with the Compass at the Explore left panel's width and
+> the Legend at 360 px. Listen adds to the Time column and nothing else.
+>
+> | State | Band | Time column | Compass | Legend column |
+> |---|---|---|---|---|
+> | Sound off | 196 px | transport, scrubber, axis, as now | full | Legend |
+> | **Sound on** | **196 px, unchanged** | an **event lane** and a **mini spectrogram** (≈54 px) fill its spare height; `♪ strip ⏶` | full | Legend + the trace section (G8) |
+> | **Strip expanded (⏶)** | **grows upward to 420 px**; the view gives up the height | the full spectrogram on the scrubber's own time axis, with the window, signal and channels shown, and `Listen…` | **cube only** | **the spectrum at the head**, until `⏷` |
+>
+> - The spectrogram and the scrubber **share one time axis**, so the playhead is one line through both. The spectrogram
+>   is blank past the run's end, which is labelled.
+> - `F3` still hides the whole band.
+>
+> ## G8. The Legend's trace section
+>
+> While a trace is shown, the Legend gains an `on the trace` block under the stain's classes: the line (and each kept
+> trace's colour), the start star, and the end icon for this run. With sound on it adds `♪ ◀ left ▶ right`. The full key
+> is `Trace… › key…`.
+>
+> ## G9. The trace's look (consistency)
+>
+> Every board and the build draw the trace one way, the demo's defaults:
+>
+> - line `#fff27a`, width 2.2, over a dark under-stroke `w + 2.2` (the demo's `pass` halo), so it reads on any stain;
+> - time ticks every 2, labelled;
+> - filled-triangle arrows every Δt 1.0, 8 px;
+> - the start a yellow star;
+> - the head a white disc labelled with its time;
+> - icons at 1.4×.
+>
+> Syzygies are off. Kept traces take distinct colours: kept #2 is `#5ab4ff` in the boards. Spectrum and spectrogram
+> colours are `principia_listen.md` S11's.
+>
+> ## G10. Tests
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a surviving `Lines ▾`) |
+> | Band height | turning ♪ on changes no pixel of the view's size; expanding the strip changes it by exactly the band's growth | the strip pushing the view on sound-on |
+> | Shared axis | the spectrogram's playhead x equals the scrubber thumb's x at every `t` | two axes |
+> | Window highlight | the bright arc on the shape sphere covers exactly the samples in `windowAt(t)` | an off-by-window highlight |
+> | Tabs | switching tabs switches the trace, previews and sound together | the sound following the cursor while a kept tab is selected |
+>
+> ## G11. Queue, don't rule
+>
+> - **Q6. Listen's default collapsed state.** Recommendation (a): collapsed until first used, then remembered per user.
+>   (b) Always collapsed.
+> - **Q7. The expanded strip's spectrum in the Legend's column.** Recommendation (a): borrow the column, as G7. (b) Keep
+>   the Legend and stack the spectrum under the spectrogram, making the band ≈520 px.
+> - **Q8. Kept-trace colours.** Recommendation (a): a fixed cycle of six, distinct from the body colours and the stain
+>   classes; to be chosen against the stain palettes.
+
+*Where the words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged where they
+read the words:*
+- **P1. Where it lands.** render_gui_spec §G2 (Overlays ▾'s Trace group, the trace settings' place, the left panel,
+  the Trajectory panel's order, the bottom band), §G3 (the keys), §G5 (`Trace…` and `Listen…`, two subsections), §G6
+  (the trace block) and §G13 (the art boards); `principia_lines.md` §2 and §8; the design notes conformed. Each
+  replaced line keeps its earlier words (*Was*); the art boards are reference mocks in
+  `docs/gui/reference/trace/artboards/`, not ported as code.
+- **P2. Lines ▾.** G2 and the human's message withdraw "the earlier art-board pass's `Lines ▾`", which R-476 adopted
+  as the whole line system's one menu: that is RQ-448. Applied meanwhile, its option (a): the trace leaves Lines ▾ for
+  Overlays ▾ › Trace, the Trajectory panel and `Trace…`; Lines ▾ stays for the contour sets, axes, grids and presets;
+  G10's One place test reads "a surviving `Lines ▾`" as a Lines ▾ that holds a trace control. The trace's place in
+  Lines ▾ (R-538 I2, render_gui_spec §G2's "Trace settings", REQ-GUI-271, REQ-GUI-247's "traces") is stale, replaced by
+  R-541. `Listen ▾` was in no corpus file, only in the demos' mock menu bars and `workbench/`'s earlier boards, so
+  nothing in the corpus is withdrawn for it.
+- **P3. Keys.** G2's `K` "keep the current trajectory" is the Figure's lock key (R-409, §G4), where Space keeps: that
+  is RQ-449. Applied meanwhile: K stays lock and Space keep; `T`, `⇧T`, `Y` and `L` are the Figure's scope shortcuts,
+  as L is (R-409), on the shortcuts sheet.
+- **P4. At most two places.** G1's rule, where G2, G4 and G5 put some markers in three: that is RQ-460. Applied
+  meanwhile: all three stay, one field behind them, one `SetField` from any.
+- **P5. The chart's square.** G2's and G5's "outline the chart's square", on by default, meets RQ-408 (R-537 Q3),
+  open with nothing built: that is RQ-461. Applied meanwhile: its two entries are built only once RQ-408 is ruled, and
+  as it rules.
+- **P6. The panel's contents.** G4 lists the panel without the summary's FTLE and `E₀`, the panel's playhead and the
+  two buttons: that is RQ-462. Applied meanwhile, a port adding: the status line carries FTLE and `E₀` too; the
+  playhead and the buttons stay, after Numbers; the kept list moves as G4 says (REQ-GUI-088 restated).
+- **P7. `Trace…`'s scope.** "It applies to `all traces` or to the current tab only": the current tab's own settings,
+  kept with its trajectory, each edit one `SetField` as the others are (R-538 I1). The window's Kept traces rows are
+  the tabs' list. Its key… button opens the icon key (R-538 TM4).
+- **P8. `Listen…`.** Its controls are `principia_listen.md`'s with the code's defaults (RQ-454: sound off at launch,
+  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. The instrument menu's families name no
+  instrument and the code has none: that is RQ-459, applied meanwhile with the task that builds the menu writing the
+  assignment (R-72), the counts met.
+- **P9. The bottom band's sizes.** G7's 196 px, 420 px and 360 px meet R-462's splitters, and "cube only" leaves the
+  compass's buttons unsaid: that is RQ-463. Applied meanwhile: the sizes are defaults, each a remembered splitter
+  position; while "cube only" the compass's buttons are hidden and out of the keyboard tree until `⏷`.
+- **P10. Colours.** G9's kept #2 `#5ab4ff` is not in R-538's trace palette and is Listen's left channel and window
+  highlight: that is RQ-447 (the file's Q8). Applied meanwhile: R-538's palette, the boards' colour illustrative. G4's
+  body colours (1 yellow, 2 magenta, 3 cyan) are R-538 I3's.
+- **P11. The queue.** Q6 to Q8 are RQ-445 to RQ-447, each with the file's recommendation as option (a). Q6's and Q7's
+  (a) are applied: Listen's section remembered per user in the GUI's own settings (R-461), the expanded strip borrowing
+  the Legend's column. Q8's is P10.
+- **P12. The art boards against other rulings.** Where the boards differ from a ruling other than R-540 and R-541, the
+  ruling stands (render_gui_spec §G13): the step under the slice (R-457), the compass's orbit (R-409), GUI labels drawn
+  over the figure (§G1, R-539), the mock menu bars (P2), the kept colour (P10); their numbers are illustrative (the
+  bundle's README). G3's "Centre `z₀`, Slice & tilt" is read with R-457's names (Navigate, Slice centre, Tilt).
+- **P13. Mechanical.** The Trace group comes after Chart: G2's "after Quadtree, Integration, Chart and Stain" names a
+  Stain group R-509 removed. G8's block comes after the stain's keys and before the debug view's key, a key of figure
+  marks (R-539), not a stain dimension. G9's dark under-stroke is the Trace style's `outline` (`principia_lines.md`
+  §3). "Repeat in wrapped copies" is R-538 TM7's repeats as a toggle, on by default. G3's "The Compass moves back to the
+  bottom band" is where §G2 already has it. The file's date (21 Oct) and its §0's sources are as delivered.
+- **P14. The tests (G10).** Each is a requirement's verify with the arm the file gives: One place REQ-GUI-324's; Tabs
+  and Window highlight REQ-GUI-326's and REQ-GUI-327's; Band height REQ-GUI-330's; Shared axis REQ-GUI-331's.
+- **P15. The tasks.** G1 to G9 are the GUI's, after the trace markers' task (TASK-M8-58, after TASK-M8-49 to
+  TASK-M8-51 and TASK-M8-55), as the human's message says: **TASK-M8-61** (G1 to G4 and G9: the panel, its tabs and
+  sections, Overlays ▾ › Trace, the keys, the window highlight, the trace's look), **TASK-M8-62** (G5 and G6: `Trace…`
+  and `Listen…`) and **TASK-M8-63** (G7 and G8: the bottom band and the legend's block), each reviewed by code, qa and
+  gui. TASK-M8-58's settings stay its own as `Lines`' state; their controls are TASK-M8-61's and TASK-M8-62's.
+  *Split, applied per R-369 (code review 5595371779 of PR #267, F2; the orchestrator's decision), so that the trace's
+  GUI does not wait on Listen's RQs:* **TASK-M8-61** (G1 to G4 and G9, the trace's half: the panel's tabs, previews,
+  Trace and Numbers sections, Overlays ▾ › Trace, T, ⇧T and Y, the trace's look) and **TASK-M8-62** (G5, `Trace…`)
+  follow only TASK-M8-58, TASK-M8-11 and TASK-M8-13; **TASK-M8-64** (the Listen section, L and the window highlight,
+  REQ-GUI-334 and REQ-GUI-327) and **TASK-M8-65** (G6, `Listen…`) follow TASK-M8-12, TASK-M8-59 and TASK-M8-60, and so
+  wait on RQ-440 and RQ-442; **TASK-M8-63** follows TASK-M8-64 and TASK-M8-65. The ramp control is TASK-M8-58's widget,
+  hosted by TASK-M8-61's Trace section and TASK-M8-62's `Trace…` (gui review G7). The text above is P15 as first
+  applied. *Completed in PR #267's second round (code review 5595481919, F5; the orchestrator's decision, applied per
+  R-369):* L is REQ-GUI-334's only, so TASK-M8-13 (the keyboard scopes) no longer depends on TASK-M8-12; a walk of
+  `depends_on` finds none of TASK-M8-12, TASK-M8-59 and TASK-M8-60 among the ancestors of TASK-M8-13, TASK-M8-42,
+  TASK-M8-58, TASK-M8-61 or TASK-M8-62.
+
+*Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the file
+assumes:* RQ-447 to RQ-449 and RQ-460 to RQ-463 are queued, not ruled. G4's tabs agree with §G2's (R-453's pin, the
+kept orbits); G3's Compass in the bottom band agrees with R-462's layout; G5's "When nothing is playing or scrubbing,
+the whole trace to the horizon is drawn" is R-538 TF3; G5's fade (the momentum proxy, R-509, floor 0.18) and forbidden
+hatch (off, R-470) agree with those rulings; R-469's centre clamp is not touched. The icons and the trace over the
+figure are figure marks (R-539), not a §G1 conflict.
+
+*Re-checked against `main` (7daf689b), after PR #263:* only a click draws the red ✕ (R-537 EX5, R-538 TM8; gui review G1
+of PR #263), which G1 to G9 do not touch; G5's footer, "the whole trace to the horizon is drawn", is queued against RQ-427
+(a), as PR #263 applied it, as RQ-465, (a) applied meanwhile (`Trace…`'s footer qualified); PR #263 gave REQ-GUI-271 a keyboard
+reach and order arm on the trace's `Lines ▾` entry (gui review G3), which G2 withdraws (RQ-448 (a)), so the arm and its
+presence screenshot move to REQ-GUI-328, `Trace…`, read on G5's table order (TASK-M8-62; applied per R-369); the
+`trace/` INDEX line keeps PR #263's note that the demos load Google Fonts (here the dev GUI's Ubuntu and Ubuntu Mono).
+
+*Found by PR #267's review, queued, not ruled:* RQ-466 (gui G1), the Inspector's listen (render_gui_spec §G8, REQ-GUI-090)
+against G1's one place, (a) applied meanwhile, listen in the Trajectory panel only.
+
+*What it amends:* **R-476** (Lines ▾ no longer lists the traces, RQ-448) and **R-538** (I2: the trace settings' place
+in the GUI). Read with R-409, R-453, R-461, R-462, R-509, R-539 and R-540.
+
+R-541 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-538.
+
+Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (statement, note), REQ-GUI-079 and
+REQ-GUI-097 (notes).
+
+## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
+prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
+`docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
+Derived — computed at read, NOT stored" (a row), `docs/design/principia_colour_composition.md` § "1.5 A point on a chart:
+Chart position's colour slot (R-542)" (new), § "2. Site-set kinds", § "3. The `ctx` contract" and § "4.1 Backbone &
+`Option` occupants" (paragraphs added), `docs/design/principia_dd_colouring.md` § "3.2 The vMF engine" (Q4's sentence),
+`docs/gui/principia_render_gui_spec.md` Part II § "1. Layout — four surfaces", § "3. The node graph — model" (the subtype
+list, with its earlier words kept), § "3.1 Node kinds", § "5. Sources & multi-source", § "6. Port typing & wire rules",
+§ "9. Node inspector — morphing editors" and § "11. Presets = whole graphs", and § "G6. Legend — generated by evaluating
+the stain (`06_legend.png`)" (added), `docs/read_first/principia_INDEX.md` (rows), RQ-480 to RQ-489 and RQ-496 to RQ-499
+(new), REQ-COL-112 to REQ-COL-132, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-339 (reqio, new), TASK-M7-46 (done) and
+TASK-M7-47 to TASK-M7-51 and TASK-M8-66 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-47 to
+TASK-M7-51 and TASK-M8-66, TASK-M7-47 waiting on RQ-489 and TASK-M7-50 on RQ-496; after PR #270's review,
+RQ-500 to RQ-505 (new), RQ-489, RQ-496, RQ-497, RQ-498 and RQ-501 (restated), REQ-COL-133 to REQ-COL-135 and
+REQ-GUI-340 (reqio, new), TASK-M7-52 (new, built before every projection's consumer), TASK-M8-10, TASK-M8-49 and
+TASK-M8-58 (a dependency each) and
+`docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden" (a bullet)*
+
+The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
+
+> A new instruction from me, Malachy, 21 Oct 2026, in `principia_state_map_bundle.zip` (unzip it to
+> `docs/incoming/2026-10-21_state_map/` and commit the bundle as-is):
+>
+> `principia_state_map.md`: the state map. A new stain node, **Chart position**, gives each sample its own system's
+> position on a chosen chart at the playhead (or t = 0, or a fixed t). It works on every chart, the shape sphere included,
+> and is coloured by a base (Gradient, Site blend, Palette, Picture) with layers on top (grid lines, checkerboard, tile or
+> cell edges, stripes, rings, site dots) — the shape sphere's colour composition, on the chart's point (SM11). Shape n̂
+> is a different node and is unchanged.
+>
+> Read it in full, with `README.md`, the prototype `demo/state_flow.html` (open it in a browser and play it) and the art
+> boards in `boards/`, before changing anything. Docs first, then plan, then code.
+>
+> Port:
+> - §0 is my words: quote them verbatim in the ruling, never paraphrased. Take the next free R-number, one ruling, with
+>   the SM items as the applied text per R-369 (mechanical consequences and routine choices; I may veto any).
+> - Port `principia_state_map.md` to `docs/design/principia_state_map.md`, headings unchanged, and add it to
+>   `docs/read_first/principia_INDEX.md`.
+> - The prototype's code is the transcription source. Where the md and the code disagree, the code wins and the
+>   disagreement is queued, not resolved.
+> - **SM2 is a hard constraint: no change to `SimState`, the payload, the `ICDescriptor` or any layout.** The field is
+>   derived at read in the fragment stage from data it already has (`r, p` at the playhead, the masses, the `state`
+>   lane, the WGSL encode). If anything turns out to need a stored field, stop and queue it; do not add one.
+> - **Shape n̂ is settled in §0:** a separate node, kept exactly as it is, nothing migrated. **The node name is settled in
+>   §0:** Chart position. **The exact last position is settled in §0:** not stored; the edge clamp (SM5a) is the
+>   behaviour.
+> - Apply SM14's "What this changes" rows to the docs they name, recording each replaced line as "stale value,
+>   replaced by R-xxx".
+> - File each "Queue, don't rule" item (Q1–Q9) as an RQ with its recommendation as option (a). Do not rule them
+>   yourself. Q4 concerns the existing vMF shape colouring: record it, change nothing in it.
+> - Requirements: `requirements_patch.yaml` is a draft in `plan/tools/reqio.py` patch format. Replace `R-NEW` with the
+>   ruling's number and each `MILESTONE` with the right one from `plan/MILESTONES.md`, check every `source` heading
+>   against the ported doc (`plan/tools/sections.py`), then apply it with `reqio.py` and run `python3 plan/check_plan.py`.
+>   Physics reviewer on the Chart position, projection and four-results requirements (SM1, SM4, SM5); the GUI ones go
+>   with `boards/`. Every test in SM12 keeps its failing arm, as written — the copies test is the bitwise IC identity, not
+>   a colour comparison at t = 20, which cannot fire (measured).
+> - Tasks: one for the docs port (this PR), then tasks for the colour pipeline (SM1–SM7, SM11) and the GUI (SM8–SM10,
+>   SM15), cut from the requirements.
+> - Put the prototype and `boards/` under `docs/gui/reference/state_map/` as reference mocks, like the lines canvas.
+>   They are not ported as code; the scripts in `tests/` are reference only.
+>
+> Check against what is open. This assumes:
+> - the extension rules (R-407, R-412, R-469, R-470) and EX7's canonical addressing from the extension bundle;
+> - the trace follow-up's F1 (where a projection has no value);
+> - L-ownership in the render contract.
+>
+> If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and queue it
+> rather than resolving it.
+>
+> Open a PR for the docs port with the ruling, and paste the doc diffs' summary and any conflicts found in the
+> description. Do not touch anything outside the repo and build or scratch directories without asking.
+
+and `principia_state_map.md`'s §0, "My words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "we take this idea of where we're sort of coloring the initial condition based upon where it ends up in some sort of
+> > chart. So in the shape sphere thing, we are coloring over time where the pixel trajectory is on the shape sphere
+> > chart and evolving over time. Now, what if we could generalize that to any chart? So you would almost see, for
+> > example, on a chart of, say, momentum, you would see how the pixel's momentum evolves over time, if that makes sense.
+> > Or you would do it with, maybe, any other sort of, like, latent parameter in a way. Because you could take a slice
+> > even and do wacky stuff like just say this entire slice area right now is an image, and then you could like see how
+> > stuff almost like flows. … I think from memory, people do this with pendulum sort of fractal stuff, so we could
+> > probably do that here."
+>
+> > "I just don't want it to completely break everything, so I want you to like actually consider everything carefully
+> > here. Because it also has interacts, you know, properly as well, of like the extension stuff"
+>
+> > "We can't have this changing any of the sim structs btw ? Can it work with the current data the shaders have access
+> > to ?"
+>
+> > "Can this be made a sort of generalisation of the shape sphere colour map system that allowed us to do a lot of
+> > possible ways to colour the shape sphere? So we could have the same sort of tiling patterns + layers + combinations
+> > of stuff? Maybe could have more stuff?"
+>
+> > "Just stop where it last was if it collided etc? That's cleaner?"
+>
+> > "I wouldn't store the exact last position, I don't want to change the structs or anything that side"
+>
+> > "Also I think the artefact doesn't really have a generalisation of the shape sphere colour map stuff idk. Its
+> > confusing. Also need you to design art boards on how the gui for this will look in the stain graph editor. Plus how
+> > this will work in the stain graph editor."
+>
+> > "Idk still feel like we need the shape n mode. This generalisation is still assuming like a spherical coordinate system
+> > / unwrap.. which is weird? We need to tile & colour the plane differently in these modes"
+>
+> > "Agreed" — to: Shape n̂ kept as its own mode; a colour vocabulary per quotient (a linear position map and real tilings
+> > on the plane, θ round the hue circle on the cylinder, triangles in the masses); tilings laid in chart units by default.
+>
+> > "Why in this are you confusing the rest of the sting graph? I just want it to be... You can choose to color the plane a
+> > certain way. Either with a gradient, either with a site blend, either with a palette. And then you can also
+> > additionally add, you know, extra lines, be it grid lines, checkerboard patterns, tiles, etc. Or you can just choose to
+> > be purely tiled, you know, there's like the layers to it, like we did the shapesphere thing. Again, you're sort of
+> > confusing a lot of the different bits of the system into this one thing here."
+>
+> > "Yep" — to: on a flat chart, the colour slot is a base (Gradient · Site blend · Palette · Picture) plus optional layers
+> > on top (grid lines, checkerboard, tile edges, stripes, contours, a site overlay), the same composition as the shape
+> > sphere's; Shape n̂, the brightness slot, Replace-L and the post chain unchanged; the state map only supplies the point.
+>
+> > "Shape sphere chart can use this mode also btw, just shape n node is different to this node, understood? What are
+> > you calling this node? We need a good name for it that is simple and clear"
+>
+> > "Chart position" — chosen for the node, one node with a time setting (playhead, t = 0 or a fixed t) in place of the
+> > two working names "Where now" and "Where at t = 0".
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and SM1 to SM15, verbatim:
+
+> *21 Oct 2026. New. A colouring, not a computation: each sample is coloured by its own system's position, at the
+> playhead, on a chart. The node is **Chart position**. It works on every chart, the shape sphere included, and is coloured by a base plus
+> layers (SM11). Shape n̂ is a different node and stays exactly as it is. The prototype `demo/state_flow.html` is the reference; where this file and it disagree, the
+> prototype's code is the transcription source and the disagreement is queued. Quote §0 verbatim in the ruling.*
+>
+> ## SM1. Definition
+>
+> For a sample with live state `x(t)` at the playhead, and a **target chart** `T`:
+>
+> ```
+> colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )
+> ```
+>
+> - `E` is the encode (`principia_dd_encode.md`), the quotient map onto the decode's canonical section: scale and
+>   rotation are removed, mirror images identified.
+> - `P_T` is the target chart's projection, the one the trace uses (`principia_trajectory_viewing.md` §3; trace
+>   follow-up F1). It returns one of four results, listed in SM5.
+> - `fold_T` maps the point onto `T`'s **quotient**, its group of images (R-407 types): θ mod 2π, the shape sphere's
+>   `n̂`, the canonical mirror.
+> - `C_T` is a colour map, **one-to-one and continuous on that quotient** (SM6).
+>
+> **The target is the view's own chart by default.** Then, at `t = 0`, every sample sits where it started, and the
+> picture is the colour map itself, i.e. the legend. As the playhead moves, it flows.
+>
+> **Image mode** replaces `C_T` with a look-up in a picture laid on `T`'s square (SM8). Each pixel shows the colour of
+> the picture at the place its system has reached. This is the "slice as an image" in §0, and it is a pull-back: one
+> gather per pixel, with no scatter.
+>
+> ## SM2. It changes no sim struct and reads only what the fragment already has
+>
+> | Needed | Where it already is |
+> |---|---|
+> | the live state `r, p` at the playhead | `SimState`, "the live state of a marching simulation at the playhead" (render contract; payload §1; generation root) |
+> | the masses | `ICDescriptor`, the payload lane's decoded-IC quantities |
+> | ended / failed | the `state` lane. Storage never holds NaN (R-79); a run stopped by its event holds its end state |
+> | the encode, including the chart inverses | WGSL generated from the one Rust source (R-116); `ROUNDTRIP` already runs it per pixel (colour composition §3, "Fragment-side recompute") |
+> | `fold_T` and `C_T` | pure maths in the stain node: no history, no buffer |
+>
+> It is a **derived field, computed at read** (payload §5), like the existing current-shape `n`. It needs no new
+> `SimState` field, no new accumulator and no kernel change. It is live-compatible: only the playhead state is read.
+>
+> Three things it adds, none of them a sim struct:
+>
+> 1. **A target other than the view's chart** needs that chart's inverse in the fragment pipeline as well (Q1).
+> 2. **Image mode** needs one texture binding for the picture: a render-side bind group.
+> 3. **The colour map owns lightness** (SM6), so under L-ownership (render contract) it is a full-colour occupant: the
+>    brightness slot is None.
+>
+> ## SM3. Source side: the extension comes for free, because the colour is a property of the system
+>
+> The colour depends only on the sample's system, never on where its pixel sits. So:
+>
+> - **Wrapped copies** (θ period, pole crossings, the hemisphere's fold; R-407, R-412) decode to the same system, and get
+>   the same colour by construction. No seam handling is needed or allowed. **But only if a copy reuses its canonical
+>   quad's samples (EX7's canonical addressing) and never re-decodes from its own coordinate.** `x + 2π` folded back
+>   is not `x` in the last bits: re-decoding each pixel from its own coordinate, as the prototype first did, gave ICs
+>   differing at the 12th decimal in 1 of 400 random copy pairs. **Whether that shows is a question of horizon, and at
+>   the prototype's it does not.** Measured on the shape sphere, released from rest, at `t = 20`: a relative IC
+>   perturbation of 1e-15, 1e-12 or 1e-9 moves the shape by more than 0.02 on **0 of 300** systems; 1e-6 on 2; 1e-3 on 61.
+>   The prototype's colour test of copies reads 0 differing pairs **with and without** the fix (0 of 1024 on the sphere,
+>   0 of 768 on θ × dilation), so at this horizon it cannot fire and proves nothing about the fix. The requirement rests
+>   on the IC identity, which can be tested bitwise, and on longer horizons, where it will show.
+> - **Never a gap while navigating.** The prototype keeps a coarse **base grid per chart** over its whole reachable
+>   domain. On a repeating chart that is the square, drawn through every image (R-407's group); on an affine chart it is
+>   the navigation limit. It is drawn under everything, then the last finished view grid, then the new one.
+>   - The first prototype restarted its integration on every frame of a drag and drew nothing until a grid finished, so
+>     the extension went black. That was a bug in the prototype, now fixed.
+>   - Measured after the fix, black fraction of the canvas while dragging into the extension: 0 at every sample, on the
+>     latent chart and on the sphere.
+>   - In the app this is the quadtree's own coarse-ancestor fill, not a new mechanism.
+> - **Affine extension** past `[0,1]²` holds new systems, coloured like any other.
+> - **Not a system** (forbidden; R-470) is the canvas background, never integrated.
+> - **The quadtree, refinement and deep zoom are unchanged.** It is a colouring: the scheduler's criterion does not read
+>   it (the firewall, scheduler contract Part 1). A coarse leaf shows its footprint's colour.
+>   - In chaotic regions the field is rough at every scale, so a leaf the criterion keeps coarse looks blocky. That is
+>     the coarse-ancestor fill doing its job, not a fault.
+>   - Whether the state map should feed the criterion is Q3.
+>
+> ## SM4. Destination side: why it must be a quotient, not a branch
+>
+> The trace picks each sample's branch by continuity with the previous one: θ ± 2π, the pole crossings
+> (`tiltProject`, `thetaHProject`). A per-pixel field has no previous sample, so it **cannot pick branches**. It must be
+> defined on the target's quotient, and `C_T` must be invariant under the target's identifications:
+>
+> | Target axis | Quotient | What `C_T` must do |
+> |---|---|---|
+> | periodic (θ) | the circle | carry θ round a closed hue circle |
+> | the shape sphere (θ, φ with pole crossing) | the sphere, via `n̂` | be a function of `n̂`, never of (θ, φ) |
+> | the hemisphere (R-412) | the sphere mod the mirror | be a function of the canonical (folded) `n̂` |
+> | affine (latent `z`, a physical quantity) | the line | compactify (SM6) |
+> | bounded (ν, a mass) | the interval | map linearly |
+> | a tilted axis (E, F) | not periodic and multi-valued in θ | take the branch nearest the slice (smallest out-of-plane `w`); this is a choice, Q2 |
+>
+> ## SM5. The four results of a projection
+>
+> | Result | When | Drawn as |
+> |---|---|---|
+> | **on the chart** | the projection exists | `C_T` |
+> | **left the chart** | a coordinate entering a shown axis with non-zero weight has no value (F1) | **at the edge it left by** (default, SM5a); or no value, in its own style |
+> | **past a bounded edge** | the nearest point lies past a bounded axis's end (F1's curve-axis row) | at that end (default, SM5a), counted apart from left; or no value |
+> | **undetermined** | the run failed (R-79's failed values; `sim_failed`) | the presentation black `#141418` (R-467) |
+>
+> ### SM5a. Left the chart: drawn at the edge it left by
+>
+> A system that leaves a chart is drawn **at the edge it went through**, not grey. On the latent chart it leaves because
+> α passes the decoder's limit, so `z_α` is `±∞`, and the side is known from the shape (`cos 2α = n₁`). The other
+> coordinate keeps its value now. The compaction sends `±∞` to the colour map's edge. The latent momenta (`|q|` past
+> `q_max`), the tilt's `z_q3`, and a curve axis's nearest point past its end clamp the same way. **This uses only the
+> current state**, so it needs no stored field (SM2).
+>
+> **It is not the same as "where it last was", and the difference is measured.** The true last on-chart position needs
+> history, and storing it is **ruled out by §0** (no struct change). It was measured once, offline, to know what the
+> clamp gives up:
+>
+> On the latent chart at `t = 8`, 400 random systems, 129 of them left, true exit found at Δt = 0.005, compared in the
+> compacted coordinates `s ∈ [−1, 1]`:
+> - **The axis it left by agrees.** |Δs| median 0.033, and it falls with Δt (0.267 at the prototype's Δt = 0.25), so in
+>   the limit the clamp *is* the exit point on that axis.
+> - **The other axis is where they differ.** |Δs| median 0.08, p90 0.54, max 1.25. The system keeps moving after it
+>   leaves: into the collision, or back round a close approach. The clamp shows that coordinate now; the last position
+>   shows it at the exit.
+>
+> So the clamp is exact in direction and current in the other coordinate. Half the left pixels differ little from the
+> last position; the tail differs a lot. Grey (no value) remains an option.
+>
+> **Ended runs hold their end state (absorbing).** A run stopped by its event sits at its last state. Option: *after
+> its end*, paint the outcome palette instead.
+>
+> Measured in the prototype at `t = 8` (64²–96² grids, the demo's integrator):
+> - On the shape sphere, the collided systems sit at the three binary-collision points and paint **three flat bands**.
+>   This is correct, and it shows the collision basins at a glance.
+> - On the latent chart, 3186 of 9216 have **left** (their α passed the decoder's limits near a collision).
+> - On the ν × dilation chart, 4854 of 6432 are **past a bounded edge**: most states are far from the right-triangle
+>   curve and project to its ends.
+>
+> ## SM6. Colour maps: one-to-one on the quotient, so they own lightness
+>
+> **No continuous one-to-one map from the sphere into a plane exists** (invariance of domain). So any fixed-lightness
+> colouring of `n̂` — including the vMF six-pole blend (`principia_dd_colouring.md` §3.2) — gives some distinct shapes
+> the same colour. That is acceptable for a hue carrier, and **not for this field**: two systems at different places
+> must not look the same. So the sphere map uses all three OKLab axes, linear in `n̂`. Measured (colours binned at 2e-3 in OKLab over a 300² grid of the sphere): the vMF blend at fixed L puts **antipodal shapes** (chord 2.000) in one bin at κ = 1, 3 and 6 — the pair `±(1,1,1)/√3`, both neutral grey — while the linear map's worst same-bin pair is 0.025 apart, the bin's own width. The state map is therefore a
+> **full-colour occupant**, and the vMF blend stays the shape colouring it already is (Q4).
+>
+> Per target, as prototyped:
+>
+> | Target quotient | Map (OKLab) |
+> |---|---|
+> | sphere `n̂` | `L = 0.64 + 0.20 n₃`, `a = 0.095 n₁`, `b = 0.095 n₂`: linear, so one-to-one |
+> | circle × line (θ × dilation) | `a, b = 0.09 (cos θ, sin θ)`, `L = 0.66 + 0.12 tanh(h/κ)`: a cylinder |
+> | simplex (masses) | `(a, b) = 0.15 Σ mᵢ ûᵢ` for three hue directions 120° apart, `L = 0.70`: an affine image of the triangle |
+> | line × line, interval × line | **linear**: `(a, b) = 0.095 (sₓ, s_y)`, `L = 0.75`. Revised (SM11): the first version put `x` along a 270° arc of hue, a polar unwrap of a flat chart, to avoid a grey centre. §0 rules out the unwrap; the grey centre is the chart origin and is accepted |
+> | circle × circle (none in the demo) | `x` round the hue circle, `y` round a circle in (L, C): a torus |
+>
+> Rules:
+> - **Compactification:** `s = tanh((z − c)/κ)` with `κ` the chart's home half-range (latent 3, momenta 0.3, the tilt's
+>   `s` π, dilation 0.6), so the home view spans about `s ∈ [−0.76, 0.76]`.
+> - **Chroma is fixed per map, never clipped per pixel** (clipping breaks linearity and injectivity), at the largest
+>   value that stays in sRGB gamut over the map's whole range. That was checked on a 200² grid for every map above: 0
+>   out-of-gamut samples.
+>
+> ## SM7. Colour frame and deep zoom
+>
+> - **Chart (default)**: absolute. The same colour means the same place in every view, so views are comparable.
+> - **View (option, the view's own chart only)**: `s = tanh((x − view centre)/view half-width)`.
+>   - It is needed at depth: in the absolute frame, the `t = 0` picture at a deep zoom is one flat colour, because the
+>     whole window is inside one colour step.
+>   - At `t > 0` most systems leave the window and saturate the relative map. That is expected and stated.
+> - **Precision**: the state is f32. The `t = 0` identity holds to **4e-7 (latent), 1.5e-6 (sphere), 5e-6 (simplex),
+>   2.7e-8 (momenta), 7e-8 (θ × h), 1.9e-6 (tilted E, F)** in chart units. On ν × h it holds to **4.9e-4**, which is the
+>   demo's 1/1000 curve table, not the method.
+>
+> ## SM8. Image mode
+>
+> - The picture is laid on `T`'s home square (equirect on the sphere; θ across on the cylinder).
+> - Past the square on an affine axis it is **mirror-repeated and dimmed**, so it stays continuous and says it is outside.
+> - The picture can be built in (checkerboard, grid, rings) or the user's own, uploaded.
+> - Played over time, a picture laid on the chart is stretched along the flow: smooth on regular islands, shredded where
+>   the dynamics are chaotic. That is the FTLE's meaning, seen directly; it is not a measurement of it.
+>
+> ## SM9. Legend and the hovered pixel
+>
+> The legend is the colour map (or the picture) over `T`'s square, with the hovered pixel's system marked where it is
+> now. On the view's own chart, the marker sits where the hovered pixel's current colour sits in the legend. The trace
+> of the same pixel would run to the same place: the trace is this field for one pixel. The prototype draws no trace,
+> only a ring on the hovered pixel.
+>
+> The marker is computed with the grid's own integrator settings, so it agrees with its pixel exactly.
+>
+> ## SM10. Time, ensemble and fade
+>
+> - **Time**: it is the field at the playhead. Scrubbing back is re-integration, as for every live field (temporal
+>   architecture note). The prototype instead keeps states every Δt = 0.25 to the horizon, so it can scrub instantly;
+>   that is a demo device, not a design.
+> - **Ensemble**: the nominal copy (copy 0). An OKLab mean over the `E+1` copies would turn undetermined regions grey,
+>   which is informative but not one-to-one (Q5).
+> - **Fade off the slice**: opt-in, off by default, view's own chart only (R-509's distance, as the trace).
+>   A fade spends lightness, so it is stated as breaking injectivity.
+>
+> ## SM11. Colouring Chart position: a base, then layers
+>
+> *Revised three times on 21 Oct 2026 (§0's last five quotes). The first version put one sphere kernel on every chart;
+> the second invented separate node kinds and mixed the source and brightness nodes into them; the third tied the sphere
+> to Shape n̂. This one: Chart position is one node, on any chart including the shape sphere, and its colour slot is
+> colour composition §1 as it stands — a base and layers — with the chart's point where Shape n̂ has n̂.*
+>
+> **Two different nodes.** *Shape n̂* is the existing node: the shape of the system, coloured by its own nodes (Site blend,
+> Bands, its position map), exactly as now. *Chart position ⟨chart⟩* is the new one: where the system is on a chosen
+> chart. On the shape sphere chart the two read the same point, and are still two nodes: Shape n̂ keeps its colouring,
+> Chart position takes a base and layers. The backbone is unchanged: one colour slot, one brightness slot, Replace-L or
+> Multiply, the post chain.
+>
+> **Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0 · a fixed t) · when it leaves the
+> chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing.
+>
+> **Its colour slot is a base plus layers** — the same shape as the shape sphere's colouring (a Family A or B occupant,
+> then `bandmask` / `site_overlay` combinators, colour composition §1.1–§1.3):
+>
+> *Base, one of:*
+>
+> | Base | Colour composition | Shape sphere | On the plane | Cylinder (θ × s) | Simplex (masses) |
+> |---|---|---|---|---|---|
+> | **Gradient** | Family B: a field over the point through a ramp | **3D**: `L = 0.64 + 0.20 n₃`, `(a, b) = 0.095 (n₁, n₂)`, one-to-one · round the longitude (hue circle) · pole to pole | **2D**: `(a, b) = 0.095 (sₓ, s_y)` at `L = 0.75`, one-to-one, L free · along x · along y · out from the centre | 2D: θ round the hue circle, `L = 0.66 + 0.12 tanh(s/0.6)` · round θ (hue circle) · along s | 2D: three primaries mixed by the masses at `L = 0.70` · along m₂ · along m₃ |
+> | **Site blend** | Family A: nearest / top-k / vMF, blend in OKLab or RGB | the sphere's site sets (`axes6`, `corner8`, `ico12`, `fib(N)`, `ring(N)`), the same code path as Shape n̂'s Site blend (agreement exactly 0) | sites on a square or hex lattice, plain flat distance `−|x − p|²` | the same, a whole number of sites round θ | the same lattice laid on the masses |
+> | **Palette** | categorical: each tile one palette colour — purely tiled | latitude × longitude cells (a multiple of 6 round θ) · Fibonacci cells · meridian wedges · latitude bands | square, hexagons, triangles, brick, stripes x / y | the same, closing round θ | triangles in the masses; stripes in m₂ / m₃ |
+> | **Picture** | the image pulled back through the flow (SM8) | equirectangular | over the square | wrapped in θ | over the triangle |
+>
+> 1D ramps run one fixed three-stop OKLab ramp (indigo → teal → yellow); round θ uses the hue circle, the one place hue is
+> native. Site colours and the palette are swatch sets, as on the sphere: **by index** — `(i mod 3, j mod 3)` picks one of
+> nine OKLab swatches at `L = 0.72`, `(a, b) = 0.08 (i mod 3 − 1, j mod 3 − 1)`, so every neighbour differs — or
+> **golden-angle** hues by tile.
+>
+> *Layers on top, in order, each optional* — every one a `bandmask` (a line or cell colour where its pattern is in band,
+> mixed in at its opacity), or for site dots a `site_overlay`:
+>
+> | Layer | In band where |
+> |---|---|
+> | grid lines | within 0.045 of a whole x or y |
+> | checkerboard | ⌊x⌋ + ⌊y⌋ is odd |
+> | hexagon / triangle / brick edges | a point 0.045 away lies in a different tile |
+> | stripes along x / y | ⌊x⌋ or ⌊y⌋ is odd |
+> | rings round the centre | within 0.045 of a whole distance from the chart's centre |
+> | site dots | within 0.13 of a lattice site |
+>
+> On the shape sphere the layers are the sphere's own: latitude / longitude lines, checkerboard (lat × lon), meridian
+> stripes, latitude bands, Fibonacci cell edges (a point 0.045 of the cell spacing away, along the surface, is in another
+> cell), site dots on the Fibonacci sites. Flat tile edges and rings are not offered there.
+>
+> Each layer has its own spacing (`n` across, 4–24), colour (dark, light, black, white) and opacity (25–100%).
+>
+> **Spacing on a flat chart is in chart units by default**: `n` across the chart's square, the same size continuing past it, and as many
+> down as keeps cells square on screen. *The squashed square* lays `n × n` over the compactified `[−1, 1]²`, the whole
+> unbounded chart, cells shrinking toward infinity. A system that has left the chart takes the cell at the navigation
+> edge it left by (SM5a). On the cylinder every count round θ is a multiple of 6, so every pattern closes across the seam.
+>
+> **Lightness.** The plane's 2D gradient, the sphere's longitude gradient, Site blend and the index palette hold L fixed, so a brightness node can take L
+> without losing position. The 1D ramps, the sphere's 3D gradient and the cylinder's 2D gradient spend L on position, and a brightness node after
+> them raises the Problems warning, as it does after Shape n̂'s position map and Bands. Layers are mostly lightness, and
+> under Replace-L their lines fade; that is a second, separate warning. The plane's 2D gradient is grey at the chart
+> origin, which on the latent charts is the Lagrange landmark (Q9).
+>
+> **Brightness, unchanged in meaning** and outside the colour slot: displacement `|e(t) − e(0)|`, a straight-line distance
+> on the quotient (`e` = n̂, `(cos θ, sin θ, s)`, `(sₓ, s_y)` or the masses: a distance only, never a colour); *left its
+> starting tile*, which under Chart position compares the Palette's tile now and at `t = 0`, and under Shape n̂ the
+> nearest site.
+>
+> **Only the 2D and 3D gradients must be one-to-one (SM6).** Site blends, palettes and layers are classifications, many-to-one by
+> design.
+>
+> **Fields that need history stay out of scope without a struct change** (Q7).
+>
+> ## SM12. Tests (each with the arm that fires)
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | Identity at `t = 0` | on every chart, target = view, every sample's projected point equals its own chart point to f32 round-trip (the prototype's figures, SM7) | a wrong projection, a missed fold, a mirror slip |
+> | Copies agree | every copy's sample is the canonical quad's sample: its IC is **bitwise** equal (the control, re-decoding from the copy's own coordinate, differs on 1 of 400 pairs). A colour comparison at `t = 20` is not the test: it reads 0 differing pairs with and without the fix | a copy re-decoded from its own coordinate; a colour computed from screen position |
+> | One-to-one | colours binned at 2e-3 over a 300² grid of each target's quotient: no bin holds points more than a bin's width apart. Controls that must **fail**: the vMF blend (antipodes, 2.000) and a closed hue circle on a line (1.993) | a fixed-lightness sphere map; a hue circle on a non-periodic axis |
+> | Invariance | `C_T` equal on identified points (θ and θ + 2π; `n̂` across a pole crossing) | a map written on (θ, φ) |
+> | Gamut | 0 out-of-gamut samples per map | per-pixel clipping |
+> | Edge clamp | for left systems, the clamp agrees with the exit point found at fine Δt on the axis it left by, and the gap falls with Δt (0.267 → 0.033 from Δt 0.25 to 0.005) | a clamp to the wrong side, or a finite clamp on an infinite coordinate |
+> | Never a gap | the canvas has no uncovered pixel during a drag or zoom into the extension (black fraction 0 at every sample) | the old grid dropped before the new one lands |
+> | Conserved axes | on the mass simplex the field is identical at every `t` | a mass leaking into the march |
+> | Four results | a latent-momentum target has left-the-chart pixels where `|q| > q_max`; ν targets have past-the-edge pixels; neither is drawn as a colour | left drawn as a clamped colour |
+> | No struct change | the build changes no `SimState`, payload or descriptor layout (`git diff` on the layout definition is empty) | a stored field |
+> | Firewall | the scheduler's decisions are identical with the state map on and off | the field read by the criterion |
+> | Shape n̂ unchanged | the Shape n̂ node, every one of its colour nodes (Position, Site blend over axes6 / fib / ico12 / corner8 with each kernel, Bands) gives bitwise the values it gave before the flat vocabularies were added: 7200 values over 400 random shapes × 6 settings, **0** differ (old build against new). The brightness slot is not in this test: Replace-L now scales chroma (below), which changes a sphere stain *with* a brightness node | a flat node's code reaching the sphere path |
+> | Same site blend on the sphere | Chart position ⟨shape sphere⟩ with Site blend (axes6 · Full · vMF κ 3 · OKLab) against the Shape n̂ node's Site blend at the same settings: worst difference **exactly 0** over 300 random shapes. Two nodes, one code path | a second implementation of the sphere's site blend |
+> | Neighbours differ | Palette by index (and Site blend's index swatches): across every tile boundary, sampled 2.5–8.6 thousand pairs per tiling, **0** pairs share a colour for square, hexagons, triangles, brick and both stripes | an index not stepping by ±1 to a neighbour; a hexagon or brick coloured by a 2-colouring |
+> | Layers in order | grid over checkerboard differs from checkerboard over grid wherever both are in band; a layer at 0% opacity changes nothing | layers applied as an unordered set |
+> | Whole periods | on the cylinder, the tile count round θ is a multiple of 6, so every base and layer closes: θ and θ + 2π give the same tile colour — **0 of 7200** differ, over 6 patterns × 6 counts | a count that is not a multiple of 3 (index colours) or 2 (checker), which draws a seam |
+> | Plane map one-to-one | binned at 2e-3 over a 300² grid of `[−1, 1]²`: worst same-bin pair **0.028** apart in s, inside the bin's own diagonal (0.030) | an angle or unwrap on a flat chart |
+> | Replace-L in gamut | chroma scaled by `min(1, L/0.75, (1 − L)/0.35)`: **0 of 99,710** out-of-gamut samples over every flat colour node at every brightness level used (0.18, 0.30, 0.50, 0.78, 0.84). Without the scaling, the 0.30 level clipped to near-black in the prototype, the undetermined colour | per-pixel clipping |
+>
+> ## SM13. Queue, don't rule
+>
+> - **Q1. A target other than the view's chart.** Recommendation (a): allowed, with the target's inverse generated into
+>   the fragment pipeline beside the view's. (b) The view's own chart only.
+> - **Q2. Tilted targets.** Recommendation (a): the branch nearest the slice, as prototyped. (b) Not offered as a
+>   target.
+> - **Q3. The state map and the criterion.** Recommendation (a): never a criterion input (the firewall). (b) A spread
+>   over it as a candidate signal, measured first.
+> - **Q4. The vMF shape colouring.** It is not one-to-one, by SM6's theorem. Recommendation (a): keep it as the hue
+>   carrier it is, and state that in colour composition §4.1. (b) Offer SM6's sphere map as an alternative shape
+>   colouring.
+> - **Q5. Ensemble colour.** Recommendation (a): the nominal copy. (b) The OKLab mean over copies, labelled as not
+>   one-to-one.
+> - **Q6. After its end.** Recommendation (a): hold the end state. (b) The outcome palette.
+> - **Q7. History fields** (winding on any chart, time in a tile, first passage). Recommendation (a): out of scope; each
+>   needs its own accumulator, which is a struct change. (b) Specify the accumulators, measured for cost first.
+> - **Settled by §0, not queued: the exact last position is not stored.** The edge clamp (SM5a) is the behaviour; no
+>   struct changes for it.
+> - **Q8. Tiling defaults** (SM11): pattern, tiles across (6) and the index palette chroma (0.08) are calibration
+>   values (R-71). Recommendation (a): adopt the prototype's as the starting values. Chart units as the default is
+>   settled by §0, not queued.
+> - **Q9. The plane's grey origin.** The linear map is achromatic at the chart origin. Recommendation (a): accept it — on
+>   the latent charts the origin is the Lagrange landmark, a named place, and it is far in L from the undetermined and
+>   no-value colours. (b) Offset the map so the achromatic point falls outside the home square.
+> - **Settled by §0, not queued: Shape n̂ stays its own mode.** Its nodes are unchanged and nothing is migrated.
+>
+> ## SM14. What this changes
+>
+> | Doc | Change |
+> |---|---|
+> | `principia_dd_simstate_payload.md` §5 | the derived table gains "chart position at the playhead", from `r, p`, the masses and the target chart; stores nothing |
+> | `principia_colour_composition.md` §3, §4.1 | the state map as a full-colour occupant (owns L; brightness None); image mode's texture input |
+> | `principia_render_gui_spec.md` | SM15: the `point⟨q⟩` field subtype, the two Where sources, the four colour nodes and two brightness nodes, the Problems entries, the presets, and the 2D legend |
+> | `principia_dd_colouring.md` §3.2 | Q4's sentence |
+> | `principia_colour_composition.md` §1–§2 | Shape n̂'s nodes unchanged. Added (SM11): a flat point as an input beside n̂; its Gradient fields; lattice site sets (square, hex) with flat distance; the Palette (categorical by tile); band patterns for layers (grid, checker, tile edges, stripes, rings, site dots) |
+> | none of the contracts' layouts | (SM2) |
+>
+> ## SM15. In the stain graph editor
+>
+> The state map adds one source and a few occupants to the existing stain graph (render GUI spec §0–§9). It does not add a
+> mode, and it does not touch the backbone. Art boards: `boards/` (1 editor, 2 base and layers, 3 inspectors, 4 ports,
+> 5 presets, 6 Explore).
+>
+> ```
+> Chart position ⟨chart⟩ at the playhead ─→ colour slot:  base ─→ layer 1 ─→ layer 2 ─→ … ─┐
+> Chart position at the playhead, at t = 0 ─→ brightness slot (unchanged) ─────────────────┴→ Replace-L / Multiply → post* → OUT
+> Shape n̂ ─→ its own colouring (unchanged), an alternative source in the same colour slot
+> ```
+>
+> **One new field subtype.** `field` gains `point⟨q⟩`, q ∈ sphere · plane · cylinder · simplex: a position on the
+> quotient plus the SM5 status (ok, clamped, past edge, undetermined). Port types and wire colours are unchanged. Shape
+> n̂ is a `point⟨sphere⟩`, and its nodes accept exactly that, as now.
+>
+> **The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0 · a fixed t), when it
+> leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing. At t = 0 it is the pixel's own IC
+> through the projection, with no march. It is one node; a brightness field that compares two times takes two copies of
+> it. *Shape n̂* is a separate node and is unchanged; on the shape sphere chart both are offered.
+>
+> **Colour slot.** From Shape n̂: its own nodes, unchanged. From Chart position, on any chart: a **base** (Gradient · Site blend ·
+> Palette · Picture) and an ordered list of **layers** (grid lines, checkerboard, hexagon / triangle / brick edges,
+> stripes, rings, site dots; on the sphere its own: lat / lon lines, checkerboard, stripes, Fibonacci cell edges, site
+> dots), each with spacing, colour and opacity (SM11). Layers are the existing `bandmask` and
+> `site_overlay` combinators with flat band patterns; the inspector shows them as a stack under the base, reorderable,
+> each removable.
+>
+> **Brightness slot and combine.** Unchanged: Displacement and Left its starting tile are brightness occupants like any
+> other, and Replace-L scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with L, so every level stays in gamut (0 of
+> 99,710 samples out). Before that, the 0.30 level clipped to near-black, the undetermined colour.
+>
+> **Inspector.** The library and the drag-off-a-pin menu offer only what the wired source takes. Swapping the source
+> between Shape n̂ and Chart position puts each base's counterpart in its place (Position ↔ Gradient, Site blend ↔ Site
+> blend, Bands ↔ Palette); changing Chart position's chart re-offers the bases and layers that exist on the new one. Every
+> setting stays on the graph, so switching back restores it exactly.
+>
+> **Problems.** Warning where a brightness node replaces L that the base spends on position (Shape n̂'s position map and
+> Bands; a 1D gradient; the sphere's 3D and the cylinder's 2D gradient). Warning where a brightness node replaces L under lightness layers.
+> Info per compile: left the chart (clamped), ended (held), past a bounded edge, undetermined, as counts; no SimState,
+> payload or descriptor change.
+>
+> **Presets** (prototype `smPreset`): Classic shape colour (the Shape n̂ node → Site blend, as today); and on Chart
+> position, on any chart: Where (Gradient 2D, 3D on the sphere); Graph paper (Gradient + checkerboard + grid lines); Basins
+> (Palette: hexagons, Fibonacci cells on the sphere); Displacement (Gradient + Displacement); Flow (Picture); Mixing
+> (Palette: square, lat × lon on the sphere, + Left its starting tile). A preset inserts an ordinary editable graph.
+>
+> **Explore.** The state map is a stain picked like any other. Compass, play bar and chart controls are unchanged. The
+> legend is the colour slot drawn over the target chart (base and layers), with a ring at the hovered system, drawn on the
+> edge when it has left.
+>
+> **Backwards compatibility.** Nothing to migrate: every saved stain loads and renders as before.
+>
+> **WGSL sketch.** The source compiles to calls that already exist: `encode(r, p)` (ROUNDTRIP), the target chart's
+> inverse, `fold_q`, the status. The base and each layer are functions of `Point` only.
+>
+> ```wgsl
+> struct Point { u: f32, v: f32, s: vec2<f32>, q: u32, status: u32 }   // chart coords, squashed coords, quotient, SM5 status
+> fn where_now(px: Px) -> Point { let z = encode(px.r, px.p); return fold(target_inverse(z)); }
+> fn gradient_2d_plane(pt: Point) -> vec3<f32> { return vec3(0.75, 0.095 * pt.s.x, 0.095 * pt.s.y); }   // OKLab
+> fn layer(base: vec3<f32>, pt: Point, kind: u32, n: f32, col: vec3<f32>, alpha: f32) -> vec3<f32> {
+>   return select(base, mix(base, col, alpha), in_band(kind, cell_xy(pt, n))); }                       // bandmask
+> ```
+>
+> **Tests.** (1) Every saved stain renders bitwise the same with the state map in the build. (2) That arm fires: removing
+> Shape n̂'s registration changes the render. (3) A mixed quotient on Displacement is an error, not a silent cast.
+> (4) Switching the source chart and back restores the base's settings exactly. (5) Layers compose in order: grid over
+> checkerboard differs from checkerboard over grid wherever both are in band.
+
+*The three points §0 settles, applied as settled (the human's message):* **Shape n̂** is a separate node, kept exactly
+as it is, nothing migrated (§0: "just shape n node is different to this node, understood?"; "Shape n̂ kept as its own
+mode"). **The node is called Chart position** (§0: ""Chart position" — chosen for the node"). **The exact last
+position is not stored** (§0: "I wouldn't store the exact last position, I don't want to change the structs"); SM5a's
+edge clamp is the behaviour.
+
+*Decided per R-369 (mechanical consequences and routine choices; the human may veto any):*
+
+- **H1. One node.** §0's last quote makes Chart position one node with a time setting; SM14's "the two Where sources"
+  is read as that one node, a brightness field that compares two times taking two copies of it (SM15).
+- **H2. The port.** `principia_state_map.md` is ported to `docs/design/`, every line of the file kept and its headings
+  unchanged; the port adds a header note, *Transcribed from the prototype (R-542)* paragraphs (what the code does where
+  the file is silent, transcribed from `state_flow.html`, not re-derived), and *Port's note* paragraphs naming the RQs.
+  Where the file and the code disagree, the code is carried and the file's words kept (RQ-499). The prototype was read
+  as source; no browser was available to run it.
+- **H3. `decode_failed`.** A `decode_failed` sample the chart does not classify as not a system draws blank, as R-511
+  draws it, and Chart position tests the `state` lane before it projects; SM5's undetermined is `sim_failed` only,
+  `#141418` (R-467, R-511).
+- **H4. The status styles under a brightness node.** Chart position's statuses keep their own style in every mode; with
+  a brightness node the stain ends in the one post that draws each style over the combiner's output, as colour
+  composition §4.1's greyscale mode does.
+- **H5. The picture.** Image mode's picture is a `RenderState` field, its tier assigned in R-484's table by the task that
+  builds it (TASK-M7-49); the texture is a render-side bind group, no sim struct (SM2).
+- **H6. The chart inverses.** Where Chart position reads a chart's inverse in the fragment, it is generated to WGSL from
+  the one Rust source (R-116), never hand-written; whether it may read one at all is RQ-489.
+- **H7. The calibration values.** SM6's compaction scales `κ` (latent 3, momenta 0.3, the tilt's `s` π, dilation 0.6),
+  given no source, join Q8's tiling defaults in one calibration requirement (R-71), the prototype's values as the
+  starting values (RQ-487 (a)).
+- **H8. The requirements.** The draft `requirements_patch.yaml` is applied with `R-NEW` as R-542 and each `MILESTONE` as
+  M7 (the colour pipeline and the stain editor, `plan/MILESTONES.md` § "M7 — Colour composition and the display chain")
+  or M8 (Explore and the extension, § "M8"); every source heading is checked with `plan/tools/sections.py`; each verify
+  is completed with its cargo test and SM12's arm as written, the copies test the bitwise IC identity. Requirements are
+  added for the SM12 rows the draft lacked (Invariance, Conserved axes, Four results), for SM7's frame, SM8's Picture,
+  SM10's fade and ensemble, SM11's brightness occupants, SM15's tests (1) to (3), and the docs port. Each draft
+  statement the port reworded keeps the draft's words as a *Was* in its requirement's note (PR #270's code review, 3);
+  the edge-clamp requirement keeps the draft's "'none' must be available as a debug option", its difference from SM5,
+  SM11 and SM15 queued (RQ-505).
+- **H9. The tasks.** TASK-M7-46, the docs port, is done, closed by this ruling's PR. The colour pipeline: TASK-M7-47
+  (Chart position: SM1 to SM5, SM7; physics review on SM1, SM4 and SM5; waits on RQ-489), TASK-M7-48 (the bases, layers
+  and brightness occupants: SM6, SM11). The GUI: TASK-M7-49 (Picture, fade and ensemble: SM8, SM10), TASK-M7-50 (Replace-L's
+  chroma scaling, SM15; waits on RQ-496), TASK-M7-51 (the stain editor: SM15; the gui reviewer with `boards/`) and
+  TASK-M8-66 (Explore: the legend and ring of SM9, SM3's never-a-gap and copies, the firewall). The stain editor is
+  M7's (TASK-M7-22 to TASK-M7-24), so its state map work is M7's; the Explore legend is M8's (TASK-M8-22). Each
+  pipeline task states SM2's constraint. The inspector's controls for the picture's choice and upload, the fade's
+  toggle and SM7's colour frame are REQ-GUI-340's (PR #270's code review, 2), closed by TASK-M7-51, which builds the
+  inspector (gui re-review G6); TASK-M7-49 keeps the gui reviewer, the picture's and the fade's look on the figure
+  being GUI-facing. *Was:* "TASK-M7-49 has the gui reviewer, and its controls (…) are REQ-GUI-340's".
+- **H10. The queue.** Q1 to Q9 are RQ-480 to RQ-488, each with its recommendation as option (a), each (a) applied
+  meanwhile; Q4 is recorded in dd_colouring §3.2 and nothing in the vMF colouring changes.
+- **H11. One projection (PR #270's code review, 1; re-review C1 to C3).** SM1's `P_T` is "the target chart's
+  projection, the one the trace uses", so the target projections, the leaving rule and the curve axis's nearest point
+  are one Rust source in `crates/kernel`, beside the encode (the only crate rust-gpu compiles), its WGSL emitted to
+  `crates/render/wgsl/` as TASK-M2-25's decode and encode are. TASK-M7-52 builds it and tests its native build against
+  its generated WGSL (REQ-COL-134). Every consumer calls it, never a second implementation: Chart position (TASK-M7-47),
+  the hover trace's `z(t)` projection (TASK-M8-10), the line system's trace projection and its breaks (TASK-M8-49) and
+  the follow-up's per-axis leaving and curve projection (TASK-M8-58), each depending on TASK-M7-52 and each carrying a
+  check with a second implementation as its failing control (REQ-COL-135, closed by TASK-M8-58, the last). It reads no
+  chart from a colour occupant, so it does not wait on RQ-489. *Was:* "one Rust source, built by TASK-M7-52 and reused
+  by TASK-M7-47 (generated to WGSL for the fragment, R-116) and by TASK-M8-58's trace, which depends on it".
+- **H12. "Left" on main's encode (PR #270's physics review, P4).** Main's encode clamps (inverse encode contract Part 3)
+  and never returns a non-finite `z`, so the prototype's "both finite" test never fires there; the app's left status is
+  read from a shown coordinate's clamp, a definition TASK-M7-52 writes (R-72; REQ-COL-133), the clamp's margin
+  (`|q| ≥ q_max(1 − 2ε_q)`) stated in the four results' verify.
+- **H13. The tolerances (PR #270's qa review, F2; physics review, P2).** The `t = 0` identity's tolerances on the sphere
+  (the prototype's 1.5e-6, measured without R-141's gauge) and on ν × h (the prototype's 4.9e-4, its 1/1000 curve table)
+  join the calibration requirement, proposed with their measurement on the app by TASK-M7-47, never chosen by the test.
+- **H14. The boards (PR #270's gui review, G1 and G5).** The state map's boards are read for their new elements only, the
+  shell following `02_stain.png` and `01_main.png` (render GUI spec §G13's R-542 bullet, which names each departure).
+  Board 1's Problems-row buttons and board 4's "Set both to this chart" are not in SM15's text and are board-only, not
+  built. The Problems counts reach the GUI from the engine through the snapshot, never computed in the GUI
+  (gui_state_contract §1). The legend's colour block is the stain's own key, first, then the brightness key, R-541
+  P13's trace block and the debug view's key (§G6).
+- **H15. The consumers' agreement and its tolerance (PR #270's code re-review, C4 and C5; applied per R-369).** The host
+  consumers (TASK-M8-10, TASK-M8-49, TASK-M8-58) call the kernel function on the CPU and stay bitwise against it; Chart
+  position's fragment, which R-297 lets compile with fast-math, is held to the calibrated native–WGSL agreement
+  tolerance, as REQ-COL-134 is, its control shown to exceed it; the snippet `cargo xtask build-kernel` emits to
+  `crates/render/wgsl/` is exempt from REQ-COL-135's symbol check. TASK-M7-52 proposes that tolerance (R-71, R-297's
+  form), using its measured value until the M7 gate, and does not wait on RQ-487.
+- **H16. The status margin band (PR #270's physics re-review, P1; applied per R-369, after R-296).** A status is a
+  threshold on a continuous value (REQ-COL-133), so under R-297's fast-math a state within the agreement tolerance of a
+  link margin can change status on the GPU. REQ-COL-134 and REQ-COL-135's fragment arm hold the statuses equal outside
+  that band and accept either inside it, the point still held to the tolerance, the band's count reported and the seeds
+  including states just inside and just outside it; TASK-M7-52's proposal bounds or names the band's width, recorded as a
+  fixed constant. The host arms stay bitwise, statuses included.
+
+*Checked against `main` (4a32decf), `rulings/print-graph` (PR #268, 1b7ca0ed), `task/TASK-M2-24` (PR #262, 8096650d),
+`task/TASK-M2-34` (PR #269, a0cf17c5), `task/TASK-M2-28` (495deb17) and the rulings the file assumes (the human's
+message: "If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and
+queue it rather than resolving it"):* five conflicts are queued, not ruled:
+
+- **RQ-489:** Chart position reads the target chart and its inverse, which seam 6 and render contract Part 4 keep from
+  every colour occupant, a source included; and SM11's "a fixed t" (the human's message too: "or a fixed t") needs a
+  state other than the playhead's, which SM2 forbids storing. Meanwhile the playhead and `t = 0` only; TASK-M7-47 waits.
+- **RQ-496:** SM2's "the brightness slot is None" against L-ownership's combiner choice and SM11/SM15; SM15's Replace-L
+  chroma scaling against dd_colouring §3.5 ("Preserves hue and chroma exactly"), its test 6 and colour composition
+  §4.1's truth table (R-77), and against SM15's own "renders bitwise the same". Meanwhile Replace-L unscaled;
+  TASK-M7-50 waits.
+- **RQ-497:** main's Shape n̂ is a `vector` field with one colour editor, so SM15's Position and Bands counterparts are
+  the prototype's; §6's morphing against SM15's gate; §3.1's one-param source and band-masks as posts; board 4's sphere
+  paragraph against SM11; PR #268's Print graph sharing "Palette", "Flow", "field" and "post", and that branch's queued range
+  question for a payload field input. Meanwhile (a).
+- **RQ-498:** SM1 folds the mirror where SM4's shape-sphere row and the prototype's code read the signed `n̂`
+  (payload §5's `n`), and R-141's decode gauge puts a lower-hemisphere pixel's system on the upper hemisphere, so the
+  `t = 0` identity on a both-hemispheres view holds modulo the mirror; in-square mirror pixels (R-141, R-503 on
+  `task/TASK-M2-28`) agree to rounding, not bitwise; the trace draws a left or past-the-end sample as no value (R-538
+  TF1), where SM5a clamps, and SM12's Four results says the opposite of SM5a; the latent charts have no navigation edge
+  (R-469, R-537 EX3). Meanwhile (a), the code's reading. *Was (before PR #270's physics review, P1):* "the encode folds
+  the mirror, so on the shape sphere Chart position and Shape n̂ read mirror points where `n₃ < 0` …", the meanwhile
+  folding the target.
+- **RQ-499:** the code against the file: the preset names, the triangle palette's L, Picture under brightness, the fade
+  and the Fibonacci cells' swatches. Meanwhile the code.
+
+*Found by PR #270's review, queued, not ruled:* RQ-500 (gui G1), board 6's "Edit graph…" against PR #268's Print panel
+button, (c) applied meanwhile, no such button; RQ-501 (gui G1), board 6's ring with no hover trace or listen hint
+against R-541 and §G2, (a) applied, the trace kept and no figure ring while it is shown (re-review G7); RQ-502 (gui G4), the layers as their own graph node (boards 1, 4)
+against §3.1 and §9, (a) applied, one colour node; RQ-503 (physics P3), the prototype's `AMIN = 0.05` against R-21's
+`α_min = 0`, main's applied; RQ-504 (physics P1), the one-hemisphere view's target, the code's full sphere applied;
+RQ-505 (code 3), "none" as a debug option (the draft) against an ordinary setting (SM5, SM11, SM15, the code), the code
+applied. RQ-489's statement is corrected: the view chart's inverse is already in the encode `ROUNDTRIP` runs; only
+another target needs a second inverse (physics P5).
+
+What agrees: R-407's four extension types and R-412's mirror hemisphere (SM3, SM4); R-537 EX7(b)'s canonical quad and
+EX4's coarse-ancestor fill (SM3); R-470's blank for not a system and R-511's for `decode_failed`, as PR #269 draws them
+(H3); PR #269's field ramps' `#141418` for a non-finite value (SM5); TF1's definition of leaving, word for word SM5's;
+PR #262's encode as the quotient map (SM1, which also removes translation and the boost); `task/TASK-M2-28`'s
+exponential map, which has no θ or φ axis (SM4); PR #268's Print graph, a separate graph after the stain, its ruling
+showing the bare ground where a Chart position stain draws blank. No open branch adds an R, RQ, REQ or TASK id this port
+uses; the RQ ids PR #268 adds and the five another agent holds, between RQ-489 and RQ-496, are left alone.
+
+*What it extends:* **R-64** (the stain graph gains the `point⟨q⟩` subtype and the Chart position source; render GUI spec
+Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412, R-469, R-470, R-511, R-537 and R-538.
+
+R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
+
+Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
