@@ -1020,6 +1020,10 @@ run, each drawn as the figure draws it. With sound on it adds `♪ ◀ left ▶ 
 channel colours. The full key is `Trace… › key…`. The block is a key of figure marks (R-539), not a dimension of the
 stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 
+**The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
+base and layers, drawn over the target chart's square, with a ring at the hovered system where it is now, drawn on the
+edge when it has left (board 6).
+
 ## G7. Chart builder (`03_chartbuilder.png`)
 
 - **Each axis has a kind:** latent direction (any mix of the eight `z` components, normalised; a normalise button shows
@@ -1372,6 +1376,11 @@ Overlays menu (R-67).*
 
 A live **preview** (shape-sphere or illustrative slice, toggle) renders the current `OUT`.
 
+**Problems for the state map (R-542; state map SM15).** A warning where a brightness node replaces L that the base
+spends on position (Shape n̂'s position map and Bands where it has them; a 1D gradient; the sphere's 3D and the
+cylinder's 2D gradient); a warning where a brightness node replaces L under lightness layers; and, per compile, an
+info line counting left the chart (clamped), ended (held), past a bounded edge (RQ-498) and undetermined.
+
 ---
 
 ## 2. The pipeline
@@ -1399,7 +1408,10 @@ composition.md` §5).
 - **Node** = `{ id, kind, inputs[], outputs[], params }`. Kinds: `source`, `colour`, `brightness`,
   `combiner`, `post`, `OUT`.
 - **Port** = a typed, directional (in/out) connection point. Wire-carried types:
-  - `field` — a ctx field, **tagged with a subtype**: `scalar` / `vector` / `categorical`.
+  - `field` — a ctx field, **tagged with a subtype**: `scalar` / `vector` / `categorical` / `point⟨q⟩` (R-542: a
+    position on the quotient q ∈ sphere · plane · cylinder · simplex with its four-result status, carried by the Chart
+    position source, `principia_state_map.md` SM15; Shape n̂ stays `vector`, RQ-497). *Was:* "`field` — a ctx field,
+    **tagged with a subtype**: `scalar` / `vector` / `categorical`." (stale value, replaced by R-542)
   - `vec3` — a colour.
   - `f32` — a lightness.
 - **Wire** = `out-port → in-port`, type-checked (§6).
@@ -1414,6 +1426,12 @@ composition.md` §5).
 | `combiner`   | `colour: vec3?` + `brightness: f32?` | `vec3` | **fixed singleton**; Replace-L / Multiply |
 | `post`       | `vec3` (+ optional `field` ins) | `vec3` | one op (overlay / band-mask / tone); chained |
 | `OUT`        | `vec3`                          | —      | **fixed singleton**; cannot be deleted |
+
+**Chart position (R-542).** A `source` whose out-port is `point⟨q⟩`. Its params are the chart (default: the view's
+own), at (playhead · `t = 0`), when it leaves the chart (clamp · none) and after its run ends (hold · outcome colour)
+(state map SM15; SM15's "a fixed t" waits on RQ-489). Its layers are combinators inside the colour occupant (colour
+composition §1.3, §1.5), not `post` nodes. That this table gives `source` one param, and that SM15 seats the layers in
+the colour slot, are in RQ-497; they apply meanwhile as written here.
 
 ---
 
@@ -1445,6 +1463,9 @@ combiner's two inputs.
 - **Multi-source mappings expose multiple input ports** on the consuming node (e.g. a derived source
   taking two `field` ins for a `top1 − top2` margin, or a `gradient-magnitude` node). This is
   distinct from multi-wire-per-port (which is disallowed, §6).
+- **Chart position (R-542).** Shape n̂ and Chart position are two sources; on the shape sphere chart both are offered.
+  A brightness field that compares two times (Displacement, Left its starting tile) takes two Chart position sources,
+  one at the playhead and one at `t = 0` (state map SM15).
 
 ---
 
@@ -1458,6 +1479,10 @@ combiner's two inputs.
 - **In-port arity: exactly one wire.** Dropping a new wire onto an occupied in-port **replaces** the
   old (last-write-wins).
 - **Out-port arity: unbounded** (fan-out, §5).
+- **`point⟨q⟩` (R-542).** Two `point⟨q⟩` inputs of different quotients on one node (Displacement) have no distance
+  between them: a Problems error, never a silent cast (state map SM15, test 3). SM15's "the library and the
+  drag-off-a-pin menu offer only what the wired source takes" meets this section's morphing rule; that is RQ-497, and
+  meanwhile the rule above stands between subtypes.
 
 ---
 
@@ -1505,13 +1530,21 @@ Clicking a node fills the right inspector with **that node's editor**, chosen by
 | `colour` ← `vector` (n̂)          | **shape-sphere / SiteBlend editor** (sites × kernel × swatch-or-gradient × blend-space) |
 | `colour` ← `scalar`              | **gradient editor** (built-in LUT or custom stops, cyclic) |
 | `colour` ← `categorical`         | **palette-swatch editor** (e.g. event palette) |
+| `colour` ← `point⟨q⟩` (R-542)    | **base-and-layers editor**: a base (Gradient · Site blend · Palette · Picture) and a reorderable stack of layers, each with spacing, colour and opacity; what it offers follows q (state map SM11, SM15; board 3) |
 | `brightness` ← any               | **gradient / compaction editor** (greyscale + polarity) |
+| `brightness` ← two `point⟨q⟩` (R-542) | Displacement · Left its starting tile (state map SM11) |
 | `combiner`                       | Replace-L / Multiply |
 | `post`                           | that op's controls (grid freq, physics κ/masses, band, tone, …) |
 | `source`                         | field dropdown (which ctx field) |
+| `source` Chart position (R-542)  | chart · at · when it leaves · after its end (state map SM15) |
 
 The source-type-morph is **automatic**: the wire *is* the type, so there is no manual site-blend /
 field-ramp toggle (unlike the standalone explorer prototype — the toggle collapses into the wire).
+
+**Switching the source (R-542).** Swapping between Shape n̂ and Chart position puts each base's counterpart in its
+place (Site blend ↔ Site blend; Position ↔ Gradient and Bands ↔ Palette where Shape n̂ has those nodes, RQ-497), and
+changing Chart position's chart re-offers the bases and layers the new quotient has. Every setting stays on the graph,
+so switching back restores it exactly (state map SM15).
 
 **Advanced ▸ edit shader** sits at the bottom of every node's inspector: reveals the generated WGSL
 **for that node**, editable in place (per-node eject, `principia_colour_composition.md` §5). Editing
@@ -1709,6 +1742,9 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
 - **Bivariate presets** (`n̂ × FTLE`, `Outcome-class × diffusion`, …) load a graph with **both**
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
+- **State map presets (R-542; state map SM15, board 5).** Classic shape colour (Shape n̂ → Site blend, as today), and
+  on Chart position, on any chart: Where, Graph paper, Basins, Displacement, Flow and Mixing. Each inserts an ordinary
+  editable graph; the prototype's labels and settings are in state map SM15 (the names differ: RQ-499).
 
 ---
 
