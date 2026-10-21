@@ -260,10 +260,17 @@ read, before anything renders:
 - **An unknown link id**, one the reading build does not have, is "state present, cannot recreate" (§9), naming the
   missing link and its block.
 - **A changed definition**, a link id whose registry entry's content differs from the writer's, is refused the same
-  way. The schema version hashes every entry by its semantic content (`principia_dd_generation_root.md` §3.9, "The
-  hash"); meanwhile a record whose schema version differs from the reader's is refused, naming its links as possibly
-  changed. Whether each recorded link carries its own entry hash, so that the refusal names exactly the changed link,
-  is RQ-385.
+  way. **Each recorded link carries its own entry hash (R-521):** the record holds, beside the build hash and the
+  schema version, one entry hash per block, the hash of that link's registry entry by its semantic content
+  (`principia_dd_generation_root.md` §3.9, "Each entry's own hash"), a u64 written as a string (R-322), four in all
+  (about 100 B of JSON). The reader compares each against its own registry's entry of that id: a mismatch is "state
+  present, cannot recreate", naming exactly that link; when all four match, a schema version other than the reader's
+  refuses nothing on the links' account, and the schema version stays the whole-ledger check of what the stored
+  payload's bits mean, so a stored payload is not reused across it and the view re-integrates. A record with no entry
+  hashes is read as before R-521: a schema version other than the reader's is refused, naming its links as possibly
+  changed. *Was:* "meanwhile a record whose schema version differs from the reader's is refused, naming its links as
+  possibly changed. Whether each recorded link carries its own entry hash, so that the refusal names exactly the
+  changed link, is RQ-385." (stale value, replaced by R-521).
 - **Never substitute.** No default link stands in for one the record names, and no default value for a parameter it
   records. A fallback must be visible (below).
 
@@ -277,7 +284,7 @@ does. When the record does not fit, the writer drops whole tiers from the bottom
 
 | Tier | Contents | Dropped |
 |---|---|---|
-| **1. Physics** | The build hash and schema version, and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
+| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
 | **2. Colour** | `RenderState` as built-ins: the colour mode's enum and every parameter, the ramp window, the overlays, the line system, the playhead, the hover and the debug view; and the sidecar's `f3_fill` (R-472). | Only after tier 3. |
 | **3. Custom source** | Each ejected WGSL node's source (custom frag shaders and nodes); the `source` flag (§2, bit 2). | First. |
 
@@ -312,6 +319,11 @@ payload, a saved tilted chart and a non-default link included, for tier 1 alone,
 1,516 B deflated. If 64² no longer holds one tile of tier 1, or of tiers 1 and 2, this section says so. **The writer
 never truncates** to fit: a record whose tier 1 does not fit is reported as not embedded, and the `tEXt` chunk still
 carries it whole.
+
+**Whether tier 2 splits waits for this re-measure (R-522).** RQ-386 asks whether tier 2 should split, its built-ins
+and the ramp window above the overlays and lines, if tier 2 often does not fit at small sizes. The human rules it after
+the re-measure: TASK-M7-44 reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default
+stain and for a typical edited one, and RQ-386 returns to the human with those numbers. Meanwhile tier 2 is whole.
 
 **Config-only payload 596 B JSON → 382 B deflated. Full `frag.glsl` 11,367 B → 2,969 B.**
 

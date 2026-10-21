@@ -71,8 +71,10 @@ The last one is what "decouples palette/compactification changes from integratio
 (`principia_chart_reference.md` §0, "every chart ends here"), not to any one chart: changing a link changes what every
 chart's pixels mean, and switching chart never switches links, since this Part's robustness test is "same chart,
 different link". They are chosen and tuned in the GUI's Decoder window (`principia_render_gui_spec.md` §G7a); the axis
-warps are per-axis chart properties, owned by the Chart builder (§G7). A chart preset carries no links (R-478, W4;
-whether one may pin them is RQ-380).
+warps are per-axis chart properties, owned by the Chart builder (§G7). A chart preset carries no links (R-478, W4),
+unless it pins them: a preset or a saved chart may optionally pin the links it was designed under, and loading it
+applies them, with a notice, in one undo entry, never silently (R-516; `principia_render_gui_spec.md` §G7). *Was:*
+"whether one may pin them is RQ-380" (stale value, replaced by R-516).
 
 ### Link functions — the mass-simplex / logit question
 
@@ -96,7 +98,8 @@ The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (ma
 
 **Tunable parameters (R-481 ⚑).** Each registry entry declares its tunable parameters, each with a name, a default, an
 allowed range and a citation: today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, with defaults 5 and 2
-(R-10); `α_min` stays fixed (R-21; RQ-382). The allowed range keeps **all three** requirements above for **every**
+(R-10); `α_min` stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)",
+a stale value, replaced by R-518). The allowed range keeps **all three** requirements above for **every**
 value in it, and the registry's check tests them at the range's ends and on a sampled interior
 (`principia_dd_generation_root.md` §3.9). Everything that reads a parameter by name reads the active value: the link
 functions, the codomain's bounds, the encode's clamps and its layer-1 range check (`principia_inverse_encode_contract.md`
@@ -122,9 +125,15 @@ signature, every export and every sidecar carry them through the one canonical s
 (`principia_gui_state_contract.md` §2). A figure that names its link but not its `μ_max` is not reproducible. A record's
 decoder is the reading build's registry plus the record's links: a link id the build lacks, or one whose definition
 changed, is refused ("state present, cannot recreate", naming the link), never replaced by a default
-(`principia_dd_image_embedding.md` §6; R-483, X4; RQ-385).
+(`principia_dd_image_embedding.md` §6; R-483, X4). Each recorded link carries its own registry-entry hash, so the
+refusal names exactly the changed link (R-521; *was:* "R-483, X4; RQ-385", a stale value, replaced by R-521).
 
 **What makes an alternative worth offering.** Not any function with the right codomain — one whose Jacobian differs *enough to stress a claim*. Two links inducing near-identical measures agree trivially and prove nothing. The registry should span genuinely different sampling densities (softmax vs. a simplex map that reaches the edges; `t^γ` at spread-apart γ; sigmoid vs. a heavier-tailed bounded map) so that agreement across them *means* something. To make that deliberate, a registry entry carries — beyond forward, inverse, and log-det — a note on **which region of the block it over- and under-samples relative to uniform**, so a robustness sweep picks alternatives that disagree where it matters rather than three flavours of the same bias.
+
+**No new entry until a study needs one (R-519).** The registry's entries stand as they are; an alternative that
+disagrees enough to stress a claim (a temperature-softmax, a bounded map heavier-tailed than softsign, a simplex map
+uniform over the simplex) is added when a study needs one, by the task that runs that study, as a definition (R-72)
+under physics review, through `principia_dd_generation_root.md` §3.9's table and its check.
 
 ---
 

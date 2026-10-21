@@ -23,9 +23,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   (chart_decoder_contract rule 6).
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console. The one
-  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. A decoder
-  badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
-  whether it may be there *(conformed to R-479)*.
+  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. Badges go
+  in the chrome or the status line, never over the figure: the decoder badge, naming the chart and any link off its
+  default, sits in the figure's header strip above the plot *(conformed to R-479 and R-523; was: "A decoder badge in
+  the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks whether it
+  may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
 

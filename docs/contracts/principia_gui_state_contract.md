@@ -148,13 +148,27 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   four momentum controls share the Momenta row's choice (R-479, E1). Its `SetField` path is `SimField::Links`, the
   whole `Links` in one edit, a sim key that re-integrates and an undoable history entry (R-69), logged as "SetField
   Links before → after" with each block's id and values; the Decoder window's staged edits are the GUI's own until its
-  Apply sends it (R-479, E4). No chart edit sends it (R-478, L2), and neither Home nor a section reset does (R-479,
-  D3). `ViewUI`'s open windows gain `Decoder`, listed after Chart builder (R-478, L4).
-- **The decoder's identity on import (R-483, X4, X5).** Every export carries, beside `SimConfig` and `RenderState`, the
-  build hash and the schema version (`principia_dd_image_embedding.md` §6). One function of the contract reads every
-  path before anything renders: a link id the build's registry lacks is "state present, cannot recreate", naming the
-  link and its block; meanwhile a schema version other than the build's is refused the same way (whether each link
-  carries its own entry hash is RQ-385); no default link or default value ever stands in. A record whose `links` is
+  Apply sends it (R-479, E4). No chart edit sends it (R-478, L2), but for one: loading a chart preset or a saved chart
+  that pins links sends the chart and the pinned `Links` together, a command of several edits, one history entry
+  (R-466's rule above), and the GUI posts a notice naming each block it changed (R-516); neither Home nor a section
+  reset sends it (R-479, D3). A preset's or saved chart's pin, the whole `Links` it stores, is that entry's, the GUI's
+  own settings beside the preset, never `SimConfig`'s, so no export carries a pin: it carries the links active
+  (R-516). *Was:* "No chart edit sends it (R-478, L2), and neither Home nor a section reset does (R-479, D3)." (stale
+  value, replaced by R-516). `ViewUI`'s open windows gain `Decoder`, listed after Chart builder (R-478, L4).
+- **The decoder's identity on import (R-483, X4, X5; R-521).** Every export carries, beside `SimConfig` and
+  `RenderState`, the build hash, the schema version and, per block, the recorded link's entry hash
+  (`principia_dd_image_embedding.md` §6; `principia_dd_generation_root.md` §3.9, "The hash"). One function of the
+  contract reads every path before anything renders: a link id the build's registry lacks is "state present, cannot
+  recreate", naming the link and its block; a block whose entry hash differs from the build's entry of that id is
+  refused the same way, naming exactly that link (R-521); when every block's hash matches, a schema version other than
+  the build's refuses nothing on the links' account, the schema version staying the whole-ledger check of what a
+  stored payload's bits mean, so a payload the record holds is not reused across it and the view re-integrates; the
+  build-hash component that detects a decoder or chart change (REQ-TOOL-112) still refuses what it detects. A record
+  that carries no entry hashes is read as before R-521: a schema version other than the build's is refused, naming its
+  links as possibly changed. No default link or default value ever stands in. *Was:* "the build hash and the schema
+  version (`principia_dd_image_embedding.md` §6)" and "meanwhile a schema version other than the build's is refused
+  the same way (whether each link carries its own entry hash is RQ-385); no default link or default value ever stands
+  in." (stale value, replaced by R-521). A record whose `links` is
   `{}`, written before R-483, recreates under this build's defaults if its build hash is this build's, and otherwise
   only on the user's explicit acceptance, labelled "links assumed".
 - **The round-trip rule (R-484).** Importing an export is the identity on `SimConfig` and `RenderState`, field for field

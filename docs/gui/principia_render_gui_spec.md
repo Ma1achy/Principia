@@ -96,8 +96,12 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
   label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
   **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
-  The decoder badge in the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it
-  may be is RQ-387.
+  **Badges go in the chrome or the status line, never over the figure (R-523).** The decoder badge, and every badge
+  that says what the figure is or how it was recreated, sits in the figure's header strip, the Figure panel's chrome
+  above the plot and outside it (§G2's Figure). The figure's own marks (the trace, contour lines, the hover label, the
+  lock reticle, a marked point) draw on the figure; generic GUI panels and badges do not. *Was:* "The decoder badge in
+  the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it may be is RQ-387."
+  (stale value, replaced by R-523).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
@@ -193,7 +197,9 @@ view the manifold.
   configuration one item while α and β use one link family, `α tanh / β sigmoid` when they differ), and a
   **Decoder…** button that opens the Decoder window (§G7a). The row is tinted amber whenever any block is off its
   default, its tooltip naming the blocks, so a non-default decoder is never invisible. The links are the decoder's,
-  not the chart's: no chart edit changes them (R-478, W1).
+  not the chart's: no chart edit changes them (R-478, W1), but for one: loading a chart preset or a saved chart that
+  pins links applies its pinned links with it, with a notice (§G7's presets; R-516). *Was:* "no chart edit changes
+  them (R-478, W1)." (stale value, replaced by R-516).
 - **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
   two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
   the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
@@ -281,11 +287,14 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
   (R-449; payload §2, "What a person reads").
 
-**The decoder badge (R-479, D4; applied meanwhile, RQ-387).** A badge in the canvas's top-left corner names the chart
-by its axes and, while any block is off its default, each block off its default after a "·", for example "z_α × z_β ·
-stick-breaking masses" or "z_α × z_β · μ_max 4 masses"; at the defaults it names the chart alone. It hides with the
-layer (F3, present mode), as the Home button does. A recreated view that is a fallback (an import that assumed default
-links, or an embedding that dropped a tier) says so in the same badge (R-483, X5; R-484, RT3).
+**The decoder badge (R-479, D4; its place R-523).** A badge in the figure's header strip, a one-line strip of the
+Figure panel's chrome above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
+off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
+· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only; the plot keeps its aspect
+below it, and nothing of the strip draws over the plot. It hides with the layer (F3, present mode), as the Home button
+does. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
+says so in the same badge (R-483, X5; R-484, RT3). *Was:* "**The decoder badge (R-479, D4; applied meanwhile,
+RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value, replaced by R-523).
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample
@@ -831,6 +840,16 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
   the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
   REQ-GUI-224); a saved preset stores them with its axes.
+- **A preset may pin links (R-516).** Pinning is optional and off by default: a preset, or a saved chart (§G2's Save
+  view as chart), with **Pin the active links** on stores the whole `Links`, each block's id and parameter values, as
+  they are when it is pinned ("designed under stick-breaking"); turning it off clears the pin. The pin is the preset's,
+  the GUI's own settings, kept with the preset and never in `SimConfig`. Loading a pinned preset whose pin differs from
+  the active links applies the pin with the chart, one command and one undo entry (one Ctrl+Z restores the chart and
+  the links together), and posts a notice to the console, shown as the footer's latest message, naming each block it
+  changed, for example "Preset 'Burrau edge' pinned its links: masses stick-breaking (was softmax·tanh μ_max 5)"; the
+  Links row's amber and the decoder badge then show the change (§G2). A pin equal to the active links changes nothing
+  and posts nothing; an unpinned preset leaves the links as they are (R-478, W4). The picker marks a pinned entry
+  with a pin icon, its tooltip naming the pinned links.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
@@ -884,8 +903,12 @@ which belong to the decoder every chart passes through (R-478, W1;
   Apply sends the whole `Links` in one `SetField`, one undo entry, and re-integrates; Revert drops what is staged. Both
   are dimmed with nothing staged, and closing the window keeps the staged edits.
 - **Home and the section resets** do not touch links (D3, §G2).
-- **A non-default decoder** shows in the canvas badge (§G2's Figure, RQ-387) and in every sidecar and export (D4),
-  since the links travel in `SimConfig` (R-483).
+- **A non-default decoder** shows in the decoder badge, in the figure's header strip (§G2's Figure, R-523), and in
+  every sidecar and export (D4), since the links travel in `SimConfig` (R-483). *Was:* "shows in the canvas badge
+  (§G2's Figure, RQ-387)" (stale value, replaced by R-523).
+- **No robustness button (R-517).** Comparing the view under the default links and under the active ones is the v2
+  side-by-side view's **compare links** (§G11); until it is built the comparison is made by hand: Apply, look,
+  Revert.
 - **From the keyboard** it is reached as every window is (§G3): its rows in order, each its dropdown, its parameters and
   its reset, then the footer.
 
@@ -970,6 +993,10 @@ tool. The side panel shows:
   physics-reviewed, confirmed at the gate.
 - **Side by side** with a linked cursor and navigation, and a difference view. The linked views are a separate
   `ViewUI` item, specified with these v2 research tools (R-106) — not the chart's link ids in `SimConfig`.
+- **Compare links (R-517).** The side-by-side view offers, in one click, the current view under the default links
+  (left) and under the active links (right), both integrated, linked as any two sides are, the estimate shown before it
+  runs; the robustness test of chart_decoder_contract Part 2.5, "same chart, different link". Each side's header strip
+  names its links (§G1's badges); the difference view reads the two.
 
 ## G12. Console (`12_console.png`)
 
@@ -1042,7 +1069,9 @@ corpus, the spec follows the authority:
   Fit" or View › Debug view; the GUI has both. `06_legend.png` shows no forbidden-region key, and the presentation
   legends have none (R-467); the debug view's "Debug" key is not drawn there.
 - **The Decoder window and the decoder badge** (R-478 to R-480). No artboard shows the Decoder window, the Chart
-  section's links row or the canvas's decoder badge; the GUI has all three (§G7a, §G2; the badge's place is RQ-387).
+  section's links row or the decoder badge; the GUI has all three (§G7a, §G2; the badge in the figure's header strip,
+  R-523). *Was:* "or the canvas's decoder badge; the GUI has all three (§G7a, §G2; the badge's place is RQ-387)"
+  (stale value, replaced by R-523).
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
   the artboards'.

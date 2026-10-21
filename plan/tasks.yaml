@@ -1888,7 +1888,7 @@
 - id: TASK-M6-50
   milestone: M6
   title: "The GUI track (R-390): the Decoder window on the mock, its rows, staged Apply, live previews through the engine's link evaluator, the Chart section's Links row, and the decoder badge (R-478 to R-482)"
-  depends_on: [TASK-M2-41, TASK-M2-21, TASK-M6-45, TASK-M6-42]
+  depends_on: [TASK-M2-41, TASK-M2-21, TASK-M6-45, TASK-M6-42, TASK-M6-49]  # TASK-M6-49: saved charts pin links too (R-516; applied per R-369)
   needs: []
   requirements: [REQ-GUI-251, REQ-GUI-252, REQ-GUI-254, REQ-GUI-255, REQ-GUI-256, REQ-GUI-257, REQ-GUI-258, REQ-GUI-259, REQ-GUI-260, REQ-GUI-262]
   reviewers: [code, qa, gui]
@@ -2248,7 +2248,7 @@
 - id: TASK-M7-44
   milestone: M7
   title: "The embedding's tiers: the tier table, the drop from the bottom and never below physics, the colour flag and layout version 4, the report, old records, and capacity re-measured (R-483, R-484) ⚑"
-  depends_on: [TASK-M7-31, TASK-M7-32]
+  depends_on: [TASK-M7-31, TASK-M7-32, TASK-M7-45]  # TASK-M7-45: tier 1 is measured with the entry hashes (R-521; applied per R-369)
   needs: []
   requirements: [REQ-TOOL-173, REQ-TOOL-174, REQ-TOOL-179, REQ-TOOL-180, REQ-TOOL-181]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2256,9 +2256,9 @@
 - id: TASK-M7-45
   milestone: M7
   title: "The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)"
-  depends_on: [TASK-M7-31]  # waits on RQ-385 (R-483 X4)
+  depends_on: [TASK-M7-31]  # R-521 ruled RQ-385; no longer waits
   needs: []
-  requirements: [REQ-TOOL-172]
+  requirements: [REQ-TOOL-172, REQ-TOOL-184]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-01
@@ -2506,7 +2506,7 @@
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
   depends_on: [TASK-M8-30, TASK-M7-31]
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
-  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175]
+  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-183]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-32
@@ -2544,9 +2544,9 @@
 - id: TASK-M8-36
   milestone: M8
   title: "Research (v2): continuation, Poincaré return map, side by side with linked views (11_research.png)"
-  depends_on: [TASK-M8-35, TASK-M8-11]
+  depends_on: [TASK-M8-35, TASK-M8-11, TASK-M8-52]  # TASK-M8-52: compare links reads the real engine's Links (R-517; applied per R-369)
   needs: [REQ-SYS-017, REQ-SYS-011, REQ-GUI-002, REQ-CHART-032]
-  requirements: [REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154, REQ-GUI-159]
+  requirements: [REQ-GUI-123, REQ-GUI-124, REQ-GUI-125, REQ-GUI-154, REQ-GUI-159, REQ-GUI-308]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-37

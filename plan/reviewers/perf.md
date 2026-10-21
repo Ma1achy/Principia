@@ -142,7 +142,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-SYS-038 — measure deep-quad occupancy/register pressure with the two-path branch vs a baked linearised variant; record the result
 
 **M7**
-- [ ] REQ-TOOL-174 — xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record that does not fit reports not embedded and writes no partial tile
+- [ ] REQ-TOOL-174 — xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for a typical edited one (R-522); a record that does not fit reports not embedded and writes no partial tile
 - [ ] REQ-PERF-068 — count pipeline objects created at startup and measure startup time
 - [ ] REQ-PERF-069 — count display-res and render-res targets allocated by the built render graph and record k_d, k_r
 

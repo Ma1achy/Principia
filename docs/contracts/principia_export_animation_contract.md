@@ -46,9 +46,19 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
 - **The spec object is the artefact.** A keyframe animation serialises as `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}` — provenance-complete, URL-encodable, re-renderable. The video is its shadow (Part 6).
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
-  link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, never an
-  interpolation. Whether link parameters may be interpolated across keyframes in a blocking export, re-integrating
-  every frame, is queued (RQ-384); meanwhile they are cut.
+  link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
+  playback and wherever a link id changes.
+- **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
+  the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
+  value (`μ_max`, `q_max`), every frame's value inside the parameter's allowed range since both ends are, and
+  re-integrates every frame at its own values: a type (b) segment, each frame a different family of ICs (Part 2),
+  priced before the job runs. Live playback never interpolates them: there the change stays a cut at the second
+  keyframe. The export is flagged: the planner names each such segment before the job runs ("link parameters
+  interpolated: every frame a different decoder"), the exported artefact carries the flag beside its embedded spec,
+  listing the segments and the parameters, and each frame's own record holds that frame's values in its `SimConfig`.
+  *Was:* "a cut, as a chart switch is, never an interpolation. Whether link parameters may be interpolated across
+  keyframes in a blocking export, re-integrating every frame, is queued (RQ-384); meanwhile they are cut." (stale
+  value, replaced by R-520).
 
 ---
 

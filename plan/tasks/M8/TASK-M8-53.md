@@ -24,7 +24,7 @@ Importing any export is the identity on `SimConfig` and `RenderState` (T1, over 
 - T1's state generator and the round trip over every path.
 - T2's struct-walking serializer.
 - C9 over the six destinations.
-- The tier report in Export & share and Import picture, and the fallback badge.
+- The tier report in Export & share and Import picture, and the fallback badge, in the figure's header strip (R-523).
 - Tests `round_trip_identity`, `no_empty_structs`, `every_destination_links`, `export_tier_report`.
 
 ## Acceptance tests

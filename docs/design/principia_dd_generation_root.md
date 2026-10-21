@@ -877,6 +877,16 @@ mirror tie-break), `ε_w` (its seed-selection floor) and `ε_M01` (the mass bloc
 added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189). `tanh_sat`, the
 `tanh` operator's argument bound (added by TASK-M2-06), is read by the operator, not by a tree, and is hashed likewise.
 
+**Each entry's own hash (R-521).** Beside the schema version, each entry has an entry hash: the 64-bit hash of that
+entry's canonical bytes alone, its hashed members above and the declarations of its tunable parameters, computed by
+the same hash as the schema version and generated with the registry. Every record and export carries, per block, the
+entry hash of the link it records, a u64 written as a decimal string (R-322), beside the build hash and the schema
+version, outside `SimConfig` since it derives from the build's registry and the link ids, not from the view
+(`principia_dd_image_embedding.md` §6; `principia_gui_state_contract.md` §2). A reader compares each block's against
+its own registry's entry of that id: a mismatch names exactly that link, and a match recreates across a schema change
+that left the record's links alone. Changing an entry changes its entry hash and the schema version; changing another
+entry, or the payload ledger, changes the schema version only.
+
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:
 - **The functions.** The forward is one tree per physical component, over the control's components; the inverse is
@@ -930,7 +940,8 @@ REQ-GEN-038)*. A parameter an entry's trees read may be declared tunable, in a t
 tunable parameter: the entry's name, the parameter's name (a chart constant the entry declares and reads), its default
 (that constant's register value), its allowed range `[lo, hi]`, closed, and its citation. Today the rows are
 `softmax_tanh`'s `mu_max` and `sigmoid_q`'s, `tanh_q`'s and `softsign_q`'s `q_max`; `alpha_min` is declared by the α
-entries and stays fixed (R-21; RQ-382). The declaration adds no member to an entry, so the entries' canonical bytes
+entries and stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)", a
+stale value, replaced by R-518). The declaration adds no member to an entry, so the entries' canonical bytes
 above stand.
 - **The check.** Generation refuses a range under which the entry breaks any of the chart decoder contract's three hard
   requirements (§ "Three hard requirements on any registered link"), tested at both ends and at a seeded sample of at
@@ -1023,6 +1034,11 @@ in `z₂`).
   is C¹ but not C².
 - **Temperature-softmax** is not registered. The corpus gives no formula or parameter for it, and the two definitions
   above already give each block a second link with a different sampling note (REQ-GEN-014).
+- **No new entry until a study needs one (R-519).** None is added now: not a temperature-softmax, a bounded map
+  heavier-tailed than softsign, or a simplex map uniform over the simplex. A study that needs a link the registry
+  lacks, to stress its claim (chart_decoder_contract § "Integrity: the link is part of the experiment"), adds it by its
+  own task, as a definition (R-72) with its sampling note and its parameters' declarations, under physics review and
+  the check above.
 
 ---
 
