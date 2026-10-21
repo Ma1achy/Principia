@@ -2137,4 +2137,5 @@ target; it changes what the Tilt section offers.*
     and 3 of 5 seeds fail 1.6×10⁻¹⁴: the bound would need a ruling (REQ-VAL-121), not a loosening here.
   - (c) Both, each with its own bound.
 - **Applied meanwhile:** (a). The 1.6×10⁻¹⁴ bound is not loosened.
-- **Waits:** REQ-VAL-021 carries `rq: RQ-477`, held, not closed, by TASK-M2-27's PR. The gate runs meanwhile.
+- **Waits:** REQ-VAL-021 and REQ-VAL-121 carry `rq: RQ-477`, held, not closed, by TASK-M2-27's PR (REQ-VAL-121's
+  handles gate value depends on the answer). The gate runs meanwhile.

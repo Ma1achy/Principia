@@ -23969,6 +23969,7 @@
   milestone: M2
   rq:
   - RQ-476
+  - RQ-477
 - id: REQ-VAL-122
   area: VAL
   kind: calibration
