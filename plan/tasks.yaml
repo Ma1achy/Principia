@@ -850,7 +850,7 @@
   title: The regularisation axis and the Aarseth–Zare occupant
   depends_on: [TASK-M3-04, TASK-M3-05]
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125, REQ-INT-105]
+  requirements: [REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M3-08
@@ -858,7 +858,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09

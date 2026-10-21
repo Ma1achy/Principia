@@ -1,7 +1,7 @@
 # TASK-M3-08 — Heggie and logH occupants, and the visible re-registration count
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104
+- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105
 - **Depends on:** TASK-M3-07
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
@@ -32,6 +32,9 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - `decisions.md` § "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
 - `decisions.md` § "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
 - `decisions.md` § "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
+- `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+- `decisions.md` § "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
+
 ## Deliverables
 - `crates/kernel/src/regularisation/{heggie,logh}.rs` — transcribed physics layers; logH carries its TTL time mode, the reversible occupant (R-162), its profile `run_reversible` true, the only one (R-500); Heggie's time transformation defaults to Eq. 22 at n = 3/2, with Eq. 20 selectable (R-161).
 - Doc change: `docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" — the Heggie, logH and TTL equations of motion, time transformations and step control, and the predictive step limit, transcribed from `docs/reference/prin-rs/src/integrate/{heggie,logh}/` and `az/driver.rs` with citations (Heggie 1974; Mikkola & Tanikawa 1999; Preto & Tremaine 1999) (REQ-INT-084).
@@ -41,6 +44,7 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - `cargo xtask gate hamiltonian-fd`: each occupant's analytic derivatives against a finite difference of its Hamiltonian (R-257).
 
 ## Acceptance tests
+- `cargo xtask gate separation-floor --propose` — REQ-INT-105's verify for Heggie and logH, on their own floored quantities: Heggie's pre-floor `dt/dτ` and `S` under Eq. 20 and Eq. 22, logH's drift denominator in its logH and TTL modes, over the radial collision passage and the close-encounter fixtures, with the floored-step counts (every step on which the floor acts, integrator contract Part 6) and the control (a `TINY` above the smallest pre-floor value floors steps and is reported); with TASK-M3-07's Aarseth–Zare evidence it gives the proposed `TINY` at f32 and f64, which the human confirms at the M3 gate and is recorded in decisions.md (REQ-INT-105; physics review 5606990734 of PR #277, P2, applied per R-369).
 - `cargo test -p kernel regularisation_default` — every stepper × regularisation pair, `none` included, runs a step on a fixture state; the default config selects Heggie × RK4, with Eq. 22 at n = 3/2 as Heggie's time transformation and Eq. 20 selectable (R-161); controls: a default config of Heggie × KDK fails, and a config builder that refuses any pair fails (REQ-INT-006; R-560, R-561). *Was:* "each stepper composes with each regularisation; the default config selects Heggie, with Eq. 22 …".
 - Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate (REQ-INT-084).
 - Review (physics): a consumer can read, per method or per trajectory, how many sync-boundary re-registrations occurred (REQ-INT-018).

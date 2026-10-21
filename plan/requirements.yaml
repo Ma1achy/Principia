@@ -5036,7 +5036,7 @@
   note: "R-565 (21 Oct 2026). Closed by TASK-M3-40. Δ_sync's value is REQ-INT-080 (calibration); the frame loop's side is REQ-SCHED-103; the unregularised macro-step grid is RQ-524."
 - id: REQ-INT-101
   area: INT
-  statement: "Under a regularised occupant a copy that runs out of its step budget must end undetermined, never discarded and never given a physical outcome label, and the separation floor (each occupant's, integrator contract Part 6: Heggie's any Rᵢ below TINY, Aarseth–Zare's A or B below TINY, logH's drift denominator below TINY or a denominator not positive) and the entry-cap hits (a per-step size asking for more than the interval's entry size, before the predictive limit and the landing clamp) must be counted, non-terminal signals that never end the run; with regularisation off the substep machinery (N_sub, N_max, the saturated bit) is unchanged."
+  statement: "Under a regularised occupant a copy that runs out of its step budget must end undetermined, never discarded and never given a physical outcome label, and the separation floor (each occupant's, integrator contract Part 6: Heggie's every step on which its floor acts, dt/dτ or S below TINY, and any Rᵢ below TINY, Aarseth–Zare's A or B below TINY, logH's drift denominator below TINY or a denominator not positive) and the entry-cap hits (a per-step size asking for more than the interval's entry size, before the predictive limit and the landing clamp) must be counted, non-terminal signals that never end the run; with regularisation off the substep machinery (N_sub, N_max, the saturated bit) is unchanged."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
@@ -5046,13 +5046,13 @@
     section: Part 7 — Detectors as the `SimState` producer
   verify:
     method: unit test
-    detail: "cargo test -p kernel budget_undetermined: a close-encounter fixture under Heggie × RK4 with the budget set below its need ends undetermined, its footprint reading undetermined and the copy kept, never a bounded, escape or collision label; a fixture driven below the separation floor (TINY at REQ-INT-105's value) under each regularised occupant and one whose per-step size asks for more than the entry cap each count the signal and run on to the horizon, and a step cut only by the landing clamp counts no hit; the stored form is RQ-526's; controls: the same fixture with the budget raised reaches its outcome with no undetermined copy, and a run ended by a counted signal fails"
+    detail: "cargo test -p kernel budget_undetermined: a close-encounter fixture under Heggie × RK4 with the budget set below its need ends undetermined, its footprint reading undetermined and the copy kept, never a bounded, escape or collision label; a fixture driven below the separation floor (TINY at REQ-INT-105's value) under each regularised occupant and one whose per-step size asks for more than the entry cap each count the signal and run on to the horizon, and a step cut only by the landing clamp counts no hit; under Heggie a step whose dt/dτ is floored while every Rᵢ ≥ TINY (Eq. 22 near a binary collision with R₂R₃ > 1, or Eq. 20 with one Rᵢ just above TINY and the other two's product below 1) is counted; the stored form is RQ-526's; controls: the same fixture with the budget raised reaches its outcome with no undetermined copy, a run ended by a counted signal fails, and a Heggie counter testing Rᵢ < TINY only (the reference's r_floored) misses that floored step and fails"
   rulings:
   - R-563
   milestone: M3
   rq:
   - RQ-526
-  note: "R-563 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-526: how the exhaustion and the two counts are stored and drive the floor. Physics review 5605806092 of PR #277, F3 (applied per R-369): the floor and the cap hit per occupant, transcribed into the contract."
+  note: "R-563 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-526: how the exhaustion and the two counts are stored and drive the floor. Physics review 5605806092 of PR #277, F3 (applied per R-369): the floor and the cap hit per occupant, transcribed into the contract. Physics review 5606990734 of PR #277, P1 (applied per R-369): Heggie's signal counts every step on which its floor acts, which differs from the reference's Rᵢ test (integrator contract Part 6)."
 - id: REQ-INT-102
   area: INT
   statement: "A regularised occupant's step budget must be a rate, steps per unit physical time per ensemble copy, defined for a live playhead with no fixed end, accounted along the run as RQ-527 rules, so every march loop stays bounded."
@@ -5116,7 +5116,7 @@
 - id: REQ-INT-105
   area: INT
   kind: calibration
-  statement: "The floor TINY of the regularised occupants' time-transformation denominators (Heggie's Rᵢ, S and dt/dτ, Aarseth–Zare's A and B, logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set."
+  statement: "The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
@@ -5128,12 +5128,12 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence: the smallest pre-floor denominator (Aarseth–Zare's A and B, and Heggie's Rᵢ and logH's drift denominator once built) over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest separation floors steps on it and is reported; recorded in decisions.md"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-07), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
   rulings:
   - R-71
   - R-563
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Closed by TASK-M3-07, the first task that floors at it."
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\""
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
@@ -5153,7 +5153,9 @@
   - R-560
   - R-566
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F6 (applied per R-369): REQ-INT-085's calibration measured only the occupants with regularisation none, and TASK-M3-05, which closes it, comes before Heggie is built (TASK-M3-08), so the default occupant's measurement is its own requirement. Closed by TASK-M3-41."
+  rq:
+  - RQ-528
+  note: "Physics review 5605806092 of PR #277, F6 (applied per R-369): REQ-INT-085's calibration measured only the occupants with regularisation none, and TASK-M3-05, which closes it, comes before Heggie is built (TASK-M3-08), so the default occupant's measurement is its own requirement. Closed by TASK-M3-41. It waits with TASK-M3-41, which builds nothing before RQ-526 to RQ-528 are ruled (applied per R-369, physics review 5606990734 of PR #277)."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
