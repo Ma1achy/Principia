@@ -2313,9 +2313,9 @@
 - id: TASK-M7-47
   milestone: M7
   title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
-  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # TASK-M7-52: the one projection (R-542 H11); waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9
+  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # TASK-M7-52: the one projection (R-542 H11); RQ-489 ruled by R-558, no longer waits
   needs: []
-  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120]
+  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120, REQ-COL-141]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M7-48
@@ -2336,8 +2336,8 @@
   pitfalls: []
 - id: TASK-M7-50
   milestone: M7
-  title: "Replace-L's chroma scaling, min(1, L/0.75, (1 − L)/0.35) (R-542 SM15)"
-  depends_on: [TASK-M7-04, TASK-M7-48]  # waits on RQ-496 (Replace-L as ruled, R-77), R-542 H9
+  title: "Replace-L's keep in gamut option: chroma scaled by min(1, L/0.75, (1 − L)/0.35), off by default (R-542 SM15, R-558)"
+  depends_on: [TASK-M7-04, TASK-M7-48]  # RQ-496 ruled by R-558 (an option, off by default); no longer waits
   needs: []
   requirements: [REQ-COL-132]
   reviewers: [code, qa]
@@ -2345,7 +2345,7 @@
 - id: TASK-M7-51
   milestone: M7
   title: "The stain editor's Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged (R-542 SM15)"
-  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]
+  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-50, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]  # TASK-M7-50: keep in gamut, which Displacement and Mixing set on (R-558 S2)
   needs: []
   requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338, REQ-GUI-340]
   reviewers: [code, qa, gui]

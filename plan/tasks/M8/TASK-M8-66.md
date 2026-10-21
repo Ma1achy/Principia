@@ -29,5 +29,5 @@ A Chart position stain in Explore: the legend drawn over the target chart with a
 
 ## Notes
 - The gui reviewer reviews against board 6.
-- **The board** is read per render GUI spec §G13's R-542 bullet: board 6's legend block only, the shell following `01_main.png`; no "Edit graph…" in the top bar (RQ-500, (c) meanwhile); the hover trace and its label stay (RQ-501 (a)).
-- **Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats, in-square mirrors to rounding.
+- **The board** is read per render GUI spec §G13's R-542 bullet: board 6's legend block only, the shell following `01_main.png`; no "Edit graph…" in the top bar (RQ-500 (a), R-558: the stain button reads "Edit stain…" once the shell builds it; none is added meanwhile); the hover trace and its label stay (RQ-501 (a), R-558).
+- **Ruled (R-558):** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats. "In-square mirrors match to rounding" is superseded by the human's second addendum to the shape sphere ruling and left to that ruling's port. *Was:* "**Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats, in-square mirrors to rounding."

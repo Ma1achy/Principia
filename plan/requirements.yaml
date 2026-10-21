@@ -9998,10 +9998,9 @@
     detail: "cargo test -p engine state_map_firewall: the same quad tree, request for request and quad for quad, over a seeded navigation, with a Chart position stain and with the default stain; control: the field read by the criterion, fails"
   rulings:
   - R-542
+  - R-558
   milestone: M8
-  rq:
-  - RQ-482
-  note: "SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The scheduler's decisions must be identical with the state map on and off.\""
+  note: "SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The scheduler's decisions must be identical with the state map on and off.\" Ruled (a) by R-558 (RQ-482): never a criterion input; a spread over it may come back only as a separately proposed and measured candidate."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -12648,6 +12647,7 @@
     detail: "seam 5/6: grep colour WGSL for non-accessor payload reads and for chart/integrator/scheduler identifiers: none"
   rulings: []
   milestone: M1
+  note: "Render contract Part 4's named exceptions read past seam 6, each excepted by the task that builds it: ROUNDTRIP and DECODE, and Chart position (R-558, RQ-489; REQ-COL-141)."
 - id: REQ-COL-006
   area: COL
   statement: "The chart decode and encode must be available to the fragment as WGSL generated from the one Rust source (R-116), so fragment presets can recompute decode(z) and encode(decode(z)) from ctx.chart.z, including agreement presets that check the translation by comparing fragment decode against the kernel payload."
@@ -14837,18 +14837,16 @@
     section: "SM3. Source side: the extension comes for free, because the colour is a property of the system"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: unit test
     detail: "cargo test -p render chart_position_status: on a constructed state per target chart (SM1's table), each status the chart can give is reached, left read from a shown coordinate's clamp (REQ-COL-133): the latent chart's left on a constructed state with λ̃ (or ρ̃) within ε_z of 0, the side from cos 2α = n₁ (on main α_min = 0, RQ-503); the latent momenta's left where the clamp acts, |q| ≥ q_max(1 − 2ε_q); ν × dilation's past a bounded edge outside [1/32, 31/32]; a sim_failed state undetermined; the shape sphere target read from the signed n̂ over both hemispheres (RQ-498 (a), RQ-504 (a)); each on-chart point equal to the chart's coordinates; a decode_failed sample and a not-a-system pixel draw blank; controls: a periodic target written on a branch (θ unwrapped) instead of the quotient, a left state reported on the chart, a decode_failed sample projected and coloured, a sim_failed sample drawn blank, and a left test on a non-finite z (which main's encode never gives), each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-489
-  - RQ-498
-  - RQ-503
-  - RQ-504
-  note: "SM1, SM4, SM5 (physics review). Left is read from the encode's clamp (REQ-COL-133; PR #270 physics P4); the latent α case is constructed, main's α_min being 0 (RQ-503); the shape sphere target reads the signed n̂ over both hemispheres, the code's reading (RQ-498 (a), RQ-504 (a); physics P1). A fixed t and the target chart read wait on RQ-489. Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing.\""
+  note: "SM1, SM4, SM5 (physics review). Left is read from the encode's clamp (REQ-COL-133; PR #270 physics P4); the latent α case is constructed, main's α_min being 0 (RQ-503); the shape sphere target reads the signed n̂ over both hemispheres, the code's reading (RQ-498 (a), RQ-504 (a); physics P1). A fixed t and the target chart read wait on RQ-489. Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing.\" Ruled by R-558: RQ-489 (a), Chart position a named seam-6 exception (REQ-COL-141), its times the playhead and t = 0 only, \"a fixed t\" struck; RQ-498 (a) and RQ-504 (a), the signed n̂ over the full sphere, as applied; RQ-503 (a), α_min = 0, the α case constructed. *Was:* \"A fixed t and the target chart read wait on RQ-489.\""
 - id: REQ-COL-114
   area: COL
   statement: "The state map must change no SimState, payload, ICDescriptor or other layout: no stored field, accumulator or kernel change; a need for one is queued, never added."
@@ -14879,29 +14877,27 @@
     detail: "cargo test -p render chart_position_identity: per chart, the worst |projected − own chart point| in chart units is within its calibrated tolerance (REQ-COL-129; the prototype's figures are latent 4e-7, sphere 1.5e-6 measured without R-141's gauge and re-measured on the app, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted E and F 1.9e-6, ν × h 4.9e-4 from its 1/1000 curve table), never a tolerance the test chooses; on the sphere measured in n̂, a lower-hemisphere pixel against its mirror point, the primary range directly, away from R-437's seam as stated; controls: a missed fold, a mirror slip and a wrong projection, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-498
-  note: "SM12 Identity at t = 0 (physics review). On the shape sphere modulo the mirror (R-141's gauge; RQ-498; PR #270 physics P2); the tolerances are REQ-COL-129's calibrations, the sphere's 1.5e-6 the ungauged prototype's, re-measured on the app (qa F2). Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip.\""
+  note: "SM12 Identity at t = 0 (physics review). On the shape sphere modulo the mirror (R-141's gauge; RQ-498; PR #270 physics P2); the tolerances are REQ-COL-129's calibrations, the sphere's 1.5e-6 the ungauged prototype's, re-measured on the app (qa F2). Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip.\" RQ-498 is ruled (a) by R-558, but the clause this statement applied meanwhile, \"The t = 0 identity on the sphere is stated modulo the mirror, under R-141\", is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and left to that ruling's port; the statement's shape-sphere clause stands only until that port restates it."
 - id: REQ-COL-116
   area: COL
-  statement: "A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as a debug option."
+  statement: "A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as an option of the node."
   source:
   - file: docs/design/principia_state_map.md
     section: "SM5a. Left the chart: drawn at the edge it left by"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: unit test
     detail: "cargo test -p render chart_position_edge_clamp: on a target that leaves on main, the latent momenta (at the link's clamp, REQ-COL-133) and the z_q3 tilt, over seeded random systems at a playhead time where a measured share have left, the clamp agrees with the exit point found at fine Δt on the axis it left by, the median gap at SM12's Δt 0.005 below that at its Δt 0.25 (the range SM12 gives; the prototype's figures 0.267 and 0.033 are reference only, RQ-503; the app's are measured and recorded by the task); the edge is observed where a finite clamp differs from it: on the projection's own output for a left axis (REQ-COL-134's source returns the left status with the edge side, ±∞ in chart units, never the encode's clamped z ≈ ±13.8, whose compacted s is 1.0 in f32 and so cannot tell them apart), and through a tiling base laid in chart units, where the edge takes the cell at the navigation edge it left by (SM5a's smTileXY transcription) while a clamped z ≈ 13.8 lands in a cell far past the square; under 'none' a left pixel draws its own grey; controls: a clamp to the wrong side, the clamped finite z drawn in place of the edge (fires on the projection's output and on the tiling's cell, shown firing by the test), and a population with no left system (the test must be able to fire), each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-498
-  - RQ-503
-  - RQ-505
-  note: "SM5a (physics review). The last position is not stored (§0, R-542). The test runs on a target that leaves on main (RQ-503; PR #270 physics P3). TF1's no value against the clamp is RQ-498; 'none' as a debug option against an ordinary setting is RQ-505, the code's ordinary setting applied meanwhile (code review 3). Closed by TASK-M7-47."
+  note: "SM5a (physics review). The last position is not stored (§0, R-542). The test runs on a target that leaves on main (RQ-503; PR #270 physics P3). TF1's no value against the clamp is RQ-498; 'none' as a debug option against an ordinary setting is RQ-505, the code's ordinary setting applied meanwhile (code review 3). Closed by TASK-M7-47. RQ-505 (a) by R-558: \"none\" an ordinary setting of the node, the statement's \"debug option\" reworded to \"an option of the node\"; RQ-498 (a), the clamp the default; RQ-503 (a), the test on the latent momenta. *Was:* \"A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as a debug option.\""
 - id: REQ-COL-117
   area: COL
   statement: "Each target must report its four results apart: a latent-momentum target has left-the-chart samples where |q| > q_max, a ν target has past-the-edge samples, and neither is drawn as an on-chart colour."
@@ -14917,10 +14913,9 @@
     detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, at the link's own margin written into SM5 by REQ-COL-133 (q_max(1 − 2ε_q) for the logit link; q_max(1 − ε_q) for tanh_q and softsign_q since R-481), with constructed states at either side of the margin; on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, a past-edge sample counted as left, and a margin taken from another link, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-498
-  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. The clamp's margin per REQ-COL-133 (PR #270 physics P4). Closed by TASK-M7-47."
+  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. The clamp's margin per REQ-COL-133 (PR #270 physics P4). Closed by TASK-M7-47. Ruled (a) by R-558 (RQ-498): the clamp stays the default and the Four results test runs with 'when it leaves: none'."
 - id: REQ-COL-118
   area: COL
   statement: "Chart position's colour must be equal on identified points of the target's quotient: θ and θ + 2π, and n̂ across a pole crossing."
@@ -14983,10 +14978,9 @@
     detail: "cargo test -p engine chart_position_copies: over seeded repeat pairs (the θ period, the pole crossings and the hemisphere's fold on the shape sphere; θ on θ × dilation), every copy's IC is bitwise equal to its canonical quad's sample's, and every copy's colour bitwise equal to its canonical sample's colour; controls: re-decoding from the copy's own coordinate (differs on about 1 of 400 pairs in the IC), and a colour computed from screen or copy position (differs in the colour), each fail; a colour comparison at t = 20 is not the test for the first arm (it reads 0 with and without the fix)"
   rulings:
   - R-542
+  - R-558
   milestone: M8
-  rq:
-  - RQ-498
-  note: "SM3, SM12 Copies agree, both its arms (PR #270 qa F1). EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal.\""
+  note: "SM3, SM12 Copies agree, both its arms (PR #270 qa F1). EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal.\" RQ-498 is ruled (a) by R-558: bitwise copies for EX7 repeats. Its clause \"in-square mirrors match to rounding\", which this note applied meanwhile, is superseded by the human's second addendum to the shape sphere ruling (\"On the shape sphere there is no mirror identification now, so the identity holds point for point\"), not applied by R-558, and left to that ruling's port; the verify's hemisphere fold among the repeat pairs is that ruling's site too."
 - id: REQ-COL-122
   area: COL
   statement: "Chart position's colour slot must be one base (Gradient, Site blend, Palette or Picture) followed by an ordered list of optional layers (bandmask or site_overlay), offering on each quotient only the bases and layers SM11 defines for it."
@@ -15038,10 +15032,9 @@
     detail: "cargo test -p render chart_position_site_blend_shared: Chart position ⟨shape sphere⟩ with Site blend (axes6 · Full · vMF κ 3 · OKLab) against Shape n̂'s Site blend at the same settings, worst difference exactly 0 over 300 seeded shapes; control: a second implementation of the sphere's site blend, fails"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-498
-  note: "SM12 Same site blend, as written: both nodes read the signed n̂ (RQ-498 (a), the code's reading; PR #270 physics P1). *Was:* \"Measured on the folded hemisphere (n₃ ≥ 0) until RQ-498 is ruled.\" Closed by TASK-M7-48."
+  note: "SM12 Same site blend, as written: both nodes read the signed n̂ (RQ-498 (a), the code's reading; PR #270 physics P1). *Was:* \"Measured on the folded hemisphere (n₃ ≥ 0) until RQ-498 is ruled.\" Closed by TASK-M7-48. Ruled (a) by R-558 (RQ-498): both nodes read the signed n̂ over the full sphere."
 - id: REQ-COL-125
   area: COL
   statement: "The Shape n̂ node and its colour nodes must render bitwise as before the state map."
@@ -15057,11 +15050,9 @@
     detail: "cargo test -p render shape_n_unchanged: every Shape n̂ colour node at its settings (Site blend over axes6, fib, ico12 and corner8 with each kernel, and every node main has) gives bitwise the values of the build before the state map over 400 seeded shapes × 6 settings (0 differ), and every saved stain renders bitwise the same; controls: a flat node's code reaching the sphere path, and removing Shape n̂'s registration, each change the render and fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-496
-  - RQ-497
-  note: "SM12 Shape n̂ unchanged; SM15 tests (1) and (2). Its Position and Bands nodes are the prototype's (RQ-497). The saved-stain clause holds under RQ-496's meanwhile, main's Replace-L unscaled; under RQ-496 (b) it narrows to stains without a brightness node, as SM12 says (PR #270 qa F3). Closed by TASK-M7-48."
+  note: "SM12 Shape n̂ unchanged; SM15 tests (1) and (2). Its Position and Bands nodes are the prototype's (RQ-497). The saved-stain clause holds under RQ-496's meanwhile, main's Replace-L unscaled; under RQ-496 (b) it narrows to stains without a brightness node, as SM12 says (PR #270 qa F3). Closed by TASK-M7-48. Ruled by R-558: Shape n̂ stays `vector` with its one colour editor, its Position and Bands nodes the prototype's only (RQ-497 (a)); Replace-L's chroma scaling is an option, keep in gamut, off by default, so every saved stain renders bitwise the same (RQ-496 (a))."
 - id: REQ-COL-126
   area: COL
   statement: "A Palette or Site blend coloured by index must give every pair of neighbouring tiles different colours."
@@ -15134,13 +15125,12 @@
   rulings:
   - R-71
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-487
-  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\""
+  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\" RQ-487 ruled (a) by R-558: the prototype's values are the starting values, the port's additions included (κ 3, 0.3, π, 0.6; line width 0.045; dot radius 0.13; the plane gradient's L 0.75 and chroma 0.095), confirmed at the M7 gate."
 - id: REQ-COL-130
   area: COL
-  statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis, the built-ins (checkerboard, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct."
+  statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis, the built-ins (checkerboard, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct; a brightness node applies over a Picture base as over every other base."
   source:
   - file: docs/design/principia_state_map.md
     section: SM8. Image mode
@@ -15148,36 +15138,37 @@
     section: "SM11. Colouring Chart position: a base, then layers"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_picture: at t = 0 on the view's own chart the picture is reproduced at the square's texels; past the square it is the mirror image at 0.62; the grid's red and blue bars sit on the top and left edges; controls: a wrapped (not mirrored) extension, an undimmed outside, and a picture stored in a sim struct, each fail"
+    detail: "cargo test -p render chart_position_picture: at t = 0 on the view's own chart the picture is reproduced at the square's texels; past the square it is the mirror image at 0.62; the grid's red and blue bars sit on the top and left edges; with Displacement in the brightness slot, Replace-L sets the Picture's L as over a Gradient base; controls: the brightness skipped under a Picture, a wrapped (not mirrored) extension, an undimmed outside, and a picture stored in a sim struct, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-499
-  note: "SM8. The picture is a RenderState field, its tier assigned in R-484's table (R-542 H5). Brightness under a Picture is the code's (RQ-499). Closed by TASK-M7-49."
+  note: "SM8. The picture is a RenderState field, its tier assigned in R-484's table (R-542 H5). Brightness under a Picture is the code's (RQ-499). Closed by TASK-M7-49. RQ-499 ruled by R-558: brightness under a Picture is the file's, the brightness slot applying to every base, Picture included (the prototype skipped it). *Was:* \"Brightness under a Picture is the code's (RQ-499).\""
 - id: REQ-COL-131
   area: COL
-  statement: "The fade off the slice must be opt-in, off by default, on the view's own chart only, reading R-509's distance, and stated as breaking injectivity; the ensemble colour must be the nominal copy (copy 0)."
+  statement: "The fade off the slice must be opt-in, off by default, on the view's own chart only, reading R-509's distance through the trace's own fade function, and stated as breaking injectivity; the ensemble colour must be the nominal copy (copy 0)."
   source:
   - file: docs/design/principia_state_map.md
     section: SM10. Time, ensemble and fade
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_fade: off by default; on, the opacity is max(0.18, 1/(1 + (d/0.35)²)) at R-509's distance, a non-finite d at the floor; not offered on another target; the colour reads copy 0 only; controls: a fade on by default, a fade on another target, and a mean over the copies, each fail"
+    detail: "cargo test -p render chart_position_fade: off by default; on, the opacity is the trace's max(0.18, e^{−d/1.2}) at R-509's distance, the same function the trace's fade evaluates, a non-finite d at the floor; not offered on another target; the colour reads copy 0 only; controls: a fade on by default, a fade on another target, the prototype's max(0.18, 1/(1 + (d/0.35)²)) in place of the trace's, and a mean over the copies, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-484
-  - RQ-499
-  note: "SM10. The fade's function is the code's (RQ-499); the ensemble's nominal copy is RQ-484 (a). Closed by TASK-M7-49."
+  note: "SM10. The fade's function is the code's (RQ-499); the ensemble's nominal copy is RQ-484 (a). Closed by TASK-M7-49. Ruled by R-558: one fade everywhere, the trace's max(0.18, e^{−d/1.2}) (RQ-499); the nominal copy (RQ-484 (a)). *Was:* \"The fade's function is the code's (RQ-499); the ensemble's nominal copy is RQ-484 (a).\" and the verify's \"the opacity is max(0.18, 1/(1 + (d/0.35)²)) at R-509's distance\"."
 - id: REQ-COL-132
   area: COL
-  statement: "Replace-L must scale chroma by min(1, L/0.75, (1 − L)/0.35) with the replaced L, so every brightness level stays in gamut."
+  statement: "The Replace-L combiner must offer an option, keep in gamut, off by default, that scales chroma by min(1, L/0.75, (1 − L)/0.35) with the replaced L, so every brightness level stays in gamut; with it off, Replace-L must be as ruled, (a, b_ab) bit-stable."
   source:
   - file: docs/design/principia_state_map.md
     section: SM15. In the stain graph editor
@@ -15185,15 +15176,16 @@
     section: SM12. Tests (each with the arm that fires)
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: property test
-    detail: "cargo test -p render replace_l_chroma: 0 of 99,710 samples out of gamut over every flat colour node at the brightness levels 0.18, 0.30, 0.50, 0.78 and 0.84; control: per-pixel clipping, and the unscaled Replace-L at 0.30, each fail"
+    detail: "cargo test -p render replace_l_chroma: with keep in gamut on, 0 of 99,710 samples out of gamut over every flat colour node at the brightness levels 0.18, 0.30, 0.50, 0.78 and 0.84; with it off (the default), (a, b_ab) bit-stable and every output bitwise the build's before the option; controls: per-pixel clipping, the unscaled Replace-L at 0.30 with the option on, and the option on by default, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-496
-  note: "SM15, SM12 Replace-L in gamut. Against Replace-L as ruled (dd_colouring §3.5, test 6; colour composition §4.1, R-77): RQ-496; main's Replace-L stands meanwhile. Closed by TASK-M7-50."
+  note: "SM15, SM12 Replace-L in gamut. Against Replace-L as ruled (dd_colouring §3.5, test 6; colour composition §4.1, R-77): RQ-496; main's Replace-L stands meanwhile. Closed by TASK-M7-50. Ruled (a) by R-558 (RQ-496): the scaling is an option of the Replace-L combiner, keep in gamut, default off, set on by the Displacement and Mixing presets (REQ-GUI-337); Replace-L as ruled (R-77) stays the default. *Was:* \"Replace-L must scale chroma by min(1, L/0.75, (1 − L)/0.35) with the replaced L, so every brightness level stays in gamut.\" and \"Against Replace-L as ruled (dd_colouring §3.5, test 6; colour composition §4.1, R-77): RQ-496; main's Replace-L stands meanwhile.\""
 - id: REQ-COL-133
   area: COL
   kind: definition
@@ -15296,6 +15288,25 @@
   - R-546
   milestone: M7
   note: "R-546 (21 Oct 2026, RQ-282, option (a)); closed by TASK-M7-11. Reviewed by gui, TASK-M7-11's reviewers being code, qa and gui (applied per R-369, R-546 B1)."
+- id: REQ-COL-141
+  area: COL
+  statement: "Chart position, the state map's source, must be a named seam-6 exception: it may read the target chart, its parameters and its inverse, generated to WGSL from the one Rust source (R-116), and is listed with its reason in render contract Part 4's exceptions and in `cargo xtask lint wgsl`'s list, as ROUNDTRIP and DECODE are; a colour occupant not so named must not read a chart."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_state_map.md
+    section: "SM2. It changes no sim struct and reads only what the fragment already has"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask lint_wgsl_chart_position: the lint passes the Chart position occupant's generated WGSL, which reads the target chart and its inverse, and render contract Part 4 and the lint's list both name it with its reason; controls: the same chart read added to a colour node, and Chart position's entry removed from the lint's list, each fail the lint"
+  rulings:
+  - R-116
+  - R-542
+  - R-558
+  milestone: M7
+  note: "RQ-489 (a), R-558 S1; Part 4's rule: excepted by the task that builds it. Closed by TASK-M7-47."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -20855,7 +20866,7 @@
   note: "R-541 G2, G4, P11; Listen's state remembered (RQ-445 (a), ruled so by R-556, 21 Oct 2026). Split from REQ-GUI-325 (L) and REQ-GUI-326 (the Listen section, the tab's sound and the remembered state) so that the trace's GUI does not wait on Listen's RQs (code review 5595371779 of PR #267, F2; gui review 5595359543, G2 and G4; applied per R-369). Closed by TASK-M8-64. Gui review 5595467390 of PR #267, H3, applied per R-369: controls on the ? sheet and text-field arms. *Was (verify):* \"cargo xtask screenshot 01_main (trajectory_panel_listen: Listen collapsed, Listen expanded) and cargo test -p gui listen_section (R-541 G10 Tabs, its sound half): the section's rows and controls are §G2's; switching tabs switches the sound with the trace and the previews; Listen's collapsed state survives a restart and is not in the contract's state; with the focus in the Figure, in each mode, L toggles the sound and is on the ? sheet, and acts neither with the focus outside the Figure nor while a text field is typed in; Tab and Enter reach the section's controls in §G2's order (♪, the instrument, ⋯; expanded, volume, listen mode, loudness, the event and effect chips) in navigation mode, each changed only in interaction mode (§G3, R-409); controls: the sound following the cursor while a kept tab is selected, the state reset on restart or kept in the contract's state, L acting outside the Figure, and a control unreachable, out of order or changed in navigation mode, each fail\""
 - id: REQ-GUI-335
   area: GUI
-  statement: "The stain editor must offer Chart position as one source node (chart, at, when it leaves, after its end) with the point⟨q⟩ subtype, beside the unchanged Shape n̂ node; its colour inspector must show one base and a reorderable layer stack; and switching the source or the chart and back must restore every setting exactly."
+  statement: "The stain editor must offer Chart position as one source node (chart, at, when it leaves, after its end) with the point⟨q⟩ subtype, beside the unchanged Shape n̂ node; its colour inspector must show one base and a reorderable layer stack; and switching the source or the chart and back must restore every setting exactly; where the stain graph and the Print graph show together, its Palette base must read \"Palette base\"."
   source:
   - file: docs/design/principia_state_map.md
     section: SM15. In the stain graph editor
@@ -20867,16 +20878,16 @@
     section: 9. Node inspector — morphing editors
   - file: docs/gui/principia_render_gui_spec.md
     section: 3.1 Node kinds
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_editor (board 3's inspector, board 1's library and Problems rows, board 4's ports; the shell per render GUI spec §G13's R-542 bullet; one colour node for the base and layers, RQ-502); cargo test -p gui chart_position_switch: switching the source between Shape n̂ and Chart position and back, and the chart from latent to shape sphere and back, restores each base's and layer's settings exactly; every control (the source's params, the base picker, the layer stack's add, reorder and remove) is reachable and changed from the keyboard in §G3's order, changed only in interaction mode (R-409); each edit and each switch is one SetField and one undo entry (R-52, R-69); controls: a setting lost on a round trip, a layer dropped (not hidden) under Shape n̂, a control reachable only by drag, and an edit making two SetFields or two undo entries, each fail"
+    detail: "cargo xtask screenshot state_map_editor (board 3's inspector, board 1's library and Problems rows, board 4's ports; the shell per render GUI spec §G13's R-542 bullet; one colour node for the base and layers, RQ-502); cargo test -p gui chart_position_switch: switching the source between Shape n̂ and Chart position and back, and the chart from latent to shape sphere and back, restores each base's and layer's settings exactly; every control (the source's params, the base picker, the layer stack's add, reorder and remove) is reachable and changed from the keyboard in §G3's order, changed only in interaction mode (R-409); each edit and each switch is one SetField and one undo entry (R-52, R-69); in a window, panel or menu listing both graphs' nodes, the Palette base reads \"Palette base\", and \"Palette\" in the stain editor alone; controls: an unqualified \"Palette\" beside the Print graph's Palette, a setting lost on a round trip, a layer dropped (not hidden) under Shape n̂, a control reachable only by drag, and an edit making two SetFields or two undo entries, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-497
-  - RQ-502
-  note: "SM15 (gui review with boards/, read per §G13's R-542 bullet). Counterparts per RQ-497 (a): Site blend ↔ Site blend until Shape n̂'s Position and Bands are ruled; one colour node for the base and layers (RQ-502 (a)); keyboard and SetField arms (PR #270 gui G5). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The stain editor must offer Chart position as one node with a time setting, beside the unchanged Shape n̂ node, and its inspector must show one base and a reorderable layer stack, preserving every setting when the source or chart is switched and back.\""
+  note: "SM15 (gui review with boards/, read per §G13's R-542 bullet). Counterparts per RQ-497 (a): Site blend ↔ Site blend until Shape n̂'s Position and Bands are ruled; one colour node for the base and layers (RQ-502 (a)); keyboard and SetField arms (PR #270 gui G5). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The stain editor must offer Chart position as one node with a time setting, beside the unchanged Shape n̂ node, and its inspector must show one base and a reorderable layer stack, preserving every setting when the source or chart is switched and back.\" Ruled (a) by R-558: RQ-497, Site blend ↔ Site blend the only swap, Chart position a source with its own settings, its layers in the colour occupant, \"Palette base\" where both graphs show (S3); RQ-502, one colour node, boards 1 and 4 redrawn to match by TASK-M7-51."
 - id: REQ-GUI-336
   area: GUI
   statement: "The Problems pane must warn where a brightness node replaces L that the base spends on position, and where it replaces L under lightness layers, and must report the left, ended, past-edge and undetermined counts per compile."
@@ -20896,7 +20907,7 @@
   note: "SM15. The lightness-layers control and the snapshot path added (PR #270 gui G5); board 1's row buttons are board-only (R-542 H14). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The Problems pane must warn where a brightness node replaces L that the base spends on position or that lightness layers are drawn in, and must report left / ended / past-edge / undetermined counts per compile.\""
 - id: REQ-GUI-337
   area: GUI
-  statement: "The library must carry the seven state map presets (Classic shape colour, Where now, Graph paper, Basin tiles, Displacement, Picture flow, Mixing — the prototype's labels), each inserting an ordinary editable graph equal to the prototype's smPreset settings."
+  statement: "The library must carry the seven state map presets under the file's names (Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing; Flow reading \"Picture flow\" where the stain graph and the Print graph show together), each inserting an ordinary editable graph equal to the prototype's smPreset settings, Displacement and Mixing with Replace-L's keep in gamut on, whose checkbox the Replace-L combiner's inspector shows."
   source:
   - file: docs/design/principia_state_map.md
     section: SM15. In the stain graph editor
@@ -20904,15 +20915,16 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: 11. Presets = whole graphs
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_presets (board 5); cargo test -p gui state_map_presets: each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load; control: a preset whose graph differs from smPreset, fails"
+    detail: "cargo xtask screenshot state_map_presets (board 5); cargo test -p gui state_map_presets: each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load, labelled with the file's names; Displacement and Mixing set keep in gamut on and the others leave it off; the Replace-L combiner's inspector shows the checkbox, reachable from the keyboard, each change one SetField and one undo entry; controls: a preset whose graph differs from smPreset, a preset labelled with the prototype's \"Where now\", \"Basin tiles\" or \"Picture flow\" in the stain editor alone, and Mixing with keep in gamut off, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-499
-  note: "SM15. The prototype's labels, RQ-499 (a) applied (PR #270 gui G2); the file's names (Where, Basins, Flow) are the queued alternative. Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The library must carry the seven state-map presets, each inserting an ordinary editable graph.\""
+  note: "SM15. The prototype's labels, RQ-499 (a) applied (PR #270 gui G2); the file's names (Where, Basins, Flow) are the queued alternative. Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The library must carry the seven state-map presets, each inserting an ordinary editable graph.\" Ruled by R-558: the file's names (RQ-499), \"Where now\" the node's retired name; \"Picture flow\" where both graphs show (RQ-497, S3); Displacement and Mixing set keep in gamut on (RQ-496), its checkbox in the Replace-L combiner's inspector (S2). *Was:* \"The library must carry the seven state map presets (Classic shape colour, Where now, Graph paper, Basin tiles, Displacement, Picture flow, Mixing — the prototype's labels), each inserting an ordinary editable graph equal to the prototype's smPreset settings.\""
 - id: REQ-GUI-338
   area: GUI
   statement: "Every saved stain must load and render as before the state map, with nothing migrated."
@@ -20926,10 +20938,9 @@
     detail: "cargo test -p gui saved_stains_unchanged: every saved stain of the library and the golden suite loads and renders bitwise the same in a build with the state map; control: removing Shape n̂'s registration changes the render and fails"
   rulings:
   - R-542
+  - R-558
   milestone: M7
-  rq:
-  - RQ-496
-  note: "SM15 tests (1) and (2). A stain with a brightness node under Replace-L's chroma scaling is RQ-496. Closed by TASK-M7-51."
+  note: "SM15 tests (1) and (2). A stain with a brightness node under Replace-L's chroma scaling is RQ-496. Closed by TASK-M7-51. Ruled (a) by R-558 (RQ-496): keep in gamut is off by default, so every saved stain, a brightness node included, renders bitwise the same."
 - id: REQ-GUI-339
   area: GUI
   statement: "In Explore, a Chart position stain's legend must be its colour slot drawn with no brightness over the target chart in the chart's own aspect ratio, with a ring at the hovered system (white inside, grey and pinned inside the edge when it is past it), placed as the stain's own colour key before the brightness key, the trace block and the debug key; and a pan or zoom into the extension must never show an uncovered pixel."
@@ -20947,10 +20958,9 @@
     detail: "cargo xtask screenshot state_map_legend (board 6's legend block; the shell per §G13's R-542 bullet, the hover trace kept, RQ-501); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the legend keeps the target's aspect ratio (2 : 1 on the sphere, the triangle on the simplex) and draws no brightness; the ring sits at the hovered pixel's own colour in the legend, grey and pinned 5 px inside the edge for a system past it; controls: the old grid dropped before the new one lands, a ring computed with other integrator settings, a square legend on the sphere, and a legend drawn with the brightness, each fail"
   rulings:
   - R-542
+  - R-558
   milestone: M8
-  rq:
-  - RQ-501
-  note: "SM9, SM3 Never a gap. The legend per SM9's transcription of smLegend (PR #270 gui G3); the hover trace stays (RQ-501 (a)). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel.\""
+  note: "SM9, SM3 Never a gap. The legend per SM9's transcription of smLegend (PR #270 gui G3); the hover trace stays (RQ-501 (a)). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel.\" Ruled (a) by R-558 (RQ-501): the hover trace and its label stay; no figure ring while the trace is shown, the legend carrying SM9's ring."
 - id: REQ-GUI-340
   area: GUI
   statement: "Chart position's inspector must offer SM7's colour frame (the chart; the view, on the view's own chart only), the Picture base's choice (the built-ins and an uploaded picture) and the fade off the slice (off by default, the view's own chart only), each reachable from the keyboard and each edit one SetField and one undo entry."

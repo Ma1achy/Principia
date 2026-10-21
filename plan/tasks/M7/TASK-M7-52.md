@@ -41,4 +41,4 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - **The margin band (PR #270's physics re-review, P1, applied per R-369; R-542 H16):** under R-297's fast-math a state within the tolerance of a link margin can change status on the GPU, as R-296 measured on Metal; `one_projection_agreement` holds the statuses equal outside that band, accepts either inside it (the point still held to the tolerance), reports the band's count, and seeds states just inside and just outside it. The host consumers stay bitwise, statuses included.
 - **The measured tolerance is a fixed constant (PR #270's qa advisory, applied per R-369):** it is recorded in the code, never re-measured on a test run, so the test never checks a build against its own measurement.
 - **Goal reworded (C5):** *Was:* "Chart position (TASK-M7-47, generated to WGSL, R-116) and the trace (TASK-M8-58) both call it."
-- **Applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
+- **Ruled by R-558 as applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
