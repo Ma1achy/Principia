@@ -290,10 +290,11 @@ negative_control!(
     }
 );
 
-/// Checks that samples 0 and 1 of a `d_min` scene, a forced failure and an unstepped sample, hold the unset f16 +∞ by
-/// its bits and render the "not yet" style, pixel by pixel (R-399).
-fn check_unset_not_yet(s: &Scene, image: &[Rgb]) {
-    for i in [0, 1] {
+/// Checks that `samples` of a `d_min` scene, of samples 0 and 1, a forced failure and an unstepped sample, hold the
+/// unset f16 +∞ by its bits and render the "not yet" style, pixel by pixel (R-399). A field view draws both; a ramp,
+/// a presentation view, draws the failure `#141418` whatever its payload (R-467, R-511 Z3), so only sample 1.
+fn check_unset_not_yet(s: &Scene, image: &[Rgb], samples: &[u32]) {
+    for &i in samples {
         let packed = s.set.simstate(i).packed_a;
         assert_eq!(packed >> 16, 0x7c00, "sample {i} holds f16 +inf");
         assert_eq!(look(s, i), Look::NotYet, "sample {i}'s look");
@@ -304,7 +305,7 @@ fn check_unset_not_yet(s: &Scene, image: &[Rgb]) {
 #[test]
 fn diffusion_invalid_fit_d_min_unset_renders_not_yet() {
     let s = named("d_min");
-    check_unset_not_yet(&s, &render(&gpu(), &s));
+    check_unset_not_yet(&s, &render(&gpu(), &s), &[0, 1]);
 }
 
 negative_control!(
@@ -315,7 +316,7 @@ negative_control!(
         let s = named("d_min");
         let image = render(&gpu(), &s);
         let flat = Look::Flat(render::present::not_yet());
-        check_unset_not_yet(&s, &painted(&s, &image, 1, flat));
+        check_unset_not_yet(&s, &painted(&s, &image, 1, flat), &[0, 1]);
     }
 );
 
@@ -383,7 +384,7 @@ fn f16_scalar_views_render_their_twins() {
         let image = render(&h, &s);
         check_twin(&s, &image);
         if name == "d_min" {
-            check_unset_not_yet(&s, &image);
+            check_unset_not_yet(&s, &image, &[0, 1]);
             check_sample(&s, &image, 2, Look::Invalid, "the hatch");
         }
     }
@@ -462,15 +463,23 @@ negative_control!(
 );
 
 /// Checks the ramps' own legs: `length`'s 127 is invalid on its ramp, drawn `#141418` (R-467), and literal in its
-/// view; `d_min`'s NaN is invalid, `#141418`, and its unset value in the "not yet" style, on the ramp as in the view.
+/// view; `d_min`'s NaN and its two forced failures, one holding the unset `+∞` and one 0.0, are invalid, `#141418`
+/// (R-467, R-511 Z3), and its unstepped sample's unset value is in the "not yet" style, on the ramp as in the view.
 fn check_ramp_legs(length: (&Scene, &[Rgb]), d_min: (&Scene, &[Rgb])) {
     let (s, image) = length;
     assert_eq!(look(s, 7), Look::PresentInvalid, "127 on `length`'s ramp");
     check_sample(s, image, 7, Look::PresentInvalid, "#141418");
     assert_eq!(look(&named("length_view"), 7), Look::Literal(127.0));
     let (s, image) = d_min;
-    check_sample(s, image, 2, Look::PresentInvalid, "#141418");
-    check_unset_not_yet(s, image);
+    for i in [0, 2, 3] {
+        assert_eq!(
+            look(s, i),
+            Look::PresentInvalid,
+            "sample {i} on `d_min`'s ramp"
+        );
+        check_sample(s, image, i, Look::PresentInvalid, "#141418");
+    }
+    check_unset_not_yet(s, image, &[1]);
 }
 
 #[test]
@@ -723,21 +732,20 @@ negative_control!(
     check_poles(Some(GUARD_TEST))
 );
 
-/// Checks that samples 0 and 1 of `s`, the `d_min` scene, unset, render in `view` the "not yet" style bit for bit as
-/// in `ramp`, the same scene through `d_min`'s field ramp, which tests its unset value first.
+/// Checks that sample 1 of `s`, the `d_min` scene, unstepped and unset, renders in `view` the "not yet" style bit for
+/// bit as in `ramp`, the same scene through `d_min`'s field ramp, which tests its unset value first. Sample 0, a forced
+/// failure holding the unset value, is the ramp's `#141418` (R-467, R-511 Z3), so it is not compared.
 fn check_unset_order(s: &Scene, view: &[[f32; 4]], ramp: &[[f32; 4]]) {
     let width = s.size().0;
-    for i in [0, 1] {
-        assert_eq!(look(s, i), Look::NotYet, "sample {i}'s look");
-        for (x, y) in s.pixels(i) {
-            let k = (y * width + x) as usize;
-            assert!(
-                view[k].map(f32::to_bits) == ramp[k].map(f32::to_bits),
-                "pixel ({x}, {y}) of the unset `d_min` is {:?}, not the \"not yet\" style {:?}",
-                view[k],
-                ramp[k]
-            );
-        }
+    assert_eq!(look(s, 1), Look::NotYet, "sample 1's look");
+    for (x, y) in s.pixels(1) {
+        let k = (y * width + x) as usize;
+        assert!(
+            view[k].map(f32::to_bits) == ramp[k].map(f32::to_bits),
+            "pixel ({x}, {y}) of the unset `d_min` is {:?}, not the \"not yet\" style {:?}",
+            view[k],
+            ramp[k]
+        );
     }
 }
 

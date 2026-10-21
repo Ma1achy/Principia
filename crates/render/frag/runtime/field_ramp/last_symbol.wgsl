@@ -6,6 +6,7 @@
 fn colour(ctx: Ctx) -> vec3<f32> {
     let v = f32(ctx.sample.last_symbol);
     if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
+    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }
     if (!(sd_last_symbol_valid(fgw_length_raw(ctx.sample.word)))) {
         return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);
     }

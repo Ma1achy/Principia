@@ -31,16 +31,17 @@
 //! per field: `low` reverses the compacted value, `1 − b`, so the field's low end is bright (colour_composition §1.2).
 //!
 //! **The order of the tests** (render_gui_spec §10.1's, R-436): first the sample itself, a pixel that is not a system
-//! (`ctx.validity.forbidden`, REQ-COL-102) or a `decode_failed` sample, which draws the canvas background (R-467, R-511);
-//! then the unset value's own bit test (`d_min`'s `+∞`, "not yet"), then the invalid lane: the field's validity, a
+//! (`ctx.validity.forbidden`, REQ-COL-102) or a `decode_failed` sample, which draws the canvas background (R-467, R-511),
+//! and a `sim_failed` sample or a reserved state (6, 7), which takes the invalid treatment whatever its payload holds
+//! (R-467, R-511); then the unset value's own bit test (`d_min`'s `+∞`, "not yet"), then the invalid lane: the field's validity, a
 //! stored sentinel's own test among it, then the non-finite guard, both in [`ScalarField`]'s predicate, then the
 //! compaction's styled values (`log`'s `x < 0`); then the compaction and the ramp. So no compaction and no comparison
 //! ever takes a non-finite value.
 //!
 //! **A field ramp is a presentation view and draws no hatch (R-467; REQ-COL-108).** It masks (render_gui_spec §13,
 //! validity first): a pixel that is not a system and a `decode_failed` sample draw the canvas background,
-//! `canvas_background()`, the uniform its caller sets to the colour its window is cleared to (R-467 D2, R-511); an
-//! invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
+//! `canvas_background()`, the uniform its caller sets to the colour its window is cleared to (R-467 D2, R-511); a
+//! `sim_failed` sample, a reserved state, an invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
 //! invalid treatment, by default the presentation views' invalid colour, bounded / nothing yet's `#141418`
 //! (`PRESENT_INVALID`, R-467 D4), overridable per node: the node's `INVALID_OVERRIDE` param, 1 to draw its
 //! `INVALID_COLOUR` instead, both declared in the occupant's header (gui_state_contract §3), so an override is a uniform
@@ -59,6 +60,7 @@
 
 use std::fmt::Write as _;
 
+use ledger::display::State;
 use ledger::gen::numeric::{float, half_width, half_width_wgsl, non_finite, End, NON_FINITE};
 use ledger::gen::{self as generate, catalogue};
 use ledger::schema::{Entry, FieldType};
@@ -66,9 +68,6 @@ use ledger::schema::{Entry, FieldType};
 use crate::assemble::{Kind, Occupant};
 use crate::codegen::Slot;
 use crate::present::{self, Rgb};
-
-/// The `state` code of `decode_failed` (payload §2), the ledger's.
-const STATE_DECODE_FAILED: u32 = ledger::display::State::DecodeFailed.code();
 
 /// The compactions' WGSL (dd_colouring §3.6), placed after the prelude at assembly.
 pub const COMPACTION_WGSL: &str = include_str!("../../shaders/wgsl/lib/compaction.wgsl");
@@ -686,14 +685,20 @@ impl FieldRamp {
     /// The blank test's `return` in a colour occupant and a post: the canvas background (R-467, R-511).
     const BLANK_RETURN: &'static str = "return canvas_background();";
 
-    /// The body's first lines: `v` read; then the sample's own test, a pixel that is not a system or a `decode_failed`
-    /// sample, returning `blank` (R-467, R-511); the unset value's, returning `unset`; and the invalid lane's, which
-    /// notes a non-finite value for the debug view (`note_non_finite()`, REQ-COL-109) and returns `invalid`.
+    /// The body's first lines: `v` read; then the sample's own tests, a pixel that is not a system or a `decode_failed`
+    /// sample, returning `blank` (R-467, R-511), and a `sim_failed` sample or a reserved state (6, 7), returning
+    /// `invalid` whatever its payload holds (R-467, R-511); the unset value's, returning `unset`; and the invalid
+    /// lane's, which notes a non-finite value for the debug view (`note_non_finite()`, REQ-COL-109) and returns
+    /// `invalid`.
     fn guards(&self, blank: &str, unset: &str, invalid: &str) -> String {
         let mut out = format!("    let v = {};\n", self.field.value);
         let _ = writeln!(
             out,
             "    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {{ {blank} }}"
+        );
+        let _ = writeln!(
+            out,
+            "    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {{ {invalid} }}"
         );
         if let Some(u) = &self.field.unset {
             let _ = writeln!(out, "    if ({u}) {{ {unset} }}");
@@ -782,12 +787,19 @@ impl FieldRamp {
     /// What the ramp shows for a sample whose chart classification is `forbidden` (`ctx.validity.forbidden`) and whose
     /// `state` is `state`, its stored value `x` read with the read side's validity `gate`, at the run-time values
     /// `reads`: the CPU twin of [`FieldRamp::wgsl`]'s whole order, the blank test first ([`Shown::Blank`], R-467,
-    /// R-511), then [`FieldRamp::shown_at`].
+    /// R-511), then the failed test (a `sim_failed` sample or a reserved state, [`Shown::Invalid`]), then
+    /// [`FieldRamp::shown_at`].
     pub fn shown_in(&self, x: f32, gate: bool, reads: Reads, forbidden: bool, state: u32) -> Shown {
-        if forbidden || state == STATE_DECODE_FAILED {
-            Shown::Blank
-        } else {
-            self.shown_at(x, gate, reads)
+        if forbidden {
+            return Shown::Blank;
+        }
+        // The WGSL's `state > STATE_DECODE_FAILED`: the reserved codes, and any past the field's eight.
+        match State::from_code(state) {
+            Some(State::DecodeFailed) => Shown::Blank,
+            Some(State::SimFailed | State::Reserved6 | State::Reserved7) | None => Shown::Invalid,
+            Some(State::Escape | State::Bounded | State::Collision | State::Running) => {
+                self.shown_at(x, gate, reads)
+            }
         }
     }
 

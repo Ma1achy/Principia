@@ -5,8 +5,10 @@
 //!   a `decode_failed` sample of each `detail` (R-511), the lane decided before every other test, the unset value's
 //!   included; `running` (in the outcome view), `sim_failed` of each `detail`, a reserved `state` code, a NaN, a `−∞`
 //!   that is no declared sentinel and the length ramp's 127 draw exactly `#141418`, the outcome view's failures at
-//!   rank 0 in greyscale and hue mode (R-446, R-448); `d_min`'s unset `+∞` keeps the "not yet" stipple
-//!   (`presentation_no_hatch_outcome_view`, `presentation_no_hatch_field_ramps`, `presentation_no_hatch_test_stain`);
+//!   rank 0 in greyscale and hue mode (R-446, R-448); a field ramp draws `sim_failed` and a reserved code `#141418`
+//!   whatever the payload the packer wrote, `d_min`'s unset `+∞` or 0.0 and a valid word (R-467, R-511 Z3), and a
+//!   `running` sample's unset `+∞` keeps the "not yet" stipple (`presentation_no_hatch_outcome_view`,
+//!   `presentation_no_hatch_field_ramps`, `presentation_no_hatch_test_stain`);
 //! - overridden, a ramp's invalid value draws the node's colour, and nothing else changes
 //!   (`presentation_no_hatch_override`);
 //! - no pixel of any presentation output equals `debug_invalid`'s pattern, and no not-a-system pixel draws a palette
@@ -78,9 +80,10 @@ struct Row {
     forbidden: bool,
 }
 
-/// The scene: physical outcomes, `running`, `sim_failed` of each `detail` with a NaN `d_min`, the reserved codes, one
-/// with the length's 127 and a `−∞` `d_min`, `decode_failed` of each `detail` with both invalid and one with `d_min`
-/// unset, and forbidden samples of each kind of payload, values valid, invalid or unset among them.
+/// The scene: physical outcomes, `running`, `sim_failed` of each `detail` with the payload the packer writes (`d_min`
+/// unset, `+∞`, or 0.0, payload §2, R-271, and a word), the reserved codes likewise, an escape with a NaN `d_min` and a
+/// bounded sample with the length's 127 and a `−∞` `d_min`, `decode_failed` of each `detail` with both invalid and one
+/// with `d_min` unset, and forbidden samples of each kind of payload, values valid, invalid or unset among them.
 fn rows() -> Vec<Row> {
     let row = |name, payload, length, d_min, forbidden| Row {
         name,
@@ -103,16 +106,29 @@ fn rows() -> Vec<Row> {
     ];
     for d in 0..4 {
         let p = (STATE_SIM_FAILED, d, 40);
-        out.push(row("sim_failed", p, 23, DMin::Bits(F16_QNAN), false));
+        let d_min = if d % 2 == 0 {
+            DMin::Unset
+        } else {
+            DMin::Bits(0)
+        };
+        out.push(row("sim_failed", p, 23, d_min, false));
     }
+    out.push(row("reserved 6", (6, 0, 40), 23, DMin::Unset, false));
+    out.push(row("reserved 7", (7, 0, 40), 9, DMin::Bits(0), false));
     out.push(row(
-        "reserved 6",
-        (6, 0, 40),
+        "escape NaN",
+        (ESCAPE, 1, 120),
+        38,
+        DMin::Bits(F16_QNAN),
+        false,
+    ));
+    out.push(row(
+        "bounded -inf",
+        (BOUNDED, 0, 1000),
         127,
         DMin::Bits(F16_NEG_INF),
         false,
     ));
-    out.push(row("reserved 7", (7, 0, 40), 9, DMin::Value(2.5e-3), false));
     for d in 0..4 {
         let p = (STATE_DECODE_FAILED, d, 0);
         out.push(row("decode_failed", p, 127, DMin::Bits(F16_QNAN), false));
@@ -550,7 +566,7 @@ fn presentation_no_hatch_field_ramps() {
 negative_control!(
     presentation_no_hatch_field_ramps,
     "a ramp drawing its invalid values in the hatch fails",
-    expected = "`length`'s ramp, Default: reserved 6",
+    expected = "`length`'s ramp, Default: sim_failed (4, 0, 40)",
     check_ramps(
         Some((
             "return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);",
@@ -592,6 +608,50 @@ mod presentation_no_hatch_field_ramps_controls {
             )
         );
     }
+
+    /// The ramp's failed-state test, as [`FieldRamp::wgsl`] writes it.
+    const FAILED: &str =
+        "if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {";
+
+    mod failed_on_the_ramp {
+        use super::*;
+        negative_control!(
+            presentation_no_hatch_field_ramps,
+            "a ramp without the failed-state test places sim_failed's payload, its word's length on the ramp, and fails",
+            expected = "`length`'s ramp, Default: sim_failed (4, 0, 40)",
+            check_ramps(Some((FAILED, "if (false) {")), false)
+        );
+    }
+
+    mod failed_unset_stippled {
+        use super::*;
+        negative_control!(
+            presentation_no_hatch_field_ramps,
+            "a ramp drawing a sim_failed sample's unset +inf d_min in the \"not yet\" stipple fails (R-467, R-511 Z3)",
+            expected = "`d_min`'s ramp, Default: sim_failed (4, 0, 40)",
+            check_ramps(
+                Some((
+                    FAILED,
+                    "if ((ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) \
+                     && bitcast<u32>(v) != 0x7f800000u) {",
+                )),
+                false
+            )
+        );
+    }
+
+    mod reserved_on_the_ramp {
+        use super::*;
+        negative_control!(
+            presentation_no_hatch_field_ramps,
+            "a ramp whose failed-state test leaves out the reserved codes places them, and fails",
+            expected = "`length`'s ramp, Default: reserved 6",
+            check_ramps(
+                Some((FAILED, "if (ctx.sample.state == STATE_SIM_FAILED) {")),
+                false
+            )
+        );
+    }
 }
 
 #[test]
@@ -602,7 +662,7 @@ fn presentation_no_hatch_override() {
 negative_control!(
     presentation_no_hatch_override,
     "a ramp ignoring its node's override draws #141418, not the node's colour, and fails",
-    expected = "`length`'s ramp, Default: reserved 6",
+    expected = "`length`'s ramp, Default: sim_failed (4, 0, 40)",
     check_ramps(
         Some((
             "uniforms.INVALID_OVERRIDE != 0u);",

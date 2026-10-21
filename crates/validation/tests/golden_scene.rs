@@ -50,8 +50,8 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("length_view", "length", "RRRRRRRL"),
     ("length_ramp", "length", "RRRRRRRP"),
     ("length_ramp_override", "length", "RRRRRRRO"),
-    ("d_min_ramp", "d_min", "NNPRRRRR"),
-    ("d_min_ramp_override", "d_min", "NNORRRRR"),
+    ("d_min_ramp", "d_min", "PNPPRRRR"),
+    ("d_min_ramp_override", "d_min", "ONOORRRR"),
     ("outcome", "state", "FFFFFFFFFFFFFFFFBBBBFFB"),
     ("outcome_edited", "state", "FFFFFFFFFFFFFFFFBBBBFFB"),
     ("state_view", "state", "FFFFFF"),
@@ -128,7 +128,7 @@ negative_control!(
     golden_scene_scenes_hold_their_samples,
     "the override scene expected to draw its NaN #141418, as the default scene does, fails the check",
     expected = "`d_min_ramp_override`'s samples show",
-    check_scene("d_min_ramp_override", "d_min", "NNPRRRRR")
+    check_scene("d_min_ramp_override", "d_min", "PNPPRRRR")
 );
 
 #[test]

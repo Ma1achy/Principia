@@ -6,6 +6,7 @@
 fn colour(ctx: Ctx) -> vec3<f32> {
     let v = ctx.sample.d_min;
     if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
+    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }
     if (bitcast<u32>(v) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }
     if (!(bitcast<u32>(ctx.sample.d_min) != 0x7f800000u && (bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u)) {
         if ((bitcast<u32>(ctx.sample.d_min) != 0x7f800000u) && (bitcast<u32>(v) & 0x7f800000u) == 0x7f800000u) { note_non_finite(); }

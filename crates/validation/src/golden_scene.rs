@@ -23,8 +23,9 @@
 //! - `length_view`: the word `length`'s view: the sentinel 127 shows as its literal value on the ramp (R-136).
 //! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp, a presentation view (R-467): 127 in the
 //!   presentation views' invalid colour, `#141418`, then in the node's override colour.
-//! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in `#141418`, then in the override colour; the
-//!   unset value in the "not yet" style either way (R-280, R-399).
+//! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN and the two forced failures, whatever their
+//!   payload (the unset `+∞`, a stored 0.0), in `#141418`, then in the override colour (R-467, R-511 Z3); the
+//!   unstepped sample's unset value in the "not yet" style either way (R-280, R-399).
 //!
 //! **The ramp follows the declared range** (`m1-numeric`; R-400, R-403; TASK-M1-17's acceptance lines), each view in
 //! its default mode, `RANGE_AUTO = 1`, over the scene's measured range:
