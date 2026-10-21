@@ -27,7 +27,7 @@ Image mode: a picture laid on the target's square pulled back through the flow, 
 ## Acceptance tests
 - `cargo test -p render chart_position_picture` — REQ-COL-130's verify.
 - `cargo test -p render chart_position_fade` — REQ-COL-131's verify.
-- `cargo test -p render chart_position_picture_wrap` — REQ-COL-137's verify: Wrap arm (Repeat against Mirror, identical inside the square, differing past it) and Wrap defaults bitwise (a stain saved without the wrap and dim fields renders bitwise as R-542's look-up; Gradient 2D, Picture and Palette hex), each with its failing arm (R-543 §5).
+- `cargo test -p render chart_position_picture_wrap` — REQ-COL-137's verify: Wrap arm (Repeat against Mirror, identical on [0, 1)², differing past the square, and at s = 1 Repeat reading texel 0 and Mirror texel N − 1; R-543 H11) and Wrap defaults bitwise (a stain saved without the wrap and dim fields renders bitwise as R-542's look-up; Gradient 2D, Picture and Palette hex), each with its failing arm (R-543 §5; the Gradient 2D and Palette hex legs' arms R-543 H11's).
 - `cargo test -p render chart_position_tileable_checker` — REQ-COL-138's verify: Tileable checker seam, with the old checkerboard as its failing arm (R-543 §5).
 
 ## Notes

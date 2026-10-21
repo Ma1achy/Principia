@@ -627,6 +627,10 @@ neighbouring cells varies with φ, so the step across the y seam is held to the 
 cell 8, which wraps to cell 0; along x every neighbouring step in a row is the same, the seam's included. Wrap defaults
 bitwise needs the app and is TASK-M7-49's; on the transcription version 9's lookup at its defaults equals version 8's on
 every texel, and flipping either default fires.
+*Amended by R-543 H11.* The Wrap arm's "inside" is `[0, 1)²`: at the closed far edge `s = 1`, inside the square (SM8),
+Repeat reads texel 0 and Mirror texel `N − 1`, so the test asserts the two modes identical on the half-open square and
+that edge rule on a sweep reaching `s = 1` (on the transcription 0 of 25,600 differ on `[0, 1)²`, 321 of 321 far-edge
+samples read the stated texels, and the arm that moves the rule fires).
 
 ## SM13. Queue, don't rule
 

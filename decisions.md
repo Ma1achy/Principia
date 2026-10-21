@@ -19221,9 +19221,11 @@ and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My w
   the port's own file beside the bundle's `torus_gam.js` (committed, not kept in a scratch directory, so a reviewer can
   run it in their worktree; the bundle's four files are unchanged). It transcribes `SM_TORUS`, `smTorusXY` with
   `smTileXY` and `smNTheta`, `smTorusLab`, `smWrapFn`, `smImage`'s `checker` and `tchecker` branches, `smPaint`'s Picture
-  look-up and `oklabToRgb`, and runs each test's passing arm and then its failing arm: 19 checks, 0 failed (Torus seam
-  1.6e-14; one-to-one 1.16e-3; gamut 0 of 240²; Wrap arm 0 inside, 19,200 of 24,000 past; tileable seam 6e-17; the
-  constants at 0.9745 of the largest in-gamut scale, §2.1's 0.975). Its output is in R-543's PR.
+  look-up and `oklabToRgb`, and runs each test's passing arm and then its failing arm: 21 checks, 0 failed (Torus seam
+  1.6e-14; one-to-one 1.16e-3; gamut 0 of 240²; Wrap arm 0 inside, 19,200 of 24,000 past, and H11's edges, 0 of
+  25,600 differing on [0, 1)² and 321 of 321 far-edge samples at the stated texels; tileable seam 6e-17; the
+  constants at 0.9745 of the largest in-gamut scale, §2.1's 0.975). Its output is in R-543's PR. *Was (PR #272's qa
+  review 5602907732, Q1):* "19 checks, 0 failed", before H11's edge check and its arm.
 - **H4. One-to-one's arms (state map SM12, its *Port's note (R-543)*).** "Minimum OKLab separation > 0 on a 200² grid"
   fires on R = r (separation 0 on the grid's row φ = π) but not on R < r or on L and chroma swapped (2.1e-6 and 1.4e-5),
   because the tube meets the L axis between grid rows. The test keeps its assertion and its arms and adds one, read
@@ -19261,6 +19263,14 @@ and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My w
   which the Torus does not use.
 - **H10. Flow keeps its name.** §2.4's preset is SM15's Flow, the file's name; the prototype's button reads "Picture
   flow", the difference RQ-499 holds. Nothing is renamed here.
+- **H11. The Wrap arm's "inside" (state map SM8, SM12; applied per R-369, PR #272's qa review 5602907732, Q1).** §5's
+  "identical inside it" is read on `[0, 1)²`: the prototype's look-up counts `s = 1` inside the square (`u > 1` is
+  past it) and there reads texel 0 under Repeat and texel `N − 1` under Mirror (SM8), so the two modes agree on the
+  half-open square, `s = 0` included, and differ on its closed far edge. REQ-COL-137's verify asserts both, with an
+  arm (the edge rule moved) that fires; the check runs them (H3). §5's words are unchanged. Its Wrap defaults
+  bitwise legs for Gradient 2D and Palette hex get arms of their own (an old Gradient 2D stain loading as the Torus;
+  the Palette's tiling changing when the Repeats field is present), and REQ-GUI-339's legend period is checked for
+  its value, REQ-COL-136's `P` and `P_y`, with an arm for a wrong one (qa Q2, Q3).
 
 *Checked against `main` (a0a83ca3), `rulings/print-graph` (PR #268, 765fe6d0), `task/TASK-M2-28` (PR #271), `task/TASK-M2-34`
 (PR #269), `task/TASK-M2-24` (PR #262) and the open queue entries the follow-up touches (RQ-487, RQ-498, RQ-499):* two

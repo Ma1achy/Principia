@@ -338,8 +338,46 @@ def test_wrap_arm():
            f"Repeat then renders as Mirror: {wired_outside_diff} of {outside_n} differ past the square, so "
            f"'differs past the square' fails")
     clamp_edge = all(picture(tex, u, 0.5, 'clamp', False) == picture(tex, 0.999, 0.5, 'clamp', False) for u in (1.2, 3.7, 40.0))
-    print(f"       Clamp holds the edge texel past the square (dim off): {clamp_edge}; at u = 1 exactly Repeat reads texel 0 and "
-          f"Mirror texel 255 (the square's closed far edge)")
+    print(f"       Clamp holds the edge texel past the square (dim off): {clamp_edge}")
+    edge_ok, edge_n, edge_diff, half_open_diff, half_open_n = wrap_edges(tex, picture)
+    report("Wrap arm, the square's edges: identical on [0, 1)², s = 0 included; at s = 1 Repeat reads texel 0, Mirror texel N − 1",
+           half_open_diff == 0 and edge_ok == edge_n and edge_diff > 0,
+           f"a 161² grid of [0, 1]² with both ends (k/160): {half_open_diff} of {half_open_n} differ on [0, 1)²; on the "
+           f"far edges (u = 1 or v = 1) {edge_ok} of {edge_n} read the stated texels and {edge_diff} differ between the modes")
+    bad_ok = wrap_edges(tex, edge_moved)[0]
+    report("Wrap arm, arm: the edge rule moved (s = 1 read as texel N − 1 under Repeat, as under Mirror) (must fire)",
+           bad_ok < edge_n,
+           f"{edge_n - bad_ok} of {edge_n} far-edge samples then read other texels than the stated ones, so the edge assertion fails")
+
+
+def edge_moved(tex, u, v, mode='mirror', dim=True):
+    """The arm: Repeat clamped below 1 at the far edge, so s = 1 reads texel N − 1 as under Mirror."""
+    if mode == 'repeat':
+        cl = lambda s: N_IMG - 1 if s == 1 else min(N_IMG - 1, math.floor((s - math.floor(s)) * N_IMG))
+        c = tex[cl(v)][cl(u)]
+        out = u < 0 or u > 1 or v < 0 or v > 1
+        return tuple(x * 0.62 for x in c) if (out and dim) else c
+    return picture(tex, u, v, mode, dim)
+
+
+def wrap_edges(tex, look):
+    """[0, 1]² with both ends: on [0, 1)² Repeat and Mirror agree; at s = 1 (inside the square, SM8) Repeat reads texel 0
+    and Mirror texel N − 1 along that axis, the other axis as usual."""
+    K = 160
+    idx = lambda s, far: far if s == 1 else min(N_IMG - 1, math.floor(s * N_IMG))
+    edge_ok = edge_n = edge_diff = half_open_diff = half_open_n = 0
+    for k in range(K + 1):
+        for l in range(K + 1):
+            u, v = k / K, l / K
+            rep, mir = look(tex, u, v, 'repeat'), look(tex, u, v, 'mirror')
+            if u < 1 and v < 1:
+                half_open_n += 1
+                half_open_diff += rep != mir
+                continue
+            edge_n += 1
+            edge_diff += rep != mir
+            edge_ok += rep == tex[idx(v, 0)][idx(u, 0)] and mir == tex[idx(v, N_IMG - 1)][idx(u, N_IMG - 1)]
+    return edge_ok, edge_n, edge_diff, half_open_diff, half_open_n
 
 
 def test_wrap_defaults_transcription():

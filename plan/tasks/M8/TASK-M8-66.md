@@ -32,6 +32,6 @@ A Chart position stain in Explore: the legend drawn over the target chart with a
 
 ## Notes
 - The gui reviewer reviews against board 6.
-- **R-543:** REQ-GUI-339 gains the Torus's period in chart units in the legend and the wrap mode in the hovered pixel's readout, the ruling's text where the prototype is silent (RQ-506 (a)).
+- **R-543:** REQ-GUI-339 gains the Torus's period in chart units in the legend (REQ-COL-136's `P` and `P_y`, on the cylinder 2π round θ, with an arm for a wrong one; R-543 H11) and the wrap mode in the hovered pixel's readout, the ruling's text where the prototype is silent (RQ-506 (a)).
 - **The board** is read per render GUI spec §G13's R-542 bullet: board 6's legend block only, the shell following `01_main.png`; no "Edit graph…" in the top bar (RQ-500, (c) meanwhile); the hover trace and its label stay (RQ-501 (a)).
 - **Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats, in-square mirrors to rounding.
