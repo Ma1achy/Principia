@@ -12,8 +12,8 @@ use validation::eps_phys::EncodeKind;
 use validation::gate::{self, Gate, GateConfig, Verdict};
 use validation::gauge::Gauge;
 use validation::inspector::{
-    ball, com, encode_leaky, handle_gaps, handle_samples, held_shapes, latents, round_trip,
-    verdict, worst, z_gap, Handle, HandlesInput, Held, InspectorHandlesGate,
+    ball, com, encode_leaky, handle_gaps, handle_samples, held_shapes, latents, radius_refusal,
+    round_trip, verdict, worst, z_gap, Handle, HandlesInput, Held, InspectorHandlesGate,
     InspectorRoundtripGate, Leak, RoundtripInput, COM_BOUND, HANDLES, ROUNDTRIP,
 };
 use validation::negative_control;
@@ -658,6 +658,54 @@ negative_control!(
     "a non-empty input must not be refused",
     expected = "an empty handles input is not refused",
     check_refusals(1, 0)
+);
+
+/// A radius is refused unless finite and positive, `ball` never returning otherwise: 0, −0, a negative, NaN and ±∞
+/// are refused, the least positive normal and 4 are not; and both judges refuse a radius of 0 and of NaN before drawing.
+fn check_radius(refusal: fn(f64) -> Option<String>) {
+    for bad in [0.0, -0.0, -4.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        assert!(
+            refusal(bad).is_some_and(|e| e.contains("is not finite and positive")),
+            "the radius {bad} is not refused"
+        );
+    }
+    for good in [f64::MIN_POSITIVE, 4.0] {
+        assert_eq!(refusal(good), None, "the radius {good} is refused");
+    }
+    for bad in [0.0, f64::NAN] {
+        let h = InspectorHandlesGate::judge(
+            &config(HANDLES),
+            "t",
+            &HandlesInput {
+                radius: bad,
+                ..handles_input(4, Leak::None)
+            },
+        );
+        let r = InspectorRoundtripGate::judge(
+            &config(ROUNDTRIP),
+            "t",
+            &RoundtripInput {
+                radius: bad,
+                ..roundtrip_input(4, EncodeKind::Defaults, 0.0)
+            },
+        );
+        assert!(
+            h.is_err_and(|e| e.contains("radius")) && r.is_err_and(|e| e.contains("radius")),
+            "a gate draws at the radius {bad}"
+        );
+    }
+}
+
+#[test]
+fn inspector_radius_refused() {
+    check_radius(radius_refusal);
+}
+
+negative_control!(
+    inspector_radius_refused,
+    "a refusal that admits an infinite radius must fail",
+    expected = "the radius inf is not refused",
+    check_radius(|r| if r > 0.0 { None } else { radius_refusal(r) })
 );
 
 /// The judges' verdicts and lines: under `E` a pass naming each handle and the margin; a leak or a shift a fail naming

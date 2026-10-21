@@ -234,7 +234,3 @@ justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x 
 [[equivalent]]
 mutant = "crates/validation/src/inspector.rs:76:49: replace < with <= in ball"
 justification = "they differ only on a draw whose squared norm equals radius² exactly, which no seed the gates and tests use draws (each coordinate is one of 2⁵³ values), and such a point lies on the sphere, inside every bound the gates read either way"
-
-[[equivalent]]
-mutant = "crates/validation/src/inspector.rs:438:35: replace + with - in round_trip"
-justification = "the shift is added to every coordinate before the CoM is read as a norm, ‖Σmᵢ(rᵢ ± shift)‖ = ‖R ± shift·(1, 1)‖, and the CoM of C's output is ~10⁻¹⁷, so +shift and −shift read the same norm to rounding; z is read from x, not the shifted state"

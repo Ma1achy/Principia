@@ -9,15 +9,15 @@
 //! - **`inspector-roundtrip`** (REQ-VAL-022): decode → canonicalise → `z`, `‖z − E(D(z))‖`; and the canonical CoM,
 //!   `‖Σ mᵢrᵢ‖` of `C`'s output, within [`COM_BOUND`].
 //!
-//! **The norm and the ball** (applied per R-369). `‖·‖` on `z` is the Euclidean norm on ℝ⁸, and "`|z| < 4`" is the
-//! ball `‖z‖ < 4`, drawn by rejection from the cube `[−4, 4]⁸`; every control is then inside `|zₖ| < 4`, so
-//! `s(1 − s) ≥ 0.018`, far from the `10⁻⁶` clamps. The componentwise reading, the whole cube, puts all eight controls
-//! at its corners at once; the Rust round trip there is about twice the reference's bound, driven by the mass block's
-//! `artanh` at `|z_μ| → 4` (the calibration proposal, REQ-VAL-121, gives both).
+//! **The norm, and the ball applied meanwhile** (RQ-476). `‖·‖` on `z` is the Euclidean norm on ℝ⁸, as the corpus
+//! writes the errors with double bars. Whether "`|z| < 4`" is the ball `‖z‖ < 4` or the cube `[−4, 4]⁸` is RQ-476's;
+//! meanwhile the gates draw the ball, by rejection from the cube. Every control is inside `|zₖ| < 4` either way, so
+//! `s(1 − s) ≥ 0.018`, far from the `10⁻⁶` clamps. Under the cube the Rust round trip is about twice the reference's
+//! bound, driven by the mass block's `artanh` at `|z_μ| → 4` (RQ-476 and REQ-VAL-121's proposal give both).
 //!
-//! **The random ICs** (`inspector-handles`): `x = g₀·D(z)`, `z` in the ball, `g₀` a random gauge element
-//! (`crate::gauge`) with `s₀` on `2^[−octaves, octaves)`, `θ` on `[−π, π)`, either parity, the offset on
-//! `s₀·[−span, span)²` and the boost on `s₀^{−1/2}·[−span, span)²`, so the IC is a general physical state. Each
+//! **The random ICs, applied meanwhile** (RQ-477; `inspector-handles`): `x = g₀·D(z)`, `z` in the ball, `g₀` a
+//! random gauge element (`crate::gauge`) with `s₀` on `2^[−octaves, octaves)`, `θ` on `[−π, π)`, either parity, the
+//! offset on `s₀·[−span, span)²` and the boost on `s₀^{−1/2}·[−span, span)²`, so the IC is a general physical state. Each
 //! handle's size is drawn alike, in proportion to the state it moves: the offset `s₀·[−span, span)²`, the boost
 //! `s₀^{−1/2}·[−span, span)²`, the turn `[−π, π)`, the factor `2^[−octaves, octaves)`.
 //!
@@ -69,13 +69,26 @@ pub fn z_gap(a: [f64; 8], b: [f64; 8]) -> f64 {
         .sqrt()
 }
 
-/// A `z` uniform in the ball `‖z‖ < radius`, by rejection from the cube `[−radius, radius)⁸`.
+/// A `z` uniform in the ball `‖z‖ < radius`, by rejection from the cube `[−radius, radius)⁸`. `radius` is finite and
+/// positive (each gate refuses another, [`radius_refusal`]); about 1.6 % of the cube's draws are kept.
 pub fn ball(rng: &mut SplitMix, radius: f64) -> [f64; 8] {
     loop {
         let z: [f64; 8] = std::array::from_fn(|_| uniform(rng, -radius, radius));
         if z.iter().map(|x| x * x).sum::<f64>() < radius * radius {
             return z;
         }
+    }
+}
+
+/// The refusal of a ball radius that is not finite and positive, on which [`ball`] would never return; `None` for one
+/// that is.
+pub fn radius_refusal(radius: f64) -> Option<String> {
+    if radius.is_finite() && radius > 0.0 {
+        None
+    } else {
+        Some(format!(
+            "refused: the radius {radius} is not finite and positive"
+        ))
     }
 }
 
@@ -331,6 +344,9 @@ impl InspectorHandlesGate {
         if input.ics == 0 {
             return Err("refused: no ICs".to_owned());
         }
+        if let Some(refusal) = radius_refusal(input.radius) {
+            return Err(refusal);
+        }
         let bound = config.threshold.value;
         let gaps: Vec<[f64; 4]> = handle_samples(input)
             .iter()
@@ -411,7 +427,7 @@ fn two_sum(a: f64, b: f64) -> (f64, f64) {
     (s, (a - (s - bb)) + (b - bb))
 }
 
-/// `‖Σ mᵢrᵢ‖`, each sum formed without rounding but the last (products by `fma`, sums by [`two_sum`]), so the CoM
+/// `‖Σ mᵢrᵢ‖`, each sum formed without rounding but the last (products by `fma`, sums by an exact two-sum), so the CoM
 /// read is the state's own, not the reading's rounding.
 pub fn com(x: &Ic<f64>) -> f64 {
     let axis = |k: usize| {
@@ -523,6 +539,9 @@ impl InspectorRoundtripGate {
     ) -> Result<GateReport, String> {
         if input.samples == 0 {
             return Err("refused: no samples".to_owned());
+        }
+        if let Some(refusal) = radius_refusal(input.radius) {
+            return Err(refusal);
         }
         let bound = config.threshold.value;
         let trips: Vec<(f64, f64)> = latents(input)

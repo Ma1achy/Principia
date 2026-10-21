@@ -1499,15 +1499,6 @@ dividing by `N_d`. Nothing is chosen.*
 - **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
   ruled); TASK-M2-36 does not wait for the rest.
 
-  - (a) Keep both, off by default, drawing the debug view's styles over the figure: diagnostics turned on by the person,
-    as the Domain preview is (R-467 D9 as first ported).
-  - (b) Drop both from Overlays ▾, View › Debug view being the one switchable view. This retires part of REQ-GUI-079,
-    the human's call.
-  - (c) Keep both, enabled only while View › Debug view is on, as filters of what it shows.
-- **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
-- **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
-  the rest of TASK-M8-08 proceeds.
-
 ## RQ-475: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
 
 *Found by TASK-M2-27 while building the `inspector-roundtrip` gate. Nothing is chosen.*
@@ -1548,3 +1539,64 @@ dividing by `N_d`. Nothing is chosen.*
   equal-mass one, as RQ-355 holds it for other masses.
 - **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-475]`, held, not closed, by
   TASK-M2-27's PR (applied per R-369). The round trip, the CoM, REQ-VAL-021 and REQ-VAL-121's proposal do not wait.
+
+## RQ-476: REQ-VAL-022's "2×10⁴ random z with |z| < 4" does not say whether `|z|` is the vector's norm (the ball `‖z‖ < 4`) or each component's (the cube `[−4, 4]⁸`), and the Rust round trip passes the reference's bound under one and fails it under the other *(silence, a missing definition, R-72, R-71, REQ-VAL-022, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's physics review (5594956833, P1) and qa review (5595411216, Q3) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:23): "round-trip
+    `decode→canonicalise→z` max `‖z−z'‖ = 1.2×10⁻¹³` over 2×10⁴ random `z` (|z|<4; residual
+    boundary-conditioning-dominated, as expected)". The domain is written with single bars, `|z|<4`, and the error
+    with double bars, `‖z−z'‖`; "boundary-conditioning-dominated" fits draws that reach `|zₖ| → 4`.
+  - `plan/requirements.yaml` REQ-VAL-022: "over 2×10⁴ random z with |z| < 4"; its verify detail: "2×10⁴ random z,
+    |z| < 4: max round-trip error ≤ 1.2×10⁻¹³".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Notes": "|z| < 4 keeps s(1−s) ≥ ~0.018", true under both readings.
+- **Measured on the f64 Rust decode and encode, the defaults links** (`‖z − E(D(z))‖`, Euclidean):
+  - **ball** `‖z‖ < 4`: 9.73×10⁻¹⁴ at the gate's seed over 2×10⁴; 5.8×10⁻¹⁴ to 1.21×10⁻¹³ over 8 seeds; over 10⁶
+    draws max 1.67×10⁻¹³, p99.999 1.09×10⁻¹³, 6 per million past 1.2×10⁻¹³.
+  - **cube** `[−4, 4)⁸`: 2.4 to 2.65×10⁻¹³ on every seed over 2×10⁴; over 10⁶ draws max 3.15×10⁻¹³, p99.999
+    2.66×10⁻¹³, p99.99 2.42×10⁻¹³, 9150 per million past 1.2×10⁻¹³. The tail is the mass block's `artanh` near
+    `|z_μ| → 4`.
+  - **The handles gate under the cube reading** (REQ-VAL-021 names no domain; its ICs `g₀·D(z)` draw `z` from the same
+    reading): 5.0 to 6.6×10⁻¹⁴ over 2×10⁴ on seeds 1–3, against 1.6×10⁻¹⁴ (174 to 198 handle applications past it),
+    and 1.54×10⁻¹³ over 5×10⁵ ICs. qa measured 3.03×10⁻¹⁴ on the Inspector's Randomise ICs kept inside the cube.
+    Under the ball it passes: 8.45×10⁻¹⁵ at the gate's seed, 1.02×10⁻¹⁴ over 5×10⁵ ICs.
+- **Options seen:**
+  - (a) The ball, with the gate at the reference's 1.2×10⁻¹³ on the seeded 2×10⁴ sample.
+  - (b) The ball, with the gate above its measured distribution, at or above 1.67×10⁻¹³.
+  - (c) The cube, with the gate above its measured distribution (above 3.15×10⁻¹³), and the handles gate's bound
+    reconsidered with it (REQ-VAL-121).
+- **Applied meanwhile:** (a). `inspector-roundtrip` and `inspector-handles` draw `z` in the ball, the round trip
+  gated at 1.2×10⁻¹³; both thresholds stay provisional under REQ-VAL-121.
+- **Waits:** REQ-VAL-022 and REQ-VAL-121 carry `rq: RQ-476`, held, not closed, by TASK-M2-27's PR. The gates run
+  meanwhile.
+
+## RQ-477: REQ-VAL-021's "2×10⁴ random ICs" does not say what a random IC is, and the Rust handles hold the reference's 1.6×10⁻¹⁴ on one distribution and not on the reference tool's own *(silence, a missing definition, R-72, R-71, REQ-VAL-021, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's qa review (5595411216, Q2) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-VAL-021: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed,
+    to the bound verified in the reference tool (1.6×10⁻¹⁴)"; its verify detail: "2×10⁴ random ICs, each handle
+    applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)".
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built" (:23): "all four gauge handles hold `z` to
+    `1.6×10⁻¹⁴`", and (:14) "Plus Reset / Randomise / Burrau-ish presets"; no distribution is given.
+  - The reference tool's Randomise (`docs/gui/reference/ic_inspector.html`:710–712, record only, R-159): masses on
+    `[0.4, 1.8]` (normalised), positions on `±0.9`, velocities on `±0.6`, each uniform.
+- **Measured on the f64 Rust encode:**
+  - **The gate's distribution**, `g₀·D(z)` with `z` in the ball `‖z‖ < 4` (RQ-476) and `g₀` a random gauge element
+    with offsets and boosts up to the state's own size: 8.45×10⁻¹⁵ at the gate's seed over 2×10⁴; 1.02×10⁻¹⁴ over
+    5×10⁵ ICs. At offsets and boosts up to twice the state's size, one sample in 2×10⁴ reaches 1.75×10⁻¹⁴.
+  - **Randomise** (qa, kept where `‖E(x)‖ < 4`, handles at the tool's button sizes and at random sizes): rotate-all
+    1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ in qa's test run; the worst over seeds 1–5 1.91, 2.48, 1.56, 1.75 and 1.48×10⁻¹⁴, so
+    3 of 5 seeds fail, on rotate-all at any turn and on translate-all.
+  - **The canonical CoM on a Randomise IC** (qa, exact reading): 1.35×10⁻¹⁵ from the origin, against 1.16×10⁻¹⁶ on
+    `C(D(z))`, REQ-VAL-022's domain and 1.7×10⁻¹⁶ bound.
+- **Options seen:**
+  - (a) The gate's `g₀·D(z)`, `z` in RQ-476's domain.
+  - (b) The Inspector's Randomise, where the Rust handles reach 1.82×10⁻¹⁴ (rotate-all) and 1.69×10⁻¹⁴ (scale-all),
+    and 3 of 5 seeds fail 1.6×10⁻¹⁴: the bound would need a ruling (REQ-VAL-121), not a loosening here.
+  - (c) Both, each with its own bound.
+- **Applied meanwhile:** (a). The 1.6×10⁻¹⁴ bound is not loosened.
+- **Waits:** REQ-VAL-021 carries `rq: RQ-477`, held, not closed, by TASK-M2-27's PR. The gate runs meanwhile.
