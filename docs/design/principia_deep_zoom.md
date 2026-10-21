@@ -82,6 +82,15 @@ ulp, and the criterion holds while the step spans at least 16 ulps.
 
 Jacobian cost: microseconds per quad on the CPU, amortised over `N²` samples. Negligible.
 
+**The latent Jacobian (R-550, RQ-341 (a)).** A second Jacobian shares this method and is not `J_D`: a CPU, f64,
+central-difference Jacobian `∂x/∂z` of the decoder with **8 columns**, one per latent direction (two decode evaluations
+per direction, the step rule `J_D`'s), at a latent point (`z₀`, or the hovered pixel's on an affine chart). It is taken
+of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and `η_E` (RQ-345 (b)), so
+it differentiates the state the integrator starts from. The compass's Jacobi and Shape views and their steer read it
+(render_gui_spec § "The compass: look and views (R-451, R-452)"): `J q̂₁`, `J q̂₂` on the slice plane's orthonormalised
+pair, the area stretch `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on that pair, so it does not move with the zoom σ or the
+tilts' shear. The linear path never reads it.
+
 ---
 
 ## 3. Three-layer quadtree

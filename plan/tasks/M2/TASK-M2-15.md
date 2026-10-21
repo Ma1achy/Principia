@@ -1,7 +1,7 @@
 # TASK-M2-15 — Encode: block inverses, E = inverses ∘ C, the discard notices and T1
 
 - **Milestone:** M2
-- **Closes:** REQ-ENC-007, REQ-ENC-003, REQ-ENC-014, REQ-SYS-015, REQ-DEC-014
+- **Closes:** REQ-ENC-007, REQ-ENC-003, REQ-SYS-015, REQ-DEC-014
 - **Depends on:** TASK-M2-01, TASK-M2-07
 - **Needs (earlier milestones):** REQ-SYS-004
 - **Reviewers:** code, qa, physics
@@ -46,7 +46,7 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `cargo test -p engine encode_beta_half_axis` — collinear inputs on the `−x` half-axis (`λ̃_y = ±0`, `λ̃_x < 0`): `β = π̂` by the select, never `atan2`'s value, and CPU-f64 and GPU-f32 agree there, `±0` operands included (R-438; REQ-ENC-007).
 - `cargo test -p kernel encode_t1_gauge` — encode test 2: random g per dd_encode §3.3, including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice (REQ-ENC-003).
 - `cargo test -p kernel encode_notices` — canonical inputs raise no notice; each operation forced individually raises exactly its notice (REQ-ENC-014).
-- Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan (including `.wgsl` files) finds no second implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be the translation's output (REQ-SYS-015).
+- Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan (including `.wgsl` files, its full reach, R-547) finds no second implementation of any dd_decoder §3 formula outside the shared source but the read side's `shape()`, which is REQ-SYS-085's (TASK-M2-25; RQ-365 (c)), so any fragment decode/encode can only be the translation's output (REQ-SYS-015).
 - `cargo test -p engine encode_exact_poles` — configurations with ‖λ̃‖ = 0 and ‖ρ̃‖ = 0 exactly: no NaN; the output is deterministic, identical on repeat and on CPU-f64 and GPU-f32; `lookup_clamped` is set — the encode clamp flag, not the payload's `saturated` bit (R-133) (REQ-DEC-014).
 
 ## Notes

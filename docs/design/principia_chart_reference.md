@@ -17,7 +17,8 @@ Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2)
 The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
 opposite body `k` (payload §2). What a person reads is 1-based (R-449): internal body `k` is shown as body `k + 1`, a
 pair by its two bodies. The shown numbers follow that map, not the Burrau literature's numbering: §4.2 gives which mass
-each body has (RQ-335).
+each body has. R-449's map applies everywhere, Burrau included, and the Burrau presets' legends and the Inspector
+show each body's mass beside its number, e.g. "body 1 (m = 5/12)" (R-549, RQ-335).
 
 ---
 
@@ -86,8 +87,9 @@ p2 =  p_λ
 
 > **Transcription hazard.** The `m0` and `m1` factors are **crossed** relative to the position
 > reconstruction (positions take `−m1/M01` on `r0`; momenta take `−m0/M01` on `p0`). It matches
-> `principia_dd_decoder.md` §3.4. Transcribe it, then verify by asserting `Σpᵢ = 0` to machine precision — the
-> test that catches a swap.
+> `principia_dd_decoder.md` §3.4. Transcribe it, then verify by asserting the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` (or the kinetic-energy identity) at
+> unequal masses: the test that catches a swap. `Σpᵢ = 0` catches only a one-sided swap (R-547, RQ-283). *Was:*
+> "verify by asserting `Σpᵢ = 0` to machine precision — the test that catches a swap."
 
 ### 0.4 Canonicalisation `C`
 
@@ -114,7 +116,8 @@ encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and `β ∈ [0, π]` h
 ℓ = √I        rᵢ ← rᵢ/ℓ        pᵢ ← √ℓ·pᵢ
 ```
 
-No-op when `R̃ = 1` was enforced. **Note the asymmetric powers** — positions divide by `ℓ`,
+No-op when `R̃ = 1` was enforced; encode's `C` skips it where `|I_in − 1| ≤ τ_I` and otherwise rescales in two steps
+(`principia_dd_encode.md` §3.2; R-547). **Note the asymmetric powers** — positions divide by `ℓ`,
 momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 
 ### 0.6 Energy normalisation — optional, and forbidden on some charts
@@ -228,7 +231,9 @@ controls. `forbids_energy_normalisation = true`.
 **The fixed geometry and masses** (defined per R-72, REQ-CHART-048; TASK-M2-08). They are the slice pin `z₀`'s: its
 configuration block through the shared `D_cfg` (§0.2, the canonical-frame decode, so `I = 1`) and its mass block
 through the shared `D_mass` (§0.1), under the chart's link selection. Only the momentum block is built per pixel, by
-§2.2 from the pixel's `(L_z, K*)`; `z₀`'s momentum block is not read.
+§2.2 from the pixel's `(L_z, K*)`; `z₀`'s momentum block is not read. The chart's parameters are the four frozen
+controls `(z_α, z_β, z_μ₁, z_μ₂)`. They are set from `z₀`'s configuration and mass blocks when the chart is entered,
+or from the lock where one is set, and edited like any chart parameter (Design axiom 6) (R-549, RQ-350).
 
 ### 2.1 Feasibility, and the warp that makes every pixel valid
 
@@ -385,17 +390,25 @@ m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
 
 **The held values** (defined per R-72, REQ-CHART-048; TASK-M2-08). `m_fixed` and `p_fixed` are the slice pin `z₀`'s:
 its mass block through the shared `D_mass` (§0.1) and its momentum block through the shared `D_mom` (§0.3), under the
-chart's link selection; `z₀`'s configuration block is not read, the shape replacing it. `p_fixed` is a canonical-frame
-momentum, the Jacobi momenta `(p_ρ, p_λ)` relative to the body frame (`ρ̃` on `+x`, `λ̃` in the upper half-plane), and
-`Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge `C` removes, decided as `C`
-decides it on that configuration (§0.4, §0.5): `(p_ρ, p_λ)` mirrored `y → −y` where `C` mirrors, turned by `R(φ)` with
-`C`'s `φ = atan2(ρ_y, ρ_x)` (0 at `ρ = 0`, R-437), and scaled by `I^{−1/4}`, the particle momenta then rebuilt by
-§0.3's map. So `p_fixed` is taken after the fibre-phase rotation, which `C` then undoes: `C(Φ(u, v))` has masses
-`m_fixed` and momenta `p_fixed` at every pixel, to rounding, and a point and its mirror `(θ, π − φ)` decode to one
-system (R-141). `I` and the fibre phase `φ_f` (§3.2) are chart parameters and pure gauge: they change `Φ`'s output,
-never `C ∘ Φ`'s, except at `ρ = 0` (`BC₀₁`, `n = (−1, 0, 0)`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in
-`C ∘ Φ`'s configuration, turned by `φ_f` against momenta that are not, so `L_z` depends on `φ_f` there. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s configuration is on `C`'s section on the
-upper hemisphere.
+chart's link selection; `z₀`'s configuration block is not read, the shape replacing it. `p_fixed` is a body-frame
+momentum, the Jacobi momenta `(p_ρ, p_λ)` relative to the frame with `ρ̃` on `+x`, unmirrored, `λ̃` in either
+half-plane (R-544; R-538 J9's frame rule: the full shape sphere is read unmirrored, `ρ` along `+x`), and `Φ` expresses
+it in the gauge of the configuration it builds, the inverse of the gauge the decode removes, decided on that
+configuration (§0.4, §0.5): `(p_ρ, p_λ)` turned by `R(φ)` with `C`'s `φ = atan2(ρ_y, ρ_x)` (0 at `ρ = 0`, R-437), and
+scaled by `I^{−1/4}`, the particle momenta then rebuilt by §0.3's map. So `p_fixed` is taken after the fibre-phase
+rotation, which the decode then undoes. The decode runs the shared `C` with its mirror step not taken (R-544):
+`C(Φ(u, v))` so taken has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and its shape is the
+pixel's own signed `n̂`. A point and its mirror `(θ, π − φ)` decode to two systems: mirror images of each other
+exactly where `p_fixed` is its own mirror image (`p_ρ,y = p_λ,y = 0`, released from rest included), and otherwise
+different systems (R-544 items 2 and 5). `I` and the fibre phase `φ_f` (§3.2) are chart parameters and pure gauge:
+they change `Φ`'s output, never the decode's, except at `ρ = 0` (`BC₀₁`, `n = (−1, 0, 0)`), `C`'s seam, where R-437's
+`φ = 0` leaves `φ_f` in the decode's configuration, turned by `φ_f` against momenta that are not, so `L_z` depends on
+`φ_f` there. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s configuration is on the decode's section, `I = 1`
+and `ρ̃` on `+x`, on either hemisphere. *Was (R-141's gauge, removed for the shape sphere by R-544):* "`p_fixed` is a
+canonical-frame momentum, the Jacobi momenta `(p_ρ, p_λ)` relative to the body frame (`ρ̃` on `+x`, `λ̃` in the upper
+half-plane)"; "`(p_ρ, p_λ)` mirrored `y → −y` where `C` mirrors"; "`C(Φ(u, v))` has masses `m_fixed` and momenta
+`p_fixed` at every pixel, to rounding, and a point and its mirror `(θ, π − φ)` decode to one system (R-141)"; "at which
+`Φ`'s configuration is on `C`'s section on the upper hemisphere".
 
 ### 3.1 Forward map (already implemented as `shape_vec`)
 
@@ -464,115 +477,90 @@ with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — us
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches
 where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
-count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
+count and the total (§5.4). Inside `[0,1]²` such a pixel is the domain's end by design, as is one exactly on `r = π` if
+REQ-CHART-078 makes it so: it draws blank and logs no decoder-bug warning (R-554, ruling RQ-470). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
 exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
 R-72), and the fixtures avoid that circle.
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
 "to avoid the collision singularities". It is rejected. Under this convention the poles are the Lagrange
-configurations, which are regular points of the flow, and every binary collision lies on the equator ($w = 0$, §3.4).
+configurations at equal masses (R-549, RQ-355), which are regular points of the flow, and every binary collision lies on the equator ($w = 0$, §3.4).
 So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \pi]$.
 
-**Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
-takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
-(`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). With
-one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The spherical map's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
-hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
-*Was:* "The chart's `system_image` is **n-to-1** with n = 2", for either map; R-503 gives the exponential map its own.
+**The whole sphere (R-544).** The chart is the whole sphere, everywhere: Explore, the Atlas, traces, Listen, the
+state map, prints and the batch job. Pixel `(θ, φ)` decodes to the system whose **signed** `n̂` is that point, and
+R-14's `φ = π·(1 − t)`, pole to pole, is the only φ span. The two hemispheres are the triangle's two orientations and
+the equator its collinear configurations, so every pixel is its own system, and a trajectory crosses the equator at
+every syzygy. The mirror `(θ, φ) ↦ (θ, π − φ)`, `w → −w`, is a symmetry of fates, not an identification: where every
+coordinate the chart holds fixed is its own mirror image (released from rest is), the mirror-invariant fields (fate,
+`t_end`, spread) are exactly symmetric across the equator and the signed ones (`L_z`, the winding) exactly
+antisymmetric, bitwise where the integration is mirror-exact, else to rounding (R-544 §4): the run from the exactly
+mirrored state `Π·x` is the run mirrored, bitwise, while the two pixels of a pair decode to mirror images only to the
+decode's rounding, so on a chaotic run their fates are compared on a named fixture the test shows to stay close over
+its horizon, and the statistics' "counted twice" holds for mirror-invariant classes, a signed class mapping to its
+mirror class (applied per R-369; physics review 5603309678 of PR #273, P2); where one is not (a held `p_fixed` with a non-zero `y`-component, or a fixed `L_z ≠ 0`), the
+hemispheres are different systems and the symmetry does not apply (REQ-CHART-082). No hemisphere is drawn alone, there
+is no hemisphere toggle, and nothing is folded, visible or not. The spherical map's `system_image` is **bijective**:
+θ's period and the poles are its only identifications, R-407's periodic and pole-crossing types on edges that no pixel
+centre lies on, not a fold (`principia_chart_decoder_contract.md` Part 5); `DoubleCover` is the full-range Burrau
+chart's (§4.5, R-157). The mirror twin survives only as information, in the initial-condition constructor
+(`principia_render_gui_spec.md` §G8). *Was (R-141, R-113 and R-412, withdrawn for the shape sphere by R-544):* the
+chart a 2-to-1 cover, `(θ, φ) ∼ (θ, π − φ)`, the canonical decode keeping `w ≥ 0`; one hemisphere drawn and said so,
+or both with the redundancy flagged, through the hemisphere toggle in the Manifold view's Chart section, with one
+hemisphere drawn φ's span remapped to end at the equator; the spherical map's `system_image` n-to-1 with n = 2.
 
-**The exponential map's `system_image` is computed from its cap (R-503, closing RQ-371),** as the ν charts' is from
-their range (§4.5). Where the cap lies within one closed hemisphere (`w ≥ 0` everywhere on it, or `w ≤ 0`
-everywhere), no pixel's mirror `w → −w` is in view other than itself: **bijective**. Where the cap straddles the
-equator, the value is **n-to-1 with a per-pixel fold**: a pixel whose mirror is not in view counts once; a pixel whose
-mirror is in view counts once for the pair, its representative the pixel with `w > 0` (the canonical decode's
-hemisphere, Part 1 of the decoder contract); a pixel on the equator (`w = 0`) is its own mirror and counts once. "In
-view" is the cap, `[0,1]²`'s pixels with `r ≤ π`; past the square the map is bounded (§5.4) and adds no multiplicity.
-The chart computes the value whenever `n0`, `e1`, `e2` or `s` change, and its label shows it. Per pixel the rule is:
-a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; otherwise 0. "`w = 0`" is the computed
-`w` being ±0.0; "the mirror is in view" is the map's inverse (the log map about `n0`) of the mirrored point landing in
-`[0,1]²` with `r ≤ π` (physics review 5587467237 and qa review 5587466555 of PR #258, applied per R-369).
+**The exponential map's `system_image` is computed from its cap (R-503, closing RQ-371; R-544).** The cap is the
+part of the sphere in view, `[0,1]²`'s pixels with `r ≤ π`; past `r = π` is the domain's end, and past the square the
+map is bounded (§5.4). Every pixel of the cap is its own system and its mirror `w → −w` another (R-544), so the value
+is **bijective** whether the cap lies within one hemisphere or straddles the equator; the pixels exactly on `r = π`,
+which all map to `−n0`, count as REQ-CHART-078 defines. The chart computes the value whenever `n0`, `e1`, `e2` or `s`
+change, and its label shows it. *Was (R-503's per-pixel fold, withdrawn by R-544):* where the cap straddles the
+equator, n-to-1 with a per-pixel fold, a pixel counting 1 if its `w ≥ 0` or its mirror lies outside the cap, else 0,
+its representative the pixel with `w > 0`; bijective only within one closed hemisphere.
 
-**Under a tilt the fold is the tilted view's (R-473 T1, T2, J1; applied per R-369, from chart_decoder_contract Part
-5's definition of `system_image`, "how the address map … folds onto distinct systems"; flagged for the human's veto,
-as it changes area statistics).** The two values above, the spherical map's n-to-1 with n = 2 and the exponential
-map's cap and per-pixel fold, are the untilted chart's (`τ₁ = τ₂ = 0`). Two pixels fold only when their full
-`(a, b, d)` decode to the same system. Under a nonzero tilt a pixel at window offset `(u, v)` maps to
-`(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1). Under a tilt a pixel's
-**mirror** is the pixel of the tilted view with the mirrored `(a, b)` (on the spherical map `(a, b) ↔ (a, 1 − b)`,
-`φ → π − φ`, the vertical axis only; on the exponential map `w → −w`) and the same `d`. The tilted view's pixels
-lie on the plane through the slice centre spanned by `R·e_a` and `R·e_b`; its normal is defined once, for every map, as
-**`N ∝ (R·e_a) × (R·e_b)`** (with one target a vector in `(a, b, d)`; Tip as sheet's `R` is a rotation, so there
-`N = R·e_X`, while Lean each axis's basis is skewed; with two targets there is no single normal, and the rule is taken
-per hidden offset, below). A pixel's mirror lies on that plane, and the pair keeps its fold, exactly when the tilt adds
-no hidden offset that depends on the mirrored axis: **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its
-mirrored `(a, b)` differ in `d` and are distinct systems: the tilted view is **bijective** there; any pair of its
-pixels whose full `(a, b, d)` do decode to the same system counts once by the per-pixel rule above. The criterion
-solves for nothing and divides by nothing, so it holds for an edge-on view (`N_d = 0`, Tip as sheet at `m = 90°`,
-which R-474 does not lock) as for any other. Its conditions come from the active tilt map's `R`
-(chart_decoder_contract § "Tilt (basis edit)", R-474), never from a rule on `τ₂` alone:
-- **Tip as sheet** (the default; `m = √(τ₁² + τ₂²)`, the plane turned by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, each angle
-  in `[−180°, 180°]`): Rodrigues' formula gives `N = R·e_X = (−τ₁ sin m/m, −τ₂ sin m/m, cos m)`, so `N_b = −τ₂·sin m/m`
-  (the same after the wrap at `m > 180°`), and the fold is kept iff `τ₂ = 0` or `m = 180°`, where the plane is the
-  untilted one mirrored (`τ₁ = 0`, `τ₂ = 180°` gives `d = 0` at every pixel).
-- **Lean each axis** (`u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, each angle in `[−90°, 90°]`):
-  `N ∝ u₁ × u₂ = (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`, so the fold is kept iff `cos τ₁·sin τ₂ = 0`
-  (`τ₂ = 0`, or `|τ₁| = 90°`).
-- **Two targets** (`X ≠ Y`, J4; `d_X = sin τ₁·u`, `d_Y = sin τ₂·v`): per hidden offset, `d_X` never depends on the
-  vertical axis and `d_Y` does unless `sin τ₂ = 0`, so the fold is kept iff `sin τ₂ = 0`.
-
-**The decision is exact, on the stored angles (physics review 5593455102 of PR #255, P5; applied per R-369, a routine
-design choice that invents no calibration; flagged for the human's veto with the tilted fold above).** In f64 the
-computed `N_b` is not zero where the closed form is (at `m = 180°` it is about `−1e-16`, and `cos 90°` is about
-`6e-17`), so the fold is never decided by a tolerance on a computed `N_b`. It is an exact comparison on the stored tilt
-angles, in degrees as the view state holds them, from each map's closed form: Tip as sheet, `τ₂ == 0` or
-`m == 180`, with `m = √(τ₁² + τ₂²)` computed from the stored angles in degrees as the map computes it; Lean each axis,
-`τ₁ == ±90` or `τ₂ == 0` (`τ₂ = ±180°` lies outside its range); two targets, `τ₂ ∈ {0, ±180}`. A pair just short of
-`m = 180°` is bijective.
-
-A single `τ₁` (R-457: `τ₁` tilts the horizontal axis) gives `d = sin τ₁·u`, the same at a pixel and its mirror, on the
-spherical map and, on the exponential map, only on a frame aligned so that the mirror is `(u, v) ↔ (u, 1 − v)`; there
-n-to-1 with n = 2, or the per-pixel fold, is kept over the tilted view's pixels. On the exponential map the conditions
-above hold on that aligned frame. A view whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at
-`|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) is RQ-471's: TASK-M2-36 neither builds nor tests that corner until it
-is ruled. *Was (physics review 5593455102, P5 and P6, and code review 5593479346, 3):* "whose normal is `N = R·e₃`
-(`e₃` the hidden target)"; "`N_b` is computed from the active tilt map's `R` …, not keyed on an angle"; "A single `τ₁`
-(either map, …) gives `d = sin τ₁·u`, the same at a pixel and its mirror, so n-to-1 with n = 2 is kept over the tilted
-view's pixels. On the exponential map the same conditions hold on a frame aligned so that the mirror is
-`(u, v) ↔ (u, 1 − v)`, where the per-pixel fold is kept". *Was (physics review 5593414323 of PR #255, P4: keyed on `τ₂`, and dividing by `N_d`):* "On the tilted
-plane, whose normal is `N = R·e₃`, `d = −(N_a·a + N_b·b)/N_d`, so the mirror pair keeps its fold exactly where the
-tilt adds no hidden offset that depends on the mirrored axis: **`N_b = 0`**. On the spherical map that is `τ₂ = 0` …
-Otherwise (`N_b ≠ 0`, any `τ₂ ≠ 0` on the spherical map) … With two targets (J4) the same holds for each hidden
-offset." *Was:* "so a pixel and the pixel whose `(a, b)` is its shape mirror (`w → −w`) carry different `d` and
-are distinct systems: a tilted view is generically **bijective**, on either map, and any pair of its pixels whose
-full `(a, b, d)` do decode to the same system counts once by the per-pixel rule above" (physics review 5593377792 of
-PR #255, P3: wrong for a `τ₁`-only tilt; applied per R-369). The pixels "in view" are the tilted view's own pixels (blank past a bounded edge,
-R-512), not `[0,1]²`'s. The chart recomputes the value whenever `n0`, `e1`, `e2`, `s`, `τ₁`, `τ₂` or the tilt's
-targets change. *Was:* "The chart computes the value whenever `n0`, `e1`, `e2` or `s` change" (above, kept as the
-untilted rule).
+**Under a tilt (R-473 T1, T2, J1; R-544).** Two pixels fold only when their full `(a, b, d)` decode to the same
+system (`principia_chart_decoder_contract.md` Part 5's definition of `system_image`). Under a nonzero tilt a pixel at
+window offset `(u, v)` maps to `(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1).
+On the shape sphere a pixel and its mirror are distinct systems at any tilt, as they are untilted, so a tilted view is
+one-to-one on either map, beyond the untilted chart's own identifications, and its pixels in view are the tilted view's
+own (blank past a bounded edge, R-512). The chart recomputes the value whenever `n0`, `e1`, `e2`, `s`, `τ₁`, `τ₂` or the
+tilt's targets change. The human's ruling on RQ-472, recorded as R-554, keeps an equator fold on a tilted view where
+`N_b = 0`; that clash with R-544 is RQ-508, R-544 applied meanwhile and R-554 leaving the clause unapplied. A view
+whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at `|τ₁| = |τ₂| = 90°`) reports
+`ray-degenerate` (R-554, ruling RQ-471 (a)): no fold is applied, there being no normal, every area weight is 0 (the
+Gram factor), and the legend shows each share as undefined ("—"), never 0%; TASK-M2-36 builds and tests it. *Was:*
+"The human's ruling on RQ-472 in `rulings_2026-10-21.md`, not yet recorded, keeps …" and "is RQ-471's: TASK-M2-36
+neither builds nor tests that corner until it is ruled." *Was (applied per R-369 from PR #255's reviews, accepted by
+R-559, withdrawn for the shape sphere by R-544):* the mirror pair of a tilted view, the pixel with the mirrored `(a, b)` and the same `d`,
+kept its fold iff the tilt added no hidden offset that depends on the mirrored axis, `N_b = 0` for
+`N ∝ (R·e_a) × (R·e_b)`, decided exactly on the stored angles (Tip as sheet `τ₂ == 0` or `m == 180`, Lean each axis
+`τ₁ == ±90` or `τ₂ == 0`, two targets `τ₂ ∈ {0, ±180}`), and was otherwise bijective; a single `τ₁` kept n-to-1 with
+n = 2, or the per-pixel fold.
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
 section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
-at the poles and can be compressed to invisibility in equirectangular.
+at the poles at equal masses and can be compressed to invisibility in equirectangular.
 
 **Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
 **pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
 `φ → −φ`; for `t < 0`, `φ → 2π − φ`; θ then wraps). So the sphere continues past `[0,1]²` with real neighbouring states,
 each a system `[0,1]²` already holds; area statistics count each system once, so these pixels, outside θ's or φ's
 primary range, are not counted (R-408, §5.4). The exponential map has no θ or φ axis, so its axes declare nothing and
-are bounded (§5.4). With the hemisphere toggle drawing one hemisphere, φ's `[0,1]` span is remapped to run from the
-pole to the equator, and φ stays pole-crossing at its pole edge; past the equator, the edge that is not a pole, its
-formula continues into the mirror hemisphere, whose pixels are real systems, repeated (the fold, R-141). Its primary
-range is pole to equator, the chart's `[0,1]` span, so that continuation is not counted (R-412, closing RQ-264; built
-by TASK-M8-44, REQ-CHART-057).
+are bounded (§5.4). There is no one-hemisphere view (R-544): φ is
+pole-crossing at both edges, `t = 1` and `t = 0`, and a pixel at `(θ, π − φ)` inside the square is its own system,
+never a repeat; TASK-M8-44 checks it (REQ-CHART-057). *Was (R-412, withdrawn by R-544):* "With the hemisphere toggle
+drawing one hemisphere, φ's `[0,1]` span is remapped to run from the pole to the equator, and φ stays pole-crossing at
+its pole edge; past the equator, the edge that is not a pole, its formula continues into the mirror hemisphere, whose
+pixels are real systems, repeated (the fold, R-141). Its primary range is pole to equator, the chart's `[0,1]` span,
+so that continuation is not counted (R-412, closing RQ-264; built by TASK-M8-44, REQ-CHART-057)."
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
 crosses the very surface being rendered. The collision points are singular points of the flow, the Euler
-configurations are equilibria on the equator, and the Lagrange configurations are the poles. The full
+configurations are equilibria on the equator, and the Lagrange configurations are the poles at equal masses. The full
 reduced phase space is $T^*S^2$, so different momenta at the same shape give crossing trajectories on the
 map. A mixed-axis chart (§1.3) pairing a shape coordinate with a momentum lifts that degeneracy. Drawing a
 trajectory on this chart is the hover trace and inspector of `principia_trajectory_viewing.md`.
@@ -581,7 +569,8 @@ trajectory on this chart is the hover trace and inspector of `principia_trajecto
 
 Useful as overlays and as tests. **Collision singularities** (two bodies coincident) are three
 points on the equator; **Euler configurations** (collinear) lie on the equator between them;
-**Lagrange configurations** (equilateral) are the two poles. Their exact coordinates depend on the
+**Lagrange configurations** (equilateral) are the two poles at equal masses; under the current masses `L±` sit at
+`w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`, the poles only at equal masses (R-549, RQ-355). Their exact coordinates depend on the
 mass ratios — compute them from §3.1 rather than hard-coding. The Euler configurations are the Euler central
 configurations: roots of Euler's quintic in the mass ratios, mapped through §3.1 (R-126).
 
@@ -886,8 +875,8 @@ existing charts:
 | chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
 |---|---|---|---|---|
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; what fails validation is not a system, blank (R-470) | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
-| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (`N_b = 0` for `N ∝ (R·e_a) × (R·e_b)` from the active tilt map's `R`, decided exactly on the stored angles, per map as chart_reference §3.3 gives it; *was:* "computed from the active tilt map's `R` with `N = R·e₃`"), and otherwise the tilted view is bijective there (*was*, physics review 5593414323 of PR #255, P4: "`N_b = 0` for the tilted plane's normal `N = R·e₃`: `τ₂ = 0` on the spherical map, the analogous condition on an exponential frame aligned so the mirror is `(u, v) ↔ (u, 1 − v)`") (§3.3, applied per R-369). *Was:* "generically bijective" |
+| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; there is no one-hemisphere view, and a pixel inside the square at `(θ, π − φ)` is its own system (R-544). *Was (R-412, withdrawn by R-544):* "with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted" |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and every pixel of the cap counts once, its mirror pixels distinct systems, straddling or not and at any tilt (R-544, §3.3). *Was (R-503's per-pixel fold and the tilted fold, withdrawn by R-544):* "a straddling cap counts a mirrored pair once"; under a tilt the mirror pair kept its fold iff `N_b = 0` |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the negative-mass area is not a system, blank (R-470), by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the blank starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
 | Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | blank on every side (R-470) | out of the count and the total (the domain's end) |
@@ -972,10 +961,12 @@ axes, and B1 stands for them." A quantity behind a nonlinear warp (§1.3) declar
 declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).
 
 **Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period of that axis (for the
-shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing, pole to pole (for the shape sphere's φ with both
-hemispheres drawn, the chart's `[0,1]` span); affine, unbounded; bounded, its domain. A new periodic or pole-crossing
+shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing, pole to pole (for the shape sphere's φ, the chart's
+`[0,1]` span, the whole sphere, R-544); affine, unbounded; bounded, its domain. A new periodic or pole-crossing
 declaration states its own primary range under physics review (R-407, clause 3); RQ-264 was that case for φ with one
-hemisphere drawn, and R-412 rules it: pole to equator, the chart's `[0,1]` span. "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
+hemisphere drawn, which R-412 ruled (pole to equator) and R-544 withdraws with the hemisphere toggle. *Was:* "for the
+shape sphere's φ with both hemispheres drawn, the chart's `[0,1]` span"; "and R-412 rules it: pole to equator, the
+chart's `[0,1]` span". "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
 range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
 fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
 `[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.
@@ -993,7 +984,8 @@ canvas background, with no hatch, key or share; only the debug views hatch it, V
 (chart)" key (`principia_chart_decoder_contract.md` Part 3, "How a pixel that is not a system is drawn"). Inside
 `[0,1]²` every chart of this reference is valid by construction (§2.1's warp, §4.5's simplex map, the decoder accepting
 any `z`): a hatched pixel there is a decoder bug, warned in the console, and REQ-CHART-058's sweep checks every chart for
-none. Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
+none, the exponential map's pixels past `r = π` (§3.3) excepted: R-503's domain's end by design, blank and unwarned
+(R-554, ruling RQ-470). Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
 rotated: planes, the square only the current window onto them), which never produce a forbidden pixel; the types and
 the fallback matter for the charts whose square is their whole domain (the warp, the mass simplex, the Burrau family,
 the shape sphere's spherical map, whose periodic and pole-crossing types redraw its own systems) and for a custom

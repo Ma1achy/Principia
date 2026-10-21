@@ -34,7 +34,8 @@ IS `θ(t), φ(t)`, and the sound is its spectrum. Measured, figure-eight vs chao
 0.076 vs 0.177**, one line with harmonics against four comparable peaks. They fail complementarily —
 a dense winding is visual mush and a clear high note. Scratchpad §2, §4. The sound is designed in
 `principia_listen.md` (R-540), whose default signal adds the triangle's rotation `ψ` to `θ(t), φ(t)` (RQ-451) and whose
-entropy is over its own spectrum (RQ-453); the measurement above is of `θ(t)`'s. It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
+entropy is over its own spectrum (RQ-453); the measurement above is of `θ(t)`'s, and stays its anchor; Listen's entropy
+has its own anchors (R-555 rules both entries, (a) and (c)). It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
 
 ---
 
@@ -106,7 +107,11 @@ Opens on click; shows the **same trajectory three ways at once**, linked by one 
 | *the IC itself, editable* | pane 1 (from the absorbed IC Inspector) | — |
 
 The 3D sphere and the 2D unwrap now share one pane and are toggled; they stay in the same config-space frame, so they still
-agree. The sphere turns slowly, with visible axes, and can be stopped ("turn").
+agree. **Both draw the signed `n(t)` over the whole sphere (R-544)**, as Listen does: a trajectory crosses the equator at every
+syzygy and its path carries on into the other half, never folded or bounced at the equator. The canonical bodies that pane 2 can
+show stay a view of the bodies and never fold the path. In the Inspector window the sphere is also the initial-condition
+constructor's (render_gui_spec §G8): every point of both halves reachable, the mirror twin a faint marker at `(θ, π − φ)`.
+The sphere turns slowly, with visible axes, and can be stopped ("turn").
 
 - **Real space is CPU-f64 intuition sugar** — "see what this IC looks like", no comparison claimed. There is no GPU real-space trajectory to compare against (the survey never produced one), and that's fine — visualisation, not parity.
 - **Config-space frame (both sphere panels).** Both feed `sph_uv` in the config-space frame (two-rotations rule). The 3D orbit control rotates the **camera, not the data** — so the 3D view and the 2D unwrap always agree. Landmarks fixed in the same frame.

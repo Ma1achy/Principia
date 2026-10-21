@@ -33,7 +33,7 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
   whether it may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
-- **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
+- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain panel is the plain node-graph editor. *(conformed to R-548; RQ-312 (a))*
 
 ## 01 Explore — the everyday view
 
@@ -85,7 +85,7 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
     figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
     R-509)*. The traces' controls are not in it: they are Overlays ▾'s Trace group, the Trajectory panel and `Trace…`
-    *(conformed to R-541; RQ-448)*.
+    *(conformed to R-541; R-556, RQ-448 (a))*.
   - **Listen in the band:** with sound on, the Time column gains an event lane and a mini spectrogram, the band's
     height unchanged; expanded, the band grows upward, the spectrogram sharing the scrubber's time axis and the
     Legend's column showing the spectrum at the head *(conformed to R-541)*.
