@@ -458,6 +458,8 @@ pub struct Held {
     pub beta_bit: [usize; 2],
     /// How many of each family have `z_β` exactly at its clamp image, `β ∈ {0, π̂}` clamped.
     pub beta_edge: [usize; 2],
+    /// The collinear states' masses.
+    pub masses: Vec<[f64; 3]>,
 }
 
 /// The held families, `n` of each, `w` read on `C`'s output through `kernel::shape::shape`: the equal-mass unit
@@ -475,6 +477,7 @@ pub fn held_shapes(seed: u64, n: u32) -> Held {
         equator: Vec::new(),
         beta_bit: [0; 2],
         beta_edge: [0; 2],
+        masses: Vec::new(),
     };
     for _ in 0..n {
         let z_mu = [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)];
@@ -499,6 +502,7 @@ pub fn held_shapes(seed: u64, n: u32) -> Held {
                 held.pole.push((w - 1.0).abs());
             } else {
                 held.equator.push(w.abs());
+                held.masses.push(x.m);
             }
             held.beta_bit[k] += usize::from(e.report.clamped_controls & 2 != 0);
             held.beta_edge[k] += usize::from(edge.contains(&e.z.z[1]));
