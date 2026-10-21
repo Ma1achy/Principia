@@ -75,11 +75,28 @@ its mass): the legs `a = ‖r₁ − r₀‖`, `b = ‖r₂ − r₀‖` and the
 the acute-angle charts evaluate it (§4.5). The mass coupling `μ₁ = log(b/c)`, `μ₂ = log(a/c)` is checked against
 `C(x)`'s `μₖ = log(mₖ/m₀)`, and its two differences are reported. `x` is on the curve where `ν(θ)` lies in the chart's
 `ν` span and `d(ν(θ)) ≤ tol`, §3.4's metric and tolerance: the metric's mass term is 0 exactly where the coupling holds
-on `γ(ν)`'s triangle, so the one test decides both. There the argmin is bypassed. On a chart's curve axis the
-coordinate is the closed form's, the chart's other axis read by its own kind, and Part 6 step 4's comparison decides
-the landing, as for every chart. On the δm strip, whose masses leave the curve's off its `v = 0` row, `θ` is read off
-the triangle alone and `v` is the blend's least squares, `v = (m − m_B)·(m_t − m_B)/‖m_t − m_B‖²`; the projection,
-which is the curve's, does not apply there.
+on `γ(ν)`'s triangle, so the one test decides both. There the argmin is bypassed. On the δm strip, whose masses leave
+the curve's off its `v = 0` row, `θ` is read off the triangle alone and `v` is the blend's least squares,
+`v = (m − m_B)·(m_t − m_B)/‖m_t − m_B‖²`; the projection, which is the curve's, does not apply there.
+
+**The composition: kind 4, then Part 6 step 4** (defined per R-72, applied per R-369; TASK-M2-18, REQ-ENC-008,
+REQ-ENC-026). Step 4's "where possible" reads `c(x)` off `C(x)` axis by axis (Part 5), so on a curve chart kind 4
+supplies the curve axis's coordinate, and step 4 then decides chart against latent, as for every chart:
+1. **Kind 4, the curve axis.** On the curve (kind 4 (a), above), the closed form's coordinate, `θ` read directly on the
+   acute-angle charts; else, where `d(ν*) ≤ tol` (kind 4 (b), §3.4), `ν*`'s (at an end of the span, the axis's end, 0
+   or 1, exactly); else no coordinate: the curve chart cannot represent the point (kind 4 (b)), and `x` falls back to
+   latent `z` with no comparison.
+2. **The other axis** is read by its own kind: `K` by the warp's inverse, `L_z` by the band's, the Euclid plane's `m`
+   an annotation.
+3. **Step 4**, `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, decides chart against latent. It is still needed: `d` does not see
+   the momentum blocks (`K`, `L_z`, the rest start).
+
+A chart landing needs both tests to pass: an input with `d(ν(θ)) > tol` and `d(ν*) > tol` falls back to latent `z`
+though its decode at `ν(θ)` lies within `ε_phys`, and an off-curve input within `tol` of `ν*` is placed at `ν*`, not at
+`ν(θ)`. `tol` is the caller's, as `‖·‖_phys` and `ε_phys` are (Part 6 step 4); at `tol = 0` a curve chart represents
+only a state its curve holds exactly. The curve encode (the closed form, `past_fold` among it, `d`, `ν*`, the edge flag
+and the landing on the curve) goes to the caller beside the chart point, on every curve chart. The δm strip is not a
+curve chart (above): its `θ` is the triangle's, its `v` the blend's, and step 4 alone decides.
 
 **The fold: an input at `θ > π/4`** (defined per R-72, REQ-ENC-022; TASK-M2-18). On the
 acute-angle charts, `θ ∈ (0, π/4]` and `ν ∈ [√2 − 1, 1)` (§4.5), an input whose closed form gives `θ > π/4` (`a > b`,
@@ -94,6 +111,11 @@ end, so it is no chart point (§3.4, "Past the span"), and the projection over t
 nearest it; only a twin within `tol` of that edge, which can happen only next to the isosceles triangle where the two
 labellings meet, is projected there, as any point within `tol` of the chart is. On a full-range `ν` chart
 (`DoubleCover`, R-27) the twin is its own chart point, at `ν′ = (1 − ν)/(1 + ν)`, and lands there.
+`past_fold` is computed on every curve chart and reaches the lookup in the curve encode (the composition, above), so
+the lookup reports it in each case: on a folded chart where the twin falls back to latent `z`, that the state is the
+fold shape's leg-swapped twin at `θ′ = π/2 − θ`, bodies 1 and 2 exchanged, not relabelled; on a folded chart where the
+twin is projected to the edge, the same, beside the chart point; on a full-range chart, where it lands, that the state
+lies on the leg-swapped half (`ν < √2 − 1`).
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
@@ -162,8 +184,10 @@ implementation.
   best grid point's two neighbouring cells, each step one evaluation, a fixed count; `ν*` is the better of the grid's
   best and the golden section's, so an edge minimum is the edge itself. A tie keeps the earlier point; a NaN start is
   replaced.
-- **The landing.** On the curve (§3.1, the argmin bypassed); else projected to `ν*` where `d(ν*) ≤ tol`; else latent
-  `z`, `E(x)`'s. `d` is reported in every case. `tol = k·ε_R`, `ε_R` the precision's machine epsilon, one `k` for both
+- **The landing on the curve.** On the curve (§3.1, the argmin bypassed); else projected to `ν*` where
+  `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s. `d` is reported in every case. This is kind 4's part of a curve chart's
+  encode: the curve axis's coordinate, which Part 6 step 4 then tests with the chart's other axis (§3.1, "The
+  composition"). `tol = k·ε_R`, `ε_R` the precision's machine epsilon, one `k` for both
   precisions as `ε_phys` takes it (Part 4): REQ-ENC-026's calibration (R-71), proposed at `k = 128` by
   `fixtures/gates/curve_projection/`, provisional until the M2 gate.
 - **The branch inputs** (the human's ruling on RQ-298, 21 Oct 2026: a branch input that must agree across backends is
