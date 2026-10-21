@@ -55,7 +55,8 @@ enum"):
   runs after the momentum block (§3.7), and which no chart with a momentum construction allows.
 - **Every pixel carries a label.** A decode is either tagged with one reason or untagged and goes on to integration,
   so no pixel is dropped and none is unlabelled (`principia_chart_reference.md` §0.7). A tagged decode keeps its
-  outputs, finite, never NaN.
+  outputs: its `(m, r, p)` finite, its descriptor never NaN, and infinite only at R-436's poles, `rho_ratio`'s `+∞`
+  and `V_0`'s `−∞` (the collision pole).
 
 **The decoder's branch inputs** *(enumerated per R-34; REQ-VAL-017, written by TASK-M2-24)*. Every decision the
 decode makes that test 12 compares bit for bit across backends, with the value it reads and how that value is formed:
