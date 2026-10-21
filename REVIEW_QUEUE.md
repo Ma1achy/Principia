@@ -3210,8 +3210,10 @@ and the disagreement is queued. Nothing is ruled.*
     801 and 1,144 at `m = 4` with `n` = 4, 6, 8; 331 and 698 at `m = 6` with `n` = 6, 8; 216 and 512 at `m = 8` with
     `n` = 6, 8; 12 at `m = 12`, `n = 8` (at `m = n = 8`, `X(2.0) = 6.331` and `X(2.75) = 6.897`, one tile). At every
     other offered pair with `n ≥ 2`, 0 of 2,001 stay (at `n = 1` the period is the whole square). Past the square
-    (100² starts over `[3, 30]²`), positions stay at every offered pair: 8,900 to 10,000 of 10,000; at `m = 6`,
-    `n = 2`, the move from `u = 0` to 3 changes the tile and those from 3 to 6, 6 to 9 and 9 to 12 do not.
+    (100² starts over `[3, 30]²`, a move of chart A's Torus period `6/n`), positions stay at every offered pair: 9,400
+    to 10,000 of 10,000 (10,000 at every `n` for `m` = 4, 6, 8; 9,800 for 12; 9,500 to 9,700 for 18; 9,400 to 9,600
+    for 24); at `m = 6`, `n = 2`, the move from `u = 0` to 3 changes the tile and those from 3 to 6, 6 to 9 and 9 to
+    12 do not.
   - **a non-square flat chart:** the y move is `round(m·H/W)/round(n·H/W)` tile units, not `m/n`. On the tilted charts
     E and F (720 × 360), hexagons at `m = 4`, `n = 3` have both y counts 2, so the y move is 1 tile unit and 824 of
     40,000 stay, though `m/n = 1.33 ≥ 2/√3`; at `m = n = 4` likewise 824. On ν × dilation H (600 × 420), hexagons at
@@ -3220,11 +3222,18 @@ and the disagreement is queued. Nothing is ruled.*
     `m = n = 4`, 10,000 at `m = 6`, `n = 4`, 13,600 at `m = 8`, `n = 6`, 0 at `m = 6`, `n = 3`.
   - **the cylinder** (G, 720 × 360): round θ there is nothing to separate (the Torus's θ is once round and θ + 2π is
     the same system), so the cost is in `s` only, where the Palette's `s` count is 3 for every `m` in {4, 6, 8} (then
-    6, 9, 12 for 12, 18, 24). The cylinder's tiles are in chart units and it offers squares and triangles, and they
-    fail along `s` at `m ≥ n` (a one-period move in `s`, 100² positions): squares 2,500 of 10,000 stay at `m = 4`,
-    `6` or `8` with `n = 4`, 5,000 at `m = 6` or `8` with `n = 6`, 6,200 at `m = n = 8`, 2,400 at `m = 12`, `n = 8`;
-    triangles 204 at `m = 4`, `6` or `8` with `n = 4`, 2,012 at `m = 6` or `8` with `n = 6`, 3,468 at `m = n = 8`, 232
-    at `m = 12`, `n = 8`. At every other offered pair with `m ≥ n`, 0 of 10,000 stay for both.
+    6, 9, 12 for 12, 18, 24). The cylinder's tiles are in chart units, and it offers six tilings (square, hexagons,
+    triangles, brick, stripes round θ, bands along `s`); all six were measured at every offered pair (a one-period move
+    in `s`, 100² positions, stays of 10,000):
+    - squares, brick (one row tall) and bands along `s` alike: stay at 10 of the 36 pairs: 2,500 at `m = 4`, `6` or `8`
+      with `n = 4`; 5,000 at `m = 4`, `6` or `8` with `n = 6`; 6,200 at `m = 4`, `6` or `8` with `n = 8`; 2,400 at
+      `m = 12`, `n = 8`;
+    - triangles: stay at the same 10 pairs: 204 with `n = 4`, 2,012 with `n = 6` and 3,468 with `n = 8` (each at
+      `m = 4`, `6` or `8`), 232 at `m = 12`, `n = 8`;
+    - hexagons: stay at 15 pairs: 264, 1,492, 3,764 and 5,212 at `m = 4`, `6` or `8` with `n` = 3, 4, 6, 8; 236 at
+      `m = 12`, `n = 6`; 1,656 at `m = 12`, `n = 8`; 8 at `m = 18`, `n = 8`;
+    - stripes round θ: the tile has no end along `s`, and 10,000 of 10,000 stay at all 36 pairs;
+    - the other five tilings, at every pair not listed for them: 0 of 10,000 stay.
 
   And the separation is a brightness node, which replaces the L the Torus spends on position, so it costs the
   one-to-one map within a period that the Torus is for (the warning §2.1 names). It also tells a system that moved one
@@ -3232,17 +3241,18 @@ and the disagreement is queued. Nothing is ruled.*
 - **Options seen:**
   - (a) As the code has it: the Palette's tile, its tiling, counts and spacing the Palette's; a one-period move is
     separated only where the exact condition above holds. In the measured cases above, every offered tiling has
-    positions that stay at some offered pair: hexagons, brick, stripes and squashed spacing on chart A, and the
-    cylinder's squares and triangles along `s` at `m ≥ n`. Squares and triangles on the flat charts A, E and H are
+    positions that stay at some offered pair: hexagons, brick, stripes and squashed spacing on chart A, and each of the
+    cylinder's six tilings along `s`, at `m ≥ n` too. Squares and triangles on the flat charts A, E and H are
     the measured exception: 0 stay at every offered pair with `m ≥ n`. The legend says which tile is compared.
   - (b) Under a Torus base, Left its starting tile compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods.
   - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph. In the
     measured cases above: squares and triangles on A, E and H then stay separated (0 stay at every offered pair with
     `m ≥ n`); hexagons along y and brick along x on chart A still have positions that stay at `m = n` = 4, 6, 8;
     stripes leave 10,000 of 10,000 in their tile across their direction at every offered pair; the y and `s` counts
-    are rounded from `m` and `n`, so on the cylinder squares and triangles still stay at the multiples `m = n` = 4,
-    6, 8 and at `m = 8`, `n = 4`; and under squashed spacing, inside the square, positions stay at `m = n` = 4, 6, 8
-    (132, 331 and 512 of 2,001) and at no other multiple with `n ≥ 2`, while past the square they stay at every
-    offered pair. Of the three options, (b) is the one that changes the compared cell on every one-period move, by
-    construction (`⌊X + 1⌋ = ⌊X⌋ + 1`).
+    are rounded from `m` and `n`, so on the cylinder squares, triangles, brick and bands along `s` still stay at the
+    multiples `m = n` = 4, 6, 8 and at `m = 8`, `n = 4`, hexagons at those and at `m = 6`, `n = 3` and `m = 12`,
+    `n = 6`, and stripes round θ at every multiple; and under squashed spacing, inside the square, positions stay at
+    `m = n` = 4, 6, 8 (132, 331 and 512 of 2,001) and at no other multiple with `n ≥ 2`, while past the square they
+    stay at every offered pair. Of the three options, (b) is the one that changes the compared cell on every
+    one-period move, by construction (`⌊X + 1⌋ = ⌊X⌋ + 1`).
 - **Applied meanwhile:** (a), the code. REQ-COL-128 is unchanged; REQ-COL-136's note cites this entry.

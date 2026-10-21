@@ -19274,14 +19274,15 @@ conflicts are queued, not ruled:
   cylinder's `s`), and under squashed spacing the tile is measured through the compaction. So, in the cases the
   port's survey measured, positions stay at some offered settings of hexagons, brick, stripes, squashed spacing
   (inside the square at 8 offered pairs, each with `m < 2n`; past it at every offered pair), non-square charts, and
-  the cylinder's squares and triangles along `s`; squares and triangles on the flat charts measured stay separated at
+  each of the cylinder's six tilings along `s`; squares and triangles on the flat charts measured stay separated at
   every offered pair with `m ≥ n`. Of the three options, (b), the Torus's own period cell, changes on every
   one-period move by construction. And the brightness
   node it needs replaces the L the Torus spends. Meanwhile (a), the code. *Was (PR #272's physics review, P1):* "only
   when the Palette's count is at least the Torus's Repeats". *Was (physics review 5602225811, P1 and P2):* the
   per-case list, its squashed-spacing case "not past the square" and its y conditions in `m/n`. *Was (physics
   review 5602328075, P1 to P3):* "within one Torus period of it", with no direction; "(toward the square's edge and
-  past it)"; "only (b), the Torus's own period cell, separates in every case".
+  past it)"; "only (b), the Torus's own period cell, separates in every case". *Was (physics review 5602473583,
+  P2):* "the cylinder's squares and triangles along `s`".
 
 What agrees: SM6's rule, a fixed chroma never clipped per pixel (the Torus's gamut, 0 of 240²); SM6's circle × circle
 row, which the Torus realises; SM11's chart units by default and its whole periods on the cylinder; SM3's copies, which
