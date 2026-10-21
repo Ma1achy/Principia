@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-VAL-029, REQ-VAL-046, REQ-VAL-048, REQ-VAL-049, REQ-VAL-126, REQ-VAL-128, REQ-VAL-129
-- **Depends on:** TASK-M3-19, TASK-M2-26
+- **Depends on:** TASK-M3-19, TASK-M2-26, TASK-M2-43
 - **Needs (earlier milestones):** REQ-ENC-002, REQ-ENC-012, REQ-VAL-014, REQ-VAL-016, REQ-VAL-018, REQ-DEC-002
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3

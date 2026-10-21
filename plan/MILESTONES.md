@@ -186,10 +186,10 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 204 requirements** (and every earlier gate still green):
+**Exit gate — 208 requirements** (and every earlier gate still green):
 
 - DEC (40): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048
-- ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
+- ENC (30): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034
 - CHART (64): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
@@ -197,9 +197,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - RENDER (3): REQ-RENDER-025…027
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
-- TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
+- TOOL (5): REQ-TOOL-029…030, REQ-TOOL-163, REQ-TOOL-188…189
 - VAL (17): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192
-- SYS (9): REQ-SYS-010…016, REQ-SYS-083…084
+- SYS (10): REQ-SYS-010…016, REQ-SYS-083…085
 <!-- /gate:M2 -->
 
 ## M3 — The integrator, events and physics validation (CPU, native)

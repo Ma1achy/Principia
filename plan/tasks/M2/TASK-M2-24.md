@@ -1,7 +1,7 @@
 # TASK-M2-24 — Decode across backends and decode totality: every pixel labelled, every chart
 
 - **Milestone:** M2
-- **Closes:** REQ-VAL-017, REQ-DEC-008, REQ-DEC-038, REQ-DEC-025
+- **Closes:** REQ-DEC-008, REQ-DEC-038, REQ-DEC-025
 - **Depends on:** TASK-M2-06, TASK-M2-09, TASK-M2-14
 - **Needs (earlier milestones):** REQ-GEN-004, REQ-VAL-007, REQ-PAY-014
 - **Reviewers:** code, qa, physics
@@ -44,6 +44,7 @@ Over every chart of this milestone, the CPU-f64 and GPU-f32 instantiations agree
 - `cargo test -p kernel decode_identities_every_chart` — decoder test 1 and chart_reference §5.2: fuzz z and random (u, v) for every chart; Σpᵢ = 0 to machine precision; I = 1 after the canonical-frame decode (REQ-DEC-025).
 
 ## Notes
+- REQ-VAL-017, held by RQ-298 when this task merged, moves to TASK-M2-44, which rewrites the fma-built branch inputs and re-proves decoder test 12 (R-547, applied per R-369); the acceptance line above is this task's as merged.
 - The browser-WGSL leg of decoder test 12 is checked with the browser build against the native tolerances (R-85; REQ-VAL-116, M8).
 - **The `η_E` target on the GPU decode (applied per R-369, the porter's survey on the R-439 rulings PR).** No task held it: TASK-M2-04 built the CPU side (`energy_norm`) and TASK-M2-06 decodes with `η_E` off ("No `E*` uniform is in this task", PR #217). The corpus settles that `η_E` runs in the kernel's decode: the chart map and decode lower into the compute pipeline (lowering_contract Part 1), §3.7's rescale is a step of the decode, between the momentum block and the derived invariants, and decoder test 12 requires its branch tags bit-identical on every backend (dd_decoder §5). It settles that `E*` is a uniform: lowering_contract Part 3's compute table puts the chart params, "invariant targets" among them, under UNIFORM, and bakes only what is different code, so no edit compiles. The energy tags compare `E*` with `V₀`, which differs by precision and by the backends' `sqrt` and division, so the cross-backend test reads each backend's tag against its own emitted inputs, as §3.1 does for `M₀₁` (physics review 5541460731 F2). `E*` changes the decoded IC, so it is on the sim key, read here as part of `SimConfig`'s "chart id + params" (gui_state_contract §2). This task holds it because its cross-backend test is the first to need the energy tags on the GPU.
 - PIT-9: include a deliberately contaminated branch input to show the bitwise comparison can fail; PIT-10: the result is for identical inputs, decode only.

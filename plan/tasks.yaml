@@ -466,7 +466,7 @@
   title: "Decoder: the latent type, the mass block and the configuration block"
   depends_on: [TASK-M2-01]
   needs: [REQ-PAY-017, REQ-SYS-004, REQ-PAY-014]
-  requirements: [REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044]
+  requirements: [REQ-DEC-010, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044]  # REQ-DEC-011, merged held (RQ-298), moves to TASK-M2-44 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-03
@@ -506,7 +506,7 @@
   title: "Canonicaliser C: the ordered procedure, the mirror tie and the scale gauge"
   depends_on: [TASK-M2-06]
   needs: [REQ-PAY-017]
-  requirements: [REQ-DEC-002, REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-006, REQ-ENC-016]
+  requirements: [REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-016]  # REQ-DEC-002 and REQ-ENC-006, merged held (RQ-296, RQ-298, RQ-295), move to TASK-M2-43 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-08
@@ -570,7 +570,7 @@
   title: "Encode: block inverses, E = inverses ∘ C, the discard notices and T1"
   depends_on: [TASK-M2-01, TASK-M2-07]
   needs: [REQ-SYS-004]
-  requirements: [REQ-ENC-007, REQ-ENC-003, REQ-ENC-014, REQ-SYS-015, REQ-DEC-014]
+  requirements: [REQ-ENC-007, REQ-ENC-003, REQ-SYS-015, REQ-DEC-014]  # REQ-ENC-014, merged held (RQ-295), moves to TASK-M2-43 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-16
@@ -642,7 +642,7 @@
   title: "Decode across backends and decode totality: every pixel labelled, every chart"
   depends_on: [TASK-M2-06, TASK-M2-09, TASK-M2-14]
   needs: [REQ-GEN-004, REQ-VAL-007, REQ-PAY-014]
-  requirements: [REQ-VAL-017, REQ-DEC-008, REQ-DEC-038, REQ-DEC-025]
+  requirements: [REQ-DEC-008, REQ-DEC-038, REQ-DEC-025]  # REQ-VAL-017, merged held (RQ-298), moves to TASK-M2-44 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-25
@@ -650,7 +650,7 @@
   title: Portable WGSL decode and encode, the DECODE preset and the agreement preset
   depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16, TASK-M1-19]  # TASK-M1-19 for REQ-TOOL-011, split from TASK-M1-14, applied per R-369 (RQ-273)
   needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063]
-  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057]
+  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057, REQ-SYS-085]  # REQ-SYS-085: the read side's shape() from the translation (R-547, RQ-365 (c))
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.7, PIT-9, PIT-5]
 - id: TASK-M2-26
@@ -787,6 +787,30 @@
   depends_on: [TASK-M1-05, TASK-M1-08]  # the CI flake on PRs #235 and #254, after R-276 and R-333; applied per R-369
   needs: [REQ-RENDER-011]
   requirements: [REQ-VAL-192]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M2-43
+  milestone: M2
+  title: "Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form"
+  depends_on: [TASK-M2-07, TASK-M2-15]  # both merged with these requirements held (RQ-295, RQ-296, RQ-298); applied per R-369
+  needs: []
+  requirements: [REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-034]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3, PIT-9]
+- id: TASK-M2-44
+  milestone: M2
+  title: "The decoder's fma-built branch inputs rewritten to R-547's form and re-proved: M₀₁ for M01_TINY, and decode test 12 on Metal and lavapipe"
+  depends_on: [TASK-M2-02, TASK-M2-24]  # both merged with these requirements held (RQ-298); applied per R-369
+  needs: []
+  requirements: [REQ-DEC-011, REQ-VAL-017]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M2-45
+  milestone: M2
+  title: "The native build without MIR GVN on the pinned nightly, a release-profile CI job, and the upstream report (R-547)"
+  depends_on: [TASK-M0-14, TASK-M2-07]  # the pin, and stage_canon_native; applied per R-369
+  needs: []
+  requirements: [REQ-TOOL-188, REQ-TOOL-189]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
 - id: TASK-M3-01
@@ -976,7 +1000,7 @@
 - id: TASK-M3-24
   milestone: M3
   title: "The ground-truth harness: Path A, Path B, the fixture set and the golden anchors"
-  depends_on: [TASK-M3-19, TASK-M2-26]
+  depends_on: [TASK-M3-19, TASK-M2-26, TASK-M2-43]  # TASK-M2-43: REQ-DEC-002 moved there (R-547, applied per R-369)
   needs: [REQ-ENC-002, REQ-ENC-012, REQ-VAL-014, REQ-VAL-016, REQ-VAL-018, REQ-DEC-002]
   requirements: [REQ-VAL-029, REQ-VAL-046, REQ-VAL-048, REQ-VAL-049, REQ-VAL-126, REQ-VAL-128, REQ-VAL-129]
   reviewers: [code, qa, physics]
@@ -1112,7 +1136,7 @@
 - id: TASK-M4-04
   milestone: M4
   title: "Tier B and Tier N: integer fields exact, continuous values within measured native-wgpu tolerances"
-  depends_on: [TASK-M4-02]
+  depends_on: [TASK-M4-02, TASK-M2-44]  # TASK-M2-44: REQ-VAL-017 moved there (R-547, applied per R-369)
   needs: [REQ-PAY-013, REQ-PAY-051, REQ-PAY-052, REQ-PAY-053, REQ-PAY-027, REQ-PAY-043, REQ-GEN-006, REQ-VAL-017, REQ-DEC-043, REQ-ENC-004, REQ-ENC-024, REQ-INT-031]
   requirements: [REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026, REQ-VAL-140, REQ-VAL-141]
   reviewers: [code, qa, physics]
@@ -2441,7 +2465,7 @@
 - id: TASK-M8-14
   milestone: M8
   title: "Inspector window and pane 1: the editable IC on the physical canvas (05_inspectors.png)"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28]
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28, TASK-M2-43]  # TASK-M2-43: REQ-DEC-002 moved there (R-547, applied per R-369)
   needs: [REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008, REQ-GUI-188]
   requirements: [REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068]
   reviewers: [code, qa, physics, gui]

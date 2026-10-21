@@ -38,7 +38,7 @@
   milestone: M2
 - id: REQ-DEC-002
   area: DEC
-  statement: "Canonicalise must be the single function that quotients a physical state onto the section (CoM at origin, ρ̃ on +x, λ̃_y ≥ −δ_λ under the R-82 mirror tie, I = 1), used by both the decode path and encode."
+  statement: "Canonicalise must be the single function that quotients a physical state onto the section (CoM at origin, ρ̃ on +x, λ̃_y ≥ −δ_λ under the R-82 mirror tie, I = 1), used by both the decode path and encode, and every branch input it reads that must agree across backends (the ρ = 0 guard, the mirror decision, and the CoM and I_in feeding step 0's I_in = 0 select and its τ_I skip) must be built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547; TASK-M2-07's IeeeBits::product the pattern)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: "3. The physics & manifold model *(authoritative: `chart_decoder_contract`, `dd_decoder`)*"
@@ -50,16 +50,17 @@
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
   - file: decisions.md
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "on random physical states the output satisfies all four section conditions and canonicalise is idempotent; at ρ = 0, with each component +0 or −0, φ is 0 and R(−φ) the identity on CPU-f64 and GPU-f32, chosen by a select on ρ_x = 0 and ρ_y = 0, never atan2(0, 0) (R-437)"
+    detail: "on random physical states the output satisfies all four section conditions and canonicalise is idempotent; at ρ = 0, with each component +0 or −0, φ is 0 and R(−φ) the identity on CPU-f64 and GPU-f32, chosen by a select on ρ_x = 0 and ρ_y = 0, never atan2(0, 0) (R-437); canonicaliser_seam_sweep: the guard, the mirror decision, the I_in = 0 select and the τ_I skip agree bit for bit between CPU-f32 and the GPU on Metal and lavapipe over the seam states, hierarchical states at inner/outer ratios down to 1e-8 included; each input's form is listed with its proof that it rounds alike fused or not, flushing or not (physics)"
   rulings:
   - R-82
   - R-437
+  - R-547
   milestone: M2
-  rq:
-  - RQ-296
-  - RQ-298
+  note: "R-547 (RQ-296 (d) + (a), RQ-298 (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-296, RQ-298); its fma-built CoM and I_in are rewritten and re-proved by TASK-M2-43, to which it moves (applied per R-369). The mirror decision and guard already take the corrected form (TASK-M2-07, applied meanwhile)."
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -225,7 +226,7 @@
   milestone: M2
 - id: REQ-DEC-011
   area: DEC
-  statement: "The mass block must emit DEGENERATE(M01_TINY) if and only if M₀₁ = m₀ + m₁ < ε, and nothing else in the mass block may tag degenerate."
+  statement: "The mass block must emit DEGENERATE(M01_TINY) if and only if M₀₁ = m₀ + m₁ < ε, with M₀₁ formed only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), and nothing else in the mass block may tag degenerate."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3.1 Mass
@@ -235,15 +236,16 @@
     section: 5. Unit tests
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
-    detail: "decoder test 4: fuzz z_μ including saturation; tag fires exactly on M₀₁ < ε; outputs tagged, never NaN, never dropped"
+    detail: "decoder test 4: fuzz z_μ including saturation; tag fires exactly on M₀₁ < ε; outputs tagged, never NaN, never dropped; the tag agrees bit for bit between CPU-f32 and the GPU on Metal and lavapipe at TASK-M2-02's onset crossings (20 000 lines z₁ ∈ [6.3, 20.3], at f32 and f64); M₀₁'s form is proved to round alike fused or not, flushing or not (physics); control: the explicit fma(m₁, 1, m₀) form, unfused, flips the tag on lavapipe's evaluation of it"
   rulings:
   - R-71
+  - R-547
   milestone: M2
-  rq:
-  - RQ-298
-  note: "Value of ε: REQ-DEC-039 (calibration)."
+  note: "Value of ε: REQ-DEC-039 (calibration). R-547 (RQ-298 (a), 21 Oct 2026): fma(m₁, 1, m₀) is not the rule's form; rewritten and re-proved by TASK-M2-44. TASK-M2-02 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-44 (applied per R-369)."
 - id: REQ-DEC-012
   area: DEC
   statement: "The configuration block must use the canonical-frame hyperspherical decode ρ̃ = cos α·(1,0), λ̃ = sin α·(cos β, sin β), R̃ = 1, with α = α_min + (π/2 − 2α_min)·σ(z_α) at α_min = 0 (i.e. α = (π/2)σ(z_α)) and β = π·σ(z_β)."
@@ -354,14 +356,16 @@
     section: Part 6 — The canonical inverse policy, completed
   - file: decisions.md
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
     detail: "states with λ̃_y at exactly −δ_λ, at +δ_λ and straddling both: no mirror for |λ̃_y| ≤ δ_λ, mirror just below −δ_λ; the same output twice and on CPU-f64 and GPU-f32 builds; the test reads λ̃_y, not λ_y; T1 sweep includes deadband-straddling rotations"
   rulings:
   - R-82
+  - R-547
   milestone: M2
-  rq:
-  - RQ-298
+  note: "R-547 (RQ-298 (a), 21 Oct 2026): the mirror decision TASK-M2-07 built, mantissas in [1, 2) with integer exponents and IeeeBits::product with no fma, is the corrected rule's pattern, so it no longer departs from R-34; the hold is lifted and TASK-M2-07's proof and seam sweep stand (applied per R-369, physics-reviewed on the batch PR)."
 - id: REQ-DEC-018
   area: DEC
   statement: "The canonicaliser must be implemented for charts that bypass the canonical-frame decode, and for canonical-frame decodes, saturated controls included, it must be a no-op (rotation angle ≈ 0, mirror not taken) away from the λ̃_y = 0 seam; an exception covers only a case the task measuring the no-op has measured and listed in dd_decoder §5 test 5, with its z, precision and measurement (R-417)."
@@ -398,13 +402,17 @@
     section: R-28 — Momentum decode has no mass unweighting *(CD-8)*
   - file: decisions.md
     section: "R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
-    detail: "Σpᵢ = 0 to machine precision on fuzzed z (catches the crossed m₀/m₁ factors); z_q = 0 gives rest; |qₖ| ≤ q_max"
+    detail: "the conjugacy μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ (or the kinetic-energy identity Σ‖pᵢ‖²/2mᵢ = ‖p_ρ‖²/2μ_ρ + ‖p_λ‖²/2μ_λ) at unequal masses, the test that catches a swap; Σpᵢ = 0 to machine precision on fuzzed z, which catches only a one-sided swap; z_q = 0 gives rest; |qₖ| ≤ q_max"
   rulings:
   - R-10
   - R-28
+  - R-547
   milestone: M2
+  note: "R-547 (RQ-283 (a), 21 Oct 2026): the conjugacy, not Σpᵢ = 0, is the check that catches the full crossed-factor swap; TASK-M2-03 asserted both, with a control for each swap (applied meanwhile), so it stands as built. *Was:* \"Σpᵢ = 0 to machine precision on fuzzed z (catches the crossed m₀/m₁ factors)\" (stale value, replaced by R-547)."
 - id: REQ-DEC-020
   area: DEC
   statement: "The invariant-momentum construction must follow chart reference §2.2 exactly: v⁽ᴸ⁾ = (L_z/I)·J rᵢ, the seed family (ρ̇,λ̇) = (ρ,0) then (0,λ), (Jρ,0), (0,Jλ) converted to particle velocities, CoM drift and angular momentum projected out, mass-weighted normalisation, then a = √(2(K* − L_z²/2I)), vᵢ = vᵢ⁽ᴸ⁾ + a·wᵢ, pᵢ = mᵢvᵢ."
@@ -458,15 +466,16 @@
     section: The four axis kinds — a closed set
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
     detail: "decoder test 8: infeasible pairs refused/tagged exactly on K* < L_z²/2; the feasibility comparison is branch-identical across backends"
   rulings:
   - R-72
+  - R-547
   milestone: M2
-  rq:
-  - RQ-298
-  note: "The label (state and detail): REQ-DEC-040 (definition)."
+  note: "The label (state and detail): REQ-DEC-040 (definition). R-547 (RQ-298 (a), 21 Oct 2026): the feasibility branch TASK-M2-09 built exact (binades and limb products, no fma; kernel::decode::invariant::infeasible) is the corrected rule's form, so it no longer departs from R-34; the hold is lifted and TASK-M2-09's proof stands (applied per R-369, physics-reviewed on the batch PR)."
 - id: REQ-DEC-023
   area: DEC
   statement: "The scale gauge must be rᵢ ← rᵢ/ℓ, pᵢ ← √ℓ·pᵢ with ℓ = √I, a no-op when R̃ = 1 was enforced."
@@ -966,7 +975,7 @@
   milestone: M2
 - id: REQ-ENC-003
   area: ENC
-  statement: "Encode must be gauge-invariant (T1): E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π) acting as rᵢ' = s·R(θ)·Π·rᵢ + a, pᵢ' = s^(−1/2)·R(θ)·Π·pᵢ + mᵢ·u."
+  statement: "Encode must be gauge-invariant (T1): E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π) acting as rᵢ' = s·R(θ)·Π·rᵢ + a, pᵢ' = s^(−1/2)·R(θ)·Π·pᵢ + mᵢ·u, off the mirror band; on |λ̃_y| ≤ δ_λ, collinear states included, for every g that translates, boosts, rotates and scales, x and Π·x there encoding as two distinct z (R-547; R-82 unchanged)."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 1 — What encode is: a quotient map onto a section"
@@ -978,14 +987,16 @@
     section: 5. Unit tests
   - file: decisions.md
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "encode test 2: random g per §3.3 including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice"
+    detail: "encode test 2: random g per §3.3, mirror included, on states off the band; on the band, g that turn, move, boost and rescale but do not mirror, including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice"
   rulings:
   - R-82
+  - R-547
   milestone: M2
-  rq:
-  - RQ-360
+  note: "R-547 (RQ-360 (a), 21 Oct 2026): T1 is restricted on the mirror band, the code unchanged; TASK-M2-15's encode_t1_gauge sweeps exactly this (applied meanwhile), so it stands as built. *Was:* \"E(g·x) = E(x) for every g = (…, mirror Π) …\" with no band, and the verify's \"random g per §3.3 including deadband-straddling rotations\" (reworded, kept in this statement and verify)."
 - id: REQ-ENC-004
   area: ENC
   statement: "Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual."
@@ -1030,7 +1041,7 @@
   milestone: M2
 - id: REQ-ENC-006
   area: ENC
-  statement: "The scale step must set λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, record λ, surface lookup_rescaled carrying λ, and transform E_canon = √I_in·E_in, L_z,canon = L_z,in/I_in^(1/4), t_canon = t_in/I_in^(3/4), with timing outputs convertible back by I_in^(3/4)."
+  statement: "The scale step must be skipped where |I_in − 1| ≤ τ_I (λ = 1, r and p unchanged, no notice; τ_I is REQ-ENC-034's calibration); elsewhere it must rescale in two steps, first by a power of two (exact), then by the remainder, so that I_in neither underflows nor overflows for any finite state with the bodies apart, setting λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, recording λ, surfacing lookup_rescaled carrying λ exactly when step 0 ran, and transforming E_canon = √I_in·E_in, L_z,canon = L_z,in/I_in^(1/4), t_canon = t_in/I_in^(3/4), with timing outputs convertible back by I_in^(3/4); where I_in = 0, which then happens only when the bodies coincide, it must keep the select: divisor 1, λ = 1, p = 0, lookup_clamped, φ = +0."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 2 — The scale gauge gap (missing from the original inverse policy)"
@@ -1038,13 +1049,17 @@
     section: 3.2 Canonicalisation `C` — the exact ordered procedure
   - file: docs/design/principia_dd_encode.md
     section: 5. Unit tests
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
-    detail: "encode test 4: Burrau state at 2× scale → I_in = 4·I_canon, λ = 1/2, E_canon = 2·E_in, timing factor I_in^(3/4); assert the whole row"
-  rulings: []
+    detail: "encode test 4: Burrau state at 2× scale → I_in = 4·I_canon, λ = 1/2, E_canon = 2·E_in, timing factor I_in^(3/4); assert the whole row; at f64 and f32, a canonical-frame decode of fuzzed z (|I_in − 1| ≤ τ_I) leaves step 0 with λ = 1 and r, p bit-identical, and raises no lookup_rescaled, while |I_in − 1| just above τ_I runs it and raises it; states with the bodies apart at f64 below about 1e-162 and above about 1e154 per coordinate, and at f32 below about 4e-23 (1e-19 where a GPU flushes subnormals) and above about 1e19, leave C with I = 1 to rounding, every output finite and no lookup_clamped; the coincident state gives divisor 1, λ = 1, p = 0, lookup_clamped and φ = +0, forming no 1/0; controls: a one-step rescale fails the underflow and overflow arms; a step 0 that always runs fails the canonical arm"
+  rulings:
+  - R-13
+  - R-436
+  - R-547
   milestone: M2
-  rq:
-  - RQ-295
+  note: "R-547 (RQ-295 (c), RQ-296 (d) + (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-295, applied per R-369); it moves to TASK-M2-43, which builds the skip, the two steps and the notice (applied per R-369). *Was:* \"The scale step must set λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, record λ, surface lookup_rescaled carrying λ, and transform …\" (reworded, kept in this statement)."
 - id: REQ-ENC-007
   area: ENC
   statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (|λ̃_y| read by abs, never max; the range holds because β reads |λ̃_y|, not by the mirror alone, R-438), s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
@@ -1194,13 +1209,15 @@
     section: 4. Seams (obligations → integration tests)
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: Part 6 — The canonical inverse policy, completed
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
-    detail: "canonical inputs raise no notice; each operation forced individually raises exactly its notice"
-  rulings: []
+    detail: "canonical inputs raise no notice (|I_in − 1| ≤ τ_I, so step 0 is skipped, R-547; no mirror; no clamp); each operation forced individually raises exactly its notice; lookup_rescaled is raised exactly when step 0 ran"
+  rulings:
+  - R-547
   milestone: M2
-  rq:
-  - RQ-295
+  note: "R-547 (RQ-295 (c), 21 Oct 2026): lookup_rescaled fires exactly when step 0 ran. TASK-M2-15 merged with this requirement held (rq: RQ-295); it moves to TASK-M2-43, with REQ-ENC-006 (applied per R-369)."
 - id: REQ-ENC-015
   area: ENC
   statement: "Canonicalisation must run in the order 1a subtract CoM → 0 rescale (I computed in the CoM frame) → 1b remove the boost (pᵢ ← pᵢ − mᵢP_tot/M) → 2 rotate ρ̃ to +x → 3 mirror iff λ̃_y < −δ_λ, pinned in the shared source so both precisions run the identical sequence."
@@ -1532,6 +1549,27 @@
   - R-113
   milestone: M3
   note: Split from REQ-ENC-019 (R-113, RQ-95).
+- id: REQ-ENC-034
+  area: ENC
+  kind: calibration
+  statement: "The step-0 skip tolerance τ_I (R-547; RQ-295 (c)), in eps of the precision at f64 and f32, must be calibrated: proposed with its evidence by the task that needs it, from TASK-M2-07's measured |I − 1| of up to 3 eps on canonical-frame decodes, re-measured, checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_encode.md
+    section: 3.2 Canonicalisation `C` — the exact ordered procedure
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: "Part 2 — The scale gauge gap (missing from the original inverse policy)"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "the proposal gives τ_I at f64 and at f32 with the measured |I_in − 1| of canonical-frame decodes of fuzzed z at each precision, on the CPU and on the GPU (Metal and lavapipe), and its margin over them; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-547
+  milestone: M2
+  note: "R-547 (RQ-295 (c)). Proposed by TASK-M2-43, TASK-M2-07 having merged (applied per R-369)."
 - id: REQ-CHART-001
   area: CHART
   statement: "Each chart must lower to a monomorphised Rust variant (the chart a type parameter the compiler specialises); there must never be a runtime axis-kind interpreter or runtime chart-type switch on the compute side, and adding a chart must mean a lowering rule plus a kernel type."
@@ -4117,7 +4155,7 @@
   note: "R-84: parity_contract governs — branch decisions are identical on identical inputs, per step; labels on chaotic trajectories may differ across precisions (Tier L / Tier B)."
 - id: REQ-INT-058
   area: INT
-  statement: "Kernel code must follow the GPU compile-discipline checklist: comparison-only branches, no non-finite literals, constant/unrolled indices, flag-in-while-condition loops with zero breaks, clamp in f32 before any float→int cast, and explicit fma."
+  statement: "Kernel code must follow the GPU compile-discipline checklist: comparison-only branches, no non-finite literals, constant/unrolled indices, flag-in-while-condition loops with zero breaks, clamp in f32 before any float→int cast, and every branch input that must agree across backends built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -4125,13 +4163,15 @@
     section: 2. Component inventory, by rung
   - file: docs/design/principia_systems_architecture.md
     section: 5. The seam catalogue
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: review checklist
-    detail: "naga validation passes; a lint over the kernel finds no break, no f32::INFINITY/NaN literal, no dynamic index, no unclamped float→int cast"
-  rulings: []
+    detail: "naga validation passes; a lint over the kernel finds no break, no f32::INFINITY/NaN literal, no dynamic index, no unclamped float→int cast; each enumerated branch input's form is checked against R-547's rule (physics)"
+  rulings:
+  - R-547
   milestone: M4
-  rq:
-  - RQ-298
+  note: "R-547 (RQ-298 (a), 21 Oct 2026). *Was:* \"…, clamp in f32 before any float→int cast, and explicit fma.\" (stale value, replaced by R-547)."
 - id: REQ-INT-059
   area: INT
   statement: "Terminal exit from the integration loops must be via a `done` flag, set by detect_terminal on collision or escape, tested in each `while` loop condition, with zero `break` statements and no counted `for` loop with a mid-body exit."
@@ -4215,7 +4255,7 @@
   milestone: M4
 - id: REQ-INT-064
   area: INT
-  statement: "Every multi-op arithmetic expression feeding a branch input — including `d²`, the windowed `|Δn̂|` and `E_rel` — must use explicit `fma` in a fixed written form, and these branch inputs must be enumerated in the source rather than relying on a backend contraction switch."
+  statement: "Every multi-op arithmetic expression feeding a branch input that must agree across backends — including `d²`, the windowed `|Δn̂|` and `E_rel` — must be built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal, in a fixed written form (TASK-M2-07's `IeeeBits::product` the pattern), and these branch inputs must be enumerated in the source rather than relying on a backend contraction switch or on an explicit `fma` being fused."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: And FMA contraction is a live question
@@ -4231,15 +4271,16 @@
     section: 2. The determinism law (the other defining decision)
   - file: docs/read_first/principia_INDEX.md
     section: Known open items
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: review checklist
-    detail: "an enumerated list of branch inputs exists; each multi-op input is written with explicit fma; no reliance on per-backend FP-contraction settings"
+    detail: "an enumerated list of branch inputs exists; each multi-op input's form is written and proved by its task to round alike on every IEEE backend, fused or not, flushing subnormals or not; no reliance on per-backend FP-contraction settings or on fma fusion"
   rulings:
   - R-34
+  - R-547
   milestone: M4
-  rq:
-  - RQ-298
-  note: "R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): rules 2 and 6 of the determinism note, R-34 and this requirement are corrected; each held requirement is rewritten and re-proved in its own task. *Was:* \"must use explicit `fma` in a fixed written form\" and the note \"R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend.\" (stale value, replaced by R-547)."
 - id: REQ-INT-065
   area: INT
   statement: "Occupant selection and the `FTLE_ENABLED` co-computation selection must select baked kernel variants, never runtime uniforms, and be on the sim key, while the ensemble must not be a baked variant: `copy_index` must be a uniform and each copy the same kernel dispatched again."
@@ -4263,7 +4304,7 @@
   note: "R-124: systems_architecture §5.5 is conformed to R-102 (copies dispatched again, not looped)."
 - id: REQ-INT-066
   area: INT
-  statement: "The `d²` fed to the substep bucket must be position-quantised: positions cast to f32, then a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx*dx)`."
+  statement: "The `d²` fed to the substep bucket must be position-quantised: positions cast to f32, then a lone subtract, and the squares and their sum formed only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), in a form its task writes and proves."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 4 — Determinism, and the substep as the subtle seam
@@ -4271,13 +4312,15 @@
     section: 3.3 Substep law — and the determinism pin, made concrete
   - file: docs/notes/principia_gpu_determinism_note.md
     section: The discipline (each rule = one measured failure)
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "d² computed on every backend is bit-identical for fuzzed position pairs"
-  rulings: []
+    detail: "d² computed on every backend (the CPU at f32, Metal and lavapipe) is bit-identical for fuzzed position pairs, separations whose squares fall below f32's smallest normal included; the form's proof is in the PR (physics)"
+  rulings:
+  - R-547
   milestone: M4
-  rq:
-  - RQ-298
+  note: "R-547 (RQ-298 (a), 21 Oct 2026). *Was:* \"then a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx*dx)`\" (stale value, replaced by R-547)."
 - id: REQ-INT-067
   area: INT
   statement: "Any float-to-int cast in the kernel must be preceded by a clamp in f32 into the target range."
@@ -4638,6 +4681,8 @@
     section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
   - file: docs/contracts/principia_parity_contract.md
     section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel theta_ref_code: at f32 and f64, encode(decode(c)) = c for every code c in 0..=65534; decode(c) lies in (−π, π); over every code's midpoints and a sweep of λ including −π, −0, 0, π and the longitudes just below 2π (which encode to 0), the encode never returns 0xFFFF and decode(encode(λ)) differs from λ, mod 2π, by at most π/65535 + 4·ulp_Real(2π) (π/65535 + 1.9e-6 at f32, π/65535 + 3.6e-15 at f64), whatever the evaluation order of the encode and decode (worst measured excess 9.4e-7 and 1.9e-15); a negative control with a truncating encode (⌊·⌋ without + ½, error up to 9.59e-5) fails it; cargo test -p ledger theta_ref_register: theta_ref_steps and theta_ref_none are register entries of value 65535, class achievable-maximum, citing R-397, both among the hashed stored-bits entries, and changing either's value changes the schema version; each with a registered negative control (R-176); parity: the sim-parity harness compares _reserved as Tier N/S with θ̃, not Tier B: given the same entry state a code may differ by one across backends, cyclically mod 65535, and along a full trajectory it follows θ̃'s Tier N/S envelope; whether it holds 0xFFFF or a code (from the comparison-only disc test, formed at the kernel's Real) must match exactly across backends on identical stored state at the same Real, and across precisions (CPU-f64 against GPU-f32) may differ at the disc edge (parity contract Tier B); the one-code allowance needs REQ-INT-086's r_pole above about 2e-3"
@@ -4645,13 +4690,12 @@
   - R-389
   - R-392
   - R-397
+  - R-547
   milestone: M3
-  rq:
-  - RQ-298
-  note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\"); the round-off bound and the parity tier follow physics reviews 5441087488 and 5441219965 of #168, applied per R-369."
+  note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\"); the round-off bound and the parity tier follow physics reviews 5441087488 and 5441219965 of #168, applied per R-369. R-547 (RQ-298 (a), 21 Oct 2026): disc_input, every term an explicit fma in crates/kernel/src/shape.rs, is rewritten by TASK-M3-11 to a form built only from operations every IEEE backend rounds alike, with no subnormal intermediate, and re-proved, so whether the sample holds 0xFFFF or a code matches exactly across backends (REQ-INT-088)."
 - id: REQ-INT-088
   area: INT
-  statement: "The kernel's march must keep θ̃'s pole hold in SimState alone: a fresh sample's `_reserved` is 0xFFFF; entering the pole disc from outside writes the code of the last longitude outside it; the exit adds wrap(exit longitude − decoded reference) into (−π, π], exactly ±π adding +π, and writes 0xFFFF back; an IC that starts inside the disc keeps 0xFFFF and adds nothing at its first exit (R-392); whether the sample is inside the hold is never stored but recomputed from the current state by the march's own disc test, on resume as on every step, and no descriptor bit is used."
+  statement: "The kernel's march must keep θ̃'s pole hold in SimState alone: a fresh sample's `_reserved` is 0xFFFF; entering the pole disc from outside writes the code of the last longitude outside it; the exit adds wrap(exit longitude − decoded reference) into (−π, π], exactly ±π adding +π, and writes 0xFFFF back; an IC that starts inside the disc keeps 0xFFFF and adds nothing at its first exit (R-392); whether the sample is inside the hold is never stored but recomputed from the current state by the march's own disc test, whose input is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), on resume as on every step, and no descriptor bit is used."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
@@ -4659,6 +4703,8 @@
     section: "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
   - file: decisions.md
     section: "R-397 — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel theta_hold_state: on synthetic configurations at f32 and f64, a fresh sample's _reserved is 0xFFFF for an IC inside the disc and one outside; outside the disc _reserved is 0xFFFF after every step; the entry step writes encode of the last longitude outside; the exit adds exactly wrap(exit longitude − decode(code)), a difference of exactly ±π adding +π, and writes 0xFFFF; an IC inside keeps 0xFFFF and adds nothing at its first exit; the inside test is the march's configuration disc test (disc_input) applied to the current state, and descriptor bits 10–15 stay zero; each with a registered negative control (R-176)"
@@ -4666,10 +4712,9 @@
   - R-389
   - R-392
   - R-397
+  - R-547
   milestone: M3
-  rq:
-  - RQ-298
-  note: "R-397 (RQ-226); the lifecycle (0xFFFF outside the disc, written back on exit) is applied per R-369 and changes no θ̃; built by TASK-M3-11."
+  note: "R-397 (RQ-226); the lifecycle (0xFFFF outside the disc, written back on exit) is applied per R-369 and changes no θ̃; built by TASK-M3-11. R-547 (RQ-298 (a), 21 Oct 2026): the disc test's input is rewritten and re-proved by TASK-M3-11; the statement gains that clause, nothing else changes."
 - id: REQ-INT-089
   area: INT
   statement: "A march's θ̃ and `_reserved` must be bit-identical whether it runs in one dispatch or is split into k dispatches, each resuming from the stored SimState the previous one wrote, including splits inside a pole passage and inside the disc for an IC that starts there: the reference is quantised when it is stored, never held unquantised across steps within a dispatch."
@@ -5204,18 +5249,20 @@
   note: "R-30 (recorded; applied with the label writer) replaces dd_integrator §3.6's static SIM_FAILED > COLLISION > ESCAPE > BOUNDED order. Applied per R-339: R-30's time order governs, and the §3.6 pin is superseded and kept for the record; superseded per R-339: \"until the label writer lands, R-6 says the §3.6 pin stands\". Triple collision and ionisation placement: payload §2 and dd_integrator :171."
 - id: REQ-EVT-021
   area: EVT
-  statement: "Collision must be decided by the comparison d² < r_coll², with d² position-quantised (f32 positions, lone sub/mul, explicit fma)."
+  statement: "Collision must be decided by the comparison d² < r_coll², with d² position-quantised as REQ-INT-066 forms it (R-547)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "fuzz pairs near r_coll on CPU and GPU; collision decision bit-identical"
+    detail: "fuzz pairs near r_coll on the CPU and on the GPU (Metal and lavapipe); collision decision bit-identical"
   rulings:
   - R-34
+  - R-547
   milestone: M4
-  rq:
-  - RQ-298
+  note: "R-547 (RQ-298 (a), 21 Oct 2026). *Was:* \"(f32 positions, lone sub/mul, explicit fma)\" (stale value, replaced by R-547)."
 - id: REQ-EVT-022
   area: EVT
   statement: "`r_coll` must be a user-exposed sim-key parameter (default `1e-3` of `R`) with the same value on both pipelines, and changing it must invalidate and re-boot affected payloads."
@@ -23868,6 +23915,36 @@
   rq:
   - RQ-520
   note: "R-545 (21 Oct 2026, RQ-286, option (a)): a schema v1 change made by the ruling; v2 (R-534) carries it as v1 plus. The bin edges wait on RQ-520 (the porter adds `rq: [RQ-520]`; reqio's add takes no rq). Closed by TASK-M5-28 (applied per R-369, R-545 B2)."
+- id: REQ-TOOL-188
+  area: TOOL
+  statement: "While the pinned nightly carries rustc's MIR GVN miscompile (RQ-299), the native build must set `-Zmir-enable-passes=-GVN`, scoped to the host target and never applied to the SPIR-V build of the kernel (R-547); when the pin moves to a nightly without the fault that `rustc_codegen_spirv` builds against, the flag goes with it."
+  source:
+  - file: docs/contracts/principia_canonical_spec.md
+    section: 1. The substrate (the defining decision)
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel --release --test canon: stage_canon_native passes at the release profile; RQ-299's standalone reproducer, built with the workspace's host flags at opt-level 1, 2 and 3, prints 0.5; the SPIR-V build's rustflags carry no -Zmir-enable-passes (a check over the rust-gpu builder's flags); control: the reproducer built on the pin without the flag prints −0.5; the upstream report (the reproducer, the toolchain table and the pass named) is drafted in the PR and handed to the human to file"
+  rulings:
+  - R-547
+  milestone: M2
+  note: "R-547 (RQ-299 (b) + (c), then (a)). Closed by TASK-M2-45. Filing the report on rust-lang/rust is outside the repo, so the PR drafts it and the human files it (applied per R-369)."
+- id: REQ-TOOL-189
+  area: TOOL
+  statement: "CI must run the native tests at the release profile, in a job of its own on every push, so that a miscompile a test covers is seen (R-547; RQ-299 (c))."
+  source:
+  - file: docs/contracts/principia_canonical_spec.md
+    section: 1. The substrate (the defining decision)
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  verify:
+    method: review checklist
+    detail: "the workflow has a job running the workspace's native tests with --release on the host target and the workspace's flags; its run on the PR is green, its log linked; a measure/ run (R-272) shows it failing stage_canon_native with the GVN flag removed"
+  rulings:
+  - R-547
+  milestone: M2
+  note: R-547 (RQ-299). Closed by TASK-M2-45.
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -24135,17 +24212,18 @@
     section: R-84 — Branch decisions across precisions *(closes RQ-35)*
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "decoder test 12: fuzz z on all backends; continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs"
+    detail: "decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them"
   rulings:
   - R-34
   - R-71
   - R-84
+  - R-547
   milestone: M2
-  rq:
-  - RQ-298
-  note: "R-34 extends explicit fma to every multi-op branch input; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration)."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-44, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547)."
 - id: REQ-VAL-018
   area: VAL
   statement: "z = 0 must decode to the canonical golden IC — masses (⅓,⅓,⅓), α = π/4, β = π/2, rest (q = 0), I = 1 — with every derived value asserted in f64 and f32."
@@ -25229,6 +25307,8 @@
     section: "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
   - file: decisions.md
     section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: numerical gate
     detail: "Parity run over full trajectories on two backends — Metal on GitHub-hosted macos-15 and lavapipe (R-110, R-186); report the label-flip rate and, for each flip, that the branch operation itself agreed on identical inputs (705 boundary states, 0 forks); the report header states the domain (fixed inputs vs trajectory)."
@@ -25237,10 +25317,9 @@
   - R-58
   - R-110
   - R-186
+  - R-547
   milestone: M4
-  rq:
-  - RQ-298
-  note: "pitfall: \"10. GENERALISING A STATELESS RESULT TO A TRAJECTORY\" — 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY."
+  note: "pitfall: \"10. GENERALISING A STATELESS RESULT TO A TRAJECTORY\" — 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY. R-547 (RQ-298 (a), 21 Oct 2026): the branch inputs it tests are built to R-547's rule, each rewritten and re-proved in its own task; the no-fork test runs on Metal and lavapipe."
 - id: REQ-VAL-080
   area: VAL
   statement: "Totality must extend to reductions: a quad where nothing integrated must report Decision::Undetermined / footprint_undetermined (terminal and flagged), and no reduction may silently discard samples (e.g. filter(is_finite))."
@@ -28916,7 +28995,7 @@
   milestone: M2
 - id: REQ-SYS-015
   area: SYS
-  statement: "The decoder must exist as one shared Rust source instantiated as the f32 GPU compute kernel (Rust to SPIR-V), the f64 CPU path (lock, inspector, deep-zoom x₀/J_D) and, inverted, inside encode, with the fragment WGSL decode and encode generated from that source (rust-gpu → SPIR-V → WGSL translation); there must be no separate transcriptions of the decode logic and no hand-written WGSL decode or encode."
+  statement: "The decoder must exist as one shared Rust source instantiated as the f32 GPU compute kernel (Rust to SPIR-V), the f64 CPU path (lock, inspector, deep-zoom x₀/J_D) and, inverted, inside encode, with the fragment WGSL decode and encode generated from that source (rust-gpu → SPIR-V → WGSL translation); there must be no separate transcriptions of the decode logic and no hand-written WGSL decode or encode; the read side's derived-field shape map is REQ-SYS-085's (R-547)."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: Drill-down — the Decoder (Matter rung)
@@ -28926,14 +29005,16 @@
     section: Drill-down — Encode (the Question rung's upward door)
   - file: decisions.md
     section: "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: review checklist
-    detail: "one decode module is referenced by the kernel crate, the CPU crate and encode; the fragment WGSL decode/encode is a build output of the translation; no second implementation of any §3 formula exists (grep for the mass/config/momentum formulae outside the shared source, including .wgsl)"
+    detail: "one decode module is referenced by the kernel crate, the CPU crate and encode; the fragment WGSL decode/encode is a build output of the translation; the scan keeps its full reach (grep for the mass/config/momentum formulae outside the shared source, including .wgsl) and finds no second implementation of any §3 formula in a decode or an encode; its one hit outside them, the read side's shape() (crates/render/frag/generated/read_side.wgsl), is REQ-SYS-085's, which TASK-M2-25 closes"
   rulings:
   - R-116
+  - R-547
   milestone: M2
-  rq:
-  - RQ-365
+  note: "R-547 (RQ-365 (c), 21 Oct 2026): REQ-SYS-015 is split; decode and encode close with TASK-M2-15 (merged), the read side's shape() moves to REQ-SYS-085, which TASK-M2-25 closes when it emits shape() from the translation."
 - id: REQ-SYS-016
   area: SYS
   statement: "Body indices must be 0-based in storage and computation (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary; what a person reads names the bodies 1, 2, 3 and a pair by its two bodies (R-449, REQ-GUI-188)."
@@ -30019,3 +30100,21 @@
   - R-483
   milestone: M2
   note: R-483 X2 (20 Oct 2026).
+- id: REQ-SYS-085
+  area: SYS
+  statement: "The read side's derived-field shape map, `shape()` in `crates/render/frag/generated/read_side.wgsl`, must be emitted from the rust-gpu → SPIR-V → WGSL translation of `kernel::shape` (R-116), never a hand-written string, so that REQ-SYS-015's full-reach scan finds no second implementation of a dd_decoder §3 formula outside the shared source (R-547; RQ-365 (c))."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.2 Configuration — hyperspherical mass-weighted Jacobi
+  - file: decisions.md
+    section: "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
+  - file: decisions.md
+    section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
+  verify:
+    method: review checklist
+    detail: "read_side.wgsl's shape() is a build output of the translation, not a string literal in crates/ledger/src/gen/read.rs; the scan (the mass/config/momentum formulae, mu_rho|mu_lambda|m01 among them, outside the shared source, .wgsl included) finds no hit; the twin test against kernel::shape still passes"
+  rulings:
+  - R-116
+  - R-547
+  milestone: M2
+  note: "R-547 (RQ-365 (c)): split from REQ-SYS-015. Closed by TASK-M2-25, when it emits shape() from the translation."
