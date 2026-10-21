@@ -140,7 +140,7 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions. **The shape sphere chart's point is the state's signed `n̂`** (R-544): its lookup reads the shape from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems. T1 stands for `z` and for every other chart; only the shape sphere's chart point keeps the mirror's sign.
 
 **Kind 3 — invariant.** Two directions, sharply different:
 
@@ -204,6 +204,15 @@ and its slice and conventions pin the other six (chart_decoder_contract Part 5),
 frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
 construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
 coordinate, and nothing is compared for it.
+
+**On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
+with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
+against `C(x)` with step 3's mirror undone on the **full state**, every `r_i` and every `p_i` (`Π·C(x)` where
+`lookup_mirrored` is set, `C(x)` otherwise), and `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x`
+whose masses and unmirrored body-frame momenta are the slice's lands on the chart at its signed point and decodes back
+to itself, `L_z`'s sign kept; its mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and
+otherwise goes to latent `z`. Comparing against the mirrored `C(x)` would send every lower-hemisphere state to latent
+`z`. Every other chart compares against `C(x)` as above.
 
 ### Chart-aware validation
 
@@ -277,7 +286,7 @@ region (for example above the parabola in $(L_z, E)$).
 | flag | meaning |
 |---|---|
 | `forbids_energy_normalisation` | the chart fixes energy itself; any $E^*$ override — every `Some(E*)`, including `Some(0)` (R-25) — is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
-| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141) or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. |
+| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. The shape sphere is bijective, the whole sphere, nothing hidden or labelled redundant (R-544; *was:* "the shape sphere: 2-to-1 over the φ hemispheres, R-141"). |
 | `requires_per_pixel_mass` | mass varies per pixel, so the integrator must not use `SimUniforms.m[3]`. True for the ternary mass plot, the Burrau family, and mixed-axis charts with a mass axis. |
 
 ## Part 7 — Ground-truth ingestion (the validation programme's demand)

@@ -20,6 +20,7 @@ A Chart position stain in Explore: the legend drawn over the target chart with a
 - `docs/design/principia_state_map.md` § "SM6. Colour maps: one-to-one on the quotient, so they own lightness"
 - `docs/design/principia_state_map.md` § "SM8. Image mode"
 - `decisions.md` § "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - The legend's Chart position block and ring (`crates/gui/`).
@@ -34,4 +35,4 @@ A Chart position stain in Explore: the legend drawn over the target chart with a
 - The gui reviewer reviews against board 6.
 - **R-543:** REQ-GUI-339 gains the Torus's period in chart units in the legend (REQ-COL-136's `P` and `P_y`, on the cylinder 2π round θ, with an arm for a wrong one; R-543 H11) and the wrap mode in the hovered pixel's readout, the ruling's text where the prototype is silent (RQ-506 (a)).
 - **The board** is read per render GUI spec §G13's R-542 bullet: board 6's legend block only, the shell following `01_main.png`; no "Edit graph…" in the top bar (RQ-500, (c) meanwhile); the hover trace and its label stay (RQ-501 (a)).
-- **Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats, in-square mirrors to rounding.
+- **Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats. *Was:* ", in-square mirrors to rounding": superseded by R-544 (the human's second addendum), since on the shape sphere chart there are no mirror pixels inside the square; the copies are θ's period and the pole crossings only (REQ-COL-121).
