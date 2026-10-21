@@ -3,12 +3,13 @@
 *Adopted by R-540 (21 Oct 2026) from the human's `principia_listen.md` (kept as delivered at
 `docs/incoming/2026-10-21_trace_listen/`), transcribed from the code of its reference implementation,
 `docs/gui/reference/trace/trace_sound.html` (version 9), which the human's message makes the transcription source:
-where the file and the code disagree, this document carries the code and the disagreement is queued (RQ-454 to RQ-458).
+where the file and the code disagree, this document carries the code and the disagreement is queued (RQ-454 to RQ-458;
+all ruled by R-555, the code kept but for three effects' defaults, §9).
 It defines pointer_channels §4's open points (R-109, R-144; extended by R-540) and is normative. Listen is a feature of
 the trajectory viewer (`principia_trajectory_viewing.md`): it reads the same `computeIC` trajectory as the trace. Its GUI
 is `principia_render_gui_spec.md` §G2, §G3, §G5 and §G6 (R-541). Bodies are shown 1, 2, 3 (R-449); the formulas index
-them 0, 1, 2. Units: `G = 1`, every system's total mass 1. Listen's build waits on RQ-440 (the audio backend) and RQ-442
-(the floor against prin-rs's integrator).*
+them 0, 1, 2. Units: `G = 1`, every system's total mass 1. Listen's build waited on RQ-440 (the audio backend) and RQ-442
+(the floor against prin-rs's integrator); R-555 rules both, so it waits on neither.*
 
 ---
 
@@ -44,7 +45,8 @@ n1 = (A − B)/I,  n2 = 2 ρ̃·λ̃ / I,  n3 = 2 (ρ̃_x λ̃_y − ρ̃_y λ̃
 `θ` itself would drift and put a sawtooth's harmonics into the spectrum. `φ` never wraps. **The pole weight** fades `θ`
 within 0.1 rad of a pole, where it is undefined and swings fast (a coordinate singularity, not motion). Under *Angles
 only* a shape that does not move is silent even while it rotates (Lagrange's rotating triangle); the rotation channel is
-what makes it heard under the default. Whether the default may add `ψ` to R-109's `θ(t), φ(t)` is RQ-451.
+what makes it heard under the default. The default adds `ψ` to R-109's `θ(t), φ(t)`, and *Angles only* is pointer_channels §4's `θ(t), φ(t)` (R-555,
+RQ-451 (a)). *Was:* "Whether the default may add `ψ` to R-109's `θ(t), φ(t)` is RQ-451."
 
 **The spectrum is complex, so it carries direction.** A forward FFT (`X[k] = Σ x_n e^{−2πi kn/NF}`) of `e^{iθ}` puts
 anticlockwise winding (θ increasing) at positive frequencies and clockwise at negative ones; that sign is what *Stereo by
@@ -73,7 +75,10 @@ For a window `[t₀, t₁]` of the run, `D = t₁ − t₀`:
   `k₀`, so a side with almost nothing stays almost silent instead of being normalised up; the mono peaks take their own
   maximum.
 - **Entropy** of the mono magnitude: `H = −Σ_{k≥1} p_k ln p_k / ln(len − 1)`, `p_k = mono[k]² / Σ_{k≥1} mono[k]²`: 0 for a
-  pure line, 1 for white noise. It is read out and drives the bit-crush (§9).
+  pure line, 1 for white noise. It is read out and drives the bit-crush (§9). Its anchors, the figure-eight against
+  Burrau 3:4:5 (§12), are measured with prin-rs's integrator and confirmed at the M8 gate (REQ-VAL-194,
+  REQ-VAL-114's tolerance); the demo's 0.309 against 0.352 (§3) is the demo's value. REQ-VAL-102's 0.076 against 0.177
+  stay the anchors of `θ(t)`'s own spectrum (R-555, RQ-453 (c)).
 - **Interval** of the two strongest mono peaks: `r = f_hi / f_lo`, halved while `r ≥ 4`, named as the nearest of 13 just
   ratios by `c = 1200 log₂(r/(p/q))` if `|c| ≤ 25` cents: 1:1 unison, 2:1 an octave, 3:2 a fifth, 4:3 a fourth, 5:4 a
   major third, 6:5 a minor third, 5:3 a major sixth, 8:5 a minor sixth, 9:8 a whole tone, 7:4 a harmonic seventh, 3:1 a
@@ -85,8 +90,12 @@ unit time over the window: `θ`'s winding rate, its steps wrapped into `(−π, 
 (the default signal only), wrapped likewise; both signed; and `φ`'s, `Σ|Δφ|/(2πD)`, unsigned. A rate with `|f|·D ≤ 10⁻⁶`
 is dropped. Each plays at weight `max(0.3, |f|/f_max)`, panned `−0.8·sign(f)` (anticlockwise left), `φ`'s at the centre;
 the left takes the rates panned at most 0.01, the right the others, the left all of them if it would be empty. A run
-that moves at all makes a sound. A run with `t_end ≤ 10⁻⁶`, or fewer than three samples, has no analysis and is silent.
-Against pointer_channels §4's "roughly 20+" periods, RQ-450.
+that moves at all makes a sound. A run with `t_end ≤ 10⁻⁶`, or fewer than three samples, has no spectrum: if it moves it
+plays its mean rates from the samples it has (two at least), a rate dropped only when it is exactly 0, since its `D`
+would drop every rate under the `10⁻⁶` cut (R-555, RQ-467 (d)). Against pointer_channels §4's "roughly 20+" periods,
+R-555 rules RQ-450 (a): the measured minimum (REQ-VAL-103) sets the readout's warning, never a silence. *Was:* "A run
+with `t_end ≤ 10⁻⁶`, or fewer than three samples, has no analysis and is silent. Against pointer_channels §4's "roughly
+20+" periods, RQ-450."
 
 ## 3. Pitch
 
@@ -100,14 +109,18 @@ t_c = (2|E|)^{−3/2}  if E < 0,   else  I^{3/4}       (G = 1, total mass 1; E a
   copy play the same notes.
 - `f_ref` (`1/t_c is`) is 110, **220 (default)** or 440 Hz; the value is REQ-GUI-143's calibration, confirmed at the M8
   gate, 220 Hz the bundle's proposal.
-- **Fit to hearing** (default on): `shift` is the whole number of octaves, from −8 to 8, that puts the whole run's
+- **Fit to hearing** (default on): `shift` is the whole number of octaves, any (R-555, RQ-467 (b); *was:* "from −8 to
+  8"), that puts the whole run's
   strongest mono line into 110–880 Hz: from `shift = 0`, down an octave while above 880 Hz, then up while below 110 Hz.
   **It is chosen once per run, from the whole run**, so the pitch does not jump as the head moves, and an octave keeps
   every ratio. Off, `shift = 0`.
 - **Only lines strictly between 30 Hz and 6 kHz are voiced.**
-- `t_c` grows without bound as `E → 0⁻` while the fit stops at ±8 octaves, so a moving bound run with small `|E|` can
-  voice nothing, and the pitch jumps by about 19 octaves across `E = 0`; against S2's "A run that moves at all makes a
-  sound" this is RQ-467, the code applied meanwhile (physics review 5595386853 of PR #267, P2).
+- `t_c` grows without bound as `E → 0⁻`; the fit, uncapped, brings every moving run with a peak into 110–880 Hz, so a
+  bound run with small `|E|` sounds. The pitch still jumps by about 19 octaves across `E = 0`, and the readout names
+  `t_c`'s branch (§11) (R-555, RQ-467 (b)). *Was:* "`t_c` grows without bound as `E → 0⁻` while the fit stops at ±8
+  octaves, so a moving bound run with small `|E|` can voice nothing, and the pitch jumps by about 19 octaves across
+  `E = 0`; against S2's "A run that moves at all makes a sound" this is RQ-467, the code applied meanwhile (physics
+  review 5595386853 of PR #267, P2)."
 
 Measured in the demo (its own integrator, Dormand–Prince 5(4) at relative tolerance 10⁻¹¹; the figure-eight from its
 standard ICs, `t ≤ 60`, the defaults): 262.6, 131.3, 393.9 and 525.2 Hz, in 2:1, 3:2 and 4:3 against the 131.3 line; the
@@ -133,7 +146,7 @@ The head's time is the playhead's, or the trace's own clock under *Own clock*, n
 |---|---|
 | **Fixed, centred (default)** | `W = min(Fixed·t_c, t_end)`, `Fixed` from 1 to 30 in steps of 0.5, default 6; `t₀ = max(0, min(t_end − W, t − W/2))`, the span `[t₀, t₀ + W]`: shifted inside the run near its ends, so every moment has a full window |
 | Grows | `[0, t₁]` |
-| Grows, last half | `[t₁ − W′, t₁]`, `W′ = max(min(t₁, ½t_c), t₁/2)`: never shorter than half a crossing time (RQ-455) |
+| Grows, last half | `[t₁ − W′, t₁]`, `W′ = max(min(t₁, ½t_c), t₁/2)`: never shorter than half a crossing time (R-555, RQ-455 (a)) |
 
 `t₁ = min(t_end, max(t, min(t_end, ½t_c)))`, so a growing window is never empty.
 
@@ -154,8 +167,10 @@ at the head (§11) is redone at most every 120 ms.
   constant of 10 ms (or its `att/3`, §8). The voices form a bank whose gain goes from 0 to the run's loudness (§7) at a time constant of a
   third of the cross-fade; the bank it replaces falls to 0 at the same time constant and is stopped after six of them.
   The cross-fade is 140 ms on a new run, 260 ms when the dwelt run replaces the moving one (§10), 160 ms on a setting
-  change, 120 ms on entering or leaving follow and 200 ms on sound on. **A chord is never retriggered.** Against
-  REQ-GUI-050 for a struck instrument, RQ-452.
+  change, 120 ms on entering or leaving follow and 200 ms on sound on. **A chord is never retriggered.** A struck
+  instrument's strike on a new run's chord is its timbre, under the bank's cross-fade, not a per-pixel retrigger; the
+  default instrument strikes nothing (R-555, RQ-452 (a); REQ-GUI-050). *Was:* "Against REQ-GUI-050 for a struck
+  instrument, RQ-452."
 - **The follow track**: a pool of **32 persistent voices** of the instrument on one bus (rebuilt when the instrument
   changes, the old bus falling to 0 at 30 ms). At each frame, with the frame's peaks between 30 Hz and 6 kHz:
   1. Each sounding voice takes the nearest unused peak **within a semitone** (`|log₂(p/f)| < 1/12`) and glides to it
@@ -178,14 +193,14 @@ at the head (§11) is redone at most every 120 ms.
 
 So in the default a system that winds one way round the sphere is heard on one side. Under *Stereo by winding* channel
 B (`φ`) reaches no side of the chord; in the follow track a line is found in `mono`, `φ` included, and panned by its
-bin's `pos` and `neg` (RQ-458).
+bin's `pos` and `neg` (R-555, RQ-458 (a)).
 
 ## 7. Loudness
 
 ```
 rms   = hypot(rms(Re A), rms(Im A), rms(B)/π [the two angle signals] or rms(B) [shape vector],
               hypot(rms(cos ψ), rms(sin ψ)) [the default signal only])         rms: the population deviation over the window
-level = 0                                   if not rms > RMS_FLOOR (10⁻⁷, RQ-442)
+level = 0                                   if not rms > RMS_FLOOR (R-555: 10 × max(4.9e-8, L₆₀), below)
       = clamp(√min(1, rms/0.1), min, max)   Loudness: follows the shape's movement (default)
       = clamp(1, min, max)                  Loudness: normalised, every system at full level
 ```
@@ -198,14 +213,24 @@ level (§9).
 The demo's floor is set against its own integrator; the human's file says the shipped integrator's drift is quieter
 and asks for the floor to be set against it (Q3, RQ-442). The physics review of PR #267 found that the equal-mass
 Lagrange triangle is linearly unstable, its shape rms growing with the horizon under any integrator, with an f64 floor of
-4.9e-8 under *Angles only* (RQ-442 records the measurements); the value waits on RQ-442. *Was:* "prin-rs's is far
+4.9e-8 under *Angles only* (RQ-442 records the measurements). *Was:* "prin-rs's is far
 quieter, and the floor is set against it (RQ-442)." (physics review 5595386853 of PR #267, P1; applied per R-369).
+
+**`RMS_FLOOR` is 10× the larger of two values, both under *Angles only*** (R-555, RQ-442): the f64 floor of an exactly
+rotating triangle, **4.9e-8**; and **`L₆₀`, the maximum shape rms of Lagrange over `t ≤ 60` with the shipped
+integrator**: §12's Lagrange rotating, integrated by prin-rs's `computeIC` at the defaults, the largest rms above over
+every follow-mode frame's window and the whole-run chord within `[0, 60]`. TASK-M8-12 measures `L₆₀` and records it
+here with its method; REQ-GUI-316's test re-runs it. The demo's `10⁻⁷` is its own. S13's Lagrange (angles only) test is
+pinned at `t ≤ 60`, with a failing arm: a perturbed Lagrange (§12's, body 1's `v_x` × 1.01) must sound (§13).
+
+*Measured (TASK-M8-12, recorded here when measured):* `L₆₀` = —; `RMS_FLOOR` = —. *Was (the value):* "10⁻⁷, RQ-442";
+"the value waits on RQ-442".
 
 ## 8. Instruments
 
 **The spectrum decides the pitches and their weights; the instrument only decides the timbre each partial is voiced
 with**, so changing instrument changes nothing that is measured or displayed. There are 39 instruments; the default is
-**Sine (pure)** in the code, Warm sine in the human's file (RQ-454). Their recipes, transcribed from the demo's
+**Sine (pure)** (R-555, RQ-454; *was:* "**Sine (pure)** in the code, Warm sine in the human's file (RQ-454)"). Their recipes, transcribed from the demo's
 `INSTRUMENTS` as written:
 
 ```
@@ -272,7 +297,7 @@ The demo's menu lists the five synths under "Synths" without the "Synth: " prefi
 | `glide` | the minimum glide time constant |
 | `oct` | an octave offset: the voice sounds at `f × 2^oct` |
 | `lvl` | the voice's level (default 1) |
-| `strike`, `sus` | **struck**: on a strike the gain rises to the level at 4 ms and, from 20 ms on, decays at a time constant `strike/3` **to a held floor `sus` × the level** (`sus` default 0.25), never to zero (RQ-456) |
+| `strike`, `sus` | **struck**: on a strike the gain rises to the level at 4 ms and, from 20 ms on, decays at a time constant `strike/3` **to a held floor `sus` × the level** (`sus` default 0.25), never to zero (R-555, RQ-456 (a)) |
 | `retrig` | a note event (the `fenv` and `fmenv` envelopes) when the partial moves on, the gain held |
 
 **A voice** (`makeVoice`), for an instrument `I` and the output it feeds:
@@ -302,7 +327,7 @@ bass; the gong has both):
   (**default**), or every crossing time ÷ 1, 2 or 4 (default 2), the beats between the last tick and this one counted;
   a beat strikes every sounding voice at its level, or gives a `retrig` voice a note event. *Only when a line changes*
   adds no beats. In every mode a struck or `retrig` voice also sounds again when its line has moved by more than a
-  quarter-tone (`1/48` octave) since it last sounded (RQ-457).
+  quarter-tone (`1/48` octave) since it last sounded (R-555, RQ-457 (a)).
 
 The menu groups them in families (§G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
 textures (2). Which instrument is in which family is RQ-459.
@@ -314,7 +339,7 @@ level` (0 to 150 %, default 80 %), panned by the bodies involved, bodies 1, 2, 3
 
 | Event (default) | Detected | Sound |
 |---|---|---|
-| Close approach (on) | at a sample `k` (not the first or last) where a pair's separation `d_k` is a local minimum (`d_k < d_{k−1}`, `d_k ≤ d_{k+1}`) below `0.2 R_k`, `R = √I` about the centre of mass, before the run's end (`t_k < t_end − 10⁻⁶`); its depth `min(1, log₁₀(0.2 R_k / d_k)/2)` (RQ-444) | a band-passed noise whoosh, panned between the pair, its centre rising from 280 Hz to `900 + 3200·depth` Hz over 0.33 s, Q 5, 0.55 s, rising to `0.35 + 0.4·depth` in 0.18 s |
+| Close approach (on) | at a sample `k` (not the first or last) where a pair's separation `d_k` is a local minimum (`d_k < d_{k−1}`, `d_k ≤ d_{k+1}`) below `0.2 R_k`, `R = √I` about the centre of mass, before the run's end (`t_k < t_end − 10⁻⁶`); its depth `min(1, log₁₀(0.2 R_k / d_k)/2)`; both stated parameters, not calibrated (R-555, RQ-444 (a)) | a band-passed noise whoosh, panned between the pair, its centre rising from 280 Hz to `900 + 3200·depth` Hz over 0.33 s, Q 5, 0.55 s, rising to `0.35 + 0.4·depth` in 0.18 s |
 | Collision (on) | the run's terminal collision | 1–2 a low tom: a sine 190 → 70 Hz over 0.25 s, 0.5 s, 0.9, and a 30 ms low-passed (2.5 kHz) noise tick at 0.4; 1–3 a snare: high-passed (1.2 kHz, Q 0.7) noise, 0.22 s, 0.55, and a triangle 200 → 170 Hz, 0.12 s, 0.45; 2–3 a rimshot: band-passed (2.6 kHz, Q 9) noise, 70 ms, 0.8, and a 1750 Hz square, 50 ms, 0.35; each panned between its pair; triple: a crash, centred: high-passed (3.5 kHz, Q 0.7) noise, 1.8 s, 0.6, and a triangle 420 → 300 Hz, 0.6 s, 0.25 |
 | Escape / ejection (on) | the run's terminal escape | a falling glide into the escaping body's ear: a sine 950 → 110 Hz over 1.2 s, 1.3 s, 0.45, and band-passed noise 2.4 kHz → 300 Hz, Q 2, 1 s, 0.12; a triple ejection glides to all three, each 0.12 s after the last and 120 Hz lower |
 | Syzygy tick (off) | each syzygy of the trace (R-538 I9) | a click panned by the middle body: 1350 Hz for 60 ms at 0.55 and 2650 Hz for 35 ms at 0.25 |
@@ -332,10 +357,18 @@ by central differences (one-sided at the ends), `E` and `t_c` at `t = 0`, `R₀`
 
 | Effect (switch, amount range, default) | Driven by | Mapping |
 |---|---|---|
-| Reverb (off in the code, on in the file, RQ-454; 0 to 2.5, ×1.40) | the spread `R/R₀` | wet `= min(1.6, a·(0.12 + 0.9·clamp(log₂(R/R₀)/3, 0, 1)))` at 150 ms, through a 3.6 s impulse: a tight system dry, a wide one in a hall; off, 0 |
-| Doppler (off; 0 to 3, ×1.50) | the scale-free expansion rate `Ṙ t_c / R` | detune `= −400·a·Ṙ t_c/R` cents, clamped to `±1200·clamp(a, 0.25, 2)`, at 80 ms: expanding bends down, contracting up; off, 0 |
+| Reverb (on; 0 to 2.5, ×1.40) | the spread `R/R₀` | wet `= min(1.6, a·(0.12 + 0.9·clamp(log₂(R/R₀)/3, 0, 1)))` at 150 ms, through a 3.6 s impulse: a tight system dry, a wide one in a hall; off, 0 |
+| Doppler (on; 0 to 3, ×1.50) | the scale-free expansion rate `Ṙ t_c / R` | detune `= −400·a·Ṙ t_c/R` cents, clamped to `±1200·clamp(a, 0.25, 2)`, at 80 ms: expanding bends down, contracting up; off, 0 |
 | Bit-crush (off; 0 to 2, ×0.60) | the spectral entropy `H` | `bits = round(clamp(15 − 40a·max(0, H − 0.12), 3, 16))`: a clean line stays clean, noise frays; off, 16 (no crush) |
-| Stereo width (off in the code, on in the file, RQ-454; 0 to 3, ×1.50) | the scale-free angular momentum `√(L_z²·|E|)` | `w = clamp(a·√(L_z²|E|)/0.08, 0.15, 2)` at 100 ms, mixed as `L′ = (1+w)/2·L + (1−w)/2·R`, `R′ = (1−w)/2·L + (1+w)/2·R`: released from rest is narrow, a rotating system wide; off, `w = 1` |
+| Stereo width (on; 0 to 3, ×1.50) | the scale-free angular momentum `√(L_z²·|E|)` | `w = clamp(a·√(L_z²|E|)/0.08, 0.15, 2)` at 100 ms, mixed as `L′ = (1+w)/2·L + (1−w)/2·R`, `R′ = (1−w)/2·L + (1+w)/2·R`: released from rest is narrow, a rotating system wide; off, `w = 1` |
+
+Doppler detunes every voice by the same amount, so the intervals are kept but the pitch heard is the measured line
+shifted by the readout's ±n¢; the chord is never detuned, since `Ṙ` is taken as 0 there.
+
+*Defaults (R-555, the human's RQ-454 ruling and Listen effects follow-up, 21 Oct 2026):* reverb, Doppler and stereo width
+on, bit-crush off, at the amounts above; the demo's code has the three unchecked, and the ruling overrides it for
+these three switches only. *Was:* "Reverb (off in the code, on in the file, RQ-454; 0 to 2.5, ×1.40)", "Doppler (off;
+0 to 3, ×1.50)", "Stereo width (off in the code, on in the file, RQ-454; 0 to 3, ×1.50)".
 
 All four inputs are scale-free, so the effects keep §1's scale invariance. The crush is a 4096-point wave-shaper on
 `[−1, 1]`, `round(x·2^{bits−1})/2^{bits−1}`, the identity at 16 bits. The impulse is stereo white noise ×
@@ -345,14 +378,17 @@ readout reads "spread ×R/R₀ · Doppler ±n¢ · b bits · width w %".
 
 ## 10. Horizon and dwell
 
-- While the hover is moving the run is integrated to `t ≤ 20` (the demo's maps' horizon), so the sound is coarse.
+- While the hover is moving the run is integrated to the sim key's `t_max` under pointer_channels §3's step budget, so
+  the sound is coarse; the demo's `t ≤ 20` is its maps' horizon (R-555, RQ-464 (a)). *Was:* "While the hover is moving
+  the run is integrated to `t ≤ 20` (the demo's maps' horizon), so the sound is coarse."
 - When a moving hover's run has reached that horizon without an event, and Listen's `Horizon` (20, **60**, 150, 400)
   is longer, after a dwell of 280 ms (at once for a pin) the same run is integrated on to the horizon, if the pointer
   has not moved on, and the trace and the sound both switch to it (cross-fade 260 ms) and sharpen. Changing the
   horizon re-extends the current run; a known orbit (§12) runs to it at once.
 - A run ended early by its event is a short run, so a coarse spectrum; that is information, not a fault.
 
-The hover's own horizon and step budget in the app, and Listen's horizon against the Run window's, are RQ-464.
+The trace and the sound switch together; the map does not change (R-555, RQ-464 (a)). *Was:* "The hover's own horizon
+and step budget in the app, and Listen's horizon against the Run window's, are RQ-464."
 
 ## 11. Display
 
@@ -383,10 +419,11 @@ The hover's own horizon and step budget in the app, and Listen's horizon against
   following, scrubbing or short of the run's end. In the GUI the strip is on the scrubber's time axis, blank past the
   run's end (R-541 G7).
 
-**The readout**: the pitch mapping (`1/t_c → f_ref Hz`, and the octave shift); the window; `t_c`; the entropy ("0 a
+**The readout**: the pitch mapping (`1/t_c → f_ref Hz`, the octave shift, and `t_c`'s branch, "t_c from E (bound)" or
+"t_c from I (E ≥ 0)", which names the jump across `E = 0`, R-555, RQ-467); the window; `t_c`; the entropy ("0 a
 pure line, 1 noise"); the movement, shape rms → loudness with the clamps, or "the shape does not move, so there is
 nothing to play"; the periods per window of the strongest line (with "under 20: too short to resolve a note" below 20,
-RQ-450); the top four peaks as notes with Hz; the named interval of the top two; the run (its horizon, its end event,
+REQ-VAL-103's measured minimum, R-555, RQ-450 (a)); the top four peaks as notes with Hz; the named interval of the top two; the run (its horizon, its end event,
 "truncated: coarser" for an incomplete run); and the reason for any silence ("silence: not a system", "silence: the run
 ended at t = … by …").
 
@@ -405,7 +442,8 @@ ended at t = … by …").
 
   These are the calibration set for the tests. Lagrange rotating is linearly unstable with equal masses (Routh's
   27Σm_im_j/M² = 9 > 1) and breaks up by t ≈ 150 under any integrator, so it is calibration only before that: its tests
-  state t ≤ 60 or wait on RQ-442 (physics review 5595386853 of PR #267, P1; applied per R-369).
+  state t ≤ 60 (physics review 5595386853 of PR #267, P1; applied per R-369; R-555, RQ-442, pins them there; *was:*
+"state t ≤ 60 or wait on RQ-442").
 
 ## 13. Tests (each with the arm that fires)
 
@@ -416,7 +454,7 @@ ended at t = … by …").
 | Wrap | the `θ` signal's spectrum has no lines at multiples of the winding rate that are absent from `e^{iθ}`'s | `θ` used instead of `e^{iθ}` | REQ-GUI-309 |
 | Figure-eight | lines in exact 2:1 / 3:2 / 4:3 ratios to ±5 cents | a windowing or peak-refinement error | REQ-GUI-311 |
 | Lagrange (default signal) | one line, level above the min clamp | the rotation channel dropped | REQ-GUI-309 |
-| Lagrange (angles only) | level 0, because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (RQ-442) | REQ-GUI-316 |
+| Lagrange (angles only) | over `t ≤ 60`, level 0, because the shape rms is below the floor; a perturbed Lagrange (§12's, body 1's `v_x` × 1.01) sounds | the floor removed, or set so high that the perturbed Lagrange is silent (R-555, RQ-442; *was:* "level 0, because the shape rms is below the floor" and "the floor removed, or set above prin-rs's drift (RQ-442)") | REQ-GUI-316 |
 | No silent run | every run with `t_end > 0` that moves has at least one voiced line (fallback included) | the fallback missing | REQ-GUI-312 |
 | Struck floor | a struck voice 10 s after its strike is at `sus × level`, not 0, and was struck exactly once without a beat | a timer re-strike, or decay to zero | REQ-GUI-317 |
 | Silence after the end | follow mode past `t_end` voices nothing | a held chord | REQ-GUI-314 |
@@ -424,14 +462,20 @@ ended at t = … by …").
 
 The requirements carry three test details the physics review of PR #267 added (applied per R-369): Winding sign
 asserts the side levels and that the sides differ (P3); Scale invariance gains a known-answer arm, Lagrange's line at
-181.94 Hz at shift 0 within ±5 cents (P4); and the Lagrange tests state their horizon or wait on RQ-442 (P1). No silent
-run excepts the silences RQ-467 queues (P2).
+181.94 Hz at shift 0 within ±5 cents (P4); and the Lagrange tests state their horizon, `t ≤ 60` (P1; R-555, RQ-442).
+No silent run has no exceptions (R-555, RQ-467: the uncapped fit and the short runs' mean rates). *Was:* "and the
+Lagrange tests state their horizon or wait on RQ-442 (P1). No silent run excepts the silences RQ-467 queues (P2)."
 
 ## 14. What the demo is not
 
-The demo is Web Audio in a browser: its time constants are `setTargetAtTime`'s, which the app's backend reproduces
-(RQ-440); its integrator (Dormand–Prince 5(4), relative tolerance 10⁻¹¹, steps at most 0.004, a 400 000-step budget), its
-escape test and its precomputed maps are its own, and the app's are `computeIC`'s and the run's. Where the analysis runs
-is RQ-441. The questions the human queued are RQ-440 to RQ-447; the conflicts and silences the port found, RQ-448 to
+The demo is Web Audio in a browser: its time constants are `setTargetAtTime`'s, which the app's backend reproduces.
+The app's voice and effects chain is one Rust synthesis graph, transcribed node for node from `trace_sound.html`
+(`makeVoice`, `INSTRUMENTS`, the bank, the effects), played natively through `cpal` on its own audio thread; the
+browser build plays the same graph's samples in TASK-M8-38's shell (an AudioWorklet or `cpal`'s WebAudio backend),
+never a second Web Audio transcription (R-555, RQ-440 (a); REQ-GUI-345); its integrator (Dormand–Prince 5(4), relative tolerance 10⁻¹¹, steps at most 0.004, a 400 000-step budget), its
+escape test and its precomputed maps are its own, and the app's are `computeIC`'s and the run's. The analysis runs on the CPU in
+the inspector worker (REQ-SYS-060), from the trajectory viewer's own `computeIC` samples, at §2's sizes; it does not use
+the GPU integrator and does not reuse frequency diffusion's FFT (R-555, RQ-441 (a); *was:* "Where the analysis runs is
+RQ-441."). The questions the human queued are RQ-440 to RQ-447; the conflicts and silences the port found, RQ-448 to
 RQ-467 (R-540, R-541; RQ-465 from merging main, RQ-466 and RQ-467 from PR #267's review). *Was:* "RQ-448 to RQ-464"
 (code review 5595371779 of PR #267, F4; applied per R-369).

@@ -407,7 +407,7 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
 - **listen**: **Listen** (R-540, `docs/design/principia_listen.md`), the trajectory heard as sound, the panel's Listen
   section (below) and `Listen…` (§G5). It follows the cursor, or the pinned or kept trajectory of the tab shown. Its
   signal is R-540's (RQ-451), within `principia_scratchpad_pointer_channels.md` §4's constraints (normative with §3 —
-  R-109, R-144) as R-540 reads them (RQ-450, RQ-452). *Was (before R-540):* "sonification
+  R-109, R-144) as R-540 reads them (RQ-450, RQ-452; the three ruled by R-555, (a)). *Was (before R-540):* "sonification
   (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can
   follow the cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative
   (R-68);" (the selector's row is stale, RQ-443, its option (a) applied);
@@ -1031,10 +1031,13 @@ Effects, with a readout row under both (`principia_listen.md` §11's readout).
 | Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
 | Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
 | Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
-| Effects | each a switch + amount slider + value: reverb ← spread (off, ×1.40), Doppler ← expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), width ← angular momentum (off, ×1.50) |
+| Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, **Doppler ← expansion (×1.50)**, bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
 
-The defaults are the demo's code (`principia_listen.md`), where R-541 G6 has sound on, Warm sine, reverb on and width
-on (RQ-454, the code applied meanwhile). **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and
+The defaults are R-555's (RQ-454 with the human's Listen effects follow-up): the demo's code, sound off at launch and
+Sine (pure), but for reverb, Doppler and width, on by default, which the code has unchecked (`principia_listen.md`
+§9). *Was:* "The defaults are the demo's code (`principia_listen.md`), where R-541 G6 has sound on, Warm sine, reverb
+on and width on (RQ-454, the code applied meanwhile)." and the Effects row "reverb ← spread (off, ×1.40), Doppler ←
+expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), width ← angular momentum (off, ×1.50)". **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and
 blown (7), voices (4), synths (8), textures (2), one instrument per row; which instrument is in which family is
 written by the task that builds the menu (RQ-459, R-72). The art board compresses rows to fit. Each control is a field
 of Listen's state, the GUI's own, never the sim key: none re-integrates but the horizon, which integrates the shown

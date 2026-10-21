@@ -889,9 +889,10 @@ override it.
 During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
-*Extended by R-540 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open points; the
-default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never retrigger" are read
-with it, RQ-450 and RQ-452).*
+*Extended by R-540 and R-555 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open
+points; the default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never
+retrigger" are read with it, RQ-450 and RQ-452; R-555 rules the three as R-540 applied them, and §4's "below which the
+sound is meaningless" is reworded "below which no line is resolved, and Listen says so").*
 *25 Sep 2026 · applied in step 7 · amended by R-144*
 *Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and
 R-72 requirements, and the rest stays working notes; §3 is normative too (R-144); §4 is read with `principia_listen.md`,
@@ -18735,6 +18736,12 @@ R-539 is in the "design" group of `plan/rule_groups.yaml`, with R-466.
 Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).
 
 ## R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
+*Amended by R-555.*
+*Still in force: all of it, but where R-555 rules its queued entries: the defaults (Sine (pure) and sound off at
+launch, with reverb, Doppler and stereo width on), S2's short runs (a moving run too short to analyse plays its mean
+rates), S3's fit (any whole number of octaves), S4's last-half window, S6's `φ` sentence, S7's floor (10× the larger of
+4.9e-8 and Lagrange's measured shape rms to t ≤ 60), S8's strike, attack and strikes, S10's moving horizon (the sim
+key's `t_max`), and its build, which no longer waits on RQ-440 and RQ-442*
 *21 Oct 2026 · applied in `docs/design/principia_listen.md` (new: the design, transcribed from the demo's code),
 `docs/incoming/2026-10-21_trace_listen/` (the bundle as delivered), `docs/gui/reference/trace/` (`trace_sound.html`,
 version 9, and its images), `docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4.
@@ -18922,7 +18929,7 @@ text; its preface and S1 to S14, verbatim:
 > |---|---|
 > | **Fixed, centred (default)** | `W = min(Fixed × t_c, t_end)` (default `6 t_c`), centred on `t`, shifted inside the run near its ends so every moment has a full window |
 > | Grows | `[0, t₁]`, everything drawn so far |
-> | Grows, last half | `[t₁/2, t₁]` |
+> | Grows, last half | `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)` |
 >
 > For the growing windows, `t₁ = min(t_end, max(t, min(t_end, 0.5 t_c)))`, so the window is never empty.
 >
@@ -18952,7 +18959,9 @@ text; its preface and S1 to S14, verbatim:
 > | Stereo | `θ` (both directions folded) | `φ` |
 > | Mono | everything summed in power | — |
 >
-> So in the default a system that winds one way round the sphere is heard on one side.
+> So in the default a system that winds one way round the sphere is heard on one side. Under *Stereo by winding* the
+> chord voices only the winding spectra; `φ` is heard through the follow track, and a `φ`-only line is panned by the
+> winding spectra at its bin.
 >
 > ## S7. Loudness
 >
@@ -18973,7 +18982,7 @@ text; its preface and S1 to S14, verbatim:
 > ## S8. Instruments
 >
 > **The spectrum decides the pitches and their weights; the instrument only decides the timbre each partial is voiced
-> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Warm sine**.
+> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Sine (pure)**.
 > Transcribe `INSTRUMENTS` and `makeVoice` from the demo; a recipe has:
 >
 > | Field | Meaning |
@@ -18986,8 +18995,8 @@ text; its preface and S1 to S14, verbatim:
 > | `vib`, `bvib`, `trem` | vibrato (rate, cents), vibrato on `b` alone, tremolo |
 > | `unison` | detuned copies of `a` |
 > | `breath` | band-passed noise tracking `f` |
-> | `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level |
-> | `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |
+> | `att`, `glide`, `oct`, `lvl` | attack (its time constant `att/3`), minimum glide, octave offset, level |
+> | `strike`, `sus` | **struck**: the note rises over 4 ms, then from 20 ms decays with time constant `strike/3` **to `sus × level`** (`sus` 0.25 by default), never to zero |
 > | `retrig` | a note event (filter or FM envelope) when the partial moves on, gain held |
 >
 > **Struck instruments** (glass bell, electric piano, marimba, music box, harp, kalimba, steel drum, vibraphone, celesta,
@@ -18995,10 +19004,11 @@ text; its preface and S1 to S14, verbatim:
 >
 > - They are **struck once and ring at their floor**. The first build re-struck them on a timer and they sounded like a
 >   loop; the second decayed to zero and they played once and died. The floor is the fix for both.
-> - **They are struck again on the trajectory's own beats** (`Strikes on`):
+> - **A voice whose line has moved more than a quarter-tone (1/48 octave) since it last sounded is struck again, in
+>   every mode.** `Strikes on` adds the trajectory's own beats:
 >   - each syzygy the head passes (**default**);
 >   - every crossing time ÷ 1, 2 or 4;
->   - only when a line changes, i.e. a voice's partial has moved more than a quarter-tone since it last sounded.
+>   - only when a line changes: no beats are added, only the line-change strike above.
 >
 > Families, for the menu (GUI file G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
 > textures (2).
@@ -19020,10 +19030,10 @@ text; its preface and S1 to S14, verbatim:
 >
 > | Effect | Driven by | Mapping |
 > |---|---|---|
-> | Reverb (on, ×1.40) | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
-> | Doppler (off, ×1.50) | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
+> | **Reverb (on, ×1.40)** | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
+> | **Doppler (on, ×1.50)** | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
 > | Bit-crush (off, ×0.60) | spectral entropy `H` | `bits = round(clamp(15 − 40 a · max(0, H − 0.12), 3, 16))`: a clean line stays clean, noise frays |
-> | Stereo width (on, ×1.50) | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
+> | **Stereo width (on, ×1.50)** | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
 >
 > All four inputs are scale-free, so the effects obey S1's scale invariance too. Chain: voices and events → bit-crush →
 > width matrix → dry + convolver → compressor → output.
@@ -19101,6 +19111,15 @@ text; its preface and S1 to S14, verbatim:
 >   signal. Recommendation (a): mark it stale, replaced by this ruling. (b) Keep separations as a fourth `Signal`.
 > - **Q5. Close-approach threshold** `0.2 R` and the event depth scale are demo choices. Recommendation (a): keep them,
 >   stated as parameters.
+
+*Edited by R-555 (21 Oct 2026), as the human's words order (RQ-454 with the Listen effects follow-up, RQ-455 to
+RQ-458): S4's last-half row, S6's sentence on `φ`, S8's default, its `att` and `strike` rows and its strikes, and S9's
+reverb, Doppler and width rows, bold as the defaults. Was: S4 "| Grows, last half | `[t₁/2, t₁]` |"; S8 "39
+instruments, default **Warm sine**.", "| `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level
+|", "| `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |",
+"**They are struck again on the trajectory's own beats** (`Strikes on`):" and "only when a line changes, i.e. a
+voice's partial has moved more than a quarter-tone since it last sounded."; S9 "| Reverb (on, ×1.40) |", "| Doppler
+(off, ×1.50) |", "| Stereo width (on, ×1.50) |". S6 gained its last sentence. The rest is quoted as delivered.*
 
 *Where the words leave a choice, or the file and the demo's code disagree, decided per R-369 (routine or mechanical;
 the human may veto any), flagged where they read the words:*
@@ -19191,6 +19210,9 @@ Adds REQ-GUI-309 to REQ-GUI-323; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, 
 REQ-VAL-103 (notes).
 
 ## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
+*Amended by R-555.*
+*Still in force: all of it, but G6's defaults, which R-555 sets: sound off at launch, Sine (pure), and reverb, Doppler
+and width on; P8's code defaults stand for the rest*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (Overlays ▾'s Trace group, Lines ▾'s list, the trace settings' place, the left panel, the Trajectory panel's kept
 orbits and its order, the bottom band's Listen, the legend's bullet; sentences and paragraphs added, the replaced words
@@ -19321,12 +19343,12 @@ text; its preface and G1 to G11, verbatim:
 >
 > | Group | Controls (default **bold**) |
 > |---|---|
-> | Sound | **♪ sound on**, `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Warm sine**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
+> | Sound | ♪ sound on (**off** at launch), `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Sine (pure)**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
 > | Loudness | **follows the shape's movement** / normalised; min level **15%**; max **100%**; volume **60%** |
 > | Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
 > | Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
 > | Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
-> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, Doppler ← expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
+> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, **Doppler ← expansion (×1.50)**, bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
 >
 > **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
 > textures (2), one instrument per row in the build. The art board compresses rows to fit.
@@ -19414,7 +19436,10 @@ read the words:*
   kept with its trajectory, each edit one `SetField` as the others are (R-538 I1). The window's Kept traces rows are
   the tabs' list. Its key… button opens the icon key (R-538 TM4).
 - **P8. `Listen…`.** Its controls are `principia_listen.md`'s with the code's defaults (RQ-454: sound off at launch,
-  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. The instrument menu's families name no
+  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. *R-555 (21 Oct 2026) rules RQ-454 with
+  the human's Listen effects follow-up: sound off at launch and Sine (pure), with reverb, Doppler and width on; G6's
+  Sound and Effects rows are edited to bold them, as the human's words order. Was: "**♪ sound on**", "instrument
+  (**Warm sine**)" and "Doppler ← expansion (off, ×1.50)".* The instrument menu's families name no
   instrument and the code has none: that is RQ-459, applied meanwhile with the task that builds the menu writing the
   assignment (R-72), the counts met.
 - **P9. The bottom band's sizes.** G7's 196 px, 420 px and 360 px meet R-462's splitters, and "cube only" leaves the
@@ -21466,3 +21491,302 @@ R-554 is in the "physics" group of `plan/rule_groups.yaml`, with R-473 and R-503
 Changes REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (statement or verify,
 rulings, source, `rq` removed, note), REQ-CHART-058 and REQ-GUI-106 (statement, verify, rulings, source, note),
 REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (notes); adds REQ-CHART-081 (a definition, M8).
+
+## R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*
+*21 Oct 2026 · applied in `docs/design/principia_listen.md` (the adoption note; § "1. What is heard", § "2. The
+spectrum", § "3. Pitch", § "4. Follow the head, or the whole run", § "5. Voices", § "6. Channels", § "7. Loudness"
+(`RMS_FLOOR`, its measurement's record), § "8. Instruments", § "9. Events and effects" (the effects table's defaults and
+the Doppler line under it), § "10. Horizon and dwell", § "11. Display", § "12. Sweep and known orbits", § "13. Tests
+(each with the arm that fires)" and § "14. What the demo is not"; the replaced words kept as *Was*),
+`docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4. Audio-specific constraints, which are NOT
+the frame budget", RQ-450's rewording and the open points' paragraph, with their earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (the listen bullet's
+citations) and § "Listen… — every sound setting (R-541 G6)" (the Effects row and the defaults' sentence, with their
+earlier words kept), `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism" (the citations), R-540's
+S4, S6, S8 and S9 and R-541's G6 and P8 (edited as the human's words order, the earlier words kept) and their heading
+blocks, R-109's heading block (a clause), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-309 to REQ-GUI-321,
+REQ-GUI-329, REQ-VAL-102, REQ-VAL-103, REQ-VAL-114 and REQ-SYS-060 (reqio: statement, verify, rulings, source, `rq`
+removed, note, as each needs), REQ-GUI-345 and REQ-VAL-194 (reqio, new), TASK-M8-12, TASK-M8-59, TASK-M8-60,
+TASK-M8-64 and TASK-M8-65 (no longer waiting; TASK-M8-12 and TASK-M8-59 gain a requirement, TASK-M8-59 a dependency on
+TASK-M8-38), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-440 to RQ-444, RQ-450
+to RQ-458, RQ-464 and RQ-467, moved with their rulings); built by TASK-M8-12 (⚑ physics), TASK-M8-59 and TASK-M8-60*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+95–99, 105–113, 119 and 122), which R-545 quotes in its opening:
+
+> - RQ-440 (Listen's audio backend: one Rust synthesis graph, `cpal` out): (a), with one point made explicit. "Listen's voice and effects chain is one Rust synthesis graph, transcribed node for node from `trace_sound.html` (`makeVoice`, `INSTRUMENTS`, the bank, the effects). Natively it plays through `cpal` on its own audio thread. The browser build plays the same graph's samples in TASK-M8-38's shell (an AudioWorklet or `cpal`'s WebAudio backend), not a second Web Audio transcription."
+>
+> - RQ-441 (Listen's analysis runs on the CPU, in the inspector worker): (a). "Listen's analysis runs on the CPU in the inspector worker (REQ-SYS-060), from the trajectory viewer's own `computeIC` samples, at S2's sizes. It does not use the GPU integrator, and it does not reuse frequency diffusion's FFT."
+>
+> - RQ-442 (`RMS_FLOOR`: set above f64's floor, measured at t ≤ 60): a reconciliation of (a) and (b). "`RMS_FLOOR` is 10× the larger of two values, both under *Angles only*. The first is the f64 floor of an exactly rotating triangle, 4.9e-8. The second is the maximum shape rms of Lagrange over `t ≤ 60` with the shipped integrator, measured and recorded in `principia_listen.md` §7. S13's Lagrange test (level 0) is pinned at `t ≤ 60`, with a failing arm: a perturbed Lagrange must sound."
+>
+> - RQ-443 (The "separations → pitch" sketch row is marked stale): (a). "The sketch's 'listen · separations → pitch' is stale, replaced by R-540. REQ-GUI-090's 'must not be implemented' stands. There is no fourth `Signal`."
+>
+> - RQ-444 (`0.2 R` and the event depth scale kept as parameters): (a). "The close-approach threshold `0.2 R` and the depth scale `min(1, log₁₀(0.2R/d)/2)` stay as stated parameters in `principia_listen.md` §9. They are not calibrated."
+>
+> - RQ-450 (Every moving run is heard; the measured minimum becomes a warning): (a). "Every run that moves makes a sound. Below the 1.5-period cut, the mean rates play. REQ-VAL-103's minimum is still measured and recorded, and it sets the readout's 'too short to resolve a note' warning, not a silence. In §4, reword 'below which the sound is meaningless' to 'below which no line is resolved, and Listen says so'."
+>
+> - RQ-451 (Default "Angles + rotation" extends R-109's `θ, φ`): (a). "R-540 extends R-109. The default signal adds `ψ` so that Lagrange is heard, and *Angles only* is §4's `θ(t), φ(t)`. REQ-GUI-090's verify reads the selected signal. `sonify_input_is_theta_phi` asserts two things: the input is only the `computeIC` trajectory, and under *Angles only* it is exactly `θ, φ`."
+>
+> - RQ-452 (Struck instruments on a new hovered chord): (a), as the code. "The bank cross-fades over 140 ms. A struck instrument's strike on a new run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger. REQ-GUI-050 gains this sentence. The default instrument strikes nothing."
+>
+> - RQ-453 (Two entropy checks: `θ(t)` anchors kept, Listen's added): (c). "REQ-VAL-102 stays a check of the `θ(t)` spectrum with its anchors, 0.076 against 0.177. Listen's readout entropy gets its own anchors, measured with prin-rs's integrator and confirmed at the M8 gate (REQ-VAL-114). The demo's 0.309 against 0.352 is recorded as the demo's value."
+>
+> - RQ-454 (Listen's defaults follow the code: Sine, effects off, sound off): (a). "Defaults are Sine (pure), reverb off, width off, and sound off at launch. Bold these in S8, S9 and G6 in place of Warm sine, reverb on (×1.40) and width on (×1.50)."
+>
+> - RQ-455 ("Grows, last half" uses the code's window): (a). "Reword S4's row to `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)`."
+>
+> - RQ-456 (Struck decay at `strike/3`, attack at `att/3`): (a). "Reword S8's row: the note rises over 4 ms, then from 20 ms decays with time constant `strike/3` to `sus × level` (`sus` 0.25 by default). The attack's time constant is `att/3`."
+>
+> - RQ-457 (Line-change strikes happen in every mode): (a). "A voice whose line has moved more than a quarter-tone (1/48 octave) is struck again in every mode. `Strikes on` adds the beats (syzygy, or crossing time ÷ 1, 2 or 4). 'Only when a line changes' adds no beats, and S8 is reworded to say so."
+>
+> - RQ-458 (Under *Stereo by winding*, `φ` is heard in the follow track): (a). "Under *Stereo by winding*, the chord voices only the winding spectra. `φ` is heard through the follow track, and a `φ`-only line is panned by the winding spectra at its bin. S6 says this in one sentence."
+>
+> - RQ-464 (Moving hover uses the map's horizon; dwell extends to `Horizon`): (a). "A moving hover integrates to the sim key's `t_max` under §3's step budget, and S10's '20' is read as the demo's maps' horizon. On dwell (280 ms) or a pin, the run continues to Listen's `Horizon` where that is longer. The trace and the sound both switch; the map does not change."
+>
+> - RQ-467 (Moving runs near E = 0 must sound): (b) + (d). "Fit to hearing shifts by any whole number of octaves, so every moving run with a peak lands in 110–880 Hz. A moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates from the samples it has. The ~19-octave jump across E = 0 stays and the readout names it." REQ-GUI-312/313 then assert S13 with no exceptions.
+
+and the human's follow-up on Listen's effects, the same day, pasted after the batch and recorded whole at
+`docs/incoming/2026-10-21_rulings/listen_effects.md`, verbatim:
+
+> # Human's pasted instruction, 21 Oct 2026 (verbatim)
+>
+> Follow-up from me, Malachy, 21 Oct 2026, on Listen's effects. My words: "make, reverd from the systems spread, doppler
+> shift from expansion rate, and stereo width from it's angular momentum on by default. (think they add more depth to
+> the sound system?)" Quote them verbatim.
+>
+> Ruling: in principia_listen.md §9, Reverb (from the spread R/R₀, ×1.40), Doppler (from Ṙ t_c / R, ×1.50) and Stereo
+> width (from √(L_z²|E|), ×1.50) are ON by default, at their existing default amounts. Bit-crush stays off. Nothing else
+> in §9 changes: the mappings, ranges, chain and readout are as they are.
+>
+> This supersedes the effects part of my RQ-454 ruling (rulings_2026-10-21.md: "reverb off, width off"). If that
+> ruling is already recorded, record this as a new ruling from the next free R-number amending it; if not, record
+> RQ-454 with this change. The rest of RQ-454 stands: Sine (pure) as the instrument, and sound off at launch, so nothing
+> is heard until the user turns sound on.
+>
+> Apply:
+> - principia_listen.md §9's table: Reverb "(on; 0 to 2.5, ×1.40)", Doppler "(on; 0 to 3, ×1.50)", Stereo width
+>   "(on; 0 to 3, ×1.50)". Drop the "off in the code, on in the file, RQ-454" notes. Add one line under the table:
+>   Doppler detunes every voice by the same amount, so the intervals are kept but the pitch heard is the measured line
+>   shifted by the readout's ±n¢; the chord is never detuned, since Ṙ is taken as 0 there.
+> - decisions.md R-540 S9 and R-541 G6: bold all three as defaults.
+> - REQ-GUI-320: update the note; add to its verify that the default state has reverb, Doppler and width on at ×1.40,
+>   ×1.50 and ×1.50 with bit-crush off, with a control that the off states are still the identity.
+> - The demo code (trace_sound.html) is the transcription source and has these unchecked. This ruling overrides it for
+>   these three switches only; say so in the port's PR.
+> - check_plan, one PR with the test output pasted in. Queue anything this conflicts with rather than resolving it.
+> - The security rule stands: never delete or modify anything outside the repo and build/scratch directories without
+>   asking.
+
+RQ-454 was not yet recorded when the follow-up came, so, as the follow-up says ("if not, record RQ-454 with this
+change"), R-555 records RQ-454's batch words and the follow-up together and decides RQ-454 with the change: the
+follow-up's effects part replaces the batch's "reverb off, width off", and the rest of RQ-454 stands. The demo's code,
+`docs/gui/reference/trace/trace_sound.html`, the transcription source R-540 H2 makes the code win by, has the three
+switches unchecked; the follow-up overrides it for those three switches only, and everywhere else the code still wins.
+
+R-555 rules Listen's sixteen entries that R-540 filed (Q1 to Q5 of `principia_listen.md` S14, and the conflicts the
+port and PR #267's review found). The other Listen entries are the GUI's, ruled by R-556 (RQ-445 to RQ-449, RQ-459 to
+RQ-463, RQ-465, RQ-466).
+
+**RQ-440 (the audio backend).** It asked whether Listen's sound in prin-rs is (a) a Rust synthesis graph on `cpal`,
+the voice and effects chain transcribed node for node (the file's recommendation), or (b) web-only. Nothing was built.
+
+*What it decides:*
+- **Option (a), with one point made explicit: one graph.** Listen's voice and effects chain is one Rust synthesis
+  graph, transcribed node for node from `trace_sound.html` (`makeVoice`, `INSTRUMENTS`, the bank, the effects).
+- **Natively it plays through `cpal` on its own audio thread.**
+- **The browser build plays the same graph's samples** in TASK-M8-38's shell, through an AudioWorklet or `cpal`'s
+  WebAudio backend, and is never a second Web Audio transcription.
+
+*Decided per R-369 (routine; reviewed by code and perf):*
+- **A1. The requirement.** A new requirement, REQ-GUI-345, states the one graph and its two outputs, closed by
+  TASK-M8-59, which builds the graph (`principia_listen.md` §5, §8, §9). TASK-M8-12's audio out is the native `cpal`
+  stream the graph feeds; TASK-M8-59 now depends on TASK-M8-38 too, so the browser half is checked against the shell
+  that plays it. Its test renders the graph offline, with no device, and compares the samples with the output
+  callback's.
+
+**RQ-441 (where the analysis runs).** Options: (a) the CPU, from the trajectory viewer's `computeIC` samples, at S2's
+sizes, in the inspector worker (REQ-SYS-060), the file's recommendation, applied meanwhile from the build's start; (b)
+the GPU with the integrator.
+
+*What it decides:* **option (a).** Listen's analysis runs on the CPU in the inspector worker (REQ-SYS-060), from the
+trajectory viewer's own `computeIC` samples, at S2's sizes. **It does not use the GPU integrator, and it does not reuse
+frequency diffusion's FFT** (pointer_channels §6's reuse stays retired, REQ-TOOL-093). Nothing changes in the design;
+REQ-SYS-060 and REQ-GUI-311 say so.
+
+**RQ-442 (`RMS_FLOOR` against prin-rs's integrator).** Options: (a) measure Lagrange's shape rms under *Angles only*
+over `t ≤ 400` and set the floor at 10× its maximum (the file's recommendation); (b) keep 10⁻⁷. The physics review of
+PR #267 (P1) found the equal-mass Lagrange triangle linearly unstable, so (a) over `t ≤ 400` gives a floor of about 9
+that silences every run, and an f64 floor of 4.9e-8 that no integrator lowers.
+
+*What it decides:* **a reconciliation of (a) and (b).**
+- **`RMS_FLOOR` is 10× the larger of two values, both under *Angles only*:** the f64 floor of an exactly rotating
+  triangle, **4.9e-8**; and **the maximum shape rms of Lagrange over `t ≤ 60` with the shipped integrator**, measured
+  and recorded in `principia_listen.md` §7.
+- **S13's Lagrange test (level 0) is pinned at `t ≤ 60`, with a failing arm: a perturbed Lagrange must sound.**
+
+*Decided per R-369 (the floor and its test; reviewed by physics):*
+- **A2. The measurement.** "The maximum shape rms of Lagrange over `t ≤ 60`" is the largest §7 rms under *Angles
+  only* of §12's Lagrange rotating, integrated by prin-rs's `computeIC` with the shipped integrator at the defaults,
+  over every follow-mode frame's window and the whole-run chord with both ends in `[0, 60]`. TASK-M8-12 (⚑ physics)
+  measures it, records it with its method in §7, where the line waits for it, and sets `RMS_FLOOR`; a test re-runs the
+  measurement and fails if it disagrees with the record. Since the ruling gives the value's formula and the measurement
+  that fills it, it is a measurement recorded in the design, not a calibration confirmed at a gate.
+- **A3. The perturbed Lagrange.** The failing arm's Lagrange is §12's Lagrange rotating with body 1's `v_x` × 1.01, as
+  the figure-eight's perturbed copy is made; over `t ≤ 60` its shape moves far above the floor (the instability's
+  growth, P1), so it must read a level above 0. The arm fails if the floor is set so high that it is silent.
+- **A4.** REQ-GUI-316 carries the formula, the horizon and both arms; REQ-GUI-309's Lagrange (default signal) arm
+  already states `t ≤ 60`.
+
+**RQ-443 (the superseded sketch row).** Option (a), applied meanwhile (R-540 H13): stale, replaced by R-540.
+
+*What it decides:* **option (a).** The sketch's "listen · separations → pitch" is stale, replaced by R-540.
+REQ-GUI-090's "must not be implemented" stands. **There is no fourth `Signal`.** Nothing changes but the citations.
+
+**RQ-444 (the close-approach threshold and the depth scale).** Option (a), applied meanwhile (R-540 H7, H13): kept,
+stated as parameters.
+
+*What it decides:* **option (a).** `0.2 R` and the depth scale `min(1, log₁₀(0.2R/d)/2)` stay as stated parameters in
+`principia_listen.md` §9. **They are not calibrated** (no R-71 requirement follows).
+
+**RQ-450 (pointer_channels §4's length floor against S2's "every run heard").** Options: (a) S2 holds, every moving run
+sounds, REQ-VAL-103's measured minimum setting the readout's warning, applied meanwhile (R-540 H6); (b) §4 holds, below
+the minimum Listen is silent; (c) the mean rates play below it, marked as rates.
+
+*What it decides:* **option (a).** Every run that moves makes a sound; below the 1.5-period cut the mean rates play.
+REQ-VAL-103's minimum is still measured and recorded, and it sets the readout's "too short to resolve a note" warning,
+not a silence. **pointer_channels §4's "below which the sound is meaningless" is reworded "below which no line is
+resolved, and Listen says so"** (its earlier words kept, as the corpus does for a normative passage).
+
+**RQ-451 (the default signal adds `ψ` to R-109's `θ, φ`).** Options: (a) R-540 extends R-109, *Angles only* §4's
+mapping, applied meanwhile (R-540 H5); (b) *Angles only* the default; (c) `ψ` dropped.
+
+*What it decides:* **option (a).** The default signal, *Angles + rotation*, adds `ψ` so that Lagrange is heard, and
+*Angles only* is pointer_channels §4's `θ(t), φ(t)`. **REQ-GUI-090's verify reads the selected signal.** TASK-M8-12's
+`sonify_input_is_theta_phi` asserts two things: **the input is only the `computeIC` trajectory, and under *Angles only*
+it is exactly `θ, φ`.** R-109's forward line already says R-540 extends it; this ruling settles that extension.
+
+**RQ-452 (a struck instrument on each new hovered chord).** Options: (a) as the code, a strike under the bank's
+cross-fade being the instrument's timbre, applied meanwhile (R-540 H2); (b) a new chord enters a struck instrument at its
+floor, unstruck; (c) struck instruments silent while the hover moves.
+
+*What it decides:* **option (a), as the code.** The bank cross-fades over 140 ms. A struck instrument's strike on a new
+run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger. **REQ-GUI-050 gains this
+sentence.** The default instrument strikes nothing (Sine (pure) is not struck; RQ-454).
+
+**RQ-453 (the entropy anchors).** Options: (a) REQ-VAL-102 stays a check of `θ(t)`'s spectrum, applied meanwhile (R-540
+H6); (b) re-anchored to Listen's entropy, measured with prin-rs's integrator and confirmed at the M8 gate (REQ-VAL-114);
+(c) both.
+
+*What it decides:* **option (c).**
+- **REQ-VAL-102 stays a check of the `θ(t)` spectrum with its anchors, 0.076 against 0.177.**
+- **Listen's readout entropy gets its own anchors, measured with prin-rs's integrator and confirmed at the M8 gate
+  (REQ-VAL-114).**
+- **The demo's 0.309 against 0.352 is recorded as the demo's value.**
+
+*Decided per R-369 (a calibration's form, R-71; reviewed by physics):*
+- **A5. The anchors' requirement.** A new calibration requirement, REQ-VAL-194, closed by TASK-M8-12 beside
+  REQ-VAL-102 and REQ-VAL-114: Listen's readout entropy (`principia_listen.md` §2, the selected signal's mono spectrum
+  over the whole run) for the figure-eight and Burrau 3:4:5, §12's known orbits, at the defaults with the default
+  `Horizon` (60; Burrau to its collision), measured with prin-rs's `computeIC`, proposed with its evidence, confirmed by
+  the human at the M8 gate and recorded here, the figure-eight below Burrau. Its tolerance is REQ-VAL-114's, which now
+  covers both pairs of anchors; the demo's pair is evidence (R-540 H12), not the anchors.
+
+**RQ-454 (Listen's defaults), with the follow-up.** RQ-454 set the human's files (Warm sine, reverb and width on, sound
+on) against the demo's code (Sine (pure), reverb and width off, sound off); option (a), the code's, was applied
+meanwhile. The batch ruled (a); the follow-up, quoted above, replaces its effects part.
+
+*What it decides, the batch's (a) as the follow-up amends it:*
+- **The instrument defaults to Sine (pure),** and **the sound is off at launch**, so nothing is heard until the user
+  turns sound on (the rest of RQ-454 stands).
+- **Reverb (from the spread `R/R₀`, ×1.40), Doppler (from `Ṙ t_c / R`, ×1.50) and Stereo width (from `√(L_z²|E|)`,
+  ×1.50) are on by default, at their existing default amounts. Bit-crush stays off** (×0.60). Nothing else in §9
+  changes: the mappings, ranges, chain and readout are as they are.
+- **Applied as the follow-up lists:** `principia_listen.md` §9's table reads Reverb "(on; 0 to 2.5, ×1.40)", Doppler
+  "(on; 0 to 3, ×1.50)" and Stereo width "(on; 0 to 3, ×1.50)", the "off in the code, on in the file, RQ-454" notes
+  dropped, and one line under the table: Doppler detunes every voice by the same amount, so the intervals are kept but
+  the pitch heard is the measured line shifted by the readout's ±n¢; the chord is never detuned, since `Ṙ` is taken as
+  0 there. R-540's S9 and R-541's G6 bold all three as defaults; with RQ-454, R-540's S8 and R-541's G6 bold Sine (pure)
+  in place of Warm sine, and G6's sound is "off at launch". REQ-GUI-320's note, and its verify gains the default state
+  (reverb, Doppler and width on at ×1.40, ×1.50 and ×1.50, bit-crush off) with a control that the off states are still
+  the identity. REQ-GUI-317 and REQ-GUI-329 take the defaults.
+- **The override.** `trace_sound.html` has the three switches unchecked; this ruling overrides it for these three
+  switches only (said in the port's PR, as the follow-up asks).
+
+*Checked against the corpus for conflicts (the follow-up: "Queue anything this conflicts with rather than resolving
+it"):* none found. S13's tests read the analysis (the peaks, the levels, the effect inputs), which the effects do not
+touch, and the effects are applied to the voices; Doppler's detune is a function of the scale-free `Ṙ t_c / R`, so
+REQ-GUI-313's scale arm still holds with it on; the known-answer arm's Lagrange rotating has `Ṙ = 0` before it breaks up,
+and a chord takes `Ṙ` as 0. One consequence, stated, not a conflict: with width on, a run with `L_z = 0` (the
+figure-eight, released from rest) is mixed at the narrowest width, 0.15, as §9's mapping has it.
+
+**RQ-455 ("Grows, last half").** Option (a), the code's, applied meanwhile (R-540 H2).
+
+*What it decides:* **option (a).** S4's row is reworded to `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)`
+(R-540's S4 edited; `principia_listen.md` §4 carries it already).
+
+**RQ-456 (a struck note's decay).** Option (a), the code's, applied meanwhile.
+
+*What it decides:* **option (a).** S8's row is reworded: the note rises over 4 ms, then from 20 ms decays with time
+constant `strike/3` to `sus × level` (`sus` 0.25 by default). The attack's time constant is `att/3` (R-540's S8 edited,
+the `strike` and `att` rows; §8 carries it already).
+
+**RQ-457 (the line-change strike).** Option (a), the code's, applied meanwhile.
+
+*What it decides:* **option (a).** A voice whose line has moved more than a quarter-tone (1/48 octave) is struck again
+in every mode. `Strikes on` adds the beats (syzygy, or crossing time ÷ 1, 2 or 4). "Only when a line changes" adds no
+beats, and **S8 is reworded to say so** (R-540's S8 edited; §8 carries it already).
+
+**RQ-458 (`φ` under *Stereo by winding*).** Options: (a) as the code, applied meanwhile; (b) `φ` added to both sides,
+centred; (c) `φ` only under *Stereo*.
+
+*What it decides:* **option (a).** Under *Stereo by winding* the chord voices only the winding spectra; `φ` is heard
+through the follow track, and a `φ`-only line is panned by the winding spectra at its bin. **S6 says this in one
+sentence** (R-540's S6 edited; §6 carries it already).
+
+**RQ-464 (horizon and dwell).** Options: (a) the moving hover to the map's own horizon (the sim key's `t_max`) under
+pointer_channels §3's step budget, S10's "20" read as the demo's, on dwell or a pin on to Listen's `Horizon`, the map
+unchanged, applied meanwhile (R-540 H8); (b) Listen's `Horizon` dropped; (c) 20 while moving, as the file.
+
+*What it decides:* **option (a).** A moving hover integrates to the sim key's `t_max` under §3's step budget, and S10's
+"20" is read as the demo's maps' horizon (R-540's S10 stands as quoted, read so). On dwell (280 ms) or a pin, the run
+continues to Listen's `Horizon` where that is longer. The trace and the sound both switch; the map does not change.
+`principia_listen.md` §10's first bullet, which still read "to `t ≤ 20`", now says the sim key's `t_max`.
+
+**RQ-467 (moving runs near E = 0, and runs too short to analyse).** Options: (a) the code's silences stand, applied
+meanwhile; (b) Fit to hearing uncapped, any whole number of octaves; (c) a crossing time continuous across E = 0; (d)
+any of these, and a moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates.
+
+*What it decides:* **options (b) and (d).**
+- **Fit to hearing shifts by any whole number of octaves**, so every moving run with a peak lands in 110–880 Hz.
+- **A moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates from the samples it has.**
+- **The ~19-octave jump across E = 0 stays, and the readout names it.**
+- **REQ-GUI-312 and REQ-GUI-313 then assert S13 with no exceptions.**
+
+*Decided per R-369 (what is heard follows the words; the mechanism reviewed by physics):*
+- **A6. The short run's rates.** A run with `t_end ≤ 10⁻⁶` or fewer than three samples (two at least: one sample does
+  not move) takes §2's mean rates over its samples, with no spectrum. §2's drop of a rate with `|f|·D ≤ 10⁻⁶` would drop
+  every rate of such a run, its `D` being at most 10⁻⁶, and silence it against the words; so for these runs a rate is
+  dropped only when it is exactly 0. The rates then go through the uncapped fit like any line.
+- **A7. Naming the jump.** The readout's pitch-mapping line names `t_c`'s branch, "t_c from E (bound)" or "t_c from I
+  (E ≥ 0)", beside the octave shift, so the jump across E = 0 is read where it happens; nothing else is added.
+- **A8. The tests.** REQ-GUI-312's verify drops its exceptions and gains arms on the physics review's silent cases
+  (figure-eight ICs with their velocities scaled to E = −3×10⁻⁴ and −10⁻⁴) and on a two-sample run; REQ-GUI-313's
+  gains an arm that a bound run at E = −10⁻⁴ is shifted past −8 octaves into 110–880 Hz. The controls are the ±8 cap and
+  the short-run fallback removed.
+
+*What it amends:* **R-540**, as to the defaults (S8's Sine (pure); S9's reverb, Doppler and width on), S4's last-half
+row, S6's sentence, S8's `strike` and `att` rows and its strikes, S7's floor (now R-555's formula), S3's fit (no ±8 cap),
+S2's short runs (they play), S10's moving horizon (read as the sim key's `t_max`), and its build's wait (no longer on
+RQ-440 and RQ-442); R-540's S-items are edited where the human's words order it (S4, S6, S8, S9), their earlier words
+kept beside them. **R-541**, as to G6's defaults (sound off at launch, Sine (pure), reverb, Doppler and width on) and
+P8's meanwhile. Read with R-109 (pointer_channels §4, the rewording RQ-450 orders) and R-144 (§3's step budget, RQ-464).
+It closes **RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467**.
+
+R-555 is in the "design" group of `plan/rule_groups.yaml`, with R-540 and R-541.
+
+Changes REQ-GUI-049, REQ-GUI-315, REQ-GUI-318, REQ-GUI-319, REQ-GUI-321, REQ-VAL-102 and REQ-VAL-103 (`rq` removed,
+rulings, note); REQ-GUI-050, REQ-GUI-090, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313,
+REQ-GUI-314, REQ-GUI-316, REQ-GUI-317, REQ-GUI-320 and REQ-GUI-329 (statement or verify as each needs, rulings,
+source, `rq` removed, note); REQ-VAL-114 and REQ-SYS-060 (statement or note, rulings); adds REQ-GUI-345 (the one
+synthesis graph, TASK-M8-59) and REQ-VAL-194 (Listen's entropy anchors, calibration, TASK-M8-12).
