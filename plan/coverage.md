@@ -42,7 +42,7 @@ Of these: 143 calibration, 137 definition, 1425 obligation. Retired (kept for th
 
 ## Sections
 
-1404 sections in 52 files: 1109 yield at least one requirement; 295 yield none and are listed below with the reason.
+1405 sections in 52 files: 1110 yield at least one requirement; 295 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
