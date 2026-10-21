@@ -1994,7 +1994,7 @@
   title: "The stain graph model: node kinds, typed ports, wire rules and RenderState serialisation"
   depends_on: [TASK-M7-01, TASK-M7-03, TASK-M2-23]
   needs: [REQ-RENDER-009, REQ-RENDER-075, REQ-GUI-007]
-  requirements: [REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016]
+  requirements: [REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016, REQ-COL-140]  # REQ-COL-140: R-546 (RQ-282)
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-12
@@ -2042,7 +2042,7 @@
   title: "The preset library: presets as whole graphs, debug views as locked presets"
   depends_on: [TASK-M7-01, TASK-M7-08, TASK-M7-10, TASK-M7-12, TASK-M7-13, TASK-M5-18]
   needs: [REQ-GEN-011, REQ-RENDER-022, REQ-RENDER-024, REQ-RENDER-025, REQ-RENDER-027, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-053]
-  requirements: [REQ-GUI-028, REQ-GUI-029, REQ-GUI-030, REQ-COL-028, REQ-RENDER-061, REQ-RENDER-064, REQ-COL-008]
+  requirements: [REQ-GUI-028, REQ-GUI-029, REQ-GUI-030, REQ-COL-028, REQ-RENDER-061, REQ-RENDER-064, REQ-COL-008, REQ-COL-139]  # REQ-COL-139: R-546 (RQ-280)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M7-18

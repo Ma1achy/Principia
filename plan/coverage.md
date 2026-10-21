@@ -16,15 +16,15 @@
 | SCHED | 100 |
 | REF | 52 |
 | RENDER | 100 |
-| COL | 134 |
+| COL | 136 |
 | GUI | 315 |
 | TOOL | 185 |
 | VAL | 191 |
 | PERF | 95 |
 | SYS | 84 |
-| **total** | **1693** |
+| **total** | **1695** |
 
-Of these: 141 calibration, 138 definition, 1414 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 141 calibration, 140 definition, 1414 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,12 +37,12 @@ Of these: 141 calibration, 138 definition, 1414 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 178 |
 | M6 | 220 |
-| M7 | 216 |
+| M7 | 218 |
 | M8 | 330 |
 
 ## Sections
 
-1416 sections in 52 files: 1107 yield at least one requirement; 309 yield none and are listed below with the reason.
+1416 sections in 52 files: 1108 yield at least one requirement; 308 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
@@ -198,7 +198,6 @@ Of these: 141 calibration, 138 definition, 1414 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)* | **MISSING REASON** | |
 | R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)* | **MISSING REASON** | |
 | R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)* | **MISSING REASON** | |
 | R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)* | **MISSING REASON** | |
@@ -603,7 +602,6 @@ Of these: 141 calibration, 138 definition, 1414 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*
 - uncovered section with no reason: decisions.md § R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*
 - uncovered section with no reason: decisions.md § R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
 - uncovered section with no reason: decisions.md § R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*

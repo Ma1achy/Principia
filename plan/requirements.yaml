@@ -12885,18 +12885,21 @@
   milestone: M7
 - id: REQ-COL-028
   area: COL
-  statement: "The debug views must be presets over the one colouring system (field views as FieldRamp presets, structural views as ctx.quad presets, quad boundary lines as a post-chain bandmask on distance-to-quad-edge), forming a section of the preset library."
+  statement: "The debug views must be presets over the one colouring system (field views as FieldRamp presets, structural views as ctx.quad presets, quad boundary lines as a post-chain bandmask on distance-to-quad-edge), forming a section of the preset library in the six groups colour_composition §9.6 lists (R-546): ROUNDTRIP and the agreement presets in decoded-IC, the §B–§D payload field views and §E's live-shape and accumulator views in diagnostic, and the per-sample cost and quad cache age views in profiling; and the addressing presets must follow §9.7's convention, TL = RB with G = 0 and centre = BG with R = 0."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
   verify:
     method: review checklist
-    detail: "no separate debug render path exists; quad boundaries can be overlaid on a normal preset"
-  rulings: []
+    detail: "no separate debug render path exists; quad boundaries can be overlaid on a normal preset; cargo test -p render debug_groups: each debug preset sits in the group §9.6 names, ROUNDTRIP and the agreement presets in decoded-IC; the TL = RB preset draws G = 0 and centre = BG R = 0"
+  rulings:
+  - R-546
   milestone: M7
-  rq:
-  - RQ-280
-  - RQ-281
+  note: "R-546 (21 Oct 2026): RQ-280 (a) + (c) and RQ-281 (b) with (a)'s profiling half ruled; the three grey presets' rules are REQ-COL-139."
 - id: REQ-COL-029
   area: COL
   statement: "Every currently-specified map in colour_composition §7.1 and every debug view must be recreated as a composition preset."
@@ -12912,9 +12915,9 @@
     detail: "every §7.1 entry and debug view maps to a preset in the library"
   rulings:
   - R-16
+  - R-546
   milestone: M7
-  rq:
-  - RQ-280
+  note: "R-546 (21 Oct 2026, RQ-280): the addressing presets, the three grey presets among them, follow colour_composition §9.7 and are recreated with the other debug views."
 - id: REQ-COL-030
   area: COL
   statement: "Each §7.1 map must implement the definition given in its row (vMF, LUT spheres incl. analytic Cubehelix, Turbo, direction cosines, Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε=0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker+VMF, real spherical harmonics ℓ≤3, Turing standing waves, custom N-pole, basin blend, physics overlay κ=11 BC / 9 Euler-Lagrange), with LUT data from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight; Cubehelix analytic, R-151) Google's published Turbo table (Mikhailov 2019, Apache-2.0; R-139) for Turbo, and Moreland's table for cool-warm and the Principia palette's stops from the colour explorer, and Stability × Hue must not be among them."
@@ -14406,8 +14409,9 @@
   - R-448
   - R-467
   - R-511
+  - R-546
   milestone: M2
-  note: "R-446 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369 (R-446): both of the chart contract's hatches (the domain's end and the universal fallback) are classified forbidden; a reserved state code draws black, no physical outcome; in the three modes the outcome class holds bounded / nothing yet for running and failures. Past [0,1]² the classification is TASK-M8-05's (REQ-CHART-054). The debug views keep the hatch for failures (R-446); which view shows the η_E tags is RQ-333. R-467 (20 Oct 2026): a forbidden region draws the canvas background, not the hatch; TASK-M2-32 built the hatch and TASK-M2-34 changes it (REQ-COL-108), the changed statement re-checked at the M2 gate; the debug view hatches it (REQ-COL-109). R-511 (20 Oct 2026, RQ-379 ruled): a decode_failed sample draws blank, not #141418, so the statement's decode_failed clause and the verify's decode_failed arms are superseded by REQ-COL-108 once TASK-M2-34 changes what TASK-M2-32 built, re-checked at the M2 gate; sim_failed keeps #141418 (gui review 5587650119 of PR #255, G11; applied per R-369)."
+  note: "R-446 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369 (R-446): both of the chart contract's hatches (the domain's end and the universal fallback) are classified forbidden; a reserved state code draws black, no physical outcome; in the three modes the outcome class holds bounded / nothing yet for running and failures. Past [0,1]² the classification is TASK-M8-05's (REQ-CHART-054). The debug views keep the hatch for failures (R-446); the η_E tags show in the existing `state` and `detail` debug views, R-467's View › Debug view (R-546, RQ-333 (a)). R-467 (20 Oct 2026): a forbidden region draws the canvas background, not the hatch; TASK-M2-32 built the hatch and TASK-M2-34 changes it (REQ-COL-108), the changed statement re-checked at the M2 gate; the debug view hatches it (REQ-COL-109). R-511 (20 Oct 2026, RQ-379 ruled): a decode_failed sample draws blank, not #141418, so the statement's decode_failed clause and the verify's decode_failed arms are superseded by REQ-COL-108 once TASK-M2-34 changes what TASK-M2-32 built, re-checked at the M2 gate; sim_failed keeps #141418 (gui review 5587650119 of PR #255, G11; applied per R-369)."
 - id: REQ-COL-102
   area: COL
   kind: definition
@@ -14453,12 +14457,13 @@
   - R-447
   - R-449
   - R-455
+  - R-546
   milestone: M2
-  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369: in M2 the preset is a second swatch set on the outcome palette's occupant; the preset library (TASK-M7-17) lists it with the outcome palette. The swatches are the ruled hex values; RQ-332 records C = 0.123 against the largest in-gamut chroma at every hue (0.1224) and three swatches' rounding. R-455 (17 Oct 2026; RQ-366, option (a)): \"its hue within 0.5° of R-447's\" is read against each class's own OKLab hue (the sRGB class's, before rounding), which every swatch meets; escape body 3's #09B9CD measures 208.54°, 0.54° from its row's 208°, and stays."
+  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369: in M2 the preset is a second swatch set on the outcome palette's occupant; the preset library (TASK-M7-17) lists it with the outcome palette. The swatches are the ruled hex values; R-546 (RQ-332, option (a)): C = 0.123 is in gamut at every listed hue, and the ruled hex values stand against the three swatches' computed rounding, recorded, not adopted. R-455 (17 Oct 2026; RQ-366, option (a)): \"its hue within 0.5° of R-447's\" is read against each class's own OKLab hue (the sRGB class's, before rounding), which every swatch meets; escape body 3's #09B9CD measures 208.54°, 0.54° from its row's 208°, and stays."
 - id: REQ-COL-104
   area: COL
   kind: calibration
-  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate (R-454) and recorded in decisions.md. Measured at R-445 (classes named as shown, R-449): the closest pair is 0.175, triple collision #F29620 against escape body 1 #F0DE32 (the human's figure, 0.185 for collision 1–3 against escape body 3, holds with the orange left out; RQ-331); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
+  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate (R-454) and recorded in decisions.md. Measured at R-445 (classes named as shown, R-449): the closest pair is 0.175, triple collision #F29620 against escape body 1 #F0DE32 (R-546, RQ-331: it stays 0.175, the same two colours as the old t = 0 pair; 0.185, collision 1–3 against escape body 3, holds only with the orange left out); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -14468,18 +14473,19 @@
     section: "R-445 — \"Collision @ t = 0\" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to \"collision at start\", the triple swatches and the first-step triple collision's orange)*"
   - file: decisions.md
     section: "R-454 — The three outcome goldens are re-baselined under R-444 to R-446, tile 7 of `known_escaper` named; the new swatches and their evidence are confirmed at the M2 gate *(closes RQ-330)*"
+  - file: decisions.md
+    section: "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
   verify:
     method: review checklist
-    detail: "the proposal gives every pair's OKLab distance, the closest pair, purple's distance from every entry, the hatch's two colours, the stipple's grey and dot, the pending hatch's #0000FF and the fallback tint's #FF69FF, and each swatch's distance from the dot against τ = 0.101; cargo test -p render outcome_palette_separation computes them; it states the human's 0.185 beside the measured 0.175 (RQ-331); confirmed by the human at the M2 gate (R-454)"
+    detail: "the proposal gives every pair's OKLab distance, the closest pair, purple's distance from every entry, the hatch's two colours, the stipple's grey and dot, the pending hatch's #0000FF and the fallback tint's #FF69FF, and each swatch's distance from the dot against τ = 0.101; cargo test -p render outcome_palette_separation computes them; it records 0.175 as the closest pair (R-546), the 0.185 of the pair after it noted as holding only with the orange left out; confirmed by the human at the M2 gate (R-454)"
   rulings:
   - R-71
   - R-445
   - R-449
   - R-454
+  - R-546
   milestone: M2
-  rq:
-  - RQ-331
-  note: "R-445 (16 Oct 2026); supersedes, for the evidence, REQ-COL-062's M1 calibration (R-433), which is kept as the record. Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"). Applied per R-369: the figures are the porter's measurement in R-445's port, to be re-run by the task."
+  note: "R-445 (16 Oct 2026); supersedes, for the evidence, REQ-COL-062's M1 calibration (R-433), which is kept as the record. Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"). Applied per R-369: the figures are the porter's measurement in R-445's port, to be re-run by the task. R-546 (21 Oct 2026, RQ-331, option (a)): 0.175 is recorded as the closest pair, the swatches as ruled."
 - id: REQ-COL-105
   area: COL
   kind: calibration
@@ -14495,19 +14501,20 @@
     section: "R-454 — The three outcome goldens are re-baselined under R-444 to R-446, tile 7 of `known_escaper` named; the new swatches and their evidence are confirmed at the M2 gate *(closes RQ-330)*"
   - file: decisions.md
     section: "R-455 — R-447's \"its hue\" is each chromatic class's own OKLab hue, which every swatch meets within 0.5°; escape body 3's `#09B9CD` is recorded at 0.54° from its row and stays *(closes RQ-366)*"
+  - file: decisions.md
+    section: "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
   verify:
     method: review checklist
-    detail: "the proposal gives every pair's OKLab distance, the closest pair, each swatch's L, C and hue as measured, whether C = 0.123 is in gamut at each hue and the largest in-gamut chroma at every hue at L = 0.72 (RQ-332), and each swatch's distance from the hatch's colours, the stipple's grey and dot, the pending hatch and the fallback tint; cargo test -p render outcome_palette_separation computes them; confirmed by the human at the M2 gate (R-454)"
+    detail: "the proposal gives every pair's OKLab distance, the closest pair, each swatch's L, C and hue as measured, C = 0.123 in gamut at every listed hue (the narrowest, 208°, admits 0.1238) and the largest in-gamut chroma at every hue at L = 0.72, 0.1224, recorded (R-546), and the three one-step roundings recorded, not adopted, and each swatch's distance from the hatch's colours, the stipple's grey and dot, the pending hatch and the fallback tint; cargo test -p render outcome_palette_separation computes them; confirmed by the human at the M2 gate (R-454)"
   rulings:
   - R-71
   - R-447
   - R-449
   - R-454
   - R-455
+  - R-546
   milestone: M2
-  rq:
-  - RQ-332
-  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"); RQ-332 holds the two departures from R-447's words. R-455 (RQ-366, option (a)): each hue is measured against its class's own OKLab hue, every swatch within 0.5°; escape body 3's #09B9CD is recorded at 0.54° from its row's 208° and stays."
+  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"); R-546 (21 Oct 2026, RQ-332, option (a)): C = 0.123 and the ruled hex swatches stand; R-447's parenthesis reads \"in gamut at every listed hue (the narrowest, 208°, admits 0.1238)\"; the three one-step roundings are recorded, not adopted. R-455 (RQ-366, option (a)): each hue is measured against its class's own OKLab hue, every swatch within 0.5°; escape body 3's #09B9CD is recorded at 0.54° from its row's 208° and stays."
 - id: REQ-COL-106
   area: COL
   kind: calibration
@@ -15120,6 +15127,46 @@
   - R-542
   milestone: M8
   note: "PR #270's code re-review, C1 and C3 (R-542 H11, applied per R-369). Closed by TASK-M8-58; TASK-M7-47, TASK-M8-10 and TASK-M8-49 each carry its arm for their consumer. PR #270's code re-review, C4 (applied per R-369): the host consumers stay bitwise; the fragment consumer, compiled with fast-math under R-297, is held to REQ-COL-129's projection agreement tolerance as REQ-COL-134 is; the emitted WGSL snippet is exempt from the symbol check, whose control still fires on a hand-written projection. *Was (verify):* \"cargo test -p render shared_projection_callers: for each consumer built, its projected points and statuses over seeded states are bitwise equal to the shared source's, and no projection, leaving rule or curve nearest point is defined outside crates/kernel's module (a symbol check over crates/render and crates/gui); each consumer's task runs its own arm (TASK-M7-47, TASK-M8-10, TASK-M8-49, TASK-M8-58), this requirement closed when the last lands; controls: a consumer with a copied projection one constant changed, and a projection function defined outside crates/kernel, each fail\" PR #270's physics re-review, P1 (R-542 H16, applied per R-369): the fragment arm's statuses follow REQ-COL-134's margin band; the host arms stay bitwise, statuses included. *Was (verify, C4):* \"cargo test -p render shared_projection_callers: for each host consumer built (TASK-M8-10, TASK-M8-49 and TASK-M8-58, which call the kernel function on the CPU), its projected points and statuses over seeded states are bitwise equal to the shared source's; for the fragment consumer (TASK-M7-47, the generated WGSL, which R-297 lets compile with fast-math), its points agree with the native build within REQ-COL-129's projection agreement tolerance and its statuses are equal, as REQ-COL-134's are; and no projection, leaving rule or curve nearest point is defined outside crates/kernel's module (a symbol check over crates/render and crates/gui, the snippet cargo xtask build-kernel emits to crates/render/wgsl/ exempt); each consumer's task runs its own arm (TASK-M7-47, TASK-M8-10, TASK-M8-49, TASK-M8-58), this requirement closed when the last lands; controls: a consumer with a copied projection one constant changed fails (on the fragment arm the test shows the copy differs from the native build by more than the tolerance, so the control can fire), and a hand-written projection function anywhere outside crates/kernel, the emitted snippet excepted, fails the symbol check\""
+- id: REQ-COL-139
+  area: COL
+  kind: definition
+  statement: "Each of the three grey addressing presets, one per index (`ctx.quad.index`, `ctx.tile.tile_index`, `ctx.tile.sample_index`), must map its index to grey in [0, 1] by a stated rule, defined in colour_composition §9.7 by the task that needs it and reviewed by the physics reviewer before merge (R-72, R-546)."
+  source:
+  - file: decisions.md
+    section: "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render addressing_grey: each grey preset draws its own index through §9.7's rule, every value in [0, 1]; control: a preset reading another index fails; the rule's text is in §9.7 and the physics reviewer approves it before merge"
+  rulings:
+  - R-72
+  - R-546
+  milestone: M7
+  note: "R-546 (21 Oct 2026, RQ-280, option (c)): one grey preset per index, each with its own stated rule, written by TASK-M7-17."
+- id: REQ-COL-140
+  area: COL
+  kind: definition
+  statement: "Render GUI spec §9's custom-stop ramp (the gradient editor's \"built-in LUT or custom stops, cyclic\") must be defined in colour_composition §9.4, its stops, their positions, its interpolation space and how `cyclic` applies, by the task whose graph model needs it, separately from §16's gradient-magnitude resolution, and reviewed by the gui reviewer before merge (R-72, R-546)."
+  source:
+  - file: decisions.md
+    section: "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 9. Node inspector — morphing editors
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine stain_custom_stop_ramp: a custom-stop ramp round-trips through RenderState and evaluates as §9.4 defines it, `cyclic` wrapping its ends; control: a ramp interpolated in the other space fails; the definition is in §9.4 and the gui reviewer approves it before merge"
+  rulings:
+  - R-72
+  - R-546
+  milestone: M7
+  note: "R-546 (21 Oct 2026, RQ-282, option (a)); closed by TASK-M7-11. Reviewed by gui, TASK-M7-11's reviewers being code, qa and gui (applied per R-369, R-546 B1)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -15372,9 +15419,9 @@
     detail: "round-trip a graph through RenderState; choosing an occupant emits one SetField"
   rulings:
   - R-64
+  - R-546
   milestone: M7
-  rq:
-  - RQ-282
+  note: "R-546 (21 Oct 2026, RQ-282, option (a)): gradient magnitude is a derived-field ramp (colour_composition §9.4); the gradient editor's custom-stop ramp is REQ-COL-140, defined by TASK-M7-11."
 - id: REQ-GUI-017
   area: GUI
   statement: "Binding brightness (or any occupant) to a field the current tier does not populate must not trigger a recompute: the UI must grey out unavailable sources, reading anyway must read NaN at unpack and show the invalid colour, and the only path to recompute must be an explicit user quality-tier change."
