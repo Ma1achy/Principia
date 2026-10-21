@@ -17,9 +17,11 @@ orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it. A drag change
 its own `√I`, the direction of `ρ`, its CoM position and CoM velocity, its masses and its Jacobi momenta in the frame
 `ρ̃` on `+x`, so pane 1's triangle changes shape, and flips when the point crosses the equator, without jumping in
 size or turning. A binary-collision landmark on the equator is reachable like any point. The IC is set through the
-decode, never the lookup: at `n = (−1, 0, 0)`, `ρ̃ = 0` and `r₀ = r₁`, the descriptor stores `V₀` and `E₀` as `−∞`
-(dd_decoder §3.6, R-436), with no NaN, drawn as R-436 and R-467 draw a non-finite value, and the run ends `collision`
-at `t = 0` (R-60); a lookup of that IC elsewhere reads `lookup_clamped` (R-13). At `ρ̃ = 0` the direction of `ρ` is
+decode, never the lookup, with no NaN, and the run ends `collision` at `t = 0`, its bodies within `r_coll` (R-60;
+integrator_contract Part 5). A drag reaches the landmark only to rounding (the unwrap's `(π, π/2)` decodes to
+`‖ρ̃‖ ≈ 6.8e−17`), so there `V₀` and `E₀` are `−∞` where the emitted `r₀ = r₁` and finite otherwise; no snap is
+added. At an exact `n̂ = (−1, 0, 0)`, `ρ̃ = 0` and `r₀ = r₁`, and the descriptor stores `V₀` and `E₀` as `−∞`
+(dd_decoder §3.6, R-436). A non-finite `V₀` or `E₀` is drawn as R-436 and R-467 draw a non-finite value; a lookup of that IC elsewhere reads `lookup_clamped` (R-13). At `ρ̃ = 0` the direction of `ρ` is
 undefined, so the constructor keeps the frame angle from the IC's last point with `ρ̃ ≠ 0` (the decode's R-437 angle 0
 if it never had one) and holds the momenta in that frame; a drag off the landmark restores `ρ` along it (a
 definition, R-72). The current IC's mirror twin, `Π·x`, positions and momenta reflected, `L_z` opposite, whose shape sits at
@@ -37,6 +39,7 @@ definition, R-72). The current IC's mirror twin, `Π·x`, positions and momenta 
 - `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 - `decisions.md` § "R-60 — No t = 0 escape outcome *(closes RQ-19)*"
 - `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+- `docs/contracts/principia_integrator_contract.md` § "Part 5 — Units and the horizon (inherited scale gauge)"
 
 ## Deliverables
 - In `crates/gui/src/windows/inspector/pane_canonical.rs` (TASK-M8-15's file), the sphere view's point draggable over
@@ -57,13 +60,15 @@ definition, R-72). The current IC's mirror twin, `Π·x`, positions and momenta 
   flips the triangle's orientation (its signed area changes sign) and keeps the masses and the held Jacobi momenta;
   after Scale × 1.25, Rotate 15° and Boost →, a drag keeps `√I`, the direction of `ρ`, the CoM position and the CoM
   velocity; a press 4 px from the point drags it, and one 20 px away orbits (or pans) and leaves the IC unchanged; a
-  drag onto the landmark `n = (−1, 0, 0)` (`ρ̃ = 0`) sets that IC, with no NaN anywhere, `V₀` and `E₀` stored as
-  `−∞` (checked on their bits) and drawn as R-436 and R-467 have it, and its run reports `collision` at `t = 0`; after
-  Rotate 15°, a drag onto the landmark and off it again restores `ρ` at 15°, with `√I` and the lab-frame momenta
-  continuous; controls: a drag clamped to the upper hemisphere, a snap to the twin, a drag that mirrors the held
+  drag onto the landmark `n = (−1, 0, 0)`, which it reaches only to rounding, sets an IC with no NaN anywhere, its
+  `V₀` and `E₀` either `−∞` on their bits (where the emitted `r₀ = r₁`) or finite, drawn as R-436 and R-467 have it
+  when non-finite, and its run reports `collision` at `t = 0` either way, its bodies within `r_coll`
+  (integrator_contract Part 5, R-60); the exact case, `n̂ = (−1, 0, 0)` set through the IC's own setter in the test,
+  not by a drag, stores `V₀` and `E₀` as `−∞` (checked on their bits); after Rotate 15°, the exact case set and a drag
+  off it restore `ρ` at 15°, with `√I` and the lab-frame momenta continuous; controls: a drag clamped to the upper hemisphere, a snap to the twin, a drag that mirrors the held
   momentum, a drag that re-places the IC at `I = 1` in the canonical frame, a far press that moves the IC, a press on
-  the point that orbits, a drag that refuses the landmark, a finite sentinel for `V₀` at the landmark, and a drag off it
-  that resets `ρ` to `+x`, each fail (REQ-GUI-343).
+  the point that orbits, a drag that refuses the landmark, a finite sentinel for `V₀` in the exact case, and a drag off
+  the exact case that resets `ρ` to `+x`, each fail (REQ-GUI-343).
 - `cargo test -p gui constructor_twin` and `cargo xtask screenshot 05_inspectors` (the constructor's twin) —
   REQ-GUI-344's verify: with the point on each hemisphere the marker is at `(θ, π − φ)` and the note reads "mirror twin
   of the system at `(θ, π − φ)`" with the twin's angles; the twin's readout is `Π·x`, its `L_z` the IC's negated; with
@@ -91,3 +96,7 @@ definition, R-72). The current IC's mirror twin, `Π·x`, positions and momenta 
 - **Review round 2 of PR #273 (physics review 5603529679, P8; applied per R-369).** The landmark IC comes from the
   decode (dd_decoder §3.6, R-436, R-60), not the lookup path (REQ-ENC-019, REQ-ENC-033, cited before); `V₀` and `E₀`
   are `−∞`, not "no non-finite value"; the frame at `ρ̃ = 0` is a definition under R-72.
+- **Review round 3 of PR #273 (physics review 5603638748, P10; applied per R-369, its option (ii)).** Neither drag
+  surface reaches an exact `n̂ = (−1, 0, 0)`, so the dragged landmark accepts `V₀` and `E₀` as `−∞` or finite and
+  asserts the `t = 0` collision; the `−∞` arm, the frame arm and the finite-sentinel control are on the exact case,
+  set through the IC's own setter in the test. No snap, which "never a snap" rules out.

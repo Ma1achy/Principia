@@ -73,12 +73,16 @@ the four, and the tests that asserted the 2-to-1 cover:
 - `cargo test -p kernel shape_sphere_mirror_test` — REQ-CHART-082's verify: released from rest and with a held
   momentum whose `y`-components are zero, the test reports mirror-equivariant; the run from `Π·x`, `Π` applied to a
   decoded state, is the run from `x` mirrored, bitwise; each pixel pair's shapes are mirror images,
-  `shape_vec(Π·decode(θ, φ))` against `shape_vec(decode(θ, π − φ))` within REQ-CHART-053's bound, and its decoded
-  states within `ε_phys` (REQ-ENC-024; physics review 5603529679 of PR #273, P6); on a named fixture (masses, pairs and horizon stated in the test, shown non-chaotic there by
+  `shape_vec(Π·decode(θ, φ))` against `shape_vec(decode(θ, π − φ))` within REQ-CHART-053's bound, at every pixel; its
+  decoded states within `ε_phys` (REQ-ENC-024; physics review 5603529679 of PR #273, P6) on the pixels whose `n̂` lies
+  farther than a `δ` stated in the test from each of the three binary-collision landmarks (placed from chart_reference
+  §3.1, as §3.4 places them), with `ulp/δ ≤ ε_phys` as `δ`'s reason, since near a landmark `λ̃`'s direction is
+  conditioned as `ulp/‖ρ̃‖` (§3.2) (physics review 5603638748, P9); on a named fixture (masses, pairs and horizon stated in the test, shown non-chaotic there by
   the pair's state separation staying below a stated bound) outcome and `t_end` are equal and `L_z` and the frame's
   winding opposite across each pixel pair; with a held
   `p_λ,y ≠ 0` it reports "does not apply" and asserts nothing; controls: the gauge left in, a momentum rule that turns
-  `p_x` below the equator, and a test asserting the symmetry in the "does not apply" case, each fail (REQ-CHART-082).
+  `p_x` below the equator, a test asserting the symmetry in the "does not apply" case, and a state comparison that includes
+  BC₀₁'s pixel `(s, t) = (0.5, 0.5)` of an odd grid, each fail (REQ-CHART-082).
 - `cargo test -p kernel encode_shape_sphere_signed` — REQ-ENC-034's verify: a state and its mirror land at `(θ, φ)`
   and `(θ, π − φ)`; decode then lookup returns the pixel on both hemispheres; T1 holds bitwise as before for `z` and
   every other chart; landing: a lower-hemisphere `x` with `p_y ≠ 0` whose unmirrored Jacobi momenta and masses are
@@ -131,3 +135,7 @@ the four, and the tests that asserted the 2-to-1 cover:
   mirror test's precision, bitwise for the exactly mirrored state and on a named non-chaotic fixture across pixel pairs,
   under §4's "bitwise where the integration is mirror-exact, else to rounding" (physics P2); `qa_TASK-M2-14.rs:16`
   added to the exceptions (code F3).
+- **Review round 3 of PR #273 (physics review 5603638748, P9; applied per R-369, a test detail under §4's "else to
+  rounding").** BC₀₁ at `n = (−1, 0, 0)` is the pixel `(s, t) = (0.5, 0.5)` of every odd grid, its own pair; there the
+  shapes agree to `1e−16` but the states differ by `0.89`, `λ̃`'s direction being ill-conditioned at `ρ̃ → 0`. The
+  states are compared away from the three landmarks, the shapes at every pixel.
