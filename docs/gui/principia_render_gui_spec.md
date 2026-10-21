@@ -1210,7 +1210,7 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   not enforced: a faint marker at `(θ, π − φ)`, never a snap, a limit or a shaded half, and the inspector notes it,
   "mirror twin of the system at (θ, π − φ)": the IC reflected, positions and momenta, which ends the same way (R-544).
   The bodies view may stay the canonical representative; the sphere's path is never folded.
-  Applied per R-369 (PR #273, gui review 5603356729, G1, G2, G5; physics review 5603309678, P5):
+  Applied per R-369 (PR #273, gui review 5603356729, G1, G2, G5; physics reviews 5603309678, P5, and 5603529679, P8):
   - **Which drag moves the point.** A press within 8 logical px of the point, on the 3D sphere or on the unwrap,
     drags the point; any other drag orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it.
   - **What a drag holds.** Only the shape changes: the IC keeps its own `√I`, the direction of `ρ`, its CoM position
@@ -1220,9 +1220,18 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   - **The twin** is `Π·x`, positions and momenta reflected, `L_z` opposite, its shape at `(θ, π − φ)`. When the held
     momenta have a `y`-component, dragging the point onto the marker reaches a different system, not the twin, and the
     readout does not call it the twin.
-  - **A binary-collision landmark** on the equator is reachable like every other point: the IC is set there, `ρ̃ = 0`
-    included, and its run takes the shared path for coincident bodies, labelled `collision` at `t = 0`
-    (`principia_inverse_encode_contract.md`; REQ-ENC-019, REQ-ENC-033).
+  - **A binary-collision landmark** on the equator is reachable like every other point. The constructor sets the IC
+    through the chart's decode, never through the lookup: at `n = (−1, 0, 0)` the decode emits `ρ̃ = 0`, `r₀ = r₁`
+    exactly, so the descriptor stores `V₀` and `E₀` as `−∞`, as computed (`principia_dd_decoder.md` §3.6, R-436),
+    with no NaN anywhere, and the readout draws them as R-436 and R-467 draw a non-finite value; the run ends
+    `collision` at `t = 0`, the one valid `t = 0` terminal (R-60; `principia_integrator_contract.md` Part 5). The
+    constructor never looks that IC up; a lookup of it elsewhere reads `lookup_clamped` (R-13;
+    `principia_inverse_encode_contract.md` Part 6, step 2).
+  - **The frame at `ρ̃ = 0`** (a definition, R-72, applied per R-369; physics review 5603529679 of PR #273, P8). There
+    the direction of `ρ` is undefined, so the constructor keeps the frame angle, the direction of `ρ`, from the IC's
+    last point with `ρ̃ ≠ 0` and holds the Jacobi momenta in that frame; a drag off the landmark restores `ρ` along
+    it, with `√I` and the momenta continuous. An IC that has never had `ρ̃ ≠ 0` takes the decode's frame angle 0
+    (R-437).
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
   f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's

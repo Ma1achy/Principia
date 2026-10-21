@@ -20289,7 +20289,8 @@ of EX7 repeats) are not this ruling's.
 - **The mirror test's precision** (item 5, under §4's own words "bitwise where the integration is mirror-exact, else
   to rounding"; physics review 5603309678 of PR #273, P2). The run from the exactly mirrored IC, `Π` applied to the
   decoded state, is the run mirrored, bitwise. The two pixels of a pair decode to mirror images only to the decode's
-  rounding (REQ-CHART-053's bound: `φ = π(1 − t)` and `π·t` do not sum to `π` exactly), so on a chaotic run their fates
+  rounding (their shapes within REQ-CHART-053's bound, their states within `ε_phys`, REQ-ENC-024; physics review
+  5603529679, P6: `φ = π(1 − t)` and `π·t` do not sum to `π` exactly), so on a chaotic run their fates
   can differ; fate equality and item 7's "counted twice" across pixel pairs are asserted on a named fixture whose
   pair runs the test shows to stay close over its horizon, and the counts only for mirror-invariant classes (outcome,
   escaper, collision pair), a signed class (a winding or braid class) mapping to its mirror class. A test detail under
@@ -20320,8 +20321,13 @@ of EX7 repeats) are not this ruling's.
   and D8 have it (gui review 5603356729, G1). A drag changes the shape only: the IC keeps its own `√I`, the direction
   of `ρ`, its CoM position and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`, so pane 1's triangle
   changes shape, flipping when the point crosses the equator, and neither jumps in size nor turns (G2). A drag onto a
-  binary-collision landmark on the equator sets that IC, `ρ̃ = 0` included, and its run takes the shared path for
-  coincident bodies, labelled `collision` at `t = 0` (REQ-ENC-019, REQ-ENC-033); nothing is blocked off (G5). REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
+  binary-collision landmark on the equator sets that IC through the decode, never the lookup: at `n = (−1, 0, 0)`,
+  `ρ̃ = 0` and `r₀ = r₁`, the descriptor stores `V₀` and `E₀` as `−∞` (dd_decoder §3.6, R-436), with no NaN, drawn as
+  R-436 and R-467 draw a non-finite value, and the run ends `collision` at `t = 0` (R-60); a lookup of that IC
+  elsewhere reads `lookup_clamped` (R-13); nothing is blocked off (G5; physics review 5603529679, P8 (b), (c)). At
+  `ρ̃ = 0` the direction of `ρ` is undefined: the constructor keeps the frame angle from the IC's last point with
+  `ρ̃ ≠ 0`, or the decode's R-437 angle 0 if it never had one, and a drag off the landmark restores `ρ` along it (a
+  definition, R-72; P8 (a)). REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
   enforced, not shown.
 - **Results measured under one hemisphere** are kept, with R-544 beside them, and not re-measured here (item 7; §5):
   PR #271's goldens `shape-sphere/one_hemisphere` (an exponential cap in `w ≥ 0`) and `shape-sphere/both_flagged` (the
