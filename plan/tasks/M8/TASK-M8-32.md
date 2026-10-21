@@ -1,9 +1,9 @@
 # TASK-M8-32 — Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45
-- **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
+- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39
+- **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
 - **Size:** ~400 lines
@@ -22,6 +22,8 @@ The Export & share window offers image export (size in multiples of the view, fo
 - `decisions.md` § "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
 
+- `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+- `decisions.md` § "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
 ## Deliverables
 - `crates/gui/src/windows/export_share.rs` — calls the exporter (TASK-M8-30) and the M7 embedding.
 - `crates/gui/src/present.rs`.
@@ -38,6 +40,7 @@ The Export & share window offers image export (size in multiples of the view, fo
 - `cargo test -p gui export_tilt_map` — REQ-TOOL-167's verify.
 - `cargo test -p gui export_f3_fill` — REQ-TOOL-168's verify.
 - `cargo test -p gui export_chart_params` — REQ-TOOL-169's verify.
+- `cargo test -p gui export_pair_warning` — an image, a snapshot and a share link exported under Heggie × KDK carry the occupant and the warning text in their sidecar, and importing each shows the warning; under Heggie × RK4 they carry the occupant and no warning; control: an export whose sidecar drops the warning under a measured-bad pair fails (REQ-GUI-353; R-561).
 
 ## Notes
 - R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.

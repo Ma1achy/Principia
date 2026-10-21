@@ -3304,7 +3304,7 @@
   milestone: M3
 - id: REQ-INT-006
   area: INT
-  statement: "Regularisation must be an occupant slot independent of the stepper — none / AZ / Heggie / logH — with Heggie global regularisation the default."
+  statement: "Regularisation must be an occupant slot independent of the stepper — none / AZ / Heggie / logH — with Heggie global regularisation stepped by RK4, Heggie × RK4, the default occupant (R-560), and every stepper × regularisation pair running (R-561)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 8. Locked vocabulary
@@ -3312,12 +3312,21 @@
     section: The predictability horizon
   - file: decisions.md
     section: "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
+  - file: decisions.md
+    section: "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  - file: decisions.md
+    section: "R-562 — Regularisation is v1, not v2: integrator contract Part 6's \"v2\" text and REQ-INT-033 are removed"
   verify:
     method: unit test
-    detail: "each stepper composes with each regularisation; the default config selects Heggie, with Eq. 22 at n = 3/2 as its time transformation and Eq. 20 selectable (R-161)"
+    detail: "every stepper × regularisation pair, `none` included, runs a step on a fixture state; the default config selects Heggie × RK4, with Eq. 22 at n = 3/2 as Heggie's time transformation and Eq. 20 selectable (R-161); controls: a default config of Heggie × KDK fails, and a config builder that refuses any pair fails"
   rulings:
   - R-19
   - R-161
+  - R-560
+  - R-561
+  - R-562
   milestone: M3
 - id: REQ-INT-007
   area: INT
@@ -3461,8 +3470,9 @@
   - R-162
   - R-168
   - R-500
+  - R-560
   milestone: M3
-  note: "R-500 (closes RQ-369): the table's \"(see §4)\" reads step_reversible true and run_reversible false for KDK, Yoshida-4 and Yoshida-6."
+  note: "R-500 (closes RQ-369): the table's \"(see §4)\" reads step_reversible true and run_reversible false for KDK, Yoshida-4 and Yoshida-6. R-560 (21 Oct 2026): the tier column is each stepper's default binding with regularisation `none`; the default occupant is Heggie × RK4 (REQ-INT-006), at every tier meanwhile (RQ-529). Yoshida-4's \"(default)\" mark is gone; this requirement's statement and test are unchanged."
 - id: REQ-INT-015
   area: INT
   statement: "The Euler occupant must be kept as a debug occupant only (profile `symplectic: false`), never offered as a production option."
@@ -3495,14 +3505,19 @@
   milestone: M3
 - id: REQ-INT-017
   area: INT
-  statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only)."
+  statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only); every pair must run, regularisation off included, and the pairs measured not to work must carry a warning, never a block (R-561)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
   verify:
     method: unit test
-    detail: "every stepper composes with every regularisation occupant; `none` is always available"
-  rulings: []
+    detail: "every stepper × regularisation pair, `none` included, can be selected and runs; `none` is always available; the pairs the Part 2b table marks measured bad carry its warning and the others none; controls: a selection that blocks a measured-bad pair fails, and a measured-bad pair with no warning fails"
+  rulings:
+  - R-561
   milestone: M3
 - id: REQ-INT-018
   area: INT
@@ -3785,6 +3800,7 @@
     detail: "no KS state representation in v1; saturated regions continue to their outcome"
   rulings: []
   milestone: M3
+  retired: "R-562: regularisation is v1, not v2; integrator contract Part 6's v2 text and this requirement are removed. Its substep half stays required by REQ-INT-029 and REQ-EVT-007."
 - id: REQ-INT-034
   area: INT
   statement: "On termination a sample must latch: its state stops advancing, its accumulators freeze and its state enum takes its terminal value."
@@ -4601,7 +4617,7 @@
 - id: REQ-INT-080
   area: INT
   kind: calibration
-  statement: "The regularised occupants' sync schedule — the number of sync boundaries n_sync over the horizon and Aarseth–Zare's step factor eta in dtau = eta·dt_left/(A·B) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  statement: "The regularised occupants' sync schedule — the fixed sync quantum Δ_sync, the same for every run (R-565), and Aarseth–Zare's step factor eta in dtau = eta·dt_left/(A·B), dt_left the interval Δ_sync — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 0.1 The mechanism, and the fix — measured, not proposed
@@ -4611,12 +4627,18 @@
     section: Part 3 — Parameter ownership (who owns what)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The sync grid is a fixed quantum of physical time (R-565)
+  - file: decisions.md
+    section: "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
   verify:
     method: review checklist
-    detail: "the proposal gives n_sync and eta per regularised occupant (declared by the occupant, on the sim key with its config), with the figure-eight closure and drift evidence across the eta / n_sync ladder of dd_validation_orbits §0.1; recorded in decisions.md"
+    detail: "the proposal gives Δ_sync (one value, a constant of the build) and eta per regularised occupant (declared by the occupant, on the sim key with its config), with the figure-eight closure and drift evidence across the eta and Δ_sync ladders of dd_validation_orbits §0.1 and the cost and label-flip evidence of integrator contract Part 2a (0.1 about 2% more steps, 0.0125 about 50%), and how the closure window's 0.4 time units map onto the grid; recorded in decisions.md"
   rulings:
   - R-71
+  - R-565
   milestone: M3
+  note: "R-565 (21 Oct 2026): was \"the number of sync boundaries n_sync over the horizon\"; the grid is a fixed quantum of physical time, never t_max / n_sync."
 - id: REQ-INT-081
   area: INT
   statement: "The horizon T_horizon must default to 50 within integrator_contract's [50, 200], and dt_macro must be max(10⁻³, T/65535), so the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 holds over the whole range and the u16 step indices stay exact (R-86)."
@@ -4936,6 +4958,151 @@
   - R-538
   milestone: M8
   note: "R-538 TM9 (I8). Closed by TASK-M8-58. RQ-418 (a) applied meanwhile: sim_failed, the trace ending with \"?\". Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-INT-097
+  area: INT
+  statement: "Every stepper × regularisation pair must be defined exactly, so its results reproduce: with regularisation `none` each stepper is dd_integrator §3.2's; under Aarseth–Zare and Heggie, whose Hamiltonians are not separable, KDK must be the explicit kick–drift–kick (kick p at (u, p), drift u and t at (u, p½), kick p at (u₁, p½)), a Yoshida step the same composition with dd §3.2's coefficients, and RK4 and Euler their classical forms on the whole state; under logH each pair is written with logH's equations; each composed occupant's profile is the pair's, not the stepper's row."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel pair_definitions: for each regularised pair, one step from a fixed fixture state equals bitwise the composition integrator contract Part 2b writes, evaluated term by term in the test; Heggie × KDK's fitted order on the figure-eight at fixed fictitious step is about 1 while Heggie × RK4's rounds to 4; the composed profile of Heggie × KDK reads symplectic false; controls: a KDK whose drift reads the derivative at (u, p) instead of (u, p½) differs from the written composition and fails, and a profile copied from KDK's Part 2 row (symplectic true) fails"
+  rulings:
+  - R-561
+  milestone: M3
+  note: R-561 (21 Oct 2026). Closed by TASK-M3-39.
+- id: REQ-INT-098
+  area: INT
+  statement: "The pair table of integrator contract Part 2b must mark every stepper × regularisation pair measured good, measured bad or not measured, with its evidence; every measured-bad pair must carry its warning text, stating what was measured, and no other pair a warning; a status must change only by a measurement recorded in the table, and the not-measured regularised pairs must be measured."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate pair-table: re-runs the design's measurement (figure-eight, fixed fictitious step, no step control, both of Heggie's time transformations: order over a halving ladder, the regularised energy over 100 orbits) on every regularised pair, prints each pair's order and energy with its verdict under REQ-INT-099's criterion, and fails if the kernel's pair table differs from the measured verdicts or from integrator contract Part 2b's table; Heggie × RK4 must read good (order about 4, energy bounded) and Heggie × KDK bad (order about 1, diverging), the design's values; a verdict that changes a status is reported for the table and the review queue; controls: a table marking Heggie × KDK good fails, and a table with a measured-bad pair whose warning is empty fails"
+  rulings:
+  - R-561
+  milestone: M3
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39. The design's measurements are the gap sweep's (prin-rs heggie_stepper_probe, PR #34; docs/incoming/2026-10-21_gap_sweep_integrator/)."
+- id: REQ-INT-099
+  area: INT
+  kind: definition
+  statement: "The criterion a pair is \"measured not to work\" by must be defined: the measurement (order over a halving ladder and the regularised energy's error over 100 orbits of the figure-eight, at a fixed fictitious step, the gap sweep's design §1) and the bounds that make a pair good or bad, written into integrator contract Part 2b by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "Part 2b states the criterion with its bounds; applied to the design's measurements it reads Heggie × RK4 good and Heggie × KDK bad; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-561
+  milestone: M3
+  note: "R-561 (21 Oct 2026), applied per R-369: a definition (R-72), written by TASK-M3-39, which closes it."
+- id: REQ-INT-100
+  area: INT
+  statement: "A regularised occupant's sync grid must be a fixed quantum of physical time, Δ_sync, the same for every run and independent of the horizon and of frame timing: steps sized from Δ_sync, never from the target a call asks for, the march stopping only on a boundary t = k·Δ_sync, ADVANCE reaching the latest boundary at or before its target, so that live march, catch-up and re-boot reach the same state bitwise."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The sync grid is a fixed quantum of physical time (R-565)
+  - file: decisions.md
+    section: "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel sync_quantum_bitwise: for each regularised occupant (Heggie, Aarseth–Zare, logH) on a close-encounter fixture, the state at a grid time reached in one ADVANCE, in frame-sized ADVANCE calls with targets off the grid (16.6 ms of playback each), and by re-boot from t = 0 after a pause, is bitwise identical, at two horizons (T = 50 and T = 200) with the same boundaries; an ADVANCE whose target lies between boundaries returns the state at the boundary before it; controls: a march that stops at the off-grid frame targets (the step resized to land on them) differs from the one-call state and fails, and a grid of t_max / n_sync differs between the two horizons and fails"
+  rulings:
+  - R-565
+  milestone: M3
+  note: "R-565 (21 Oct 2026). Closed by TASK-M3-40. Δ_sync's value is REQ-INT-080 (calibration); the frame loop's side is REQ-SCHED-103; the unregularised macro-step grid is RQ-524."
+- id: REQ-INT-101
+  area: INT
+  statement: "Under a regularised occupant a copy that runs out of its step budget must end undetermined, never discarded and never given a physical outcome label, and the separation floor (a pair separation below the floor, the time transformation's denominator floored) and the steps held at the entry cap must be counted, non-terminal signals that never end the run; with regularisation off the substep machinery (N_sub, N_max, the saturated bit) is unchanged."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+  - file: decisions.md
+    section: "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 7 — Detectors as the `SimState` producer
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel budget_undetermined: a close-encounter fixture under Heggie × RK4 with the budget set below its need ends undetermined, its footprint reading undetermined and the copy kept, never a bounded, escape or collision label; a fixture driven below the separation floor and one held at the entry cap each count the signal and run on to the horizon; the stored form is RQ-526's; controls: the same fixture with the budget raised reaches its outcome with no undetermined copy, and a run ended by a counted signal fails"
+  rulings:
+  - R-563
+  milestone: M3
+  rq:
+  - RQ-526
+  note: "R-563 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-526: how the exhaustion and the two counts are stored and drive the floor."
+- id: REQ-INT-102
+  area: INT
+  statement: "A regularised occupant's step budget must be a rate, steps per unit physical time per ensemble copy, defined for a live playhead with no fixed end, accounted along the run as RQ-527 rules, so every march loop stays bounded."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+  - file: decisions.md
+    section: "R-564 — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel budget_rate: a copy marched to t = 13 and to t = 50 under the same rate has a budget scaling with its elapsed physical time by RQ-527's rule, and the same copy marched live, frame by frame, is undetermined at the same grid time as in one call; controls: a whole-run count sized at t = 13 (480,000) exhausts a burrau_nu_k fixture copy at t = 50 that the rate clears, and a copy with no budget at all fails the bounded-loop check"
+  rulings:
+  - R-564
+  milestone: M3
+  rq:
+  - RQ-527
+  note: "R-564 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-527: how the rate is accounted along a run."
+- id: REQ-INT-103
+  area: INT
+  kind: calibration
+  statement: "The regularised occupants' step-budget rate (steps per unit physical time per copy, starting at about 4e4, about twice the worst measured pixel mean) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: decisions.md
+    section: "R-564 — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate step-budget --propose: per-copy step rates (p50, p99, max over copies, not only pixel means) on the budget's worst targets (burrau_nu_k, latent_mixed_h3, config_stability) and the clean control (latent_shape) at t = 13 and t = 50, with the proposed rate clearing every copy; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-564
+  milestone: M3
+  rq:
+  - RQ-527
+  note: "R-564 (21 Oct 2026): the starting value about 4e4 per unit time per copy is the human's, a calibration, not confirmed (R-71). Closed by TASK-M3-41. Waits on RQ-527, the accounting the value is for."
+- id: REQ-INT-104
+  area: INT
+  kind: definition
+  statement: "Each regularised occupant's regularised energy must be defined — the energy read from its regularised state, for Heggie and Aarseth–Zare from the regularised coordinates and momenta their Hamiltonians march, for logH from its transcribed equations — written into integrator contract Part 1 by the task that transcribes the equations and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: COM projection and invariant monitoring
+  - file: decisions.md
+    section: "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "integrator contract Part 1 states each regularised occupant's regularised energy with the equation it is read from; on the radial collision it stays at round-off through the passage while the Cartesian energy does not; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-160
+  - R-566
+  milestone: M3
+  note: "R-566 (21 Oct 2026), applied per R-369: a definition (R-72) written with the equations TASK-M3-08 transcribes (R-160); closed by TASK-M3-08."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -5248,7 +5415,7 @@
   note: "pitfall: \"2.2 The criterion\" — 2.2 The criterion — prin-rs's M_pair-only E_rel biases toward escape."
 - id: REQ-EVT-017
   area: EVT
-  statement: "The |Δn̂| closure window must be 0.4 time units (provisional per R-29), sampled at macro-step boundaries for unregularised occupants and at sync boundaries for regularised ones."
+  statement: "The |Δn̂| closure window must be 0.4 time units (provisional per R-29), stated in physical time and never as a count of boundaries (R-565), sampled at macro-step boundaries for unregularised occupants and at sync boundaries, on the fixed grid Δ_sync, for regularised ones."
   source:
   - file: docs/read_first/principia_01_pitfalls.md
     section: 2.2 The criterion
@@ -5258,12 +5425,15 @@
     section: R-95 — After escape fires *(closes RQ-48, in part)*
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The sync grid is a fixed quantum of physical time (R-565)
   verify:
     method: unit test
-    detail: "for an unregularised occupant (KDK/Yoshida) the detector compares n̂ at the current macro-step boundary with n̂ held from 0.4 time units earlier on the macro-step grid; for a regularised occupant (AZ, Heggie, logH) the same on the sync grid, for several n_sync values"
+    detail: "for an unregularised occupant (KDK/Yoshida) the detector compares n̂ at the current macro-step boundary with n̂ held from 0.4 time units earlier on the macro-step grid; for a regularised occupant (AZ, Heggie, logH) the same on the sync grid, for several Δ_sync values, the window spanning 0.4 time units at each; control: a window held as a fixed count of boundaries spans a different time at a second Δ_sync and fails"
   rulings:
   - R-29
   - R-95
+  - R-565
   milestone: M3
   note: "pitfall: \"2.2 The criterion\" — the window length is marked provisional in R-29; a change must go through a ruling. R-95 fixes the sampling grid."
 - id: REQ-EVT-018
@@ -9252,18 +9422,25 @@
   milestone: M6
 - id: REQ-SCHED-063
   area: SCHED
-  statement: "A quad whose samples are substep-saturated and whose suspect_fraction stays high must be stopped at the integration floor: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated."
+  statement: "A quad at the integration floor must be stopped there: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated. The floor follows the occupant (R-563): with regularisation off, samples substep-saturated with suspect_fraction staying high, unchanged; under a regularised occupant, the floor read from its counted signals (the separation floor and the entry-cap hits) and its undetermined, budget-exhausted copies, as RQ-526 rules."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 4 — Terminal vs refinable, tied to the two floors
   - file: docs/design/principia_deep_zoom.md
     section: "Reserved: the integration floor"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+  - file: decisions.md
+    section: "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
   verify:
     method: unit test
-    detail: "fixture quad with saturated samples above the suspect threshold: assert no split, floor-limited flag set, not re-queued, and per-sample outcomes unchanged"
-  rulings: []
+    detail: "regularisation off: a fixture quad with saturated samples above the suspect threshold: assert no split, floor-limited flag set, not re-queued, and per-sample outcomes unchanged; control: the same quad below the threshold splits. Regularised (waits on RQ-526): a fixture quad whose samples carry the counted signals stops as RQ-526 rules, its budget-exhausted copies undetermined and never discarded; control: a quad with neither signal is not floor-limited"
+  rulings:
+  - R-563
   milestone: M6
-  note: "\"High\" and \"stays\": REQ-SCHED-077 (calibration)."
+  rq:
+  - RQ-526
+  note: "\"High\" and \"stays\": REQ-SCHED-077 (calibration). R-563 (21 Oct 2026) re-points it: was \"A quad whose samples are substep-saturated and whose suspect_fraction stays high must be stopped at the integration floor\". The regularisation-off arm does not wait on RQ-526."
 - id: REQ-SCHED-064
   area: SCHED
   statement: "Only the true floors (AT_F32_FLOOR, the integration floor) and Decision::Undetermined may make a quad terminal; every other Ready quad (kept by the policy, or screen-floored at this zoom) must stay ReadyRefinable and be revisited when budget frees or on zoom-in, and terminal quads must never be revisited."
@@ -9484,7 +9661,7 @@
 - id: REQ-SCHED-077
   area: SCHED
   kind: calibration
-  statement: "The integration floor's suspect_fraction threshold (\"high\") and its persistence (\"stays\", with its unit, frames or levels) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  statement: "The integration floor's suspect_fraction threshold (\"high\") and its persistence (\"stays\", with its unit, frames or levels) must be calibrated for the floor as it follows the occupant (R-563), regularisation off and regularised: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 4 — Terminal vs refinable, tied to the two floors
@@ -9492,11 +9669,14 @@
     section: "Reserved: the integration floor"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
   verify:
     method: numerical gate
-    detail: "decisions.md records both with their evidence: suspect_fraction traces on substep-saturated near-collision fixtures, separating floor-limited quads from quads that resolve on refinement"
+    detail: "decisions.md records both with their evidence: suspect_fraction traces on substep-saturated near-collision fixtures with regularisation off, and on fixtures where the separation floor fires or steps are held at the entry cap under the default occupant, Heggie × RK4, separating floor-limited quads from quads that resolve on refinement"
   rulings:
   - R-71
+  - R-563
   milestone: M6
 - id: REQ-SCHED-078
   area: SCHED
@@ -9956,6 +10136,23 @@
   rq:
   - RQ-482
   note: "SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The scheduler's decisions must be identical with the state map on and off.\""
+- id: REQ-SCHED-103
+  area: SCHED
+  statement: "Under a regularised occupant the frame loop must advance the live set to the latest sync boundary at or before the playhead, zero or more whole quanta of Δ_sync per frame and never to a point between boundaries, present that boundary's state, and promote a catching-up quad when it stands on the playhead's boundary."
+  source:
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 7 — The frame loop (lockstep presentation)
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The sync grid is a fixed quantum of physical time (R-565)
+  - file: decisions.md
+    section: "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine frame_loop_sync_quantum: under Heggie × RK4 with the playhead advancing at a playback speed that puts frame times between boundaries, the presented state at each frame is the latest boundary's, a live quad and a catching-up quad promoted at the same boundary are bitwise equal there, and an evicted quad re-booted to it is bitwise equal too; controls: a loop advancing the live set to the frame's own time differs from the boundary state and fails, and a promotion gated on the frame time rather than the boundary never fires and fails"
+  rulings:
+  - R-565
+  milestone: M5
+  note: R-565 (21 Oct 2026). Closed by TASK-M5-21.
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -16837,7 +17034,7 @@
   note: "R-476 L2, M3 (20 Oct 2026). *Was:* \"The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair.\" R-509 Y5. *Was:* \"The Display window must offer the overlays class edges and cursor crosshair; the grid and the t_end contours are Lines ▾ presets (REQ-GUI-247).\""
 - id: REQ-GUI-102
   area: GUI
-  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, Heggie with KDK leapfrog by default, Aarseth–Zare available), with no 'tolerance' field."
+  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, two selectors, Heggie × RK4 by default (R-560), Aarseth–Zare available), with no 'tolerance' field."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Run — from the top bar
@@ -16853,16 +17050,19 @@
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
   - file: decisions.md
     section: "R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*"
+  - file: decisions.md
+    section: "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
   verify:
     method: unit test
-    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×KDK; T_horizon is clamped to [50, 200]; no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
+    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon is clamped to [50, 200]; no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
   rulings:
   - R-68
   - R-107
   - R-132
   - R-138
+  - R-560
   milestone: M8
-  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081)."
+  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081). R-560 (21 Oct 2026): the default occupant is Heggie × RK4; was \"Heggie with KDK leapfrog by default\" and \"occupant = Heggie×KDK\". The pair warning beside the selectors is REQ-GUI-351."
 - id: REQ-GUI-103
   area: GUI
   statement: "The Run window's escape settings must be tau and the escape window (0.4 time units, provisional), with no persistence count."
@@ -20923,6 +21123,59 @@
   - R-544
   milestone: M8
   note: "R-544 item 9 and the first addendum. Closed by TASK-M8-67. Physics review 5603309678 of PR #273, P5, and gui review 5603356729, G3 (applied per R-369): the twin on the full state, and the drag arms moved from the screenshot to a cargo test. *Was (verify, GUI screenshot):* \"a drag never snaps to the marker … controls: a marker at the point itself off the equator, and a drag that stops at the marker, each fail\"."
+- id: REQ-GUI-351
+  area: GUI
+  statement: "The Run window's occupant selectors (regularisation, `none` included, and stepper) must offer every pair, and a pair the integrator contract's Part 2b table marks measured bad must show its warning, the table's measured text, beside the selectors, the pair staying selectable."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Run — from the top bar
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui occupant_pair_warning: selecting Heggie × KDK shows the table's warning text beside the selectors and the run proceeds; selecting Heggie × RK4 shows none; every pair is reachable; controls: a selector that disables a measured-bad pair fails, and a warning shown for a not-measured pair fails"
+  rulings:
+  - R-561
+  milestone: M8
+  note: R-561 (21 Oct 2026). Closed by TASK-M8-24.
+- id: REQ-GUI-352
+  area: GUI
+  statement: "A pair measured not to work must show its warning in the Problems panel, as RQ-525 places it."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Run — from the top bar
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui problems_pair_warning: with Heggie × KDK bound the Problems panel RQ-525 names lists the pair's warning, and with Heggie × RK4 it lists none; control: a binding change that leaves the old warning listed fails"
+  rulings:
+  - R-561
+  milestone: M8
+  rq:
+  - RQ-525
+  note: "R-561 (21 Oct 2026). Closed by TASK-M8-24. Waits on RQ-525: the corpus's only Problems pane is the stain editor's."
+- id: REQ-GUI-353
+  area: GUI
+  statement: "Each export's settings (the sidecar carried by an image's pxpack, a snapshot and a share link, and a recording's spec object) must record the occupant's regularisation and stepper and, for a pair measured not to work, its warning text, which a receiver shows."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+  - file: decisions.md
+    section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui export_pair_warning: an image, a snapshot and a share link exported under Heggie × KDK carry the occupant and the warning text in their sidecar, and importing each shows the warning; under Heggie × RK4 they carry the occupant and no warning; control: an export whose sidecar drops the warning under a measured-bad pair fails"
+  rulings:
+  - R-561
+  milestone: M8
+  note: "R-561 (21 Oct 2026). Closed by TASK-M8-32; a recording's spec object carries SimConfig, so the occupant and the warning with it (TASK-M8-31)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -21586,16 +21839,21 @@
   note: "Tolerance on ‖n‖ = 1: REQ-VAL-122 (calibration)."
 - id: REQ-TOOL-038
   area: TOOL
-  statement: "A diagnostic that re-runs trajectories must reuse the original discretisation (same n_sync and t_max grid), never rescale it per window."
+  statement: "A diagnostic that re-runs trajectories must reuse the original discretisation (the same Δ_sync, one fixed grid for every run under R-565, and the same step parameters and horizon), never rescale it per window."
   source:
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The sync grid is a fixed quantum of physical time (R-565)
+  - file: decisions.md
+    section: "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
   verify:
     method: unit test
-    detail: "The diagnostic harness asserts its n_sync, t_max and step parameters equal those of the run under test and refuses to run otherwise; regression: a persistence check with per-window rescaled n_sync is rejected."
-  rulings: []
+    detail: "The diagnostic harness asserts its Δ_sync, horizon and step parameters equal those of the run under test and refuses to run otherwise; regression: a persistence check with a per-window rescaled sync grid or step parameter is rejected"
+  rulings:
+  - R-565
   milestone: M3
-  note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. — A DIAGNOSTIC MUST REUSE THE ORIGINAL DISCRETISATION."
+  note: "pitfall: \"3. Standing rules earned in this sequence\" — 3. — A DIAGNOSTIC MUST REUSE THE ORIGINAL DISCRETISATION. R-565 (21 Oct 2026): the sync grid is one fixed quantum, so the n_sync/t_max trap cannot be built for it; was \"(same n_sync and t_max grid)\"."
 - id: REQ-TOOL-039
   area: TOOL
   statement: "dt_max must not fold from 0.0: a pixel with no usable step must report 'no usable step' distinguishably from a step of zero."
@@ -24774,12 +25032,18 @@
     section: 2. What the suite tests that the current gates do not
   - file: decisions.md
     section: "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
+  - file: decisions.md
+    section: "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: COM projection and invariant monitoring
   verify:
     method: numerical gate
-    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12"
+    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12, E the regularised energy under a regularised occupant (R-566); control: the Cartesian energy read on the same run after the passage is printed and is worse than the regularised one (the design measured 280× to 7100×), so the gate pointed at it fails"
   rulings:
   - R-257
+  - R-566
   milestone: M3
+  note: "R-566 (21 Oct 2026): the gate reads the regularised energy; the Cartesian energy is a diagnostic read only from runs that did not stop at an event (REQ-VAL-195)."
 - id: REQ-VAL-046
   area: VAL
   statement: "A ground-truth validation suite, separate from parity, must compare the f64 CPU instantiation against external truth in four tiers: conservation, analytic solutions (Lagrange, Euler), known periodic orbits (figure-eight, Broucke–Hadjidemetriou–Hénon, catalogue orbits), and literature benchmarks (Burrau, Lehto et al.), comparing chaotic cases (Burrau) at structural features only, never pointwise."
@@ -27306,6 +27570,25 @@
   - R-369
   milestone: M2
   note: "Applied per R-369 (the orchestrator decides tooling and tests), after the precedent of R-276 (REQ-VAL-175) and R-333: the SIGSEGV at teardown seen on PR #235 (run 39048546893, attempt 1, job 117446692905) and PR #254 (run 39427866705, attempt 1, job 118650558546), each passing on re-run. In M2, the milestone in progress, since M1's gate has passed (R-432). Closed by TASK-M2-42."
+- id: REQ-VAL-195
+  area: VAL
+  statement: "Under a regularised occupant, any per-step suspect flag (SUSPECT_ENERGY) must read the regularised energy, and the Cartesian energy must be read for diagnostics (the drift fields, error_ratio) only from runs that did not stop at an event, as RQ-528 places and draws them."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: COM projection and invariant monitoring
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.5 Invariant monitoring (per `STEP`, post-projection)
+  - file: decisions.md
+    section: "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel energy_named: on the radial collision under Heggie × RK4 the suspect predicate reads the regularised drift and stays clear through the passage; a run stopped at a collision contributes no Cartesian drift to the diagnostic read; controls: the predicate pointed at the Cartesian drift fires on the same run, and a diagnostic aggregate that includes the event-stopped run differs and fails"
+  rulings:
+  - R-566
+  milestone: M3
+  rq:
+  - RQ-528
+  note: "R-566 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-528: where the regularised drift is stored and how an event-stopped run is drawn."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

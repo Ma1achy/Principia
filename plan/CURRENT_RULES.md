@@ -20,7 +20,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-72** — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*
 - **R-112** — The archived briefs' standing parts are superseded *(closes RQ-81)*
 - **R-159** — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*
-- **R-257** — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*
+- **R-257** — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*. Still in force: all of it; under a regularised occupant the two-body radial collision gate's `|dE/E| < 1e-12` is the regularised energy's (R-566). Refined by R-566 (the radial collision gate's energy).
 
 ## Physics conventions
 
@@ -114,6 +114,12 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-519** — No new link registry entry until a study needs one; that study's own task adds it as a definition under physics review *(closes RQ-383)*
 - **R-526** — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*
 - **R-544** — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*
+- **R-560** — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it
+- **R-561** — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured
+- **R-562** — Regularisation is v1, not v2: integrator contract Part 6's "v2" text and REQ-INT-033 are removed
+- **R-563** — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed
+- **R-565** — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time
+- **R-566** — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*
 
 ## Design and architecture
 
@@ -381,6 +387,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-434** — REQ-COL-064's stipple is confirmed as 2 × 2 px dots in each 4 × 4 physical-pixel cell over `#4E4E4E`, with the dots changed from `#808080` to `#909090`, so that a 4 × 4 block clears the hatch's τ = 0.101 (0.115); the goldens it changes are re-rendered *(amends R-399 as it applies to the stipple)*
 - **R-435** — The golden baselines recorded as proposed for the M1 gate are confirmed: the 131 rows of `fixtures/golden/BASELINES.md` so marked *(amends R-153 as it applies to the M1 gate's baselines)*
 - **R-440** — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)*
+- **R-564** — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
 
 ## Process
 
