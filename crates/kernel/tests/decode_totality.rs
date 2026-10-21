@@ -708,7 +708,8 @@ negative_control!(
 // ── degenerate_totality_stage_entry ─────────────────────────────────────────────────────────────────────────────
 
 /// The decode stage's body for `V`, natively at f32, over `uv` with `chart`, toward `e_star`: every sample's tag word is
-/// written, a reason or none, and is [`sample_with`]'s, and every `(m, r, p)` is written and finite.
+/// written, a reason or none, and is [`sample_with`]'s, whose decode is the CPU's `η_E` (`energy_norm::decode_chart`) bit
+/// for bit, and every `(m, r, p)` is written and finite.
 fn check_entry<V: DecodeVariant>(
     chart: &V::Chart,
     uv: &[[f32; 2]],
@@ -733,6 +734,16 @@ fn check_entry<V: DecodeVariant>(
     let chart = V::Chart::from_uniform(&uniforms.chart);
     for (i, p) in uv.iter().enumerate() {
         let want = sample_with::<V::Chart, V::Links, f32>(&chart, p[0], p[1], e_star);
+        // The stage's branch-free `η_E` (`energy_norm::apply_shared`) is the CPU's (`energy_norm::apply`), bit for bit:
+        // the same IC, descriptor and tag, the switch's off and on cases both.
+        let cpu =
+            energy_norm::decode_chart::<V::Links, f32, V::Chart>(&chart, p[0], p[1], e_star).0;
+        assert_eq!(
+            format!("{:?}", (want.ic, want.descriptor, want.degenerate)),
+            format!("{:?}", (cpu.ic, cpu.descriptor, cpu.degenerate)),
+            "{}: sample {i}'s stage decode is not the CPU's toward {e_star:?}",
+            V::ENTRY
+        );
         let got = untag(tags[i]);
         assert_eq!(
             got,
