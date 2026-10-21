@@ -2074,7 +2074,7 @@ target; it changes what the Tilt section offers.*
 - **Applied meanwhile:** nothing; REQ-GUI-277's latent-momentum arm and its controls stand.
 - **Waits:** REQ-GUI-277's physical-momentum arm (`rq: RQ-474`); TASK-M8-58 does not wait for the rest.
 
-## RQ-478: R-526 rules a field input "the stain's normalisation", and the design doc §4.4 and §12 q3 take that to be "over the visible range", rescaling while zooming; but the stain normalises by `range_norm`, a field's declared range fixed (`t_end` → lin [0, T]) and only an unbounded field measured over the draw; and which range applies when the stain does not colour by that field *(conflict: the human's words and the bundle against the render docs, R-526, R-486, R-536; context: the plan PR's field-inputs task)*
+## RQ-478: R-526 rules a field input "the stain's normalisation", and the design doc §4.4 and §12 q3 take that to be "over the visible range", rescaling while zooming; but the stain normalises by `range_norm`, a field's declared range fixed (`t_end` → lin [0, T]) and only an unbounded field measured over the draw; and which range applies when the stain does not colour by that field *(conflict: the human's words and the bundle against docs on origin/main, render_gui_spec §10.1 and render contract Part 6, R-526, R-486, R-536; context: the plan PR's field-inputs task)*
 
 *Found by physics review 5596610796 of PR #268 (P2). For the human: yes, it decides whether a field-driven medium
 rescales while zooming; physics, since it is the field's normalisation.*
@@ -2089,10 +2089,11 @@ rescales while zooming; physics, since it is the field's normalisation.*
     the **fixed `[lo,hi]`** — a per-field domain **declared in the manifest** … (a `u16` step index
     `[0, horizon_steps]`; …). **`auto = true`** ignores the declared range and uses the **measured min/max** of the
     field over the current draw".
+  - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library", the debug fields' `colour()`:
+    "`RANGE_AUTO` is the fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in
+    the code": a setting of the stain's node that colours by the field.
   - `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)": "`t_end` → lin
     [0, T]".
-  - The same section: "`RANGE_AUTO` is the fixed↔auto flag, editable identically in the node inspector, on the node in
-    the graph, and in the code": a setting of the stain's node that colours by the field.
 - **The conflict:** under the stain's own rule `t_end` has a declared range and does not rescale while zooming, so
   Relief of lifetime would not rescale, against §4.4's "visible range" and §12 q3's premise; the ensemble spread, with
   no declared bound, would. And the stain's `RANGE_AUTO` belongs to the field the stain colours by: when the stain does
@@ -2106,7 +2107,7 @@ rescales while zooming; physics, since it is the field's normalisation.*
   declares a range and measured over the draw where it does not (option (a)). R-526's text no longer decides "visible
   range". What waits: the plan PR's field-inputs task writes the normalisation from the ruling.
 
-## RQ-479: R-488 counts the Print graph's post stage in the tier controller's accounting, and the Auto arbiter's rungs set N, E, depth and FTLE gating, so a heavy Print graph changes numbers the instrument reports, against R-489 and the design doc §3 *(conflict: the human's P4 against the human's P5, R-488, R-489, quality_device_note §3; context: the plan PR's post-stage budget task)*
+## RQ-479: R-488 counts the Print graph's post stage in the tier controller's accounting, and the Auto arbiter's rungs set N, E, depth and FTLE gating, so a heavy Print graph changes numbers the instrument reports, against R-489 and the design doc §3 *(conflict: the human's P4 against the human's P5 and `principia_quality_device_note.md` §3 on origin/main, R-488, R-489; context: the plan PR's post-stage budget task)*
 
 *Found by physics review 5596610796 of PR #268 (P3). For the human: yes, it decides whether a look can change a
 measurement.*
@@ -2130,7 +2131,7 @@ measurement.*
 - **Applied meanwhile:** none; both texts stand as written. What waits: the plan PR's post-stage budget task and the
   arbiter's accounting of `post`.
 
-## RQ-495: R-488's whole-graph fallback reads the measured post-stage time each frame, and the quality device note gives every knob one writer, model-based, with no per-frame setting change, and switches the arbiter off under a named tier: who owns the post level, and does the fallback run under a pinned tier *(silence and conflict: the human's P4 against the quality device note, R-488, R-499; context: the plan PR's degrade task)*
+## RQ-495: R-488's whole-graph fallback reads the measured post-stage time each frame, and the quality device note gives every knob one writer, model-based, with no per-frame setting change, and switches the arbiter off under a named tier: who owns the post level, and does the fallback run under a pinned tier *(silence and conflict: the human's P4 against `principia_quality_device_note.md` §1, §2, §5 and §10 on origin/main, R-488, R-499; context: the plan PR's degrade task)*
 
 *Found by perf review 5596612647 of PR #268 (F2). For the human: yes, it decides whether a pinned tier can still be
 overridden while moving.*
