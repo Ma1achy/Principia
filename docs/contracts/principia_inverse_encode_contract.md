@@ -20,7 +20,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 **The three theorems (the contract):**
 
-- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13).
+- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13). T1 holds for every `g` off the mirror band. On `|λ̃_y| ≤ δ_λ`, collinear states included, it holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`, the mirror's two sides both kept; R-82 is unchanged (R-547, RQ-360).
 - **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
@@ -47,7 +47,7 @@ L_z,canon =  λ^{1/2} L_z,in =  L_z,in / I_in^{1/4}
 t_canon   =  λ^{3/2} t_in   =  t_in / I_in^{3/4}
 ```
 
-so `t_end` and all timing outputs are in canonical units; to express them in the user's original units, multiply by `I_in^{3/4}`. Encode surfaces a **`lookup_rescaled`** notice carrying `λ`, in the same family as `lookup_clamped`. (The simpler alternative — reject unless `I ≈ 1` — is admissible but strictly weaker; the rescale is the mathematically complete behaviour and matches the project's clamp-and-notify pattern.)
+so `t_end` and all timing outputs are in canonical units; to express them in the user's original units, multiply by `I_in^{3/4}`. Encode surfaces a **`lookup_rescaled`** notice carrying `λ`, in the same family as `lookup_clamped`, exactly when the rescale ran: it is skipped (`λ = 1`, the state unchanged) where `|I_in − 1| ≤ τ_I`, a calibration (R-71) in eps of the precision, so a canonical input raises none (R-547, RQ-295). (The simpler alternative — reject unless `I ≈ 1` — is admissible but strictly weaker; the rescale is the mathematically complete behaviour and matches the project's clamp-and-notify pattern.)
 
 ---
 
@@ -189,7 +189,7 @@ normative (R-23): **1a → 0 → 1b → 2 → 3**, then 4–6. CoM subtraction p
 CoM-frame-defined.
 
 - **1a. Subtract the CoM** — positions to the CoM frame, so `I_in` is defined.
-- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
+- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`. Skipped where `|I_in − 1| ≤ τ_I` (`λ = 1`, `r` and `p` unchanged, no notice); elsewhere in two steps, first by a power of two (exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies apart; `I_in = 0`, the bodies coinciding, keeps the select: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0` (R-547, RQ-295, RQ-296).
 - **1b. Subtract the boost** — the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
 - **2. Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
 - **3. Mirror iff `λ̃_y < −δ_λ`** (`λ̃ = √μ_λ·λ`, `δ_λ = 10⁻¹²`) — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| ≤ δ_λ` → no mirror, deterministic (R-82); T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).

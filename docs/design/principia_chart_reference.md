@@ -86,8 +86,9 @@ p2 =  p_λ
 
 > **Transcription hazard.** The `m0` and `m1` factors are **crossed** relative to the position
 > reconstruction (positions take `−m1/M01` on `r0`; momenta take `−m0/M01` on `p0`). It matches
-> `principia_dd_decoder.md` §3.4. Transcribe it, then verify by asserting `Σpᵢ = 0` to machine precision — the
-> test that catches a swap.
+> `principia_dd_decoder.md` §3.4. Transcribe it, then verify by asserting the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` (or the kinetic-energy identity) at
+> unequal masses: the test that catches a swap. `Σpᵢ = 0` catches only a one-sided swap (R-547, RQ-283). *Was:*
+> "verify by asserting `Σpᵢ = 0` to machine precision — the test that catches a swap."
 
 ### 0.4 Canonicalisation `C`
 
@@ -114,7 +115,8 @@ encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and `β ∈ [0, π]` h
 ℓ = √I        rᵢ ← rᵢ/ℓ        pᵢ ← √ℓ·pᵢ
 ```
 
-No-op when `R̃ = 1` was enforced. **Note the asymmetric powers** — positions divide by `ℓ`,
+No-op when `R̃ = 1` was enforced; encode's `C` skips it where `|I_in − 1| ≤ τ_I` and otherwise rescales in two steps
+(`principia_dd_encode.md` §3.2; R-547). **Note the asymmetric powers** — positions divide by `ℓ`,
 momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 
 ### 0.6 Energy normalisation — optional, and forbidden on some charts

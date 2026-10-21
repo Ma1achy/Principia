@@ -339,6 +339,10 @@ validation_ground_truth_note :99; parity_contract :13; systems_architecture :45;
 dd_integrator :92; spike_brief :61.
 
 ## R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*
+*Corrected by R-547.*
+*Still in force: every branch input that consumes multi-op arithmetic, the change-11 `|Δn̂|` and `E_rel` included, is
+enumerated rather than relying on a backend switch; "explicit fma" is corrected: such an input is built only from
+operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547).*
 *24 Sep 2026 · recorded; applied before the parity gate on a second backend*
 
 Rule 6 extends to every branch input that consumes multi-op arithmetic, the change-11 `|Δn̂|` and `E_rel` included. The branch
@@ -20381,3 +20385,163 @@ R-546 is in the "design" group of `plan/rule_groups.yaml`, with R-444 and R-447.
 Changes REQ-COL-028 (statement, verify, rulings, `rq` removed), REQ-COL-029, REQ-GUI-016 (`rq` removed, rulings, note),
 REQ-COL-104 and REQ-COL-105 (`rq` removed, rulings, verify, note), REQ-COL-101 and REQ-COL-103 (notes); adds
 REQ-COL-139 and REQ-COL-140.
+
+## R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*
+*21 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "0.3 Momentum — free Jacobi momenta" (the
+transcription hazard note, with its earlier words kept) and § "0.5 Scale gauge" (a clause), `docs/design/principia_dd_encode.md`
+§ "3.2 Canonicalisation `C` — the exact ordered procedure" (step 0's lines and a paragraph) and § "3.3 The gauge group
+action, explicit (this is what T1 sweeps)" (T1's sentence, with its earlier words kept),
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 1 — What encode is: a quotient map onto a section" (T1, a
+sentence), § "Part 2 — The scale gauge gap (missing from the original inverse policy)" and § "Part 6 — The canonical
+inverse policy, completed" (step 0), `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one
+measured failure)" (rules 2 and 6, with their earlier words kept), `docs/design/principia_dd_decoder.md` § "2.
+Consolidated contract (every clause that binds this component)" (the branch-input table's two rows) and § "3.1 Mass"
+(a paragraph), `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
+and `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
+(`d²`'s form, with the earlier words kept), `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the
+defining decision)" (item 2, a sentence) and § "2. The determinism law (the other defining decision)" (the checklist's
+last item), R-34's heading block, `plan/OPERATIONS.md` § "Toolchain" (a bullet), REQ-DEC-019, REQ-ENC-006,
+REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-ENC-003
+and REQ-SYS-015 (reqio: statement or verify, rulings, `rq` removed, note), REQ-DEC-017, REQ-DEC-022, REQ-INT-087,
+REQ-INT-088 and REQ-VAL-079 (reqio: rulings, `rq` removed, note; REQ-INT-088's statement a clause), REQ-ENC-034 to
+REQ-SYS-085 (reqio, new), TASK-M2-43 to TASK-M2-45 (new), TASK-M2-02, TASK-M2-07, TASK-M2-15 and
+TASK-M2-24 (the held requirements moved), TASK-M2-25 (REQ-SYS-085), TASK-M3-24, TASK-M4-04 and TASK-M8-14 (a
+dependency each), TASK-M2-03 and TASK-M2-15 (an acceptance line each), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365, moved with their
+rulings); built by TASK-M2-43, TASK-M2-44, TASK-M2-45, TASK-M2-25, TASK-M3-11, TASK-M4-01,
+TASK-M4-03 and TASK-M4-18*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+16, 18–19, 21–22 and 65–69), which R-545 quotes in its opening:
+
+> - RQ-283 (`Σpᵢ = 0` does not catch the full crossed-mass swap): (a). Reword chart_reference §0.3's note (:85–88) to: "verify by asserting the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` (or the kinetic-energy identity) at unequal masses: the test that catches a swap. `Σpᵢ = 0` catches only a one-sided swap." Make the matching change to REQ-DEC-019's acceptance detail (:383) and to TASK-M2-03's `decode_momentum` line.
+>
+> - RQ-295 (When `lookup_rescaled` fires on near-canonical input): (c). "Step 0 is skipped (`λ = 1`, `r` and `p` unchanged) where `|I_in − 1| ≤ τ_I`. `lookup_rescaled` fires exactly when step 0 ran. `τ_I` is a calibration (R-71) in eps of the precision, proposed by TASK-M2-07 from its measured `|I − 1|` of up to 3 eps."
+>
+> - RQ-296 (`C`'s output when `I_in` is 0, underflows or overflows): (d) + (a). "Step 0 rescales in two steps: first by a power of two (exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies apart. `I_in = 0` then happens only when the bodies coincide, and that case keeps the applied select: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0`."
+>
+> - RQ-298 (Explicit `fma` not fused on lavapipe; subnormal flushing forks branches): (a). "Rules 2 and 6, R-34 and REQ-INT-064 are corrected: a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal. TASK-M2-07's `IeeeBits::product` form is the pattern. Each of the twelve held requirements is rewritten and re-proved in its own task."
+>
+> - RQ-299 (Pinned nightly's MIR GVN miscompile in native release builds): (b) + (c), then (a). "The native build sets `-Zmir-enable-passes=-GVN`, scoped to the host target and not the SPIR-V build. A CI job runs the native tests at the release profile. The fault is reported upstream, and the pin moves to a fixed nightly once `rustc_codegen_spirv` builds against one."
+>
+> - RQ-360 (T1 fails for the mirror inside the deadband): (a). T1 and REQ-ENC-003 hold for every `g` off the band. On `|λ̃_y| ≤ δ_λ`, collinear states included, they hold for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`. R-82 is unchanged. Inverse-encode Part 1 and dd_encode §3.3 say so.
+>
+> - RQ-365 (The scan finds the read side's hand-written `shape()`): (c). REQ-SYS-015 is split:
+>   - Decode and encode close with TASK-M2-15.
+>   - The read side's `shape()` moves to a new requirement that TASK-M2-25 closes when it emits `shape()` from the translation.
+>   The acceptance scan keeps its full reach, `.wgsl` included.
+
+R-547 ports the seven answers on the decode and encode numerics, cross-backend rounding and the toolchain, in number
+order.
+
+**RQ-283.** chart_reference §0.3 named `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed
+factors keeps `Σpᵢ = 0` at every mass. Its option (a) was to name the conjugacy check (or the kinetic-energy identity)
+as the swap test and `Σpᵢ = 0` as the one-sided one; TASK-M2-03 asserts both meanwhile, with a control for each swap.
+
+*What it decides:* **option (a).**
+- **The swap test is the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ`, or the kinetic-energy identity, at unequal masses.**
+  `Σpᵢ = 0` catches only a one-sided swap. §0.3's note takes the human's words; REQ-DEC-019's acceptance detail and
+  TASK-M2-03's `decode_momentum` line match.
+- Nothing is rebuilt: TASK-M2-03 (merged) asserts the conjugacy already, so REQ-DEC-019 stands as built.
+
+**RQ-295.** Step 0 always rescaled and recorded `λ`, while seam 8 and REQ-ENC-014 have `lookup_rescaled` fire only if its
+operation did, and a canonical-frame decode has `I = 1` only to rounding. Option (c): raise it iff `|I_in − 1| > τ_I`, a
+new calibration, and skip step 0 where `|I_in − 1| ≤ τ_I`.
+
+*What it decides:* **option (c).**
+- **Step 0 is skipped (`λ = 1`, `r` and `p` unchanged) where `|I_in − 1| ≤ τ_I`, and `lookup_rescaled` fires exactly
+  when step 0 ran.** So `C` is an exact no-op in scale on canonical input, and a canonical input raises no notice.
+- **`τ_I` is a calibration (R-71), in eps of the precision,** proposed from TASK-M2-07's measured `|I − 1|` of up to 3
+  eps: REQ-ENC-034, for the M2 gate.
+
+**RQ-296.** Step 0 divides by `√I_in` before step 2's guard, and nothing defined `C`'s output where `I_in` is 0 (the
+bodies coincide) or rounds to 0 or `+∞` with the bodies apart. Option (d): rescale in two steps; option (a): skip step 0
+at `I_in = 0` and let `lookup_clamped` carry it, the select TASK-M2-07 applied.
+
+*What it decides:* **options (d) and (a).**
+- **Step 0 rescales in two steps, first by a power of two (exact), then by the remainder,** so `I_in` neither underflows
+  nor overflows for any finite state with the bodies apart.
+- **`I_in = 0` then happens only when the bodies coincide, and keeps the applied select:** divisor 1, `λ = 1`, `p = 0`,
+  `lookup_clamped`, `φ = +0` (R-13, R-436, R-437).
+
+**RQ-298.** An explicit `fma` is not fused on CI's lavapipe, against the determinism note's rule 6, and a GPU that
+flushes subnormals rounds differently from one that keeps them, which no rule addressed; twelve requirements whose
+branch inputs rest on the premise, or depart from it, were held. Option (a): correct rules 2 and 6, R-34 and
+REQ-INT-064, so that a branch input that must agree everywhere is built only from operations every IEEE backend rounds
+alike; TASK-M2-07's `IeeeBits::product` is the example.
+
+*What it decides:* **option (a).**
+- **Rules 2 and 6 of the determinism note, R-34 and REQ-INT-064 are corrected: a branch input that must agree across
+  backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be
+  subnormal.** An explicit `fma` is no longer the rule's form.
+- **TASK-M2-07's `IeeeBits::product` form is the pattern.**
+- **Each of the twelve held requirements is rewritten and re-proved in its own task.**
+
+**RQ-299.** The pinned nightly miscompiles plain Rust above opt-level 0 in rustc's MIR GVN pass, and the native build,
+the kernel's f64 instantiation included, is built on it; CI builds tests at opt-level 0 and does not see it.
+
+*What it decides:* **options (b) and (c), then (a).**
+- **The native build sets `-Zmir-enable-passes=-GVN`, scoped to the host target and not the SPIR-V build** (REQ-TOOL-188).
+- **A CI job runs the native tests at the release profile** (REQ-TOOL-189).
+- **The fault is reported upstream, and the pin moves to a fixed nightly once `rustc_codegen_spirv` builds against
+  one,** the flag then dropped.
+
+**RQ-360.** T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on
+both sides of `Π` (every `|λ̃_y| ≤ δ_λ`, every exactly collinear one) `E(Π·x)` and `E(x)` differ in the momenta's `y`
+components. Option (a): restrict T1 and REQ-ENC-003 there, the code unchanged.
+
+*What it decides:* **option (a).**
+- **T1 and REQ-ENC-003 hold for every `g` off the band.** On `|λ̃_y| ≤ δ_λ`, collinear states included, they hold for
+  translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`.
+- **R-82 is unchanged.** Inverse-encode Part 1 and dd_encode §3.3 say so. TASK-M2-15's `encode_t1_gauge` sweeps exactly
+  this (applied meanwhile), so REQ-ENC-003 stands as built.
+
+**RQ-365.** REQ-SYS-015's acceptance scan found the read side's hand-written WGSL `shape()`, a second implementation of
+dd_decoder §3.2's mass and configuration formulae that RQ-235's R-369 decision put there with a twin test. Option (c):
+split REQ-SYS-015.
+
+*What it decides:* **option (c).**
+- **Decode and encode close with TASK-M2-15** (merged): REQ-SYS-015 loses its hold.
+- **The read side's `shape()` moves to a new requirement, REQ-SYS-085, that TASK-M2-25 closes when it emits `shape()`
+  from the translation.**
+- **The acceptance scan keeps its full reach, `.wgsl` included;** its one hit outside decode and encode is the new
+  requirement's.
+
+*Where the words leave a choice, decided per R-369 (mechanical consequences; the forms under physics review):*
+- **N1. Held requirements of merged tasks move.** TASK-M2-07, TASK-M2-15, TASK-M2-02, TASK-M2-24 and TASK-M2-27 merged
+  with requirements held, not closed. Where a ruling changes what the code must do, the requirement moves to a new M2
+  task that builds it: REQ-ENC-006, REQ-ENC-014 and REQ-DEC-002 to TASK-M2-43 (step 0's skip, the two steps, the
+  notice, `C`'s branch inputs and `τ_I`'s proposal); REQ-DEC-011 and REQ-VAL-017 to TASK-M2-44 (`M₀₁` and
+  decode test 12, re-proved on Metal and lavapipe). The tasks that need REQ-DEC-002 or REQ-VAL-017 (TASK-M3-24,
+  TASK-M8-14, TASK-M4-04) gain the dependency; those reaching them already need nothing.
+- **N2. Requirements already in the corrected form are not rebuilt.** REQ-DEC-017 (TASK-M2-07's mirror decision,
+  `IeeeBits::product` with no `fma`) and REQ-DEC-022 (TASK-M2-09's exact feasibility sign) are R-547's pattern; they
+  lose their hold and their tasks' proofs and sweeps stand. REQ-DEC-019 (RQ-283) and REQ-ENC-003 (RQ-360) were built as
+  ruled meanwhile, and stand. Physics confirms on this PR that N2's two proofs are the re-proof R-547 asks.
+- **N3. Unbuilt requirements are rewritten in place.** REQ-INT-058 and REQ-INT-064 (TASK-M4-01, TASK-M4-03),
+  REQ-INT-066 and REQ-EVT-021 (`d²`, TASK-M4-03), REQ-INT-087 and REQ-INT-088 (`disc_input`, TASK-M3-11) and
+  REQ-VAL-079 (TASK-M4-18) take the corrected rule; each task writes its form and proves it. Rule 2's `d²` form is
+  not written here: it is TASK-M4-03's, physics-reviewed.
+- **N4. `τ_I`'s proposer.** The human's words name TASK-M2-07, which has merged; TASK-M2-43 proposes it from
+  TASK-M2-07's measurement, re-measured on the CPU and on Metal and lavapipe at f64 and f32.
+- **N5. The toolchain task.** TASK-M2-45 (M2, code and qa) sets the host-target flag, adds the release-profile CI
+  job and RQ-299's reproducer as a test. Filing the upstream report on rust-lang/rust is outside the repo, so the PR
+  drafts it and the human files it. The pin's move, "then (a)", is a `rust-toolchain.toml` change in its own PR when a
+  fixed nightly that `rustc_codegen_spirv` builds against exists (R-414), and it drops the flag. No code or CI file
+  changes in this PR.
+- **N6. Where the doc lines go.** dd_decoder §3.1's two paragraphs on `fma(m₁, 1, m₀)` stay as the record of the form
+  built until TASK-M2-44, with a paragraph saying the premise fails; the branch-input table's `M01_TINY` row
+  points there, and its `INVARIANT_INFEASIBLE` row names the corrected rule. The canonical spec's checklist item and
+  the integrator contract's and dd_integrator's `d²` forms are reworded to the rule, their earlier words kept.
+
+*What it corrects:* **R-34** ("explicit fma at every branch input"): the enumeration stands; the form is R-547's.
+Read with it: R-82 (unchanged), R-13 and R-437 (the coincident case's select and `φ = +0`), R-116 (the translation
+`shape()` moves onto), R-71 (`τ_I`). It closes **RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365**.
+
+R-547 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-019, REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064,
+REQ-INT-066, REQ-EVT-021, REQ-ENC-003 and REQ-SYS-015 (statement or verify, rulings, `rq` removed, note) and
+REQ-DEC-017, REQ-DEC-022, REQ-INT-087, REQ-INT-088 and REQ-VAL-079 (rulings, `rq` removed, note; REQ-INT-088's
+statement a clause); adds REQ-ENC-034 (calibration, `τ_I`), REQ-TOOL-188 and REQ-TOOL-189 (the toolchain) and
+REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-43 to TASK-M2-45.
