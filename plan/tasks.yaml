@@ -2256,7 +2256,7 @@
 - id: TASK-M7-45
   milestone: M7
   title: "The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)"
-  depends_on: [TASK-M7-31]  # R-521 ruled RQ-385; no longer waits
+  depends_on: [TASK-M7-31, TASK-M7-32]  # R-521 ruled RQ-385; no longer waits; TASK-M7-32 builds the tEXt chunk (code review F8 of PR #265, applied per R-369)
   needs: []
   requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2504,7 +2504,7 @@
 - id: TASK-M8-31
   milestone: M8
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
-  depends_on: [TASK-M8-30, TASK-M7-31]
+  depends_on: [TASK-M8-30, TASK-M7-31, TASK-M7-45]  # TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
   requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185]
   reviewers: [code, qa, physics, perf]
@@ -2512,7 +2512,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475)
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)

@@ -881,16 +881,29 @@ added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-
 entry's canonical bytes alone, its hashed members above and the declarations of its tunable parameters, computed by
 the same hash as the schema version and generated with the registry. It also covers, by value, the registry constants
 outside the entries that the entry's decode reaches: `tanh_sat` for an entry whose trees hold a `tanh` node, `ε_M01`
-for an entry onto the masses, and `δ_λ` and `ε_w`, which every decode reads, in every entry (applied per R-369,
-physics review P2 of PR #265), so a change to any of them changes the hashes of the links it reaches and is refused
-naming them, never recreated. Every record and export carries, per block, the
+for an entry onto the masses, and `δ_λ` and `ε_w` in every entry (applied per R-369, physics review P2 of PR #265).
+Not every decode reads those two: `δ_λ` is read only by dd_decoder §3.3's canonicalise and `ε_w` only by §3.4's
+invariant construction; neither depends on the link, so hashing both into every entry is a deliberate, conservative
+choice, a needless refusal being safe where a stale recreation is not (applied per R-369, physics review P6 of PR #265;
+*was:* "`δ_λ` and `ε_w`, which every decode reads, in every entry", reworded, kept here). A change to any of them
+changes the hashes of the links it reaches and is refused naming them, never recreated. The refusal names the
+constants as well as the link: the record carries hashes, not the writer's constants, so it names each mismatched link
+with the constants its hash covers ("its entry, or `tanh_sat`, `δ_λ` or `ε_w`, changed"), and when every block
+mismatches it says first that `δ_λ` or `ε_w`, the constants all four share, may be what changed, so a user is not told
+their links changed when none did (applied per R-369, physics review P6 of PR #265). Every record and export carries, per block, the
 entry hash of the link it records, a u64 written as a decimal string (R-322), beside the build hash and the schema
 version, outside `SimConfig` since it derives from the build's registry and the link ids, not from the view
 (`principia_dd_image_embedding.md` §6; `principia_gui_state_contract.md` §2). A reader compares each block's against
 its own registry's entry of that id: a mismatch names exactly that link, and a match recreates across a schema change
 that left the record's links and what they reach alone, such as a payload-ledger entry no decode reads. Changing an
 entry, or a constant it reaches, changes its entry hash and the schema version; changing another entry, or the payload
-ledger, changes the schema version only.
+ledger, changes the schema version only. The entry hashes are not the whole decoder's identity: three things no entry
+hash or constant sees stay with the build-hash component (`principia_dd_image_embedding.md` §6's `build hash` line,
+REQ-TOOL-112), which refuses a change to them: dd_decoder §3.2–3.5's own construction (the reconstruction, the seeded
+fallback family and its order, the scale gauge); how the closed operators are evaluated (the canonical form hashes an
+operator's spelling, not its evaluation); and the emitter's rules, which leave the hashed bytes unchanged (the f32
+images of π/2 and π rounded toward zero, each tunable's f32 value rounded to nearest) (applied per R-369, physics
+review P5 of PR #265).
 
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:

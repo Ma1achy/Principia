@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185
-- **Depends on:** TASK-M8-30, TASK-M7-31
+- **Depends on:** TASK-M8-30, TASK-M7-31, TASK-M7-45
 - **Needs (earlier milestones):** REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-10
@@ -49,3 +49,4 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 - Closes, for gaps the corpus leaves open: REQ-TOOL-129 (R-72 definition) (classification accepted by R-132).
 - R-483 X7 (20 Oct 2026): a link-id change between keyframes is a cut. **R-520 (20 Oct 2026) rules RQ-384** ("blocking export only, flagged"): in a blocking export a link parameter differing between keyframes with the same link ids eases linearly, every frame re-integrated, and the export is flagged; live playback keeps the cut. Physics review covers it (⚑; this task's reviewers include physics). *Was:* "a link or parameter change between keyframes is a cut; interpolating parameters is RQ-384 (meanwhile never)."
 - **R-521 H2, H5 (code review F1 of PR #265, applied per R-369):** the spec object's sidecar carries the four entry hashes beside the build hash and the schema version (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. **R-520 F2 (physics review P1):** each eased parameter is clamped into `[min(a, b), max(a, b)]`, the keyframe's frame takes its value bit for bit, and the spec's `easing` curve gives the progress `s`.
+- **Code review F9 of PR #265 (applied per R-369):** this task depends on TASK-M7-45, which generates the entry hashes the spec's sidecar carries (R-521 H5). *Was:* "- **Depends on:** TASK-M8-30, TASK-M7-31".

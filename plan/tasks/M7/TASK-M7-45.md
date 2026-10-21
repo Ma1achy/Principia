@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-TOOL-172, REQ-TOOL-186
-- **Depends on:** TASK-M7-31
+- **Depends on:** TASK-M7-31, TASK-M7-32
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -30,3 +30,5 @@ Each recorded link carries its own registry-entry hash beside the build hash and
 - **R-521 (20 Oct 2026) rules RQ-385** ("per-link hash", option (b)): this task no longer waits. REQ-TOOL-171's schema-version refusal stays for a record with no entry hashes. TASK-M7-44 measures tier 1 with the hashes, so it depends on this task (applied per R-369). *Was:* "Waits on RQ-385 (a leaf): meanwhile REQ-TOOL-171's schema-version refusal stands. The recommendation is (b), a per-link entry hash in the sidecar."
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
 - **Code review F1 of PR #265 (applied per R-369):** REQ-TOOL-186 is kept to the destinations M7 builds. The animation spec (TASK-M8-31), snapshot JSON and a share link (TASK-M8-32) carry the hashes where they are built, and REQ-TOOL-176 (TASK-M8-53) checks all six. Each entry's hash also covers the registry constants its decode reaches (`tanh_sat`, `ε_M01`, `δ_λ`, `ε_w`; physics review P2), and REQ-TOOL-172's verify has the constants' control.
+- **Code review F8 of PR #265 (applied per R-369):** this task depends on TASK-M7-32, which builds the `tEXt` chunk that `entry_hashes_written` reads back (R-521 H5). *Was:* "- **Depends on:** TASK-M7-31".
+- **Physics review P5–P7 of PR #265 (applied per R-369):** the refusal names the constants a mismatched link's hash covers as well as the link; REQ-TOOL-172's verify checks each constant's scope (`ε_M01` the mass entries only, `ε_w` every entry, `tanh_sat` never a sigmoid_* or softsign_* entry); the decoder's construction, the operators' evaluation and the emitter's rules stay with the build-hash component (REQ-TOOL-112).

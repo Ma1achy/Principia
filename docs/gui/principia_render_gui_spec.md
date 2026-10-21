@@ -324,7 +324,8 @@ included.
 
 **Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,
 its Screen preset the dev default; this line is its Ends only preset, offered.)* A **Home** button, a house icon 24 × 24
-points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7): a click on it is
+points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of
+the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
 and it hides with the layer (F3, present mode). The orbit's path is drawn from the cursor's IC:
 - **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. It is drawn by
@@ -342,9 +343,17 @@ top of the figure region above the plot and outside it, left-aligned, names the 
 off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
 · μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only. **Where it sits (applied per
 R-369, gui review G1 of PR #265):** the strip takes its height, one line of the body font with its padding, from the
-top of the figure region (the rect `01_main`'s proportions give the figure); the plot is fitted into the rest at its
-aspect, square for the slice, centred, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229 read, so
-nothing of the strip draws over the plot and the plot is never stretched. It hides with the layer (F3, present mode),
+top of the figure region (the rect `01_main`'s proportions give the figure). **The shown rect (applied per R-369, gui
+review G3 of PR #265)**, the rect R-406, R-468 and REQ-GUI-229 read, is the whole of the figure region below the strip,
+at that region's own aspect, with the field drawn at one scale in both directions across it, as Layout below says
+("the canvas showing more or less of the field at the same scale", R-462) and as R-537's window onto the extended
+plane has it (never any gaps): there is no centred square, no margin and no gap, and nothing of the strip draws over
+it. A window resize or a splitter drag changes how much of the field shows, never its scale. The axis labels' strips
+(Figure, below) and the Home button hang from the shown rect, so Home sits in its top-right corner, below the strip.
+*Was* (round 1, gui review G1 of PR #265): "the plot is fitted into the rest at its aspect, square for the slice,
+centred, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229 read, so nothing of the strip draws over
+the plot and the plot is never stretched" (stale value, replaced by gui review G3 of PR #265, applied per R-369 under
+R-523). It hides with the layer (F3, present mode),
 as the Home button does, and the figure then fills the window as R-406 and R-468 say. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
 says so in the same badge (R-483, X5; R-484, RT3). *Was:* "**The decoder badge (R-479, D4; applied meanwhile,
 RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value, replaced by R-523).
@@ -1131,8 +1140,11 @@ corpus, the spec follows the authority:
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
   the artboards'. One departure from `01_main`: the figure region's top line is the figure's header strip (R-523, §G2),
-  and the plot is fitted below it at its aspect, so the plot's rect is that much shorter than the artboard's figure
-  (applied per R-369, gui review G1 of PR #265).
+  and the shown rect is the rest of the region at its own aspect, the field at one scale across it, so the shown
+  figure is one line shorter than the artboard's and shows that much less of the field at the same scale, with the
+  axis labels' strips and Home hung from it (applied per R-369, gui review G3 of PR #265). *Was:* "and the plot is
+  fitted below it at its aspect, so the plot's rect is that much shorter than the artboard's figure (applied per
+  R-369, gui review G1 of PR #265)." (stale value, replaced by gui review G3 of PR #265, applied per R-369).
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag

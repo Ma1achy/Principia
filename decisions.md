@@ -16466,7 +16466,11 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
   with the registry (dd_generation_root §3.9, "Each entry's own hash"). It also covers, by value, the registry
   constants outside the entries that the entry's decode reaches: `tanh_sat` for an entry with a `tanh` node, `ε_M01`
   for a mass entry, and `δ_λ` and `ε_w` in every entry, so a change to any of them is refused naming the links it
-  reaches (physics review P2 of PR #265, applied per R-369). Changing an entry or a constant it reaches changes its
+  reaches (physics review P2 of PR #265, applied per R-369). Not every decode reads `δ_λ` and `ε_w`: `δ_λ` is read
+  only by dd_decoder §3.3's canonicalise and `ε_w` only by §3.4's invariant construction; neither depends on the
+  link, and hashing both into every entry is a deliberate, conservative choice, a needless refusal being safe where a
+  stale recreation is not. The refusal names the constants as well as the link, so a user is not told their links
+  changed when only a constant did (physics review P6 of PR #265, applied per R-369). Changing an entry or a constant it reaches changes its
   hash and the schema version; changing another entry, or the payload ledger, changes the schema version only.
 - **H2. Where it travels.** Per block, four in all, a decimal string each, beside the build hash and the schema version
   wherever they travel: the image record's tier 1 and every other destination's sidecar (snapshot JSON, a share link,
@@ -16481,13 +16485,20 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
   so a payload the record holds is not reused across it and the view re-integrates ("if nothing else in the record's
   tier 1 changed meaning" read as: the payload is re-made, never reinterpreted). A decode constant the links reach is
   in their hashes (H1), so its change refuses; what matches and recreates is a change no decode reads, such as a
-  payload-ledger entry. The build-hash component that detects a chart change outside the links (REQ-TOOL-112, a
-  definition) still refuses what it detects.
+  payload-ledger entry. The build-hash component that detects a chart or decode change outside the links and the
+  constants they reach (REQ-TOOL-112, a definition) still refuses what it detects; three things stay with it, not
+  with the entry hashes: dd_decoder §3.2–3.5's construction (the reconstruction, the seed family, the scale gauge),
+  how the closed operators are evaluated, and the emitter's rules (the f32 images of π/2 and π rounded toward zero,
+  the tunables rounded to nearest) (physics review P5 of PR #265, applied per R-369). *Was:* "The build-hash component
+  that detects a chart change outside the links (REQ-TOOL-112, a definition) still refuses what it detects." (stale
+  value, replaced by physics review P5 of PR #265, applied per R-369).
 - **H4. A record with no hashes** (one written by a build between TASK-M7-31 and TASK-M7-45) is read under (a): a
   schema version other than the reader's is refused, naming its links as possibly changed (REQ-TOOL-171). A record
   written before R-483 (`"links":{}`) is X5's, unchanged.
-- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-186, the M7 destinations only.
-  TASK-M8-31 and TASK-M8-32 write the hashes into the destinations they build, and TASK-M8-53 checks every destination
+- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-186, the M7 destinations only;
+  it depends on TASK-M7-31 and on TASK-M7-32, which builds the `tEXt` chunk `entry_hashes_written` reads back (code
+  review F8 of PR #265, applied per R-369). TASK-M8-31 and TASK-M8-32 write the hashes into the destinations they
+  build, and each depends on TASK-M7-45, which generates them (code review F9 of PR #265, applied per R-369); TASK-M8-53 checks every destination
   (REQ-TOOL-176). TASK-M7-44 re-measures the capacity with tier 1 holding the hashes (about 100 B of JSON), so it
   depends on TASK-M7-45.
 - **H6. Numbering.** REQ-TOOL-186 is numbered past the other open ports' TOOL ids.
@@ -16566,9 +16577,15 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
 
 *Where the words leave a choice, decided per R-369 (the human may veto any):*
 - **B1. Which of the two.** The figure's header strip: a one-line strip of the chrome at the top of the figure region, above the plot
-  and outside it, left-aligned, holding badges only. The strip takes its height from the top of the figure region;
-  the plot is fitted into the rest at its aspect, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229
-  use; render_gui_spec §G13 records the departure from `01_main` (gui review G1 of PR #265, applied per R-369). It
+  and outside it, left-aligned, holding badges only. The strip takes its height from the top of the figure region
+  (gui review G1 of PR #265, applied per R-369). The shown rect, the rect R-406, R-468 and REQ-GUI-229 use, is the
+  whole of the region below the strip at that region's own aspect, the field drawn at one scale across it, more or
+  less of the field showing as the region resizes and never a rescale (R-462, render_gui_spec §G2's Layout; R-537:
+  no centred square, no margins, no gaps); the axis labels' strips and the Home button hang from it, so Home sits at
+  its top-right, below the strip; render_gui_spec §G13 records the departure from `01_main` (gui review G3 of PR
+  #265, applied per R-369). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
+  rect R-406, R-468 and REQ-GUI-229 use; render_gui_spec §G13 records the departure from `01_main`" (stale value,
+  replaced by gui review G3 of PR #265, applied per R-369). It
   sits beside what it
   describes, as D4's "beside the chart name" wanted, where the top bar's status would put it a panel away. The status
   line stays open to a later badge that is about the session rather than the figure.

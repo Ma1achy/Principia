@@ -265,7 +265,8 @@ read, before anything renders:
   registry constants its decode reaches (`tanh_sat`, `ε_M01`, `δ_λ`, `ε_w`; `principia_dd_generation_root.md` §3.9,
   "Each entry's own hash"), a u64 written as a string (R-322), four in all
   (about 100 B of JSON). The reader compares each against its own registry's entry of that id: a mismatch is "state
-  present, cannot recreate", naming exactly that link; when all four match, a schema version other than the reader's
+  present, cannot recreate", naming exactly that link and the registry constants its hash covers (generation_root
+  §3.9; physics review P6 of PR #265, applied per R-369); when all four match, a schema version other than the reader's
   refuses nothing on the links' account, and the schema version stays the whole-ledger check of what the stored
   payload's bits mean, so a stored payload is not reused across it and the view re-integrates. A record with no entry
   hashes is read as before R-521: a schema version other than the reader's is refused, naming its links as possibly
