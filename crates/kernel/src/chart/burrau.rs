@@ -73,7 +73,7 @@ use crate::decode::config::{self, Config};
 use crate::decode::invariant::{construct_seeded, ExactSign, Outcome, Seed};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
-use crate::decode::{self, descriptor, Blocks, Decoded, Ic, Latent};
+use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic, Latent};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
@@ -243,6 +243,12 @@ impl<R: LinkReal + PayloadReal + ExactSign> Blocks<R> for BurrauBlocks<R> {
     #[inline]
     fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R> {
         descriptor::describe(ic)
+    }
+
+    /// The construction's tag (`Outcome::tag`), as on the invariant charts.
+    #[inline]
+    fn tag(&self) -> Option<Degenerate> {
+        self.outcome.tag()
     }
 }
 

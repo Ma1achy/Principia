@@ -1,0 +1,166 @@
+{
+ "name": "Egg tempera",
+ "doc": "Thousands of tiny hatched strokes over gesso, pale layers first, a unifying glaze, faint craquelure.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "b": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "blur(I,0.6)"
+   }
+  },
+  "C": {
+   "op": "kuwahara",
+   "in": {
+    "image": "b"
+   },
+   "p": {
+    "r": 3
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 4
+   }
+  },
+  "ax0": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*cos(0.35)-ty*sin(0.35)"
+   }
+  },
+  "ay0": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*sin(0.35)+ty*cos(0.35)"
+   }
+  },
+  "st0": {
+   "op": "strokes",
+   "in": {
+    "tx": "ax0",
+    "ty": "ay0"
+   },
+   "p": {
+    "width": 0.6,
+    "density": 0.02,
+    "length": 5,
+    "seed": "$seed",
+    "amp_var": 0.4
+   }
+  },
+  "ax1": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*cos(-0.25)-ty*sin(-0.25)"
+   }
+  },
+  "ay1": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*sin(-0.25)+ty*cos(-0.25)"
+   }
+  },
+  "st1": {
+   "op": "strokes",
+   "in": {
+    "tx": "ax1",
+    "ty": "ay1"
+   },
+   "p": {
+    "width": 0.6,
+    "density": 0.03,
+    "length": 5,
+    "seed": "$seed+1",
+    "amp_var": 0.4
+   }
+  },
+  "ax2": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*cos(0.12)-ty*sin(0.12)"
+   }
+  },
+  "ay2": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*sin(0.12)+ty*cos(0.12)"
+   }
+  },
+  "st2": {
+   "op": "strokes",
+   "in": {
+    "tx": "ax2",
+    "ty": "ay2"
+   },
+   "p": {
+    "width": 0.6,
+    "density": 0.04,
+    "length": 4,
+    "seed": "$seed+2",
+    "amp_var": 0.4
+   }
+  },
+  "n7": {
+   "op": "noise",
+   "p": {
+    "scale": 9,
+    "octaves": 3,
+    "seed": "$seed+7"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "st0": "st0",
+    "st1": "st1",
+    "st2": "st2",
+    "C": "C",
+    "n7": "n7"
+   },
+   "p": {
+    "f": "G = array([0.96, 0.95, 0.91]); out = np.ones((H, W, 3))*G\nfor st, mix in ((st0, 0.45), (st1, 0.7), (st2, 0.92)):\n    s = clip(st*2.2, 0, 1)\n    col = G*(1-mix) + C*mix\n    out = out*(1-s[..., None]) + col*s[..., None]\nout = 0.55*out + 0.45*C\ncrack = (abs(n7) < 0.035).astype(float)\nout = out*(1-0.12*gaussian(crack, 0.5))[..., None]\nout = out*array([1.0, 0.99, 0.96])"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

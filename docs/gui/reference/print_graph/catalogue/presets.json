@@ -1,0 +1,6199 @@
+{
+ "Offset press (NASA Facts, 1978)": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 40,
+    "params": {}
+   },
+   "pap": {
+    "type": "paper",
+    "x": 30,
+    "y": 200,
+    "params": {
+     "colour": "#efe9dc",
+     "tooth": 0.035,
+     "fibres": 0.02
+    }
+   },
+   "off": {
+    "type": "offset",
+    "x": 250,
+    "y": 80,
+    "params": {
+     "slip": 1,
+     "bleed": 1,
+     "rich": 0.55,
+     "drift": 0.05
+    }
+   },
+   "gr": {
+    "type": "grain",
+    "x": 470,
+    "y": 80,
+    "params": {
+     "amount": 0.025,
+     "size": 1.2,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 690,
+    "y": 100,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "off",
+    "input": "in"
+   },
+   {
+    "from": "pap",
+    "to": "off",
+    "input": "paper"
+   },
+   {
+    "from": "off",
+    "to": "gr",
+    "input": "in"
+   },
+   {
+    "from": "gr",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Halftone": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 40,
+    "params": {}
+   },
+   "pap": {
+    "type": "paper",
+    "x": 30,
+    "y": 200,
+    "params": {
+     "colour": "#efe9dc",
+     "tooth": 0.035,
+     "fibres": 0.02
+    }
+   },
+   "ht": {
+    "type": "halftone",
+    "x": 250,
+    "y": 80,
+    "params": {
+     "cell": 6,
+     "gain": 1.08,
+     "slip": 1,
+     "mono": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 480,
+    "y": 100,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ht",
+    "input": "in"
+   },
+   {
+    "from": "pap",
+    "to": "ht",
+    "input": "paper"
+   },
+   {
+    "from": "ht",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Acrylic, sculptural": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 250,
+    "y": 20,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 250,
+    "y": 180,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 470,
+    "y": 160,
+    "params": {
+     "width": 3,
+     "amount": 0.45,
+     "length": 24,
+     "seed": 0
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 690,
+    "y": 30,
+    "params": {
+     "mode": 3,
+     "amount": 0.5
+    }
+   },
+   "sm": {
+    "type": "smear",
+    "x": 470,
+    "y": 330,
+    "params": {
+     "length": 6,
+     "step": 1
+    }
+   },
+   "rl": {
+    "type": "relief",
+    "x": 910,
+    "y": 140,
+    "params": {
+     "depth": 26,
+     "angle": -128,
+     "elevation": 32,
+     "ambient": 0.4,
+     "specular": 0.15,
+     "shine": 24,
+     "shadow": 0.6
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 1130,
+    "y": 160,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "br",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "img",
+    "to": "sm",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "sm",
+    "input": "flow"
+   },
+   {
+    "from": "sm",
+    "to": "rl",
+    "input": "colour"
+   },
+   {
+    "from": "mx",
+    "to": "rl",
+    "input": "height"
+   },
+   {
+    "from": "rl",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Oil": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "ku": {
+    "type": "kuwahara",
+    "x": 250,
+    "y": 20,
+    "params": {
+     "radius": 5
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 250,
+    "y": 180,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "sm": {
+    "type": "smear",
+    "x": 470,
+    "y": 40,
+    "params": {
+     "length": 9,
+     "step": 1
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 470,
+    "y": 220,
+    "params": {
+     "width": 2.4,
+     "amount": 0.5,
+     "length": 18,
+     "seed": 0
+    }
+   },
+   "rl": {
+    "type": "relief",
+    "x": 690,
+    "y": 100,
+    "params": {
+     "depth": 5,
+     "angle": -128,
+     "elevation": 32,
+     "ambient": 0.7,
+     "specular": 0.08,
+     "shine": 24,
+     "shadow": 0.2
+    }
+   },
+   "lv": {
+    "type": "levels",
+    "x": 910,
+    "y": 100,
+    "params": {
+     "exposure": 1,
+     "contrast": 1,
+     "saturation": 1.1,
+     "warmth": 0.03,
+     "lift": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 1130,
+    "y": 120,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ku",
+    "input": "in"
+   },
+   {
+    "from": "ku",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "ku",
+    "to": "sm",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "sm",
+    "input": "flow"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "sm",
+    "to": "rl",
+    "input": "colour"
+   },
+   {
+    "from": "st",
+    "to": "rl",
+    "input": "height"
+   },
+   {
+    "from": "rl",
+    "to": "lv",
+    "input": "in"
+   },
+   {
+    "from": "lv",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Light painting": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "width": 1.1,
+     "amount": 0.3,
+     "length": 34,
+     "seed": 0
+    }
+   },
+   "ne": {
+    "type": "neon",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "saturation": 1.7,
+     "floor": 0.05
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "gl": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.3,
+     "bloom": 1.7,
+     "halation": 1.4,
+     "radius": 9,
+     "exposure": 1.8
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "img",
+    "to": "ne",
+    "input": "in"
+   },
+   {
+    "from": "ne",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "gl",
+    "input": "in"
+   },
+   {
+    "from": "gl",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Light painting, overexposed": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 250,
+    "y": 20,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 250,
+    "y": 180,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 470,
+    "y": 160,
+    "params": {
+     "width": 1.2,
+     "amount": 0.7,
+     "length": 30,
+     "seed": 0
+    }
+   },
+   "ne": {
+    "type": "neon",
+    "x": 470,
+    "y": 20,
+    "params": {
+     "saturation": 1.7,
+     "floor": 0.05
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 690,
+    "y": 60,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "gl": {
+    "type": "glow",
+    "x": 910,
+    "y": 60,
+    "params": {
+     "threshold": 0.25,
+     "bloom": 1.4,
+     "halation": 1.2,
+     "radius": 8,
+     "exposure": 2.4
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 1130,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "img",
+    "to": "ne",
+    "input": "in"
+   },
+   {
+    "from": "ne",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "gl",
+    "input": "in"
+   },
+   {
+    "from": "gl",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, 8×8, two colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "di": {
+    "type": "dither",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pattern": 2,
+     "size": 3,
+     "steps": 2,
+     "colours": 0,
+     "back": "#000c38",
+     "front": "#94ffaf",
+     "highlight": "#eaff94",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "di",
+    "input": "in"
+   },
+   {
+    "from": "di",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, 4×4, original colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "di": {
+    "type": "dither",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pattern": 1,
+     "size": 3,
+     "steps": 3,
+     "colours": 2,
+     "back": "#000c38",
+     "front": "#94ffaf",
+     "highlight": "#eaff94",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "di",
+    "input": "in"
+   },
+   {
+    "from": "di",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, gradient noise, three colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "di": {
+    "type": "dither",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pattern": 4,
+     "size": 2,
+     "steps": 3,
+     "colours": 1,
+     "back": "#1d1b19",
+     "front": "#c3402a",
+     "highlight": "#efe9dc",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "di",
+    "input": "in"
+   },
+   {
+    "from": "di",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Dot matrix, colour ribbon": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "dm": {
+    "type": "dotmatrix",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pitch": 3,
+     "bands": 1,
+     "colour": 1,
+     "dot": 0.62,
+     "ribbon": "#1a1521",
+     "paperc": "#f2efe6",
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "dm",
+    "input": "in"
+   },
+   {
+    "from": "dm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Dot matrix, black ribbon": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "dm": {
+    "type": "dotmatrix",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pitch": 3.2,
+     "bands": 1,
+     "colour": 0,
+     "dot": 0.62,
+     "ribbon": "#1a1521",
+     "paperc": "#f2efe6",
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "dm",
+    "input": "in"
+   },
+   {
+    "from": "dm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Risograph": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 40,
+    "params": {}
+   },
+   "pap": {
+    "type": "paper",
+    "x": 30,
+    "y": 200,
+    "params": {
+     "colour": "#f5f2ea",
+     "tooth": 0.035,
+     "fibres": 0.02
+    }
+   },
+   "ri": {
+    "type": "riso",
+    "x": 250,
+    "y": 80,
+    "params": {
+     "grain": 0.16,
+     "slip": 1,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 100,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ri",
+    "input": "in"
+   },
+   {
+    "from": "pap",
+    "to": "ri",
+    "input": "paper"
+   },
+   {
+    "from": "ri",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Stipple (after Luminet, 1979)": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "st": {
+    "type": "stipple",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "spacing": 2.6,
+     "gamma": 1.6,
+     "size": 1,
+     "negative": 1,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "st",
+    "input": "in"
+   },
+   {
+    "from": "st",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "CRT television": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "cr": {
+    "type": "crt",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "lines": 200,
+     "grille": 0.65,
+     "converge": 1.2,
+     "glow": 0.35,
+     "snow": 0.025
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "cr",
+    "input": "in"
+   },
+   {
+    "from": "cr",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Old LCD": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "lc": {
+    "type": "lcd",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 6,
+     "bits": 5,
+     "door": 1,
+     "bleed": 0.05
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "lc",
+    "input": "in"
+   },
+   {
+    "from": "lc",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Block-game map art": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "mm": {
+    "type": "mcmap",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pixels": 128,
+     "shades": 1,
+     "dither": 0.5
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "mm",
+    "input": "in"
+   },
+   {
+    "from": "mm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Block-game map, three shades, no dither": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "mm": {
+    "type": "mcmap",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pixels": 128,
+     "shades": 1,
+     "dither": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "mm",
+    "input": "in"
+   },
+   {
+    "from": "mm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Blocks": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "bk": {
+    "type": "mcblocks",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "blocks": 48,
+     "texture": 1,
+     "seams": 0.15
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "bk",
+    "input": "in"
+   },
+   {
+    "from": "bk",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Blocks, big": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "bk": {
+    "type": "mcblocks",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "blocks": 24,
+     "texture": 1,
+     "seams": 0.3
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "bk",
+    "input": "in"
+   },
+   {
+    "from": "bk",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, white terminal": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 10,
+     "ramp": 0,
+     "mode": 2,
+     "depth": 0,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ANSI art, 16 colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 12,
+     "ramp": 1,
+     "mode": 4,
+     "depth": 2,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, 8-bit colour": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 9,
+     "ramp": 0,
+     "mode": 3,
+     "depth": 1,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, green terminal": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 10,
+     "ramp": 0,
+     "mode": 0,
+     "depth": 0,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, own colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 8,
+     "ramp": 0,
+     "mode": 3,
+     "depth": 0,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, amber, on a CRT": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 10,
+     "ramp": 0,
+     "mode": 1,
+     "depth": 0,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "cr": {
+    "type": "crt",
+    "x": 470,
+    "y": 60,
+    "params": {
+     "lines": 200,
+     "grille": 0.4,
+     "converge": 1.2,
+     "glow": 0.35,
+     "snow": 0.025
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 690,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "cr",
+    "input": "in"
+   },
+   {
+    "from": "cr",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "ASCII, typed on paper": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "as": {
+    "type": "ascii",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cell": 9,
+     "ramp": 0,
+     "mode": 5,
+     "depth": 0,
+     "contrast": 1.2,
+     "glow": 0.35
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "as",
+    "input": "in"
+   },
+   {
+    "from": "as",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Game Boy": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "gb": {
+    "type": "gameboy",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "rows": 144,
+     "grid": 1,
+     "shadow": 0.18
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "gb",
+    "input": "in"
+   },
+   {
+    "from": "gb",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Limited palette, then halftone": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 40,
+    "params": {}
+   },
+   "pl": {
+    "type": "palette",
+    "x": 250,
+    "y": 40,
+    "params": {
+     "palette": 0,
+     "hue": 1.6
+    }
+   },
+   "pap": {
+    "type": "paper",
+    "x": 250,
+    "y": 200,
+    "params": {
+     "colour": "#efe9dc",
+     "tooth": 0.035,
+     "fibres": 0.02
+    }
+   },
+   "ht": {
+    "type": "halftone",
+    "x": 470,
+    "y": 80,
+    "params": {
+     "cell": 5,
+     "gain": 1.08,
+     "slip": 1,
+     "mono": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 690,
+    "y": 100,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "pl",
+    "input": "in"
+   },
+   {
+    "from": "pl",
+    "to": "ht",
+    "input": "in"
+   },
+   {
+    "from": "pap",
+    "to": "ht",
+    "input": "paper"
+   },
+   {
+    "from": "ht",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Duotone, on a CRT": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "du": {
+    "type": "duotone",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "dark": "#1c284a",
+     "light": "#f0e2c4",
+     "contrast": 1
+    }
+   },
+   "cr": {
+    "type": "crt",
+    "x": 470,
+    "y": 60,
+    "params": {
+     "lines": 200,
+     "grille": 0.5,
+     "converge": 1.2,
+     "glow": 0.35,
+     "snow": 0.025
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 690,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "du",
+    "input": "in"
+   },
+   {
+    "from": "du",
+    "to": "cr",
+    "input": "in"
+   },
+   {
+    "from": "cr",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Watercolour pencil": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0.7
+    }
+   },
+   "n2": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n3": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Watercolour pencil, limited palette": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "palette",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "palette": 0,
+     "hue": 1.6
+    }
+   },
+   "n2": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0
+    }
+   },
+   "n3": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n4": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "n4",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n4",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Watercolour pencil, earth": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "palette",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "palette": 1,
+     "hue": 1.6
+    }
+   },
+   "n2": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0
+    }
+   },
+   "n3": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n4": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "n4",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n4",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Watercolour pencil, nocturne": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "palette",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "palette": 2,
+     "hue": 1.6
+    }
+   },
+   "n2": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0
+    }
+   },
+   "n3": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n4": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "n4",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n4",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Gouache": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 4
+    }
+   },
+   "n2": {
+    "type": "posterize",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "levels": 4,
+     "rag": 1.6,
+     "rim": 0.12,
+     "lighter": 0.09
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   }
+  ]
+ },
+ "Egg tempera": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n2": {
+    "type": "tempera",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "gesso": "#f5f2e8",
+     "glaze": 0.45,
+     "cracks": 0.12,
+     "seed": 0
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 4
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n2",
+    "input": "flow"
+   }
+  ]
+ },
+ "Encaustic": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "blur",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "top": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 4
+    }
+   },
+   "nz": {
+    "type": "noise",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "scale": 40,
+     "octaves": 3,
+     "contrast": 1.6,
+     "seed": 0
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 0,
+     "amount": 0.85
+    }
+   },
+   "h": {
+    "type": "noise",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "scale": 25,
+     "octaves": 3,
+     "contrast": 1,
+     "seed": 2
+    }
+   },
+   "rl": {
+    "type": "relief",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "depth": 6,
+     "angle": -128,
+     "elevation": 32,
+     "ambient": 0.86,
+     "specular": 0.1,
+     "shine": 7,
+     "shadow": 0.2
+    }
+   },
+   "lv": {
+    "type": "levels",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "exposure": 1,
+     "contrast": 1,
+     "saturation": 1,
+     "warmth": 0.03,
+     "lift": 0.05
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "top",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "top",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "nz",
+    "to": "mx",
+    "input": "mask"
+   },
+   {
+    "from": "mx",
+    "to": "rl",
+    "input": "colour"
+   },
+   {
+    "from": "h",
+    "to": "rl",
+    "input": "height"
+   },
+   {
+    "from": "rl",
+    "to": "lv",
+    "input": "in"
+   },
+   {
+    "from": "lv",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Graphite": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "hatching",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#f2f0e8",
+     "lead": "#2b2b30",
+     "width": 0.7,
+     "amount": 0.3,
+     "length": 18,
+     "tone": 1.1,
+     "tooth": 0.2,
+     "contour": 0.45,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 4
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Charcoal": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "hatching",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#f2f0e8",
+     "lead": "#141416",
+     "width": 2.4,
+     "amount": 0.5,
+     "length": 22,
+     "tone": 1.05,
+     "tooth": 0.35,
+     "contour": 0.35,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "blur",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 0.9
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Chalk pastel": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "pastel",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ground": "#212226",
+     "width": 4,
+     "amount": 0.25,
+     "pressure": 1,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 7
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Ink wash": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "inkwash",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#0f0f14",
+     "bleed": 3.5,
+     "pool": 0.35,
+     "dry": 0.45,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Engraving": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "engrave",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#141214",
+     "pitch": 5.2,
+     "angle": 28,
+     "bend": 22
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Mezzotint": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "mezzotint",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#1a1414",
+     "grain": 3,
+     "softness": 9
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Linocut": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "linocut",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#171414",
+     "gouge": 1.1,
+     "amount": 0.4,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Cyanotype": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "cyanotype",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "blue": "#0a2b61",
+     "streaks": 0.06,
+     "haze": 0.07
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Pen plotter": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "plotter",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#f7f5ee",
+     "spacing": 4.5,
+     "density": 0.5,
+     "colour": 1
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Dot matrix, no scan lines": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "dotmatrix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pitch": 3.2,
+     "bands": 0,
+     "colour": 0,
+     "dot": 0.62,
+     "ribbon": "#1a1521",
+     "paperc": "#f2efe6",
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Dot matrix, colour, no scan lines": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "dotmatrix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pitch": 3,
+     "bands": 0,
+     "colour": 1,
+     "dot": 0.62,
+     "ribbon": "#1a1521",
+     "paperc": "#f2efe6",
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, 8×8, three colours": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "dither",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pattern": 2,
+     "size": 3,
+     "steps": 3,
+     "colours": 1,
+     "back": "#000c38",
+     "front": "#94ffaf",
+     "highlight": "#eaff94",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, random": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "dither",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pattern": 3,
+     "size": 2,
+     "steps": 2,
+     "colours": 0,
+     "back": "#1d1b19",
+     "front": "#efe9dc",
+     "highlight": "#efe9dc",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Dither, 2×2, Game Boy greens": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "dither",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pattern": 0,
+     "size": 3,
+     "steps": 4,
+     "colours": 1,
+     "back": "#0f380f",
+     "front": "#306230",
+     "highlight": "#9bbc0f",
+     "invert": 0,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Marbling": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "marbling",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "levels": 3,
+     "comb": 9,
+     "combscale": 64,
+     "stones": 0.5
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Mosaic": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "mosaic",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "tile": 11,
+     "grout": 0.13,
+     "groutc": "#bdb8ab",
+     "gloss": 0.25,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Stained glass": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "glass",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pane": 60,
+     "levels": 3,
+     "lead": 2.2,
+     "saturation": 1.45,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.6,
+     "bloom": 0.6,
+     "halation": 0,
+     "radius": 5,
+     "exposure": 1.4
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   }
+  ]
+ },
+ "Kintsugi": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "kintsugi",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "gold": "#cc9e3d",
+     "levels": 3,
+     "seam": 1.6,
+     "crazing": 0.1,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Cut paper": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "cutpaper",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sheets": 6,
+     "shadow": 0.38,
+     "soften": 4
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Thread painting": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "thread",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "linen": "#d6ccb8",
+     "spacing": 3.2,
+     "length": 7,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 4
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Polaroid": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "polaroid",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "leak": 1,
+     "grain": 0.03,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Thin film": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "thinfilm",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "thick": 380,
+     "base": 90,
+     "index": 1.38,
+     "wobble": 8
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Film negative": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "negative",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "grain": 0.06,
+     "dust": 1,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "35mm film, developed": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "film35",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "contrast": 5.2,
+     "grain": 0.022,
+     "vignette": 0.28,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.7,
+     "bloom": 0.15,
+     "halation": 0.35,
+     "radius": 4,
+     "exposure": 1.1
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   }
+  ]
+ },
+ "Relief of lifetime*": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 4
+    }
+   },
+   "br": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "bb": {
+    "type": "blur",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 2
+    }
+   },
+   "rl": {
+    "type": "relief",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "depth": 14,
+     "angle": -148,
+     "elevation": 20,
+     "ambient": 0.35,
+     "specular": 0.15,
+     "shine": 24,
+     "shadow": 0.8
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "br",
+    "to": "bb",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "rl",
+    "input": "colour"
+   },
+   {
+    "from": "bb",
+    "to": "rl",
+    "input": "height"
+   },
+   {
+    "from": "rl",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Inverse palette": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "invert",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Fluoro palette, risograph": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "palette",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "palette": 3,
+     "hue": 1.6
+    }
+   },
+   "n2": {
+    "type": "riso",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "grain": 0.16,
+     "slip": 1,
+     "seed": 0
+    }
+   },
+   "n3": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   }
+  ]
+ },
+ "Light painting, solid": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "width": 2.6,
+     "amount": 0.75,
+     "length": 30,
+     "seed": 0
+    }
+   },
+   "ne": {
+    "type": "neon",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "saturation": 1.7,
+     "floor": 0.05
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "gl": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.4,
+     "bloom": 1.2,
+     "halation": 1.3,
+     "radius": 9,
+     "exposure": 1.4
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "img",
+    "to": "ne",
+    "input": "in"
+   },
+   {
+    "from": "ne",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "gl",
+    "input": "in"
+   },
+   {
+    "from": "gl",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Light painting, on a Polaroid": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "width": 1.1,
+     "amount": 0.3,
+     "length": 34,
+     "seed": 0
+    }
+   },
+   "ne": {
+    "type": "neon",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "saturation": 1.7,
+     "floor": 0.05
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "gl": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.3,
+     "bloom": 1.7,
+     "halation": 1.4,
+     "radius": 9,
+     "exposure": 1.8
+    }
+   },
+   "x0": {
+    "type": "polaroid",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "leak": 0.6,
+     "grain": 0.03,
+     "seed": 0
+    }
+   },
+   "x1": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "img",
+    "to": "ne",
+    "input": "in"
+   },
+   {
+    "from": "ne",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "gl",
+    "input": "in"
+   },
+   {
+    "from": "gl",
+    "to": "x0",
+    "input": "in"
+   },
+   {
+    "from": "x0",
+    "to": "x1",
+    "input": "in"
+   }
+  ]
+ },
+ "Light painting, solid, on a Polaroid": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "br": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0.5,
+     "lo": 0.02,
+     "hi": 0.98,
+     "gamma": 1
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "width": 2.6,
+     "amount": 0.75,
+     "length": 30,
+     "seed": 0
+    }
+   },
+   "ne": {
+    "type": "neon",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "saturation": 1.7,
+     "floor": 0.05
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "gl": {
+    "type": "glow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "threshold": 0.4,
+     "bloom": 1.2,
+     "halation": 1.3,
+     "radius": 9,
+     "exposure": 1.4
+    }
+   },
+   "x0": {
+    "type": "polaroid",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "leak": 0.6,
+     "grain": 0.03,
+     "seed": 0
+    }
+   },
+   "x1": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "br",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "br",
+    "to": "st",
+    "input": "density"
+   },
+   {
+    "from": "img",
+    "to": "ne",
+    "input": "in"
+   },
+   {
+    "from": "ne",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "st",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "gl",
+    "input": "in"
+   },
+   {
+    "from": "gl",
+    "to": "x0",
+    "input": "in"
+   },
+   {
+    "from": "x0",
+    "to": "x1",
+    "input": "in"
+   }
+  ]
+ },
+ "Wet where chaotic*": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0.7
+    }
+   },
+   "n2": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n3": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "x0": {
+    "type": "blur",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "ed": {
+    "type": "edges",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6,
+     "gain": 3
+    }
+   },
+   "th": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0,
+     "lo": 0.45,
+     "hi": 0.65,
+     "gamma": 1
+    }
+   },
+   "mx2": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 0,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "mx",
+    "to": "x0",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "ed",
+    "input": "in"
+   },
+   {
+    "from": "ed",
+    "to": "th",
+    "input": "in"
+   },
+   {
+    "from": "mx",
+    "to": "mx2",
+    "input": "a"
+   },
+   {
+    "from": "x0",
+    "to": "mx2",
+    "input": "b"
+   },
+   {
+    "from": "th",
+    "to": "mx2",
+    "input": "mask"
+   },
+   {
+    "from": "mx2",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Craquelure*": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "ku": {
+    "type": "kuwahara",
+    "x": 250,
+    "y": 20,
+    "params": {
+     "radius": 5
+    }
+   },
+   "fl": {
+    "type": "flow",
+    "x": 250,
+    "y": 180,
+    "params": {
+     "sigma": 5
+    }
+   },
+   "sm": {
+    "type": "smear",
+    "x": 470,
+    "y": 40,
+    "params": {
+     "length": 9,
+     "step": 1
+    }
+   },
+   "st": {
+    "type": "strokes",
+    "x": 470,
+    "y": 220,
+    "params": {
+     "width": 2.4,
+     "amount": 0.5,
+     "length": 18,
+     "seed": 0
+    }
+   },
+   "rl": {
+    "type": "relief",
+    "x": 690,
+    "y": 100,
+    "params": {
+     "depth": 5,
+     "angle": -128,
+     "elevation": 32,
+     "ambient": 0.7,
+     "specular": 0.08,
+     "shine": 24,
+     "shadow": 0.2
+    }
+   },
+   "lv": {
+    "type": "levels",
+    "x": 910,
+    "y": 100,
+    "params": {
+     "exposure": 1,
+     "contrast": 1,
+     "saturation": 1.1,
+     "warmth": 0.03,
+     "lift": 0
+    }
+   },
+   "x0": {
+    "type": "cracks",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "fine": 14,
+     "coarse": 38,
+     "depth": 0.75,
+     "seed": 0
+    }
+   },
+   "ed": {
+    "type": "edges",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6,
+     "gain": 3
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ku",
+    "input": "in"
+   },
+   {
+    "from": "ku",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "ku",
+    "to": "sm",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "sm",
+    "input": "flow"
+   },
+   {
+    "from": "fl",
+    "to": "st",
+    "input": "flow"
+   },
+   {
+    "from": "sm",
+    "to": "rl",
+    "input": "colour"
+   },
+   {
+    "from": "st",
+    "to": "rl",
+    "input": "height"
+   },
+   {
+    "from": "rl",
+    "to": "lv",
+    "input": "in"
+   },
+   {
+    "from": "lv",
+    "to": "x0",
+    "input": "in"
+   },
+   {
+    "from": "img",
+    "to": "ed",
+    "input": "in"
+   },
+   {
+    "from": "ed",
+    "to": "x0",
+    "input": "mask"
+   },
+   {
+    "from": "x0",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Unfinished where uncertain*": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "pigment",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "amount": 0.7
+    }
+   },
+   "n2": {
+    "type": "kuwahara",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "radius": 3
+    }
+   },
+   "n3": {
+    "type": "watercolour",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "pool": 0.4,
+     "reach": 3,
+     "granulation": 0.1,
+     "bleed": 1.2,
+     "saturation": 0.95
+    }
+   },
+   "pe": {
+    "type": "pencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "line": 0.7,
+     "length": 6,
+     "hatch": 0.3,
+     "angle": 45,
+     "floor": 0.25
+    }
+   },
+   "mx": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 1,
+     "amount": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 4
+    }
+   },
+   "gr": {
+    "type": "hatching",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#f2f0e8",
+     "lead": "#77777c",
+     "width": 0.7,
+     "amount": 0.3,
+     "length": 18,
+     "tone": 1.1,
+     "tooth": 0.2,
+     "contour": 0.6,
+     "seed": 0
+    }
+   },
+   "ed": {
+    "type": "edges",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6,
+     "gain": 3
+    }
+   },
+   "th": {
+    "type": "brightness",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mix": 0,
+     "lo": 0.5,
+     "hi": 0.62,
+     "gamma": 1
+    }
+   },
+   "mx2": {
+    "type": "mix",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "mode": 0,
+     "amount": 1
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n2",
+    "to": "n3",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "pe",
+    "input": "in"
+   },
+   {
+    "from": "n3",
+    "to": "mx",
+    "input": "a"
+   },
+   {
+    "from": "pe",
+    "to": "mx",
+    "input": "b"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "gr",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "gr",
+    "input": "flow"
+   },
+   {
+    "from": "n0",
+    "to": "ed",
+    "input": "in"
+   },
+   {
+    "from": "ed",
+    "to": "th",
+    "input": "in"
+   },
+   {
+    "from": "mx",
+    "to": "mx2",
+    "input": "a"
+   },
+   {
+    "from": "gr",
+    "to": "mx2",
+    "input": "b"
+   },
+   {
+    "from": "th",
+    "to": "mx2",
+    "input": "mask"
+   },
+   {
+    "from": "mx2",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Stereogram, random dots": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sg": {
+    "type": "stereogram",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "eye": 72,
+     "depth": 0.6,
+     "smooth": 2.5,
+     "invert": 0,
+     "pattern": 0,
+     "dot": 2,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sg",
+    "input": "in"
+   },
+   {
+    "from": "sg",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Stereogram, picture's colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sg": {
+    "type": "stereogram",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "eye": 72,
+     "depth": 0.6,
+     "smooth": 2.5,
+     "invert": 0,
+     "pattern": 1,
+     "dot": 2,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sg",
+    "input": "in"
+   },
+   {
+    "from": "sg",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Stereogram, wallpaper": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sg": {
+    "type": "stereogram",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "eye": 96,
+     "depth": 0.6,
+     "smooth": 2.5,
+     "invert": 0,
+     "pattern": 2,
+     "dot": 1,
+     "seed": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sg",
+    "input": "in"
+   },
+   {
+    "from": "sg",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Teletext": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "tt": {
+    "type": "teletext",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cells": 40,
+     "gain": 1.2,
+     "dither": 0.35,
+     "graphics": 0
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "tt",
+    "input": "in"
+   },
+   {
+    "from": "tt",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Teletext, separated graphics": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "tt": {
+    "type": "teletext",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cells": 40,
+     "gain": 1.2,
+     "dither": 0,
+     "graphics": 1
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "tt",
+    "input": "in"
+   },
+   {
+    "from": "tt",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Teletext, on a CRT": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "tt": {
+    "type": "teletext",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "cells": 40,
+     "gain": 1.2,
+     "dither": 0.35,
+     "graphics": 0
+    }
+   },
+   "cr": {
+    "type": "crt",
+    "x": 470,
+    "y": 60,
+    "params": {
+     "lines": 200,
+     "grille": 0.4,
+     "converge": 1.2,
+     "glow": 0.35,
+     "snow": 0.025
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 690,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "tt",
+    "input": "in"
+   },
+   {
+    "from": "tt",
+    "to": "cr",
+    "input": "in"
+   },
+   {
+    "from": "cr",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Cross-stitch": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "xs": {
+    "type": "crossstitch",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "stitches": 44,
+     "threads": 0,
+     "levels": 4,
+     "bare": 0,
+     "cloth": "#eee6d2"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "xs",
+    "input": "in"
+   },
+   {
+    "from": "xs",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Cross-stitch, sampler on bare cloth": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "xs": {
+    "type": "crossstitch",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "stitches": 40,
+     "threads": 0,
+     "levels": 4,
+     "bare": 0.1,
+     "cloth": "#eee6d2"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "xs",
+    "input": "in"
+   },
+   {
+    "from": "xs",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Brick mosaic": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "bm": {
+    "type": "bricks",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "studs": 48,
+     "dither": 0,
+     "gloss": 0.6
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "bm",
+    "input": "in"
+   },
+   {
+    "from": "bm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Brick mosaic, big studs": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "bm": {
+    "type": "bricks",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "studs": 24,
+     "dither": 0.5,
+     "gloss": 0.6
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "bm",
+    "input": "in"
+   },
+   {
+    "from": "bm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "E-ink": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "ei": {
+    "type": "eink",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "levels": 16,
+     "dither": 1,
+     "pixel": 1,
+     "contrast": 1.1,
+     "ghost": 0.08,
+     "grain": 0.03
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ei",
+    "input": "in"
+   },
+   {
+    "from": "ei",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "E-ink, four greys, worn panel": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "ei": {
+    "type": "eink",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "levels": 4,
+     "dither": 2,
+     "pixel": 2,
+     "contrast": 1.1,
+     "ghost": 0.14,
+     "grain": 0.03
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "ei",
+    "input": "in"
+   },
+   {
+    "from": "ei",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "LED matrix": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "lm": {
+    "type": "ledmatrix",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pitch": 8,
+     "size": 0.72,
+     "colour": 0,
+     "gain": 1,
+     "glow": 0.4,
+     "levels": 16
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "lm",
+    "input": "in"
+   },
+   {
+    "from": "lm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "LED matrix, amber": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "lm": {
+    "type": "ledmatrix",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pitch": 6,
+     "size": 0.72,
+     "colour": 1,
+     "gain": 1,
+     "glow": 0.4,
+     "levels": 16
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "lm",
+    "input": "in"
+   },
+   {
+    "from": "lm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "LED matrix, red, coarse": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "lm": {
+    "type": "ledmatrix",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "pitch": 12,
+     "size": 0.72,
+     "colour": 2,
+     "gain": 1,
+     "glow": 0.4,
+     "levels": 4
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "lm",
+    "input": "in"
+   },
+   {
+    "from": "lm",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Fair Isle knit": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "kn": {
+    "type": "knit",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "stitches": 44,
+     "yarns": 0,
+     "fuzz": 0.5,
+     "back": "#1d2340",
+     "front": "#efe6d0"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "kn",
+    "input": "in"
+   },
+   {
+    "from": "kn",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Knit, two colours": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "kn": {
+    "type": "knit",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "stitches": 56,
+     "yarns": 1,
+     "fuzz": 0.5,
+     "back": "#1d2340",
+     "front": "#efe6d0"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "kn",
+    "input": "in"
+   },
+   {
+    "from": "kn",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Oscilloscope": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sc": {
+    "type": "scope",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "levels": 10,
+     "smooth": 2,
+     "width": 1.1,
+     "glow": 5,
+     "bloom": 0.8,
+     "colour": "#46ff7a"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sc",
+    "input": "in"
+   },
+   {
+    "from": "sc",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Oscilloscope, dense, amber": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sc": {
+    "type": "scope",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "levels": 20,
+     "smooth": 2,
+     "width": 0.8,
+     "glow": 4,
+     "bloom": 0.8,
+     "colour": "#ffb040"
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sc",
+    "input": "in"
+   },
+   {
+    "from": "sc",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Cross-hatching, ruled": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "crosshatch",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#17161c",
+     "paper": "#f5f2e9",
+     "spacing": 5,
+     "angle": 40,
+     "layers": 4,
+     "weight": 1,
+     "wobble": 0.7,
+     "lines": 0,
+     "tone": 1.1,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Cross-hatching, round the forms": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "crosshatch",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#17161c",
+     "paper": "#f5f2e9",
+     "spacing": 4.4,
+     "angle": 40,
+     "layers": 4,
+     "weight": 0.9,
+     "wobble": 0.5,
+     "lines": 1,
+     "tone": 1.1,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 8
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Pencil, HB": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "graphitepencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "grade": 1,
+     "paper": "#f2efe7",
+     "spacing": 3,
+     "width": 1.6,
+     "length": 70,
+     "lines": 1,
+     "angle": 50,
+     "tooth": 0.55,
+     "smudge": 0.5,
+     "sheen": 0.5,
+     "contour": 0.5,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 5
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Pencil, 6B": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "graphitepencil",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "grade": 4,
+     "paper": "#f2efe7",
+     "spacing": 3.4,
+     "width": 2.2,
+     "length": 70,
+     "lines": 1,
+     "angle": 50,
+     "tooth": 0.55,
+     "smudge": 0.75,
+     "sheen": 0.7,
+     "contour": 0.5,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Fineliner": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "fineliner",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#121216",
+     "paper": "#f8f6f0",
+     "pen": 0.9,
+     "levels": 9,
+     "smooth": 2,
+     "shading": 2,
+     "spacing": 3.2,
+     "density": 1,
+     "angle": 45,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Fineliner, stipple, sepia": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "fineliner",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#3b2516",
+     "paper": "#f3ecdc",
+     "pen": 0.9,
+     "levels": 6,
+     "smooth": 2,
+     "shading": 0,
+     "spacing": 2.6,
+     "density": 1,
+     "angle": 45,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Marker": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "marker",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#fbfaf5",
+     "nib": 14,
+     "length": 130,
+     "opacity": 0.72,
+     "cover": 1,
+     "streak": 0.6,
+     "bleed": 0.6,
+     "lines": 1,
+     "angle": 30,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 8
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Marker, ruled strokes": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "marker",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "paper": "#fbfaf5",
+     "nib": 16,
+     "length": 120,
+     "opacity": 0.72,
+     "cover": 1,
+     "streak": 0.6,
+     "bleed": 0.6,
+     "lines": 0,
+     "angle": 35,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 8
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Biro": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "biro",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#1c2a8a",
+     "paper": "#f7f6f1",
+     "ruling": 0,
+     "spacing": 2.6,
+     "scribble": 1,
+     "layers": 4,
+     "angle": 35,
+     "lines": 1,
+     "skips": 0.4,
+     "blobs": 0.5,
+     "sheen": 0.5,
+     "tone": 1.15,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Biro, on feint-ruled paper": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "biro",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "ink": "#1c2a8a",
+     "paper": "#f7f6f1",
+     "ruling": 1,
+     "spacing": 2.6,
+     "scribble": 1.4,
+     "layers": 4,
+     "angle": 50,
+     "lines": 0,
+     "skips": 0.4,
+     "blobs": 0.5,
+     "sheen": 0.5,
+     "tone": 1.15,
+     "detail": 0.8,
+     "seed": 0
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "fl": {
+    "type": "flow",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "sigma": 6
+    }
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   },
+   {
+    "from": "n0",
+    "to": "fl",
+    "input": "in"
+   },
+   {
+    "from": "fl",
+    "to": "n1",
+    "input": "flow"
+   }
+  ]
+ },
+ "Tetris": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "tetris",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "cells": 40,
+     "colour": 0,
+     "shade": 0.6,
+     "bevel": 0.16,
+     "seam": 1
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Tetris, picture's colours": {
+  "nodes": {
+   "n0": {
+    "type": "image",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   },
+   "n1": {
+    "type": "tetris",
+    "x": 0,
+    "y": 0,
+    "params": {
+     "cells": 56,
+     "colour": 1,
+     "shade": 0,
+     "bevel": 0.16,
+     "seam": 1
+    }
+   },
+   "n2": {
+    "type": "output",
+    "x": 0,
+    "y": 0,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "n0",
+    "to": "n1",
+    "input": "in"
+   },
+   {
+    "from": "n1",
+    "to": "n2",
+    "input": "in"
+   }
+  ]
+ },
+ "Shattered glass": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sh": {
+    "type": "shatter",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "mode": 0,
+     "cx": 0.56,
+     "cy": 0.46,
+     "spokes": 15,
+     "rings": 3,
+     "shards": 5,
+     "shift": 7,
+     "split": 0.35,
+     "tint": 0.14,
+     "width": 1.3,
+     "glint": 0.75,
+     "crush": 0.045,
+     "seed": 3
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sh",
+    "input": "in"
+   },
+   {
+    "from": "sh",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Shattered pane": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sh": {
+    "type": "shatter",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "mode": 1,
+     "cx": 0.56,
+     "cy": 0.46,
+     "spokes": 15,
+     "rings": 3,
+     "shards": 4,
+     "shift": 10,
+     "split": 0.35,
+     "tint": 0.14,
+     "width": 1.6,
+     "glint": 0.75,
+     "crush": 0.045,
+     "seed": 3
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sh",
+    "input": "in"
+   },
+   {
+    "from": "sh",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ },
+ "Through cracked goggles": {
+  "nodes": {
+   "img": {
+    "type": "image",
+    "x": 30,
+    "y": 60,
+    "params": {}
+   },
+   "sh": {
+    "type": "shatter",
+    "x": 250,
+    "y": 60,
+    "params": {
+     "mode": 0,
+     "cx": 0.3,
+     "cy": 0.62,
+     "spokes": 22,
+     "rings": 5,
+     "shards": 5,
+     "shift": 14,
+     "split": 0.8,
+     "tint": 0.14,
+     "width": 1.3,
+     "glint": 1,
+     "crush": 0.07,
+     "seed": 3
+    }
+   },
+   "out": {
+    "type": "output",
+    "x": 470,
+    "y": 80,
+    "params": {}
+   }
+  },
+  "edges": [
+   {
+    "from": "img",
+    "to": "sh",
+    "input": "in"
+   },
+   {
+    "from": "sh",
+    "to": "out",
+    "input": "in"
+   }
+  ]
+ }
+}

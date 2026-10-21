@@ -50,8 +50,9 @@
 //! **The infeasible label** (chart_reference §2.2): the construction's [`Outcome`] is returned beside the decode. Under
 //! the warp it is never [`Outcome::Infeasible`] inside `[0,1]²` (the note above); past it the chart is bounded on every
 //! side and hatched (§5.4), and [`validate`](Chart::validate) projects such a point back. `DEGENERATE`'s member for it,
-//! `INVARIANT_INFEASIBLE`, `decode_failed`/3 ([`crate::decode::invariant::infeasible_label`]), joins the reason type with
-//! its full set (TASK-M2-24); until then [`Decoded::degenerate`] carries the mass block's tag alone.
+//! `INVARIANT_INFEASIBLE`, `decode_failed`/3 ([`crate::decode::invariant::infeasible_label`]), and the seed rule's
+//! `NO_QUALIFYING_SEED` are carried in [`Decoded::degenerate`] after the mass block's tag ([`Blocks::tag`],
+//! [`Outcome::tag`]), so the decode stage writes them as it writes `M01_TINY`.
 //!
 //! **Validation** (R-26; chart_reference §5.1): inside `[0,1]²` every point is `Valid` (layer 2 by the warp; layer 3,
 //! decode sanity, by the shared decoder's construction: positive masses, the CoM at the origin, `Σpᵢ = 0` by the
@@ -70,7 +71,7 @@ use crate::decode::config::{self, Config};
 use crate::decode::invariant::{self as construction, infeasible, ExactSign, Outcome};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
-use crate::decode::{self, descriptor, Blocks, Decoded, Ic};
+use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
@@ -405,6 +406,12 @@ impl<S: Selection, R: LinkReal + PayloadReal + ExactSign> Blocks<R> for Invarian
     #[inline]
     fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R> {
         descriptor::describe(ic)
+    }
+
+    /// The construction's tag ([`Outcome::tag`]).
+    #[inline]
+    fn tag(&self) -> Option<Degenerate> {
+        self.outcome.tag()
     }
 }
 

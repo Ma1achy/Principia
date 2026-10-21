@@ -1,0 +1,28 @@
+{
+ "name": "Luminet stipple on a Polaroid",
+ "doc": "luminet → polaroid",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "s0": {
+   "op": "preset:luminet",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "s1": {
+   "op": "preset:polaroid",
+   "in": {
+    "src": "s0"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "s1"
+}

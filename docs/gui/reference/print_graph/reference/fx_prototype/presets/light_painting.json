@@ -1,0 +1,116 @@
+{
+ "name": "Light painting",
+ "doc": "Long-exposure light trails along the field in neon, adding where they cross, with film glow.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(0.5*lum(I)+0.5*I.max(-1), 1.0))"
+   }
+  },
+  "E": {
+   "op": "edge_density",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "s": 5
+   }
+  },
+  "f": {
+   "op": "field_flow",
+   "in": {
+    "image": "src",
+    "E": "E"
+   }
+  },
+  "lines": {
+   "op": "streamlines",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty",
+    "density": "L"
+   },
+   "p": {
+    "dmin": 6.0,
+    "dmax": 20.0,
+    "tmin": 0.05,
+    "seed": "$seed",
+    "maxlen": 1200,
+    "minlen": 20
+   }
+  },
+  "neon": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "n = I/maximum(I.max(-1, keepdims=True), 0.08)\ng = n.mean(-1, keepdims=True); n = clip(g + (n-g)*1.7, 0, 1)\nout = clip(n*0.95 + 0.05, 0, 1)"
+   }
+  },
+  "tr": {
+   "op": "trails",
+   "in": {
+    "lines": "lines",
+    "rng": "r",
+    "colour": "neon",
+    "weight": "L"
+   }
+  },
+  "e0": {
+   "op": "expr",
+   "in": {
+    "acc": "tr.acc"
+   },
+   "p": {
+    "f": "blur(acc, 0.8)*4.0 + (blur(acc, 2.5)*1.0 + blur(acc, 8.0)*1.6 + blur(acc, 24.0)*1.2)*2.2"
+   }
+  },
+  "e": {
+   "op": "film_glow",
+   "in": {
+    "e": "e0"
+   }
+  },
+  "gr": {
+   "op": "draw",
+   "in": {
+    "rng": "tr.rng"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW1"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "e": "e",
+    "gr": "gr.out"
+   },
+   "p": {
+    "f": "out = 1 - exp(-e)\nhot = clip(e.mean(-1, keepdims=True)-0.9, 0, None)\nout = out + (1-out)*(1-exp(-hot*1.5))\ngnd = array([0.055, 0.05, 0.05])\nout = gnd + (1-gnd)*out\nout = out + 0.012*gr"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

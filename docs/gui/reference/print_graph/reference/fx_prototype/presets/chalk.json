@@ -1,0 +1,70 @@
+{
+ "name": "Chalk pastel",
+ "doc": "Soft pastel on dark laid paper: side-of-the-stick strokes caught on the tooth, a dusty halo, finger-blended passages.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 7
+   }
+  },
+  "side": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 4.0,
+    "density": 0.0025,
+    "length": 22,
+    "seed": "$seed"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 1.0,
+    "octaves": 1,
+    "seed": "$seed+1"
+   }
+  },
+  "n7": {
+   "op": "noise",
+   "p": {
+    "scale": 70,
+    "octaves": 2,
+    "seed": "$seed+7"
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "side": "side",
+    "n1": "n1",
+    "n7": "n7",
+    "pt": "pt"
+   },
+   "p": {
+    "f": "C = blur(I, 1.2); mx = C.max(-1); mn = C.min(-1); sat = (mx-mn)/(mx+1e-6)\npig = (C*0.72+0.28)*(0.85+0.3*sat[..., None])\namount = clip(maximum(lum(C)*1.1, mx*0.9)**0.9, 0, 1)\npressure = clip(amount*(0.75+0.45*clip(side, 0, 1.2)), 0, 1.2)\nlaid = 0.45*sin(2*pi*yy/3.2) + 0.3*n1 + 0.55*z(pt)\npeaks = 1/(1+exp(-(laid+(pressure-0.5)*5.0)))\ncover = clip(pressure*peaks*1.2, 0, 1)\ndust = gaussian(cover[..., None]*pig, (3, 3, 0))*0.16\nout = array([0.13, 0.135, 0.15])*(1-cover[..., None]) + pig*cover[..., None] + dust\nsmear = gaussian((n7 > 1.2).astype(float), 6)[..., None]\nout = out*(1-smear) + blur(out, 3)*smear\nout = out*(1+0.03*z(pt))[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

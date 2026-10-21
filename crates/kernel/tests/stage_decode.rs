@@ -1,26 +1,35 @@
 //! The decode stage's host-side plumbing and its body, natively (`kernel::stage::decode`; TASK-M2-06):
 //! - `stage_uniform_roundtrip`: the latent chart's parameters through the uniform's rows and back, each component in
 //!   its slot (REQ-DEC-007: the chart's parameters are the uniform).
+//! - `stage_uniform_charts`: the acute Burrau strips' and the shape sphere's parameters, under both maps, through the
+//!   uniform and back, each parameter distinct, so a swapped or dropped slot reads back otherwise.
 //! - `stage_decode_mode_bits`: `DECODE_MODE` is bit 0 of the flags word, full 0 and linearised 1, and no other bit
 //!   moves it (scheduler_contract Part 5).
-//! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2 and `ENERGY_UNSCALABLE`
-//!   3, and every other word refused.
+//! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2, `ENERGY_UNSCALABLE` 3,
+//!   `INVARIANT_INFEASIBLE` 4 and `NO_QUALIFYING_SEED` 5, and every other word refused.
+//! - `stage_energy_row`: the energy target's row, `(1, E*'s bits, 0, 0)` on and zero off, read back as the same
+//!   `Option`, its switch bit 0 of `x` alone (dd_decoder §3.7, R-25: `η_E`'s off switch is a uniform flag).
 //! - `stage_words_roundtrip`: a sample's `(m, r, p)` and `ICDescriptor` written as words and read back, at its index,
 //!   every other sample's words untouched.
 //! - `stage_entry_native`: the stage's body, compiled natively at f32, writes each sample's decode, the chart read from
 //!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing (REQ-DEC-005, REQ-DEC-007).
 //! - `stage_entry_points`: the three compute entry points, called natively, write each sample's decode under their link
 //!   set, or its descriptor, and nothing at the sample count.
+//! - `stage_chart_entry_points`: the acute Burrau strips' and the shape sphere's compute entry points, called natively,
+//!   write each sample's decode, its chart read from the uniform.
 //! - `stage_link_tanh`: the §3.9 `tanh` operator's entry point, called natively, writes the operator at each word.
 
-use kernel::chart::{self, Latent};
+use kernel::chart::{
+    self, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Latent, ShapeMap, ShapeSphere,
+};
 use kernel::decode::{Degenerate, Ic};
 use kernel::generated::links::Defaults;
 use kernel::payload::ICDescriptor;
 use kernel::stage::decode::{
-    decode_mode, descriptor_words, entry, flags, ic_words, read_descriptor, read_ic, sample, tag,
-    untag, write_descriptor, write_ic, DecodeMode, DecodeUniforms, LatentDefaults,
-    LatentStickBreaking, UniformChart,
+    decode_mode, descriptor_words, energy, entry, flags, ic_words, read_descriptor, read_ic,
+    sample, tag, target, untag, write_descriptor, write_ic, BurrauThetaDeltaMDefaults,
+    BurrauThetaKDefaults, BurrauThetaLzDefaults, DecodeMode, DecodeUniforms, DecodeVariant,
+    LatentDefaults, LatentStickBreaking, ShapeSphereDefaults, UniformChart,
 };
 use spirv_std::glam::{UVec3, UVec4};
 use validation::negative_control;
@@ -126,13 +135,15 @@ negative_control!(
 
 // ── stage_tag_words ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Each reason round-trips through its word, the words are 0 to 3, and every other word is refused.
+/// Each reason of the closed set round-trips through its word, the words are 0 to 5, and every other word is refused.
 fn check_tags(write: fn(Option<Degenerate>) -> u32) {
     for (reason, word) in [
         (None, 0),
         (Some(Degenerate::M01Tiny), 1),
         (Some(Degenerate::EnergyInfeasible), 2),
         (Some(Degenerate::EnergyUnscalable), 3),
+        (Some(Degenerate::InvariantInfeasible), 4),
+        (Some(Degenerate::NoQualifyingSeed), 5),
     ] {
         assert_eq!(
             write(reason),
@@ -146,7 +157,7 @@ fn check_tags(write: fn(Option<Degenerate>) -> u32) {
             "the word {word} reads back otherwise"
         );
     }
-    for word in [4, 5, u32::MAX] {
+    for word in [6, 7, u32::MAX] {
         assert_eq!(
             untag(word),
             Err(word),
@@ -169,6 +180,120 @@ negative_control!(
         3 => 2,
         w => w,
     })
+);
+
+// ── stage_uniform_charts ────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each chart through `write` and [`UniformChart::from_uniform`] is itself, its parameters distinct.
+fn check_charts(write: fn(&ShapeSphere<f32>) -> [spirv_std::glam::Vec4; 6]) {
+    let k = BurrauThetaK {
+        theta_range: [0.1, 0.2],
+        k_max: 3.0,
+        gamma_k: 4.0,
+    };
+    assert_eq!(
+        BurrauThetaK::from_uniform(&k.uniform()),
+        k,
+        "the (θ, K) strip"
+    );
+    let lz = BurrauThetaLz {
+        theta_range: [0.1, 0.2],
+        k: 3.0,
+        lz_fraction: 0.4,
+    };
+    assert_eq!(
+        BurrauThetaLz::from_uniform(&lz.uniform()),
+        lz,
+        "the (θ, L_z) strip"
+    );
+    let m = BurrauThetaDeltaM {
+        theta_range: [0.1, 0.2],
+        m_target: [0.25, 0.3, 0.45],
+    };
+    assert_eq!(
+        BurrauThetaDeltaM::from_uniform(&m.uniform()),
+        m,
+        "the (θ, Δm) strip"
+    );
+    for map in [ShapeMap::Spherical, ShapeMap::Exponential] {
+        let c = ShapeSphere {
+            map,
+            n0: [1.0, 2.0, 3.0],
+            e1: [4.0, 5.0, 6.0],
+            e2: [7.0, 8.0, 9.0],
+            scale: 10.0,
+            inertia: 11.0,
+            phase: 12.0,
+            z_mass: [13.0, 14.0],
+            z_mom: [15.0, 16.0, 17.0, 18.0],
+        };
+        assert_eq!(
+            ShapeSphere::from_uniform(&write(&c)),
+            c,
+            "the shape sphere under {map:?}"
+        );
+    }
+}
+
+#[test]
+fn stage_uniform_charts() {
+    check_charts(UniformChart::uniform);
+}
+
+negative_control!(
+    stage_uniform_charts,
+    "a writer that leaves out the shape sphere's map must fail",
+    expected = "the shape sphere under Exponential",
+    check_charts(|c| {
+        let mut rows = c.uniform();
+        rows[4].z = 0.0;
+        rows
+    })
+);
+
+// ── stage_energy_row ────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each target through the row and back is itself, bit for bit, `-0.0` and the extremes among them; the row is
+/// `(1, E*'s bits, 0, 0)` on and zero off; and only `x`'s bit 0 is the switch: `x` = 2 is off and `x` = 3 is on.
+fn check_energy(write: fn(Option<f32>) -> UVec4) {
+    assert_eq!(write(None), UVec4::ZERO, "the off row is not zero");
+    assert_eq!(target(write(None)), None, "the off row reads as a target");
+    for e in [0.0, -0.0, -0.3, 1.5, f32::MIN, f32::MAX, f32::MIN_POSITIVE] {
+        let row = write(Some(e));
+        assert_eq!(
+            row,
+            UVec4::new(1, e.to_bits(), 0, 0),
+            "the row of {e:?} is {row:?}"
+        );
+        assert_eq!(
+            target(row).map(f32::to_bits),
+            Some(e.to_bits()),
+            "the row of {e:?} reads back otherwise"
+        );
+    }
+    let e = 2.5f32.to_bits();
+    assert_eq!(
+        target(UVec4::new(2, e, 0, 0)),
+        None,
+        "x = 2, bit 0 clear, reads as on"
+    );
+    assert_eq!(
+        target(UVec4::new(3, e, 0, 0)),
+        Some(2.5),
+        "x = 3, bit 0 set, reads as off"
+    );
+}
+
+#[test]
+fn stage_energy_row() {
+    check_energy(energy);
+}
+
+negative_control!(
+    stage_energy_row,
+    "a writer that drops the switch must fail",
+    expected = "the row of 0.0 is",
+    check_energy(|e| energy(e) & UVec4::new(0, u32::MAX, 0, 0))
 );
 
 // ── stage_words_roundtrip ───────────────────────────────────────────────────────────────────────────────────────
@@ -263,6 +388,7 @@ fn run_entry(chart: &Latent<f32>, flag: u32) -> Written {
     let uniforms = DecodeUniforms {
         chart: chart.uniform(),
         flags: UVec4::new(flag, 0, 0, 0),
+        energy: Default::default(),
     };
     let uv = [0.25f32, 0.75, 0.5, 0.5, 1.0, 0.0];
     let (mut ic, mut tags, mut d) = buffers(3);
@@ -323,6 +449,7 @@ fn stage_entry_native() {
     let uniforms = DecodeUniforms {
         chart: corner.uniform(),
         flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
     };
     let (mut ic, mut tags, mut d) = buffers(1);
     entry::<LatentStickBreaking>(0, &uniforms, &[0.5, 0.5], &mut ic, &mut tags, &mut d);
@@ -364,6 +491,7 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
     let uniforms = DecodeUniforms {
         chart: chart.uniform(),
         flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
     };
     let uv = [0.2f32, 0.7, 0.6, 0.3];
     for (name, run, want) in
@@ -448,6 +576,115 @@ negative_control!(
         kernel::stage::decode::latent_defaults,
         kernel::stage::decode::describe,
     ))
+);
+
+// ── stage_chart_entry_points ────────────────────────────────────────────────────────────────────────────────────
+
+/// A decode compute entry point, as the kernel declares it.
+type Wrapper = fn(UVec3, &DecodeUniforms, &[f32], &mut [u32], &mut [u32], &mut [u32]);
+
+/// `wrapper`, called natively for two samples of `chart`, writes `V`'s decode of each: its `(m, r, p)`, tag and
+/// descriptor.
+fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
+    let uniforms = DecodeUniforms {
+        chart: chart.uniform(),
+        flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
+    };
+    let uv = [0.2f32, 0.7, 0.6, 0.3];
+    let (mut ic, mut tags, mut d) = buffers(2);
+    for i in 0..2 {
+        wrapper(
+            UVec3::new(i, 0, 0),
+            &uniforms,
+            &uv,
+            &mut ic,
+            &mut tags,
+            &mut d,
+        );
+    }
+    for i in 0..2 {
+        let want = sample::<V::Chart, V::Links, f32>(chart, uv[2 * i], uv[2 * i + 1]);
+        let name = V::ENTRY;
+        assert_eq!(read_ic(&ic, i), want.ic, "{name} sample {i}'s (m, r, p)");
+        assert_eq!(
+            untag(tags[i]),
+            Ok(want.degenerate),
+            "{name} sample {i}'s tag"
+        );
+        assert_eq!(
+            read_descriptor(&d, i),
+            want.descriptor,
+            "{name} sample {i}'s descriptor"
+        );
+    }
+}
+
+/// The four entry points, in the order `(θ, K)`, `(θ, L_z)`, `(θ, Δm)`, shape sphere.
+fn check_chart_entry_points(w: [Wrapper; 4]) {
+    check_wrapper::<BurrauThetaKDefaults>(
+        w[0],
+        &BurrauThetaK {
+            theta_range: [0.3, 1.2],
+            k_max: 2.0,
+            gamma_k: 1.5,
+        },
+    );
+    check_wrapper::<BurrauThetaLzDefaults>(
+        w[1],
+        &BurrauThetaLz {
+            theta_range: [0.3, 1.2],
+            k: 1.0,
+            lz_fraction: 0.5,
+        },
+    );
+    check_wrapper::<BurrauThetaDeltaMDefaults>(
+        w[2],
+        &BurrauThetaDeltaM {
+            theta_range: [0.3, 1.2],
+            m_target: [0.25, 0.375, 0.375],
+        },
+    );
+    check_wrapper::<ShapeSphereDefaults>(
+        w[3],
+        &ShapeSphere {
+            map: ShapeMap::Exponential,
+            n0: [0.0, 0.0, 1.0],
+            e1: [1.0, 0.0, 0.0],
+            e2: [0.0, 1.0, 0.0],
+            scale: 1.2,
+            inertia: 1.0,
+            phase: 0.0,
+            z_mass: [0.3, -0.2],
+            z_mom: [0.1, -0.4, 0.2, 0.3],
+        },
+    );
+}
+
+#[test]
+fn stage_chart_entry_points() {
+    use kernel::stage::decode as k;
+    check_chart_entry_points([
+        k::burrau_theta_k_defaults,
+        k::burrau_theta_lz_defaults,
+        k::burrau_theta_delta_m_defaults,
+        k::shape_sphere_defaults,
+    ]);
+}
+
+negative_control!(
+    stage_chart_entry_points,
+    "the (θ, K) strip's entry point swapped for the (θ, L_z) strip's must fail",
+    expected = "stage_decode_burrau_theta_k_defaults sample 0's",
+    {
+        use kernel::stage::decode as k;
+        check_chart_entry_points([
+            k::burrau_theta_lz_defaults,
+            k::burrau_theta_lz_defaults,
+            k::burrau_theta_delta_m_defaults,
+            k::shape_sphere_defaults,
+        ])
+    }
 );
 
 // ── stage_link_tanh ─────────────────────────────────────────────────────────────────────────────────────────────

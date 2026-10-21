@@ -1,0 +1,63 @@
+{
+ "name": "35mm film, developed",
+ "doc": "Printed colour film: S-curve, lifted blacks, warm and cool, halation, mid-tone grain, vignette.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pre": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "C = blur(I, 0.7)\nC = 0.03 + 0.94*(1/(1+exp(-(C-0.5)*5.2)) - 0.069)/0.862\nL = lum(C)[..., None]\nC = C + array([0.035, 0.012, -0.03])*L + array([-0.02, 0.005, 0.03])*(1-L)\ng = L; C = g + (C-g)*0.92\nout = -log(clip(1-C, 1e-3, 1))"
+   }
+  },
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "C = blur(I, 0.7)\nC = 0.03 + 0.94*(1/(1+exp(-(C-0.5)*5.2)) - 0.069)/0.862\nout = lum(C)[..., None]"
+   }
+  },
+  "gl": {
+   "op": "film_glow",
+   "in": {
+    "e": "pre"
+   },
+   "p": {
+    "bloom": 0.1,
+    "halation": 0.35,
+    "bleed": 0.0
+   }
+  },
+  "gr": {
+   "op": "grain",
+   "p": {
+    "seed": "$seed",
+    "size": 1.4
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "gl": "gl",
+    "gr": "gr",
+    "L": "L"
+   },
+   "p": {
+    "f": "C = 1 - exp(-gl)\nC = C + 0.022*gr[..., None]*(4*L*(1-L))\nv = 1 - 0.28*(((xx-W/2)/W)**2 + ((yy-H/2)/H)**2)*2\nout = C*v[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

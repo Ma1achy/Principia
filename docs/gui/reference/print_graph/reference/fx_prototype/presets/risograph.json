@@ -1,0 +1,107 @@
+{
+ "name": "Risograph",
+ "doc": "Four drums (pink, blue, yellow, black), each a grainy screen at its own angle, slightly out of register.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "d0": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed"
+   }
+  },
+  "d1": {
+   "op": "draw",
+   "in": {
+    "rng": "d0.rng"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed+1"
+   }
+  },
+  "d2": {
+   "op": "draw",
+   "in": {
+    "rng": "d1.rng"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed+2"
+   }
+  },
+  "d3": {
+   "op": "draw",
+   "in": {
+    "rng": "d2.rng"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "n3": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed+3"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "d0": "d0.out",
+    "d1": "d1.out",
+    "d2": "d2.out",
+    "d3": "d3.out",
+    "n0": "n0",
+    "n1": "n1",
+    "n2": "n2",
+    "n3": "n3"
+   },
+   "p": {
+    "f": "cmy = 1-I; k = cmy.min(-1)*0.85; cmy = (cmy-k[..., None])/(1-k[..., None]+1e-6)\ndens = [cmy[..., 1], cmy[..., 0], cmy[..., 2], k]\ninks = [(1.0, 0.28, 0.56), (0.0, 0.47, 0.75), (1.0, 0.91, 0.0), (0.12, 0.12, 0.13)]\npaper = array([0.96, 0.95, 0.92])\nout = np.ones((H, W, 3))*paper\nfor i, (ink, ang, off, dn, nz) in enumerate(zip(inks, (75, 15, 0, 45), ((0, 0), (1.8, -1.2), (-1.4, 1.6), (0.7, 0.9)), (d0, d1, d2, d3), (n0, n1, n2, n3))):\n    a = deg2rad(ang); u = xx*cos(a)+yy*sin(a); v = -xx*sin(a)+yy*cos(a)\n    screen = 0.5+0.3*sin(2*pi*u/3.6)*sin(2*pi*v/3.6) + 0.16*dn\n    d = ndi.shift(gaussian(dens[i], 0.7), off, order=1, mode='nearest')\n    dot = 1/(1+exp(-(d-screen)*10))\n    cov = (dot*clip(0.9+0.1*nz, 0.6, 1))[..., None]\n    out = out*((1-cov)+cov*array(ink)/paper)"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

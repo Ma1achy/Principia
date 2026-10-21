@@ -1,0 +1,126 @@
+{
+ "name": "Light painting, solid",
+ "doc": "Light trails packed edge to edge, thin in the filaments and broad where calm, with film glow.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(0.5*lum(I)+0.5*I.max(-1), 1.0))"
+   }
+  },
+  "E": {
+   "op": "edge_density",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "s": 5
+   }
+  },
+  "f": {
+   "op": "field_flow",
+   "in": {
+    "image": "src",
+    "E": "E"
+   }
+  },
+  "lines": {
+   "op": "streamlines",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty",
+    "density": "E"
+   },
+   "p": {
+    "dmin": 2.2,
+    "dmax": 12.0,
+    "tmin": 0.0,
+    "seed": "$seed",
+    "maxlen": 1500,
+    "minlen": 6
+   }
+  },
+  "neon": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "n = I/maximum(I.max(-1, keepdims=True), 0.08)\ng = n.mean(-1, keepdims=True); n = clip(g + (n-g)*1.6, 0, 1)\nout = n"
+   }
+  },
+  "tr": {
+   "op": "trails_solid",
+   "in": {
+    "lines": "lines",
+    "rng": "r",
+    "colour": "neon",
+    "weight": "L",
+    "E": "E"
+   },
+   "p": {
+    "dmin": 2.2,
+    "dmax": 12.0
+   }
+  },
+  "e0": {
+   "op": "expr",
+   "in": {
+    "core": "tr.core"
+   },
+   "p": {
+    "f": "core*2.2 + (blur(core, 3.0)*0.6 + blur(core, 12.0)*0.6)*0.9"
+   }
+  },
+  "e": {
+   "op": "film_glow",
+   "in": {
+    "e": "e0"
+   },
+   "p": {
+    "bloom": 0.55,
+    "halation": 1.2,
+    "bleed": 0.5
+   }
+  },
+  "gr": {
+   "op": "draw",
+   "in": {
+    "rng": "tr.rng"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW1"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "e": "e",
+    "gr": "gr.out"
+   },
+   "p": {
+    "f": "out = 1 - exp(-e)\nhot = clip(e.mean(-1, keepdims=True)-1.1, 0, None)\nout = out + (1-out)*(1-exp(-hot*1.2))\ngnd = array([0.05, 0.045, 0.045])\nout = gnd + (1-gnd)*out\nout = out + 0.01*gr"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

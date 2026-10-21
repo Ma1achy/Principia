@@ -1,0 +1,50 @@
+{
+ "name": "Halftone",
+ "doc": "AM CMYK screens at 15/75/0/45 degrees forming rosettes, dot gain, a little slip.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "b": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "blur(I, 0.6)"
+   }
+  },
+  "sep": {
+   "op": "separate_cmyk",
+   "in": {
+    "image": "b"
+   }
+  },
+  "paper": {
+   "op": "paper_ground",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "c": "sep.c",
+    "m": "sep.m",
+    "y": "sep.y",
+    "k": "sep.k",
+    "paper": "paper"
+   },
+   "p": {
+    "f": "out = paper; cell = 6.0\nfor cov, ink, ang, (dy, dx) in zip((c, m, y, k), [array([0, 164, 228])/255, array([232, 18, 130])/255, array([255, 230, 0])/255, array([38, 34, 36])/255], (15, 75, 0, 45), ((-1.5, -1), (1.5, 0.5), (0, 1.5), (0, 0))):\n    a = deg2rad(ang); u = (xx*cos(a)+yy*sin(a))/cell; v = (-xx*sin(a)+yy*cos(a))/cell\n    spot = 0.5*(cos(2*pi*u)+cos(2*pi*v))\n    cc = clip(cov*1.08, 0, 1)\n    dot = sig((spot - (1-2*cc))*7.0)*(cc > 0.02)\n    dot = gaussian(dot, 0.45)\n    dot = ndi.shift(dot, (dy, dx), order=1, mode='nearest')\n    out = out*(1 - dot[..., None]*(1-ink[None, None]))"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

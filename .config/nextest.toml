@@ -51,7 +51,8 @@ xtask-cargo = { max-threads = 1 }
 # canonicalisation's (`engine`'s `canon_gpu` and `qa_TASK-M2-07_gpu`, TASK-M2-07), the invariant-momentum construction's
 # (`engine`'s `invariant_gpu`, TASK-M2-09), the invariant charts' gradient gate's (validation's
 # `invariant_gradient_gpu`, TASK-M2-12) and encode's (`engine`'s `encode_gpu` and `qa_TASK-M2-15_gpu`, TASK-M2-15) among
-# them, and the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13); the xtask tests that run cargo on
+# them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
+# (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24); the xtask tests that run cargo on
 # the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
@@ -73,6 +74,8 @@ default-filter = """
         | binary_id(=engine::encode_gpu)
         | binary_id(=engine::qa_TASK-M2-15_gpu)
         | binary_id(=engine::per_pixel_mass_gpu)
+        | binary_id(=engine::decode_cross_backend)
+        | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=xtask::build_kernel)
@@ -113,8 +116,25 @@ default-filter = """
     | binary_id(=engine::encode_gpu)
     | binary_id(=engine::qa_TASK-M2-15_gpu)
     | binary_id(=engine::per_pixel_mass_gpu)
+    | binary_id(=engine::decode_cross_backend)
+    | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
 """
+
+# Decoder test 12's measurements on lavapipe (TASK-M2-24, physics review F3): `decode_cross_backend_continuous` prints
+# each domain's worst difference against f64 and against the native f32 decode, and the gpu-kernel job shows it on
+# success, so REQ-DEC-043's proposal record (`validation::decode_f32_eps`) can cite the backend's numbers. Applied per
+# R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous)"
+success-output = "immediate"
+
+# The same for qa's `qa_m224_gpu_canon_turn` (`engine/tests/qa_TASK-M2-24_gpu.rs`), which prints `C`'s worst against f64
+# on the job's backend: REQ-DEC-043's record cites lavapipe's value for that domain too (physics review 5599301723 F1).
+# It changes only what is shown; the test and its filter are as before. Applied per R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_canon_turn)"
+success-output = "immediate"
