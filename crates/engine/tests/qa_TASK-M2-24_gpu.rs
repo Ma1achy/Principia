@@ -22,6 +22,12 @@
 //!   the `(θ, K)` and `(θ, L_z)` strips among them; on the latent chart and the shape sphere `Some(0)` rescales, and on
 //!   the δm strip, a rest start, `Some(0)` above its `V₀ < 0` is `ENERGY_UNSCALABLE` (`qa_m224_gpu_eta_switch`).
 //!
+//! - REQ-VAL-017 on `C`, the canonicalisation the decode ends in (and encode starts from), alone on the GPU: generic
+//!   states with one light body far out, the case that once put a body's `r_y` 273.88 eps from f64 on lavapipe when
+//!   step 2 turned by `sin` and `cos` of a rounded angle, at every orientation and scale: each of the GPU's canonical
+//!   `m`, `r` and `p` within REQ-DEC-043's factor of `C` at f64 on the same widened inputs, `lookup_mirrored` and
+//!   `lookup_clamped` bitwise equal, and the canonical `ρ̃` on `+x` (REQ-DEC-002) (`qa_m224_gpu_canon_turn`).
+//!
 //! Tier B (parity_contract §2): the tags are compared bitwise, given the same inputs, at once, never accumulated (§3).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
@@ -31,13 +37,15 @@
 use std::path::{Path, PathBuf};
 
 use engine::contract::fast_math::FastMath;
-use engine::decode_dispatch::{decode_only_with, DecodeStage};
+use engine::decode_dispatch::{canonicalise_gpu, decode_only_with, DecodeStage};
+use kernel::canon::{canonicalise, Canonical};
 use kernel::chart::invariant::Invariant;
 use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, InvariantLE,
     InvariantLK, Latent, ShapeMap, ShapeSphere,
 };
 use kernel::decode::degenerate::Degenerate;
+use kernel::decode::Ic;
 use kernel::stage::decode::{
     BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
     DecodeMode, DecodeOut, DecodeVariant, InvariantLEDefaults, InvariantLKDefaults, LatentDefaults,
@@ -617,4 +625,157 @@ negative_control!(
     "the latent chart, which allows η_E, must not ignore the target on the GPU",
     expected = "the GPU did not ignore",
     check_switch(true)
+);
+
+// ── REQ-VAL-017 on `C`: step 2's turn on the GPU ────────────────────────────────────────────────────────────────
+
+/// `n` generic f32 states with a light body far out: the light body (index cycling 0, 1, 2) of mass `10^[−3.5, −2]`
+/// at distance `[4, 40]` from the CoM of two heavy ones placed in `[−1, 1]²`, momenta in `[−0.5, 0.5]²`; the whole
+/// turned by `θ ∈ [−π, π]` and scaled by `2^[−20, 20]`, so `ρ` lies in every quadrant and at every scale.
+fn far_light(n: usize) -> Vec<Ic<f32>> {
+    let mut rng = Rng(2402);
+    (0..n)
+        .map(|j| {
+            let k = j % 3;
+            let light = 10f64.powf(f64::from(rng.uniform(-3.5, -2.0)));
+            let w = [
+                f64::from(rng.uniform(0.3, 1.0)),
+                f64::from(rng.uniform(0.3, 1.0)),
+            ];
+            let rest = 1.0 - light;
+            let mut m = [0.0; 3];
+            let mut r = [[0.0; 2]; 3];
+            let mut h = 0;
+            for (i, (mi, ri)) in m.iter_mut().zip(r.iter_mut()).enumerate() {
+                if i == k {
+                    let d = f64::from(rng.uniform(4.0, 40.0));
+                    let a = f64::from(rng.uniform(-3.2, 3.2));
+                    *mi = light;
+                    *ri = [d * a.cos(), d * a.sin()];
+                } else {
+                    *mi = rest * w[h] / (w[0] + w[1]);
+                    *ri = [
+                        f64::from(rng.uniform(-1.0, 1.0)),
+                        f64::from(rng.uniform(-1.0, 1.0)),
+                    ];
+                    h += 1;
+                }
+            }
+            let theta = f64::from(rng.uniform(-3.2, 3.2));
+            let (s, c) = theta.sin_cos();
+            let scale = 2f64.powi(rng.uniform(-20.0, 20.0) as i32);
+            Ic {
+                m: m.map(|x| x as f32),
+                r: r.map(|v| {
+                    [
+                        ((c * v[0] - s * v[1]) * scale) as f32,
+                        ((s * v[0] + c * v[1]) * scale) as f32,
+                    ]
+                }),
+                p: [0; 3].map(|_| [rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5)]),
+            }
+        })
+        .collect()
+}
+
+fn widen(ic: &Ic<f32>) -> Ic<f64> {
+    Ic {
+        m: ic.m.map(f64::from),
+        r: ic.r.map(|v| v.map(f64::from)),
+        p: ic.p.map(|v| v.map(f64::from)),
+    }
+}
+
+/// `v` turned by `a` radians.
+fn turn(v: [f64; 2], a: f64) -> [f64; 2] {
+    let (s, c) = a.sin_cos();
+    [c * v[0] - s * v[1], s * v[0] + c * v[1]]
+}
+
+/// `C` on the GPU against `C` at f64 on the same inputs, widened: the notices bitwise equal; each of `m`, `r` and `p`
+/// within REQ-DEC-043's factor (`decode_f32_eps::error`, the decode's own measure); the GPU's `ρ̃ = r̃₁ − r̃₀` on `+x`,
+/// its `x` positive and its `y` within the factor (against f64's 0). `skew` is a control's defect: the f64 reference
+/// turned a further `skew` radians, a step 2 whose angle is off.
+fn check_canon_turn(skew: f64) {
+    let h = GpuHarness::new().expect("a GPU device");
+    let f = factor();
+    let states = far_light(4096);
+    let g: Vec<Canonical<f32>> =
+        canonicalise_gpu(h.device(), h.queue(), &wgsl(), &states, FastMath::default())
+            .expect("the canonicalise dispatch");
+    assert_eq!(g.len(), states.len());
+    let (mut worst, mut cpu32, mut far): (f64, f64, f64) = (0.0, 0.0, 0.0);
+    for (j, (x, gj)) in states.iter().zip(&g).enumerate() {
+        let c = canonicalise(&widen(x));
+        assert_eq!(
+            (gj.mirrored, gj.clamped),
+            (c.mirrored, c.clamped),
+            "state {j}: the GPU's (mirrored, clamped) differ from f64's"
+        );
+        let r64 = c.ic.r.map(|v| turn(v, skew));
+        let p64 = c.ic.p.map(|v| turn(v, skew));
+        let g64 = widen(&gj.ic);
+        let pairs = c.ic.m.iter().zip(&g64.m).map(|(a, b)| ("m", *a, *b)).chain(
+            r64.iter()
+                .flatten()
+                .zip(g64.r.iter().flatten())
+                .map(|(a, b)| ("r", *a, *b)),
+        );
+        let pairs = pairs.chain(
+            p64.iter()
+                .flatten()
+                .zip(g64.p.iter().flatten())
+                .map(|(a, b)| ("p", *a, *b)),
+        );
+        // CPU-f32 on the same inputs, reported beside the GPU: what f32 alone costs against f64.
+        let w32 = widen(&canonicalise(x).ic);
+        for (a, b) in
+            c.ic.r
+                .iter()
+                .flatten()
+                .chain(c.ic.p.iter().flatten())
+                .zip(w32.r.iter().flatten().chain(w32.p.iter().flatten()))
+        {
+            cpu32 = cpu32.max(error(*b, *a));
+        }
+        for (what, a, b) in pairs {
+            let e = error(b, a);
+            worst = worst.max(e);
+            assert!(
+                e <= f,
+                "state {j}: the GPU's canonical {what} {b:e} is {e:.2} eps from f64's {a:e}, over REQ-DEC-043's {f}"
+            );
+        }
+        let rho = [g64.r[1][0] - g64.r[0][0], g64.r[1][1] - g64.r[0][1]];
+        assert!(
+            rho[0] > 0.0,
+            "state {j}: the GPU's ρ̃ = {rho:?} is not on +x"
+        );
+        let ey = error(rho[1], 0.0);
+        assert!(
+            ey <= f,
+            "state {j}: the GPU's ρ̃_y is {ey:.2} eps off +x, over REQ-DEC-043's {f}"
+        );
+        far = far.max(g64.r.iter().map(|v| v[0].hypot(v[1])).fold(0.0, f64::max));
+    }
+    // The domain reached: a light body far out at I = 1, where a turn's error in angle is multiplied most.
+    assert!(far > 10.0, "no canonical body beyond ‖r‖ = {far}");
+    eprintln!(
+        "qa_m224_gpu_canon_turn: {} states, worst {worst:.2} eps against f64 (CPU-f32 {cpu32:.2}; REQ-DEC-043's \
+         {f}), farthest body at ‖r‖ = {far:.1}, on {}",
+        states.len(),
+        h.adapter_info().name
+    );
+}
+
+#[test]
+fn qa_m224_gpu_canon_turn() {
+    check_canon_turn(0.0);
+}
+
+negative_control!(
+    qa_m224_gpu_canon_turn,
+    "an f64 reference turned 10⁻⁶ rad further, a step-2 angle off by the order of lavapipe's trig, must fail REQ-DEC-043's factor",
+    expected = "over REQ-DEC-043's",
+    check_canon_turn(1e-6)
 );
