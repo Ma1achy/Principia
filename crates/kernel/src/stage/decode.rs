@@ -391,7 +391,7 @@ fn map_word(map: ShapeMap) -> f32 {
 }
 
 /// The shape sphere's uniform: rows 0–2 `(n₀, s)`, `(e₁, I)` and `(e₂, φ_f)`, row 3 `z₀`'s momentum block, row 4
-/// `(z_μ1, z_μ2, map, 0)`, the map's word 0 spherical and any other exponential ([`map_word`]), row 5 zero. The map is a
+/// `(z_μ1, z_μ2, map, 0)`, the map's word 0 spherical and any other exponential (`map_word`), row 5 zero. The map is a
 /// chart parameter (chart_reference §3.3, "state which is used"), so a uniform, as `DECODE_MODE` is, its branch uniform
 /// over the dispatch and taken before the decode (applied per R-369, TASK-M2-24).
 impl UniformChart for ShapeSphere<f32> {
