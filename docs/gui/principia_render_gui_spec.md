@@ -67,7 +67,9 @@ data. The two words name one object. The **figure** is the rendered slice.
   figure is identical over the shown rect for a stain that reads no screen-lane field (R-407, A4;
   `principia_coordinate_conventions_note.md`). *Was (R-406, R-407):* "a pixel whose `Φ` fails or whose state fails
   validation is hatched as forbidden"; "the full window with the layer hidden"; "the figure is identical over the shown
-  rect"; one mode.
+  rect"; one mode. **Past the square with the controls shown (R-537):** the extension is a property of the chart, not
+  of F3: pan and zoom reach it with the layer shown, Extend only adding window area, and wherever the view lands it
+  renders with no gaps (§G2, "Past the square with the controls shown").
 - **Presentation views draw no hatch (R-467).** The outcome view, the Chazy stains, every other stain that is not a
   debug view, the figure filling the window with F3 and present mode are presentation views. In them a pixel that is
   not part of the chart (past `[0,1]²` a state that fails validity or an axis beyond its bounded edge; inside the
@@ -95,7 +97,11 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
   label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
-  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
+  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7). **R-539:** the rule is about
+  the generic GUI panels and chrome (windows, panels, toasts, notifications and the GUI's own labels); figure-level
+  marks may cover the figure: the trace and its icons, contour lines and the line system's other lines, icons for
+  points of interest, the icons pinned to the view's edge (R-538) and the red ✕ pick marker (R-537), as the hover
+  label and the lock reticle are the figure's own marks.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
@@ -147,8 +153,10 @@ pinned and kept traces, the axes (frame, ticks, labels, titles), grids and style
 sets, traces and axes with their visibility, opens the contour-set editor and the style library, and holds the presets,
 among them **Grid** (contours of the chart's own axes), **t_end** (`t_end` at the playhead) and **Class edges**
 (contours of the stain's categorical field, the edges between pixels of different class, R-509), which were Overlays
-toggles. Lines belong to the figure: they stay with F3 and present mode and are in exports; under F3's Extend they
-continue wherever the field exists and never pass through a pixel that is not a system. Editing a line is one undoable
+toggles. Lines belong to the figure: they stay with F3 and present mode and are in exports; wherever the view
+reaches past the square, the controls shown or hidden (R-537), they continue wherever the field exists and never pass
+through a pixel that is not a system. *Was:* "under F3's Extend they continue wherever the field exists".
+Editing a line is one undoable
 `SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are ruled (R-509,
 ruling RQ-377): a contour expression is typed in the stain's expression syntax; the playhead reads any payload field
 the generation root's ledger declares; a trace fades off the plane by the proxy where the chart defines one, and
@@ -159,6 +167,28 @@ and opens as it does; the contour-set editor and the style library are windows (
 Tab (R-476, M13). `Alt+L` is a global key (§G3). On the mock (R-390), which has no line system, Lines ▾ is shown
 dimmed, its count 0, its tooltip saying the line system draws on the real engine, and `Alt+L` does nothing (R-476,
 M6).
+
+**Trace settings (R-538).** Each trace's entry in Lines ▾ holds its settings, in this order, with their defaults
+(`principia_lines.md` §8): **Icon set** (Principia; Arrows, Pictures, Orbits; "Compare icon sets" draws the table),
+icon size (1.4×), syzygy markers (off) and their style (from the icon set: o–o–o in Principia; Three in a row, Line
+and bead, Numeral tag, Crossing tick, Eclipse), fade stutters (on), leaving / re-entering the chart's reach (on), end
+event icon (on), "Off-screen icons: pin to the edge (faint). Untick to hide them." (on), leaving / entering the window
+(edge chevrons, off), seams (θ wrap, off), join jumps with a dotted line (off), length (to the head, everything from
+`t = 0`, while played or scrubbed; to its end otherwise, R-538 TF3), tail only (off; tail Δt 3 when on), show the rest faintly (off), head marker labelled with its time (on), time
+ticks (every 2, labelled), direction arrows (filled triangle, 8 px, every Δt 1.0), width (2.2 px) and colour (the hover
+and pinned trace fixed `#FFF27A`; kept traces the trace palette in turn, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
+#9EF0D2`; or **Ramp along time**, R-538 TF4: the ramp's preset, Sunset by default, Viridis, Magma, Ice, Ember, Aurora,
+Mono or Custom… with three colour stops, a Reverse toggle and a preview bar). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
+the keyboard tree as Lines ▾'s others are (R-476 M13). The icons are figure marks (R-539). A click on a pixel
+that is not a system starts no trace and draws the red ✕; hover there shows the readout and no trace, and draws no ✕
+(R-537 EX5, R-538 TM8). A trace of the default length (to the head) not being played or scrubbed is drawn whole, to
+its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
+TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), applied meanwhile). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5). *Was:* "length (to the head,
+everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
+turn, …)", with no ramp control. *Was:* "A click or hover on a pixel that is not a system starts no trace and
+draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole," (gui review 5594407176 of PR #263, G1
+and G2: only a click draws the ✕; RQ-427 (a); applied per R-369).
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.
@@ -255,6 +285,27 @@ move `z₀`, so the checks that a reset leaves the other two sections untouched 
 `validate`'s layers 2 and 3 stops at the last valid value: a dragged slider's handle stops there and goes no further,
 the drag staying live up to it, the compass shows the clamped plane, and the compass's readout adds "stopped at the
 edge: <check> (validate layer <n>)" until the next edit. Undo and the contract hold the clamped value.
+
+**Past the square with the controls shown (R-537).** The view is a window onto the chart's extended parameter plane:
+with the controls shown or hidden, pan moves the window and zoom scales it past `[0,1]²` in any direction, and F3's
+Extend only adds window area; Fit scales the view's own square, wherever it sits (R-468 E2; RQ-416). What is drawn past
+the square is the axes' types (`principia_chart_decoder_contract.md` Part 3): an affine chart continues, a periodic axis
+repeats, a pole-crossing one continues over the pole with θ shifted by half its period, the hemisphere's fold shows the
+mirror hemisphere, and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
+Overlays › Chart › forbidden region. The only navigation limit is the stop above, judged on the centre after the types
+fold it: a pan across a seam or a pole never stops. **Never any gaps:** every visible point is drawn at whatever
+resolution is available, a quad not yet computed showing its nearest computed ancestor; the only blank pixels are not
+systems. **Every interaction works at every visible pixel:** hover, click and pin (R-453), lock, the inspector, the
+trace, keep and the readouts. A pixel in a repeat resolves to its canonical chart point, the same system: the readout
+shows the canonical coordinates and labels the pixel a repeat, and the trajectory, outcome and inspector are the
+canonical system's. A click on a pixel that is not a system integrates nothing and draws a red ✕ where it was clicked, a
+transient pick marker and a figure mark (R-539), kept until the next click, edit or the pointer leaving the figure; it
+pins nothing and leaves a pin as it is, and a lock there is refused (R-469). Its readout says "not a system" and names
+the check that failed (e.g. "a mass ≤ 0"); the label `decode_failed` and its detail show there only while a debug view
+is the figure (RQ-417; R-470). Hover over such a pixel shows the same readout and no trace. Traces repeat in every image
+in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view state records the centre as it is, on a
+periodic axis unwrapped (RQ-406), so an export, its JSON and its embedded payload reproduce the same window, repeats
+included.
 
 **Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,
 its Screen preset the dev default; this line is its Ends only preset, offered.)* A **Home** button, a house icon 24 × 24
@@ -984,7 +1035,9 @@ corpus, the spec follows the authority:
 2. Explore and Stain are the two modes; everything else is a window or a tool.
 3. "Manifold view" is one group: chart, navigation, centre, slice and tilt, rotation.
 4. Run settings live in a window, not on the page.
-5. The figure is never covered; warnings go to the footer console.
+5. The figure is never covered by panels or chrome; warnings go to the footer console. Figure marks (the trace and its
+   icons, contour lines, icons for points of interest) may cover it (R-539). *Was:* "5. The figure is never covered;
+   warnings go to the footer console."
 6. Every slice preview keeps the viewport's aspect.
 7. The compass switches mode by itself, and by its Tilt and Slice buttons, with no orbit (R-409); lock re-bases the
    sliders and pins the compass.
