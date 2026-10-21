@@ -202,14 +202,15 @@ pub fn rotation_angle<R: LinkReal>(rho: [R; 2]) -> R {
 /// light body is far out at `I = 1` (`‖r₁‖ ≈ 27` at `m₁ ≈ 1.2·10⁻³`), and through the sines CI's lavapipe put that
 /// body's `r_y` 273.88 eps from the f64 decode where the native f32 decode is 1.12 (PR #262). `ρ̂`'s direction is
 /// rounded only by the two products `ρ_x·k` and `ρ_y·k`, half an ulp each, the error of `k = 1/√(ρ_x² + ρ_y²)`
-/// scaling both alike. `ρ` is first scaled by a power of two, in two exact steps that keep each factor normal, its
-/// larger component into `[1, 2)` (from a subnormal, at least `2⁻²³` at f32), so `ρ_x² + ρ_y²` neither overflows nor
-/// underflows for a finite `ρ`, and is 0 only at `ρ = 0` (or where a GPU flushes a subnormal `ρ` to 0, RQ-298).
+/// scaling both alike. `ρ` is first scaled by `2^−e`, `e` its larger component's exponent, in two exact steps that keep
+/// each factor normal (`2^−⌊e/2⌋`, then `2^(⌊e/2⌋−e)`), taking that component into `[1, 2)` (from a subnormal, at
+/// least `2⁻²²` at f32), so `ρ_x² + ρ_y²` neither overflows nor underflows for a finite `ρ`, and is 0 only at `ρ = 0`
+/// (or where a GPU flushes a subnormal `ρ` to 0, RQ-298).
 #[inline]
 pub fn rotation<R: LinkReal + IeeeBits>(rho: [R; 2]) -> (R, R) {
     let (ex, ey) = (rho[0].exponent(), rho[1].exponent());
     let e = select(ex > ey, ex, ey);
-    let h = e / 2;
+    let h = e >> 1;
     let (a, b) = (R::pow2(-h), R::pow2(h - e));
     let (x, y) = (rho[0] * a * b, rho[1] * a * b);
     let n2 = Float::mul_add(x, x, y * y);

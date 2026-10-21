@@ -230,3 +230,7 @@ justification = "the fold ORs in 1 << k once for each distinct index k from enum
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass/views.rs:199:19: replace / with * in gauge"
 justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x * 1.0 are both x for every f64"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:212:23: replace > with >= in rotation"
+justification = "at ex == ey both arms of the select are the same exponent, so > and >= pick the same e"
