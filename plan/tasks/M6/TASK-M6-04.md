@@ -44,3 +44,4 @@ The `Floor` decision exists: `alpha_area = log2(unresolved_area(coarse) / unreso
 ## Notes
 - Calibration proposed: REQ-REF-043 (the ~11° angle). REQ-REF-025's test uses the calibrated value (tolerance: REQ-REF-043 (calibrated)).
 - PIT-9: the empty/full test must be able to fail — assert different results, not `!= 0`.
+- **R-537 EX7(d) (20 Oct 2026):** across seams, poles and folds the eight neighbours are read through the type group's map, and a footprint on the root's edge has as many as an interior one; TASK-M8-56 builds that (REQ-REF-054). This task's arm is unchanged.

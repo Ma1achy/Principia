@@ -60,7 +60,11 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
 
 > **Never dispatch a refinement job while the current view's baseline cover is missing.** Baseline dispatch is a hard tier above the priority queue, not a large weight inside it.
 
-- **The baseline cover** = the coarsest quad(s) spanning the viewport at useful resolution near the camera depth. At deep zoom this is *not* the depth-0 domain root (uselessly coarse) — it's the viewport-covering quads a few levels above camera depth. Something low-resolution appears in one or two dispatches; refinement then proceeds beneath it.
+- **The baseline cover** = the coarsest quad(s) spanning the viewport at useful resolution near the camera depth. At deep zoom this is *not* the depth-0 domain root (uselessly coarse) — it's the viewport-covering quads a few levels above camera depth. Something low-resolution appears in one or two dispatches; refinement then proceeds beneath it. **Past the chart's
+  `[0,1]²` (R-537, EX4)** it is the coarsest cover of the whole viewport, extension included: every cell the view
+  touches has a root of the root lattice (EX7), so every visible point has an ancestor, and the cover's ancestor chain is
+  evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
+  pixels are those that are not a system.
 - **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned. Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
 
 ---
