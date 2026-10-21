@@ -33,8 +33,8 @@ The quadtree covers the extended parameter plane and computes one system once (R
 ## Notes
 - **⚑ Physics review is required** (R-537 U2): the maps against R-14 and R-412 (U10), the neighbours across poles and folds, and the statistics; it does not merge on the code reviewer's word alone. **Perf** reviews the frame quota and the union-of-images scheduling.
 - **2:1 balance** is the refinement policy's `BalanceForced`, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's (TASK-M6-04) (R-537 U11).
-- **RQ-410 (a)** applied meanwhile: a level-0 repeat across a pole is drawn from its two level-1 halves.
-- **R-538's follow-up (TF2.2, J8; RQ-430 (a) applied meanwhile):** along an axis that mixes a periodic parameter with a non-periodic coordinate (a tilt) the chart is affine: the canonical address folds an axis only where every term with non-zero weight has that period (REQ-CHART-080). Physics reviews it with the maps.
+- **RQ-410 (a)**, ruled by R-552 (21 Oct 2026), as applied meanwhile: a level-0 repeat across a pole is drawn from its two level-1 halves; the bootstrap is not raised.
+- **R-538's follow-up (TF2.2, J8; RQ-430 (a), ruled by R-552):** along an axis that mixes a periodic parameter with a non-periodic coordinate (a tilt) the chart is affine: the canonical address folds an axis only where every term with non-zero weight has that period (REQ-CHART-080). Physics reviews it with the maps.
 - **The maps by hemispheres drawn (R-537 U10):** with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at `t = 1` and `t = 0`; with one hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and the fold at `t = 0`, past `t = −1` the fold then the `t = 1` pole map (REQ-SCHED-101).
 - **RQ-472 waits:** on a tilted view the pole maps and the equator fold are not built until RQ-472 is ruled (REQ-SCHED-101, `rq: RQ-472`; REQ-REF-054's neighbours and REQ-CHART-079's statistics through them); the rest does not wait.
 - **TASK-M2-36** builds the tilt (R-473) that REQ-CHART-080's test decodes, hence the dependency.

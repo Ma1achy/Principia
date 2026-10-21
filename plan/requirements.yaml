@@ -3131,7 +3131,7 @@
   note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone. On a tilted view the canonical address over a pole or the equator fold waits on RQ-472 (REQ-SCHED-101's maps); RQ-430 (a) for θ's period (REQ-CHART-080). Physics review 5594430380 of PR #263, P2, applied per R-369."
 - id: REQ-CHART-080
   area: CHART
-  statement: "Along an axis that mixes a periodic chart parameter with a non-periodic coordinate (a tilt, R-473), the chart must be affine (R-538 TF2.2; RQ-430 (a)): no image is drawn there and R-537 EX7(b)'s canonical address must not fold it, folding applying along an axis only where every term with non-zero weight has that period; the untilted shape sphere's maps stand."
+  statement: "Along an axis that mixes a periodic chart parameter with a non-periodic coordinate (a tilt, R-473), the chart must be affine (R-538 TF2.2; R-552, RQ-430 (a)): no image is drawn there and R-537 EX7(b)'s canonical address must not fold it, folding applying along an axis only where every term with non-zero weight has that period; the untilted shape sphere's maps stand (θ's period and the pole maps; its equator fold is the human's shape sphere ruling of 21 Oct's, not this requirement's, R-552 E3)."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -3139,6 +3139,8 @@
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Past the unit square — each axis's extension type (R-407)
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel tilted_periodic_not_folded (R-538 T17): on the shape sphere tilted 30° toward z_q3 the systems decoded at s and s + 2π/cos τ differ and their quads have different canonical addresses, while on the untilted sphere the θ period still folds (R-537 EX7(b)); control: drawing the tilted chart with periodic repeats (folding s by 2π/cos τ) fails; review (physics)"
@@ -3147,8 +3149,9 @@
   - R-473
   - R-537
   - R-538
+  - R-552
   milestone: M8
-  note: "R-538 TF2.2 (J8). Closed by TASK-M8-56. RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-538 TF2.2 (J8); R-552 (RQ-430 (a) ruled, as applied meanwhile). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"RQ-430 (a) applied meanwhile.\""
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -9945,10 +9948,11 @@
   - R-408
   - R-412
   - R-537
+  - R-552
   milestone: M8
   rq:
   - RQ-472
-  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) applied meanwhile. Physics review 5594430380 (P2, P3) and code review 5594440613 (F3, F4) of PR #263, applied per R-369: the maps split by hemispheres drawn (U10), the tilted case waiting on RQ-472 (`rq`), and the test in crates/engine, where the quad scheduler lives. *Was:* \"(on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root)\" and \"cargo test -p kernel quad_canonical (R-537 T2):\"."
+  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) and RQ-430 (a) ruled by R-552 (21 Oct 2026), as applied meanwhile: the level-0 pole repeat from its level-1 halves, the bootstrap not raised; a tilted θ axis affine. *Was:* \"RQ-410 (a) applied meanwhile.\" Physics review 5594430380 (P2, P3) and code review 5594440613 (F3, F4) of PR #263, applied per R-369: the maps split by hemispheres drawn (U10), the tilted case waiting on RQ-472 (`rq`), and the test in crates/engine, where the quad scheduler lives. *Was:* \"(on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root)\" and \"cargo test -p kernel quad_canonical (R-537 T2):\"."
 - id: REQ-SCHED-102
   area: SCHED
   statement: "The scheduler's decisions must be identical with a Chart position stain and with the default stain: the state map is never a criterion input."
@@ -19953,7 +19957,7 @@
   note: "R-509 Y3; R-550 J7. Waits for RQ-522 (the metric on z; RQ-341 was ruled by R-550 without one); closed by TASK-M8-54, a leaf task. Meanwhile no fade there (REQ-GUI-249). Physics review is required (⚑); it does not merge on the code reviewer's word alone. gui review 5587650119 of PR #255, G13 (applied per R-369): it supersedes REQ-GUI-249's no-fade arm and settings line where it applies; TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit. *Was:* \"in the metric RQ-341 rules\" and \"Waits for RQ-341\"."
 - id: REQ-GUI-267
   area: GUI
-  statement: "On the real engine, with the controls shown or hidden, pan must move the view's window and zoom scale it past the chart's [0,1]² in any direction (R-537 EX1): F3's Extend only adding window area at the same scale (R-406), Fit scaling the view's own square wherever it sits (R-468 E2; RQ-416), and nothing about what a pixel means changing with F3; the only navigation limit must be R-469's stop on the centre (EX3), validate evaluated on the centre after the axes' types have folded it, so that a pan across a periodic seam or over a pole never stops, an affine latent axis never stops, and on a chart whose square is its whole domain the centre stops at the last valid value while the window shows blank past it."
+  statement: "On the real engine, with the controls shown or hidden, pan must move the view's window and zoom scale it past the chart's [0,1]² in any direction (R-537 EX1): F3's Extend only adding window area at the same scale (R-406), Fit scaling the view's own square wherever it sits (R-468 E2; R-552, RQ-416 (a): R-472 X2's \"with no extension\" meaning no window area beyond that square), and nothing about what a pixel means changing with F3; periodic charts must have no zoom-out limit beyond the frame budget and the baseline cover (R-552, RQ-409 (a)); the only navigation limit must be R-469's stop on the centre (EX3), validate evaluated on the centre after the axes' types have folded it, so that a pan across a periodic seam or over a pole never stops, an affine latent axis never stops, and on a chart whose square is its whole domain the centre stops at the last valid value while the window shows blank past it."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
@@ -19961,6 +19965,8 @@
     section: The operation table
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
   verify:
     method: unit test
     detail: "cargo test -p gui extension_navigation (R-537 T1, T12): with the controls shown, a scripted drag pans the shape sphere's view across θ = 2π and over a pole and never stops, the view continuous (each frame's centre within one drag step of the last, the field drawn across the seam); on the mass simplex a drag of the centre past its corner stops at the last valid value, the view showing blank beyond, and undo holds the clamped value; F3 Extend and back leaves the view bit for bit; controls: a scoping of the extension to F3, or a clamp of the centre to [0,1]², stops the drag at the seam and fails T1; a stop judged on the unfolded centre stops at the pole and fails; no clamp lets the simplex's centre into not-a-system and fails T12"
@@ -19968,11 +19974,12 @@
   - R-468
   - R-469
   - R-537
+  - R-552
   milestone: M8
-  note: "R-537 EX1, EX3 (U3, U4). Closed by TASK-M8-55. Fit's square is RQ-416's (a), R-468 E2's reading, applied meanwhile; a ruling for (b) or (c) changes this requirement and REQ-GUI-230. RQ-409 (a): no zoom-out limit beyond the frame budget and the baseline cover."
+  note: "R-537 EX1, EX3 (U3, U4); R-552. Closed by TASK-M8-55. Fit's square is RQ-416's (a), R-468 E2's reading, ruled by R-552 as applied meanwhile. RQ-409 (a), ruled by R-552: no zoom-out limit beyond the frame budget and the baseline cover. *Was:* \"Fit's square is RQ-416's (a), R-468 E2's reading, applied meanwhile; a ruling for (b) or (c) changes this requirement and REQ-GUI-230.\""
 - id: REQ-GUI-268
   area: GUI
-  statement: "Wherever the view reaches past the chart's [0,1]², with the controls shown or hidden, the figure must draw the axes' types (R-537 EX2): an affine chart's plane continuing, a periodic axis repeating, a pole-crossing axis continuing over the pole with its partner shifted by half its period, the hemisphere's fold showing the mirror hemisphere, the field's repeats at full strength (RQ-407 (a)), and past a bounded edge or a validity failure a pixel that is not a system blank (R-470), the hatch only through Overlays › Chart › forbidden region; and it must never have gaps (EX4): every visible point drawn at whatever resolution is available, a quad not yet computed showing its nearest computed ancestor, the only blank pixels those that are not a system, never raw canvas background where a system exists, from the first baseline cover on (RQ-419 (a))."
+  statement: "Wherever the view reaches past the chart's [0,1]², with the controls shown or hidden, the figure must draw the axes' types (R-537 EX2): an affine chart's plane continuing, a periodic axis repeating, a pole-crossing axis continuing over the pole with its partner shifted by half its period, the hemisphere's fold showing the mirror hemisphere, the field's repeats at full strength (R-552, RQ-407 (a)), and past a bounded edge or a validity failure a pixel that is not a system blank (R-470), the hatch only through Overlays › Chart › forbidden region; and it must never have gaps (EX4): every visible point drawn at whatever resolution is available, a quad not yet computed showing its nearest computed ancestor, the only blank pixels those that are not a system, never raw canvas background where a system exists, from the first baseline cover on, the canvas background drawn until it lands at launch, on a chart switch with no backdrop or on a cold cache with no snapshot (R-552, RQ-419 (a))."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
@@ -19982,6 +19989,8 @@
     section: "Part 4 — Baseline-first: an absolute tier, not a priority weight"
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
   verify:
     method: unit test
     detail: "cargo test -p gui extension_no_gaps (R-537 T3, T4): on the real engine, after the first baseline cover lands, render the shape sphere at a zoom with six or more images in view and the latent chart panned 10 units off the root, and count canvas-background pixels where a system exists: 0; on the mass simplex past its edge the integration count over the blank area is 0, and Overlays › Chart › forbidden region hatches exactly those pixels and no other; controls: a missing root cell or an unmapped repeat leaves background and fails T3; integrating then discarding the blank pixels counts > 0 and fails T4"
@@ -19989,11 +19998,12 @@
   - R-407
   - R-470
   - R-537
+  - R-552
   milestone: M8
-  note: "R-537 EX2, EX4 (U5, U6). Closed by TASK-M8-55, after TASK-M8-56's root lattice and canonical addresses. RQ-419 (a) applied meanwhile: the frames before the first baseline cover are excepted."
+  note: "R-537 EX2, EX4 (U5, U6); R-552. Closed by TASK-M8-55, after TASK-M8-56's root lattice and canonical addresses. RQ-419 (a), ruled by R-552 as applied meanwhile: the frames before the first baseline cover are excepted. *Was:* \"RQ-419 (a) applied meanwhile\"."
 - id: REQ-GUI-269
   area: GUI
-  statement: "Every interaction must work at every visible pixel past the chart's [0,1]² as inside it (R-537 EX5): hover, click and pin (R-453), lock, the IC inspector, the trace, keep and the readouts; a pixel in a repeat (periodic, pole, fold) must resolve to its canonical chart point inside the primary ranges, its readout showing the canonical coordinates and labelling the pixel a repeat, its trajectory, outcome and inspector the canonical system's; a pixel on an affine extension must be that point of the plane; a click on a pixel that is not a system must integrate nothing (no computeIC) and draw a red ✕ where it was clicked, a transient figure mark kept until the next click, edit or the pointer leaving the figure, pinning nothing and leaving a pin as it is, a lock there refused; its readout and its hover's must say \"not a system\" and name the check that failed, with no trace, the label decode_failed and its detail shown only while a debug view is the figure (RQ-417 (b))."
+  statement: "Every interaction must work at every visible pixel past the chart's [0,1]² as inside it (R-537 EX5): hover, click and pin (R-453), lock, the IC inspector, the trace, keep and the readouts, and comments on the figure and the console's pick once the human has defined them, which the corpus does not yet specify (R-552, RQ-420 (b)), a comment pinned in a repeat then attaching to the canonical point and appearing in every image (RQ-411 (a)); a pixel in a repeat (periodic, pole, fold) must resolve to its canonical chart point inside the primary ranges, its readout showing the canonical coordinates and labelling the pixel a repeat, its trajectory, outcome and inspector the canonical system's; a pixel on an affine extension must be that point of the plane; a click on a pixel that is not a system must integrate nothing (no computeIC) and draw a red ✕ where it was clicked, a transient figure mark kept until the next click, edit or the pointer leaving the figure, pinning nothing and leaving a pin as it is, a lock there refused; its readout and its hover's must say \"not a system\" and name the check that failed, with no trace, the label decode_failed and its detail shown only while a debug view is the figure (RQ-417 (b))."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
@@ -20001,6 +20011,8 @@
     section: Past the unit square — each axis's extension type (R-407)
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
   verify:
     method: GUI screenshot
     detail: "cargo test -p gui extension_pick (R-537 T5, T6) and cargo xtask screenshot 01_main (real engine, extension_pick_x; presence only, no artboard, R-129): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; hover over a blank pixel draws no ✕ and starts no computeIC, its readout naming the failed check; the screenshot shows the ✕ at the click with the not-a-system readout; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6; a ✕ drawn on hover fails"
@@ -20009,24 +20021,28 @@
   - R-469
   - R-470
   - R-537
+  - R-552
   milestone: M8
-  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it). Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6\". The method is now GUI screenshot, for the presence screenshot."
+  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; R-552 rules RQ-420 (b) and RQ-411 (a): the human will define comments on the figure and the console's pick, and EX5 applies to each once defined, a comment in a repeat attaching to the canonical point; nothing is built for them and the verify has no arm for them until then. *Was:* \"RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it).\" Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369. *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6\". The method is now GUI screenshot, for the presence screenshot."
 - id: REQ-GUI-270
   area: GUI
-  statement: "The view state must record the centre and zoom as they are, on a periodic axis the unwrapped centre (R-537 EX9; RQ-406 (a)), keys and quad addresses taking the canonical value, so that an image export, its JSON state and its embedded payload, reopened, reproduce the same window, repeats included."
+  statement: "The view state must record the centre and zoom as they are, on a periodic axis the unwrapped centre (R-537 EX9; R-552, RQ-406 (a)), keys and quad addresses taking the canonical value, so that an image export, its JSON state and its embedded payload, reopened, reproduce the same window, repeats included."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
   verify:
     method: unit test
     detail: "cargo test -p gui extension_round_trip (R-537 EX9, U13): pan the shape sphere's view 1.5 periods along θ and 0.3 past a pole, export the image, the JSON and the embedded payload, and reopen each: the view state is bitwise the exported one and the window's capture pixel-identical, its repeats in place; the sim key and the quad addresses read the canonical centre; control: a centre canonicalised on export reopens one period off and fails the capture"
   rulings:
   - R-472
   - R-537
+  - R-552
   milestone: M8
-  note: "R-537 EX9 (U13, U15). Closed by TASK-M8-55. The round-trip rule (RT1) and the steganographic tier 1 are ruled on unmerged branches; when they merge they apply here as to every export."
+  note: "R-537 EX9 (U13, U15). Closed by TASK-M8-55. The round-trip rule (RT1) and the steganographic tier 1 are ruled on unmerged branches; when they merge they apply here as to every export. R-552 rules RQ-406 (a), as applied: the centre unwrapped in the view state, keys and addresses canonical."
 - id: REQ-GUI-271
   area: GUI
   statement: "A new trace must take principia_lines.md §8's defaults (R-538 TM2): icon set Principia, icon size 1.4×, syzygy markers off (style from the icon set), stutters faded, leaving and re-entering the reach on, the end event icon on, off-screen icons pinned faint to the edge on, window chevrons, seams and joined jumps off, length to the head with everything from t = 0 (to its end while the playhead is neither played nor scrubbed, TF3), the tail off (Tail only, Δt 3 when on), the rest not shown faintly, the head marker labelled with its time on, time ticks every 2 labelled, direction arrows filled triangles of 8 px every Δt 1.0, width 2.2 px, the hover and pinned trace #FFF27A and kept traces the trace palette in turn (#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2); each setting must be a field of the trace's Lines state, in that order, its control in Trace… (REQ-GUI-328), one undoable SetField that re-integrates nothing."
@@ -20940,6 +20956,24 @@
   - R-550
   milestone: M6
   note: "R-550 J4 (flagged): the ruling's words give angles, masses and momenta their ranges; the Shape view's rates and L_z are a missing definition. Closed by TASK-M6-35."
+- id: REQ-GUI-344
+  area: GUI
+  statement: "On the real engine, Overlays ▾'s Chart group must hold an \"outline the chart's primary square\" toggle (R-552, RQ-408 (a)): one toggle with one state in the view's overlay state, on by default (RQ-461's reconciliation, R-556), drawn whatever its state while a debug view is the figure (View › Debug view, R-467) and returning to its own state when the debug view is left, undoable as every Overlays ▾ toggle is and saved by \"save as default\"; when on it must draw the edge of [0,1]² of the chart's own parameters as a figure mark (R-539), wherever that edge is in view, the view panned or zoomed past the square included, and nothing where it is not."
+  source:
+  - file: decisions.md
+    section: "R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui extension_outline: at launch the toggle is on; panning the latent chart half a window past the square's right edge, the outline's pixels lie on the primary square's edge (u = 1 in the chart's parameters) to within one pixel, and none on the view's own square; toggled off nothing is drawn, and with View › Debug view on it is drawn; leaving the debug view restores off; one undo entry restores on; controls: an outline drawn on the view's square (which moves with the pan), a default of off, and a debug view that does not draw it, each fail"
+  rulings:
+  - R-537
+  - R-552
+  milestone: M8
+  note: "R-552 (RQ-408 (a); its default by RQ-461, R-556), E1, E2. Closed by TASK-M8-55. The Trace group's and Trace…'s routes to the same state are RQ-461's (R-556), built by TASK-M8-61 and TASK-M8-62."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
