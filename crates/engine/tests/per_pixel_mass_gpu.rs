@@ -71,6 +71,7 @@ fn clean<C: UniformChart>(chart: &C) -> DecodeUniforms {
     DecodeUniforms {
         chart: chart.uniform(),
         flags: [flags(DecodeMode::Full), 0, 0, 0].into(),
+        energy: Default::default(),
     }
 }
 

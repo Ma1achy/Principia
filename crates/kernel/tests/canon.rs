@@ -30,6 +30,9 @@
 //!   f64, where subnormals are kept (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
+//! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`
+//!   for every sign of the zeros (R-437), and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it
+//!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included, and nothing past the last state.
 //!
@@ -1453,5 +1456,120 @@ negative_control!(
             *v = v.map(|q| q / c.i_in.sqrt());
         }
         check_no_division_by_zero(&c, "an unguarded divisor");
+    }
+);
+
+// ── canon_rotation (REQ-DEC-002) ────────────────────────────────────────────────────────────────────────────────
+
+/// A step-2 turn: `ρ ↦ (cos φ, sin φ)`.
+type Turn<R> = fn([R; 2]) -> (R, R);
+
+/// `ρ` at `2^e` in the direction `θ`, each component rounded to `R` (a subnormal one included).
+fn turned<R: Precision>(theta: f64, e: i32) -> [R; 2] {
+    // In two factors, each normal, so `2^e` below f64's normal range is not formed by `powi`.
+    let (a, b) = (2f64.powi(e / 2), 2f64.powi(e - e / 2));
+    [
+        cast::<R>(theta.cos() * a * b),
+        cast::<R>(theta.sin() * a * b),
+    ]
+}
+
+/// The turn on `ρ` against `ρ/‖ρ‖`, from `ρ`'s own `R` values at f64 (at f64 itself, to its own rounding): `c` and `s` each within `tol` eps of it, and
+/// the turn's error in direction, `|c·ρ_y − s·ρ_x|/‖ρ‖`, the `y` that `R(−φ)` leaves on `ρ`, within `tol` eps. The
+/// worst of the two, in eps.
+fn check_turn<R: Precision>(turn: Turn<R>, rho: [R; 2], tol: f64) -> f64 {
+    let (x, y): (f64, f64) = (rho[0].into(), rho[1].into());
+    // Taken by a power of two, exactly, away from f64's overflow and underflow, so `ρ/‖ρ‖` is f64's to an ulp or so.
+    let big = x.abs().max(y.abs());
+    let k = if big > 1e300 {
+        2f64.powi(-600)
+    } else if big < 1e-300 {
+        2f64.powi(600)
+    } else {
+        1.0
+    };
+    let (x, y) = (x * k, y * k);
+    let n = f64::hypot(x, y);
+    let (c, s) = turn(rho);
+    let (c, s): (f64, f64) = (c.into(), s.into());
+    let dc = (c - x / n).abs().max((s - y / n).abs()) / eps::<R>();
+    let dy = c.mul_add(y / n, -(s * (x / n))).abs() / eps::<R>();
+    assert!(
+        dy <= tol,
+        "{}: at ρ = {rho:?}, the turn turns ρ {dy:.2} eps off +x, over {tol}",
+        R::NAME
+    );
+    assert!(
+        dc <= tol,
+        "{}: at ρ = {rho:?}, (c, s) = ({c:e}, {s:e}) is {dc:.2} eps from ρ/‖ρ‖, over {tol}",
+        R::NAME
+    );
+    dc.max(dy)
+}
+
+/// Step 2's turn ([`canon::rotation`]): at `ρ = 0`, `(1, +0)` exactly for every sign of the zeros (R-437); elsewhere
+/// `ρ/‖ρ‖` to `tol` eps, in value and in direction, on 64 directions at every power of two from the least subnormal to
+/// the greatest exponent, at the format's greatest value and with the components at opposite ends of the range. The
+/// worst, in eps.
+fn check_rotation<R: Precision>(turn: Turn<R>, lo: i32, hi: i32, tol: f64) -> f64 {
+    for rho in [[0.0, 0.0], [-0.0, 0.0], [0.0, -0.0], [-0.0, -0.0]].map(|v| v.map(cast::<R>)) {
+        let (c, s) = turn(rho);
+        let (c, s): (f64, f64) = (c.into(), s.into());
+        assert!(
+            c.to_bits() == 1f64.to_bits() && s.to_bits() == 0f64.to_bits(),
+            "{}: at ρ = {rho:?}, (c, s) = ({c:?}, {s:?}), not (1, +0)",
+            R::NAME
+        );
+    }
+    let mut rng = SplitMix::new(437);
+    let mut worst: f64 = 0.0;
+    for e in lo..=hi {
+        for j in 0..64 {
+            let theta: f64 = <f64 as From<f32>>::from(rng.uniform(-3.2, 3.2)) + 1e-3 * j as f64;
+            let rho = turned::<R>(theta, e);
+            if rho[0] != R::zero() || rho[1] != R::zero() {
+                worst = worst.max(check_turn(turn, rho, tol));
+            }
+        }
+    }
+    let tiny = cast::<R>(2f64.powi(lo + 100)) * cast::<R>(2f64.powi(-100));
+    assert!(tiny > R::zero(), "{}: 2^{lo} is 0", R::NAME);
+    // `2^hi·(2 − ε)`, the greatest finite value.
+    let max = cast::<R>(2f64.powi(hi)) * (cast::<R>(2.0) - cast::<R>(eps::<R>()));
+    for rho in [
+        [max, max],
+        [-max, max],
+        [max, tiny],
+        [tiny, -max],
+        [tiny, tiny],
+    ] {
+        worst = worst.max(check_turn(turn, rho, tol));
+    }
+    worst
+}
+
+#[test]
+fn canon_rotation() {
+    let w32 = check_rotation::<f32>(canon::rotation, -149, 127, 2.0);
+    let w64 = check_rotation::<f64>(canon::rotation, -1074, 1023, 2.0);
+    eprintln!("canon_rotation: worst {w32:.2} eps at f32, {w64:.2} at f64 (bound 2)");
+}
+
+negative_control!(
+    canon_rotation,
+    "a turn through sin and cos of an angle 10⁻⁶ rad off, the order of CI's lavapipe trig, must fail the direction",
+    expected = "the turn turns ρ",
+    {
+        check_rotation::<f32>(
+            |rho| {
+                // Off by 10⁻⁶ away from the pole, where R-437's φ = 0 is kept.
+                let phi = canon::rotation_angle(rho);
+                let phi = if phi == 0.0 { phi } else { phi + 1e-6 };
+                (phi.cos(), phi.sin())
+            },
+            -20,
+            20,
+            2.0,
+        );
     }
 );

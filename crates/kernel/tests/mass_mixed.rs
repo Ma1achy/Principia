@@ -1341,6 +1341,7 @@ where
     let uniforms = DecodeUniforms {
         chart: rows,
         flags: [flags(DecodeMode::Full), 0, 0, 0].into(),
+        energy: Default::default(),
     };
     let mut ic = vec![0; n * ic_words()];
     let mut tags = vec![u32::MAX; n];

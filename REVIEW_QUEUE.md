@@ -406,6 +406,13 @@ Nothing is chosen.*
   R-34's letter and from REQ-INT-064** ("explicit `fma` in a fixed written form"), and option (b) would undo it, so
   REQ-DEC-017's form is among what this entry holds. Nothing else changes: `M₀₁` and the other `fma`-built branch
   inputs stay as they are, pending a ruling.
+- **Applied meanwhile (TASK-M2-09, recorded by TASK-M2-24 per R-369 on physics F4 and qa Q3):** the
+  invariant-momentum construction's feasibility branch, `K* < L_z²/(2I)` (`INVARIANT_INFEASIBLE`), uses no `fma`
+  either. `kernel::decode::invariant::infeasible` decides `2·I·K* < L_z²` exactly: each operand's binade read from its
+  bits, its mantissa in `[1, 2)` split into limbs whose products are exact and normal, the columns summed in a fixed
+  order whose sign is exact (the module's note, "The feasibility branch"). TASK-M2-12's `L_max` steps reuse that sign.
+  **This departs from R-34's letter and from REQ-INT-064** as TASK-M2-07's mirror does, and option (b) would undo it,
+  so REQ-DEC-022's form is among what this entry holds. dd_decoder §2's branch-input table records it.
 - **Holds** (`rq: RQ-298`, applied per R-369 from physics review 5544295057; every branch input built with an explicit
   `fma`, or this PR's departure from that):
 
@@ -422,7 +429,7 @@ Nothing is chosen.*
   | REQ-INT-058 | the compile-discipline checklist's "explicit `fma`" |
   | REQ-DEC-017 | this PR's mirror decision, which departs from R-34's letter (above) |
   | REQ-DEC-002 | `crates/kernel/src/canon.rs`'s `fma` CoM and `I_in` feed `similarity`'s `I_in = 0` select (also held by RQ-296) |
-  | REQ-DEC-022 | TASK-M2-09's feasibility input (`fma` per R-34), not yet built |
+  | REQ-DEC-022 | TASK-M2-09's feasibility input, `kernel::decode::invariant::infeasible`, built exact with no `fma`, which departs from R-34's letter (above) |
 
   REQ-INT-089 is not held: it is same-backend, split dispatches.
 - **Waits:** the twelve requirements above. TASK-M2-07's PR does not wait.

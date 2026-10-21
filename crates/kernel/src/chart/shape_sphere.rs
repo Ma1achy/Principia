@@ -28,8 +28,8 @@
 //! chart's link selection; `z₀`'s configuration block is not held, the shape replacing it. `p_fixed` is a
 //! canonical-frame momentum, and `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge
 //! `C` then removes, decided as `C` decides it on that configuration ([`held_momentum`]): mirrored where `C` mirrors
-//! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)` ([`canon::rotation_angle`]) and scaled by
-//! `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
+//! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)`, its cosine and sine formed as `C` forms
+//! them ([`canon::rotation`]), and scaled by `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
 //! hemispheres' mirror points decode to one system (R-141). `I` and `φ_f` are gauge: they change `Φ`'s output, not
 //! `C`'s, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in `C`'s configuration. Their
 //! defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
@@ -210,9 +210,8 @@ pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
 ) -> Momentum<R> {
     let fixed = momentum::decode::<S, R>(z_mom, masses);
     let r = config.r;
-    let phi = canon::rotation_angle([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
+    let (c, s) = canon::rotation([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
     let flip = canon::mirror_decision(masses.m, r);
-    let (s, c) = (Float::sin(phi), Float::cos(phi));
     let k = R::one() / Float::sqrt(Float::sqrt(inertia));
     let gauge = |v: [R; 2]| {
         let y = select(flip, -v[1], v[1]);
@@ -236,9 +235,9 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
         match self.map {
             ShapeMap::Spherical => spherical(u, v, wide(P::PI())),
             ShapeMap::Exponential => exponential(
-                self.n0.map(wide),
-                self.e1.map(wide),
-                self.e2.map(wide),
+                widen3(self.n0),
+                widen3(self.e1),
+                widen3(self.e2),
                 wide(self.scale),
                 u,
                 v,
@@ -280,9 +279,9 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode::<S, R>(self.z_mass.map(wide));
+        let masses = mass::decode::<S, R>(widen2(self.z_mass));
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum::<S, R>(self.z_mom.map(wide), &masses, &config, inertia);
+        let momentum = held_momentum::<S, R>(widen4(self.z_mom), &masses, &config, inertia);
         let ic = canon::canonicalise(&Ic {
             m: masses.m,
             r: config.r,
@@ -312,6 +311,26 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid
     }
+}
+
+/// Each parameter of `a` widened to `F`, at constant indices: the kernel's SPIR-V has no `[T; N]::map`, whose
+/// iterator casts the array to a slice (rust-gpu: "cannot cast between pointer types"), and a loop over a runtime index
+/// is lowered with bounds-check breaks (gpu_determinism_note rule 5), so each length has its own unrolled helper.
+#[inline]
+fn widen2<P: Copy, F: From<P>>(a: [P; 2]) -> [F; 2] {
+    [F::from(a[0]), F::from(a[1])]
+}
+
+/// [`widen2`] for three parameters.
+#[inline]
+fn widen3<P: Copy, F: From<P>>(a: [P; 3]) -> [F; 3] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2])]
+}
+
+/// [`widen2`] for four parameters.
+#[inline]
+fn widen4<P: Copy, F: From<P>>(a: [P; 4]) -> [F; 4] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2]), F::from(a[3])]
 }
 
 /// `t` where `c` holds, else `f`: a select, both operands computed.
