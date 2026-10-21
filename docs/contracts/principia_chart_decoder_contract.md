@@ -332,8 +332,9 @@ accepts any `z` (the latent chart and the flat and body-plane slices, tilted or 
 is unbounded:** any centre is allowed, because every latent `z` decodes to a valid system, so the stop below never
 fires for a pan there. **Zoom-out is unbounded:** no cap from a fixed view range, a multiple of the home view or a
 number of chart squares; the only limits are the frame budget and the baseline cover (`principia_caching_contract.md`
-Part 4), and a frame's cost is set by the screen, not by the view's extent (how the cover stays screen-sized when the
-viewport spans many level-0 roots is RQ-535). **Every pixel is a system** at any pan or zoom: no hatch, no blank, no
+Part 4), and a frame's cost is set by the screen, not by the view's extent: where the viewport spans many level-0
+roots the cover is taken at a level `L < 0`, coarser than the root (`principia_scheduler_contract.md` Part 3,
+"Infinite zoom-out: levels coarser than the root"; RQ-535, decided per R-369). **Every pixel is a system** at any pan or zoom: no hatch, no blank, no
 "not a system" (at the decoder's default links; RQ-536). **Far out the field goes flat, and that is correct:** the
 decoder saturates every coordinate (`principia_chart_reference.md` §0: the configuration through a sigmoid, the momenta
 to `±q_max`, the masses through `μ_max·tanh`), so far from the origin neighbouring pixels decode to nearly the same

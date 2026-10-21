@@ -49,6 +49,27 @@ This is the scheduler-side member of the same family as the link-measure honesty
 | How deep you *can* zoom | decode floor + integration floor | physics/precision, emergent |
 | Whether to split *this* quad | `Policy::Tolerance` (`principia_dd_refinement_policy.md`, R-15) | scientific — the adaptive part |
 
+### Infinite zoom-out: levels coarser than the root
+
+*Decided per R-369 by the orchestrator (22 Oct 2026; RQ-535, option (a)), not a human ruling, so that R-570's "cost
+per frame is set by the screen, not by the view's extent" holds on R-537 EX7(a)'s root lattice. ⚑ Physics review is
+required on the addressing, as for EX7; perf reviews the cost.*
+
+- **Levels below 0.** The quadtree that covers the extended parameter plane (R-537 EX7(a)) has levels `L < 0` on an
+  affine chart, with no lower bound. A level-`L` quad with `L < 0` spans `2^(−L) × 2^(−L)` level-0 roots: the quad
+  `(L, i, j)` holds the four quads `(L + 1, 2i + a, 2j + b)`, `a, b ∈ {0, 1}`, the same indexing as at every level
+  `L ≥ 0`, with negative indices allowed (EX7(a)). Its address keeps
+  R-97's frame, the slice plane's own, relative to the plane anchor: a zoom-out changes which addresses are requested,
+  never the addresses themselves. Levels `L ≥ 0`, the roots, and EX7(b)'s canonical maps are unchanged.
+- **The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the
+  smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent:
+  at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104).
+- **Coarser quads are ordinary.** They are scheduled, cached and refined like any other, refinement running down
+  through `L = 0` as the user zooms in; a coarse quad's samples are systems of the plane at its own sample positions,
+  computed as any quad's are. `MAX_REL_DEPTH` and the screen floor stay view-relative.
+- **Rejected:** re-basing the plane's frame on a far zoom-out (against R-97), and a cover outside the quadtree (a second
+  scheduler).
+
 ### `MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)
 
 A **view-relative performance/quality window**: refine at most N levels below the current camera depth. It *follows the camera down*, so infinite zoom works — descend, the window slides with you, always a bounded amount of work below the view. Sensible relative budget is small (≈ 4–8 below the view; the earlier defaults of 8 / 10 / 12–14 were written as *absolute* and conflated "how deep total" with "how much detail below the view").

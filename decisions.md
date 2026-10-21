@@ -20781,4 +20781,11 @@ span; each requirement goes to the task that owns its code, with no new task; th
 requirement; RQ-409's entry is not edited here, PR #274 archiving it; the three tests run at the decoder's default
 links while RQ-536 is open.
 
+*22 Oct 2026, on the same PR: RQ-535 decided per R-369 by the orchestrator, not a human ruling: (a), coarser levels
+`L < 0` of the same quadtree, a level-`L` quad spanning `2^(−L) × 2^(−L)` level-0 roots in R-97's frame, the baseline
+cover taken at the level whose quads are the smallest still at least its on-screen size, so its count is set by the
+screen. Applied in `principia_scheduler_contract.md` Part 3, `principia_deep_zoom.md` and chart_decoder_contract Part 4
+(⚑ physics review of the addressing); REQ-SCHED-104 no longer waits. RQ-535 moved to
+`docs/archive/review_queue/M0.md`.*
+
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.

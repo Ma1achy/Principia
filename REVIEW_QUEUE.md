@@ -3403,46 +3403,6 @@ and the disagreement is queued. Nothing is ruled.*
   them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
   Each carries `rq: RQ-508`.
 
-## RQ-535: R-570's "cost per frame is set by the screen, not by the view's extent" at any zoom-out, where R-537 EX7(a)'s root lattice has no quad coarser than a level-0 root, so the baseline cover of a far zoomed-out viewport grows with its extent *(conflict: the human's ruling against an earlier ruling's applied text; R-570, R-537 EX4, EX7(a); REQ-SCHED-104, REQ-SCHED-056, REQ-SCHED-101; context: TASK-M8-56)*
-
-*Found by R-570's port. Nothing is ruled.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 2:
-    "The only limits are the existing ones: the frame budget and the baseline cover, which already span the viewport
-    whatever its size. Cost per frame is set by the screen, not by the view's extent."; § "Tests",
-    zoom_out_cost_bounded: "a frame at 10⁶ × the home view computes no more quads than the baseline cover of the
-    viewport. **Control:** at home zoom the same count, so the cost does not grow with the view's extent."
-  - `decisions.md` § "R-537 — …", EX7(a): "The level-0 cells of the root lattice tile the whole parameter plane. Every
-    cell the view touches has a root, so every visible point has an ancestor and EX4 can hold."; EX4: "The baseline
-    cover (caching contract Part 4) is the coarsest cover of the whole viewport, extension included."
-  - `docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute tier, not a priority weight":
-    "every cell the view touches has a root of the root lattice (EX7), so every visible point has an ancestor".
-  - `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)": the quad address is
-    taken "in the slice plane's own frame, relative to the plane anchor …: in-plane pan and zoom change which addresses
-    are requested, never the addresses themselves (R-97)".
-- **The conflict:** a level-0 root is fixed in the slice plane's own frame, and an in-plane zoom does not re-address
-  it (R-97). If the root is about the home view's size, the coarsest cover of a viewport at 10⁶ × the home view
-  is therefore about 10⁶ × 10⁶ level-0 roots, each far below a pixel, on an affine chart each a different set of
-  systems; the corpus has no coarser quad. "The baseline cover … already span[s] the viewport" holds, but its count,
-  and so the cost per frame, grows with the square of the view's extent, so zoom_out_cost_bounded's control (the same
-  count at 10⁶ × and at home zoom) cannot pass on the corpus as written. On periodic charts the union of images
-  (EX7(c)) already computes each canonical root once.
-- **Options seen:**
-  - (a) The root lattice gains coarser levels on an affine axis, `L < 0`, each cell of level `L − 1` the 2 × 2 block
-    of level-`L` cells it holds, with no lower bound, so the baseline cover is a screen-sized number of quads at any
-    extent; the canonical maps, the keys and the addresses at `L ≥ 0` are unchanged (R-97).
-  - (b) A zoom-out past a set extent re-bases the plane's frame, so the depth-0 root again spans about the window: a
-    re-addressing event, its cached quads re-keyed or dropped, against R-97's "never the addresses themselves".
-  - (c) Past a set extent the baseline cover samples one footprint per screen cell without a quad per root, a cover
-    outside the quadtree.
-- **For the human:** no as a ruling on navigation, which R-570 settles; it is the scheduler's addressing, which R-537
-  marks ⚑ (physics) and the perf reviewer reviews, so the orchestrator and the reviewers may decide it under R-369 with
-  physics review. Queued because R-570's item 2 says the existing cover already does this.
-- **Applied meanwhile:** nothing; no option is applied.
-- **Waits:** REQ-SCHED-104 (zoom_out_cost_bounded, TASK-M8-56), `rq: RQ-535`. The rest of TASK-M8-56 does not wait,
-  and neither do REQ-GUI-357 or REQ-CHART-087: zooming out is never refused while this is open (R-570).
-
 ## RQ-536: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against the decoder's `DEGENERATE(M01_TINY)` fence, which the far field of a latent chart reaches under the edge-reaching simplex link, or under `softmax_tanh` with a large enough `μ_max`, and which R-511 draws blank *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-481, dd_decoder §3.1, REQ-GEN-026; REQ-CHART-087; context: TASK-M8-57)*
 
 *Found by R-570's port. Nothing is ruled. For the human: yes (physics: what a far-field pixel is under a non-default
