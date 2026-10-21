@@ -29,12 +29,13 @@
 //! `d` is reported in every case. `tol` is the caller's, REQ-ENC-026's calibration (R-71), proposed with its evidence
 //! in `fixtures/gates/curve_projection/`.
 //!
-//! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4; REQ-ENC-022). Each Burrau axis is bounded
-//! (chart_reference §5.4): past its edge the chart shows no system. So a `ν` past the span is no chart point: the
-//! closed form does not land there, and the search does not leave the span. An input at `θ > π/4` on a folded chart
-//! is the leg-swapped twin of a fold shape, bodies 1 and 2 exchanged, a distinct labelled system (R-27): encode does
-//! not relabel it. Its closed-form `ν` is below `√2 − 1`, past the fold's end, and it falls back to latent `z`, unless
-//! the fold's end is within `tol` of it; [`ClosedForm::past_fold`] flags it.
+//! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4; REQ-ENC-022). The curve axis of every Burrau chart,
+//! `ν`, or `θ` on the acute-angle charts, is bounded (chart_reference §5.4): past its edge the chart shows no system.
+//! (`K` continues past `t = 1`, R-508, and `L_z` and δm are affine: those axes are read unbounded.) So a `ν` past the
+//! span is no chart point: the closed form does not land there, and the search does not leave the span. An input at
+//! `θ > π/4` on a folded chart is the leg-swapped twin of a fold shape, bodies 1 and 2 exchanged, a distinct labelled
+//! system (R-27): encode does not relabel it. Its closed-form `ν` is below `√2 − 1`, past the fold's end, and it falls
+//! back to latent `z`, unless the fold's end is within `tol` of it; [`ClosedForm::past_fold`] flags it.
 //!
 //! **Into the active chart** ([`ByKind`] for the Burrau charts). The curve axis's coordinate is the closed form's, the
 //! other axis by its own kind: `K` by the warp's inverse, `L_z` by the band's, δm by the blend's least squares, the
