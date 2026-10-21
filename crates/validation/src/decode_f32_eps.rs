@@ -56,7 +56,7 @@
 //! | `(ν, K)` Burrau / Euclid plane | 4.43 / 3.64 | 6.61 / 2.72 | 7.61 / 7.44 | 7.41 / 7.23 |
 //! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.57 / 9.70 / 22.12 | 9.56 / 8.50 / 15.44 | 7.68 / 9.34 / 8.73 | 7.17 / 7.40 / 7.38 |
 //! | mixed `(z_μ1, α)` | 9.76 | 12.82 | 17.50 | 24.10 |
-//! | shape sphere, both maps, off its poles | 10.89 | 10.50 | 45.07 | 41.52 |
+//! | shape sphere, both maps, off its poles | 10.89 | 12.64 | 45.07 | 44.57 |
 //!
 //! Outside the domain, measured and reported, not held to the factor:
 //!
@@ -65,12 +65,30 @@
 //! | `stick_breaking` at saturated controls (`q` on `[−20, 20]`) | 1.58e10 | 7.40e6 | 1.58e10 | 4.16e6 | f32's own conditioning, as above |
 //! | `(L_z, E)` / `(L_z, K)` edge columns `s ∈ {0, 1}` | 1119.6 / 885.3 | 686.1 / 523.1 | 1276.3 / 795.3 | 978.6 / 746.3 | `a = √(2(K* − L_z²/2))` of a rounding-sized radicand amplifies a one-ulp difference in a backend's `sqrt` by about `1/√eps` (TASK-M2-12's stepped `L_max`); the feasibility tag there is held bitwise |
 //! | `(L_z, E)` / `(L_z, K)` past the square in `s` | 4.34 / 4.52 | 5.71 / 5.84 | 10.53 / 9.00 | 11.52 / 9.60 | every pixel `INVARIANT_INFEASIBLE`, the rigid rotation; outside the chart's view |
-//! | shape sphere's `n₀ = ±1` poles, `(s, t) = (½, ½), (0, ½), (1, ½)` | 3.97e6 | 3.79e6 | 1.61e6 | 2.88e6 | `BC₀₁` (`ρ̃ = 0`) and `λ̃ = 0`, reached only to each precision's rounding of `sin π` and `cos(π/2)` |
+//! | shape sphere's `n₀ = ±1` poles, `(s, t) = (½, ½), (0, ½), (1, ½)` | 4.12e6 | 3.94e6 | 1.61e6 | 2.88e6 | `BC₀₁` (`ρ̃ = 0`) and `λ̃ = 0`, reached only to each precision's rounding of `sin π` and `cos(π/2)` |
 //!
 //! The lavapipe columns are the `gpu-kernel` job's (Mesa's lavapipe, llvmpipe on LLVM 20.1.2, Vulkan; PR #262, CI run
-//! 39548466825), which shows the test's report on success (`.config/nextest.toml`); the Metal columns the same code's
-//! run on the build machine. Inside the domain the worst is 45.07 (the shape sphere's `virial_ratio` on lavapipe), so
-//! 256 covers every chart's interior by a factor of 5.7 on both backends.
+//! 39568757113, on the code of commit 7fbf8653), which shows the test's report on success (`.config/nextest.toml`); the
+//! Metal columns the same code's run on the build machine. Each row is measured at the chart's default parameters, the
+//! shape sphere's at its default frame (`n₀ = +w`), scale 1.2, `I = 1` and `φ_f = 0`, only its held blocks drawn.
+//! There the worst is 45.07 (the shape sphere's `virial_ratio` on lavapipe), 5.7 below 256.
+//!
+//! **Off the defaults** (qa's `qa_m224_gpu_new_charts`, `engine/tests/qa_TASK-M2-24_gpu.rs`): the `(θ, K)`, `(θ, L_z)`
+//! and `(θ, Δm)` strips with drawn ranges, warps and targets, and the shape sphere with `n₀ = (0, 0.6, 0.8)` and its
+//! scale, `I`, `φ_f` and held blocks drawn, which reach masses as light as `m₁ ≈ 1.2·10⁻³`, off its poles; `η_E` off and
+//! toward 0 and 1.5. Worst against f64, in eps:
+//!
+//! | domain | Metal (M3 Pro) | lavapipe |
+//! |---|---|---|
+//! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.68 / 5.62 / 3.03 | 7.54 / 7.52 / 7.52 |
+//! | shape sphere, spherical / exponential map | 13.76 / 27.11 | 72.81 / 58.62 |
+//!
+//! The lavapipe worst is 72.81 (`r2x`, the spherical map, `z_mass = (−0.490, −0.724)`, at `(0.484, 0.249)`, where the
+//! native f32 decode is 3.06), 3.5 below 256 (CI run 39572746056's `gpu-kernel` job, a diagnostic on the code of
+//! 7fbf8653). Before 7fbf8653 the lavapipe decode exceeded the factor there: `r1y` 273.88 eps from f64 at
+//! `(0.9118395, 0.6456125)` (masses about `(0.0514, 0.00124, 0.947)`, native f32 1.12), the light body's `‖r₁‖ ≈ 27`
+//! multiplying the error of `C`'s turn by `sin` and `cos` of a rounded `atan2`. `C` now turns by `ρ/‖ρ‖`
+//! (`kernel::canon::rotation`), and that value is 12.12 (native f32 2.62).
 //!
 //! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
 //! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
