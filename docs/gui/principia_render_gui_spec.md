@@ -993,7 +993,8 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
   Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
-  selectors, and every pair can be chosen; a pair measured not to work shows its warning beside the selectors, the
+  selectors, and every pair can be chosen (the Euler pairs in the debug selection only, Euler never being a production
+  option, REQ-INT-015; applied per R-369, qa review 5607548278 of PR #277, Q6); a pair measured not to work shows its warning beside the selectors, the
   integrator contract's measured text, and stays selectable (R-561; Part 2b's pair table). The warning is also in the
   Problems panel (which panel is RQ-525) and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
   leapfrog is the general default".

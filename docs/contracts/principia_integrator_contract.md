@@ -260,7 +260,10 @@ at the step `h` the step control gives:
 - **RK4 and Euler:** their classical forms on the whole state `(u, p, t)`.
 
 Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's equations
-when they are transcribed (R-160, REQ-INT-084) and checked as the others are (REQ-INT-097).
+and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**, each pair in each of logH's time modes, from
+logH's equations once TASK-M3-08 has transcribed them (R-160, REQ-INT-084, which covers logH's own equations, time
+transformations and step control, not its pairs), physics-reviewed before merge (applied per R-369, qa review 5607548278
+of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms.
 
 The explicit composition is not symplectic on a non-separable Hamiltonian, so the composed occupant's profile is the
 pair's, not the stepper's row in Part 2: `symplectic` false for these pairs, and `step_reversible` dd test 3's
@@ -271,12 +274,21 @@ occupant, if one is wanted, is an implicit stepper and gets its own row in the t
 pair carries the warning. A status changes only by a measurement, recorded here with its evidence; the criterion for
 "measured not to work" is a definition (R-72, REQ-INT-099).
 
-| regularisation \ stepper | Euler (debug) | KDK | Yoshida-4 | Yoshida-6 | RK4 |
+**One cell per pair and time transformation.** A regularisation with more than one time transformation (Heggie's Eq. 20
+and Eq. 22, R-161; logH's logH and TTL modes, R-162) has a row for each, since each is selectable and is measured on its
+own; a pair's status, and its warning, are the cell's for the time transformation in force, and no rule combines
+verdicts across them. The design measured Heggie's pairs under both transformations with the same verdict, so the two
+Heggie rows agree (applied per R-369, qa review 5607548278 of PR #277, Q2; *was:* one row per regularisation, "Heggie"
+and "logH" a row each).
+
+| regularisation (time transformation) \ stepper | Euler (debug) | KDK | Yoshida-4 | Yoshida-6 | RK4 |
 |---|---|---|---|---|---|
 | `none` | not measured | not measured | not measured | not measured | not measured |
 | Aarseth–Zare | not measured | not measured | not measured | not measured | **measured good** (1) |
-| Heggie | not measured | **measured bad** (2) | not measured | not measured | **measured good, the default** (3) |
-| logH | not measured | not measured | not measured | not measured | not measured |
+| Heggie (Eq. 20) | not measured | **measured bad** (2) | not measured | not measured | **measured good** (3) |
+| Heggie (Eq. 22, the default) | not measured | **measured bad** (2) | not measured | not measured | **measured good, the default** (3) |
+| logH (logH mode) | not measured | not measured | not measured | not measured | not measured |
+| logH (TTL mode) | not measured | not measured | not measured | not measured | not measured |
 
 1. Aarseth–Zare + RK4 passes through exact collision at `d_min = 1.35e-11` with energy drift `6.2e-15` (Part 2a); the
    32-case matrix ran it and Heggie under the same RK4 and step control (the comparison discipline, below). This status

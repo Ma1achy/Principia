@@ -23132,6 +23132,14 @@ TASK-M8-24 and TASK-M8-32*
   dd_integrator §3.2's drift order (`w₁, w₀, w₁`; `w₃, w₂, w₁, w₀, w₁, w₂, w₃`), and adjacent half-kicks are not
   merged, three evaluations per sub-step: §3.2's merged kicks equal the sequence on a separable Hamiltonian only.
 
+- **After qa review 5607548278 of PR #277:** logH's pair forms are written into Part 2b by TASK-M3-39, from logH's
+  equations as TASK-M3-08 transcribes them (REQ-INT-084 covers logH's own equations, not its pairs), physics-reviewed
+  (Q1); the pair table has one cell per pair and time transformation, Heggie's Eq. 20 and Eq. 22 and logH's two modes
+  each a row, a status and its warning being the cell's for the transformation in force, with no rule combining
+  verdicts across them: the design measured Heggie's pairs under both transformations with one verdict, and the
+  human's texts give no combination rule, so the table follows the measurement (Q2); the Euler pairs are offered in
+  the debug selection only (REQ-INT-015, Q6).
+
 *Not settled here:* the pairs the table marks not measured carry no warning until measured.
 
 R-561 is in the "physics" group of `plan/rule_groups.yaml`.
