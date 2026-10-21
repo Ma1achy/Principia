@@ -6,25 +6,25 @@
 
 | area | count |
 |---|---|
-| DEC | 48 |
-| ENC | 34 |
-| CHART | 82 |
+| DEC | 49 |
+| ENC | 35 |
+| CHART | 83 |
 | INT | 105 |
 | EVT | 31 |
-| PAY | 106 |
-| GEN | 42 |
+| PAY | 107 |
+| GEN | 43 |
 | SCHED | 101 |
 | REF | 52 |
 | RENDER | 100 |
-| COL | 134 |
-| GUI | 322 |
-| TOOL | 184 |
-| VAL | 192 |
+| COL | 140 |
+| GUI | 328 |
+| TOOL | 187 |
+| VAL | 194 |
 | PERF | 95 |
-| SYS | 84 |
-| **total** | **1712** |
+| SYS | 85 |
+| **total** | **1735** |
 
-Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 146 calibration, 145 definition, 1444 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,27 +32,26 @@ Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 207 |
+| M2 | 212 |
 | M3 | 219 |
 | M4 | 106 |
-| M5 | 177 |
-| M6 | 220 |
-| M7 | 215 |
-| M8 | 338 |
+| M5 | 179 |
+| M6 | 223 |
+| M7 | 222 |
+| M8 | 344 |
 
 ## Sections
 
-1413 sections in 52 files: 1118 yield at least one requirement; 295 yield none and are listed below with the reason.
+1429 sections in 52 files: 1132 yield at least one requirement; 297 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 170 |
+| informative only | 172 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 45 |
-| planned (the plan PR) | 59 |
+| planned (the plan PR) | 60 |
 | rationale | 11 |
 | superseded (kept for the record) | 4 |
 
@@ -198,6 +197,8 @@ Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | planned (the plan PR) | R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement |
+| R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -339,7 +340,7 @@ Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for th
 | 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
 | 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
 | 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
-| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.3 Open questions | informative only | the open questions, each an RQ entry, all ruled: RQ-310 by R-545, RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467; their obligations are in the requirements they changed |
 | 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
 | 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
 | 13. References | informative only | bibliography |
@@ -439,7 +440,7 @@ Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for th
 |---|---|---|
 | Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
 | 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322) |
-| 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
+| 14. What the demo is not | informative only | where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-349 and REQ-SYS-060 |
 
 ### `docs/design/principia_print_graph.md`
 

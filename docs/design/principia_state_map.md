@@ -13,8 +13,24 @@ reference only. §0 is the human's words; SM1 to SM15 are the applied text (R-36
 the prototype (R-542)* are the port's: what the prototype's code does where this file is silent. Where the file and the
 code disagree the code is carried, the file's words kept, and the disagreement queued (RQ-499). SM13's questions are
 RQ-480 to RQ-488; the conflicts the port found with the corpus and the open branches are RQ-489 and RQ-496 to RQ-499.
+R-558 (21 Oct 2026, the human's batch) rules them all, with RQ-500 to RQ-505, which PR #270's review added; each ruling
+is noted where it applies, and SM13's "Ruled" paragraph lists them.
 The prototype was read as source; it was not run in a browser. The trace's "F1" this file cites is R-538's TF1
 (`principia_lines.md` §8).*
+
+*Amended by R-543 (21 Oct 2026), the tiling follow-up, `docs/incoming/2026-10-21_state_map_tiling/` (its
+`INSTRUCTION.md` the human's ruling): colour maps that tile the infinite plane. §0 gains the follow-up's words; SM6 and
+SM11 gain the **Torus** gradient, SM8 and SM11 the Picture's **wrap mode** and **Dim past the square**, SM8 the
+**Checkerboard, tileable** picture, SM11's lightness paragraph and SM15's Problems the Torus among the bases that spend
+L, SM12 six tests and SM15 the Flow preset's new settings; each addition is marked R-543. No line of the file is changed
+or removed: where R-543 replaces a rule the line stays and an *Amended by R-543* line follows it, so the bundle's file
+stays a line-for-line subsequence of this one (REQ-COL-112). The reference prototype
+`docs/gui/reference/state_map/state_flow.html` is version 9 of the State Flow page from R-543 on, the follow-up's
+`demo/state_flow.html`; its diff against version 8 is the tiling only.
+Where R-543's text and that code disagree the code is carried and the disagreement queued, except where a queued
+entry applies R-543's text meanwhile: RQ-506 (a) carries the ruling's words where the code is silent (the legend's
+period, the readout's wrap mode) and the code's period counts. The tile that separates systems a Torus period apart is
+RQ-507.*
 
 ---
 
@@ -68,6 +84,20 @@ The prototype was read as source; it was not run in a browser. The trace's "F1" 
 
 > "Chart position" — chosen for the node, one node with a time setting (playhead, t = 0 or a fixed t) in place of the
 > two working names "Where now" and "Where at t = 0".
+
+*The follow-up of 21 Oct 2026 (R-543): the human's words, `docs/incoming/2026-10-21_state_map_tiling/INSTRUCTION.md`
+§0 verbatim, "here" in its last line being that bundle:*
+
+> > "i geuss what i'm reaching for are colour maps that tile cleanly over the whole infinire plane because the tiling is
+> > weird right now ?"
+>
+> To the proposal of a Torus gradient base and a Repeat wrap mode for the Picture base:
+>
+> > "yeah"
+>
+> And on the prototype built from it (`demo/state_flow.html` here, version 9 of the State Flow page):
+>
+> > "ok add this as follow up instructiosn bc i already sent of f that bundle"
 
 ---
 
@@ -142,7 +172,12 @@ chart (`principia_dd_colouring.md` §4, seam 6; render contract Part 4), where C
 its inverse (the view chart's inverse is already in the encode `ROUNDTRIP` runs, dd_encode §2; only a target other
 than the view's chart needs a second one); and SM11's "a fixed t" needs a state other than the playhead's, which `SimState` does not hold (both RQ-489). Item 3's "the brightness slot is None" meets L-ownership
 (render contract Part 4: "resolved by combiner choice") and SM11 and SM15, which let a brightness node follow an L-fixed
-base (RQ-496). The prototype offers no fixed t; meanwhile Chart position reads the playhead or `t = 0` only.
+base (RQ-496). Both are ruled by R-558. Chart position has a named seam-6 exception, as ROUNDTRIP and DECODE have,
+listed in render contract Part 4 and in the lint, the target chart's inverse generated to WGSL from the one Rust
+source (R-116); its times are the playhead and `t = 0` only, "a fixed t" struck from SM11 and SM15 (RQ-489 (a)).
+Item 3 means that a base spending L on position takes a brightness node only with the Problems warning, Multiply
+keeping its L (RQ-496 (a)). *Was:* "The prototype offers no fixed t; meanwhile Chart position reads the playhead or
+`t = 0` only."
 
 ## SM3. Source side: the extension comes for free, because the colour is a property of the system
 
@@ -273,12 +308,16 @@ not stored (§0, R-542).
 *Port's note (R-542).* The trace draws a left sample and a past-the-end one as no value (R-538 TF1, `principia_lines.md`
 §8: "not drawn there, the line broken"), where SM5a's default clamps; SM9's "the trace is this field for one pixel"
 holds for on-chart samples only; "past a bounded edge" is R-470 N1's and R-472's term for a source pixel drawn blank;
-and on the latent chart "the navigation edge it left by" (SM11) can only be the compacted edge `s = ±1`. Queued as
-RQ-498; meanwhile the clamp is the default, as the file and the prototype have it. The latent-chart figures above are
+and on the latent chart "the navigation edge it left by" (SM11) can only be the compacted edge `s = ±1`. Ruled by
+R-558 (RQ-498 (a)): the clamp stays the default, the Four results test runs with "when it leaves: none", the clamp's
+edge on an affine chart is the compacted edge `s = ±1`, and the base grid is a demo device, the app filling gaps with
+EX4's coarse ancestor. *Was:* "Queued as RQ-498; meanwhile the clamp is the default, as the file and the prototype
+have it." The latent-chart figures above are
 the prototype's, whose latent chart has `AMIN = 0.05` where R-21 sets `α_min = 0`, so on main a system leaves the latent
-chart almost only at a collision (RQ-503); main's encode clamps and never returns a non-finite `z`, so the app's "left"
-is read from a shown coordinate's clamp (REQ-COL-133). Whether "none" is an ordinary setting or a debug option is
-RQ-505.
+chart almost only at a collision (RQ-503, ruled (a) by R-558: `α_min = 0` stands, these figures are kept for
+reference only, the edge-clamp test runs on the latent momenta and the α case on a constructed state); main's encode clamps and never returns a non-finite `z`, so the app's "left"
+is read from a shown coordinate's clamp (REQ-COL-133). "None" is an ordinary setting of the node (RQ-505 (a),
+R-558). *Was:* "Whether "none" is an ordinary setting or a debug option is RQ-505."
 
 ## SM6. Colour maps: one-to-one on the quotient, so they own lightness
 
@@ -297,6 +336,9 @@ Per target, as prototyped:
 | simplex (masses) | `(a, b) = 0.15 Σ mᵢ ûᵢ` for three hue directions 120° apart, `L = 0.70`: an affine image of the triangle |
 | line × line, interval × line | **linear**: `(a, b) = 0.095 (sₓ, s_y)`, `L = 0.75`. Revised (SM11): the first version put `x` along a 270° arc of hue, a polar unwrap of a flat chart, to avoid a grey centre. §0 rules out the unwrap; the grey centre is the chart origin and is accepted |
 | circle × circle (none in the demo) | `x` round the hue circle, `y` round a circle in (L, C): a torus |
+| circle × circle, realised (R-543) | by the Torus gradient below, on the plane and the cylinder, which it makes periodic |
+| line × line, interval × line: the **Torus** gradient (R-543) | periodic in chart units, `n` periods across the home square: `θ = 2πX`, `φ = 2πY` with `(X, Y)` the position in periods, `(a, b) = (R + r cos φ)(cos θ, sin θ)`, `L = L₀ + r_L sin φ`, `R = 0.074`, `r = 0.037`, `L₀ = 0.70`, `r_L = 0.12`: a torus, one-to-one within a period, repeating exactly across periods |
+| circle × line (θ × dilation): the **Torus** gradient (R-543) | `X = (θ mod 2π)/2π`, θ once round, and `s` repeating `n` times over the square: the same torus |
 
 Rules:
 - **Compactification:** `s = tanh((z − c)/κ)` with `κ` the chart's home half-range (latent 3, momenta 0.3, the tilt's
@@ -304,6 +346,31 @@ Rules:
 - **Chroma is fixed per map, never clipped per pixel** (clipping breaks linearity and injectivity), at the largest
   value that stays in sRGB gamut over the map's whole range. That was checked on a 200² grid for every map above: 0
   out-of-gamut samples.
+
+*Added by R-543 (the Torus gradient).* The Torus gradient makes the plane periodic, so it tiles the infinite plane
+with no seam and no special home square. Each period maps onto a torus inside OKLab, `X, Y` the position in periods in
+**chart units** (never the squashed square), `n` periods across the home square; on the plane the `y` period count is
+`round(n · H / W)`, as the Palette's tiling already does. On the cylinder `X` is θ itself once round (`wrap(θ)/2π`), and
+only `s` repeats. A torus sits in 3-D colour without touching itself (`R > r`), so within one period the map is
+one-to-one and continuous; across periods it repeats exactly. Its shape is fixed, never clipped per pixel (the rule
+above): the constants are 0 out of gamut on a 240² sweep of (θ, φ), at 0.975 of the largest scale that stays in gamut
+(`checks/torus_gam.js`). They are calibration values under R-71, confirmed at the M7 gate with the rest of SM6's. It
+spends L on position (SM11). **The honest cost:** a system exactly one period away gets the same colour; the legend
+states the period in chart units, and "Left its starting tile" brightness separates such systems (RQ-506, RQ-507). The
+table's circle × circle row is realised by it, for the plane, by making the plane periodic.
+
+*Transcribed from the prototype (R-543; `SM_TORUS`, `smTorusXY`, `smTileXY`, `smNTheta`, `smTorusLab`, `SM_GRAD`).*
+`SM_TORUS = { L0: 0.70, rL: 0.12, R: 0.074, r: 0.037 }`. On the plane `(X, Y)` are SM11's tile coordinates in chart
+units at `n` = Repeats, whatever the tilings' own *squashed square* setting: `X = (u − x_min)/(x_max − x_min)·n`,
+`Y = (v − y_min)/(y_max − y_min)·n_y`, `n_y = max(1, round(n·H/W))` (`round` half up), so one period is
+`(x_max − x_min)/n` by `(y_max − y_min)/n_y` in chart units, the same size inside the square and past it; a system that
+has left takes the navigation edge it left by, as the tilings do (SM11, SM5a). On the cylinder `X = (θ mod 2π)/2π` and
+`Y = (v − y_min)/(y_max − y_min)·n`, so `s` repeats `n` times over the square's height whatever its aspect (the code
+reaches it as SM11's `Y` at `n_θ` rescaled by `n/max(1, round(n_θ·H/W))`). Then `θ = 2πX`, `φ = 2πY`,
+`c = R + r cos φ`, `(L, a, b) = (L₀ + r_L sin φ, c cos θ, c sin θ)`. It is offered on the plane and cylinder quotients
+only, not on the sphere or the simplex. The largest in-gamut scale of `(R, r)` at `L₀ = 0.70`, `r_L = 0.12` is 1.026 on
+torus_gam.js's 120² sweep (1.0259 on 240²), so the constants sit at 0.9745 of it (R-543's check,
+`docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py`).
 
 *Transcribed from the prototype (R-542; `smPosLab`, `smCompact`, `oklabToRgb`).* OKLab to sRGB is
 `principia_dd_colouring.md` §3.1's, each linear channel clamped to [0, 1] before the transfer, so an in-gamut map is
@@ -335,7 +402,19 @@ each pixel's system is its own, with its signed `n̂`, and no pixel is compared 
 
 - The picture is laid on `T`'s home square (equirect on the sphere; θ across on the cylinder).
 - Past the square on an affine axis it is **mirror-repeated and dimmed**, so it stays continuous and says it is outside.
+  - *Amended by R-543:* that is now the default of a wrap mode. Past the square the picture follows its wrap mode,
+    **Past its square**: Repeat · Mirror · Clamp, with a separate tickbox, **Dim past the square**, which dims it so it
+    says it is outside. Repeat is `s − ⌊s⌋`, Mirror the triangle wave, Clamp the edge colour. **The defaults are Mirror
+    with dimming on**, so every saved stain renders bitwise as before. Mirror stays right for photos, which stay
+    continuous across the edge. For a picture made of cells it is wrong: a mirror repeats the edge row, so the same cell
+    appears on both sides of the square's edge (one bright, one dim) and a checkerboard stops being a checkerboard; and
+    past the edge the picture runs backwards, so a system far outside gets the colour of one just inside. Repeat tiles a
+    tileable picture over the plane with no seam. The hovered pixel's readout and the graph strip name the wrap mode
+    ("Picture · repeat").
 - The picture can be built in (checkerboard, grid, rings) or the user's own, uploaded.
+- Built in too: **Checkerboard, tileable** (R-543), 8 × 8 cells coloured by the Torus gradient at their centres, so its
+  colours wrap and under Repeat it has no seam. The existing Checkerboard stays as it is: under Repeat its parity holds
+  but its colour ramp jumps at the seams, which is the picture's property, not the wrap mode's.
 - Played over time, a picture laid on the chart is stretched along the flow: smooth on regular islands, shredded where
   the dynamics are chaotic. That is the FTLE's meaning, seen directly; it is not a measurement of it.
 
@@ -347,7 +426,21 @@ an 8 × 8 checkerboard, its cells at OKLab `L = 0.82` or `0.50`, `(a, b) = 0.12(
 grid of 2 px lines `#f2efe6` on `#101114`, with a red bar `#ff5a4f` along the top half of the top edge and a blue bar
 `#4fb6ff` down the top half of the left edge, so orientation reads; and 18 rings, alternately `L = 0.80` and `0.42`,
 `(a, b) = 0.1(cos r, sin r)`. The user's picture is scaled to the same 256 × 256. Layers (SM11) apply over a picture as
-over any base. The brightness slot does not apply under Picture in the prototype (RQ-499).
+over any base. The brightness slot does not apply under Picture in the prototype; the file's words govern (RQ-499, ruled by R-558):
+the brightness slot applies to every base, Picture included, and the prototype skipped it.
+
+*Transcribed from the prototype (R-543; `smWrapFn`, `smImage`'s `tchecker` branch, `smPaint`, `smSyncUI`).* The
+paragraph above is the default, Mirror with dimming on. The wrap mode maps each coordinate before the texel look-up
+`min(N − 1, ⌊w(s)·N⌋)`: Repeat `w(s) = s − ⌊s⌋`; Mirror the triangle wave above; Clamp `w(s) = max(0, min(1 − 10⁻⁹, s))`.
+Dimming multiplies the texel by 0.62 where `(u, v)` lies outside `[0, 1]²` and the tickbox is on, whatever the wrap
+mode. At the square's closed far edge `s = 1`, which is inside it, Repeat reads texel 0 and Mirror texel `N − 1`.
+**Checkerboard, tileable:** cell `(i, j)` of 8 × 8 is SM6's torus at its centre, `θ = 2π(i + ½)/8`, `φ = 2π(j + ½)/8`,
+chroma × 0.8 and `r_L` × 0.8 about `L₀`, then ± 0.07 in `L` by parity: `L = L₀ + 0.8 r_L sin φ + 0.07` where `i + j` is
+odd and `− 0.07` where it is even, `(a, b) = 0.8 (R + r cos φ)(cos θ, sin θ)`; taken to 8-bit sRGB as the other
+built-ins, its linear channels lie in [0.035, 0.972], 0 of 64 cells at a channel limit (R-543's check). The picture's
+menu lists Checkerboard, Checkerboard, tileable, Grid, Rings and Your image…; Past its square offers "Repeat (tiles the
+plane)", "Mirror (for photos)" and "Clamp to the edge". The graph strip reads "Picture · repeat" (or mirror, clamp);
+the prototype's hovered-pixel readout does not name the wrap mode (RQ-506).
 
 ## SM9. Legend and the hovered pixel
 
@@ -377,7 +470,7 @@ not marked and the readout says why.
 *Transcribed from the prototype (R-542; `smPaint`).* The fade is applied as the pixel's opacity over the canvas,
 `a = max(0.18, 1/(1 + (d/0.35)²))`, `d` the off-slice distance the trace's fade reads (the chart's projection's distance,
 or the momentum proxy `|q|`, R-509), a non-finite `d` faded to the floor; the trace's own fade is `max(0.18, e^{−d/1.2})`
-(RQ-499). The prototype integrates with Dormand–Prince 5(4) at relative tolerance `10⁻¹⁰`, `h ≤ 0.02`, landing on each
+(RQ-499). The app has one fade everywhere, the trace's (RQ-499, ruled by R-558); the prototype's is reference only. The prototype integrates with Dormand–Prince 5(4) at relative tolerance `10⁻¹⁰`, `h ≤ 0.02`, landing on each
 stored time, to the horizon `t = 20`; a failed step stores NaN from there on ("not data: never held"). These are the
 demo's, not the app's: the app reads the live `SimState` (SM2).
 
@@ -402,8 +495,9 @@ chart. On the shape sphere chart the two read the same point, and are still two 
 Chart position takes a base and layers. The backbone is unchanged: one colour slot, one brightness slot, Replace-L or
 Multiply, the post chain.
 
-**Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0 · a fixed t) · when it leaves the
-chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing.
+**Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0) · when it leaves the
+chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing. ("A fixed t" is struck,
+R-558, RQ-489; *was:* "at (playhead · t = 0 · a fixed t)".)
 
 **Its colour slot is a base plus layers** — the same shape as the shape sphere's colouring (a Family A or B occupant,
 then `bandmask` / `site_overlay` combinators, colour composition §1.1–§1.3):
@@ -416,6 +510,8 @@ then `bandmask` / `site_overlay` combinators, colour composition §1.1–§1.3):
 | **Site blend** | Family A: nearest / top-k / vMF, blend in OKLab or RGB | the sphere's site sets (`axes6`, `corner8`, `ico12`, `fib(N)`, `ring(N)`), the same code path as Shape n̂'s Site blend (agreement exactly 0) | sites on a square or hex lattice, plain flat distance `−|x − p|²` | the same, a whole number of sites round θ | the same lattice laid on the masses |
 | **Palette** | categorical: each tile one palette colour — purely tiled | latitude × longitude cells (a multiple of 6 round θ) · Fibonacci cells · meridian wedges · latitude bands | square, hexagons, triangles, brick, stripes x / y | the same, closing round θ | triangles in the masses; stripes in m₂ / m₃ |
 | **Picture** | the image pulled back through the flow (SM8) | equirectangular | over the square | wrapped in θ | over the triangle |
+| **Gradient**, added by R-543 | Family B, as above | — | **Torus**: periodic in chart units, `n` periods across the square, one-to-one within a period, seamless across periods (SM6) | **Torus**: θ round the hue, `s` repeating seamlessly (SM6) | — |
+| **Picture**, added by R-543 | past its square by its wrap mode, Repeat · Mirror · Clamp, with Dim past the square; Mirror and dimming on by default (SM8); built in also **Checkerboard, tileable** | — | past the square by the wrap mode | in `s` by the wrap mode | — |
 
 1D ramps run one fixed three-stop OKLab ramp (indigo → teal → yellow); round θ uses the hue circle, the one place hue is
 native. Site colours and the palette are swatch sets, as on the sphere: **by index** — `(i mod 3, j mod 3)` picks one of
@@ -450,6 +546,8 @@ without losing position. The 1D ramps, the sphere's 3D gradient and the cylinder
 them raises the Problems warning, as it does after Shape n̂'s position map and Bands. Layers are mostly lightness, and
 under Replace-L their lines fade; that is a second, separate warning. The plane's 2D gradient is grey at the chart
 origin, which on the latent charts is the Lagrange landmark (Q9).
+The Torus gradient (R-543) spends L on position too, so a brightness node after it raises the same "no longer
+one-to-one" warning.
 
 **Brightness, unchanged in meaning** and outside the colour slot: displacement `|e(t) − e(0)|`, a straight-line distance
 on the quotient (`e` = n̂, `(cos θ, sin θ, s)`, `(sₓ, s_y)` or the masses: a distance only, never a colour); *left its
@@ -458,6 +556,9 @@ nearest site.
 
 **Only the 2D and 3D gradients must be one-to-one (SM6).** Site blends, palettes and layers are classifications, many-to-one by
 design.
+
+The Torus gradient (R-543) is one-to-one within a period and repeats exactly across periods: a system one period away
+has the same colour, its cost (SM6).
 
 **Fields that need history stay out of scope without a struct change** (Q7).
 
@@ -496,6 +597,14 @@ design.
   cylinder `2√2`, simplex `√2`, plane `2√2`); Left its starting tile: `B = 0.30` if the tile (Shape n̂: the nearest site)
   is the same at `t` and `t = 0`, else `0.78`. The `t = 0` point is the pixel's own IC through the projection, with no
   march. Replace-L then sets `L = B` and scales `(a, b)` by `min(1, B/0.75, (1 − B)/0.35)` (SM15; RQ-496).
+- **The Torus's Repeats** (R-543; `sm_gn`). 1, 2, 3, 4, 6 or 8 across the square, **2** by default, shown only when Torus
+  is chosen; on the cylinder θ stays once round whatever it is. Its "no longer one-to-one" warning under a brightness
+  node is `smSpendsL`'s, every plane Gradient but 2D and every cylinder Gradient but round θ.
+  *Transcribed from the prototype (R-543, version 9; `sm_gn`, `SM_GRAD`).* Repeats offers "Once across the square",
+  "2 across", "3 across", "4 across", "6 across" and "8 across", in that order, "2 across" selected. The Gradient
+  picker lists the Torus second: on the plane "Torus: repeats seamlessly over the whole plane", after "2D: x → a, y → b
+  (one lightness)"; on the cylinder "Torus: θ round the hue, s repeats seamlessly", after "2D: θ round the hue circle,
+  s up L".
 
 ## SM12. Tests (each with the arm that fires)
 
@@ -519,11 +628,36 @@ design.
 | Whole periods | on the cylinder, the tile count round θ is a multiple of 6, so every base and layer closes: θ and θ + 2π give the same tile colour — **0 of 7200** differ, over 6 patterns × 6 counts | a count that is not a multiple of 3 (index colours) or 2 (checker), which draws a seam |
 | Plane map one-to-one | binned at 2e-3 over a 300² grid of `[−1, 1]²`: worst same-bin pair **0.028** apart in s, inside the bin's own diagonal (0.030) | an angle or unwrap on a flat chart |
 | Replace-L in gamut | chroma scaled by `min(1, L/0.75, (1 − L)/0.35)`: **0 of 99,710** out-of-gamut samples over every flat colour node at every brightness level used (0.18, 0.30, 0.50, 0.78, 0.84). Without the scaling, the 0.30 level clipped to near-black in the prototype, the undetermined colour | per-pixel clipping |
+| Torus seam (R-543) | colour at (u, v) equals colour at (u + P, v) and (u, v + P_y) to 1e-12 over a sweep reaching well past the square (prototype: 2.7e-17) | a period computed in squashed or compacted units; an off-by-one in the period count |
+| Torus one-to-one (R-543) | within one period, distinct grid points have distinct colours (minimum OKLab separation > 0 on a 200² grid) | R ≤ r, or L and chroma swapped so the tube self-intersects |
+| Torus gamut (R-543) | 0 samples out of sRGB on a 240² (θ, φ) sweep, with no clipping in the shader path | constants raised past the gamut, or a per-pixel clamp added |
+| Wrap defaults bitwise (R-543) | a stain saved before this change renders bitwise identically (Gradient 2D, Picture, Palette hex; the prototype checks all three) | the default wrap or dim flipped |
+| Wrap arm (R-543) | the same Picture under Repeat and under Mirror differs past the square and is identical inside it | a wrap setting that is not wired through |
+| Tileable checker seam (R-543) | under Repeat, the cell across each seam has opposite parity and the colour difference across the seam equals that between neighbouring cells inside | the old checkerboard silently substituted |
 
 *Port's note (R-542).* Every test keeps its failing arm as written; each is a requirement's verify (R-542 H-items).
 Where an arm meets the corpus or the prototype's code it is queued, not changed: Four results' "neither is drawn as a
 colour" against SM5a's default clamp (RQ-498); Shape n̂ unchanged's "Position" and "Bands" against main's Shape n̂
 (RQ-497); Replace-L in gamut against main's Replace-L (RQ-496).
+
+*Port's note (R-543).* The six R-543 rows are the follow-up's §5, verbatim, each a requirement's verify. They were run
+on a transcription of the prototype, `docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py`
+(`python3 -I`; its output is in R-543's PR), with each arm shown to fire: Torus seam 1.6e-14 over four charts (the
+latent chart, the tilted chart, ν × dilation, the cylinder) and every Repeats, out to ten squares past each edge; Torus
+one-to-one 1.16e-3; Torus gamut 0 of 240², none changed by a clamp; Wrap arm 0 differing inside the square and 19,200
+of 24,000 past it; Tileable checker seam's steps equal to 6e-17. Two readings, applied per R-369 (R-543 H4, H5): **One-to-one's
+arms.** On the 200² grid R = r gives a separation of 0, but R < r and the swap leave the grid's minimum above 0 (2.1e-6
+and 1.4e-5), because the tube meets the L axis between grid rows; so the test also asserts, on the map's output, a
+signed radial chroma `(a, b)·(cos θ, sin θ)` > 0 at every grid point, the tube clear of the L axis, which fires on every
+arm (0.037 at the constants; 0, −0.007 and −0.046 on the arms). **The seam's step along y.** Inside a column the step between
+neighbouring cells varies with φ, so the step across the y seam is held to the picture's own rule from cell 7 to
+cell 8, which wraps to cell 0; along x every neighbouring step in a row is the same, the seam's included. Wrap defaults
+bitwise needs the app and is TASK-M7-49's; on the transcription version 9's lookup at its defaults equals version 8's on
+every texel, and flipping either default fires.
+*Amended by R-543 H11.* The Wrap arm's "inside" is `[0, 1)²`: at the closed far edge `s = 1`, inside the square (SM8),
+Repeat reads texel 0 and Mirror texel `N − 1`, so the test asserts the two modes identical on the half-open square and
+that edge rule on a sweep reaching `s = 1` (on the transcription 0 of 25,600 differ on `[0, 1)²`, 321 of 321 far-edge
+samples read the stated texels, and the arm that moves the rule fires).
 
 ## SM13. Queue, don't rule
 
@@ -554,6 +688,24 @@ colour" against SM5a's default clamp (RQ-498); Shape n̂ unchanged's "Position" 
 *Port's note (R-542).* Q1 to Q9 are RQ-480 to RQ-488, each with its recommendation as option (a), unruled; each (a) is
 applied meanwhile, as the prototype has it, and a ruling otherwise is a follow-up change. Q4 records the existing vMF
 shape colouring and changes nothing in it.
+
+*Ruled (R-558, 21 Oct 2026).* Q1 to Q9 are each ruled (a): any chart may be a target, its inverse generated beside the
+view's from R-116's one Rust source (RQ-480); a tilted target takes the branch nearest the slice, `k ∈ [−4, 4]`, the
+smallest `|w|`, a stated choice named in SM4 (RQ-481); the state map is never a criterion input, SM12's Firewall test
+holding it (RQ-482); the vMF colouring is kept and colour composition §4.1 states that it is not one-to-one (RQ-483);
+the nominal copy (RQ-484); an ended run held, "outcome colour" an option (RQ-485); history fields out of scope
+(RQ-486); the prototype's values the starting values, the port's additions included, confirmed at the M7 gate
+(RQ-487); the grey origin accepted (RQ-488). The conflicts: Chart position a named seam-6 exception, with no fixed t
+(RQ-489); Replace-L's chroma scaling an option, "keep in gamut", off by default and on in the Displacement and Mixing
+presets, so SM12's "Shape n̂ unchanged" and "Replace-L in gamut" rows read it with the option on, and every saved
+stain renders bitwise at the default (RQ-496); Shape n̂ stays `vector`, `point⟨q⟩` is Chart position's alone, Site
+blend ↔ Site blend the only swap, board 4's sphere paragraph superseded by SM11, and "Palette base" and "Picture
+flow" where both graphs show (RQ-497); the code's reading of the mirror and the clamp, the Four results test under
+"none" (RQ-498, its two mirror clauses superseded by the human's second addendum to the shape sphere ruling); the
+file's preset names, the brightness slot under a Picture and the trace's fade, with the code's triangle lightness and
+Fibonacci swatches (RQ-499); "Edit stain…" (RQ-500); no figure ring while the trace is shown (RQ-501); one colour
+node, boards 1 and 4 redrawn to match (RQ-502); `α_min = 0` (RQ-503); the full sphere with the signed `n̂` as the
+target (RQ-504); and "none" a setting of the node (RQ-505).
 
 ## SM14. What this changes
 
@@ -586,8 +738,9 @@ Shape n̂ ─→ its own colouring (unchanged), an alternative source in the sam
 quotient plus the SM5 status (ok, clamped, past edge, undetermined). Port types and wire colours are unchanged. Shape
 n̂ is a `point⟨sphere⟩`, and its nodes accept exactly that, as now.
 
-**The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0 · a fixed t), when it
-leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing. At t = 0 it is the pixel's own IC
+**The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0), when it
+leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing ("a fixed t" struck by R-558,
+RQ-489; *was:* "at (playhead · t = 0 · a fixed t)"). At t = 0 it is the pixel's own IC
 through the projection, with no march. It is one node; a brightness field that compares two times takes two copies of
 it. *Shape n̂* is a separate node and is unchanged; on the shape sphere chart both are offered.
 
@@ -599,23 +752,31 @@ dots), each with spacing, colour and opacity (SM11). Layers are the existing `ba
 each removable.
 
 **Brightness slot and combine.** Unchanged: Displacement and Left its starting tile are brightness occupants like any
-other, and Replace-L scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with L, so every level stays in gamut (0 of
-99,710 samples out). Before that, the 0.30 level clipped to near-black, the undetermined colour.
+other. Replace-L's option **keep in gamut**, off by default, scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with
+L, so every level stays in gamut (0 of 99,710 samples out); the Displacement and Mixing presets set it on. Before
+that, the 0.30 level clipped to near-black, the undetermined colour. Replace-L as ruled stays the default, so every
+saved stain renders bitwise as before (R-558, RQ-496 (a)). *Was:* "and Replace-L scales chroma by `min(1, L/0.75,
+(1 − L)/0.35)` along with L, so every level stays in gamut (0 of 99,710 samples out)."
 
 **Inspector.** The library and the drag-off-a-pin menu offer only what the wired source takes. Swapping the source
 between Shape n̂ and Chart position puts each base's counterpart in its place (Position ↔ Gradient, Site blend ↔ Site
 blend, Bands ↔ Palette); changing Chart position's chart re-offers the bases and layers that exist on the new one. Every
-setting stays on the graph, so switching back restores it exactly.
+setting stays on the graph, so switching back restores it exactly. On main Shape n̂ stays `vector` with its one colour
+editor, so Site blend ↔ Site blend is the only swap, and "offer only what the wired source takes" applies to the
+library and the drag-off-a-pin menu only, render GUI spec §6's morphing staying between subtypes (R-558, RQ-497 (a)).
 
 **Problems.** Warning where a brightness node replaces L that the base spends on position (Shape n̂'s position map and
 Bands; a 1D gradient; the sphere's 3D and the cylinder's 2D gradient). Warning where a brightness node replaces L under lightness layers.
 Info per compile: left the chart (clamped), ended (held), past a bounded edge, undetermined, as counts; no SimState,
 payload or descriptor change.
+The first warning holds for the Torus gradient too (R-543), which spends L on position.
 
 **Presets** (prototype `smPreset`): Classic shape colour (the Shape n̂ node → Site blend, as today); and on Chart
 position, on any chart: Where (Gradient 2D, 3D on the sphere); Graph paper (Gradient + checkerboard + grid lines); Basins
 (Palette: hexagons, Fibonacci cells on the sphere); Displacement (Gradient + Displacement); Flow (Picture); Mixing
 (Palette: square, lat × lon on the sphere, + Left its starting tile). A preset inserts an ordinary editable graph.
+*Amended by R-543:* Flow is Picture over **Checkerboard, tileable**, with **Repeat** and dimming **off**, the one
+deliberate visual change of the follow-up.
 
 **Explore.** The state map is a stain picked like any other. Compass, play bar and chart controls are unchanged. The
 legend is the colour slot drawn over the target chart (base and layers), with a ring at the hovered system, drawn on the
@@ -641,7 +802,8 @@ checkerboard differs from checkerboard over grid wherever both are in band.
 
 *Transcribed from the prototype (R-542; `smPreset`, `smSyncUI`, `smSpendsL`).* The preset buttons read "Classic shape
 colour", "Where now", "Graph paper", "Basin tiles", "Displacement", "Picture flow" and "Mixing" (the file and board 5
-name them Where, Basins and Flow; RQ-499). Each preset sets: Classic — the shape sphere chart, the Shape n̂ node, Site
+name them Where, Basins and Flow; RQ-499). The file's names are the presets' (R-558, RQ-499): Where, Basins and Flow,
+"Where now" being the node's retired name. Each preset sets: Classic — the shape sphere chart, the Shape n̂ node, Site
 blend `axes6`, Full swatches, vMF κ 3, OKLab, no brightness; Where now — Gradient 2D, the view's own chart; Graph paper
 — Gradient 2D, layer 1 checkerboard ×6 white 25 %, layer 2 grid lines ×6 dark 75 %; Basin tiles — Palette, 6 across, by
 index, hexagons (Fibonacci cells on the sphere); Displacement — Gradient 2D with Displacement; Picture flow — Picture,
@@ -655,3 +817,8 @@ checkerboard of `2n` cells round θ and `n` down φ in `L` 0.80 / 0.42 with the 
 paragraph, where the layers have no sphere form and the flat base takes "its sphere counterpart's place" when Chart
 position's chart becomes the sphere, is the third revision's, before SM11 gave Chart position the sphere's own bases and
 layers; the file and the code have Chart position keep its bases on the sphere (RQ-497, RQ-499).
+
+*Transcribed from the prototype's version 9 (R-543; `smPreset`).* The Flow preset (its button "Picture flow", RQ-499)
+sets Picture, **Checkerboard, tileable**, Past its square **Repeat** and Dim past the square **off**, with no brightness,
+in place of version 8's Picture over the Checkerboard at the defaults: the one deliberate visual change of R-543. No
+other preset sets the wrap mode or the dimming.

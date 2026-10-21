@@ -34,7 +34,8 @@ IS `θ(t), φ(t)`, and the sound is its spectrum. Measured, figure-eight vs chao
 0.076 vs 0.177**, one line with harmonics against four comparable peaks. They fail complementarily —
 a dense winding is visual mush and a clear high note. Scratchpad §2, §4. The sound is designed in
 `principia_listen.md` (R-540), whose default signal adds the triangle's rotation `ψ` to `θ(t), φ(t)` (RQ-451) and whose
-entropy is over its own spectrum (RQ-453); the measurement above is of `θ(t)`'s. It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
+entropy is over its own spectrum (RQ-453); the measurement above is of `θ(t)`'s, and stays its anchor; Listen's entropy
+has its own anchors (R-555 rules both entries, (a) and (c)). It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
 
 ---
 

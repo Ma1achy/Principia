@@ -75,7 +75,10 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 ```
 1a COM        r ← r − R_com                            (translations gauged; I is CoM-frame-defined)
 0  SCALE      I_in = Σ mᵢ‖rᵢ‖²  (CoM frame)          → r ← r/√I_in ;  p ← I_in^{1/4}·p
-              record λ = I_in^{−1/2} ; notice lookup_rescaled
+              record λ = I_in^{−1/2} ; notice lookup_rescaled, exactly when step 0 ran (R-547)
+              |I_in − 1| ≤ τ_I : step 0 skipped (λ = 1, r and p unchanged, no notice)
+              else in two steps: by a power of two (exact), then by the remainder
+              I_in = 0 (the bodies coincide) : divisor 1, λ = 1, p = 0, lookup_clamped, φ = +0
               (E_canon = √I_in·E_in ;  L_canon = L_in/I_in^{1/4} ;  t_canon = t_in/I_in^{3/4})
 1b BOOST      p ← p − mᵢ·P_tot/M                       (boosts gauged)
 2  ROTATE     φ = atan2(ρ_y, ρ_x) ;  apply R(−φ) to every rᵢ AND every pᵢ ;  ρ̃ lands on +x
@@ -92,6 +95,15 @@ identity, on CPU-f64 and GPU-f32 alike: a select on `ρ_x = 0` and `ρ_y = 0`, n
 (`principia_dd_decoder.md` §3.2, §3.3). The guard (`lookup_clamped`, R-13) still catches the pixel; the defined `φ`
 makes the rotation there the same on both, the identity.
 
+**Step 0's skip and its two steps (R-547, closing RQ-295 and RQ-296).** Step 0 is skipped (`λ = 1`, `r` and `p`
+unchanged) where `|I_in − 1| ≤ τ_I`, and `lookup_rescaled` fires exactly when step 0 ran, so a canonical input, which
+has `I = 1` only to rounding (up to 3 eps measured by TASK-M2-07), raises no notice (seam 8, REQ-ENC-014). `τ_I` is a
+calibration (R-71) in eps of the precision. Where step 0 runs, it rescales in two steps, first by a power of two
+(exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies
+apart. `I_in = 0` then happens only when the bodies coincide, and that case keeps the select: divisor 1, `λ = 1`,
+`p = 0`, `lookup_clamped`, `φ = +0` (R-13, R-436, R-437). *Was:* step 0 ran, and noticed `lookup_rescaled`, on every
+input, its output at `I_in` rounded to 0 or `+∞` not defined.
+
 **After step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`.** The deadband `|λ̃_y| ≤ δ_λ` is left unmirrored (R-82), so a state can
 leave `C` with `λ̃_y ∈ [−δ_λ, 0]`, `−0` included. §3.1's `β` reads `|λ̃_y|` for that reason (R-438).
 
@@ -106,7 +118,7 @@ rᵢ' = s · R(θ) · Π · rᵢ + a
 pᵢ' = s^{−1/2} · R(θ) · Π · pᵢ + mᵢ · u
 ```
 
-**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep). The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
+**T1 asserts `E(g·x) = E(x)` for every such g off the mirror band** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep), which there turn, move, boost and rescale but do not mirror. On `|λ̃_y| ≤ δ_λ`, collinear states included, T1 holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z` (R-547, RQ-360; R-82 unchanged). *Was:* "**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep)." The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
 
 ### 3.4 Curve projection (off-curve input) — metric pinned
 
