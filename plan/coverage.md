@@ -6,25 +6,25 @@
 
 | area | count |
 |---|---|
-| DEC | 47 |
+| DEC | 48 |
 | ENC | 33 |
-| CHART | 78 |
+| CHART | 79 |
 | INT | 96 |
 | EVT | 31 |
 | PAY | 106 |
-| GEN | 36 |
-| SCHED | 98 |
+| GEN | 42 |
+| SCHED | 99 |
 | REF | 52 |
-| RENDER | 99 |
+| RENDER | 100 |
 | COL | 110 |
-| GUI | 268 |
-| TOOL | 171 |
+| GUI | 309 |
+| TOOL | 184 |
 | VAL | 191 |
 | PERF | 95 |
-| SYS | 82 |
-| **total** | **1593** |
+| SYS | 84 |
+| **total** | **1659** |
 
-Of these: 140 calibration, 136 definition, 1317 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 141 calibration, 136 definition, 1382 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,25 +32,25 @@ Of these: 140 calibration, 136 definition, 1317 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 195 |
+| M2 | 204 |
 | M3 | 209 |
-| M4 | 104 |
-| M5 | 175 |
-| M6 | 210 |
-| M7 | 180 |
-| M8 | 290 |
+| M4 | 106 |
+| M5 | 176 |
+| M6 | 220 |
+| M7 | 188 |
+| M8 | 326 |
 
 ## Sections
 
-1278 sections in 48 files: 1056 yield at least one requirement; 222 yield none and are listed below with the reason.
+1313 sections in 49 files: 1088 yield at least one requirement; 225 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
-| informative only | 165 |
+| informative only | 167 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 39 |
+| parent heading (obligations are in its subsections) | 40 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -383,6 +383,14 @@ Of these: 140 calibration, 136 definition, 1317 obligation. Retired (kept for th
 | Principia — the line system: contours and traces | informative only | the adoption note (R-476), the proposal's status line and its summary |
 | 4. Contours | parent heading (obligations are in its subsections) |  |
 | 13. About the mock-ups | informative only | how the mock-ups were drawn (R-476 M1: the scripts are not kept) |
+
+### `docs/design/principia_listen.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
+| 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322) |
+| 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
 
 ### `docs/design/principia_quality_device_note.md`
 
