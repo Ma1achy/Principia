@@ -389,7 +389,7 @@ Of these: 136 calibration, 134 definition, 1336 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
-| 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-283 to REQ-GUI-296) |
+| 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322) |
 | 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
 
 ### `docs/design/principia_quality_device_note.md`

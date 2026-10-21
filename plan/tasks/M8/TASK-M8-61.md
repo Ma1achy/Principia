@@ -1,7 +1,7 @@
 # TASK-M8-61 — The trace and Listen in Explore, 1: the Trajectory panel's tabs and sections, Overlays ▾ › Trace, the keys, the window highlight and the trace's look (R-541 G1 to G4, G9)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-298, REQ-GUI-299, REQ-GUI-300, REQ-GUI-301, REQ-GUI-307
+- **Closes:** REQ-GUI-324, REQ-GUI-325, REQ-GUI-326, REQ-GUI-327, REQ-GUI-333
 - **Depends on:** TASK-M8-58, TASK-M8-11, TASK-M8-12, TASK-M8-13
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -26,11 +26,11 @@ R-541's placing of the trace and Listen, G1 to G4 and G9: everything about one t
 - Tests `trace_one_place`, `trace_keys`, `trajectory_tabs` and `listen_window_highlight`; screenshots `01_main` (trace_overlays, trajectory_panel, trace_look).
 
 ## Acceptance tests
-- cargo xtask screenshot 01_main (trace_overlays) and cargo test -p gui trace_one_place (R-541 G10 One place): the open Overlays ▾ shows the Trace group after Chart; walking the widget tree finds no trace or sound control outside the Trajectory panel, Overlays ▾ › Trace, Trace…, Listen… and the Time column; a Trace group item, its Trace… control and its chip set one field, one SetField each; control: a stray control (e.g. a trace control surviving in Lines ▾ or the left panel) fails (REQ-GUI-298).
-- cargo test -p gui trace_keys: with the focus in the Figure, in each mode, T, ⇧T and Y toggle their Overlays ▾ › Trace fields (one SetField each), L the sound, Space keeps and K locks; each is listed on the ? sheet; none acts while a text field is typed in or with the focus outside the Figure; controls: K keeping, or a key acting outside the Figure, each fail (REQ-GUI-299).
-- cargo xtask screenshot 01_main (trajectory_panel: at rest, Trace expanded, Listen expanded) and cargo test -p gui trajectory_tabs (R-541 G10 Tabs): the panel's order and its sections' rows are §G2's; switching tabs switches the trace, the previews and the sound together; Listen's collapsed state survives a restart; control: the sound following the cursor while a kept tab is selected fails (REQ-GUI-300).
-- cargo test -p gui listen_window_highlight (R-541 G10 Window highlight): the bright arc covers exactly the samples in windowAt(t) at every head time, under each Window mode; nothing is highlighted with Listen off; control: an off-by-window highlight fails (REQ-GUI-301).
-- cargo xtask screenshot 01_main (trace_look): the default trace's line, outline, ticks, arrows, star, head disc and icons as stated, over a light and a dark stain; two kept traces in the palette's first two colours; control: a trace drawn without its outline fails (REQ-GUI-307).
+- cargo xtask screenshot 01_main (trace_overlays) and cargo test -p gui trace_one_place (R-541 G10 One place): the open Overlays ▾ shows the Trace group after Chart; walking the widget tree finds no trace or sound control outside the Trajectory panel, Overlays ▾ › Trace, Trace…, Listen… and the Time column; a Trace group item, its Trace… control and its chip set one field, one SetField each; control: a stray control (e.g. a trace control surviving in Lines ▾ or the left panel) fails (REQ-GUI-324).
+- cargo test -p gui trace_keys: with the focus in the Figure, in each mode, T, ⇧T and Y toggle their Overlays ▾ › Trace fields (one SetField each), L the sound, Space keeps and K locks; each is listed on the ? sheet; none acts while a text field is typed in or with the focus outside the Figure; controls: K keeping, or a key acting outside the Figure, each fail (REQ-GUI-325).
+- cargo xtask screenshot 01_main (trajectory_panel: at rest, Trace expanded, Listen expanded) and cargo test -p gui trajectory_tabs (R-541 G10 Tabs): the panel's order and its sections' rows are §G2's; switching tabs switches the trace, the previews and the sound together; Listen's collapsed state survives a restart; control: the sound following the cursor while a kept tab is selected fails (REQ-GUI-326).
+- cargo test -p gui listen_window_highlight (R-541 G10 Window highlight): the bright arc covers exactly the samples in windowAt(t) at every head time, under each Window mode; nothing is highlighted with Listen off; control: an off-by-window highlight fails (REQ-GUI-327).
+- cargo xtask screenshot 01_main (trace_look): the default trace's line, outline, ticks, arrows, star, head disc and icons as stated, over a light and a dark stain; two kept traces in the palette's first two colours; control: a trace drawn without its outline fails (REQ-GUI-333).
 
 ## Notes
 - **Applied meanwhile (R-541):** RQ-448 (a), the trace's controls leave Lines ▾, which keeps the rest; RQ-449 (a), K stays lock and Space keep; RQ-460 (a), the three places share one field; RQ-461 (a), the outline's entries are built only once RQ-408 is ruled; RQ-462 (a), the panel keeps FTLE, `E₀`, the playhead and the two buttons; RQ-445 (a), Listen's section remembered per user; RQ-447, R-538's palette. A ruling other than these is a follow-up change.

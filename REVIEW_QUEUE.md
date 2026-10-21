@@ -1912,7 +1912,7 @@ mechanical consequence, unless the human wants it.*
   window's quad addresses on every chart whose parameter is periodic.
 - **Applied meanwhile:** (a) (R-538 J8). Nothing waits.
 
-## RQ-440: Listen's audio backend in prin-rs: a Rust synthesis graph on `cpal`, transcribed node for node from the demo's Web Audio, or sound kept web-only *(the human's queued question, R-540 Q1, S8, S9; REQ-GUI-289, REQ-GUI-291 to REQ-GUI-294; context: TASK-M8-12, TASK-M8-59)*
+## RQ-440: Listen's audio backend in prin-rs: a Rust synthesis graph on `cpal`, transcribed node for node from the demo's Web Audio, or sound kept web-only *(the human's queued question, R-540 Q1, S8, S9; REQ-GUI-315, REQ-GUI-317 to REQ-GUI-320; context: TASK-M8-12, TASK-M8-59)*
 
 *Queued by the human (`principia_listen.md` S14, Q1; this bundle's Q-numbers, distinct from the trace follow-up's F7
 Q5 and Q6, which are RQ-421 and RQ-422). For the human: yes; the human's message says it needs an answer before Listen
@@ -1928,7 +1928,7 @@ is built.*
 - **Applied meanwhile:** nothing is built. TASK-M8-12, TASK-M8-59 and TASK-M8-60 wait on this entry and RQ-442
   (R-540 H14).
 
-## RQ-441: Where Listen's analysis runs: on the CPU from the trajectory viewer's own samples, or on the GPU with the integrator *(the human's queued question, R-540 Q2, S2; REQ-GUI-285, REQ-SYS-060; context: TASK-M8-12)*
+## RQ-441: Where Listen's analysis runs: on the CPU from the trajectory viewer's own samples, or on the GPU with the integrator *(the human's queued question, R-540 Q2, S2; REQ-GUI-311, REQ-SYS-060; context: TASK-M8-12)*
 
 *Queued by the human (`principia_listen.md` S14, Q2). For the human: yes.*
 
@@ -1944,7 +1944,7 @@ is built.*
 - **Applied meanwhile:** nothing is built (TASK-M8-12 waits on RQ-440 and RQ-442); when it starts, (a) unless this is
   ruled otherwise first.
 
-## RQ-442: `RMS_FLOOR` against prin-rs's integrator: measure Lagrange's shape rms under *Angles only* over `t ≤ 400` and set the floor at 10× its maximum *(the human's queued question, R-540 Q3, S7, S13; REQ-GUI-290; context: TASK-M8-12)*
+## RQ-442: `RMS_FLOOR` against prin-rs's integrator: measure Lagrange's shape rms under *Angles only* over `t ≤ 400` and set the floor at 10× its maximum *(the human's queued question, R-540 Q3, S7, S13; REQ-GUI-316; context: TASK-M8-12)*
 
 *Queued by the human (`principia_listen.md` S14, Q3). For the human: yes; the human's message says it needs an answer
 before Listen is built.*
@@ -1980,7 +1980,7 @@ before Listen is built.*
 - **Applied meanwhile:** (a) (R-540 H13): the listen bullet's words are recorded stale, replaced by R-540; REQ-GUI-090's
   "must not be implemented" stands. Nothing waits.
 
-## RQ-444: The close-approach threshold `0.2 R` and the event depth scale: kept, stated as parameters *(the human's queued question, R-540 Q5, S9; REQ-GUI-293; context: TASK-M8-59)*
+## RQ-444: The close-approach threshold `0.2 R` and the event depth scale: kept, stated as parameters *(the human's queued question, R-540 Q5, S9; REQ-GUI-319; context: TASK-M8-59)*
 
 *Queued by the human (`principia_listen.md` S14, Q5). For the human: no for (a).*
 
@@ -1990,7 +1990,7 @@ before Listen is built.*
 - **Options seen:** (a) kept, stated as parameters (the file's recommendation); (b) calibrated (R-71).
 - **Applied meanwhile:** (a) (R-540 H13): `principia_listen.md` §9 states both. Nothing waits.
 
-## RQ-445: Listen's section in the Trajectory panel: collapsed until first used, then remembered per user, or always collapsed *(the human's queued question, R-541 Q6, G4; REQ-GUI-300; context: TASK-M8-61)*
+## RQ-445: Listen's section in the Trajectory panel: collapsed until first used, then remembered per user, or always collapsed *(the human's queued question, R-541 Q6, G4; REQ-GUI-326; context: TASK-M8-61)*
 
 *Queued by the human (`principia_trace_listen_gui.md` G11, Q6; this bundle's Q-numbers, distinct from the trace
 follow-up's F7 Q5 and Q6, RQ-421 and RQ-422). For the human: no for (a).*
@@ -2003,7 +2003,7 @@ follow-up's F7 Q5 and Q6, RQ-421 and RQ-422). For the human: no for (a).*
 - **Applied meanwhile:** (a) (R-541 P11): remembered in the GUI's own settings, as a window's place is (R-461), never the
   contract. Nothing waits.
 
-## RQ-446: The expanded strip's spectrum takes the Legend's column, or the Legend stays and the spectrum stacks under the spectrogram (the band ≈ 520 px) *(the human's queued question, R-541 Q7, G7; REQ-GUI-304; context: TASK-M8-63)*
+## RQ-446: The expanded strip's spectrum takes the Legend's column, or the Legend stays and the spectrum stacks under the spectrogram (the band ≈ 520 px) *(the human's queued question, R-541 Q7, G7; REQ-GUI-330; context: TASK-M8-63)*
 
 *Queued by the human (`principia_trace_listen_gui.md` G11, Q7). For the human: no for (a).*
 
@@ -2013,7 +2013,7 @@ follow-up's F7 Q5 and Q6, RQ-421 and RQ-422). For the human: no for (a).*
 - **Options seen:** (a) borrow the Legend's column (the file's recommendation); (b) keep the Legend, the band ≈ 520 px.
 - **Applied meanwhile:** (a) (R-541 P11). Nothing waits.
 
-## RQ-447: Kept-trace colours: a fixed cycle of six, distinct from the body colours and the stain classes, to be chosen against the stain palettes, where R-538 TM2 has already fixed a six-colour trace palette *(the human's queued question, R-541 Q8, G9; conflict with R-538 TM2; REQ-GUI-271, REQ-GUI-307; context: TASK-M8-58, TASK-M8-61)*
+## RQ-447: Kept-trace colours: a fixed cycle of six, distinct from the body colours and the stain classes, to be chosen against the stain palettes, where R-538 TM2 has already fixed a six-colour trace palette *(the human's queued question, R-541 Q8, G9; conflict with R-538 TM2; REQ-GUI-271, REQ-GUI-333; context: TASK-M8-58, TASK-M8-61)*
 
 *Queued by the human (`principia_trace_listen_gui.md` G11, Q8). Found by the port: the recommendation reads as if no
 cycle were chosen. For the human: yes, if the cycle is to change.*
@@ -2033,7 +2033,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   boards' `#5ab4ff` illustrative.
 - **Applied meanwhile:** R-538's six (the ruling), the boards' `#5ab4ff` illustrative (R-541 P10). Nothing waits.
 
-## RQ-448: R-541 G2 withdraws `Lines ▾` ("An earlier art-board pass had both; they are withdrawn"), where `Lines ▾` is R-476's menu for the whole line system: contours, axes, grids, presets and class edges as well as the traces *(conflict: the human's words against a ruling, R-541 G2, R-476 L2, R-509 Y5, R-538 I2; REQ-GUI-247, REQ-GUI-271, REQ-GUI-298; context: TASK-M8-50, TASK-M8-58, TASK-M8-61)*
+## RQ-448: R-541 G2 withdraws `Lines ▾` ("An earlier art-board pass had both; they are withdrawn"), where `Lines ▾` is R-476's menu for the whole line system: contours, axes, grids, presets and class edges as well as the traces *(conflict: the human's words against a ruling, R-541 G2, R-476 L2, R-509 Y5, R-538 I2; REQ-GUI-247, REQ-GUI-271, REQ-GUI-324; context: TASK-M8-50, TASK-M8-58, TASK-M8-61)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it decides whether the line system keeps its menu.*
 
@@ -2067,7 +2067,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
 - **Applied meanwhile:** (a) (R-541 P2): the trace's place in `Lines ▾` is stale, replaced by R-541; the rest of
   R-476's menu stands. Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-247 and TASK-M8-50.
 
-## RQ-449: R-541 G2's `K` "keep the current trajectory" is the Figure's lock key (R-409, §G4), where Space keeps the orbit; and G2 does not say in which scope `T`, `⇧T`, `Y`, `K` and `L` act *(conflict and silence, R-541 G2, R-409, R-460; REQ-GUI-097, REQ-GUI-299; context: TASK-M8-61)*
+## RQ-449: R-541 G2's `K` "keep the current trajectory" is the Figure's lock key (R-409, §G4), where Space keeps the orbit; and G2 does not say in which scope `T`, `⇧T`, `Y`, `K` and `L` act *(conflict and silence, R-541 G2, R-409, R-460; REQ-GUI-097, REQ-GUI-325; context: TASK-M8-61)*
 
 *Found by the port. Nothing is chosen. For the human: yes, for `K`.*
 
@@ -2085,7 +2085,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   either mode wherever the focus is, as `Alt+L`.
 - **Applied meanwhile:** (a) (R-541 P3). Nothing waits.
 
-## RQ-450: pointer_channels §4 (normative, R-109) sets a floor on trajectory length, "roughly 20+" periods, below which "the sound is meaningless", and REQ-VAL-103 measures it; R-540 S2 plays every run that moves, the human's words "that shouldn't be a thing" *(conflict: the human's words against a ruling, R-540 S2, R-109, R-144; REQ-VAL-103, REQ-GUI-286; context: TASK-M8-12)*
+## RQ-450: pointer_channels §4 (normative, R-109) sets a floor on trajectory length, "roughly 20+" periods, below which "the sound is meaningless", and REQ-VAL-103 measures it; R-540 S2 plays every run that moves, the human's words "that shouldn't be a thing" *(conflict: the human's words against a ruling, R-540 S2, R-109, R-144; REQ-VAL-103, REQ-GUI-312; context: TASK-M8-12)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it decides whether a short run is heard.*
 
@@ -2105,7 +2105,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   measured minimum Listen is silent and says why; (c) both: below it the mean rates play, marked as rates, not a note.
 - **Applied meanwhile:** (a) (R-540 H6), the human's later words. Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-451: R-540's default signal, "Angles + rotation", adds the triangle's orientation in space `ψ` to the sound, where R-109's mapping (pointer_channels §1 and §2, REQ-GUI-090) is `θ(t), φ(t)` → spectrum, "the same measurement" as the shape-sphere trace *(conflict: the applied text against a ruling, R-540 S1, R-109; REQ-GUI-090, REQ-GUI-283; context: TASK-M8-12)*
+## RQ-451: R-540's default signal, "Angles + rotation", adds the triangle's orientation in space `ψ` to the sound, where R-109's mapping (pointer_channels §1 and §2, REQ-GUI-090) is `θ(t), φ(t)` → spectrum, "the same measurement" as the shape-sphere trace *(conflict: the applied text against a ruling, R-540 S1, R-109; REQ-GUI-090, REQ-GUI-309; context: TASK-M8-12)*
 
 *Found by the port. Nothing is chosen. For the human: yes (physics: what is heard).*
 
@@ -2127,9 +2127,9 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   verify reads the selected signal, the input still only the `computeIC` trajectory; (b) the default is *Angles only*,
   the rotation an option; (c) `ψ` dropped.
 - **Applied meanwhile:** (a) (R-540 H5). Nothing waits beyond RQ-440 and RQ-442; the physics reviewer checks the signal
-  either way (REQ-GUI-283).
+  either way (REQ-GUI-309).
 
-## RQ-452: A struck instrument strikes every voice of each new hovered IC's chord, where pointer_channels §4 and REQ-GUI-050 say "cross-fade, never retrigger" per pixel *(conflict: the transcribed code against a ruling, R-540 S5, S8, R-109; REQ-GUI-050, REQ-GUI-289, REQ-GUI-291; context: TASK-M8-12, TASK-M8-59)*
+## RQ-452: A struck instrument strikes every voice of each new hovered IC's chord, where pointer_channels §4 and REQ-GUI-050 say "cross-fade, never retrigger" per pixel *(conflict: the transcribed code against a ruling, R-540 S5, S8, R-109; REQ-GUI-050, REQ-GUI-315, REQ-GUI-317; context: TASK-M8-12, TASK-M8-59)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it is how a hover sweep sounds with a struck instrument.*
 
@@ -2167,7 +2167,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   (REQ-VAL-114); (c) both.
 - **Applied meanwhile:** (a) (R-540 H6). Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-454: Listen's defaults in the files against the demo's code: the instrument (Warm sine against Sine (pure)), reverb and stereo width (on against off) and the sound itself (on against off) *(conflict: the human's files against the transcription source, R-540 S8, S9, R-541 G6; REQ-GUI-291, REQ-GUI-294, REQ-GUI-303; context: TASK-M8-59, TASK-M8-62)*
+## RQ-454: Listen's defaults in the files against the demo's code: the instrument (Warm sine against Sine (pure)), reverb and stereo width (on against off) and the sound itself (on against off) *(conflict: the human's files against the transcription source, R-540 S8, S9, R-541 G6; REQ-GUI-317, REQ-GUI-320, REQ-GUI-329; context: TASK-M8-59, TASK-M8-62)*
 
 *Found by the port. Nothing is chosen. For the human: yes (one line: which defaults).*
 
@@ -2185,7 +2185,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
 - **Applied meanwhile:** (a), the human's message making the code the transcription source (R-540 H2). Nothing waits
   beyond RQ-440 and RQ-442.
 
-## RQ-455: "Grows, last half": the file's window `[t₁/2, t₁]`, the code's `[t₁ − W, t₁]` with `W = max(min(t₁, ½t_c), t₁/2)` *(conflict: the human's file against the transcription source, R-540 S4; REQ-GUI-288; context: TASK-M8-12)*
+## RQ-455: "Grows, last half": the file's window `[t₁/2, t₁]`, the code's `[t₁ − W, t₁]` with `W = max(min(t₁, ½t_c), t₁/2)` *(conflict: the human's file against the transcription source, R-540 S4; REQ-GUI-314; context: TASK-M8-12)*
 
 *Found by the port. Nothing is chosen. For the human: no; the code is applied, as the human's message says.*
 
@@ -2196,7 +2196,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
 - **Options seen:** (a) the code's; (b) the file's.
 - **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-456: A struck note's decay: the file's "time constant `strike`", the code's `strike/3` (and the attack's `att/3`) *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-291; context: TASK-M8-59)*
+## RQ-456: A struck note's decay: the file's "time constant `strike`", the code's `strike/3` (and the attack's `att/3`) *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-317; context: TASK-M8-59)*
 
 *Found by the port. Nothing is chosen. For the human: no; the code is applied.*
 
@@ -2208,7 +2208,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   (`sus` default 0.25); an attack at `att/3`; (b) the file's: the time constant `strike`.
 - **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-457: "Strikes on": the file makes "only when a line changes" one of three options; the code re-strikes a voice whose line has moved more than a quarter-tone in every mode *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-292; context: TASK-M8-59)*
+## RQ-457: "Strikes on": the file makes "only when a line changes" one of three options; the code re-strikes a voice whose line has moved more than a quarter-tone in every mode *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-318; context: TASK-M8-59)*
 
 *Found by the port. Nothing is chosen. For the human: no; the code is applied.*
 
@@ -2223,7 +2223,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
 - **Applied meanwhile:** (a) (R-540 H2). S13's Struck floor test ("struck exactly once without a beat") holds for a line
   that does not move. Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-458: Under *Stereo by winding* the chord voices only the winding spectra, so channel B, `φ`, is not heard in it, while the follow track finds its lines in the mono sum, `φ` included *(silence, R-540 S1, S6; REQ-GUI-284; context: TASK-M8-12)*
+## RQ-458: Under *Stereo by winding* the chord voices only the winding spectra, so channel B, `φ`, is not heard in it, while the follow track finds its lines in the mono sum, `φ` included *(silence, R-540 S1, S6; REQ-GUI-310; context: TASK-M8-12)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it is what is heard in the default.*
 
@@ -2237,7 +2237,7 @@ cycle were chosen. For the human: yes, if the cycle is to change.*
   winding spectra at its bin; (b) `φ` added to both sides of the chord, centred; (c) `φ` only under *Stereo*.
 - **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
 
-## RQ-459: The instrument menu's families and their counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2) name no instrument, and the code has none *(silence: a definition, R-540 S8, R-541 G6, R-72; REQ-GUI-303; context: TASK-M8-62)*
+## RQ-459: The instrument menu's families and their counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2) name no instrument, and the code has none *(silence: a definition, R-540 S8, R-541 G6, R-72; REQ-GUI-329; context: TASK-M8-62)*
 
 *Found by the port. Nothing is chosen. For the human: no; the task that builds the menu can write it (R-72), unless the
 human wants to.*
@@ -2251,7 +2251,7 @@ human wants to.*
   chiptune, raw saw and sub drone among synths, say), reviewed by gui; (b) the human gives it.
 - **Applied meanwhile:** (a) (R-541 P8). Nothing waits.
 
-## RQ-460: R-541 G1's "Every setting appears in at most two places", where G2, G4 and G5 put the syzygies, the end event icon, the off-screen pins and the wrapped copies in three: `Overlays ▾ › Trace`, the Trajectory panel's marker chips and `Trace…` *(conflict: the applied text against itself, R-541 G1, G2, G4, G5; REQ-GUI-298; context: TASK-M8-61, TASK-M8-62)*
+## RQ-460: R-541 G1's "Every setting appears in at most two places", where G2, G4 and G5 put the syzygies, the end event icon, the off-screen pins and the wrapped copies in three: `Overlays ▾ › Trace`, the Trajectory panel's marker chips and `Trace…` *(conflict: the applied text against itself, R-541 G1, G2, G4, G5; REQ-GUI-324; context: TASK-M8-61, TASK-M8-62)*
 
 *Found by the port. Nothing is chosen. For the human: no for (a), which keeps every control the file names.*
 
@@ -2266,7 +2266,7 @@ human wants to.*
   has; (c) `Overlays ▾ › Trace` keeps only the trace, kept traces and `Trace…`.
 - **Applied meanwhile:** (a) (R-541 P4). Nothing waits.
 
-## RQ-461: R-541 G2 and G5 turn "outline the chart's square" on by default in `Overlays ▾ › Trace` and `Trace…`, where RQ-408 (R-537 Q3) is open, nothing built meanwhile, its recommendation an Overlays › Chart toggle, off by default *(conflict: the applied text against an open entry, R-541 G2, G5, R-537 Q3; REQ-GUI-298, REQ-GUI-302; context: TASK-M8-61, TASK-M8-62, TASK-M8-55)*
+## RQ-461: R-541 G2 and G5 turn "outline the chart's square" on by default in `Overlays ▾ › Trace` and `Trace…`, where RQ-408 (R-537 Q3) is open, nothing built meanwhile, its recommendation an Overlays › Chart toggle, off by default *(conflict: the applied text against an open entry, R-541 G2, G5, R-537 Q3; REQ-GUI-324, REQ-GUI-328; context: TASK-M8-61, TASK-M8-62, TASK-M8-55)*
 
 *Found by the port. Nothing is chosen. For the human: yes, with RQ-408.*
 
@@ -2279,7 +2279,7 @@ human wants to.*
   is ruled, as it rules; (b) R-541 answers RQ-408: an outline toggle, on by default, in the Trace group and `Trace…`.
 - **Applied meanwhile:** (a) (R-541 P5). Only the outline's two entries wait.
 
-## RQ-462: R-541 G4 lists the Trajectory panel from the top and leaves out the summary's FTLE and `E₀`, the panel's own playhead and the Open full viewer… and IC Inspector… buttons, which §G2 and REQ-GUI-088 have *(silence, R-541 G4, R-65, R-453; REQ-GUI-088, REQ-GUI-300; context: TASK-M8-11, TASK-M8-61)*
+## RQ-462: R-541 G4 lists the Trajectory panel from the top and leaves out the summary's FTLE and `E₀`, the panel's own playhead and the Open full viewer… and IC Inspector… buttons, which §G2 and REQ-GUI-088 have *(silence, R-541 G4, R-65, R-453; REQ-GUI-088, REQ-GUI-326; context: TASK-M8-11, TASK-M8-61)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it decides what the panel shows.*
 
@@ -2296,7 +2296,7 @@ human wants to.*
   buttons going too.
 - **Applied meanwhile:** (a) (R-541 P6). Nothing waits.
 
-## RQ-463: R-541 G7 fixes the bottom band's sizes (196 px, 420 px expanded, the Compass at the left panel's width, the Legend 360 px), where every panel boundary is a remembered splitter (R-462); and "Compass: cube only" does not say what becomes of the compass's buttons, which are keyboard siblings *(conflict and silence, R-541 G7, R-462, R-409, R-452, R-459; REQ-GUI-213, REQ-GUI-304; context: TASK-M8-63)*
+## RQ-463: R-541 G7 fixes the bottom band's sizes (196 px, 420 px expanded, the Compass at the left panel's width, the Legend 360 px), where every panel boundary is a remembered splitter (R-462); and "Compass: cube only" does not say what becomes of the compass's buttons, which are keyboard siblings *(conflict and silence, R-541 G7, R-462, R-409, R-452, R-459; REQ-GUI-213, REQ-GUI-330; context: TASK-M8-63)*
 
 *Found by the port. Nothing is chosen. For the human: no for (a), which reads the sizes as R-462 reads the artboards'.*
 
@@ -2318,7 +2318,7 @@ human wants to.*
   compass keeps its buttons, the cube shrunk.
 - **Applied meanwhile:** (a) (R-541 P9). Nothing waits.
 
-## RQ-464: Listen's horizon and dwell: R-540 S10 integrates a moving hover to `t ≤ 20` ("the maps' horizon") and, after a 280 ms dwell or a pin, on to Listen's own `Horizon` (20, 60, 150, 400), the trace switching with it, where pointer_channels §3 bounds the moving hover by a step budget, the dwell lifting it, and the hover runs to the sim key's horizon, set in the Run window *(conflict: the applied text against a ruling and the GUI spec, R-540 S10, R-541 G6, R-144; REQ-GUI-295, REQ-GUI-303; context: TASK-M8-60)*
+## RQ-464: Listen's horizon and dwell: R-540 S10 integrates a moving hover to `t ≤ 20` ("the maps' horizon") and, after a 280 ms dwell or a pin, on to Listen's own `Horizon` (20, 60, 150, 400), the trace switching with it, where pointer_channels §3 bounds the moving hover by a step budget, the dwell lifting it, and the hover runs to the sim key's horizon, set in the Run window *(conflict: the applied text against a ruling and the GUI spec, R-540 S10, R-541 G6, R-144; REQ-GUI-321, REQ-GUI-329; context: TASK-M8-60)*
 
 *Found by the port. Nothing is chosen. For the human: yes, it decides how long a trace runs.*
 

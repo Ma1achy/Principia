@@ -1,7 +1,7 @@
 # TASK-M8-62 — The trace and Listen in Explore, 2: the Trace… and Listen… windows (R-541 G5, G6)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-302, REQ-GUI-303
+- **Closes:** REQ-GUI-328, REQ-GUI-329
 - **Depends on:** TASK-M8-61, TASK-M8-58, TASK-M8-59, TASK-M8-60
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -26,8 +26,8 @@ The two windows of R-541 G5 and G6: `Trace…`, every trace setting of both demo
 - Tests `trace_window` and `listen_window`; screenshots `trace_window` and `listen_window`.
 
 ## Acceptance tests
-- cargo xtask screenshot trace_window: every control of §G5's Trace… table present with its default, the preview strip matching the settings, all traces / current tab, reset and save as default; cargo test -p gui trace_window: each control's edit is one undo entry leaving the sim key unchanged, and a current-tab edit leaves the other tabs' traces unchanged; control: a trace setting of the demo missing from the window fails (REQ-GUI-302).
-- cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key but Horizon's extension; control: a sound setting of principia_listen.md missing fails (REQ-GUI-303).
+- cargo xtask screenshot trace_window: every control of §G5's Trace… table present with its default, the preview strip matching the settings, all traces / current tab, reset and save as default; cargo test -p gui trace_window: each control's edit is one undo entry leaving the sim key unchanged, and a current-tab edit leaves the other tabs' traces unchanged; control: a trace setting of the demo missing from the window fails (REQ-GUI-328).
+- cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key but Horizon's extension; control: a sound setting of principia_listen.md missing fails (REQ-GUI-329).
 
 ## Notes
 - **Applied meanwhile (R-541):** RQ-454, the code's defaults; RQ-459 (a), this task writes the families; RQ-461, the outline's entry waits on RQ-408; RQ-447, R-538's palette. A ruling other than these is a follow-up change.

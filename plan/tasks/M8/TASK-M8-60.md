@@ -1,7 +1,7 @@
 # TASK-M8-60 — Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits (R-540 S10 to S12)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-295, REQ-GUI-296, REQ-GUI-297
+- **Closes:** REQ-GUI-321, REQ-GUI-322, REQ-GUI-323
 - **Depends on:** TASK-M8-12, TASK-M8-49
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -25,9 +25,9 @@
 - Tests `listen_dwell`, `listen_display_only` and `listen_known_orbits`.
 
 ## Acceptance tests
-- cargo test -p gui listen_dwell: a hover held 280 ms (a pin at once) on a run that reached the moving horizon without an event is integrated on to Horizon, the trace and the sound switching in the same frame (cross-fade 260 ms); a run ended by its event is not extended; a pointer that moves on cancels it; the map's quads are unchanged; controls: the sound switching without the trace, or an extension of an ended run, each fail (REQ-GUI-295).
-- cargo test -p gui listen_display_only (R-540 S13 Spectrogram is display-only): the voiced peaks are identical with the spectrogram on and off and under any display mode; a column's values equal §11's contrast formula and bins 0 to 3 are blank; the readout names the reason for a silence; control: the contrast step leaking into the analysis fails (REQ-GUI-296).
-- cargo test -p gui listen_known_orbits: each known orbit loads §12's masses, positions and velocities, total mass 1 and G = 1, pinned and run to the horizon at once; a sweep's pointer positions are §12's and it sends no SetField; pressing it again stops it; control: a known orbit's IC off §12's digits fails (REQ-GUI-297).
+- cargo test -p gui listen_dwell: a hover held 280 ms (a pin at once) on a run that reached the moving horizon without an event is integrated on to Horizon, the trace and the sound switching in the same frame (cross-fade 260 ms); a run ended by its event is not extended; a pointer that moves on cancels it; the map's quads are unchanged; controls: the sound switching without the trace, or an extension of an ended run, each fail (REQ-GUI-321).
+- cargo test -p gui listen_display_only (R-540 S13 Spectrogram is display-only): the voiced peaks are identical with the spectrogram on and off and under any display mode; a column's values equal §11's contrast formula and bins 0 to 3 are blank; the readout names the reason for a silence; control: the contrast step leaking into the analysis fails (REQ-GUI-322).
+- cargo test -p gui listen_known_orbits: each known orbit loads §12's masses, positions and velocities, total mass 1 and G = 1, pinned and run to the horizon at once; a sweep's pointer positions are §12's and it sends no SetField; pressing it again stops it; control: a known orbit's IC off §12's digits fails (REQ-GUI-323).
 
 ## Notes
 - **Waits on RQ-440 and RQ-442** (R-540 H14). The task does not start until they are ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first).

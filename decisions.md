@@ -15982,7 +15982,7 @@ Audio-specific constraints, which are NOT the frame budget", sentences added), `
 § "1. The single mechanism" (a sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday
 view (`01_main.png`)" (the Trajectory panel's listen bullet, reworded, with its earlier words kept) and § "G13. Where
 the artboards are overridden" (the sound mapping, with its earlier words kept), `docs/read_first/principia_INDEX.md`
-(rows), R-109's heading block, RQ-440 to RQ-444, RQ-450 to RQ-458 and RQ-464 (new), REQ-GUI-283 to REQ-GUI-297 (reqio,
+(rows), R-109's heading block, RQ-440 to RQ-444, RQ-450 to RQ-458 and RQ-464 (new), REQ-GUI-309 to REQ-GUI-323 (reqio,
 new), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and REQ-VAL-103 (reqio, notes),
 TASK-M8-12 (extended), TASK-M8-59 and TASK-M8-60 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
 TASK-M8-12, TASK-M8-59 and TASK-M8-60, which wait on RQ-440 and RQ-442*
@@ -16381,7 +16381,7 @@ the human may veto any), flagged where they read the words:*
 - **H9. The effects (S9)** read the run at the head in follow mode and its mean over the run in the chord, as S9 says;
   `R₀` is the spread at `t = 0` and `L_z` the total angular momentum; the events go to the output beside the master
   volume, as the code routes them (`principia_listen.md` §9).
-- **H10. The display (S11).** The spectrogram's contrast is display only (REQ-GUI-296); where the spectrum and the
+- **H10. The display (S11).** The spectrogram's contrast is display only (REQ-GUI-322); where the spectrum and the
   spectrogram sit is R-541's (G4, G7).
 - **H11. Sweep and known orbits (S12).** The known orbits' ICs are the demo's, transcribed (`principia_listen.md` §12),
   with total mass 1 and `G = 1`, and are the tests' calibration set. A sweep moves the hover along the current row of
@@ -16397,9 +16397,9 @@ the human may veto any), flagged where they read the words:*
   RQ-442. They are the trajectory viewer's tasks, after TASK-M8-09 and TASK-M8-11. The physics reviewer is on
   TASK-M8-12, which builds S1 to S3 and S7 (the signal, the pitch's scale invariance, the floor), as the message says.
 - **H15. The tests (S13).** Each is a requirement's verify with the arm the file gives: Wrap and Lagrange (default
-  signal) REQ-GUI-283's; Winding sign REQ-GUI-284's; Figure-eight REQ-GUI-285's; No silent run REQ-GUI-286's; Scale
-  invariance REQ-GUI-287's; Silence after the end REQ-GUI-288's; Lagrange (angles only) REQ-GUI-290's; Struck floor
-  REQ-GUI-291's; Spectrogram is display-only REQ-GUI-296's.
+  signal) REQ-GUI-309's; Winding sign REQ-GUI-310's; Figure-eight REQ-GUI-311's; No silent run REQ-GUI-312's; Scale
+  invariance REQ-GUI-313's; Silence after the end REQ-GUI-314's; Lagrange (angles only) REQ-GUI-316's; Struck floor
+  REQ-GUI-317's; Spectrogram is display-only REQ-GUI-322's.
 
 *Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the files
 assume (the human's message: "If anything here contradicts main, an open branch or a ruling — or my words contradict a
@@ -16415,7 +16415,7 @@ Read with R-144, R-538 and R-541.
 
 R-540 is in the "design" group of `plan/rule_groups.yaml`, with R-109 and R-538.
 
-Adds REQ-GUI-283 to REQ-GUI-297; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and
+Adds REQ-GUI-309 to REQ-GUI-323; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and
 REQ-VAL-103 (notes).
 
 ## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
@@ -16429,7 +16429,7 @@ sentences added), § "G5. Windows (`04_windows.png`)" (a sentence, and "Trace…
 § "2. Where it sits" and § "8. Traces" (sentences added), `docs/gui/design/GUI_DESIGN_NOTES.md` (conformed),
 `docs/read_first/principia_INDEX.md` (rows), `docs/gui/reference/trace/` (`trace_markers.html` version 28, the
 art boards in `artboards/` and the images), R-476's and R-538's heading blocks, RQ-445 to RQ-449 and RQ-459 to RQ-463
-(new), REQ-GUI-298 to REQ-GUI-307 (reqio, new), REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (reqio: statement, note),
+(new), REQ-GUI-324 to REQ-GUI-333 (reqio, new), REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (reqio: statement, note),
 REQ-GUI-079 and REQ-GUI-097 (reqio, notes), TASK-M8-61 to TASK-M8-63 (new), TASK-M8-58 (deliverables, notes),
 TASK-M8-11 and TASK-M8-50 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-61 to TASK-M8-63*
 
@@ -16663,8 +16663,8 @@ read the words:*
   marks (R-539), not a stain dimension. G9's dark under-stroke is the Trace style's `outline` (`principia_lines.md`
   §3). "Repeat in wrapped copies" is R-538 TM7's repeats as a toggle, on by default. G3's "The Compass moves back to the
   bottom band" is where §G2 already has it. The file's date (21 Oct) and its §0's sources are as delivered.
-- **P14. The tests (G10).** Each is a requirement's verify with the arm the file gives: One place REQ-GUI-298's; Tabs
-  and Window highlight REQ-GUI-300's and REQ-GUI-301's; Band height REQ-GUI-304's; Shared axis REQ-GUI-305's.
+- **P14. The tests (G10).** Each is a requirement's verify with the arm the file gives: One place REQ-GUI-324's; Tabs
+  and Window highlight REQ-GUI-326's and REQ-GUI-327's; Band height REQ-GUI-330's; Shared axis REQ-GUI-331's.
 - **P15. The tasks.** G1 to G9 are the GUI's, after the trace markers' task (TASK-M8-58, after TASK-M8-49 to
   TASK-M8-51 and TASK-M8-55), as the human's message says: **TASK-M8-61** (G1 to G4 and G9: the panel, its tabs and
   sections, Overlays ▾ › Trace, the keys, the window highlight, the trace's look), **TASK-M8-62** (G5 and G6: `Trace…`
@@ -16683,5 +16683,5 @@ in the GUI). Read with R-409, R-453, R-461, R-462, R-509, R-539 and R-540.
 
 R-541 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-538.
 
-Adds REQ-GUI-298 to REQ-GUI-307; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (statement, note), REQ-GUI-079 and
+Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (statement, note), REQ-GUI-079 and
 REQ-GUI-097 (notes).

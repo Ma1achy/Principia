@@ -400,16 +400,16 @@ ended at t = … by …").
 
 | Test | Passes when | Fires on | Requirement |
 |---|---|---|---|
-| Scale invariance | a system and its copy scaled by `α` (times by `α^{3/2}`) give the same peaks in Hz to 0.1 Hz | a `t_c` or `f_ref` slip; an effect input that is not scale-free | REQ-GUI-287 |
-| Winding sign | the figure-eight run forwards and time-reversed swap its lines between L and R under *Stereo by winding* | a real FFT, or the sign dropped | REQ-GUI-284 |
-| Wrap | the `θ` signal's spectrum has no lines at multiples of the winding rate that are absent from `e^{iθ}`'s | `θ` used instead of `e^{iθ}` | REQ-GUI-283 |
-| Figure-eight | lines in exact 2:1 / 3:2 / 4:3 ratios to ±5 cents | a windowing or peak-refinement error | REQ-GUI-285 |
-| Lagrange (default signal) | one line, level above the min clamp | the rotation channel dropped | REQ-GUI-283 |
-| Lagrange (angles only) | level 0, because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (RQ-442) | REQ-GUI-290 |
-| No silent run | every run with `t_end > 0` that moves has at least one voiced line (fallback included) | the fallback missing | REQ-GUI-286 |
-| Struck floor | a struck voice 10 s after its strike is at `sus × level`, not 0, and was struck exactly once without a beat | a timer re-strike, or decay to zero | REQ-GUI-291 |
-| Silence after the end | follow mode past `t_end` voices nothing | a held chord | REQ-GUI-288 |
-| Spectrogram is display-only | the voiced peaks are identical with the spectrogram on and off and under any display mode | the contrast step leaking into analysis | REQ-GUI-296 |
+| Scale invariance | a system and its copy scaled by `α` (times by `α^{3/2}`) give the same peaks in Hz to 0.1 Hz | a `t_c` or `f_ref` slip; an effect input that is not scale-free | REQ-GUI-313 |
+| Winding sign | the figure-eight run forwards and time-reversed swap its lines between L and R under *Stereo by winding* | a real FFT, or the sign dropped | REQ-GUI-310 |
+| Wrap | the `θ` signal's spectrum has no lines at multiples of the winding rate that are absent from `e^{iθ}`'s | `θ` used instead of `e^{iθ}` | REQ-GUI-309 |
+| Figure-eight | lines in exact 2:1 / 3:2 / 4:3 ratios to ±5 cents | a windowing or peak-refinement error | REQ-GUI-311 |
+| Lagrange (default signal) | one line, level above the min clamp | the rotation channel dropped | REQ-GUI-309 |
+| Lagrange (angles only) | level 0, because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (RQ-442) | REQ-GUI-316 |
+| No silent run | every run with `t_end > 0` that moves has at least one voiced line (fallback included) | the fallback missing | REQ-GUI-312 |
+| Struck floor | a struck voice 10 s after its strike is at `sus × level`, not 0, and was struck exactly once without a beat | a timer re-strike, or decay to zero | REQ-GUI-317 |
+| Silence after the end | follow mode past `t_end` voices nothing | a held chord | REQ-GUI-314 |
+| Spectrogram is display-only | the voiced peaks are identical with the spectrogram on and off and under any display mode | the contrast step leaking into analysis | REQ-GUI-322 |
 
 ## 14. What the demo is not
 

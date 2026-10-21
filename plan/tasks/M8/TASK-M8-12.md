@@ -1,7 +1,7 @@
 # TASK-M8-12 — Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out (R-540 S1 to S4, S6, S7) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-283, REQ-GUI-284, REQ-GUI-285, REQ-GUI-286, REQ-GUI-287, REQ-GUI-288, REQ-GUI-290
+- **Closes:** REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316
 - **Depends on:** TASK-M8-09, TASK-M8-11, TASK-M3-28
 - **Needs (earlier milestones):** REQ-SYS-017, REQ-CHART-036, REQ-TOOL-028, REQ-VAL-041
 - **Reviewers:** code, qa, physics, gui, perf
@@ -49,13 +49,13 @@
 - `cargo xtask gate sonify-min-length` — a recorded measurement of spectral line resolution vs t gives the minimum t used by listen (REQ-VAL-103).
 - Doc review of `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism" — trajectory_viewing §1 gives the chaotic IC (as z or physical state) and the horizon of the measurement; the physics reviewer approves the doc change before merge (REQ-VAL-113).
 - `cargo xtask gate sonify-entropy` — the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-VAL-114).
-- `cargo test -p engine listen_signal` — REQ-GUI-283's verify (R-540 S13 Wrap; Lagrange (default signal)).
-- `cargo test -p engine listen_winding_sign` — REQ-GUI-284's verify (R-540 S13 Winding sign).
-- `cargo test -p engine listen_spectrum` — REQ-GUI-285's verify (R-540 S13 Figure-eight).
-- `cargo test -p engine listen_no_silent_run` — REQ-GUI-286's verify (R-540 S13 No silent run).
-- `cargo test -p engine listen_scale_invariance` — REQ-GUI-287's verify (R-540 S13 Scale invariance).
-- `cargo test -p engine listen_follow` — REQ-GUI-288's verify (R-540 S13 Silence after the end).
-- `cargo test -p engine listen_loudness` — REQ-GUI-290's verify (R-540 S13 Lagrange (angles only)).
+- `cargo test -p engine listen_signal` — REQ-GUI-309's verify (R-540 S13 Wrap; Lagrange (default signal)).
+- `cargo test -p engine listen_winding_sign` — REQ-GUI-310's verify (R-540 S13 Winding sign).
+- `cargo test -p engine listen_spectrum` — REQ-GUI-311's verify (R-540 S13 Figure-eight).
+- `cargo test -p engine listen_no_silent_run` — REQ-GUI-312's verify (R-540 S13 No silent run).
+- `cargo test -p engine listen_scale_invariance` — REQ-GUI-313's verify (R-540 S13 Scale invariance).
+- `cargo test -p engine listen_follow` — REQ-GUI-314's verify (R-540 S13 Silence after the end).
+- `cargo test -p engine listen_loudness` — REQ-GUI-316's verify (R-540 S13 Lagrange (angles only)).
 - `cargo xtask bench hover-listen-frame` — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker (REQ-SYS-060).
 
 ## Notes
@@ -63,6 +63,6 @@
 - Calibrations (R-71) proposed here: REQ-GUI-143, REQ-VAL-114. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-GUI-144, REQ-VAL-113. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - **Waits on RQ-440 and RQ-442** (R-540 H14). The task does not start until they are ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first). Native audio out is RQ-440's backend.
-- **⚑ Physics review is required** on R-540 S1 to S3 and S7 (REQ-GUI-283 to REQ-GUI-287, REQ-GUI-290: the signal, the pitch's scale invariance, the floor); it does not merge on the code reviewer's word alone.
+- **⚑ Physics review is required** on R-540 S1 to S3 and S7 (REQ-GUI-309 to REQ-GUI-313, REQ-GUI-316: the signal, the pitch's scale invariance, the floor); it does not merge on the code reviewer's word alone.
 - **Applied meanwhile (R-540):** RQ-451 (the default adds the rotation), RQ-450 (the fallback; REQ-VAL-103's measured minimum sets the readout's warning), RQ-453 (REQ-VAL-102 stays a check of θ(t)'s spectrum), RQ-455 and RQ-458 (the code's last-half window and channels), RQ-443 (the selector's row stale), and RQ-441 (a), the analysis on the CPU in the inspector worker, unless it is ruled first. REQ-GUI-144's choices are defined by R-540; this task's doc change to pointer_channels §4 is made (R-540's port), so its doc review checks the build against it. A ruling other than these is a follow-up change.
 - The S3 measurements are the demo's, evidence, not values (R-540 H12); the tests measure prin-rs.

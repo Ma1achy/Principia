@@ -14928,7 +14928,7 @@
   - R-109
   - R-540
   milestone: M8
-  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-287)."
+  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-313)."
 - id: REQ-GUI-050
   area: GUI
   statement: "Sonification must cross-fade between hovered ICs and never retrigger per pixel."
@@ -14948,7 +14948,7 @@
   milestone: M8
   rq:
   - RQ-452
-  note: "R-540 S5 (21 Oct 2026): the chord cross-fades as a bank; a struck instrument strikes each new hovered run's chord, which is RQ-452 against this requirement, the code applied meanwhile (REQ-GUI-289, REQ-GUI-291)."
+  note: "R-540 S5 (21 Oct 2026): the chord cross-fades as a bank; a struck instrument strikes each new hovered run's chord, which is RQ-452 against this requirement, the code applied meanwhile (REQ-GUI-315, REQ-GUI-317)."
 - id: REQ-GUI-051
   area: GUI
   statement: "Hover and click must map the pointer through the single Y-flip (v = 1 − event.y / H) exactly as the render does, decode the IC on the CPU, and integrate it with one f64 computeIC returning the full state r(t), p(t)."
@@ -15408,7 +15408,7 @@
   - R-476
   - R-509
   milestone: M8
-  note: "Where 'save as default' is stored: REQ-GUI-153 (definition). R-467 (20 Oct 2026), D9, applied per R-369: the Chart group's \"forbidden region\" and the Integration group's \"NaN / invalid pixels\" stay as diagnostics the person turns on, off by default; with View › Debug view built they draw its styles (REQ-COL-109). Flagged. Whether the two toggles stay is RQ-374 (gui review 5585209592 of PR #253, G5): option (a), keep both off by default, is applied meanwhile; only TASK-M8-08's two lines for them wait. R-470 (20 Oct 2026), G3, rules RQ-374: forbidden region stays, off by default, over not-a-system pixels only; NaN / invalid pixels draws only while a debug view is the figure (option (c), applied per R-369, flagged); TASK-M8-08's two lines no longer wait. R-476 L2, M3: the grid and t_end contours leave Overlays ▾ for Lines ▾ (TASK-M8-50). *Was:* \"Chart (forbidden region from the chart's domain function, grid, Burrau lattice), Stain (class edges, t_end contours)\". R-509 Y5: class edges leave Overlays ▾ for Lines ▾ (TASK-M8-50), so the Stain group goes. *Was:* \"Chart (…, Burrau lattice), Stain (class edges)\". R-541 G2 (21 Oct 2026): Overlays ▾ gains a Trace group after Chart, REQ-GUI-298's (TASK-M8-61); this requirement's groups are unchanged."
+  note: "Where 'save as default' is stored: REQ-GUI-153 (definition). R-467 (20 Oct 2026), D9, applied per R-369: the Chart group's \"forbidden region\" and the Integration group's \"NaN / invalid pixels\" stay as diagnostics the person turns on, off by default; with View › Debug view built they draw its styles (REQ-COL-109). Flagged. Whether the two toggles stay is RQ-374 (gui review 5585209592 of PR #253, G5): option (a), keep both off by default, is applied meanwhile; only TASK-M8-08's two lines for them wait. R-470 (20 Oct 2026), G3, rules RQ-374: forbidden region stays, off by default, over not-a-system pixels only; NaN / invalid pixels draws only while a debug view is the figure (option (c), applied per R-369, flagged); TASK-M8-08's two lines no longer wait. R-476 L2, M3: the grid and t_end contours leave Overlays ▾ for Lines ▾ (TASK-M8-50). *Was:* \"Chart (forbidden region from the chart's domain function, grid, Burrau lattice), Stain (class edges, t_end contours)\". R-509 Y5: class edges leave Overlays ▾ for Lines ▾ (TASK-M8-50), so the Stain group goes. *Was:* \"Chart (…, Burrau lattice), Stain (class edges)\". R-541 G2 (21 Oct 2026): Overlays ▾ gains a Trace group after Chart, REQ-GUI-324's (TASK-M8-61); this requirement's groups are unchanged."
 - id: REQ-GUI-080
   area: GUI
   statement: "There must be no global display bar: its controls must live in the Display window and the Overlays menu."
@@ -15548,7 +15548,7 @@
   note: "R-449 (16 Oct 2026) supersedes R-22's display half: was \"must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels\" (verify: \"labels for body 0 escape read 'body 0'; … no '1–2' style collision label\"). Still closed by TASK-M8-10, which uses TASK-M2-33's function."
 - id: REQ-GUI-088
   area: GUI
-  statement: "The right-hand Trajectory panel must show, for the IC under the cursor or a kept orbit (tabs 'under cursor', #1, #2, +), a one-line summary (fate, t_end, FTLE, E₀), real space (CoM frame) beside the shape sphere, the F₂ word, substeps, minimum separation and |ΔE/E|, a playhead, listen, Open full viewer… and IC Inspector… (both opening the Inspector window), and the kept orbits as the header's tabs, each with its fate and time, removable, and its own previews, trace and sound (R-541 G4; its order and sections REQ-GUI-300)."
+  statement: "The right-hand Trajectory panel must show, for the IC under the cursor or a kept orbit (tabs 'under cursor', #1, #2, +), a one-line summary (fate, t_end, FTLE, E₀), real space (CoM frame) beside the shape sphere, the F₂ word, substeps, minimum separation and |ΔE/E|, a playhead, listen, Open full viewer… and IC Inspector… (both opening the Inspector window), and the kept orbits as the header's tabs, each with its fate and time, removable, and its own previews, trace and sound (R-541 G4; its order and sections REQ-GUI-326)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -15567,7 +15567,7 @@
   milestone: M8
   rq:
   - RQ-462
-  note: "R-541 G4 (21 Oct 2026): the kept list moves into the tabs and Trace…; the panel's order, its status line and its Trace, Listen and Numbers sections are REQ-GUI-300 (TASK-M8-61); what G4 leaves out is kept (RQ-462, (a) applied meanwhile). *Was:* \"and the kept orbits below with fate and time, each removable.\""
+  note: "R-541 G4 (21 Oct 2026): the kept list moves into the tabs and Trace…; the panel's order, its status line and its Trace, Listen and Numbers sections are REQ-GUI-326 (TASK-M8-61); what G4 leaves out is kept (RQ-462, (a) applied meanwhile). *Was:* \"and the kept orbits below with fate and time, each removable.\""
 - id: REQ-GUI-089
   area: GUI
   statement: "The shape sphere (in the Trajectory panel and the Inspector's pane 2) must turn slowly with visible x, y, z axes, switch to an unwrapped equirectangular view in the same pane, and stop turning when the 'turn' checkbox is cleared."
@@ -15619,7 +15619,7 @@
   rq:
   - RQ-443
   - RQ-451
-  note: "The artboard's selector is illustrative (R-68). Only pointer_channels §4 is normative, through render_gui_spec's listen (R-109). Its open choices: REQ-GUI-144 (definition); the reference pitch: REQ-GUI-143 (calibration). R-540 (21 Oct 2026) extends the mapping: the default signal adds the rotation e^{iψ}, Angles only being θ(t), φ(t) (REQ-GUI-283; RQ-451, applied meanwhile); the verify's input is the selected signal's series, still only the computeIC trajectory's. The selector's row is stale, replaced by R-540 (RQ-443, (a) applied); no separations mapping exists."
+  note: "The artboard's selector is illustrative (R-68). Only pointer_channels §4 is normative, through render_gui_spec's listen (R-109). Its open choices: REQ-GUI-144 (definition); the reference pitch: REQ-GUI-143 (calibration). R-540 (21 Oct 2026) extends the mapping: the default signal adds the rotation e^{iψ}, Angles only being θ(t), φ(t) (REQ-GUI-309; RQ-451, applied meanwhile); the verify's input is the selected signal's series, still only the computeIC trajectory's. The selector's row is stale, replaced by R-540 (RQ-443, (a) applied); no separations mapping exists."
 - id: REQ-GUI-091
   area: GUI
   statement: "The compass (nav cube) must sit bottom left under the view controls and show the slice plane inside the chart in a fixed orthographic view at its default angle, with no orbit (R-409); have a Tilt and a Slice button, Tilt the default, a click on one switching the mode and the buttons always showing the current mode, while touching a slice slider still switches it to slicing and touching a tilt to tilting; tilt the plane when dragged in tilt mode, and move the slice plane along its normal, its tilt fixed, when dragged anywhere on it in slice mode; carry a gold pin at the pivot when locked with the plane turning about it; and read out the tilt and rotation angles."
@@ -15750,7 +15750,7 @@
   rulings:
   - R-409
   milestone: M8
-  note: "R-409 (10 Oct 2026): the compass's keys are reworded (Shift+arrows' orbit retired; the slice-mode arrows' base step is REQ-GUI-184). R-409's follow-up answers (F1, F3): the arrows need Enter and the letter and Space shortcuts act in either mode; on the compass Shift is ×10 and Alt ×0.1, as everywhere, the earlier fine step superseded; Time's ← → step in interaction mode on its scrubber (applied per R-369). TASK-M6-31 builds the compass's keys on the mock (REQ-GUI-183). R-541 G2 (21 Oct 2026): the Figure's T, ⇧T, Y and L are REQ-GUI-299's (TASK-M8-61); G2's \"K keep the current trajectory\" against K the lock is RQ-449, K staying lock and Space keep meanwhile."
+  note: "R-409 (10 Oct 2026): the compass's keys are reworded (Shift+arrows' orbit retired; the slice-mode arrows' base step is REQ-GUI-184). R-409's follow-up answers (F1, F3): the arrows need Enter and the letter and Space shortcuts act in either mode; on the compass Shift is ×10 and Alt ×0.1, as everywhere, the earlier fine step superseded; Time's ← → step in interaction mode on its scrubber (applied per R-369). TASK-M6-31 builds the compass's keys on the mock (REQ-GUI-183). R-541 G2 (21 Oct 2026): the Figure's T, ⇧T, Y and L are REQ-GUI-325's (TASK-M8-61); G2's \"K keep the current trajectory\" against K the lock is RQ-449, K staying lock and Space keep meanwhile."
 - id: REQ-GUI-098
   area: GUI
   statement: "Keyboard focus must be shown only as a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409), and a top-bar breadcrumb (e.g. 'Manifold view › Navigate › zoom'), with nothing else changing on screen: the ring's colour showing the mode is the one change the mode makes (and the breadcrumb's, per R-409 A6)."
@@ -18711,7 +18711,7 @@
   note: "R-537 EX9 (U13, U15). Closed by TASK-M8-55. The round-trip rule (RT1) and the steganographic tier 1 are ruled on unmerged branches; when they merge they apply here as to every export."
 - id: REQ-GUI-271
   area: GUI
-  statement: "A new trace must take principia_lines.md §8's defaults (R-538 TM2): icon set Principia, icon size 1.4×, syzygy markers off (style from the icon set), stutters faded, leaving and re-entering the reach on, the end event icon on, off-screen icons pinned faint to the edge on, window chevrons, seams and joined jumps off, length to the head with everything from t = 0 (to its end while the playhead is neither played nor scrubbed, TF3), the tail off (Tail only, Δt 3 when on), the rest not shown faintly, the head marker labelled with its time on, time ticks every 2 labelled, direction arrows filled triangles of 8 px every Δt 1.0, width 2.2 px, the hover and pinned trace #FFF27A and kept traces the trace palette in turn (#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2); each setting must be a field of the trace's Lines state, in that order, its control in Trace… (REQ-GUI-302), one undoable SetField that re-integrates nothing."
+  statement: "A new trace must take principia_lines.md §8's defaults (R-538 TM2): icon set Principia, icon size 1.4×, syzygy markers off (style from the icon set), stutters faded, leaving and re-entering the reach on, the end event icon on, off-screen icons pinned faint to the edge on, window chevrons, seams and joined jumps off, length to the head with everything from t = 0 (to its end while the playhead is neither played nor scrubbed, TF3), the tail off (Tail only, Δt 3 when on), the rest not shown faintly, the head marker labelled with its time on, time ticks every 2 labelled, direction arrows filled triangles of 8 px every Δt 1.0, width 2.2 px, the hover and pinned trace #FFF27A and kept traces the trace palette in turn (#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2); each setting must be a field of the trace's Lines state, in that order, its control in Trace… (REQ-GUI-328), one undoable SetField that re-integrates nothing."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -18733,7 +18733,7 @@
   milestone: M8
   rq:
   - RQ-448
-  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing. R-541 P2 (21 Oct 2026): the settings' controls leave Lines ▾ for Trace…, the Trajectory panel's Trace section and Overlays ▾ › Trace (REQ-GUI-298, REQ-GUI-300, REQ-GUI-302; RQ-448, (a) applied meanwhile). *Was:* \"each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing.\""
+  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing. R-541 P2 (21 Oct 2026): the settings' controls leave Lines ▾ for Trace…, the Trajectory panel's Trace section and Overlays ▾ › Trace (REQ-GUI-324, REQ-GUI-326, REQ-GUI-328; RQ-448, (a) applied meanwhile). *Was:* \"each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing.\""
 - id: REQ-GUI-272
   area: GUI
   statement: "A trace's markers must be drawn from the chosen icon set (Principia the default; Arrows, Pictures, Orbits; R-538 TM3, TM4): a star at the start (Pictures: the initial triangle in body colours, RQ-413 (a)), each end event its own icon in its outcome's colour from the active outcome palette (pair collision, triple collision with detail = 3, escape, triple ejection with detail = 3, horizon), \"?\" for an incomplete run with its last stretch dashed, the leave and re-enter rings of the chart's reach, where R-538 TF1 says the trace leaves (REQ-GUI-277), with the line dashed between them, the optional window chevrons and seam ticks, each icon over a dark halo #0B0B0E with light ink #F5F4F0; there must be no double-escape icon."
@@ -18934,7 +18934,7 @@
   - R-538
   milestone: M8
   note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a) applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
-- id: REQ-GUI-283
+- id: REQ-GUI-309
   area: GUI
   statement: "Listen's signal must be principia_listen.md §1's, computed per sample from the computeIC trajectory's mass-weighted Jacobi vectors with no canonical frame: Channel A w·e^{iθ}, Channel B φ, and, under the default Signal (Angles + rotation), the rotation e^{iψ} summed in power into A's two sides; Angles only and Shape vector selectable; the pole weight min(1, sin φ / 0.1) (sin φ under Shape vector)."
   source:
@@ -18950,7 +18950,7 @@
   - R-540
   milestone: M8
   note: "R-540 S1, H5; ⚑ physics review (the signal). The default's ψ against R-109's θ(t), φ(t) is RQ-451, applied meanwhile. Closed by TASK-M8-12."
-- id: REQ-GUI-284
+- id: REQ-GUI-310
   area: GUI
   statement: "Listen's spectrum must be a complex forward FFT of the complex channels, so that anticlockwise winding (θ increasing) lies at positive frequencies and clockwise at negative ones; Channels must be Stereo by winding (the default: pos left, neg right), Stereo (fold left, φ's b right) or Mono (mono), as principia_listen.md §6 gives them."
   source:
@@ -18967,7 +18967,7 @@
   - R-540
   milestone: M8
   note: "R-540 S1, S6; φ under Stereo by winding is RQ-458, the code applied meanwhile. Closed by TASK-M8-12."
-- id: REQ-GUI-285
+- id: REQ-GUI-311
   area: GUI
   statement: "Listen's spectrum must be principia_listen.md §2's: the window's samples resampled linearly to N uniform times (4096 for the analysis shown, 1024 per frame), each series less its mean, Hann-windowed and zero-padded to NF (8192, 2048), df = (N−1)/(D·NF); peaks above 0.01 of the largest bin from k₀ = max(2, ⌈1.5/(D·df)⌉), refined by the parabola through three bins, the top Voices (default 16) kept; left and right found on one shared scale; the entropy, the interval and the periods per window as §2 defines them."
   source:
@@ -18982,7 +18982,7 @@
   - R-540
   milestone: M8
   note: "R-540 S2; ⚑ physics review (the spectrum). Where it runs is RQ-441 (its option (a), the CPU in the inspector worker, applied when the build starts unless ruled first); the entropy against REQ-VAL-102's anchors is RQ-453. Closed by TASK-M8-12."
-- id: REQ-GUI-286
+- id: REQ-GUI-312
   area: GUI
   statement: "Where no mono peak of a window clears the 1.5-period cut, Listen must play the mean rates of principia_listen.md §2 (θ's and, under the default signal, ψ's signed winding rates, φ's unsigned rate), so that every run that moves makes a sound; a run with t_end ≤ 10⁻⁶ or fewer than three samples has no analysis and is silent."
   source:
@@ -18997,7 +18997,7 @@
   - R-540
   milestone: M8
   note: "R-540 S2, H6. Against pointer_channels §4's measured floor (REQ-VAL-103) this is RQ-450, applied meanwhile: the measured minimum sets the readout's warning. Closed by TASK-M8-12."
-- id: REQ-GUI-287
+- id: REQ-GUI-313
   area: GUI
   statement: "Listen's pitch must be Hz = f·t_c·f_ref·2^shift (principia_listen.md §3): t_c = (2|E|)^{−3/2} for E < 0, else I^{3/4}, at t = 0; f_ref (1/t_c is) 110, 220 (the default) or 440 Hz; Fit to hearing (on by default) choosing shift, a whole number of octaves from −8 to 8, once per run from the whole run's strongest mono line into 110–880 Hz; only lines strictly between 30 Hz and 6 kHz voiced."
   source:
@@ -19012,7 +19012,7 @@
   - R-540
   milestone: M8
   note: "R-540 S3; ⚑ physics review (the pitch's scale invariance). f_ref's value is REQ-GUI-143's calibration. Closed by TASK-M8-12."
-- id: REQ-GUI-288
+- id: REQ-GUI-314
   area: GUI
   statement: "Listen must follow the head or play the whole run as principia_listen.md §4 gives it: in Follow the head, while the trace is played, scrubbed or animates on its own clock, the frame at or before the head, its window Fixed, centred (W = min(Fixed·t_c, t_end), default 6 t_c, shifted inside the run), Grows or Grows, last half, the frames at §4's hop; otherwise, and under Whole run, the whole run as one chord; past the run's end follow mode is silent."
   source:
@@ -19028,7 +19028,7 @@
   - R-540
   milestone: M8
   note: "R-540 S4; the last-half window is the code's, RQ-455. Closed by TASK-M8-12."
-- id: REQ-GUI-289
+- id: REQ-GUI-315
   area: GUI
   statement: "Listen's voices must be principia_listen.md §5's: the whole run's chord one voice per peak at 0.22·a/Σa (×1.3 in stereo), a bank cross-faded in and out (140 ms on a new run) and never retriggered; the follow track a pool of 32 persistent voices tracking partials, each sounding voice gliding (35 ms) to the nearest unused peak within a semitone, each unclaimed peak taking a silent voice, the pan the peak's × 0.9 in stereo."
   source:
@@ -19044,7 +19044,7 @@
   - R-540
   milestone: M8
   note: "R-540 S5; with a struck instrument the chord strikes, against REQ-GUI-050's never retrigger: RQ-452, the code applied meanwhile. Closed by TASK-M8-59."
-- id: REQ-GUI-290
+- id: REQ-GUI-316
   area: GUI
   statement: "Listen's loudness must be principia_listen.md §7's: the window's shape rms (with the rotation's under the default signal); level 0 unless rms > RMS_FLOOR; otherwise clamp(√min(1, rms/0.1), Min, Max) under Loudness: follows the shape's movement (the default), or clamp(1, Min, Max) normalised; Min level 15 %, Max level 100 %, Volume 60 % by default."
   source:
@@ -19059,7 +19059,7 @@
   - R-540
   milestone: M8
   note: "R-540 S7; ⚑ physics review (the floor). RMS_FLOOR's value waits on RQ-442 (the demo's 10⁻⁷ is its own integrator's); the task does not start until it is ruled. Closed by TASK-M8-12."
-- id: REQ-GUI-291
+- id: REQ-GUI-317
   area: GUI
   statement: "Listen's instruments must be the 39 recipes of principia_listen.md §8's INSTRUMENTS, voiced by makeVoice's steps as §8 transcribes them; the instrument decides only the timbre, so it changes nothing measured or displayed; a struck instrument is struck once and rings at its floor, sus × the level, never decaying to zero."
   source:
@@ -19074,7 +19074,7 @@
   - R-540
   milestone: M8
   note: "R-540 S8; the default instrument (Sine (pure) in the code, Warm sine in the file) is RQ-454 and the strike's time constant RQ-456, the code applied meanwhile. Closed by TASK-M8-59."
-- id: REQ-GUI-292
+- id: REQ-GUI-318
   area: GUI
   statement: "Listen's struck and retrig voices must sound again on the trajectory's own beats in follow mode (Strikes on: each syzygy the head passes, the default; every crossing time ÷ 1, 2 or 4, default 2; only when a line changes, adding no beats), and, in every mode, when their line has moved by more than a quarter-tone since it last sounded."
   source:
@@ -19089,7 +19089,7 @@
   - R-540
   milestone: M8
   note: "R-540 S8; the line-change strike in every mode is the code's, RQ-457. Closed by TASK-M8-59."
-- id: REQ-GUI-293
+- id: REQ-GUI-319
   area: GUI
   statement: "Listen's events must be principia_listen.md §9's, each with its switch, at Event level (80 % by default), fired as the head passes them in follow mode and panned by the bodies involved (1, 2, 3 at −0.8, 0, +0.8): a close approach below 0.2 R (on), the terminal collision by its pair (on), the terminal escape or ejection (on), and a syzygy tick (off)."
   source:
@@ -19104,7 +19104,7 @@
   - R-540
   milestone: M8
   note: "R-540 S9, H4; the 0.2 R threshold and depth scale are parameters, RQ-444 (a) applied. Closed by TASK-M8-59."
-- id: REQ-GUI-294
+- id: REQ-GUI-320
   area: GUI
   statement: "Listen's effects must be principia_listen.md §9's, each a switch and an amount read at the head (or the run's mean for a chord): reverb from the spread R/R₀, Doppler from Ṙ t_c / R, bit-crush from the entropy H and stereo width from √(L_z²|E|), all scale-free, chained voices and events → bit-crush → width → dry and convolver → compressor → output."
   source:
@@ -19119,7 +19119,7 @@
   - R-540
   milestone: M8
   note: "R-540 S9, H9; reverb and width are off by default in the code, on in the file: RQ-454, the code applied meanwhile. Closed by TASK-M8-59."
-- id: REQ-GUI-295
+- id: REQ-GUI-321
   area: GUI
   statement: "Listen must sharpen on dwell as principia_listen.md §10 gives it: a moving hover's run integrated to the map's own horizon under pointer_channels §3's step budget; after a 280 ms dwell, or at once for a pin, a run that reached it without an event is integrated on to Listen's Horizon (20, 60 by default, 150, 400) where that is longer, the trace and the sound both switching to it; a run ended by its event is not extended."
   source:
@@ -19135,7 +19135,7 @@
   - R-540
   milestone: M8
   note: "R-540 S10, H8; the moving bound and Listen's horizon against R-144's step budget and the Run window are RQ-464, (a) applied meanwhile. Closed by TASK-M8-60."
-- id: REQ-GUI-296
+- id: REQ-GUI-322
   area: GUI
   statement: "Listen's spectrum and spectrogram must be drawn as principia_listen.md §11 gives them: the spectrum on log frequency 30 Hz–6 kHz, 0 to −60 dB, the fit band, the channels in #5ab4ff, #e0a030 and #dcdcdc, the top peaks as notes and the harmonics; the spectrogram's frames in magma, each in dB above its own mean over ±½ octave, display only, with its event lane and playhead; and the readout's lines."
   source:
@@ -19149,8 +19149,8 @@
   rulings:
   - R-540
   milestone: M8
-  note: "R-540 S11, H10; where each sits in the GUI is R-541's (REQ-GUI-300, REQ-GUI-304). Closed by TASK-M8-60."
-- id: REQ-GUI-297
+  note: "R-540 S11, H10; where each sits in the GUI is R-541's (REQ-GUI-326, REQ-GUI-330). Closed by TASK-M8-60."
+- id: REQ-GUI-323
   area: GUI
   statement: "Listen must offer Sweep a row (the pinned hover moving along the current run's row from 2 % to 98 % of the view's width over Sweep seconds, default 10, every 60 ms, sending no SetField) and Known orbit (figure-eight, figure-eight perturbed 1 %, Burrau 3:4:5, Lagrange rotating, each loaded with principia_listen.md §12's IC, total mass 1, G = 1, pinned and integrated to the horizon at once)."
   source:
@@ -19165,7 +19165,7 @@
   - R-540
   milestone: M8
   note: "R-540 S12, H11; the known orbits are the S13 tests' calibration set. Closed by TASK-M8-60."
-- id: REQ-GUI-298
+- id: REQ-GUI-324
   area: GUI
   statement: "Everything about one trajectory must live in the Trajectory panel, Overlays ▾ › Trace, Trace…, Listen… and the bottom band's Time column (R-541 G1): Overlays ▾ gains its Trace group after Chart (trace under cursor, kept traces, syzygies, end event icon, off-screen icons pinned, repeat in wrapped copies, outline the chart's square once RQ-408 is ruled, and Trace…), each item the same field as its Trace… control and panel chip; the left panel holds no trace control, and Lines ▾ lists no trace."
   source:
@@ -19184,7 +19184,7 @@
   - R-541
   milestone: M8
   note: "R-541 G1 to G3, P2, P4, P5, P13. Lines ▾ keeps the rest of the line system meanwhile (RQ-448 (a)); the outline's entries wait on RQ-408 (RQ-461). Closed by TASK-M8-61."
-- id: REQ-GUI-299
+- id: REQ-GUI-325
   area: GUI
   statement: "With the focus in the Figure, in either keyboard mode, T must show or hide the trace under the cursor, ⇧T the kept traces, Y the syzygies and L turn the sound on or off (R-541 G2), Space keeping the trajectory and K staying the lock (RQ-449), each on the shortcuts sheet."
   source:
@@ -19200,7 +19200,7 @@
   - R-541
   milestone: M8
   note: "R-541 G2, P3; K against R-409's lock is RQ-449, (a) applied meanwhile. Closed by TASK-M8-61."
-- id: REQ-GUI-300
+- id: REQ-GUI-326
   area: GUI
   statement: "The Trajectory panel must be R-541 G4's from the top (render_gui_spec §G2): the header's tabs (under cursor, #1, #2, …, + keep), each kept trajectory a tab with its own previews, trace and sound; the status line (running or pinned, the end event and its time, |ΔE/E|, FTLE, E₀); the previews; the Trace, Listen and Numbers sections, each one row collapsed, Trace and Numbers collapsed by default and Listen collapsed until first used, then remembered per user; then the panel's playhead, Open full viewer… and IC Inspector…."
   source:
@@ -19216,7 +19216,7 @@
   - R-541
   milestone: M8
   note: "R-541 G4, P6, P11; the summary's FTLE and E₀, the playhead and the buttons kept (RQ-462 (a)); Listen's state remembered (RQ-445 (a)). Closed by TASK-M8-61."
-- id: REQ-GUI-301
+- id: REQ-GUI-327
   area: GUI
   statement: "While Listen is on, the stretch of the shape-sphere preview's path inside the analysis window, windowAt(t) (principia_listen.md §4), must be drawn brighter, #5ab4ff at width 2.4."
   source:
@@ -19234,7 +19234,7 @@
   - R-541
   milestone: M8
   note: R-541 G4. Closed by TASK-M8-61.
-- id: REQ-GUI-302
+- id: REQ-GUI-328
   area: GUI
   statement: "The Trace… window must hold every trace setting of render_gui_spec §G5's Trace… table with its default, under a preview strip drawn with the current settings, applying to all traces or the current tab only, with reset and save as default; each control one undoable SetField of the trace's Lines state that re-integrates nothing."
   source:
@@ -19252,7 +19252,7 @@
   - R-541
   milestone: M8
   note: "R-541 G5, P7; the kept colours are R-538's (RQ-447); the outline's entry waits on RQ-408 (RQ-461). Closed by TASK-M8-62."
-- id: REQ-GUI-303
+- id: REQ-GUI-329
   area: GUI
   statement: "The Listen… window must hold every sound setting of render_gui_spec §G5's Listen… table with its default (the demo's code's), in two columns (Sound, Loudness, Listen; Pitch & analysis, Events, Effects) with the readout row under both, the instrument menu grouped by family, one instrument per row."
   source:
@@ -19270,7 +19270,7 @@
   - R-541
   milestone: M8
   note: "R-541 G6, P8; defaults the code's (RQ-454); the family assignment is written by the task (RQ-459, R-72). Closed by TASK-M8-62."
-- id: REQ-GUI-304
+- id: REQ-GUI-330
   area: GUI
   statement: "Listen must add to the bottom band's Time column and nothing else (R-541 G7): with sound on the band keeps its height (196 px by default) and an event lane and mini spectrogram fill the Time column's spare height; expanded (⏶), the band grows upward to its second height (420 px by default), the view giving up exactly that, the Time column showing the full spectrogram, the Compass its cube only (its buttons out of the keyboard tree) and the Legend's column the spectrum at the head until ⏷; F3 hides the whole band."
   source:
@@ -19286,7 +19286,7 @@
   - R-541
   milestone: M8
   note: "R-541 G7, P9, P11; the sizes are R-462's defaults (RQ-463 (a)); the spectrum borrows the Legend's column (RQ-446 (a)). Closed by TASK-M8-63."
-- id: REQ-GUI-305
+- id: REQ-GUI-331
   area: GUI
   statement: "The spectrogram and the scrubber must share one time axis, so that the playhead is one line through both; the spectrogram is blank past the run's end, which is labelled (R-541 G7)."
   source:
@@ -19301,7 +19301,7 @@
   - R-541
   milestone: M8
   note: R-541 G7. Closed by TASK-M8-63.
-- id: REQ-GUI-306
+- id: REQ-GUI-332
   area: GUI
   statement: "While a trace is shown, the legend must gain an `on the trace` block after the stain's own keys and before the debug view's key: the line (and each kept trace's colour), the start star and this run's end icon, and with sound on `♪ ◀ left ▶ right` in Listen's channel colours (R-541 G8)."
   source:
@@ -19317,7 +19317,7 @@
   - R-541
   milestone: M8
   note: R-541 G8, P13. Closed by TASK-M8-63.
-- id: REQ-GUI-307
+- id: REQ-GUI-333
   area: GUI
   statement: "Every trace must be drawn one way, the defaults (R-541 G9, principia_lines.md §8): the line #FFF27A at 2.2 px over the style's dark outline of width w + 2.2, time ticks every 2 labelled, filled-triangle arrows every Δt 1.0 at 8 px, a yellow start star, a white head disc labelled with its time, icons at 1.4×, syzygies off; kept traces in R-538's trace palette in turn."
   source:
@@ -23859,7 +23859,7 @@
   milestone: M8
   rq:
   - RQ-450
-  note: "R-540 S2 (21 Oct 2026): every run that moves makes a sound (the mean-rate fallback, REQ-GUI-286); the measured minimum sets the readout's \"under 20: too short to resolve a note\" warning, not a silence: RQ-450, (a) applied meanwhile."
+  note: "R-540 S2 (21 Oct 2026): every run that moves makes a sound (the mean-rate fallback, REQ-GUI-312); the measured minimum sets the readout's \"under 20: too short to resolve a note\" warning, not a silence: RQ-450, (a) applied meanwhile."
 - id: REQ-VAL-104
   area: VAL
   statement: "The two sonification predictions must be tested on inspector data: a line of ICs across a known fractal boundary sounds a note dissolving into noise and re-forming as a different note, and a 3:2 resonance gives a 3:2 frequency ratio (a fifth)."

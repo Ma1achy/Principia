@@ -51,5 +51,5 @@ The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view
   REQ-GUI-183), and this task reaches it through TASK-M6-28. REQ-GUI-096, REQ-GUI-097 and
   REQ-GUI-098 are reworded; this task's lines for them read as now worded. The base step of the compass's slice-mode
   arrows is REQ-GUI-184, proposed by TASK-M6-31 and confirmed at the M8 gate.
-- R-541 G2 (21 Oct 2026): the Figure's T, ⇧T, Y and L are REQ-GUI-299's, TASK-M8-61's, on this task's scopes; G2's
+- R-541 G2 (21 Oct 2026): the Figure's T, ⇧T, Y and L are REQ-GUI-325's, TASK-M8-61's, on this task's scopes; G2's
   "K keep the current trajectory" against K the lock is RQ-449, K staying lock and Space keep meanwhile.

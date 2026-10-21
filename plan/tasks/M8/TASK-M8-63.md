@@ -1,7 +1,7 @@
 # TASK-M8-63 — The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-304, REQ-GUI-305, REQ-GUI-306
+- **Closes:** REQ-GUI-330, REQ-GUI-331, REQ-GUI-332
 - **Depends on:** TASK-M8-61, TASK-M8-60, TASK-M8-07, TASK-M8-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -23,9 +23,9 @@ Listen in the bottom band and the legend, R-541 G7 and G8: with sound on, an eve
 - Tests `band_height` and `spectrogram_shared_axis`; screenshot `06_legend` (trace_block).
 
 ## Acceptance tests
-- cargo test -p gui band_height (R-541 G10 Band height): turning ♪ on changes no pixel of the view's size; expanding the strip shrinks it by exactly the band's growth, and collapsing restores it; while expanded the compass's buttons are out of the keyboard tree and the Legend's column shows the spectrum; control: the strip pushing the view on sound-on fails (REQ-GUI-304).
-- cargo test -p gui spectrogram_shared_axis (R-541 G10 Shared axis): the spectrogram's playhead x equals the scrubber thumb's x at every t, in the mini and the expanded strip; columns past t_end are blank and labelled; control: two axes fail (REQ-GUI-305).
-- cargo xtask screenshot 06_legend (trace_block, sound on and off): the block sits after the stain's keys and before the debug key, its entries drawn as the figure draws them; no block while no trace is shown; control: a block shown with no trace, or one among the stain's keys, fails (REQ-GUI-306).
+- cargo test -p gui band_height (R-541 G10 Band height): turning ♪ on changes no pixel of the view's size; expanding the strip shrinks it by exactly the band's growth, and collapsing restores it; while expanded the compass's buttons are out of the keyboard tree and the Legend's column shows the spectrum; control: the strip pushing the view on sound-on fails (REQ-GUI-330).
+- cargo test -p gui spectrogram_shared_axis (R-541 G10 Shared axis): the spectrogram's playhead x equals the scrubber thumb's x at every t, in the mini and the expanded strip; columns past t_end are blank and labelled; control: two axes fail (REQ-GUI-331).
+- cargo xtask screenshot 06_legend (trace_block, sound on and off): the block sits after the stain's keys and before the debug key, its entries drawn as the figure draws them; no block while no trace is shown; control: a block shown with no trace, or one among the stain's keys, fails (REQ-GUI-332).
 
 ## Notes
 - **Applied meanwhile (R-541):** RQ-463 (a), the band's sizes are R-462's splitter defaults and the compass's buttons leave the keyboard tree while it is cube only; RQ-446 (a), the spectrum borrows the Legend's column. A ruling other than these is a follow-up change.
