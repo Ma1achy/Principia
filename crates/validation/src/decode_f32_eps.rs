@@ -83,12 +83,30 @@
 //! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.68 / 5.62 / 3.03 | 7.54 / 7.52 / 7.52 |
 //! | shape sphere, spherical / exponential map | 13.76 / 27.11 | 72.81 / 58.62 |
 //!
-//! The lavapipe worst is 72.81 (`r2x`, the spherical map, `z_mass = (−0.490, −0.724)`, at `(0.484, 0.249)`, where the
-//! native f32 decode is 3.06), 3.5 below 256 (CI run 39572746056's `gpu-kernel` job, a diagnostic on the code of
-//! 7fbf8653). Before 7fbf8653 the lavapipe decode exceeded the factor there: `r1y` 273.88 eps from f64 at
-//! `(0.9118395, 0.6456125)` (masses about `(0.0514, 0.00124, 0.947)`, native f32 1.12), the light body's `‖r₁‖ ≈ 27`
-//! multiplying the error of `C`'s turn by `sin` and `cos` of a rounded `atan2`. `C` now turns by `ρ/‖ρ‖`
-//! (`kernel::canon::rotation`), and that value is 12.12 (native f32 2.62).
+//! Off the defaults the lavapipe worst is 72.81 (`r2x`, the spherical map, `z_mass = (−0.490, −0.724)`, at
+//! `(0.484, 0.249)`, where the native f32 decode is 3.06), 3.5 below 256 (CI run 39572746056's `gpu-kernel` job, a
+//! diagnostic on the code of 7fbf8653). Before 7fbf8653 the lavapipe decode exceeded the factor there: `r1y` 273.88
+//! eps from f64 at `(0.9118395, 0.6456125)` (masses about `(0.0514, 0.00124, 0.947)`, native f32 1.12), the light
+//! body's `‖r₁‖ ≈ 27` multiplying the error of `C`'s turn by `sin` and `cos` of a rounded `atan2`. `C` now turns by
+//! `ρ/‖ρ‖` (`kernel::canon::rotation`), and that value is 12.12 (native f32 2.62).
+//!
+//! **`C` alone** (qa's `qa_m224_gpu_canon_turn`, `engine/tests/qa_TASK-M2-24_gpu.rs`; physics review 5599301723 F1).
+//! The test holds the same factor, by the same measure, on `C`'s `(m, r, p)` (`kernel::canon`, the decode's last step)
+//! from f32 states, against f64 `C` on the same states widened: 4096 states at every orientation (a turn drawn on
+//! `[−3.2, 3.2]` rad); scale `2^k` with `k` on `[−19, 19]`, `k = 0` drawn twice as often as each other value (`k` is a
+//! draw on `[−20, 20]` truncated toward zero); a light body of mass `10^−3.5` to `10^−2` at 4 to 40 from the CoM of the
+//! heavy two; canonical momenta, left unnormalised, up to about 10³. Worst against f64, in eps:
+//!
+//! | domain | Metal (M3 Pro) | CPU, f32 (native) | lavapipe |
+//! |---|---|---|---|
+//! | `C` alone, the domain above | 81.29 (in `p`) | 81.29 | 162.71 |
+//!
+//! The lavapipe value is the `gpu-kernel` job's (llvmpipe on LLVM 20.1.2; PR #262, CI run 39599090423, job
+//! 119219350820, on commit 43164ef3, whose code is 8666c7bd's), which shows the test's report on success
+//! (`.config/nextest.toml`); the Metal and CPU values are the same code's run on the build machine, the Metal value's
+//! place, in `p`, physics review 5599301723's reading. The test reports its worst over `(m, r, p)`, not where it lies
+//! nor its distance from the native f32 `C` on the same state; lavapipe's worst is twice the CPU's f32 worst over the
+//! same states. Over every domain this record holds the factor on, the worst is now this 162.71, 1.57 below 256.
 //!
 //! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
 //! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
