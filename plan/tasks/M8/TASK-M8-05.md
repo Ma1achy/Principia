@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056, REQ-CHART-071
-- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48
+- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48, TASK-M6-49
 - **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -27,6 +27,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - `decisions.md` § "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › "F3 fills by: Extend / Fit" for the session, a view change and never an edit *(amends R-406)*"
 - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)"
 - `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they nest; each is right for its job)"
+- `decisions.md` § "R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*"
 
 ## Deliverables
 - `crates/gui/src/render_host.rs` — egui-wgpu `Renderer` constructed from the engine's `wgpu::Device` / `Queue`, painting after the engine's pass on the same surface texture.
@@ -129,3 +130,5 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - **R-474 R7 (20 Oct 2026):** under Lean each axis the area statistics take the Gram factor (REQ-CHART-071); depends on TASK-M6-48 for `tilt_map`.
 - **R-470, R-471, R-472 (20 Oct 2026):** a forbidden pixel draws blank, never a palette colour; a builder energy-type axis is warped by default (bounded) and B1's affine axis its linear option, REQ-CHART-054's and REQ-CHART-056's tests run under both mappings; a tilted, sliced or saved chart extends by its axes' types.
 - **⚑ Physics review is required** for REQ-CHART-071 and B1's retirement (R-471, R-474) (the instruction of R-469, "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
+- **Review round 1 of PR #255 (applied per R-369):** depends on TASK-M6-49, which builds View › Save view as chart on the mock (gui review G4); REQ-GUI-078's Lines ▾ clause moved to REQ-GUI-247 (TASK-M8-50). **R-508:** REQ-CHART-056's statistic counts the warp's `t > 1` side.
+- **R-537 (20 Oct 2026):** the extension is reached by pan and zoom with the controls shown too, not only under F3; this task's F3 fill and extension types are unchanged, and TASK-M8-55 (navigation, no gaps, interactions) and TASK-M8-56 (the quadtree's canonical addresses) build on them.

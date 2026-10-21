@@ -343,6 +343,19 @@ pub const FGW_LENGTH_SENTINEL: ConstantBuilder = maximum(
     },
 );
 
+/// The most branch-cut crossings one accepted substep holds: one per cut, as a crossing is a sign change of a cut's
+/// signed distance between the segment's two endpoints (dd_simstate_payload §3, the half-open sign convention), and the
+/// word's generators `a` and `b` are two branch cuts (symbolic_dynamics_contract §1). The capacity of the march's
+/// per-substep crossing list (`kernel::word::SubstepCrossings`), each slot reached by a constant index.
+pub const MAX_CROSSINGS_PER_SUBSTEP: ConstantBuilder = maximum(
+    "max_crossings_per_substep",
+    2.0,
+    Citation::Corpus {
+        file: "docs/contracts/principia_symbolic_dynamics_contract.md",
+        section: "1. Generator ↔ branch-cut convention",
+    },
+);
+
 /// binary16's greatest finite value: the pack clamp, ±65504, applied before `pack2x16float`.
 pub const F16_FINITE_MAX: ConstantBuilder = maximum(
     "f16_finite_max",
@@ -849,6 +862,20 @@ pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `ε_phys`, the round trip's tolerance in physical units, `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` (inverse-encode Part
+/// 4; REQ-ENC-024), as `k` in `ε_phys = k·ε_R`, `ε_R` the precision's machine epsilon: 64, so 64·2⁻⁵² ≈ 1.42e-14 at
+/// f64 and 64·2⁻²³ ≈ 7.63e-6 at f32. TASK-M2-16's proposal (R-71): the `encode-eps-phys` gate's `interior.json`, 65 536
+/// points on each registered chart and 2²⁰ latent `z` on `[−6, 6]⁸`, the defaults links, at f64 and f32, measures a
+/// worst interior residual of 21.90 `ε_R` (the ternary mass plot, f64); seeds 2 to 9 of the same draws, about 3.1·10⁷
+/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×.
+pub const EPS_PHYS: ConstantBuilder = proposed(
+    "eps_phys",
+    64.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-024",
+    "M2",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -877,7 +904,8 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
-/// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
+/// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
+/// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
 /// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
 /// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
@@ -888,6 +916,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
     FGW_LENGTH_SENTINEL,
+    MAX_CROSSINGS_PER_SUBSTEP,
     F16_FINITE_MAX,
     F16_MIN_SUBNORMAL,
     MU_MAX,
@@ -927,6 +956,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     N_NORM_TOL,
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
+    EPS_PHYS,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
 ];

@@ -50,3 +50,4 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
   the ruling, the rest of this task does not.
 - **R-470 (20 Oct 2026) rules RQ-374:** forbidden region stays, off by default, hatching exactly the not-a-system pixels (REQ-COL-111); NaN / invalid pixels draws only while a debug view is the figure, dimmed otherwise (option (c), applied per R-369, flagged). The two lines no longer wait.
 - **R-476 (20 Oct 2026):** the Chart group loses grid and the Stain group t_end contours, which are Lines ▾ presets (TASK-M8-50, REQ-GUI-247); REQ-GUI-079's statement is changed so.
+- **R-511 (20 Oct 2026):** Overlays › Chart › forbidden region hatches the `decode_failed` samples too (REQ-COL-111). **R-509:** the Stain group's class edges leave Overlays ▾ for Lines ▾ (TASK-M8-50).

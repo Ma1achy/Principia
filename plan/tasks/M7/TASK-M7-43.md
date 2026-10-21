@@ -35,3 +35,4 @@ Contours of any expression over §4.1's variables, total; starting-state contour
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers L4, the energy contours on a tilted plane (R-476 M7).
 - **RQ-377 (1), (2)** wait (REQ-RENDER-097, TASK-M8-51); meanwhile §4.1's tree and its named fields.
+- **R-509 (20 Oct 2026) rules RQ-377 (1) and (2):** contours reuse the stain's expression syntax, and the playhead reads any field the ledger declares; nothing waits (REQ-RENDER-097, TASK-M8-51). The note above is kept as history (code review 5587720942 of PR #255, F7).

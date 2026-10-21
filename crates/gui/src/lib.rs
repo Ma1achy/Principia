@@ -10,6 +10,7 @@ pub mod explore;
 pub mod headless;
 pub mod keyboard;
 pub mod layout;
+pub mod settings;
 pub mod side;
 pub mod stain;
 pub mod theme;
@@ -22,6 +23,8 @@ mod tests {
     mod canvas_gestures_mock;
     mod cli;
     mod compass_cross_section;
+    mod compass_plucker;
+    mod compass_position_gauge;
     mod compass_support;
     mod conformance;
     mod degenerate_tilt_guards;
@@ -31,6 +34,9 @@ mod tests {
     mod mock_axis_labels;
     mod mock_compass;
     mod mock_compass_cube;
+    mod mock_compass_steer_latent;
+    mod mock_compass_view_keys;
+    mod mock_compass_views;
     mod mock_console_keys;
     mod mock_content;
     mod mock_drawn;
@@ -57,7 +63,9 @@ mod tests {
     mod mock_trajectory_pin;
     mod mock_trajectory_views;
     mod mock_windows_drawn;
+    mod mock_windows_move_resize;
     mod mock_windows_open;
+    mod mock_windows_remembered;
     mod present_fills_window_mock;
     mod reachability;
     mod scope_tab_order_mock;

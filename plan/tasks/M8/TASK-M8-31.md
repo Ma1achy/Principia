@@ -1,8 +1,8 @@
 # TASK-M8-31 — Keyframes, the export planner and the spec object: serialise, share, re-render
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175
-- **Depends on:** TASK-M8-30, TASK-M7-31
+- **Closes:** REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185
+- **Depends on:** TASK-M8-30, TASK-M7-31, TASK-M7-45
 - **Needs (earlier milestones):** REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-10
@@ -22,13 +22,14 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 - `docs/contracts/principia_export_animation_contract.md` § "Part 5 — Determinism & reproducibility"
 - `decisions.md` § "R-84 — Branch decisions across precisions *(closes RQ-35)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*"
 
 ## Deliverables
 - `crates/engine/src/contract/animation.rs` — the spec object and its URL encoding.
 - `crates/engine/src/export/{keyframes,planner}.rs` — interpolation and segment classification with estimates.
 - `xtask/src/reel.rs` — `cargo xtask reel <spec-list>` builds the spotlight reel through the exporter.
 - Golden suite `spec-rerender` (same backend bit-identical; second backend within parity tolerance, flips reported).
-- Tests: `planner_segments`, `keyframe_interp` (proptest), `spec_url_roundtrip`, `spec_rerender_payload`, `keyframe_sim_key_reintegrates`, `export_embeds_spec`.
+- Tests: `planner_segments`, `keyframe_interp` (proptest), `spec_url_roundtrip`, `spec_rerender_payload`, `keyframe_sim_key_reintegrates`, `export_embeds_spec`, `keyframe_link_params`, `export_link_param_flag`.
 
 ## Acceptance tests
 - `cargo test -p engine planner_segments` — a three-segment spec is classified (a) / (b) / (c) and an estimate is shown before start; the (c) segment triggers no integration (REQ-TOOL-074).
@@ -40,9 +41,12 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 - Review checklist (code reviewer) of `xtask/src/reel.rs` and the reel player's click-to-load — the reel build script invokes the exporter over the spec list; clicking a segment loads its spec (REQ-TOOL-084).
 - `cargo xtask golden spec-rerender` — render a spec twice on one backend: bit-identical frames; on a second backend: label / class images identical outside chaotic regions (flips there reported), values within parity tolerance (REQ-VAL-100).
 - Definition: the spec-object URL encoding and the principia://view query format written into export_animation_contract Part 6 and approved by the physics reviewer (REQ-TOOL-129).
-- `cargo test -p engine keyframe_link_cut` — REQ-TOOL-175's verify.
+- `cargo test -p engine keyframe_link_params` — REQ-TOOL-175's verify (R-520; *was:* `keyframe_link_cut`).
+- `cargo test -p engine export_link_param_flag` — REQ-TOOL-185's verify (R-520).
 
 ## Notes
 - The URL encoding of the spec (and the `principia://view?…` link TASK-M8-32 uses) is not specified.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-129 (R-72 definition) (classification accepted by R-132).
-- R-483 X7 (20 Oct 2026): a link or parameter change between keyframes is a cut; interpolating parameters is RQ-384 (meanwhile never).
+- R-483 X7 (20 Oct 2026): a link-id change between keyframes is a cut. **R-520 (20 Oct 2026) rules RQ-384** ("blocking export only, flagged"): in a blocking export a link parameter differing between keyframes with the same link ids eases linearly, every frame re-integrated, and the export is flagged; live playback keeps the cut. Physics review covers it (⚑; this task's reviewers include physics). *Was:* "a link or parameter change between keyframes is a cut; interpolating parameters is RQ-384 (meanwhile never)."
+- **R-521 H2, H5 (code review F1 of PR #265, applied per R-369):** the spec object's sidecar carries the four entry hashes beside the build hash and the schema version (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. **R-520 F2 (physics review P1):** each eased parameter is clamped into `[min(a, b), max(a, b)]`, the keyframe's frame takes its value bit for bit, and the spec's `easing` curve gives the progress `s`.
+- **Code review F9 of PR #265 (applied per R-369):** this task depends on TASK-M7-45, which generates the entry hashes the spec's sidecar carries (R-521 H5). *Was:* "- **Depends on:** TASK-M8-30, TASK-M7-31".

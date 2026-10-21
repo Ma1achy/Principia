@@ -8,10 +8,12 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 - **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, not the final UI, but it has the same
   structure and every feature. With the layer hidden the figure fills the window by Extend, the default, more of the
   field at the same scale, or Fit, the view's square scaled to the window's shorter side, chosen in View › "F3 fills
-  by" *(conformed to R-468)*.
-- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, and a
-  failure or a non-finite value black `#141418`; View › Debug view shows them, each with a key and a count *(conformed
-  to R-467)*.
+  by" *(conformed to R-468)*. Pan and zoom reach past the chart's square with the layer shown too, with no gaps, every
+  interaction working there *(conformed to R-537)*.
+- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, a
+  `sim_failed` sample or a non-finite value black `#141418`, and a `decode_failed` sample blank; View › Debug view shows
+  them, each with a key and a count *(conformed to R-467 and R-511; was: "and a failure or a non-finite value black
+  `#141418`")*.
 - **Not a system is blank, never a colour.** A pixel that is not a system draws the background in every view; the hatch
   is only the optional Overlays › Chart › forbidden region, over those pixels alone. A chart never leaves the manifold:
   a pan, slice, zoom, tilt or lock stops at the last value whose centre validates, and the readout says which check
@@ -22,9 +24,14 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   (chart_decoder_contract rule 6).
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console. The one
-  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. A decoder
+  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. The rule is
+  about panels and chrome: figure marks, the trace and its icons, contour lines and icons for points of interest, may
+  cover the figure *(conformed to R-539)*.
+  Badges go in the chrome or the status line, never over the figure: the decoder badge, naming the chart and any link
+  off its default, sits in the figure's header strip above the plot, a badge being chrome and not a figure mark *(conformed to R-479, R-523
+  and R-539; was: "A decoder
   badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
-  whether it may be there *(conformed to R-479)*.
+  whether it may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
 
@@ -72,7 +79,8 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **Save view as chart** (after Chart builder…, and on View ›) saves the view as a named chart in the picker's Saved
     group, to tilt and save again *(conformed to R-475)*.
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
-    figure outside the node graph; the grid and `t_end` contours are its presets *(conformed to R-476)*.
+    figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
+    R-509)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It

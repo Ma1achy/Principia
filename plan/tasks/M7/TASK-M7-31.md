@@ -39,4 +39,4 @@ The embedded payload carries the build hash, the slice (chart id + params, z₀ 
 - The colour "enum ID" is the registry / preset id of each node (TASK-M7-13, -17).
 - R-297 adds REQ-TOOL-142: the compute fast-math setting travels with the sim fields (dd_image_embedding §6). Scope added to this task, which builds what travels (~30 lines).
 - R-483 X3, H3 (20 Oct 2026): REQ-TOOL-065's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; its verify likewise.
-- R-483 X4, H4: the refusal reads the build's registry plus the record's links; meanwhile a schema-version mismatch is refused; the per-link arm is TASK-M7-45 (RQ-385).
+- R-483 X4, H4: the refusal reads the build's registry plus the record's links; a schema-version mismatch is refused for a record with no entry hashes; the per-link arm is TASK-M7-45 (R-521, ruling RQ-385). *Was:* "meanwhile a schema-version mismatch is refused; the per-link arm is TASK-M7-45 (RQ-385)."

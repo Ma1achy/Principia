@@ -46,9 +46,22 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
 - **The spec object is the artefact.** A keyframe animation serialises as `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}` — provenance-complete, URL-encodable, re-renderable. The video is its shadow (Part 6).
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
-  link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, never an
-  interpolation. Whether link parameters may be interpolated across keyframes in a blocking export, re-integrating
-  every frame, is queued (RQ-384); meanwhile they are cut.
+  link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
+  playback and wherever a link id changes.
+- **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
+  the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
+  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. The spec's `easing` curve gives the
+  segment's progress `s ∈ [0, 1]` at each frame, as for every other eased field; the value is `a + s·(b − a)`, clamped
+  into `[min(a, b), max(a, b)]` so that rounding never puts a frame past an end or outside the parameter's allowed
+  range, and each keyframe's own frame takes that keyframe's value bit for bit, so its sim key is the keyframe's
+  (applied per R-369, physics review P1 of PR #265). It is a type (b) segment, each frame a different family of ICs (Part 2),
+  priced before the job runs. Live playback never interpolates them: there the change stays a cut at the second
+  keyframe. The export is flagged: the planner names each such segment before the job runs ("link parameters
+  interpolated: every frame a different decoder"), the exported artefact carries the flag beside its embedded spec,
+  listing the segments and the parameters, and each frame's own record holds that frame's values in its `SimConfig`.
+  *Was:* "a cut, as a chart switch is, never an interpolation. Whether link parameters may be interpolated across
+  keyframes in a blocking export, re-integrating every frame, is queued (RQ-384); meanwhile they are cut." (stale
+  value, replaced by R-520).
 
 ---
 
@@ -67,7 +80,7 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 
 ## Part 5 — Determinism & reproducibility
 
-Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against frozen f32 constants, not runtime-computed) ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions are identical on identical inputs, per step; terminal labels and outcome classes on chaotic trajectories may differ across precisions — `principia_parity_contract.md` governs, R-84). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
+Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against the sim key's f32 thresholds, generated on the host and shipped bit-exact, R-502, not runtime-computed on the device; *was:* "against frozen f32 constants") ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions are identical on identical inputs, per step; terminal labels and outcome classes on chaotic trajectories may differ across precisions — `principia_parity_contract.md` governs, R-84). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
 
 Frame-loop speed settings do not affect exported content — export ignores wall-clock pacing entirely and steps `dt` exactly per the spec object.
 

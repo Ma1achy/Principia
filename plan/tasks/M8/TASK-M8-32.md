@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -61,3 +61,4 @@ The Export & share window offers image export (size in multiples of the view, fo
   fallback" reading is now the Deliverables and acceptance lines.
 - **R-471, R-472, R-473, R-474, R-475 (20 Oct 2026):** the sidecar (the pxpack, the snapshot JSON, the share link) carries `tilt_map=sheet|lean`, `f3_fill=extend|fit`, each energy-type axis's mapping, a curved chart's tilt and a saved chart's definition; present mode follows F3's fill mode (R-472 X2c).
 - R-484 RT2, RT3 (20 Oct 2026): the window's tier report is TASK-M8-53's (REQ-GUI-263); the sidecar carries the links through `SimConfig` (R-483).
+- **R-521 H2, H5 (20 Oct 2026; code review F1 of PR #265, applied per R-369):** snapshot JSON and the share link carry, beside the build hash and the schema version, the four entry hashes of their links (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. This task depends on TASK-M7-45, which generates the hashes (code review F9 of PR #265, applied per R-369).

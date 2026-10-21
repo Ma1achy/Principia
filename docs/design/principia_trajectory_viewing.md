@@ -68,8 +68,16 @@ Two behaviours follow, and both are diagnostic value that exists *because* the a
 Works in **any** chart, any tilt, any slice — uniformly, because the full CPU state supports the projection regardless.
 
 **Drawn by the line system (R-476).** The trace's drawing, the hover, pinned and kept traces with their style and
-fade, is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
+fade (the proxy where the chart defines one, else none, R-509), is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
 `Trace` and renderer serve the inspector's views (§4), nothing in them specific to the slice view (R-476, L3).
+
+**Where a trace can leave, and mixed axes (R-538 TF1, TF2).** The projection is per shown axis: hidden coordinates
+never make a trace leave, they are the fade; it leaves only where a coordinate entering a shown axis with non-zero
+weight has no value (±∞ from a saturated link, NaN, a bounded axis's inverse outside its domain), so on the shape
+sphere, the mass simplex or a physical axis it never leaves. Before the mix each sample's chart parameters are taken
+on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), every coordinate read in the
+frame the chart's own parameters are defined in; the trace never reuses lookup and lock's whole-state validation
+(`principia_inverse_encode_contract.md` Part 6). `principia_lines.md` §8 has the table.
 
 ---
 

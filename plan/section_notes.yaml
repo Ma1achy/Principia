@@ -950,6 +950,10 @@
   section: "13. References"
   reason: informative only
   note: "bibliography"
+- file: decisions.md
+  section: "R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied"
+  reason: gap (RQ-378)
+  note: "a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note)"
 
 # The Print graph and the benchmark (R-485 to R-499), ported docs first: the human's message (R-485) puts the docs in
 # one PR and the tasks and requirements in the next. Until that plan PR cites these sections, each is recorded here as

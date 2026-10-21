@@ -24,7 +24,7 @@ Importing any export is the identity on `SimConfig` and `RenderState` (T1, over 
 - T1's state generator and the round trip over every path.
 - T2's struct-walking serializer.
 - C9 over the six destinations.
-- The tier report in Export & share and Import picture, and the fallback badge.
+- The tier report in Export & share and Import picture, and the fallback badge, in the figure's header strip (R-523).
 - Tests `round_trip_identity`, `no_empty_structs`, `every_destination_links`, `export_tier_report`.
 
 ## Acceptance tests
@@ -37,3 +37,4 @@ Importing any export is the identity on `SimConfig` and `RenderState` (T1, over 
 - T2 fires on today's `Links {}`, `Chart {}`, `Slice {}`, `Integrator {}`, `Collision {}`, `Quality {}` and `Palette {}` (R-484 J9); this task depends on the tasks that fill them, so main never goes red. The PR records that T2 fired on all seven before they were filled, as the human asked.
 - Physics reviews that tier 1 round-trips everything that decides integration; this task does not merge on the code reviewer's word alone.
 - `ViewUI` is not exported; `f3_fill` rides beside the two structs outside the identity (R-484 J3).
+- **R-521 (code review F1 of PR #265, applied per R-369):** REQ-TOOL-176's `every_destination_links` also checks the four entry hashes in each of the six destinations, with a control (a destination missing one fails).
