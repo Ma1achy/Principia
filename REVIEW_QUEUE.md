@@ -1433,6 +1433,9 @@ only, so the flag has no entry to wait on.*
     is valid by construction, so a pixel the chart classifies as not a system there (a validity failure, or a
     `Chart::map` that fails) is a decoder bug"; REQ-GUI-227: "a pixel a gallery chart classifies as not a system inside
     [0,1]² must log REQ-GUI-226's console warning".
+- **Also in the conflict:** REQ-CHART-078, the definition of how pixels exactly on `r = π` count, offers "counted
+  once, like the equator, or as the domain's end"; if TASK-M2-28 defines them as the domain's end, those in-square
+  pixels meet the same warning.
 - **Conflict:** with `s√2 > π` the exponential map classifies its pixels past `r = π` inside the square as not a system
   (REQ-CHART-075), by design; REQ-GUI-227 and §G12 then log "decoder bug" for them on every such view, and REQ-CHART-058's
   sweep ("the real engine should log none") would fail for that chart. R-506 W1 excepts only the energy-type axes'
@@ -1441,9 +1444,15 @@ only, so the flag has no entry to wait on.*
   - (a) The exponential map's `r > π` pixels are by design, as an energy-type axis's linear option is: they draw blank
     and log no warning; §G12 and REQ-GUI-227 name the exception.
   - (b) The chart keeps the square inside its cap: `s` is bounded so that `s√2 ≤ π`, every pixel inside `[0,1]²` a
-    system, and R-503's `r > π` case arises only past the square.
+    system. Past the square the exponential map is bounded and declares nothing (chart_reference §5.4; R-503, "Past
+    the square the map is bounded"), so R-503's `r > π` arm becomes unreachable: REQ-CHART-075's "a pixel with r > π
+    must be the domain's end", R-503 review round 2's fixture requirement `s√2·(N−1)/N > π`, and TASK-M2-28's
+    acceptance line and its control ("one that counts the pixels with r > π") would be retired or amended, and, if
+    TASK-M2-28 merges first, (b) changes built code.
   - (c) The warning stands for them, as R-506 W1 reads literally.
 - **Applied meanwhile:** both texts as merged; nothing in the code changes. TASK-M2-28 builds REQ-CHART-075 as R-503
-  has it and does not wait.
+  has it.
 - **Waits:** REQ-GUI-227's warning for the exponential map (TASK-M8-46), and REQ-CHART-058's sweep if it covers that
-  map with `s√2 > π`.
+  map with `s√2 > π`. Under option (b): REQ-CHART-075's `r > π` clause, its verify's fixture `s√2·(N−1)/N > π` (R-503
+  review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
+  (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.

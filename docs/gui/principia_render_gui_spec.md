@@ -132,13 +132,14 @@ on, or a debug-catalogue stain), dimmed with a tooltip saying so otherwise (RQ-3
 **The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
 that shows what the presentation views leave out: every system pixel as the stain draws it; a pixel the chart
 classifies as not a system with the hatch, `debug_invalid`; a decode or sim failure with `debug_invalid`; NaN and `±∞`
-with a style of their own (REQ-COL-110; not magenta, which sits at τ from escape body 2, R-505). The legend gains a "Debug" key, its three entries "forbidden (chart)",
-"decode or sim failure" and "NaN / Inf", each with its count of the figure's pixels and their share, drawn always
-(§G6; colour_composition §6). It is a render-side toggle sent as a `SetField`, undoable as an Overlays ▾ toggle is
-(R-69), re-integrating nothing (gui_state_contract §2; applied per R-369). *Was (R-467 D5 as first ported):* "marked
-'no history': a view, not an edit, adding no undo entry". It is off at launch, keeps its state through
-F3, present mode and both fill modes, and has no key of its own; the View menu reaches it from the keyboard (§G3). On
-the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`, R-467 D8).
+with a style of their own (REQ-COL-110; not magenta, which sits at τ from escape body 2, R-505). The legend gains a
+"Debug" key, its three entries "forbidden (chart)", "decode or sim failure" and "NaN / Inf", each with its count of the
+figure's pixels and their share, drawn always (§G6; colour_composition §6). It is a render-side toggle sent as a
+`SetField`, undoable as an Overlays ▾ toggle is (R-69), re-integrating nothing (gui_state_contract §2; applied per
+R-369). *Was (R-467 D5 as first ported):* "marked 'no history': a view, not an edit, adding no undo entry". It is off at
+launch, keeps its state through F3, present mode and both fill modes, and has no key of its own; the View menu reaches
+it from the keyboard (§G3). On the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`,
+R-467 D8).
 
 **Lines ▾ (R-476).** The line system of `docs/design/principia_lines.md`, a separate system, not a node of the stain
 graph, drawn over the finished figure: contours of any expression over chart, latent and payload quantities, the hover,

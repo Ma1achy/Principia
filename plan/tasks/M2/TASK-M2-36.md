@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-062, REQ-CHART-063, REQ-CHART-064, REQ-CHART-065, REQ-CHART-066
-- **Depends on:** TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13
+- **Depends on:** TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13, TASK-M2-28
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,6 +24,8 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
 - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid"
 - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)"
+- `docs/design/principia_chart_reference.md` § "3.3 The chart map"
+- `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract"
 
 ## Deliverables
 - The chart's hidden coordinates per chart (R-473 J1), from the block-touch sets (`crates/kernel/src/chart/`).
@@ -31,11 +33,12 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 - The tilt path in each chart's map, skipped exactly at `τ = 0` (J6); mass logits and links' pre-images (J8).
 - Slice along any hidden coordinate (T6), through its latent control.
 - The extension types acting on the tilted `(a, b)` (R-472 X3a).
+- The tilted fold (chart_reference §3.3; applied per R-369): under a nonzero tilt `system_image` folds two pixels only when their full `(a, b, d)` decode to the same system, over the tilted view's pixels, recomputed when `τ₁`, `τ₂` or the targets change; a tilted shape-sphere view, on either map, is generically bijective (REQ-CHART-062).
 - Units as R-507 rules them: each screen axis in units of its full range at zoom 1, the hidden coordinate in its slider span, on the curved charts; the decoder's basis edit on the latent chart (REQ-CHART-064, test `tilt_units`). *Was:* "Units: the human's proposal on the curved charts and the decoder's basis edit on the latent chart, as RQ-375 applies meanwhile (R-473 J3); REQ-CHART-064 is TASK-M2-39's."
 - Tests `tilt_every_chart`, `tilt_mass_logits`, `slice_every_chart`, `tilted_extension`.
 
 ## Acceptance tests
-- `cargo test -p kernel tilt_every_chart` — REQ-CHART-062's verify (C2 with its controls).
+- `cargo test -p kernel tilt_every_chart` — REQ-CHART-062's verify (C2 with its controls), with the tilted fold's arm: the shape sphere on both maps tilted 30° into a momentum control reports bijective and counts every pixel of the tilted view once, recomputed on a change of `τ` or target, the untilted value at `τ = 0`; control: a fold that pairs a tilted pixel with its shape mirror undercounts and fails. *Was:* "REQ-CHART-062's verify (C2 with its controls)."
 - `cargo test -p kernel tilt_mass_logits` — REQ-CHART-063's verify (C7).
 - `cargo test -p kernel tilt_units` — REQ-CHART-064's verify (R-507).
 - `cargo test -p kernel slice_every_chart` — REQ-CHART-065's verify.
@@ -46,4 +49,4 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 - **Units (R-507, ruling RQ-375).** On a curved chart `R` acts on the parameter offsets in units of each axis's full range at zoom 1 and the hidden offset in its slider span, scaled back after; the latent chart keeps the basis edit (U1, U2). REQ-CHART-064 moved here from TASK-M2-39 (applied per R-369: T2 is not built without its scale). *Was:* "Built under the meanwhile reading (R-473 J3); the ruling is TASK-M2-39's, a leaf."
 - **Under Tip as sheet** with one target and both angles set a window pixel's `(a, b)` can leave the square; the types act on it as X3a says (R-471 H9), and REQ-CHART-066's test covers it; R-512 (ruling RQ-402) makes such a pixel past the edge, blank past a bounded one, which TASK-M2-39 tests. *Was:* "(RQ-402, R-471 H9), and REQ-CHART-066's test covers it; what it should draw is TASK-M2-39's."
 - **Re-integration (R-92):** a curved chart's tilt is a chart-param edit, a sim key.
-
+- **The tilted fold (physics review 5593301205 of PR #255, P1; applied per R-369, from chart_decoder_contract Part 5's definition, "how the address map … folds onto distinct systems"; flagged for the human's veto, as it changes area statistics).** R-503's cap and per-pixel fold and R-141's n-to-1 with n = 2 are the untilted chart's values. Under a tilt, a pixel and its shape mirror carry different `d` and are distinct systems, so the fold is taken over the tilted view's pixels and pairs only pixels whose full `(a, b, d)` decode to the same system. The task depends on TASK-M2-28, which builds the exponential map's fold.

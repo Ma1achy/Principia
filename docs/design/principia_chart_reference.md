@@ -491,6 +491,19 @@ a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; 
 `w` being ±0.0; "the mirror is in view" is the map's inverse (the log map about `n0`) of the mirrored point landing in
 `[0,1]²` with `r ≤ π` (physics review 5587467237 and qa review 5587466555 of PR #258, applied per R-369).
 
+**Under a tilt the fold is the tilted view's (R-473 T1, T2, J1; applied per R-369, from chart_decoder_contract Part
+5's definition of `system_image`, "how the address map … folds onto distinct systems"; flagged for the human's veto,
+as it changes area statistics).** The two values above, the spherical map's n-to-1 with n = 2 and the exponential
+map's cap and per-pixel fold, are the untilted chart's (`τ₁ = τ₂ = 0`). Two pixels fold only when their full
+`(a, b, d)` decode to the same system. Under a nonzero tilt a pixel at window offset `(u, v)` maps to
+`(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1), so a pixel and the pixel whose
+`(a, b)` is its shape mirror (`w → −w`) carry different `d` and are distinct systems: a tilted view is generically
+**bijective**, on either map, and any pair of its pixels whose full `(a, b, d)` do decode to the same system counts
+once by the per-pixel rule above. The pixels "in view" are the tilted view's own pixels (blank past a bounded edge,
+R-512), not `[0,1]²`'s. The chart recomputes the value whenever `n0`, `e1`, `e2`, `s`, `τ₁`, `τ₂` or the tilt's
+targets change. *Was:* "The chart computes the value whenever `n0`, `e1`, `e2` or `s` change" (above, kept as the
+untilted rule).
+
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
@@ -823,7 +836,7 @@ existing charts:
 |---|---|---|---|---|
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3) |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's, generically bijective (§3.3, applied per R-369) |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
 | Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
