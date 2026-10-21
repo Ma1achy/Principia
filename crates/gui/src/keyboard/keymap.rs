@@ -90,6 +90,13 @@ pub fn command(key: Key, modifiers: Modifiers) -> Option<Command> {
     }
 }
 
+/// Whether `key` with `modifiers` is Ctrl+Z (Cmd+Z on macOS): undo from the contract's history, in either mode (§G3;
+/// R-409 G5). It is no command of the layer's: the app reads it from egui's input, so a text field being typed in
+/// keeps it for its own edit. Shift or Alt with it is not undo.
+pub fn undoes(key: Key, modifiers: Modifiers) -> bool {
+    key == Key::Z && command_held(modifiers) && !modifiers.shift && !modifiers.alt
+}
+
 /// Shift's ×10 and Alt's ×0.1; both together, ×1.
 pub fn multiplier(modifiers: Modifiers) -> f64 {
     let shift = if modifiers.shift { 10.0 } else { 1.0 };

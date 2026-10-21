@@ -733,6 +733,46 @@
   requirements: [REQ-CHART-058]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
+- id: TASK-M2-36
+  milestone: M2
+  title: "Tilt and slice on every chart: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3) ⚑"
+  depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13, TASK-M2-28]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22); M2-28 for the exponential map's fold, which the tilted fold arm tests (physics review 5593301205 of PR #255, P1, applied per R-369)
+  needs: []
+  requirements: [REQ-CHART-062, REQ-CHART-063, REQ-CHART-064, REQ-CHART-065, REQ-CHART-066]  # REQ-CHART-064: R-507 (RQ-375 ruled), T2's scale
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-37
+  milestone: M2
+  title: "Energy-type axes warped by default, per pixel, with a linear option per axis; PE's warp defined (R-471) ⚑"
+  depends_on: [TASK-M2-36, TASK-M2-12, TASK-M2-11, TASK-M2-14]
+  needs: []
+  requirements: [REQ-CHART-067, REQ-CHART-068, REQ-CHART-069, REQ-CHART-070]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-38
+  milestone: M2
+  title: "Navigation stops at the edge: one generic stop over the Chart trait and validate, and the fuzz that never leaves the manifold (R-469, R-477 C6) ⚑"
+  depends_on: [TASK-M2-36, TASK-M2-37, TASK-M2-22]
+  needs: []
+  requirements: [REQ-CHART-060, REQ-CHART-061]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-39
+  milestone: M2
+  title: "Under Tip as sheet, a window pixel whose (a, b) leave the chart's square is past the edge, blank past a bounded one (R-512) ⚑"
+  depends_on: [TASK-M2-36, TASK-M2-38]  # re-scoped (R-507 U4, R-512, R-513 Q4): a leaf; REQ-CHART-077 moved to TASK-M2-40
+  needs: []
+  requirements: [REQ-CHART-076]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-40
+  milestone: M2
+  title: "Saved charts in the kernel: the oblique latent chart and the curved parent with its tilt, composed tilts, and the bitwise reopen (R-475) ⚑"
+  depends_on: [TASK-M2-36]
+  needs: []
+  requirements: [REQ-CHART-073, REQ-CHART-077]  # REQ-CHART-077: R-513 Q4, the composition built once
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
 - id: TASK-M2-42
   milestone: M2
   title: "The pipeline_runtime teardown SIGSEGV stops: reproduce it, find the cause, fix it, and check for it"
@@ -1029,6 +1069,14 @@
   requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M3-37
+  milestone: M3
+  title: "Cross-chart consistency: the same state through the shape sphere and the latent chart gives the same z, payload and outcome (R-477 C1) ⚑"
+  depends_on: [TASK-M3-19, TASK-M3-22, TASK-M2-15]
+  needs: []
+  requirements: [REQ-CHART-072]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -1805,6 +1853,30 @@
   requirements: [REQ-GUI-229]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M6-48
+  milestone: M6
+  title: "The GUI track (R-390): RQ-340 ruled — Tip as sheet the default, Lean each axis an option, over the pole, the compass drawing the active map, the readout's lines (R-474) ⚑"
+  depends_on: [TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45]  # R-474 K13: the Tilt section's targets (M6-38), live drags (M6-39), the H, V, D buttons (M6-40) and the resets (M6-45)
+  needs: []
+  requirements: [REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M6-49
+  milestone: M6
+  title: "The GUI track (R-390): Save view as chart on the mock — the button and View entry, the Saved group, provenance, one undo entry, the oblique latent chart reopened bitwise (R-475)"
+  depends_on: [TASK-M6-48, TASK-M6-45, TASK-M6-46, TASK-M6-47]
+  needs: []
+  requirements: [REQ-GUI-239, REQ-GUI-240]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-51
+  milestone: M6
+  title: "The GUI track (R-390): a latent view saved at a tilt, tilted again in the orthonormal frame of its projected targets, the stored pair kept (R-475, R-514) ⚑"
+  depends_on: [TASK-M6-49]  # R-475 L4, R-514: a leaf; numbered past the links port's (unmerged) TASK-M6-50
+  needs: []
+  requirements: [REQ-GUI-265]
+  reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2133,6 +2205,22 @@
   requirements: [REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-COL-107, REQ-VAL-188, REQ-VAL-189]
   reviewers: [code, qa, gui, physics]
   pitfalls: [PIT-5]
+- id: TASK-M7-42
+  milestone: M7
+  title: "The line engine: its overlay pass, data model and styles, polylines with dashes by arc length, smart ink and labels (R-476, principia_lines.md §2 to §7)"
+  depends_on: [TASK-M7-21, TASK-M7-02]
+  needs: []
+  requirements: [REQ-RENDER-087, REQ-RENDER-088, REQ-RENDER-089, REQ-RENDER-090, REQ-RENDER-091]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M7-43
+  milestone: M7
+  title: "Contours: the expression's variables and totality, evaluation on the decode, levels, marching squares, and energy contours that follow the active mapping (R-476, principia_lines.md §4) ⚑"
+  depends_on: [TASK-M7-42, TASK-M2-37, TASK-M2-25]
+  needs: [REQ-CHART-067, REQ-CHART-069]
+  requirements: [REQ-RENDER-092, REQ-RENDER-093, REQ-RENDER-094, REQ-RENDER-095, REQ-RENDER-096]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -2168,9 +2256,9 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47]  # TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253)
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48, TASK-M6-49]  # TASK-M6-49 for the View entry Save view as chart (R-475; gui review G4 on PR #255); TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253); TASK-M6-48 for tilt_map, the Gram factor's map (R-474 R7)
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
-  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
+  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056, REQ-CHART-071]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
   pitfalls: []
 - id: TASK-M8-06
@@ -2194,7 +2282,7 @@
   title: "Overlays ▾: the grouped toggles, their tiers, the Tier-3 buffer and quad drill-down"
   depends_on: [TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27]
   needs: [REQ-RENDER-024, REQ-RENDER-055, REQ-TOOL-026, REQ-TOOL-045, REQ-CHART-039, REQ-SYS-013, REQ-SCHED-047]
-  requirements: [REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153]
+  requirements: [REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153, REQ-COL-111]
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: []
 - id: TASK-M8-09
@@ -2272,7 +2360,7 @@
 - id: TASK-M8-18
   milestone: M8
   title: "Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)"
-  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45]  # TASK-M6-45 defines the preset's home values a saved preset stores (R-466, REQ-GUI-224; review round 1 of PR #243)
+  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37]  # TASK-M6-45 defines the preset's home values a saved preset stores (R-466, REQ-GUI-224; review round 1 of PR #243); TASK-M2-37 for the energy axes' warp and linear option (R-471)
   needs: [REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027]
   requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160]
   reviewers: [code, qa, physics, gui]
@@ -2384,17 +2472,17 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46]  # R-467 D13: the background and Fit (code review F4 on PR #253)
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
-  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
+  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
   pitfalls: []
 - id: TASK-M8-33
   milestone: M8
   title: Import picture, saved views, and record a time sweep (09_importrecord.png)
-  depends_on: [TASK-M8-32, TASK-M8-08]
+  depends_on: [TASK-M8-32, TASK-M8-08, TASK-M6-48, TASK-M6-49]  # TASK-M6-48 and TASK-M6-49 for the tilt map and saved charts (R-474, R-475)
   needs: [REQ-TOOL-061, REQ-TOOL-063, REQ-TOOL-066, REQ-TOOL-071, REQ-SYS-011]
-  requirements: [REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107]
+  requirements: [REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107, REQ-TOOL-170]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1]
 - id: TASK-M8-34
@@ -2503,11 +2591,51 @@
   pitfalls: []
 - id: TASK-M8-47
   milestone: M8
-  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning as RQ-372 rules (R-467)"
-  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf, waiting for RQ-372
+  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning only for warped axes (R-467, R-506)"
+  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf; RQ-372 ruled by R-506
   needs: []
   requirements: [REQ-GUI-228]
   reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-48
+  milestone: M8
+  title: "On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑"
+  depends_on: [TASK-M8-06, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18]
+  needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077]
+  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M8-49
+  milestone: M8
+  title: "Traces on the line system: the hover, pinned and kept traces drawn by §8, shared with the orbit viewer (R-476 L3)"
+  depends_on: [TASK-M7-42, TASK-M8-09, TASK-M8-10, TASK-M8-11]
+  needs: []
+  requirements: [REQ-GUI-245]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-50
+  milestone: M8
+  title: "Lines ▾, its editors, the axes and presets, Grid, t_end and class edges out of Overlays, and lines in the exported view state (R-476 L2, §8b, §9; R-509)"
+  depends_on: [TASK-M7-42, TASK-M7-43, TASK-M8-05, TASK-M8-08, TASK-M8-23, TASK-M8-03]
+  needs: []
+  requirements: [REQ-GUI-246, REQ-GUI-247, REQ-GUI-248]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-51
+  milestone: M8
+  title: "The line system's open questions as R-509 rules them: the stain's expression syntax and the ledger's fields, the trace fade's proxy, trace labels winning, Screen contour the default"
+  depends_on: [TASK-M7-43, TASK-M8-49, TASK-M8-50]
+  needs: []
+  requirements: [REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249, REQ-GUI-250]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-54
+  milestone: M8
+  title: "The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑"
+  depends_on: [TASK-M8-51]  # R-509 Y3: a leaf, waiting for RQ-341; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
+  needs: []
+  requirements: [REQ-GUI-266]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

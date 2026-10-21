@@ -63,3 +63,4 @@ On the mock engine, the View menu gains **Debug view**, a check entry after F3 h
   The implementer changes its own tests (`crates/gui/src/tests/f3_fallback_mock.rs`, `mock_legend_keys.rs`,
   `mock_drawn.rs`, `crates/engine/tests/nav.rs`, `crates/prin/tests/profile.rs`).
 - **No physics reviewer**: the mock has no chart mapping (as for TASK-M6-30).
+- **R-470 (20 Oct 2026):** View › Debug view stays and is one of N3's debug views; on the mock the toggle is unchanged in scope (G4).

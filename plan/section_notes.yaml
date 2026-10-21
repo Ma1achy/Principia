@@ -198,6 +198,17 @@
   section: Principia — deep zoom & adaptive sampling
   reason: informative only
   note: preamble
+- file: docs/design/principia_lines.md
+  section: "Principia — the line system: contours and traces"
+  reason: informative only
+  note: "the adoption note (R-476), the proposal's status line and its summary"
+- file: docs/design/principia_lines.md
+  section: 4. Contours
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_lines.md
+  section: 13. About the mock-ups
+  reason: informative only
+  note: "how the mock-ups were drawn (R-476 M1: the scripts are not kept)"
 - file: docs/design/principia_quality_device_note.md
   section: Principia — quality presets & device characterisation
   reason: informative only
@@ -939,3 +950,7 @@
   section: "13. References"
   reason: informative only
   note: "bibliography"
+- file: decisions.md
+  section: "R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied"
+  reason: gap (RQ-378)
+  note: "a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note)"
