@@ -153,10 +153,11 @@ implementation.
   hemisphere where the embed's points do; `n(α_γ(ν), β_γ(ν))` is the embed's `γ(ν)` through the same weighting and
   map, and `m_γ(ν)` its masses.
 - **Past the span** (defined per R-72, applied per R-369). The search runs over the chart's own `ν` span, the `ν` its
-  decode gives at its curve axis's two ends, not over the family's `(0, 1)`. Every Burrau axis is bounded
-  (`principia_chart_reference.md` §5.4): past its edge the chart shows no system, so a `ν` past the span is no chart
-  point. A closed form past the span does not land; the search does not leave the span, and where the curve's nearest
-  point lies past an edge, `ν*` is that edge (flagged), and the landing is decided by `d(ν*)` as anywhere else.
+  decode gives at its curve axis's two ends, not over the family's `(0, 1)`. The curve axis (`ν`, or `θ` on the
+  acute-angle charts) of every Burrau chart is bounded (`principia_chart_reference.md` §5.4; `K` continues past
+  `t = 1`, R-508, and `L_z` and δm are affine): past its edge the chart shows no system, so a `ν` past the span is no
+  chart point. A closed form past the span does not land; the search does not leave the span, and where the curve's
+  nearest point lies past an edge, `ν*` is that edge (flagged), and the landing is decided by `d(ν*)` as anywhere else.
 - **The minimiser.** A grid of 65 points, 64 cells, the span's edges included, then 80 golden-section steps inside the
   best grid point's two neighbouring cells, each step one evaluation, a fixed count; `ν*` is the better of the grid's
   best and the golden section's, so an edge minimum is the edge itself. A tie keeps the earlier point; a NaN start is
