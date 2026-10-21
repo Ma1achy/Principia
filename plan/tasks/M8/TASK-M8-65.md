@@ -21,7 +21,7 @@ The `Listen…` window of R-541 G6, split from TASK-M8-62: every sound setting o
 
 ## Deliverables
 - The `Listen…` window (`crates/gui/`), moving and resizing as every window does (R-461).
-- The instrument menu's family assignment, written here (R-72; RQ-459), into `docs/design/principia_listen.md` §8 with the porting rule's "Removed lines" note.
+- The instrument menu's family assignment, written here (R-72; RQ-459 (a), R-556: the 39 instruments, the counts met, reviewed by gui), into `docs/design/principia_listen.md` §8 with the porting rule's "Removed lines" note.
 - Test `listen_window`; screenshot `listen_window`.
 
 ## Acceptance tests
@@ -29,7 +29,7 @@ The `Listen…` window of R-541 G6, split from TASK-M8-62: every sound setting o
 
 ## Notes
 - **Split (code review 5595371779 of PR #267, F2; the orchestrator's decision, applied per R-369):** from TASK-M8-62, which keeps `Trace…`.
-- **Applied meanwhile (R-541):** RQ-454, the code's defaults; RQ-459 (a), this task writes the families. A ruling other than these is a follow-up change.
+- **Ruled (21 Oct 2026):** RQ-454, the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on at ×1.40, ×1.50 and ×1.50 and bit-crush off (R-555, with the human's Listen effects follow-up, which overrides the code's unchecked three); RQ-459 (a), this task writes the families, ruled so by R-556. *Was:* "**Applied meanwhile (R-541):** RQ-454, the code's defaults; RQ-459 (a), this task writes the families. A ruling other than these is a follow-up change."
 - The gui reviewer checks the family assignment against the counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2).
 - REQ-GUI-329's sim-key arm and keyboard arm are gui review 5595359543 of PR #267's G3 and G2 (applied per R-369): Listen never touches the sim key, Horizon included.
 - **gui review 5595467390 of PR #267, H2: a non-Horizon Listen edit calling computeIC fails** (applied per R-369). *Was:* "cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key, Horizon included; only Horizon starts an integration, of the shown trajectory through computeIC; Tab and Enter reach the controls column by column (Sound, Loudness, Listen; then Pitch & analysis, Events, Effects), group by group in §G5's order, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: a sound setting of principia_listen.md missing, a Listen edit that changes the sim key or the quad requests, and a control out of that order or changed in navigation mode, each fail (REQ-GUI-329)."

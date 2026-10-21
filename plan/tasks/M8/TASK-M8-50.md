@@ -38,6 +38,6 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
 - **Keyboard and captures (R-476 M9, M13; gui review G5 to G7 of PR #255):** `Alt+L` is global and never the Figure's L; Lines ▾ follows Overlays ▾ in the top bar's scope; the editors are windows. REQ-GUI-247's verify takes the mock capture `mock_lines_dimmed` and a real-engine capture `lines_menu`; `check_01_main` gains `mock_lines_dimmed` (*was:* `mock_lines_menu`). REQ-GUI-078's Lines ▾ clause is REQ-GUI-247's.
 - **R-541 (21 Oct 2026):** Lines ▾ lists no trace: the traces' controls are Overlays ▾ › Trace's, the Trajectory
   panel's and `Trace…`'s (TASK-M8-61, TASK-M8-62). REQ-GUI-247 is restated (*was:* "it lists the contour sets, traces
-  and axes with their visibility"). Whether Lines ▾ stays for the rest of the line system is RQ-448, its option (a),
-  Lines ▾ kept for contours, axes, grids and presets, applied meanwhile; a ruling other than (a) is a follow-up change.
+  and axes with their visibility"). Lines ▾ stays for the rest of the line system: R-556 rules RQ-448 (a),
+  Lines ▾ kept for contours, axes, grids, the presets and class edges.
 - R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.

@@ -43,4 +43,4 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
   (REQ-GUI-088, restated); this task builds the tabs and the panel's items as REQ-GUI-088 has them, and TASK-M8-61 the
   order, the status line and the Trace and Numbers sections over them (REQ-GUI-326), TASK-M8-64 the Listen section
   (REQ-GUI-334; PR #267's split, *was:* "the Trace, Listen and Numbers sections over them (REQ-GUI-326)"). What G4 leaves out (FTLE,
-  `E₀`, the playhead, the two buttons) is kept: RQ-462, its option (a) applied meanwhile.
+  `E₀`, the playhead, the two buttons) is kept: RQ-462 (a), ruled so by R-556.
