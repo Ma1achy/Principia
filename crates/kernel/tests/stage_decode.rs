@@ -15,6 +15,8 @@
 //!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing (REQ-DEC-005, REQ-DEC-007).
 //! - `stage_entry_points`: the three compute entry points, called natively, write each sample's decode under their link
 //!   set, or its descriptor, and nothing at the sample count.
+//! - `stage_chart_entry_points`: the acute Burrau strips' and the shape sphere's compute entry points, called natively,
+//!   write each sample's decode, its chart read from the uniform.
 //! - `stage_link_tanh`: the §3.9 `tanh` operator's entry point, called natively, writes the operator at each word.
 
 use kernel::chart::{
@@ -25,8 +27,9 @@ use kernel::generated::links::Defaults;
 use kernel::payload::ICDescriptor;
 use kernel::stage::decode::{
     decode_mode, descriptor_words, energy, entry, flags, ic_words, read_descriptor, read_ic,
-    sample, tag, target, untag, write_descriptor, write_ic, DecodeMode, DecodeUniforms,
-    LatentDefaults, LatentStickBreaking, UniformChart,
+    sample, tag, target, untag, write_descriptor, write_ic, BurrauThetaDeltaMDefaults,
+    BurrauThetaKDefaults, BurrauThetaLzDefaults, DecodeMode, DecodeUniforms, DecodeVariant,
+    LatentDefaults, LatentStickBreaking, ShapeSphereDefaults, UniformChart,
 };
 use spirv_std::glam::{UVec3, UVec4};
 use validation::negative_control;
@@ -573,6 +576,115 @@ negative_control!(
         kernel::stage::decode::latent_defaults,
         kernel::stage::decode::describe,
     ))
+);
+
+// ── stage_chart_entry_points ────────────────────────────────────────────────────────────────────────────────────
+
+/// A decode compute entry point, as the kernel declares it.
+type Wrapper = fn(UVec3, &DecodeUniforms, &[f32], &mut [u32], &mut [u32], &mut [u32]);
+
+/// `wrapper`, called natively for two samples of `chart`, writes `V`'s decode of each: its `(m, r, p)`, tag and
+/// descriptor.
+fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
+    let uniforms = DecodeUniforms {
+        chart: chart.uniform(),
+        flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
+    };
+    let uv = [0.2f32, 0.7, 0.6, 0.3];
+    let (mut ic, mut tags, mut d) = buffers(2);
+    for i in 0..2 {
+        wrapper(
+            UVec3::new(i, 0, 0),
+            &uniforms,
+            &uv,
+            &mut ic,
+            &mut tags,
+            &mut d,
+        );
+    }
+    for i in 0..2 {
+        let want = sample::<V::Chart, V::Links, f32>(chart, uv[2 * i], uv[2 * i + 1]);
+        let name = V::ENTRY;
+        assert_eq!(read_ic(&ic, i), want.ic, "{name} sample {i}'s (m, r, p)");
+        assert_eq!(
+            untag(tags[i]),
+            Ok(want.degenerate),
+            "{name} sample {i}'s tag"
+        );
+        assert_eq!(
+            read_descriptor(&d, i),
+            want.descriptor,
+            "{name} sample {i}'s descriptor"
+        );
+    }
+}
+
+/// The four entry points, in the order `(θ, K)`, `(θ, L_z)`, `(θ, Δm)`, shape sphere.
+fn check_chart_entry_points(w: [Wrapper; 4]) {
+    check_wrapper::<BurrauThetaKDefaults>(
+        w[0],
+        &BurrauThetaK {
+            theta_range: [0.3, 1.2],
+            k_max: 2.0,
+            gamma_k: 1.5,
+        },
+    );
+    check_wrapper::<BurrauThetaLzDefaults>(
+        w[1],
+        &BurrauThetaLz {
+            theta_range: [0.3, 1.2],
+            k: 1.0,
+            lz_fraction: 0.5,
+        },
+    );
+    check_wrapper::<BurrauThetaDeltaMDefaults>(
+        w[2],
+        &BurrauThetaDeltaM {
+            theta_range: [0.3, 1.2],
+            m_target: [0.25, 0.375, 0.375],
+        },
+    );
+    check_wrapper::<ShapeSphereDefaults>(
+        w[3],
+        &ShapeSphere {
+            map: ShapeMap::Exponential,
+            n0: [0.0, 0.0, 1.0],
+            e1: [1.0, 0.0, 0.0],
+            e2: [0.0, 1.0, 0.0],
+            scale: 1.2,
+            inertia: 1.0,
+            phase: 0.0,
+            z_mass: [0.3, -0.2],
+            z_mom: [0.1, -0.4, 0.2, 0.3],
+        },
+    );
+}
+
+#[test]
+fn stage_chart_entry_points() {
+    use kernel::stage::decode as k;
+    check_chart_entry_points([
+        k::burrau_theta_k_defaults,
+        k::burrau_theta_lz_defaults,
+        k::burrau_theta_delta_m_defaults,
+        k::shape_sphere_defaults,
+    ]);
+}
+
+negative_control!(
+    stage_chart_entry_points,
+    "the (θ, K) strip's entry point swapped for the (θ, L_z) strip's must fail",
+    expected = "stage_decode_burrau_theta_k_defaults sample 0's",
+    {
+        use kernel::stage::decode as k;
+        check_chart_entry_points([
+            k::burrau_theta_lz_defaults,
+            k::burrau_theta_lz_defaults,
+            k::burrau_theta_delta_m_defaults,
+            k::shape_sphere_defaults,
+        ])
+    }
 );
 
 // ── stage_link_tanh ─────────────────────────────────────────────────────────────────────────────────────────────
