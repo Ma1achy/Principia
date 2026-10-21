@@ -3318,8 +3318,6 @@
   - R-72
   - R-500
   milestone: M3
-  rq:
-  - RQ-369
   note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition). R-500 (closes RQ-369): the split flag, defined in Part 2."
 - id: REQ-INT-014
   area: INT
@@ -3343,8 +3341,6 @@
   - R-168
   - R-500
   milestone: M3
-  rq:
-  - RQ-369
   note: "R-500 (closes RQ-369): the table's \"(see §4)\" reads step_reversible true and run_reversible false for KDK, Yoshida-4 and Yoshida-6."
 - id: REQ-INT-015
   area: INT
