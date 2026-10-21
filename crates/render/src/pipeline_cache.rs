@@ -936,12 +936,14 @@ impl PipelineCache {
 }
 
 /// `keys` as `stain`'s node keys: one per node, distinct.
-/// The cache's drop stops the compile worker and waits for it (TASK-M2-42). The worker holds a clone of the device and,
-/// through the shared state, every compiled pipeline; a worker left running releases them on its own thread, after
-/// the cache is gone, so a process can reach its exit while the driver is still destroying them. On lavapipe that is
-/// a SIGSEGV after every test has passed (REQ-VAL-192). Closing both channels stops the worker at its next send, which
-/// finds no receiver, or, idle with no job queued, at its next receive, which finds no sender: it compiles at most one
-/// more job, and the drop returns once the worker has released what it held.
+/// The cache's drop stops the compile worker and waits for it (TASK-M2-42, REQ-VAL-192). The worker holds a clone of
+/// the device and, through the shared state, every compiled pipeline. Left running, it released them on its own thread
+/// after the cache was gone, and where it was their last holder that was the device's and the instance's teardown:
+/// on lavapipe, the Vulkan loader's dlclose of each driver and of `libvulkan.so.1`, on the worker, while the main
+/// thread, every test passed, was in `exit` calling the exit handlers those libraries registered; one whose library
+/// had just been unmapped faulted (SIGSEGV). Closing both channels stops the worker at its next send, which finds no
+/// receiver, or, idle with no job queued, at its next receive, which finds no sender: it compiles at most one more
+/// job, and the drop returns once the worker has released what it held.
 impl Drop for PipelineCache {
     fn drop(&mut self) {
         drop(std::mem::replace(&mut self.jobs, mpsc::channel().0));

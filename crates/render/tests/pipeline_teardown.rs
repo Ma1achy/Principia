@@ -1,14 +1,16 @@
-//! The render teardown, in a child process (TASK-M2-42, REQ-VAL-192). A render-crate test used to pass its assertions
-//! and then die by SIGSEGV on lavapipe, after libtest's `test result: ok`: the pipeline cache's compile worker, a
-//! thread left running, still held a clone of the device and every compiled pipeline when the cache was dropped, and
-//! released them on its own thread while the process went on to exit. The cache's drop now joins the worker.
+//! The render teardown, in a child process (TASK-M2-42, REQ-VAL-192). Render-crate tests used to pass their
+//! assertions and then die by SIGSEGV on lavapipe, after libtest's `test result: ok`. The pipeline cache's compile
+//! worker, a detached thread, held a clone of the device and every compiled pipeline; when it was their last holder,
+//! it released them after the cache was gone: the device's and the instance's teardown, and with it the Vulkan
+//! loader's dlclose of each driver and of `libvulkan.so.1`, ran on the worker while the main thread was in `exit`,
+//! calling the exit handlers those libraries had registered. A handler whose library the worker had just unmapped
+//! faulted. The cache's drop now joins the worker, so all of it happens before the drop returns.
 //!
-//! `pipeline_teardown_exits_by_status` runs the sequence `pipeline_runtime`'s rig runs, `GpuHarness`, a `RenderLoop`
-//! with its pipeline cache, a stain compiled by the worker, a frame, and their drop, as this test binary re-run on
-//! that one test (as `scratch_guard_keeps_a_failing_tests_scratch` runs its child), four children at once as a CI
-//! shard runs four tests. The check fails when a child dies by a signal, naming it; when a child fails, as it does
-//! when a compiled pipeline outlives the render loop's drop; and when a child ran no test. Its negative controls (R-176)
-//! show each.
+//! `pipeline_teardown_exits_by_status` runs that sequence, the harness dropped first and the cache last so that the
+//! worker is the device's last holder, as this test binary re-run on that one test (as
+//! `scratch_guard_keeps_a_failing_tests_scratch` runs its child), four children at once as a CI shard runs four tests.
+//! The check fails when a child dies by a signal, naming it; when a child fails, as it does when a compiled pipeline
+//! outlives the cache's drop; and when a child ran no test. Its negative controls (R-176) show each.
 
 #![cfg(unix)]
 
@@ -17,11 +19,8 @@ use std::process::{Command, Output};
 use std::sync::Arc;
 use std::time::Duration;
 
-use ledger::gen::rust;
 use render::assemble::{Kind, Node, Occupant, Stain, Tier};
-use render::compositor::LAYER_FORMAT;
-use render::frame_record::RenderLoop;
-use render::pipeline_cache::FrameInputs;
+use render::pipeline_cache::PipelineCache;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::spawn::Spawn;
@@ -31,19 +30,6 @@ const CHILD: &str = "PIPELINE_TEARDOWN_CHILD";
 
 /// The test the children run.
 const TEST: &str = "pipeline_teardown_exits_by_status";
-
-const W: u32 = 4;
-const H: u32 = 2;
-
-const INPUTS: FrameInputs = FrameInputs {
-    ensemble: 0,
-    ensemble_spread: 0.25,
-    masses: [1.0, 1.0, 1.0],
-    dt_macro: 0.01,
-    delta_0: 1e-6,
-    n_renorm: 16,
-    horizon_steps: 1000,
-};
 
 fn node(kind: Kind, occupant: Occupant, inputs: &[Option<usize>]) -> Node {
     Node {
@@ -69,69 +55,28 @@ fn stain() -> Stain {
     .unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// One stored `SimStateFTLE`'s size in bytes.
-fn simstate_size() -> u64 {
-    let s = ledger::payload::structs()
-        .into_iter()
-        .find(|s| s.name == "SimStateFTLE")
-        .expect("the FTLE stored variant");
-    u64::from(rust::offsets(&s).1)
-}
-
-/// The teardown sequence: the harness, a render loop presenting into a target, the sim buffers set on it, a stain
-/// compiled by the worker and drawn, then the render loop dropped, which must release every pipeline the worker
-/// compiled before it returns, then the rest, in the order `pipeline_runtime`'s `Rig` drops them. With `leak`, the
-/// control, a clone of the compiled pipeline is kept past the drop, as a worker still running keeps one.
+/// The teardown sequence: the harness and a pipeline cache on its device, a stain compiled by the worker, then the
+/// harness dropped and the cache last, so that only the cache and its worker still hold the device. The cache's drop
+/// must release every pipeline the worker compiled before it returns; then the test returns to libtest, which exits.
+/// With `leak`, the control, a clone of the compiled pipeline is kept past the drop, as a worker still running keeps
+/// one.
 fn sequence(leak: bool) {
     let h = GpuHarness::new().expect("a GPU device");
-    let mut rl = RenderLoop::new(h.device(), h.queue(), LAYER_FORMAT, W, H)
-        .unwrap_or_else(|e| panic!("{e}"));
-    let target = h.device().create_texture(&wgpu::TextureDescriptor {
-        label: Some("target"),
-        size: wgpu::Extent3d {
-            width: W,
-            height: H,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: LAYER_FORMAT,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-        view_formats: &[],
-    });
-    let view = target.create_view(&Default::default());
-    let buffer = |label: &str, size: u64| {
-        h.device().create_buffer(&wgpu::BufferDescriptor {
-            label: Some(label),
-            size,
-            usage: wgpu::BufferUsages::STORAGE,
-            mapped_at_creation: false,
-        })
-    };
-    let samples = u64::from(W * H);
-    let simstate = buffer("simstate", samples * simstate_size());
-    let word = buffer("word", samples * 16);
-    rl.set_sim(simstate.clone(), Some(word.clone()));
-    rl.cache()
+    let mut cache = PipelineCache::new(h.device());
+    cache
         .request(&stain(), &[0, 1, 2, 3], Tier::FULL)
         .unwrap_or_else(|e| panic!("{e}"));
-    rl.cache().wait();
-    let compiled = Arc::clone(rl.cache().current().expect("the stain compiled"));
-    rl.frame(&INPUTS, &view);
-    h.device()
-        .poll(wgpu::PollType::wait_indefinitely())
-        .expect("device poll failed");
+    cache.wait();
+    let compiled = Arc::clone(cache.current().expect("the stain compiled"));
     let pipeline = Arc::downgrade(&compiled);
     let kept = leak.then_some(compiled);
-    drop(rl);
+    drop(h);
+    drop(cache);
     assert!(
         pipeline.upgrade().is_none(),
-        "a compiled pipeline outlived the render loop's drop: another thread still holds it"
+        "a compiled pipeline outlived the cache's drop: another thread still holds it"
     );
     drop(kept);
-    drop(h);
-    drop((target, view, simstate, word));
 }
 
 /// Ends this process by SIGSEGV, and waits up to 10 s for it to land. The Rust runtime's own SIGSEGV handler, its
@@ -252,8 +197,8 @@ mod pipeline_teardown_leak {
     use super::*;
     negative_control!(
         pipeline_teardown_exits_by_status,
-        "a pipeline still held after the render loop's drop, as by a worker left running, fails the check",
-        expected = "a compiled pipeline outlived the render loop's drop",
+        "a pipeline still held after the cache's drop, as by a worker left running, fails the check",
+        expected = "a compiled pipeline outlived the cache's drop",
         check("leak", TEST, 1)
     );
 }
