@@ -22,8 +22,9 @@
 //! - **Annotation** ([`Coord::Annotation`]): nothing to invert; the axis gives no coordinate and nothing is compared
 //!   for it.
 //! - **Kind 4, coupled curve** (`super::curve`): the Burrau charts' impls are there, beside the closed form, the
-//!   off-curve projection and the fold: the curve axis's coordinate is the closed form's, read off `C(x)`, and the
-//!   chart's other axis is read by its own kind.
+//!   off-curve projection and the fold. The curve axis's coordinate is kind 4's landing at the curve tolerance `tol`
+//!   ([`ByKind::coords_within`]; REQ-ENC-026): the closed form's on the curve, `ν*`'s within `tol`, and none beyond
+//!   it; the chart's other axis is read by its own kind.
 //!
 //! **Lowered, never interpreted** (chart_decoder_contract design axiom 4; lowering Part 2): the kind is each chart
 //! type's impl, monomorphised, as the decode is; the kernel holds no runtime axis-kind value. The authoring layer's
@@ -32,8 +33,11 @@
 //! **Where possible** (inverse_encode_contract Part 6, step 4's definition, R-72): `x` lands on the chart iff
 //! `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, `D(Φ(c(x)))` the chart's decode at `c(x)`
 //! ([`crate::chart::ChartDecode::decode_at`]), both states canonical: Part 4's norm (REQ-ENC-029) and tolerance
-//! (REQ-ENC-024). [`encode_into`] takes both from its caller, the lookup, and fixes neither. A coordinate that is not
-//! finite, or an axis that cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison.
+//! (REQ-ENC-024). [`encode_into_within`] takes both from its caller, the lookup, and fixes neither, and with them kind
+//! 4's curve tolerance `tol` (REQ-ENC-026), which only a curve chart reads; [`encode_into`] is it at `tol = 0`, where a
+//! curve chart represents only a state its curve holds exactly. A coordinate that is not finite, or an axis that
+//! cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report,
+//! `d`, `ν*` and the fold's flag, is [`ChartEncoded::curve`].
 //!
 //! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
 //! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
@@ -73,6 +77,7 @@
 
 use spirv_std::num_traits::{Float, FloatConst};
 
+use super::curve::CurveEncoded;
 use super::{encode, Encoded, SimplexClamp};
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
@@ -125,6 +130,21 @@ pub trait ByKind: ChartDecode {
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<Self::Param>;
+
+    /// The chart coordinates at kind 4's curve tolerance `tol` (Part 5 kind 4; REQ-ENC-026), and a curve chart's curve
+    /// encode (`super::curve`). A chart with no curve axis ignores `tol`: its [`ByKind::coords`], and no curve encode.
+    #[inline]
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        _tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<Self::Param>,
+    {
+        (self.coords::<S, R>(e), None)
+    }
 }
 
 /// Encode into the active chart: `E(x)`, the chart point read off it by kind, and where it lands.
@@ -138,6 +158,10 @@ pub struct ChartEncoded<R> {
     pub residual: Option<R>,
     /// The chart point, or latent `z`.
     pub landing: Landing<R>,
+    /// A curve chart's curve encode at the caller's `tol`: the closed form, its `past_fold` flag among it, `d`, `ν*`
+    /// where the projection ran, and the landing on the curve (`super::curve`; REQ-ENC-022, REQ-ENC-026). `None` on
+    /// every other chart.
+    pub curve: Option<CurveEncoded<R>>,
 }
 
 /// The chart coordinate an axis's [`Coord`] places: `Some` for a finite coordinate, and 0 for an annotation axis, which
@@ -151,10 +175,7 @@ fn placed<R: LinkReal>(c: Coord<R>) -> Option<R> {
     }
 }
 
-/// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind, and the chart
-/// as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from `C(ic)`, is at most `eps_phys`, else
-/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
-/// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible").
+/// [`encode_into_within`] at `tol = 0` (the module's note): a curve chart represents only a state on its curve exactly.
 #[inline]
 pub fn encode_into<S, R, C, N>(chart: &C, ic: &Ic<R>, norm: N, eps_phys: R) -> ChartEncoded<R>
 where
@@ -164,8 +185,31 @@ where
     C: ByKind,
     N: Fn(&Ic<R>, &Ic<R>) -> R,
 {
+    encode_into_within::<S, R, C, N>(chart, ic, norm, eps_phys, R::zero())
+}
+
+/// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind at the curve
+/// tolerance `tol`, and the chart as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from
+/// `C(ic)`, is at most `eps_phys`, else latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys`
+/// (REQ-ENC-029) and `eps_phys` its `ε_phys` (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible"), and
+/// `tol` Part 5 kind 4's (REQ-ENC-026), the caller's too.
+#[inline]
+pub fn encode_into_within<S, R, C, N>(
+    chart: &C,
+    ic: &Ic<R>,
+    norm: N,
+    eps_phys: R,
+    tol: R,
+) -> ChartEncoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
+{
     let encoded = encode::<S, R>(ic);
-    let coords = chart.coords::<S, R>(&encoded);
+    let (coords, curve) = chart.coords_within::<S, R>(&encoded, tol);
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
             let d = norm(&encoded.canonical.ic, &chart.decode_at::<S, R>(u, v).ic);
@@ -181,6 +225,7 @@ where
         coords,
         residual,
         landing,
+        curve,
     }
 }
 

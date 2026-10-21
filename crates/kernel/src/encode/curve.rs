@@ -24,10 +24,10 @@
 //! steps ([`GOLDEN_STEPS`], a fixed count) inside the best grid point's two neighbouring cells, and `ν*` the better of
 //! the two searches, so an edge minimum is the edge itself ([`Projection::edge`]).
 //!
-//! **The landing** ([`project`]): on the curve where `ν(θ)` lies in the span and `d(ν(θ)) ≤ tol`, the argmin
-//! bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always available (Part 6 case 3).
-//! `d` is reported in every case. `tol` is the caller's, REQ-ENC-026's calibration (R-71), proposed with its evidence
-//! in `fixtures/gates/curve_projection/`.
+//! **The landing on the curve** ([`project`], kind 4 (a) and (b)): on the curve where `ν(θ)` lies in the span and
+//! `d(ν(θ)) ≤ tol`, the argmin bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always
+//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, REQ-ENC-026's calibration (R-71),
+//! proposed with its evidence in `fixtures/gates/curve_projection/`.
 //!
 //! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4; REQ-ENC-022). The curve axis of every Burrau chart,
 //! `ν`, or `θ` on the acute-angle charts, is bounded (chart_reference §5.4): past its edge the chart shows no system.
@@ -37,10 +37,16 @@
 //! system (R-27): encode does not relabel it. Its closed-form `ν` is below `√2 − 1`, past the fold's end, and it falls
 //! back to latent `z`, unless the fold's end is within `tol` of it; [`ClosedForm::past_fold`] flags it.
 //!
-//! **Into the active chart** ([`ByKind`] for the Burrau charts). The curve axis's coordinate is the closed form's, the
-//! other axis by its own kind: `K` by the warp's inverse, `L_z` by the band's, δm by the blend's least squares, the
-//! Euclid plane's `m` an annotation. A closed form past the span is [`Coord::Unplaced`]. Whether the chart represents
-//! `x` is then `by_kind::encode_into`'s comparison, as for every chart.
+//! **Into the active chart** ([`ByKind`] for the Burrau charts; dd_encode §3.1, "The composition"). Kind 4 supplies the
+//! curve axis's coordinate, [`curve_axis`]: [`project`]'s landing at the caller's `tol`, the closed form's coordinate
+//! on the curve (`θ` read directly on the acute-angle charts), `ν*`'s where projected (at an edge of the span, the
+//! axis's end, 0 or 1, exactly), and [`Coord::Unplaced`] where the landing is latent. The other axis is read by its own
+//! kind: `K` by the warp's inverse, `L_z` by the band's, δm by the blend's least squares, the Euclid plane's `m` an
+//! annotation. Then `by_kind::encode_into_within`'s comparison, Part 6 step 4's `‖·‖_phys ≤ ε_phys`, decides chart
+//! against latent, as for every chart: `d` does not see the momentum. A chart landing needs both. The curve encode,
+//! `past_fold` among it, goes to the caller in `ChartEncoded::curve`; `by_kind::encode_into` is `tol = 0`. The δm
+//! strip, whose masses leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not
+//! apply there.
 //!
 //! **The branch inputs** (gpu_determinism_note, "The discipline"; the human's ruling on RQ-298, 21 Oct 2026: a branch
 //! input that must agree across backends is built only from operations every IEEE backend rounds alike, with no
@@ -328,11 +334,24 @@ pub fn project<R: LinkReal + IeeeBits>(e: &Encoded<R>, span: [R; 2], tol: R) -> 
 /// A Burrau chart whose systems lie on the curve: the `ν` its curve axis spans and the axis's coordinate at a `ν`.
 /// The δm strip is not one: off its `v = 0` row its masses leave the curve's.
 pub trait CurveChart: ByKind {
-    /// `[lo, hi]`, the `ν` the chart's decode gives at its curve axis's two ends, ordered.
-    fn nu_span<R: LinkReal + From<Self::Param>>(&self) -> [R; 2];
+    /// `[ν(0), ν(1)]`, the `ν` the chart's decode gives at its curve axis's two ends, `t = 0` and `t = 1`.
+    fn nu_ends<R: LinkReal + From<Self::Param>>(&self) -> [R; 2];
+
+    /// `[lo, hi]`, [`CurveChart::nu_ends`] ordered.
+    #[inline]
+    fn nu_span<R: LinkReal + From<Self::Param>>(&self) -> [R; 2] {
+        let [x, y] = self.nu_ends::<R>();
+        [Float::min(x, y), Float::max(x, y)]
+    }
 
     /// The curve axis's chart coordinate at `ν`.
     fn at_nu<R: LinkReal + From<Self::Param>>(&self, nu: R) -> R;
+
+    /// The curve axis's chart coordinate at the closed form `c`, on the curve: [`CurveChart::at_nu`] at its `ν`.
+    #[inline]
+    fn at_closed<R: LinkReal + From<Self::Param>>(&self, c: &ClosedForm<R>) -> R {
+        self.at_nu(c.nu)
+    }
 }
 
 /// `t` as a coordinate of a bounded axis: [`Coord::At`] on `[0, 1]`, else [`Coord::Unplaced`] (the module's note).
@@ -345,20 +364,38 @@ pub fn bounded<R: Float>(t: R) -> Coord<R> {
     )
 }
 
+/// Kind 4's coordinate of `e` on `chart`'s curve axis at the tolerance `tol` (the module's note; Part 5 kind 4), and
+/// the curve encode it came from: [`project`] over the chart's span; on the curve, [`CurveChart::at_closed`]; projected
+/// to `ν*`, [`CurveChart::at_nu`] there, or the axis's end, 0 or 1, where `ν*` is the end's `ν`; latent,
+/// [`Coord::Unplaced`]. Each read [`bounded`].
+#[inline]
+pub fn curve_axis<C, R>(chart: &C, e: &Encoded<R>, tol: R) -> (Coord<R>, CurveEncoded<R>)
+where
+    C: CurveChart,
+    R: LinkReal + IeeeBits + From<C::Param>,
+{
+    let c = project(e, chart.nu_span::<R>(), tol);
+    let [start, end] = chart.nu_ends::<R>();
+    let coord = match c.landing {
+        CurveLanding::OnCurve { .. } => bounded(chart.at_closed(&c.closed)),
+        CurveLanding::Projected { nu } => bounded(select(
+            nu == start,
+            R::zero(),
+            select(nu == end, R::one(), chart.at_nu(nu)),
+        )),
+        CurveLanding::Latent => Coord::Unplaced,
+    };
+    (coord, c)
+}
+
 /// `(x − lo)/(hi − lo)`, the linear axis `lerp(lo, hi, t)` inverted.
 #[inline]
 fn unlerp<R: Float>(lo: R, hi: R, x: R) -> R {
     (x - lo) / (hi - lo)
 }
 
-/// The closed form of `e`'s canonical state.
-#[inline]
-fn closed<R: LinkReal + IeeeBits>(e: &Encoded<R>) -> ClosedForm<R> {
-    closed_form(&e.canonical.ic)
-}
-
-/// `(ν, K)`: `ν` by the closed form, `K` by the warp's inverse (`by_kind::warp_inverse`); `L_z = 0` is
-/// `by_kind::encode_into`'s comparison.
+/// `(ν, K)`: `ν` by [`curve_axis`], `K` by the warp's inverse (`by_kind::warp_inverse`); `L_z = 0` is
+/// `by_kind::encode_into_within`'s comparison. [`ByKind::coords`] is `tol = 0`.
 impl<P: Copy> ByKind for Burrau<P>
 where
     f64: From<P>,
@@ -368,13 +405,26 @@ where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
+        self.coords_within::<S, R>(e, R::zero()).0
+    }
+
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
         let wide = <R as From<P>>::from;
         let (_, t) = warp_inverse(
             wide(self.k_max),
             wide(self.gamma_k),
             &invariants(&e.canonical.ic),
         );
-        [bounded(self.at_nu(closed(e).nu)), Coord::At(t)]
+        let (nu, curve) = curve_axis(self, e, tol);
+        ([nu, Coord::At(t)], Some(curve))
     }
 }
 
@@ -382,9 +432,8 @@ impl<P: Copy> CurveChart for Burrau<P>
 where
     f64: From<P>,
 {
-    fn nu_span<R: LinkReal + From<P>>(&self) -> [R; 2] {
-        let (x, y) = (self.nu(R::zero()), self.nu(R::one()));
-        [Float::min(x, y), Float::max(x, y)]
+    fn nu_ends<R: LinkReal + From<P>>(&self) -> [R; 2] {
+        [self.nu(R::zero()), self.nu(R::one())]
     }
 
     fn at_nu<R: LinkReal + From<P>>(&self, nu: R) -> R {
@@ -393,7 +442,8 @@ where
     }
 }
 
-/// The Euclid plane: `m` an annotation, `ν` by the closed form; the rest start is the comparison's.
+/// The Euclid plane: `m` an annotation, `ν` by [`curve_axis`]; the rest start is the comparison's. [`ByKind::coords`]
+/// is `tol = 0`.
 impl<P: Copy> ByKind for EuclidPlane<P>
 where
     f64: From<P>,
@@ -403,7 +453,20 @@ where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
-        [Coord::Annotation, bounded(self.at_nu(closed(e).nu))]
+        self.coords_within::<S, R>(e, R::zero()).0
+    }
+
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        let (nu, curve) = curve_axis(self, e, tol);
+        ([Coord::Annotation, nu], Some(curve))
     }
 }
 
@@ -411,9 +474,8 @@ impl<P: Copy> CurveChart for EuclidPlane<P>
 where
     f64: From<P>,
 {
-    fn nu_span<R: LinkReal + From<P>>(&self) -> [R; 2] {
-        let (x, y) = (self.nu(R::zero()), self.nu(R::one()));
-        [Float::min(x, y), Float::max(x, y)]
+    fn nu_ends<R: LinkReal + From<P>>(&self) -> [R; 2] {
+        [self.nu(R::zero()), self.nu(R::one())]
     }
 
     fn at_nu<R: LinkReal + From<P>>(&self, nu: R) -> R {
@@ -422,26 +484,32 @@ where
     }
 }
 
-/// `θ`'s coordinate on `theta_range` at the closed form's `θ`, read directly, not through `ν`.
+/// `θ`'s coordinate on `theta_range` at `θ`.
 #[inline]
 fn theta_coordinate<R: Float + From<P>, P: Copy>(theta_range: [P; 2], theta: R) -> R {
     let wide = <R as From<P>>::from;
     unlerp(wide(theta_range[0]), wide(theta_range[1]), theta)
 }
 
-/// `[ν(θ(1)), ν(θ(0))]`, ordered, of an acute-angle chart whose `ν(θ(u))` is `nu`.
-#[inline]
-fn fold_span<R: Float>(nu: impl Fn(R) -> R) -> [R; 2] {
-    let (x, y) = (nu(R::zero()), nu(R::one()));
-    [Float::min(x, y), Float::max(x, y)]
-}
-
-/// `Φ_θ,K`: `θ` by the closed form, `K` by the warp's inverse; `L_z = 0` is the comparison's.
+/// `Φ_θ,K`: `θ` by [`curve_axis`], on the curve the closed form's `θ` read directly, not through `ν`; `K` by the
+/// warp's inverse; `L_z = 0` is the comparison's. [`ByKind::coords`] is `tol = 0`.
 impl<P: Copy> ByKind for BurrauThetaK<P>
 where
     f64: From<P>,
 {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        self.coords_within::<S, R>(e, R::zero()).0
+    }
+
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
@@ -452,10 +520,8 @@ where
             wide(self.gamma_k),
             &invariants(&e.canonical.ic),
         );
-        [
-            bounded(theta_coordinate(self.theta_range, closed(e).theta)),
-            Coord::At(t),
-        ]
+        let (theta, curve) = curve_axis(self, e, tol);
+        ([theta, Coord::At(t)], Some(curve))
     }
 }
 
@@ -463,17 +529,22 @@ impl<P: Copy> CurveChart for BurrauThetaK<P>
 where
     f64: From<P>,
 {
-    fn nu_span<R: LinkReal + From<P>>(&self) -> [R; 2] {
-        fold_span(|u| self.nu(u))
+    fn nu_ends<R: LinkReal + From<P>>(&self) -> [R; 2] {
+        [self.nu(R::zero()), self.nu(R::one())]
     }
 
     fn at_nu<R: LinkReal + From<P>>(&self, nu: R) -> R {
         theta_coordinate(self.theta_range, crate::chart::burrau_acute::theta_of(nu))
     }
+
+    fn at_closed<R: LinkReal + From<P>>(&self, c: &ClosedForm<R>) -> R {
+        theta_coordinate(self.theta_range, c.theta)
+    }
 }
 
-/// `Φ_θ,L_z`: `θ` by the closed form, `L_z` by the band's inverse `v = (L_z/(λ_L·L_max(K)) + 1)/2`, `v = ½` where the
-/// band's half-width is 0; the fixed `K` is the comparison's.
+/// `Φ_θ,L_z`: `θ` by [`curve_axis`], on the curve the closed form's `θ` read directly; `L_z` by the band's inverse
+/// `v = (L_z/(λ_L·L_max(K)) + 1)/2`, `v = ½` where the band's half-width is 0; the fixed `K` is the comparison's.
+/// [`ByKind::coords`] is `tol = 0`.
 impl<P: Copy> ByKind for BurrauThetaLz<P>
 where
     f64: From<P>,
@@ -483,15 +554,25 @@ where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
+        self.coords_within::<S, R>(e, R::zero()).0
+    }
+
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
         let half = R::one() / (R::one() + R::one());
         let width = self.lz_max::<R>();
         let flat = width == R::zero();
         let lz = invariants(&e.canonical.ic).lz;
         let ratio = select(flat, R::zero(), lz / select(flat, R::one(), width));
-        [
-            bounded(theta_coordinate(self.theta_range, closed(e).theta)),
-            Coord::At((ratio + R::one()) * half),
-        ]
+        let (theta, curve) = curve_axis(self, e, tol);
+        ([theta, Coord::At((ratio + R::one()) * half)], Some(curve))
     }
 }
 
@@ -499,12 +580,16 @@ impl<P: Copy> CurveChart for BurrauThetaLz<P>
 where
     f64: From<P>,
 {
-    fn nu_span<R: LinkReal + From<P>>(&self) -> [R; 2] {
-        fold_span(|u| self.nu(u))
+    fn nu_ends<R: LinkReal + From<P>>(&self) -> [R; 2] {
+        [self.nu(R::zero()), self.nu(R::one())]
     }
 
     fn at_nu<R: LinkReal + From<P>>(&self, nu: R) -> R {
         theta_coordinate(self.theta_range, crate::chart::burrau_acute::theta_of(nu))
+    }
+
+    fn at_closed<R: LinkReal + From<P>>(&self, c: &ClosedForm<R>) -> R {
+        theta_coordinate(self.theta_range, c.theta)
     }
 }
 
@@ -521,7 +606,7 @@ where
         R: LinkReal + PayloadReal + From<P>,
     {
         let wide = <R as From<P>>::from;
-        let cf = closed(e);
+        let cf = closed_form(&e.canonical.ic);
         let mb = embed(cf.nu).m;
         let m = e.canonical.ic.m;
         let t = self.m_target.map(wide);

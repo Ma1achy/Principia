@@ -7,15 +7,21 @@
 //!   the closed form lands, the argmin bypassed; off it `d(ν*)` is reported, the latent fallback is taken beyond the
 //!   tolerance and satisfies T2; within it the point is projected; the tolerance's edges; and the calibration's
 //!   evidence, `fixtures/gates/curve_projection/` (REQ-ENC-017, REQ-ENC-026).
+//! - `encode_curve_composition_*`: kind 4 composed with Part 6 step 4 (dd_encode §3.1, "The composition"): a state
+//!   with `d(ν(θ))` and `d(ν*)` beyond the tolerance falls back to latent `z` though its decode at the closed form is
+//!   within `ε_phys`; a state within the tolerance of `ν*` only lands at `ν*`, not at `ν(θ)`.
+//! - `encode_curve_axis_ends`: a state projected to an end of a curve chart's span reads the axis's end, 0 or 1,
+//!   exactly.
 //! - `encode_projection_metric_bruteforce`: off-curve fixtures: `ν*` minimises the shape sphere's chordal ⊕ the mass
 //!   simplex's Euclidean distance at unit weights, against a brute-force search under the test's own metric, built from
 //!   the positions by `kernel::shape::shape`, not from the encode's Jacobi vectors (REQ-ENC-020). Its control, the
 //!   same search under another weighting, is the one that shows the projection test can fail (PIT-3).
 //! - `encode_burrau_fold`: on a folded chart an input at `θ > π/4`, the leg-swapped twin of a fold shape, is not
 //!   relabelled: it falls back to latent `z`, flagged `past_fold`; on the full-range Euclid plane the twin is its own
-//!   chart point (REQ-ENC-022, dd_encode §3.1).
+//!   chart point; the flag reaches the caller in the curve encode (REQ-ENC-022, dd_encode §3.1).
 //! - `encode_burrau_by_kind`: every Burrau chart's state, under a random gauge, lands back on its chart at its own
-//!   point through `by_kind::encode_into`; past the curve axis's edge the axis places nothing.
+//!   point through `by_kind::encode_into_within` at the curve tolerance, `encode_into` being it at `tol = 0`; past the
+//!   curve axis's edge the axis places nothing.
 //! - `encode_curve_primitives`: each comparison and select at its boundary: the square's floor, the bounded axis's
 //!   edges, the search's edges and its NaN start, the span test, the fold's isosceles tie, and the flat guards.
 //!
@@ -37,7 +43,9 @@ use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, ChartDecode, EuclidPlane,
 };
 use kernel::decode::{self as dec, Ic};
-use kernel::encode::by_kind::{encode_into, ByKind, ChartEncoded, Coord, Landing};
+use kernel::encode::by_kind::{
+    encode_into, encode_into_within, ByKind, ChartEncoded, Coord, Landing,
+};
 use kernel::encode::curve::{
     bounded, closed_form, curve_distance2, curve_point, distance2, floor, nearest, project, sq,
     state_point, ClosedForm, CurveChart, CurveLanding, Point,
@@ -122,12 +130,18 @@ fn norm<R: Precision>(a: &Ic<R>, b: &Ic<R>) -> R {
     R::of(phys(&widen(a), &widen(b)))
 }
 
-/// `x` encoded into `chart` at `R` under `‖·‖_phys` and `ε_phys`.
+/// `x` encoded into `chart` at `R` under `‖·‖_phys`, `ε_phys` and the curve tolerance [`curve_tol`].
 fn into<R: Precision, C: ByKind<Param = R>>(chart: &C, x: &Ic<f64>) -> ChartEncoded<R>
 where
     f64: From<R>,
 {
-    encode_into::<Defaults, R, C, _>(chart, &narrow::<R>(x), norm::<R>, R::of(eps_phys::<R>()))
+    encode_into_within::<Defaults, R, C, _>(
+        chart,
+        &narrow::<R>(x),
+        norm::<R>,
+        R::of(eps_phys::<R>()),
+        curve_tol::<R>(),
+    )
 }
 
 fn f<R: Precision>(x: R) -> f64 {
@@ -783,8 +797,9 @@ fn swapped(x: &Ic<f64>) -> Ic<f64> {
 
 /// `Φ_θ,K`'s state at `(u, v)` and its leg-swapped twin, at `R`, each under a random gauge: the state lands on the
 /// chart, inside the fold; the twin, at `θ > π/4`, is flagged `past_fold`, is not relabelled onto the chart, and falls
-/// back to latent `z`, by `encode_into` and by the projection both; at rest (`v = 0`) the twin is the full-range Euclid
-/// plane's own chart point. When `twin` is false the twin is replaced by the state itself, for the control.
+/// back to latent `z`, by `encode_into_within` and by the projection both, the flag in the curve encode it reports; at
+/// rest (`v = 0`) the twin is the full-range Euclid plane's own chart point, flagged too. When `twin` is false the twin
+/// is replaced by the state itself, for the control.
 fn check_fold<R: Precision>(u: f64, v: f64, rng: &mut SplitMix, twin: bool)
 where
     f64: From<R>,
@@ -811,6 +826,10 @@ where
         "the twin lands on the folded chart: {:?}",
         t.landing
     );
+    assert!(
+        t.curve.is_some_and(|c| c.closed.past_fold),
+        "the twin's curve encode does not carry past_fold to the caller"
+    );
     let p = project(&e, theta_k::<R>().nu_span::<R>(), curve_tol::<R>());
     assert!(
         matches!(p.landing, CurveLanding::Latent),
@@ -820,8 +839,9 @@ where
     if v == 0.0 {
         let full = into(&euclid::<R>(), &gauged(&y, rng));
         assert!(
-            matches!(full.landing, Landing::Chart { .. }),
-            "on the full range the twin is not its own chart point: {:?}",
+            matches!(full.landing, Landing::Chart { .. })
+                && full.curve.is_some_and(|c| c.closed.past_fold),
+            "on the full range the twin is not its own chart point, flagged: {:?}",
             full.residual
         );
     }
@@ -903,6 +923,13 @@ fn encode_burrau_by_kind() {
     let e = enc::<f64>(&burrau(0.95));
     let c = nu_k().coords::<Defaults, f64>(&e);
     assert!(c[0] == Coord::Unplaced, "ν past the span is placed: {c:?}");
+    // `encode_into` is `encode_into_within` at `tol = 0`.
+    let x = gauged(&burrau(0.5), &mut rng(35));
+    let eps = eps_phys::<f64>();
+    assert_eq!(
+        encode_into::<Defaults, f64, _, _>(&euclid::<f64>(), &x, norm::<f64>, eps),
+        encode_into_within::<Defaults, f64, _, _>(&euclid::<f64>(), &x, norm::<f64>, eps, 0.0)
+    );
 }
 
 negative_control!(
@@ -1083,4 +1110,210 @@ negative_control!(
     "the f32 floor is not the f64 one",
     expected = "is not",
     check_floor::<f32>(2f64.powi(-255))
+);
+
+// ── Kind 4 composed with step 4 (dd_encode §3.1, "The composition") ──────────────────────────────────────────────────
+
+/// `γ(ν)` with each position component moved by up to `s` and the masses by up to `s` within the simplex, in two
+/// random directions, (1, 0, −1) and (0, 1, −1) mixed.
+fn perturbed(nu: f64, s: f64, rng: &mut SplitMix) -> Ic<f64> {
+    let mut x = burrau(nu);
+    for body in &mut x.r {
+        body[0] += s * uniform(rng, -1.0, 1.0);
+        body[1] += s * uniform(rng, -1.0, 1.0);
+    }
+    let (a, b) = (s * uniform(rng, -1.0, 1.0), s * uniform(rng, -1.0, 1.0));
+    x.m = [x.m[0] + a, x.m[1] + b, x.m[2] - (a + b)];
+    x
+}
+
+/// `D(Φ(c))` on the Euclid plane at the curve coordinate `t`, against `C(x)`, in `‖·‖_phys`.
+fn residual_at<R: Precision>(e: &Encoded<R>, t: R) -> f64
+where
+    f64: From<R>,
+{
+    let back = euclid::<R>().decode_at::<Defaults, R>(R::zero(), t).ic;
+    phys(&widen(&e.canonical.ic), &widen(&back))
+}
+
+/// Case (i), kind 4 (b) before step 4: the first seeded draw near the curve, at `R`, with `d(ν(θ)) > tol` and
+/// `d(ν*) > tol`, `tol` the proposal's, whose decode at the closed form's `ν` is within `ε_phys` of `C(x)`. Encoded into
+/// the Euclid plane at the tolerance `at`, it falls back to latent `z`: the curve axis places nothing, and the curve
+/// encode, reported, is latent. The closed form's coordinate alone would have landed (the precondition).
+fn check_beyond<R: Precision>(seed: u64, at: R)
+where
+    f64: From<R>,
+{
+    let mut r = rng(seed);
+    let chart = euclid::<R>();
+    let tol = curve_tol::<R>();
+    for _ in 0..65536 {
+        let x = perturbed(uniform(&mut r, 0.04, 0.2), 3.0 * f(tol), &mut r);
+        let e = enc::<R>(&x);
+        let p = project(&e, chart.nu_span::<R>(), tol);
+        let cf = p.closed;
+        if p.closed_d2 <= tol * tol || !matches!(p.landing, CurveLanding::Latent) {
+            continue;
+        }
+        if residual_at(&e, chart.at_nu(cf.nu)) > eps_phys::<R>() {
+            continue;
+        }
+        let w = encode_into_within::<Defaults, R, _, _>(
+            &chart,
+            &narrow::<R>(&x),
+            norm::<R>,
+            R::of(eps_phys::<R>()),
+            at,
+        );
+        assert!(
+            matches!(w.landing, Landing::Latent)
+                && w.coords[1] == Coord::Unplaced
+                && w.curve
+                    .is_some_and(|c| matches!(c.landing, CurveLanding::Latent)),
+            "d(ν(θ)) = {:e} and d(ν*) beyond tol = {:e}: lands on the chart, {:?} at {:?}",
+            f(p.d),
+            f(tol),
+            w.landing,
+            w.coords
+        );
+        return;
+    }
+    panic!("no draw beyond tol within ε_phys");
+}
+
+#[test]
+fn encode_curve_composition_beyond() {
+    check_beyond::<f64>(41, curve_tol());
+    check_beyond::<f32>(41, curve_tol());
+}
+
+negative_control!(
+    encode_curve_composition_beyond,
+    "a tolerance of 1, the closed form's coordinate whatever d is, lands the state on the chart",
+    expected = "lands on the chart",
+    check_beyond::<f64>(41, 1.0)
+);
+
+/// Case (ii), kind 4 (b)'s `ν*`: the first seeded draw near the curve, at `R`, with `d(ν*) ≤ tol < d(ν(θ))`, `tol`
+/// the proposal's, whose decode at `ν*` is within `ε_phys` of `C(x)`. Encoded into the Euclid plane, it lands on the
+/// chart at `ν*`'s coordinate, which is not `ν(θ)`'s, and the curve encode, reported, is projected there. `closed`
+/// expects `ν(θ)`'s coordinate instead, for the control.
+fn check_at_star<R: Precision>(seed: u64, closed: bool)
+where
+    f64: From<R>,
+{
+    let mut r = rng(seed);
+    let chart = euclid::<R>();
+    let tol = curve_tol::<R>();
+    for _ in 0..65536 {
+        let x = perturbed(uniform(&mut r, 0.1, 0.9), f(tol), &mut r);
+        let e = enc::<R>(&x);
+        let p = project(&e, chart.nu_span::<R>(), tol);
+        let CurveLanding::Projected { nu: star } = p.landing else {
+            continue;
+        };
+        let (at_star, at_closed) = (chart.at_nu(star), chart.at_nu(p.closed.nu));
+        if at_star == at_closed || residual_at(&e, at_star) > eps_phys::<R>() {
+            continue;
+        }
+        let w = into(&chart, &x);
+        let expected = if closed { at_closed } else { at_star };
+        assert!(
+            w.landing
+                == Landing::Chart {
+                    u: R::zero(),
+                    v: expected
+                }
+                && w.curve.is_some_and(|c| c.landing == p.landing),
+            "d(ν*) = {:e} ≤ tol < d(ν(θ)): lands at {:?}, not ν*'s {} (ν(θ)'s {})",
+            f(p.d),
+            w.landing,
+            f(at_star),
+            f(at_closed)
+        );
+        return;
+    }
+    panic!("no draw within tol of ν* only");
+}
+
+#[test]
+fn encode_curve_composition_projected() {
+    check_at_star::<f64>(43, false);
+    check_at_star::<f32>(43, false);
+}
+
+negative_control!(
+    encode_curve_composition_projected,
+    "the closed form's coordinate is not where an off-curve state within tol lands",
+    expected = "not ν*'s",
+    check_at_star::<f64>(43, true)
+);
+
+/// A state on the curve just past each end of `chart`'s span, `8 ε_R` in `ν`, is projected to that end within
+/// [`curve_tol`], and the curve axis, the coordinate `axis`, reads the end's own coordinate, 0 at `t = 0` and 1 at
+/// `t = 1`, exactly, at `R`.
+fn check_axis_ends<R: Precision, C: CurveChart<Param = R>>(chart: &C, axis: usize, name: &str)
+where
+    f64: From<R>,
+{
+    let tol = curve_tol::<R>();
+    let span = chart.nu_span::<R>();
+    for (t, end) in chart.nu_ends::<R>().into_iter().enumerate() {
+        let out = if end == span[0] { -1.0 } else { 1.0 };
+        let e = enc::<R>(&burrau(f(end) + out * 8.0 * R::EPS));
+        let (c, curve) = chart.coords_within::<Defaults, R>(&e, tol);
+        let curve = curve.expect("a curve chart reports its curve encode");
+        assert!(
+            curve.landing == CurveLanding::Projected { nu: end }
+                && c[axis] == Coord::At(R::of(t as f64)),
+            "{name}: past the end t = {t}, ν = {}, the axis reads {:?}, landing {:?}",
+            f(end),
+            c[axis],
+            curve.landing
+        );
+    }
+}
+
+fn axis_ends<R: Precision>()
+where
+    f64: From<R>,
+{
+    let wide = |c: Burrau<f64>| Burrau {
+        nu_range: c.nu_range.map(R::of),
+        k_max: R::of(c.k_max),
+        gamma_k: R::of(c.gamma_k),
+    };
+    // Φ_θ,L_z on [0.2, 0.7]: an end away from the isosceles, where at f32 the curve's d is flat to a float.
+    let lz = |c: BurrauThetaLz<f64>| BurrauThetaLz {
+        theta_range: [R::of(c.theta_range[0]), R::of(0.7)],
+        k: R::of(c.k),
+        lz_fraction: R::of(c.lz_fraction),
+    };
+    check_axis_ends(&wide(nu_k()), 0, "(ν, K)");
+    check_axis_ends(&euclid::<R>(), 1, "Euclid plane");
+    check_axis_ends(&theta_k::<R>(), 0, "Φ_θ,K");
+    check_axis_ends(&lz(theta_lz()), 0, "Φ_θ,L_z");
+}
+
+#[test]
+fn encode_curve_axis_ends() {
+    axis_ends::<f64>();
+    axis_ends::<f32>();
+}
+
+negative_control!(
+    encode_curve_axis_ends,
+    "past the span by more than tol allows, the state is not projected to the end",
+    expected = "past the end",
+    {
+        let chart = theta_k::<f64>();
+        let e = enc::<f64>(&burrau(chart.nu_span::<f64>()[1] + 1e-3));
+        let (c, curve) = chart.coords_within::<Defaults, f64>(&e, curve_tol::<f64>());
+        assert!(
+            curve.is_some_and(|k| matches!(k.landing, CurveLanding::Projected { .. }))
+                && c[0] == Coord::At(0.0),
+            "past the end by 10⁻³ the axis reads {:?}",
+            c[0]
+        );
+    }
 );
