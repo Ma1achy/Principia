@@ -108,6 +108,14 @@ This sidesteps the floor question at design time — you don't need to *know* wh
 
 **Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a deep-zoom backstop; (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
 
+**Precision is not a navigation limit (R-570).** None of these conditions stops a pan or a zoom: they stop refinement
+only. On a latent or flat chart, which has no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4,
+"Latent and flat charts: no limit on pan or zoom-out"), the f32 floor arrives sooner at large chart coordinates, because
+the floor depends on where you zoom; (iii) and (iv), with R-537 EX8's root-cell anchor for the f32 centre (TASK-M8-57),
+handle it there as at the root. Far from the origin the decoder saturates (`principia_chart_reference.md` §0), so the
+full decoder's samples may collapse because the field is flat rather than because f32 has run out; the ladder treats
+both alike, and nothing clamps, rescales, wraps or fades the view to hide the flat field.
+
 ---
 
 ## Couplings to the contract

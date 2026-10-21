@@ -3402,3 +3402,78 @@ and the disagreement is queued. Nothing is ruled.*
   and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56), with the neighbours and the statistics read through
   them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
   Each carries `rq: RQ-508`.
+
+## RQ-535: R-570's "cost per frame is set by the screen, not by the view's extent" at any zoom-out, where R-537 EX7(a)'s root lattice has no quad coarser than a level-0 root, so the baseline cover of a far zoomed-out viewport grows with its extent *(conflict: the human's ruling against an earlier ruling's applied text; R-570, R-537 EX4, EX7(a); REQ-SCHED-104, REQ-SCHED-056, REQ-SCHED-101; context: TASK-M8-56)*
+
+*Found by R-570's port. Nothing is ruled.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 2:
+    "The only limits are the existing ones: the frame budget and the baseline cover, which already span the viewport
+    whatever its size. Cost per frame is set by the screen, not by the view's extent."; § "Tests",
+    zoom_out_cost_bounded: "a frame at 10⁶ × the home view computes no more quads than the baseline cover of the
+    viewport. **Control:** at home zoom the same count, so the cost does not grow with the view's extent."
+  - `decisions.md` § "R-537 — …", EX7(a): "The level-0 cells of the root lattice tile the whole parameter plane. Every
+    cell the view touches has a root, so every visible point has an ancestor and EX4 can hold."; EX4: "The baseline
+    cover (caching contract Part 4) is the coarsest cover of the whole viewport, extension included."
+  - `docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute tier, not a priority weight":
+    "every cell the view touches has a root of the root lattice (EX7), so every visible point has an ancestor".
+  - `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)": the quad address is
+    taken "in the slice plane's own frame, relative to the plane anchor …: in-plane pan and zoom change which addresses
+    are requested, never the addresses themselves (R-97)".
+- **The conflict:** a level-0 root is fixed in the slice plane's own frame, and an in-plane zoom does not re-address
+  it (R-97). If the root is about the home view's size, the coarsest cover of a viewport at 10⁶ × the home view
+  is therefore about 10⁶ × 10⁶ level-0 roots, each far below a pixel, on an affine chart each a different set of
+  systems; the corpus has no coarser quad. "The baseline cover … already span[s] the viewport" holds, but its count,
+  and so the cost per frame, grows with the square of the view's extent, so zoom_out_cost_bounded's control (the same
+  count at 10⁶ × and at home zoom) cannot pass on the corpus as written. On periodic charts the union of images
+  (EX7(c)) already computes each canonical root once.
+- **Options seen:**
+  - (a) The root lattice gains coarser levels on an affine axis, `L < 0`, each cell of level `L − 1` the 2 × 2 block
+    of level-`L` cells it holds, with no lower bound, so the baseline cover is a screen-sized number of quads at any
+    extent; the canonical maps, the keys and the addresses at `L ≥ 0` are unchanged (R-97).
+  - (b) A zoom-out past a set extent re-bases the plane's frame, so the depth-0 root again spans about the window: a
+    re-addressing event, its cached quads re-keyed or dropped, against R-97's "never the addresses themselves".
+  - (c) Past a set extent the baseline cover samples one footprint per screen cell without a quad per root, a cover
+    outside the quadtree.
+- **For the human:** no as a ruling on navigation, which R-570 settles; it is the scheduler's addressing, which R-537
+  marks ⚑ (physics) and the perf reviewer reviews, so the orchestrator and the reviewers may decide it under R-369 with
+  physics review. Queued because R-570's item 2 says the existing cover already does this.
+- **Applied meanwhile:** nothing; no option is applied.
+- **Waits:** REQ-SCHED-104 (zoom_out_cost_bounded, TASK-M8-56), `rq: RQ-535`. The rest of TASK-M8-56 does not wait,
+  and neither do REQ-GUI-357 or REQ-CHART-087: zooming out is never refused while this is open (R-570).
+
+## RQ-536: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against the decoder's `DEGENERATE(M01_TINY)` fence, which the far field of a latent chart reaches under the edge-reaching simplex link, or under `softmax_tanh` with a large enough `μ_max`, and which R-511 draws blank *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-481, dd_decoder §3.1, REQ-GEN-026; REQ-CHART-087; context: TASK-M8-57)*
+
+*Found by R-570's port. Nothing is ruled. For the human: yes (physics: what a far-field pixel is under a non-default
+link).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 1:
+    "every latent `z` decodes to a valid system"; item 3: "**Every pixel is a system, everywhere.** No hatch, no blank,
+    and no "not a system" on these charts at any pan or zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass": "`M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)`",
+    with `ε_M01 = 10⁻⁵` (REQ-DEC-039) and "the edge-reaching simplex link's corner `m₂ → 1` piles up at
+    `ε_μ − ε_μ²/4`, below it".
+  - `docs/design/principia_dd_generation_root.md` § 3, the edge-reaching simplex link (REQ-GEN-026): "Near the corner
+    `m₂ → 1`, `m₀ + m₁` falls to about `ε_μ`, where dd_decoder's `DEGENERATE(M01_TINY)` fence (`M₀₁ < ε`) can fire."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** at the default links (`softmax_tanh` at `μ_max = 5`) the far field's `M₀₁` stays at or above
+  `(1 + e^−5)/(1 + e^−5 + e^5) ≈ 6.7×10⁻³`, far above `ε_M01`, so no pixel is tagged and R-570 holds. Under the
+  edge-reaching simplex link, which the Decoder window may select for the masses (R-478), the latent far field saturates toward the corner
+  `m₂ → 1`, where the fence fires, so those pixels are `decode_failed` and draw blank (R-511); under `softmax_tanh` the
+  floor falls below `ε_M01` once `μ_max` is above about 11.5, and `μ_max`'s allowed range is an open calibration
+  (REQ-GEN-038). Either way a latent chart has "not a system" pixels far out, which item 3 rules out.
+- **Options seen:**
+  - (a) R-570's item 3 holds at the default links; under a link or a parameter whose saturation reaches the fence, the
+    tag stands and those far-field pixels are not a system, blank, as the decoder defines them.
+  - (b) The links' ranges are bounded so that saturation never reaches the fence: `μ_max`'s range capped below the
+    value where `softmax_tanh`'s floor meets `ε_M01`, and the edge-reaching link's `ε_μ` set above `ε_M01`.
+  - (c) R-570 governs on latent and flat charts: a far-field `M01_TINY` there is a labelled system, drawn and
+    integrated as any other, the fence becoming a label rather than "not a system" on these charts.
+- **Applied meanwhile:** nothing changes in the decoder; R-570's tests run at the default links, where no pixel is
+  tagged.
+- **Waits:** REQ-CHART-087's arm under a non-default mass link or `μ_max` (TASK-M8-57), `rq: RQ-536`. The default-link
+  arms do not wait.

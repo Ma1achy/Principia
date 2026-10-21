@@ -883,6 +883,14 @@ with no band"; the Euclid plane, "hatched on every side"; `Φ_θ,L_z`, "hatched 
 hatches `L_z² > 2IK` …; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`"; the δm strip, "hatched
 past `θ`'s edges; … the fallback hatches the zero- or negative-mass area".
 
+**`Latent`, the flat slices and `BodyPlane` at any pan or zoom (R-570).** The table's first row holds wherever the view
+goes: these charts have no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4, "Latent and flat
+charts: no limit on pan or zoom-out"). Their `validate` accepts every `z`, so every pixel is a system at any pan or zoom
+(at the decoder's default links; RQ-536), and the row's "what fails validation" is empty for them. Far from the origin
+§0's links saturate (`σ` onto α and β, `q_max·(2σ − 1)` onto the momenta, `μ_max·tanh` onto the mass logits), so
+neighbouring pixels decode to nearly the same system and the field goes flat. That is correct, not a bug: nothing
+clamps, rescales, wraps or fades it, and each pixel is the system it decodes to (REQ-CHART-087).
+
 **The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
 type per axis of every Burrau-family chart (§4.5), with the reasoning:
 

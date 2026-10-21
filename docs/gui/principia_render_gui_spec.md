@@ -335,6 +335,22 @@ in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view 
 periodic axis unwrapped (RQ-406), so an export, its JSON and its embedded payload reproduce the same window, repeats
 included.
 
+**Latent and flat charts: no limit on pan or zoom-out (R-570).** On the latent chart and the flat and body-plane
+slices, tilted or rotated, a pan may take the centre anywhere and a zoom may go out as far as asked
+(`principia_chart_decoder_contract.md` Part 4): the stop above never fires there for a pan, and the only limits on
+zoom-out are the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent. **No
+control caps either.** The drag, the wheel, the arrows and + / −, the centre `(u, v)` and `z₀` fields, the Slice
+centre sliders and Navigate's zoom row all send the value asked for, and the view state records it unclamped; a
+slider's span is the range its handle covers, never a clamp, so a zoom past the zoom row's span is kept and shown, the
+handle at the end of the rail (REQ-GUI-357). Every pixel is a system at any pan or zoom: no hatch, no blank, no "not a
+system" (at the decoder's default links; RQ-536). Far out the field goes flat, because the decoder saturates every
+coordinate; that is correct, nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the
+decoded system as for any pixel. Precision is never a navigation limit: the deep-zoom ladder handles it
+(`principia_deep_zoom.md` §4). **The reference demos' caps are never ported:** the trace demo, the Listen demo and the
+state map prototype (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
+`docs/gui/reference/state_map/state_flow.html`) cap zoom-out at 3× on the sphere and clamp the view to their maps in
+`clampView` only because their maps are precomputed images; the app has neither.
+
 **Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,
 its Screen preset the dev default; this line is its Ends only preset, offered.)* A **Home** button, a house icon 24 × 24
 points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of

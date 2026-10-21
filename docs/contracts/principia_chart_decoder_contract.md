@@ -327,6 +327,24 @@ an affine latent axis there is no stop at all; on a chart whose square is its wh
 domain's edge, while the window may still show blank past it. "Filling the window is not a gesture" stands for F3, whose
 Extend only adds window area.
 
+**Latent and flat charts: no limit on pan or zoom-out (R-570).** On a chart whose axes are affine and whose decode
+accepts any `z` (the latent chart and the flat and body-plane slices, tilted or rotated) navigation has no limit. **Pan
+is unbounded:** any centre is allowed, because every latent `z` decodes to a valid system, so the stop below never
+fires for a pan there. **Zoom-out is unbounded:** no cap from a fixed view range, a multiple of the home view or a
+number of chart squares; the only limits are the frame budget and the baseline cover (`principia_caching_contract.md`
+Part 4), and a frame's cost is set by the screen, not by the view's extent (how the cover stays screen-sized when the
+viewport spans many level-0 roots is RQ-535). **Every pixel is a system** at any pan or zoom: no hatch, no blank, no
+"not a system" (at the decoder's default links; RQ-536). **Far out the field goes flat, and that is correct:** the
+decoder saturates every coordinate (`principia_chart_reference.md` §0: the configuration through a sigmoid, the momenta
+to `±q_max`, the masses through `μ_max·tanh`), so far from the origin neighbouring pixels decode to nearly the same
+system; nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the decoded system as for
+any pixel. **Precision is not a navigation limit:** at large chart coordinates the f32 floor arrives sooner, and the
+precision ladder handles it (`principia_deep_zoom.md` §2 and §4), never a stop on the pan or the zoom. Unchanged: a
+chart with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`, the
+Invariant warp), keeps its not-a-system region past the square; periodic and pole-crossing charts keep RQ-409 (a), no
+zoom-out limit beyond the frame budget and the baseline cover; and the trace's "leaves / re-enters the chart" on a
+latent chart is a trajectory state projected back onto the axes, not a navigation limit.
+
 **Navigation stops at the edge (R-469).** Pan, slice, zoom, tilt and lock are accepted only if the chart's centre (the
 view's centre pixel, `z(½,½)`) still passes `validate`'s layers 2 and 3 after the edit. An edit that would cross stops
 at the last valid value along its own path (bisection on the edit's fraction to adjacent f64 values), the drag staying
