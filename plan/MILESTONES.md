@@ -389,10 +389,10 @@ canonical_spec §11: "build the browser product on top".
   With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
 
 <!-- gate:M8 -->
-**Exit gate — 332 requirements** (and every earlier gate still green):
+**Exit gate — 333 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (7): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080
+- CHART (8): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…081
 - INT (2): REQ-INT-093, REQ-INT-096
 - GEN (1): REQ-GEN-023
 - SCHED (3): REQ-SCHED-073, REQ-SCHED-101…102
