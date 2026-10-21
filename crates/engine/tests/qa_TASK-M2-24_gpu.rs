@@ -630,8 +630,9 @@ negative_control!(
 // ── REQ-VAL-017 on `C`: step 2's turn on the GPU ────────────────────────────────────────────────────────────────
 
 /// `n` generic f32 states with a light body far out: the light body (index cycling 0, 1, 2) of mass `10^[−3.5, −2]`
-/// at distance `[4, 40]` from the CoM of two heavy ones placed in `[−1, 1]²`, momenta in `[−0.5, 0.5]²`; the whole
-/// turned by `θ ∈ [−π, π]` and scaled by `2^[−20, 20]`, so `ρ` lies in every quadrant and at every scale.
+/// at distance `[4, 40]` from the origin, the two heavy ones placed in `[−1, 1]²`, momenta in `[−0.5, 0.5]²`; the
+/// positions turned by `θ ∈ [−3.2, 3.2]` and scaled by `2^k`, `k` a draw on `[−20, 20]` truncated toward zero, so `ρ`
+/// lies in every quadrant and at every scale.
 fn far_light(n: usize) -> Vec<Ic<f32>> {
     let mut rng = Rng(2402);
     (0..n)
