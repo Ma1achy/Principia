@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*108 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*109 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -31,10 +31,11 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-COL-060 — the proposal measures, in gpu-metal and gpu-lavapipe, the agreement presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement uses it; recorded in decisions.md; pixels with a non-finite operand draw the invalid colour and are excluded from the measured differences (R-436)
 - [ ] REQ-VAL-015 — on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target
 - [ ] REQ-VAL-019 — import the literature ICs; compare E, L_z after multiplying back by the recorded rescale
-- [ ] REQ-VAL-021 — 2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)
-- [ ] REQ-VAL-022 — 2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole at equal masses and collinear → w = 0 exactly
-- [ ] REQ-VAL-121 — the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles) and states the gates; recorded in decisions.md
+- [ ] REQ-VAL-021 — cargo xtask gate inspector-handles: 2×10⁴ ICs g₀·D(z) at the fixed, recorded seed, z in the ball ‖z‖ < 4, g₀ with offsets and boosts up to the state's own size, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound, unchanged)
+- [ ] REQ-VAL-022 — cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w| within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)
+- [ ] REQ-VAL-121 — the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles; RQ-475's measured 2.2×10⁻¹⁶ for |w − 1| and 6.8×10⁻¹⁴ for |w|; the Randomise arm's per-handle maxima over seeds) and states the gates; recorded in decisions.md
 - [ ] REQ-VAL-174 — the imported Burrau rest start, multiplied back by the recorded rescale, gives M = 12, R = 2.2361 and E = −12.8167
+- [ ] REQ-VAL-193 — cargo xtask gate inspector-handles reports the Randomise arm's max ‖Δz‖ per handle, at the tool's button sizes and at random sizes, over seeded draws, beside REQ-VAL-021's arm; REQ-VAL-021's verdict reads its own arm only; once REQ-VAL-121's bound for the arm is recorded, the arm fails above it; control: an arm whose maximum is fed into REQ-VAL-021's verdict fails
 
 **M3**
 - [ ] REQ-INT-044 — at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form

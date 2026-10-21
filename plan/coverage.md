@@ -19,12 +19,12 @@
 | COL | 136 |
 | GUI | 318 |
 | TOOL | 187 |
-| VAL | 191 |
+| VAL | 192 |
 | PERF | 95 |
 | SYS | 85 |
-| **total** | **1703** |
+| **total** | **1704** |
 
-Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 143 calibration, 142 definition, 1419 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,7 +32,7 @@ Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 208 |
+| M2 | 209 |
 | M3 | 209 |
 | M4 | 106 |
 | M5 | 178 |
@@ -42,7 +42,7 @@ Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for th
 
 ## Sections
 
-1416 sections in 52 files: 1112 yield at least one requirement; 304 yield none and are listed below with the reason.
+1416 sections in 52 files: 1113 yield at least one requirement; 303 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -197,7 +197,6 @@ Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)* | **MISSING REASON** | |
 | R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)* | **MISSING REASON** | |
 | R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)* | **MISSING REASON** | |
 | R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)* | **MISSING REASON** | |
@@ -597,7 +596,6 @@ Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
 - uncovered section with no reason: decisions.md § R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*
 - uncovered section with no reason: decisions.md § R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*
 - uncovered section with no reason: decisions.md § R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*

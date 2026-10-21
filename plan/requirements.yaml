@@ -24381,7 +24381,7 @@
   note: "R-417 (RQ-270), filed from TASK-M2-03's pre-flight: β = 0 is reached at underflow, and with the f32 images of π rounded toward zero β no longer passes π."
 - id: REQ-VAL-021
   area: VAL
-  statement: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed, to the bound verified in the reference tool (1.6×10⁻¹⁴)."
+  statement: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed, to the bound verified in the reference tool (1.6×10⁻¹⁴), over the gated distribution g₀·D(z): z drawn in the ball ‖z‖ < 4 and g₀ a random gauge element (R-551); the Inspector's Randomise distribution is REQ-VAL-193's arm and never loosens this bound."
   source:
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Status — as built (supersedes stale details below)
@@ -24391,18 +24391,19 @@
     section: The quotient set (the thing being audited)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*"
   verify:
     method: numerical gate
-    detail: "2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)"
+    detail: "cargo xtask gate inspector-handles: 2×10⁴ ICs g₀·D(z) at the fixed, recorded seed, z in the ball ‖z‖ < 4, g₀ with offsets and boosts up to the state's own size, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound, unchanged)"
   rulings:
   - R-71
+  - R-551
   milestone: M2
-  rq:
-  - RQ-477
-  note: "The bound is the standalone tool's measured value; the Rust Inspector's gate: REQ-VAL-121 (calibration)."
+  note: "The bound is the standalone tool's measured value; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-551 (RQ-477 (c), 21 Oct 2026): the gated distribution is g₀·D(z), z in the ball, held at 1.6×10⁻¹⁴; TASK-M2-27 built exactly this (applied meanwhile), so it stands as built. *Was:* \"2×10⁴ random ICs, each handle applied\" (reworded, kept with the distribution named)."
 - id: REQ-VAL-022
   area: VAL
-  statement: "Decode → canonicalise → z must round-trip with max ‖z − z′‖ ≤ 1.2×10⁻¹³ over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole at equal masses and collinear ones on the equator exactly."
+  statement: "Decode → canonicalise → z must round-trip with max ‖z − z′‖ ≤ 1.2×10⁻¹³ over the fixed, recorded seed's 2×10⁴ random z drawn in the ball ‖z‖ < 4 (the bound provisional under REQ-VAL-121), with the canonical CoM at the origin; a collinear state's z_β must sit at its clamp image with its lookup_clamped bit set, bit for bit, and no equilateral state's may set it; an equilateral state's |w − 1| (at equal masses, where L± are the poles) and a collinear state's |w| must lie within REQ-VAL-121's calibrated bound (R-551)."
   source:
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Status — as built (supersedes stale details below)
@@ -24410,19 +24411,19 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
+  - file: decisions.md
+    section: "R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*"
   verify:
     method: numerical gate
-    detail: "2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole at equal masses and collinear → w = 0 exactly"
+    detail: "cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w| within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)"
   rulings:
   - R-10
   - R-21
   - R-71
   - R-549
+  - R-551
   milestone: M2
-  rq:
-  - RQ-475
-  - RQ-476
-  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration)."
+  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-549 (RQ-355): the pole at equal masses. R-551 (RQ-475 (a) + (c), RQ-476 (a), 21 Oct 2026): \"exactly\" is the chart's clamp image, bit for bit, at the equator, and a calibrated bound on |w − 1| and |w|; |z| < 4 is the ball. TASK-M2-27 merged with this requirement held (rq: RQ-355, RQ-475, RQ-476), its gate drawing in the ball and reporting the shape checks unjudged (applied meanwhile); it moves to TASK-M2-46, which judges them (applied per R-369). *Was:* \"over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly\" and the verify's \"equilateral → pole and collinear → w = 0 exactly\" (stale value, replaced by R-551)."
 - id: REQ-VAL-023
   area: VAL
   statement: "The shape-sphere dot must land on a binary-collision landmark exactly when two bodies coincide, at any mass ratio."
@@ -26095,7 +26096,7 @@
 - id: REQ-VAL-121
   area: VAL
   kind: calibration
-  statement: "The Inspector's round-trip and invariance gates for the Rust Inspector (max ‖z − z′‖ and max ‖Δz‖ under the whole-system handles) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The Inspector's gates for the Rust Inspector must be calibrated — the round trip's max ‖z − z′‖ over the ball ‖z‖ < 4, the whole-system handles' max ‖Δz‖ over g₀·D(z), the Randomise arm's max ‖Δz‖ per handle (REQ-VAL-193), and the bounds on |w − 1| at the equal-mass pole and |w| at the equator (REQ-VAL-022): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md; 1.2×10⁻¹³ and 1.6×10⁻¹⁴ stay provisional until then and are never loosened by the Randomise arm (R-551)."
   source:
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Status — as built (supersedes stale details below)
@@ -26103,15 +26104,16 @@
     section: Whole-system handles — the invariance audit
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*"
   verify:
     method: numerical gate
-    detail: "the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles) and states the gates; recorded in decisions.md"
+    detail: "the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles; RQ-475's measured 2.2×10⁻¹⁶ for |w − 1| and 6.8×10⁻¹⁴ for |w|; the Randomise arm's per-handle maxima over seeds) and states the gates; recorded in decisions.md"
   rulings:
   - R-71
+  - R-551
   milestone: M2
-  rq:
-  - RQ-476
-  - RQ-477
+  note: "R-551 (RQ-475 to RQ-477, 21 Oct 2026). TASK-M2-27 merged with this requirement held (rq: RQ-476, RQ-477); its proposal (1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles, the canonical CoM) stands as the first part, and the requirement moves to TASK-M2-46, which proposes the shape bounds and the Randomise arm's (applied per R-369). *Was:* \"The Inspector's round-trip and invariance gates for the Rust Inspector (max ‖z − z′‖ and max ‖Δz‖ under the whole-system handles) must be calibrated\" (reworded, kept in this statement)."
 - id: REQ-VAL-122
   area: VAL
   kind: calibration
@@ -27387,6 +27389,24 @@
   - R-369
   milestone: M2
   note: "Applied per R-369 (the orchestrator decides tooling and tests), after the precedent of R-276 (REQ-VAL-175) and R-333: the SIGSEGV at teardown seen on PR #235 (run 39048546893, attempt 1, job 117446692905) and PR #254 (run 39427866705, attempt 1, job 118650558546), each passing on re-run. In M2, the milestone in progress, since M1's gate has passed (R-432). Closed by TASK-M2-42."
+- id: REQ-VAL-193
+  area: VAL
+  statement: "The Inspector's Randomise distribution (render GUI spec §G8's Randomise; the reference tool's masses on [0.4, 1.8] normalised, positions on ±0.9 and velocities on ±0.6, each uniform) must run as a second arm of the handles gate, each whole-system handle applied, its max ‖Δz‖ reported until REQ-VAL-121 calibrates its bound and gated at that bound after; it must never be used to loosen REQ-VAL-021's 1.6×10⁻¹⁴ (R-551; RQ-477 (c))."
+  source:
+  - file: docs/notes/ic_inspector_scratchpad.md
+    section: Status — as built (supersedes stale details below)
+  - file: docs/notes/ic_inspector_scratchpad.md
+    section: Whole-system handles — the invariance audit
+  - file: decisions.md
+    section: "R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate inspector-handles reports the Randomise arm's max ‖Δz‖ per handle, at the tool's button sizes and at random sizes, over seeded draws, beside REQ-VAL-021's arm; REQ-VAL-021's verdict reads its own arm only; once REQ-VAL-121's bound for the arm is recorded, the arm fails above it; control: an arm whose maximum is fed into REQ-VAL-021's verdict fails"
+  rulings:
+  - R-71
+  - R-551
+  milestone: M2
+  note: "R-551 (RQ-477 (c)): qa measured rotate-all 1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ on this distribution, 3 of 5 seeds past 1.6×10⁻¹⁴. Closed by TASK-M2-46."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
