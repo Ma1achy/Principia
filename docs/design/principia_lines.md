@@ -327,11 +327,14 @@ it:
   inside the view's edge, by default; "Off-screen icons: pin to the edge (faint). Untick to hide them." Window
   chevrons (off) mark where the line crosses the view's edge. Pins are events, chevrons the line.
 - **Repeats (R-538, R-537).** The trace works wherever the view goes. On an affine chart it runs on past the square
-  like the field. On a periodic, pole-crossing or fold chart (the shape sphere, its hemisphere) it is drawn in every
+  like the field. On a periodic or pole-crossing chart (the shape sphere) it is drawn in every
   image of the chart in view, with every marker and icon (start, events, rings, ticks, arrows, head), at half strength;
   repeats are never pinned to the edge, only the primary copy pins, so the edge does not fill with duplicates. A hover
-  or click in a repeat integrates the canonical system, so the trace is identical in every image. With the hemisphere
-  toggle on (R-412) the trace folds at the equator and its repeats continue into the mirror hemisphere.
+  or click in a repeat integrates the canonical system, so the trace is identical in every image. On the shape sphere
+  the trace is the signed `n̂` over the whole sphere: it crosses the equator at every syzygy and carries on into the
+  other half, with no fold and no kink (R-544). *Was (R-412, R-538 TM7; the toggle removed by R-544):* "On a periodic,
+  pole-crossing or fold chart (the shape sphere, its hemisphere)"; "With the hemisphere toggle on (R-412) the trace
+  folds at the equator and its repeats continue into the mirror hemisphere".
 - **Not a system (R-538).** Every sample of the trajectory is encoded into the chart; a sample whose chart point is not
   a system (fails `validate`'s layers 2 and 3, on the shown axes after the types fold the point, RQ-429) is not drawn,
   the line breaking there. A real trajectory cannot enter such

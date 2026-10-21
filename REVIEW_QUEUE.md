@@ -3013,6 +3013,12 @@ restated and R-141's gauge added after PR #270's physics review (5598441029, P1 
   target onto the hemisphere, the identity and site-blend tests measured there. The requirements on the identity, the
   copies, the clamp, the four results and the sphere's site blend carry `rq: RQ-498`; their tests run as (a) reads them.
   The hemisphere view's target is RQ-504.
+- **21 Oct 2026, R-544:** R-544 (the shape sphere chart is the whole sphere) settles this entry's hemisphere
+  question: Chart position ⟨shape sphere⟩ reads the signed `n̂` over the whole sphere, R-141's decode gauge is removed
+  for the shape sphere, so the `t = 0` identity holds point for point, and there are no mirror pixels inside the square
+  (the human's second addendum supersedes the two mirror clauses of their RQ-498 ruling in `rulings_2026-10-21.md`).
+  The entry stays open for the batch rulings PR, which records that ruling and archives it; its other parts (left
+  samples, the navigation edge, the bitwise copies of EX7 repeats) are not R-544's.
 
 ## RQ-499: The prototype's code and the state map's text disagree: preset names, the triangle palette's lightness, Picture under a brightness node, the fade's function, and the Fibonacci cells' swatches *(conflict: the file against its transcription source; R-542; context: TASK-M7-48, TASK-M7-49, TASK-M7-51)*
 
@@ -3129,6 +3135,9 @@ Nothing is ruled.*
   - (a) The code's: the one-hemisphere view targets the full sphere, signed `n̂` (with RQ-498 (a)).
   - (b) The file's: the sphere mod the mirror, the canonical folded `n̂`.
 - **Applied meanwhile:** (a), the code (the human's message).
+- **21 Oct 2026, R-544:** R-544 settles this entry: the shape sphere chart has no one-hemisphere view, and its
+  Chart position target is the whole sphere with the signed `n̂`, as (a) has it. The entry stays open for the batch
+  rulings PR, which records the human's ruling on it in `rulings_2026-10-21.md` and archives it.
 
 ## RQ-505: "'none' must be available as a debug option" (the bundle's draft requirement) against SM5, SM11 and SM15, which offer "none" as an ordinary setting of the node *(conflict: the human's draft against the file and its code; R-542; REQ-COL-116; context: TASK-M7-47, TASK-M7-51)*
 
@@ -3144,3 +3153,35 @@ Nothing is ruled.*
   - (a) An ordinary setting of the node, as the file and the code have it (which includes the debug use).
   - (b) Debug only: offered in the debug views, not in the node's inspector.
 - **Applied meanwhile:** (a), the code. REQ-COL-116 keeps the draft's words, its note citing this entry.
+
+## RQ-508: The human's ruling on RQ-472 keeps the equator fold on a tilted shape sphere view where `N_b = 0`, where R-544 has no folding of any kind on the shape sphere chart *(conflict: the human's batch ruling against the human's later ruling; R-544, R-537 EX7(b), RQ-472; REQ-CHART-062, REQ-SCHED-101, REQ-GUI-278; context: TASK-M2-36, TASK-M8-56, TASK-M8-58)*
+
+*Found by R-544's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `rulings_2026-10-21.md` (not yet recorded in `decisions.md`; a batch rulings PR records it), RQ-472:
+    "(a). "On a tilted view the equator fold is kept iff `N_b = 0`, and the pole maps iff `N_a = 0` and `N_b = 0`, each
+    decided exactly on the stored angles as §3.3 decides. Otherwise the view is affine along that axis and draws no
+    image (TF2.2). §3.3's pixel fold governs the statistics (EX7(g)).""
+  - `docs/incoming/2026-10-21_shape_sphere_whole/REPLY.md`, R-544: "No folding of any kind on the shape sphere chart,
+    visible or not."; `PLAIN_SUMMARY_2.md`: "There is no hemisphere mode and no folding."; `INSTRUCTION.md` §2 item 4:
+    "The mirror is no longer a repeat. R-537's repeats on the shape sphere are θ's period and the pole crossing only".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (#255, applied per R-369): "the
+    pair keeps its fold, exactly when the tilt adds no hidden offset that depends on the mirrored axis: **`N_b = 0`**",
+    which R-544's port replaces.
+- **The conflict:** RQ-472's ruling concerns the shape sphere chart: its subject is "Tilted shape sphere: EX7(b) folds
+  only where §3.3 allows", the tilted views of the shape sphere chart, and `N_b = 0` includes the untilted view. Its
+  equator clause keeps a mirror fold there, and its last sentence keeps §3.3's pixel fold for the statistics; R-544 has
+  none, at any tilt. The pole maps under a tilt (its `N_a = 0` and `N_b = 0` clause) are not a fold of the mirror:
+  R-544 keeps the pole crossing as a repeat, and that clause is not in conflict.
+- **Options seen:**
+  - (a) R-544 governs on the shape sphere chart: no equator fold and no pixel fold on any view, tilted or not; RQ-472's
+    ruling keeps its pole maps, decided as it says, and its equator clause and its last sentence no longer apply to the
+    shape sphere.
+  - (b) RQ-472's equator clause stands for a tilted view with `N_b = 0`, the untilted view excepted, so the fold
+    returns on a tilted view only.
+- **Applied meanwhile:** (a), R-544, the later ruling and the one that says "of any kind". chart_reference §3.3's
+  tilted fold is replaced by R-544's one-to-one tilted view.
+- **Waits:** the tilted shape sphere's fold arm of REQ-CHART-062 (TASK-M2-36; the rest of the task does not wait),
+  and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56) and their trace images, REQ-GUI-278 (TASK-M8-58), which
+  already wait on RQ-472. Each carries `rq: RQ-508`.

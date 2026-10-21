@@ -211,9 +211,10 @@ view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory 
 the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
   an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
-  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
-  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
-  hemisphere drawn, φ's span runs from the pole to the equator (R-412).
+  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) —
+  `principia_chart_reference.md` §3.3 (R-113). There is no hemisphere toggle: the shape sphere chart is the whole sphere,
+  always (R-544). *Was (R-113, R-412, the toggle removed by R-544):* "and the **hemisphere toggle** (one hemisphere, or
+  both with the redundancy flagged) …; with one hemisphere drawn, φ's span runs from the pole to the equator (R-412)".
   **Save view as chart** (R-475), a button after Chart builder… (and on View ›), commits the current view as a named
   custom chart: a latent view as the oblique chart `(z₀, q₁, q₂)`, a curved one as its parent chart, slice centre and
   tilt (map, angles, targets). It is one undo entry, makes the saved chart active (reproducing the view bitwise at zero
@@ -317,8 +318,8 @@ edge: <check> (validate layer <n>)" until the next edit. Undo and the contract h
 with the controls shown or hidden, pan moves the window and zoom scales it past `[0,1]²` in any direction, and F3's
 Extend only adds window area; Fit scales the view's own square, wherever it sits (R-468 E2; RQ-416). What is drawn past
 the square is the axes' types (`principia_chart_decoder_contract.md` Part 3): an affine chart continues, a periodic axis
-repeats, a pole-crossing one continues over the pole with θ shifted by half its period, the hemisphere's fold shows the
-mirror hemisphere, and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
+repeats, a pole-crossing one continues over the pole with θ shifted by half its period (the shape sphere has no fold at the
+equator, R-544; *was:* "the hemisphere's fold shows the mirror hemisphere"), and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
 Overlays › Chart › forbidden region. The only navigation limit is the stop above, judged on the centre after the types
 fold it: a pan across a seam or a pole never stops. **Never any gaps:** every visible point is drawn at whatever
 resolution is available, a quad not yet computed showing its nearest computed ancestor; the only blank pixels are not
@@ -1141,6 +1142,15 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
   transform" shows what the gauge buttons did.
+- **The initial-condition constructor's shape sphere (R-544).** Pane 2's sphere, beside the triangle and the bodies, is
+  the constructor's: it shows where the IC being built sits, and it is a different thing from the shape sphere chart.
+  Its point is the IC's **signed** `n̂`, and it reaches every point of both halves, with no limit and nothing blocked
+  off; dragging the point sets the IC's shape to it, as the shape sphere chart places a shape (its masses and its
+  momenta in the frame `ρ̃` on `+x` held; `principia_chart_reference.md` §3, the held values), so a drag across the
+  equator flips the triangle's orientation in the triangle view (pane 1), which is correct. The **mirror twin** is shown,
+  not enforced: a faint marker at `(θ, π − φ)`, never a snap, a limit or a shaded half, and the inspector notes it,
+  "mirror twin of the system at (θ, π − φ)": the IC reflected, positions and momenta, which ends the same way (R-544).
+  The bodies view may stay the canonical representative; the sphere's path is never folded.
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
   f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's

@@ -489,6 +489,9 @@ Files: dd_integrator :81–90, §6; integrator_contract :366.
 Files: canonical_spec §2, §11; gpu_determinism_note and parity_contract if branch words fork.
 
 ## R-59 — Fix D1 to D6 as listed *(sheet §8)*
+*Amended by R-544 (D5's shape-sphere value).*
+*Still in force: D1 to D6 as listed; D5's `system_image` in place of `has_redundant_hemisphere` stands, the shape
+sphere's value now one-to-one over the whole sphere, not the 2-to-1 cover (R-544).*
 *24 Sep 2026 · D1–D3 applied in step 5 with R-29 and R-37; D4–D6 applied with R-42, R-27 and R-40*
 
 - D1: the stale escape remnants (integrator_contract :318, :340, :357; dd_integrator :283).
@@ -911,6 +914,10 @@ TASK-M0-02 checks that each standing obligation exists in a consolidated doc, an
 INDEX and REQ-SYS-008. Archives are never cited.
 
 ## R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*
+*Amended by R-544 (the hemisphere toggle is removed).*
+*Still in force: every fix and split in RQ-93 to RQ-100 as written, with these choices; of RQ-95's, the M2 goldens
+and the projection selector in the Manifold view's Chart section, shown when the chart is the shape sphere; the
+hemisphere toggle is removed (R-544).*
 *25 Sep 2026 · applied in step 7*
 
 Every proposed fix and split in RQ-93 to RQ-100 is accepted as written, with these choices:
@@ -1117,10 +1124,11 @@ All four readings in RQ-118 are accepted.
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
 *Amended by R-503 (the exponential map).*
+*Amended by R-544 (the decode gauge and the 2-to-1 cover are removed for the shape sphere).*
 *25 Sep 2026 · applied in step 7 · amended by R-157*
-*Still in force: the shape sphere's spherical map is 2-to-1 over its φ hemispheres (its exponential map's value is
-computed from its cap, R-503), and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau
-chart's value (R-157).*
+*Still in force: `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau chart's value
+(R-157). The decode gauge and the 2-to-1 cover are removed: the shape sphere chart is the whole sphere, each pixel its
+own system, one-to-one on either map (R-544).*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
@@ -1434,6 +1442,9 @@ Crates without the `controls` feature are skipped, not failed.
 Bench is removed from the per-commit `ci`.
 
 ## R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*
+*Amended by R-544 (the canonicaliser's fold check).*
+*Still in force: TASK-M2-08's round-trip gate composes Φ alone; the decode keeps each pixel's signed n̂, so there is
+no canonicaliser fold to check (R-544).*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M2-08's round-trip gate composes Φ alone. The canonicaliser's fold is checked separately, on the upper hemisphere
@@ -7745,8 +7756,10 @@ pixel of `[0,1]²` feasible, and B1's affine axis is its linear option).*
 *Superseded in part by R-506 (20 Oct 2026; port B1 as the default for every physical-quantity axis, the virial
 ratio and the mass ratio included: each is warped to its feasible range by default, B1's affine axis its linear
 option).*
-*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506); the counting and
-its statistics are unchanged (R-470).*
+*Amended in part by R-544 (21 Oct 2026; B3's and B7's both-hemispheres wording and the 2-to-1 fold, and B4's
+one-hemisphere toggle, go: the shape sphere is the whole sphere, with no hemisphere mode).*
+*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506), and the shape
+sphere's one-hemisphere case and 2-to-1 fold (R-544); the counting and its statistics are unchanged (R-470).*
 *10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
 added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
 added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
@@ -8351,6 +8364,7 @@ REQ-COL-065's statement, verify, rulings, sources, note and `rq` and REQ-COL-066
 sources; adds no requirement.
 
 ## R-412 — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+*Superseded by R-544 (withdrawn with the hemisphere toggle: the shape sphere chart has no one-hemisphere view).*
 *10 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (sentences added and
 reworded) and § "5.4 Past the unit square — each axis's extension type (R-407)" (the sphere's row; a sentence
 reworded), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
@@ -15551,6 +15565,10 @@ R-502 is in the "physics" group of `plan/rule_groups.yaml`, with R-34.
 Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 (statement, verify, rulings, note), and on review REQ-INT-061 (statement).
 
 ## R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*
+*Amended by R-544 (the per-pixel fold goes).*
+*Still in force: the exponential map's `system_image` is computed from its cap, bijective now whether or not the cap
+straddles the equator, its mirror pixels distinct systems (R-544); its radius is bounded at π and past it is the
+domain's end.*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the exponential map's
 radius, the hemisphere-redundancy paragraph) and § "5.4 Past the unit square — each axis's extension type (R-407)"
 (the exponential map's row), `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the
@@ -16628,6 +16646,9 @@ R-523 is in the "design" group of `plan/rule_groups.yaml`, with R-479.
 Changes REQ-GUI-258 and REQ-GUI-263 (statement, verify, rulings, note).
 
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
+*Amended by R-544 (the hemisphere's fold at the equator).*
+*Still in force: all of it but the hemisphere's fold at the equator, EX2's fold type, EX5's fold among the repeats and
+EX7(b)'s equator map, which go with the hemisphere toggle (R-544); θ's period and the pole maps stand.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -16975,7 +16996,9 @@ REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 ## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
 *Amended in part by R-541 (21 Oct 2026; I2's place for the trace settings, the trace's entry in Lines ▾, becomes the
 `Trace…` window, the Trajectory panel's Trace section and Overlays ▾ › Trace).*
-*Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
+*Amended by R-544 (the hemisphere's trace fold).*
+*Still in force: all of it but I2's place for the settings, which R-541 replaces, and TM7's hemisphere, the trace
+folding at the equator with the toggle on, which goes with the toggle (R-544); the settings, their order and their
 defaults stand.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
@@ -18385,6 +18408,10 @@ Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-08
 REQ-GUI-097 (notes).
 
 ## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended by R-544 (the shape sphere target's mirror).*
+*Still in force: all of it but, for the shape sphere chart only, SM1's mirror identification, SM3's hemisphere fold
+and in-square mirror pixels, SM4's hemisphere row and SM7's identity modulo the mirror: the shape sphere target is the
+whole sphere, read by its signed n̂, and its identity holds point for point (R-544).*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -19046,3 +19073,228 @@ Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412
 R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 
 Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
+
+## R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_shape_sphere_whole/` (the instruction as delivered, its two
+addenda, the plain summary's two versions, the reply, and `checks/r544_check.py`, the port's check),
+`docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`" (the held values), § "3.3 The chart map"
+(the hemisphere paragraph, the exponential map's `system_image`, the tilted fold, past the unit square) and § "5.4
+Past the unit square — each axis's extension type (R-407)" (the
+sphere's rows), `docs/contracts/principia_chart_decoder_contract.md` § "Part 1 — The physics: what the 8D actually
+is", § "Part 2 — The decoder" (the canonicaliser), § "Past the unit square — each axis's extension type (R-407)" (the
+primary ranges, the one-hemisphere sentence, "Repeats and the canonical point") and § "Part 5 — Well-posedness and the
+validation contract" (n-to-1), `docs/contracts/principia_inverse_encode_contract.md` § "Part 5 — Inverse by axis kind
+(completing the four kinds)" and § "Chart-aware validation" (the `system_image` row),
+`docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set" (the
+shape sphere's row), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (the
+toggle, the fold past the square) and § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+(the constructor), `docs/design/principia_trajectory_viewing.md` § "4. Click inspector — the three-panel absolute
+surface" (pane 2), `docs/design/principia_lines.md` § "8. Traces" (repeats), `docs/design/principia_state_map.md` §
+"SM1. Definition", § "SM3. Source side: the extension comes for free, because the colour is a property of the system",
+§ "SM4. Destination side: why it must be a quotient, not a branch", § "SM7. Colour frame and deep zoom" and § "SM11.
+Colouring Chart position: a base, then layers" (port's notes and the hemisphere row), `docs/notes/ic_inspector_scratchpad.md`
+§ "Status — as built (supersedes stale details below)" (a sentence), the forward lines of R-59, R-113, R-141, R-178,
+R-408, R-412, R-503, R-537, R-538 and R-542, RQ-498 and RQ-504 (a dated line each), RQ-508 (new), the requirements
+named below (reqio), TASK-M2-43 and TASK-M8-67 (new), TASK-M2-28 and TASK-M8-44 (re-scoped), TASK-M2-36, TASK-M8-06,
+TASK-M8-15, TASK-M8-55, TASK-M8-56 and TASK-M8-58 (their requirements' changes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M2-43, TASK-M2-28, TASK-M8-44, TASK-M8-55, TASK-M8-56, TASK-M8-58 and
+TASK-M8-67*
+
+The human's covering message, 21 Oct 2026, verbatim:
+
+> New instruction from me, Malachy. The attached INSTRUCTION.md is my ruling: the shape sphere chart is the whole
+> sphere. Quote its §0 verbatim, record it as a new ruling amending R-113, R-141, R-412 and R-537 EX7, and apply it as
+> its §5 says. One PR with the test output pasted in. Queue anything it conflicts with rather than resolving it.
+
+`INSTRUCTION.md` §0, "My words", verbatim:
+
+> "One thing I don't really get why is the thing actually now thinking about it more is on the shapesphere chart, the
+> one hemisphere mode doesn't actually make any sense. It makes sense in terms of the initial condition inspector,
+> right? When it's like how it's the same system, right? Reflected, right? Because of how the like angle wrapping or
+> like symmetry reduction works and like the initial condition like generator thing. It makes sense there. But in terms
+> of like an actual chart that the Explorer uses and the Atlas uses and the Trace system uses and the Listening system
+> uses, basically just what everything else uses, it doesn't actually make any sense because, especially with traces,
+> like the system can go through the angles on the opposite hemisphere, on like the other side of the hemisphere. So
+> like removing it just doesn't make any sense because you're like cutting away like an entire set of angles and like
+> reflecting, and you're sort of lying because it did actually go through that angle. if you get me?"
+>
+> And, to the proposal in §1–§2 below:
+>
+> > "yes"
+
+The first addendum, the human's words, which it asks to be quoted verbatim:
+
+> "you might as well just have full access to all the angles and just let the symmetry be obvious."
+
+and its ruling, verbatim (`ADDENDUM.md`):
+
+> In the initial-condition constructor (the editor showing the triangle, the bodies and where the system lands on the
+> shape sphere): every angle is reachable, both hemispheres, with no limit. The mirror twin is shown, not enforced: a
+> faint marker at (θ, π − φ) on the sphere, with the inspector's "mirror twin of …" note, so the symmetry is visible
+> rather than imposed. Dragging the point across the equator flips the triangle's orientation in the triangle view,
+> which is correct. Fold this into the same PR and the same ruling.
+
+The second addendum, verbatim (`ADDENDUM_2.md`):
+
+> Second addendum from me, Malachy, to the shape sphere ruling: it supersedes the two mirror clauses of my RQ-498
+> ruling in rulings_2026-10-21.md ("the t = 0 identity on the sphere is stated modulo the mirror, under R-141" and
+> "in-square mirrors match to rounding"). On the shape sphere there is no mirror identification now, so the identity
+> holds point for point.
+
+The plain summary's second version, verbatim (`PLAIN_SUMMARY_2.md`; it is the later one and governs; the first
+version, `PLAIN_SUMMARY_1.md`, is kept as the record):
+
+> From me, Malachy. A plain summary of how the mirror and the shape sphere should work, to sit beside the shape sphere
+> instruction I sent. If anything in that instruction or my earlier rulings disagrees with this, this is what I mean;
+> queue the disagreement rather than guessing.
+>
+> There are two different shape spheres. Keep them apart.
+>
+> 1. The shape sphere in the initial-condition constructor. This is the small sphere in the editor, beside the triangle
+>    and the bodies, showing where the starting condition you are building sits. A triangle and its mirror image play
+>    out the same way and end the same way, and this is the one place where saying so is useful. So: every point on it
+>    is reachable, both halves, nothing blocked off. The mirror twin of the current point is shown as a faint marker, so
+>    the symmetry is obvious rather than enforced. Dragging across the equator flips the triangle in the triangle view.
+>
+> 2. The shape sphere chart. This is the chart you explore, render, trace and listen on, like any other chart. It is
+>    the whole sphere, always. The top half is the triangle one way round, the bottom half is it flipped, and the
+>    equator is where the bodies are in a line. Every point is its own real system. There is no hemisphere mode and no
+>    folding. A moving system crosses the equator whenever the bodies line up, so its trace carries on into the other
+>    half and you see it. Listen already works this way.
+>
+> The other charts were never the problem. Where they cannot show something, they say so and the trace leaves the
+> chart. Nothing is folded or faked. Do not change them for this.
+>
+> The rule underneath it: the mirror is a fact about fates ("these two end the same way"). It belongs in the
+> constructor, as information. It is not a reason to hide half of the chart a system moves through.
+>
+> One tidy-up: this supersedes the two mirror clauses of my RQ-498 ruling in rulings_2026-10-21.md ("the t = 0 identity
+> on the sphere is stated modulo the mirror, under R-141" and "in-square mirrors match to rounding"). On the shape
+> sphere chart the identity now holds point for point.
+
+The human's reply confirming the porter's restatement, verbatim (`REPLY.md`):
+
+> That's right on every point. Answers:
+>
+> - The compute shortcut: drop it. No folding of any kind on the shape sphere chart, visible or not. If the chart is
+>   ever too slow we'll add it back as a measured optimisation, as a separate decision.
+> - Make sure the agent doing the shape sphere work has the plain summary and the RQ-498 tidy-up before it continues.
+>   It does not need anything else I sent about other charts; nothing changes there.
+> - Redo #271 to match the whole-sphere chart.
+> - Where the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there
+>   already chose the full sphere with signed n̂, so they should agree.
+>
+> Go ahead with everything.
+
+**The ruling** is `INSTRUCTION.md` §2 and §4, as read in `docs/incoming/2026-10-21_shape_sphere_whole/`, with the
+addenda, the plain summary and the reply. "The compute shortcut" is §2 item 6's second bullet, the optional EX7 fold
+saving; "#271" is the open PR for TASK-M2-28. In short:
+
+1. The shape sphere chart is the whole sphere everywhere (Explore, the Atlas, traces, Listen, the state map, prints,
+   the batch job). Pixel `(θ, φ)` decodes to the system whose **signed** `n̂` is that point; R-14's `φ = π·(1 − t)`,
+   pole to pole, is the only φ span.
+2. R-141's decode gauge is removed for the shape sphere: a lower-hemisphere pixel decodes to its own system, the one
+   with the mirrored shape. The chart's `system_image` is one-to-one over the sphere, n-to-1 only over its genuine
+   identifications, θ's period and the poles. R-157's `DoubleCover` for the full-range Burrau chart is untouched.
+3. The hemisphere toggle is removed from the Manifold view's Chart section, and R-412's remap is withdrawn with it.
+4. The mirror is no longer a repeat. R-537's repeats on the shape sphere are θ's period and the pole crossing only. A
+   pixel past the equator is its own system, with its own pick, readout, trajectory, outcome and inspector.
+5. The mirror becomes a test, not an identification. Where every coordinate the chart holds fixed is
+   mirror-equivariant (released from rest is), mirror-invariant fields are exactly symmetric across the equator and
+   signed fields exactly antisymmetric. Where one is not (a fixed `L_z ≠ 0`, say), the two hemispheres are different
+   systems and the test does not apply; the test says which case it is in.
+6. The fold survives in one place: the IC inspector notes a system's mirror twin ("mirror twin of the system at
+   `(θ, π − φ)`"). **§2 item 6's second bullet, the optional compute saving, is withdrawn by the reply**: no folding of
+   any kind on the shape sphere chart, visible or not; a measured optimisation, if one is ever wanted, is a separate
+   decision. §4's "Fold saving is exact" row goes with it.
+7. Area statistics are counted over the whole sphere. Where item 5's symmetry holds every fate is counted twice,
+   equally, so fractions are unchanged; that is a statement of the symmetry item 5 tests, not a fold. A statistic
+   measured under one hemisphere says so, beside R-544.
+8. Traces on the shape sphere use the signed `n̂` over the whole sphere, as Listen already does. "Show the canonical
+   bodies" in the trajectory panel may stay as a view of the bodies; it never folds the path.
+9. **Two shape spheres, kept apart** (the plain summary). The initial-condition constructor's sphere, the small sphere
+   in the Inspector beside the triangle and the bodies, is where the mirror is information: every point of both halves
+   is reachable, nothing blocked off; the current point's mirror twin is drawn as a faint marker at `(θ, π − φ)`, with
+   the inspector's "mirror twin of …" note; dragging the point across the equator flips the triangle in the triangle
+   view. The shape sphere chart is the other one, items 1 to 8. No other chart changes.
+10. The RQ-498 tidy-up (the second addendum): the two mirror clauses of the human's RQ-498 ruling in
+    `rulings_2026-10-21.md` are superseded; on the shape sphere chart the `t = 0` identity holds point for point.
+
+**What it amends and withdraws.** R-113: the hemisphere toggle's placement goes, the projection selector's stays.
+R-141: its decode gauge and its 2-to-1 cover go for the shape sphere; `DoubleCover`'s retirement for the shape sphere
+and R-157's restoration for the Burrau chart stand. R-412 is withdrawn: with no one-hemisphere view there is nothing to
+remap. R-537: EX2's "hemisphere's fold at the equator" type, EX5's fold among the repeats and EX7(b)'s "hemisphere fold
+at the equator" map go; θ's period and the pole maps stand. R-59: D5's `system_image` replacing
+`has_redundant_hemisphere` stands; the shape sphere's value it cites, the 2-to-1 cover, goes. Applied per R-369, each a
+mechanical consequence of items 1 to 4, the further rulings whose text turns on the fold: R-178 (its sentence that the
+canonicaliser's fold is checked on the upper hemisphere; the round trip composing `Φ` alone stands), R-408 (B3's and
+B7's "with both hemispheres drawn" and the 2-to-1 fold, and B4's one-hemisphere toggle, as ruled by R-412), R-503 (the
+exponential map's per-pixel fold: its cap is one-to-one now, whether or not it straddles the equator; the radius
+bounded at π and the domain's end past it stand), R-538 (TM7's "fold charts (the shape sphere, its hemisphere)" and the
+trace folding at the equator with the toggle on; J9's frame rule, the full sphere read unmirrored, already agrees) and
+R-542 (SM1's mirror identification and fold for the shape-sphere target, SM3's hemisphere fold and in-square mirror
+pixels, SM4's hemisphere row, and SM7's identity modulo the mirror, for the shape sphere chart only; every other
+chart's rows stand).
+
+**What it settles.** RQ-498 and RQ-504, where they turn on the hemisphere: the shape-sphere target is the full sphere
+with the signed `n̂`, the `t = 0` identity holds point for point, and there are no mirror pixels inside the square, so
+"in-square mirrors match to rounding" has nothing left to describe; the one-hemisphere view, RQ-504's subject, is gone.
+Both entries stay open in `REVIEW_QUEUE.md` with a dated line each, for the batch rulings PR that records the human's
+`rulings_2026-10-21.md` and archives them; RQ-498's other parts (left samples, the navigation edge, the bitwise copies
+of EX7 repeats) are not this ruling's.
+
+**Applied per R-369** (mechanical consequences and routine choices; reviewed by physics):
+- **The decode** (item 2). The shape sphere's `Φ` already places the pixel's own shape; what R-141 added is `C`'s
+  mirror step on the joined state. So the shape sphere's decode runs the one shared `C` (REQ-CHART-015) with its step 3
+  not taken: CoM at the origin and at rest, `I = 1`, `ρ̃` on `+x`, and `λ̃_y` keeping its sign. On every other chart
+  `C` is unchanged. Only the shape sphere's call changes.
+- **The held momentum below the equator** (items 2 and 5). `p_fixed` is held in the shape sphere's own frame, `ρ̃` on
+  `+x`, unmirrored, at every pixel (chart_reference §3, the held values; R-538 J9's frame rule: the full shape sphere
+  is read "unmirrored, `ρ` along `+x`"). So the lower pixel holds the same momentum components as the upper one, and
+  the two are mirror twins exactly when the held momentum is its own mirror image (its `y`-components zero, released
+  from rest included), which is item 5's equivariant case; otherwise they are different systems, item 5's "does not
+  apply". Mirroring `p_fixed` below the equator, as R-141's gauge did, would make every pair twins and leave item 5's
+  second case empty.
+- **The lookup** (the encode into the chart). The shape sphere's chart point is the state's signed `n̂`: the
+  shape read from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror land at
+  `(θ, φ)` and `(θ, π − φ)`. Inverse-encode's T1, `E(g·x) = E(x)` over the gauge group with its `Z₂` mirror, stands
+  for `z` and for every other chart.
+- **`system_image`.** The spherical map's is bijective: θ's period and the pole rows are R-407's types, on edges of
+  measure zero that no pixel centre lies on, not a fold. The exponential map's is bijective over its cap, the pixels on
+  `r = π` counting as REQ-CHART-078 defines; the cap is still computed for its `r > π` domain's end. Under a tilt there
+  is no mirror pair to fold on the shape sphere, so the tilted view is one-to-one too.
+- **The tilted shape sphere.** The human's `rulings_2026-10-21.md`, RQ-472 (a), keeps "the equator fold … iff
+  `N_b = 0`" on a tilted view, where the reply rules "no folding of any kind on the shape sphere chart". That is a real
+  clash these texts don't settle: **RQ-508** (new). Meanwhile R-544: no fold on the shape sphere at any tilt; the
+  tilted shape sphere's fold arm (REQ-CHART-062, TASK-M2-36) and the tilted canonical maps (REQ-SCHED-101,
+  REQ-GUI-278) wait on it, the rest of their tasks not. RQ-472 (a)'s pole maps under a tilt are not this ruling's.
+- **The constructor** (item 9). It is the Inspector window's pane 2 sphere (render GUI spec §G8): its point is the
+  IC's signed `n̂`, draggable to every point of both halves, a drag setting the IC's shape as the shape sphere chart
+  places one (its masses and its momenta in the frame `ρ̃` on `+x` held); the twin is a faint marker, never a snap or
+  a limit. REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
+  enforced, not shown.
+- **Results measured under one hemisphere** are kept, with R-544 beside them, and not re-measured here (item 7; §5):
+  PR #271's goldens `shape-sphere/one_hemisphere` (an exponential cap in `w ≥ 0`) and `shape-sphere/both_flagged` (the
+  redundant hemisphere striped) and its `exp_map_system_image` counts, made under R-141's and R-503's fold on its
+  branch, and `fixtures/ic_inspector/shape_vec.json`, whose `n` is the canonical, upper-hemisphere representative of
+  each IC (a check of `shape_vec` on canonical states, which it still is). No statistic in the corpus was measured
+  under one hemisphere: the state map's sphere figures are the prototype's, which never gauged. The PR lists them for
+  the human to decide which to re-run.
+
+**Requirements.** Amended (reqio): REQ-CHART-002, REQ-CHART-014, REQ-CHART-020, REQ-CHART-037, REQ-CHART-054,
+REQ-CHART-056, REQ-CHART-057, REQ-CHART-062, REQ-CHART-075, REQ-CHART-078, REQ-CHART-079, REQ-SCHED-101, REQ-REF-054,
+REQ-COL-113, REQ-COL-115, REQ-COL-121, REQ-COL-124, REQ-GUI-060, REQ-GUI-161, REQ-GUI-268, REQ-GUI-275 and
+REQ-GUI-278. Added: REQ-CHART-081 (the signed decode), REQ-CHART-082 (the mirror test and its "does not apply" case),
+REQ-ENC-034 (the signed lookup), REQ-CHART-083 (the whole-sphere area statistics), REQ-GUI-341 (a trace through a
+syzygy), REQ-GUI-342 (no repeat at the equator), REQ-GUI-343 (the constructor's reach and the drag across the equator)
+and REQ-GUI-344 (the twin marker and the inspector's note). No requirement for the fold saving.
+
+**Tasks.** TASK-M2-43 (new, M2): the signed decode, the held momentum, the lookup and the spherical map's
+`system_image`, with the tests that asserted the 2-to-1 cover. TASK-M2-28 (re-scoped, after TASK-M2-43): the
+whole-sphere display, the exponential map's one-to-one cap and the equal-area projection; its open PR #271 is redone
+against the new scope. TASK-M8-44 (re-scoped): no hemisphere mode past `[0,1]²`, and the whole-sphere statistics.
+TASK-M8-67 (new, M8, gui): the constructor. TASK-M8-06 (no toggle), TASK-M8-15 (no folded shading), TASK-M8-55 (no
+repeat at the equator), TASK-M8-56 (no equator map) and TASK-M8-58 (a trace through a syzygy) take their requirements'
+changes.
+
+R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412.

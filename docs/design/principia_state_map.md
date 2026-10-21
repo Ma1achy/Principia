@@ -86,6 +86,10 @@ colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )
 - `fold_T` maps the point onto `T`'s **quotient**, its group of images (R-407 types): θ mod 2π, the shape sphere's
   `n̂`, the canonical mirror.
 - `C_T` is a colour map, **one-to-one and continuous on that quotient** (SM6).
+- **On the shape sphere chart, no mirror (R-544).** The shape sphere target is the whole sphere: `P_T` reads the
+  state's signed `n̂`, and neither `E`'s mirror identification nor `fold_T`'s canonical mirror applies to it, the
+  mirror being no identification there. Its quotient is the sphere via `n̂` (SM4), and the `t = 0` identity holds
+  point for point. Every other target is unchanged.
 
 **The target is the view's own chart by default.** Then, at `t = 0`, every sample sits where it started, and the
 picture is the colour map itself, i.e. the legend. As the playhead moves, it flows.
@@ -95,10 +99,11 @@ the picture at the place its system has reached. This is the "slice as an image"
 gather per pixel, with no scatter.
 
 *Transcribed from the prototype (R-542; `smWhere`, `smTarget`).* The prototype's targets are its charts: the latent
-`z_α × z_β` chart, the shape sphere `(θ, φ)` (both hemispheres; the one-hemisphere view targets the full sphere), the
+`z_α × z_β` chart, the shape sphere `(θ, φ)` (both hemispheres), the
 mass simplex, the latent momenta `z_q1 × z_q3`, `θ × dilation rate`, the right triangles `ν × dilation`, and the sphere
-tilted 30° into `z_q3` or into `p_λ,y`. The target "the view's own" resolves to the view's chart, the one-hemisphere
-view to the full sphere. Per target, `P_T` reads, from the encode `e` of the state:
+tilted 30° into `z_q3` or into `p_λ,y`. The target "the view's own" resolves to the view's chart. (The prototype's one-hemisphere
+view targeted the full sphere; the app has no one-hemisphere view, R-544. *Was:* "(both hemispheres; the
+one-hemisphere view targets the full sphere)"; "the one-hemisphere view to the full sphere".) Per target, `P_T` reads, from the encode `e` of the state:
 
 | Target | On the chart | Otherwise |
 |---|---|---|
@@ -143,7 +148,8 @@ base (RQ-496). The prototype offers no fixed t; meanwhile Chart position reads t
 
 The colour depends only on the sample's system, never on where its pixel sits. So:
 
-- **Wrapped copies** (θ period, pole crossings, the hemisphere's fold; R-407, R-412) decode to the same system, and get
+- **Wrapped copies** (θ period, pole crossings; R-407; *was:* "the hemisphere's fold; R-407, R-412", the fold gone
+  with the toggle, R-544) decode to the same system, and get
   the same colour by construction. No seam handling is needed or allowed. **But only if a copy reuses its canonical
   quad's samples (EX7's canonical addressing) and never re-decodes from its own coordinate.** `x + 2π` folded back
   is not `x` in the last bits: re-decoding each pixel from its own coordinate, as the prototype first did, gave ICs
@@ -178,9 +184,11 @@ and is computed at 24, 48 and then the chosen resolution (64, 96 or 128), coarse
 chart does not decode, or decodes to a non-finite IC, is not a system: blank (alpha 0), never integrated. *Port's note
 (R-542, applied per R-369):* a `decode_failed` sample the chart does not classify as not a system draws blank too, as
 R-511 draws it in a presentation view; Chart position tests the `state` lane before it projects, and SM5's undetermined
-is `sim_failed` only. On main a copy's canonical address is EX7's for repeats outside the primary range; two mirror
-pixels inside the square (the spherical map's hemispheres, R-141; the exponential map's straddling cap, R-503) are each
-decoded from their own coordinate and agree to rounding, not bitwise; and on an affine latent axis there is no
+is `sim_failed` only. On main a copy's canonical address is EX7's for repeats outside the primary range; there are no
+mirror pixels inside the square, the two hemispheres being different systems (R-544, which supersedes the two mirror
+clauses of the human's RQ-498 ruling; *was:* "two mirror pixels inside the square (the spherical map's hemispheres,
+R-141; the exponential map's straddling cap, R-503) are each decoded from their own coordinate and agree to rounding,
+not bitwise"); and on an affine latent axis there is no
 navigation limit (R-469; R-537 EX3), so the app's base fill is EX4's coarse ancestor and EX7(a)'s root tiling, the
 prototype's base grid a demo device (RQ-498).
 
@@ -194,16 +202,19 @@ defined on the target's quotient, and `C_T` must be invariant under the target's
 |---|---|---|
 | periodic (θ) | the circle | carry θ round a closed hue circle |
 | the shape sphere (θ, φ with pole crossing) | the sphere, via `n̂` | be a function of `n̂`, never of (θ, φ) |
-| the hemisphere (R-412) | the sphere mod the mirror | be a function of the canonical (folded) `n̂` |
 | affine (latent `z`, a physical quantity) | the line | compactify (SM6) |
 | bounded (ν, a mass) | the interval | map linearly |
 | a tilted axis (E, F) | not periodic and multi-valued in θ | take the branch nearest the slice (smallest out-of-plane `w`); this is a choice, Q2 |
 
 *Port's note (R-542).* The prototype's code reads the shape sphere target from the signed `n̂`, computed before the
-encode canonicalises, over both hemispheres, as this table's shape-sphere row has it; SM1's "mirror images identified"
-folds it. The code is applied meanwhile (RQ-498). The code's one-hemisphere view targets the full sphere, where this
-table's hemisphere row folds (RQ-504; the code meanwhile). On main R-141's decode gauge puts a lower-hemisphere pixel's
-system on the upper hemisphere, so on a both-hemispheres view SM7's identity holds modulo the mirror (RQ-498).
+encode canonicalises, over both hemispheres, as this table's shape-sphere row has it. R-544 settles it so: the shape
+sphere chart is the whole sphere, the hemisphere row is gone with the one-hemisphere view, and with R-141's decode
+gauge removed a lower-hemisphere pixel's system is its own, so SM7's identity holds point for point (R-544, settling
+RQ-498 and RQ-504 where they turn on the hemisphere). *Was:* "| the hemisphere (R-412) | the sphere mod the mirror |
+be a function of the canonical (folded) `n̂` |"; "SM1's "mirror images identified" folds it. The code is applied
+meanwhile (RQ-498). The code's one-hemisphere view targets the full sphere, where this table's hemisphere row folds
+(RQ-504; the code meanwhile). On main R-141's decode gauge puts a lower-hemisphere pixel's system on the upper
+hemisphere, so on a both-hemispheres view SM7's identity holds modulo the mirror (RQ-498)".
 
 ## SM5. The four results of a projection
 
@@ -317,6 +328,9 @@ bounded range; the simplex `(2u − 1, 2v − 1)`, linear.
 orientation (`−tanh((y − c_y)/h_y) · sign(y_max − y_min)`), so up on the screen is `+s_y` on every chart. The prototype's
 frame is a control, "Colour window", with the target chart (absolute) as the default.
 
+*Port's note (R-544).* On the shape sphere chart the `t = 0` identity holds point for point over the whole sphere:
+each pixel's system is its own, with its signed `n̂`, and no pixel is compared with its mirror point.
+
 ## SM8. Image mode
 
 - The picture is laid on `T`'s home square (equirect on the sphere; θ across on the cylinder).
@@ -376,8 +390,8 @@ colour composition §1 as it stands — a base and layers — with the chart's p
 
 *Port's note (R-542).* The prototype's code reads the shape sphere target from the signed `n̂` (payload §5's `n`), so on
 the shape sphere the two nodes read the same point, as this section says, and SM12's "Same site blend" holds as
-written; SM1's fold, under which they would read mirror points where `n₃ < 0`, is queued against SM4 and the code
-(RQ-498, the code applied meanwhile). *Was:* "The encode folds the mirror …, so `E(x)` lies on one hemisphere, while
+written; R-544 settles it so, the shape sphere target having no mirror fold. *Was:* "SM1's fold, under which they
+would read mirror points where `n₃ < 0`, is queued against SM4 and the code (RQ-498, the code applied meanwhile)". *Was:* "The encode folds the mirror …, so `E(x)` lies on one hemisphere, while
 Shape n̂'s `n` (payload §5) keeps its sign: on the shape sphere the two nodes read the same point only where `n₃ ≥ 0`,
 and SM12's "Same site blend" and SM7's identity are measured there until RQ-498 is ruled." Main's Shape n̂ is a `vector` subtype, its colour node the SiteBlend editor (render GUI
 spec Part II §3, §6, where a subtype is no hard gate and the inspector morphs) (RQ-497).

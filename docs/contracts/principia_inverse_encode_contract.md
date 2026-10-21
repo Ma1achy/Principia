@@ -140,7 +140,7 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions. **The shape sphere chart's point is the state's signed `n̂`** (R-544): its lookup reads the shape from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems. T1 stands for `z` and for every other chart; only the shape sphere's chart point keeps the mirror's sign.
 
 **Kind 3 — invariant.** Two directions, sharply different:
 
@@ -277,7 +277,7 @@ region (for example above the parabola in $(L_z, E)$).
 | flag | meaning |
 |---|---|
 | `forbids_energy_normalisation` | the chart fixes energy itself; any $E^*$ override — every `Some(E*)`, including `Some(0)` (R-25) — is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
-| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141) or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. |
+| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. The shape sphere is bijective, the whole sphere, nothing hidden or labelled redundant (R-544; *was:* "the shape sphere: 2-to-1 over the φ hemispheres, R-141"). |
 | `requires_per_pixel_mass` | mass varies per pixel, so the integrator must not use `SimUniforms.m[3]`. True for the ternary mass plot, the Burrau family, and mixed-axis charts with a mass axis. |
 
 ## Part 7 — Ground-truth ingestion (the validation programme's demand)
