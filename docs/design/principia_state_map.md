@@ -573,6 +573,11 @@ has the same colour, its cost (SM6).
 - **The Torus's Repeats** (R-543; `sm_gn`). 1, 2, 3, 4, 6 or 8 across the square, **2** by default, shown only when Torus
   is chosen; on the cylinder θ stays once round whatever it is. Its "no longer one-to-one" warning under a brightness
   node is `smSpendsL`'s, every plane Gradient but 2D and every cylinder Gradient but round θ.
+  *Transcribed from the prototype (R-543, version 9; `sm_gn`, `SM_GRAD`).* Repeats offers "Once across the square",
+  "2 across", "3 across", "4 across", "6 across" and "8 across", in that order, "2 across" selected. The Gradient
+  picker lists the Torus second: on the plane "Torus: repeats seamlessly over the whole plane", after "2D: x → a, y → b
+  (one lightness)"; on the cylinder "Torus: θ round the hue, s repeats seamlessly", after "2D: θ round the hue circle,
+  s up L".
 
 ## SM12. Tests (each with the arm that fires)
 

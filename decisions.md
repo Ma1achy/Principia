@@ -19244,7 +19244,9 @@ and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My w
   as its *Was*: REQ-COL-130's mirror and dim read "by default"; REQ-GUI-337's Flow preset follows the prototype's
   `smPreset`, now version 9 (TASK-M7-51); REQ-GUI-340's inspector gains the Repeats setting, Past its square and Dim
   past the square, the node's label naming the wrap mode (TASK-M7-51); REQ-GUI-339's legend states the Torus's period
-  and the hovered-pixel readout names the wrap mode (TASK-M8-66; RQ-506).
+  and the hovered-pixel readout names the wrap mode (TASK-M8-66; RQ-506); REQ-GUI-336's Problems pane counts the
+  Torus, on the plane and the cylinder, among the bases that spend L, its "no longer one-to-one" warning under a
+  brightness node checked with an arm that fires (§2.1; TASK-M7-51; PR #272's gui review, G1, applied per R-369).
 - **H7. The calibration values.** The Torus's `R = 0.074`, `r = 0.037`, `L₀ = 0.70`, `r_L = 0.12`, its default of 2
   Repeats, and the tileable checkerboard's 0.8 (chroma), 0.8 (`r_L`) and ± 0.07 (`L` by parity) join REQ-COL-129, the
   state map's calibration requirement (R-71), confirmed at the M7 gate with SM6's, the prototype's values the starting
