@@ -16470,7 +16470,11 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
   only by dd_decoder §3.3's canonicalise and `ε_w` only by §3.4's invariant construction; neither depends on the
   link, and hashing both into every entry is a deliberate, conservative choice, a needless refusal being safe where a
   stale recreation is not. The refusal names the constants as well as the link, so a user is not told their links
-  changed when only a constant did (physics review P6 of PR #265, applied per R-369). Changing an entry or a constant it reaches changes its
+  changed when only a constant did (physics review P6 of PR #265, applied per R-369). When every block mismatches,
+  the refusal leads with the constants all four mismatched hashes cover, computed from the record's links: `δ_λ`
+  and `ε_w` always, and `tanh_sat` as well when every recorded link is tanh-bearing (softmax_tanh or stick_breaking
+  on the masses, a tanh_* link on α, β and q), never a fixed `δ_λ`/`ε_w` lead (physics review P8 of PR #265, applied
+  per R-369; generation_root §3.9 keeps the round-2 fixed lead as its *was*). Changing an entry or a constant it reaches changes its
   hash and the schema version; changing another entry, or the payload ledger, changes the schema version only.
 - **H2. Where it travels.** Per block, four in all, a decimal string each, beside the build hash and the schema version
   wherever they travel: the image record's tier 1 and every other destination's sidecar (snapshot JSON, a share link,
@@ -16585,7 +16589,10 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
   its top-right, below the strip; render_gui_spec §G13 records the departure from `01_main` (gui review G3 of PR
   #265, applied per R-369). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
   rect R-406, R-468 and REQ-GUI-229 use; render_gui_spec §G13 records the departure from `01_main`" (stale value,
-  replaced by gui review G3 of PR #265, applied per R-369). It
+  replaced by gui review G3 of PR #265, applied per R-369). At launch and after Home, the chart's unit square
+  [0,1]² spans the shown rect's shorter side, centred in it, at one scale in both directions, with the extended
+  field drawn around it (R-537); a resize then keeps that scale (gui review 5595357065's note on PR #265, applied
+  per R-369). It
   sits beside what it
   describes, as D4's "beside the chart name" wanted, where the top bar's status would put it a panel away. The status
   line stays open to a later badge that is about the session rather than the figure.
@@ -16596,7 +16603,9 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
 - **B3. Hiding.** The strip hides with the layer (F3, present mode), as the Home button does; present mode's "hide all
   chrome" hides it.
 - **B4. The tests.** REQ-GUI-258's verify gains an arm that can fail: the badge's rect lies in the header strip,
-  disjoint from the plot's rect; control, a badge whose rect meets the plot's. REQ-GUI-263's fallback badge likewise.
+  disjoint from the shown rect; control, a badge whose rect meets the shown rect. REQ-GUI-263's fallback badge
+  likewise. *Was:* "disjoint from the plot's rect; control, a badge whose rect meets the plot's." (reworded, kept here:
+  one term, the shown rect, throughout; applied per R-369, round 3 of PR #265).
   The gui checklist's §1 figure line names the rule.
 
 *What it amends:* **R-479**, D4's "the canvas corner badge" and E7's meanwhile: the badge is in the figure's header

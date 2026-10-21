@@ -889,8 +889,10 @@ choice, a needless refusal being safe where a stale recreation is not (applied p
 changes the hashes of the links it reaches and is refused naming them, never recreated. The refusal names the
 constants as well as the link: the record carries hashes, not the writer's constants, so it names each mismatched link
 with the constants its hash covers ("its entry, or `tanh_sat`, `δ_λ` or `ε_w`, changed"), and when every block
-mismatches it says first that `δ_λ` or `ε_w`, the constants all four share, may be what changed, so a user is not told
-their links changed when none did (applied per R-369, physics review P6 of PR #265). Every record and export carries, per block, the
+mismatches it leads with the constants all four mismatched hashes cover, computed from the record's links: `δ_λ` and `ε_w` always, and `tanh_sat` as well when every recorded link is tanh-bearing (softmax_tanh or stick_breaking on the masses, a tanh_* link on α, β and q), saying that one of them may be what changed, so a user is not told their
+links changed when none did (applied per R-369, physics review P6 of PR #265; the lead per physics review P8 of PR
+#265, applied per R-369; *was:* "and when every block mismatches it says first that `δ_λ` or `ε_w`, the constants all
+four share, may be what changed", stale value, replaced by physics review P8 of PR #265). Every record and export carries, per block, the
 entry hash of the link it records, a u64 written as a decimal string (R-322), beside the build hash and the schema
 version, outside `SimConfig` since it derives from the build's registry and the link ids, not from the view
 (`principia_dd_image_embedding.md` §6; `principia_gui_state_contract.md` §2). A reader compares each block's against

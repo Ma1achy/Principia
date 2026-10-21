@@ -327,7 +327,10 @@ its Screen preset the dev default; this line is its Ends only preset, offered.)*
 points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of
 the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
-and it hides with the layer (F3, present mode). The orbit's path is drawn from the cursor's IC:
+and it hides with the layer (F3, present mode). **At launch and after Home** (applied per R-369, gui review
+5595357065's note on PR #265), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
+one scale in both directions, and the extended field is drawn around it (R-537); a resize then keeps that scale and
+shows more or less of the field (Layout, below). The orbit's path is drawn from the cursor's IC:
 - **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. It is drawn by
   the line system (R-476, `principia_lines.md` §8), as the pinned and kept orbits are. This is
   `principia_trajectory_viewing.md` §3's hover trace (the full CPU state, `computeIC`, projected onto the chart's actual
@@ -349,7 +352,7 @@ at that region's own aspect, with the field drawn at one scale in both direction
 ("the canvas showing more or less of the field at the same scale", R-462) and as R-537's window onto the extended
 plane has it (never any gaps): there is no centred square, no margin and no gap, and nothing of the strip draws over
 it. A window resize or a splitter drag changes how much of the field shows, never its scale. The axis labels' strips
-(Figure, below) and the Home button hang from the shown rect, so Home sits in its top-right corner, below the strip.
+(Figure, above; *was:* "(Figure, below)", reworded, kept here) and the Home button hang from the shown rect, so Home sits in its top-right corner, below the strip.
 *Was* (round 1, gui review G1 of PR #265): "the plot is fitted into the rest at its aspect, square for the slice,
 centred, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229 read, so nothing of the strip draws over
 the plot and the plot is never stretched" (stale value, replaced by gui review G3 of PR #265, applied per R-369 under
