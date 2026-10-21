@@ -232,6 +232,10 @@ mutant = "crates/gui/src/explore/compass/views.rs:199:19: replace / with * in ga
 justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x * 1.0 are both x for every f64"
 
 [[equivalent]]
+mutant = "crates/validation/src/inspector.rs:77:49: replace < with <= in ball"
+justification = "they differ only on a draw whose squared norm equals radius² exactly, which no seed the gates and tests use draws (each coordinate is one of 2⁵³ values), and such a point lies on the sphere, inside every bound the gates read either way"
+
+[[equivalent]]
 mutant = "crates/kernel/src/chart/shape_sphere.rs:496:22: replace > with >= in ShapeSphere<P>::in_view"
 justification = "sin2 == 0.0 needs every component of m − c·n₀ below about 1e-154, so for m on S² |c| = 1 to rounding there; c is never 0 in that branch, and c > 0.0 and c >= 0.0 agree"
 

@@ -56,3 +56,4 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause is REQ-CHART-037's here; REQ-RENDER-027's Burrau int lattice and Anosova half is REQ-RENDER-082, closed here.
 - RQ-98 ruled: R-113 — REQ-INT-072's copy offsets are REQ-INT-083, closed here (H and σ²_T stay in TASK-M5-18); REQ-RENDER-031's verify is parameterised by (E, FTLE on/off), the tier names checked by REQ-PERF-014 in M5.
 - R-297: every compute pipeline is created through TASK-M0-44's entry point, which takes the fast-math setting (off by default); the setting joins the sim key in TASK-M4-08.
+- R-481 G7 (20 Oct 2026): link parameters are a uniform, not a variant axis; the link ids stay baked. The uniform is TASK-M4-21's.

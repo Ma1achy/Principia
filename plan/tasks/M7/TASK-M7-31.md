@@ -1,9 +1,9 @@
 # TASK-M7-31 — Image embedding: what travels — the contract-named payload and the build-hash refusal
 
 - **Milestone:** M7
-- **Closes:** REQ-TOOL-065, REQ-TOOL-066, REQ-TOOL-112, REQ-TOOL-067, REQ-TOOL-142
-- **Depends on:** TASK-M7-14, TASK-M7-17, TASK-M7-27
-- **Needs (earlier milestones):** REQ-SYS-011, REQ-GUI-007, REQ-RENDER-043, REQ-SCHED-097
+- **Closes:** REQ-TOOL-065, REQ-TOOL-066, REQ-TOOL-112, REQ-TOOL-067, REQ-TOOL-142, REQ-TOOL-171
+- **Depends on:** TASK-M7-14, TASK-M7-17, TASK-M7-27, TASK-M2-40, TASK-M6-48
+- **Needs (earlier milestones):** REQ-SYS-011, REQ-GUI-007, REQ-RENDER-043, REQ-SCHED-097, REQ-SYS-083
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
 - **Size:** ~480 lines (~450 before R-297)
@@ -31,9 +31,12 @@ The embedded payload carries the build hash, the slice (chart id + params, z₀ 
 - Review (physics): dd_image_embedding §6 names the component and what changes it; a decode or chart-version change alters it and an unrelated build change does not (REQ-TOOL-112).
 - `cargo test -p render embed_fast_math` — embed → extract round-trips the compute fast-math setting, off and on; recreating from a record with it on restores it on, and from one with it off restores it off (REQ-TOOL-142).
 - `cargo test -p render embed_colour_spec` — the default preset payload contains no source; an ejected node's payload contains its source; an unknown enum id triggers a visible fallback notice (REQ-TOOL-067).
+- `cargo test -p engine decoder_identity_refusal` — REQ-TOOL-171's verify (C11, with its mutation arm).
 
 ## Notes
 - Definition (R-72) REQ-TOOL-112.
 - Accepted interpretation (revised checkpoint A): `rEsc`, `eta` and `nSync` are dropped from the embedded record.
 - The colour "enum ID" is the registry / preset id of each node (TASK-M7-13, -17).
 - R-297 adds REQ-TOOL-142: the compute fast-math setting travels with the sim fields (dd_image_embedding §6). Scope added to this task, which builds what travels (~30 lines).
+- R-483 X3, H3 (20 Oct 2026): REQ-TOOL-065's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; its verify likewise.
+- R-483 X4, H4: the refusal reads the build's registry plus the record's links; a schema-version mismatch is refused for a record with no entry hashes; the per-link arm is TASK-M7-45 (R-521, ruling RQ-385). *Was:* "meanwhile a schema-version mismatch is refused; the per-link arm is TASK-M7-45 (RQ-385)."

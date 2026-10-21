@@ -49,3 +49,4 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - Closes, for gaps the corpus leaves open: REQ-TOOL-128 (R-72 definition) (classification accepted by R-132).
 - R-152, amended in part by R-390: TASK-M6-28 builds the Profiler window's frame and tabs, TASK-M6-22 fills its Arbiter tab, and this task fills in the rest (the Timeline, Flame, GPU, Memory and Counters tabs and the views above).
 - R-390: TASK-M6-28 builds the Profiler window's frame and tabs on the mock engine; this task depends on it and fills them from the real profiler stream, keeping every requirement it closes.
+- R-484 RT1 (20 Oct 2026): the profiler header's `config` is an export path; its round trip is TASK-M8-53's T1.

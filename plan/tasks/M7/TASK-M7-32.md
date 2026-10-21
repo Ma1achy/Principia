@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-TOOL-070, REQ-TOOL-072, REQ-TOOL-069, REQ-TOOL-113, REQ-VAL-098
-- **Depends on:** TASK-M7-29, TASK-M7-31
+- **Depends on:** TASK-M7-29, TASK-M7-31, TASK-M2-40
 - **Needs (earlier milestones):** REQ-PERF-032
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -33,3 +33,4 @@ PNG export with provenance: pixel embedding off by default for figure export (pi
 ## Notes
 - Calibration (R-71): REQ-TOOL-113.
 - The Export & share window itself is M8; this task provides the export functions and their defaults.
+- R-483 C10 (20 Oct 2026): REQ-VAL-098's golden round trip runs with a non-default link and a saved tilted chart, its control the low bits zeroed reading no embedded state.

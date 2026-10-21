@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Colour node inspectors</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+.panel{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;display:flex;flex-direction:column;min-width:0}
+.ph{padding:8px 10px;border-bottom:1px solid #2a2a2a;display:flex;flex-direction:column;gap:3px}
+.pb{padding:10px;display:flex;flex-direction:column;gap:10px;font-size:12px}
+.lab{color:#a8a8a8}
+.f{display:flex;flex-direction:column;gap:3px}
+.opt{padding:3px 8px;border-radius:2px}
+.opt.on{background:#005c80;color:#fff}
+.sl{height:4px;background:#2a2a2a;border-radius:2px;position:relative;flex:1}
+.sl i{position:absolute;left:0;top:0;bottom:0;background:#1a7ca3;border-radius:2px}
+.sl b{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc;margin-left:-6px}
+.chip{background:#262626;border:1px solid #3c3c3c;border-radius:3px;padding:2px 7px}
+.chip.on{background:#005c80;border-color:#1a7ca3;color:#fff}
+.sw{width:22px;height:22px;border-radius:3px;border:1px solid #3c3c3c}
+.note{font-size:11px;color:#a8a8a8;line-height:1.45}
+.g3{display:grid;grid-template-columns:repeat(3,22px);gap:3px}
+</style>
+</helmet>
+<div style="width:1600px;height:860px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;padding:28px 32px;display:flex;flex-direction:column;gap:18px">
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<h1 style="margin:0;font-size:24px;font-weight:400">The colour slot's inspector: the Shape n̂ node, or Chart position's base and layers</h1>
+<div style="color:#a8a8a8;font-size:13px;line-height:1.5;max-width:1150px">The inspector follows the source. From the Shape n̂ node: its panel exactly as today. From Chart position, on any chart including the shape sphere: one base and a stack of layers, offering what exists on that chart (on the sphere, its site sets, lat × lon or Fibonacci cells, lat / lon lines and cell edges). Swap the source and each base takes its counterpart's place (Position ↔ Gradient, Site blend ↔ Site blend, Bands ↔ Palette); every setting stays, so switching back restores it.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;flex:1;min-height:0">
+
+<div class="panel" style="border-color:#1a7ca3">
+<div class="ph"><span class="hd">Shape n̂ node</span><span style="font-size:14px;font-weight:500">Site blend — unchanged</span></div>
+<div class="pb">
+<div class="f"><span class="lab">Sites</span>
+<div style="background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:1px">
+<span class="opt on">axes6 — the six ±axis poles</span><span class="opt">corner8 — octant corners</span><span class="opt">ico12 — icosahedron vertices</span><span class="opt">fib(N) — Fibonacci lattice</span><span class="opt">ring(N) — a great circle</span></div></div>
+<div class="f"><span class="lab">Swatches</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">Full</span><span class="chip">Okabe–Ito</span><span class="chip">Golden</span><span class="chip">Gradient</span></div>
+<div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+<span class="sw" style="background:oklch(72% 0.11 0)"></span><span class="sw" style="background:oklch(72% 0.11 180)"></span><span class="sw" style="background:oklch(72% 0.11 120)"></span><span class="sw" style="background:oklch(72% 0.11 300)"></span><span class="sw" style="background:oklch(72% 0.11 240)"></span><span class="sw" style="background:oklch(72% 0.11 60)"></span>
+<span class="note" style="margin-left:4px">+x −x +y −y +z −z</span></div></div>
+<div class="f"><span class="lab">Kernel</span><div style="display:flex;gap:6px"><span class="chip">Nearest</span><span class="chip">Top-3</span><span class="chip on">vMF</span></div></div>
+<div style="display:flex;gap:10px;align-items:center"><span class="lab" style="width:60px">κ</span><div class="sl"><i style="width:22%"></i><b style="left:22%"></b></div><span class="mono">3.0</span></div>
+<div class="f"><span class="lab">Blend in</span><div style="display:flex;gap:6px"><span class="chip on">OKLab</span><span class="chip">RGB</span></div></div>
+<div class="note" style="border-top:1px solid #2a2a2a;padding-top:8px">Today's shape colouring, as it is. Chart position on the shape sphere offers the same site sets through the same code (agreement exactly 0).</div>
+</div>
+</div>
+
+<div class="panel">
+<div class="ph"><span class="hd">Chart position · base</span><span style="font-size:14px;font-weight:500">Gradient · or Site blend</span></div>
+<div class="pb">
+<div class="f"><span class="lab">Base</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">Gradient</span><span class="chip">Site blend</span><span class="chip">Palette</span><span class="chip">Picture</span></div></div>
+<div class="f"><span class="lab">Gradient</span><div style="background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:1px"><span class="opt on">2D: x → a, y → b (one lightness)</span><span class="opt">Along x</span><span class="opt">Along y</span><span class="opt">Out from the centre</span></div></div>
+<div style="display:flex;gap:8px"><img src="/_blob/cc856090ec78862013f3285551b8ef87" alt="Gradient 2D" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"><img src="/_blob/8e41598d234e53bc9e8cea20f7152490" alt="Gradient along x" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"><img src="/_blob/5f1deeb8cec294be86473bc18df45c9d" alt="Gradient out from the centre" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"></div>
+<div class="note" style="border-top:1px solid #2a2a2a;padding-top:8px"><b style="font-weight:500;color:#dcdcdc">Site blend</b>, when chosen, has the sphere's own dials on a flat lattice: sites (square or hex lattice) · across · swatches (by index or golden-angle) · kernel (nearest, top-3, vMF) · κ · blend space (OKLab, RGB).</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/66beda538da1458df8be270839a7683b" alt="Site blend, hex lattice, vMF" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"><span class="note">hex lattice, vMF κ 3</span></div>
+</div>
+</div>
+
+<div class="panel">
+<div class="ph"><span class="hd">Chart position · base</span><span style="font-size:14px;font-weight:500">Palette — purely tiled</span></div>
+<div class="pb">
+<div class="f"><span class="lab">Tiling</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip">Square</span><span class="chip on">Hexagons</span><span class="chip">Triangles</span><span class="chip">Brick</span><span class="chip">Stripes x</span><span class="chip">Stripes y</span></div></div>
+<div class="f"><span class="lab">Across</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip">4</span><span class="chip on">6</span><span class="chip">8</span><span class="chip">12</span><span class="chip">18</span><span class="chip">24</span></div></div>
+<div class="f"><span class="lab">Palette</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">By index</span><span class="chip">Golden-angle</span></div>
+<div style="display:flex;gap:10px;align-items:center;margin-top:4px"><div class="g3" aria-hidden="true">
+<span class="sw" style="background:oklab(72% -0.08 -0.08)"></span><span class="sw" style="background:oklab(72% 0 -0.08)"></span><span class="sw" style="background:oklab(72% 0.08 -0.08)"></span>
+<span class="sw" style="background:oklab(72% -0.08 0)"></span><span class="sw" style="background:oklab(72% 0 0)"></span><span class="sw" style="background:oklab(72% 0.08 0)"></span>
+<span class="sw" style="background:oklab(72% -0.08 0.08)"></span><span class="sw" style="background:oklab(72% 0 0.08)"></span><span class="sw" style="background:oklab(72% 0.08 0.08)"></span></div>
+<span class="note">(i mod 3, j mod 3): every neighbour differs</span></div></div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/734aaf6e2afa97bd23fd09fd0d64a44b" alt="Palette, hexagons, by index" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"><span class="note">on the cylinder a multiple of 6 round θ; on the simplex, triangles in the masses</span></div>
+</div>
+</div>
+
+<div class="panel">
+<div class="ph"><span class="hd">Chart position · on top of any base</span><span style="font-size:14px;font-weight:500">Layers</span></div>
+<div class="pb">
+<div class="note">An ordered stack. Drag to reorder; each row is one band-mask with its own spacing, colour and opacity.</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:6px;align-items:center;background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:5px 6px"><span style="color:#8a8a8a;font-size:11px">⋮⋮</span><span>Checkerboard <span class="mono" style="color:#a8a8a8">6 · white · 25%</span></span><span style="color:#a8a8a8">✕</span></div>
+<div style="display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:6px;align-items:center;background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:5px 6px"><span style="color:#8a8a8a;font-size:11px">⋮⋮</span><span>Grid lines <span class="mono" style="color:#a8a8a8">6 · dark · 75%</span></span><span style="color:#a8a8a8">✕</span></div>
+<div style="background:#141414;border:1px dashed #3c3c3c;border-radius:3px;padding:5px 8px;color:#a8a8a8">+ Add layer: grid lines · checkerboard · hexagon / triangle / brick edges · stripes x / y · rings · site dots</div>
+</div>
+<div class="f"><span class="lab">Spacing in</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip on">Chart units</span><span class="chip">The squashed square</span></div></div>
+<div style="display:flex;gap:8px"><img src="/_blob/0b171435b158203a4510f03c1f98648d" alt="Gradient with checkerboard and grid layers" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"><img src="/_blob/9d2a2ad499bae3b849dbe2ae96e7294a" alt="Gradient with hexagon edges" style="width:96px;height:96px;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px"></div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":860}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
