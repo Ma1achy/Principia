@@ -1,7 +1,7 @@
-# TASK-M2-43 — Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form
+# TASK-M2-47 — Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form
 
 - **Milestone:** M2
-- **Closes:** REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-034
+- **Closes:** REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-035
 - **Depends on:** TASK-M2-07, TASK-M2-15
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -49,7 +49,7 @@ proposed for the M2 gate.
   conditions and idempotence; the guard, the mirror decision, the `I_in = 0` select and the `τ_I` skip agree bit for
   bit between CPU-f32 and the GPU on Metal and lavapipe (REQ-DEC-002).
 - Calibration: `τ_I` proposed from the measured `|I − 1|` (TASK-M2-07 measured up to 3 eps), reviewer-checked,
-  confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-034).
+  confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-035).
 - Review (physics) — each branch input's form, and its proof that it rounds alike fused or not, flushing subnormals or
   not (REQ-DEC-002).
 

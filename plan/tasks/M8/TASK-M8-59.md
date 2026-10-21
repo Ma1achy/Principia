@@ -1,7 +1,7 @@
 # TASK-M8-59 — Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory's beats, the events and the effects (R-540 S5, S8, S9)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320, REQ-GUI-345
+- **Closes:** REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320, REQ-GUI-349
 - **Depends on:** TASK-M8-12, TASK-M8-38
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, perf
@@ -23,7 +23,7 @@ R-555 rules RQ-440 and RQ-442, so this task no longer waits; it builds Listen's 
 
 ## Deliverables
 - The voices, the instruments and `makeVoice`, the strikes, the events and the effects chain in Listen's audio graph (`crates/gui/src/listen/`), one Rust synthesis graph transcribed node for node from `trace_sound.html`, on TASK-M8-12's audio out natively and in TASK-M8-38's shell in the browser (R-555, RQ-440).
-- Test `listen_graph` (REQ-GUI-345).
+- Test `listen_graph` (REQ-GUI-349).
 - Tests `listen_voices`, `listen_struck_floor`, `listen_strikes_on`, `listen_events` and `listen_effects`.
 
 ## Acceptance tests
@@ -32,7 +32,7 @@ R-555 rules RQ-440 and RQ-442, so this task no longer waits; it builds Listen's 
 - cargo test -p gui listen_strikes_on: in follow mode a struck voice is struck once per syzygy the head passes (the default), once per t_c/2 under ÷ 2, and once on its line moving by more than 1/48 octave in each mode; a retrig voice gets a note event, its gain held; control: a strike on a timer of its own fails (REQ-GUI-318).
 - cargo test -p gui listen_events: as the head passes, a pair's separation minimum below 0.2 R fires one whoosh at §9's depth, the terminal collision its pair's drum, a triple collision the crash, the escape a falling glide towards the escaping body's side, and a syzygy a tick only when switched on; each switch silences only its own event; nothing fires outside follow mode; controls: an event fired twice, or with its switch off, each fail (REQ-GUI-319).
 - cargo test -p gui listen_effects: REQ-GUI-320's verify, the default state (reverb, Doppler and width on at ×1.40, ×1.50 and ×1.50, bit-crush off; R-555) included (REQ-GUI-320).
-- cargo test -p gui listen_graph: REQ-GUI-345's verify (one graph, natively `cpal` on its own thread, the browser build the same graph's samples).
+- cargo test -p gui listen_graph: REQ-GUI-349's verify (one graph, natively `cpal` on its own thread, the browser build the same graph's samples).
 
 ## Notes
 - **No longer waits:** R-555 rules RQ-440 and RQ-442. *Was:* "**Waits on RQ-440 and RQ-442** (R-540 H14). …"

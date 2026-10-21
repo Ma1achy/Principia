@@ -522,7 +522,7 @@ anything outside the repository and its build and scratch directories without as
   pins, and installs stable only if a Linux job still asks for it.
 - **The native build runs without MIR GVN (R-547, 21 Oct 2026; RQ-299).** The pinned nightly miscompiles plain Rust
   above opt-level 0 in rustc's MIR GVN pass, so the native build sets `-Zmir-enable-passes=-GVN`, scoped to the host
-  target and never the SPIR-V build, and a CI job runs the native tests at the release profile (TASK-M2-45,
+  target and never the SPIR-V build, and a CI job runs the native tests at the release profile (TASK-M2-49,
   REQ-TOOL-188 and REQ-TOOL-189). The fault is reported upstream; the pin moves to a fixed nightly once
   `rustc_codegen_spirv` builds against one, and the flag goes with it.
 - **Toolchains change only through the pin (R-414, 10 Oct 2026; R-349).** `~/.rustup`'s stable stays at 1.99.0;

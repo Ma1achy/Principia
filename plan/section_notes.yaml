@@ -1249,7 +1249,7 @@
 - file: docs/design/principia_listen.md
   section: "14. What the demo is not"
   reason: informative only
-  note: "where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-345 and REQ-SYS-060"
+  note: "where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-349 and REQ-SYS-060"
 - file: docs/design/principia_state_map.md
   section: "The state map: every pixel coloured by where its system is now"
   reason: informative only

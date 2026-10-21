@@ -1,8 +1,8 @@
-# TASK-M2-46 — The Inspector's gates per R-551: the pole and equator checks judged, the Randomise arm reported, and the gates' bounds proposed
+# TASK-M2-50 — The Inspector's gates per R-551: the pole and equator checks judged, the Randomise arm reported, and the gates' bounds proposed
 
 - **Milestone:** M2
 - **Closes:** REQ-VAL-022, REQ-VAL-121, REQ-VAL-193
-- **Depends on:** TASK-M2-27, TASK-M2-43
+- **Depends on:** TASK-M2-27, TASK-M2-47
 - **Needs (earlier milestones):** REQ-VAL-007, REQ-VAL-006
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-9
@@ -48,7 +48,7 @@ adds the Randomise arm, and proposes the bounds.
 
 ## Notes
 - Applied per R-369: the held requirements move here from TASK-M2-27 (merged); REQ-VAL-021 stands as built there.
-- Applied per R-369: this task depends on TASK-M2-43, because R-547 changes canonicalisation's step 0, which
+- Applied per R-369: this task depends on TASK-M2-47, because R-547 changes canonicalisation's step 0, which
   the round trip runs; the bounds are measured on the final `C`.
 - The pole check runs at equal masses only, where `L±` are the poles (R-549, RQ-355); at unequal masses the
   equilateral configuration is not at `w = ±1`.

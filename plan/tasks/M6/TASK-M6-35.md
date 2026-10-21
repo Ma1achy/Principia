@@ -1,7 +1,7 @@
 # TASK-M6-35 — The compass's Jacobi and Shape views and the physical steer (R-452)
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-342, REQ-GUI-343
+- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347
 - **Depends on:** TASK-M6-34
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -42,12 +42,12 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
 - The Jacobi and Shape views on TASK-M6-34's grid — `u₁ = J q̂₁`, `u₂ = J q̂₂`, the grid over Jacobi's
   `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M` and Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M` (R-550), each divided by
   its fixed reference range (angles by their domain, masses by 1, momenta by `q_max`, Shape's rates and `L_z` by the
-  ranges this task writes, REQ-GUI-343, a definition under physics review), the readout's dominant pair and the
+  ranges this task writes, REQ-GUI-347, a definition under physics review), the readout's dominant pair and the
   area stretch on the orthonormalised pair; a degenerate pushforward (`J q̂₁ ∧ J q̂₂ = 0`) said, not drawn; the help
   text (the physical views change as the slice moves, the latent one does not; the metric named).
 - The physical steer — `q₁ ∝ J⁻¹ e_i`, `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised; refused, its reason logged, where
   the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is below the tolerance this task proposes
-  (REQ-GUI-342, a calibration confirmed at the M6 gate), "normal to the energy shell" on an `E*`-normalised chart;
+  (REQ-GUI-346, a calibration confirmed at the M6 gate), "normal to the energy shell" on an `E*`-normalised chart;
   the Manifold view's sliders following as after the Chart builder's Apply (§G7); an accepted steer a single
   `SetField` on the basis, logged, undone by one Ctrl+Z.
 - *Was (before R-550):* the deliverables read the Jacobian, the coordinate sets, the stage and the metric "as RQ-341's
@@ -59,8 +59,8 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
 ## Acceptance tests
 - `cargo test -p gui compass_physical_views` and `cargo xtask screenshot 01_main` (mock_compass_jacobi, mock_compass_shape) — on the linear-decoder fixture the grid equals the normalised bivector of J q₁ ∧ J q₂ within 1e-12 and the stretch the Gram factor; on the decoder a slice edit changes the physical grid where J depends on z₀ and leaves the Plücker grid unchanged; the hovered pixel's J is used while the pointer is over the figure; a degenerate pushforward shows its message; controls: the reference's synthetic Jacobian and un-orthonormalised u₁, u₂ each fail; review checklist (physics reviewer): the Jacobian, the coordinate sets, the stage read and the physical metric are R-550's (REQ-GUI-199).
 - `cargo test -p gui compass_latent_jacobian` — REQ-DEC-049's verify (the eight columns, the stage after `η_E`, the stretch on the orthonormalised pair).
-- The reference ranges (REQ-GUI-343) and the steer's tolerance (REQ-GUI-342): written into render_gui_spec's compass section and the PR's calibration record; review checklist (physics reviewer).
-- `cargo test -p gui mock_compass_steer_physical` — on the fixture a click on a physical cell with e_i, e_j in J's range steers to a plane whose pushforward lights (i, j) at ±1 within REQ-GUI-342's tolerance; a cell needing the energy shell's normal on an `E*` chart is refused with "normal to the energy shell" and no SetField; each steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a refused case and one without Gram–Schmidt each fail; review checklist (physics reviewer): the construction is R-550's (REQ-GUI-200).
+- The reference ranges (REQ-GUI-347) and the steer's tolerance (REQ-GUI-346): written into render_gui_spec's compass section and the PR's calibration record; review checklist (physics reviewer).
+- `cargo test -p gui mock_compass_steer_physical` — on the fixture a click on a physical cell with e_i, e_j in J's range steers to a plane whose pushforward lights (i, j) at ±1 within REQ-GUI-346's tolerance; a cell needing the energy shell's normal on an `E*` chart is refused with "normal to the energy shell" and no SetField; each steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a refused case and one without Gram–Schmidt each fail; review checklist (physics reviewer): the construction is R-550's (REQ-GUI-200).
 
 ## Notes
 - **What to try.** The PR description has a "What to try" section (R-390), on `cargo run -p gui --features mock`: the Jacobi and Shape views; move the slice and

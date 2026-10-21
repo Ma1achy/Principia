@@ -1,4 +1,4 @@
-# TASK-M2-44 — The decoder's fma-built branch inputs rewritten to R-547's form and re-proved: M₀₁ for M01_TINY, and decode test 12 on Metal and lavapipe
+# TASK-M2-48 — The decoder's fma-built branch inputs rewritten to R-547's form and re-proved: M₀₁ for M01_TINY, and decode test 12 on Metal and lavapipe
 
 - **Milestone:** M2
 - **Closes:** REQ-DEC-011, REQ-VAL-017

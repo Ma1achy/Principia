@@ -1,7 +1,7 @@
 # TASK-M8-55 — Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-344
+- **Closes:** REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-348
 - **Depends on:** TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -34,7 +34,7 @@ On the real engine the chart's extension is reached by pan and zoom with the con
 - `cargo test -p gui extension_no_gaps` — REQ-GUI-268's verify (R-537 T3, T4).
 - `cargo test -p gui extension_pick` and `cargo xtask screenshot 01_main` (real engine, `extension_pick_x`) — REQ-GUI-269's verify (R-537 T5, T6; the hover arm, the ✕'s screenshot).
 - `cargo test -p gui extension_round_trip` — REQ-GUI-270's verify (R-537 EX9).
-- `cargo test -p gui extension_outline` — REQ-GUI-344's verify (R-552, RQ-408).
+- `cargo test -p gui extension_outline` — REQ-GUI-348's verify (R-552, RQ-408).
 
 ## Notes
 - **Ruled (R-552, 21 Oct 2026):** RQ-416 (a), Fit the view's own square (R-468 E2); RQ-419 (a), the frames before the first baseline cover excepted; RQ-406 (a), RQ-407 (a), RQ-409 (a), as applied; RQ-408 (a), the outline built here, on by default (RQ-461, R-556); RQ-420 (b), comments and the console's pick are the human's to define, and EX5 applies to each once defined, a comment in a repeat attaching to the canonical point (RQ-411 (a)); nothing is built for them. RQ-417 (b), the readout's label only in a debug view, as applied meanwhile (R-537 U7), ruled by R-553. *Was:* "**Applied meanwhile (R-537 U4, U6, U7, U9, U14):** RQ-416 (a) …; RQ-406 (a), RQ-407 (a), RQ-409 (a); RQ-408's outline is not built; comments and the console's pick wait on RQ-420. A ruling other than these is a follow-up change."

@@ -20493,12 +20493,12 @@ defining decision)" (item 2, a sentence) and § "2. The determinism law (the oth
 last item), R-34's heading block, `plan/OPERATIONS.md` § "Toolchain" (a bullet), REQ-DEC-019, REQ-ENC-006,
 REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-ENC-003
 and REQ-SYS-015 (reqio: statement or verify, rulings, `rq` removed, note), REQ-DEC-017, REQ-DEC-022, REQ-INT-087,
-REQ-INT-088 and REQ-VAL-079 (reqio: rulings, `rq` removed, note; REQ-INT-088's statement a clause), REQ-ENC-034 to
-REQ-SYS-085 (reqio, new), TASK-M2-43 to TASK-M2-45 (new), TASK-M2-02, TASK-M2-07, TASK-M2-15 and
+REQ-INT-088 and REQ-VAL-079 (reqio: rulings, `rq` removed, note; REQ-INT-088's statement a clause), REQ-ENC-035 to
+REQ-SYS-085 (reqio, new), TASK-M2-47 to TASK-M2-49 (new), TASK-M2-02, TASK-M2-07, TASK-M2-15 and
 TASK-M2-24 (the held requirements moved), TASK-M2-25 (REQ-SYS-085), TASK-M3-24, TASK-M4-04 and TASK-M8-14 (a
 dependency each), TASK-M2-03 and TASK-M2-15 (an acceptance line each), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
 `docs/archive/review_queue/M0.md` (RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365, moved with their
-rulings); built by TASK-M2-43, TASK-M2-44, TASK-M2-45, TASK-M2-25, TASK-M3-11, TASK-M4-01,
+rulings); built by TASK-M2-47, TASK-M2-48, TASK-M2-49, TASK-M2-25, TASK-M3-11, TASK-M4-01,
 TASK-M4-03 and TASK-M4-18*
 
 The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
@@ -20542,7 +20542,7 @@ new calibration, and skip step 0 where `|I_in − 1| ≤ τ_I`.
 - **Step 0 is skipped (`λ = 1`, `r` and `p` unchanged) where `|I_in − 1| ≤ τ_I`, and `lookup_rescaled` fires exactly
   when step 0 ran.** So `C` is an exact no-op in scale on canonical input, and a canonical input raises no notice.
 - **`τ_I` is a calibration (R-71), in eps of the precision,** proposed from TASK-M2-07's measured `|I − 1|` of up to 3
-  eps: REQ-ENC-034, for the M2 gate.
+  eps: REQ-ENC-035, for the M2 gate.
 
 **RQ-296.** Step 0 divides by `√I_in` before step 2's guard, and nothing defined `C`'s output where `I_in` is 0 (the
 bodies coincide) or rounds to 0 or `+∞` with the bodies apart. Option (d): rescale in two steps; option (a): skip step 0
@@ -20600,8 +20600,8 @@ split REQ-SYS-015.
 *Where the words leave a choice, decided per R-369 (mechanical consequences; the forms under physics review):*
 - **N1. Held requirements of merged tasks move.** TASK-M2-07, TASK-M2-15, TASK-M2-02, TASK-M2-24 and TASK-M2-27 merged
   with requirements held, not closed. Where a ruling changes what the code must do, the requirement moves to a new M2
-  task that builds it: REQ-ENC-006, REQ-ENC-014 and REQ-DEC-002 to TASK-M2-43 (step 0's skip, the two steps, the
-  notice, `C`'s branch inputs and `τ_I`'s proposal); REQ-DEC-011 and REQ-VAL-017 to TASK-M2-44 (`M₀₁` and
+  task that builds it: REQ-ENC-006, REQ-ENC-014 and REQ-DEC-002 to TASK-M2-47 (step 0's skip, the two steps, the
+  notice, `C`'s branch inputs and `τ_I`'s proposal); REQ-DEC-011 and REQ-VAL-017 to TASK-M2-48 (`M₀₁` and
   decode test 12, re-proved on Metal and lavapipe). The tasks that need REQ-DEC-002 or REQ-VAL-017 (TASK-M3-24,
   TASK-M8-14, TASK-M4-04) gain the dependency; those reaching them already need nothing.
 - **N2. Requirements already in the corrected form are not rebuilt.** REQ-DEC-017 (TASK-M2-07's mirror decision,
@@ -20612,15 +20612,15 @@ split REQ-SYS-015.
   REQ-INT-066 and REQ-EVT-021 (`d²`, TASK-M4-03), REQ-INT-087 and REQ-INT-088 (`disc_input`, TASK-M3-11) and
   REQ-VAL-079 (TASK-M4-18) take the corrected rule; each task writes its form and proves it. Rule 2's `d²` form is
   not written here: it is TASK-M4-03's, physics-reviewed.
-- **N4. `τ_I`'s proposer.** The human's words name TASK-M2-07, which has merged; TASK-M2-43 proposes it from
+- **N4. `τ_I`'s proposer.** The human's words name TASK-M2-07, which has merged; TASK-M2-47 proposes it from
   TASK-M2-07's measurement, re-measured on the CPU and on Metal and lavapipe at f64 and f32.
-- **N5. The toolchain task.** TASK-M2-45 (M2, code and qa) sets the host-target flag, adds the release-profile CI
+- **N5. The toolchain task.** TASK-M2-49 (M2, code and qa) sets the host-target flag, adds the release-profile CI
   job and RQ-299's reproducer as a test. Filing the upstream report on rust-lang/rust is outside the repo, so the PR
   drafts it and the human files it. The pin's move, "then (a)", is a `rust-toolchain.toml` change in its own PR when a
   fixed nightly that `rustc_codegen_spirv` builds against exists (R-414), and it drops the flag. No code or CI file
   changes in this PR.
 - **N6. Where the doc lines go.** dd_decoder §3.1's two paragraphs on `fma(m₁, 1, m₀)` stay as the record of the form
-  built until TASK-M2-44, with a paragraph saying the premise fails; the branch-input table's `M01_TINY` row
+  built until TASK-M2-48, with a paragraph saying the premise fails; the branch-input table's `M01_TINY` row
   points there, and its `INVARIANT_INFEASIBLE` row names the corrected rule. The canonical spec's checklist item and
   the integrator contract's and dd_integrator's `d²` forms are reworded to the rule, their earlier words kept.
 
@@ -20633,8 +20633,8 @@ R-547 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-DEC-019, REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064,
 REQ-INT-066, REQ-EVT-021, REQ-ENC-003 and REQ-SYS-015 (statement or verify, rulings, `rq` removed, note) and
 REQ-DEC-017, REQ-DEC-022, REQ-INT-087, REQ-INT-088 and REQ-VAL-079 (rulings, `rq` removed, note; REQ-INT-088's
-statement a clause); adds REQ-ENC-034 (calibration, `τ_I`), REQ-TOOL-188 and REQ-TOOL-189 (the toolchain) and
-REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-43 to TASK-M2-45.
+statement a clause); adds REQ-ENC-035 (calibration, `τ_I`), REQ-TOOL-188 and REQ-TOOL-189 (the toolchain) and
+REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-47 to TASK-M2-49.
 
 ## R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
 *21 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes" (the halves
@@ -20827,8 +20827,8 @@ sentence), `docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated 
 (`06_legend.png`)" (a sentence) and § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" (the
 readouts), R-14's heading block, REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022 (reqio: statement or verify,
 rulings, `rq` removed, note), REQ-GUI-054 and REQ-GUI-087 (reqio: statement, verify, rulings, note), REQ-GUI-188,
-REQ-SYS-016, REQ-GEN-036, REQ-CHART-048 and REQ-CHART-017 (reqio: notes, rulings), REQ-GUI-341 (reqio, new),
-TASK-M8-06 (REQ-GUI-341), TASK-M8-11 (a note), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
+REQ-SYS-016, REQ-GEN-036, REQ-CHART-048 and REQ-CHART-017 (reqio: notes, rulings), REQ-GUI-345 (reqio, new),
+TASK-M8-06 (REQ-GUI-345), TASK-M8-11 (a note), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
 `docs/archive/review_queue/M0.md` (RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355, moved with their rulings); built by
 TASK-M8-06, TASK-M8-10 and TASK-M8-11*
 
@@ -20907,7 +20907,7 @@ equal masses, as TASK-M2-08 built them.
   Burrau chart preset, and the Inspector on every chart, where it shows the masses anyway; the hover label and the
   Trajectory panel are unchanged.
 - **L3. The invariant chart's entry in the GUI.** The kernel's representation is TASK-M2-12's (merged); the GUI's half,
-  setting the four controls on entry from `z₀` or the lock and editing them as chart parameters, is REQ-GUI-341,
+  setting the four controls on entry from `z₀` or the lock and editing them as chart parameters, is REQ-GUI-345,
   closed by TASK-M8-06, the Manifold view's Chart section. REQ-CHART-048 and REQ-CHART-017 gain notes.
 - **L4. REQ-VAL-022.** It carries only RQ-355's "at equal masses" here; R-551 rewrites it for RQ-475 and RQ-476.
 
@@ -20920,14 +20920,14 @@ R-549 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022 (statement or verify, rulings, `rq` removed, note),
 REQ-GUI-054 and REQ-GUI-087 (statement, verify, rulings, note) and REQ-GUI-188, REQ-SYS-016, REQ-GEN-036,
-REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-341.
+REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-345.
 
 ## R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
 Jacobi and Shape bullet and the steer bullet reworded, with their earlier words kept) and § "G2. Explore — the everyday
 view (`01_main.png`)" (the line system's fade clause), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder —
 IC precision" (a paragraph added, "The latent Jacobian"), R-452's heading block, REQ-DEC-049 (reqio, new,
-definition), REQ-GUI-342 (reqio, new, calibration), REQ-GUI-343 (reqio, new, definition), REQ-GUI-199 and
+definition), REQ-GUI-346 (reqio, new, calibration), REQ-GUI-347 (reqio, new, definition), REQ-GUI-199 and
 REQ-GUI-200 (reqio: statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (reqio: statement, `rq`
 RQ-341 replaced by RQ-522, note), REQ-GUI-244 (reqio, note), TASK-M6-35 (no longer waiting; three
 requirements added; its goal, deliverables, acceptance and notes), TASK-M8-54 (now waiting on RQ-522),
@@ -21002,7 +21002,7 @@ scale-free; (b) a weighted pseudo-inverse; (c) only the latent steer.
 *What it decides:* **option (a) with the (a2) test.**
 - **The steer uses the full-rank sets of RQ-342 and RQ-343 (b), so `J⁺ = J⁻¹` and no metric on `z` enters.**
 - **A click is refused, with the reason logged, where the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is
-  below a stated tolerance.** The tolerance is a calibration value (R-71), REQ-GUI-342.
+  below a stated tolerance.** The tolerance is a calibration value (R-71), REQ-GUI-346.
 - **The Manifold view's sliders follow as after the Chart builder's Apply (§G7).**
 
 **RQ-345** asked whether the physical views and the steer read the state before or after the energy normalisation
@@ -21031,11 +21031,11 @@ physics review, as R-452 asks):*
 - **J2. The hovered pixel (R-452 C4) stands:** on an affine chart the pixel's latent point `z₀ + (2s−1)q₁ + (2t−1)q₂`;
   on a nonlinear chart `z₀`, the help text saying so. C4's "until RQ-341 is ruled" no longer applies: RQ-341's
   Jacobian is taken at a latent point, which a nonlinear chart's pixel does not have.
-- **J3. The tolerance** of RQ-344's (a2) test is a calibration (R-71), REQ-GUI-342: TASK-M6-35 proposes it from the
+- **J3. The tolerance** of RQ-344's (a2) test is a calibration (R-71), REQ-GUI-346: TASK-M6-35 proposes it from the
   measured smaller singular value over the decoder's image (`E*` unset and set), and it is
   confirmed at the M6 gate.
 - **J4. The reference ranges RQ-346's three classes do not name.** Shape's `θ̇`, `φ̇`, `L_z` and `Ṙ` are neither angles,
-  masses nor Jacobi momenta, and the ruling's words give no range for them. It is a missing definition, REQ-GUI-343
+  masses nor Jacobi momenta, and the ruling's words give no range for them. It is a missing definition, REQ-GUI-347
   (R-72), written by TASK-M6-35 under physics review into render_gui_spec's compass section, each a fixed, stated range
   derived from the decoder's own bounds (`q_max`, the masses' and the angles' domains), never a spread measured over the
   chart's image (RQ-346's "fixed"). Flagged.
@@ -21053,7 +21053,7 @@ physics review, as R-452 asks):*
 - **J8. RQ-378.** R-510 parked it until RQ-341 is ruled, to return to the human then. RQ-341 is ruled here; the batch
   leaves RQ-378 open ("Left open, not ruled (3): RQ-378, RQ-386, RQ-391. They stay in REVIEW_QUEUE.md."), so it stays
   open in `REVIEW_QUEUE.md`, now with the human, its option (a) still applied (REQ-GUI-244's note).
-- **J9. TASK-M6-35 no longer waits.** It closes REQ-GUI-199, REQ-GUI-200 and REQ-DEC-049 to REQ-GUI-343, reviewed
+- **J9. TASK-M6-35 no longer waits.** It closes REQ-GUI-199, REQ-GUI-200 and REQ-DEC-049 to REQ-GUI-347, reviewed
   by code, qa, gui and physics as before; its linear-decoder fixture stays, and its controls gain the un-orthonormalised
   stretch (which moves with σ) and a reading before `η_E` (which differs on an `E*` chart).
 
@@ -21064,8 +21064,8 @@ R-509 (Y3's distance, J7) and R-510 (RQ-378, J8). It closes **RQ-341 to RQ-346**
 
 R-550 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Adds REQ-DEC-049 (the eight-column Jacobian, definition), REQ-GUI-342 (the steer's tolerance, calibration) and
-REQ-GUI-343 (the reference ranges the ruling's classes do not name, definition); changes REQ-GUI-199 and REQ-GUI-200
+Adds REQ-DEC-049 (the eight-column Jacobian, definition), REQ-GUI-346 (the steer's tolerance, calibration) and
+REQ-GUI-347 (the reference ranges the ruling's classes do not name, definition); changes REQ-GUI-199 and REQ-GUI-200
 (statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (statement, `rq`, note) and REQ-GUI-244 (note).
 
 ## R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
@@ -21073,8 +21073,8 @@ REQ-GUI-343 (the reference ranges the ruling's classes do not name, definition);
 (the verified line's "exactly", with its earlier words kept, and the re-verified line's ball), REQ-VAL-022 (reqio:
 statement, verify, rulings, `rq` removed, note), REQ-VAL-021 and REQ-VAL-121 (reqio: statement, verify, rulings, `rq`
 removed, note), REQ-VAL-193 (reqio, new), TASK-M2-27 (REQ-VAL-022 and REQ-VAL-121 moved out, a note), TASK-M8-15 (a
-dependency), TASK-M2-46 (new), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-475, RQ-476
-and RQ-477, moved with their rulings); built by TASK-M2-46*
+dependency), TASK-M2-50 (new), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-475, RQ-476
+and RQ-477, moved with their rulings); built by TASK-M2-50*
 
 The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
 128–130), which R-545 quotes in its opening:
@@ -21115,10 +21115,10 @@ distribution past 1.6×10⁻¹⁴ on 3 seeds of 5.
   never used to loosen 1.6×10⁻¹⁴** (REQ-VAL-193).
 
 *Where the words leave a choice, decided per R-369 (placement and tasks; the bounds under physics review):*
-- **V1. The held requirements move.** REQ-VAL-022 and REQ-VAL-121 leave TASK-M2-27 (merged) for TASK-M2-46,
+- **V1. The held requirements move.** REQ-VAL-022 and REQ-VAL-121 leave TASK-M2-27 (merged) for TASK-M2-50,
   which judges the shape checks, adds the Randomise arm (REQ-VAL-193) and proposes the bounds; TASK-M2-27 keeps
   REQ-VAL-021. TASK-M8-15, which needs REQ-VAL-022, gains the new task as a dependency.
-- **V2. Measured on the final `C`.** TASK-M2-46 depends on TASK-M2-43, because R-547 changes
+- **V2. Measured on the final `C`.** TASK-M2-50 depends on TASK-M2-47, because R-547 changes
   canonicalisation's step 0, which the round trip runs.
 - **V3. The pole check at equal masses.** "Equilateral → `|w − 1|`" is read at equal masses, where `L±` are the poles
   (R-549, RQ-355); the families draw equal-mass equilateral triangles.
@@ -21138,7 +21138,7 @@ Changes REQ-VAL-022, REQ-VAL-021 and REQ-VAL-121 (statement, verify, rulings, `r
 updated), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
 (R-407)" (the level-0 pole repeat, a sentence added; RQ-430's citation), `docs/contracts/principia_caching_contract.md`
 § "Part 4 — Baseline-first: an absolute tier, not a priority weight" (the baseline cover's bullet, a sentence added),
-R-537's and R-472's heading blocks, REQ-GUI-344 (reqio, new), REQ-GUI-267, REQ-GUI-268, REQ-GUI-269 and REQ-GUI-270
+R-537's and R-472's heading blocks, REQ-GUI-348 (reqio, new), REQ-GUI-267, REQ-GUI-268, REQ-GUI-269 and REQ-GUI-270
 (reqio: statement, rulings, note), REQ-CHART-080 (reqio: statement, rulings, note), REQ-SCHED-101 (reqio: rulings,
 note), TASK-M8-55 (a requirement added; deliverables, acceptance and notes), TASK-M8-56 (notes), `plan/tasks.yaml`,
 `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430,
@@ -21182,7 +21182,7 @@ the human will define the two features).
   human's reconciliation there ("There is one outline toggle with one state. It sits in Overlays › Chart and is reached
   also from the Trace group and `Trace…`. It is on by default, as R-541 and the demo have it, and on in the debug
   view.") supersedes this entry's "off by default" by its own words, so **the toggle is on by default and on in the
-  debug view**; its other routes are R-556's (RQ-461). Built now, by TASK-M8-55 (REQ-GUI-344).
+  debug view**; its other routes are R-556's (RQ-461). Built now, by TASK-M8-55 (REQ-GUI-348).
 - **RQ-409 (a).** Periodic charts have no zoom-out limit beyond the frame budget and the baseline cover; the demo's 3×
   cap applies only to its fixed maps.
 - **RQ-410 (a).** A level-0 repeat across a pole is drawn from its two level-1 children, as EX7(b) states; the
@@ -21208,7 +21208,7 @@ the human will define the two features).
   chart's own parameters, drawn as a figure mark (R-539) in the line system's overlay pass, a 1 px line in the axes'
   colour, drawn where the square's edge is in view and nowhere else. Its look is a dark-mode look choice under R-390,
   listed in TASK-M8-55's PR.
-- **E2. Who builds the outline.** TASK-M8-55, the extension's GUI task (RQ-408's context), closes REQ-GUI-344, the
+- **E2. Who builds the outline.** TASK-M8-55, the extension's GUI task (RQ-408's context), closes REQ-GUI-348, the
   toggle, its one state and its default; the Trace group's and `Trace…`'s routes to the same state are RQ-461's
   (R-556), built by TASK-M8-61 and TASK-M8-62.
 - **E3. The untilted sphere's maps (RQ-430)** are θ's period and the pole maps of R-537 EX7(b). Its equator fold, a
@@ -21228,7 +21228,7 @@ R-538 (TF2.2, J8), R-539 (figure marks) and R-541 (the outline on by default, as
 
 R-552 is in the "design" group of `plan/rule_groups.yaml`, with R-537.
 
-Adds REQ-GUI-344 (the outline toggle); changes REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270 and REQ-CHART-080
+Adds REQ-GUI-348 (the outline toggle); changes REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270 and REQ-CHART-080
 (statement, rulings, note) and REQ-SCHED-101 (rulings, note).
 
 ## R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*
@@ -21384,8 +21384,8 @@ corner's sentence, with its earlier words kept) and § "5.4 Past the unit square
 extension type (R-407)" (the tilted view's maps, with its earlier words kept), the heading blocks of R-467, R-473,
 R-506, R-537 and R-538 (a forward line each, their "Still in force" lines), REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101,
 REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (reqio: statement or verify, rulings, source, `rq` removed, note),
-REQ-CHART-058, REQ-GUI-106, REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (reqio), REQ-CHART-081 (reqio, new, a
-definition), TASK-M8-58 (closes REQ-CHART-081; notes), TASK-M2-36 and TASK-M8-56 (notes),
+REQ-CHART-058, REQ-GUI-106, REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (reqio), REQ-CHART-084 (reqio, new, a
+definition), TASK-M8-58 (closes REQ-CHART-084; notes), TASK-M2-36 and TASK-M8-56 (notes),
 `docs/archive/review_queue/M0.md` (RQ-470 to RQ-474, moved with their rulings) and `plan/rule_groups.yaml`; built by
 TASK-M2-36, TASK-M2-35, TASK-M8-46, TASK-M8-56 and TASK-M8-58*
 
@@ -21489,7 +21489,7 @@ console under gui review):*
   control, so it never saturates. That is the one target kind for which R-473 J2's "every hidden coordinate is set and
   tilted through its latent control" does not hold, and REQ-CHART-062's control "a d added to a physical value" stays
   a control for the latent targets. The definition, how the decode holds the other components and the masses and what
-  the readout names, is REQ-CHART-081, written into `principia_chart_decoder_contract.md` § "Tilt (basis edit)" by
+  the readout names, is REQ-CHART-084, written into `principia_chart_decoder_contract.md` § "Tilt (basis edit)" by
   TASK-M8-58 and checked by physics (R-72), before which the target is not offered.
 - **L6. The entries close.** RQ-470 to RQ-474 move to the archive. REQ-GUI-227 (`rq: RQ-470`), REQ-CHART-062
   (`rq: RQ-471`), REQ-SCHED-101 (`rq: RQ-472`), REQ-GUI-278 (`rq: RQ-472`, `RQ-473`), REQ-GUI-279 (`rq: RQ-473`) and
@@ -21507,7 +21507,7 @@ R-554 is in the "physics" group of `plan/rule_groups.yaml`, with R-473 and R-503
 
 Changes REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (statement or verify,
 rulings, source, `rq` removed, note), REQ-CHART-058 and REQ-GUI-106 (statement, verify, rulings, source, note),
-REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (notes); adds REQ-CHART-081 (a definition, M8).
+REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (notes); adds REQ-CHART-084 (a definition, M8).
 
 ## R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*
 *21 Oct 2026 · applied in `docs/design/principia_listen.md` (the adoption note; § "1. What is heard", § "2. The
@@ -21523,7 +21523,7 @@ earlier words kept), `docs/design/principia_trajectory_viewing.md` § "1. The si
 S4, S6, S8 and S9 and R-541's G6 and P8 (edited as the human's words order, the earlier words kept) and their heading
 blocks, R-109's heading block (a clause), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-309 to REQ-GUI-321,
 REQ-GUI-329, REQ-VAL-102, REQ-VAL-103, REQ-VAL-114 and REQ-SYS-060 (reqio: statement, verify, rulings, source, `rq`
-removed, note, as each needs), REQ-GUI-345 and REQ-VAL-194 (reqio, new), TASK-M8-12, TASK-M8-59, TASK-M8-60,
+removed, note, as each needs), REQ-GUI-349 and REQ-VAL-194 (reqio, new), TASK-M8-12, TASK-M8-59, TASK-M8-60,
 TASK-M8-64 and TASK-M8-65 (no longer waiting; TASK-M8-12 and TASK-M8-59 gain a requirement, TASK-M8-59 a dependency on
 TASK-M8-38), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-440 to RQ-444, RQ-450
 to RQ-458, RQ-464 and RQ-467, moved with their rulings); built by TASK-M8-12 (⚑ physics), TASK-M8-59 and TASK-M8-60*
@@ -21616,7 +21616,7 @@ the voice and effects chain transcribed node for node (the file's recommendation
   WebAudio backend, and is never a second Web Audio transcription.
 
 *Decided per R-369 (routine; reviewed by code and perf):*
-- **A1. The requirement.** A new requirement, REQ-GUI-345, states the one graph and its two outputs, closed by
+- **A1. The requirement.** A new requirement, REQ-GUI-349, states the one graph and its two outputs, closed by
   TASK-M8-59, which builds the graph (`principia_listen.md` §5, §8, §9). TASK-M8-12's audio out is the native `cpal`
   stream the graph feeds; TASK-M8-59 now depends on TASK-M8-38 too, so the browser half is checked against the shell
   that plays it. Its test renders the graph offline, with no device, and compares the samples with the output
@@ -21805,7 +21805,7 @@ R-555 is in the "design" group of `plan/rule_groups.yaml`, with R-540 and R-541.
 Changes REQ-GUI-049, REQ-GUI-315, REQ-GUI-318, REQ-GUI-319, REQ-GUI-321, REQ-VAL-102 and REQ-VAL-103 (`rq` removed,
 rulings, note); REQ-GUI-050, REQ-GUI-090, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313,
 REQ-GUI-314, REQ-GUI-316, REQ-GUI-317, REQ-GUI-320 and REQ-GUI-329 (statement or verify as each needs, rulings,
-source, `rq` removed, note); REQ-VAL-114 and REQ-SYS-060 (statement or note, rulings); adds REQ-GUI-345 (the one
+source, `rq` removed, note); REQ-VAL-114 and REQ-SYS-060 (statement or note, rulings); adds REQ-GUI-349 (the one
 synthesis graph, TASK-M8-59) and REQ-VAL-194 (Listen's entropy anchors, calibration, TASK-M8-12).
 
 ## R-556 — The trace and Listen in the GUI, R-541's questions ruled: Listen's section collapsed until first used, then remembered per user; the expanded strip's spectrum in the Legend's column; R-538's six kept-trace colours, tested against the body colours and the stain classes; only the trace leaves Lines ▾; K the lock and Space keep; TASK-M8-65 writes the instrument families; every setting set in at most two places; one outline toggle, on by default; the Trajectory panel keeps its summary, playhead and buttons; the band's heights are splitter defaults; a paused trace drawn whole at the default length only; Listen in the Trajectory panel only *(closes RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466; amends R-540 and R-541)*

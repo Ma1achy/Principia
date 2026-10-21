@@ -60,7 +60,7 @@
   - R-437
   - R-547
   milestone: M2
-  note: "R-547 (RQ-296 (d) + (a), RQ-298 (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-296, RQ-298); its fma-built CoM and I_in are rewritten and re-proved by TASK-M2-43, to which it moves (applied per R-369). The mirror decision and guard already take the corrected form (TASK-M2-07, applied meanwhile)."
+  note: "R-547 (RQ-296 (d) + (a), RQ-298 (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-296, RQ-298); its fma-built CoM and I_in are rewritten and re-proved by TASK-M2-47, to which it moves (applied per R-369). The mirror decision and guard already take the corrected form (TASK-M2-07, applied meanwhile)."
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -245,7 +245,7 @@
   - R-71
   - R-547
   milestone: M2
-  note: "Value of ε: REQ-DEC-039 (calibration). R-547 (RQ-298 (a), 21 Oct 2026): fma(m₁, 1, m₀) is not the rule's form; rewritten and re-proved by TASK-M2-44. TASK-M2-02 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-44 (applied per R-369)."
+  note: "Value of ε: REQ-DEC-039 (calibration). R-547 (RQ-298 (a), 21 Oct 2026): fma(m₁, 1, m₀) is not the rule's form; rewritten and re-proved by TASK-M2-48. TASK-M2-02 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48 (applied per R-369)."
 - id: REQ-DEC-012
   area: DEC
   statement: "The configuration block must use the canonical-frame hyperspherical decode ρ̃ = cos α·(1,0), λ̃ = sin α·(cos β, sin β), R̃ = 1, with α = α_min + (π/2 − 2α_min)·σ(z_α) at α_min = 0 (i.e. α = (π/2)σ(z_α)) and β = π·σ(z_β)."
@@ -1060,7 +1060,7 @@
   milestone: M2
 - id: REQ-ENC-006
   area: ENC
-  statement: "The scale step must be skipped where |I_in − 1| ≤ τ_I (λ = 1, r and p unchanged, no notice; τ_I is REQ-ENC-034's calibration); elsewhere it must rescale in two steps, first by a power of two (exact), then by the remainder, so that I_in neither underflows nor overflows for any finite state with the bodies apart, setting λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, recording λ, surfacing lookup_rescaled carrying λ exactly when step 0 ran, and transforming E_canon = √I_in·E_in, L_z,canon = L_z,in/I_in^(1/4), t_canon = t_in/I_in^(3/4), with timing outputs convertible back by I_in^(3/4); where I_in = 0, which then happens only when the bodies coincide, it must keep the select: divisor 1, λ = 1, p = 0, lookup_clamped, φ = +0."
+  statement: "The scale step must be skipped where |I_in − 1| ≤ τ_I (λ = 1, r and p unchanged, no notice; τ_I is REQ-ENC-035's calibration); elsewhere it must rescale in two steps, first by a power of two (exact), then by the remainder, so that I_in neither underflows nor overflows for any finite state with the bodies apart, setting λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, recording λ, surfacing lookup_rescaled carrying λ exactly when step 0 ran, and transforming E_canon = √I_in·E_in, L_z,canon = L_z,in/I_in^(1/4), t_canon = t_in/I_in^(3/4), with timing outputs convertible back by I_in^(3/4); where I_in = 0, which then happens only when the bodies coincide, it must keep the select: divisor 1, λ = 1, p = 0, lookup_clamped, φ = +0."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 2 — The scale gauge gap (missing from the original inverse policy)"
@@ -1078,7 +1078,7 @@
   - R-436
   - R-547
   milestone: M2
-  note: "R-547 (RQ-295 (c), RQ-296 (d) + (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-295, applied per R-369); it moves to TASK-M2-43, which builds the skip, the two steps and the notice (applied per R-369). *Was:* \"The scale step must set λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, record λ, surface lookup_rescaled carrying λ, and transform …\" (reworded, kept in this statement)."
+  note: "R-547 (RQ-295 (c), RQ-296 (d) + (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-295, applied per R-369); it moves to TASK-M2-47, which builds the skip, the two steps and the notice (applied per R-369). *Was:* \"The scale step must set λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, record λ, surface lookup_rescaled carrying λ, and transform …\" (reworded, kept in this statement)."
 - id: REQ-ENC-007
   area: ENC
   statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (|λ̃_y| read by abs, never max; the range holds because β reads |λ̃_y|, not by the mirror alone, R-438), s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
@@ -1236,7 +1236,7 @@
   rulings:
   - R-547
   milestone: M2
-  note: "R-547 (RQ-295 (c), 21 Oct 2026): lookup_rescaled fires exactly when step 0 ran. TASK-M2-15 merged with this requirement held (rq: RQ-295); it moves to TASK-M2-43, with REQ-ENC-006 (applied per R-369)."
+  note: "R-547 (RQ-295 (c), 21 Oct 2026): lookup_rescaled fires exactly when step 0 ran. TASK-M2-15 merged with this requirement held (rq: RQ-295); it moves to TASK-M2-47, with REQ-ENC-006 (applied per R-369)."
 - id: REQ-ENC-015
   area: ENC
   statement: "Canonicalisation must run in the order 1a subtract CoM → 0 rescale (I computed in the CoM frame) → 1b remove the boost (pᵢ ← pᵢ − mᵢP_tot/M) → 2 rotate ρ̃ to +x → 3 mirror iff λ̃_y < −δ_λ, pinned in the shared source so both precisions run the identical sequence."
@@ -1568,7 +1568,7 @@
   - R-113
   milestone: M3
   note: Split from REQ-ENC-019 (R-113, RQ-95).
-- id: REQ-ENC-034
+- id: REQ-ENC-035
   area: ENC
   kind: calibration
   statement: "The step-0 skip tolerance τ_I (R-547; RQ-295 (c)), in eps of the precision at f64 and f32, must be calibrated: proposed with its evidence by the task that needs it, from TASK-M2-07's measured |I − 1| of up to 3 eps on canonical-frame decodes, re-measured, checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
@@ -1588,7 +1588,7 @@
   - R-71
   - R-547
   milestone: M2
-  note: "R-547 (RQ-295 (c)). Proposed by TASK-M2-43, TASK-M2-07 having merged (applied per R-369)."
+  note: "R-547 (RQ-295 (c)). Proposed by TASK-M2-47, TASK-M2-07 having merged (applied per R-369)."
 - id: REQ-CHART-001
   area: CHART
   statement: "Each chart must lower to a monomorphised Rust variant (the chart a type parameter the compiler specialises); there must never be a runtime axis-kind interpreter or runtime chart-type switch on the compute side, and adding a chart must mean a lowering rule plus a kernel type."
@@ -2482,7 +2482,7 @@
   - R-72
   - R-549
   milestone: M2
-  note: "R-549 (RQ-350 (a), as applied, 21 Oct 2026): the invariant charts' parameters are the four frozen controls (z_α, z_β, z_μ₁, z_μ₂), set from z₀'s configuration and mass blocks when the chart is entered, or from the lock where one is set, and edited like any chart parameter; chart_reference §2 says so. TASK-M2-12's representation (applied meanwhile) stands; the GUI's entry is REQ-GUI-341."
+  note: "R-549 (RQ-350 (a), as applied, 21 Oct 2026): the invariant charts' parameters are the four frozen controls (z_α, z_β, z_μ₁, z_μ₂), set from z₀'s configuration and mass blocks when the chart is entered, or from the lock where one is set, and edited like any chart parameter; chart_reference §2 says so. TASK-M2-12's representation (applied meanwhile) stands; the GUI's entry is REQ-GUI-345."
 - id: REQ-CHART-049
   area: CHART
   kind: calibration
@@ -2793,7 +2793,7 @@
   - R-503
   - R-554
   milestone: M2
-  note: "R-473 (20 Oct 2026), T1, T2, J1 and J3 to J7; R-477 C2. Closed by TASK-M2-36. Units: REQ-CHART-064 (RQ-375); meanwhile the curved charts use the human's proposal and the latent chart the basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5593301205 of PR #255, P1 (applied per R-369, flagged for the human's veto as it changes area statistics; accepted by R-559): the tilted fold and its arm; TASK-M2-36 depends on TASK-M2-28 for the exponential map's fold. *Was:* the statement ended at \"render bitwise today's (C2)\", and the verify's controls began \"a tilt applied to a tangent vector at the centre\". Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): the fold survives a tilt iff N_b = 0 (τ₂ = 0 on the spherical map), and the tilted arm is split by angle. *Was:* the statement's \"so that a tilted shape-sphere view, on either map, is generically bijective\", and the verify's single arm \"the shape sphere, spherical and exponential maps (the latter on a cap straddling the equator), tilted 30° into a momentum control, reports system_image bijective … controls: a fold that pairs a tilted pixel with its shape mirror (it undercounts)\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". The verify gains the Tip-as-sheet arms at τ₂ = 180° and on m = 180°. Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". The verify's m = 180° arm uses τ₁ = 108°, τ₂ = 144° (*was:* τ₁ = τ₂ = 180°/√2), with the floating-point control and the near-boundary arm (code review 5593479346). RQ-471 (P7): the Lean corner |τ₁| = |τ₂| = 90°, ruled by R-554 (RQ-471 (a)): ray-degenerate, no fold, area weights 0, shares undefined; built and tested here. *Was:* \"the Lean corner |τ₁| = |τ₂| = 90° waits; the rest does not\" and, in the verify, \"the Lean-each-axis corner |τ₁| = |τ₂| = 90° with one target is not tested until RQ-471 is ruled;\". Physics review 5593531369 of PR #255, P8, P9: the ulp-off-boundary arms with the tolerance bounds, and the Lean and two-target arms. *Was:* \"and at τ₁ = 108°, τ₂ = 143.9° (m just short of 180°) report bijective (control: a tolerance rule that keeps the fold there fails)\". R-554 L5: the shape sphere's physical p_λ tilt targets (REQ-CHART-081, TASK-M8-58) add d to the physical value; the control \"a d added to a physical value\" is for the latent targets."
+  note: "R-473 (20 Oct 2026), T1, T2, J1 and J3 to J7; R-477 C2. Closed by TASK-M2-36. Units: REQ-CHART-064 (RQ-375); meanwhile the curved charts use the human's proposal and the latent chart the basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5593301205 of PR #255, P1 (applied per R-369, flagged for the human's veto as it changes area statistics; accepted by R-559): the tilted fold and its arm; TASK-M2-36 depends on TASK-M2-28 for the exponential map's fold. *Was:* the statement ended at \"render bitwise today's (C2)\", and the verify's controls began \"a tilt applied to a tangent vector at the centre\". Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): the fold survives a tilt iff N_b = 0 (τ₂ = 0 on the spherical map), and the tilted arm is split by angle. *Was:* the statement's \"so that a tilted shape-sphere view, on either map, is generically bijective\", and the verify's single arm \"the shape sphere, spherical and exponential maps (the latter on a cap straddling the equator), tilted 30° into a momentum control, reports system_image bijective … controls: a fold that pairs a tilted pixel with its shape mirror (it undercounts)\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". The verify gains the Tip-as-sheet arms at τ₂ = 180° and on m = 180°. Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". The verify's m = 180° arm uses τ₁ = 108°, τ₂ = 144° (*was:* τ₁ = τ₂ = 180°/√2), with the floating-point control and the near-boundary arm (code review 5593479346). RQ-471 (P7): the Lean corner |τ₁| = |τ₂| = 90°, ruled by R-554 (RQ-471 (a)): ray-degenerate, no fold, area weights 0, shares undefined; built and tested here. *Was:* \"the Lean corner |τ₁| = |τ₂| = 90° waits; the rest does not\" and, in the verify, \"the Lean-each-axis corner |τ₁| = |τ₂| = 90° with one target is not tested until RQ-471 is ruled;\". Physics review 5593531369 of PR #255, P8, P9: the ulp-off-boundary arms with the tolerance bounds, and the Lean and two-target arms. *Was:* \"and at τ₁ = 108°, τ₂ = 143.9° (m just short of 180°) report bijective (control: a tolerance rule that keeps the fold there fails)\". R-554 L5: the shape sphere's physical p_λ tilt targets (REQ-CHART-084, TASK-M8-58) add d to the physical value; the control \"a d added to a physical value\" is for the latent targets."
 - id: REQ-CHART-063
   area: CHART
   statement: "A mass hidden coordinate must be tilted in logits, d added to the mass logits, and every linked coordinate in its link's pre-image (its latent control), never in the physical value, so that a tilt of the shape-sphere chart into a mass keeps every pixel's masses positive and summing to 1 (C7)."
@@ -3160,7 +3160,7 @@
   - R-552
   milestone: M8
   note: "R-538 TF2.2 (J8); R-552 (RQ-430 (a) ruled, as applied meanwhile). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"RQ-430 (a) applied meanwhile.\""
-- id: REQ-CHART-081
+- id: REQ-CHART-084
   area: CHART
   kind: definition
   statement: "The shape sphere's physical-momentum tilt targets must be defined (R-554, RQ-474 (a); R-72): the physical p_λ components p_λ,x and p_λ,y, read in the shape sphere's own frame (ρ along +x, unmirrored), offered as tilt targets on the shape sphere as the trace demo's tab F builds them, the tilt adding d to the physical component at the slice centre and not to its latent control; the definition (how the decode holds the other momenta and the masses, the target's range, what the readout names) must be written into the chart and decoder contract's Tilt (basis edit) by the task that needs it and checked by the physics reviewer, and the target must not be offered until it is."
@@ -16032,7 +16032,7 @@
   - R-540
   - R-555
   milestone: M8
-  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-313). RQ-440 ruled by R-555 (a): one Rust synthesis graph, natively through cpal (REQ-GUI-345)."
+  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-313). RQ-440 ruled by R-555 (a): one Rust synthesis graph, natively through cpal (REQ-GUI-349)."
 - id: REQ-GUI-050
   area: GUI
   statement: "Sonification must cross-fade between hovered ICs and never retrigger per pixel. The bank cross-fades over 140 ms. A struck instrument's strike on a new run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger."
@@ -18688,7 +18688,7 @@
   note: "R-452 (C6 applied per R-369); closed by TASK-M6-34. REQ-GUI-183's three siblings stay TASK-M6-31's record; this adds the view buttons after them."
 - id: REQ-GUI-199
   area: GUI
-  statement: "On the mock engine, the compass's Jacobi and Shape views must push the slice plane through the latent Jacobian J (R-550: the eight-column, f64, central-difference ∂x/∂z of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and η_E) at z₀, or at the hovered pixel's latent point on an affine chart while the pointer is over the figure, u₁ = J q̂₁ and u₂ = J q̂₂ with q̂₁, q̂₂ the slice plane's pair orthonormalised, and draw the Plücker grid of u₁ ∧ u₂ over the view's eight physical coordinates, each divided by its fixed reference range (angles by the length of their domain, masses by 1, momenta by the decoder's momentum saturation bound q_max, Shape's rates and L_z by REQ-GUI-343's ranges), with the Plücker view's colouring, outline and hover, and a readout of the dominant pair and the area stretch √(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²) on the orthonormalised pair; Jacobi's eight must be α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M, each named as the decoder writes it, and Shape's θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M, θ and φ in R-14's convention (φ the polar angle from +w), the rates d/dt at t = 0 of the decoded state's mass-weighted ρ̃, λ̃, the sphere's poles named as the chart's singularities; never the reference's synthetic Jacobian; where J q̂₁ ∧ J q̂₂ vanishes the view must say so rather than draw; and the help text must name the metric and say that these views change as the slice moves, because the Jacobian depends on z₀, while the Plücker view does not."
+  statement: "On the mock engine, the compass's Jacobi and Shape views must push the slice plane through the latent Jacobian J (R-550: the eight-column, f64, central-difference ∂x/∂z of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and η_E) at z₀, or at the hovered pixel's latent point on an affine chart while the pointer is over the figure, u₁ = J q̂₁ and u₂ = J q̂₂ with q̂₁, q̂₂ the slice plane's pair orthonormalised, and draw the Plücker grid of u₁ ∧ u₂ over the view's eight physical coordinates, each divided by its fixed reference range (angles by the length of their domain, masses by 1, momenta by the decoder's momentum saturation bound q_max, Shape's rates and L_z by REQ-GUI-347's ranges), with the Plücker view's colouring, outline and hover, and a readout of the dominant pair and the area stretch √(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²) on the orthonormalised pair; Jacobi's eight must be α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M, each named as the decoder writes it, and Shape's θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M, θ and φ in R-14's convention (φ the polar angle from +w), the rates d/dt at t = 0 of the decoded state's mass-weighted ρ̃, λ̃, the sphere's poles named as the chart's singularities; never the reference's synthetic Jacobian; where J q̂₁ ∧ J q̂₂ vanishes the view must say so rather than draw; and the help text must name the metric and say that these views change as the slice moves, because the Jacobian depends on z₀, while the Plücker view does not."
   source:
   - file: decisions.md
     section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
@@ -18709,7 +18709,7 @@
   note: "R-452; R-550 (RQ-341 to RQ-343, RQ-345 and RQ-346 ruled, 21 Oct 2026): the latent Jacobian (REQ-DEC-049), the full-rank sets, the state after η_E, the fixed-range metric. Closed by TASK-M6-35, which no longer waits. C4 (the hovered pixel on an affine chart) applied per R-369 and kept (R-550 J2). *Was:* \"the Jacobian, its coordinates and the stretch must be those RQ-341, RQ-342, RQ-343, RQ-345 and RQ-346 settle (proposed: Jacobi ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ as the decoder writes them; Shape n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ)\", with u₁ = J q₁, u₂ = J q₂ and the stretch on the un-orthonormalised q."
 - id: REQ-GUI-200
   area: GUI
-  statement: "On the mock engine, a click on cell (i, j) of the compass's Jacobi or Shape view must set the slice plane to the latent preimage of that physical plane at z₀, q₁ ∝ J⁻¹ e_i and q₂ ∝ J⁻¹ e_j Gram–Schmidt orthonormalised, J the latent Jacobian over R-550's full-rank coordinates (so J⁺ = J⁻¹ and no metric on z enters), read after η_E; it must refuse the click and log the reason to the console where the smaller singular value of [P e_i, P e_j], P = J J⁺, is below REQ-GUI-342's tolerance (a chart singularity, such as the Shape view's poles or a saturated link, and on an E*-normalised chart a cell whose plane needs the direction normal to the energy shell, logged \"normal to the energy shell\"); and every steer must be one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following as after the Chart builder's Apply (§G7)."
+  statement: "On the mock engine, a click on cell (i, j) of the compass's Jacobi or Shape view must set the slice plane to the latent preimage of that physical plane at z₀, q₁ ∝ J⁻¹ e_i and q₂ ∝ J⁻¹ e_j Gram–Schmidt orthonormalised, J the latent Jacobian over R-550's full-rank coordinates (so J⁺ = J⁻¹ and no metric on z enters), read after η_E; it must refuse the click and log the reason to the console where the smaller singular value of [P e_i, P e_j], P = J J⁺, is below REQ-GUI-346's tolerance (a chart singularity, such as the Shape view's poles or a saturated link, and on an E*-normalised chart a cell whose plane needs the direction normal to the energy shell, logged \"normal to the energy shell\"); and every steer must be one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following as after the Chart builder's Apply (§G7)."
   source:
   - file: decisions.md
     section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
@@ -20218,7 +20218,7 @@
   note: "R-538 TM8 (I7, I11). Closed by TASK-M8-58. RQ-417 (b) to the readout, RQ-425 (a) and RQ-429 (a) (R-538 TF2.1, TF1; J5, J10), ruled by R-553 as applied meanwhile; the count line's wording is R-553 K1. *Was:* \"(\\\"in forbidden: N samples\\\")\" and \"(RQ-417 (b) meanwhile)\"."
 - id: REQ-GUI-277
   area: GUI
-  statement: "A trace must leave a chart only where a coordinate entering a shown axis with non-zero weight has no value (R-538 TF1): ±∞ from a saturated link, NaN, or a bounded axis's inverse outside its domain; hidden coordinates never make it leave, they are fade, and moving off the slice is never leaving; θ and φ of the shape sphere, alone or in any mix, a mass, and a physical quantity whose warp's inverse has a value never make it leave; a latent coordinate behind a saturating link makes it leave exactly when it has non-zero weight in a shown axis (on a tilt toward z_q, while the target's |q₃| ≥ q_max, RQ-424 (a), R-553), and on the shape sphere tilted toward a physical p_λ component (REQ-CHART-081) never (R-554, RQ-474 (a)), and never on the latent z_α × z_β chart through a momentum; where it leaves, the reach rings mark it and the line is dashed until it re-enters; the trace must never run the inverse encode contract's lookup and lock validation (Part 6) on a sample's state, but encode the shown coordinates without clamping and check each shown axis on its own (TF2.1; RQ-429 (a))."
+  statement: "A trace must leave a chart only where a coordinate entering a shown axis with non-zero weight has no value (R-538 TF1): ±∞ from a saturated link, NaN, or a bounded axis's inverse outside its domain; hidden coordinates never make it leave, they are fade, and moving off the slice is never leaving; θ and φ of the shape sphere, alone or in any mix, a mass, and a physical quantity whose warp's inverse has a value never make it leave; a latent coordinate behind a saturating link makes it leave exactly when it has non-zero weight in a shown axis (on a tilt toward z_q, while the target's |q₃| ≥ q_max, RQ-424 (a), R-553), and on the shape sphere tilted toward a physical p_λ component (REQ-CHART-084) never (R-554, RQ-474 (a)), and never on the latent z_α × z_β chart through a momentum; where it leaves, the reach rings mark it and the line is dashed until it re-enters; the trace must never run the inverse encode contract's lookup and lock validation (Part 6) on a sample's state, but encode the shown coordinates without clamping and check each shown axis on its own (TF2.1; RQ-429 (a))."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -20234,7 +20234,7 @@
     section: "R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15's second arm, on REQ-CHART-081's physical-momentum tilt target, R-554); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
+    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15's second arm, on REQ-CHART-084's physical-momentum tilt target, R-554); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
   rulings:
   - R-473
   - R-509
@@ -20242,7 +20242,7 @@
   - R-553
   - R-554
   milestone: M8
-  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a), ruled by R-553 as applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. T15's physical-momentum arm runs on the shape sphere's physical p_λ tilt target, R-554 (RQ-474 (a)), defined by REQ-CHART-081 in this task. *Was:* \"T15's physical-momentum arm waits on RQ-474 (physics review 5594430380 of PR #263, P5, applied per R-369); the rest does not wait.\" and, in the verify, \"waiting on RQ-474: R-473 offers no physical-momentum tilt target\". *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)\"."
+  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a), ruled by R-553 as applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. T15's physical-momentum arm runs on the shape sphere's physical p_λ tilt target, R-554 (RQ-474 (a)), defined by REQ-CHART-084 in this task. *Was:* \"T15's physical-momentum arm waits on RQ-474 (physics review 5594430380 of PR #263, P5, applied per R-369); the rest does not wait.\" and, in the verify, \"waiting on RQ-474: R-473 offers no physical-momentum tilt target\". *Was (verify, before PR #263's fix round):* method unit test, \"cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)\"."
 - id: REQ-GUI-278
   area: GUI
   statement: "Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a), R-553); on a tilted view the trace's images over a pole follow REQ-SCHED-101's pole maps, drawn only where N_a = 0 and N_b = 0, and no image across the equator fold is drawn (R-554, RQ-472 (a))."
@@ -20518,7 +20518,7 @@
   - R-540
   - R-555
   milestone: M8
-  note: "R-540 S5; with a struck instrument the chord strikes, against REQ-GUI-050's never retrigger: RQ-452, the code applied meanwhile. Closed by TASK-M8-59. R-555 rules RQ-452 (a), as the code: the struck chord's strike is the instrument's timbre under the bank's cross-fade (REQ-GUI-050); RQ-440 ruled (a), one synthesis graph (REQ-GUI-345)."
+  note: "R-540 S5; with a struck instrument the chord strikes, against REQ-GUI-050's never retrigger: RQ-452, the code applied meanwhile. Closed by TASK-M8-59. R-555 rules RQ-452 (a), as the code: the struck chord's strike is the instrument's timbre under the bank's cross-fade (REQ-GUI-050); RQ-440 ruled (a), one synthesis graph (REQ-GUI-349)."
 - id: REQ-GUI-316
   area: GUI
   statement: "Listen's loudness must be principia_listen.md §7's: the window's shape rms (with the rotation's under the default signal); level 0 unless rms > RMS_FLOOR, RMS_FLOOR being 10× the larger of the f64 floor of an exactly rotating triangle under Angles only, 4.9e-8, and L₆₀, the maximum shape rms under Angles only of Lagrange rotating over t ≤ 60 with the shipped integrator, measured and recorded in §7; otherwise clamp(√min(1, rms/0.1), Min, Max) under Loudness: follows the shape's movement (the default), or clamp(1, Min, Max) normalised; Min level 15 %, Max level 100 %, Volume 60 % by default."
@@ -20980,7 +20980,7 @@
   - R-542
   milestone: M7
   note: "PR #270's code review, 2; closed by TASK-M7-51, which builds the inspector (gui re-review G6, applied per R-369). The Picture base's upload is its own file picker, labelled as the prototype has it (\"Your image…\"), distinct from File › Import picture (the pxpack restore). *Was:* \"Closed by TASK-M7-49.\""
-- id: REQ-GUI-341
+- id: REQ-GUI-345
   area: GUI
   statement: "On entering an invariant chart ((L_z, E) or (L_z, K)) the four frozen controls (z_α, z_β, z_μ₁, z_μ₂), the chart's parameters, must be set from z₀'s configuration and mass blocks, or from the lock where one is set, and must then be edited like any chart parameter (Design axiom 6), one undoable SetField each (R-549; RQ-350)."
   source:
@@ -20997,7 +20997,7 @@
   - R-549
   milestone: M8
   note: "R-549 (RQ-350 (a), as applied). Closed by TASK-M8-06, the Manifold view's Chart section (applied per R-369)."
-- id: REQ-GUI-342
+- id: REQ-GUI-346
   area: GUI
   kind: calibration
   statement: "The physical steer's refusal tolerance, the bound below which the smaller singular value of [P e_i, P e_j] (P = J J⁺) refuses a click (R-550, RQ-344's (a2) test), must be a calibrated value (R-71), proposed by TASK-M6-35 from that singular value measured over the decoder's image with E* unset and set, and confirmed at the M6 gate."
@@ -21014,7 +21014,7 @@
   - R-550
   milestone: M6
   note: "R-550 (RQ-344 (a), (a2)), J3. Closed by TASK-M6-35, proposed for the M6 gate."
-- id: REQ-GUI-343
+- id: REQ-GUI-347
   area: GUI
   kind: definition
   statement: "Each physical coordinate of the compass's Shape view that RQ-346's ruling does not name a class for (θ̇, φ̇, L_z and Ṙ: neither an angle, a mass nor a Jacobi momentum) must have a stated, fixed reference range (R-550, RQ-346 (c)), derived from the decoder's own bounds (q_max, the masses' and the angles' domains) and never measured over the chart's image, written by TASK-M6-35 (R-72) into render_gui_spec § \"The compass: look and views (R-451, R-452)\" under physics review, and the compass's grid and help text must use it."
@@ -21031,7 +21031,7 @@
   - R-550
   milestone: M6
   note: "R-550 J4 (flagged): the ruling's words give angles, masses and momenta their ranges; the Shape view's rates and L_z are a missing definition. Closed by TASK-M6-35."
-- id: REQ-GUI-344
+- id: REQ-GUI-348
   area: GUI
   statement: "On the real engine, Overlays ▾'s Chart group must hold an \"outline the chart's primary square\" toggle (R-552, RQ-408 (a)): one toggle with one state in the view's overlay state, on by default (RQ-461's reconciliation, R-556), drawn whatever its state while a debug view is the figure (View › Debug view, R-467) and returning to its own state when the debug view is left, undoable as every Overlays ▾ toggle is and saved by \"save as default\"; when on it must draw the edge of [0,1]² of the chart's own parameters as a figure mark (R-539), wherever that edge is in view, the view panned or zoomed past the square included, and nothing where it is not."
   source:
@@ -21049,7 +21049,7 @@
   - R-552
   milestone: M8
   note: "R-552 (RQ-408 (a); its default by RQ-461, R-556), E1, E2. Closed by TASK-M8-55. The Trace group's and Trace…'s routes to the same state are RQ-461's (R-556), built by TASK-M8-61 and TASK-M8-62."
-- id: REQ-GUI-345
+- id: REQ-GUI-349
   area: GUI
   statement: "Listen's voice and effects chain must be one Rust synthesis graph, transcribed node for node from trace_sound.html (makeVoice, INSTRUMENTS, the bank, the effects); natively it must play through cpal on its own audio thread, and the browser build must play the same graph's samples in TASK-M8-38's shell (an AudioWorklet or cpal's WebAudio backend), never a second Web Audio transcription."
   source:
@@ -24164,7 +24164,7 @@
   rulings:
   - R-547
   milestone: M2
-  note: "R-547 (RQ-299 (b) + (c), then (a)). Closed by TASK-M2-45. Filing the report on rust-lang/rust is outside the repo, so the PR drafts it and the human files it (applied per R-369)."
+  note: "R-547 (RQ-299 (b) + (c), then (a)). Closed by TASK-M2-49. Filing the report on rust-lang/rust is outside the repo, so the PR drafts it and the human files it (applied per R-369)."
 - id: REQ-TOOL-189
   area: TOOL
   statement: "CI must run the native tests at the release profile, in a job of its own on every push, so that a miscompile a test covers is seen (R-547; RQ-299 (c))."
@@ -24179,7 +24179,7 @@
   rulings:
   - R-547
   milestone: M2
-  note: R-547 (RQ-299). Closed by TASK-M2-45.
+  note: R-547 (RQ-299). Closed by TASK-M2-49.
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -24458,7 +24458,7 @@
   - R-84
   - R-547
   milestone: M2
-  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-44, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547)."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547)."
 - id: REQ-VAL-018
   area: VAL
   statement: "z = 0 must decode to the canonical golden IC — masses (⅓,⅓,⅓), α = π/4, β = π/2, rest (q = 0), I = 1 — with every derived value asserted in f64 and f32."
@@ -24550,7 +24550,7 @@
   - R-549
   - R-551
   milestone: M2
-  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-549 (RQ-355): the pole at equal masses. R-551 (RQ-475 (a) + (c), RQ-476 (a), 21 Oct 2026): \"exactly\" is the chart's clamp image, bit for bit, at the equator, and a calibrated bound on |w − 1| and |w|; |z| < 4 is the ball. TASK-M2-27 merged with this requirement held (rq: RQ-355, RQ-475, RQ-476), its gate drawing in the ball and reporting the shape checks unjudged (applied meanwhile); it moves to TASK-M2-46, which judges them (applied per R-369). *Was:* \"over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly\" and the verify's \"equilateral → pole and collinear → w = 0 exactly\" (stale value, replaced by R-551)."
+  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-549 (RQ-355): the pole at equal masses. R-551 (RQ-475 (a) + (c), RQ-476 (a), 21 Oct 2026): \"exactly\" is the chart's clamp image, bit for bit, at the equator, and a calibrated bound on |w − 1| and |w|; |z| < 4 is the ball. TASK-M2-27 merged with this requirement held (rq: RQ-355, RQ-475, RQ-476), its gate drawing in the ball and reporting the shape checks unjudged (applied meanwhile); it moves to TASK-M2-50, which judges them (applied per R-369). *Was:* \"over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly\" and the verify's \"equilateral → pole and collinear → w = 0 exactly\" (stale value, replaced by R-551)."
 - id: REQ-VAL-023
   area: VAL
   statement: "The shape-sphere dot must land on a binary-collision landmark exactly when two bodies coincide, at any mass ratio."
@@ -26246,7 +26246,7 @@
   - R-71
   - R-551
   milestone: M2
-  note: "R-551 (RQ-475 to RQ-477, 21 Oct 2026). TASK-M2-27 merged with this requirement held (rq: RQ-476, RQ-477); its proposal (1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles, the canonical CoM) stands as the first part, and the requirement moves to TASK-M2-46, which proposes the shape bounds and the Randomise arm's (applied per R-369). *Was:* \"The Inspector's round-trip and invariance gates for the Rust Inspector (max ‖z − z′‖ and max ‖Δz‖ under the whole-system handles) must be calibrated\" (reworded, kept in this statement)."
+  note: "R-551 (RQ-475 to RQ-477, 21 Oct 2026). TASK-M2-27 merged with this requirement held (rq: RQ-476, RQ-477); its proposal (1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles, the canonical CoM) stands as the first part, and the requirement moves to TASK-M2-50, which proposes the shape bounds and the Randomise arm's (applied per R-369). *Was:* \"The Inspector's round-trip and invariance gates for the Rust Inspector (max ‖z − z′‖ and max ‖Δz‖ under the whole-system handles) must be calibrated\" (reworded, kept in this statement)."
 - id: REQ-VAL-122
   area: VAL
   kind: calibration
@@ -27539,7 +27539,7 @@
   - R-71
   - R-551
   milestone: M2
-  note: "R-551 (RQ-477 (c)): qa measured rotate-all 1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ on this distribution, 3 of 5 seeds past 1.6×10⁻¹⁴. Closed by TASK-M2-46."
+  note: "R-551 (RQ-477 (c)): qa measured rotate-all 1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ on this distribution, 3 of 5 seeds past 1.6×10⁻¹⁴. Closed by TASK-M2-50."
 - id: REQ-VAL-194
   area: VAL
   kind: calibration

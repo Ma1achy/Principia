@@ -29,5 +29,5 @@ The IC Inspector's verified bounds are re-established on the Rust decode and enc
 ## Notes
 - These are z-space gates; |z| < 4 keeps s(1−s) ≥ ~0.018, far from the 10⁻⁶ clamps, so inverse_encode Part 4's "never in z near saturation" rule is respected. The handle gate at 1.6×10⁻¹⁴ is the reference tool's number; if the Rust measurement differs, REQ-VAL-121's proposal says so rather than loosening the gate (physics checklist §1).
 - R-551 (21 Oct 2026; RQ-475 to RQ-477): this task merged with REQ-VAL-022 and REQ-VAL-121 held; the shape checks, the
-  Randomise arm and the bounds' proposal move to TASK-M2-46 with them (applied per R-369). REQ-VAL-021's
+  Randomise arm and the bounds' proposal move to TASK-M2-50 with them (applied per R-369). REQ-VAL-021's
   distribution, `g₀·D(z)` with `z` in the ball `‖z‖ < 4`, is this task's gate as built.
