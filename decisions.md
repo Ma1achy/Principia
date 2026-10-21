@@ -16360,7 +16360,7 @@ Changes REQ-GEN-014 (rulings, source, note).
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
-REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-183 (reqio, new), TASK-M8-31 (closes it;
+REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
 references, deliverables, acceptance, notes), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
 `docs/archive/review_queue/M0.md` (RQ-384, moved with its ruling); built by TASK-M8-31*
 
@@ -16390,11 +16390,11 @@ frame re-integrated at its own values; live playback does not interpolate them; 
   each such segment and its parameters before the job runs ("link parameters interpolated: every frame a different
   decoder"), the exported artefact carrying the flag beside its embedded spec, listing them, and each frame's record
   holding that frame's values in its `SimConfig`; and physics review (⚑) is required where it is built (TASK-M8-31's
-  reviewers include physics). REQ-TOOL-183 (new) holds the flag, with a control: an interpolating export with no flag
+  reviewers include physics). REQ-TOOL-185 (new) holds the flag, with a control: an interpolating export with no flag
   fails.
 - **F6. The tests.** REQ-TOOL-175's verify becomes `keyframe_link_params`: a blocking export's frames carry the eased
   value and each re-integrates; live playback cuts; a link-id change cuts in both; controls, a blocking export that
-  cuts and a live playback that interpolates. REQ-TOOL-183's `export_link_param_flag`.
+  cuts and a live playback that interpolates. REQ-TOOL-185's `export_link_param_flag`.
 
 *What it amends:* **R-483**, X7's and H7's "Meanwhile parameters are never interpolated (RQ-384)": a parameter now
 interpolates in a blocking export. A link-id change, and a parameter change in live playback, stay cuts. It closes
@@ -16402,7 +16402,7 @@ interpolates in a blocking export. A link-id change, and a parameter change in l
 
 R-520 is in the "design" group of `plan/rule_groups.yaml`, with R-483.
 
-Adds REQ-TOOL-183; changes REQ-TOOL-175 (statement, verify, rulings, source, note).
+Adds REQ-TOOL-185; changes REQ-TOOL-175 (statement, verify, rulings, source, note).
 
 ## R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*
 *20 Oct 2026 · applied in `docs/design/principia_dd_image_embedding.md` § "6. What travels" (the changed-definition
@@ -16412,7 +16412,7 @@ bullet, with its earlier words kept, and the tier table's tier 1), `docs/design/
 decoder's identity on import, with its earlier words kept), `docs/contracts/principia_chart_decoder_contract.md` §
 "Integrity: the link is part of the experiment" (the record's sentence, with its earlier words kept), REQ-TOOL-172
 (reqio: statement, verify, rulings, source, note; `rq: RQ-385` removed), REQ-TOOL-171 (reqio: statement, verify,
-rulings, note), REQ-TOOL-112 (reqio, note), REQ-TOOL-174 (with R-522), REQ-TOOL-184 (reqio, new), TASK-M7-45 (closes
+rulings, note), REQ-TOOL-112 (reqio, note), REQ-TOOL-174 (with R-522), REQ-TOOL-186 (reqio, new), TASK-M7-45 (closes
 it; no longer waits), TASK-M7-44 (a dependency on TASK-M7-45), TASK-M7-31 (a note), `plan/tasks.yaml`,
 `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-385, moved with its ruling); built by TASK-M7-45*
 
@@ -16440,7 +16440,7 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
 - **H2. Where it travels.** Per block, four in all, a decimal string each, beside the build hash and the schema version
   wherever they travel: the image record's tier 1 and every other destination's sidecar (snapshot JSON, a share link,
   the profiler header, the animation spec, the `tEXt` chunk). Not in `SimConfig`, so R-484's identity and its table
-  are unchanged. REQ-TOOL-184 (new) is the writing side.
+  are unchanged. REQ-TOOL-186 (new) is the writing side.
 - **H3. The reader.** A block whose hash differs from the build's entry of that id: "state present, cannot recreate",
   naming exactly that link (C11's "entry hash differs" arm). All four matching: a schema version other than the
   reader's refuses nothing on the links' account; it stays the whole-ledger check of what a stored payload's bits mean,
@@ -16450,16 +16450,16 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
 - **H4. A record with no hashes** (one written by a build between TASK-M7-31 and TASK-M7-45) is read under (a): a
   schema version other than the reader's is refused, naming its links as possibly changed (REQ-TOOL-171). A record
   written before R-483 (`"links":{}`) is X5's, unchanged.
-- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-184. TASK-M7-44 re-measures the
+- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-186. TASK-M7-44 re-measures the
   capacity with tier 1 holding the hashes (about 100 B of JSON), so it depends on TASK-M7-45.
-- **H6. Numbering.** REQ-TOOL-184 is numbered past the other open ports' TOOL ids.
+- **H6. Numbering.** REQ-TOOL-186 is numbered past the other open ports' TOOL ids.
 
 *What it amends:* **R-483**, H4 (b)'s meanwhile, the schema-version refusal for every record: it now holds only for a
 record with no entry hashes. X4's (a) and (c), unknown ids refused and never substituted, stand. It closes **RQ-385**.
 
 R-521 is in the "design" group of `plan/rule_groups.yaml`, with R-483.
 
-Adds REQ-TOOL-184; changes REQ-TOOL-172 (statement, verify, rulings, source, note; `rq` removed), REQ-TOOL-171
+Adds REQ-TOOL-186; changes REQ-TOOL-172 (statement, verify, rulings, source, note; `rq` removed), REQ-TOOL-171
 (statement, verify, rulings, note), REQ-TOOL-112 (rulings, note) and REQ-TOOL-174 (verify, rulings, note, with R-522).
 
 ## R-522 — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile

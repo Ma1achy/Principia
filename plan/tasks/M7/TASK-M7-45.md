@@ -1,7 +1,7 @@
 # TASK-M7-45 — The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)
 
 - **Milestone:** M7
-- **Closes:** REQ-TOOL-172, REQ-TOOL-184
+- **Closes:** REQ-TOOL-172, REQ-TOOL-186
 - **Depends on:** TASK-M7-31
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -24,7 +24,7 @@ Each recorded link carries its own registry-entry hash beside the build hash and
 
 ## Acceptance tests
 - `cargo test -p engine decoder_identity_per_link` — REQ-TOOL-172's verify.
-- `cargo test -p engine entry_hashes_written` — REQ-TOOL-184's verify.
+- `cargo test -p engine entry_hashes_written` — REQ-TOOL-186's verify.
 
 ## Notes
 - **R-521 (20 Oct 2026) rules RQ-385** ("per-link hash", option (b)): this task no longer waits. REQ-TOOL-171's schema-version refusal stays for a record with no entry hashes. TASK-M7-44 measures tier 1 with the hashes, so it depends on this task (applied per R-369). *Was:* "Waits on RQ-385 (a leaf): meanwhile REQ-TOOL-171's schema-version refusal stands. The recommendation is (b), a per-link entry hash in the sidecar."

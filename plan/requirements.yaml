@@ -20813,7 +20813,7 @@
   - R-483
   - R-521
   milestone: M7
-  note: "R-483 X4: the schema version covers every registry entry by content (R-340). R-521 (RQ-385 ruled, 20 Oct 2026): each recorded link carries its own entry hash (REQ-TOOL-172, REQ-TOOL-184), which answers the links' part; this definition still names the build-hash component that detects a chart or decode change outside the links. *Was:* \"whether each recorded link carries its own entry hash is RQ-385 (20 Oct 2026).\""
+  note: "R-483 X4: the schema version covers every registry entry by content (R-340). R-521 (RQ-385 ruled, 20 Oct 2026): each recorded link carries its own entry hash (REQ-TOOL-172, REQ-TOOL-186), which answers the links' part; this definition still names the build-hash component that detects a chart or decode change outside the links. *Was:* \"whether each recorded link carries its own entry hash is RQ-385 (20 Oct 2026).\""
 - id: REQ-TOOL-113
   area: TOOL
   kind: calibration
@@ -21961,7 +21961,7 @@
   - R-483
   - R-521
   milestone: M7
-  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-184. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\""
+  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\""
 - id: REQ-TOOL-173
   area: TOOL
   statement: "A record or export whose links are `{}` (written before Links was filled) must be read with its links unrecorded: under the same build hash it recreates under this build's defaults, labelled so; under another it is \"state present, links unrecorded\", recreated only when the user accepts \"Recreate with this build's default links\" and then badged \"links assumed\"; the embedded record's layout version must be 4."
@@ -22019,7 +22019,7 @@
   - R-483
   - R-520
   milestone: M8
-  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-183). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\""
+  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-185). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\""
 - id: REQ-TOOL-176
   area: TOOL
   statement: "Every destination (snapshot JSON, a share link, the profiler header, the embedded record, the tEXt chunk and an animation spec) must carry a non-default link and parameter that read back equal to the set value, and at the defaults every link field must still be present."
@@ -22122,7 +22122,7 @@
   - R-484
   milestone: M7
   note: R-484 RT4, T4, J4, J8 (20 Oct 2026).
-- id: REQ-TOOL-183
+- id: REQ-TOOL-185
   area: TOOL
   statement: "A blocking export that interpolates link parameters must be flagged: the planner must name each such segment and its parameters before the job runs (\"link parameters interpolated: every frame a different decoder\"), the exported artefact must carry the flag beside its embedded spec, listing the segments and the parameters, and each frame's record must hold that frame's values; an export with no such segment must carry no flag."
   source:
@@ -22137,7 +22137,7 @@
   - R-520
   milestone: M8
   note: "R-520 (RQ-384 ruled: \"blocking export only, flagged\", 20 Oct 2026); the flag's form applied per R-369. Closed by TASK-M8-31. Physics review is required (⚑)."
-- id: REQ-TOOL-184
+- id: REQ-TOOL-186
   area: TOOL
   statement: "Every destination (the embedded record's tier 1, the PNG tEXt chunk, snapshot JSON, a share link, the profiler header and an animation spec) must carry, beside the build hash and the schema version, one entry hash per block, the hash of that block's recorded link's registry entry by its semantic content, each a u64 written as a decimal string (R-322), outside `SimConfig`; changing one registry entry must change that entry's hash and no other's."
   source:

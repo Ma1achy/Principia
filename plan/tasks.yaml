@@ -2258,7 +2258,7 @@
   title: "The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)"
   depends_on: [TASK-M7-31]  # R-521 ruled RQ-385; no longer waits
   needs: []
-  requirements: [REQ-TOOL-172, REQ-TOOL-184]
+  requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-01
@@ -2506,7 +2506,7 @@
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
   depends_on: [TASK-M8-30, TASK-M7-31]
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
-  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-183]
+  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-32
