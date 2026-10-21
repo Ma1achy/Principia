@@ -38,6 +38,11 @@ source(s) → brightness? ┘
 | combiner | `combine(rgb, b) → vec3` | Principia default (OKLab replace-L), multiply, custom |
 | post | `post(rgb) → vec3` (a chain of zero or more) | invert, structural overlays, custom (colour-vision simulation is not a post node — it is in the display stage, R-67) |
 
+**A post node may read a render-side texture bound to it** (R-548, RQ-320): the Chazy "what just changed" view's
+previous-class texture, written each frame, is the one such texture (Chazy drill-down §10.8.2). It is render-side
+state, never a payload field; how the post node reads it beside this frame's coarse class is written here by the task
+that builds the view (TASK-M7-40; R-72).
+
 **Custom is not a node kind — it is an occupant.** Swapping a node's shader source is the *only* extension mechanism. Built-in, debug, and custom occupants share one compile path: full fragment source regenerated from the shared prelude + one function per node + the generated `shade()` that walks the graph (render_gui_spec Part II §10.1); schema-driven uniforms; hot reload with per-node failure isolation (a broken custom keeps the last valid source in that node; the other nodes are untouched). **Backbone order is constitutional** — sources feed colour and brightness, they meet only at the combiner, and the post chain runs after it; nobody feeds post back into colour (the graph is acyclic). **The built-in occupants are themselves customs through this path** — they are the proof it works, which is *why* the read-side interface below is identical for both.
 
 **Reading `SimState` at any tier (the author contract).** The read-side `SimState` type is **fixed across all tiers** — every field is always present, read by plain member access (`sample.ftle`, `sample.ensemble_spread`), never a getter (lowering contract Part 3a). A tier that bakes a feature out does **not** remove the field; it makes the field read **NaN**. So:

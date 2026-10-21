@@ -108,7 +108,7 @@ data. The two words name one object. The **figure** is the rendered slice.
   the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it may be is RQ-387."
   (stale value, replaced by R-523).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
-- **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
+- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
 - **Sim key or not.** Each control knows whether its field re-integrates (sim key) or is live (render key), and warns per
   field from the caching blast-radius table (gui_state_contract §2).

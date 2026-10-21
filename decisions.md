@@ -10064,6 +10064,9 @@ The human's words are R-440's quote, its second remark ("Call 5").
 Changes no requirement.
 
 ## R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default
+*Read by R-548 (21 Oct 2026; the port's entries ruled: the seven-class default stands, B `#141418` near-neutral and held
+to chroma ≤ 0.009, the rule's order transient before B-stable and B-stable before excursion, H, HP, P and the
+two-stage H only at E ≥ 0; RQ-311 to RQ-318, RQ-320, RQ-324 and RQ-325 ruled).*
 *Read by R-467 (20 Oct 2026; in every Chazy stain a `sim_failed` or `decode_failed` sample, a reserved `state` code
 and a NaN draw B's `#141418`, and a pixel the chart classifies forbidden the canvas background; RQ-319 ruled).*
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` (new; the spec transcribed),
@@ -10207,6 +10210,9 @@ the escaper map's columns `chazy_escaper` = 0, 1, 2 as body 1, 2, 3, and the thr
 through TASK-M2-33's one display conversion, REQ-GUI-188; R-449's text names "the Chazy spec and its follow-ups").*
 *Still in force: all of it; `k` and `chazy_escaper` stay 0-based in storage and computation, and a machine-readable
 export keeps them 0-based and says so (REQ-GEN-036); only the names a person reads are R-449's.*
+*Read by R-548 (21 Oct 2026; the one-body views read `chazy_escaper` always, their legends counting where it differs
+from the event's escape detail; the grey `#8A8A90` stays, held to chroma ≤ 0.009; the three panels are one figure;
+RQ-321 to RQ-323 ruled).*
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
 added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
 time (R-443)", § "11.1.1 Decided (R-443)", § "11.2.2 One-body palettes, measured (R-443)" and § "12.3 One body at a
@@ -20545,3 +20551,184 @@ REQ-INT-066, REQ-EVT-021, REQ-ENC-003 and REQ-SYS-015 (statement or verify, ruli
 REQ-DEC-017, REQ-DEC-022, REQ-INT-087, REQ-INT-088 and REQ-VAL-079 (rulings, `rq` removed, note; REQ-INT-088's
 statement a clause); adds REQ-ENC-034 (calibration, `τ_I`), REQ-TOOL-188 and REQ-TOOL-189 (the toolchain) and
 REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-43 to TASK-M2-45.
+
+## R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
+*21 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes" (the halves
+paragraph, with its earlier words kept), § "3.2 The rule, in order" (the order and the two differences, with their
+earlier words kept), § "4. Validation" (a sentence), § "4.3 On real charts (48 × 48)", § "5.6 `chazy_escaper` and
+`chazy_qk` (R-443)", § "7. Validity and styles", § "8. Parity", § "9. Gaps between the prototype and Principia",
+§ "10.1 The two rules that hold in every stain", § "10.5.1 Seven classes × energy", § "10.6 Status", § "10.8.2 What just
+changed", § "10.10 Legends", § "10.11.1 Body lens", § "10.11.2 Body lens with energy", § "10.11.3 All three bodies",
+§ "10.11.4 Escaper map", § "11.2 Calibrations to confirm at a gate (R-71)", § "11.2.1 Palette separation, measured",
+§ "11.2.2 One-body palettes, measured (R-443)", § "11.3 Open questions" (a "Ruled" paragraph) and § "12.2 New, for
+Principia" (items 1, 4 and 5 reworded, items 10 and 11 added), `docs/contracts/principia_render_contract.md` § "Part 2
+— Fixed pipeline, swappable slots" (a sentence), `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold
+everywhere" and `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere" (the subtitle ban reworded),
+R-442's and R-443's heading blocks, `docs/archive/review_queue/M0.md` (RQ-311 to RQ-318 and RQ-320 to RQ-325, moved
+with their rulings), REQ-PAY-099, REQ-PAY-101, REQ-EVT-027, REQ-VAL-183, REQ-VAL-185, REQ-VAL-186, REQ-COL-074,
+REQ-COL-083, REQ-COL-087, REQ-COL-090 to REQ-COL-093, REQ-COL-098, REQ-COL-099, REQ-GUI-185, REQ-GUI-186 and
+REQ-GUI-187 (reqio: `rq` removed, statement or verify, rulings, source, note), REQ-COL-106 (reqio: RQ-320 removed,
+note), REQ-GUI-076 and REQ-COL-086 (reqio: statement, verify or note, rulings, source), `REVIEW_QUEUE.md`
+(RQ-521, new), TASK-M7-35 to TASK-M7-41 and TASK-M8-45 (references, acceptance, deliverables and notes),
+`plan/MILESTONES.md` (the M7 and M8 text), `plan/section_notes.yaml` (§11.3) and `plan/rule_groups.yaml`; built by
+TASK-M7-35 to TASK-M7-41 and TASK-M8-45*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 24–37), which R-545 quotes in its opening:
+
+> - RQ-311 (Seven-class default palette below τ, or Okabe–Ito): (a). "The seven-class palette stays the default (R-442 ruling 7), its within-palette shortfall (H / HP 0.083; HP / P 0.002 under deuteranopia) asserted by REQ-COL-086. Okabe–Ito is a preset one click away."
+> - RQ-312 (REQ-GUI-076's "Chazy subtitles" ban does not cover Chazy stains): (a) and (b) together. "The ban covers Chazy subtitles only, meaning captions naming the final-motion class over the figure. It does not cover the Chazy fields, stains or legends. Reword REQ-GUI-076, render_gui_spec §G1 line 69 and GUI_DESIGN_NOTES line 17 to 'Chazy subtitles (captions over the figure)', and scope the verify to 'no Chazy subtitle code path exists'."
+> - RQ-313 (Chazy HE gate and escape detector may disagree): (a). "Accepted: the escape event and the Chazy class answer different questions. An escape-terminated sample's class freezes at the fire-time state, and the legend help says the two can differ. REQ-EVT-027's test asserts the freeze, not agreement."
+> - RQ-314 (f32 parity for a categorical label: not Tier N): (a). "`chazy_class` is 'a label on a real trajectory' under the parity contract's scope table: it is reported, not asserted. REQ-VAL-183's measured disagreement rate and its band check are the gate. Reword the drill-down §8 'It is Tier N' to cite the scope-table row, and restrict 'read as the marginal labels' to the parabolic band, not the pair's binding sign."
+> - RQ-315 (Ship OS-candidate and B-stable marked provisional): (a). "Ship both. The status legend's help marks them provisional: OS-candidate is unvalidated (2–3 per seed later escaped as HE), and B-stable has never fired on random starts."
+> - RQ-316 (Chazy tasks placed in M7, legends in M8): (a), as applied. "TASK-M7-35 to M7-40 in M7, TASK-M8-45 in M8, each depending on the M3, M4 and M7 tasks it uses. The calibrations are confirmed at the M7 gate."
+> - RQ-317 (B's `#141418` is near-neutral (chroma 0.008), not hueless): (a). "B stays `#141418` (R-442). Test 05 §2.5 asserts OKLab chroma ≤ 0.009, a bound that covers this swatch (0.0080) and RQ-322's grey (0.0089), with a chromatic control well above it. Reword spec 03 / drill-down §10.1 'It has no hue (a = b = 0)' to 'near-neutral (chroma 0.008)'."
+> - RQ-318 (B-stable against transient ordering (E > 0)): (c). "Use the code's order, with transient tested before B-stable, and state in the rule that B-stable requires `E < 0`."
+> - RQ-320 ("What just changed" needs the previous frame's class): (a). "A render-side previous-class texture is written each frame and bound to a post node. The dimming is REQ-COL-106's calibration, proposed by TASK-M7-40."
+> - RQ-321 (Which escaping body the one-body views draw): (c). "The one-body views read `chazy_escaper` always. The legend counts the pixels where it names a different body from the event's escape detail."
+> - RQ-322 (One-body grey `#8A8A90` chroma 0.009): (a), with RQ-317 (a). "`#8A8A90` stays. It is held to the same chroma bound of ≤ 0.009 as `#141418`. Reword §10.11.2 'Grey and black have no hue' to 'near-neutral (chroma ≤ 0.009)'. The stipple dot distance of 0.020 is recorded, and by R-434's criterion (0.212) the grey clears."
+> - RQ-323 (Three body-lens panels hosted as one split figure): (a). "§10.11.3 is one figure. The view's canvas splits into three panels, each the body lens at its own `k`, all drawn from one payload at one playhead. This is a GUI layout with no new stain or node."
+> - RQ-324 (B-stable against excursion ordering (reachable, common)): (b). "Use the table's order: B-stable before excursion. A bound, Mardling–Aarseth-stable hierarchy reads B-stable throughout its outer orbit. Excursion means 'far out, bound, and not certified stable'. Add a fixture with a receding outer body past `h_far` (`v_r ≠ 0`) so the ordering test can fail."
+> - RQ-325 (Enforce "E < 0 rules out H, HP, P"): (b). "H, HP, P and the two-stage H each require `E ≥ 0`. An E < 0 state that passes their geometric tests falls through to B-stable, OS-candidate or B-so-far. Add the review's homothetic counter-example (`E = −0.1 U₀`) as a fixture that reads B-so-far."
+
+R-548 records the fourteen rulings on the Chazy port's entries (R-442's spec and R-443's follow-up) as one ruling, as
+R-113 did for its group. RQ-319, the same port's, was ruled by R-467; RQ-310, the descriptor bits, is R-545's.
+
+**RQ-311** asked whether the default seven-class final-motion palette, under τ within itself (H / HP 0.083; HP / P
+0.002 under deuteranopia), stays the default: (a) keep it (R-442), the shortfall asserted by REQ-COL-086, Okabe–Ito one
+click away; (b) make Okabe–Ito the default; (c) respace H, HP and P. *What it decides:* **option (a).** The seven-class
+palette stays the default (R-442 ruling 7); REQ-COL-086 asserts its within-palette shortfall as measured; **Okabe–Ito
+is a preset one click away.** The palettes are still confirmed as calibrations at the M7 gate (REQ-COL-087), with the
+default no longer an open question there.
+
+**RQ-312** asked whether REQ-GUI-076's ban on "Chazy subtitles" covers the Chazy stains: (a) record that it covers
+subtitles only, (b) reword REQ-GUI-076 and render_gui_spec §G1, (c) read it as covering every Chazy surface. *What it
+decides:* **(a) and (b) together.** **The ban covers captions naming the final-motion class over the figure, and not
+the Chazy fields, stains or legends.** REQ-GUI-076, render_gui_spec § "G1. Rules that hold everywhere" and
+GUI_DESIGN_NOTES § "Rules that hold everywhere" read "Chazy subtitles (captions over the figure)", the ruling's
+words; REQ-GUI-076's verify is scoped to "no Chazy subtitle code path exists". (The ruling's line numbers, 69 and 17,
+are the lines as they stood when the entry was filed; the sentence is at :111 and :36 on main. The words are what is
+applied.) REQ-GUI-185, REQ-GUI-186 and REQ-GUI-187 no longer wait.
+
+**RQ-313** asked whether the Chazy class and Principia's escape event may disagree at a pixel: (a) accept it, the
+legend help saying so; (b) the event gates the class; (c) the class's HE gate gates the event. *What it decides:*
+**option (a).** **The escape event and the Chazy class answer different questions.** An escape-terminated sample's
+class freezes at the fire-time state (§7, as written); **the legend help says the two can differ**; REQ-EVT-027's test
+asserts the freeze, not agreement.
+
+**RQ-314** asked how a categorical label fits the parity contract's tiers: (a) "a label on a real trajectory",
+reported not asserted, REQ-VAL-183's rate and band check the gate; (b) Tier N with a tolerance on the rate; (c)
+comparison-only branch inputs. *What it decides:* **option (a).** `chazy_class` is the parity contract's scope-table
+row "a label on a real trajectory" (`principia_parity_contract.md` § "Tier B — integer-exact *given the same branch
+decisions* (integer & packed fields)"): **reported, not asserted.** **REQ-VAL-183's measured disagreement rate and its
+band check are the gate**, with no threshold on the rate. The drill-down's §8 cites the row in place of "It is Tier N",
+and "read as the marginal labels" holds for the parabolic band only, not for a pair's binding, which is a sign (§3.4).
+
+**RQ-315** asked whether OS-candidate and B-stable ship, and how: (a) both, marked provisional in the status legend's
+help; (b) both, unmarked; (c) OS-candidate withheld. *What it decides:* **option (a).** **Both ship; the status
+legend's help marks them provisional:** OS-candidate is unvalidated (2–3 per seed later escaped as HE), and B-stable
+has never fired on random starts.
+
+**RQ-316** recorded the tasks' placement, (a) applied per R-369: TASK-M7-35 to TASK-M7-40 in M7, TASK-M8-45 in M8.
+*What it decides:* **option (a), as applied.** Each task depends on the M3, M4 and M7 tasks it uses; the calibrations
+are confirmed at the M7 gate. Nothing moves.
+
+**RQ-317** asked how B's `#141418`, OKLab chroma 0.0080, meets the spec's "no hue": (a) keep it, test 05 §2.5 asserting
+a stated chroma bound with a chromatic control well above it; (b) zero B's `a` and `b` under Replace-L; (c) a neutral
+near-black. *What it decides:* **option (a).** **B stays `#141418` (R-442).** **Test 05 §2.5 (the drill-down's §12.2
+item 5) asserts OKLab chroma ≤ 0.009**, a bound that covers this swatch (0.0080) and RQ-322's grey (0.0089), with a
+chromatic control well above it. The drill-down's §10.1 reads "near-neutral (chroma 0.008)" where it said the swatch has
+no hue (`a = b = 0`); §10.5.1's "Because B has no hue" follows (decided per R-369: the same sentence's consequence).
+
+**RQ-318** asked the order of B-stable and transient, which differ only for a Mardling–Aarseth-stable hierarchy with
+`E > 0`, a state not shown to exist: (a) the code's order; (b) the table's; (c) the code's, with B-stable stated to
+require `E < 0`. *What it decides:* **option (c).** **Transient is tested before B-stable, as prin-rs PR #32's
+`classify` does, and the rule states that B-stable requires `E < 0`.**
+
+**RQ-320** asked where "what just changed" finds the previous frame's class: (a) a render-side previous-class texture
+written each frame and bound to a post node, the dimming a calibration; (b) a payload latch; (c) offline only. *What it
+decides:* **option (a).** **A render-side previous-class texture is written each frame and bound to a post node.** The
+dimming is REQ-COL-106's calibration (R-71), proposed by TASK-M7-40.
+
+**RQ-321** asked which escaping body the one-body views draw: (a) `chazy_escaper` always; (b) the event's escape detail
+where the run has an escape event; (c) as (a), with the pixels where the two name different bodies counted in the
+legend. *What it decides:* **option (c).** **The one-body views read `chazy_escaper` always**, and **their legend
+counts the pixels where it names a different body from the event's escape detail.**
+
+**RQ-322** asked how the one-body grey `#8A8A90`, chroma 0.0089, meets §10.11.2's "no hue": (a) keep it, taking RQ-317's
+ruling; (b) an exactly neutral grey; (c) a neutral grey at another lightness. *What it decides:* **option (a), with
+RQ-317 (a).** **`#8A8A90` stays, held to the same chroma bound, ≤ 0.009, as `#141418`.** §10.11.2 reads "near-neutral
+(chroma ≤ 0.009)" where it said "Grey and black have no hue". **The stipple dot distance of 0.020 is recorded, and by
+R-434's criterion (0.212) the grey clears.**
+
+**RQ-323** asked where §10.11.3's three body-lens panels live: (a) one figure, the canvas split into three panels; (b)
+the v2 side by side; (c) an export only. *What it decides:* **option (a).** **§10.11.3 is one figure: the view's canvas
+splits into three panels, each the body lens at its own `k`, all drawn from one payload at one playhead, a GUI layout
+with no new stain or node.** Nothing of R-443 is deferred or dropped.
+
+**RQ-324** asked the order of B-stable and excursion, which differ for a bound, Mardling–Aarseth-stable hierarchy whose
+outer body is past `h_far` and receding (11,066 of 23,675 such hierarchies in the review): (a) the code's, excursion
+first; (b) the table's, B-stable first; (c) the code's, with a B-stable latch. *What it decides:* **option (b).**
+**B-stable is tested before excursion**, so **a bound, Mardling–Aarseth-stable hierarchy reads B-stable throughout its
+outer orbit**, and **excursion means "far out, bound, and not certified stable".** **A fixture with a receding outer
+body past `h_far` (`v_r ≠ 0`) is added, so the ordering test can fail** (§12.1's B-stable fixture has `v_r = 0` and
+passes under both orders).
+
+**RQ-325** asked whether the classifier enforces "E < 0 rules out H, HP and P", which `classify` does not (the review's
+homothetic expansion with `E = −0.1 U_0` reads H, then P): (a) keep the code, the checks empirical; (b) guard H, HP, P
+and the two-stage H with `E ≥ 0`, an E < 0 state that passes their geometric tests falling through to the later steps;
+(c) a label of its own for that state. *What it decides:* **option (b).** **H, HP, P and the two-stage H each require
+`E ≥ 0`.** An E < 0 state that passes their geometric tests falls through to B-stable, OS-candidate or B-so-far. **The
+review's homothetic counter-example (`E = −0.1 U₀`) is a fixture that reads B-so-far.** REQ-VAL-185's E < 0 arm and
+REQ-VAL-186's "no H, HP or P" are then guaranteed by the rule, and a failure of either is a bug.
+
+*Where the words leave a choice, decided per R-369 (the order under physics review; the layout and legends under gui
+review):*
+- **C1. The ruled order** (RQ-318, RQ-324, RQ-325), written into the drill-down's §3.2 as prin-rs PR #32's `classify`
+  with three changes: step 1 (dispersal) runs only at `E ≥ 0`; in step 2 the two-stage H fires only at `E ≥ 0`, and a
+  bound pair with a bound, receding outer body past the gate reads B-stable when step 4's test holds, and excursion
+  otherwise; step 4 (B-stable) requires `E < 0`. B-stable is the same test in step 2 and step 4. Transient stays step
+  3, before step 4, as RQ-318 (c) has it; excursion stays before transient, as the table and the code both order them.
+- **C2. Where a guarded state goes.** An E < 0 state that fails the two-stage H's guard is in step 2's last branch
+  (pair not bound, outer not bound), so it goes on to step 3 and reads B-stable, OS-candidate or B-so-far, as the words
+  say. An E < 0 state that passes step 1's geometric tests goes on to step 2, as `classify`'s "Otherwise go on" and
+  option (b)'s "the later steps" read; whether such a state may then read HE, PE or excursion in step 2, which the
+  words' list (B-stable, OS-candidate or B-so-far) leaves out, is a physics question the texts don't settle: RQ-521,
+  for the human. REQ-PAY-099 carries it for that clause only; the fixtures don't reach it, and the homothetic fixture
+  reads B-so-far under either reading (its hierarchy ratio is about 0.87, below `h_far`).
+- **C3. The two fixtures** are the drill-down's §12.2 items 10 and 11, ported by TASK-M7-35 with §12.1's (REQ-PAY-099).
+  The receding hierarchy is §12.1's B-stable fixture with a radial velocity added to body 2 that keeps it bound to the
+  pair and `ma_stable` true; its exact values, and the homothetic state's construction at 2.9 and at 3.2–3.5 times its
+  initial size, are written by the task with its physics review. Each has a control arm: the code's order reads
+  excursion on the first, and the unguarded rule reads H, then P on the second.
+- **C4. The legend help** (RQ-313, RQ-315): the final-motion and status legends' help says that the class and the
+  escape event can differ at a pixel, the two answering different questions; the status legend's help marks
+  OS-candidate and B-stable provisional, with the ruling's reasons (REQ-GUI-185, TASK-M8-45).
+- **C5. The count** (RQ-321) is shown in every one-body legend whose view reads `chazy_escaper` (the body lens, with
+  energy, the escaper map and its rank form), from the event's escape detail of each pixel whose run has an escape
+  event naming one body (`detail` 0–2), a triple ejection (`detail` 3) counting as different from every body
+  (REQ-GUI-187, TASK-M8-45).
+- **C6. The previous-class texture** (RQ-320): render contract Part 2 gains one sentence, that a post node may read a
+  render-side texture bound to it, this one; how the post node reads it beside this frame's coarse class is written
+  into Part 2 by TASK-M7-40 (R-72), which builds the view (REQ-COL-083).
+- **C7. The grey's bound** (RQ-322) is asserted with the energy lens (REQ-COL-091's verify): `#8A8A90` and `#141418`
+  at OKLab chroma ≤ 0.009.
+- **C8. Measured under the code's order.** prin-rs PR #32's measurements (the drill-down's §4, §10.6) were taken under
+  `classify`'s order; they are kept as the record with a sentence saying so, and are not re-measured here. TASK-M7-35's
+  proposals carry them as the evidence they are.
+- **C9. The entries close** and move to the archive with their rulings; every requirement and task that waited on them
+  no longer does, but REQ-PAY-099's C2 clause.
+
+*What it amends:* nothing of R-442 or R-443, whose rulings stand; the drill-down's transcribed order (R-442's
+"Applied per R-369": "the rule's order … the code is transcribed") changes in the three places C1 names, by these
+rulings. R-442 and R-443 gain a "Read by R-548" line, as R-467 gave them. It closes **RQ-311** to **RQ-318** and
+**RQ-320** to **RQ-325**, and opens **RQ-521**.
+
+R-548 is in the "physics" group of `plan/rule_groups.yaml`: it rules the classifier's order and its energy guards,
+with the colour and layout answers beside them.
+
+Changes REQ-PAY-099, REQ-PAY-101, REQ-EVT-027, REQ-VAL-183, REQ-VAL-185, REQ-VAL-186, REQ-COL-074, REQ-COL-083,
+REQ-COL-087, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-098, REQ-COL-099, REQ-GUI-185, REQ-GUI-186 and
+REQ-GUI-187 (`rq` removed; statement, verify or note; rulings; source), REQ-COL-106 (RQ-320 removed, note) and
+REQ-GUI-076 and REQ-COL-086 (statement, verify or note; rulings; source); REQ-PAY-099 gains `rq: RQ-521`. Adds no
+requirement.
