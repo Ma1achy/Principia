@@ -104,8 +104,9 @@ fn centre(i: u32, n: u32) -> f64 {
     (f64::from(i) + 0.5) / f64::from(n)
 }
 
-/// The chart cell of `cells` holding the coordinate `c ∈ [0, 1]`, and that cell's centre.
-fn cell_centre(c: f64, cells: u32) -> f64 {
+/// The centre of the chart cell of `cells` holding the coordinate `c ∈ [0, 1]`: cell `⌊c·cells⌋`, the square's far
+/// edge, `c = 1`, in the last cell.
+pub fn cell_centre(c: f64, cells: u32) -> f64 {
     let k = ((c * f64::from(cells)).floor() as u32).min(cells - 1);
     centre(k, cells)
 }

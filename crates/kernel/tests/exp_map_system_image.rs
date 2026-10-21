@@ -15,6 +15,9 @@
 //!   the per-pixel rule applied to `−n₀` (REQ-CHART-078).
 //! - `exp_map_system_image_in_view`: the mirror test's log map, and its singular points: `n₀` always in view, `−n₀`
 //!   only where the circle `r = π` meets `[0,1]²`, its edge case `s√2 = π` included (REQ-CHART-078).
+//! - `exp_map_system_image_mirror_off_pole`: the mirror test about centres off the poles: `−n₀` out of a short cap's
+//!   view, a point near the singular test's zero out of view, and `−n₀` counting where its mirror is off the square
+//!   (REQ-CHART-078).
 //! - `shape_sphere_label`: the spherical map's label flags the redundancy, n-to-1 with n = 2 (R-141); a bijective cap's
 //!   names its one hemisphere; a straddling cap's names the fold (REQ-CHART-002).
 
@@ -425,6 +428,74 @@ negative_control!(
         check_in_view(|chart, m| {
             let antipode = m == [0.0, 0.0, -1.0];
             antipode || chart.in_view(m)
+        });
+    }
+);
+
+/// A cap about `n₀ = (sin β cos γ, sin β sin γ, cos β)`, `β = 1.3`, with `e₁` its meridian's direction toward `+w`,
+/// `e₂` the parallel's and extent `s = 2.3`: its corners past `r = π` (`s√2 > π`), and the mirror of `−n₀`,
+/// `(−n₀ₓ, −n₀ᵧ, n₀_w)`, at `d = 2β·e₁`, off the square (`2β > s`).
+fn off_pole(gamma: f64) -> ShapeSphere<f64> {
+    let beta = 1.3f64;
+    let (cg, sg) = (gamma.cos(), gamma.sin());
+    exp_chart(
+        [beta.sin() * cg, beta.sin() * sg, beta.cos()],
+        [-beta.cos() * cg, -beta.cos() * sg, beta.sin()],
+        [-sg, cg, 0.0],
+        2.3,
+    )
+}
+
+/// The mirror test off the poles, by `in_view` and `antipode_counts`: `−n₀` out of view of a short cap about `x̂`; a
+/// point whose `‖m − (m·n₀)·n₀‖²` is not zero but whose `x` component cancels the rest under a sign slip, out of view;
+/// and the pixels on `r = π` of [`off_pole`] counting, `−n₀`'s mirror being off the square, for `n₀` off both the
+/// `x` and the `y` axis (REQ-CHART-078).
+fn check_mirror_off_pole(
+    in_view: fn(&ShapeSphere<f64>, [f64; 3]) -> bool,
+    antipode_counts: fn(&ShapeSphere<f64>) -> bool,
+) {
+    let short = exp_chart([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], 0.5);
+    assert!(
+        !in_view(&short, [-1.0, 0.0, 0.0]),
+        "−x̂ is in view of a short cap about x̂"
+    );
+    // perp = (−⅛, ½, 0) about ŵ, its ‖·‖² = 17/64, and ½·½ + 2·(−⅛) = 0 exactly.
+    let near = polar_cap(1.0, 0.1);
+    let m = [-0.125, 0.5, (1.0f64 - 0.125 * 0.125 - 0.25).sqrt()];
+    assert!(
+        !in_view(&near, m),
+        "a point 0.54 from n₀ is in view of a cap of extent 0.1"
+    );
+    for gamma in [0.0, PI / 2.0] {
+        let chart = off_pole(gamma);
+        assert!(
+            chart.reaches_antipode(),
+            "γ = {gamma}: no corner reaches r = π"
+        );
+        let n0 = chart.n0;
+        assert!(
+            !in_view(&chart, [-n0[0], -n0[1], n0[2]]),
+            "γ = {gamma}: the mirror of −n₀ is in view"
+        );
+        assert!(
+            antipode_counts(&chart),
+            "γ = {gamma}: −n₀ does not count, its mirror off the square"
+        );
+    }
+}
+
+#[test]
+fn exp_map_system_image_mirror_off_pole() {
+    check_mirror_off_pole(ShapeSphere::in_view, ShapeSphere::antipode_counts);
+}
+
+negative_control!(
+    exp_map_system_image_mirror_off_pole,
+    "taking n₀ itself for the mirror of −n₀ puts it in view of every cap, so −n₀ never counts, and must fail",
+    expected = "−n₀ does not count",
+    {
+        check_mirror_off_pole(ShapeSphere::in_view, |chart| {
+            -chart.n0[2] >= 0.0 || !chart.in_view(chart.n0)
         });
     }
 );

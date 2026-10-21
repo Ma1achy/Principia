@@ -19,7 +19,7 @@ use render::present::Rgb;
 use validation::golden_scene::{encode_image, tie_margin};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
-use validation::shape_scene::{scene, ShapeScene, CAP_GRID, CHART, DISPLAY, NAMES};
+use validation::shape_scene::{cell_centre, scene, ShapeScene, CAP_GRID, CHART, DISPLAY, NAMES};
 
 /// The largest per-channel difference, linear RGB, between a render and its CPU twin, as the other scenes' tests allow.
 const TOL: f64 = 1e-5;
@@ -199,6 +199,21 @@ fn shape_scene_samples_the_chart() {
         .filter(|&i| hammer.scene.set.forbidden(i))
         .count();
     assert!(outside > 0, "Hammer's scene shows its whole square");
+    for (name, map, size) in [
+        ("shape_equirectangular", ShapeMap::Spherical, DISPLAY),
+        ("shape_equal_area", ShapeMap::Spherical, DISPLAY),
+        ("shape_one_hemisphere", ShapeMap::Exponential, CAP_GRID),
+    ] {
+        let s = named(name);
+        assert_eq!(s.chart.map, map, "`{name}` draws the wrong map");
+        assert_eq!(
+            s.scene.context.grid.quads, size,
+            "`{name}` has the wrong display grid"
+        );
+    }
+    for (c, want) in [(0.0, 0.125), (0.25, 0.375), (0.999, 0.875), (1.0, 0.875)] {
+        assert_eq!(cell_centre(c, 4), want, "c = {c} is not in its chart cell");
+    }
 }
 
 negative_control!(
