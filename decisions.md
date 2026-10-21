@@ -20364,4 +20364,17 @@ whole sphere), TASK-M8-06 (no toggle), TASK-M8-15 (no folded shading), TASK-M8-5
 changes. The qa-file exceptions R-544 forces are named in TASK-M2-43 (`qa_TASK-M2-14.rs:883`, the fold assertions of
 `qa_TASK-M2-08.rs`) and TASK-M2-28 (`qa_TASK-M2-14.rs:884`).
 
+*Applied per R-369 (21 Oct 2026, TASK-M2-43's pre-flight; the ruling's words above are unchanged):* REQ-CHART-082's
+run arms (the run from `Π·x` the run from `x` mirrored, bitwise; on the named non-chaotic fixture, outcome and `t_end`
+equal and `L_z` and the frame's winding opposite across each pixel pair; and the controls that need a run) need the
+stepper, the wrapper and the outcome classifier (TASK-M3-02, TASK-M3-04, TASK-M3-12), which TASK-M2-43 cannot reach;
+they move to REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and TASK-M2-43), with REQ-CHART-086
+defining the frame's winding (R-72), which chart_reference §3.3 uses and the corpus never defines. This is not a
+deferral: the arms move to the task that can build them, and REQ-CHART-082 keeps in TASK-M2-43 the classification, the
+"does not apply" case, the shape and state pair checks and the bitwise `Π·x` decode checks. On the shape sphere chart
+the per-chart T2 round trip and the `encode-eps-phys` gate compare `D(E(x))` against `C(x)`, as T3 does, since a
+lower-hemisphere decode is off `C`'s section (inverse_encode_contract Part 1, T2; REQ-ENC-004, REQ-ENC-024); the gate's
+measurements, made under R-141's fold, are kept with R-544 beside them, not re-measured (as "Results measured under one
+hemisphere" above).
+
 R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412.

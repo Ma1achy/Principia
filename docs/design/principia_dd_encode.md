@@ -140,7 +140,7 @@ Generic input is not on the Burrau embed. Projection:
 
 Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)` construction ↔ its known ν and mass point).
 
-1. **T2, per chart:** interior z samples → `D → E`, assert physical residual ≤ `ε_phys`; clamp-adjacent samples assert `lookup_clamped`, not a tight residual.
+1. **T2, per chart:** interior z samples → `D → E`, assert physical residual ≤ `ε_phys` (on the shape sphere chart against `C` of the decoded state, inverse-encode Part 1's T2, R-544); clamp-adjacent samples assert `lookup_clamped`, not a tight residual.
 2. **T1 gauge sweep:** random `g` per §3.3 (including deadband-straddling rotations) → `E(g·x) = E(x)` bit-comparably after float tolerance; the mirror tie produces the identical output twice.
 3. **T3 with the half-mirror catch:** random-gauge x → `E → D` → equals `C(x)`: shapes match, masses match, `E` matches after the recorded rescale, `|L_z|` matches **with sign consistent with `lookup_mirrored`** — a config-only mirror fails exactly this check.
 4. **Scale step:** feed the Burrau state at 2× scale → `lookup_rescaled` with `λ = 1/2`... precisely `I_in = 4·I_canon` ⇒ recorded `λ = 1/2`, `E_canon = 2·E_in`, timing conversion factor `I_in^{3/4}` — assert the whole table row.
