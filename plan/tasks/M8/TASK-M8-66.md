@@ -29,4 +29,5 @@ A Chart position stain in Explore: the legend drawn over the target chart with a
 
 ## Notes
 - The gui reviewer reviews against board 6.
+- **The board** is read per render GUI spec §G13's R-542 bullet: board 6's legend block only, the shell following `01_main.png`; no "Edit graph…" in the top bar (RQ-500, (c) meanwhile); the hover trace and its label stay (RQ-501 (a)).
 - **Applied meanwhile:** RQ-482 (a), the firewall; RQ-498 (a): bitwise for EX7 repeats, in-square mirrors to rounding.

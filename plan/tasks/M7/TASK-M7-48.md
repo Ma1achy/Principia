@@ -37,4 +37,4 @@ Chart position's colour slot, colour composition §1.5: one base and an ordered 
 - Review checklist — REQ-COL-129's verify (the register entries, confirmed at the M7 gate).
 
 ## Notes
-- **Applied meanwhile:** RQ-487 and RQ-488 (a); RQ-497 (a), Shape n̂ stays `vector`; RQ-498 (a), the site-blend test on the folded hemisphere; RQ-499 (a), the code's triangle lightness and Fibonacci swatches.
+- **Applied meanwhile:** RQ-487 and RQ-488 (a); RQ-497 (a), Shape n̂ stays `vector`; RQ-498 (a), the code's signed n̂, the site-blend test as written (*was:* "the site-blend test on the folded hemisphere", PR #270's physics review, P1); RQ-499 (a), the code's triangle lightness and Fibonacci swatches.

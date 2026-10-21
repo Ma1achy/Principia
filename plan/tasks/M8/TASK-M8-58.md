@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283
-- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55
+- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -60,3 +60,4 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - *Was:* Closes without REQ-GUI-283; the acceptance line "`cargo test -p render trace_defaults` — REQ-GUI-271's verify (R-538 T1)." (code review 5594440613 of PR #263, F4; gui review 5594407176, G3; physics review 5594430380, P1, P2, P5; applied per R-369).
 - **Merging main (7daf689b, PR #263), applied per R-369:** gui review 5594407176's G3 arm, the keyboard reach and order of the trace's Lines ▾ entry and its `lines_trace_settings` screenshot, moves with the controls to `Trace…` (REQ-GUI-328, TASK-M8-62), R-541 P2 having withdrawn the entry (RQ-448 (a)). *Was:* the tests ending "`trace_playback`, `trace_ramp_round_trip` and `trace_settings_keys`, and the `lines_trace_settings` screenshot target." and the acceptance line "`cargo test -p render trace_defaults`, `cargo test -p gui trace_settings_keys` and `cargo xtask screenshot 01_main` (real engine, `lines_trace_settings`) — REQ-GUI-271's verify (R-538 T1; the keyboard reach and order, the presence screenshot)."
 - **RQ-465, (a) applied meanwhile** (found merging main into rulings/R-540): R-541 G5's footer and R-540 S4 restate TF3 for every trace; REQ-GUI-281's `Window` / `LastDt` arm stands. A ruling for (b) reverses that arm in a follow-up change.
+- **The one projection (R-542 H11; PR #270's code review, 1; applied per R-369):** the trace's projection onto the chart's axes, its leaving rule and a curve axis's nearest point are TASK-M7-52's Rust source, shared with the state map's Chart position (`principia_state_map.md` SM1: "the one the trace uses"); this task reuses it and does not re-implement it. *Was:* "- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55".

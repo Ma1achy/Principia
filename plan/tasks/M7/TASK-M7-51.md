@@ -33,4 +33,6 @@ Chart position in the stain editor, as SM15 and the art boards place it: one sou
 
 ## Notes
 - The gui reviewer reviews against `docs/gui/reference/state_map/boards/` (boards 1 to 5; the human's message: "the GUI ones go with `boards/`").
-- **Applied meanwhile:** RQ-497 (a): Site blend ↔ Site blend the only swap, §6's morphing kept between subtypes; RQ-499 (a), the code's preset names.
+- **Applied meanwhile:** RQ-497 (a): Site blend ↔ Site blend the only swap, §6's morphing kept between subtypes, the file's "Palette" unqualified until ruled; RQ-499 (a), the code's preset names (Where now, Basin tiles, Picture flow); RQ-502 (a), one colour node for the base and its layers; RQ-505 (a), "none" an ordinary setting.
+- **The boards** are read per render GUI spec §G13's R-542 bullet: their new elements only, the shell following `02_stain.png`; board 1's Problems-row buttons and board 4's "Set both to this chart" are board-only, not built (R-542 H14).
+- **The Problems counts** come from the engine through the snapshot, by the legend's path (R-467 D5), never computed in the GUI (gui_state_contract §1).

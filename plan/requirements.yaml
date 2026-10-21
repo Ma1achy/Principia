@@ -9831,7 +9831,7 @@
   milestone: M8
   rq:
   - RQ-482
-  note: SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66.
+  note: "SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The scheduler's decisions must be identical with the state map on and off.\""
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -14645,14 +14645,16 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_status: on a constructed state per target chart (SM1's table), each status the chart can give is reached (the latent chart's left by α past its limit, the side from cos 2α = n₁; the latent momenta's left where |q| ≥ q_max; ν × dilation's past a bounded edge outside [1/32, 31/32]; a sim_failed state undetermined), each on-chart point equal to the chart's coordinates; a decode_failed sample and a not-a-system pixel draw blank; controls: a periodic target written on a branch (θ unwrapped) instead of the quotient, a left state reported on the chart, a decode_failed sample projected and coloured, and a sim_failed sample drawn blank, each fail"
+    detail: "cargo test -p render chart_position_status: on a constructed state per target chart (SM1's table), each status the chart can give is reached, left read from a shown coordinate's clamp (REQ-COL-133): the latent chart's left on a constructed state with λ̃ (or ρ̃) within ε_z of 0, the side from cos 2α = n₁ (on main α_min = 0, RQ-503); the latent momenta's left where the clamp acts, |q| ≥ q_max(1 − 2ε_q); ν × dilation's past a bounded edge outside [1/32, 31/32]; a sim_failed state undetermined; the shape sphere target read from the signed n̂ over both hemispheres (RQ-498 (a), RQ-504 (a)); each on-chart point equal to the chart's coordinates; a decode_failed sample and a not-a-system pixel draw blank; controls: a periodic target written on a branch (θ unwrapped) instead of the quotient, a left state reported on the chart, a decode_failed sample projected and coloured, a sim_failed sample drawn blank, and a left test on a non-finite z (which main's encode never gives), each fail"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-489
   - RQ-498
-  note: "SM1, SM4, SM5 (physics review). A fixed t waits on RQ-489; the target chart read waits on RQ-489. Closed by TASK-M7-47."
+  - RQ-503
+  - RQ-504
+  note: "SM1, SM4, SM5 (physics review). Left is read from the encode's clamp (REQ-COL-133; PR #270 physics P4); the latent α case is constructed, main's α_min being 0 (RQ-503); the shape sphere target reads the signed n̂ over both hemispheres, the code's reading (RQ-498 (a), RQ-504 (a); physics P1). A fixed t and the target chart read wait on RQ-489. Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing.\""
 - id: REQ-COL-114
   area: COL
   statement: "The state map must change no SimState, payload, ICDescriptor or other layout: no stored field, accumulator or kernel change; a need for one is queued, never added."
@@ -14667,10 +14669,10 @@
   rulings:
   - R-542
   milestone: M7
-  note: "SM2, the human's hard constraint (R-542). Closed by TASK-M7-47; held by every state map task's review."
+  note: "SM2, the human's hard constraint (R-542). Closed by TASK-M7-47; held by every state map task's review. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map must change no SimState, payload, ICDescriptor or other layout.\""
 - id: REQ-COL-115
   area: COL
-  statement: "At t = 0, with the target the view's own chart, every sample's Chart position must equal its own chart point to the f32 round trip on every chart."
+  statement: "At t = 0, with the target the view's own chart, every sample's Chart position must equal its own chart point to the f32 round trip on every chart, on the shape sphere modulo the mirror: a lower-hemisphere pixel, whose system R-141's gauge puts on the upper hemisphere, is compared with its mirror point."
   source:
   - file: docs/design/principia_state_map.md
     section: SM12. Tests (each with the arm that fires)
@@ -14680,16 +14682,16 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: property test
-    detail: "cargo test -p render chart_position_identity: per chart, the worst |projected − own chart point| in chart units is within the prototype's figures (latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted E and F 1.9e-6; ν × h 4.9e-4, the curve table's, re-measured on the app's curve), the sphere measured in n̂ and away from R-437's seam as stated; controls: a missed fold, a mirror slip and a wrong projection, each fail"
+    detail: "cargo test -p render chart_position_identity: per chart, the worst |projected − own chart point| in chart units is within its calibrated tolerance (REQ-COL-129; the prototype's figures are latent 4e-7, sphere 1.5e-6 measured without R-141's gauge and re-measured on the app, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted E and F 1.9e-6, ν × h 4.9e-4 from its 1/1000 curve table), never a tolerance the test chooses; on the sphere measured in n̂, a lower-hemisphere pixel against its mirror point, the primary range directly, away from R-437's seam as stated; controls: a missed fold, a mirror slip and a wrong projection, each fail"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-498
-  note: "SM12 Identity at t = 0 (physics review). On the shape sphere it is measured on the folded hemisphere until RQ-498 is ruled. Closed by TASK-M7-47."
+  note: "SM12 Identity at t = 0 (physics review). On the shape sphere modulo the mirror (R-141's gauge; RQ-498; PR #270 physics P2); the tolerances are REQ-COL-129's calibrations, the sphere's 1.5e-6 the ungauged prototype's, re-measured on the app (qa F2). Closed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip.\""
 - id: REQ-COL-116
   area: COL
-  statement: "A system that has left the chart must be drawn at the edge it left by (its clamped point, the other coordinate current), with no stored history; 'none' (no value, in its own style) must be available as an option."
+  statement: "A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as a debug option."
   source:
   - file: docs/design/principia_state_map.md
     section: "SM5a. Left the chart: drawn at the edge it left by"
@@ -14697,13 +14699,15 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_edge_clamp: on the latent chart at t = 8 over seeded random systems, the clamp agrees with the exit point found at fine Δt on the axis it left by, the median gap falling with Δt (0.267 at Δt 0.25 → 0.033 at 0.005); under 'none' a left pixel draws its own grey; controls: a clamp to the wrong side, and a finite clamp on an infinite coordinate, each fail"
+    detail: "cargo test -p render chart_position_edge_clamp: on a target that leaves on main, the latent momenta (|q| ≥ q_max(1 − 2ε_q), REQ-COL-133) and the z_q3 tilt, over seeded random systems at a playhead time where a measured share have left, the clamp agrees with the exit point found at fine Δt on the axis it left by, the median gap falling as Δt falls (the prototype's latent-chart figures, 0.267 at Δt 0.25 → 0.033 at 0.005, are reference only, RQ-503; the app's are measured and recorded by the task); under 'none' a left pixel draws its own grey; controls: a clamp to the wrong side, a finite clamp on an infinite coordinate, and a population with no left system (the test must be able to fire), each fail"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-498
-  note: "SM5a (physics review). The last position is not stored (§0, R-542). TF1's no value against the clamp is RQ-498. Closed by TASK-M7-47."
+  - RQ-503
+  - RQ-505
+  note: "SM5a (physics review). The last position is not stored (§0, R-542). The test runs on a target that leaves on main (RQ-503; PR #270 physics P3). TF1's no value against the clamp is RQ-498; 'none' as a debug option against an ordinary setting is RQ-505, the code's ordinary setting applied meanwhile (code review 3). Closed by TASK-M7-47."
 - id: REQ-COL-117
   area: COL
   statement: "Each target must report its four results apart: a latent-momentum target has left-the-chart samples where |q| > q_max, a ν target has past-the-edge samples, and neither is drawn as an on-chart colour."
@@ -14716,13 +14720,13 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those with |q| > q_max; on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, and a past-edge sample counted as left, each fail"
+    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, |q| ≥ q_max(1 − 2ε_q) (REQ-COL-133's definition, the clamp's ε_q margin); on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, and a past-edge sample counted as left, each fail"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-498
-  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. Closed by TASK-M7-47."
+  note: "SM12 Four results, its arm as written (physics review). Against SM5a's default clamp: RQ-498, (a) applied meanwhile, the test run under 'none'. The clamp's margin per REQ-COL-133 (PR #270 physics P4). Closed by TASK-M7-47."
 - id: REQ-COL-118
   area: COL
   statement: "Chart position's colour must be equal on identified points of the target's quotient: θ and θ + 2π, and n̂ across a pole crossing."
@@ -14772,7 +14776,7 @@
   note: SM7. Closed by TASK-M7-47.
 - id: REQ-COL-121
   area: COL
-  statement: "Every copy of a sample in the extension must be the canonical sample: its IC bitwise equal to the canonical quad's."
+  statement: "Every copy of a sample in the extension must be the canonical sample: its IC bitwise equal to the canonical quad's, and its colour bitwise equal to its canonical sample's."
   source:
   - file: docs/design/principia_state_map.md
     section: "SM3. Source side: the extension comes for free, because the colour is a property of the system"
@@ -14782,13 +14786,13 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: property test
-    detail: "cargo test -p engine chart_position_copies: over seeded repeat pairs (the θ period, the pole crossings and the hemisphere's fold on the shape sphere; θ on θ × dilation), every copy's IC is bitwise equal to its canonical quad's sample's; control: re-decoding from the copy's own coordinate, which differs on about 1 of 400 pairs, fails; a colour comparison at t = 20 is not the test (it reads 0 with and without the fix)"
+    detail: "cargo test -p engine chart_position_copies: over seeded repeat pairs (the θ period, the pole crossings and the hemisphere's fold on the shape sphere; θ on θ × dilation), every copy's IC is bitwise equal to its canonical quad's sample's, and every copy's colour bitwise equal to its canonical sample's colour; controls: re-decoding from the copy's own coordinate (differs on about 1 of 400 pairs in the IC), and a colour computed from screen or copy position (differs in the colour), each fail; a colour comparison at t = 20 is not the test for the first arm (it reads 0 with and without the fix)"
   rulings:
   - R-542
   milestone: M8
   rq:
   - RQ-498
-  note: "SM3, SM12 Copies agree. EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66."
+  note: "SM3, SM12 Copies agree, both its arms (PR #270 qa F1). EX7's canonical addressing (R-537, REQ-SCHED-101). Mirror pixels inside the square agree to rounding (RQ-498). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal.\""
 - id: REQ-COL-122
   area: COL
   statement: "Chart position's colour slot must be one base (Gradient, Site blend, Palette or Picture) followed by an ordered list of optional layers (bandmask or site_overlay), offering on each quotient only the bases and layers SM11 defines for it."
@@ -14805,7 +14809,7 @@
   rulings:
   - R-542
   milestone: M7
-  note: "SM11, SM12 Layers in order, SM15 test (5). Closed by TASK-M7-48."
+  note: "SM11, SM12 Layers in order, SM15 test (5). Closed by TASK-M7-48. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"Chart position's colour slot must be one base (Gradient, Site blend, Palette or Picture) followed by an ordered list of optional layers (bandmask or site_overlay), offering on each chart only the bases and layers defined for its quotient.\""
 - id: REQ-COL-123
   area: COL
   statement: "The 2D gradient on a flat chart, the cylinder's 2D gradient, the simplex's and the sphere's 3D gradient must be one-to-one on their quotient and in sRGB gamut over their whole range, chroma fixed per map, never clipped per pixel."
@@ -14824,7 +14828,7 @@
   rulings:
   - R-542
   milestone: M7
-  note: "SM6, SM12 One-to-one, Gamut, Plane map one-to-one. Closed by TASK-M7-48."
+  note: "SM6, SM12 One-to-one, Gamut, Plane map one-to-one. Closed by TASK-M7-48. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The 2D gradient on a flat chart and the 3D gradient on the sphere must be one-to-one and in sRGB gamut over their whole range.\""
 - id: REQ-COL-124
   area: COL
   statement: "Chart position's Site blend on the shape sphere must be the same code path as the Shape n̂ node's Site blend."
@@ -14843,7 +14847,7 @@
   milestone: M7
   rq:
   - RQ-498
-  note: "SM12 Same site blend. Measured on the folded hemisphere (n₃ ≥ 0) until RQ-498 is ruled. Closed by TASK-M7-48."
+  note: "SM12 Same site blend, as written: both nodes read the signed n̂ (RQ-498 (a), the code's reading; PR #270 physics P1). *Was:* \"Measured on the folded hemisphere (n₃ ≥ 0) until RQ-498 is ruled.\" Closed by TASK-M7-48."
 - id: REQ-COL-125
   area: COL
   statement: "The Shape n̂ node and its colour nodes must render bitwise as before the state map."
@@ -14861,8 +14865,9 @@
   - R-542
   milestone: M7
   rq:
+  - RQ-496
   - RQ-497
-  note: "SM12 Shape n̂ unchanged; SM15 tests (1) and (2). Its Position and Bands nodes are the prototype's (RQ-497). Closed by TASK-M7-48."
+  note: "SM12 Shape n̂ unchanged; SM15 tests (1) and (2). Its Position and Bands nodes are the prototype's (RQ-497). The saved-stain clause holds under RQ-496's meanwhile, main's Replace-L unscaled; under RQ-496 (b) it narrows to stains without a brightness node, as SM12 says (PR #270 qa F3). Closed by TASK-M7-48."
 - id: REQ-COL-126
   area: COL
   statement: "A Palette or Site blend coloured by index must give every pair of neighbouring tiles different colours."
@@ -14917,7 +14922,7 @@
 - id: REQ-COL-129
   area: COL
   kind: calibration
-  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095) and the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6); proposed with the prototype's values and the gamut evidence by the task that needs them, confirmed by the human at the M7 gate."
+  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
   source:
   - file: docs/design/principia_state_map.md
     section: SM13. Queue, don't rule
@@ -14929,13 +14934,13 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: review checklist
-    detail: "each value is a register entry citing R-542 and RQ-487, proposed with the prototype's value and its gamut check (0 out-of-gamut samples), confirmed at the M7 gate"
+    detail: "each value is a register entry citing R-542 and RQ-487, proposed with the prototype's value and its gamut check (0 out-of-gamut samples) or, for a tolerance, the app's measured worst error, confirmed at the M7 gate; no test picks its own tolerance"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-487
-  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7). Closed by TASK-M7-48."
+  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\""
 - id: REQ-COL-130
   area: COL
   statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis, the built-ins (checkerboard, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct."
@@ -14992,6 +14997,45 @@
   rq:
   - RQ-496
   note: "SM15, SM12 Replace-L in gamut. Against Replace-L as ruled (dd_colouring §3.5, test 6; colour composition §4.1, R-77): RQ-496; main's Replace-L stands meanwhile. Closed by TASK-M7-50."
+- id: REQ-COL-133
+  area: COL
+  kind: definition
+  statement: "Chart position's and the trace's 'left the chart' status must be defined on main's clamped encode, which never returns a non-finite z: a sample leaves where a coordinate entering a shown axis with non-zero weight is clamped by its link (lookup_clamped; the momenta's |q| ≥ q_max(1 − 2ε_q), the latent α and β at ε_z), the definition written into principia_state_map.md SM5 by the task that builds it (R-72)."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM5. The four results of a projection
+  - file: docs/design/principia_state_map.md
+    section: SM1. Definition
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: "Part 3 — Block inverses (closed forms, with their forward mates)"
+  - file: decisions.md
+    section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  verify:
+    method: review checklist
+    detail: "the definition is written into SM5 with the clamp per link and its margin, cites R-72 and R-538 TF1, and the four results' and the status tests read it; the physics reviewer checks it against the inverse encode contract's clamps"
+  rulings:
+  - R-542
+  milestone: M7
+  note: "PR #270's physics review, P4 (R-542 H12). Closed by TASK-M7-52."
+- id: REQ-COL-134
+  area: COL
+  statement: "The target chart's projection, the leaving rule and a curve axis's nearest point must be one Rust source, shared by Chart position (generated to WGSL for the fragment, R-116) and the trace's projection."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM1. Definition
+  - file: docs/design/principia_state_map.md
+    section: SM9. Legend and the hovered pixel
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: decisions.md
+    section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render one_projection: over seeded states per target, the trace's projected point and status and Chart position's (the CPU twin of the generated WGSL) are bitwise equal; controls: a second implementation of a target's projection or of the leaving rule in either consumer, each fail"
+  rulings:
+  - R-542
+  milestone: M7
+  note: "PR #270's code review, 1 (R-542 H11). TASK-M8-58's trace reuses it. Closed by TASK-M7-52."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -20509,13 +20553,14 @@
     section: 3.1 Node kinds
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_editor (boards 1, 3 and 4 of docs/gui/reference/state_map/boards/); cargo test -p gui chart_position_switch: switching the source between Shape n̂ and Chart position and back, and the chart from latent to shape sphere and back, restores each base's and layer's settings exactly; controls: a setting lost on a round trip, and a layer dropped (not hidden) under Shape n̂, each fail"
+    detail: "cargo xtask screenshot state_map_editor (board 3's inspector, board 1's library and Problems rows, board 4's ports; the shell per render GUI spec §G13's R-542 bullet; one colour node for the base and layers, RQ-502); cargo test -p gui chart_position_switch: switching the source between Shape n̂ and Chart position and back, and the chart from latent to shape sphere and back, restores each base's and layer's settings exactly; every control (the source's params, the base picker, the layer stack's add, reorder and remove) is reachable and changed from the keyboard in §G3's order, changed only in interaction mode (R-409); each edit and each switch is one SetField and one undo entry (R-52, R-69); controls: a setting lost on a round trip, a layer dropped (not hidden) under Shape n̂, a control reachable only by drag, and an edit making two SetFields or two undo entries, each fail"
   rulings:
   - R-542
   milestone: M7
   rq:
   - RQ-497
-  note: "SM15 (gui review with boards/). Counterparts per RQ-497 (a): Site blend ↔ Site blend until Shape n̂'s Position and Bands are ruled. Closed by TASK-M7-51."
+  - RQ-502
+  note: "SM15 (gui review with boards/, read per §G13's R-542 bullet). Counterparts per RQ-497 (a): Site blend ↔ Site blend until Shape n̂'s Position and Bands are ruled; one colour node for the base and layers (RQ-502 (a)); keyboard and SetField arms (PR #270 gui G5). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The stain editor must offer Chart position as one node with a time setting, beside the unchanged Shape n̂ node, and its inspector must show one base and a reorderable layer stack, preserving every setting when the source or chart is switched and back.\""
 - id: REQ-GUI-336
   area: GUI
   statement: "The Problems pane must warn where a brightness node replaces L that the base spends on position, and where it replaces L under lightness layers, and must report the left, ended, past-edge and undetermined counts per compile."
@@ -20528,14 +20573,14 @@
     section: 1. Layout — four surfaces
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_problems (board 1's Problems rows on the prototype's settings); cargo test -p gui state_map_problems: each warning raised exactly for its bases (a 1D gradient, the sphere's 3D and the cylinder's 2D gradient; Shape n̂'s position map and Bands where they exist), none for the L-fixed bases; the four counts equal the frame's statuses; controls: a warning missing on an L-spending base, and one raised on an L-fixed base, each fail"
+    detail: "cargo xtask screenshot state_map_problems (board 1's Problems rows on the prototype's settings; its row buttons are board-only, §G13); cargo test -p gui state_map_problems: each L-spending warning raised exactly for its bases (a 1D gradient, the sphere's 3D and the cylinder's 2D gradient; Shape n̂'s position map and Bands where they exist), none for the L-fixed bases; the lightness-layers warning raised under Replace-L with a lightness layer and a brightness node, and not under Multiply; the four counts equal the frame's statuses, read from the engine through the snapshot; controls: a warning missing on an L-spending base, one raised on an L-fixed base, a lightness-layers warning missing under Replace-L, one raised under Multiply, and counts computed in the GUI, each fail"
   rulings:
   - R-542
   milestone: M7
-  note: SM15. Closed by TASK-M7-51.
+  note: "SM15. The lightness-layers control and the snapshot path added (PR #270 gui G5); board 1's row buttons are board-only (R-542 H14). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The Problems pane must warn where a brightness node replaces L that the base spends on position or that lightness layers are drawn in, and must report left / ended / past-edge / undetermined counts per compile.\""
 - id: REQ-GUI-337
   area: GUI
-  statement: "The library must carry the seven state map presets (Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing), each inserting an ordinary editable graph equal to the prototype's smPreset settings."
+  statement: "The library must carry the seven state map presets (Classic shape colour, Where now, Graph paper, Basin tiles, Displacement, Picture flow, Mixing — the prototype's labels), each inserting an ordinary editable graph equal to the prototype's smPreset settings."
   source:
   - file: docs/design/principia_state_map.md
     section: SM15. In the stain graph editor
@@ -20551,7 +20596,7 @@
   milestone: M7
   rq:
   - RQ-499
-  note: "SM15. The names are the code's buttons where they differ (RQ-499). Closed by TASK-M7-51."
+  note: "SM15. The prototype's labels, RQ-499 (a) applied (PR #270 gui G2); the file's names (Where, Basins, Flow) are the queued alternative. Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The library must carry the seven state-map presets, each inserting an ordinary editable graph.\""
 - id: REQ-GUI-338
   area: GUI
   statement: "Every saved stain must load and render as before the state map, with nothing migrated."
@@ -20571,7 +20616,7 @@
   note: "SM15 tests (1) and (2). A stain with a brightness node under Replace-L's chroma scaling is RQ-496. Closed by TASK-M7-51."
 - id: REQ-GUI-339
   area: GUI
-  statement: "In Explore, a Chart position stain's legend must be its colour slot drawn over the target chart with a ring at the hovered system, on the edge when it has left, and a pan or zoom into the extension must never show an uncovered pixel."
+  statement: "In Explore, a Chart position stain's legend must be its colour slot drawn with no brightness over the target chart in the chart's own aspect ratio, with a ring at the hovered system (white inside, grey and pinned inside the edge when it is past it), placed as the stain's own colour key before the brightness key, the trace block and the debug key; and a pan or zoom into the extension must never show an uncovered pixel."
   source:
   - file: docs/design/principia_state_map.md
     section: SM9. Legend and the hovered pixel
@@ -20583,11 +20628,32 @@
     section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_legend (board 6); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the ring sits at the hovered pixel's own colour in the legend; controls: the old grid dropped before the new one lands, and a ring computed with other integrator settings, each fail"
+    detail: "cargo xtask screenshot state_map_legend (board 6's legend block; the shell per §G13's R-542 bullet, the hover trace kept, RQ-501); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the legend keeps the target's aspect ratio (2 : 1 on the sphere, the triangle on the simplex) and draws no brightness; the ring sits at the hovered pixel's own colour in the legend, grey and pinned 5 px inside the edge for a system past it; controls: the old grid dropped before the new one lands, a ring computed with other integrator settings, a square legend on the sphere, and a legend drawn with the brightness, each fail"
   rulings:
   - R-542
   milestone: M8
-  note: SM9, SM3 Never a gap. Closed by TASK-M8-66.
+  rq:
+  - RQ-501
+  note: "SM9, SM3 Never a gap. The legend per SM9's transcription of smLegend (PR #270 gui G3); the hover trace stays (RQ-501 (a)). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel.\""
+- id: REQ-GUI-340
+  area: GUI
+  statement: "Chart position's inspector must offer SM7's colour frame (the chart; the view, on the view's own chart only), the Picture base's choice (the built-ins and an uploaded picture) and the fade off the slice (off by default, the view's own chart only), each reachable from the keyboard and each edit one SetField and one undo entry."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM7. Colour frame and deep zoom
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: docs/design/principia_state_map.md
+    section: SM10. Time, ensemble and fade
+  - file: decisions.md
+    section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot state_map_picture (board 3's Picture inspector; the shell per §G13's R-542 bullet); cargo test -p gui state_map_picture_controls: the colour frame's view option, and the fade, are offered on the view's own chart only; the built-ins and an upload set the Picture field (RenderState); each control is reached and changed from the keyboard (§G3, R-409); each edit is one SetField and one undo entry (R-52, R-69); controls: a view frame or fade offered on another target, a fade on by default, and an edit making two undo entries, each fail"
+  rulings:
+  - R-542
+  milestone: M7
+  note: "PR #270's code review, 2. Closed by TASK-M7-49."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

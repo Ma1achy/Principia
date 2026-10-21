@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120
-- **Depends on:** TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11
+- **Depends on:** TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -41,5 +41,7 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 ## Notes
 - **Waits on RQ-489** (the chart read from a colour occupant; a fixed t; R-542 H9).
 - **⚑ Physics review is required** on SM1, SM4 and SM5 (the human's message): this task does not merge on the code reviewer's word alone.
-- **Applied meanwhile:** RQ-480 to RQ-482 and RQ-485 (a); RQ-498 (a): the shape-sphere target is the folded hemisphere, Four results run under "none". A fixed t is not built (RQ-489).
+- **Applied meanwhile:** RQ-480 to RQ-482 and RQ-485 (a); RQ-498 (a), the code's reading: the shape-sphere target reads the signed n̂ (payload §5's `n`) over both hemispheres, the `t = 0` identity on the sphere modulo the mirror (R-141's gauge), Four results run under "none"; RQ-503 (a), main's `α_min = 0`, the edge-clamp test on the latent momenta; RQ-504 (a), the one-hemisphere view targets the full sphere; RQ-505 (a), "none" an ordinary setting. A fixed t is not built (RQ-489). *Was:* "RQ-498 (a): the shape-sphere target is the folded hemisphere, Four results run under \"none\"." (PR #270's physics review, P1).
+- **The one projection (R-542 H11):** the target projections, the leaving rule and the curve axis's nearest point are TASK-M7-52's Rust source, shared with TASK-M8-58's trace; this task wraps them as the fragment occupant and adds the fold, the statuses' colours and SM7's frame.
+- **The tolerances** of the identity are proposed here, measured on the app, as REQ-COL-129's calibration values (R-542 H13).
 - The prototype's per-target projection is transcribed in `principia_state_map.md` SM1's table (`smWhere`); its compaction in SM6's.
