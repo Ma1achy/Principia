@@ -966,3 +966,11 @@
   section: "14. What the demo is not"
   reason: informative only
   note: "where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries"
+- file: docs/design/principia_state_map.md
+  section: "The state map: every pixel coloured by where its system is now"
+  reason: informative only
+  note: preface and the port's header note (R-542); obligations in SM1 to SM15
+- file: docs/design/principia_state_map.md
+  section: 0. My words
+  reason: rationale
+  note: the human's words, quoted verbatim in R-542; the obligations they settle are in SM1 to SM15 and R-542

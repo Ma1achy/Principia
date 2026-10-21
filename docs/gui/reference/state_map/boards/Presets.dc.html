@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>State map presets</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+.card{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.t{font-size:15px;font-weight:500}
+.q{font-size:12px;color:#dcdcdc;line-height:1.45}
+.g{font-family:'Ubuntu Mono',ui-monospace,monospace;font-size:12px;color:#a8a8a8;background:#141414;border:1px solid #2a2a2a;border-radius:3px;padding:6px 8px;line-height:1.5}
+.g b{color:#dcdcdc;font-weight:400}
+.foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#a8a8a8;margin-top:auto}
+.btn{background:#262626;border:1px solid #3c3c3c;color:#dcdcdc;border-radius:3px;padding:3px 10px;font:inherit;font-size:12px}
+</style>
+</helmet>
+<div style="width:1600px;height:760px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;padding:28px 32px;display:flex;flex-direction:column;gap:18px">
+
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<span class="hd">Library › Presets › State map</span>
+<h1 style="margin:0;font-size:24px;font-weight:400">Seven starting graphs, each a question about where systems are now</h1>
+</div>
+<span style="font-size:12px;color:#a8a8a8;max-width:440px;text-align:right">A preset drops a complete graph into the editor. It is an ordinary graph afterwards: every node stays editable.</span>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;flex:1">
+
+<div class="card" style="border-color:#1a7ca3">
+<span class="t">Classic shape colour</span>
+<span class="q">What shape is each system's triangle now? Today's Shape n̂ colouring, untouched, reading the live state.</span>
+<div class="g"><b>Shape n̂</b><br>→ <b>Site blend</b> axes6 · Full · vMF κ 3 · OKLab<br>→ OUT</div>
+<div class="foot"><span>the existing node, unchanged</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Where</span>
+<span class="q">Where on this chart has each system gone? Every place its own colour; stillness shows as the legend, motion as the picture changing.</span>
+<div class="g"><b>Chart position ⟨view's chart⟩</b><br>→ <b>Gradient</b> 2D<br>→ OUT</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/dde8d4c523587b21cbbcc0c5d023d8f3" alt="Where at t = 8" style="width:72px;height:72px;image-rendering:pixelated;border:1px solid #3c3c3c"><span style="font-size:11px;color:#a8a8a8">latent chart, t = 8</span></div>
+<div class="foot"><span>t = 0 is the legend itself</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Graph paper</span>
+<span class="q">How is the chart's own grid carried by the flow? A gradient with a checkerboard and grid lines on top, as layers.</span>
+<div class="g"><b>Chart position ⟨view's chart⟩</b><br>→ <b>Gradient</b> 2D<br>+ checkerboard ×6 · white 25%<br>+ grid lines ×6 · dark 75%<br>→ OUT</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/57c086ad5c53f07f49a5592226f6952e" alt="Graph paper at t = 8" style="width:72px;height:72px;image-rendering:pixelated;border:1px solid #3c3c3c"><span style="font-size:11px;color:#a8a8a8">latent chart, t = 8</span></div>
+<div class="foot"><span>on the sphere: lat / lon lines</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Basins</span>
+<span class="q">Which tile is each system in now? Hard tiles, every neighbour a different colour, so the address reads off the picture.</span>
+<div class="g"><b>Chart position ⟨view's chart⟩</b><br>→ <b>Palette</b> hexagons · 6 across · by index<br>→ OUT</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/9089caff13e3efb64b42578c7db97150" alt="Basins: hexagons at t = 8" style="width:72px;height:72px;image-rendering:pixelated;border:1px solid #3c3c3c"><span style="font-size:11px;color:#a8a8a8">latent chart, t = 8</span></div>
+<div class="foot"><span>on the sphere: Fibonacci cells</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Displacement</span>
+<span class="q">Where is each system, and how far has it moved since t = 0? Colour locates; lightness is distance travelled.</span>
+<div class="g"><b>Chart position</b> → <b>Gradient</b> 2D → colour<br><b>Chart position</b>, <b>Chart position at t = 0</b> → <b>Displacement</b> → L<br>→ Replace-L → OUT</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/cb6dd3f2c6b80de1c2f9648c1b6f8136" alt="Displacement at t = 8" style="width:72px;height:72px;image-rendering:pixelated;border:1px solid #3c3c3c"><span style="font-size:11px;color:#a8a8a8">latent chart, t = 8</span></div>
+<div class="foot"><span>clean on a plane; warns on sphere or cylinder</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Flow</span>
+<span class="q">How is the chart carried by the dynamics? A checkerboard laid on the chart at t = 0 and dragged along by every system.</span>
+<div class="g"><b>Chart position ⟨view's chart⟩</b><br>→ <b>Picture</b> Checkerboard<br>→ OUT</div>
+<div class="foot"><span>also Grid, Rings, or your image</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+<div class="card">
+<span class="t">Mixing</span>
+<span class="q">Which systems have left the region they started in? Tile colour is where they are; bright means they have moved tile.</span>
+<div class="g"><b>Chart position</b> → <b>Palette</b> square · 6 across · by index<br><b>Chart position</b>, <b>Chart position at t = 0</b> → <b>Left its starting tile</b> → L<br>→ Replace-L → OUT</div>
+<div style="display:flex;gap:8px;align-items:center"><img src="/_blob/574769eef98a5258df169bf947bdbb52" alt="Mixing at t = 8" style="width:72px;height:72px;image-rendering:pixelated;border:1px solid #3c3c3c"><span style="font-size:11px;color:#a8a8a8">latent chart, t = 8</span></div>
+<div class="foot"><span>L 0.30 stayed · 0.78 moved · on the sphere: lat × lon cells</span><button class="btn" type="button">Insert</button></div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":760}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

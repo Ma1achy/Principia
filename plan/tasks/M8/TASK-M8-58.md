@@ -1,8 +1,8 @@
 # TASK-M8-58 — The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283
-- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55
+- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135
+- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -26,7 +26,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 
 ## Deliverables
 - The icon sets and markers, the syzygy detection and placement, edge pinning, repeats and the not-a-system checks in the trace renderer (`crates/render/src/lines/`), the trace settings as `Lines`' state, each one `SetField` (`crates/gui/`; their controls are TASK-M8-61's and TASK-M8-62's, R-541; *was:* "the trace settings in Lines ▾"), and the guards in `computeIC` (the CPU kernel instance).
-- The follow-up's per-axis leaving, branch continuity, frame rule and curve projection in the trace's projection (`crates/render/src/lines/`), the playback extent and the ramp control (`crates/gui/`).
+- The follow-up's branch continuity and frame rule in the trace's drawing (`crates/render/src/lines/`), its per-axis leaving and curve projection by calling TASK-M7-52's shared projection (`crates/kernel`), never its own, the playback extent and the ramp control (`crates/gui/`). *Was:* "The follow-up's per-axis leaving, branch continuity, frame rule and curve projection in the trace's projection (`crates/render/src/lines/`), the playback extent and the ramp control (`crates/gui/`)." (code re-review C1 of PR #270).
 - Tests `trace_defaults`, `trace_markers`, `trace_syzygy`, `trace_edge_pins`, `trace_repeats`, `trace_not_a_system`, `compute_ic_guards`, `trace_leaves_per_axis`, `trace_branch_continuity`, `trace_mix_frame`, `trace_curve_axis`, `trace_playback` and `trace_ramp_round_trip`.
 - Proposal: the no-false-jump threshold for T16 and T16b, with the measured worst genuine step and the artefacts' steps; the human confirms it at the M8 gate (REQ-GUI-283, RQ-473).
 
@@ -44,6 +44,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `cargo test -p render trace_curve_axis` — REQ-GUI-280's verify (R-538 T18).
 - `cargo test -p gui trace_playback` — REQ-GUI-281's verify (R-538 T19).
 - `cargo test -p gui trace_ramp_round_trip` — REQ-GUI-282's verify (R-538 T20).
+- `cargo test -p render shared_projection_callers` — REQ-COL-135's verify, every consumer's arm (this task lands last).
 
 ## Notes
 - **⚑ Physics review is required**: the syzygy test on `w`, the guards and the forbidden-sample count, and the follow-up's per-axis leaving check, the branches before a mix, the frame rule and the curve's projection, which touch the encode (REQ-GUI-277 to REQ-GUI-280); it does not merge on the code reviewer's word alone.
@@ -60,3 +61,4 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - *Was:* Closes without REQ-GUI-283; the acceptance line "`cargo test -p render trace_defaults` — REQ-GUI-271's verify (R-538 T1)." (code review 5594440613 of PR #263, F4; gui review 5594407176, G3; physics review 5594430380, P1, P2, P5; applied per R-369).
 - **Merging main (7daf689b, PR #263), applied per R-369:** gui review 5594407176's G3 arm, the keyboard reach and order of the trace's Lines ▾ entry and its `lines_trace_settings` screenshot, moves with the controls to `Trace…` (REQ-GUI-328, TASK-M8-62), R-541 P2 having withdrawn the entry (RQ-448 (a)). *Was:* the tests ending "`trace_playback`, `trace_ramp_round_trip` and `trace_settings_keys`, and the `lines_trace_settings` screenshot target." and the acceptance line "`cargo test -p render trace_defaults`, `cargo test -p gui trace_settings_keys` and `cargo xtask screenshot 01_main` (real engine, `lines_trace_settings`) — REQ-GUI-271's verify (R-538 T1; the keyboard reach and order, the presence screenshot)."
 - **RQ-465, (a) applied meanwhile** (found merging main into rulings/R-540): R-541 G5's footer and R-540 S4 restate TF3 for every trace; REQ-GUI-281's `Window` / `LastDt` arm stands. A ruling for (b) reverses that arm in a follow-up change.
+- **The one projection (R-542 H11; PR #270's code review, 1; applied per R-369):** the trace's projection onto the chart's axes, its leaving rule and a curve axis's nearest point are TASK-M7-52's Rust source, shared with the state map's Chart position (`principia_state_map.md` SM1: "the one the trace uses"); this task reuses it and does not re-implement it. *Was:* "- **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55".

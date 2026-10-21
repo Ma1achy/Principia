@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Base and layers</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+.tile{display:flex;flex-direction:column;gap:5px;min-width:0}
+.tile img{width:100%;aspect-ratio:1;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px;display:block}
+.tile b{font-weight:500;font-size:13px}
+.tile span{font-size:11px;color:#a8a8a8;line-height:1.4}
+.plus{font-size:28px;color:#a8a8a8;align-self:center;text-align:center}
+.box{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+</style>
+</helmet>
+<div style="width:1280px;height:1260px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;padding:28px 32px;display:flex;flex-direction:column;gap:18px">
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<h1 style="margin:0;font-size:24px;font-weight:400">Chart position is coloured by a base, then layers on top — on any chart</h1>
+<div style="color:#a8a8a8;font-size:13px;max-width:1080px;line-height:1.5">Chart position is one node and works on every chart, the shape sphere included. Shape n̂ is a different node and keeps its own colouring; the brightness slot, Replace-L and the post chain are as they are. All renders below are the prototype on Latent z_α × z_β, the systems' positions at t = 0, so each shows the colouring itself.</div>
+</div>
+
+<div class="box">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px">Base — pick one</span><span class="hd">colour composition §1.1–§1.2</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px">
+<div class="tile"><img src="/_blob/cc856090ec78862013f3285551b8ef87" alt="Gradient 2D"><b>Gradient · 2D</b><span>x → a, y → b, one lightness. One-to-one; L stays free.</span></div>
+<div class="tile"><img src="/_blob/8e41598d234e53bc9e8cea20f7152490" alt="Gradient along x"><b>Gradient · along x</b><span>also along y, or out from the centre. One ramp.</span></div>
+<div class="tile"><img src="/_blob/66beda538da1458df8be270839a7683b" alt="Site blend, hex lattice, vMF"><b>Site blend</b><span>sites on a square or hex lattice, flat distance; vMF here, or top-k, nearest.</span></div>
+<div class="tile"><img src="/_blob/734aaf6e2afa97bd23fd09fd0d64a44b" alt="Palette, hexagons"><b>Palette</b><span>purely tiled: each tile one palette colour, neighbours always different.</span></div>
+<div class="tile"><img src="/_blob/7c4eefd25caea0dab112ad8e63e7e342" alt="Picture with a grid layer"><b>Picture</b><span>an image laid on the chart (shown with a grid layer).</span></div>
+</div>
+</div>
+
+<div class="box">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px">Layers — any number, in order, each optional</span><span class="hd">bandmask · site_overlay, §1.3</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+<div style="display:grid;grid-template-columns:1fr 30px 1fr 30px 1fr;gap:8px;align-items:start">
+<div class="tile"><img src="/_blob/cc856090ec78862013f3285551b8ef87" alt="Base: gradient 2D"><span>base: gradient</span></div>
+<div class="plus">+</div>
+<div class="tile"><div style="aspect-ratio:1;border:1px solid #3c3c3c;border-radius:3px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:8px;font-size:11px;color:#dcdcdc;background:#141414"><span>1 checkerboard · 6 · white 25%</span><span>2 grid lines · 6 · dark 75%</span></div><span>two layers</span></div>
+<div class="plus">=</div>
+<div class="tile"><img src="/_blob/0b171435b158203a4510f03c1f98648d" alt="Graph paper"><span>graph paper</span></div>
+</div>
+<div style="display:grid;grid-template-columns:170px minmax(0,1fr);gap:14px">
+<div class="tile"><img src="/_blob/9d2a2ad499bae3b849dbe2ae96e7294a" alt="Gradient with hexagon edges"><b>Gradient + hex edges</b><span>tile edges for hexagons, triangles or brick</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#a8a8a8;line-height:1.5">
+<span style="color:#dcdcdc">The layers</span>
+<span>grid lines · checkerboard · hexagon, triangle and brick edges · stripes along x or y · rings round the centre · site dots</span>
+<span>Each: spacing (4–24 across), colour (dark, light, black, white), opacity (25–100%). Spacing is in chart units, or across the squashed square.</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="box">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:15px">The same stains at t = 8: what each system's position has become</span><span class="hd">Chart position</span></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px">
+<div class="tile"><img src="/_blob/281b991325194084691c51f9d1b2f6d0" alt="Gradient 2D at t = 8"><span>gradient</span></div>
+<div class="tile"><img src="/_blob/a0a39e4a743216174cce6ae06139915e" alt="Site blend nearest at t = 8"><span>site blend, nearest</span></div>
+<div class="tile"><img src="/_blob/57c086ad5c53f07f49a5592226f6952e" alt="Graph paper at t = 8"><span>graph paper: the grid carried by the flow</span></div>
+<div class="tile"><img src="/_blob/a353378ee66b39bacfed2e2f1220f0d0" alt="Shape sphere chart: 3D gradient with checkerboard and lat/lon lines" style="width:100%;aspect-ratio:2;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px;display:block"><img src="/_blob/058862b3221959ddf386d727d4de7ed1" alt="Shape sphere chart: 3D gradient with Fibonacci cell edges" style="width:100%;aspect-ratio:2;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px;display:block"><img src="/_blob/409e34db46f1a4afb3a43e8169f332e5" alt="Shape sphere chart: Fibonacci cells palette" style="width:100%;aspect-ratio:2;image-rendering:pixelated;border:1px solid #3c3c3c;border-radius:3px;display:block"><span>Chart position on the shape sphere, t = 0: graph paper · cell edges · Fibonacci cells</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#a8a8a8;line-height:1.5"><span style="color:#dcdcdc">On other charts</span><span>Shape sphere: 3D gradient, the sphere's site sets, lat × lon or Fibonacci cells; layers are lat / lon lines, cell edges, stripes. Cylinder: a multiple of 6 round θ. Simplex: laid on the masses.</span></div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1260}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

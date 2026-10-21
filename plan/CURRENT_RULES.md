@@ -137,7 +137,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-55** — Cursor bias is `P_focus` centred on the pointer *(GU-4 (a))*
 - **R-56** — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*
 - **R-63** — The continuation table is hashed with the ledger *(confirms R-36's application)*
-- **R-64** — The stain editor is a free, typed node graph *(closes RQ-20)*
+- **R-64** — The stain editor is a free, typed node graph *(closes RQ-20)*. Still in force: the stain editor is a free, typed node graph, render_gui_spec Part II standing; R-542 adds a subtype and a source to it. Extended by R-542.
 - **R-65** — One Inspector window; the standalone IC Inspector is absorbed *(closes RQ-21)*
 - **R-66** — The time scrubber stays *(closes RQ-22)*
 - **R-67** — The display chain *(closes RQ-23)*
@@ -323,6 +323,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-539** — "The figure is never covered" is about the generic GUI panels and chrome: figure-level marks, such as the trace, contour lines and icons for points of interest, may cover the figure *(refines R-466)*
 - **R-540** — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
 - **R-541** — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
+- **R-542** — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
 
 ## Values
 
