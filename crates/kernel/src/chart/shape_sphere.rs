@@ -28,8 +28,8 @@
 //! chart's link selection; `z₀`'s configuration block is not held, the shape replacing it. `p_fixed` is a
 //! canonical-frame momentum, and `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge
 //! `C` then removes, decided as `C` decides it on that configuration ([`held_momentum`]): mirrored where `C` mirrors
-//! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)` ([`canon::rotation_angle`]) and scaled by
-//! `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
+//! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)`, its cosine and sine formed as `C` forms
+//! them ([`canon::rotation`]), and scaled by `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
 //! hemispheres' mirror points decode to one system (R-141). `I` and `φ_f` are gauge: they change `Φ`'s output, not
 //! `C`'s, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in `C`'s configuration. Their
 //! defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
@@ -210,9 +210,8 @@ pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
 ) -> Momentum<R> {
     let fixed = momentum::decode::<S, R>(z_mom, masses);
     let r = config.r;
-    let phi = canon::rotation_angle([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
+    let (c, s) = canon::rotation([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
     let flip = canon::mirror_decision(masses.m, r);
-    let (s, c) = (Float::sin(phi), Float::cos(phi));
     let k = R::one() / Float::sqrt(Float::sqrt(inertia));
     let gauge = |v: [R; 2]| {
         let y = select(flip, -v[1], v[1]);
