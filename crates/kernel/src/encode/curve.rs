@@ -256,7 +256,7 @@ pub fn nearest<R: LinkReal + IeeeBits>(x: &Point<R>, span: [R; 2]) -> Projection
         (d, fd) = select(left, kept, (fresh, f));
         (a, b) = (na, nb);
     }
-    let golden = select(fc < fd, (c, fc), (d, fd));
+    let golden = better((d, fd), (c, fc));
     let (nu, d2) = better(grid, golden);
     Projection {
         nu,

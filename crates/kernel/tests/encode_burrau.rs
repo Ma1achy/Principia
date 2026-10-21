@@ -680,13 +680,45 @@ const FIXTURES: [(f64, f64, f64, f64); 8] = [
     (0.1, 0.0, 0.05, -0.05),
 ];
 
+/// Two far states, `d² > 1`, whose `d²` has a second local minimum on the Euclid span (found by a random search, 2 in
+/// 200 000): a search that leaves the best grid point's two cells can settle in the other basin.
+const FAR: [Ic<f64>; 2] = [
+    Ic {
+        m: [0.6590993899962303, 0.260895262143094, 0.08000534786067577],
+        r: [
+            [0.0, 0.0],
+            [-0.05432953293357334, 0.8274629309567318],
+            [0.3088102163100235, -1.9664279320973064],
+        ],
+        p: [[0.0; 2]; 3],
+    },
+    Ic {
+        m: [0.17094085574060783, 0.6699798483787551, 0.15907929588063704],
+        r: [
+            [0.0, 0.0],
+            [-1.4689826507511716, 1.244462576487301],
+            [1.4715565077088297, -0.9332744531024302],
+        ],
+        p: [[0.0; 2]; 3],
+    },
+];
+
+/// The fixture `i`: [`FIXTURES`]' perturbations, then the [`FAR`] states.
 fn fixture(i: usize) -> Ic<f64> {
+    if i >= FIXTURES.len() {
+        return FAR[i - FIXTURES.len()];
+    }
     let (nu, dx, dy, dm) = FIXTURES[i];
     let mut x = burrau(nu);
     x.r[2][0] += dx;
     x.r[2][1] += dy;
     x.m = [x.m[0] + dm, x.m[1] - dm / 2.0, x.m[2] - dm / 2.0];
     x
+}
+
+/// Every fixture's index.
+fn fixtures() -> std::ops::Range<usize> {
+    0..FIXTURES.len() + FAR.len()
 }
 
 /// The fixture `i`'s `ν*`, under a random gauge, minimises the test's metric at weight `w` over the Euclid span,
@@ -721,7 +753,7 @@ fn check_minimises(i: usize, w: f64, rng: &mut SplitMix) {
 #[test]
 fn encode_projection_metric_bruteforce() {
     let mut r = rng(20);
-    for i in 0..FIXTURES.len() {
+    for i in fixtures() {
         check_minimises(i, 1.0, &mut r);
     }
 }
@@ -732,7 +764,7 @@ negative_control!(
     expected = "does not minimise",
     {
         let mut r = rng(20);
-        for i in 0..FIXTURES.len() {
+        for i in fixtures() {
             check_minimises(i, 4.0, &mut r);
         }
     }
@@ -936,6 +968,9 @@ fn encode_curve_primitives() {
         assert!(s.edge == edge, "ν = {nu}: edge {} is not {edge}", s.edge);
         assert!((s.nu - nu).abs() <= 1e-14, "ν = {nu}: found {}", s.nu);
     }
+    // A span of one point: that point, an edge at both ends.
+    let one = nearest(&curve_point(0.3), [0.5, 0.5]);
+    assert!(one.nu == 0.5 && one.edge, "a one-point span: {one:?}");
     // Past the span the nearest point is its edge.
     assert_eq!(nearest(&curve_point(0.8), span).nu, 0.6);
     assert_eq!(nearest(&curve_point(0.1), span).nu, 0.2);
@@ -991,6 +1026,42 @@ fn encode_curve_primitives() {
         "the isosceles closed form is not √2 − 1"
     );
     assert!((theta_of(nu_of(0.5f64)) - 0.5).abs() <= 1e-15);
+
+    // Each curve chart's span is the ν its decode gives at the curve axis's ends, ordered, and `at_nu` inverts it.
+    fn ends<C: CurveChart<Param = f64>>(c: &C, nu: [f64; 2], name: &str) {
+        let span = c.nu_span::<f64>();
+        assert!(
+            (span[0] - nu[0]).abs() <= 1e-15 && (span[1] - nu[1]).abs() <= 1e-15,
+            "{name}: the span {span:?} is not {nu:?}"
+        );
+        let t = [c.at_nu(span[0]), c.at_nu(span[1])];
+        let mut sorted = t;
+        sorted.sort_by(f64::total_cmp);
+        assert!(
+            sorted[0].abs() <= 1e-12 && (sorted[1] - 1.0).abs() <= 1e-12,
+            "{name}: the span's ends are at {t:?}, not 0 and 1"
+        );
+    }
+    let fold = |c: [f64; 2]| [nu_of(c[1]), nu_of(c[0])];
+    ends(&nu_k(), [0.05, 0.9], "(ν, K)");
+    ends(&euclid::<f64>(), [1.0 / 32.0, 31.0 / 32.0], "Euclid plane");
+    ends(
+        &theta_k::<f64>(),
+        fold(theta_k::<f64>().theta_range),
+        "Φ_θ,K",
+    );
+    ends(&theta_lz(), fold(theta_lz().theta_range), "Φ_θ,L_z");
+    let mid = theta_lz().at_nu(nu_of(0.5f64));
+    assert!(
+        (mid - (0.5 - 0.2) / (FRAC_PI_4 - 0.2)).abs() <= 1e-12,
+        "Φ_θ,L_z: θ = ½ is at {mid}"
+    );
+    let mid = theta_k::<f64>().at_nu(nu_of(0.5f64));
+    let range = theta_k::<f64>().theta_range;
+    assert!(
+        (mid - (0.5 - range[0]) / (range[1] - range[0])).abs() <= 1e-12,
+        "Φ_θ,K: θ = ½ is at {mid}"
+    );
 
     // The flat guards: Φ_θ,L_z at K = 0, whose band has no width, reads v = ½; the δm strip whose target is the
     // closed form's own Burrau masses reads v = 0.
