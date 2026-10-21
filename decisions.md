@@ -19226,9 +19226,13 @@ and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My w
   constants at 0.9745 of the largest in-gamut scale, §2.1's 0.975). Its output is in R-543's PR.
 - **H4. One-to-one's arms (state map SM12, its *Port's note (R-543)*).** "Minimum OKLab separation > 0 on a 200² grid"
   fires on R = r (separation 0 on the grid's row φ = π) but not on R < r or on L and chroma swapped (2.1e-6 and 1.4e-5),
-  because the tube meets the L axis between grid rows. The test keeps its assertion and its arms and adds one: `R > r`
-  on the constants, the tube clear of the L axis, which fires on every arm. "L and chroma swapped" is read as the tube's
-  L amplitude `r_L` and chroma radius `r` exchanged.
+  because the tube meets the L axis between grid rows. The test keeps its assertion and its arms and adds one, read
+  from the map's output alone: the signed radial chroma `(a, b)·(cos θ, sin θ)` is > 0 at every point of the 200²
+  grid, the tube clear of the L axis. It fires on every arm, a changed formula as well as changed constants: on the
+  transcription it is 0.037 at the constants, 0 at R = r, −0.007 at R = 0.030 and −0.046 swapped. "L and chroma
+  swapped" is read as the tube's L amplitude `r_L` and chroma radius `r` exchanged. *Was (PR #272's code review, C1):*
+  "adds one: `R > r` on the constants, the tube clear of the L axis, which fires on every arm", which a swapped formula
+  with unchanged constants passes.
 - **H5. The tileable seam's step along y.** Inside a column the step between neighbouring cells varies with φ, so "the
   colour difference across the seam equals that between neighbouring cells inside" is held, along y, to the picture's
   own rule from cell 7 to cell 8, which wraps to cell 0; along x every neighbouring step in a row is equal, the seam's

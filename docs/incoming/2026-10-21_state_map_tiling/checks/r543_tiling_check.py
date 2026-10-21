@@ -240,36 +240,37 @@ def torus_grid(N, T=SM_TORUS, swap=False):
     return [torus_lab_xy(i / N, j / N, T, swap) for i in range(N) for j in range(N)]
 
 
-def tube_clear(T, swap=False):
-    """The continuous condition: the tube's chroma radius is less than the ring's, so the torus never reaches the L
-    axis (c = R + r cos φ > 0 for every φ) and cannot touch itself."""
-    return T['R'] > (T['rL'] if swap else T['r'])
+def min_radial_chroma(N, T=SM_TORUS, swap=False):
+    """The tube clear of the L axis, read from the map's output only (no knowledge of its constants or formula): the
+    signed radial chroma (a, b)·(cos θ, sin θ) at every point of an N² grid of one period. It is > 0 exactly when the
+    torus never reaches the L axis; R = r gives 0, and R < r or L and chroma swapped give a negative minimum."""
+    best = math.inf
+    for i in range(N):
+        th = TAU * i / N
+        for j in range(N):
+            _, a, b = torus_lab_xy(i / N, j / N, T, swap)
+            best = min(best, a * math.cos(th) + b * math.sin(th))
+    return best
 
 
 def test_torus_one_to_one():
     N = 200
-    sep = min_separation(torus_grid(N), 0.01)
-    report("Torus one-to-one", sep > 0 and tube_clear(SM_TORUS),
+    sep, rad = min_separation(torus_grid(N), 0.01), min_radial_chroma(N)
+    report("Torus one-to-one", sep > 0 and rad > 0,
            f"min OKLab separation between distinct points of a {N}² grid of one period = {sep:.3e} (> 0); "
-           f"R > r: {SM_TORUS['R']} > {SM_TORUS['r']}")
-    eq = dict(SM_TORUS, R=SM_TORUS['r'])
-    s_eq = min_separation(torus_grid(N, eq), 0.01)
-    report("Torus one-to-one, arm: R ≤ r, R = r = 0.037 (must fire)", not (s_eq > 0 and tube_clear(eq)),
-           f"min separation = {s_eq:.3e}: the tube touches the L axis at φ = π, every θ there one colour")
-    lt = dict(SM_TORUS, R=0.03)
-    s_lt = min_separation(torus_grid(N, lt), 0.01)
-    report("Torus one-to-one, arm: R < r, R = 0.030 (must fire)", not (s_lt > 0 and tube_clear(lt)),
-           f"grid min separation = {s_lt:.3e}, > 0 on its own; R > r fails, so the test fires")
-    s_sw = min_separation(torus_grid(N, swap=True), 0.01)
-    report("Torus one-to-one, arm: L and chroma swapped, r_L 0.12 and r 0.037 exchanged (must fire)",
-           not (s_sw > 0 and tube_clear(SM_TORUS, swap=True)),
-           f"grid min separation = {s_sw:.3e}, > 0 on its own (the tube crosses the L axis at cos φ = −R/r_L, "
-           f"between grid rows); the chroma radius 0.12 > R 0.074, so R > r fails and the test fires")
+           f"min signed radial chroma (a, b)·(cos θ, sin θ) = {rad:.4f} (> 0)")
+    for label, T, swap in (("R ≤ r, R = r = 0.037", dict(SM_TORUS, R=SM_TORUS['r']), False),
+                           ("R < r, R = 0.030", dict(SM_TORUS, R=0.03), False),
+                           ("L and chroma swapped, r_L 0.12 and r 0.037 exchanged", SM_TORUS, True)):
+        s_arm, r_arm = min_separation(torus_grid(N, T, swap), 0.01), min_radial_chroma(N, T, swap)
+        report(f"Torus one-to-one, arm: {label} (must fire)", not (s_arm > 0 and r_arm > 0),
+               f"grid min separation = {s_arm:.3e}; min signed radial chroma = {r_arm:.4f} (≤ 0), so the test fires")
 
 
-def gamut_count(T, N=240, clamp_after=False):
-    """Samples out of sRGB on an N² (θ, φ) sweep. The shader path is the unclamped conversion; with clamp_after the
-    test also counts samples the shader's clamp would change, i.e. the clipping a clamp would hide."""
+def gamut_count(T, N=240):
+    """Samples out of sRGB on an N² (θ, φ) sweep, and samples a per-pixel clamp would change. The shader path is the
+    unclamped conversion. The "per-pixel clamp added" arm fires over the raised constants, as §5 intends: over in-gamut
+    constants a clamp changes no output, so there is nothing for it to hide and nothing to detect."""
     bad = clipped = 0
     for i in range(N):
         for j in range(N):

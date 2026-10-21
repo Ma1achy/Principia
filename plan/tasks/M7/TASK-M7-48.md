@@ -37,7 +37,7 @@ Chart position's colour slot, colour composition §1.5: one base and an ordered 
 - `cargo test -p render whole_periods` — REQ-COL-127's verify.
 - `cargo test -p render chart_position_brightness` — REQ-COL-128's verify.
 - Review checklist — REQ-COL-129's verify (the register entries, confirmed at the M7 gate).
-- `cargo test -p render chart_position_torus` — REQ-COL-136's verify: Torus seam (to 1e-12, well past the square), Torus one-to-one (min OKLab separation > 0 on a 200² grid, and R > r) and Torus gamut (0 of 240², no sample changed by a clamp), each with its failing arms (R-543 §5).
+- `cargo test -p render chart_position_torus` — REQ-COL-136's verify: Torus seam (to 1e-12, well past the square), Torus one-to-one (min OKLab separation > 0 on a 200² grid, and the signed radial chroma (a, b)·(cos θ, sin θ) > 0 at every grid point, read from the map's output) and Torus gamut (0 of 240², no sample changed by a clamp), each with its failing arms (R-543 §5).
 
 ## Notes
 - **R-543 (the Torus gradient):** REQ-COL-136 is the follow-up's §4 item 1, its verify §5's three Torus rows; `docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py` is the transcription they were run on and shows each arm firing, a reference for the Rust test, not a substitute. Its constants and default Repeats join REQ-COL-129 (R-543 H7). Applied meanwhile: RQ-506 (a), the code's period counts; RQ-507 (a), Left its starting tile on the Palette's tile.

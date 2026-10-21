@@ -25,8 +25,10 @@ or removed: where R-543 replaces a rule the line stays and an *Amended by R-543*
 stays a line-for-line subsequence of this one (REQ-COL-112). The reference prototype
 `docs/gui/reference/state_map/state_flow.html` is version 9 of the State Flow page from R-543 on, the follow-up's
 `demo/state_flow.html`; its diff against version 8 is the tiling only.
-Where R-543's text and that code disagree the code is carried and the disagreement queued (RQ-506); the tile that
-separates systems a Torus period apart is RQ-507.*
+Where R-543's text and that code disagree the code is carried and the disagreement queued, except where a queued
+entry applies R-543's text meanwhile: RQ-506 (a) carries the ruling's words where the code is silent (the legend's
+period, the readout's wrap mode) and the code's period counts. The tile that separates systems a Torus period apart is
+RQ-507.*
 
 ---
 
@@ -613,8 +615,9 @@ latent chart, the tilted chart, ν × dilation, the cylinder) and every Repeats,
 one-to-one 1.16e-3; Torus gamut 0 of 240², none changed by a clamp; Wrap arm 0 differing inside the square and 19,200
 of 24,000 past it; Tileable checker seam's steps equal to 6e-17. Two readings, applied per R-369 (R-543 H4, H5): **One-to-one's
 arms.** On the 200² grid R = r gives a separation of 0, but R < r and the swap leave the grid's minimum above 0 (2.1e-6
-and 1.4e-5), because the tube meets the L axis between grid rows; so the test also asserts `R > r` on the constants,
-the tube clear of the L axis, which fires on every arm. **The seam's step along y.** Inside a column the step between
+and 1.4e-5), because the tube meets the L axis between grid rows; so the test also asserts, on the map's output, a
+signed radial chroma `(a, b)·(cos θ, sin θ)` > 0 at every grid point, the tube clear of the L axis, which fires on every
+arm (0.037 at the constants; 0, −0.007 and −0.046 on the arms). **The seam's step along y.** Inside a column the step between
 neighbouring cells varies with φ, so the step across the y seam is held to the picture's own rule from cell 7 to
 cell 8, which wraps to cell 0; along x every neighbouring step in a row is the same, the seam's included. Wrap defaults
 bitwise needs the app and is TASK-M7-49's; on the transcription version 9's lookup at its defaults equals version 8's on
