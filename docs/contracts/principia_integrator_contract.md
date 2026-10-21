@@ -106,6 +106,36 @@ each one's `STEP` and records its residual, and the profile carries what it meas
 - **The reversibility diagnostic needs a `step_reversible` occupant** (Part 6; *was:* "a `reversible` occupant (§4)") — it cannot be wired to whatever happens to be bound. The profile flag is the guard: both of Part 6's routes, the replayed schedule and the fixed step with projection off, gate on `step_reversible` (R-500).
 - **Order sets the meaning of the `total_substeps_log2` complexity proxy (derived, payload §5) and FTLE confidence** — a 6th-order step is worth more than a Euler step of the same size.
 
+**What the profile's `order` sets (R-72; REQ-INT-078, a definition the physics reviewer approves; TASK-M3-02).**
+`total_substeps_log2 = ⌊log₂ total_substeps⌋` (payload §5) counts `STEP` calls. The profile gives a count its
+meaning, in three readings, each read from the profile and none from an occupant's name:
+- *Encounter stress, the complexity proxy proper.* For an occupant with `owns_time_mapping: false` the count is the
+  wrapper's substep law (`N_sub` from `r_min`, Part 4), not the occupant's, so on one trajectory it is the same for
+  every such occupant and `order` does not change it: it reads as how hard the close encounters were. It is compared
+  between samples of one sim key, whose occupant is one (Part 3). For `owns_time_mapping: true` the count is the
+  occupant's own schedule (Part 2a, Cost 2), read only against samples of the same occupant.
+- *Cost.* A run made `total_substeps · force_evals` force evaluations, so its cost in `log₂` is
+  `total_substeps_log2 + log₂ force_evals`, to within the floor's 1. Effort compares across occupants in this form,
+  never as the bare count.
+- *Resolution.* A `STEP` of size `h` of an order-`p` occupant commits a local error `O(h^{p+1})`, and a run of mean
+  step `h̄` a global error `O(h̄^p)`. With `step_count` macro-steps taken (payload §5), `h̄ = dt_macro · step_count /
+  total_substeps`, so each doubling of the steps per macro-step is worth `p` bits of accuracy: 1 for Euler, 2 for KDK,
+  4 for Yoshida-4 and RK4, 6 for Yoshida-6. The run's **resolution** is
+  `ρ = order · (total_substeps_log2 − ⌊log₂ step_count⌋)`, in bits, at least 0 (a difference the two floors invert
+  reads 0) and within `order` of `order · log₂(total_substeps / step_count)`. It is ordinal: it ranks the runs of one
+  occupant by how much finer than the macro-step they were integrated, and compares occupants only up to each one's
+  error constant; it is not an error bound, and no threshold is set on it (a threshold would be a calibration, R-71).
+  Bits past the precision's own (24 at f32, 53 at f64) carry nothing.
+
+**FTLE confidence** is the pair `(symplectic, ρ)`. The FTLE (payload §5) is read off the Benettin shadow, integrated
+by the same occupant. On a `symplectic: true` occupant the step preserves phase-space volume, so its error does not
+bias the exponent in kind, and `ρ` grades the run; on a `symplectic: false` occupant (Euler, RK4) the step's numerical
+dissipation or excitation of phase-space volume enters the exponent at the order of its error, so the FTLE is marked
+integrator-biased whatever its `ρ`, and is not compared with a symplectic occupant's. Whether the FTLE has a value at
+all stays `ftle_valid`'s (payload §6; R-253, R-254). `kernel::occupant::CapabilityProfile` reads all three
+(`force_evaluations`, `resolution_bits`, `ftle_confidence`), with `drift_reads_dynamics` (`symplectic`) and the two
+reversibility gates (`step_reversible`, `run_reversible`).
+
 **Euler is kept deliberately, as a debug occupant.** It makes energy drift blow up violently and visibly, which makes "energy-drift view + Euler" a *test that the diagnostic plumbing works* — you *want* to see it explode. It is not a production option; it is the integrator-side analogue of a debug shader. The profile (`symplectic: false`) is what stops it being mistaken for one.
 
 ### Part 2c — THE GPU KERNEL: what ports, what is rewritten, and the rules it must hold
