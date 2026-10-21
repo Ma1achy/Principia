@@ -862,6 +862,20 @@ pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `ε_phys`, the round trip's tolerance in physical units, `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` (inverse-encode Part
+/// 4; REQ-ENC-024), as `k` in `ε_phys = k·ε_R`, `ε_R` the precision's machine epsilon: 64, so 64·2⁻⁵² ≈ 1.42e-14 at
+/// f64 and 64·2⁻²³ ≈ 7.63e-6 at f32. TASK-M2-16's proposal (R-71): the `encode-eps-phys` gate's `interior.json`, 65 536
+/// points on each registered chart and 2²⁰ latent `z` on `[−6, 6]⁸`, the defaults links, at f64 and f32, measures a
+/// worst interior residual of 21.90 `ε_R` (the ternary mass plot, f64); seeds 2 to 9 of the same draws, about 3.1·10⁷
+/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×.
+pub const EPS_PHYS: ConstantBuilder = proposed(
+    "eps_phys",
+    64.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-024",
+    "M2",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -942,6 +956,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     N_NORM_TOL,
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
+    EPS_PHYS,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
 ];
