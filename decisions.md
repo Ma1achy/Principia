@@ -20638,7 +20638,7 @@ past the square (R-537)"), `docs/design/principia_chart_reference.md` § "5.4 Pa
 (R-407)" (a paragraph added), `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" (a paragraph added),
 `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added),
 `docs/design/principia_state_map.md` § "SM3. Source side: the extension comes for free, because the colour is a property
-of the system" (an *Amended by R-570* line), `docs/read_first/principia_INDEX.md` § "GUI" (the trace demo's
+of the system" (a line added under its "Never a gap while navigating" bullet, marked R-570), `docs/read_first/principia_INDEX.md` § "GUI" (the trace demo's
 and the state map prototype's entries, a sentence each), `REVIEW_QUEUE.md` (RQ-535 and RQ-536, new), REQ-GUI-357,
 REQ-SCHED-104, REQ-CHART-087 and REQ-CHART-088 (reqio, new), REQ-GUI-267 (reqio, a note), TASK-M8-55, TASK-M8-56 and
 TASK-M8-57, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-55 (the GUI, REQ-GUI-357), TASK-M8-56 (the
@@ -20713,7 +20713,8 @@ is the human's text, the applied text of this ruling:
 - **Zoom-out is unbounded** (item 2). There is no cap from a fixed view range, a multiple of the home view or a number
   of chart squares. The only limits are the existing ones, the frame budget and the baseline cover (caching contract
   Part 4), and a frame's cost is set by the screen, not by the view's extent. That is RQ-409 (a) (R-537 U14, applied
-  meanwhile on periodic charts; ruled (a) on the open PR #274, its R-552) carried to every chart whose axes are affine.
+  meanwhile on periodic charts; ruled (a) in the batch rulings of the open PR #274) carried to every chart whose axes
+  are affine.
 - **Every pixel is a system, everywhere** (item 3): no hatch, no blank and no "not a system" on these charts at any pan
   or zoom, as R-467's context already says ("Latent and flat charts never produce a forbidden pixel anywhere").
 - **Far out the field goes flat, and that is correct** (item 4). The decoder saturates every coordinate
@@ -20731,7 +20732,7 @@ is the human's text, the applied text of this ruling:
   `docs/gui/reference/state_map/state_flow.html`, and their copies under `docs/incoming/`) exist only because the
   demos' maps are precomputed images. They are never ported. Where the corpus cites the demos or the prototype's
   navigation limit, it now says so: the INDEX's two entries, the GUI spec's new paragraph and state map SM3's
-  *Amended by R-570* line. RQ-409's own quotation of the 3× cap is left as it stands: PR #274's R-552 rules it with the
+  added line, marked R-570. RQ-409's own quotation of the 3× cap is left as it stands: PR #274's batch rulings rule it with the
   human's words "The demo's 3× cap applies only to its fixed maps", and moves the entry to the archive.
 
 *What the port found (the instruction's "What to check").* No spec, contract or requirement caps pan or zoom-out on a
