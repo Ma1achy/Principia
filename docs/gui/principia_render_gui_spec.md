@@ -1221,10 +1221,14 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
     momenta have a `y`-component, dragging the point onto the marker reaches a different system, not the twin, and the
     readout does not call it the twin.
   - **A binary-collision landmark** on the equator is reachable like every other point. The constructor sets the IC
-    through the chart's decode, never through the lookup: at `n = (−1, 0, 0)` the decode emits `ρ̃ = 0`, `r₀ = r₁`
-    exactly, so the descriptor stores `V₀` and `E₀` as `−∞`, as computed (`principia_dd_decoder.md` §3.6, R-436),
-    with no NaN anywhere, and the readout draws them as R-436 and R-467 draw a non-finite value; the run ends
-    `collision` at `t = 0`, the one valid `t = 0` terminal (R-60; `principia_integrator_contract.md` Part 5). The
+    through the chart's decode, never through the lookup, with no NaN anywhere. At an exact `n̂ = (−1, 0, 0)` the
+    decode emits `ρ̃ = 0`, `r₀ = r₁` exactly, so the descriptor stores `V₀` and `E₀` as `−∞`, as computed
+    (`principia_dd_decoder.md` §3.6, R-436). A drag does not reach that `n̂` exactly: the unwrap's `(π, π/2)` decodes
+    to `‖ρ̃‖ ≈ 6.8e−17`, and a 3D pick gives a generic `n̂`, so at a dragged landmark `V₀` and `E₀` are `−∞` where
+    the emitted `r₀ = r₁` and finite otherwise. No snap is added (physics review 5603638748 of PR #273, P10, its
+    option (ii), applied per R-369). The readout draws a non-finite `V₀` or `E₀` as R-436 and R-467 draw a non-finite
+    value. Either way the run ends `collision` at `t = 0`, its bodies within `r_coll`, the one valid `t = 0` terminal
+    (R-60; `principia_integrator_contract.md` Part 5). The
     constructor never looks that IC up; a lookup of it elsewhere reads `lookup_clamped` (R-13;
     `principia_inverse_encode_contract.md` Part 6, step 2).
   - **The frame at `ρ̃ = 0`** (a definition, R-72, applied per R-369; physics review 5603529679 of PR #273, P8). There
