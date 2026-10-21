@@ -58,17 +58,38 @@
 //!
 //! **π** is taken at the parameters' type, `P::PI()` widened (`F: From<P>`), as every parameter is: the trait's float
 //! bound has no constant of its own.
+//!
+//! **`system_image` and the label** ([`ShapeSphere::system_image`], [`ShapeSphere::label`]; chart_decoder_contract
+//! Part 5; chart_reference §3.3; R-141, R-503; REQ-CHART-002, REQ-CHART-075). The spherical map is n-to-1 with n = 2,
+//! its φ hemispheres reflection-equivalent: it draws both and its label flags the redundancy. The exponential map's
+//! value is computed from its cap, at f64 on the CPU, as `validate` is: [`ShapeSphere::cap`] decides from the computed
+//! `w` at the centre and the four corners of `[0,1]²` which closed hemisphere the cap lies in (`r cot r` is concave, so
+//! the square's extreme `w` lies at a corner), bijective there, its label naming the one hemisphere; a cap reaching
+//! `r = π` or crossing the equator is n-to-1 with the per-pixel fold, at most 2. [`ShapeSphere::exp_pixel`] is the
+//! per-pixel rule: past `r = π` the domain's end; on it the one point `−n₀`, whose pixels count once together
+//! (REQ-CHART-078, [`ShapeSphere::antipode_counts`]); else counted where the computed `w ≥ 0` or the mirror `w → −w`
+//! lies outside the cap ([`ShapeSphere::in_view`], through the log map [`exponential_inverse`]), folded otherwise.
+//! [`ShapeSphere::exp_counted_total`] counts a grid of pixel centres by it. These are the untilted chart's values.
+//!
+//! **The projection** ([`Projection`]; chart_reference §3.3; REQ-RENDER-026, REQ-CHART-047): a display remap of the
+//! spherical map's render, not a chart map, so never on the sim key: equirectangular by default, the display point the
+//! chart point; or Hammer's equal-area projection, [`hammer_inverse`] from a display point to the chart point it shows,
+//! none outside its 2:1 ellipse, and [`hammer_forward`] back.
 
 use spirv_std::num_traits::{Float, FloatConst};
 
-use super::{Chart, ChartOut, ValidationResult};
+use super::{Chart, ChartLabel, ChartOut, SystemImage, ValidationResult};
 use crate::canon;
 use crate::decode::config::{self, Config};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
+use crate::encode::by_kind::exponential_inverse;
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
+
+/// The chart's name, [`Chart::name`]'s and its label's.
+const NAME: &str = "ShapeSphere";
 
 /// Which chart map the shape sphere uses (chart_reference §3.3: "state which is used").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -121,14 +142,8 @@ pub fn spherical<F: Float>(s: F, t: F, pi: F) -> [F; 3] {
 /// (2v − 1)·s·e₂`, `r = ‖d‖`, `n = cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as 1 at `r = 0` (chart_reference §3.3).
 #[inline]
 pub fn exponential<F: Float>(n0: [F; 3], e1: [F; 3], e2: [F; 3], scale: F, u: F, v: F) -> [F; 3] {
-    let a = (u + u - F::one()) * scale;
-    let b = (v + v - F::one()) * scale;
-    let d = [
-        a * e1[0] + b * e2[0],
-        a * e1[1] + b * e2[1],
-        a * e1[2] + b * e2[2],
-    ];
-    let r = Float::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    let d = offset(e1, e2, scale, u, v);
+    let r = radius(d);
     let c = Float::cos(r);
     let k = select(r == F::zero(), F::one(), Float::sin(r) / r);
     [
@@ -136,6 +151,24 @@ pub fn exponential<F: Float>(n0: [F; 3], e1: [F; 3], e2: [F; 3], scale: F, u: F,
         c * n0[1] + k * d[1],
         c * n0[2] + k * d[2],
     ]
+}
+
+/// The exponential map's tangent offset at `(u, v)`: `d = (2u − 1)·s·e₁ + (2v − 1)·s·e₂` (chart_reference §3.3).
+#[inline]
+fn offset<F: Float>(e1: [F; 3], e2: [F; 3], scale: F, u: F, v: F) -> [F; 3] {
+    let a = (u + u - F::one()) * scale;
+    let b = (v + v - F::one()) * scale;
+    [
+        a * e1[0] + b * e2[0],
+        a * e1[1] + b * e2[1],
+        a * e1[2] + b * e2[2],
+    ]
+}
+
+/// `r = ‖d‖`, the exponential map's radius, as [`exponential`] computes it.
+#[inline]
+fn radius<F: Float>(d: [F; 3]) -> F {
+    Float::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2])
 }
 
 /// What [`inverse`] gives: the mass-weighted Jacobi vectors and the shape's hyperspherical angles in `Φ`'s frame.
@@ -300,7 +333,7 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 
     fn name(&self) -> &str {
-        "ShapeSphere"
+        NAME
     }
 
     /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
@@ -312,6 +345,261 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid
     }
+}
+
+// ── `system_image`, the label, and the exponential map's cap and fold (R-141, R-503) ───────────────────────────────
+
+/// Which closed hemisphere the exponential map's cap lies in (chart_reference §3.3, "Which closed hemisphere the cap
+/// lies in"; R-503).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Cap {
+    /// Within `w ≥ 0`: bijective.
+    Upper,
+    /// Within `w ≤ 0` and not within `w ≥ 0`: bijective.
+    Lower,
+    /// Across the equator: n-to-1 with the per-pixel fold, at most 2.
+    Straddling,
+}
+
+/// How one pixel of the exponential map counts (chart_reference §3.3; R-503; REQ-CHART-075, REQ-CHART-078).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PixelCount {
+    /// Counted here, 1: its computed `w ≥ 0` (±0.0 on the equator), or its mirror `w → −w` outside the cap.
+    Counted,
+    /// Counted at its mirror, 0: `w < 0`, its mirror in view.
+    Folded,
+    /// On `r = π`, the one point `−n₀`: its pixels count once together ([`ShapeSphere::antipode_counts`]).
+    Antipode,
+    /// Past `r = π`: the domain's end, not a system, out of the count and the total.
+    DomainEnd,
+}
+
+/// π at f64, the float type the cap and the count are computed at.
+const PI64: f64 = core::f64::consts::PI;
+
+/// The centre of pixel `i` of `n` along an axis of `[0,1]²`: `(i + ½)/n`.
+#[inline]
+pub fn pixel_centre(i: u32, n: u32) -> f64 {
+    (f64::from(i) + 0.5) / f64::from(n)
+}
+
+impl<P: Copy> ShapeSphere<P>
+where
+    f64: From<P>,
+{
+    /// The exponential map's frame `(n₀, e₁, e₂)` and extent `s`, at f64.
+    fn frame(&self) -> ([f64; 3], [f64; 3], [f64; 3], f64) {
+        let wide = <f64 as From<P>>::from;
+        (
+            self.n0.map(wide),
+            self.e1.map(wide),
+            self.e2.map(wide),
+            wide(self.scale),
+        )
+    }
+
+    /// The exponential map's point at `(u, v)` at f64, with its radius `r = ‖d‖` as [`exponential`] computes it.
+    pub fn exp_at(&self, u: f64, v: f64) -> ([f64; 3], f64) {
+        let (n0, e1, e2, s) = self.frame();
+        (
+            exponential(n0, e1, e2, s, u, v),
+            radius(offset(e1, e2, s, u, v)),
+        )
+    }
+
+    /// The exponential map's point and radius at the four corners of `[0,1]²` ([`ShapeSphere::exp_at`]).
+    fn corners(&self) -> [([f64; 3], f64); 4] {
+        let (lo, hi) = (0.0, 1.0);
+        [(lo, lo), (hi, lo), (lo, hi), (hi, hi)].map(|(u, v)| self.exp_at(u, v))
+    }
+
+    /// Whether the circle `r = π` meets `[0,1]²`: a corner at `r ≥ π` (`s√2 ≥ π`).
+    pub fn reaches_antipode(&self) -> bool {
+        self.corners().iter().any(|&(_, r)| r >= PI64)
+    }
+
+    /// Which closed hemisphere the exponential map's cap lies in (chart_reference §3.3): straddling where a corner
+    /// reaches `r = π`; else [`Cap::Upper`] where the computed `w ≥ 0` at the centre and the four corners,
+    /// [`Cap::Lower`] where `w ≤ 0` there, else straddling. `r cot r`'s concavity puts the extreme `w` of the square at
+    /// a corner, so the five points decide it exactly.
+    pub fn cap(&self) -> Cap {
+        if self.reaches_antipode() {
+            return Cap::Straddling;
+        }
+        let centre = self.exp_at(0.5, 0.5).0[2];
+        let w = self.corners().map(|(n, _)| n[2]);
+        let w = [centre, w[0], w[1], w[2], w[3]];
+        if w.iter().all(|&w| w >= 0.0) {
+            Cap::Upper
+        } else if w.iter().all(|&w| w <= 0.0) {
+            Cap::Lower
+        } else {
+            Cap::Straddling
+        }
+    }
+
+    /// The chart's `system_image` (chart_decoder_contract Part 5): the spherical map's n-to-1 with n = 2, its φ
+    /// hemispheres reflection-equivalent (R-141); the exponential map's from its cap, bijective within one closed
+    /// hemisphere, else n-to-1 with the per-pixel fold, at most 2, the value's name kept (R-503).
+    pub fn system_image(&self) -> SystemImage {
+        match self.map {
+            ShapeMap::Spherical => SystemImage::NToOne(2),
+            ShapeMap::Exponential => match self.cap() {
+                Cap::Upper | Cap::Lower => SystemImage::Bijective,
+                Cap::Straddling => SystemImage::NToOne(2),
+            },
+        }
+    }
+
+    /// The quotient the chart covers, in words, for its [`ChartLabel`]: both hemispheres drawn and the redundancy
+    /// flagged, one labelled hemisphere, or the per-pixel fold (REQ-CHART-002; chart_reference §3.3).
+    pub fn quotient(&self) -> &'static str {
+        match self.map {
+            ShapeMap::Spherical => {
+                "both φ hemispheres drawn, redundant: (θ, φ) and (θ, π − φ) decode to one system, its w ≥ 0 point \
+                 canonical"
+            }
+            ShapeMap::Exponential => match self.cap() {
+                Cap::Upper => "one hemisphere, w ≥ 0: each system in the cap once",
+                Cap::Lower => "one hemisphere, w ≤ 0: each system in the cap once",
+                Cap::Straddling => {
+                    "the cap straddles the equator, a per-pixel fold: a pixel whose mirror w → −w is in view counts \
+                     once with it, at its w > 0 pixel"
+                }
+            },
+        }
+    }
+
+    /// The chart's label: its name, its `system_image` and the quotient it covers ([`ShapeSphere::quotient`]).
+    pub fn label(&self) -> ChartLabel<'_> {
+        ChartLabel {
+            name: NAME,
+            image: self.system_image(),
+            quotient: self.quotient(),
+        }
+    }
+
+    /// Whether the point `m` of S² is in the exponential map's view (chart_reference §3.3): its log map about `n₀`
+    /// lands in `[0,1]²`, with `r ≤ π` by construction. Where the log map is singular, `m` is `n₀`, the centre, in
+    /// view, or `−n₀`, in view exactly where the circle `r = π` meets `[0,1]²` (REQ-CHART-078). The singular test is
+    /// [`exponential_inverse`]'s own, `‖m − (m·n₀)·n₀‖² = 0`, with its `fma`s.
+    pub fn in_view(&self, m: [f64; 3]) -> bool {
+        let (n0, e1, e2, s) = self.frame();
+        let c = Float::mul_add(m[2], n0[2], Float::mul_add(m[1], n0[1], m[0] * n0[0]));
+        let perp = [0, 1, 2].map(|k| Float::mul_add(-c, n0[k], m[k]));
+        let sin2 = Float::mul_add(
+            perp[2],
+            perp[2],
+            Float::mul_add(perp[1], perp[1], perp[0] * perp[0]),
+        );
+        if sin2 == 0.0 {
+            return c > 0.0 || self.reaches_antipode();
+        }
+        let (u, v) = exponential_inverse(m, (n0, e1, e2), s);
+        (0.0..=1.0).contains(&u) && (0.0..=1.0).contains(&v)
+    }
+
+    /// How the exponential map's pixel at `(u, v)` counts (chart_reference §3.3's per-pixel rule; R-503): past `r = π`
+    /// the domain's end; on it the antipode's group; else counted where the computed `w ≥ 0` or the mirror point lies
+    /// outside the cap, folded otherwise.
+    pub fn exp_pixel(&self, u: f64, v: f64) -> PixelCount {
+        let (n, r) = self.exp_at(u, v);
+        if r > PI64 {
+            PixelCount::DomainEnd
+        } else if r == PI64 {
+            PixelCount::Antipode
+        } else if n[2] >= 0.0 || !self.in_view([n[0], n[1], -n[2]]) {
+            PixelCount::Counted
+        } else {
+            PixelCount::Folded
+        }
+    }
+
+    /// Whether the pixels on `r = π` count, once together (REQ-CHART-078): `−n₀` by the per-pixel rule, its
+    /// `w = −n₀·ŵ ≥ 0` or its mirror outside the cap.
+    pub fn antipode_counts(&self) -> bool {
+        let (n0, ..) = self.frame();
+        -n0[2] >= 0.0 || !self.in_view([-n0[0], -n0[1], n0[2]])
+    }
+
+    /// The counted total of the exponential map over the `nx` × `ny` pixels of `[0,1]²`, each at its centre
+    /// ([`pixel_centre`]): one per [`PixelCount::Counted`] pixel, plus one for the pixels on `r = π` where there are
+    /// any and they count ([`ShapeSphere::antipode_counts`]); a folded pixel and the domain's end add none.
+    pub fn exp_counted_total(&self, nx: u32, ny: u32) -> u64 {
+        let mut total = 0u64;
+        let mut antipode = false;
+        for j in 0..ny {
+            for i in 0..nx {
+                match self.exp_pixel(pixel_centre(i, nx), pixel_centre(j, ny)) {
+                    PixelCount::Counted => total += 1,
+                    PixelCount::Antipode => antipode = true,
+                    PixelCount::Folded | PixelCount::DomainEnd => {}
+                }
+            }
+        }
+        total + u64::from(antipode && self.antipode_counts())
+    }
+}
+
+// ── The projection: a display remap of the spherical map's render (REQ-RENDER-026, REQ-CHART-047) ──────────────────
+
+/// The shape sphere's display projection (chart_reference §3.3, "Projection" and "The equal-area projection is
+/// Hammer's"): a display remap of the spherical map's render, never on the sim key; equirectangular by default.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Projection {
+    /// θ and φ linear on the axes: the display point is the chart point.
+    #[default]
+    Equirectangular,
+    /// Hammer's equal-area projection ([`hammer_inverse`], [`hammer_forward`]).
+    EqualArea,
+}
+
+impl Projection {
+    /// The chart point `(s, t)` the display point `(x, y)` shows, both in `[0,1]²`, bottom-left origin and Y-up; `None`
+    /// where it shows none, outside Hammer's ellipse.
+    pub fn chart_point(self, x: f64, y: f64) -> Option<[f64; 2]> {
+        match self {
+            Projection::Equirectangular => Some([x, y]),
+            Projection::EqualArea => hammer_inverse(x, y),
+        }
+    }
+
+    /// The display point where the chart point `(s, t)` is drawn.
+    pub fn display_point(self, s: f64, t: f64) -> [f64; 2] {
+        match self {
+            Projection::Equirectangular => [s, t],
+            Projection::EqualArea => hammer_forward(s, t),
+        }
+    }
+}
+
+/// Hammer's inverse, display → chart (chart_reference §3.3): `q = (2x − 1)² + (2y − 1)²`, shown only where `q ≤ 1`,
+/// `z = √(1 − q/2)`, `λ = 2·atan2(z·X, 2(1 − q))` with `X = 2√2·(2x − 1)`, `ℓ = asin(z·Y)` with `Y = √2·(2y − 1)`, and
+/// `(s, t) = ((λ + π)/2π, ℓ/π + ½)`. `z·Y` is clamped to `[−1, 1]`, which rounding can leave at the poles.
+pub fn hammer_inverse(x: f64, y: f64) -> Option<[f64; 2]> {
+    let (h, k) = (x + x - 1.0, y + y - 1.0);
+    let q = h * h + k * k;
+    if q > 1.0 {
+        return None;
+    }
+    let root2 = core::f64::consts::SQRT_2;
+    let z = Float::sqrt(1.0 - q / 2.0);
+    let lambda = 2.0 * Float::atan2(z * 2.0 * root2 * h, 2.0 * (1.0 - q));
+    let lat = Float::asin((z * root2 * k).clamp(-1.0, 1.0));
+    Some([(lambda + PI64) / (2.0 * PI64), lat / PI64 + 0.5])
+}
+
+/// Hammer's forward map, chart → display (chart_reference §3.3): `λ = 2π·s − π`, `ℓ = π·(t − ½)`,
+/// `D = √(1 + cos ℓ·cos(λ/2))`, `x = (cos ℓ·sin(λ/2)/D + 1)/2`, `y = (sin ℓ/D + 1)/2`, which are §3.3's
+/// `(X/(2√2) + 1)/2` and `(Y/√2 + 1)/2`.
+pub fn hammer_forward(s: f64, t: f64) -> [f64; 2] {
+    let half = PI64 * s - PI64 / 2.0;
+    let lat = PI64 * (t - 0.5);
+    let d = Float::sqrt(1.0 + Float::cos(lat) * Float::cos(half));
+    [
+        (Float::cos(lat) * Float::sin(half) / d + 1.0) / 2.0,
+        (Float::sin(lat) / d + 1.0) / 2.0,
+    ]
 }
 
 /// `t` where `c` holds, else `f`: a select, both operands computed.

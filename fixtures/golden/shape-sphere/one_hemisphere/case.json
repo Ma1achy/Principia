@@ -1,0 +1,9 @@
+{
+  "render": { "harness": "shape_one_hemisphere", "width": 64, "height": 64 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": {
+    "row_32": { "from": [0, 32], "to": [63, 32] }
+  }
+}

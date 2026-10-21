@@ -397,9 +397,10 @@ fn golden_scene_binary_writes_the_render() {
     let debug = golden_scene::debug_cases().unwrap_or_else(|e| panic!("{e}"));
     want.extend(debug.iter().map(|c| c.name.clone()));
     want.extend(validation::structural_scene::NAMES.map(str::to_owned));
+    want.extend(validation::shape_scene::NAMES.map(str::to_owned));
     assert_eq!(
         names, want,
-        "--list prints the scenes, the debug views' after, the structural ones last"
+        "--list prints the scenes, the debug views' after, the structural ones, the shape sphere's last"
     );
     for (args, why) in [
         (
