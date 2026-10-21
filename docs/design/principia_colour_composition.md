@@ -278,10 +278,13 @@ collision 2–3's hue (264° against 265°) and becomes indistinguishable from i
 transforms): purple is 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 2–3 and from the hatch's violet,
 0.272 from escape body 2, 0.277 from bounded, 0.316 from the stipple's `#909090` dot and 0.580 from the hatch's cyan
 `#48FFFF`, so it clears every entry and the hatch and stipple colours by at least 0.19, as R-445 says; the orange is
-0.188 from the dot. The human's figure for the palette's closest pair is 0.185, collision 1–3 against escape body 3, "with
-the t = 0 class gone"; measured, the closest pair is 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, the
-pair that was collision @ t=0's, since the orange stays as triple collision (0.185 is the closest pair with the orange
-left out). Transcribed as ruled, the measured value beside it: RQ-331.
+0.188 from the dot. **The palette's closest pair is 0.175** (R-546, RQ-331): triple collision `#F29620` against escape body 1 `#F0DE32`,
+with the swatches as ruled. With the t = 0 class gone it stays 0.175 (the same two colours as the old t = 0 pair);
+0.185 holds only with the orange left out. *Was:* "The human's figure for the palette's closest pair is 0.185,
+collision 1–3 against escape body 3, "with the t = 0 class gone"; measured, the closest pair is 0.175, triple collision
+`#F29620` against escape body 1 `#F0DE32`, the pair that was collision @ t=0's, since the orange stays as triple
+collision (0.185 is the closest pair with the orange left out). Transcribed as ruled, the measured value beside it:
+RQ-331."
 
 **The OKLab-uniform variant (R-447; REQ-COL-103, REQ-COL-105).** A second preset of the outcome palette: each chromatic
 class keeps its own OKLab hue at L = 0.72 and C = 0.123, so only hue varies and any brightness-slot field reads
@@ -298,12 +301,15 @@ cleanly; bounded stays `#141418`. **The sRGB palette above stays the default.**
 | escape body 3 | 208° | `#09B9CD` |
 | triple ejection | 305° | `#B790E2` |
 
-The hues are the sRGB classes' own, rounded to a degree. R-447 gives C = 0.123 as "the largest chroma in gamut at every
-hue at that L"; measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the
-largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°. The swatches as ruled measure L 0.719 to
+The hues are the sRGB classes' own, rounded to a degree. C = 0.123 is in gamut at every listed hue (the narrowest,
+208°, admits 0.1238) (R-546, RQ-332); the largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°,
+recorded, not adopted. *Was:* "R-447 gives C = 0.123 as "the largest chroma in gamut at every hue at that L";
+measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the largest chroma in
+gamut at every hue at L = 0.72 is 0.1224, near 199.8°." The swatches as ruled measure L 0.719 to
 0.721, C 0.122 to 0.124 and each hue within 0.5° of its row; `#6EB976`, `#D99349` and `#09B9CD` differ by one or two
-8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Transcribed as
-ruled: RQ-332. Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
+8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Those three
+roundings are recorded, not adopted: the ruled hex values stand (R-546, RQ-332 (a)). *Was:* "Transcribed as ruled:
+RQ-332." Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
 swatch is within 0.5°; escape body 3's `#09B9CD` measures 208.54°, 0.54° from its row's 208° and 0.04° from its class's
 208.5°, and stays: R-455 (RQ-366) reads the 0.5° against the class's own hue, a tolerance below hex quantisation at this
 chroma (one green or blue step moves the hue about 0.7°). **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
@@ -880,9 +886,11 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 ## 9. The stain editor's composition resolutions (R-72; REQ-COL-054)
 
 Render GUI spec §16 lists eight "standing composition-spec gaps" whose resolutions the stain editor assumes. Each is
-written here from the passages that already carry it. The open parts are raised in `REVIEW_QUEUE.md`, not written in:
-RQ-280 (the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four
-the passages settle) and RQ-282 (a ramp of custom stops).
+written here from the passages that already carry it. The parts the passages left open were ruled by R-546 and are written in: RQ-280 (the addressing convention's third
+channels and its indexes, §9.7), RQ-281 (the debug groups' membership, §9.6) and RQ-282 (gradient magnitude, §9.4; a
+ramp of custom stops is defined apart). *Was:* "The open parts are raised in `REVIEW_QUEUE.md`, not written in: RQ-280
+(the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four the
+passages settle) and RQ-282 (a ramp of custom stops)."
 
 **9.1 Colour source as an axis.** Where a value comes from is one axis, independent of the slot it fills and of the
 mapping that colours it. In the graph a source is a `source` node with one parameter, the ctx field it reads; picking
@@ -915,8 +923,11 @@ sequential clamped mix (§1.3, R-122). It is evaluated per fragment, never baked
 difference of another colour node from three evaluations at ±ε on the sphere, and the ramp is an ordinary §1.2 ramp,
 so it is a field through a ramp, not a mode of its own. The gradient magnitude of the rendered *map* is a different
 thing: a post occupant, a screen-space finite difference over the colour buffer, distinct from the |∇c| evaluated on
-the sphere (render contract Part 4). Whether the item also means that the GUI's gradient editor, "built-in LUT or
-custom stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282.
+the sphere (render contract Part 4). §16's item is this reading alone (R-546, RQ-282 (a)). Render GUI spec §9's
+custom-stop ramp, the gradient editor's "built-in LUT or custom stops, cyclic", is defined separately, here, by
+TASK-M7-11 when its graph model needs it (R-72, REQ-COL-140): its stops, their positions, its interpolation space and
+how `cyclic` applies. *Was:* "Whether the item also means that the GUI's gradient editor, "built-in LUT or custom
+stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282."
 
 **9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
 footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no
@@ -928,17 +939,24 @@ per quad, as `ctx.quad.impurity` is.
 
 **9.6 The debug taxonomy.** The library's debug section is the six groups of render GUI spec §11: addressing,
 quad-structure, decoded-IC, validity, diagnostic and profiling. Every entry is a locked debug preset over the one
-colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four:
+colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four, and
+R-546 (RQ-281) the other two and the cross-checks:
 - **addressing**: the presets that colour a position, `ctx.screen.uv → RG` (fragment addressing) and `ctx.quad.uv →
   RG` (structural addressing) (§6), in the channel convention of §9.7;
 - **quad-structure**: §6's `ctx.quad` presets, `s_depth`, `s_impurity` and `s_state`;
 - **decoded-IC**: the decoded-IC payload quantities (§1.2), the `ICDescriptor` views of debug tooling plan §E (its
   masses, scalar and `E₀` rows), which "certify the **decoder**, independent of any integration" (debug tooling plan
-  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6);
-- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2).
+  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6); and ROUNDTRIP and the agreement
+  presets, because they certify the decoder (R-546, RQ-281);
+- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2);
+- **diagnostic**: the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and
+  accumulator views (R-546, RQ-281);
+- **profiling**: views of per-sample cost (`total_substeps`, the substep-log proxy) and of quad cache age (R-546,
+  RQ-281). These colour measurements that are always taken, so telemetry §5.5 stands: profiling's measurement is
+  first-class, and only its views are filed here.
 
-Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the §B–§D
-payload field views and §E's live-shape and accumulator views, is RQ-281.
+*Was:* "Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the
+§B–§D payload field views and §E's live-shape and accumulator views, is RQ-281."
 
 **9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
 spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
@@ -946,12 +964,14 @@ spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v`
   draws "`u`'s in red and `v`'s in green, blue 0", and "in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
   so the two agree unless the δ path is wrong" (debug tooling plan §F), which holds only with the RG view's blue 0
   too; §6's UV view is one preset over either source, so `ctx.screen.uv → RG` takes the same;
-- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B;
-- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G;
-- **index = grey**: an index written as one value on all three channels.
+- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B, G = 0 (R-546, RQ-280);
+- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G, R = 0 (R-546, RQ-280);
+- **index = grey**: an index written as one value on all three channels, one grey preset per index: `ctx.quad.index`,
+  `ctx.tile.tile_index` and `ctx.tile.sample_index` (R-546, RQ-280). Each maps its index to grey in [0, 1] by a
+  stated rule, written here by TASK-M7-17 (R-72, REQ-COL-139).
 
-The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
-`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
+*Was:* "The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
+`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280."
 
 **9.8 Boundaries are an overlay.** Quad and tile boundaries are Tier-1 overlays (render GUI spec §12.1): a function of
 the position within the cell, drawn by an ordinary post node from `ctx.quad.uv` or `ctx.tile.uv`, with no data

@@ -1070,9 +1070,11 @@ applied per R-369):* "The Chazy stains draw the same samples black too, Chazy B'
 view draws a failure …, so the same slice reads black there"; "In both systems the black key's share counts these
 samples, so there it reads near 100 % and is not a bound fraction; the debug view's counts separate them". *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
 (`debug_invalid`), as they draw `sim_failed`, not black, …, so the same slice reads hatched there." The
-tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
-the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view
-the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
+tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: the
+`state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B), and together they
+are the η_E debug view, R-467's View › Debug view; nothing new is built (R-546, RQ-333 (a)). *Was:* "today the `state`
+view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view the ruling's
+"η_E debug view" is, is RQ-333." *Was (R-441):* drawn degenerate's white `#ECECF0`.
 
 **The trace block (R-541 G8).** While a trace is shown, the legend gains an `on the trace` block under the stain's own
 keys, before the debug view's key: the line (and each kept trace's colour), the start star and the end icon for this
@@ -1992,5 +1994,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   the debug taxonomy, the addressing channel convention (UV=RG / TL=RB / centre=BG / index=grey), and
   boundaries-as-overlay. This GUI spec assumes those resolutions.~~ **Closed (R-72; REQ-COL-054; TASK-M7-01):** each
   resolution is written in `principia_colour_composition.md` §9, "The stain editor's composition resolutions". Its open
-  parts are in `REVIEW_QUEUE.md`: RQ-280 (the addressing convention's unnamed channel and index), RQ-281 (the
-  diagnostic and profiling groups' membership) and RQ-282 (a ramp of custom stops).
+  parts were ruled by R-546 and are written there: RQ-280 (the addressing convention's third channels and indexes),
+  RQ-281 (the diagnostic and profiling groups' membership) and RQ-282 (gradient magnitude; the custom-stop ramp
+  defined apart by TASK-M7-11). *Was:* "Its open parts are in `REVIEW_QUEUE.md`: RQ-280 (the addressing convention's
+  unnamed channel and index), RQ-281 (the diagnostic and profiling groups' membership) and RQ-282 (a ramp of custom
+  stops)."

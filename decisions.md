@@ -10303,7 +10303,11 @@ which is RQ-321.
 new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
 2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*
-*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*Amended in part by R-546 (21 Oct 2026; RQ-331: the nine-class palette's closest pair stays 0.175, triple collision
+`#F29620` against escape body 1 `#F0DE32`, the same two colours as the old t = 0 pair; 0.185 holds only with the orange
+left out; the quoted words are kept).*
+*Still in force: all of it, but the message's "rises from 0.175 to 0.185" (R-546); its 0-based class names are the
+internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (the table, the mnemonic paragraph, "how the table reads the payload" and the triple
 outcomes' paragraph rewritten) and § "4.1 Backbone & `Option` occupants" (event mode's reading),
@@ -10676,7 +10680,11 @@ stands as written.*
 *Its gate named by R-454 (17 Oct 2026; closes RQ-330): the three goldens re-baselined under R-444 to R-446, and the
 new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown, as for R-444; same hues, same swatches).*
-*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*Amended in part by R-546 (21 Oct 2026; RQ-332: its parenthesis reads "in gamut at every listed hue (the narrowest,
+208°, admits 0.1238)"; C = 0.123 and the ruled hex swatches stand, the three one-step roundings recorded, not adopted;
+the quoted words are kept).*
+*Still in force: all of it, its parenthesis read as R-546 words it; its 0-based class names are the internal ids, shown
+by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (a paragraph and a table added), `docs/contracts/principia_render_contract.md` §
 "Presentation layer (hand-written, small, reused by every debug view)" (a clause of R-445's sentence), REQ-COL-103 and
@@ -20262,3 +20270,114 @@ Changes REQ-PAY-093, REQ-GEN-008, REQ-GEN-017 (statement, verify, rulings, note)
 REQ-PAY-105, REQ-COL-082 (`rq` removed; statement, verify, rulings, note), REQ-PAY-106 (statement, verify, kind cleared,
 `rq` removed), REQ-COL-106 (`rq` RQ-310 removed), REQ-VAL-055, REQ-PAY-056, REQ-PAY-013 and REQ-PAY-015 (notes, and
 REQ-VAL-055's statement); adds REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187.
+
+## R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*
+*21 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the closest pair's sentence and the variant's chroma sentence, with their earlier
+words kept) and § "9. The stain editor's composition resolutions (R-72; REQ-COL-054)" (the opening, 9.4, 9.6 and 9.7,
+with their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "16. Open / next" (the closed item's open
+parts) and the outcome legend's η_E sentence, R-444's and R-447's heading blocks, `docs/archive/review_queue/M0.md`
+(RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333, moved with their rulings), REQ-COL-028, REQ-COL-029, REQ-GUI-016,
+REQ-COL-104 and REQ-COL-105 (reqio: `rq` removed, rulings, verify, note), REQ-COL-101 and REQ-COL-103 (reqio, notes),
+REQ-COL-139 and REQ-COL-140 (reqio, new), TASK-M7-17 and TASK-M7-11 (a requirement each), TASK-M2-32 (notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-17, TASK-M7-11 and TASK-M7-18*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+13–15 and 38–40), which R-545 quotes in its opening:
+
+> - RQ-280 (Addressing convention: third channels and which index is grey): (a) + (c). "TL = RB carries G = 0 and centre = BG carries R = 0, as UV = RG carries B = 0. There is one grey preset per index (`ctx.quad.index`, `tile_index`, `sample_index`). Each maps its index to grey by a stated rule, written by TASK-M7-17 (R-72)."
+> - RQ-281 (Membership of the diagnostic and profiling debug groups): (b), plus (a)'s profiling half. "ROUNDTRIP and the agreement presets go in decoded-IC, because they certify the decoder. Diagnostic holds the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and accumulator views. Profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and quad cache age. These colour measurements that are always taken, so §5.5 stands: profiling's measurement is first-class, and only its views are filed here."
+> - RQ-282 ("Gradient-unifies-the-ramp": derived-field ramp, not custom stops): (a). "§16's item is the task file's reading, which colour_composition §9.4 already writes: `FieldRamp{gradient_magnitude}` against the map's post node. Render GUI spec §9's custom-stop ramp is defined separately by TASK-M7-11 when its graph model needs it (R-72)."
+> - RQ-331 (sRGB outcome palette's closest pair is 0.175): (a). "Record 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, as the nine-class palette's closest pair, with the swatches as ruled. Reword colour_composition §1.4's 'rises from 0.175 to 0.185' to 'stays 0.175 (the same two colours as the old t = 0 pair); 0.185 holds only with the orange left out'."
+> - RQ-332 (R-447's C = 0.123 is not "in gamut at every hue"): (a). "Keep C = 0.123 and the ruled hex swatches. Reword R-447's parenthesis to 'in gamut at every listed hue (the narrowest, 208°, admits 0.1238)'. The three one-step roundings are recorded, not adopted."
+> - RQ-333 (Which view is "the η_E debug view"): (a). "The η_E debug view" is the existing debug views: the `state` view shows `decode_failed`, and the `detail` view shows its failure category. Together they are R-467's View › Debug view. Nothing new is built. If a tag-by-tag view is wanted later, it is (b), a fragment-side decode preset. It is never (c): no payload change is made for a debug colour.
+
+**RQ-280** asked for the addressing channel convention's third channels (TL = RB's G and centre = BG's R), which index
+"index = grey" is, and how an integer maps to grey: (a) both third channels 0, as UV = RG's B is; (b) "index" is
+`ctx.quad.index`, mapped by a stated normalisation or a hash; (c) one preset per index, each with its own mapping.
+
+*What it decides:* **options (a) and (c).**
+- **TL = RB carries G = 0 and centre = BG carries R = 0,** as UV = RG carries B = 0.
+- **There is one grey preset per index:** `ctx.quad.index`, `tile_index` and `sample_index`.
+- **Each maps its index to grey by a stated rule, written by TASK-M7-17** (R-72), a definition requirement
+  (REQ-COL-139).
+
+*Where the words leave a choice, decided per R-369 (reviewed by physics, as REQ-COL-054's resolutions are):*
+- **A1. Where the rule is written.** colour_composition §9.7, beside the convention; the rule is a definition, not a
+  calibration, so it is reviewed and not confirmed at a gate. The three presets are addressing presets in the debug
+  section (§9.6), and TASK-M7-18 recreates them with the other debug views (REQ-COL-029).
+
+**RQ-281** asked what the diagnostic and profiling debug groups hold, where ROUNDTRIP, the agreement presets, the §B–§D
+payload field views and §E's live-shape and accumulator views go, and how a profiling group sits beside telemetry
+§5.5's "Profiling is FIRST-CLASS, not a debug mode": (a) diagnostic holds the payload field views, §E's live views and
+the cross-checks, profiling holds views of per-sample cost and quad cache age; (b) ROUNDTRIP and the agreement presets
+in decoded-IC, diagnostic holding the payload field views and §E's live views; (c) the render-modes prototype's
+grouping.
+
+*What it decides:* **option (b), plus (a)'s profiling half.**
+- **ROUNDTRIP and the agreement presets go in decoded-IC,** because they certify the decoder.
+- **Diagnostic holds the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and
+  accumulator views.**
+- **Profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and quad cache age.**
+- **Telemetry §5.5 stands:** these colour measurements that are always taken, so profiling's measurement is
+  first-class, and only its views are filed here.
+
+**RQ-282** asked whether render GUI spec §16's "gradient-unifies-the-ramp" is the task file's reading (a ramp over a
+derived field, colour_composition §9.4) or also the GUI's gradient editor of custom stops unifying §1.2's ramps: (a)
+the task file's reading, the custom stops defined separately by the task that needs them (R-72); (b) both, §1.2
+gaining `stops(…)`.
+
+*What it decides:* **option (a).** §16's item is the task file's reading, which colour_composition §9.4 already writes:
+`FieldRamp{gradient_magnitude}` against the map's post node. Render GUI spec §9's custom-stop ramp is defined
+separately by TASK-M7-11 when its graph model needs it (R-72), a definition requirement (REQ-COL-140).
+
+*Where the words leave a choice, decided per R-369 (reviewed by gui):*
+- **B1. What TASK-M7-11 defines and where.** The custom-stop ramp's stops, their positions, their interpolation space
+  and how `cyclic` applies, written into colour_composition §9.4 beside the resolution it is set apart from, reviewed
+  by the gui reviewer (TASK-M7-11's reviewers are code, qa and gui). TASK-M7-11 closes REQ-COL-140 and REQ-GUI-016,
+  whose hold is lifted.
+
+**RQ-331** asked whether the sRGB outcome palette's closest pair, measured at 0.175 (triple collision `#F29620`
+against escape body 1 `#F0DE32`) where R-444's message gives 0.185, is recorded as measured (a) or a swatch is changed
+to reach 0.185 (b).
+
+*What it decides:* **option (a).** 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, is the nine-class
+palette's closest pair, with the swatches as ruled. colour_composition §1.4 reads "stays 0.175 (the same two colours as
+the old t = 0 pair); 0.185 holds only with the orange left out" in place of "rises from 0.175 to 0.185".
+
+*Where the words leave a choice, decided per R-369:*
+- **C1. Where the reword lands.** The words "rises from 0.175 to 0.185" are R-444's message, quoted in R-444; §1.4
+  paraphrases them as "the human's figure … is 0.185". The quoted words stay; §1.4's sentence is reworded with the
+  human's text, and R-444's heading block carries the forward line. REQ-COL-104's evidence still gives both figures,
+  0.175 as the closest pair.
+
+**RQ-332** asked whether R-447's C = 0.123, in gamut at the eight listed hues but not "the largest chroma in gamut at
+every hue at that L" (0.1224), and three swatches one or two 8-bit steps from the rounding of (0.72, 0.123, hue), are
+kept (a), C retaken as 0.1224 (b), or the three swatches replaced by the computed rounding (c).
+
+*What it decides:* **option (a).** C = 0.123 and the ruled hex swatches stand. R-447's parenthesis reads "in gamut at
+every listed hue (the narrowest, 208°, admits 0.1238)". The three one-step roundings (`#6DB976`, `#D9934A`,
+`#07B9CD`) are recorded, not adopted.
+
+*Where the words leave a choice, decided per R-369:*
+- **D1. Rewording a quoted parenthesis.** The parenthesis is inside the human's words quoted in R-447. Quoted words are
+  not edited (as R-14's stayed under RQ-355 and R-449's under RQ-336, in this batch); R-447's heading block carries the
+  reworded parenthesis as its forward line and "Still in force" line, and colour_composition §1.4's paragraph uses it.
+
+**RQ-333** asked which view "the η_E debug view" (R-446) is: (a) the existing `state` and `detail` views; (b) a
+fragment-side decode preset drawing each tag; (c) a payload change, a further `detail` code.
+
+*What it decides:* **option (a).** "The η_E debug view" is the existing debug views: the `state` view shows
+`decode_failed`, and the `detail` view its failure category; together they are R-467's View › Debug view. Nothing new
+is built. A tag-by-tag view, if wanted later, is (b), a fragment-side decode preset; it is never (c): no payload change
+is made for a debug colour.
+
+*What it amends:* **R-444** (its message's "rises from 0.175 to 0.185": the closest pair stays 0.175; RQ-331) and
+**R-447** (its parenthesis: in gamut at every listed hue; RQ-332). Read with R-446 and R-467 (RQ-333), neither changed.
+It closes **RQ-280**, **RQ-281**, **RQ-282**, **RQ-331**, **RQ-332** and **RQ-333**.
+
+R-546 is in the "design" group of `plan/rule_groups.yaml`, with R-444 and R-447.
+
+Changes REQ-COL-028 (statement, verify, rulings, `rq` removed), REQ-COL-029, REQ-GUI-016 (`rq` removed, rulings, note),
+REQ-COL-104 and REQ-COL-105 (`rq` removed, rulings, verify, note), REQ-COL-101 and REQ-COL-103 (notes); adds
+REQ-COL-139 and REQ-COL-140.
