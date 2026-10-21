@@ -3,13 +3,17 @@
 //! against the same source at f64 on the CPU (`decode_only_with`), over every compute variant the stage is built for,
 //! on identical inputs: the same f32 `(u, v)`, chart parameters and `E*`, the CPU's widened, never narrowed (PIT-10).
 //! CI runs this file in the `gpu-kernel` job (lavapipe) and on Metal (`gpu-metal`'s `decode_` filter).
-//! - `decode_cross_backend_registry`: the variants this file runs are every decode entry point the kernel's WGSL holds.
+//! - `decode_cross_backend_registry`: the charts this file decodes on the GPU are every chart of the registry
+//!   (`kernel::chart::REGISTRY`), through every decode entry point the kernel's WGSL holds.
 //! - `decode_cross_backend_continuous`: the 27 continuous values within REQ-DEC-043's factor (`decode-f32-eps`'s
-//!   threshold), `η_E` off and on.
+//!   threshold), `η_E` off and on, inside its domain; outside it (saturated `stick_breaking`, the invariant charts' edge
+//!   columns and the points past their square, the shape sphere's `n₀ = ±1` poles) measured and reported, as
+//!   REQ-DEC-043's proposal records (`validation::decode_f32_eps`).
 //! - `decode_cross_backend_tags`: on each backend each tag is what dd_decoder §2's branch inputs, read from that
 //!   backend's own emitted values, call for; across backends the tags are bitwise equal wherever those inputs are, and
 //!   the construction's tag (`INVARIANT_INFEASIBLE`), decided on the shared `(u, v)` and parameters, everywhere, the
-//!   invariant charts' edge columns `s ∈ {0, 1}` included (the GPU's `sqrt` there, TASK-M2-12's note).
+//!   invariant charts' edge columns `s ∈ {0, 1}` included (the GPU's `sqrt` there, TASK-M2-12's note), and past the
+//!   square in `s`, where every pixel is `INVARIANT_INFEASIBLE`, on both backends.
 //! - `decode_cross_backend_energy`: `η_E` on, as a uniform: rest starts at `E* > V₀` (`ENERGY_UNSCALABLE`), targets
 //!   `E* < V₀` (`ENERGY_INFEASIBLE`) and `E* = V₀` (untouched, untagged), each on each backend, its tag dd_decoder
 //!   §3.7's from that backend's own `V₀`, `E*`, `s` and `r_min_pair_0`; a disagreement between backends only where those
@@ -29,7 +33,8 @@ use engine::decode_dispatch::{decode_only_with, DecodeStage, DESCRIBE_ENTRY};
 use kernel::chart::invariant::{Invariant, InvariantChart};
 use kernel::chart::mixed::{Alpha, ZMu1};
 use kernel::chart::{
-    Burrau, Chart, EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, Float, InvariantLE,
+    InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere, REGISTRY,
 };
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::energy_norm::largest;
@@ -38,16 +43,18 @@ use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::LinkReal;
 use kernel::payload::PayloadReal;
 use kernel::stage::decode::{
-    BurrauDefaults, DecodeMode, DecodeOut, DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults,
+    BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
+    DecodeMode, DecodeOut, DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults,
     InvariantLKDefaults, LatentDefaults, LatentStickBreaking, MassSimplexDefaults,
-    MixedMu1AlphaDefaults, UniformChart,
+    MixedMu1AlphaDefaults, ShapeSphereDefaults, UniformChart,
 };
 use validation::decode_f32_eps::{
     error, interior, physics_key, values, Fuzz, SplitMix, QUANTITIES,
 };
 use validation::gpu::GpuHarness;
 use validation::{
-    negative_control, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN, GAMMA_K, K_MAX,
+    negative_control, BURRAU_THETA_LZ_FRACTION, BURRAU_THETA_LZ_K, BURRAU_THETA_MAX,
+    BURRAU_THETA_MIN, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN, GAMMA_K, K_MAX,
 };
 
 fn root() -> PathBuf {
@@ -124,6 +131,8 @@ impl Case for Latent<f32> {
 impl Case for MassSimplex<f32> {}
 impl Case for EuclidPlane<f32> {}
 impl Case for Mixed<ZMu1, Alpha, f32> {}
+impl Case for BurrauThetaDeltaM<f32> {}
+impl Case for ShapeSphere<f32> {}
 
 fn short<R: Q + kernel::chart::invariant::WarpReal>(k: R, lz: R) -> Option<Degenerate> {
     infeasible(R::one(), k, lz).then_some(Degenerate::InvariantInfeasible)
@@ -136,6 +145,26 @@ impl Case for Burrau<f32> {
         v: R,
     ) -> Option<Degenerate> {
         short(self.kinetic(v), R::zero())
+    }
+}
+
+impl Case for BurrauThetaK<f32> {
+    fn construction<R: Q + kernel::chart::invariant::WarpReal + From<f32>>(
+        &self,
+        _u: R,
+        v: R,
+    ) -> Option<Degenerate> {
+        short(self.kinetic(v), R::zero())
+    }
+}
+
+impl Case for BurrauThetaLz<f32> {
+    fn construction<R: Q + kernel::chart::invariant::WarpReal + From<f32>>(
+        &self,
+        _u: R,
+        v: R,
+    ) -> Option<Degenerate> {
+        short(self.kinetic(), self.lz(v))
     }
 }
 
@@ -253,6 +282,25 @@ fn edges(rng: &mut SplitMix) -> Vec<[f32; 2]> {
     p
 }
 
+/// Points past the invariant charts' square in `s`, where `K* < K_min` and every pixel is `INVARIANT_INFEASIBLE`
+/// (chart_reference §2.1, §5.4): `s ∈ {−0.5, −0.25, 1.25, 1.5}` at 17 values of `t`, and 32 more with `s` drawn from
+/// `[−0.75, 0)` or `(1, 1.75]`.
+fn past(rng: &mut SplitMix) -> Vec<[f32; 2]> {
+    let mut p = Vec::new();
+    for s in [-0.5, -0.25, 1.25, 1.5] {
+        p.extend((0..=16).map(|j| [s, j as f32 / 16.0]));
+    }
+    for k in 0..32 {
+        let s = if k % 2 == 0 {
+            rng.uniform(-0.75, -0.01)
+        } else {
+            rng.uniform(1.01, 1.75)
+        };
+        p.push([s, rng.uniform(0.0, 1.0)]);
+    }
+    p
+}
+
 /// Each of `charts` with the points `draw` gives.
 fn with<C: Copy>(
     charts: &[C],
@@ -288,6 +336,52 @@ fn plane() -> EuclidPlane<f32> {
     EuclidPlane {
         m_range: [EUCLID_M_MIN.number() as f32, EUCLID_M_MAX.number() as f32],
         nu_range: [EUCLID_NU_MIN.number() as f32, EUCLID_NU_MAX.number() as f32],
+    }
+}
+
+fn theta_range() -> [f32; 2] {
+    [
+        BURRAU_THETA_MIN.number() as f32,
+        BURRAU_THETA_MAX.number() as f32,
+    ]
+}
+
+fn strip_k() -> BurrauThetaK<f32> {
+    BurrauThetaK {
+        theta_range: theta_range(),
+        k_max: K_MAX.number() as f32,
+        gamma_k: GAMMA_K.number() as f32,
+    }
+}
+
+fn strip_lz() -> BurrauThetaLz<f32> {
+    BurrauThetaLz {
+        theta_range: theta_range(),
+        k: BURRAU_THETA_LZ_K.number() as f32,
+        lz_fraction: BURRAU_THETA_LZ_FRACTION.number() as f32,
+    }
+}
+
+/// The `(θ, Δm)` strip toward a target whose sum is 1 exactly at f32 and f64.
+fn strip_m() -> BurrauThetaDeltaM<f32> {
+    BurrauThetaDeltaM {
+        theta_range: theta_range(),
+        m_target: [0.25, 0.375, 0.375],
+    }
+}
+
+/// The shape sphere under `map`, its held blocks from `rng`, the exponential map about the `+w` pole.
+fn sphere(rng: &mut SplitMix, map: ShapeMap) -> ShapeSphere<f32> {
+    ShapeSphere {
+        map,
+        n0: [0.0, 0.0, 1.0],
+        e1: [1.0, 0.0, 0.0],
+        e2: [0.0, 1.0, 0.0],
+        scale: 1.2,
+        inertia: 1.0,
+        phase: 0.0,
+        z_mass: [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)],
+        z_mom: core::array::from_fn(|_| rng.uniform(-1.0, 1.0)),
     }
 }
 
@@ -338,6 +432,9 @@ struct Report {
     infeasible: [usize; 2],
     at_target: [usize; 2],
     samples: usize,
+    /// The entry points run and the charts they decode, by name.
+    entries: BTreeSet<String>,
+    charts: BTreeSet<String>,
 }
 
 impl Report {
@@ -354,6 +451,8 @@ impl Report {
             infeasible: [0; 2],
             at_target: [0; 2],
             samples: 0,
+            entries: BTreeSet::new(),
+            charts: BTreeSet::new(),
         }
     }
 }
@@ -513,7 +612,9 @@ fn run<V>(
     let native = |chart: &V::Chart, p: [f32; 2], e: Option<f32>| {
         kernel::stage::decode::sample_with::<V::Chart, V::Links, f32>(chart, p[0], p[1], e)
     };
+    r.entries.insert(V::ENTRY.to_owned());
     for (n, (chart, uv)) in batches.iter().enumerate() {
+        r.charts.insert(chart.name().to_owned());
         let gpu_off = gpu_run(chart, uv, None);
         let cpu_off: Vec<_> = uv.iter().map(|&p| cpu_run(chart, p, None)).collect();
         r.domain = format!("{} {label}, η_E off", V::ENTRY);
@@ -654,6 +755,22 @@ fn run_all(taint: Taint, energy: bool) -> Report {
         t,
         false,
     );
+    run::<InvariantLEDefaults>(
+        &h,
+        &wgsl,
+        &mut r,
+        (PAST, &with(&le, &mut rng, past)),
+        t,
+        false,
+    );
+    run::<InvariantLKDefaults>(
+        &h,
+        &wgsl,
+        &mut r,
+        (PAST, &with(&lk, &mut rng, past)),
+        t,
+        false,
+    );
     let one = |c, n| vec![(c, points(&mut SplitMix::new(n), 128))];
     run::<MassSimplexDefaults>(&h, &wgsl, &mut r, ("fuzz", &one(simplex(), 1)), t, energy);
     run::<BurrauDefaults>(
@@ -676,6 +793,43 @@ fn run_all(taint: Taint, energy: bool) -> Report {
         .map(|_| (mixed(&mut rng), points(&mut rng, 64)))
         .collect();
     run::<MixedMu1AlphaDefaults>(&h, &wgsl, &mut r, ("fuzz", &mx), t, false);
+    run::<BurrauThetaKDefaults>(
+        &h,
+        &wgsl,
+        &mut r,
+        ("fuzz", &[(strip_k(), points(&mut rng, 128))]),
+        t,
+        false,
+    );
+    run::<BurrauThetaLzDefaults>(
+        &h,
+        &wgsl,
+        &mut r,
+        ("fuzz", &[(strip_lz(), points(&mut rng, 128))]),
+        t,
+        false,
+    );
+    run::<BurrauThetaDeltaMDefaults>(
+        &h,
+        &wgsl,
+        &mut r,
+        ("fuzz", &[(strip_m(), points(&mut rng, 128))]),
+        t,
+        energy,
+    );
+    let spheres: Vec<_> = [ShapeMap::Spherical, ShapeMap::Exponential]
+        .into_iter()
+        .flat_map(|map| [0, 1].map(|_| map))
+        .map(|map| {
+            let uv = points(&mut rng, 64)
+                .into_iter()
+                .filter(|p| !POLES.contains(p));
+            (sphere(&mut rng, map), uv.collect())
+        })
+        .collect();
+    run::<ShapeSphereDefaults>(&h, &wgsl, &mut r, ("fuzz", &spheres), t, energy);
+    let pole = [(sphere(&mut rng, ShapeMap::Spherical), POLES.to_vec())];
+    run::<ShapeSphereDefaults>(&h, &wgsl, &mut r, (POLE, &pole), t, energy);
     for (domain, (e, k, at)) in &r.worst {
         let (b, bk, _) = &r.backend[domain];
         eprintln!(
@@ -701,18 +855,6 @@ fn run_all(taint: Taint, energy: bool) -> Report {
 
 // ── decode_cross_backend_registry ───────────────────────────────────────────────────────────────────────────────
 
-/// The decode variants [`run_all`] runs, by entry point.
-const RUN: [&str; 8] = [
-    LatentDefaults::ENTRY,
-    LatentStickBreaking::ENTRY,
-    InvariantLEDefaults::ENTRY,
-    InvariantLKDefaults::ENTRY,
-    MassSimplexDefaults::ENTRY,
-    BurrauDefaults::ENTRY,
-    EuclidPlaneDefaults::ENTRY,
-    MixedMu1AlphaDefaults::ENTRY,
-];
-
 /// Every compute entry point of the decode stage in `wgsl`, `stage_decode_…`, but the descriptor writer and the `tanh`
 /// operator, which decode nothing.
 fn entries(wgsl: &str) -> BTreeSet<String> {
@@ -728,26 +870,36 @@ fn entries(wgsl: &str) -> BTreeSet<String> {
         .collect()
 }
 
-fn check_registry(run: &[&str]) {
+/// The runs decoded every chart of the registry (`kernel::chart::REGISTRY`) on the GPU, through every decode entry
+/// point the kernel's WGSL holds.
+fn check_registry(drop: Option<&str>) {
+    let mut r = run_all(CLEAN, false);
+    if let Some(chart) = drop {
+        r.charts.remove(chart);
+    }
+    let registry: BTreeSet<String> = REGISTRY.iter().map(|s| s.to_string()).collect();
+    assert_eq!(
+        r.charts, registry,
+        "the charts run on the GPU are not every chart of the registry"
+    );
     let want = entries(&wgsl());
-    let got: BTreeSet<String> = run.iter().map(|s| s.to_string()).collect();
     assert!(!want.is_empty(), "the WGSL names no decode entry point");
     assert_eq!(
-        got, want,
+        r.entries, want,
         "the variants run are not every decode entry point"
     );
 }
 
 #[test]
 fn decode_cross_backend_registry() {
-    check_registry(&RUN);
+    check_registry(None);
 }
 
 negative_control!(
     decode_cross_backend_registry,
-    "a run that leaves out the Burrau chart's variant must fail",
-    expected = "the variants run are not every decode entry point",
-    check_registry(&RUN[..5])
+    "a run that leaves out the shape sphere must fail",
+    expected = "the charts run on the GPU are not every chart of the registry",
+    check_registry(Some("ShapeSphere"))
 );
 
 // ── decode_cross_backend_continuous ─────────────────────────────────────────────────────────────────────────────
@@ -761,9 +913,25 @@ const SATURATED: &str = "saturated";
 /// `√eps`-sized and different at each precision, and the momenta differ by `a·w` (f32's conditioning, not the backend).
 const EDGES: &str = "edge columns";
 
-/// Whether `domain` lies outside REQ-DEC-043's: [`SATURATED`] or [`EDGES`].
+/// The invariant charts' points past the square in `s` ([`past`]), outside REQ-DEC-043's domain: every one is
+/// `INVARIANT_INFEASIBLE`, its momenta the rigid rotation, and its continuous values are measured and reported.
+const PAST: &str = "past the square";
+
+/// The spherical map's points of `n₀ = ±1` in `[0,1]²`, the inverse's two poles (chart_reference §3.2). At `(½, ½)`,
+/// `θ = π` and `φ = π/2`, so `n₀ = −1` and `ρ̃ = √(I(1 + n₀)/2) = 0`: the binary collision `BC₀₁`, where `V₀ → −∞`
+/// (R-436). At `(0, ½)` and `(1, ½)`, `n₀ = +1` and `λ̃ = 0`, where `rho_angle` is R-437's defined `atan2` pole. Each
+/// precision reaches them only to its own rounding of `sin π` and `cos(π/2)`, so the vanishing vector is that rounding,
+/// f32's or f64's, and `1/ρ` or the angle of a rounding-sized `λ̃` amplifies it.
+const POLES: [[f32; 2]; 3] = [[0.5, 0.5], [0.0, 0.5], [1.0, 0.5]];
+
+/// The shape sphere at [`POLES`], outside REQ-DEC-043's domain: its continuous values are measured and reported.
+const POLE: &str = "n₀ = ±1 poles";
+
+/// Whether `domain` lies outside REQ-DEC-043's: [`SATURATED`], [`EDGES`], [`PAST`] or [`POLE`].
 fn outside(domain: &str) -> bool {
-    domain.contains(SATURATED) || domain.contains(EDGES)
+    [SATURATED, EDGES, PAST, POLE]
+        .iter()
+        .any(|d| domain.contains(d))
 }
 
 /// Inside REQ-DEC-043's domain, every continuous value within its factor of the f64 decode. Outside it, the
@@ -802,12 +970,14 @@ negative_control!(
 
 fn check_tags(taint: Taint) {
     let r = run_all(taint, false);
-    assert!(
-        r.gpu_tags.contains("M01_TINY") && r.cpu_tags.contains("M01_TINY"),
-        "the fuzz never reached M01_TINY: GPU {:?}, CPU {:?}",
-        r.gpu_tags,
-        r.cpu_tags
-    );
+    for tag in ["M01_TINY", "INVARIANT_INFEASIBLE"] {
+        assert!(
+            r.gpu_tags.contains(tag) && r.cpu_tags.contains(tag),
+            "the fuzz never reached {tag} on both backends: GPU {:?}, CPU {:?}",
+            r.gpu_tags,
+            r.cpu_tags
+        );
+    }
 }
 
 #[test]
