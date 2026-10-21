@@ -1456,3 +1456,31 @@ only, so the flag has no entry to wait on.*
   map with `s√2 > π`. Under option (b): REQ-CHART-075's `r > π` clause, its verify's fixture `s√2·(N−1)/N > π` (R-503
   review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
   (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.
+
+## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°` maps the whole window onto one line of systems; the corpus gives that view no `system_image` *(silence, R-474, R-473, R-408; context: TASK-M2-36)*
+
+*Found answering physics review 5593414323 of PR #255 (P4), while restating the tilted fold's criterion without
+dividing by `N_d`. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "**Lean each axis**, an option
+    (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed
+    (`u₁·u₂ = sin τ₁ sin τ₂`)"; "The range `τ ∈ [−90°, +90°]` above is Lean each axis's"; "Under Lean each axis an area
+    statistic weights each pixel by the Gram factor `√(|u₁|²|u₂|² − (u₁·u₂)²)` (R-408)".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract": the
+    four `system_image` values, "ray-degenerate — whole lines of pixels map to the same system".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (applied per R-369): the fold is
+    kept iff `N_b = 0` for `N ∝ u₁ × u₂`.
+- **Silence:** at `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and `u₂ = ±e_X`, so `u₁ × u₂ = 0` and the Gram factor
+  is 0: every pixel maps to `(a, b) = ` the slice centre's and `d = ±u ± v`, whole lines of pixels decoding to one
+  system. The tilted fold's criterion has no normal there, the area statistic weights every pixel 0, and no text says
+  whether such a view is allowed, what its `system_image` is (ray-degenerate, or refused), or what it draws. Under
+  Tip as sheet `R` is a rotation and keeps rank 2; with two targets the two tilted vectors are orthonormal; an
+  edge-on view (`N_d = 0`) keeps rank 2 and the criterion needs no `N_d`.
+- **Options seen:**
+  - (a) The view is allowed and reports ray-degenerate, its statistics weighted 0 as the Gram factor says.
+  - (b) The edit path refuses the second angle at 90° when the first is at 90° with one target (a stop, as R-469 P2
+    stops an edit), the readout saying why.
+  - (c) Lean each axis's range is open, `(−90°, 90°)`, for both angles together.
+- **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
+- **Waits:** REQ-CHART-062's fold at that point (TASK-M2-36); TASK-M2-36 does not wait for the rest.
