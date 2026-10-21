@@ -1,0 +1,138 @@
+# Proposed requirements for the state map (Chart position), in plan/tools/reqio.py patch format.
+# Draft: ids are assigned by reqio.py; set each `milestone` from plan/MILESTONES.md and the `rulings` to the new
+# R-number before applying (MILESTONE and R-NEW are placeholders and must not be applied as written).
+# Sources assume principia_state_map.md is ported to docs/design/principia_state_map.md with its headings unchanged.
+add:
+  - area: COL
+    statement: "Chart position ⟨chart⟩ must yield, per sample, the system's position on the chosen chart at the chosen time (playhead, t = 0 or a fixed t) and one of four statuses (ok, clamped, past a bounded edge, undetermined), derived at read from r, p at the playhead, the masses and the existing encode, storing nothing."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM1. Definition"}
+      - {file: docs/design/principia_state_map.md, section: "SM4. Destination side: why it must be a quotient, not a branch"}
+      - {file: docs/design/principia_state_map.md, section: "SM5. The four results of a projection"}
+      - {file: docs/design/principia_state_map.md, section: "SM11. Colouring Chart position: a base, then layers"}
+    verify: {method: unit test, detail: "each status reached on a constructed state per chart; latent-momentum targets give 'left' where |q| > q_max, ν targets give 'past edge'"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "The state map must change no SimState, payload, ICDescriptor or other layout."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM2. It changes no sim struct and reads only what the fragment already has"}
+    verify: {method: review checklist, detail: "git diff of every layout definition is empty in the PR; no new stored field"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "At t = 0 on its own chart, every sample's Chart position must equal its own chart coordinate to the f32 round trip."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM12. Tests (each with the arm that fires)"}
+      - {file: docs/design/principia_state_map.md, section: "SM7. Colour frame and deep zoom"}
+    verify: {method: property test, detail: "worst error per chart within the prototype's figures (≤ 5e-6; 4.9e-4 on the curve chart); fires on a missed fold or mirror slip"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "A system that has left the chart must be drawn at the edge it left by, with no stored history; 'none' must be available as a debug option."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM5a. Left the chart: drawn at the edge it left by"}
+    verify: {method: unit test, detail: "the clamp agrees with the fine-Δt exit on the exit axis and the gap falls with Δt (0.267 → 0.033); fires on a clamp to the wrong side"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "Every copy of a sample in the extension must be the canonical sample, its IC bitwise equal."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM3. Source side: the extension comes for free, because the colour is a property of the system"}
+    verify: {method: property test, detail: "bitwise IC identity; the control (re-decode from the copy's own coordinate) differs on 1 of 400 pairs; a colour comparison at t = 20 is not the test"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "Chart position's colour slot must be one base (Gradient, Site blend, Palette or Picture) followed by an ordered list of optional layers (bandmask or site_overlay), offering on each chart only the bases and layers defined for its quotient."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM11. Colouring Chart position: a base, then layers"}
+    verify: {method: unit test, detail: "per quotient, the offered set matches SM11's tables; layers compose in order (grid over checker ≠ checker over grid where both are in band); a 0% layer changes nothing"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "The 2D gradient on a flat chart and the 3D gradient on the sphere must be one-to-one and in sRGB gamut over their whole range."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM6. Colour maps: one-to-one on the quotient, so they own lightness"}
+      - {file: docs/design/principia_state_map.md, section: "SM11. Colouring Chart position: a base, then layers"}
+    verify: {method: property test, detail: "binned at 2e-3 over a 300² grid: no bin holds points more than its own diagonal apart; 0 out-of-gamut samples; controls that must fail: the vMF blend (antipodes, 2.000) and a hue circle on a line (1.993)"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "Chart position's Site blend on the shape sphere must be the same code path as the Shape n̂ node's Site blend."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM12. Tests (each with the arm that fires)"}
+    verify: {method: unit test, detail: "at axes6 · Full · vMF κ 3 · OKLab, worst difference exactly 0 over random shapes"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "The Shape n̂ node and its colour nodes must render bitwise as before the state map."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM12. Tests (each with the arm that fires)"}
+    verify: {method: golden image, detail: "every saved stain renders bitwise the same; the arm: removing Shape n̂'s registration changes the render"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "A Palette or Site blend coloured by index must give every pair of neighbouring tiles different colours."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM11. Colouring Chart position: a base, then layers"}
+    verify: {method: property test, detail: "across sampled tile boundaries, 0 same-colour pairs for square, hexagons, triangles, brick and stripes"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "On a periodic axis (θ on the cylinder and the sphere) every base and layer must have a whole number of cells per period, a multiple of 6."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM11. Colouring Chart position: a base, then layers"}
+    verify: {method: property test, detail: "colour at θ and θ + 2π identical over every pattern and count (0 of 7200 differ)"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    statement: "Replace-L must scale chroma by min(1, L/0.75, (1 − L)/0.35) with the replaced L, so every brightness level stays in gamut."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM15. In the stain graph editor"}
+    verify: {method: property test, detail: "0 of 99,710 samples out of gamut over every base at L 0.18, 0.30, 0.50, 0.78, 0.84"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: SCHED
+    statement: "The scheduler's decisions must be identical with the state map on and off."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM12. Tests (each with the arm that fires)"}
+    verify: {method: unit test, detail: "the same tree, quad for quad, with a Chart position stain and with the default stain"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: GUI
+    statement: "The stain editor must offer Chart position as one node with a time setting, beside the unchanged Shape n̂ node, and its inspector must show one base and a reorderable layer stack, preserving every setting when the source or chart is switched and back."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM15. In the stain graph editor"}
+    verify: {method: GUI screenshot, detail: "boards 1, 3 and 4 of the reference mock; switching chart or source and back restores the settings exactly"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: GUI
+    statement: "The Problems pane must warn where a brightness node replaces L that the base spends on position or that lightness layers are drawn in, and must report left / ended / past-edge / undetermined counts per compile."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM15. In the stain graph editor"}
+    verify: {method: GUI screenshot, detail: "board 1's Problems rows reproduced on the prototype's settings"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: GUI
+    statement: "The library must carry the seven state-map presets, each inserting an ordinary editable graph."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM15. In the stain graph editor"}
+    verify: {method: GUI screenshot, detail: "board 5; each preset's graph matches the prototype's smPreset"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: GUI
+    statement: "In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM9. Legend and the hovered pixel"}
+      - {file: docs/design/principia_state_map.md, section: "SM3. Source side: the extension comes for free, because the colour is a property of the system"}
+    verify: {method: GUI screenshot, detail: "board 6; black fraction 0 at every frame of a drag into the extension"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
+  - area: COL
+    kind: calibration
+    statement: "The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095)."
+    source:
+      - {file: docs/design/principia_state_map.md, section: "SM13. Queue, don't rule"}
+    verify: {method: review checklist, detail: "proposed with the prototype's values and the gamut evidence; confirmed at the milestone gate"}
+    rulings: [R-NEW]
+    milestone: MILESTONE
