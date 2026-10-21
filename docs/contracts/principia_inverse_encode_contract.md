@@ -197,6 +197,14 @@ CoM-frame-defined.
 - **5. Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
 - **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
 
+**Where possible, at step 4** (R-72, applied per R-369; REQ-ENC-008). The active chart represents `x` when the
+chart point `c(x)`, read off `C(x)` axis by axis (Part 5), decodes back to it: `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`,
+Part 4's norm and tolerance (REQ-ENC-029, REQ-ENC-024), both states on the canonical section. A chart sweeps two DOF
+and its slice and conventions pin the other six (chart_decoder_contract Part 5), so a generic state is not on it: its
+frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
+construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
+coordinate, and nothing is compared for it.
+
 ### Chart-aware validation
 
 Not every point of the latent hypercube $[0,1]^8$ is valid in every chart, and not every entered IC lands inside
@@ -226,6 +234,33 @@ the hypercube. Lookup and lock validate against the **active chart's** constrain
 - **Clamp**: snap each out-of-range coordinate to its boundary, set `lookup_clamped`, and show which coordinates moved.
 - **Reject**: refuse with an error naming the failed constraint. Only when projecting or clamping would give a
   qualitatively different IC from the one intended.
+
+**The nearest valid point** (R-72; REQ-ENC-030). On the invariant charts, a projection keeps the energy and moves
+`L_z` alone. At the frozen configuration and masses, the kinetic energy is `K* = E − U` on $(L_z, E)$ and `K* = K` on
+$(L_z, K)$, and the points feasible at that energy are the segment $|L_z| \le \sqrt{2I K^*}$. The nearest valid point is
+the one at the same `K*`, and so at the same `E`, on the parabola, on the side of the entered `L_z`:
+$L_z \leftarrow \operatorname{sign}(L_z)\sqrt{2I K^*}$. Distance is $|\Delta L_z|$ at fixed energy. Each chart's vertical
+coordinate is its energy, so the projection moves only the horizontal coordinate, as the charts' own domain function
+does. The root is held so that $L_z^2 \le 2I K^*$ exactly, so the projected pair passes the feasibility test it failed.
+Where `K* < 0` (`E < U`; on $(L_z, K)$, `K < 0`), no `L_z` is feasible at that energy. The nearest feasible point is
+then the parabola's apex, `L_z = 0` at `K* = 0`, `E = U`: the rest start. The lock re-centres to the nearest feasible
+point in the same metric. The other charts' layer-2 failures are clamps in the chart's own coordinates, each
+out-of-range coordinate snapped to its boundary, which needs no metric.
+
+**A qualitatively different IC** (R-72; REQ-ENC-030). A projection or clamp gives a qualitatively different IC, and
+lookup rejects instead, when it changes the class of either constant of motion that classifies the motion:
+
+- **The sense of rotation**, `sign(L_z)` ∈ {−, 0, +}. `L_z = 0` is a class of its own: a triple collision needs zero
+  angular momentum (Sundman), so only that class can reach one.
+- **The energy class**, `sign(E)` ∈ {−, 0, +}. With `E ≥ 0`, the Lagrange–Jacobi identity
+  $\ddot I = 4E - 2U > 0$ ($U < 0$) makes `I` grow without bound, so only `E < 0` admits motion that stays bounded.
+
+Under the metric above, a projection at `K* > 0` keeps `E` and the sign of `L_z`, so it is taken. At `K* = 0` with
+`L_z ≠ 0` the parabola's only point is `L_z = 0`, so the pair is rejected (`L_z`'s class would change). At `K* < 0` the
+apex keeps `L_z`'s class only where `L_z = 0`. It keeps `E`'s, since `E < U < 0`. So that pair is projected to the
+rest start, and every other pair there is rejected. A non-finite entry is rejected, naming its constraint, never
+carried on as a NaN. A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has
+no real value there. So projecting it to `t = 0` changes no class, and the projection stands.
 
 **Lock validation.** A clicked pixel is valid by construction, but a tilt can carry the lock's neighbourhood
 into an infeasible region. Detect it, then re-centre to the nearest feasible point or switch to a chart where

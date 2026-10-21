@@ -69,6 +69,7 @@ pub use shape_sphere::{ShapeMap, ShapeSphere};
 use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
+use spirv_std::num_traits::FloatConst;
 
 /// What `Φ` hands the shared decoder (chart_reference §5.1: `ChartOut` is whatever `D` consumes). The latent chart
 /// hands it the eight controls `z`; a chart that sets masses, `(α, β)`, an explicit `(ρ, λ)` or a `(L_z, K)` request
@@ -238,6 +239,18 @@ impl<P: Copy> ChartDecode for InvariantLK<P> {
         R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
     {
         invariant::decode::<S, R, Self>(self, u, v).0
+    }
+}
+
+impl<P: Copy + FloatConst> ChartDecode for ShapeSphere<P> {
+    /// The chart's own [`Chart::decode`]: the configuration set explicitly, then `C` (`shape_sphere`'s note).
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        Chart::decode::<S, R>(self, u, v)
     }
 }
 
