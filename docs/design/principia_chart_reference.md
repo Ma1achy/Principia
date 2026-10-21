@@ -17,7 +17,8 @@ Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2)
 The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
 opposite body `k` (payload §2). What a person reads is 1-based (R-449): internal body `k` is shown as body `k + 1`, a
 pair by its two bodies. The shown numbers follow that map, not the Burrau literature's numbering: §4.2 gives which mass
-each body has (RQ-335).
+each body has. R-449's map applies everywhere, Burrau included, and the Burrau presets' legends and the Inspector
+show each body's mass beside its number, e.g. "body 1 (m = 5/12)" (R-549, RQ-335).
 
 ---
 
@@ -230,7 +231,9 @@ controls. `forbids_energy_normalisation = true`.
 **The fixed geometry and masses** (defined per R-72, REQ-CHART-048; TASK-M2-08). They are the slice pin `z₀`'s: its
 configuration block through the shared `D_cfg` (§0.2, the canonical-frame decode, so `I = 1`) and its mass block
 through the shared `D_mass` (§0.1), under the chart's link selection. Only the momentum block is built per pixel, by
-§2.2 from the pixel's `(L_z, K*)`; `z₀`'s momentum block is not read.
+§2.2 from the pixel's `(L_z, K*)`; `z₀`'s momentum block is not read. The chart's parameters are the four frozen
+controls `(z_α, z_β, z_μ₁, z_μ₂)`. They are set from `z₀`'s configuration and mass blocks when the chart is entered,
+or from the lock where one is set, and edited like any chart parameter (Design axiom 6) (R-549, RQ-350).
 
 ### 2.1 Feasibility, and the warp that makes every pixel valid
 
@@ -473,7 +476,7 @@ R-72), and the fixtures avoid that circle.
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
 "to avoid the collision singularities". It is rejected. Under this convention the poles are the Lagrange
-configurations, which are regular points of the flow, and every binary collision lies on the equator ($w = 0$, §3.4).
+configurations at equal masses (R-549, RQ-355), which are regular points of the flow, and every binary collision lies on the equator ($w = 0$, §3.4).
 So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \pi]$.
 
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
@@ -558,7 +561,7 @@ untilted rule).
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
 section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
-at the poles and can be compressed to invisibility in equirectangular.
+at the poles at equal masses and can be compressed to invisibility in equirectangular.
 
 **Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
 **pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
@@ -574,7 +577,7 @@ by TASK-M8-44, REQ-CHART-057).
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
 crosses the very surface being rendered. The collision points are singular points of the flow, the Euler
-configurations are equilibria on the equator, and the Lagrange configurations are the poles. The full
+configurations are equilibria on the equator, and the Lagrange configurations are the poles at equal masses. The full
 reduced phase space is $T^*S^2$, so different momenta at the same shape give crossing trajectories on the
 map. A mixed-axis chart (§1.3) pairing a shape coordinate with a momentum lifts that degeneracy. Drawing a
 trajectory on this chart is the hover trace and inspector of `principia_trajectory_viewing.md`.
@@ -583,7 +586,8 @@ trajectory on this chart is the hover trace and inspector of `principia_trajecto
 
 Useful as overlays and as tests. **Collision singularities** (two bodies coincident) are three
 points on the equator; **Euler configurations** (collinear) lie on the equator between them;
-**Lagrange configurations** (equilateral) are the two poles. Their exact coordinates depend on the
+**Lagrange configurations** (equilateral) are the two poles at equal masses; under the current masses `L±` sit at
+`w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`, the poles only at equal masses (R-549, RQ-355). Their exact coordinates depend on the
 mass ratios — compute them from §3.1 rather than hard-coding. The Euler configurations are the Euler central
 configurations: roots of Euler's quintic in the mass ratios, mapped through §3.1 (R-126).
 

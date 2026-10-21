@@ -1024,7 +1024,8 @@ dimension gets its own key:**
 It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and
 its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
 2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
-function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes,
+function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Under a Burrau chart preset each
+key that names a body shows its mass beside its number, e.g. "escape body 1 (m = 5/12)" (R-549, RQ-335). Its keys are the nine classes,
 physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running`,
 `sim_failed` and a reserved code share in the outcome view (R-446), a `decode_failed` sample drawing blank, with no key
 or share (R-511; *was:* "which `running` and every failure share"); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
@@ -1210,7 +1211,8 @@ one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajec
 holds no sound control. Gui review 5595359543 of PR #267, G1.)
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
   doesn't move.
-- **Readouts:** latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
+- **Readouts:** latent `z`, `α, β`, masses (each body's mass beside its number, e.g. "body 1 (m = 5/12)", R-549),
+  `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
   and pair separations.
 - **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
   **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.

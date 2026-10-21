@@ -238,7 +238,7 @@ SIM_FAILED (non-finite state)  >  COLLISION  >  ESCAPE  >  BOUNDED (t ≥ T — 
 ```
 Shape map (Montgomery), from mass-weighted Jacobi (ρ̃, λ̃), I = ‖ρ̃‖² + ‖λ̃‖²:
    u = ‖ρ̃‖² − ‖λ̃‖²          v = 2 (ρ̃ · λ̃)          w = 2 (ρ̃ ∧ λ̃)   (signed area)
-   n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles
+   n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles at equal masses (R-549)
 ```
 
 **The physics-overlay convention** (Montgomery's shape sphere, equal masses). Three classes of special
@@ -247,7 +247,7 @@ configuration sit at fixed points:
 | symbol | configuration | location | count |
 |---|---|---|---|
 | $BC_{01}, BC_{12}, BC_{20}$ | binary collisions | equator, 120° apart | 3 |
-| $E_0, E_1, E_2$ | Euler collinear | equator, between the collisions | 3 |
+| $E_0, E_1, E_2$ | Euler collinear, $E_j$ with body $j$ in the middle | equator, between the collisions | 3 |
 | $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
 
 **The landmarks are computed from the shape map above, not hard-coded (R-14).** A binary collision's $\hat{\mathbf b}$ is
@@ -266,8 +266,11 @@ The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
 fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
 These labels are internal. Shown on the overlay, they name the bodies 1-based (R-449): `BC₀₁`, `BC₁₂` and `BC₂₀` read
-`BC₁₂`, `BC₂₃` and `BC₁₃`, a pair's bodies smaller first. The table's `E₀, E₁, E₂` index is not defined beyond
-`ê_j = −b̂_j`; how they are shown is RQ-334.
+`BC₁₂`, `BC₂₃` and `BC₁₃`, a pair's bodies smaller first. `E_j` is the collinear configuration with body `j` in the
+middle, and it is shown as `E_{j+1}` through R-449's one conversion function, so `E₀, E₁, E₂` read `E₁, E₂, E₃`;
+its antipodality to the other two bodies' binary collision (`ê_j = −b̂_j`, `b̂_j` the collision of pair `j`, the side
+opposite body `j`) is stated for equal masses only (R-549, RQ-334). *Was:* "The table's `E₀, E₁, E₂` index is not
+defined beyond `ê_j = −b̂_j`; how they are shown is RQ-334."
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
 
@@ -347,7 +350,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 6. **Detector — collision & priority:** head-on pair crosses `r_coll` → `COLLISION(pair)` with the correct pair id; two pairs below `r_coll` in the same step → `COLLISION` with `detail = 3`, never a binary label (change 7); a contrived same-step collision+escape resolves per §3.6 priority, identically on both precisions (R-30's order by time, a same-time tie going to collision; REQ-EVT-020, R-339).
 7. **Drift shape:** a close-encounter IC shows `max|ΔE| ≫ |ΔE_final|` (spike that recovered) — validates storing both and the cross-check view's premise.
 8. **Winding & terminal latch:** on a circulating bounded orbit, `θ̃` is continuous (no 2π jumps), `orbit_count` matches a hand-counted winding, `retrograde` matches the L_z sign; post-event slots are frozen at the terminal state (finalisation).
-9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
+9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles) at equal masses, and `n_w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)` for every mass set (R-549, RQ-355); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)` at equal masses; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
 10. **Benettin invariance:** halving `δ₀` and doubling `n_renorm` (within the linear regime) leaves λ_T unchanged within tolerance; λ_T ≈ 0 on the quasi-regular Kepler-embedded orbit, large on Burrau.
 11. **Ensemble sanity:** deep basin-interior pixel → `H = 0`, tiny σ²; a straddling boundary pixel → `H > 0`; and each sample's **Benettin shadow is excluded from the colour/spread pool** (asserting the shadow-is-not-a-sample separation structurally).
 12. **Burrau smoke (literature-anchored):** the classical rest start resolves to binary + escaper within the default horizon, qualitatively matching Szebehely & Peters (1967); asserted as outcome-class + coarse `t_end` window, not trajectories.
