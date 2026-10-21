@@ -21,10 +21,10 @@
 //!   "not yet" style, the grey with its dot stipple (R-271, R-280, R-399); an f16 NaN is hatched; a failed-state stored
 //!   0.0 sits on the ramp at 0.0's place; a valid `d_min` on the ramp.
 //! - `length_view`: the word `length`'s view: the sentinel 127 shows as its literal value on the ramp (R-136).
-//! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp: 127 in the invalid pattern, then in the
-//!   node's override colour.
-//! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in the invalid pattern, then in the override
-//!   colour; the unset value in the "not yet" style either way (R-280, R-399).
+//! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp, a presentation view (R-467): 127 in the
+//!   presentation views' invalid colour, `#141418`, then in the node's override colour.
+//! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in `#141418`, then in the override colour; the
+//!   unset value in the "not yet" style either way (R-280, R-399).
 //!
 //! **The ramp follows the declared range** (`m1-numeric`; R-400, R-403; TASK-M1-17's acceptance lines), each view in
 //! its default mode, `RANGE_AUTO = 1`, over the scene's measured range:
@@ -51,9 +51,13 @@
 //!   table's order: bounded, the collisions with `t_end_step > 0` per pair, the triple collision, the escapes per body,
 //!   the triple ejection; a collision and a triple collision at `t_end_step == 0`, each in its own class's colour
 //!   (R-445); then a running sample, a `sim_failed` sample of each `detail`, a `decode_failed` sample of each `detail`
-//!   and the reserved `state` codes 6 and 7, each drawn bounded / nothing yet's `#141418` (R-446); and a sample whose
-//!   chart point is forbidden ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101,
-//!   REQ-COL-102).
+//!   and the reserved `state` codes 6 and 7, each drawn bounded / nothing yet's `#141418` (R-446), but the
+//!   `decode_failed` samples, drawn blank, the canvas background (R-511); and a sample whose chart point is forbidden
+//!   ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn blank too, from the chart (R-467; REQ-COL-101, REQ-COL-102,
+//!   REQ-COL-108).
+//!
+//! **The canvas background** every scene renders with is the harness's recorded value, [`BACKGROUND`]: the GUI's clear
+//! colour, `#0A0A0A` (`render::present::CANVAS_BACKGROUND_SRGB8`; R-467 D2, R-504).
 //! - `outcome_edited`: the same samples, the body-2 escape's swatch (`escape_body_1`) edited: only that class changes
 //!   (REQ-COL-002).
 //! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
@@ -81,9 +85,9 @@ use kernel::payload::{
 };
 use ledger::gen::numeric::{NumericView, Ramp, Shown as ViewShown};
 use ledger::schema::Storage;
-use render::assemble::{self, Kind, Node, Occupant, Stain, Tier};
+use render::assemble::{self, Fragment, Kind, Node, Occupant, Stain, Tier, View};
 use render::bind::{self, Context};
-use render::colour::field_ramp::{override_default, FieldRamp, Shown as RampShown};
+use render::colour::field_ramp::{override_default, FieldRamp, Reads, Shown as RampShown};
 use render::colour::outcome::{self, Shown as OutcomeShown};
 use render::headless::{self, Draw, Target};
 use render::pipeline_cache::{block_layout, encode};
@@ -232,8 +236,13 @@ pub const OUTCOME_SAMPLES: [(&str, u32, u32); 23] = [
     ("decode_failed", 1, 0),
 ];
 
+/// The canvas background every scene renders with, 8-bit sRGB: the value the harness records (R-467 D2, R-504), the
+/// GUI's clear colour, `render::present::CANVAS_BACKGROUND_SRGB8`, `#0A0A0A`, confirmed at the M2 gate.
+pub const BACKGROUND: [u8; 3] = render::present::CANVAS_BACKGROUND_SRGB8;
+
 /// The `outcome` scene's sample whose chart point is forbidden (REQ-COL-102): its last, a `decode_failed` sample like
-/// the one before it, which is not, so only the chart's classification tells them apart (R-446).
+/// the one before it, which is not. Both draw the background in the presentation view (R-467, R-511); the debug view
+/// tells them apart, the forbidden one in the hatch and counted as forbidden (REQ-COL-109).
 pub const OUTCOME_FORBIDDEN: u32 = 22;
 
 /// The `state` code of an outcome sample's state name: the ledger's ([`outcome::code`]), or the reserved codes, named
@@ -408,6 +417,11 @@ pub enum Look {
     /// A flat colour, linear RGB: a categorical class's (a swatch of the outcome palette, a `dbg_cat` class, or the
     /// `detail` view's blank).
     Flat(Rgb),
+    /// The canvas background, [`BACKGROUND`]: a presentation view's pixel that is not a system, or its `decode_failed`
+    /// sample (R-467, R-511).
+    Background,
+    /// The presentation views' invalid colour, `#141418` (R-467 D4): a field ramp's invalid value, not overridden.
+    PresentInvalid,
 }
 
 impl Look {
@@ -432,6 +446,8 @@ impl Look {
             } => present::ramp_coolwarm(t),
             Look::Override => override_default(),
             Look::Flat(c) => c,
+            Look::Background => present::srgb8(BACKGROUND),
+            Look::PresentInvalid => present::present_invalid(),
         }
     }
 }
@@ -1193,7 +1209,7 @@ impl Scene {
             Colouring::Outcome { .. } => Ok(
                 match outcome::shown(read.state, read.detail, self.set.forbidden(i)) {
                     OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
-                    OutcomeShown::Forbidden => Look::Invalid,
+                    OutcomeShown::Forbidden | OutcomeShown::DecodeFailed => Look::Background,
                 },
             ),
             Colouring::View(f) => {
@@ -1213,15 +1229,18 @@ impl Scene {
                     },
                 )
             }
-            Colouring::Ramp { ramp, override_on } => Ok(match ramp.shown(v, gate) {
-                RampShown::Invalid if *override_on => Look::Override,
-                RampShown::Invalid => Look::Invalid,
-                RampShown::NotYet => Look::NotYet,
-                RampShown::Ramp(t) => Look::Ramp {
-                    ramp: Ramp::Viridis,
-                    t,
+            Colouring::Ramp { ramp, override_on } => Ok(
+                match ramp.shown_in(v, gate, Reads::HEADER, self.set.forbidden(i), read.state) {
+                    RampShown::Blank => Look::Background,
+                    RampShown::Invalid if *override_on => Look::Override,
+                    RampShown::Invalid => Look::PresentInvalid,
+                    RampShown::NotYet => Look::NotYet,
+                    RampShown::Ramp(t) => Look::Ramp {
+                        ramp: Ramp::Viridis,
+                        t,
+                    },
                 },
-            }),
+            ),
             Colouring::Debug(_) | Colouring::Probe(..) => {
                 unreachable!("a debug view's or a probe's scene reads no value")
             }
@@ -1239,11 +1258,13 @@ impl Scene {
     }
 
     /// Whether sample `i` shows a value the fragment returns unchanged from a uniform, with no arithmetic: a swatch of
-    /// the outcome palette (`render::colour::outcome`). Its render is then the same f32 bits on every backend, so it
-    /// needs no margin from a rounding tie ([`tie_checked`](Scene::tie_checked)).
+    /// the outcome palette (`render::colour::outcome`), or the canvas background, the prelude's uniform. Its render is
+    /// then the same f32 bits on every backend, so it needs no margin from a rounding tie
+    /// ([`tie_checked`](Scene::tie_checked)).
     pub fn exact(&self, i: u32) -> Result<bool, String> {
-        Ok(matches!(self.colouring, Colouring::Outcome { .. })
-            && matches!(self.look(i)?, Look::Flat(_)))
+        let look = self.look(i)?;
+        Ok(look == Look::Background
+            || matches!(self.colouring, Colouring::Outcome { .. }) && matches!(look, Look::Flat(_)))
     }
 
     /// The twin's pixels a backend's arithmetic may move ([`tie_margin`]'s input): each pixel's linear RGB, rows from
@@ -1410,6 +1431,111 @@ fn render_stain_bound_at(
     usage: wgpu::BufferUsages,
 ) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
     let fragment = assemble::assemble(stain, tier).map_err(|e| e.to_string())?;
+    let background = present::srgb8(BACKGROUND).map(|c| c as f32);
+    draw(
+        device, queue, &fragment, tier, set, context, param, background, usage,
+    )
+    .map(|(rendered, bound)| (rendered.pixels, bound))
+}
+
+/// What a render takes beside its stain, payload, context and params (R-467; REQ-COL-108, REQ-COL-109): the tier, the
+/// variant, a presentation view or View › Debug view, the render's debug-view flag, and the canvas background, linear
+/// RGB, the prelude's uniform its caller sets to the colour its window is cleared to.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Inputs {
+    pub tier: Tier,
+    pub view: View,
+    pub background: [f32; 3],
+}
+
+impl Default for Inputs {
+    /// The full tier, a presentation view and the harness's recorded background, [`BACKGROUND`].
+    fn default() -> Inputs {
+        Inputs {
+            tier: Tier::FULL,
+            view: View::Presentation,
+            background: present::srgb8(BACKGROUND).map(|c| c as f32),
+        }
+    }
+}
+
+/// A render: each pixel's RGBA, rows from the top, and, for the debug view, the "Debug" key's three counts, the pixels
+/// drawn in "forbidden (chart)", "decode or sim failure" and "NaN / Inf" (REQ-COL-109).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Rendered {
+    pub pixels: Vec<[f32; 4]>,
+    pub counts: Option<[u32; 3]>,
+}
+
+/// [`render_stain`] with the inputs `inputs`: `stain` assembled at `inputs.tier` as `inputs.view`'s variant
+/// (`render::assemble::assemble_view`), drawn with the canvas background `inputs.background`, and the debug view's
+/// counts read back.
+pub fn render_stain_with(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    inputs: Inputs,
+) -> Result<Rendered, String> {
+    let fragment =
+        assemble::assemble_view(stain, inputs.tier, inputs.view).map_err(|e| e.to_string())?;
+    render_fragment(
+        device,
+        queue,
+        &fragment,
+        inputs.tier,
+        set,
+        context,
+        param,
+        inputs.background,
+    )
+}
+
+/// [`render_stain_with`] for an assembled `fragment` at `tier`: a test's control renders an altered debug arm
+/// (`render::assemble::assemble_arm`) through it.
+#[allow(clippy::too_many_arguments)] // the draw's inputs, as `render_stain_with` takes them
+pub fn render_fragment(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    fragment: &Fragment,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    background: [f32; 3],
+) -> Result<Rendered, String> {
+    draw(
+        device,
+        queue,
+        fragment,
+        tier,
+        set,
+        context,
+        param,
+        background,
+        wgpu::BufferUsages::empty(),
+    )
+    .map(|(rendered, _)| rendered)
+}
+
+/// Draws `fragment` over `set` with `context` through the render harness into an `Rgba32Float` target the size of
+/// `context`'s grid: group 0 the prelude's uniform block, with the canvas background `background`, and the nodes'
+/// blocks; groups 1 and 2 `render::bind::upload_with`'s, its four buffers made with `usage`; and, for a fragment with
+/// the debug arm, group 3 the counts, zeroed, read back after the draw.
+#[allow(clippy::too_many_arguments)] // the draw's inputs, as `render_stain_with` takes them, and the buffers' usage
+fn draw(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    fragment: &Fragment,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    background: [f32; 3],
+    usage: wgpu::BufferUsages,
+) -> Result<(Rendered, bind::Bound), String> {
     let module = bind::preset_module(&fragment.source);
     let bytes = set.bytes_at(tier.has_ftle);
     let bound = bind::upload_with(device, &bytes.payload(), context, usage);
@@ -1421,7 +1547,7 @@ fn render_stain_bound_at(
             usage: wgpu::BufferUsages::UNIFORM,
         })
     };
-    let words: Vec<u8> = ledger::gen::prelude::uniform_words(context.grid.e)
+    let words: Vec<u8> = ledger::gen::prelude::uniform_words_with(context.grid.e, background)
         .iter()
         .flat_map(|w| w.to_le_bytes())
         .collect();
@@ -1469,8 +1595,15 @@ fn render_stain_bound_at(
         layout: &layout,
         entries: &group_entries,
     });
+    let counts = fragment.debug_arm.then(|| DebugCounts::new(device));
     let [_, l1, l2] = bound.layout_refs();
     let [_, g1, g2] = bound.group_refs();
+    let mut layouts = vec![&layout, l1, l2];
+    let mut groups = vec![&group, g1, g2];
+    if let Some(c) = &counts {
+        layouts.push(&c.layout);
+        groups.push(&c.group);
+    }
     let (width, height) = context.grid.target();
     let image = headless::render(
         device,
@@ -1478,8 +1611,8 @@ fn render_stain_bound_at(
         &Draw {
             module: &module,
             entry: bind::PRESET_ENTRY,
-            layouts: &[&layout, l1, l2],
-            groups: &[&group, g1, g2],
+            layouts: &layouts,
+            groups: &groups,
         },
         Target {
             width,
@@ -1497,7 +1630,85 @@ fn render_stain_bound_at(
             [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
         })
         .collect();
-    Ok((pixels, bound))
+    let counts = match counts {
+        Some(c) => Some(c.read(device, queue)?),
+        None => None,
+    };
+    Ok((Rendered { pixels, counts }, bound))
+}
+
+/// The debug view's counts' buffer, zeroed, and its bind group at `render::assemble::DEBUG_COUNTS_GROUP`
+/// (REQ-COL-109).
+struct DebugCounts {
+    buffer: wgpu::Buffer,
+    layout: wgpu::BindGroupLayout,
+    group: wgpu::BindGroup,
+}
+
+impl DebugCounts {
+    /// The counts' buffer, three zeroed u32, read-write storage the draw adds to and a copy reads back.
+    fn new(device: &wgpu::Device) -> DebugCounts {
+        use wgpu::util::DeviceExt;
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("debug view counts"),
+            contents: &[0u8; 12],
+            usage: wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_SRC),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("debug view counts"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: assemble::DEBUG_COUNTS_BINDING,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("debug view counts"),
+            layout: &layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: assemble::DEBUG_COUNTS_BINDING,
+                resource: buffer.as_entire_binding(),
+            }],
+        });
+        DebugCounts {
+            buffer,
+            layout,
+            group,
+        }
+    }
+
+    /// The three counts, read back after the draw.
+    fn read(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Result<[u32; 3], String> {
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("debug view counts readback"),
+            size: 12,
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let mut encoder = device.create_command_encoder(&Default::default());
+        encoder.copy_buffer_to_buffer(&self.buffer, 0, &readback, 0, 12);
+        queue.submit([encoder.finish()]);
+        let slice = readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("counts map failed"));
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| format!("device poll failed: {e}"))?;
+        let mapped = slice
+            .get_mapped_range()
+            .map_err(|e| format!("counts range: {e}"))?;
+        let mut out = [0u32; 3];
+        for (k, w) in mapped.as_chunks::<4>().0.iter().enumerate() {
+            out[k] = u32::from_le_bytes(*w);
+        }
+        drop(mapped);
+        readback.unmap();
+        Ok(out)
+    }
 }
 
 /// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):

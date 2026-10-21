@@ -35,6 +35,14 @@
 //! `ledger::gen::read::assemble`, never the checked-in full-fill `read_side.wgsl`. A field `sample_read` does not
 //! fill reads 0, a plausible value with no validity signal, so [`assemble_reading`] refuses a stain that reads a field
 //! its set misses. Nothing a node writes may name the stored buffers or `sample_read` (R-343).
+//!
+//! **Two variants (R-41's baked variants; R-467 D5, R-470 G4; REQ-COL-108, REQ-COL-109).** A stain assembles as a
+//! presentation view, the default ([`assemble`]), or as View › Debug view ([`assemble_view`] with [`View::Debug`]), the
+//! render's own debug-view flag, which its caller sets from `RenderState`'s `debug_view`. The debug variant adds one arm
+//! after the walk ([`DEBUG_ARM`]): the hatch for a pixel the chart classifies as not a system, the NaN / Inf style for a
+//! non-finite sample, `debug_invalid` for any other failure, every system pixel as the stain draws it, each counted
+//! into [`DEBUG_COUNTS_GROUP`]'s storage buffer for the legend's "Debug" key. The presentation variant has no arm and no
+//! flag bit: its `note_non_finite()`, the hook a node calls where it reads a non-finite value, does nothing.
 
 use std::collections::BTreeSet;
 use std::fmt::{self, Write as _};
@@ -110,8 +118,45 @@ pub const MAX_POSTS: usize = 8;
 pub const MAX_INPUTS: usize = 4;
 
 /// Names a node may not write: the stored buffers and the read side's readers of them (R-343, R-378), `ic_read` and
-/// each `ic_read_<member>` too (RQ-227).
-const RESERVED: [&str; 4] = ["simstate_buffer", "word_buffer", "sample_read", "ic_buffer"];
+/// each `ic_read_<member>` too (RQ-227), and the debug view's counts and its note (REQ-COL-109), which only its arm
+/// writes.
+const RESERVED: [&str; 6] = [
+    "simstate_buffer",
+    "word_buffer",
+    "sample_read",
+    "ic_buffer",
+    "debug_counts",
+    "debug_non_finite",
+];
+
+/// View › Debug view's arm (R-467 D5, R-470 G4; REQ-COL-109), the debug variant's one addition: `debug_view(ctx, rgb)`
+/// over the stain's colour, `note_non_finite()`, and the counts' storage buffer at [`DEBUG_COUNTS_GROUP`]. Its CPU
+/// twin is [`crate::debug_view`].
+pub const DEBUG_ARM: &str = include_str!("../shaders/wgsl/stain/debug_view.wgsl");
+
+/// The presentation variant's `note_non_finite()`: nothing (R-470 G4: no debug arm).
+const PRESENTATION_HOOK: &str = "
+// The presentation variant notes nothing: it has no debug arm (R-470 G4), and draws a non-finite value as the stain's
+// invalid treatment does, `#141418` by default (R-467).
+fn note_non_finite() {}
+";
+
+/// The debug variant's counts' bind group and binding (REQ-COL-109): `array<atomic<u32>, 3>`, read-write storage, the
+/// pixels drawn in "forbidden (chart)", "decode or sim failure" and "NaN / Inf", in that order. Group 3, past the
+/// harness's three (applied per R-369: the corpus gives the counts no binding).
+pub const DEBUG_COUNTS_GROUP: u32 = 3;
+pub const DEBUG_COUNTS_BINDING: u32 = 0;
+
+/// Which variant a stain assembles to (R-41; R-467 D5, R-470 G4): a presentation view, or View › Debug view, the
+/// render's debug-view flag, which its caller sets from `RenderState`'s `debug_view`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum View {
+    /// A presentation view: no debug arm (REQ-COL-108).
+    #[default]
+    Presentation,
+    /// View › Debug view: the arm [`DEBUG_ARM`] over the stain (REQ-COL-109).
+    Debug,
+}
 
 /// The read side's `ICDescriptor` reader, and the prefix of its per-member readers (RQ-227).
 const IC_READ: &str = "ic_read";
@@ -880,26 +925,60 @@ pub struct UniformBlock {
     pub uniforms: Vec<Uniform>,
 }
 
-/// An assembled stain: its WGSL, the read-side fields its `sample_read` fills, and its nodes' uniform blocks.
+/// An assembled stain: its WGSL, the read-side fields its `sample_read` fills, its nodes' uniform blocks, and whether
+/// it carries a debug arm, which binds the counts at [`DEBUG_COUNTS_GROUP`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Fragment {
     pub source: String,
     pub fields: Vec<String>,
     pub uniforms: Vec<UniformBlock>,
+    pub debug_arm: bool,
 }
 
-/// The one assembler entry point (render contract Part 2): `stain` at `tier`, its read side filling the fields its IR
-/// reads ([`field_set`]), refused where any step fails ([`assemble_reading`]).
+/// The one assembler entry point (render contract Part 2): `stain` at `tier`, a presentation view, its read side
+/// filling the fields its IR reads ([`field_set`]), refused where any step fails ([`assemble_reading`]).
 pub fn assemble(stain: &Stain, tier: Tier) -> Result<Fragment, AssembleError> {
-    let fields = field_set(stain, tier)?;
+    assemble_view(stain, tier, View::Presentation)
+}
+
+/// [`assemble`] as the variant `view` (R-41; R-467 D5, R-470 G4): the debug view's with [`DEBUG_ARM`].
+pub fn assemble_view(stain: &Stain, tier: Tier, view: View) -> Result<Fragment, AssembleError> {
+    assemble_arm(
+        stain,
+        tier,
+        match view {
+            View::Presentation => None,
+            View::Debug => Some(DEBUG_ARM),
+        },
+    )
+}
+
+/// [`assemble`] with the debug arm `arm`, WGSL defining `debug_view(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32>` and
+/// `note_non_finite()`, or none, the presentation variant: [`assemble_view`]'s step, open so a test's control can
+/// assemble an altered arm.
+pub fn assemble_arm(
+    stain: &Stain,
+    tier: Tier,
+    arm: Option<&str>,
+) -> Result<Fragment, AssembleError> {
+    let fields = field_set_arm(stain, tier, arm)?;
     let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
-    assemble_reading(stain, tier, &fields)
+    assemble_reading_arm(stain, tier, &fields, arm)
 }
 
 /// The stain's field set (R-378): every member of the read-side `SimState` its live nodes read, by naga's IR of the
 /// stain assembled with every field filled, the word as `word` or as only the components it reads, and each member of
 /// `ctx.ic` it reads as `ic.<member>` ([`fields_read`]).
 pub fn field_set(stain: &Stain, tier: Tier) -> Result<Vec<String>, AssembleError> {
+    field_set_arm(stain, tier, None)
+}
+
+/// [`field_set`] with the debug arm `arm`, whose reads join the stain's.
+fn field_set_arm(
+    stain: &Stain,
+    tier: Tier,
+    arm: Option<&str>,
+) -> Result<Vec<String>, AssembleError> {
     let (words, entries) = ledger()?;
     let mut every: Vec<String> = read::members(words, entries)
         .into_iter()
@@ -907,7 +986,7 @@ pub fn field_set(stain: &Stain, tier: Tier) -> Result<Vec<String>, AssembleError
         .collect();
     every.extend(read::ic_fields());
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = source(stain, tier, &every)?;
+    let (source, _) = source(stain, tier, &every, arm)?;
     let (module, info) = compile(&source)?;
     Ok(fields_read(&module, &info).into_iter().collect())
 }
@@ -920,7 +999,17 @@ pub fn assemble_reading(
     tier: Tier,
     fields: &[&str],
 ) -> Result<Fragment, AssembleError> {
-    let (source, uniforms) = source(stain, tier, fields)?;
+    assemble_reading_arm(stain, tier, fields, None)
+}
+
+/// [`assemble_reading`] with the debug arm `arm`.
+fn assemble_reading_arm(
+    stain: &Stain,
+    tier: Tier,
+    fields: &[&str],
+    arm: Option<&str>,
+) -> Result<Fragment, AssembleError> {
+    let (source, uniforms) = source(stain, tier, fields, arm)?;
     let (module, info) = compile(&source)?;
     let filled = |f: &str| {
         fields.contains(&f)
@@ -940,6 +1029,7 @@ pub fn assemble_reading(
         source,
         fields,
         uniforms,
+        debug_arm: arm.is_some(),
     })
 }
 
@@ -965,11 +1055,13 @@ fn ledger() -> Result<(&'static [Word], &'static [Entry]), AssembleError> {
 /// [`MAX_INPUTS`] long: a file of its own, so `cargo xtask lint wgsl` lints the generated debug views after it.
 pub const CONTEXT: &str = include_str!("../shaders/wgsl/stain/context.wgsl");
 
-/// `stain`'s WGSL at `tier`, its read side filling `fields`, and its uniform blocks.
+/// `stain`'s WGSL at `tier`, its read side filling `fields`, with the debug arm `arm` or the presentation variant's
+/// hook, and its uniform blocks.
 fn source(
     stain: &Stain,
     tier: Tier,
     fields: &[&str],
+    arm: Option<&str>,
 ) -> Result<(String, Vec<UniformBlock>), AssembleError> {
     let (words, entries) = ledger()?;
     let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
@@ -1033,8 +1125,15 @@ fn source(
         out.push_str(&prefixed(&text, &format!("n{i}_"), n.kind, &extra)?);
     }
     out.push_str(&shade(
-        stain, &sources, colour, brightness, combiner, &chain,
+        stain,
+        &sources,
+        colour,
+        brightness,
+        combiner,
+        &chain,
+        arm.is_some(),
     ));
+    out.push_str(arm.unwrap_or(PRESENTATION_HOOK));
     Ok((out, uniforms))
 }
 
@@ -1050,7 +1149,8 @@ fn label(occupant: &Occupant) -> String {
 /// `shade(ctx)`, which walks the graph in backbone order: the sources, the colour and the brightness, the combiner, the
 /// post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen, quad, tile and validity lanes
 /// and shades it; and `shade_sample`, the same with the screen, quad and tile lanes absent (the absence NaN) and the
-/// validity lane unclassified, no sample forbidden, for a pass that places no quad (REQ-COL-102).
+/// validity lane unclassified, no sample forbidden, for a pass that places no quad (REQ-COL-102). With `debug`,
+/// `shade_at` returns the debug view's arm over the walk's colour, `debug_view(ctx, shade(ctx))` (REQ-COL-109).
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1058,6 +1158,7 @@ fn shade(
     brightness: Option<usize>,
     combiner: usize,
     chain: &[usize],
+    debug: bool,
 ) -> String {
     let mut out = String::from(
         "\n// The generated walk of the graph, in backbone order (render contract Part 2): sources → colour / brightness \
@@ -1104,9 +1205,16 @@ fn shade(
          ctx.quad = quad;\n    \
          ctx.tile = tile;\n    \
          ctx.validity = validity;\n    \
-         ctx.params = params;\n    \
-         return shade(ctx);\n}\n\n\
-         // Sample `i` shaded at pixel `frag_xy` where no raster places it in a target, a quad and a tile: its screen,\n\
+         ctx.params = params;\n",
+    );
+    // The debug variant draws its arm over the walk's colour; the presentation variant returns the walk's (R-470 G4).
+    out.push_str(if debug {
+        "    return debug_view(ctx, shade(ctx));\n}\n\n"
+    } else {
+        "    return shade(ctx);\n}\n\n"
+    });
+    out.push_str(
+        "// Sample `i` shaded at pixel `frag_xy` where no raster places it in a target, a quad and a tile: its screen,\n\
          // quad and tile lanes hold the absence NaN, the canonical quiet NaN (`is_absent_nan`), each u32 member its\n\
          // bits (`ctx_quad_absent`, `ctx_tile_absent`), and no chart classification reaches it\n\
          // (`ctx_validity_unclassified`).\n\

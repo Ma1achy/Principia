@@ -18,9 +18,12 @@ fn named(name: &str) -> Scene {
     scene(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat.
+/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat, `B`ackground, `P`resentation's invalid
+/// colour.
 fn kind(l: Look) -> char {
     match l {
+        Look::Background => 'B',
+        Look::PresentInvalid => 'P',
         Look::Invalid => 'I',
         Look::Literal(_) => 'L',
         Look::NotYet => 'N',
@@ -45,12 +48,12 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("dlz_max_failed", "dLz_max", "RRRRRRRR"),
     ("d_min", "d_min", "NNIRRRRR"),
     ("length_view", "length", "RRRRRRRL"),
-    ("length_ramp", "length", "RRRRRRRI"),
+    ("length_ramp", "length", "RRRRRRRP"),
     ("length_ramp_override", "length", "RRRRRRRO"),
-    ("d_min_ramp", "d_min", "NNIRRRRR"),
+    ("d_min_ramp", "d_min", "NNPRRRRR"),
     ("d_min_ramp_override", "d_min", "NNORRRRR"),
-    ("outcome", "state", "FFFFFFFFFFFFFFFFFFFFFFI"),
-    ("outcome_edited", "state", "FFFFFFFFFFFFFFFFFFFFFFI"),
+    ("outcome", "state", "FFFFFFFFFFFFFFFFBBBBFFB"),
+    ("outcome_edited", "state", "FFFFFFFFFFFFFFFFBBBBFFB"),
     ("state_view", "state", "FFFFFF"),
     ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
     ("e_0_signed", "E_0", "RRRRRRRR"),
@@ -123,9 +126,9 @@ fn golden_scene_scenes_hold_their_samples() {
 
 negative_control!(
     golden_scene_scenes_hold_their_samples,
-    "the override scene expected to hatch its NaN, as the pattern scene does, fails the check",
+    "the override scene expected to draw its NaN #141418, as the default scene does, fails the check",
     expected = "`d_min_ramp_override`'s samples show",
-    check_scene("d_min_ramp_override", "d_min", "NNIRRRRR")
+    check_scene("d_min_ramp_override", "d_min", "NNPRRRRR")
 );
 
 #[test]
@@ -713,13 +716,13 @@ fn check_exact(name: &str, want: &str) {
     );
 }
 
-/// The outcome scenes' swatches are exact, their running and failed samples among them (`#141418`, R-446), their
-/// forbidden sample, the hatch, not; no other scene's sample is exact, the view scenes' flat colours included, which the
-/// fragment computes.
+/// The outcome scenes' swatches are exact, their running and failed samples among them (`#141418`, R-446), and so are
+/// their `decode_failed` and forbidden samples, the background uniform, a value the harness records (R-467, R-511); no
+/// other scene's sample is exact, the view scenes' flat colours included, which the fragment computes.
 #[test]
 fn golden_scene_exact_samples_are_the_swatches() {
     for name in ["outcome", "outcome_edited"] {
-        check_exact(name, "xxxxxxxxxxxxxxxxxxxxxx.");
+        check_exact(name, "xxxxxxxxxxxxxxxxxxxxxxx");
     }
     check_exact("state_view", "......");
     check_exact("detail_view", "..................");
@@ -729,9 +732,9 @@ fn golden_scene_exact_samples_are_the_swatches() {
 
 negative_control!(
     golden_scene_exact_samples_are_the_swatches,
-    "the forbidden sample, drawn in the computed hatch, taken as exact",
+    "the forbidden sample, drawn in the background uniform, taken as computed, as the hatch was",
     expected = "`outcome`'s exact samples",
-    check_exact("outcome", "xxxxxxxxxxxxxxxxxxxxxxx")
+    check_exact("outcome", "xxxxxxxxxxxxxxxxxxxxxx.")
 );
 
 /// Checks that scene `name`'s swatches are the palette's defaults, but `edits`.

@@ -193,7 +193,7 @@ fn field_ramp_declares_its_invalid_lane() {
         check_declares(&wgsl, 0.0);
         assert!(
             wgsl.contains(
-                "return select(debug_invalid(ctx.frag_xy), uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);"
+                "return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);"
             ),
             "{wgsl}"
         );
@@ -202,7 +202,7 @@ fn field_ramp_declares_its_invalid_lane() {
 
 negative_control!(
     field_ramp_declares_its_invalid_lane,
-    "a ramp with the override on by default is not the pattern's",
+    "a ramp with the override on by default does not draw #141418 by default",
     expected = "the override's default",
     check_declares(
         &FieldRamp::length().unwrap_or_else(|e| panic!("{e}")).wgsl(),

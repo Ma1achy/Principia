@@ -413,7 +413,7 @@ fn check_override(base: (&Scene, &[Rgb]), over: (&Scene, &[Rgb])) {
             let k = (y * width + x) as usize;
             !near(a[k], b[k])
         });
-        let is_invalid = look(s, i) == Look::Invalid;
+        let is_invalid = matches!(look(s, i), Look::Invalid | Look::PresentInvalid);
         assert_eq!(
             changed, is_invalid,
             "`{}` sample {i}: the override changed it: {changed}, but it is invalid: {is_invalid}",
@@ -461,15 +461,15 @@ negative_control!(
     }
 );
 
-/// Checks the ramps' own legs: `length`'s 127 is invalid on its ramp and literal in its view; `d_min`'s NaN is
-/// invalid and its unset value in the "not yet" style, on the ramp as in the view.
+/// Checks the ramps' own legs: `length`'s 127 is invalid on its ramp, drawn `#141418` (R-467), and literal in its
+/// view; `d_min`'s NaN is invalid, `#141418`, and its unset value in the "not yet" style, on the ramp as in the view.
 fn check_ramp_legs(length: (&Scene, &[Rgb]), d_min: (&Scene, &[Rgb])) {
     let (s, image) = length;
-    assert_eq!(look(s, 7), Look::Invalid, "127 on `length`'s ramp");
-    check_sample(s, image, 7, Look::Invalid, "the invalid pattern");
+    assert_eq!(look(s, 7), Look::PresentInvalid, "127 on `length`'s ramp");
+    check_sample(s, image, 7, Look::PresentInvalid, "#141418");
     assert_eq!(look(&named("length_view"), 7), Look::Literal(127.0));
     let (s, image) = d_min;
-    check_sample(s, image, 2, Look::Invalid, "the invalid pattern");
+    check_sample(s, image, 2, Look::PresentInvalid, "#141418");
     check_unset_not_yet(s, image);
 }
 
@@ -484,7 +484,7 @@ fn field_ramp_sentinel_and_nan_are_invalid_and_unset_not_yet() {
 negative_control!(
     field_ramp_sentinel_and_nan_are_invalid_and_unset_not_yet,
     "a length ramp drawing 127 on the ramp, as the view does, fails the check",
-    expected = "not the invalid pattern",
+    expected = "not #141418",
     {
         let h = gpu();
         let (l, d) = (named("length_ramp"), named("d_min_ramp"));

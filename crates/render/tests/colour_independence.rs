@@ -6,15 +6,17 @@
 //!   fails (`colour_independence_edge_maps_agree`);
 //! - each mode is the one §4.1 defines: event the outcome palette, greyscale the None-colour row `OKLab(L = B, 0, 0)`
 //!   at `B = (r + ½)/K`, hue the hue wheel at `t = r/K` with the brightness None, `K = 9` ranked as R-448 ranks the
-//!   outcome class, `running` and every failure at rank 0 and a forbidden sample in the hatch in every mode (R-446)
-//!   (`colour_independence_modes_are_the_defined_ones`);
+//!   outcome class, `running` and `sim_failed` at rank 0 (R-446), and a forbidden or `decode_failed` sample the canvas
+//!   background in every mode (R-467, R-511) (`colour_independence_modes_are_the_defined_ones`);
 //! - the map is taken on the render, so a mode that gives two classes one colour loses their edge and fails
 //!   (`colour_independence_a_merging_mode_fails`).
 //!
 //! The slice is eight by eight samples, one quad each, each tile 8 px: a bounded dome ringed by collision and escape
 //! basins, wedges of triple outcomes, a band of collisions at t = 0 in their pair's class (R-445), a `decode_failed`
-//! corner, a 2 × 2 block of `sim_failed` samples and a pair of running ones, all three in the bounded / nothing yet
-//! class (R-446), and a block of samples in a forbidden chart region, hatched. The modes are `support/outcome_modes.rs`'s.
+//! corner, blank (R-511), a 2 × 2 block of `sim_failed` samples and a pair of running ones, both in the bounded /
+//! nothing yet class (R-446), and a block of samples in a forbidden chart region, blank (R-467). The renders take a
+//! background of this file's own, [`BG`], apart from every class in every mode. The modes are
+//! `support/outcome_modes.rs`'s.
 //! Each test registers its negative control (R-176).
 
 use std::collections::BTreeSet;
@@ -23,7 +25,7 @@ use render::assemble::Occupant;
 use render::bind::Context;
 use render::present::{self, Rgb};
 use render::raster::Grid;
-use validation::golden_scene::{render_stain, STATE_DECODE_FAILED, STATE_SIM_FAILED};
+use validation::golden_scene::{render_stain_with, Inputs, STATE_DECODE_FAILED, STATE_SIM_FAILED};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::synthetic::Synthetic;
@@ -40,11 +42,15 @@ const TILE: u32 = 8;
 /// least distance a mode puts between two appearances.
 const TAU: f64 = 0.01;
 
+/// The canvas background the renders take, linear RGB: a value of this file's own, exact in f32 and over 5τ in OKLab
+/// from every class in every mode, so the blank samples are a class of their own.
+const BG: [f32; 3] = [0.25, 0.125, 0.0625];
+
 /// The slice, rows from the top: each character a sample, `b` bounded; `1`, `2`, `3` the collisions of pair 2 (shown
 /// collision 1–2), 1 (1–3) and 0 (2–3); `o` a collision of pair 0 at t = 0, class `3`'s (R-445); `t` a triple
 /// collision; `y`, `m`, `c` the escapes of body 0, 1 and 2 (shown body 1, 2, 3); `j` a triple ejection; `d`
-/// `decode_failed`, `R` running and `F` `sim_failed`, class `b`'s (R-446); `X` a `decode_failed` sample in a forbidden
-/// chart region, the hatch. The bounded dome meets the triple ejection, ranked first and last, which a hue at
+/// `decode_failed`, blank (R-511); `R` running and `F` `sim_failed`, class `b`'s (R-446); `X` a `decode_failed` sample
+/// in a forbidden chart region, blank (R-467). The bounded dome meets the triple ejection, ranked first and last, which a hue at
 /// `r/(K − 1)` would give one colour.
 const SLICE: [&str; 8] = [
     "yyymmmcc", "yy11mmcc", "y1bbbjmc", "22bbbjtc", "22bbRRt3", "oo2FF333", "oXXFF3cc", "dXXyymmc",
@@ -52,7 +58,7 @@ const SLICE: [&str; 8] = [
 
 /// A sample's payload `(state, detail, t_end_step)`, whether its chart point is forbidden, and its class: its rank in
 /// the outcome field (colour_composition §4.1, R-448: bounded / nothing yet 0; collision 1–2, 1–3, 2–3; triple
-/// collision; escape body 1, 2, 3; triple ejection 8), `None` for a forbidden sample.
+/// collision; escape body 1, 2, 3; triple ejection 8), `None` for a blank sample, `decode_failed` or forbidden.
 fn class(c: char) -> ((u32, u32, u32), bool, Option<u32>) {
     let valid = |p, r| (p, false, Some(r));
     match c {
@@ -66,7 +72,7 @@ fn class(c: char) -> ((u32, u32, u32), bool, Option<u32>) {
         'm' => valid((0, 1, 120), 6),
         'c' => valid((0, 2, 120), 7),
         'j' => valid((0, 3, 120), 8),
-        'd' => valid((STATE_DECODE_FAILED, 1, 0), 0),
+        'd' => ((STATE_DECODE_FAILED, 1, 0), false, None),
         'R' => valid((3, 0, 20), 0),
         'F' => valid((STATE_SIM_FAILED, 0, 40), 0),
         'X' => ((STATE_DECODE_FAILED, 1, 0), true, None),
@@ -120,15 +126,20 @@ fn context() -> Context {
 
 /// `slice` rendered in `mode`: each pixel's OKLab, rows from the top.
 fn render(h: &GpuHarness, slice: &[&str; 8], mode: &Mode) -> Vec<Rgb> {
-    render_stain(
+    render_stain_with(
         h.device(),
         h.queue(),
         &stain(mode),
         &payload(slice),
         &context(),
         &|_, _| None,
+        Inputs {
+            background: BG,
+            ..Inputs::default()
+        },
     )
     .unwrap_or_else(|e| panic!("{}: {e}", mode.name))
+    .pixels
     .into_iter()
     .map(|p| present::linear_to_oklab([p[0], p[1], p[2]].map(f64::from)))
     .collect()
@@ -177,7 +188,7 @@ fn edge_map(lab: &[Rgb]) -> BTreeSet<Edge> {
         .collect()
 }
 
-/// The class boundaries of `slice`: the adjacent tiles of two classes, the forbidden samples a class of their own.
+/// The class boundaries of `slice`: the adjacent tiles of two classes, the blank samples a class of their own.
 fn boundaries(slice: &[&str; 8]) -> BTreeSet<Edge> {
     let kind = |x, y| class(at(slice, x, y)).2;
     neighbours()
@@ -256,12 +267,11 @@ negative_control!(
 );
 
 /// What `mode` draws at pixel `(px, py)` of a tile of class `c`, by colour_composition §4.1 and §1.4, linear RGB: a
-/// forbidden sample the hatch in every mode; event mode the outcome palette's swatch of the class's rank, which is its
+/// blank sample the background [`BG`] in every mode; event mode the outcome palette's swatch of the class's rank, which is its
 /// index in `SWATCHES` (R-448); greyscale and hue mode the rank's lightness and hue.
-fn defined(mode: &str, c: char, px: u32, py: u32) -> Rgb {
-    let frag = [f64::from(px) + 0.5, f64::from(py) + 0.5];
+fn defined(mode: &str, c: char) -> Rgb {
     let Some(r) = class(c).2 else {
-        return present::debug_invalid(frag);
+        return BG.map(f64::from);
     };
     match mode {
         "greyscale" => present::ramp_grey((f64::from(r) + 0.5) / f64::from(K)),
@@ -276,7 +286,7 @@ fn check_defined(mode: &str, lab: &[Rgb]) {
     for (k, got) in lab.iter().enumerate() {
         let (px, py) = (k as u32 % width, k as u32 / width);
         let c = at(&SLICE, px / TILE, py / TILE);
-        let want = present::linear_to_oklab(defined(mode, c, px, py));
+        let want = present::linear_to_oklab(defined(mode, c));
         let d = (0..3)
             .map(|i| (got[i] - want[i]).powi(2))
             .sum::<f64>()
