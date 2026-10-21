@@ -106,8 +106,10 @@ FieldRamp {
 band, base colour elsewhere — this is `grid`, `contours`, and the lattice classifiers `checker`,
 `lat/lon-stripes`, `truchet` on (θ,φ)). **Compaction** (scalar → lightness, for the `brightness`
 slot or before a ramp): `lin`, `log`, `symlog` (signed, through the midpoint), `cyclic` (phase),
-`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default the hatched invalid
-pattern (§3, §6; R-132).
+`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default `#141418` in a
+presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (§3, §6; R-132,
+R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (§3, §6; R-132)" (stale value, replaced
+by R-467).
 
 **Default ramps by field role.** Signed fields (energy, L_z, drifts) default to
 diverging-through-neutral so the zero-crossing is a legible contour; positive fields to sequential;
@@ -681,7 +683,9 @@ or unset value keeps its own style (`d_min`'s unset `+∞`, R-280, R-399).
 toggle (`RenderState`'s `debug_view`, gui_state_contract §2), not a preset: every system pixel is drawn as the stain
 draws it; a pixel the chart classifies as not a system (§1.4) draws the hatch, `debug_invalid(frag_xy)`; a non-finite
 sample (a `sim_failed` with a non-finite detail, a `decode_failed` of detail 0, a non-finite value the stain reads)
-draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71); any other `sim_failed` or
+draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71), proposed by the task
+that needs it and not magenta: R-16's flat magenta `#FF00FF` sits at τ (0.101, R-429) from escape body 2's `#E034C6`,
+so each of the style's colours lies farther than τ from `#FF00FF` (R-505); any other `sim_failed` or
 `decode_failed` sample, a reserved `state` code included, draws `debug_invalid`. The chart is read first, then
 non-finiteness, then the failure. Its legend adds one key after the stain's, "Debug": "forbidden (chart)", "decode or
 sim failure" and "NaN / Inf", each in its style, with the number of the figure's pixels drawn in it and their share,

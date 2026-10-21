@@ -20,6 +20,7 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 - `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated honestly (deferred work lands here)"
 - `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability profile"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
+- `decisions.md` § "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
 - `docs/contracts/principia_integrator_contract.md` § "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
 
 ## Deliverables
@@ -30,9 +31,9 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 
 ## Acceptance tests
 - `cargo xtask gate free-fall-closure` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported (REQ-VAL-042).
-- `cargo xtask gate reversibility-xi` — time symmetry via `xi` on the brake orbits, run on logH-TTL (R-162) (REQ-VAL-044).
+- `cargo xtask gate reversibility-xi` — time symmetry via `xi` on the brake orbits, run on logH-TTL, bound through `run_reversible` (R-162, R-500) (REQ-VAL-044).
 - The doc gives xi's formula and what a reversible occupant should read; physics reviewer approved (REQ-VAL-134).
-- Review (physics): the reversibility diagnostic refuses an occupant with reversible = false; the implementation uses one of the two named routes (REQ-INT-032).
+- Review (physics): the reversibility diagnostic refuses an occupant with step_reversible = false on either route (R-500; *was:* "reversible = false"); the implementation uses one of the two named routes (REQ-INT-032).
 
 ## Notes
 - *Was: "Gap: the only `reversible: true` occupant in the Part 2a table is AZ + time-transformed leapfrog (Mikkola–Tanikawa), whose equations the corpus doesn't give and whose build in M3 isn't decided; without it REQ-VAL-044's gate cannot run ('blocked on a reversible occupant')."* RQ-102 ruled: R-162 — a reversible occupant exists: logH's TTL time mode, built in TASK-M3-08; Aarseth–Zare with Mikkola–Tanikawa isn't required.

@@ -1391,72 +1391,6 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
 
-## RQ-371: What is the shape sphere's `system_image` under the exponential chart map? *(silence, R-141, R-117, REQ-CHART-014; context: TASK-M2-14, PR #252)*
-
-*Found in review of PR #252 (physics review 5584063700, item 4). Nothing is chosen. For the human: physics, the
-choice changes which pixels a fold or an area statistic counts once (R-369).*
-
-- **File, section:**
-  - `docs/design/principia_chart_reference.md` § "3.3 The chart map": "Two options; state which is used", spherical
-    `(θ, φ)` and "Exponential map about a centre `n0`". Its "Hemisphere redundancy" paragraph: "The chart is a 2-to-1
-    cover: (θ, φ) ∼ (θ, π − φ) … The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
-    hemispheres". Its "Past the unit square" paragraph treats the exponential map apart: "The exponential map has no θ
-    or φ axis, so its axes declare nothing and are bounded".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract":
-    "**n-to-1** — a fixed finite number of pixels share each system … The shape sphere is n-to-1 with n = 2: 2-to-1
-    over the φ hemispheres, which are reflection-equivalent".
-  - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*": "The lowering
-    appendix's shape-sphere row is conformed to R-14's (θ, φ) map."
-- **Silence:** on the exponential map `[0,1]²` covers a cap of centre `n0` and radius up to `√2·s`. A cap inside one
-  closed hemisphere is bijective (no pixel's mirror `w → −w` is in view); a cap straddling the equator is 2-to-1 only
-  on the part whose mirror is also in view; past `r = π` the map wraps. No fixed n holds, and the corpus gives this
-  map no value of its own. By contrast §4.5 makes the `ν` charts' value depend on their range (`DoubleCover` only where
-  `ν_min < √2 − 1 < ν_max`).
-- **Options seen:**
-  - (a) `NToOne(2)` for either map, read as "subject to the hemisphere fold `w → −w`", whatever the cap.
-  - (b) Computed from the cap, as the `ν` charts' is from their range: bijective where the cap lies in one closed
-    hemisphere, and a ruling for the straddling case.
-  - (c) Another value.
-- **Applied meanwhile:** PR #252 gives both maps `NToOne(2)`, the `(θ, φ)` chart's value. The only consumer today,
-  `kernel::chart::admit_shape_fraction`, treats `Bijective` and `NToOne(_)` alike, and no shape-sphere label is shown
-  yet.
-- **Waits:** the consumers that fold or count by `system_image` on the exponential map: R-408's area statistics and
-  "downstream draws/labels one representative". TASK-M2-14's PR does not wait: it claims only the spherical map's
-  value, which R-141 settles.
-
-## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
-
-*Filed porting R-467 (D15), as the human asked: "The outcome goldens re-baselined under RQ-330 may need another
-re-baseline; list them, don't re-baseline without a gate decision." Nothing is re-baselined.*
-
-- **File, section:**
-  - `fixtures/golden/BASELINES.md`, the rows `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
-    `m1-synthetic/known_escaper` (each "R-454 (re-baselined under R-444 to R-446, RQ-330 …)"), and the rows
-    `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`.
-  - `crates/validation/src/golden_scene.rs`, the `outcome` scene: "a sample whose chart point is forbidden
-    ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101, REQ-COL-102)", tile 22; the
-    `length_ramp` and `d_min_ramp` scenes: "127 in the invalid pattern", "NaN in the invalid pattern".
-  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*": no re-baselining without
-    a gate decision.
-- **What changes under R-467:**
-  - `m1-outcome/outcome` and `m1-outcome/outcome_edited`: tile 22, the forbidden sample, from the hatch to the canvas
-    background (R-467 D2, D3). No other tile changes.
-  - `m1-synthetic/known_escaper`: no forbidden sample and no hatched pixel; expected unchanged.
-  - `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`: a field ramp is a presentation occupant (R-467 D1), so its
-    invalid value draws `#141418` (D4) where the hatch was; their `_override` twins draw the node's override colour and
-    are expected unchanged.
-  - The debug catalogue's goldens do not change (D1).
-- **Options seen:**
-  - (a) Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row leading with the
-    ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with REQ-COL-110's NaN /
-    Inf style.
-  - (b) As (a), but `length_ramp` and `d_min_ramp` keep the hatch: a field ramp is read as a debug occupant, which
-    narrows R-467 D1.
-  - (c) Hold the re-baseline for the M2 gate itself, TASK-M2-34 waiting until then.
-- **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
-  change and waits for this ruling before it merges.
-- **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
-
 ## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
 
 *Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
@@ -1475,7 +1409,6 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Applied meanwhile:** (a). Nothing waits.
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
-
 
 ## RQ-406: On a periodic axis, whether the view centre is stored unwrapped (continuous pan, an unbounded number) or canonicalised after each gesture (bounded, with an invisible jump of one period) *(the human's queued question, R-537 Q1, EX9; REQ-GUI-270; context: TASK-M8-55)*
 
@@ -1911,3 +1844,135 @@ mechanical consequence, unless the human wants it.*
   has that period, so a tilted θ axis is affine (TF2.2); the untilted sphere's maps stand; (b) EX7(b) folds the
   window's quad addresses on every chart whose parameter is periodic.
 - **Applied meanwhile:** (a) (R-538 J8). Nothing waits.
+- **See also:** RQ-472, EX7(b)'s pole and equator maps on a tilted view against chart_reference §3.3's tilted fold
+  (found merging main into this branch).
+
+## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
+
+*Found merging PR #258 (R-500 to R-505, R-515) into PR #255 (R-469 to R-477, R-506 to R-514). Nothing is chosen.
+R-503 flagged this and left it to RQ-372; R-506 has since ruled RQ-372 for the Chart builder's physical-quantity axes
+only, so the flag has no entry to wait on.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map" (R-503): "**The radius is bounded at π (R-503,
+    closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches where `s√2 > π`, is past the antipode of
+    `n0`, where the map wraps; it is the domain's end, not a system, out of the count and the total (§5.4)."
+  - `decisions.md` § "R-503 — …", "Flagged, not ruled": "a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an
+    in-square pixel that is not a system; R-467 makes an in-square validity failure a decoder bug with a console
+    warning, and RQ-372 (open, another batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as
+    the human wrote it: the domain's end."
+  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction" and clause
+    4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning naming the chart
+    and pixel. The real engine should produce zero."
+  - `decisions.md` § "R-506 — …", W1: "Gallery charts warn as R-467 has it, their energy-type axes under the linear
+    option excepted (R-471 H5)."
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": "Inside the square every gallery chart
+    is valid by construction, so a pixel the chart classifies as not a system there (a validity failure, or a
+    `Chart::map` that fails) is a decoder bug"; REQ-GUI-227: "a pixel a gallery chart classifies as not a system inside
+    [0,1]² must log REQ-GUI-226's console warning".
+- **Also in the conflict:** REQ-CHART-078, the definition of how pixels exactly on `r = π` count, offers "counted
+  once, like the equator, or as the domain's end"; if TASK-M2-28 defines them as the domain's end, those in-square
+  pixels meet the same warning.
+- **Conflict:** with `s√2 > π` the exponential map classifies its pixels past `r = π` inside the square as not a system
+  (REQ-CHART-075), by design; REQ-GUI-227 and §G12 then log "decoder bug" for them on every such view, and REQ-CHART-058's
+  sweep ("the real engine should log none") would fail for that chart. R-506 W1 excepts only the energy-type axes'
+  linear option.
+- **Options seen:**
+  - (a) The exponential map's `r > π` pixels are by design, as an energy-type axis's linear option is: they draw blank
+    and log no warning; §G12 and REQ-GUI-227 name the exception.
+  - (b) The chart keeps the square inside its cap: `s` is bounded so that `s√2 ≤ π`, every pixel inside `[0,1]²` a
+    system. Past the square the exponential map is bounded and declares nothing (chart_reference §5.4; R-503, "Past
+    the square the map is bounded"), so R-503's `r > π` arm becomes unreachable: REQ-CHART-075's "a pixel with r > π
+    must be the domain's end", R-503 review round 2's fixture requirement `s√2·(N−1)/N > π`, and TASK-M2-28's
+    acceptance line and its control ("one that counts the pixels with r > π") would be retired or amended, and, if
+    TASK-M2-28 merges first, (b) changes built code.
+  - (c) The warning stands for them, as R-506 W1 reads literally.
+- **Applied meanwhile:** both texts as merged; nothing in the code changes. TASK-M2-28 builds REQ-CHART-075 as R-503
+  has it.
+- **Waits:** REQ-GUI-227's warning for the exponential map (TASK-M8-46), and REQ-CHART-058's sweep if it covers that
+  map with `s√2 > π`. Under option (b): REQ-CHART-075's `r > π` clause, its verify's fixture `s√2·(N−1)/N > π` (R-503
+  review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
+  (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.
+
+## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°`, a reachable corner, maps the whole window onto one line of systems; the corpus gives what the chart shows there no `system_image`, fold or statistics *(silence, R-474 R8 and K15, R-451 B11, R-473, R-408; context: TASK-M2-36)*
+
+*Found answering physics review 5593414323 of PR #255 (P4), while restating the tilted fold's criterion without
+dividing by `N_d`. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "**Lean each axis**, an option
+    (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed
+    (`u₁·u₂ = sin τ₁ sin τ₂`)"; "The range `τ ∈ [−90°, +90°]` above is Lean each axis's"; "Under Lean each axis an area
+    statistic weights each pixel by the Gram factor `√(|u₁|²|u₂|² − (u₁·u₂)²)` (R-408)".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract": the
+    four `system_image` values, "ray-degenerate — whole lines of pixels map to the same system".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (applied per R-369): the fold is
+    kept iff `N_b = 0` for `N ∝ u₁ × u₂`.
+- **What the corpus does say (gui review 5593448572 of PR #255, G1):** the corner is reachable and handled on the GUI's
+  side. `decisions.md` § "R-474 — …", R8: the readout flags "the degenerate corner `τ₁ = ±τ₂ = ±90°`, where the plane
+  collapses to a line, which R-451 B11 already handles"; K15: Lean each axis's range is closed at ±90°, and a switch
+  to it clamps each angle to ±90°. `docs/gui/principia_render_gui_spec.md` § "G2. …", the compass: The map; the
+  Readout's "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" line, ending "(Lean each axis)" under that
+  map (R-451 B11, R-474); the Drag text: "a tilt-mode drag acts as anywhere else", the GUI's guards declining where
+  `s < 10⁻⁶` on the plane's own basis, no `z₀` edit sent (R-451 B11; REQ-GUI-203).
+- **Silence (narrowed):** what the chart shows there. At `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and
+  `u₂ = ±e_X`, so `(R·e_a) × (R·e_b) = 0` and the Gram factor is 0: every pixel maps to the slice centre's `(a, b)` and
+  `d = ±u ± v`, whole lines of pixels decoding to one system. No text gives that view's `system_image`, its fold
+  (the tilted fold's criterion has no normal there) or its area statistics (every pixel's Gram weight is 0). Under
+  Tip as sheet `R` is a rotation and keeps rank 2, with two targets the tilted vectors are orthonormal, and an edge-on
+  view (`N_d = 0`) keeps rank 2; none of these is in question.
+- **Options seen:**
+  - (a) The view stays as R-474 and R-451 B11 have it and the chart reports ray-degenerate, its statistics weighted 0
+    as the Gram factor says; the label then reads ray-degenerate and every legend share is undefined (0 of a total of
+    0), which the legend would have to show.
+  - (b) The edit path refuses the second angle at 90° when the first is at 90° with one target (a stop, as R-469 P2
+    stops an edit), the readout saying why.
+  - (c) Lean each axis's range is open, `(−90°, 90°)`, for both angles together.
+  - Options (b) and (c) would amend R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines, which reach and
+    handle the corner today.
+- **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
+- **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
+  ruled); TASK-M2-36 does not wait for the rest.
+
+## RQ-472: R-537 EX7(b) folds the shape sphere's quads over the poles and at the equator with no word on tilt, and RQ-430 (a) narrows only the θ period, where chart_reference §3.3 (#255) keeps the mirror fold under a tilt only where `N_b = 0`, decided exactly on the stored angles, and makes the tilted view bijective elsewhere *(conflict: a ruling against a design doc's applied rule, and silence, R-537 EX2, EX7(b) to (d) and (g), R-538 TF2.2 and J8, R-412, R-473, R-474; REQ-CHART-062, REQ-CHART-079, REQ-CHART-080, REQ-SCHED-101, REQ-GUI-278; context: TASK-M8-56, TASK-M8-58, TASK-M2-36)*
+
+*Found merging main (8484e2f1, PR #255's final rounds) into PR rulings/R-537. Nothing is chosen. For the human: no
+unless the human wants it; it is physics only in that the fold changes area statistics, and the orchestrator may rule
+it as a mechanical consequence of §3.3 and R-472 X3a.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", EX2: "**Pole-crossing** (φ): the chart continues over the pole, with θ shifted by
+    half its period." and "**The hemisphere's fold at the equator** (R-412): the mirror hemisphere, the same systems.";
+    EX7(b): "**Pole `φ = 0` (`t = 1`):** `iy' = 2n − 1 − iy`, and `ix' = (ix + n/2) mod n`." … "**Hemisphere fold at
+    the equator** (R-412, equator at `t = 0`): `iy' = −1 − iy`, `ix` unchanged."; EX7(c): "A canonical quad is in view
+    if any of its images is."; EX7(d): "Neighbours cross seams, poles and folds through the same map."
+  - `decisions.md` § "R-538 — …", J8: "R-537 EX7(b)'s canonical address applies along an axis only where every term
+    with non-zero weight has that period; the untilted sphere's maps stand." (RQ-430 (a), applied meanwhile, which
+    asks about θ's period only).
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (#255, applied per R-369): "Two
+    pixels fold only when their full `(a, b, d)` decode to the same system."; "A pixel's mirror lies on that plane, and
+    the pair keeps its fold, exactly when the tilt adds no hidden offset that depends on the mirrored axis:
+    **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its mirrored `(a, b)` differ in `d` and are distinct
+    systems: the tilted view is **bijective** there"; "It is an exact comparison on the stored tilt angles": Tip as
+    sheet `τ₂ == 0` or `m == 180`, Lean each axis `τ₁ == ±90` or `τ₂ == 0`, two targets `τ₂ ∈ {0, ±180}`.
+  - `docs/design/principia_chart_reference.md` § 5.4's table, the exponential map's row (§3.3's tilted fold, read for either map): "under a tilt the fold is the
+    tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored
+    axis".
+- **The conflict:** on a tilted shape-sphere view, EX7(b)'s equator map (`ix` unchanged, `iy' = −1 − iy`) folds the
+  mirror hemisphere's quads onto the canonical ones whatever the tilt, so the repeat draws, schedules and counts the
+  canonical quad's systems; where `N_b ≠ 0` §3.3 makes those pixels distinct systems, each its own. The pole maps,
+  a half-period shift of `ix` with a reflection of `iy`, are covered by J8 only in so far as the shift is a period;
+  their reflection, like the equator's, is not. The two rules also differ in kind: §3.3 pairs a pixel with whichever
+  pixel of the view carries the mirrored `(a, b)` and the same `d` (at Lean each axis's `|τ₁| = 90°` that pixel is at
+  another `u`), while EX7(b) maps a quad to the one at the same `ix`.
+- **Options seen:**
+  - (a) On a tilted view EX7(b)'s pole and equator maps, like its θ period (J8), apply only where they are a symmetry
+    of the full `(a, b, d)` at the same window address, decided exactly on the stored angles as §3.3 decides its fold;
+    elsewhere the tilted view is affine along that axis, no image drawn, as TF2.2 has it for θ; §3.3's pixel fold
+    stands for the statistics (EX7(g)).
+  - (b) EX7(b)'s maps apply on every view, tilted or not, and §3.3's tilted fold is read as the in-square statistics
+    only.
+  - (c) RQ-430 is widened to every map of EX7(b) and ruled with it.
+- **Applied meanwhile:** nothing; no task has built EX7(b), and the untilted maps (U10) and RQ-430 (a) for θ stand.
+- **Waits:** TASK-M8-56's pole and equator maps on a tilted view, and TASK-M8-58's trace images there (REQ-GUI-278);
+  neither task waits for the rest. TASK-M2-36's §3.3 fold does not wait.
