@@ -201,8 +201,10 @@ the keyboard tree as a window's or a panel's others are (§G3; R-541). The icons
 that is not a system starts no trace and draws the red ✕; hover there shows the readout and no trace, and draws no ✕
 (R-537 EX5, R-538 TM8). A trace of the default length (to the head) not being played or scrubbed is drawn whole, to
 its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
-TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), applied meanwhile). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
-trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5). *Was:* "length (to the head,
+TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), R-553). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5; RQ-425 (a), R-553), and its count of
+samples that are not a system reads "not a system: N samples", "in forbidden: N samples" only while a debug view is the
+figure (RQ-417 (b), R-553 K1). *Was:* "length (to the head,
 everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
 turn, …)", with no ramp control. *Was:* "A click or hover on a pixel that is not a system starts no trace and
 draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole," (gui review 5594407176 of PR #263, G1
@@ -339,7 +341,7 @@ canonical system's. A click on a pixel that is not a system integrates nothing a
 transient pick marker and a figure mark (R-539), kept until the next click, edit or the pointer leaving the figure; it
 pins nothing and leaves a pin as it is, and a lock there is refused (R-469). Its readout says "not a system" and names
 the check that failed (e.g. "a mass ≤ 0"); the label `decode_failed` and its detail show there only while a debug view
-is the figure (RQ-417; R-470). Hover over such a pixel shows the same readout and no trace. Repeats of the field are drawn at full strength, because
+is the figure, as is the word "forbidden" (RQ-417 (b), R-553; R-470). Hover over such a pixel shows the same readout and no trace. Repeats of the field are drawn at full strength, because
 they are the same systems (R-552, RQ-407 (a)). Traces repeat in every image
 in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view state records the centre as it is, on a
 periodic axis unwrapped, keys and addresses taking the canonical value (R-552, RQ-406 (a)), so an export, its JSON and its embedded payload reproduce the same window, repeats

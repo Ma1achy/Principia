@@ -17695,8 +17695,11 @@ R-536 is in the "design" group of `plan/rule_groups.yaml`, with R-486.
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
 *Amended in part by R-552 (21 Oct 2026; Q1 to Q6 and U4, U6 and U9's entries ruled: Q3's outline is built, as an
 Overlays › Chart toggle on by default; EX5's comments and the console's pick apply once the human defines them).*
+*Amended in part by R-553 (21 Oct 2026; EX5's readout: the label `decode_failed` and its detail only while a debug view
+is the figure, as U7 applied; RQ-417 closed).*
 *Still in force: all of it; R-552 confirms each option (a) applied meanwhile, builds the outline U14 left unbuilt, and
-leaves EX5's comments and the console's pick for the human to define.*
+leaves EX5's comments and the console's pick for the human to define; R-553 keeps EX5's label and detail to a debug
+view.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -18044,8 +18047,13 @@ REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 ## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
 *Amended in part by R-541 (21 Oct 2026; I2's place for the trace settings, the trace's entry in Lines ▾, becomes the
 `Trace…` window, the Trajectory panel's Trace section and Overlays ▾ › Trace).*
+*Amended in part by R-553 (21 Oct 2026; TM8's readout: `decode_failed`, its detail and "forbidden" only while a debug
+view is the figure, the count line "not a system: N samples" in a presentation view; TM9's guard (b): `sim_failed`,
+not incomplete; TF3 the default length's; T18's fade arm only where an off-plane distance is defined; RQ-412 to
+RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429 closed, each as applied meanwhile).*
 *Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
-defaults stand.*
+defaults stand. R-553 rules the queued questions as applied meanwhile: TM8's readout labels in a debug view only,
+TM9's guard (b) `sim_failed`, TF3 the default length's, T18's fade arm only where a distance is defined.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -21162,3 +21170,146 @@ R-552 is in the "design" group of `plan/rule_groups.yaml`, with R-537.
 
 Adds REQ-GUI-344 (the outline toggle); changes REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270 and REQ-CHART-080
 (statement, rulings, note) and REQ-SCHED-101 (rulings, note).
+
+## R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*
+*21 Oct 2026 · applied in `docs/design/principia_lines.md` § "8. Traces" (the leaving table's curve row and the tilted
+axis's sentence, the repeats, not-a-system, ramp, animation, length and incomplete-run bullets: the entries' citations,
+the readout's count line and a `sim_failed` sentence), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the
+everyday view (`01_main.png`)" (the trace settings' paragraph and the not-a-system readout, citations), R-537's and R-538's heading blocks (a forward line each, their "Still in force" lines),
+REQ-GUI-272 to REQ-GUI-276, REQ-GUI-280, REQ-GUI-282 and REQ-INT-096 (reqio: rulings, source, notes; REQ-GUI-276 and
+REQ-GUI-280 the readout's count line), REQ-GUI-269, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-281 (reqio: notes),
+TASK-M8-58 and TASK-M8-55 (notes), `docs/archive/review_queue/M0.md` (RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to
+RQ-429, moved with their rulings) and `plan/rule_groups.yaml`; built by TASK-M8-58 and, RQ-417's readout, TASK-M8-55*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+76–79, 81, 82 and 85–93), which R-545 quotes in its opening:
+
+> - RQ-412 (A trace's repeats at half strength): (a). "A trace's repeats are drawn at half strength so the primary reads first."
+> - RQ-413 (Start icon: the star, with Pictures' triangle): (a). "The start icon is the star in every set except Pictures, which uses the initial triangle in body colours."
+> - RQ-414 (End event draws over a coincident syzygy): (a). "Where a syzygy and an end event coincide in time, the end event draws on top."
+> - RQ-415 (Edge chevrons and edge-pinned icons stay separate): (a). "Chevrons and edge-pinned icons stay separate: pins are events, chevrons are the line."
+> - RQ-417 (`decode_failed` and "forbidden" in a presentation readout): (b). "In a presentation view the readout says 'not a system' and names the failed check, for example 'a mass is ≤ 0'. The label `decode_failed`, its detail and the word 'forbidden' appear only while a debug view is the figure. The same rule covers RQ-425's readout line."
+> - RQ-418 (Non-finite step in `computeIC` is `sim_failed`): (a). "A non-finite step size ends the run at once with the label `sim_failed`, as the integrator contract says. The trace ends with the '?' icon. 'Incomplete' means only that the hover's step budget ran out."
+> - RQ-421 (Other θ branches on a tilted chart: an option, off): (a). "Only the continuous θ branch is drawn by default. Drawing the other branches, each faded by its own out-of-plane distance, is an option built when REQ-GUI-266's distance lands (RQ-341)."
+> - RQ-422 (Time ramp default stays Sunset): (a). "The time ramp defaults to Sunset (`#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`). Viridis is a preset."
+> - RQ-423 (Follow-up's "§3a", "T13" and "two bug classes"): (a). "F1 replaces the delivered bundle's §3 row 'Leaves the chart's reach' (I5). F2 adds three bug classes. No updated bundle is coming."
+> - RQ-424 (T15's boundary: `|q₃| ≥ q_max`): (a). "T15 tests the target component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019). The trace leaves at `|q₃| ≥ q_max`."
+> - RQ-425 (Trace sample past a curve axis's bounded edge): (a). "On a curve axis, a sample past a bounded edge is not drawn, the line breaks with no ring, and it is counted in its own readout line, 'past the domain's end: N', which is never a bug. On every other bounded axis TF1 rule 2 applies (the trace leaves, with rings). TM8's forbidden count keeps only samples that are not a system, and must read 0."
+> - RQ-426 (T18's fade arm only where a distance exists): (a). "T18's fade arm runs only where an off-plane distance is defined: R-509's proxy now, REQ-GUI-266's distance once RQ-341 is ruled. Everywhere else its point-stays arm runs and the settings line says there is no fade."
+> - RQ-427 (Paused traces: TF3 applies to the default length only): (a). "TF3's 'drawn to its end while paused' applies to the default length, `ToPlayhead`. A `Window` or `LastDt` length is kept as chosen, and a finished own-clock 'Once' holds its last frame, the whole trace."
+> - RQ-428 (A kept orbit's `Trace` round-trips through `Lines`): (a). "A kept orbit's `Trace` (its IC and style, ramp included) is `Lines` state and round-trips with `RenderState`. On reopening, the view redraws it. The Trajectory panel's kept-orbit tabs stay `ViewUI`."
+> - RQ-429 (TM8 tests the shown axes, not Part 6's ladder): (a). "TM8's not-a-system test checks the sample's chart point on the shown axes, after the types fold it. It never runs Part 6's validation ladder on the whole state."
+
+These are the fifteen trace entries R-537 and R-538 queued: the four questions of `principia_trace_markers.md` §12
+(RQ-412 to RQ-415), the two of the follow-up's F7 (RQ-421, RQ-422), and the conflicts and silences the ports found
+(RQ-417, RQ-418, RQ-423 to RQ-429). Every one is ruled by the option applied meanwhile (R-537 U7; R-538 I8, I10, I13,
+J2, J4 to J6 and J10 to J13), so nothing built or planned changes but the citations, the readout's count line
+(RQ-417 with RQ-425) and the requirements' `rq`-free notes.
+
+On RQ-412 the entry asked whether a trace's repeats are drawn at half strength (a, the file's recommendation), full
+(b), or by a setting, half by default (c). *What it decides:* **option (a): a trace's repeats are drawn at half
+strength, so the primary reads first** (R-538 TM7, as applied, I10). The entry's note stands: along an axis that mixes
+θ with a non-periodic coordinate there are no images (RQ-430's), so this is about the images of untilted periodic and
+pole-crossing charts; the other θ branches of a tilted chart are RQ-421's.
+
+On RQ-413 the entry asked whether the start icon is the star by default with the triangle as Pictures' (a), the star
+in every set (b), or the triangle offered in every set (c). *What it decides:* **option (a): the star in every set but
+Pictures, whose start icon is the initial triangle in body colours** (R-538 TM4's table, as applied).
+
+On RQ-414 the entry asked which draws on top where a syzygy and an end event coincide in time: the end event (a), the
+syzygy (b), or the syzygy hidden (c). *What it decides:* **option (a): the end event draws on top.**
+
+On RQ-415 the entry asked whether the window chevrons and the edge-pinned icons stay separate (a) or merge into one
+edge treatment (b). *What it decides:* **option (a): they stay separate; pins are events, chevrons are the line**
+(R-538 TM6, as applied).
+
+On RQ-417 the entry asked whether a presentation view's readout of a pixel that is not a system shows the label
+`decode_failed`, its detail and "forbidden" (a, R-537 EX5 and R-538 TM8 as written), shows only "not a system" and the
+failed check, the label and its detail only while a debug view is the figure (b, R-470 N3 holding for the readout), or
+(b) with a "details" toggle (c). *What it decides:*
+- **Option (b).** In a presentation view the readout says "not a system" and names the failed check (for example "a
+  mass is ≤ 0"); the label `decode_failed`, its detail and the word "forbidden" appear only while a debug view is the
+  figure. R-537 EX5's "and gives the label (`decode_failed`, its detail)" and R-538 TM8's readout ("forbidden: not
+  integrated", the label, detail 2) hold in a debug view only. This is R-537 U7's meanwhile, now ruled.
+- **The same rule covers RQ-425's readout line** (below): the trace's readout lines follow it.
+
+On RQ-418 the entry asked whether a step size that is not finite ends the run `sim_failed`, the trace ending with "?"
+(a), "incomplete" as R-538 TM9 says (b), or `sim_failed` with its own end icon (c). *What it decides:* **option (a): a
+non-finite step size ends the run at once with the label `sim_failed`, as the integrator contract says, and the trace
+ends with the "?" icon; "incomplete" means only that the hover's step budget ran out** (TM3). R-538 TM9's guard (b)
+"ends the run as incomplete" reads "ends the run `sim_failed`" (I8, as applied; REQ-INT-096).
+
+On RQ-421 the entry asked whether a tilted periodic chart draws the other θ branches, each faded by its own
+out-of-plane distance: no by default, an option (a), always (b), or never (c). *What it decides:* **option (a): only the
+continuous θ branch is drawn by default; drawing the other branches, each faded by its own out-of-plane distance, is an
+option built when REQ-GUI-266's distance lands** (RQ-341, another area of this batch, R-550). R-538 J13 as applied;
+REQ-GUI-278's "the other θ branches of a tilted chart are not drawn" is the default.
+
+On RQ-422 the entry asked whether the time ramp's default is Sunset (a) or Viridis (b). *What it decides:* **option (a):
+Sunset, `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`; Viridis is a preset** (R-538 TF4, J12).
+
+On RQ-423 the entry asked whether F1 replaces what the delivered bundle says on leaving, with three bug classes, as
+the human's message says (a), or an updated bundle with a §3a and a T13 is still to come (b). *What it decides:*
+**option (a): F1 replaces the delivered bundle's §3 row "Leaves the chart's reach" (R-538 I5); F2 adds three bug
+classes; no updated bundle is coming** (R-538 J2, as applied).
+
+On RQ-424 the entry asked which quantity and boundary T15 leaves at: the target component's own `|q₃|` at `≥ q_max`
+(a), the same at `> q_max` (b), or the proxy's magnitude (c). *What it decides:* **option (a): T15 tests the target
+component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019), and the trace leaves at `|q₃| ≥ q_max`** (R-538 J4).
+
+On RQ-425 the entry asked what a trace sample projected past a bounded edge is: on a curve axis not drawn, broken with
+no ring, counted in its own line, rule 2 elsewhere, TM8's count only for non-systems (a); rule 2 everywhere (b); or
+TM8 as written, the forbidden count then not always 0 (c). *What it decides:*
+- **Option (a).** On a curve axis a sample past a bounded edge is not drawn, the line breaks with no ring, and it is
+  counted in its own readout line, "past the domain's end: N", which is never a bug. On every other bounded axis TF1's
+  rule 2 applies: the trace leaves, with rings.
+- **TM8's forbidden count keeps only samples that are not a system, and must read 0** (R-538 J5, as applied).
+
+On RQ-426 the entry asked whether T18's fade arm runs only where an off-plane distance is defined (a), the distance to
+the curve becomes a second proxy (b), or T18 waits whole on RQ-341 (c). *What it decides:* **option (a): T18's fade arm
+runs only where an off-plane distance is defined, R-509's proxy now and REQ-GUI-266's distance once RQ-341 is ruled;
+everywhere else its point-stays arm runs and the settings line says there is no fade** (R-538 J6; R-509 Y3 stands).
+
+On RQ-427 the entry asked whether TF3's "drawn to its end while paused" is the default length's only (a), every
+length's (b), or the last `Δt` measured back from the end while paused (c). *What it decides:* **option (a): TF3 applies
+to the default length, `ToPlayhead`; a `Window` or `LastDt` length is kept as chosen, and a finished own-clock "Once"
+holds its last frame, the whole trace** (R-538 J11, as applied).
+
+On RQ-428 the entry asked whether a kept orbit's `Trace` round-trips through `Lines` with the kept-orbit tabs staying
+`ViewUI` (a), the kept orbits move into `RenderState` whole (b), or only the ramp round-trips (c). *What it decides:*
+**option (a): a kept orbit's `Trace` (its IC and style, the ramp included) is `Lines` state and round-trips with
+`RenderState`; on reopening the view redraws it; the Trajectory panel's kept-orbit tabs stay `ViewUI`** (R-538 J12).
+
+On RQ-429 the entry asked whether TM8's test is the not-a-system test of the sample's chart point on the shown axes,
+after the types fold it (a), Part 6's layers on the whole state with θ folded first (b), or dropped (c). *What it
+decides:* **option (a): TM8 checks the sample's chart point on the shown axes, after the types fold it, and never runs
+Part 6's validation ladder on the whole state** (R-538 J10, TF2.1).
+
+*Where the words leave a choice, decided per R-369 (the readout's wording, a GUI choice; reviewed by gui):*
+- **K1. The count line under RQ-417's rule.** TM8's readout line "in forbidden: N samples" carries the word
+  "forbidden", which RQ-417 keeps to a debug view. So in a presentation view the trace's readout counts those samples as
+  "not a system: N samples", and the line reads "in forbidden: N samples" only while a debug view is the figure; its
+  value and the warning on a non-zero count are unchanged. RQ-425's line, "past the domain's end: N samples", carries
+  no debug label and reads the same in every view. *Was:* "in forbidden: N samples" in every view (R-538 TM8, as
+  applied).
+- **K2. TM9's word.** R-538's applied text and the trace file say "incomplete" for both a spent step budget and a
+  non-finite step; the code, the requirements and the tests use `sim_failed` for the second, and the "?" end icon for
+  both (I8). Nothing else is renamed.
+- **K3. The entries close.** RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429 move to the archive with their
+  rulings; REQ-GUI-272 to REQ-GUI-282 and REQ-INT-096 cite R-553 for the options that were "applied meanwhile", their
+  statements unchanged but for REQ-GUI-276's and REQ-GUI-280's count line (K1). No requirement carried an `rq` for
+  these entries. The R-537 U7 and R-538 I8, I10, I13, J2, J4 to J6 and J10 to J13 meanwhiles are now the rulings.
+- **K4. Where it is built.** TASK-M8-58 builds the trace (REQ-GUI-271 to REQ-GUI-283, REQ-INT-096), TASK-M8-55 the
+  pick's readout (REQ-GUI-269), as before; physics reviews TASK-M8-58.
+
+*What it amends:* **R-537** (EX5's readout: the label and its detail in a debug view only, U7 ruled) and **R-538**
+(TM8's readout: "forbidden: not integrated", the label and its detail in a debug view only, the count line reading "not
+a system: N samples" in a presentation view; TM9's guard (b): `sim_failed`, not incomplete; TF3, J11: the default
+length's; TF6's T18: its fade arm only where a distance is defined). Read with it: R-470 N3 and R-467, which it
+follows; R-509 Y3, which stands. It closes **RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429**.
+
+R-553 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
+
+Changes REQ-GUI-276 and REQ-GUI-280 (statement or verify: the count line; rulings, source, note), REQ-GUI-272 to
+REQ-GUI-275, REQ-GUI-282 and REQ-INT-096 (rulings, source, note), REQ-GUI-269, REQ-GUI-277, REQ-GUI-278 and
+REQ-GUI-281 (notes).
