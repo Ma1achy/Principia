@@ -357,8 +357,11 @@ it:
   - Static: the whole path at once.
   - With the playhead: a head marker sits at the playhead and moves as time is scrubbed or played, using the Time
     panel's own play and loop. **When the playhead is not playing and is not being scrubbed (R-538 TF3)**, every trace
-    is drawn from `t = 0` to its end (its event, or the horizon), with no head marker; while playing, or while the
-    scrubber is dragged, it is drawn to the head, with the head marker. A step while paused is neither (R-538 J11).
+    of the default length (to the head) is drawn from `t = 0` to its end (its event, or the horizon), with no head
+    marker, and a `Window` or `LastDt` length is kept as chosen (RQ-427 (a), applied meanwhile); while playing, or
+    while the scrubber is dragged, it is drawn to the head, with the head marker. A step while paused is neither
+    (R-538 J11). *Was:* "every trace is drawn from `t = 0` to its end" (gui review 5594407176 of PR #263, G2; applied
+    per R-369).
   - Own clock: the trace plays over its own window at its own speed while the figure stays put: once, looped, or back
     and forth. It is always animated (R-538 TF3); static draws the whole trace, as above.
   - Both animated modes take a tail (a bright stretch of Δt behind the head), an option to show the rest of the path

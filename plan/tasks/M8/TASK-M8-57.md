@@ -1,7 +1,7 @@
 # TASK-M8-57 — Deep zoom in repeats and far from the root, and seams between images with a shared edge (R-537 EX8) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-182, REQ-RENDER-100
+- **Closes:** REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183
 - **Depends on:** TASK-M8-56, TASK-M6-08
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -20,6 +20,7 @@ Deep zoom works in the extension and in repeats (R-537 EX8): in a repeat the zoo
 ## Deliverables
 - The canonical quad's deep-zoom uniforms for a repeat, the root-cell anchor for the f32 centre, and the shared-edge rasterisation of image seams, in `crates/kernel/` and `crates/render/`.
 - Tests `deep_zoom_extension` and `image_seams`.
+- Proposal: the depth tolerance far from the root, with the measured placement depth at the root and at `u ~ 10³` and the fixture's `|x₀|`; the human confirms it at the M8 gate (REQ-TOOL-183).
 
 ## Acceptance tests
 - `cargo test -p kernel deep_zoom_extension` — REQ-TOOL-182's verify (R-537 T9, T10).
@@ -28,3 +29,6 @@ Deep zoom works in the extension and in repeats (R-537 EX8): in a repeat the zoo
 ## Notes
 - **⚑ Physics review is required**: the precision in repeats and far from the root; it does not merge on the code reviewer's word alone.
 - **The anchor** is the root cell's own origin, not a re-set plane anchor, which would re-address the cache (R-97; R-537 U12).
+- **T10** is measured as placement (REQ-TOOL-158's criterion) on an affine fixture whose decode is not saturated at `u ~ 10³`, the latent chart's α axes being saturated there (REQ-TOOL-182).
+- **Closes, for gaps the corpus leaves open:** REQ-TOOL-183 (R-71 calibration).
+- *Was:* Closes without REQ-TOOL-183 (physics review 5594430380 of PR #263, P4; applied per R-369).

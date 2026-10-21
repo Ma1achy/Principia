@@ -3022,7 +3022,7 @@
   - R-408
   - R-537
   milestone: M8
-  note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone. On a tilted view the canonical address over a pole or the equator fold waits on RQ-472 (REQ-SCHED-101's maps); RQ-430 (a) for θ's period (REQ-CHART-080). Physics review 5594430380 of PR #263, P2, applied per R-369."
 - id: REQ-CHART-080
   area: CHART
   statement: "Along an axis that mixes a periodic chart parameter with a non-periodic coordinate (a tilt, R-473), the chart must be affine (R-538 TF2.2; RQ-430 (a)): no image is drawn there and R-537 EX7(b)'s canonical address must not fold it, folding applying along an axis only where every term with non-zero weight has that period; the untilted shape sphere's maps stand."
@@ -9617,7 +9617,7 @@
   note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"cache-valid moves to the M5 cache task, which also decides whether per-quad schema version belongs with cache-valid\"; the M5 cache task is TASK-M5-08, whose lookup is identity + signature match (applied per R-369). At M1 the schema version cell is checked against the build's PAYLOAD_SCHEMA_VERSION (REQ-TOOL-011)."
 - id: REQ-SCHED-101
   area: SCHED
-  statement: "The quadtree must cover the extended parameter plane and compute one system once (R-537 EX7(a)–(c), (e), (f)): the level-0 cells of the root lattice must tile the whole parameter plane, every cell the view touches having a root, quad indices outside the depth-0 root negative or past 2^L − 1 and the address in the slice plane's own frame (R-97); a quad in a repeat must map to its canonical quad in the primary range by the type group (on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root), that quad alone requested, computed, cached and decided and every image drawing it, a reflection drawing the canonical samples mirrored without re-integrating, and a level-0 repeat across a pole drawn from its two level-1 halves (RQ-410 (a)); scheduling must read the union of images, a canonical quad in view if any image is, its screen size its images' size, decided once, its children shared, counted once by the frame quota, its payload, timeline and playhead shared; quads past the root on an affine chart must be scheduled, refined, floored and cached like any other; a quad wholly past a bounded edge must not be requested, and one straddling a validity boundary must integrate its valid footprints only, the rest labelled decode_failed."
+  statement: "The quadtree must cover the extended parameter plane and compute one system once (R-537 EX7(a)–(c), (e), (f)): the level-0 cells of the root lattice must tile the whole parameter plane, every cell the view touches having a root, quad indices outside the depth-0 root negative or past 2^L − 1 and the address in the slice plane's own frame (R-97); a quad in a repeat must map to its canonical quad in the primary range by the type group (on the shape sphere at level L, n = 2^L: ix' = ix mod n; with both hemispheres drawn, R-14's φ = π(1 − t), the pole maps at both edges, over the pole at t = 1 iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n, over the pole at t = 0 iy' = −1 − iy with the same shift; with one hemisphere drawn, R-412's φ = (π/2)(1 − t), the pole map at t = 1 and the fold at the equator, t = 0, iy' = −1 − iy with ix unchanged, past t = −1 the fold then the t = 1 pole map (R-537 U10); composed until inside the root; on a tilted view an axis that mixes θ with a non-periodic coordinate is affine and not folded (RQ-430 (a), REQ-CHART-080), and the pole maps and the equator fold are not built on a tilted view until RQ-472 is ruled), that quad alone requested, computed, cached and decided and every image drawing it, a reflection drawing the canonical samples mirrored without re-integrating, and a level-0 repeat across a pole drawn from its two level-1 halves (RQ-410 (a)); scheduling must read the union of images, a canonical quad in view if any image is, its screen size its images' size, decided once, its children shared, counted once by the frame quota, its payload, timeline and playhead shared; quads past the root on an affine chart must be scheduled, refined, floored and cached like any other; a quad wholly past a bounded edge must not be requested, and one straddling a validity boundary must integrate its valid footprints only, the rest labelled decode_failed."
   source:
   - file: decisions.md
     section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
@@ -9629,14 +9629,17 @@
     section: "Part 4 — Baseline-first: an absolute tier, not a priority weight"
   verify:
     method: unit test
-    detail: "cargo test -p kernel quad_canonical (R-537 T2): with three images of one canonical quad in view on the shape sphere, the counter of integrations per canonical address reads 1 and every image draws the same payload frame; the maps above, property-tested at L = 1..12 over random quads, land inside the root and are involutions where they reflect; a reflected repeat's samples are the canonical ones mirrored, bitwise; every cell a random viewport touches, the latent chart panned to u ~ 10³ included, has a root; the frame quota counts the canonical quad once; a quad wholly past the warp's bounded edge is never requested and one straddling the simplex's edge integrates only its valid footprints; controls: computing a repeat by its own address reads 3 and fails T2; a lattice with only the depth-0 root leaves a visible cell with no ancestor and fails; review (physics) of the maps against R-14 and R-412"
+    detail: "cargo test -p engine quad_canonical (R-537 T2), the scheduler's own crate: with three images of one canonical quad in view on the shape sphere, the counter of integrations per canonical address reads 1 and every image draws the same payload frame; the maps above, property-tested at L = 1..12 over random quads, land inside the root and are involutions where they reflect; a reflected repeat's samples are the canonical ones mirrored, bitwise; every cell a random viewport touches, the latent chart panned to u ~ 10³ included, has a root; the frame quota counts the canonical quad once; a quad wholly past the warp's bounded edge is never requested and one straddling the simplex's edge integrates only its valid footprints; with both hemispheres drawn a quad past t = 0 maps by the pole map (ix shifted by n/2), with one hemisphere drawn by the fold (ix unchanged); controls: the fold applied on the two-hemisphere chart, or the pole map at t = 0 on the one-hemisphere chart, gives a different canonical quad and fails; computing a repeat by its own address reads 3 and fails T2; a lattice with only the depth-0 root leaves a visible cell with no ancestor and fails; review (physics) of the maps against R-14 and R-412"
   rulings:
   - R-97
   - R-407
   - R-408
+  - R-412
   - R-537
   milestone: M8
-  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) applied meanwhile."
+  rq:
+  - RQ-472
+  note: "R-537 EX7 (U10, U12). Closed by TASK-M8-56. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-410 (a) applied meanwhile. Physics review 5594430380 (P2, P3) and code review 5594440613 (F3, F4) of PR #263, applied per R-369: the maps split by hemispheres drawn (U10), the tilted case waiting on RQ-472 (`rq`), and the test in crates/engine, where the quad scheduler lives. *Was:* \"(on the shape sphere at level L, n = 2^L: ix' = ix mod n; over the pole at t = 1, iy' = 2n − 1 − iy and ix' = (ix + n/2) mod n; over the pole at t = 0, iy' = −1 − iy with the same shift; the fold at the equator, iy' = −1 − iy, ix unchanged; composed until inside the root)\" and \"cargo test -p kernel quad_canonical (R-537 T2):\"."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -10508,11 +10511,11 @@
     section: Past the unit square — each axis's extension type (R-407)
   verify:
     method: unit test
-    detail: "cargo test -p kernel neighbours_across_seams (R-537 T7, T8): a footprint on the shape sphere's root edge at θ = 0 has 8 neighbours, those on the θ = 2π side, and its agreement arm matches an interior footprint's on a field smooth across the seam; an unbalanced pair of quads straddling a pole is balanced (BalanceForced), as an interior pair is; a footprint on the warp's bounded edge has no neighbour past it; controls: treating the edge as missing neighbours gives a different arm value and fails T7; per-root balance misses the pair across the pole and fails T8; review (physics)"
+    detail: "cargo test -p engine neighbours_across_seams (R-537 T7, T8), the refinement policy's own crate: a footprint on the shape sphere's root edge at θ = 0 has 8 neighbours, those on the θ = 2π side, and its agreement arm matches an interior footprint's on a field smooth across the seam; an unbalanced pair of quads straddling a pole is balanced (BalanceForced), as an interior pair is; a footprint on the warp's bounded edge has no neighbour past it; controls: treating the edge as missing neighbours gives a different arm value and fails T7; per-root balance misses the pair across the pole and fails T8; review (physics)"
   rulings:
   - R-537
   milestone: M8
-  note: "R-537 EX7(d) (U11). Closed by TASK-M8-56. 2:1 balance is the refinement policy's BalanceForced, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX7(d) (U11). Closed by TASK-M8-56. 2:1 balance is the refinement policy's BalanceForced, whose producer REQ-REF-047 defines (TASK-M6-01); the arms are REQ-REF-025's. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Neighbours across a pole or the equator fold on a tilted view follow REQ-SCHED-101's maps, which wait on RQ-472 there. Code review 5594440613 of PR #263, F3, and physics review 5594430380, P2, applied per R-369. *Was:* \"cargo test -p kernel neighbours_across_seams (R-537 T7, T8):\"."
 - id: REQ-RENDER-001
   area: RENDER
   statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing. It must bind SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1), leaving group 0 to the assembler's per-frame uniforms, with the group and binding numbers generated constants from one ledger table; read either buffer only in the generated unpack layer, at the same sample index i for both, loading only the stored members each field needs, never the whole stored struct in one load (R-378); emit no setter; and test an unset value by its bit pattern (pa_d_min_is_unset against PA_D_MIN_UNSET = 0x7c00u), never by isinf, isnan or a float comparison standing in for them, which fast-math (R-297) may optimise away (R-343)."
@@ -15493,7 +15496,7 @@
   rulings:
   - R-539
   milestone: M8
-  note: " R-539 (20 Oct 2026): \"the figure is never covered\" is about panels and chrome; figure marks may cover the figure."
+  note: "R-539 (20 Oct 2026): \"the figure is never covered\" is about panels and chrome; figure marks may cover the figure."
 - id: REQ-GUI-075
   area: GUI
   statement: "The dev GUI must use egui's dark default theme with the Ubuntu / Ubuntu Mono fonts and no styling beyond egui's own."
@@ -18845,15 +18848,15 @@
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
-    method: unit test
-    detail: "cargo test -p gui extension_pick (R-537 T5, T6): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6"
+    method: GUI screenshot
+    detail: "cargo test -p gui extension_pick (R-537 T5, T6) and cargo xtask screenshot 01_main (real engine, extension_pick_x; presence only, no artboard, R-129): a click on a blank (not-a-system) pixel on the mass simplex draws the ✕ at the click and starts no computeIC (the call counter reads 0), the pin unchanged, and the readout names the failed check; hover in the shape sphere's θ-shifted repeat and in its pole repeat: the IC is bitwise the canonical pixel's and the readout says \"repeat\"; the label decode_failed appears in the readout only with View › Debug view on; hover over a blank pixel draws no ✕ and starts no computeIC, its readout naming the failed check; the screenshot shows the ✕ at the click with the not-a-system readout; controls: a pick that falls through to the nearest valid pixel integrates and fails T5; an unfolded decode gives a different IC and fails T6; a ✕ drawn on hover fails"
   rulings:
   - R-453
   - R-469
   - R-470
   - R-537
   milestone: M8
-  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it)."
+  note: "R-537 EX5 (U7 to U9). Closed by TASK-M8-55. RQ-417 (b) applied meanwhile; RQ-420: comments and the console's pick are not yet defined, and EX5 applies to them once they are (RQ-411 waits with it). Gui review 5594407176 of PR #263, G1 and G3: the hover arm and the ✕'s screenshot, applied per R-369."
 - id: REQ-GUI-270
   area: GUI
   statement: "The view state must record the centre and zoom as they are, on a periodic axis the unwrapped centre (R-537 EX9; RQ-406 (a)), keys and quad addresses taking the canonical value, so that an image export, its JSON state and its embedded payload, reopened, reproduce the same window, repeats included."
@@ -18883,13 +18886,13 @@
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
-    method: unit test
-    detail: "cargo test -p render trace_defaults (R-538 T1): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail"
+    method: GUI screenshot
+    detail: "cargo test -p render trace_defaults (R-538 T1), cargo test -p gui trace_settings_keys and cargo xtask screenshot 01_main (real engine, lines_trace_settings; presence only, no artboard, R-129): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail; the trace's Lines ▾ entry holds the settings in TM2's order, Tab and Enter reach each (the icon set, the syzygy style, the ramp preset, Custom's three stops, Reverse and the rest) in navigation mode and each is changed only in interaction mode (render_gui_spec §G3, R-409), and the screenshot shows the settings; controls: a setting outside the scope tree, a setting out of TM2's order, and a setting changed in navigation mode, each fail"
   rulings:
   - R-476
   - R-538
   milestone: M8
-  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing."
+  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing. Gui review 5594407176 of PR #263, G3: the keyboard reach and order arm and the presence screenshot, modelled on REQ-GUI-247, applied per R-369."
 - id: REQ-GUI-272
   area: GUI
   statement: "A trace's markers must be drawn from the chosen icon set (Principia the default; Arrows, Pictures, Orbits; R-538 TM3, TM4): a star at the start (Pictures: the initial triangle in body colours, RQ-413 (a)), each end event its own icon in its outcome's colour from the active outcome palette (pair collision, triple collision with detail = 3, escape, triple ejection with detail = 3, horizon), \"?\" for an incomplete run with its last stretch dashed, the leave and re-enter rings of the chart's reach, where R-538 TF1 says the trace leaves (REQ-GUI-277), with the line dashed between them, the optional window chevrons and seam ticks, each icon over a dark halo #0B0B0E with light ink #F5F4F0; there must be no double-escape icon."
@@ -18988,13 +18991,15 @@
     section: Part 6 — The canonical inverse policy, completed
   verify:
     method: unit test
-    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
+    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15's second arm, waiting on RQ-474: R-473 offers no physical-momentum tilt target); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
   rulings:
   - R-473
   - R-509
   - R-538
   milestone: M8
-  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-474
+  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. T15's physical-momentum arm waits on RQ-474 (physics review 5594430380 of PR #263, P5, applied per R-369); the rest does not wait."
 - id: REQ-GUI-278
   area: GUI
   statement: "Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a))."
@@ -19007,13 +19012,16 @@
     section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within 3× the median step (T16); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)"
+    detail: "cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within REQ-GUI-283's calibrated multiple of the median step (T16; RQ-473 (a)); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)"
   rulings:
   - R-473
   - R-537
   - R-538
   milestone: M8
-  note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-472
+  - RQ-473
+  note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a) applied meanwhile: the threshold is REQ-GUI-283's, set from the measured gap, not 3× (TF2.3 measures correct code at 5–97×). The trace's images over a pole or the equator fold on a tilted view wait on RQ-472. Physics review 5594430380 of PR #263, P1, P2; code review 5594440613, F4; applied per R-369. *Was:* \"is within 3× the median step (T16)\"."
 - id: REQ-GUI-279
   area: GUI
   statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5)."
@@ -19028,12 +19036,14 @@
     section: Part 6 — The canonical inverse policy, completed
   verify:
     method: unit test
-    detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within 3× the median step; control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
+    detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within REQ-GUI-283's calibrated multiple of the median step (RQ-473 (a)); control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
   rulings:
   - R-473
   - R-538
   milestone: M8
-  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  rq:
+  - RQ-473
+  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a) applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\"."
 - id: REQ-GUI-280
   area: GUI
   statement: "On a curve axis (Burrau's ν) a trace's point must be the curve's nearest point (inverse encode Part 5(b)), never dropped or clamped, the distance to the curve the fade where an off-plane distance is defined (R-509; RQ-426 (a)); a point whose nearest ν lies past a bounded edge must not be drawn there, the line broken with no reach ring, and counted in the trace readout's \"past the domain's end: N samples\", apart from the not-a-system count and with no warning (R-538 TF1; RQ-425 (a))."
@@ -19064,12 +19074,12 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
     method: unit test
-    detail: "cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails"
+    detail: "cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails; paused, a Window(t0, t1) trace still draws exactly [t0, t1] and a LastDt trace its last Δt (RQ-427 (a)); control: either drawn whole while paused fails"
   rulings:
   - R-476
   - R-538
   milestone: M8
-  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile."
+  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile. Gui review 5594407176 of PR #263, G2: the Window and LastDt arm, applied per R-369."
 - id: REQ-GUI-282
   area: GUI
   statement: "A trace's colour along time must be a TimeRamp held in its Trace (R-538 TF4): the presets Sunset (the default once the ramp is chosen, RQ-422 (a)), Viridis, Magma, Ice, Ember, Aurora and Mono with R-538 J12's stops, Custom with three stops, Reverse and a preview bar; the stops evenly spaced and interpolated linearly over t ∈ [0, t_max]; it colours the line, its time ticks, the start star and the direction arrows, the event icons keeping the outcome palette; it is Lines' state in RenderState, never the stain graph's palette, each control one undoable SetField that re-integrates nothing, saved with the view and exported (the round-trip rule's tier 2 once it merges), a kept orbit's ramp travelling with its Trace (RQ-428 (a))."
@@ -19090,6 +19100,23 @@
   - R-538
   milestone: M8
   note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a) applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
+- id: REQ-GUI-283
+  area: GUI
+  kind: calibration
+  statement: "The trace's no-false-jump threshold, the multiple of a run's median screen step that a step at a θ wrap, a pole passage or a syzygy must stay within (R-538 T16 and T16b; RQ-473 (a)), must be calibrated: proposed with its evidence by the task that needs it, set from the measured gap between genuine fast motion at close approach (up to ~97× the median read in the chart's own frame, TF2.3) and the artefacts the tests catch (the 2π·cos τ wrap jump, the ~2000× frame flip), checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the threshold with the measured worst genuine step over REQ-GUI-278's and REQ-GUI-279's fixtures and the artefacts' steps, and the margin on each side; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-538
+  milestone: M8
+  note: "Physics review 5594430380 of PR #263, P1, applied per R-369; RQ-473. Closed by TASK-M8-58, with REQ-GUI-278 and REQ-GUI-279."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -21879,13 +21906,30 @@
     section: "The three coordinate spaces (they nest; each is right for its job)"
   verify:
     method: unit test
-    detail: "cargo test -p kernel deep_zoom_extension (R-537 T9, T10): zoom 40 levels into a shape sphere pole repeat and into its canonical point: the ICs agree bitwise; on the latent chart at u = 10³ adjacent samples give distinct ICs to the same depth as at the root, within ±1 level, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u collapses about 10 levels early and fails T10; review (physics)"
+    detail: "cargo test -p kernel deep_zoom_extension (R-537 T9, T10): zoom 40 levels into a shape sphere pole repeat and into its canonical point: the ICs agree bitwise; on an affine fixture whose decode is not saturated at u ~ 10³ (its Jacobian along u non-zero there, which rules out the latent chart's α axes, σ(z_α) = 1 at z_α ≈ 2·10³), named by the task with |x₀| stated, the placement passes REQ-TOOL-158's criterion (c (f64) + δ against the f64 reference positions) to the same depth as at the root, within REQ-TOOL-183's calibrated tolerance, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u fails the placement criterion about 10 levels sooner and fails T10, the control shown to fire on that fixture; review (physics)"
   rulings:
   - R-97
   - R-395
   - R-537
   milestone: M8
-  note: "R-537 EX8 (U12). Closed by TASK-M8-57, on REQ-TOOL-158's per-quad local path (TASK-M5-04) and REQ-TOOL-159's routing (TASK-M6-08). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-537 EX8 (U12). Closed by TASK-M8-57, on REQ-TOOL-158's per-quad local path (TASK-M5-04) and REQ-TOOL-159's routing (TASK-M6-08). Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5594430380 of PR #263, P4, applied per R-369: T10 measured as placement on an unsaturated affine fixture; the tolerance is REQ-TOOL-183's calibration (R-71), the corpus stating none. *Was:* \"on the latent chart at u = 10³ adjacent samples give distinct ICs to the same depth as at the root, within ±1 level, the depth reported with the coordinate magnitude; controls: an uncanonicalised centre loses precision and fails T9; an absolute f32 c_u collapses about 10 levels early and fails T10\"."
+- id: REQ-TOOL-183
+  area: TOOL
+  kind: calibration
+  statement: "The depth tolerance of deep zoom far from the root (R-537 T10's \"± the stated tolerance\"), the number of levels by which the placement depth on an affine extension at u ~ 10³ may differ from the root's, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance with the measured placement depth at the root and at u ~ 10³ on REQ-TOOL-182's fixture, its |x₀| at each, and the f32 ulp of x₀ there; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-537
+  milestone: M8
+  note: "Physics review 5594430380 of PR #263, P4, applied per R-369: the port's \"±1 level\" was a chosen value. Closed by TASK-M8-57, with REQ-TOOL-182."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

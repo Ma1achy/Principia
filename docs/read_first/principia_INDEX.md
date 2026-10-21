@@ -112,7 +112,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_nav_cube.html` — Principia — navigation cube: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/lines/` — the line system's mock-ups, `images/` (PNGs) and `canvas/` (artboards, `.dc.html`), the reference for `principia_lines.md` (R-476)
-- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (self-contained, version 27, the follow-up's), and its screenshots, `images/`: the reference for `principia_lines.md` §8's markers and icon sets, where a trace can leave, mixed axes and the time ramp (R-538) and for the view past the square with the controls shown (R-537)
+- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (one HTML file, version 27, the follow-up's; it loads IBM Plex from Google Fonts, and its fonts and look are not copied, the dev GUI's being Ubuntu and Ubuntu Mono), and its screenshots, `images/`: the reference for `principia_lines.md` §8's markers and icon sets, where a trace can leave, mixed axes and the time ramp (R-538) and for the view past the square with the controls shown (R-537)
 - `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 
 ---

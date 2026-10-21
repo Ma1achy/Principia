@@ -25,15 +25,16 @@ On the real engine the chart's extension is reached by pan and zoom with the con
 
 ## Deliverables
 - Navigation past the square with the layer shown, the readout's repeat label and canonical coordinates, the ✕ and its readout, and the view state's unwrapped centre, in `crates/gui/` on the real engine, reading TASK-M8-56's canonical addresses.
-- Tests `extension_navigation`, `extension_no_gaps`, `extension_pick` and `extension_round_trip`.
+- Tests `extension_navigation`, `extension_no_gaps`, `extension_pick` and `extension_round_trip`, and the `extension_pick_x` screenshot target.
 
 ## Acceptance tests
 - `cargo test -p gui extension_navigation` — REQ-GUI-267's verify (R-537 T1, T12).
 - `cargo test -p gui extension_no_gaps` — REQ-GUI-268's verify (R-537 T3, T4).
-- `cargo test -p gui extension_pick` — REQ-GUI-269's verify (R-537 T5, T6).
+- `cargo test -p gui extension_pick` and `cargo xtask screenshot 01_main` (real engine, `extension_pick_x`) — REQ-GUI-269's verify (R-537 T5, T6; the hover arm, the ✕'s screenshot).
 - `cargo test -p gui extension_round_trip` — REQ-GUI-270's verify (R-537 EX9).
 
 ## Notes
 - **Applied meanwhile (R-537 U4, U6, U7, U9, U14):** RQ-416 (a), Fit the view's own square (R-468 E2); RQ-419 (a), the frames before the first baseline cover excepted; RQ-417 (b), the readout's label only in a debug view; RQ-406 (a), RQ-407 (a), RQ-409 (a); RQ-408's outline is not built; comments and the console's pick wait on RQ-420. A ruling other than these is a follow-up change.
 - **The mock** needs nothing (R-537 U2): its stand-in is affine everywhere and already pans past the preset's window with the controls shown.
 - **The trace's repeats** (EX6) are TASK-M8-58's, with R-538's markers.
+- *Was:* the acceptance line "`cargo test -p gui extension_pick` — REQ-GUI-269's verify (R-537 T5, T6)." (gui review 5594407176 of PR #263, G1, G3; applied per R-369).

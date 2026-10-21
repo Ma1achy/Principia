@@ -1415,7 +1415,7 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 *Queued by the human (`principia_extension_interaction.md` §4, Q1). For the human: yes, it changes what the view state
 records.*
 
-- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q1.** On a periodic axis, is the view
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q1.** On a periodic axis, is the view
   centre stored unwrapped (continuous pan, unbounded number) or canonicalised after each gesture (bounded, with an
   invisible jump of one period)? *Recommendation:* unwrapped in the view state, canonical in keys and addresses."; EX9:
   "The view state (centre, zoom, and on a periodic axis the unwrapped centre, Q1) is recorded as it is."
@@ -1429,7 +1429,7 @@ records.*
 
 *Queued by the human (`principia_extension_interaction.md` §4, Q2). For the human: yes, it changes what is drawn.*
 
-- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q2.** Are repeats of the field drawn at
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q2.** Are repeats of the field drawn at
   full strength? *Recommendation:* yes; they are the same systems. Repeats of a trace are fainter, as in the demo."
 - **Options seen:** (a) yes, the field's repeats at full strength, a trace's repeats fainter (the file's
   recommendation); (b) the field's repeats dimmed too, so the primary range reads first; (c) a setting, full strength
@@ -1440,7 +1440,7 @@ records.*
 
 *Queued by the human (`principia_extension_interaction.md` §4, Q3). For the human: yes, it adds an overlay.*
 
-- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q3.** An outline of the chart's primary
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q3.** An outline of the chart's primary
   square when the view goes past it. *Recommendation:* an Overlays › Chart toggle, off by default and on in the debug
   view. The demo has it on."
 - **Options seen:** (a) an Overlays › Chart toggle, off by default and on in the debug view (the file's
@@ -1452,7 +1452,7 @@ records.*
 
 *Queued by the human (`principia_extension_interaction.md` §4, Q4). For the human: yes, it changes navigation.*
 
-- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q4.** A zoom-out limit on periodic charts
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q4.** A zoom-out limit on periodic charts
   (how many periods may show). *Recommendation:* none beyond the frame budget and baseline cover. The demo caps at 3×
   for its fixed maps."
 - **Options seen:** (a) none beyond the frame budget and the baseline cover (the file's recommendation); (b) a fixed
@@ -1465,7 +1465,7 @@ records.*
 addressing).*
 
 - **File, section:** `decisions.md` § "R-537 — …", the applied text, EX7(b): "At `L = 0` the half-period shift splits
-  the root, so **a level-0 repeat across a pole is drawn from its two level-1 halves** (Q5)."; §4: "**Q5.** The level-0
+  the root, so **a level-0 repeat across a pole is drawn from its two level-1 halves** (Q5)."; `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q5.** The level-0
   pole repeat: draw it from its two level-1 halves, or raise the bootstrap to `L ≥ 1` on every chart with a
   pole-crossing axis? *Recommendation:* draw from the children; the bootstrap is already ≥ 2 in practice."
 - **Options seen:** (a) draw it from its two level-1 children (the file's recommendation); (b) raise the bootstrap to
@@ -1476,7 +1476,7 @@ addressing).*
 
 *Queued by the human (`principia_extension_interaction.md` §4, Q6). For the human: yes; it needs RQ-420 first.*
 
-- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q6.** Does a comment pinned in a repeat
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_extension_interaction.md` § "4. Queue, don't rule": "**Q6.** Does a comment pinned in a repeat
   attach to the canonical point, so that it appears in every image? *Recommendation:* yes."
 - **Options seen:** (a) yes, to the canonical point, shown in every image (the file's recommendation); (b) to the
   pixel's own place, shown in that image only.
@@ -1488,7 +1488,7 @@ addressing).*
 *Queued by the human (`principia_trace_markers.md` §12, Q1). For the human: yes, it changes what is drawn.*
 
 - **File, section:** `decisions.md` § "R-538 — …", the applied text, TM7: "the trace is drawn **in every image of the
-  chart in view**, with every marker and icon …, at half strength"; §12: "**Q1.** Repeats of a trace at half strength
+  chart in view**, with every marker and icon …, at half strength"; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q1.** Repeats of a trace at half strength
   or full. *Recommendation:* half, so the primary reads first."
 - **Options seen:** (a) half strength (the file's recommendation); (b) full strength; (c) a setting, half by default.
 - **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
@@ -1501,7 +1501,7 @@ addressing).*
 *Queued by the human (`principia_trace_markers.md` §12, Q2). For the human: yes (look).*
 
 - **File, section:** `decisions.md` § "R-538 — …", the applied text, TM4's table, Start: "star | star | the initial
-  triangle in body colours | star"; §12: "**Q2.** Start icon: the star in every set, or Pictures' initial-triangle glyph
+  triangle in body colours | star"; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q2.** Start icon: the star in every set, or Pictures' initial-triangle glyph
   as an option elsewhere. *Recommendation:* star by default, the triangle as Pictures'."
 - **Options seen:** (a) the star by default, the triangle as Pictures' (the file's recommendation); (b) the star in
   every set; (c) the triangle offered as a start option in every set.
@@ -1511,7 +1511,7 @@ addressing).*
 
 *Queued by the human (`principia_trace_markers.md` §12, Q3). For the human: yes (look).*
 
-- **File, section:** `decisions.md` § "R-538 — …", the applied text, §12: "**Q3.** Where a syzygy and an end event
+- **File, section:** `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q3.** Where a syzygy and an end event
   coincide in time, which draws on top? *Recommendation:* the end event."
 - **Options seen:** (a) the end event on top (the file's recommendation); (b) the syzygy on top; (c) the syzygy
   hidden where they coincide.
@@ -1521,7 +1521,7 @@ addressing).*
 
 *Queued by the human (`principia_trace_markers.md` §12, Q4). For the human: yes (look).*
 
-- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM6; §12: "**Q4.** Should "Leaves / enters the
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM6; `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md` § "12. Queue, don't rule": "**Q4.** Should "Leaves / enters the
   window" chevrons and edge-pinned icons merge into one edge treatment? *Recommendation:* keep them separate; pins are
   events, chevrons are the line."
 - **Options seen:** (a) keep them separate (the file's recommendation); (b) one edge treatment, a pinned icon drawn
@@ -1936,9 +1936,10 @@ dividing by `N_d`. Nothing is chosen.*
 
 ## RQ-472: R-537 EX7(b) folds the shape sphere's quads over the poles and at the equator with no word on tilt, and RQ-430 (a) narrows only the θ period, where chart_reference §3.3 (#255) keeps the mirror fold under a tilt only where `N_b = 0`, decided exactly on the stored angles, and makes the tilted view bijective elsewhere *(conflict: a ruling against a design doc's applied rule, and silence, R-537 EX2, EX7(b) to (d) and (g), R-538 TF2.2 and J8, R-412, R-473, R-474; REQ-CHART-062, REQ-CHART-079, REQ-CHART-080, REQ-SCHED-101, REQ-GUI-278; context: TASK-M8-56, TASK-M8-58, TASK-M2-36)*
 
-*Found merging main (8484e2f1, PR #255's final rounds) into PR rulings/R-537. Nothing is chosen. For the human: no
-unless the human wants it; it is physics only in that the fold changes area statistics, and the orchestrator may rule
-it as a mechanical consequence of §3.3 and R-472 X3a.*
+*Found merging main (8484e2f1, PR #255's final rounds) into PR rulings/R-537 (PR #263). Nothing is chosen. For the
+human: no unless the human wants it; on a tilted view the fold changes which system a pixel shows, not only the area
+statistics, and the orchestrator may rule it as a mechanical consequence of §3.3 and R-472 X3a. *Was:* "it is physics
+only in that the fold changes area statistics" (physics review 5594430380 of PR #263, P6).*
 
 - **File, section:**
   - `decisions.md` § "R-537 — …", EX2: "**Pole-crossing** (φ): the chart continues over the pole, with θ shifted by
@@ -1966,13 +1967,64 @@ it as a mechanical consequence of §3.3 and R-472 X3a.*
   pixel of the view carries the mirrored `(a, b)` and the same `d` (at Lean each axis's `|τ₁| = 90°` that pixel is at
   another `u`), while EX7(b) maps a quad to the one at the same `ix`.
 - **Options seen:**
-  - (a) On a tilted view EX7(b)'s pole and equator maps, like its θ period (J8), apply only where they are a symmetry
-    of the full `(a, b, d)` at the same window address, decided exactly on the stored angles as §3.3 decides its fold;
-    elsewhere the tilted view is affine along that axis, no image drawn, as TF2.2 has it for θ; §3.3's pixel fold
-    stands for the statistics (EX7(g)).
+  - (a) On a tilted view the equator fold (a reflection along `b`) is kept iff §3.3's exact `N_b = 0` condition holds
+    on the stored angles; the pole maps (a shift along `a` and a reflection along `b`) are kept only if `d` depends on
+    neither window axis, `N_a = 0` and `N_b = 0`, decided the same way; elsewhere the tilted view is affine along that
+    axis, no image drawn, as TF2.2 has it for θ; §3.3's pixel fold stands for the statistics (EX7(g)). *Was:* "apply
+    only where they are a symmetry of the full `(a, b, d)` at the same window address, decided exactly on the stored
+    angles as §3.3 decides its fold" (physics review 5594430380 of PR #263, P6: the pole maps move the address).
   - (b) EX7(b)'s maps apply on every view, tilted or not, and §3.3's tilted fold is read as the in-square statistics
     only.
   - (c) RQ-430 is widened to every map of EX7(b) and ruled with it.
 - **Applied meanwhile:** nothing; no task has built EX7(b), and the untilted maps (U10) and RQ-430 (a) for θ stand.
-- **Waits:** TASK-M8-56's pole and equator maps on a tilted view, and TASK-M8-58's trace images there (REQ-GUI-278);
-  neither task waits for the rest. TASK-M2-36's §3.3 fold does not wait.
+- **Waits:** TASK-M8-56's pole and equator maps on a tilted view (REQ-SCHED-101, `rq: RQ-472`; REQ-REF-054's
+  neighbours and REQ-CHART-079's statistics through them, noted), and TASK-M8-58's trace images there (REQ-GUI-278,
+  `rq: RQ-472`); neither task waits for the rest. TASK-M2-36's §3.3 fold does not wait. The decoder contract's
+  "Repeats and the canonical point" paragraph names this entry (applied per R-369, PR #263's fix round).
+
+## RQ-473: T16 and T16b hold the trace's screen step "within 3× the median" at a θ wrap, a pole passage and a syzygy, where TF2.3 measures correct code at 5–97× the median and TF1 passes θ's pole singularity as a jump *(conflict: the human's tests against the human's own measurement, R-538 TF6 T16 and T16b, TF2.3, TF1; REQ-GUI-278, REQ-GUI-279, REQ-GUI-283; context: TASK-M8-58)*
+
+*Found by physics review 5594430380 of PR #263 (P1). Nothing is chosen. For the human: no unless the human wants it;
+the threshold is a value, and R-71 makes it a calibration requirement meanwhile.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the follow-up's applied text, F6's table: "T16b | Frame: on the sphere tilted toward
+    `p_y`, the trace's screen step at a syzygy is within 3× the median | reading `p_y` in the canonical (mirrored) frame
+    flips it at every syzygy" and "T16 | No false jumps: on the tilted chart, the trace's screen step at a θ wrap and at
+    a pole passage is within 3× the median step | per-sample `[0, 2π)` θ gives a jump of `2π·cos τ`".
+  - The same, F2, item 3: "Mixing the two flipped the sign of `p_y` at every syzygy, so the tilted trace jumped there: up to
+    ~2000× the median step." and "Read in the sphere's own frame (`ρ` along `+x`, no mirror), the worst jump falls to
+    5–97× the median, the size of genuine fast motion at close approach."
+  - The same, F1's table, θ or φ of the shape sphere: "θ is undefined at the poles, a coordinate singularity the line
+    passes as a jump."
+- **The conflict:** T16b's fixture, Burrau 3:4:5 to `t = 70`, is full of close approaches near syzygies; read in the
+  right frame its worst step is up to ~97× the median by the follow-up's own measurement, so a correct implementation
+  fails "within 3×". A pole passage resolved at polar distance `ε` steps θ by about `Δ/ε`, more than 3× the median for
+  small `ε`, so T16's pole arm fails correct code too. The artefacts the tests exist for are far larger (~2000× for the
+  frame flip; `2π·cos τ` for the wrap).
+- **Options seen:** (a) the threshold is set from the measured gap between genuine motion (≤ ~97× the median, TF2.3)
+  and the artefacts (the `2π·cos τ` wrap jump, the ~2000× flip), an R-71 calibration value (REQ-GUI-283); (b) the step
+  is compared with the same run read in the chart's own untilted frame, not with the median; (c) 3× as written, on a
+  fixture with no close approach.
+- **Applied meanwhile:** (a): REQ-GUI-278's and REQ-GUI-279's verifies hold the step within REQ-GUI-283's calibrated
+  threshold, their controls unchanged.
+- **Waits:** nothing; the threshold is proposed by TASK-M8-58 with its measurement and confirmed at the M8 gate.
+
+## RQ-474: T15's second arm runs "the same tilt toward `p_λ,y`", the physical momentum, where R-473 tilts the shape sphere only toward its latent controls, so no chart offers that target *(conflict: the human's test against a ruling, R-538 TF1 and TF6 T15, R-473 J1 and J2; REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by physics review 5594430380 of PR #263 (P5). Nothing is chosen. For the human: yes if the answer is a new tilt
+target; it changes what the Tilt section offers.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the follow-up's applied text, F1: "**Tilted toward the physical momentum:** the same
+    tilt never leaves." … "The demo's tabs E and F are that pair."; F6's table: "T15 | A latent-momentum tilt leaves exactly
+    while the target's `|q| ≥ q_max`; the physical-momentum tilt never does, over 100 runs".
+  - `decisions.md` § "R-473 — …", J1: "on the shape sphere the four momentum controls and the two mass logits"; J2:
+    "every hidden coordinate is set and tilted through its latent control (a mass through its logit)".
+- **The conflict:** under R-473 J1 and J2 the shape sphere's tilt targets are its latent controls, so a tilt toward the
+  physical `p_λ,y` exists on no chart in the corpus; the demo's tab F builds one. T15's second arm has nothing to run on.
+- **Options seen:** (a) a physical-momentum tilt target, its definition a requirement (R-72), the arm run on it; (b) the
+  arm run on a chart whose shown axis is the physical momentum (a mixed-axis chart, chart_reference §1.3), untilted; (c) the arm
+  dropped, TF1's row kept as the reason.
+- **Applied meanwhile:** nothing; REQ-GUI-277's latent-momentum arm and its controls stand.
+- **Waits:** REQ-GUI-277's physical-momentum arm (`rq: RQ-474`); TASK-M8-58 does not wait for the rest.

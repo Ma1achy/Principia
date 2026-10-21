@@ -179,13 +179,16 @@ ticks (every 2, labelled), direction arrows (filled triangle, 8 px, every Δt 1.
 and pinned trace fixed `#FFF27A`; kept traces the trace palette in turn, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
 #9EF0D2`; or **Ramp along time**, R-538 TF4: the ramp's preset, Sunset by default, Viridis, Magma, Ice, Ember, Aurora,
 Mono or Custom… with three colour stops, a Reverse toggle and a preview bar). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
-the keyboard tree as Lines ▾'s others are (R-476 M13). The icons are figure marks (R-539). A click or hover on a pixel
-that is not a system starts no trace and draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole,
-to its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
-TF3). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+the keyboard tree as Lines ▾'s others are (R-476 M13). The icons are figure marks (R-539). A click on a pixel
+that is not a system starts no trace and draws the red ✕; hover there shows the readout and no trace, and draws no ✕
+(R-537 EX5, R-538 TM8). A trace of the default length (to the head) not being played or scrubbed is drawn whole, to
+its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
+TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), applied meanwhile). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
 trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5). *Was:* "length (to the head,
 everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
-turn, …)", with no ramp control.
+turn, …)", with no ramp control. *Was:* "A click or hover on a pixel that is not a system starts no trace and
+draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole," (gui review 5594407176 of PR #263, G1
+and G2: only a click draws the ✕; RQ-427 (a); applied per R-369).
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.

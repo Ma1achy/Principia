@@ -243,15 +243,26 @@ built by TASK-M8-44, REQ-CHART-057).
 hemisphere's fold) is the same system as its **canonical** point, the one inside every axis's primary range, which the
 types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
 naming the pixel a repeat. A pixel on an affine extension is that point of the plane. The quadtree follows the same
-fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`, `n = 2^L`,
-with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
-`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
-`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed until the address is inside the root), which is the one
+fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`,
+`n = 2^L`: θ's period `ix' = ix mod n`; with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at both
+edges, over the pole at `t = 1` `iy' = 2n − 1 − iy` and `ix' = (ix + n/2) mod n`, over the pole at `t = 0`
+`iy' = −1 − iy` and the same shift; with one hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and
+R-412's fold at the equator, `t = 0`, `iy' = −1 − iy` with `ix` unchanged, past `t = −1` the fold then the `t = 1` pole
+map (R-537 U10); composed until the address is inside the root), which is the one
 requested, computed, cached and decided, every image drawing it; neighbours (2:1 balance, the criterion's arms,
 contours, class edges, smoothing) cross seams, poles and folds through the same map, an affine neighbour is the real
 one, and past a bounded edge there is none. A quad wholly past a bounded edge is not requested; one straddling a
 validity boundary integrates its valid footprints only, the rest `decode_failed` and blank. The statistics above are
-unchanged: each system is counted once, at its canonical address (R-408).
+unchanged: each system is counted once, at its canonical address (R-408). **On a tilted view** a repeat is the same
+system only where the type group's map leaves the tilt's hidden offset `d` unchanged: along an axis that mixes θ with
+a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; RQ-430 (a) applied meanwhile);
+whether the pole maps and the equator fold apply on a tilted view, against chart_reference §3.3's tilted fold, is
+RQ-472, and they are not built on a tilted view until it is ruled.
+*Was:* "with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
+`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
+`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed" (physics review 5594430380 of PR #263, P3: two maps on one
+edge; applied per R-369).
+
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)

@@ -1,7 +1,7 @@
 # TASK-M8-58 — The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282
+- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283
 - **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -27,10 +27,11 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 ## Deliverables
 - The icon sets and markers, the syzygy detection and placement, edge pinning, repeats and the not-a-system checks in the trace renderer (`crates/render/src/lines/`), the trace settings in Lines ▾ (`crates/gui/`), and the guards in `computeIC` (the CPU kernel instance).
 - The follow-up's per-axis leaving, branch continuity, frame rule and curve projection in the trace's projection (`crates/render/src/lines/`), the playback extent and the ramp control (`crates/gui/`).
-- Tests `trace_defaults`, `trace_markers`, `trace_syzygy`, `trace_edge_pins`, `trace_repeats`, `trace_not_a_system`, `compute_ic_guards`, `trace_leaves_per_axis`, `trace_branch_continuity`, `trace_mix_frame`, `trace_curve_axis`, `trace_playback` and `trace_ramp_round_trip`.
+- Tests `trace_defaults`, `trace_markers`, `trace_syzygy`, `trace_edge_pins`, `trace_repeats`, `trace_not_a_system`, `compute_ic_guards`, `trace_leaves_per_axis`, `trace_branch_continuity`, `trace_mix_frame`, `trace_curve_axis`, `trace_playback`, `trace_ramp_round_trip` and `trace_settings_keys`, and the `lines_trace_settings` screenshot target.
+- Proposal: the no-false-jump threshold for T16 and T16b, with the measured worst genuine step and the artefacts' steps; the human confirms it at the M8 gate (REQ-GUI-283, RQ-473).
 
 ## Acceptance tests
-- `cargo test -p render trace_defaults` — REQ-GUI-271's verify (R-538 T1).
+- `cargo test -p render trace_defaults`, `cargo test -p gui trace_settings_keys` and `cargo xtask screenshot 01_main` (real engine, `lines_trace_settings`) — REQ-GUI-271's verify (R-538 T1; the keyboard reach and order, the presence screenshot).
 - `cargo test -p render trace_markers` — REQ-GUI-272's verify (R-538 T2).
 - `cargo test -p render trace_syzygy` — REQ-GUI-273's verify (R-538 T3, T4).
 - `cargo test -p render trace_edge_pins` — REQ-GUI-274's verify (R-538 T5).
@@ -51,3 +52,8 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - **TF2.2's field half** (the tilted chart's quads never folded, T17) is REQ-CHART-080, TASK-M8-56's, which this task depends on through TASK-M8-55.
 - **Applied meanwhile (R-538 I8, I13):** RQ-412 to RQ-415's option (a); RQ-418 (a), a non-finite step ends the run `sim_failed`, its trace ending with "?"; RQ-417 (b) for the readout. A ruling other than these is a follow-up change.
 - **REQ-GUI-245** (TASK-M8-49) no longer draws the markers; this task replaces them. The icons are figure marks (R-539).
+- **RQ-472 waits:** the trace's images over a pole or the equator fold on a tilted view (REQ-GUI-278, `rq: RQ-472`); the rest does not wait.
+- **RQ-473 (a) applied meanwhile:** T16 and T16b hold the step within REQ-GUI-283's calibrated threshold, not 3× (TF2.3 measures correct code at 5–97×).
+- **RQ-474 waits:** T15's physical-momentum arm (REQ-GUI-277, `rq: RQ-474`); R-473 offers no such tilt target.
+- **Closes, for gaps the corpus leaves open:** REQ-GUI-283 (R-71 calibration).
+- *Was:* Closes without REQ-GUI-283; the acceptance line "`cargo test -p render trace_defaults` — REQ-GUI-271's verify (R-538 T1)." (code review 5594440613 of PR #263, F4; gui review 5594407176, G3; physics review 5594430380, P1, P2, P5; applied per R-369).
