@@ -13,8 +13,8 @@ use validation::gate::{self, Gate, GateConfig, Verdict};
 use validation::gauge::Gauge;
 use validation::inspector::{
     ball, com, encode_leaky, handle_gaps, handle_samples, held_shapes, latents, round_trip,
-    verdict, worst, z_gap, Handle, HandlesInput, InspectorHandlesGate, InspectorRoundtripGate,
-    Leak, RoundtripInput, COM_BOUND, HANDLES, ROUNDTRIP,
+    verdict, worst, z_gap, Handle, HandlesInput, Held, InspectorHandlesGate,
+    InspectorRoundtripGate, Leak, RoundtripInput, COM_BOUND, HANDLES, ROUNDTRIP,
 };
 use validation::negative_control;
 
@@ -141,6 +141,63 @@ fn inspector_handles_draw() {
         "an IC's masses do not sum to 1"
     );
 }
+
+/// Each IC is `g₀·D(z)` with `g₀`'s offset and boost in proportion to its scale `s₀ = √I_in` (`D(z)` is at `I = 1`):
+/// the CoM within `span·s₀` and the total momentum within `span·s₀^{−1/2}` on each axis, each reaching both ends, and
+/// `s₀` reaching both ends of `2^[−octaves, octaves)`.
+fn check_ics(list: &[validation::inspector::HandleSample], span: f64, octaves: f64) {
+    let mut seen = Vec::new();
+    for s in list {
+        let x = s.ic;
+        let c = kernel::canon::centre_of_mass(x.m, x.r);
+        let centred = x.r.map(|v| [v[0] - c[0], v[1] - c[1]]);
+        let s0 = kernel::canon::inertia(x.m, centred).sqrt();
+        let total = [0, 1].map(|k| x.p.iter().map(|p| p[k]).sum::<f64>());
+        let (a, u) = (c.map(|w| w / s0), total.map(|w| w * s0.sqrt()));
+        let slack = span * (1.0 + 1e-9);
+        assert!(
+            a.iter().all(|w| w.abs() <= slack),
+            "the IC's offset out of proportion: {a:?}"
+        );
+        assert!(
+            u.iter().all(|w| w.abs() <= slack),
+            "the IC's boost out of proportion: {u:?}"
+        );
+        assert!(
+            s0.log2().abs() <= octaves * (1.0 + 1e-9),
+            "the IC's scale {s0} out of range"
+        );
+        seen.push([a[0], a[1], u[0], u[1], s0.log2() * span / octaves]);
+    }
+    for k in 0..5 {
+        assert!(
+            seen.iter().any(|v| v[k] > 0.8 * span) && seen.iter().any(|v| v[k] < -0.8 * span),
+            "the ICs' gauge does not reach across its range (component {k})"
+        );
+    }
+}
+
+#[test]
+fn inspector_handles_ics() {
+    check_ics(&handle_samples(&handles_input(400, Leak::None)), 1.0, 4.0);
+}
+
+negative_control!(
+    inspector_handles_ics,
+    "ICs boosted past their own scale must fail",
+    expected = "the IC's boost out of proportion",
+    {
+        let mut list = handle_samples(&handles_input(400, Leak::None));
+        for s in &mut list {
+            s.ic = Gauge {
+                u: [5.0, 0.0],
+                ..Gauge::identity()
+            }
+            .act(&s.ic);
+        }
+        check_ics(&list, 1.0, 4.0)
+    }
+);
 
 negative_control!(
     inspector_handles_draw,
@@ -505,23 +562,26 @@ negative_control!(
     check_trips(EncodeKind::Mismatched, 1.2e-13)
 );
 
-/// The held families: `n` of each; every collinear state's `z_β` at its clamp with its bit set; every equilateral
-/// `|w − 1|` and collinear `|w|` at rounding (below 10⁻¹²), reported, not judged (RQ-471).
-fn check_held(n: u32, (pole, equator, clamped): (Vec<f64>, Vec<f64>, usize)) {
+/// The held families: `n` of each; every collinear state's `z_β` at its clamp image with its bit set, and no
+/// equilateral one's; every equilateral `|w − 1|` and collinear `|w|` at rounding (below 10⁻¹²), reported, not judged
+/// (RQ-471).
+fn check_held(n: u32, held: &Held) {
+    let n = n as usize;
     assert!(
-        pole.len() == n as usize && equator.len() == n as usize,
+        held.pole.len() == n && held.equator.len() == n,
         "the held families' counts"
     );
-    assert_eq!(clamped, n as usize, "a collinear z_β off its clamp");
+    assert_eq!(held.beta_bit, [0, n], "z_β's clamp bits by family");
+    assert_eq!(held.beta_edge, [0, n], "z_β at its clamp image by family");
     assert!(
-        pole.iter().chain(&equator).all(|&w| w < 1e-12),
+        held.pole.iter().chain(&held.equator).all(|&w| w < 1e-12),
         "a held w past rounding"
     );
 }
 
 #[test]
 fn inspector_held_shapes() {
-    check_held(200, held_shapes(5, 200));
+    check_held(200, &held_shapes(5, 200));
 }
 
 negative_control!(
@@ -529,9 +589,9 @@ negative_control!(
     "a family one short must fail",
     expected = "the held families' counts",
     {
-        let (mut pole, equator, clamped) = held_shapes(5, 200);
-        pole.pop();
-        check_held(200, (pole, equator, clamped))
+        let mut held = held_shapes(5, 200);
+        held.pole.pop();
+        check_held(200, &held)
     }
 );
 
@@ -594,6 +654,14 @@ fn check_reports(tight: f64) {
     let pass = InspectorHandlesGate::judge(&c, "t", &handles_input(200, Leak::None)).unwrap();
     assert_eq!(pass.verdict, Verdict::Pass, "E fails the handles gate");
     assert_eq!(pass.scatter.len(), 4, "a line per handle");
+    for (line, h) in pass.scatter.iter().zip(Handle::ALL) {
+        assert!(
+            line.starts_with(&format!("{}: ‖Δz‖: max ", h.word()))
+                && line.contains("; median ")
+                && line.ends_with("over 200 samples"),
+            "a handle's scatter line: {line}"
+        );
+    }
     assert!(
         pass.negative_results
             .iter()
@@ -618,8 +686,26 @@ fn check_reports(tight: f64) {
     let pass = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
     assert_eq!(pass.verdict, Verdict::Pass, "E fails the round-trip gate");
     assert_eq!(pass.scatter.len(), 2, "no held lines without shapes");
-    i.shapes = 8;
+    i.shapes = 9;
     let held = InspectorRoundtripGate::judge(&rc, "t", &i).unwrap();
+    let h = held_shapes(i.seed, 9);
+    // An odd count, so a count of the inexact cannot pass for the exact one.
+    let exact = |v: &[f64]| v.iter().filter(|&&x| x == 0.0).count();
+    let counts = |k: usize| {
+        format!(
+            "clamp bit set in {}, at its clamp image in {}",
+            h.beta_bit[k], h.beta_edge[k]
+        )
+    };
+    assert!(
+        exact(&h.pole) > 0
+            && held.scatter[2].contains(&format!("w = 1 exactly in {} of 9", exact(&h.pole)))
+            && held.scatter[2].ends_with(&counts(0))
+            && held.scatter[3].contains(&format!("w = 0 exactly in {} of 9", exact(&h.equator)))
+            && held.scatter[3].ends_with(&counts(1)),
+        "the held counts: {:?}",
+        held.scatter
+    );
     assert!(
         held.scatter.len() == 4
             && held.scatter[2..]

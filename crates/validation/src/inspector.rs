@@ -36,7 +36,7 @@ use serde::Deserialize;
 
 use kernel::canon::{canonicalise, inertia};
 use kernel::decode::descriptor::pi_image;
-use kernel::decode::{self, Ic, Latent};
+use kernel::decode::{self, mass, Ic, Latent};
 use kernel::encode::blocks::invert;
 use kernel::encode::encode;
 use kernel::generated::links::{Defaults, Link, Selection};
@@ -447,51 +447,64 @@ pub fn latents(input: &RoundtripInput) -> Vec<[f64; 8]> {
         .collect()
 }
 
-/// The held families' `w`, on `C`'s output through `kernel::shape::shape`: equal-mass equilateral triangles, both
-/// orientations, and collinear states with random masses on a random line, each through a random gauge element with
-/// random momenta. Returns the equilateral `|w − 1|` and the collinear `|w|`, and for the collinear states whether `z_β`
-/// sits at its clamp with its bit set.
-pub fn held_shapes(seed: u64, n: u32) -> (Vec<f64>, Vec<f64>, usize) {
+/// The held families (RQ-471), measured: `[equilateral, collinear]` in each count.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Held {
+    /// The equilateral states' `|w − 1|`.
+    pub pole: Vec<f64>,
+    /// The collinear states' `|w|`.
+    pub equator: Vec<f64>,
+    /// How many of each family have `z_β`'s clamp bit set.
+    pub beta_bit: [usize; 2],
+    /// How many of each family have `z_β` exactly at its clamp image, `β ∈ {0, π̂}` clamped.
+    pub beta_edge: [usize; 2],
+}
+
+/// The held families, `n` of each, `w` read on `C`'s output through `kernel::shape::shape`: the equal-mass unit
+/// equilateral triangle, and three bodies on the `x`-axis with masses from the mass block at `z_μ` on `[−4, 4)²`, each
+/// through a random gauge element (either parity, so `L⁺` and `L⁻` both), at rest before it. Neither `w` nor `z_β`
+/// reads the momenta.
+pub fn held_shapes(seed: u64, n: u32) -> Held {
     let mut rng = SplitMix::new(seed);
-    let momenta = |rng: &mut SplitMix| -> [[f64; 2]; 3] {
-        std::array::from_fn(|_| [uniform(rng, -1.0, 1.0), uniform(rng, -1.0, 1.0)])
-    };
     type BetaLink = <Defaults as Selection>::BetaLink;
     let edge = [0.0, pi_image::<f64>()].map(|b| BetaLink::inverse([b])[0]);
-    let third = 1.0 / 3.0;
-    let equal = [third, third, 1.0 - 2.0 * third];
-    let height = 3f64.sqrt() / 2.0;
-    let mut pole = Vec::new();
-    let mut equator = Vec::new();
-    let mut clamped = 0;
-    for k in 0..n {
-        let side = if k % 2 == 0 { height } else { -height };
-        let p = momenta(&mut rng);
-        let g = Gauge::random(&mut rng, 2.0, 4.0);
-        let x = g.act(&Ic {
-            m: equal,
-            r: [[0.0, 0.0], [1.0, 0.0], [0.5, side]],
-            p,
-        });
-        pole.push((shape(canonicalise(&x).ic.r, equal)[2] - 1.0).abs());
-        let m0 = uniform(&mut rng, 0.05, 0.6);
-        let m1 = uniform(&mut rng, 0.05, 0.9 - m0);
-        let m = [m0, m1, 1.0 - m0 - m1];
-        let t: [f64; 3] = std::array::from_fn(|_| uniform(&mut rng, -1.0, 1.0));
-        let p = momenta(&mut rng);
-        let g = Gauge::random(&mut rng, 2.0, 4.0);
-        let x = g.act(&Ic {
-            m,
-            r: t.map(|t| [t, 0.0]),
-            p,
-        });
-        let e = encode::<Defaults, f64>(&x);
-        equator.push(shape(e.canonical.ic.r, m)[2].abs());
-        if e.report.clamped_controls & 2 != 0 && edge.contains(&e.z.z[1]) {
-            clamped += 1;
+    let equal = mass::decode::<Defaults, f64>([0.0, 0.0]).m;
+    let triangle = [[0.0, 0.0], [1.0, 0.0], [0.5, 3f64.sqrt() / 2.0]];
+    let mut held = Held {
+        pole: Vec::new(),
+        equator: Vec::new(),
+        beta_bit: [0; 2],
+        beta_edge: [0; 2],
+    };
+    for _ in 0..n {
+        let z_mu = [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)];
+        let line: [f64; 3] = std::array::from_fn(|_| uniform(&mut rng, -1.0, 1.0));
+        let states = [
+            Ic {
+                m: equal,
+                r: triangle,
+                p: [[0.0; 2]; 3],
+            },
+            Ic {
+                m: mass::decode::<Defaults, f64>(z_mu).m,
+                r: line.map(|t| [t, 0.0]),
+                p: [[0.0; 2]; 3],
+            },
+        ];
+        for (k, state) in states.iter().enumerate() {
+            let x = Gauge::random(&mut rng, 2.0, 4.0).act(state);
+            let e = encode::<Defaults, f64>(&x);
+            let w = shape(e.canonical.ic.r, x.m)[2];
+            if k == 0 {
+                held.pole.push((w - 1.0).abs());
+            } else {
+                held.equator.push(w.abs());
+            }
+            held.beta_bit[k] += usize::from(e.report.clamped_controls & 2 != 0);
+            held.beta_edge[k] += usize::from(edge.contains(&e.z.z[1]));
         }
     }
-    (pole, equator, clamped)
+    held
 }
 
 /// The `inspector-roundtrip` gate.
@@ -533,22 +546,24 @@ impl InspectorRoundtripGate {
             ));
         }
         if input.shapes > 0 {
-            let (pole, equator, clamped) = held_shapes(input.seed, input.shapes);
+            let held = held_shapes(input.seed, input.shapes);
             let exact = |v: &[f64]| v.iter().filter(|&&x| x == 0.0).count();
+            let n = input.shapes;
             scatter.push(format!(
                 "held (RQ-471, RQ-355), not judged: equal-mass equilateral, L⁺ and L⁻ through a random gauge: max \
-                 |w − 1| {:.3e}, w = 1 exactly in {} of {}",
-                worst(&pole).0,
-                exact(&pole),
-                pole.len()
+                 |w − 1| {:.3e}, w = 1 exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
+                worst(&held.pole).0,
+                exact(&held.pole),
+                held.beta_bit[0],
+                held.beta_edge[0]
             ));
             scatter.push(format!(
                 "held (RQ-471), not judged: collinear on a random line through a random gauge: max |w| {:.3e}, w = 0 \
-                 exactly in {} of {}; z_β at its clamp with its bit set in {clamped} of {}",
-                worst(&equator).0,
-                exact(&equator),
-                equator.len(),
-                equator.len()
+                 exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
+                worst(&held.equator).0,
+                exact(&held.equator),
+                held.beta_bit[1],
+                held.beta_edge[1]
             ));
         }
         let pass = v_gap == Verdict::Pass && v_com == Verdict::Pass;

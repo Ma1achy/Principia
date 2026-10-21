@@ -1550,12 +1550,13 @@ beyond the human's words. For the human: yes, because option (b) drops part of a
   (every `y` equal) is not mapped to `w = 0` bit for bit: `C`'s rotation `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, rounds
   (`sin π ≠ 0`, R-23's step 2), and the CoM subtraction leaves the three `y` unequal by an ulp. Measured on the f64
   encode, `w` of `C`'s output through `kernel::shape::shape`:
-  - equal-mass equilateral triangles, `L⁺` and `L⁻`, through a random gauge element (scale `2^[−4, 4)`, any turn and
-    parity, offsets and boosts on `[−2, 2)²`), random momenta: `max |w − 1| = 2.2×10⁻¹⁶`, `w = 1`
-    exactly in 876 of 2000;
-  - collinear states, random masses, through the same gauge: `max |w| = 2.7×10⁻¹⁴`, `w = 0` exactly in 0 of 2000;
-    their `z_β` sits exactly at its clamp image, with its `lookup_clamped` bit set, in 2000 of 2000 (the chart's own
-    equator, `β ∈ {0, π̂}` clamped to `ε_z`);
+  - equal-mass equilateral triangles, at rest, through a random gauge element (scale `2^[−4, 4)`, any turn, either
+    parity, so `L⁺` and `L⁻` both, offsets and boosts on `[−2, 2)²`): `max |w − 1| = 2.2×10⁻¹⁶`, `w = 1` exactly in
+    1067 of 2000;
+  - collinear states, bodies on the `x`-axis, masses from the mass block at `z_μ` on `[−4, 4)²`, through the same
+    gauge: `max |w| = 6.8×10⁻¹⁴`, `w = 0` exactly in 0 of 2000; their `z_β` sits exactly at its clamp image, with its
+    `lookup_clamped` bit set, in 2000 of 2000 (the chart's own equator, `β ∈ {0, π̂}` clamped to `ε_z`), and no
+    equilateral state's does;
   - exactly collinear float states, every `y` equal, no gauge: `w = 0` exactly in 943 of 992 with `ρ_x > 0` and 340 of
     1008 with `ρ_x < 0`, `max |w| = 8.8×10⁻³¹`.
   The tool's "exactly" was read on its presets; the corpus does not say on which states, or to what, it holds.
