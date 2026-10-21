@@ -3426,8 +3426,10 @@ Nothing is ruled.*
     per occupant (a change to the one-threshold rule).
 - **Applied meanwhile:** none in the payload; the contracts state the rule and name this entry. For (d): (d2),
   REQ-INT-106 measures and records Heggie × RK4's regularised drift on tests 2 and 7 and which predicates it lights
-  under REQ-INT-085's proposed thresholds.
-- **Waits:** REQ-VAL-195 (TASK-M3-41), `rq: RQ-528`. Nothing waits on (d): the M3 gate reads REQ-INT-106's record.
+  under REQ-INT-085's proposed thresholds. REQ-INT-106 waits with TASK-M3-41, which builds nothing before RQ-526 to
+  RQ-528 are ruled (applied per R-369, physics review 5606990734 of PR #277).
+- **Waits:** REQ-VAL-195 and REQ-INT-106 (TASK-M3-41), `rq: RQ-528`. *Was:* "REQ-VAL-195 (TASK-M3-41), `rq: RQ-528`.
+  Nothing waits on (d): the M3 gate reads REQ-INT-106's record."
 
 ## RQ-529: R-560's default occupant, Heggie × RK4, against integrator contract Part 2's tier column, which binds KDK at Potato–Low, Yoshida-4 at Medium–High and Yoshida-6 at Ultra–Extreme *(conflict: R-560 against R-4 and the tier table; REQ-INT-014, REQ-INT-006; context: TASK-M3-02, TASK-M3-08)*
 

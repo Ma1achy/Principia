@@ -20582,8 +20582,18 @@ new) and `plan/rule_groups.yaml`; built by TASK-M3-41 and TASK-M6-10*
   before the predictive limit and the landing clamp, under every regularised occupant. *Was:* "a pair separation below
   the floor `TINY`, the time transformation's denominator floored" for all three, and "steps held at the interval's
   entry cap".
+- **Every floored Heggie step is counted** (physics review 5606990734 of PR #277, P1): the reference's `r_floored`
+  tests `Rᵢ < TINY` but floors `dt/dτ`, so `dt/dτ` can be floored while every `Rᵢ ≥ TINY` and the step go uncounted.
+  Heggie's signal therefore fires when `dt/dτ` or (under Eq. 22) `S` is below `TINY`, as well as on the reference's
+  `Rᵢ` test, so every step on which the floor acts is counted, as logH's is; integrator contract Part 6 says it
+  differs from the reference and why. `Rᵢ` is tested, never floored. *Was:* "Heggie's signal fires when any
+  `Rᵢ < TINY`" above, which stands as the reference's test.
 - **`TINY` is a calibration** (R-71, REQ-INT-105): it is in neither the corpus nor the reference set, which names it
-  only. TASK-M3-07, the first task that floors at it, proposes it per working precision.
+  only. TASK-M3-07, the first task that floors at it, proposes it per working precision from Aarseth–Zare's `A` and
+  `B`; TASK-M3-08 re-runs the proposal on Heggie's and logH's own floored quantities (Heggie's pre-floor `dt/dτ` and
+  `S` under both time transformations, logH's drift denominator in both modes) and closes REQ-INT-105, so the value
+  the M3 gate confirms rests on all three regularisations' evidence (physics review 5606990734 of PR #277, P2, applied
+  per R-369). *Was:* "TASK-M3-07, the first task that floors at it, proposes it per working precision."
 - **A copy out of budget stops** (F4): integrator contract Part 7 says it stops the copy, which is undetermined, never
   discarded and never a physical-outcome label, matching Part 6. *Was:* "is not a terminal label either", which read
   as though the march continued.
@@ -20754,8 +20764,10 @@ TASK-M3-41 takes REQ-INT-106, the default occupant against the suspect threshold
 `TINY` (REQ-INT-105, F3).
 
 ## R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*
-*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the follow-up, byte for byte, and the record
-copy of `designs/integrator_findings.md` changed as the follow-up says, its README giving both sha256s),
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the follow-up, byte for byte, the record
+copy of `designs/integrator_findings.md` being the human's own updated file and the later probe and its output in
+`evidence/`, each byte for byte, its README giving the sha256s; *was:* "the record copy of
+`designs/integrator_findings.md` changed as the follow-up says, its README giving both sha256s"),
 `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to
 work carry a warning (R-561)" (the pair table's note 4, and the implicit steppers' paragraph), R-561's heading block (a
 forward line), REQ-INT-006, REQ-INT-017 and REQ-INT-098 (reqio), TASK-M3-39, `REVIEW_QUEUE.md` (RQ-532, new) and
@@ -20792,8 +20804,11 @@ The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), its header
 
 *What it decides:*
 - **The record is corrected.** The design's §1 bullet is the new one and its table row reads "(explained below)"; the
-  record copy in `docs/incoming/2026-10-21_gap_sweep_integrator/designs/` is changed so, and its README gives the
-  sha256 before and after.
+  record copy in `docs/incoming/2026-10-21_gap_sweep_integrator/designs/` is the human's own updated file, byte for
+  byte, as he sent it with the follow-up, and its README gives the sha256s. His file says "My earlier" where the
+  follow-up's quoted bullet says "The earlier", and adds "Nothing below depends on it; it adds one row to the warning
+  table's reasons."; this ruling quotes the follow-up. *Was:* "the record copy … is changed so, and its README gives
+  the sha256 before and after" (a hand edit, replaced by his file on his instruction, `4ee461e5`).
 - **Heggie × the generalised (Störmer–Verlet) leapfrog is measured bad**, the cause measured: it does not keep Heggie's
   Eq. (9), the residual growing as h² per orbit until the energy breaks at about 1.8e-2, in every run, at every step
   size, under both time transformations; the control is implicit midpoint started off the constraint.
@@ -20811,8 +20826,11 @@ The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), its header
   stepper, which it is not in the contract; making it one (and the implicit midpoint rule with it) changes what is
   built, so it is queued, RQ-532. Meanwhile the pair is in the table with its warning and neither implicit stepper is
   built; REQ-INT-098's gate re-measures the built pairs and keeps note 4 as the design's measurement.
-- **The evidence** is cited, not copied or built: prin-rs `examples/heggie_stepper_probe.rs`, its header and its third
-  section, the causal arm, a later version of the probe than the copy recorded in the bundle's `evidence/`.
+- **The evidence** is prin-rs `examples/heggie_stepper_probe.rs`, its header and its third section, the causal arm, a
+  later version of the probe than the bundle's two-section `evidence/heggie_stepper_probe.rs`. It and its output are
+  recorded byte for byte as `evidence/heggie_stepper_probe_2026-10-21b.rs` and
+  `evidence/heggie_stepper_probe_2026-10-21b_output.txt`, as the human sent them; they are data, never built or run.
+  *Was:* "The evidence is cited, not copied or built".
 
 *What it amends:* **R-561**, as to its table: Heggie × the generalised leapfrog is measured bad, with its warning.
 
