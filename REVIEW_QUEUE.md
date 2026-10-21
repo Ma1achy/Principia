@@ -1296,6 +1296,8 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
 - **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
   (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
   would change two lines of `landmarks` and the tests' expectation.
+  REQ-VAL-022's "equilateral configurations at a shape-sphere pole" is the same statement: it carries `rq: [RQ-355,
+  RQ-475]` too, held by TASK-M2-27's PR, which reports the equal-mass pole only.
 
 ## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
 
@@ -2057,3 +2059,106 @@ target; it changes what the Tilt section offers.*
   dropped, TF1's row kept as the reason.
 - **Applied meanwhile:** nothing; REQ-GUI-277's latent-momentum arm and its controls stand.
 - **Waits:** REQ-GUI-277's physical-momentum arm (`rq: RQ-474`); TASK-M8-58 does not wait for the rest.
+
+## RQ-475: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
+
+*Found by TASK-M2-27 while building the `inspector-roundtrip` gate. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:9): "**Verified
+    numerically:** … canonical COM = origin to 1.7×10⁻¹⁶; equilateral → shape-sphere pole and collinear → equator
+    exactly."
+  - `plan/requirements.yaml` REQ-VAL-022 (:20679): "with the canonical CoM at the origin, equilateral configurations at a
+    shape-sphere pole and collinear ones on the equator exactly"; its verify detail: "equilateral → pole and collinear
+    → w = 0 exactly".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Acceptance tests": "equilateral → pole and collinear → w = 0 exactly
+    (REQ-VAL-022)".
+- **Why it is open:** no float triangle is exactly equilateral (√3 is irrational), and a collinear state on a line at
+  a general angle is not exactly collinear once its coordinates are rounded. Even an exactly collinear float state
+  (every `y` equal) is not mapped to `w = 0` bit for bit: `C`'s rotation `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, rounds
+  (`sin π ≠ 0`, R-23's step 2), and the CoM subtraction leaves the three `y` unequal by an ulp. Measured on the f64
+  encode, `w` of `C`'s output through `kernel::shape::shape`:
+  - equal-mass equilateral triangles, at rest, through a random gauge element (scale `2^[−4, 4)`, any turn, either
+    parity, so `L⁺` and `L⁻` both, offsets and boosts on `[−2, 2)²`): `max |w − 1| = 2.2×10⁻¹⁶`, `w = 1` exactly in
+    1067 of 2000;
+  - collinear states, bodies on the `x`-axis, masses from the mass block at `z_μ` on `[−4, 4)²`, through the same
+    gauge: `max |w| = 6.8×10⁻¹⁴`, `w = 0` exactly in 0 of 2000; their `z_β` sits exactly at its clamp image, with its
+    `lookup_clamped` bit set, in 2000 of 2000 (the chart's own equator, `β ∈ {0, π̂}` clamped to `ε_z`), and no
+    equilateral state's does;
+  - exactly collinear float states, every `y` equal, no gauge: `w = 0` exactly in 943 of 992 with `ρ_x > 0` and 340 of
+    1008 with `ρ_x < 0`, `max |w| = 8.8×10⁻³¹`.
+  The tool's "exactly" was read on its presets; the corpus does not say on which states, or to what, it holds.
+- **Options seen:**
+  - (a) "Exactly" is "to rounding": a stated bound on `|w − 1|` and `|w|` over random gauge images (a calibration,
+    R-71; the measurement above as its evidence).
+  - (b) "Exactly" is bit for bit on the canvas presets only (equal-mass unit triangle and bodies on the `x`-axis in
+    order, no gauge), with the general case at rounding as in (a).
+  - (c) "Exactly" is the chart's: collinear → `z_β` at its clamp image with its bit set, bit for bit (holds on every
+    state measured), and equilateral → `(z_α, z_β) = (0, 0)` to rounding.
+- **Applied meanwhile:** nothing is judged. `cargo xtask gate inspector-roundtrip` reports both families' `w` and the
+  `z_β` clamp count beside its verdict, which judges the round trip and the canonical CoM only. The pole is the
+  equal-mass one, as RQ-355 holds it for other masses.
+- **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-475]`, held, not closed, by
+  TASK-M2-27's PR (applied per R-369). The round trip, the CoM, REQ-VAL-021 and REQ-VAL-121's proposal do not wait.
+
+## RQ-476: REQ-VAL-022's "2×10⁴ random z with |z| < 4" does not say whether `|z|` is the vector's norm (the ball `‖z‖ < 4`) or each component's (the cube `[−4, 4]⁸`), and the Rust round trip passes the reference's bound under one and fails it under the other *(silence, a missing definition, R-72, R-71, REQ-VAL-022, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's physics review (5594956833, P1) and qa review (5595411216, Q3) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:23): "round-trip
+    `decode→canonicalise→z` max `‖z−z'‖ = 1.2×10⁻¹³` over 2×10⁴ random `z` (|z|<4; residual
+    boundary-conditioning-dominated, as expected)". The domain is written with single bars, `|z|<4`, and the error
+    with double bars, `‖z−z'‖`; "boundary-conditioning-dominated" fits draws that reach `|zₖ| → 4`.
+  - `plan/requirements.yaml` REQ-VAL-022: "over 2×10⁴ random z with |z| < 4"; its verify detail: "2×10⁴ random z,
+    |z| < 4: max round-trip error ≤ 1.2×10⁻¹³".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Notes": "|z| < 4 keeps s(1−s) ≥ ~0.018", true under both readings.
+- **Measured on the f64 Rust decode and encode, the defaults links** (`‖z − E(D(z))‖`, Euclidean):
+  - **ball** `‖z‖ < 4`: 9.73×10⁻¹⁴ at the gate's seed over 2×10⁴; 5.8×10⁻¹⁴ to 1.21×10⁻¹³ over 8 seeds; over 10⁶
+    draws max 1.67×10⁻¹³, p99.999 1.09×10⁻¹³, 6 per million past 1.2×10⁻¹³.
+  - **cube** `[−4, 4)⁸`: 2.4 to 2.65×10⁻¹³ on every seed over 2×10⁴; over 10⁶ draws max 3.15×10⁻¹³, p99.999
+    2.66×10⁻¹³, p99.99 2.42×10⁻¹³, 9150 per million past 1.2×10⁻¹³. The tail is the mass block's `artanh` near
+    `|z_μ| → 4`.
+  - **The handles gate under the cube reading** (REQ-VAL-021 names no domain; its ICs `g₀·D(z)` draw `z` from the same
+    reading): 5.0 to 6.6×10⁻¹⁴ over 2×10⁴ on seeds 1–3, against 1.6×10⁻¹⁴ (174 to 198 handle applications past it),
+    and 1.54×10⁻¹³ over 5×10⁵ ICs. qa measured 3.03×10⁻¹⁴ on the Inspector's Randomise ICs kept inside the cube.
+    Under the ball it passes: 8.45×10⁻¹⁵ at the gate's seed, 1.02×10⁻¹⁴ over 5×10⁵ ICs.
+- **Options seen:**
+  - (a) The ball, with the gate at the reference's 1.2×10⁻¹³ on the seeded 2×10⁴ sample.
+  - (b) The ball, with the gate above its measured distribution, at or above 1.67×10⁻¹³.
+  - (c) The cube, with the gate above its measured distribution (above 3.15×10⁻¹³), and the handles gate's bound
+    reconsidered with it (REQ-VAL-121).
+- **Applied meanwhile:** (a). `inspector-roundtrip` and `inspector-handles` draw `z` in the ball, the round trip
+  gated at 1.2×10⁻¹³; both thresholds stay provisional under REQ-VAL-121.
+- **Waits:** REQ-VAL-022 and REQ-VAL-121 carry `rq: RQ-476`, held, not closed, by TASK-M2-27's PR. The gates run
+  meanwhile.
+
+## RQ-477: REQ-VAL-021's "2×10⁴ random ICs" does not say what a random IC is, and the Rust handles hold the reference's 1.6×10⁻¹⁴ on one distribution and not on the reference tool's own *(silence, a missing definition, R-72, R-71, REQ-VAL-021, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's qa review (5595411216, Q2) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-VAL-021: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed,
+    to the bound verified in the reference tool (1.6×10⁻¹⁴)"; its verify detail: "2×10⁴ random ICs, each handle
+    applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)".
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built" (:23): "all four gauge handles hold `z` to
+    `1.6×10⁻¹⁴`", and (:14) "Plus Reset / Randomise / Burrau-ish presets"; no distribution is given.
+  - The reference tool's Randomise (`docs/gui/reference/ic_inspector.html`:710–712, record only, R-159): masses on
+    `[0.4, 1.8]` (normalised), positions on `±0.9`, velocities on `±0.6`, each uniform.
+- **Measured on the f64 Rust encode:**
+  - **The gate's distribution**, `g₀·D(z)` with `z` in the ball `‖z‖ < 4` (RQ-476) and `g₀` a random gauge element
+    with offsets and boosts up to the state's own size: 8.45×10⁻¹⁵ at the gate's seed over 2×10⁴; 1.02×10⁻¹⁴ over
+    5×10⁵ ICs. At offsets and boosts up to twice the state's size, one sample in 2×10⁴ reaches 1.75×10⁻¹⁴.
+  - **Randomise** (qa, kept where `‖E(x)‖ < 4`, handles at the tool's button sizes and at random sizes): rotate-all
+    1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ in qa's test run; the worst over seeds 1–5 1.91, 2.48, 1.56, 1.75 and 1.48×10⁻¹⁴, so
+    3 of 5 seeds fail, on rotate-all at any turn and on translate-all.
+  - **The canonical CoM on a Randomise IC** (qa, exact reading): 1.35×10⁻¹⁵ from the origin, against 1.16×10⁻¹⁶ on
+    `C(D(z))`, REQ-VAL-022's domain and 1.7×10⁻¹⁶ bound.
+- **Options seen:**
+  - (a) The gate's `g₀·D(z)`, `z` in RQ-476's domain.
+  - (b) The Inspector's Randomise, where the Rust handles reach 1.82×10⁻¹⁴ (rotate-all) and 1.69×10⁻¹⁴ (scale-all),
+    and 3 of 5 seeds fail 1.6×10⁻¹⁴: the bound would need a ruling (REQ-VAL-121), not a loosening here.
+  - (c) Both, each with its own bound.
+- **Applied meanwhile:** (a). The 1.6×10⁻¹⁴ bound is not loosened.
+- **Waits:** REQ-VAL-021 and REQ-VAL-121 carry `rq: RQ-477`, held, not closed, by TASK-M2-27's PR (REQ-VAL-121's
+  handles gate value depends on the answer). The gate runs meanwhile.

@@ -1,0 +1,6 @@
+{
+  "gate": "inspector-handles",
+  "inputs": ["random.json", "leak_com.json", "leak_boost.json", "leak_rotate.json", "leak_scale.json"],
+  "threshold": { "value": 1.6e-14, "requirement": "REQ-VAL-121", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-121" }
+}
