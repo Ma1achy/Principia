@@ -106,8 +106,10 @@ FieldRamp {
 band, base colour elsewhere — this is `grid`, `contours`, and the lattice classifiers `checker`,
 `lat/lon-stripes`, `truchet` on (θ,φ)). **Compaction** (scalar → lightness, for the `brightness`
 slot or before a ramp): `lin`, `log`, `symlog` (signed, through the midpoint), `cyclic` (phase),
-`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default the hatched invalid
-pattern (§3, §6; R-132).
+`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default `#141418` in a
+presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (§3, §6; R-132,
+R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (§3, §6; R-132)" (stale value, replaced
+by R-467).
 
 **Default ramps by field role.** Signed fields (energy, L_z, drifts) default to
 diverging-through-neutral so the zero-crossing is a legible contour; positive fields to sequential;
