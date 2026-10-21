@@ -1032,10 +1032,17 @@ fn encode_burrau_by_kind() {
     sweep(&theta_k::<f64>(), &theta_k::<f64>(), 32, "Φ_θ,K", false);
     sweep(&theta_lz(), &theta_lz(), 33, "Φ_θ,L_z", false);
     sweep(&delta_m(), &delta_m(), 34, "δm strip", false);
-    // Past the curve axis's edge the axis places nothing: the (ν, K) chart's ν = 0.95 > ν_max.
+    // Past the curve axis's edge the axis places nothing at the curve tolerance: the (ν, K) chart's ν = 0.95 > ν_max,
+    // while ν = 0.85, inside [0.05, 0.9], is placed by the same call.
     let e = enc::<f64>(&burrau(0.95));
-    let c = nu_k().coords::<Defaults, f64>(&e);
+    let (c, _) = nu_k().coords_within::<Defaults, f64>(&e, curve_tol());
     assert!(c[0] == Coord::Unplaced, "ν past the span is placed: {c:?}");
+    let e = enc::<f64>(&burrau(0.85));
+    let (c, _) = nu_k().coords_within::<Defaults, f64>(&e, curve_tol());
+    assert!(
+        matches!(c[0], Coord::At(t) if (t - 0.8 / 0.85).abs() <= 1e-9),
+        "ν inside the span is not placed: {c:?}"
+    );
     // `encode_into` is `encode_into_within` at `tol = 0`.
     let x = gauged(&burrau(0.5), &mut rng(35));
     let eps = eps_phys::<f64>();
