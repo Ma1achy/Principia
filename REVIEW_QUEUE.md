@@ -1457,7 +1457,7 @@ only, so the flag has no entry to wait on.*
   review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
   (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.
 
-## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°` maps the whole window onto one line of systems; the corpus gives that view no `system_image` *(silence, R-474, R-473, R-408; context: TASK-M2-36)*
+## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°`, a reachable corner, maps the whole window onto one line of systems; the corpus gives what the chart shows there no `system_image`, fold or statistics *(silence, R-474 R8 and K15, R-451 B11, R-473, R-408; context: TASK-M2-36)*
 
 *Found answering physics review 5593414323 of PR #255 (P4), while restating the tilted fold's criterion without
 dividing by `N_d`. Nothing is chosen.*
@@ -1471,16 +1471,28 @@ dividing by `N_d`. Nothing is chosen.*
     four `system_image` values, "ray-degenerate — whole lines of pixels map to the same system".
   - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (applied per R-369): the fold is
     kept iff `N_b = 0` for `N ∝ u₁ × u₂`.
-- **Silence:** at `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and `u₂ = ±e_X`, so `u₁ × u₂ = 0` and the Gram factor
-  is 0: every pixel maps to `(a, b) = ` the slice centre's and `d = ±u ± v`, whole lines of pixels decoding to one
-  system. The tilted fold's criterion has no normal there, the area statistic weights every pixel 0, and no text says
-  whether such a view is allowed, what its `system_image` is (ray-degenerate, or refused), or what it draws. Under
-  Tip as sheet `R` is a rotation and keeps rank 2; with two targets the two tilted vectors are orthonormal; an
-  edge-on view (`N_d = 0`) keeps rank 2 and the criterion needs no `N_d`.
+- **What the corpus does say (gui review 5593448572 of PR #255, G1):** the corner is reachable and handled on the GUI's
+  side. `decisions.md` § "R-474 — …", R8: the readout flags "the degenerate corner `τ₁ = ±τ₂ = ±90°`, where the plane
+  collapses to a line, which R-451 B11 already handles"; K15: Lean each axis's range is closed at ±90°, and a switch
+  to it clamps each angle to ±90°. `docs/gui/principia_render_gui_spec.md` § "G2. …", the compass: The map; the
+  Readout's "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" line, ending "(Lean each axis)" under that
+  map (R-451 B11, R-474); the Drag text: "a tilt-mode drag acts as anywhere else", the GUI's guards declining where
+  `s < 10⁻⁶` on the plane's own basis, no `z₀` edit sent (R-451 B11; REQ-GUI-203).
+- **Silence (narrowed):** what the chart shows there. At `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and
+  `u₂ = ±e_X`, so `(R·e_a) × (R·e_b) = 0` and the Gram factor is 0: every pixel maps to the slice centre's `(a, b)` and
+  `d = ±u ± v`, whole lines of pixels decoding to one system. No text gives that view's `system_image`, its fold
+  (the tilted fold's criterion has no normal there) or its area statistics (every pixel's Gram weight is 0). Under
+  Tip as sheet `R` is a rotation and keeps rank 2, with two targets the tilted vectors are orthonormal, and an edge-on
+  view (`N_d = 0`) keeps rank 2; none of these is in question.
 - **Options seen:**
-  - (a) The view is allowed and reports ray-degenerate, its statistics weighted 0 as the Gram factor says.
+  - (a) The view stays as R-474 and R-451 B11 have it and the chart reports ray-degenerate, its statistics weighted 0
+    as the Gram factor says; the label then reads ray-degenerate and every legend share is undefined (0 of a total of
+    0), which the legend would have to show.
   - (b) The edit path refuses the second angle at 90° when the first is at 90° with one target (a stop, as R-469 P2
     stops an edit), the readout saying why.
   - (c) Lean each axis's range is open, `(−90°, 90°)`, for both angles together.
+  - Options (b) and (c) would amend R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines, which reach and
+    handle the corner today.
 - **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
-- **Waits:** REQ-CHART-062's fold at that point (TASK-M2-36); TASK-M2-36 does not wait for the rest.
+- **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
+  ruled); TASK-M2-36 does not wait for the rest.

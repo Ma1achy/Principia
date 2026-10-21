@@ -499,14 +499,16 @@ map's cap and per-pixel fold, are the untilted chart's (`τ₁ = τ₂ = 0`). Tw
 `(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1). Under a tilt a pixel's
 **mirror** is the pixel of the tilted view with the mirrored `(a, b)` (on the spherical map `(a, b) ↔ (a, 1 − b)`,
 `φ → π − φ`, the vertical axis only; on the exponential map `w → −w`) and the same `d`. The tilted view's pixels
-lie on the plane through the slice centre spanned by `R·e_a` and `R·e_b`, whose normal is `N = R·e₃` (`e₃` the hidden
-target). A pixel's mirror lies on that plane, and the pair keeps its fold, exactly when the tilt adds no hidden offset
-that depends on the mirrored axis: **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its mirrored `(a, b)`
-differ in `d` and are distinct systems: the tilted view is **bijective** there; any pair of its pixels whose full
-`(a, b, d)` do decode to the same system counts once by the per-pixel rule above. The criterion solves for nothing and
-divides by nothing, so it holds for an edge-on view (`N_d = 0`, Tip as sheet at `m = 90°`, which R-474 does not lock)
-as for any other. `N_b` is computed from the active tilt map's `R` (chart_decoder_contract § "Tilt (basis edit)",
-R-474), not keyed on an angle:
+lie on the plane through the slice centre spanned by `R·e_a` and `R·e_b`; its normal is defined once, for every map, as
+**`N ∝ (R·e_a) × (R·e_b)`** (with one target a vector in `(a, b, d)`; Tip as sheet's `R` is a rotation, so there
+`N = R·e_X`, while Lean each axis's basis is skewed; with two targets there is no single normal, and the rule is taken
+per hidden offset, below). A pixel's mirror lies on that plane, and the pair keeps its fold, exactly when the tilt adds
+no hidden offset that depends on the mirrored axis: **`N_b = 0`**. When `N_b ≠ 0` a pixel and the pixel with its
+mirrored `(a, b)` differ in `d` and are distinct systems: the tilted view is **bijective** there; any pair of its
+pixels whose full `(a, b, d)` do decode to the same system counts once by the per-pixel rule above. The criterion
+solves for nothing and divides by nothing, so it holds for an edge-on view (`N_d = 0`, Tip as sheet at `m = 90°`,
+which R-474 does not lock) as for any other. Its conditions come from the active tilt map's `R`
+(chart_decoder_contract § "Tilt (basis edit)", R-474), never from a rule on `τ₂` alone:
 - **Tip as sheet** (the default; `m = √(τ₁² + τ₂²)`, the plane turned by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, each angle
   in `[−180°, 180°]`): Rodrigues' formula gives `N = R·e_X = (−τ₁ sin m/m, −τ₂ sin m/m, cos m)`, so `N_b = −τ₂·sin m/m`
   (the same after the wrap at `m > 180°`), and the fold is kept iff `τ₂ = 0` or `m = 180°`, where the plane is the
@@ -517,11 +519,25 @@ R-474), not keyed on an angle:
 - **Two targets** (`X ≠ Y`, J4; `d_X = sin τ₁·u`, `d_Y = sin τ₂·v`): per hidden offset, `d_X` never depends on the
   vertical axis and `d_Y` does unless `sin τ₂ = 0`, so the fold is kept iff `sin τ₂ = 0`.
 
-A single `τ₁` (either map, R-457: `τ₁` tilts the horizontal axis) gives `d = sin τ₁·u`, the same at a pixel and its
-mirror, so n-to-1 with n = 2 is kept over the tilted view's pixels. On the exponential map the same conditions hold on
-a frame aligned so that the mirror is `(u, v) ↔ (u, 1 − v)`, where the per-pixel fold is kept. A view whose map
-`(u, v) → (a, b, d)` loses rank (Lean each axis with one target at `|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) is
-RQ-471's. *Was (physics review 5593414323 of PR #255, P4: keyed on `τ₂`, and dividing by `N_d`):* "On the tilted
+**The decision is exact, on the stored angles (physics review 5593455102 of PR #255, P5; applied per R-369, a routine
+design choice that invents no calibration; flagged for the human's veto with the tilted fold above).** In f64 the
+computed `N_b` is not zero where the closed form is (at `m = 180°` it is about `−1e-16`, and `cos 90°` is about
+`6e-17`), so the fold is never decided by a tolerance on a computed `N_b`. It is an exact comparison on the stored tilt
+angles, in degrees as the view state holds them, from each map's closed form: Tip as sheet, `τ₂ == 0` or
+`m == 180`, with `m = √(τ₁² + τ₂²)` computed from the stored angles in degrees as the map computes it; Lean each axis,
+`τ₁ == ±90` or `τ₂ == 0` (`τ₂ = ±180°` lies outside its range); two targets, `τ₂ ∈ {0, ±180}`. A pair just short of
+`m = 180°` is bijective.
+
+A single `τ₁` (R-457: `τ₁` tilts the horizontal axis) gives `d = sin τ₁·u`, the same at a pixel and its mirror, on the
+spherical map and, on the exponential map, only on a frame aligned so that the mirror is `(u, v) ↔ (u, 1 − v)`; there
+n-to-1 with n = 2, or the per-pixel fold, is kept over the tilted view's pixels. On the exponential map the conditions
+above hold on that aligned frame. A view whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at
+`|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) is RQ-471's: TASK-M2-36 neither builds nor tests that corner until it
+is ruled. *Was (physics review 5593455102, P5 and P6, and code review 5593479346, 3):* "whose normal is `N = R·e₃`
+(`e₃` the hidden target)"; "`N_b` is computed from the active tilt map's `R` …, not keyed on an angle"; "A single `τ₁`
+(either map, …) gives `d = sin τ₁·u`, the same at a pixel and its mirror, so n-to-1 with n = 2 is kept over the tilted
+view's pixels. On the exponential map the same conditions hold on a frame aligned so that the mirror is
+`(u, v) ↔ (u, 1 − v)`, where the per-pixel fold is kept". *Was (physics review 5593414323 of PR #255, P4: keyed on `τ₂`, and dividing by `N_d`):* "On the tilted
 plane, whose normal is `N = R·e₃`, `d = −(N_a·a + N_b·b)/N_d`, so the mirror pair keeps its fold exactly where the
 tilt adds no hidden offset that depends on the mirrored axis: **`N_b = 0`**. On the spherical map that is `τ₂ = 0` …
 Otherwise (`N_b ≠ 0`, any `τ₂ ≠ 0` on the spherical map) … With two targets (J4) the same holds for each hidden
@@ -868,7 +884,7 @@ existing charts:
 |---|---|---|---|---|
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; what fails validation is not a system, blank (R-470) | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (`N_b = 0`, computed from the active tilt map's `R` with `N = R·e₃`, per map as chart_reference §3.3 gives it), and otherwise the tilted view is bijective there (*was*, physics review 5593414323 of PR #255, P4: "`N_b = 0` for the tilted plane's normal `N = R·e₃`: `τ₂ = 0` on the spherical map, the analogous condition on an exponential frame aligned so the mirror is `(u, v) ↔ (u, 1 − v)`") (§3.3, applied per R-369). *Was:* "generically bijective" |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (`N_b = 0` for `N ∝ (R·e_a) × (R·e_b)` from the active tilt map's `R`, decided exactly on the stored angles, per map as chart_reference §3.3 gives it; *was:* "computed from the active tilt map's `R` with `N = R·e₃`"), and otherwise the tilted view is bijective there (*was*, physics review 5593414323 of PR #255, P4: "`N_b = 0` for the tilted plane's normal `N = R·e₃`: `τ₂ = 0` on the spherical map, the analogous condition on an exponential frame aligned so the mirror is `(u, v) ↔ (u, 1 − v)`") (§3.3, applied per R-369). *Was:* "generically bijective" |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the negative-mass area is not a system, blank (R-470), by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the blank starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
 | Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | blank on every side (R-470) | out of the count and the total (the domain's end) |
