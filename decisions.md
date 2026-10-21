@@ -20992,3 +20992,67 @@ R-550 is in the "physics" group of `plan/rule_groups.yaml`.
 Adds REQ-DEC-049 (the eight-column Jacobian, definition), REQ-GUI-342 (the steer's tolerance, calibration) and
 REQ-GUI-343 (the reference ranges the ruling's classes do not name, definition); changes REQ-GUI-199 and REQ-GUI-200
 (statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (statement, `rq`, note) and REQ-GUI-244 (note).
+
+## R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
+*21 Oct 2026 · applied in `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)"
+(the verified line's "exactly", with its earlier words kept, and the re-verified line's ball), REQ-VAL-022 (reqio:
+statement, verify, rulings, `rq` removed, note), REQ-VAL-021 and REQ-VAL-121 (reqio: statement, verify, rulings, `rq`
+removed, note), REQ-VAL-193 (reqio, new), TASK-M2-27 (REQ-VAL-022 and REQ-VAL-121 moved out, a note), TASK-M8-15 (a
+dependency), TASK-M2-46 (new), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-475, RQ-476
+and RQ-477, moved with their rulings); built by TASK-M2-46*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+128–130), which R-545 quotes in its opening:
+
+> - RQ-475 (What "exactly" means for pole and equator): (a) + (c). "Collinear → `z_β` sits at its clamp image with its `lookup_clamped` bit set, bit for bit; no equilateral state sets it. Equilateral → `|w − 1|` and collinear `|w|` lie within an R-71 calibrated bound, with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence." Reword the scratchpad's "exactly" to "to rounding (pole); at the clamp image (equator)".
+>
+> - RQ-476 (Round-trip domain is the ball ‖z‖ < 4): (a). "`|z| < 4` is the ball `‖z‖ < 4`. The gate is max `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³` over the fixed, recorded seed's 2×10⁴ draws, and the bound stays provisional under REQ-VAL-121."
+>
+> - RQ-477 (Random IC is g₀·D(z); Randomise reported separately): (c), consistent with RQ-476. "The gated distribution is `g₀·D(z)` with `z` in the ball, held at 1.6×10⁻¹⁴ unchanged. The Inspector's Randomise distribution runs as a second arm whose bound REQ-VAL-121 calibrates. It is reported until then and never used to loosen 1.6×10⁻¹⁴."
+
+R-551 ports the three answers on the IC Inspector's gates, which TASK-M2-27 built and merged with REQ-VAL-022 and
+REQ-VAL-121 held, in number order.
+
+**RQ-475.** The scratchpad and REQ-VAL-022 said equilateral states land on a shape-sphere pole and collinear ones on
+the equator "exactly", which floating point cannot promise for `w`, and which the chart meets at the equator only
+through its clamp.
+
+*What it decides:* **options (a) and (c).**
+- **A collinear state's `z_β` sits at its clamp image with its `lookup_clamped` bit set, bit for bit; no equilateral
+  state sets it.** That check is exact.
+- **An equilateral state's `|w − 1|` and a collinear state's `|w|` lie within an R-71 calibrated bound**, REQ-VAL-121's,
+  with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence.
+- **The scratchpad's "exactly" becomes "to rounding (pole); at the clamp image (equator)".**
+
+**RQ-476.** The round trip's domain, "`|z| < 4`", did not say whether it is a box or a ball, nor which seed.
+
+*What it decides:* **option (a).** **`|z| < 4` is the ball `‖z‖ < 4`. The gate is max `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³`
+over the fixed, recorded seed's 2×10⁴ draws, provisional under REQ-VAL-121.** The scratchpad's re-verified line names
+the ball.
+
+**RQ-477.** The handles gate's "2×10⁴ random ICs" did not name the distribution; qa found the Inspector's Randomise
+distribution past 1.6×10⁻¹⁴ on 3 seeds of 5.
+
+*What it decides:* **option (c), consistent with RQ-476.**
+- **The gated distribution is `g₀·D(z)` with `z` in the ball, held at 1.6×10⁻¹⁴ unchanged.** TASK-M2-27 built that
+  distribution, so REQ-VAL-021 stands as built.
+- **The Randomise distribution runs as a second arm whose bound REQ-VAL-121 calibrates; it is reported until then and
+  never used to loosen 1.6×10⁻¹⁴** (REQ-VAL-193).
+
+*Where the words leave a choice, decided per R-369 (placement and tasks; the bounds under physics review):*
+- **V1. The held requirements move.** REQ-VAL-022 and REQ-VAL-121 leave TASK-M2-27 (merged) for TASK-M2-46,
+  which judges the shape checks, adds the Randomise arm (REQ-VAL-193) and proposes the bounds; TASK-M2-27 keeps
+  REQ-VAL-021. TASK-M8-15, which needs REQ-VAL-022, gains the new task as a dependency.
+- **V2. Measured on the final `C`.** TASK-M2-46 depends on TASK-M2-43, because R-547 changes
+  canonicalisation's step 0, which the round trip runs.
+- **V3. The pole check at equal masses.** "Equilateral → `|w − 1|`" is read at equal masses, where `L±` are the poles
+  (R-549, RQ-355); the families draw equal-mass equilateral triangles.
+- **V4. One bound requirement.** The shape bounds and the Randomise arm's bound join REQ-VAL-121's calibration rather
+  than a new calibration requirement, since it already gates this Inspector's bounds at the M2 gate.
+
+*Read with:* R-71 (the calibration rule), R-549 (the poles at equal masses), R-547 (canonicalisation's step 0). It
+closes **RQ-475, RQ-476 and RQ-477**.
+
+R-551 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-022, REQ-VAL-021 and REQ-VAL-121 (statement, verify, rulings, `rq` removed, note); adds REQ-VAL-193.
