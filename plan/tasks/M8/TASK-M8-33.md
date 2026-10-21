@@ -33,3 +33,4 @@ Import picture (drop a Principia PNG or File › Import picture…) reads the px
 - "Open side by side" opens the v2 side-by-side view of TASK-M8-36 once it lands; until then the action is asserted to request it.
 - RQ-108 ruled: R-131 — the formats offered per build (TASK-M8-30 builds the sinks).
 - **R-474, R-475 (20 Oct 2026):** a saved view reopens under its tilt map, a pre-R-474 one under Lean; a saved view on a saved chart carries its definition.
+- R-483 X4, X5, R-484 RT3 (20 Oct 2026): Import picture's new outcomes (cannot recreate, links unrecorded, tiers recovered) are reported by TASK-M8-53 (REQ-GUI-263).
