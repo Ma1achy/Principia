@@ -238,3 +238,7 @@ justification = "they differ only on a draw whose squared norm equals radius² e
 [[equivalent]]
 mutant = "crates/kernel/src/canon.rs:212:23: replace > with >= in rotation"
 justification = "at ex == ey both arms of the select are the same exponent, so > and >= pick the same e"
+
+[[equivalent]]
+mutant = "crates/kernel/src/encode/curve.rs:244:30: replace + with * in nearest"
+justification = "two is 1 + 1, so two * two + one and two + two + one are both exactly 5: the golden ratio's sqrt(5) is unchanged"
