@@ -107,7 +107,11 @@ Opens on click; shows the **same trajectory three ways at once**, linked by one 
 | *the IC itself, editable* | pane 1 (from the absorbed IC Inspector) | — |
 
 The 3D sphere and the 2D unwrap now share one pane and are toggled; they stay in the same config-space frame, so they still
-agree. The sphere turns slowly, with visible axes, and can be stopped ("turn").
+agree. **Both draw the signed `n(t)` over the whole sphere (R-544)**, as Listen does: a trajectory crosses the equator at every
+syzygy and its path carries on into the other half, never folded or bounced at the equator. The canonical bodies that pane 2 can
+show stay a view of the bodies and never fold the path. In the Inspector window the sphere is also the initial-condition
+constructor's (render_gui_spec §G8): every point of both halves reachable, the mirror twin a faint marker at `(θ, π − φ)`.
+The sphere turns slowly, with visible axes, and can be stopped ("turn").
 
 - **Real space is CPU-f64 intuition sugar** — "see what this IC looks like", no comparison claimed. There is no GPU real-space trajectory to compare against (the survey never produced one), and that's fine — visualisation, not parity.
 - **Config-space frame (both sphere panels).** Both feed `sph_uv` in the config-space frame (two-rotations rule). The 3D orbit control rotates the **camera, not the data** — so the 3D view and the 2D unwrap always agree. Landmarks fixed in the same frame.

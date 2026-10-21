@@ -17,12 +17,13 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - `docs/gui/principia_render_gui_spec.md` § "G14. Settled by the notes (record)"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Directions are axis kinds — the unifying rule"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - `crates/gui/src/explore/manifold_view/{chart,navigate,depth,centre,slice_tilt}.rs` (the files may carry R-457's names), extending the track's Manifold view group (TASK-M6-26, R-390) — each control emits SetField on the SimConfig paths from TASK-M8-01; each shows the per-field warning from TASK-M8-03.
 - `crates/gui/src/explore/direction_label.rs` — raw-control vs physical labelling from the chart axis metadata (REQ-CHART-012).
 - `crates/gui/src/explore/axis_labels.rs`, the track's axis labels (TASK-M6-26, R-390) wired to the real chart — short axis name and range at each end, recomputed after pan.
-- `crates/gui/src/explore/manifold_view/chart.rs` also carries the shape-sphere controls: the projection selector (equirectangular / the equal-area alternative) and the hemisphere toggle, shown only when the chart is the shape sphere (R-113).
+- `crates/gui/src/explore/manifold_view/chart.rs` also carries the shape-sphere control: the projection selector (equirectangular / the equal-area alternative), shown only when the chart is the shape sphere (R-113), and no hemisphere toggle (R-544).
 - Screenshot cases `01_main/shape_sphere_controls`, `01_main/left_panel`, `01_main/axis_labels`, `01_main/direction_labels`.
 
 ## Acceptance tests
@@ -32,10 +33,11 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - `cargo test -p gui navigate_z0_fields` — drag and typed entry on centre u, v, the zoom and each of the eight Slice centre sliders' number boxes emit the same SetField as the slider and round-trip through the snapshot; Navigate has no single-coordinate z₀ box (centre u, v pan within the plane, which edits z₀) (REQ-GUI-083).
 - `cargo xtask screenshot 01_main` (axis labels, before and after a pan) — screenshot against 01_main.png; after a pan the end values update (REQ-GUI-084).
 - `cargo xtask screenshot 01_main` (direction labels) — slider/direction labels distinguish 'one mass logit' from 'only m₀' (REQ-GUI-034).
-- `cargo xtask screenshot 01_main` (shape-sphere controls) — with the shape-sphere chart the Chart section shows the projection selector and the hemisphere toggle and each changes the figure; with any other chart neither is shown (REQ-GUI-161).
+- `cargo xtask screenshot 01_main` (shape-sphere controls) — with the shape-sphere chart the Chart section shows the projection selector, which changes the figure, and no hemisphere toggle; with any other chart the selector is not shown (REQ-GUI-161).
 
 ## Notes
 - R-113 (RQ-95 M2-G5): the shape-sphere projection selector and hemisphere toggle live in the Manifold view's Chart section, shown when the chart is the shape sphere (REQ-GUI-161); the M2 goldens (TASK-M2-28) verify the render side.
+- R-544 (21 Oct 2026) removes the hemisphere toggle, and withdraws R-412's remap with it: the shape sphere chart is the whole sphere. The projection selector's placement stands. TASK-M8-44 no longer depends on this task.
 - The Lock sub-group's badge and the compass are TASK-M8-07; this task leaves the Lock slot wired to the lock SetFields.
 - R-390: TASK-M6-26 builds the Manifold view group on the mock engine and closes REQ-GUI-081; this task depends on it, wires the group to the real engine and re-runs REQ-GUI-081's acceptance there, keeping every other requirement it closes.
 - TASK-M6-26 also builds the figure's axis labels on mock data (applied per R-369, review 5434766412 on PR #157); this task wires them to the real chart's ranges and keeps REQ-GUI-084.

@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-035
-- **Depends on:** TASK-M2-07, TASK-M2-15
+- **Depends on:** TASK-M2-07, TASK-M2-15, TASK-M2-43
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-9
@@ -67,6 +67,8 @@ includes the pair differences feeding the `ρ = 0` guard and the mirror decision
 - Applied per R-369: `τ_I` is proposed here, TASK-M2-07 having merged; R-547's words name TASK-M2-07's measurement as
   its evidence.
 - `crates/kernel/tests/canon.rs` is the implementer's file (TASK-M2-07); qa's files are qa's (R-290).
+- Applied per R-369 (merge of main into PR #274): this task depends on TASK-M2-43, whose `canon.rs` change (R-544's
+  signed decode and lookup) runs before this task's rebuild of `C`.
 - Fix round 1 of PR #274 (physics P1, applied per R-369): R-547 N2 stands for REQ-DEC-017's mirror decision except
   its pair differences, which this task rebuilds under REQ-DEC-002; the seam sweep's subnormal-difference arm and its
   flush-to-zero control are physics P1's, the `τ_I` ± ulp states and the superseded-form controls qa Q5's.

@@ -67,6 +67,151 @@ later." For the human: yes, whether there is a Frame stage at all.*
   stays open and returns to the human when the human raises it. Nothing is built; the lab's Polaroid medium stays a
   medium (R-486).
 
+## RQ-506: The prototype's code and R-543's text disagree: the legend states no Torus period, the hovered-pixel readout does not name the wrap mode, and the period counts the code uses go past the text's *(conflict: the ruling against its transcription source; R-543, R-542; context: TASK-M7-48, TASK-M7-51, TASK-M8-66)*
+
+*Found by R-543's port, reading `docs/gui/reference/state_map/state_flow.html` (version 9) as source (no browser was
+available). R-542's rule, which R-543 keeps: where the text and the code disagree, the code is the transcription source
+and the disagreement is queued. Nothing is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-21_state_map_tiling/INSTRUCTION.md` (the human's ruling, R-543) against
+  the prototype's code, each carried into `docs/design/principia_state_map.md`:
+  - **The legend's period** (§2.1; state map § "SM6"): "The legend states the period in chart units". The code's
+    `smLegend` draws the colour slot over the target's square and writes no period anywhere; only the comment above
+    `SM_TORUS` says "(the legend states the period; …)".
+  - **The hovered-pixel readout** (§2.2; state map § "SM8"): "The hovered-pixel readout and the graph strip name the
+    wrap mode ("Picture · repeat")". The code names it in the graph strip (`smSyncUI`'s "Picture · " + the wrap); its
+    `readout()` gives the pixel, the masses and the end, and no base or wrap mode.
+  - **The period counts** (§2.1; state map § "SM6", its *Transcribed* paragraph): "on the plane the y period count is
+    round(n · H / W)"; the code's is `max(1, round(n·H/W))`, round half up, which differs only where `n·H/W < ½`
+    (no prototype chart). "On the cylinder, X is θ itself once round …, and only s repeats" gives no count for `s`;
+    the code repeats `s` `n` times over the square's height whatever its aspect.
+- **Options seen:**
+  - (a) The ruling's text where the code is silent (the legend states the period in chart units, the readout names the
+    wrap mode), and the code's counts, which only fill what the text leaves open.
+  - (b) The code throughout: no period in the legend, the wrap mode in the graph strip only.
+  - (c) Each ruled separately.
+- **Applied meanwhile:** (a). REQ-GUI-339 carries the legend's period and the readout (TASK-M8-66), REQ-GUI-340 the
+  node's label (TASK-M7-51), each with `rq: RQ-506`; REQ-COL-136's verify uses the code's counts.
+
+## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, so it separates systems one Torus period apart only where that tile ends within one period ahead of the system, in the move's direction, which depends on the Palette's tiling, counts, spacing and the chart's aspect, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
+
+*Found by R-543's port. Nothing is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-21_state_map_tiling/INSTRUCTION.md` §2.1 (R-543; state map § "SM6"): "The
+  honest cost: a system exactly one period away gets the same colour. The legend states the period in chart units;
+  "Left its starting tile" brightness already separates such systems." and "It spends L on position, so a brightness
+  node after it gets the existing "no longer one-to-one" warning." `docs/design/principia_state_map.md` § "SM11",
+  "Brightness, unchanged in meaning": "*left its starting tile*, which under Chart position compares the Palette's tile
+  now and at `t = 0`"; the prototype's graph strip: ""tile" is the Palette's tiling"; its Palette offers 4, 6, 8, 12, 18
+  or 24 tiles across and the Torus 1, 2, 3, 4, 6 or 8 periods.
+- **The conflict:** the tile is the Palette's, from its own tiling, its count `m` and its spacing setting, not the
+  Torus's Repeats `n`. **The exact condition (applied per R-369, the coordinator's decision on PR #272's physics
+  review 5602225811):** a one-period move along an axis changes the Palette tile at a position exactly when the Palette
+  tile containing that position, measured in chart units along that axis, ends within one Torus period ahead of it, in
+  the move's direction (a move of −P tests the tile's other end). Both
+  counts per axis are `smTileXY`'s: along x `m` and `n`; along y `max(1, round(m·H/W))` and `max(1, round(n·H/W))`;
+  on the cylinder, along `s`, the Palette's own count `max(1, round(n_θ(m)·H/W))` against the Torus's `n`; under the
+  squashed-square spacing the Palette's tile is measured through the compaction, the Torus's period never. The
+  consequences, each measured on a transcription of the prototype's `smTile`, `smPattern`, `smTileXY`, `smHexRound`
+  and `smTorusXY` (a one-period move from each of 200² positions in the home square unless stated; the survey and its
+  output are in R-543's PR; "every offered pair" means every `m` in {4, 6, 8, 12, 18, 24} with every `n` in {1, 2, 3,
+  4, 6, 8}), are examples of that condition, not further rules:
+  - **square and triangles, square chart (latent A):** at every offered pair with `m ≥ n`, 0 of 10,000 positions (100²)
+    stay on either axis (and 0 of 40,000 at `m = n` = 4, 6, 8); at `m = 6`, `n = 8`, squares 10,000 of 40,000 stay on
+    each axis, triangles 2,442 along x and 724 along y.
+  - **hexagons** (pointy-top, one unit wide, `2/√3 ≈ 1.155` tall), chart A: along x, at `m = n`, 0 of 40,000 stay at 4
+    and 6, 14 at 8, on tile edges; along y the move must be at least `2/√3` tile units, and at `m = n` = 4, 6, 8, 1,032,
+    968 and 936 of 40,000 stay; 0 at `m = 6`, `n = 4`, at `m = 8`, `n = 4` and at `m = 12`, `n = 6`.
+  - **brick** (2 units wide, 1 tall), chart A: along y, 0 of 40,000 stay at `m = n` = 4, 6, 8 and at `m/n` = 6/4, 8/4
+    and 12/6; along x the move must be at least 2 tile units: 20,000 of 40,000 stay at `m = n` = 4, 6, 8, 10,000 at
+    `m = 6`, `n = 4`, and 0 at `m = 8`, `n = 4` and `m = 12`, `n = 6`.
+  - **stripes:** the tile has no end across the stripes: on chart A, at every offered pair, stripes along x leave
+    10,000 of 10,000 positions in their tile under a move along y, and stripes along y under a move along x.
+  - **squashed-square spacing** (`sm_tspace = square`; latent chart A, square tiles, a move along x). Inside the square
+    (2,001 starts on a line, both ends in the square): positions stay at 8 offered pairs, each with `m < 2n`: 132,
+    801 and 1,144 at `m = 4` with `n` = 4, 6, 8; 331 and 698 at `m = 6` with `n` = 6, 8; 216 and 512 at `m = 8` with
+    `n` = 6, 8; 12 at `m = 12`, `n = 8` (at `m = n = 8`, `X(2.0) = 6.331` and `X(2.75) = 6.897`, one tile). At every
+    other offered pair with `n ≥ 2`, 0 of 2,001 stay (at `n = 1` the period is the whole square). Past the square
+    (100² starts over `[3, 30]²`, a move of chart A's Torus period `6/n`), positions stay at every offered pair: 9,400
+    to 10,000 of 10,000 (10,000 at every `n` for `m` = 4, 6, 8; 9,800 for 12; 9,500 to 9,700 for 18; 9,400 to 9,600
+    for 24); at `m = 6`, `n = 2`, the move from `u = 0` to 3 changes the tile and those from 3 to 6, 6 to 9 and 9 to
+    12 do not.
+  - **a non-square flat chart:** the y move is `round(m·H/W)/round(n·H/W)` tile units, not `m/n`. On the tilted charts
+    E and F (720 × 360), hexagons at `m = 4`, `n = 3` have both y counts 2, so the y move is 1 tile unit and 824 of
+    40,000 stay, though `m/n = 1.33 ≥ 2/√3`; at `m = n = 4` likewise 824. On ν × dilation H (600 × 420), hexagons at
+    `m = n = 4` (y counts 3 and 3): 1,080 stay. Squares and triangles on E and H, at every offered pair with `m ≥ n`:
+    0 of 10,000 stay on either axis. Brick along x on E and H: 13,200 of 40,000 stay at `m = 4`, `n = 3`, 20,000 at
+    `m = n = 4`, 10,000 at `m = 6`, `n = 4`, 13,600 at `m = 8`, `n = 6`, 0 at `m = 6`, `n = 3`.
+  - **the cylinder** (G, 720 × 360): round θ there is nothing to separate (the Torus's θ is once round and θ + 2π is
+    the same system), so the cost is in `s` only, where the Palette's `s` count is 3 for every `m` in {4, 6, 8} (then
+    6, 9, 12 for 12, 18, 24). The cylinder's tiles are in chart units, and it offers six tilings (square, hexagons,
+    triangles, brick, stripes round θ, bands along `s`); all six were measured at every offered pair (a one-period move
+    in `s`, 100² positions, stays of 10,000):
+    - squares, brick (one row tall) and bands along `s` alike: stay at 10 of the 36 pairs: 2,500 at `m = 4`, `6` or `8`
+      with `n = 4`; 5,000 at `m = 4`, `6` or `8` with `n = 6`; 6,200 at `m = 4`, `6` or `8` with `n = 8`; 2,400 at
+      `m = 12`, `n = 8`;
+    - triangles: stay at the same 10 pairs: 204 with `n = 4`, 2,012 with `n = 6` and 3,468 with `n = 8` (each at
+      `m = 4`, `6` or `8`), 232 at `m = 12`, `n = 8`;
+    - hexagons: stay at 15 pairs: 264, 1,492, 3,764 and 5,212 at `m = 4`, `6` or `8` with `n` = 3, 4, 6, 8; 236 at
+      `m = 12`, `n = 6`; 1,656 at `m = 12`, `n = 8`; 8 at `m = 18`, `n = 8`;
+    - stripes round θ: the tile has no end along `s`, and 10,000 of 10,000 stay at all 36 pairs;
+    - the other five tilings, at every pair not listed for them: 0 of 10,000 stay.
+
+  And the separation is a brightness node, which replaces the L the Torus spends on position, so it costs the
+  one-to-one map within a period that the Torus is for (the warning §2.1 names). It also tells a system that moved one
+  period from one that stayed, but not one period from two.
+- **Options seen:**
+  - (a) As the code has it: the Palette's tile, its tiling, counts and spacing the Palette's; a one-period move is
+    separated only where the exact condition above holds. In the measured cases above, every offered tiling has
+    positions that stay at some offered pair: hexagons, brick, stripes and squashed spacing on chart A, and each of the
+    cylinder's six tilings along `s`, at `m ≥ n` too. Squares and triangles on the flat charts A, E and H are
+    the measured exception: 0 stay at every offered pair with `m ≥ n`. The legend says which tile is compared.
+  - (b) Under a Torus base, Left its starting tile compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods.
+  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph. In the
+    measured cases above: squares and triangles on A, E and H then stay separated (0 stay at every offered pair with
+    `m ≥ n`); hexagons along y and brick along x on chart A still have positions that stay at `m = n` = 4, 6, 8;
+    stripes leave 10,000 of 10,000 in their tile across their direction at every offered pair; the y and `s` counts
+    are rounded from `m` and `n`, so on the cylinder squares, triangles, brick and bands along `s` still stay at the
+    multiples `m = n` = 4, 6, 8 and at `m = 8`, `n = 4`, hexagons at those and at `m = 6`, `n = 3` and `m = 12`,
+    `n = 6`, and stripes round θ at every multiple; and under squashed spacing, inside the square, positions stay at
+    `m = n` = 4, 6, 8 (132, 331 and 512 of 2,001) and at no other multiple with `n ≥ 2`, while past the square they
+    stay at every offered pair. Of the three options, (b) is the one that changes the compared cell on every
+    one-period move, by construction (`⌊X + 1⌋ = ⌊X⌋ + 1`).
+- **Applied meanwhile:** (a), the code. REQ-COL-128 is unchanged; REQ-COL-136's note cites this entry.
+
+## RQ-508: The human's ruling on RQ-472 keeps the equator fold on a tilted shape sphere view where `N_b = 0`, where R-544 has no folding of any kind on the shape sphere chart *(conflict: the human's batch ruling against the human's later ruling; R-544, R-537 EX7(b), RQ-472; REQ-CHART-062, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-GUI-278; context: TASK-M2-36, TASK-M8-56, TASK-M8-58)*
+
+*Found by R-544's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `rulings_2026-10-21.md` (not yet recorded in `decisions.md`; a batch rulings PR records it), RQ-472:
+    "(a). "On a tilted view the equator fold is kept iff `N_b = 0`, and the pole maps iff `N_a = 0` and `N_b = 0`, each
+    decided exactly on the stored angles as §3.3 decides. Otherwise the view is affine along that axis and draws no
+    image (TF2.2). §3.3's pixel fold governs the statistics (EX7(g)).""
+  - `docs/incoming/2026-10-21_shape_sphere_whole/REPLY.md`, R-544: "No folding of any kind on the shape sphere chart,
+    visible or not."; `PLAIN_SUMMARY_2.md`: "There is no hemisphere mode and no folding."; `INSTRUCTION.md` §2 item 4:
+    "The mirror is no longer a repeat. R-537's repeats on the shape sphere are θ's period and the pole crossing only".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (#255, applied per R-369): "the
+    pair keeps its fold, exactly when the tilt adds no hidden offset that depends on the mirrored axis: **`N_b = 0`**",
+    which R-544's port replaces.
+- **The conflict:** RQ-472's ruling concerns the shape sphere chart: its subject is "Tilted shape sphere: EX7(b) folds
+  only where §3.3 allows", the tilted views of the shape sphere chart, and `N_b = 0` includes the untilted view. Its
+  equator clause keeps a mirror fold there, and its last sentence keeps §3.3's pixel fold for the statistics; R-544 has
+  none, at any tilt. The pole maps under a tilt (its `N_a = 0` and `N_b = 0` clause) are not a fold of the mirror:
+  R-544 keeps the pole crossing as a repeat, and that clause is not in conflict.
+- **Options seen:**
+  - (a) R-544 governs on the shape sphere chart: no equator fold and no pixel fold on any view, tilted or not; RQ-472's
+    ruling keeps its pole maps, decided as it says, and its equator clause and its last sentence no longer apply to the
+    shape sphere.
+  - (b) RQ-472's equator clause stands for a tilted view with `N_b = 0`, the untilted view excepted, so the fold
+    returns on a tilted view only.
+- **Applied meanwhile:** (a), R-544, the later ruling and the one that says "of any kind". chart_reference §3.3's
+  tilted fold is replaced by R-544's one-to-one tilted view.
+- **Waits:** the tilted shape sphere's fold arm of REQ-CHART-062 (TASK-M2-36; the rest of the task does not wait),
+  and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56), with the neighbours and the statistics read through
+  them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
+  Each carries `rq: RQ-508`.
+
 ## RQ-520: The frame record's `substep_histogram` is ruled `[u32; 16]` with "equal bins of width `N_max/16`" and "cap hits as their own last bin", but sixteen bins of width `N_max/16` fill `[0, N_max]` and leave no entry for a separate cap bin *(conflict within the human's ruling on RQ-286; R-545, R-288, REQ-TOOL-098, REQ-TOOL-187; context: TASK-M5-28, TASK-M8-28)*
 
 *Found porting R-545 (the human's batch of 21 Oct 2026). Nothing is chosen.*

@@ -671,8 +671,8 @@
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-28
   milestone: M2
-  title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
-  depends_on: [TASK-M2-08, TASK-M2-14]
+  title: "Shape-sphere display: the whole sphere, the exponential map's one-to-one cap and the equal-area projection (R-544)"
+  depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-43]  # R-544: re-scoped, redone on top of TASK-M2-43 (PR #271 is redone)
   needs: [REQ-GUI-001, REQ-SYS-009]
   requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075, REQ-CHART-078]
   reviewers: [code, qa, physics, gui]
@@ -789,10 +789,18 @@
   requirements: [REQ-VAL-192]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M2-43
+  milestone: M2
+  title: "The shape sphere chart is the whole sphere: the signed decode, the held momentum unmirrored below the equator, the signed lookup, the spherical map's system_image one-to-one, and the tests that asserted the 2-to-1 cover (R-544) ⚑"
+  depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-17]
+  needs: []
+  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: [PIT-9]
 - id: TASK-M2-47
   milestone: M2
   title: "Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form"
-  depends_on: [TASK-M2-07, TASK-M2-15]  # both merged with these requirements held (RQ-295, RQ-296, RQ-298); applied per R-369
+  depends_on: [TASK-M2-07, TASK-M2-15, TASK-M2-43]  # TASK-M2-07 and TASK-M2-15 merged with these requirements held (RQ-295, RQ-296, RQ-298); TASK-M2-43's canon.rs change runs before this task's (merge of main into PR #274); applied per R-369
   needs: []
   requirements: [REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-035]
   reviewers: [code, qa, physics]
@@ -2313,7 +2321,7 @@
 - id: TASK-M7-47
   milestone: M7
   title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
-  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # TASK-M7-52: the one projection (R-542 H11); RQ-489 ruled by R-558, no longer waits
+  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11, TASK-M2-43]  # TASK-M7-52: the one projection (R-542 H11); RQ-489 ruled by R-558, no longer waits; TASK-M2-43: the signed decode and lookup the sphere's identity reads (R-544, applied per R-369)
   needs: []
   requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120, REQ-COL-141]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2323,7 +2331,7 @@
   title: "Chart position's colour slot: the bases (Gradient, Site blend, Palette), the layers, the brightness occupants and the calibrations (R-542 SM6, SM11)"
   depends_on: [TASK-M7-47, TASK-M7-04, TASK-M7-05, TASK-M7-06, TASK-M7-08, TASK-M7-10]
   needs: []
-  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129]
+  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129, REQ-COL-136]  # REQ-COL-136: the Torus gradient (R-543)
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M7-49
@@ -2331,7 +2339,7 @@
   title: "Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)"
   depends_on: [TASK-M7-48, TASK-M7-44]  # TASK-M7-44: the picture's tier in R-484's table (R-542 H5)
   needs: []
-  requirements: [REQ-COL-130, REQ-COL-131]
+  requirements: [REQ-COL-130, REQ-COL-131, REQ-COL-137, REQ-COL-138]  # REQ-COL-137, REQ-COL-138: the wrap mode and the tileable checkerboard (R-543)
   reviewers: [code, qa, gui]  # gui: SM8 and SM10 are the GUI's, the picture's and the fade's look (the human's message; PR #270 code review 2, gui re-review G6)
   pitfalls: []
 - id: TASK-M7-50
@@ -2712,10 +2720,10 @@
   pitfalls: []
 - id: TASK-M8-44
   milestone: M8
-  title: "The shape sphere past [0,1]² with one hemisphere drawn: φ's extension and primary range (RQ-264)"
-  depends_on: [TASK-M8-05, TASK-M8-06]
+  title: "The shape sphere past [0,1]² as the whole sphere: no hemisphere mode, and the area statistics over the whole sphere (R-544) ⚑"
+  depends_on: [TASK-M8-05, TASK-M2-28]  # R-544: re-scoped; TASK-M8-06's toggle is gone
   needs: [REQ-CHART-002]
-  requirements: [REQ-CHART-057]
+  requirements: [REQ-CHART-057, REQ-CHART-083]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-45
@@ -2803,7 +2811,7 @@
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
   depends_on: [TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
   needs: []
-  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-348]
+  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-56
@@ -2827,7 +2835,7 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-CHART-084, REQ-GUI-350]  # REQ-GUI-350: gui review 5604048081 of PR #274, G3, applied per R-369
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341, REQ-CHART-084, REQ-GUI-350]  # REQ-GUI-350: gui review 5604048081 of PR #274, G3, applied per R-369
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59
@@ -2894,6 +2902,14 @@
   requirements: [REQ-COL-121, REQ-SCHED-102, REQ-GUI-339]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M8-67
+  milestone: M8
+  title: "The initial-condition constructor's shape sphere: every point of both halves reachable, the drag across the equator flipping the triangle, and the mirror twin shown as a faint marker with its note (R-544)"
+  depends_on: [TASK-M8-15, TASK-M2-43]
+  needs: []
+  requirements: [REQ-GUI-343, REQ-GUI-344]
+  reviewers: [code, qa, gui, physics]  # physics: the decode of the dragged n̂ and the twin (gui review 5603356729 of PR #273, G6)
+  pitfalls: [PIT-9]
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"
