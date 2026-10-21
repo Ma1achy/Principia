@@ -123,3 +123,11 @@ default-filter = """
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
 """
+
+# Decoder test 12's measurements on lavapipe (TASK-M2-24, physics review F3): `decode_cross_backend_continuous` prints
+# each domain's worst difference against f64 and against the native f32 decode, and the gpu-kernel job shows it on
+# success, so REQ-DEC-043's proposal record (`validation::decode_f32_eps`) can cite the backend's numbers. Applied per
+# R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous)"
+success-output = "immediate"
