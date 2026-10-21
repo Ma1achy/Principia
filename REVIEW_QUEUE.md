@@ -3402,3 +3402,67 @@ and the disagreement is queued. Nothing is ruled.*
   and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56), with the neighbours and the statistics read through
   them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
   Each carries `rq: RQ-508`.
+
+## RQ-523: REQ-CHART-082's run arms leave the M2 gate for M3, since TASK-M2-43 cannot reach a stepper, the wrapper or the outcome classifier *(deferral: a requirement's arms leave a gate, which only a ruling does; R-544, R-369; REQ-CHART-082, REQ-CHART-085; context: TASK-M2-43, TASK-M3-38)*
+
+*Found by TASK-M2-43's pre-flight; raised by code review 5605370280 of PR #276, F1, which the human has been asked.
+Nothing is ruled.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-CHART-082's verify as merged by PR #273 (main 9c8cb15e, :3185): "the run from Π·x,
+    Π applied to a decoded state, is the run from x mirrored, bitwise; … on a named fixture (the masses, the pairs and a
+    horizon stated in the test, which the test shows non-chaotic there by the pair's state separation staying below a
+    stated bound over the horizon) the outcome and t_end are equal and L_z and the frame's winding opposite across each
+    pixel pair; … controls: R-141's gauge left in (L_z and the winding equal, not opposite), a momentum rule that turns
+    p_x below the equator (outcome, t_end or winding broken)"; its milestone `M2`.
+  - `plan/tasks/M2/TASK-M2-43.md` § "Acceptance tests" as merged (main :73-:85): "`cargo test -p kernel
+    shape_sphere_mirror_test` — REQ-CHART-082's verify: … the run from `Π·x`, `Π` applied to a decoded state, is the
+    run from `x` mirrored, bitwise; … on a named fixture (masses, pairs and horizon stated in the test, shown
+    non-chaotic there by the pair's state separation staying below a stated bound) outcome and `t_end` are equal and
+    `L_z` and the frame's winding opposite across each pixel pair"; its Depends on: TASK-M2-08, TASK-M2-14,
+    TASK-M2-17.
+  - `decisions.md` § "R-544 — …", item 5: "The mirror becomes a test, not an identification. Where every coordinate
+    the chart holds fixed is mirror-equivariant (released from rest is), mirror-invariant fields are exactly symmetric
+    across the equator and signed fields exactly antisymmetric. Where one is not (a fixed `L_z ≠ 0`, say), the two
+    hemispheres are different systems and the test does not apply; the test says which case it is in."
+  - `plan/WORKFLOW.md` § "No deferral": "A requirement leaves a gate only by a ruling".
+- **The problem:** the run arms need real integrator runs: a stepper (TASK-M3-02), the wrapper (TASK-M3-04) and the
+  outcome classifier (TASK-M3-12), none of them on main and none reachable from TASK-M2-43's dependencies. As written,
+  TASK-M2-43 cannot pass REQ-CHART-082 at M2. Moving the arms to M3 takes them out of the M2 gate, a deferral that
+  R-369 does not cover (precedent: R-113, R-125 and R-273 were the human's rulings).
+- **Options seen:**
+  - (a) Move the run arms to M3: REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and TASK-M2-43),
+    with REQ-CHART-086 defining the frame's winding (R-72); REQ-CHART-082 keeps at M2 the classification, the "does not
+    apply" case, the shape and state pair checks and the bitwise `Π·x` check. PR #276 drafts this.
+  - (b) Move the whole of TASK-M2-43, and REQ-CHART-081, REQ-CHART-082 and REQ-ENC-034 with it, to M3, after
+    TASK-M3-04 and TASK-M3-12; TASK-M2-28, which depends on TASK-M2-43, would move or wait with it.
+  - (c) Keep the arms at M2: TASK-M2-43 builds a minimal stepper of its own (a fixed-step mirror-exact integrator and
+    a collision and horizon outcome, as `checks/r544_check.py`'s `run()` models), used only by the test.
+- **Applied meanwhile:** (a), as a draft that waits on this ruling: REQ-CHART-082 and REQ-CHART-085 each carry
+  `rq: RQ-523`, so neither gate passes silently either way. REQ-CHART-086 (the winding's definition) does not wait.
+- **Waits:** REQ-CHART-082 (TASK-M2-43) and REQ-CHART-085 (TASK-M3-38).
+
+## RQ-537: dd_integrator §5 test 8 asserts "`retrograde` matches the L_z sign", where the mirror leaves `θ̃`, and so `retrograde`, unchanged while it negates `L_z` *(conflict: the design doc's test against the mirror symmetry R-544 item 5 tests; R-544, R-113, R-389; REQ-INT-082, REQ-CHART-086; context: TASK-M3-11, TASK-M3-38)*
+
+*Found by code review 5605370280 of PR #276 (a pointer for physics), read against REQ-CHART-086. Nothing is ruled.*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "5. Unit tests", test 8 (:349): "on a circulating bounded orbit, `θ̃` is
+    continuous (no 2π jumps), `orbit_count` matches a hand-counted winding, `retrograde` matches the L_z sign".
+    REQ-INT-082's verify (TASK-M3-11's `theta_unwrap_real_orbit`): "retrograde matches the L_z sign".
+  - The same doc § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)" (:272): "`θ̃`: the
+    equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously"; `retrograde = sign(θ̃) < 0`.
+  - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's
+    premise)*": `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2 ρ̃·λ̃`, `w = 2(ρ̃ ∧ λ̃)`.
+  - `decisions.md` § "R-544 — …", item 5, and the full-state mirror (inverse_encode_contract Part 1): "Under the
+    correct full-state mirror, `L_z → −L_z`".
+- **The conflict:** the mirror `Π` (`y → −y` on every position and momentum) leaves `u` and `v` unchanged and negates
+  `w`, so the run from `Π·x` has the same `θ̃(t)` as the run from `x`, and the same `retrograde`, while its `L_z` is
+  opposite. Of a mirror pair of circulating bounded orbits, at most one can have `retrograde` matching the `L_z` sign,
+  so test 8 holds for a chosen orbit, never as a property. R-544 makes both twins chart pixels.
+- **Options seen:** none is chosen here. Possibly: test 8's `L_z` clause dropped or restated as a fixture-specific
+  check; `retrograde` read from a winding the mirror negates (such as REQ-CHART-086's frame winding); or a stated
+  hemisphere convention for the comparison.
+- **Applied meanwhile:** nothing; REQ-INT-082 carries `rq: RQ-537`. REQ-CHART-086's "θ̃ … which the mirror leaves
+  unchanged" stands as the reason the frame's winding is not `θ̃`.
+- **Waits:** REQ-INT-082's `L_z` clause (TASK-M3-11).

@@ -20633,10 +20633,12 @@ changes. The qa-file exceptions R-544 forces are named in TASK-M2-43 (`qa_TASK-M
 run arms (the run from `Π·x` the run from `x` mirrored, bitwise; on the named non-chaotic fixture, outcome and `t_end`
 equal and `L_z` and the frame's winding opposite across each pixel pair; and the controls that need a run) need the
 stepper, the wrapper and the outcome classifier (TASK-M3-02, TASK-M3-04, TASK-M3-12), which TASK-M2-43 cannot reach;
-they move to REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and TASK-M2-43), with REQ-CHART-086
-defining the frame's winding (R-72), which chart_reference §3.3 uses and the corpus never defines. This is not a
-deferral: the arms move to the task that can build them, and REQ-CHART-082 keeps in TASK-M2-43 the classification, the
-"does not apply" case, the shape and state pair checks and the bitwise `Π·x` decode checks. On the shape sphere chart
+they are drafted as REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and TASK-M2-43), with
+REQ-CHART-086 defining the frame's winding (R-72), which chart_reference §3.3 uses and the corpus never defines. Taking
+them from the M2 gate to M3 is a deferral, which only the human rules: **RQ-523** (code review 5605370280 of PR #276,
+F1), and both requirements hold on it (`rq: RQ-523`); the draft is applied meanwhile, not under R-369. *Was:* "This is
+not a deferral: the arms move to the task that can build them". REQ-CHART-082 keeps in TASK-M2-43 the classification,
+the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` decode checks. On the shape sphere chart
 the per-chart T2 round trip and the `encode-eps-phys` gate compare `D(E(x))` against `C(x)`, as T3 does, since a
 lower-hemisphere decode is off `C`'s section (inverse_encode_contract Part 1, T2; REQ-ENC-004, REQ-ENC-024); the gate's
 measurements, made under R-141's fold, are kept with R-544 beside them, not re-measured (as "Results measured under one

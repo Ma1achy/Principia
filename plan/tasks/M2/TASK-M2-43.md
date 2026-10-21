@@ -34,7 +34,9 @@ the four, and the tests that asserted the 2-to-1 cover:
   apply" and asserts nothing. The runs (the run from `Π·x` the run mirrored, bitwise; outcome, `t_end`, `L_z` and the
   frame's winding across pixel pairs) need the stepper, the wrapper and the outcome classifier (TASK-M3-02,
   TASK-M3-04, TASK-M3-12), which this task cannot reach. They are TASK-M3-38's (REQ-CHART-085), with the frame's
-  winding defined there (REQ-CHART-086, R-72). This is not a deferral: the arms move to the task that can build them.
+  winding defined there (REQ-CHART-086, R-72). Taking them from the M2 gate is a deferral that waits on the human's
+  ruling, RQ-523; this split is a draft meanwhile, and REQ-CHART-082 holds on it (`rq: RQ-523`). *Was:* "This is not a
+  deferral: the arms move to the task that can build them."
 - **T2 and the `encode-eps-phys` gate on the shape sphere.** A lower-hemisphere pixel now decodes off `C`'s section,
   so `D(E(x)) = C(x)`, `Π·x` to rounding, and the T2 residual against `x` is of order 1. On the shape sphere chart, T2
   and the gate's rows compare `D(E(x))` against `C(x)`, as T3 does (inverse_encode_contract Part 1's T2; REQ-ENC-004,
@@ -176,11 +178,14 @@ the four, and the tests that asserted the 2-to-1 cover:
   `mirror: bool`, and either `canonicalise` and a second public entry over it, or the shape sphere's call through it;
   never a copy of the steps. Don't change `canonicalise`'s signature (about 80 test call sites in 15 files), and leave
   `similarity`, `centre_of_mass`, `inertia` and `mirror_decision` untouched.
-- **The pre-flight (applied per R-369, 21 Oct 2026; R-544's dated line).** (A) REQ-CHART-082's run arms need real
+- **The pre-flight (applied per R-369 except (A)'s split, 21 Oct 2026; R-544's dated line).** (A) REQ-CHART-082's
+  run arms need real
   integrator runs, and main has no stepper (TASK-M3-02), wrapper (TASK-M3-04) or outcome classifier (TASK-M3-12):
   they move to REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and this task), with REQ-CHART-086
-  defining the frame's winding (R-72; chart_reference §3.3's "the signed ones (`L_z`, the winding)"). Not a deferral:
-  the arms move to the task that can build them. (B) T2 and the `encode-eps-phys` gate compare against `C(x)` on the
+  defining the frame's winding (R-72; chart_reference §3.3's "the signed ones (`L_z`, the winding)"), as a draft that
+  waits on RQ-523, the deferral being the human's to rule (code review 5605370280 of PR #276, F1). *Was:* "(applied
+  per R-369, 21 Oct 2026; R-544's dated line)" and "Not a deferral: the arms move to the task that can build them."
+  (B) T2 and the `encode-eps-phys` gate compare against `C(x)` on the
   shape sphere chart, a mechanical consequence of R-544 (inverse_encode_contract Part 1's T2 premise amended;
   REQ-ENC-004 and REQ-ENC-024 amended). (C) `shape_sphere.rs`'s shared-decoder check, `well_posedness.rs`'s inverted
   control and the stale docs at `chart/mod.rs:411` and `by_kind.rs:449-451` added to the sites; the qa exception

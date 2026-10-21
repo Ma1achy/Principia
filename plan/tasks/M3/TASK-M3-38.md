@@ -13,8 +13,10 @@ R-544 item 5 makes the mirror on the shape sphere chart a test, not an identific
 static half (REQ-CHART-082): the classification of the held coordinates as mirror-equivariant or not, the "does not
 apply" case, the pixel pairs' shape and state checks and the bitwise `Π·x` check. The arms that need real integrator
 runs could not be built there, since the stepper (TASK-M3-02), the wrapper (TASK-M3-04) and the outcome classifier
-(TASK-M3-12) are not on main; they are this task's (REQ-CHART-085). This is not a deferral: the arms move to the task
-that can build them.
+(TASK-M3-12) are not on main; they are drafted as this task's (REQ-CHART-085). Taking them from the M2 gate to M3 is
+a deferral that waits on the human's ruling, RQ-523 (code review 5605370280 of PR #276, F1); REQ-CHART-085 holds on it
+(`rq: RQ-523`), and this task's run arms wait on it. *Was:* "This is not a deferral: the arms move to the task that can
+build them."
 
 - **The exactly mirrored run.** Where REQ-CHART-082's classification reports mirror-equivariant, the run from `Π·x`,
   `Π` applied to a decoded state, is the run from `x` mirrored, bitwise (R-544 §4, "bitwise where the integration is
@@ -67,10 +69,13 @@ that can build them.
 ## Notes
 - **⚑ Physics review is required** (R-544 is in the physics group); it does not merge on the code reviewer's word
   alone.
-- **Applied per R-369 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).** REQ-CHART-082's run arms split
-  into REQ-CHART-085, this task's, since TASK-M2-43 (after TASK-M2-08, TASK-M2-14 and TASK-M2-17) cannot reach a
+- **A draft that waits on RQ-523 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).** REQ-CHART-082's run
+  arms split into REQ-CHART-085, this task's, since TASK-M2-43 (after TASK-M2-08, TASK-M2-14 and TASK-M2-17) cannot reach a
   stepper, a wrapper or an outcome classifier; REQ-CHART-086 (R-72) added for the winding, which chart_reference
-  §3.3's whole-sphere paragraph uses ("the signed ones (`L_z`, the winding)") with no definition.
+  §3.3's whole-sphere paragraph uses ("the signed ones (`L_z`, the winding)") with no definition; REQ-CHART-086 does
+  not wait. *Was:* "**Applied per R-369 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).**"
+- **RQ-537** (open): dd_integrator §5 test 8's "`retrograde` matches the L_z sign" against the mirror, which leaves
+  `θ̃` unchanged and negates `L_z`; the frame's winding defined here must not lean on test 8's reading.
 - The precision follows R-544's "The mirror test's precision" (physics review 5603309678 of PR #273, P2): bitwise only
   for the exactly mirrored state; across pixel pairs, a named non-chaotic fixture, since a rounding-level difference in
   the IC changes a chaotic fate (physics.md §7, R-84).
