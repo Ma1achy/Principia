@@ -18989,6 +18989,12 @@ edge clamp is the behaviour.
   tolerance, as REQ-COL-134 is, its control shown to exceed it; the snippet `cargo xtask build-kernel` emits to
   `crates/render/wgsl/` is exempt from REQ-COL-135's symbol check. TASK-M7-52 proposes that tolerance (R-71, R-297's
   form), using its measured value until the M7 gate, and does not wait on RQ-487.
+- **H16. The status margin band (PR #270's physics re-review, P1; applied per R-369, after R-296).** A status is a
+  threshold on a continuous value (REQ-COL-133), so under R-297's fast-math a state within the agreement tolerance of a
+  link margin can change status on the GPU. REQ-COL-134 and REQ-COL-135's fragment arm hold the statuses equal outside
+  that band and accept either inside it, the point still held to the tolerance, the band's count reported and the seeds
+  including states just inside and just outside it; TASK-M7-52's proposal bounds or names the band's width, recorded as a
+  fixed constant. The host arms stay bitwise, statuses included.
 
 *Checked against `main` (4a32decf), `rulings/print-graph` (PR #268, 1b7ca0ed), `task/TASK-M2-24` (PR #262, 8096650d),
 `task/TASK-M2-34` (PR #269, a0cf17c5), `task/TASK-M2-28` (495deb17) and the rulings the file assumes (the human's
