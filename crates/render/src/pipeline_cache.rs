@@ -39,6 +39,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::thread::JoinHandle;
 
 use ledger::gen::prelude;
 use wgpu::util::DeviceExt;
@@ -683,6 +684,8 @@ pub struct PipelineCache {
     shared: Arc<Shared>,
     jobs: Sender<Job>,
     outcomes: Receiver<Outcome>,
+    /// The compile worker, joined when the cache is dropped: `None` when it could not start.
+    worker: Option<JoinHandle<()>>,
     current: Option<Arc<CompiledStain>>,
     /// The current request's stain as it renders.
     rendered: Option<Stain>,
@@ -699,7 +702,7 @@ pub struct PipelineCache {
 
 impl PipelineCache {
     /// An empty cache on `device`, its compile worker started. The worker stops when the cache is dropped, once it has
-    /// finished the job it is on.
+    /// finished the job it is on, and the drop waits for it ([`Drop`]).
     pub fn new(device: &wgpu::Device) -> PipelineCache {
         let shared = Arc::new(Shared {
             device: device.clone(),
@@ -714,7 +717,7 @@ impl PipelineCache {
         let (tx, outcomes) = mpsc::channel::<Outcome>();
         let worker_shared = Arc::clone(&shared);
         // A worker that cannot start leaves `jobs` with no receiver: every request is refused, naming it.
-        let _ = std::thread::Builder::new()
+        let worker = std::thread::Builder::new()
             .name("render-compile".into())
             .spawn(move || {
                 for job in rx {
@@ -736,11 +739,13 @@ impl PipelineCache {
                         break;
                     }
                 }
-            });
+            })
+            .ok();
         PipelineCache {
             shared,
             jobs,
             outcomes,
+            worker,
             current: None,
             rendered: None,
             live_keys: Vec::new(),
@@ -937,6 +942,25 @@ impl PipelineCache {
     }
 }
 
+/// The cache's drop stops the compile worker and waits for it (TASK-M2-42, REQ-VAL-192). The worker holds a clone of
+/// the device and, through the shared state, every compiled pipeline. Left running, it released them on its own thread
+/// after the cache was gone, and where it was their last holder that was the device's and the instance's teardown:
+/// on lavapipe, the Vulkan loader's dlclose of each driver and of `libvulkan.so.1`, on the worker, while the main
+/// thread, every test passed, was in `exit` calling the exit handlers those libraries registered; one whose library
+/// had just been unmapped faulted (SIGSEGV). Closing both channels stops the worker at its next send, which finds no
+/// receiver, or, idle with no job queued, at its next receive, which finds no sender: it compiles at most one more
+/// job, and the drop returns once the worker has released what it held.
+impl Drop for PipelineCache {
+    fn drop(&mut self) {
+        drop(std::mem::replace(&mut self.jobs, mpsc::channel().0));
+        drop(std::mem::replace(&mut self.outcomes, mpsc::channel().1));
+        if let Some(worker) = self.worker.take() {
+            // A worker that panicked has already stopped; its panic was reported on its own thread.
+            let _ = worker.join();
+        }
+    }
+}
+
 /// `keys` as `stain`'s node keys: one per node, distinct.
 fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
     if keys.len() != stain.nodes().len() {
@@ -1111,6 +1135,52 @@ mod tests {
         );
         assert_eq!(cache.in_flight(), 0);
     }
+
+    /// The cache's drop waits for the worker (TASK-M2-42, REQ-VAL-192). With the worker held (`hold`) on a prepare's
+    /// job, a drop on another thread has not returned after 500 ms; once the worker is let go, the drop returns and the
+    /// worker has released the shared state, which holds the device and every compiled pipeline: only this test's
+    /// clone is left. With `job` false, the control, the worker is idle, so the drop returns at once, and the check
+    /// that it waits fails.
+    fn check_drop_waits(job: bool) {
+        let h = GpuHarness::new().expect("a GPU device");
+        let mut cache = PipelineCache::new(h.device());
+        let shared = Arc::clone(&cache.shared);
+        let held = lock(&shared.hold);
+        if job {
+            cache
+                .prepare(&grey(1), &[0, 1, 2, 3], Tier::FULL)
+                .unwrap_or_else(|e| panic!("{e}"));
+        }
+        let dropping = std::thread::spawn(move || drop(cache));
+        let start = std::time::Instant::now();
+        while !dropping.is_finished() && start.elapsed() < std::time::Duration::from_millis(500) {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let returned = dropping.is_finished();
+        drop(held);
+        dropping.join().expect("the drop's thread");
+        assert!(
+            !returned,
+            "the cache's drop returned while the worker was still on its job"
+        );
+        assert_eq!(
+            Arc::strong_count(&shared),
+            1,
+            "the worker still holds the shared state after the cache's drop"
+        );
+    }
+
+    #[test]
+    fn pipeline_teardown_drop_waits_for_the_worker() {
+        check_drop_waits(true);
+    }
+
+    negative_control!(
+        pipeline_teardown_drop_waits_for_the_worker,
+        "with no job on, the worker stops at once, and the drop returns without waiting",
+        expected = "the cache's drop returned while the worker was still on its job",
+        check_drop_waits(false)
+    );
 
     #[test]
     fn fragment_cache_superseded_requests_never_compile() {
