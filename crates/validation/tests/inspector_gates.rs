@@ -564,7 +564,7 @@ negative_control!(
 
 /// The held families: `n` of each; every collinear state's `z_β` at its clamp image with its bit set, and no
 /// equilateral one's; every equilateral `|w − 1|` and collinear `|w|` at rounding (below 10⁻¹²), reported, not judged
-/// (RQ-471).
+/// (RQ-475).
 fn check_held(n: u32, held: &Held) {
     let n = n as usize;
     assert!(
@@ -724,7 +724,7 @@ fn check_reports(tight: f64) {
         held.scatter.len() == 4
             && held.scatter[2..]
                 .iter()
-                .all(|l| l.starts_with("held (RQ-471")),
+                .all(|l| l.starts_with("held (RQ-475")),
         "the held lines: {:?}",
         held.scatter
     );

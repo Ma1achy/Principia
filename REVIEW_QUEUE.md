@@ -1297,7 +1297,7 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
   (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
   would change two lines of `landmarks` and the tests' expectation.
   REQ-VAL-022's "equilateral configurations at a shape-sphere pole" is the same statement: it carries `rq: [RQ-355,
-  RQ-471]` too, held by TASK-M2-27's PR, which reports the equal-mass pole only.
+  RQ-475]` too, held by TASK-M2-27's PR, which reports the equal-mass pole only.
 
 ## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
 
@@ -1508,7 +1508,7 @@ dividing by `N_d`. Nothing is chosen.*
 - **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
   the rest of TASK-M8-08 proceeds.
 
-## RQ-471: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
+## RQ-475: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
 
 *Found by TASK-M2-27 while building the `inspector-roundtrip` gate. Nothing is chosen.*
 
@@ -1546,5 +1546,5 @@ dividing by `N_d`. Nothing is chosen.*
 - **Applied meanwhile:** nothing is judged. `cargo xtask gate inspector-roundtrip` reports both families' `w` and the
   `z_β` clamp count beside its verdict, which judges the round trip and the canonical CoM only. The pole is the
   equal-mass one, as RQ-355 holds it for other masses.
-- **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-471]`, held, not closed, by
+- **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-475]`, held, not closed, by
   TASK-M2-27's PR (applied per R-369). The round trip, the CoM, REQ-VAL-021 and REQ-VAL-121's proposal do not wait.

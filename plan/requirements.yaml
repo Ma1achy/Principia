@@ -21817,7 +21817,7 @@
   milestone: M2
   rq:
   - RQ-355
-  - RQ-471
+  - RQ-475
   note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration)."
 - id: REQ-VAL-023
   area: VAL

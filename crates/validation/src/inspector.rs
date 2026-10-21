@@ -28,8 +28,8 @@
 //! defaults swapped (`crate::eps_phys::Mismatched`), and its `shift` moves `C`'s output by a known offset before the CoM
 //! is read, so the CoM check must fail it.
 //!
-//! **Held** (RQ-355, RQ-471). REQ-VAL-022's "equilateral → pole and collinear → `w = 0` exactly" is reported, not
-//! judged: what "exactly" means on floating-point states is RQ-471's, and the pole is the equilateral triangle's at
+//! **Held** (RQ-355, RQ-475). REQ-VAL-022's "equilateral → pole and collinear → `w = 0` exactly" is reported, not
+//! judged: what "exactly" means on floating-point states is RQ-475's, and the pole is the equilateral triangle's at
 //! equal masses only (RQ-355). The gate prints the measured `w` on both families.
 
 use serde::Deserialize;
@@ -400,7 +400,7 @@ pub struct RoundtripInput {
     pub encode: EncodeKind,
     /// An offset added to every coordinate of `C`'s output before its CoM is read: 0, or the CoM control's.
     pub shift: f64,
-    /// The draws of each held family, equilateral and collinear, reported only (RQ-471).
+    /// The draws of each held family, equilateral and collinear, reported only (RQ-475).
     pub shapes: u32,
 }
 
@@ -447,7 +447,7 @@ pub fn latents(input: &RoundtripInput) -> Vec<[f64; 8]> {
         .collect()
 }
 
-/// The held families (RQ-471), measured: `[equilateral, collinear]` in each count.
+/// The held families (RQ-475), measured: `[equilateral, collinear]` in each count.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Held {
     /// The equilateral states' `|w − 1|`.
@@ -554,7 +554,7 @@ impl InspectorRoundtripGate {
             let exact = |v: &[f64]| v.iter().filter(|&&x| x == 0.0).count();
             let n = input.shapes;
             scatter.push(format!(
-                "held (RQ-471, RQ-355), not judged: equal-mass equilateral, L⁺ and L⁻ through a random gauge: max \
+                "held (RQ-475, RQ-355), not judged: equal-mass equilateral, L⁺ and L⁻ through a random gauge: max \
                  |w − 1| {:.3e}, w = 1 exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
                 worst(&held.pole).0,
                 exact(&held.pole),
@@ -562,7 +562,7 @@ impl InspectorRoundtripGate {
                 held.beta_edge[0]
             ));
             scatter.push(format!(
-                "held (RQ-471), not judged: collinear on a random line through a random gauge: max |w| {:.3e}, w = 0 \
+                "held (RQ-475), not judged: collinear on a random line through a random gauge: max |w| {:.3e}, w = 0 \
                  exactly in {} of {n}; z_β's clamp bit set in {}, at its clamp image in {}",
                 worst(&held.equator).0,
                 exact(&held.equator),
