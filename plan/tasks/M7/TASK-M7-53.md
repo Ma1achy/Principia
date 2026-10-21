@@ -35,8 +35,14 @@ the hash and runs seam 5 end to end.
 - `cargo test -p engine schema_signature_scale` — REQ-GEN-017's cache test extended: one field's `scale` changed alone
   leaves the hash and the compatibility signature unchanged and the cached payload is served; a bit offset flipped still
   invalidates it; control: a variant hashing `scale` fails (REQ-GEN-043).
-- `cargo test -p render ledger_scale_restyle_zero_recompute` — seam 5 end to end: with the regenerated ledger the view
-  re-styles, the cache serves the same payload and the dispatch counter is unchanged (REQ-GEN-043, REQ-COL-032).
+- `cargo test -p render seam5_scale_edit_schema_zero_recompute` — seam 5 end to end: with the regenerated ledger the
+  schema version is read and unchanged, the view re-styles, the cache serves the same payload and the dispatch counter
+  is unchanged; control: a variant hashing `scale` changes the schema version, invalidates the cached payload and
+  fails (REQ-GEN-043, REQ-COL-032). A new test, distinct from `crates/render/tests/compaction_ramps.rs:1615`'s
+  `ledger_scale_restyle_zero_recompute`, which never consults the schema version and passes on main today (qa re-check
+  5606819712 of PR #274, Q11, applied per R-369; *was:* "`cargo test -p render ledger_scale_restyle_zero_recompute` —
+  seam 5 end to end: with the regenerated ledger the view re-styles, the cache serves the same payload and the dispatch
+  counter is unchanged").
 
 ## Notes
 - Applied per R-369 (R-545 C1): REQ-COL-032 stays TASK-M7-05's (merged), its hold lifted; its zero-recompute arm runs

@@ -65,6 +65,19 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
   departed field); and, if the packer's change reaches it, `crates/kernel/tests/qa_TASK-M0-10_r288.rs:223-289` (the
   reserved bits kept through `set_d_min`). TASK-M7-35 narrows the same two spans again for bits 10–14. The code reviewer
   confirms no other assertion is weakened.
+- qa-file exceptions further to the above (qa re-check 5606819712 of PR #274, Q10; each span checked against the tree),
+  forced by R-545 (RQ-310: bit 15 the departed bit):
+  - `crates/kernel/tests/qa_TASK-M0-10.rs:333-371` (`reserved_bits_qa_zero_with_every_field_at_max`; `:359` asserts
+    `PACKED_A_RESERVED == [(10, 6)]`), an `M` line under R-290, its commits all qa's.
+  - `crates/ledger/tests/qa_TASK-M0-09.rs:172-179` (`check_packed`: `packed_a`'s reserved spans exactly `[(10, 6)]`).
+    The file has implementer commits (382c9de2, 8952af9d, 7b3725ee beside qa's 2c567619), so R-290's qa-only rule does
+    not cover it: it is an exception applied per R-369, the ruling forcing the change.
+  - `crates/ledger/tests/qa_TASK-M1-08.rs:460-489` (`with_qa_cat`: a test field at bits 10–11 and the reserved span
+    narrowed to 12–15; once bit 15 is a field the span overlaps it and `check::check`, `crates/ledger/src/gen/mod.rs:272`,
+    panics), an `M` line under R-290, its commits all qa's.
+  - If the packer's change reaches it (a departed argument to `pack_packed_a`, or a setter that writes the bit):
+    `crates/kernel/tests/qa_TASK-M0-11.rs:239-337` (`qa_payload_sizes_descriptor_bits_10_to_15_never_written` and its
+    controls, one reading "a packer that spends bit 15 must fail"), an `M` line under R-290, its commits all qa's.
 - R-113 (RQ-94): REQ-INT-001's dd test 8 on a real orbit is split off as REQ-INT-082 and closed here; the synthetic-path half stays in TASK-M1-11.
 - δ_dep must be relative or gap-set (pitfalls §3, 'A threshold on a quantity spanning decades must be relative'). The value is recorded with its measurement; R-37 says the value is set by measurement.
 - R-397 (RQ-226), applied per R-369: TASK-M3-11 owns the storage of θ̃'s pole hold as well as θ̃ in the march, since it already edits the ledger with a schema-version change (REQ-VAL-055, REQ-PAY-059); no separate ledger task. The member keeps its name `_reserved` (R-343 and R-351 name its WGSL home `closure_step_reserved`), has no field entry, and gets no read-side accessor or catalogue view. The bring-up pattern keeps `_reserved = 0` (colour_composition Appendix A).

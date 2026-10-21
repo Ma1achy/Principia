@@ -67,6 +67,19 @@ parameters and the latch's quantisation are proposed with their evidence for the
   10–14 after TASK-M3-11, is spent) and `crates/kernel/tests/qa_TASK-M0-10.rs:128-150` (the packer's descriptor bits);
   and `crates/kernel/tests/qa_TASK-M0-10_r288.rs:223-289` if `set_d_min`'s kept bits change. The code reviewer confirms
   no other assertion is weakened.
+- qa-file exceptions further to the above (qa re-check 5606819712 of PR #274, Q10; each span checked against the tree),
+  forced by R-545 (RQ-310: `I_max` takes bits 10–14):
+  - `crates/kernel/tests/qa_TASK-M0-10.rs:333-371` (`reserved_bits_qa_zero_with_every_field_at_max`; `:359` asserts
+    `PACKED_A_RESERVED`, by then `[(10, 5)]` after TASK-M3-11), an `M` line under R-290, its commits all qa's.
+  - `crates/ledger/tests/qa_TASK-M0-09.rs:172-179` (`check_packed`: `packed_a`'s reserved spans).
+    The file has implementer commits (382c9de2, 8952af9d, 7b3725ee beside qa's 2c567619), so R-290's qa-only rule does
+    not cover it: it is an exception applied per R-369, the ruling forcing the change.
+  - `crates/ledger/tests/qa_TASK-M1-08.rs:460-489` (`with_qa_cat`: a test field at bits 10–11 and the reserved span
+    narrowed to 12–15; once bits 10–14 are `I_max` the field overlaps it and `check::check`, `crates/ledger/src/gen/mod.rs:272`,
+    panics), an `M` line under R-290, its commits all qa's.
+  - If the packer's change reaches it (an `I_max` argument to `pack_packed_a`, or a setter that writes bits 10–14):
+    `crates/kernel/tests/qa_TASK-M0-11.rs:239-337` (`qa_payload_sizes_descriptor_bits_10_to_15_never_written` and its
+    controls, one reading "a packer that spends bit 15 must fail"), an `M` line under R-290, its commits all qa's.
 - R-548 (21 Oct 2026) rules the order, as the drill-down's §3.2 now gives it: transient before B-stable, B-stable
   requiring E < 0 (RQ-318, option (c)); B-stable before excursion (RQ-324, option (b)); H, HP, P and the two-stage H
   only at E ≥ 0 (RQ-325, option (b)). This is `classify`'s order with three changes, so prin-rs PR #32's measurements
