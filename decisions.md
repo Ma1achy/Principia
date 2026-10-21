@@ -12954,9 +12954,13 @@ chart's in-square failure on a linear axis is not a system, blank and unwarned; 
 *Amended in part by R-511 (20 Oct 2026; D4's `decode_failed` sample the chart does not classify draws blank, not
 `#141418`; `sim_failed` keeps `#141418`; RQ-379 closed).*
 *Extended by R-505.*
+*Amended in part by R-554 (21 Oct 2026; clause 4: the shape sphere's exponential-map pixels with `r > π` inside
+`[0,1]²`, and those on `r = π` if REQ-CHART-078 makes them the domain's end, are by design, blank and unwarned;
+RQ-470 closed).*
 *Still in force: all of it; R-470 rules D9's two toggles and reads D5 as a baked variant; R-511 draws D4's
 unclassified `decode_failed` blank, `sim_failed` and a system's non-finite values keeping `#141418`; R-506 limits
-clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505).*
+clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505); R-554 excepts the exponential
+map's pixels past `r = π` from clause 4's warning.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (a cell and the fallback's sentences reworded, two paragraphs added),
 `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)" (a
@@ -13918,8 +13922,11 @@ in units of the axis's full range at zoom 1, the hidden coordinate in its slider
 decoder's basis edit; J3's meanwhile no longer applies).*
 *Amended in part by R-513 (20 Oct 2026; J9, RQ-403 closed: a new tilt `R′` of a saved curved chart into its
 own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`).*
+*Amended in part by R-554 (21 Oct 2026; J1 and J2: the shape sphere's tilt targets gain the physical `p_λ`
+components, tilted by their physical value; RQ-474 closed).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
-composition runs into the saved target.*
+composition runs into the saved target; R-554 adds the physical `p_λ` targets, J2's latent-control rule holding for
+every other target.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -16292,6 +16299,9 @@ R-505 is in the "design" group of `plan/rule_groups.yaml`, with R-467.
 Changes REQ-COL-110 (statement, verify, rulings, note).
 
 ## R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*
+*Amended in part by R-554 (21 Oct 2026; W1: the exception for the energy axes' linear option also covers the shape
+sphere's exponential-map pixels past `r = π`; RQ-470 closed).*
+*Still in force: all of it; R-554 extends W1's exception to the exponential map's pixels past `r = π`.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (RQ-372's sentence reworded, with its earlier words kept), `docs/design/principia_chart_reference.md`
 § "2.1 Feasibility, and the warp that makes every pixel valid" (a paragraph added, "Every physical-quantity axis") and §
@@ -17697,9 +17707,12 @@ R-536 is in the "design" group of `plan/rule_groups.yaml`, with R-486.
 Overlays › Chart toggle on by default; EX5's comments and the console's pick apply once the human defines them).*
 *Amended in part by R-553 (21 Oct 2026; EX5's readout: the label `decode_failed` and its detail only while a debug view
 is the figure, as U7 applied; RQ-417 closed).*
+*Amended in part by R-554 (21 Oct 2026; EX7(b) on a tilted view: the pole maps only where `N_a = 0` and `N_b = 0`,
+decided on the stored angles; the tilted equator fold not applied, the human's shape sphere ruling governing it;
+RQ-472 closed).*
 *Still in force: all of it; R-552 confirms each option (a) applied meanwhile, builds the outline U14 left unbuilt, and
 leaves EX5's comments and the console's pick for the human to define; R-553 keeps EX5's label and detail to a debug
-view.*
+view; R-554 narrows EX7(b)'s pole maps on a tilted view.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -18051,9 +18064,14 @@ REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 view is the figure, the count line "not a system: N samples" in a presentation view; TM9's guard (b): `sim_failed`,
 not incomplete; TF3 the default length's; T18's fade arm only where an off-plane distance is defined; RQ-412 to
 RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429 closed, each as applied meanwhile).*
+*Amended in part by R-554 (21 Oct 2026; F6's T16 and T16b cells read "within the calibrated threshold (REQ-GUI-283)"
+in place of "within 3× the median", the quoted words unchanged; T15's second arm runs on the physical `p_λ` tilt
+target; RQ-473 and RQ-474 closed).*
 *Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
 defaults stand. R-553 rules the queued questions as applied meanwhile: TM8's readout labels in a debug view only,
-TM9's guard (b) `sim_failed`, TF3 the default length's, T18's fade arm only where a distance is defined.*
+TM9's guard (b) `sim_failed`, TF3 the default length's, T18's fade arm only where a distance is defined. R-554 reads
+F6's T16 and T16b cells "within the calibrated threshold (REQ-GUI-283)" and runs T15's second arm on the physical
+`p_λ` target.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -21313,3 +21331,138 @@ R-553 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 Changes REQ-GUI-276 and REQ-GUI-280 (statement or verify: the count line; rulings, source, note), REQ-GUI-272 to
 REQ-GUI-275, REQ-GUI-282 and REQ-INT-096 (rulings, source, note), REQ-GUI-269, REQ-GUI-277, REQ-GUI-278 and
 REQ-GUI-281 (notes).
+
+## R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (the exponential
+map's exception) and § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (undefined shares),
+`docs/design/principia_chart_reference.md` § "3.3 The chart map" (the radius paragraph, a sentence; the rank-losing
+corner's sentence, with its earlier words kept) and § "5.4 Past the unit square — each axis's extension type (R-407)"
+(the in-square sentence, the exception), `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)"
+(the corner after the Gram factor; the physical tilt targets, a paragraph) and § "Past the unit square — each axis's
+extension type (R-407)" (the tilted view's maps, with its earlier words kept), the heading blocks of R-467, R-473,
+R-506, R-537 and R-538 (a forward line each, their "Still in force" lines), REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101,
+REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (reqio: statement or verify, rulings, source, `rq` removed, note),
+REQ-CHART-058, REQ-GUI-106, REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (reqio), REQ-CHART-081 (reqio, new, a
+definition), TASK-M8-58 (closes REQ-CHART-081; notes), TASK-M2-36 and TASK-M8-56 (notes),
+`docs/archive/review_queue/M0.md` (RQ-470 to RQ-474, moved with their rulings) and `plan/rule_groups.yaml`; built by
+TASK-M2-36, TASK-M2-35, TASK-M8-46, TASK-M8-56 and TASK-M8-58*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+123–127), which R-545 quotes in its opening:
+
+> - RQ-470 (Exponential map past r = π: by design, no warning): (a). "An exponential-map pixel with `r > π` inside `[0,1]²`, and one exactly on `r = π` if REQ-CHART-078 makes it the domain's end, is the domain's end by design. It draws blank and logs no warning, the same exception R-506 W1 makes for the energy axes' linear option." §G12, REQ-GUI-227 and REQ-CHART-058's sweep name the exception.
+> - RQ-471 (Lean-each-axis degenerate corner: ray-degenerate, legend undefined): (a). "At `|τ₁| = |τ₂| = 90°` with one target the chart reports `ray-degenerate`. No fold is applied (there is no normal), every area weight is 0, and the legend shows each share as undefined ('—'), never 0%."
+> - RQ-472 (Tilted shape sphere: EX7(b) folds only where §3.3 allows): (a). "On a tilted view the equator fold is kept iff `N_b = 0`, and the pole maps iff `N_a = 0` and `N_b = 0`, each decided exactly on the stored angles as §3.3 decides. Otherwise the view is affine along that axis and draws no image (TF2.2). §3.3's pixel fold governs the statistics (EX7(g))."
+> - RQ-473 (T16/T16b jump threshold becomes a calibrated value): (a). "T16 and T16b hold the screen step within REQ-GUI-283's calibrated threshold, set inside the measured gap between genuine motion (≤ ~97× median, TF2.3) and the artefacts (the `2π·cos τ` wrap jump and the ~2000× flip). Their controls are unchanged and must still fail." Reword the "within 3× the median" cells in F6's table to "within the calibrated threshold (REQ-GUI-283)".
+> - RQ-474 (T15's physical-momentum arm needs a target): (a). "The shape sphere offers the physical `p_λ` components as tilt targets, defined by TASK-M8-58 (R-72) as demo tab F builds them, and T15's second arm runs on that target."
+
+These five entries touch the shape sphere chart, and RQ-470 to RQ-472 its hemisphere and mirror. The human's shape
+sphere ruling of the same day, ported on its own branch and not yet merged here, makes the shape sphere chart the whole
+sphere, with no fold, toggle or hemisphere mode, and changes no other chart. The orchestrator's instruction for this
+port, from the human: these entries are recorded and applied verbatim, except that a clause which would put a fold or
+a hemisphere back onto the shape sphere chart is left unapplied, what is not hemisphere-specific applied, the shape
+sphere ruling governing that clause; an entry is queued only for a real clash. The human's reply on the overlap: "Where
+the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there already chose
+the full sphere with signed n̂, so they should agree." One real clash is RQ-472's equator fold on a tilted view
+against the shape sphere ruling's "no folding of any kind on the shape sphere chart"; that ruling's port files it as
+its own entry, so it is not queued again here.
+
+On RQ-470 the entry asked whether the exponential map's pixels past `r = π` inside `[0,1]²` (R-503's domain's end) are
+by design, blank with no warning, as an energy-type axis's linear option is (a); whether the chart keeps its square
+inside its cap, `s√2 ≤ π` (b); or whether R-467's decoder-bug warning stands for them (c). *What it decides:*
+- **Option (a).** An exponential-map pixel with `r > π` inside `[0,1]²`, and one exactly on `r = π` if REQ-CHART-078
+  makes it the domain's end, **is the domain's end by design: it draws blank and logs no warning**, the same exception
+  R-506 W1 makes for the energy axes' linear option.
+- **§G12, REQ-GUI-227 and REQ-CHART-058's sweep name the exception.** R-503's "Flagged, not ruled" is settled: R-503
+  applies as the human wrote it, and R-467's clause 4 no longer reaches those pixels.
+- Not hemisphere-specific: R-503's cap and its `r > π` arm do not turn on the fold, and stand under the shape sphere
+  ruling too.
+
+On RQ-471 the entry asked what Lean each axis shows with one target at `|τ₁| = |τ₂| = 90°`, where the window maps onto
+one line of systems: the chart reports ray-degenerate, its statistics weighted 0 (a); the edit path refuses the corner
+(b); or Lean each axis's range is open (c). *What it decides:*
+- **Option (a).** At `|τ₁| = |τ₂| = 90°` with one target **the chart reports `ray-degenerate`. No fold is applied
+  (there is no normal), every area weight is 0, and the legend shows each share as undefined ("—"), never 0%.**
+- R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines stand as they reach and handle the corner.
+- Not hemisphere-specific: it applies no fold, which agrees with the shape sphere ruling; it is applied whole.
+
+On RQ-472 the entry asked how R-537 EX7(b)'s pole maps and equator fold meet a tilted view: kept only where §3.3's
+exact conditions hold, `N_b = 0` for the equator fold and `N_a = 0` and `N_b = 0` for the pole maps, the view otherwise
+affine along that axis, §3.3's pixel fold governing the statistics (a); EX7(b)'s maps on every view (b); or RQ-430
+widened (c). *What it decides, as applied here:*
+- **The pole maps, applied: on a tilted view they are kept iff `N_a = 0` and `N_b = 0`, decided exactly on the stored
+  angles as §3.3 decides; otherwise the view is affine along that axis and draws no image (TF2.2).** The pole maps
+  are R-14's `φ` continuing over the pole on the whole sphere, not the hemisphere's; the shape sphere ruling keeps
+  θ's period and the pole maps, so this clause is applied.
+- **The equator fold, not applied.** "On a tilted view the equator fold is kept iff `N_b = 0`" would put a fold back
+  onto the shape sphere chart, where the shape sphere ruling has no fold of any kind; it is left unapplied, the shape
+  sphere ruling governing it, and that ruling's port files the clash. Meanwhile nothing builds an equator fold on a
+  tilted view (as before this ruling).
+- **"§3.3's pixel fold governs the statistics (EX7(g))", not applied.** §3.3's pixel fold on the shape sphere is the
+  mirror fold (R-141's 2-to-1 cover kept under a tilt where `N_b = 0`), hemisphere-specific in the same way; the shape
+  sphere ruling governs it. EX7(g)'s rule, each system counted once at its canonical address, stands for every map
+  that is applied.
+
+On RQ-473 the entry asked whether T16 and T16b's "within 3× the median" becomes a threshold set from the measured gap,
+an R-71 calibration value (a), a comparison with the run read in the untilted frame (b), or stays 3× on a fixture
+with no close approach (c). *What it decides:*
+- **Option (a).** **T16 and T16b hold the screen step within REQ-GUI-283's calibrated threshold**, set inside the
+  measured gap between genuine motion (≤ ~97× median, TF2.3) and the artefacts (the `2π·cos τ` wrap jump and the
+  ~2000× flip). **Their controls are unchanged and must still fail.** This is what was applied meanwhile.
+- **F6's table is reworded:** its "within 3× the median" cells read "within the calibrated threshold (REQ-GUI-283)".
+
+On RQ-474 the entry asked whether T15's second arm gets a physical-momentum tilt target, its definition a requirement
+(R-72) (a); runs on an untilted mixed-axis chart (b); or is dropped (c). *What it decides:*
+- **Option (a).** **The shape sphere offers the physical `p_λ` components as tilt targets, defined by TASK-M8-58
+  (R-72) as demo tab F builds them, and T15's second arm runs on that target.** R-473 J1 and J2's list of the shape
+  sphere's tilt targets, its latent controls, gains them.
+- Not hemisphere-specific: a tilt target is a hidden coordinate of the whole sphere.
+
+*Where the words leave a choice, decided per R-369 (tilt maths and the trace tests under physics review; the legend and
+console under gui review):*
+- **L1. RQ-470's warning.** REQ-GUI-227's console warning, §G12's rule and REQ-CHART-058's sweep exclude the
+  exponential map's pixels with `r > π`, and those on `r = π` if TASK-M2-28's REQ-CHART-078 makes them the domain's
+  end; they are counted apart as the domain's end (R-503's count and total), so the sweep's 0-forbidden gate covers the
+  cap. A failure of any other kind inside the cap still warns. REQ-GUI-227's verify gains the arm: the exponential map
+  at `s√2 > π` logs no warning, with the control that warning for an `r > π` pixel fails.
+- **L2. RQ-471's legend.** The chart's statistics report each share as undefined (0 of a total of 0) rather than 0,
+  and the legend draws "—" for it (REQ-GUI-106; render GUI spec §G6). The fold test of REQ-CHART-062 gains the corner's
+  arm: ray-degenerate, no fold, area weights 0, the shares undefined; TASK-M2-36 builds and tests it, the corner no
+  longer waiting.
+- **L3. RQ-472's pole maps on the stored angles.** `N` is §3.3's, `∝ (R·e_a) × (R·e_b)` from the active map's `R`; the
+  pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles from each map's closed form, as
+  §3.3 decides `N_b`: under Tip as sheet `N_a = −τ₁ sin m/m` and `N_b = −τ₂ sin m/m`, so both vanish on a tilted view
+  only at `m == 180` (the plane mirrored, `d = 0` at every pixel); under Lean each axis
+  `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`, so on a tilted view they vanish together only at the corner
+  `|τ₁| = |τ₂| = 90°`, where there is no normal and RQ-471 applies no fold, so no pole map either; with two targets,
+  per hidden offset, `d_X = sin τ₁·u` and `d_Y = sin τ₂·v`, so iff `τ₁, τ₂ ∈ {0, ±180}`. Flagged: at the corner the
+  pole maps are read as folds under RQ-471's "no fold is applied".
+- **L4. F6's cells.** F6's table is the human's quoted text in R-538 (and the delivered bundle in
+  `docs/incoming/2026-10-20_trace_followup/`, a record); the quote is not edited. R-538's heading block carries the
+  rewording as a forward line, as R-14's quoted words stayed unchanged with a forward note (RQ-355's ruling), and
+  REQ-GUI-278's and REQ-GUI-279's verifies already read REQ-GUI-283's threshold.
+- **L5. RQ-474's targets.** "The physical `p_λ` components" are `p_λ,x` and `p_λ,y`, the decoded state's
+  mass-weighted Jacobi momentum of the outer pair in the shape sphere's own frame (`ρ` along `+x`, unmirrored, TF2.3);
+  as demo tab F builds them, the tilt adds `d` to that physical component at the slice centre, not to its latent
+  control, so it never saturates. That is the one target kind for which R-473 J2's "every hidden coordinate is set and
+  tilted through its latent control" does not hold, and REQ-CHART-062's control "a d added to a physical value" stays
+  a control for the latent targets. The definition, how the decode holds the other components and the masses and what
+  the readout names, is REQ-CHART-081, written into `principia_chart_decoder_contract.md` § "Tilt (basis edit)" by
+  TASK-M8-58 and checked by physics (R-72), before which the target is not offered.
+- **L6. The entries close.** RQ-470 to RQ-474 move to the archive. REQ-GUI-227 (`rq: RQ-470`), REQ-CHART-062
+  (`rq: RQ-471`), REQ-SCHED-101 (`rq: RQ-472`), REQ-GUI-278 (`rq: RQ-472`, `RQ-473`), REQ-GUI-279 (`rq: RQ-473`) and
+  REQ-GUI-277 (`rq: RQ-474`) lose their `rq`. TASK-M2-36's corner, TASK-M8-56's tilted pole maps and TASK-M8-58's
+  physical-momentum arm no longer wait; the tilted equator fold is not built (the shape sphere ruling).
+
+*What it amends:* **R-467** (clause 4: the exponential map's `r > π` pixels inside `[0,1]²` are by design and warn
+nothing), **R-506** (W1: its exception for the energy axes' linear option now also covers those pixels), **R-473** (J1
+and J2: the shape sphere's tilt targets gain the physical `p_λ` components, tilted by their physical value),
+**R-537** (EX7(b): on a tilted view the pole maps only where `N_a = 0` and `N_b = 0`) and **R-538** (TF6's T16 and
+T16b: within REQ-GUI-283's calibrated threshold, not 3×; T15's second arm on the new target). Read with it: R-503,
+whose flag it settles; R-474 R8 and K15 and R-451 B11, which stand. It closes **RQ-470 to RQ-474**.
+
+R-554 is in the "physics" group of `plan/rule_groups.yaml`, with R-473 and R-503.
+
+Changes REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (statement or verify,
+rulings, source, `rq` removed, note), REQ-CHART-058 and REQ-GUI-106 (statement, verify, rulings, source, note),
+REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (notes); adds REQ-CHART-081 (a definition, M8).

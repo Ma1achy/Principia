@@ -1045,7 +1045,8 @@ trajectory on (`principia_listen.md` §10).
 Walk back from OUT; sample each colour and brightness node over its **declared input domain** (R-53: the node interface
 declares it, inheriting the manifest's per-field domain by default); push the samples through the real combiner. **Each
 dimension gets its own key:**
-- categorical: swatches, with their shares of the view;
+- categorical: swatches, with their shares of the view (a share is undefined, drawn "—", never 0%, where every area
+  weight is 0, as at Lean each axis's one-target corner `|τ₁| = |τ₂| = 90°`, `ray-degenerate`; R-554, ruling RQ-471);
 - then a separate bar for what brightness (or any second channel) encodes;
 - number ramps: ticks placed through the curve (a log curve gets log-spaced ticks);
 - direction fields: a sphere key (the node's own sphere colouring, sampled);
@@ -1332,7 +1333,9 @@ log none (REQ-CHART-058's sweep). A Chart-builder chart's in-square failure warn
 axes are all warped, valid by construction there, and not when any is linear (R-506, ruling RQ-372). *Was:* "Whether
 a Chart-builder chart's in-square failure warns is RQ-372." An energy-type
 axis under its linear option (R-471, E2) has infeasible pixels inside the square by design: they draw blank and warn
-nothing.
+nothing. So do the shape sphere's exponential-map pixels with `r > π` inside the square, and those exactly on `r = π`
+if REQ-CHART-078 makes them the domain's end: R-503's domain's end by design, blank, logging no warning, the same
+exception R-506 W1 makes for the energy axes' linear option (R-554, ruling RQ-470).
 
 ## G13. Where the artboards are overridden
 

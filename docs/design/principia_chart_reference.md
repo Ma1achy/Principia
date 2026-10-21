@@ -469,7 +469,8 @@ with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — us
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches
 where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
-count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
+count and the total (§5.4). Inside `[0,1]²` such a pixel is the domain's end by design, as is one exactly on `r = π` if
+REQ-CHART-078 makes it so: it draws blank and logs no decoder-bug warning (R-554, ruling RQ-470). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
 exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
 R-72), and the fixtures avoid that circle.
 
@@ -540,8 +541,9 @@ A single `τ₁` (R-457: `τ₁` tilts the horizontal axis) gives `d = sin τ₁
 spherical map and, on the exponential map, only on a frame aligned so that the mirror is `(u, v) ↔ (u, 1 − v)`; there
 n-to-1 with n = 2, or the per-pixel fold, is kept over the tilted view's pixels. On the exponential map the conditions
 above hold on that aligned frame. A view whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at
-`|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) is RQ-471's: TASK-M2-36 neither builds nor tests that corner until it
-is ruled. *Was (physics review 5593455102, P5 and P6, and code review 5593479346, 3):* "whose normal is `N = R·e₃`
+`|τ₁| = |τ₂| = 90°`, both axes wholly in `e_X`) reports `ray-degenerate` (R-554, ruling RQ-471 (a)): no fold is applied, there being no normal, every area weight is 0
+(the Gram factor), and the legend shows each share as undefined ("—"), never 0%; TASK-M2-36 builds and tests it.
+*Was:* "is RQ-471's: TASK-M2-36 neither builds nor tests that corner until it is ruled." *Was (physics review 5593455102, P5 and P6, and code review 5593479346, 3):* "whose normal is `N = R·e₃`
 (`e₃` the hidden target)"; "`N_b` is computed from the active tilt map's `R` …, not keyed on an angle"; "A single `τ₁`
 (either map, …) gives `d = sin τ₁·u`, the same at a pixel and its mirror, so n-to-1 with n = 2 is kept over the tilted
 view's pixels. On the exponential map the same conditions hold on a frame aligned so that the mirror is
@@ -999,7 +1001,8 @@ canvas background, with no hatch, key or share; only the debug views hatch it, V
 (chart)" key (`principia_chart_decoder_contract.md` Part 3, "How a pixel that is not a system is drawn"). Inside
 `[0,1]²` every chart of this reference is valid by construction (§2.1's warp, §4.5's simplex map, the decoder accepting
 any `z`): a hatched pixel there is a decoder bug, warned in the console, and REQ-CHART-058's sweep checks every chart for
-none. Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
+none, the exponential map's pixels past `r = π` (§3.3) excepted: R-503's domain's end by design, blank and unwarned
+(R-554, ruling RQ-470). Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
 rotated: planes, the square only the current window onto them), which never produce a forbidden pixel; the types and
 the fallback matter for the charts whose square is their whole domain (the warp, the mass simplex, the Burrau family,
 the shape sphere's spherical map, whose periodic and pole-crossing types redraw its own systems) and for a custom
