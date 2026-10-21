@@ -3205,6 +3205,42 @@
   - R-544
   milestone: M8
   note: "R-544 item 7, amending R-408 B3, B4 and B7 for the shape sphere; check 6 of checks/r544_check.py is the port's model. Closed by TASK-M8-44. Physics review 5603309678 of PR #273, P2 (applied per R-369): mirror-invariant classes only, on a named non-chaotic fixture. *Was:* \"a class's count over the whole sphere is twice its count over the upper half\". Physics review 5603529679 of PR #273, P7 (applied per R-369). *Was:* \"so those fractions are either hemisphere's to the decode's rounding\"."
+- id: REQ-CHART-087
+  area: CHART
+  statement: "On a latent or flat chart every pixel must be a system at any pan or zoom, and the far field must go flat by the decoder's saturation alone (R-570 items 3 and 4): at |z| = 10⁴ the states decoded at adjacent pixels must agree to within REQ-CHART-088's saturation tolerance, near the origin they must differ by more than it, and nothing may clamp, rescale, wrap or fade the chart coordinates or the decoded state to hide the flat field; at the decoder's default links no pixel there may be tagged DEGENERATE or classified not a system (RQ-536 for the other links)."
+  source:
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/design/principia_deep_zoom.md
+    section: 4. Sliding depth bound
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel far_field_saturates (R-570): on the latent chart at the decoder's default links, a view at the home zoom centred at |z| = 10⁴ along each latent axis and along a seeded random unit direction: the states (masses, positions, momenta) decoded at adjacent pixels agree within REQ-CHART-088's tolerance, each validates (layers 2 and 3) and none is tagged DEGENERATE; the chart's (s, t) and z reach the decoder unchanged; control: near the origin, at the home view, adjacent pixels differ by more than the tolerance, so the test sees structure where there is some; review (physics)"
+  rulings:
+  - R-407
+  - R-467
+  - R-570
+  milestone: M8
+  note: "R-570 items 3 and 4, its test far_field_saturates. Closed by TASK-M8-57. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-536: under the edge-reaching simplex link, or softmax_tanh with μ_max above about 11.5, the far field reaches the M01_TINY fence; that arm waits."
+- id: REQ-CHART-088
+  area: CHART
+  kind: calibration
+  statement: "The saturation tolerance of R-570's far_field_saturates (\"the decoded states of adjacent pixels agree to within the saturation tolerance\"), the largest difference allowed between the states decoded at adjacent pixels at |z| = 10⁴, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance with the measured adjacent-pixel differences of each state component at |z| = 10⁴ and near the origin, at f32 and f64, on REQ-CHART-087's views; physics reviewer approves; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-570
+  milestone: M8
+  note: "R-570's test names the tolerance and the corpus states none (R-71). Closed by TASK-M8-57, with REQ-CHART-087."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -9956,6 +9992,24 @@
   rq:
   - RQ-482
   note: "SM12 Firewall; RQ-482 (a). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The scheduler's decisions must be identical with the state map on and off.\""
+- id: REQ-SCHED-104
+  area: SCHED
+  statement: "On a latent or flat chart a frame's cost must be set by the screen, not by the view's extent (R-570 item 2): at any zoom-out the quads a frame computes must number no more than the baseline cover of the viewport, that cover must count the same quads at 10⁶ × the home view as at home zoom, and zoom-out must never be refused or capped to bound the cost, the frame budget and the baseline cover being the only limits."
+  source:
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 4 — Baseline-first: an absolute tier, not a priority weight"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The operation table
+  verify:
+    method: unit test
+    detail: "cargo test -p engine zoom_out_cost_bounded (R-570): on the latent chart, a frame at 10⁶ × the home view computes no more quads than the baseline cover of the viewport, counted by the scheduler's per-frame counter of computed quads; control: at home zoom the same count, so the cost does not grow with the view's extent; review (perf)"
+  rulings:
+  - R-537
+  - R-570
+  milestone: M8
+  note: "R-570 item 2, its test zoom_out_cost_bounded. Closed by TASK-M8-56; the perf reviewer reviews the cost. Waits on RQ-535: R-537 EX7(a)'s root lattice has no quad coarser than a level-0 root, so on the corpus as written the cover of a far zoomed-out viewport grows with its extent."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -19965,6 +20019,8 @@
     section: The operation table
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
   verify:
     method: unit test
     detail: "cargo test -p gui extension_navigation (R-537 T1, T12): with the controls shown, a scripted drag pans the shape sphere's view across θ = 2π and over a pole and never stops, the view continuous (each frame's centre within one drag step of the last, the field drawn across the seam); on the mass simplex a drag of the centre past its corner stops at the last valid value, the view showing blank beyond, and undo holds the clamped value; F3 Extend and back leaves the view bit for bit; controls: a scoping of the extension to F3, or a clamp of the centre to [0,1]², stops the drag at the seam and fails T1; a stop judged on the unfolded centre stops at the pole and fails; no clamp lets the simplex's centre into not-a-system and fails T12"
@@ -19972,8 +20028,9 @@
   - R-468
   - R-469
   - R-537
+  - R-570
   milestone: M8
-  note: "R-537 EX1, EX3 (U3, U4). Closed by TASK-M8-55. Fit's square is RQ-416's (a), R-468 E2's reading, applied meanwhile; a ruling for (b) or (c) changes this requirement and REQ-GUI-230. RQ-409 (a): no zoom-out limit beyond the frame budget and the baseline cover."
+  note: "R-537 EX1, EX3 (U3, U4). Closed by TASK-M8-55. Fit's square is RQ-416's (a), R-468 E2's reading, applied meanwhile; a ruling for (b) or (c) changes this requirement and REQ-GUI-230. RQ-409 (a): no zoom-out limit beyond the frame budget and the baseline cover. R-570 (21 Oct 2026): a latent or flat chart has no limit on pan or zoom-out, RQ-409 (a)'s \"no zoom-out limit\" carried from periodic charts to every chart whose axes are affine; no control caps either, and the reference demos' 3× cap and clampView, which exist only because their maps are precomputed images, are never ported (REQ-GUI-357)."
 - id: REQ-GUI-268
   area: GUI
   statement: "Wherever the view reaches past the chart's [0,1]², with the controls shown or hidden, the figure must draw the axes' types (R-537 EX2): an affine chart's plane continuing, a periodic axis repeating, a pole-crossing axis continuing over the pole with its partner shifted by half its period, the shape sphere's lower hemisphere drawn as its own systems and never as a fold (R-544), the field's repeats at full strength (RQ-407 (a)), and past a bounded edge or a validity failure a pixel that is not a system blank (R-470), the hatch only through Overlays › Chart › forbidden region; and it must never have gaps (EX4): every visible point drawn at whatever resolution is available, a quad not yet computed showing its nearest computed ancestor, the only blank pixels those that are not a system, never raw canvas background where a system exists, from the first baseline cover on (RQ-419 (a))."
@@ -21012,6 +21069,25 @@
   - R-544
   milestone: M8
   note: "R-544 item 9 and the first addendum. Closed by TASK-M8-67. Physics review 5603309678 of PR #273, P5, and gui review 5603356729, G3 (applied per R-369): the twin on the full state, and the drag arms moved from the screenshot to a cargo test. *Was (verify, GUI screenshot):* \"a drag never snaps to the marker … controls: a marker at the point itself off the equator, and a drag that stops at the marker, each fail\"."
+- id: REQ-GUI-357
+  area: GUI
+  statement: "On a latent or flat chart (the latent chart and the flat and body-plane slices, tilted or rotated) pan and zoom-out must have no limit (R-570 items 1 and 2): any centre accepted, R-469's stop never firing for a pan there, and no zoom-out cap from a fixed view range, a multiple of the home view or a number of chart squares; no control may clamp either: the drag, the wheel, the arrows and + / −, the centre (u, v) and z₀ fields, the Slice centre sliders and Navigate's zoom row must each send the value asked for and the view state record it unclamped, a slider's span being the range its handle covers and never a clamp, so a zoom past the zoom row's span is kept and shown with the handle at the end of the rail and a step from it starts from the zoom itself; and every pixel must decode to a valid system, none classified not a system, the readout stating the decoded system as for any pixel (R-570 items 3 and 4), at the decoder's default links (RQ-536 for the others)."
+  source:
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The operation table
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui latent_unbounded_navigation (R-570): on the real engine, on the latent chart at the decoder's default links, zoom out by the wheel and by the keys to 10⁶ × the home view and pan the centre to |z| = 10⁴: every pixel of the frame decodes to a valid system (validate's layers 2 and 3 pass, Φ evaluates) and none is classified not a system; the view state and each history entry's after hold z₀ and the basis bit for bit as asked, unclamped; a frame drawn there sends no edit from Navigate's zoom row, and a + / − step on the focused zoom row moves the zoom from 10⁶ × by ZoomLog2's step, not from the end of the rail; control: the same navigation on the mass simplex classifies the pixels past its edge not a system and stops its centre at the last valid value (R-469), or the test cannot tell the two kinds of chart apart; and a zoom row that writes back the slider's clamped value (egui's SliderClamping::Always over ZOOM_RANGE, crates/gui/src/explore/manifold_view/navigate.rs:88) records a zoom inside the rail and fails"
+  rulings:
+  - R-469
+  - R-537
+  - R-570
+  milestone: M8
+  note: "R-570 items 1 to 4, its test latent_unbounded_navigation. Closed by TASK-M8-55, on the real engine; the mock shares Navigate's code (crates/gui/src/explore/manifold_view/). The code site found by R-570's port: crates/gui/src/explore/manifold_view/mod.rs:56 (ZOOM_RANGE, four octaves out) read by the zoom row's slider at navigate.rs:88 under egui's default SliderClamping::Always. RQ-536 (a non-default mass link or μ_max in the far field) waits; this test runs at the default links. The slider's span is never a clamp (applied per R-369, R-570's port)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
