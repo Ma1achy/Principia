@@ -1,6 +1,8 @@
 //! The decode stage's host-side plumbing and its body, natively (`kernel::stage::decode`; TASK-M2-06):
 //! - `stage_uniform_roundtrip`: the latent chart's parameters through the uniform's rows and back, each component in
 //!   its slot (REQ-DEC-007: the chart's parameters are the uniform).
+//! - `stage_uniform_charts`: the acute Burrau strips' and the shape sphere's parameters, under both maps, through the
+//!   uniform and back, each parameter distinct, so a swapped or dropped slot reads back otherwise.
 //! - `stage_decode_mode_bits`: `DECODE_MODE` is bit 0 of the flags word, full 0 and linearised 1, and no other bit
 //!   moves it (scheduler_contract Part 5).
 //! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2, `ENERGY_UNSCALABLE` 3,
@@ -15,7 +17,9 @@
 //!   set, or its descriptor, and nothing at the sample count.
 //! - `stage_link_tanh`: the §3.9 `tanh` operator's entry point, called natively, writes the operator at each word.
 
-use kernel::chart::{self, Latent};
+use kernel::chart::{
+    self, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Latent, ShapeMap, ShapeSphere,
+};
 use kernel::decode::{Degenerate, Ic};
 use kernel::generated::links::Defaults;
 use kernel::payload::ICDescriptor;
@@ -172,6 +176,75 @@ negative_control!(
         2 => 3,
         3 => 2,
         w => w,
+    })
+);
+
+// ── stage_uniform_charts ────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each chart through `write` and [`UniformChart::from_uniform`] is itself, its parameters distinct.
+fn check_charts(write: fn(&ShapeSphere<f32>) -> [spirv_std::glam::Vec4; 6]) {
+    let k = BurrauThetaK {
+        theta_range: [0.1, 0.2],
+        k_max: 3.0,
+        gamma_k: 4.0,
+    };
+    assert_eq!(
+        BurrauThetaK::from_uniform(&k.uniform()),
+        k,
+        "the (θ, K) strip"
+    );
+    let lz = BurrauThetaLz {
+        theta_range: [0.1, 0.2],
+        k: 3.0,
+        lz_fraction: 0.4,
+    };
+    assert_eq!(
+        BurrauThetaLz::from_uniform(&lz.uniform()),
+        lz,
+        "the (θ, L_z) strip"
+    );
+    let m = BurrauThetaDeltaM {
+        theta_range: [0.1, 0.2],
+        m_target: [0.25, 0.3, 0.45],
+    };
+    assert_eq!(
+        BurrauThetaDeltaM::from_uniform(&m.uniform()),
+        m,
+        "the (θ, Δm) strip"
+    );
+    for map in [ShapeMap::Spherical, ShapeMap::Exponential] {
+        let c = ShapeSphere {
+            map,
+            n0: [1.0, 2.0, 3.0],
+            e1: [4.0, 5.0, 6.0],
+            e2: [7.0, 8.0, 9.0],
+            scale: 10.0,
+            inertia: 11.0,
+            phase: 12.0,
+            z_mass: [13.0, 14.0],
+            z_mom: [15.0, 16.0, 17.0, 18.0],
+        };
+        assert_eq!(
+            ShapeSphere::from_uniform(&write(&c)),
+            c,
+            "the shape sphere under {map:?}"
+        );
+    }
+}
+
+#[test]
+fn stage_uniform_charts() {
+    check_charts(UniformChart::uniform);
+}
+
+negative_control!(
+    stage_uniform_charts,
+    "a writer that leaves out the shape sphere's map must fail",
+    expected = "the shape sphere under Exponential",
+    check_charts(|c| {
+        let mut rows = c.uniform();
+        rows[4].z = 0.0;
+        rows
     })
 );
 

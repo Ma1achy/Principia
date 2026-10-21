@@ -6,8 +6,9 @@
 //! generic over the chart `C` and the link selection `S`: each `(C, S)` is its own compiled variant, a
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
 //! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`], and the charts whose masses vary per
-//! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`])
-//! calling [`entry`]. Nothing at run
+//! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`],
+//! the acute Burrau strips, [`burrau_theta_k_defaults`], [`burrau_theta_lz_defaults`] and
+//! [`burrau_theta_delta_m_defaults`], and the shape sphere, [`shape_sphere_defaults`]) calling [`entry`]. Nothing at run
 //! time names a chart, a chart id or an axis kind: adding a chart is a `Φ` ([`crate::chart`]), its decode
 //! ([`ChartDecode`]), its [`UniformChart`] layout and one wrapper.
 //!
@@ -48,7 +49,8 @@ use spirv_std::spirv;
 use crate::chart::invariant::{Invariant, WarpReal};
 use crate::chart::mixed::{Alpha, ZMu1};
 use crate::chart::{
-    Burrau, Chart, ChartDecode, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, EuclidPlane,
+    InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere,
 };
 use crate::decode::{descriptor, energy_norm, Degenerate, Ic};
 use crate::generated::links::{
@@ -312,6 +314,121 @@ impl UniformChart for Mixed<ZMu1, Alpha, f32> {
     }
 }
 
+/// A row of the acute Burrau strips' uniforms: `(θ_min, θ_max, a, b)`, the rest zero.
+#[inline]
+fn strip_rows(theta: [f32; 2], a: f32, b: f32) -> [Vec4; 6] {
+    let zero = Vec4::ZERO;
+    [
+        Vec4::new(theta[0], theta[1], a, b),
+        zero,
+        zero,
+        zero,
+        zero,
+        zero,
+    ]
+}
+
+/// The `(θ, K)` strip's uniform: row 0 `(θ_min, θ_max, K_max, γ_K)`, rows 1–5 zero.
+impl UniformChart for BurrauThetaK<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaK {
+            theta_range: [r[0].x, r[0].y],
+            k_max: r[0].z,
+            gamma_k: r[0].w,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        strip_rows(self.theta_range, self.k_max, self.gamma_k)
+    }
+}
+
+/// The `(θ, L_z)` strip's uniform: row 0 `(θ_min, θ_max, K, L_z fraction)`, rows 1–5 zero.
+impl UniformChart for BurrauThetaLz<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaLz {
+            theta_range: [r[0].x, r[0].y],
+            k: r[0].z,
+            lz_fraction: r[0].w,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        strip_rows(self.theta_range, self.k, self.lz_fraction)
+    }
+}
+
+/// The `(θ, Δm)` strip's uniform: row 0 `(θ_min, θ_max, 0, 0)`, row 1 `(m₀*, m₁*, m₂*, 0)`, rows 2–5 zero.
+impl UniformChart for BurrauThetaDeltaM<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        BurrauThetaDeltaM {
+            theta_range: [r[0].x, r[0].y],
+            m_target: [r[1].x, r[1].y, r[1].z],
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let mut rows = strip_rows(self.theta_range, 0.0, 0.0);
+        let m = self.m_target;
+        rows[1] = Vec4::new(m[0], m[1], m[2], 0.0);
+        rows
+    }
+}
+
+/// The shape sphere's map as its uniform's word: 0 the spherical map, 1 the exponential.
+#[inline]
+fn map_word(map: ShapeMap) -> f32 {
+    match map {
+        ShapeMap::Spherical => 0.0,
+        ShapeMap::Exponential => 1.0,
+    }
+}
+
+/// The shape sphere's uniform: rows 0–2 `(n₀, s)`, `(e₁, I)` and `(e₂, φ_f)`, row 3 `z₀`'s momentum block, row 4
+/// `(z_μ1, z_μ2, map, 0)`, the map's word 0 spherical and any other exponential ([`map_word`]), row 5 zero. The map is a
+/// chart parameter (chart_reference §3.3, "state which is used"), so a uniform, as `DECODE_MODE` is, its branch uniform
+/// over the dispatch and taken before the decode (applied per R-369, TASK-M2-24).
+impl UniformChart for ShapeSphere<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        let three = |v: Vec4| [v.x, v.y, v.z];
+        ShapeSphere {
+            map: if r[4].z == 0.0 {
+                ShapeMap::Spherical
+            } else {
+                ShapeMap::Exponential
+            },
+            n0: three(r[0]),
+            e1: three(r[1]),
+            e2: three(r[2]),
+            scale: r[0].w,
+            inertia: r[1].w,
+            phase: r[2].w,
+            z_mom: [r[3].x, r[3].y, r[3].z, r[3].w],
+            z_mass: [r[4].x, r[4].y],
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let row = |v: [f32; 3], w: f32| Vec4::new(v[0], v[1], v[2], w);
+        [
+            row(self.n0, self.scale),
+            row(self.e1, self.inertia),
+            row(self.e2, self.phase),
+            Vec4::new(self.z_mom[0], self.z_mom[1], self.z_mom[2], self.z_mom[3]),
+            Vec4::new(self.z_mass[0], self.z_mass[1], map_word(self.map), 0.0),
+            Vec4::ZERO,
+        ]
+    }
+}
+
 /// One chart and link set the kernel is built for: the chart, the selection, and the name of its compute entry point
 /// in the WGSL, as naga names it from the wrapper's module path.
 pub trait DecodeVariant {
@@ -398,6 +515,42 @@ impl DecodeVariant for MixedMu1AlphaDefaults {
     type Chart = Mixed<ZMu1, Alpha, f32>;
     type Links = Defaults;
     const ENTRY: &'static str = "stage_decode_mixed_mu1_alpha_defaults";
+}
+
+/// The `(θ, K)` strip under the default links, which it does not read.
+pub struct BurrauThetaKDefaults;
+
+impl DecodeVariant for BurrauThetaKDefaults {
+    type Chart = BurrauThetaK<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_k_defaults";
+}
+
+/// The `(θ, L_z)` strip under the default links, which it does not read.
+pub struct BurrauThetaLzDefaults;
+
+impl DecodeVariant for BurrauThetaLzDefaults {
+    type Chart = BurrauThetaLz<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_lz_defaults";
+}
+
+/// The `(θ, Δm)` strip under the default links, which it does not read.
+pub struct BurrauThetaDeltaMDefaults;
+
+impl DecodeVariant for BurrauThetaDeltaMDefaults {
+    type Chart = BurrauThetaDeltaM<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_theta_delta_m_defaults";
+}
+
+/// The shape sphere under the default links, which decode its held mass and momentum blocks.
+pub struct ShapeSphereDefaults;
+
+impl DecodeVariant for ShapeSphereDefaults {
+    type Chart = ShapeSphere<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_shape_sphere_defaults";
 }
 
 /// One sample's decode: the integrator's input and the payload side's record of it.
@@ -737,6 +890,58 @@ pub fn mixed_mu1_alpha_defaults(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
 ) {
     entry::<MixedMu1AlphaDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaKDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_k_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaKDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaLzDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_lz_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaLzDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauThetaDeltaMDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_theta_delta_m_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauThetaDeltaMDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`ShapeSphereDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn shape_sphere_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<ShapeSphereDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
 }
 
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,

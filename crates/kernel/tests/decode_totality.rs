@@ -40,10 +40,11 @@ use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{Defaults, LinkReal, Selection};
 use kernel::payload::{PayloadReal, STATE_DECODE_FAILED};
 use kernel::stage::decode::{
-    self as stage, entry, ic_words, read_ic, sample_with, untag, BurrauDefaults, DecodeUniforms,
+    self as stage, entry, ic_words, read_ic, sample_with, untag, BurrauDefaults,
+    BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults, DecodeUniforms,
     DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults, InvariantLKDefaults, LatentDefaults,
-    LatentStickBreaking, MassSimplexDefaults, MixedMu1AlphaDefaults, StickBreakingLinks,
-    UniformChart,
+    LatentStickBreaking, MassSimplexDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults,
+    StickBreakingLinks, UniformChart,
 };
 use validation::decode_f32_eps::SplitMix;
 use validation::{
@@ -771,7 +772,8 @@ fn check_entry<V: DecodeVariant>(
     }
 }
 
-/// [`check_entry`] on every compute variant the stage is built for, `η_E` off and at three targets.
+/// [`check_entry`] on every compute variant the stage is built for, the shape sphere under both maps, `η_E` off and at
+/// three targets.
 fn check_entries(blank: bool) {
     let mut rng = SplitMix::new(11);
     let uv = points(&mut rng, 40, 0.0, 1.0);
@@ -798,6 +800,26 @@ fn check_entries(blank: bool) {
         check_entry::<EuclidPlaneDefaults>(&plane, &uv, e, blank);
         let mixed = Mixed::<ZMu1, Alpha, f32>::new(controls(&mut rng), [-2.0, 2.0], [0.1, 1.4]);
         check_entry::<MixedMu1AlphaDefaults>(&mixed, &uv, e, blank);
+        let strip_k = BurrauThetaK {
+            theta_range: theta_range(),
+            k_max: K_MAX.number() as f32,
+            gamma_k: GAMMA_K.number() as f32,
+        };
+        check_entry::<BurrauThetaKDefaults>(&strip_k, &uv, e, blank);
+        let strip_lz = BurrauThetaLz {
+            theta_range: theta_range(),
+            k: BURRAU_THETA_LZ_K.number() as f32,
+            lz_fraction: BURRAU_THETA_LZ_FRACTION.number() as f32,
+        };
+        check_entry::<BurrauThetaLzDefaults>(&strip_lz, &uv, e, blank);
+        let strip_m = BurrauThetaDeltaM {
+            theta_range: theta_range(),
+            m_target: [0.25, 0.375, 0.375],
+        };
+        check_entry::<BurrauThetaDeltaMDefaults>(&strip_m, &uv, e, blank);
+        for map in [ShapeMap::Spherical, ShapeMap::Exponential] {
+            check_entry::<ShapeSphereDefaults>(&sphere(&mut rng, map), &uv, e, blank);
+        }
     }
 }
 

@@ -236,9 +236,9 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
         match self.map {
             ShapeMap::Spherical => spherical(u, v, wide(P::PI())),
             ShapeMap::Exponential => exponential(
-                self.n0.map(wide),
-                self.e1.map(wide),
-                self.e2.map(wide),
+                widen(self.n0),
+                widen(self.e1),
+                widen(self.e2),
                 wide(self.scale),
                 u,
                 v,
@@ -280,9 +280,9 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode::<S, R>(self.z_mass.map(wide));
+        let masses = mass::decode::<S, R>(widen(self.z_mass));
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum::<S, R>(self.z_mom.map(wide), &masses, &config, inertia);
+        let momentum = held_momentum::<S, R>(widen(self.z_mom), &masses, &config, inertia);
         let ic = canon::canonicalise(&Ic {
             m: masses.m,
             r: config.r,
@@ -312,6 +312,19 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid
     }
+}
+
+/// Each parameter of `a` widened to `F`, by index: the kernel's SPIR-V has no `[T; N]::map`, whose iterator
+/// casts the array to a slice (rust-gpu: "cannot cast between pointer types").
+#[inline]
+fn widen<P: Copy, F: Copy + From<P>, const N: usize>(a: [P; N]) -> [F; N] {
+    let mut out = [F::from(a[0]); N];
+    let mut k = 1;
+    while k < N {
+        out[k] = F::from(a[k]);
+        k += 1;
+    }
+    out
 }
 
 /// `t` where `c` holds, else `f`: a select, both operands computed.

@@ -290,6 +290,19 @@ where
     }
 }
 
+impl<P: Copy + spirv_std::num_traits::FloatConst> ChartDecode for ShapeSphere<P> {
+    /// The chart's own [`Chart::decode`], [`shape_sphere`]'s: the configuration set explicitly, then `C` (that module's
+    /// note).
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        Chart::decode::<S, R>(self, u, v)
+    }
+}
+
 /// The decoder blocks an axis writes, its block-touch set (chart_decoder_contract Part 5): empty for an annotation axis.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BlockTouch {
