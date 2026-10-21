@@ -124,7 +124,10 @@ many are on; **Lines ▾** beside it, with a count, `Alt+L` showing or hiding al
 **Overlays ▾** holds the toggles, grouped, each with an Alt+digit shortcut, plus **all off** and **save as default**:
 - Quadtree: tile bounds, depth colouring, priority heatmap, `refine_flagged`, split / merge activity.
 - Integration: substep density, substep-cap hits, NaN / invalid pixels, energy drift.
-- Chart: forbidden region (the chart's domain function, R-26), Burrau lattice (primitive triples).
+- Chart: forbidden region (the chart's domain function, R-26), Burrau lattice (primitive triples), outline the
+  chart's primary square (R-552, RQ-408 (a)): one toggle with one state, on by default and drawn whatever its state
+  while a debug view is the figure, as RQ-461's reconciliation rules it (R-556), outlining `[0,1]²` of the chart's own
+  parameters as a figure mark (R-539) where its edge is in view.
 - Trace (R-541 G2): trace under cursor (`T`), kept traces (`⇧T`), syzygies (`Y`), end event icon, off-screen icons
   pinned to the edge, repeat in wrapped copies, outline the chart's square, and a **Trace…** button, which opens
   `Trace…` (§G5). A trace is an overlay, so it lives with the overlays. Each item is the trace's own setting in
@@ -316,23 +319,30 @@ edge: <check> (validate layer <n>)" until the next edit. Undo and the contract h
 
 **Past the square with the controls shown (R-537).** The view is a window onto the chart's extended parameter plane:
 with the controls shown or hidden, pan moves the window and zoom scales it past `[0,1]²` in any direction, and F3's
-Extend only adds window area; Fit scales the view's own square, wherever it sits (R-468 E2; RQ-416). What is drawn past
+Extend only adds window area; Fit scales the view's own square, wherever it sits, and draws whatever that square holds,
+R-472 X2's "with no extension" meaning no window area beyond that square (R-468 E2; R-552, RQ-416 (a)). What is drawn past
 the square is the axes' types (`principia_chart_decoder_contract.md` Part 3): an affine chart continues, a periodic axis
 repeats, a pole-crossing one continues over the pole with θ shifted by half its period, the hemisphere's fold shows the
 mirror hemisphere, and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
 Overlays › Chart › forbidden region. The only navigation limit is the stop above, judged on the centre after the types
-fold it: a pan across a seam or a pole never stops. **Never any gaps:** every visible point is drawn at whatever
+fold it: a pan across a seam or a pole never stops. Periodic charts have no zoom-out limit beyond the frame budget
+and the baseline cover; the demo's 3× cap applies only to its fixed maps (R-552, RQ-409 (a)). **Never any gaps:** every visible point is drawn at whatever
 resolution is available, a quad not yet computed showing its nearest computed ancestor; the only blank pixels are not
-systems. **Every interaction works at every visible pixel:** hover, click and pin (R-453), lock, the inspector, the
-trace, keep and the readouts. A pixel in a repeat resolves to its canonical chart point, the same system: the readout
+systems. Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no
+snapshot) the canvas background is drawn, and the rule holds from then on (R-552, RQ-419 (a)). **Every interaction works at every visible pixel:** hover, click and pin (R-453), lock, the inspector, the
+trace, keep and the readouts. Comments on the figure and the console's pick are not yet specified: the human will
+define what a comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's
+pick is, and the rule applies to each once it is defined, a comment pinned in a repeat attaching to the canonical point
+and appearing in every image (R-552, RQ-420 (b), RQ-411 (a)). A pixel in a repeat resolves to its canonical chart point, the same system: the readout
 shows the canonical coordinates and labels the pixel a repeat, and the trajectory, outcome and inspector are the
 canonical system's. A click on a pixel that is not a system integrates nothing and draws a red ✕ where it was clicked, a
 transient pick marker and a figure mark (R-539), kept until the next click, edit or the pointer leaving the figure; it
 pins nothing and leaves a pin as it is, and a lock there is refused (R-469). Its readout says "not a system" and names
 the check that failed (e.g. "a mass ≤ 0"); the label `decode_failed` and its detail show there only while a debug view
-is the figure (RQ-417; R-470). Hover over such a pixel shows the same readout and no trace. Traces repeat in every image
+is the figure (RQ-417; R-470). Hover over such a pixel shows the same readout and no trace. Repeats of the field are drawn at full strength, because
+they are the same systems (R-552, RQ-407 (a)). Traces repeat in every image
 in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view state records the centre as it is, on a
-periodic axis unwrapped (RQ-406), so an export, its JSON and its embedded payload reproduce the same window, repeats
+periodic axis unwrapped, keys and addresses taking the canonical value (R-552, RQ-406 (a)), so an export, its JSON and its embedded payload reproduce the same window, repeats
 included.
 
 **Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,

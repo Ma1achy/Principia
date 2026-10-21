@@ -13842,8 +13842,11 @@ note), REQ-CHART-056 (verify, rulings, note), REQ-CHART-040 (note), REQ-GUI-109 
 square under Tip as sheet is past the edge, the types acting on it as X3a says, blank past a bounded edge).*
 *Amended in part by R-537 (20 Oct 2026; X2's Extend is no longer the only way to see past the square: pan and zoom
 reach the extension with the controls shown, and Extend only adds window area).*
+*Refined by R-552 (21 Oct 2026; X2's "with no extension": no window area beyond the view's own square, which Fit
+scales wherever the view sits, RQ-416).*
 *Still in force: all of it; R-512 answers X3a's "whether that is meant"; Extend and Fit stand, and R-537 adds the
-extension with the controls shown.*
+extension with the controls shown; R-552 reads X2's "with no extension" as no window area beyond the view's own
+square.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (the F3 bullet: the
 sidecar and present mode) and § "Export & share" (the sidecar), `docs/design/principia_chart_reference.md` § "5.4 Past
 the unit square — each axis's extension type (R-407)" (a paragraph added, "Blank, and tilted charts"),
@@ -17690,6 +17693,10 @@ of it.
 R-536 is in the "design" group of `plan/rule_groups.yaml`, with R-486.
 
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
+*Amended in part by R-552 (21 Oct 2026; Q1 to Q6 and U4, U6 and U9's entries ruled: Q3's outline is built, as an
+Overlays › Chart toggle on by default; EX5's comments and the console's pick apply once the human defines them).*
+*Still in force: all of it; R-552 confirms each option (a) applied meanwhile, builds the outline U14 left unbuilt, and
+leaves EX5's comments and the console's pick for the human to define.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -21056,3 +21063,102 @@ closes **RQ-475, RQ-476 and RQ-477**.
 R-551 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-022, REQ-VAL-021 and REQ-VAL-121 (statement, verify, rulings, `rq` removed, note); adds REQ-VAL-193.
+
+## R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Chart group, a toggle added; "Past the square with the controls shown", clauses added and citations
+updated), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+(R-407)" (the level-0 pole repeat, a sentence added; RQ-430's citation), `docs/contracts/principia_caching_contract.md`
+§ "Part 4 — Baseline-first: an absolute tier, not a priority weight" (the baseline cover's bullet, a sentence added),
+R-537's and R-472's heading blocks, REQ-GUI-344 (reqio, new), REQ-GUI-267, REQ-GUI-268, REQ-GUI-269 and REQ-GUI-270
+(reqio: statement, rulings, note), REQ-CHART-080 (reqio: statement, rulings, note), REQ-SCHED-101 (reqio: rulings,
+note), TASK-M8-55 (a requirement added; deliverables, acceptance and notes), TASK-M8-56 (notes), `plan/tasks.yaml`,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430,
+moved with their rulings); built by TASK-M8-55 and TASK-M8-56*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 70–75, 80, 83, 84 and 94), which R-545 quotes in its opening:
+
+> - RQ-406 (Periodic-axis view centre: unwrapped in the view state): (a). "On a periodic axis the view state stores the centre unwrapped. Keys and addresses use the canonical value."
+>
+> - RQ-407 (The field's repeats at full strength): (a). "Repeats of the field are drawn at full strength, because they are the same systems. A trace's repeats are fainter."
+>
+> - RQ-408 (Outline of the primary square past its edge): (a). "Add an Overlays › Chart toggle that outlines the chart's primary square. It is off by default and on in the debug view."
+>
+> - RQ-409 (No fixed zoom-out limit on periodic charts): (a). "Periodic charts have no zoom-out limit beyond the frame budget and the baseline cover. The demo's 3× cap applies only to its fixed maps."
+>
+> - RQ-410 (Level-0 pole repeat drawn from its level-1 halves): (a). "A level-0 repeat across a pole is drawn from its two level-1 children, as EX7(b) states. The bootstrap is not raised for pole-crossing charts."
+>
+> - RQ-411 (Comment pinned in a repeat attaches canonically): (a), ruled together with RQ-420. "A comment pinned in a repeat attaches to the canonical point and appears in every image. This applies once a comment on the figure is defined (RQ-420)."
+>
+> - RQ-416 (Fit scales the view's own square): (a). "Fit scales the view's own square, wherever the view sits, and draws whatever that square holds. 'With no extension' in R-472 X2 means no window area beyond that square."
+>
+> - RQ-419 (Frames before any ancestor exists): (a). "Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no snapshot), the canvas background is drawn. EX4's no-gaps check applies from then on."
+>
+> - RQ-420 (Comments on the figure and the console's pick are undefined): (b), with (a)'s condition. "EX5 names features I have not specified yet. I will define what a comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's pick is. EX5 applies to each once it is defined."
+>
+> - RQ-430 (A tilted θ axis is affine and does not repeat): (a). "Canonical folding applies along an axis only where every term with non-zero weight has that period. A tilted θ axis is therefore affine and does not repeat, while the untilted sphere's maps stand."
+
+RQ-406 to RQ-411 are the extension file's §4 questions Q1 to Q6 (R-537 U14), each with the file's recommendation as
+its option (a), applied meanwhile except Q3's outline, which nothing built; RQ-416, RQ-419 and RQ-420 are R-537's port's
+own entries (U4, U6, U9), and RQ-430 the trace follow-up port's (R-538 J8). Every ruling here is an option (a) the
+corpus already assumes, but RQ-408 (an overlay added), RQ-416 (a reading of R-472 X2's words) and RQ-420 (option (b):
+the human will define the two features).
+
+*What it decides:*
+- **RQ-406 (a).** On a periodic axis the view state stores the centre unwrapped; keys and addresses use the canonical
+  value (R-537 EX9, as applied).
+- **RQ-407 (a).** Repeats of the field are drawn at full strength, because they are the same systems; a trace's
+  repeats are fainter (their strength is RQ-412's, R-553).
+- **RQ-408 (a).** An Overlays › Chart toggle outlines the chart's primary square. Its default is ruled with RQ-461: the
+  human's reconciliation there ("There is one outline toggle with one state. It sits in Overlays › Chart and is reached
+  also from the Trace group and `Trace…`. It is on by default, as R-541 and the demo have it, and on in the debug
+  view.") supersedes this entry's "off by default" by its own words, so **the toggle is on by default and on in the
+  debug view**; its other routes are R-556's (RQ-461). Built now, by TASK-M8-55 (REQ-GUI-344).
+- **RQ-409 (a).** Periodic charts have no zoom-out limit beyond the frame budget and the baseline cover; the demo's 3×
+  cap applies only to its fixed maps.
+- **RQ-410 (a).** A level-0 repeat across a pole is drawn from its two level-1 children, as EX7(b) states; the
+  bootstrap is not raised for pole-crossing charts.
+- **RQ-411 (a), ruled with RQ-420.** A comment pinned in a repeat attaches to the canonical point and appears in every
+  image, once a comment on the figure is defined (RQ-420). Nothing is built until then.
+- **RQ-416 (a).** Fit scales the view's own square, wherever the view sits, and draws whatever that square holds;
+  R-472 X2's "with no extension" means no window area beyond that square (R-468 E2's reading, R-537 U4's meanwhile).
+- **RQ-419 (a).** Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with
+  no snapshot) the canvas background is drawn; EX4's no-gaps check applies from then on.
+- **RQ-420 (b), with (a)'s condition.** EX5 named features the human has not specified: the human will define what a
+  comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's pick is.
+  EX5 applies to each once it is defined. Nothing is built for either meanwhile, and no definition requirement is
+  opened: the definitions are the human's.
+- **RQ-430 (a).** Canonical folding applies along an axis only where every term with non-zero weight has that period, so
+  a tilted θ axis is affine and does not repeat (R-538 TF2.2, as applied); the untilted sphere's maps stand.
+
+*Where the words leave a choice, decided per R-369 (mechanical or routine):*
+- **E1. "On in the debug view"** (RQ-408, RQ-461) is read as: while a debug view is the figure (View › Debug view,
+  R-467) the outline is drawn whatever the toggle's state, as the debug view shows the hatch; leaving the debug view
+  returns the toggle's own state. The toggle is one field in the view's overlay state, saved with the overlays'
+  defaults (Overlays ▾'s "save as default") like every other overlay. The outline is the primary square `[0,1]²` of the
+  chart's own parameters, drawn as a figure mark (R-539) in the line system's overlay pass, a 1 px line in the axes'
+  colour, drawn where the square's edge is in view and nowhere else. Its look is a dark-mode look choice under R-390,
+  listed in TASK-M8-55's PR.
+- **E2. Who builds the outline.** TASK-M8-55, the extension's GUI task (RQ-408's context), closes REQ-GUI-344, the
+  toggle, its one state and its default; the Trace group's and `Trace…`'s routes to the same state are RQ-461's
+  (R-556), built by TASK-M8-61 and TASK-M8-62.
+- **E3. The untilted sphere's maps (RQ-430)** are θ's period and the pole maps of R-537 EX7(b). Its equator fold, a
+  hemisphere map, is the human's shape sphere ruling of 21 Oct's (ported on its own branch, not yet merged), which
+  makes the shape sphere chart the whole sphere with no fold; this ruling applies nothing to it and changes no fold.
+- **E4. RQ-420's features** stay out of EX5's tests until the human defines them; REQ-GUI-269 says so, and RQ-411's
+  attachment is recorded for that definition.
+- **E5. Nothing else changes:** each (a) was applied meanwhile (R-537 U4, U6, U14; R-538 J8), so REQ-GUI-267 to
+  REQ-GUI-270, REQ-SCHED-101 and REQ-CHART-080 change only in their citations and notes, but REQ-GUI-267 (the zoom-out
+  clause) and REQ-GUI-269 (comments and the pick, stated as undefined) gain a clause each.
+
+*What it amends:* **R-537** (U14: Q3's outline, "which nothing builds until it is ruled", is built; U4, U6 and U9's
+meanwhile readings are ruled; EX5's "comments and the console's pick" apply once the human defines them). *What it
+refines:* **R-472** (X2's "with no extension": no window area beyond the view's own square). Read with R-468 (E2),
+R-538 (TF2.2, J8), R-539 (figure marks) and R-541 (the outline on by default, as RQ-461 reconciles it). It closes
+**RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430**.
+
+R-552 is in the "design" group of `plan/rule_groups.yaml`, with R-537.
+
+Adds REQ-GUI-344 (the outline toggle); changes REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270 and REQ-CHART-080
+(statement, rulings, note) and REQ-SCHED-101 (rulings, note).

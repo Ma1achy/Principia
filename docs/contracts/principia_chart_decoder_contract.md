@@ -287,9 +287,11 @@ requested, computed, cached and decided, every image drawing it; neighbours (2:1
 contours, class edges, smoothing) cross seams, poles and folds through the same map, an affine neighbour is the real
 one, and past a bounded edge there is none. A quad wholly past a bounded edge is not requested; one straddling a
 validity boundary integrates its valid footprints only, the rest `decode_failed` and blank. The statistics above are
-unchanged: each system is counted once, at its canonical address (R-408). **On a tilted view** a repeat is the same
+unchanged: each system is counted once, at its canonical address (R-408). At `L = 0` a repeat across a pole is drawn
+from its two level-1 children, as EX7(b) states; the bootstrap is not raised for pole-crossing charts (R-552, RQ-410
+(a)). **On a tilted view** a repeat is the same
 system only where the type group's map leaves the tilt's hidden offset `d` unchanged: along an axis that mixes θ with
-a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; RQ-430 (a) applied meanwhile);
+a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; R-552, RQ-430 (a); *was:* "RQ-430 (a) applied meanwhile");
 whether the pole maps and the equator fold apply on a tilted view, against chart_reference §3.3's tilted fold, is
 RQ-472, and they are not built on a tilted view until it is ruled.
 *Was:* "with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
