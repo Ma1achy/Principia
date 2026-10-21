@@ -300,8 +300,11 @@ and "logH" a row each).
    regularised energy diverges within 100 orbits (to 1e78 and beyond). Its warning reads: "Heggie's Hamiltonian is not
    separable, so a leapfrog step is first order here and can diverge (figure-eight: order about 1, diverged within 100
    orbits)."
-3. Heggie × RK4, the same fixture: order 3.99 at 4.0 calls per step, the regularised energy bounded, 5e-7 to 3e-6, over
-   100 orbits; 31 of 32 gallery cases (row above).
+3. Heggie × RK4, the same fixture, under both of Heggie's time transformations (Eq. 20 and Eq. 22; the design §1's
+   table, "Tested today on the figure-eight, fixed fictitious step, no step control, both of Heggie's time
+   transformations"): order 3.99 at 4.0 calls per step, the regularised energy bounded, 5e-7 to 3e-6, over 100 orbits;
+   31 of 32 gallery cases (row above). *Was:* "Heggie × RK4, the same fixture: order 3.99 …", which named no time
+   transformation (qa re-check 5607645188 of PR #277).
 4. Heggie × the generalised (Störmer–Verlet) leapfrog, **measured bad** (R-567), the same fixture: order 2.0 over one
    orbit at 15–20 calls per step, growing without bound over 100. **Cause, measured:** it does not keep Heggie's
    Eq. (9), `Σ qᵢ = 0`, which is quadratic in the regularised positions (`qᵢ = Qᵢ²`); implicit midpoint keeps every
