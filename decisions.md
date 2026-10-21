@@ -18983,6 +18983,12 @@ edge clamp is the behaviour.
   built. The Problems counts reach the GUI from the engine through the snapshot, never computed in the GUI
   (gui_state_contract §1). The legend's colour block is the stain's own key, first, then the brightness key, R-541
   P13's trace block and the debug view's key (§G6).
+- **H15. The consumers' agreement and its tolerance (PR #270's code re-review, C4 and C5; applied per R-369).** The host
+  consumers (TASK-M8-10, TASK-M8-49, TASK-M8-58) call the kernel function on the CPU and stay bitwise against it; Chart
+  position's fragment, which R-297 lets compile with fast-math, is held to the calibrated native–WGSL agreement
+  tolerance, as REQ-COL-134 is, its control shown to exceed it; the snippet `cargo xtask build-kernel` emits to
+  `crates/render/wgsl/` is exempt from REQ-COL-135's symbol check. TASK-M7-52 proposes that tolerance (R-71, R-297's
+  form), using its measured value until the M7 gate, and does not wait on RQ-487.
 
 *Checked against `main` (4a32decf), `rulings/print-graph` (PR #268, 1b7ca0ed), `task/TASK-M2-24` (PR #262, 8096650d),
 `task/TASK-M2-34` (PR #269, a0cf17c5), `task/TASK-M2-28` (495deb17) and the rulings the file assumes (the human's

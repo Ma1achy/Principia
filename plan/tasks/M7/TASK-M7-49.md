@@ -27,6 +27,6 @@ Image mode: a picture laid on the target's square pulled back through the flow, 
 
 ## Notes
 - **REQ-GUI-340 moved to TASK-M7-51 (gui re-review G6 of PR #270; applied per R-369),** which builds the inspector the controls sit in; this task keeps the render side. It keeps the gui reviewer because the picture's look on the figure (mirror-repeated, dimmed past the square) and the fade are GUI-facing. *Was:* "- **Closes:** REQ-COL-130, REQ-COL-131, REQ-GUI-340", with its controls deliverable and acceptance line.
-- **gui review (PR #270 code review, 2; applied per R-369):** SM8 and SM10 are the GUI's in the human's message; the gui reviewer reads board 3 per render GUI spec §G13's R-542 bullet. *Was:* "- **Reviewers:** code, qa".
+- **gui review (PR #270 code review, 2; applied per R-369):** SM8 and SM10 are the GUI's in the human's message (board 3's Picture inspector is TASK-M7-51's; PR #270 gui re-review note, applied per R-369; *was:* "the gui reviewer reads board 3 per render GUI spec §G13's R-542 bullet"). *Was:* "- **Reviewers:** code, qa".
 - TASK-M7-44 builds R-484's tier table, where the picture takes its tier (R-542 H5; applied per R-369).
 - **Applied meanwhile:** RQ-484 (a); RQ-499 (a), the code's fade and no brightness under a Picture.

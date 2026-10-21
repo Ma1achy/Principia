@@ -25,7 +25,7 @@ The traces are drawn by the line system: projection through the chart's forward 
 
 ## Acceptance tests
 - `cargo test -p render line_traces` — REQ-GUI-245's verify (§12 trace projection).
-- `cargo test -p render shared_projection_callers` (the line-trace arm) — REQ-COL-135's arm for this consumer: its projection is REQ-COL-134's shared source (control: a copied projection with one constant changed, and a projection defined outside `crates/kernel`, each fail).
+- `cargo test -p render shared_projection_callers` (the line-trace arm) — REQ-COL-135's arm for this consumer: it calls the kernel function on the CPU, its projected points and statuses bitwise equal to REQ-COL-134's shared source's; controls: a copied projection with one constant changed fails, and a hand-written projection defined outside `crates/kernel` fails the symbol check, the snippet `cargo xtask build-kernel` emits to `crates/render/wgsl/` exempt. *Was (PR #270 code re-review, C4, applied per R-369):* "`cargo test -p render shared_projection_callers` (the line-trace arm) — REQ-COL-135's arm for this consumer: its projection is REQ-COL-134's shared source (control: a copied projection with one constant changed, and a projection defined outside `crates/kernel`, each fail)."
 
 ## Notes
 - **Physics reviews** the projection onto the chart's own coordinates (R-476 M4).
