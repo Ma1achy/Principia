@@ -131,3 +131,10 @@ default-filter = """
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous)"
 success-output = "immediate"
+
+# The same for qa's `qa_m224_gpu_canon_turn` (`engine/tests/qa_TASK-M2-24_gpu.rs`), which prints `C`'s worst against f64
+# on the job's backend: REQ-DEC-043's record cites lavapipe's value for that domain too (physics review 5599301723 F1).
+# It changes only what is shown; the test and its filter are as before. Applied per R-369.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_canon_turn)"
+success-output = "immediate"
