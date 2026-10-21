@@ -109,6 +109,31 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 - **Therefore every round-trip tolerance is asserted in *physical* space**, where the composed map is well-conditioned: `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys`. A z-space residual near saturation is meaningless and must not be a test criterion.
 - The clamp flags are the honest boundary: inside the clamps, T2 holds tightly; at the clamps, the inverse is by construction lossy and *says so*.
 
+**The norm `‖·‖_phys`** (defined per R-72, REQ-ENC-029; TASK-M2-16). Between a reference state `x` and a state `x′`, both
+on the canonical section (`G = M = I = 1`), over the masses, the positions and the momenta of all three bodies:
+
+```
+‖x′ − x‖_phys  =  maxᵢ max( |m′ᵢ − mᵢ|,  ‖r′ᵢ − rᵢ‖ / R_x,  ‖p′ᵢ − pᵢ‖ / P_x )
+R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
+```
+
+- **Unweighted by mass, each block against the state's own extent.** A position or momentum difference is absolute
+  where the reference state's extent in that block is at most 1, and relative to that extent above it; the masses are
+  absolute (`Σmᵢ = 1`). On the section a light body sits far out (`‖rᵢ‖` up to `1/√mᵢ`), and the decode builds the
+  bodies from the Jacobi vectors (`r₁ = r₀ + ρ`), so a near body's position carries the far body's rounding: measured
+  against its own size it would show a conditioning the map does not have. A mass-weighted norm (`√mᵢ‖Δrᵢ‖`,
+  `‖Δpᵢ‖/√mᵢ`) is not used: it divides a light body's momentum rounding by `√mᵢ`.
+- **One norm for every round trip.** T2 measures `D(E(D(z)))` against `D(z)`, T3 `D(E(x))` against `C(x)`; the
+  ground-truth ingestion residual and the `ROUNDTRIP` preset (Part 8) use it unchanged.
+- **`ε_phys = k·ε_R`**, `ε_R` the precision's machine epsilon (2⁻⁵² at f64, 2⁻²³ at f32), one `k` for both precisions:
+  the interior residual is rounding, the same count of `ε_R` at f64 and f32. `k` is REQ-ENC-024's calibration (R-71),
+  the constants register's `eps_phys`, proposed at 64 by the `encode-eps-phys` gate and provisional until the M2 gate.
+- **Interior and clamp-adjacent** (applied per R-369, TASK-M2-16). Each control is read off the state by Part 3's own
+  formulas. A sample is interior when every control is clear of its clamp by a factor of two: `s_α`, `s_β` and `s_q`
+  in `[2ε, 1 − 2ε]` (their clamp `[ε, 1 − ε]`) and `|μₖ| ≤ (1 − 2ε_μ)·μ_max` (its clamp `(1 − ε_μ)·μ_max`); T2 holds
+  it to `ε_phys`. A control past its clamp by the same factor, `s` within `ε/2` of 0 or 1 or `|μₖ| ≥ (1 − ε_μ/2)·μ_max`,
+  is clamp-adjacent and must set its `lookup_clamped` bit; a control clear of its clamp must leave its bit unset.
+
 ---
 
 ## Part 5 — Inverse by axis kind (completing the four kinds)
