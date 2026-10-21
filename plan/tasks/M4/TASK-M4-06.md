@@ -9,7 +9,7 @@
 - **Size:** ~480 lines
 
 ## Goal
-Compute-side lowering, per lowering Part 3 and its appendix: chart type, link selection, integrator occupant and the FTLE shadow co-computation are monomorphised variants; wrapper config goes in `SimUniforms`, chart params in uniforms, and the ensemble's `copy_index` is a uniform — each copy is the same kernel dispatched again, and at E = 0 no copy is dispatched (R-102). Every chart of the appendix lowers to its stated Φ map, extra uniforms and flags and ends in canonicalise → (m, r, p) → wrapper(occupant). Each render pixel integrates E+1 samples — copy 0 the un-jittered centre, copies 1..E at centred, footprint-scaled Halton (2,3) points (R-113) — plus each sample's Benettin shadow when the FTLE variant is bound. The two appendix charts M2 didn't build (the Burrau int lattice and Anosova) decode through the DECODE fragment preset.
+Compute-side lowering, per lowering Part 3 and its appendix: chart type, link selection, integrator occupant and the FTLE shadow co-computation are monomorphised variants; wrapper config goes in `SimUniforms`, chart params in uniforms, and the ensemble's `copy_index` is a uniform — each copy is the same kernel dispatched again, and at E = 0 no copy is dispatched (R-102). Every chart of the appendix lowers to its stated Φ map, extra uniforms and flags and ends in canonicalise → (m, r, p) → wrapper(occupant), the shape sphere's lowered decode running canonicalise with step 3, the mirror, not taken, as its CPU decode does (R-544). Each render pixel integrates E+1 samples — copy 0 the un-jittered centre, copies 1..E at centred, footprint-scaled Halton (2,3) points (R-113) — plus each sample's Benettin shadow when the FTLE variant is bound. The two appendix charts M2 didn't build (the Burrau int lattice and Anosova) decode through the DECODE fragment preset.
 
 ## References
 - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
@@ -33,6 +33,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*"
 - `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
 - `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - `crates/kernel`: the variant axes as type parameters (chart Φ, link set, occupant, FTLE on/off); the nine appendix rows lowered; the invariant charts write tagged payloads for infeasible pixels in-kernel; the Burrau integer lattice's per-cell dispatch.
@@ -41,7 +42,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - A per-chart checklist table in the PR mapping each appendix row to its registry entry and kernel variant.
 
 ## Acceptance tests
-- Physics + code reviewers: one row per chart of the lowering appendix checked against the chart registry and the kernel variants (latent slice with its scale in q; shape sphere lowering (s, t) → (θ, φ) → n → (ρ̃, λ̃) by R-14's map (R-117) with `system_image: n-to-1`, n = 2 (R-141); (L_z,E)/(L_z,K) writing tagged payloads in-kernel; ternary mass; Euclid ν plane annotation axis; θ×K strip requiring lock for tilt; Burrau lattice per-cell dispatch, its `system_image` bijective (R-113); Anosova through canonicalise) (REQ-CHART-037); backed by `cargo test -p kernel chart_lowering_rows`.
+- Physics + code reviewers: one row per chart of the lowering appendix checked against the chart registry and the kernel variants (latent slice with its scale in q; shape sphere lowering (s, t) → (θ, φ) → n → (ρ̃, λ̃) by R-14's map (R-117) with `system_image: bijective` over the whole sphere and canonicalise's step 3 not taken (R-544; *was:* "`system_image: n-to-1`, n = 2 (R-141)"); (L_z,E)/(L_z,K) writing tagged payloads in-kernel; ternary mass; Euclid ν plane annotation axis; θ×K strip requiring lock for tilt; Burrau lattice per-cell dispatch, its `system_image` bijective (R-113); Anosova through canonicalise) (REQ-CHART-037); backed by `cargo test -p kernel chart_lowering_rows`.
 - `cargo test -p engine variant_selection` — a navigation edit changes only uniform buffers; a tier change of N or FTLE selects a different pre-built variant; a change of E selects none (REQ-SYS-024).
 - `cargo test -p engine occupant_ftle_baked` — no runtime uniform branches on occupant or FTLE; each (occupant, FTLE) combination is a distinct compiled variant; E = 0 and E = 3 use the same pipeline, the copies differing only in the `copy_index` uniform (REQ-INT-065).
 - `cargo test -p engine ftle_off_no_shadow` — the FTLE-off variant contains no shadow state; no ensemble kernel variant exists; E = 0 dispatches no copies (REQ-INT-069).
@@ -51,6 +52,7 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 
 ## Notes
 - RQ-71 ruled: R-141 — the shape sphere's row carries `system_image: n-to-1`, n = 2; `DoubleCover` stays only for the full-range Burrau chart (R-157) (REQ-CHART-037).
+- R-544 (21 Oct 2026) amends that: the shape sphere's row is bijective over the whole sphere, and its baked decode skips canonicalise's mirror step, so the GPU variant generated from the shared source never restores R-141's gauge; `DoubleCover` stays the full-range Burrau chart's (physics review 5603309678 of PR #273, P3; applied per R-369).
 - RQ-85 ruled: R-117 — the appendix's shape-sphere row is conformed to R-14's (θ, φ) map (applied in step 7).
 - RQ-92 ruled: R-124 — the dispatch-shape conflict is settled (copies dispatched again, R-102); this task is unblocked.
 - RQ-95 ruled: R-113 — REQ-CHART-014's lattice clause is REQ-CHART-037's here; REQ-RENDER-027's Burrau int lattice and Anosova half is REQ-RENDER-082, closed here.

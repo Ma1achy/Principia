@@ -20,6 +20,7 @@ Chart position's colour slot, colour composition §1.5: one base and an ordered 
 - `docs/design/principia_colour_composition.md` § "1.5 A point on a chart: Chart position's colour slot (R-542)"
 - `docs/design/principia_colour_composition.md` § "2. Site-set kinds"
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - The bases, tilings, swatches, layers and brightness occupants (`crates/render/`), transcribed from SM11's *Transcribed from the prototype* paragraph.
@@ -37,4 +38,4 @@ Chart position's colour slot, colour composition §1.5: one base and an ordered 
 - Review checklist — REQ-COL-129's verify (the register entries, confirmed at the M7 gate).
 
 ## Notes
-- **Applied meanwhile:** RQ-487 and RQ-488 (a); RQ-497 (a), Shape n̂ stays `vector`; RQ-498 (a), the code's signed n̂, the site-blend test as written (*was:* "the site-blend test on the folded hemisphere", PR #270's physics review, P1); RQ-499 (a), the code's triangle lightness and Fibonacci swatches.
+- **Applied meanwhile:** RQ-487 and RQ-488 (a); RQ-497 (a), Shape n̂ stays `vector`; RQ-498 (a), the code's signed n̂ (R-544: the whole sphere, settled where it turns on the hemisphere), the site-blend test as written (*was:* "the site-blend test on the folded hemisphere", PR #270's physics review, P1); RQ-499 (a), the code's triangle lightness and Fibonacci swatches.
