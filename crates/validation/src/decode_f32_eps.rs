@@ -94,8 +94,10 @@
 //! The test holds the same factor, by the same measure, on `C`'s `(m, r, p)` (`kernel::canon`, the decode's last step)
 //! from f32 states, against f64 `C` on the same states widened: 4096 states at every orientation (a turn drawn on
 //! `[−3.2, 3.2]` rad); scale `2^k` with `k` on `[−19, 19]`, `k = 0` drawn twice as often as each other value (`k` is a
-//! draw on `[−20, 20]` truncated toward zero); a light body of mass `10^−3.5` to `10^−2` at 4 to 40 from the CoM of the
-//! heavy two; canonical momenta, left unnormalised, up to about 10³. Worst against f64, in eps:
+//! draw on `[−20, 20]` truncated toward zero); a light body (its index cycling 0, 1, 2) of mass `10^−3.5` to `10^−2` at
+//! 4 to 40 from the origin, the heavy two in `[−1, 1]²` with masses splitting `1 − m_light` in ratio `w₀ : w₁`, each
+//! `w` on `[0.3, 1]`; input momenta on `[−0.5, 0.5]²`, not scaled with `r`, which step 0 multiplies by `I_in^{1/4}`, so
+//! the canonical momenta reach about 10³. Worst against f64, in eps:
 //!
 //! | domain | Metal (M3 Pro) | CPU, f32 (native) | lavapipe |
 //! |---|---|---|---|
