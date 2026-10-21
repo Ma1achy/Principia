@@ -13,7 +13,7 @@ Transcribed (formulas, not code):
 - chart_reference §3.2, the closed-form inverse (I = 1, φ_f = 0), with §3.2's small-of-a-and-b form;
 - chart_reference §3.1, shape_vec: n = ((a − b)/I, 2p/I, 2q/I), q = ρ̃ ∧ λ̃;
 - chart_reference §0.2 (unweight, positions) and §0.3 (momenta), and §0.4's mirror test (mirror iff λ̃_y < −δ_λ);
-- R-537 EX7(b)'s quad maps at level L (θ period, the two pole maps, and R-412's equator fold for the control);
+- R-537 EX7(b)'s quad maps at level L (θ period, the two pole maps, and the hemisphere fold left in for the control);
 - a plain velocity-Verlet integrator (G = 1), standing in for the kernel's: only its mirror-exactness is used, and that
   holds for any integrator built from +, −, ×, ÷ and √ on the coordinates, since negation commutes with each exactly.
 """
@@ -316,46 +316,63 @@ def trace_through_syzygy():
 
 def canonical_address(ix, iy, level, equator_fold):
     """R-537 EX7(b) at level L, n = 2^L, R-14's φ = π(1 − t): the θ period and the pole maps at t = 1 and t = 0. With
-    equator_fold, R-412's one-hemisphere address (the control): the fold at the equator, t = 0, iy' = −1 − iy, ix
-    unchanged; R-544 withdraws it."""
+    equator_fold (the control), EX7(b)'s hemisphere fold left in on the whole sphere: a quad of the lower hemisphere,
+    t < ½, goes on to its mirror (ix, n − 1 − iy), as R-141's one-system reading of the pair had it; R-544 withdraws
+    it."""
     n = 2 ** level
     for _ in range(64):
         ix %= n
         if 0 <= iy < n:
+            if equator_fold and iy < n // 2:
+                iy = n - 1 - iy
             return ix, iy
         if iy >= n:
             iy, ix = 2 * n - 1 - iy, (ix + n // 2) % n
-        elif equator_fold:
-            iy = -1 - iy
         else:
             iy, ix = -1 - iy, (ix + n // 2) % n
     raise RuntimeError("no address")
 
 
+def quad_point(ix, iy, n):
+    """The sphere point of a quad's centre by R-14's map continued past the square (R-407's types follow from it)."""
+    return sphere_point(TAU * (ix + 0.5) / n, PI * (1 - (iy + 0.5) / n))
+
+
 def no_repeat_at_equator():
-    print("5. No repeat at the equator (§4): the quad maps of R-537 EX7(b) at L = 1..8")
-    own = twin_hits = total = pole_ok = 0
+    print("5. No repeat at the equator (§4): the quad maps of R-537 EX7(b) at L = 1..6, over three periods of θ and "
+          "past both poles")
+
+    def audit(equator_fold):
+        """Each quad of the extended window [−n, 2n)² against the canonical quad it maps to: the same system iff their
+        centres are the same sphere point. Returns (quads, same point, at the quad's mirror point)."""
+        quads = same = mirrored = 0
+        for level in range(1, 7):
+            n = 2 ** level
+            for ix in range(-n, 2 * n):
+                for iy in range(-n, 2 * n):
+                    quads += 1
+                    p = quad_point(ix, iy, n)
+                    q = quad_point(*canonical_address(ix, iy, level, equator_fold), n)
+                    if max(abs(a - b) for a, b in zip(p, q)) <= 1e-9:
+                        same += 1
+                    elif max(abs(p[0] - q[0]), abs(p[1] - q[1]), abs(p[2] + q[2])) <= 1e-9:
+                        mirrored += 1
+        return quads, same, mirrored
+
+    quads, same, mirrored = audit(False)
+    pole_ok = 0
     for level in range(1, 9):
         n = 2 ** level
-        for ix in range(n):
-            for iy in range(n):
-                total += 1
-                twin = (ix, n - 1 - iy)  # the quad at (θ, π − φ)
-                if canonical_address(ix, iy, level, False) == (ix, iy) and twin != (ix, iy):
-                    own += 1
-            # past each pole, R-14's maps: t > 1 and t < 0, θ shifted by half its period
+        for ix in range(n):  # past each pole, R-14's maps: t > 1 and t < 0, θ shifted by half its period
             pole_ok += canonical_address(ix, n, level, False) == ((ix + n // 2) % n, n - 1)
             pole_ok += canonical_address(ix, -1, level, False) == ((ix + n // 2) % n, 0)
-    check("every quad inside the square is its own canonical quad, not its twin's", own == total,
-          f"{own} of {total}; the pole maps shift θ by half a period at both edges: {pole_ok} of "
-          f"{2 * sum(2 ** l for l in range(1, 9))}")
-    for level in range(1, 9):
-        n = 2 ** level
-        for ix in range(n):
-            for iy in range(-n, 0):  # past t = 0
-                twin_hits += canonical_address(ix, iy, level, True)[0] == ix
-    fires("R-537's equator fold left in", twin_hits > 0,
-          f"{twin_hits} quads past t = 0 fold onto the same θ (the mirror), where R-14's pole map shifts θ by π")
+    check("every quad resolves to a canonical quad at its own sphere point, never its mirror's",
+          same == quads and mirrored == 0,
+          f"{same} of {quads} at their own point, {mirrored} at the mirror; the pole maps shift θ by half a period at "
+          f"both edges: {pole_ok} of {2 * sum(2 ** l for l in range(1, 9))}")
+    quads, same, mirrored = audit(True)
+    fires("R-537's equator fold left in", mirrored > 0,
+          f"{mirrored} of {quads} quads resolve to their mirror's point (θ kept, w → −w), not their own system")
 
 
 def no_fold():
@@ -372,29 +389,37 @@ def no_fold():
     def twin(th, ph):
         return th, min(phis, key=lambda q: abs(q - (PI - ph)))
 
-    # R-544's chart: every pixel integrated from its own decode, once.
-    chart = {k: own(*k) for k in pixels}
-    chart_runs = len(pixels)
+    # R-544's chart: every pixel integrated from its own decode, once, the integrations counted as they run.
+    runs = [0]
+
+    def counted(th, ph):
+        runs[0] += 1
+        return own(th, ph)
+
+    chart = {k: counted(*k) for k in pixels}
+    chart_runs = runs[0]
     # The withdrawn saving, left in: the upper hemisphere integrated, the lower copied from its twins.
     folded = {k: chart[k] for k in upper}
     folded.update({twin(*k): chart[k] for k in upper})
     folded_runs = len(upper)
 
     def audit(results, runs):
-        """What a fold left in breaks: one integration per pixel, and every pixel's result its own system's. Read on
-        the signed field (the frame's winding), which a copy from the twin carries with the wrong sign; outcome and
-        t_end are mirror-invariant, so they cannot see the fold here."""
+        """What a fold left in breaks, read from the results alone: one integration per pixel, and, released from rest,
+        each lower pixel's frame winding the negative of its twin's (item 5's signed field), which a copy from the twin
+        carries with the same sign. Outcome and t_end are mirror-invariant, so they cannot see the fold here."""
         problems = []
         if runs != len(pixels):
             problems.append(f"{runs} integrations for {len(pixels)} pixels")
-        wrong = sum(abs(results[k][3] - chart[k][3]) > 1e-6 for k in pixels if abs(chart[k][3]) > 1e-6)
+        lower = [k for k in pixels if k[1] > PI / 2]
+        wrong = sum(abs(results[k][3] + results[twin(*k)][3]) > 1e-6 for k in lower if abs(results[k][3]) > 1e-6)
         if wrong:
-            problems.append(f"{wrong} pixels carry their twin's winding, the wrong sign")
+            problems.append(f"{wrong} lower pixels carry their twin's winding, not its negative")
         return problems
 
     got = audit(chart, chart_runs)
     check("every pixel integrated once, from its own decode", not got,
-          f"{chart_runs} integrations for {len(pixels)} pixels, every winding its own" if not got else "; ".join(got))
+          f"{chart_runs} integrations for {len(pixels)} pixels, every lower pixel's winding the negative of its twin's"
+          if not got else "; ".join(got))
     got = audit(folded, folded_runs)
     fires("a fold left in (the lower half copied from its twins, the withdrawn saving)", bool(got), "; ".join(got))
     whole = sum(r[0] == "collision" for r in chart.values())

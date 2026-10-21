@@ -1210,6 +1210,19 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   not enforced: a faint marker at `(θ, π − φ)`, never a snap, a limit or a shaded half, and the inspector notes it,
   "mirror twin of the system at (θ, π − φ)": the IC reflected, positions and momenta, which ends the same way (R-544).
   The bodies view may stay the canonical representative; the sphere's path is never folded.
+  Applied per R-369 (PR #273, gui review 5603356729, G1, G2, G5; physics review 5603309678, P5):
+  - **Which drag moves the point.** A press within 8 logical px of the point, on the 3D sphere or on the unwrap,
+    drags the point; any other drag orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it.
+  - **What a drag holds.** Only the shape changes: the IC keeps its own `√I`, the direction of `ρ`, its CoM position
+    and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`. So pane 1's triangle changes shape, and flips
+    when the point crosses the equator, but does not jump in size or turn; the gauge buttons' Scale, Rotate and Boost
+    survive a drag.
+  - **The twin** is `Π·x`, positions and momenta reflected, `L_z` opposite, its shape at `(θ, π − φ)`. When the held
+    momenta have a `y`-component, dragging the point onto the marker reaches a different system, not the twin, and the
+    readout does not call it the twin.
+  - **A binary-collision landmark** on the equator is reachable like every other point: the IC is set there, `ρ̃ = 0`
+    included, and its run takes the shared path for coincident bodies, labelled `collision` at `t = 0`
+    (`principia_inverse_encode_contract.md`; REQ-ENC-019, REQ-ENC-033).
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
   f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too. (Against R-541 G1's

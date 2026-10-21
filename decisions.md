@@ -20221,8 +20221,8 @@ saving; "#271" is the open PR for TASK-M2-28. In short:
 1. The shape sphere chart is the whole sphere everywhere (Explore, the Atlas, traces, Listen, the state map, prints,
    the batch job). Pixel `(θ, φ)` decodes to the system whose **signed** `n̂` is that point; R-14's `φ = π·(1 − t)`,
    pole to pole, is the only φ span.
-2. R-141's decode gauge is removed for the shape sphere: a lower-hemisphere pixel decodes to its own system, the one
-   with the mirrored shape. The chart's `system_image` is one-to-one over the sphere, n-to-1 only over its genuine
+2. R-141's decode gauge is removed for the shape sphere: "A lower-hemisphere pixel decodes to the true mirror
+   system" (§2 item 2; read as "The held momentum below the equator" below says). The chart's `system_image` is one-to-one over the sphere, n-to-1 only over its genuine
    identifications, θ's period and the poles. R-157's `DoubleCover` for the full-range Burrau chart is untouched.
 3. The hemisphere toggle is removed from the Manifold view's Chart section, and R-412's remap is withdrawn with it.
 4. The mirror is no longer a repeat. R-537's repeats on the shape sphere are θ's period and the pole crossing only. A
@@ -20282,11 +20282,26 @@ of EX7 repeats) are not this ruling's.
   the two are mirror twins exactly when the held momentum is its own mirror image (its `y`-components zero, released
   from rest included), which is item 5's equivariant case; otherwise they are different systems, item 5's "does not
   apply". Mirroring `p_fixed` below the equator, as R-141's gauge did, would make every pair twins and leave item 5's
-  second case empty.
+  second case empty. So item 2's "the true mirror system" is read as the system at the mirrored shape with `p_fixed`
+  held in the unmirrored frame, which is the upper pixel's mirror image `Π·x` exactly when the held momentum's
+  `y`-components are zero (code review 5603292175 of PR #273, F4: the human's words quoted in item 2, this reading
+  stated here, for the human's veto).
+- **The mirror test's precision** (item 5, under §4's own words "bitwise where the integration is mirror-exact, else
+  to rounding"; physics review 5603309678 of PR #273, P2). The run from the exactly mirrored IC, `Π` applied to the
+  decoded state, is the run mirrored, bitwise. The two pixels of a pair decode to mirror images only to the decode's
+  rounding (REQ-CHART-053's bound: `φ = π(1 − t)` and `π·t` do not sum to `π` exactly), so on a chaotic run their fates
+  can differ; fate equality and item 7's "counted twice" across pixel pairs are asserted on a named fixture whose
+  pair runs the test shows to stay close over its horizon, and the counts only for mirror-invariant classes (outcome,
+  escaper, collision pair), a signed class (a winding or braid class) mapping to its mirror class. A test detail under
+  §4's words, not a change to the ruling.
 - **The lookup** (the encode into the chart). The shape sphere's chart point is the state's signed `n̂`: the
   shape read from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror land at
   `(θ, φ)` and `(θ, π − φ)`. Inverse-encode's T1, `E(g·x) = E(x)` over the gauge group with its `Z₂` mirror, stands
-  for `z` and for every other chart.
+  for `z` and for every other chart. The landing test (inverse_encode_contract Part 6, "Where possible, at step 4")
+  compares, on the shape sphere chart, against `C(x)` with step 3 undone on the full state, the decode's own section,
+  so a lower-hemisphere state whose unmirrored momenta are the slice's lands and decodes back to itself (physics
+  review 5603309678 of PR #273, P1). The lowered GPU decode (the lowering contract's appendix row, TASK-M4-06) runs
+  `C` with step 3 not taken, as the CPU decode does (P3).
 - **`system_image`.** The spherical map's is bijective: θ's period and the pole rows are R-407's types, on edges of
   measure zero that no pixel centre lies on, not a fold. The exponential map's is bijective over its cap, the pixels on
   `r = π` counting as REQ-CHART-078 defines; the cap is still computed for its `r > π` domain's end. Under a tilt there
@@ -20299,7 +20314,14 @@ of EX7 repeats) are not this ruling's.
 - **The constructor** (item 9). It is the Inspector window's pane 2 sphere (render GUI spec §G8): its point is the
   IC's signed `n̂`, draggable to every point of both halves, a drag setting the IC's shape as the shape sphere chart
   places one (its masses and its momenta in the frame `ρ̃` on `+x` held); the twin is a faint marker, never a snap or
-  a limit. REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
+  a limit. The twin is `Π·x`, positions and momenta reflected, `L_z` opposite; with held momenta that have a
+  `y`-component, dragging the point to the marker does not give the twin (physics review 5603309678, P5). A press
+  within 8 logical px of the point drags the point; any other drag orbits the 3D view or pans the unwrap as R-453 D7
+  and D8 have it (gui review 5603356729, G1). A drag changes the shape only: the IC keeps its own `√I`, the direction
+  of `ρ`, its CoM position and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`, so pane 1's triangle
+  changes shape, flipping when the point crosses the equator, and neither jumps in size nor turns (G2). A drag onto a
+  binary-collision landmark on the equator sets that IC, `ρ̃ = 0` included, and its run takes the shared path for
+  coincident bodies, labelled `collision` at `t = 0` (REQ-ENC-019, REQ-ENC-033); nothing is blocked off (G5). REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
   enforced, not shown.
 - **Results measured under one hemisphere** are kept, with R-544 beside them, and not re-measured here (item 7; §5):
   PR #271's goldens `shape-sphere/one_hemisphere` (an exponential cap in `w ≥ 0`) and `shape-sphere/both_flagged` (the

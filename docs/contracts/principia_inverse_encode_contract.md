@@ -205,6 +205,15 @@ frozen blocks differ from the slice's, or, on an invariant chart, its momenta ar
 construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
 coordinate, and nothing is compared for it.
 
+**On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
+with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
+against `C(x)` with step 3's mirror undone on the **full state**, every `r_i` and every `p_i` (`Π·C(x)` where
+`lookup_mirrored` is set, `C(x)` otherwise), and `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x`
+whose masses and unmirrored body-frame momenta are the slice's lands on the chart at its signed point and decodes back
+to itself, `L_z`'s sign kept; its mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and
+otherwise goes to latent `z`. Comparing against the mirrored `C(x)` would send every lower-hemisphere state to latent
+`z`. Every other chart compares against `C(x)` as above.
+
 ### Chart-aware validation
 
 Not every point of the latent hypercube $[0,1]^8$ is valid in every chart, and not every entered IC lands inside

@@ -489,7 +489,11 @@ the equator its collinear configurations, so every pixel is its own system, and 
 every syzygy. The mirror `(θ, φ) ↦ (θ, π − φ)`, `w → −w`, is a symmetry of fates, not an identification: where every
 coordinate the chart holds fixed is its own mirror image (released from rest is), the mirror-invariant fields (fate,
 `t_end`, spread) are exactly symmetric across the equator and the signed ones (`L_z`, the winding) exactly
-antisymmetric; where one is not (a held `p_fixed` with a non-zero `y`-component, or a fixed `L_z ≠ 0`), the
+antisymmetric, bitwise where the integration is mirror-exact, else to rounding (R-544 §4): the run from the exactly
+mirrored state `Π·x` is the run mirrored, bitwise, while the two pixels of a pair decode to mirror images only to the
+decode's rounding, so on a chaotic run their fates are compared on a named fixture the test shows to stay close over
+its horizon, and the statistics' "counted twice" holds for mirror-invariant classes, a signed class mapping to its
+mirror class (applied per R-369; physics review 5603309678 of PR #273, P2); where one is not (a held `p_fixed` with a non-zero `y`-component, or a fixed `L_z ≠ 0`), the
 hemispheres are different systems and the symmetry does not apply (REQ-CHART-082). No hemisphere is drawn alone, there
 is no hemisphere toggle, and nothing is folded, visible or not. The spherical map's `system_image` is **bijective**:
 θ's period and the poles are its only identifications, R-407's periodic and pole-crossing types on edges that no pixel
