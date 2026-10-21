@@ -40,6 +40,38 @@
 //! not 2.53e6, so the backend adds nothing there; a factor for saturated controls, or for another link set, would be
 //! measured on its own domain.
 //!
+//! **Its use across the chart registry** (decoder test 12, `engine/tests/decode_cross_backend.rs`; TASK-M2-24, physics
+//! review 5593488673 F3). The test holds the same factor, by the same measure, on every chart's own fuzzed interior,
+//! each decoded on the GPU through its stage variant from f32 `(u, v)` and parameters, `η_E` off and toward targets
+//! `0, −0.3, −40, 1.5` where the chart allows it. That widens the domain above, the defaults' latent interior, to these
+//! domains, and the confirmation at the M2 gate covers them. Worst over the 27 values, against the f64 decode and
+//! against the native f32 decode (rustc's, the backend's own share), in eps:
+//!
+//! | domain | Metal (M3 Pro), against f64 | Metal, against native f32 | lavapipe, against f64 | lavapipe, against native f32 |
+//! |---|---|---|---|---|
+//! | latent, defaults links (golden, interior seed 24, rest starts) | 12.43 | 19.22 | 14.51 | 19.11 |
+//! | latent, `stick_breaking`, interior (`q` on `[−½, ½]`) | 21.57 | 15.50 | 25.66 | 20.00 |
+//! | `(L_z, E)` / `(L_z, K)`, `s ∈ [0.01, 0.99]` | 4.67 / 4.53 | 5.21 / 7.63 | 11.07 / 9.00 | 11.65 / 9.60 |
+//! | ternary mass plot | 9.91 | 16.00 | 25.91 | 7.19 |
+//! | `(ν, K)` Burrau / Euclid plane | 4.43 / 3.64 | 6.61 / 2.72 | 7.61 / 7.44 | 7.41 / 7.23 |
+//! | `(θ, K)` / `(θ, L_z)` / `(θ, Δm)` strips | 10.57 / 9.70 / 22.12 | 9.56 / 8.50 / 15.44 | 7.68 / 9.34 / 8.73 | 7.17 / 7.40 / 7.38 |
+//! | mixed `(z_μ1, α)` | 9.76 | 12.82 | 17.50 | 24.10 |
+//! | shape sphere, both maps, off its poles | 10.89 | 10.50 | 45.07 | 41.52 |
+//!
+//! Outside the domain, measured and reported, not held to the factor:
+//!
+//! | domain | Metal, against f64 | Metal, against native f32 | lavapipe, against f64 | lavapipe, against native f32 | why |
+//! |---|---|---|---|---|---|
+//! | `stick_breaking` at saturated controls (`q` on `[−20, 20]`) | 1.58e10 | 7.40e6 | 1.58e10 | 4.16e6 | f32's own conditioning, as above |
+//! | `(L_z, E)` / `(L_z, K)` edge columns `s ∈ {0, 1}` | 1119.6 / 885.3 | 686.1 / 523.1 | 1276.3 / 795.3 | 978.6 / 746.3 | `a = √(2(K* − L_z²/2))` of a rounding-sized radicand amplifies a one-ulp difference in a backend's `sqrt` by about `1/√eps` (TASK-M2-12's stepped `L_max`); the feasibility tag there is held bitwise |
+//! | `(L_z, E)` / `(L_z, K)` past the square in `s` | 4.34 / 4.52 | 5.71 / 5.84 | 10.53 / 9.00 | 11.52 / 9.60 | every pixel `INVARIANT_INFEASIBLE`, the rigid rotation; outside the chart's view |
+//! | shape sphere's `n₀ = ±1` poles, `(s, t) = (½, ½), (0, ½), (1, ½)` | 3.97e6 | 3.79e6 | 1.61e6 | 2.88e6 | `BC₀₁` (`ρ̃ = 0`) and `λ̃ = 0`, reached only to each precision's rounding of `sin π` and `cos(π/2)` |
+//!
+//! The lavapipe columns are the `gpu-kernel` job's (Mesa's lavapipe, llvmpipe on LLVM 20.1.2, Vulkan; PR #262, CI run
+//! 39548466825), which shows the test's report on success (`.config/nextest.toml`); the Metal columns the same code's
+//! run on the build machine. Inside the domain the worst is 45.07 (the shape sphere's `virial_ratio` on lavapipe), so
+//! 256 covers every chart's interior by a factor of 5.7 on both backends.
+//!
 //! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
 //! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
 //! small `K_0` over cancelling momenta (`virial_ratio`). 256 covers the sweep's worst by a factor of 1.46; the perturbed
