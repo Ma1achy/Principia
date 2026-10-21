@@ -1862,8 +1862,9 @@
     detail: "no (u,v) in [0,1]² produces K* < K_min under the warp (chart reference §5.2)"
   rulings:
   - R-71
+  - R-549
   milestone: M2
-  note: "Defaults for K_max and γ_K: REQ-CHART-044 (calibration)."
+  note: "Defaults for K_max and γ_K: REQ-CHART-044 (calibration). Its fixed geometry and mass are the four frozen controls, chart parameters (R-549, RQ-350; REQ-CHART-048)."
 - id: REQ-CHART-018
   area: CHART
   statement: "The shape-sphere forward map must be shape_vec with u = ‖ρ̃‖² − ‖λ̃‖², v = 2ρ̃·λ̃, w = 2(ρ̃ ∧ λ̃) (standard positive cross), n = (u, v, w)/I, holding masses and momenta fixed."
@@ -1876,14 +1877,16 @@
     section: "Part 1 — The physics: what the 8D actually is"
   - file: decisions.md
     section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: unit test
-    detail: "L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1; collision of 0 and 1 → n = (−1, 0, 0); cross-check n against the IC Inspector's JS on random ICs"
+    detail: "L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1 at equal masses, w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂) under the current masses; collision of 0 and 1 → n = (−1, 0, 0); cross-check n against the IC Inspector's JS on random ICs"
   rulings:
   - R-14
+  - R-549
   milestone: M2
-  rq:
-  - RQ-355
+  note: "R-549 (RQ-355 (a), 21 Oct 2026): L⁺ is the pole only at equal masses; TASK-M2-08 stands as built. *Was:* the verify's \"L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1\" (reworded, kept with \"at equal masses\")."
 - id: REQ-CHART-019
   area: CHART
   statement: "The shape-sphere chart must state which chart map it uses; the spherical map must be θ = 2π·s (azimuth, horizontal), φ = π·(1 − t) (polar from +w, vertical, L⁺ at the top), n = (sin φ cos θ, sin φ sin θ, cos φ), over the full φ ∈ [0, π] with no polar buffer; the exponential map n = cos(r)·n₀ + sin(r)·d/‖d‖ about an orthonormal frame (n₀, e₁, e₂) must be available as the nonlinear chart."
@@ -2202,22 +2205,23 @@
   milestone: M2
 - id: REQ-CHART-036
   area: CHART
-  statement: "The shape-sphere convention must be u = ‖ρ̃‖² − ‖λ̃‖², v = 2ρ̃·λ̃, w = 2(ρ̃ ∧ λ̃), n = (u, v, w)/I, θ the azimuth in (u, v) on the horizontal axis (0..2π) and φ the polar angle from +w on the vertical axis (0..π, L⁺ at top), with no polar buffer."
+  statement: "The shape-sphere convention must be u = ‖ρ̃‖² − ‖λ̃‖², v = 2ρ̃·λ̃, w = 2(ρ̃ ∧ λ̃), n = (u, v, w)/I, θ the azimuth in (u, v) on the horizontal axis (0..2π) and φ the polar angle from +w on the vertical axis (0..π, L⁺ at top at equal masses), with no polar buffer."
   source:
   - file: decisions.md
     section: "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
   - file: decisions.md
     section: "R-12 — The shape-sphere chart map stays as the markdown has it *(closes RQ-10)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: unit test
-    detail: "Numeric landmark tests: BC₀₁ → (−1, 0, 0), L⁺ → (0, 0, +1), all binary collisions at w = 0, equal masses 120° apart; cross-check n against the IC Inspector's JS on random ICs."
+    detail: "Numeric landmark tests: BC₀₁ → (−1, 0, 0), L⁺ → (0, 0, +1) at equal masses and w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂) under the current masses, all binary collisions at w = 0, equal masses 120° apart; cross-check n against the IC Inspector's JS on random ICs."
   rulings:
   - R-12
   - R-14
+  - R-549
   milestone: M2
-  rq:
-  - RQ-355
-  note: "R-14 corrects R-12's premise; R-12's 'no polar buffer' stands."
+  note: "R-14 corrects R-12's premise; R-12's 'no polar buffer' stands (it survives RQ-355: a pole is a nondegenerate triangle for any masses). R-549 (RQ-355 (a), 21 Oct 2026): L⁺ is the top pole at equal masses only; TASK-M2-08 stands as built."
 - id: REQ-CHART-037
   area: CHART
   statement: "Each chart in the lowering appendix must lower to its stated Φ map, extra uniforms and flags (latent affine slice with its scale in q, shape sphere by chart_reference §3.3's (θ, φ) map with system_image n-to-1, n = 2 (R-141), (L_z,E)/(L_z,K) invariant charts writing tagged payloads for infeasible pixels in-kernel, ternary mass, Euclid ν plane annotation axis, θ×K strip requiring lock for curve tilt, Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise), all ending in canonicalise → (m,r,p) → wrapper(occupant)."
@@ -2450,12 +2454,16 @@
     section: Part 5 — Well-posedness and the validation contract
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: review checklist
     detail: "each chart's held blocks are traced to the slice pin (z₀) or a named chart parameter, with p_fixed's frame and φ_f stated; physics reviewer approved"
   rulings:
   - R-72
+  - R-549
   milestone: M2
+  note: "R-549 (RQ-350 (a), as applied, 21 Oct 2026): the invariant charts' parameters are the four frozen controls (z_α, z_β, z_μ₁, z_μ₂), set from z₀'s configuration and mass blocks when the chart is entered, or from the lock where one is set, and edited like any chart parameter; chart_reference §2 says so. TASK-M2-12's representation (applied meanwhile) stands; the GUI's entry is REQ-GUI-341."
 - id: REQ-CHART-049
   area: CHART
   kind: calibration
@@ -3160,7 +3168,7 @@
   milestone: M2
 - id: REQ-INT-003
   area: INT
-  statement: "The shape-sphere landmarks must be computed from the shape map with the current masses, not hard-coded: `BC₀₁` at `(−1, 0, 0)`, `L⁺` (bodies 0→1→2 anticlockwise) at `(0, 0, +1)`, all binary collisions on `w = 0`, and the collision landmarks placed at their mass-weighted positions."
+  statement: "The shape-sphere landmarks must be computed from the shape map with the current masses, not hard-coded: `BC₀₁` at `(−1, 0, 0)`, `L⁺` (bodies 0→1→2 anticlockwise) at `(0, 0, +1)` at equal masses and at `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)` under the current masses, all binary collisions on `w = 0`, and the collision landmarks placed at their mass-weighted positions."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
@@ -3172,18 +3180,19 @@
     section: 3.4 Landmarks at known fixed coordinates
   - file: decisions.md
     section: "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: unit test
-    detail: "dd test 9: BC₀₁ -> (−1,0,0) for any masses; L⁺ -> (0,0,+1); random masses -> all collisions at w = 0; equal masses -> azimuths 180°, 60°, 300°"
+    detail: "dd test 9: BC₀₁ -> (−1,0,0) for any masses; L⁺ -> (0,0,+1) at equal masses and w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂) for every mass set; random masses -> all collisions at w = 0; equal masses -> azimuths 180°, 60°, 300°"
   rulings:
   - R-14
   - R-22
   - R-50
   - R-124
+  - R-549
   milestone: M2
-  rq:
-  - RQ-355
-  note: "R-50 (applied now, R-124): the collision landmarks are mass-weighted; dd_integrator §3.7's 'B18 still open' is conformed. Decides audit B18 left open in R-14."
+  note: "R-50 (applied now, R-124): the collision landmarks are mass-weighted; dd_integrator §3.7's 'B18 still open' is conformed. Decides audit B18 left open in R-14. R-549 (RQ-355 (a), as applied, 21 Oct 2026): L± are the poles only at equal masses; TASK-M2-08 built and tested exactly this (applied meanwhile), so it stands as built. *Was:* \"`L⁺` (bodies 0→1→2 anticlockwise) at `(0, 0, +1)`\" and the verify's \"L⁺ -> (0,0,+1)\" (reworded, kept with \"at equal masses\")."
 - id: REQ-INT-004
   area: INT
   statement: "The shared kernel must be generic over its real type and instantiated for f32 and f64 only: the CPU runs it at f64 and the GPU at f32 (R-265 parks double-double)."
@@ -8101,8 +8110,9 @@
   rulings:
   - R-22
   - R-449
+  - R-549
   milestone: M2
-  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). .raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are."
+  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). R-549 (RQ-336, 21 Oct 2026): R-449 item 5 names prin-rs's dump formats (.raw, .prnq) as examples; the rule covers every machine-readable export the corpus defines, and any defined later, and R-449's quoted words are not changed. *Was:* \".raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are.\" (reworded, kept here)."
 - id: REQ-GEN-037
   area: GEN
   statement: "Each link registry entry must declare its tunable parameters, each with a name (a chart constant the entry already declares and its trees read), a default (that constant's value), a closed allowed range [lo, hi] and a citation, in a table beside the entries: today `mu_max` on `softmax_tanh` and `q_max` on `sigmoid_q`, `tanh_q` and `softsign_q`, with `alpha_min` not tunable; and `check` must refuse, at generation, an entry whose forward leaves its declared codomain and a slot given an entry of another codomain, never merely leaving it out of a list."
@@ -16018,17 +16028,22 @@
   note: "R-476 M4 (20 Oct 2026): the integration is unchanged; the trace's drawing is the line system's (REQ-GUI-245, TASK-M8-49)."
 - id: REQ-GUI-054
   area: GUI
-  statement: "The shape-sphere panel must draw n(t) as a polyline on S² with the landmarks (the three binary collisions on the equator, the Lagrange poles), its 3D and unwrapped views must share the config-space frame so they always agree, and the 3D orbit control must rotate the view, not the data."
+  statement: "The shape-sphere panel must draw n(t) as a polyline on S² with the landmarks (the three binary collisions on the equator, the Lagrange poles, and the Euler landmarks, E_j the collinear configuration with body j in the middle, labelled E_{j+1} through REQ-GUI-188's one conversion module), its 3D and unwrapped views must share the config-space frame so they always agree, and the 3D orbit control must rotate the view, not the data."
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 4. Click inspector — the three-panel absolute surface
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: unit test
-    detail: "points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged"
+    detail: "points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged; the Euler landmark with body 0 in the middle is labelled E₁, with body 2 E₃, at the collinear configuration's n; control: a 0-based E₀ label fails"
   rulings:
   - R-14
   - R-50
+  - R-449
+  - R-549
   milestone: M8
+  note: "R-549 (RQ-334 (a), 21 Oct 2026): the Euler landmarks' index and shown label; their antipodality to the other two bodies' collision is stated for equal masses only (dd_integrator §3.7). Closed by TASK-M8-11."
 - id: REQ-GUI-055
   area: GUI
   statement: "The inspector's scalar readout must show t_end_step, state, escaper, d_min and the drifts at the cursor."
@@ -16559,7 +16574,7 @@
   note: "R-390: the GUI track builds the hover label on mock data in TASK-M6-27, from the mock's fake sample, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which reads the real sample."
 - id: REQ-GUI-087
   area: GUI
-  statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 1-based and come from R-449's one conversion module (REQ-GUI-188): the bodies 1, 2, 3, and a pair named by its two bodies, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"), as the artboards show them."
+  statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 1-based and come from R-449's one conversion module (REQ-GUI-188): the bodies 1, 2, 3, and a pair named by its two bodies, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"), as the artboards show them; R-449's map applies under the Burrau presets too, and there the legend, and in every chart the Inspector, show each body's mass beside its number, e.g. \"body 1 (m = 5/12)\" (R-549)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -16571,14 +16586,17 @@
     section: "Measurement readouts (gauge-invariant → hold under all four handles)"
   - file: decisions.md
     section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui labels_one_based: on the real engine the hover label, the legend, the Trajectory panel and the Inspector name an escape of body 0 \"escape body 1\" and collisions of pairs 2, 1 and 0 \"collision 1–2\", \"collision 1–3\" and \"collision 2–3\", each through REQ-GUI-188's function; no label reads \"body 0\" or a pair id"
+    detail: "cargo test -p gui labels_one_based: on the real engine the hover label, the legend, the Trajectory panel and the Inspector name an escape of body 0 \"escape body 1\" and collisions of pairs 2, 1 and 0 \"collision 1–2\", \"collision 1–3\" and \"collision 2–3\", each through REQ-GUI-188's function; no label reads \"body 0\" or a pair id; under the Burrau (3, 4, 5) preset the legend's keys and the Inspector name body 0 \"body 1 (m = 5/12)\" (and \"escape body 1 (m = 5/12)\"); control: a Burrau legend key without the mass fails"
   rulings:
   - R-22
   - R-449
+  - R-549
   milestone: M8
-  note: "R-449 (16 Oct 2026) supersedes R-22's display half: was \"must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels\" (verify: \"labels for body 0 escape read 'body 0'; … no '1–2' style collision label\"). Still closed by TASK-M8-10, which uses TASK-M2-33's function."
+  note: "R-449 (16 Oct 2026) supersedes R-22's display half: was \"must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels\" (verify: \"labels for body 0 escape read 'body 0'; … no '1–2' style collision label\"). Still closed by TASK-M8-10, which uses TASK-M2-33's function. R-549 (RQ-335 (a), both halves, 21 Oct 2026): the mass beside the number, applied per R-369 to the legend under a Burrau preset and to the Inspector on every chart, which shows the masses anyway."
 - id: REQ-GUI-088
   area: GUI
   statement: "The right-hand Trajectory panel must show, for the IC under the cursor or a kept orbit (tabs 'under cursor', #1, #2, +), a one-line summary (fate, t_end, FTLE, E₀), real space (CoM frame) beside the shape sphere, the F₂ word, substeps, minimum separation and |ΔE/E|, a playhead, listen, Open full viewer… and IC Inspector… (both opening the Inspector window), and the kept orbits as the header's tabs, each with its fate and time, removable, and its own previews, trace and sound (R-541 G4; its order and sections REQ-GUI-326)."
@@ -18408,8 +18426,9 @@
   rulings:
   - R-22
   - R-449
+  - R-549
   milestone: M2
-  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: one module owns the conversion, the (state, detail) function and the body and pair names it is built from, in the ledger crate beside pair_bodies unless the code reviewer agrees otherwise; the states with no body or pair read by their payload §2 names; ledger::payload::detail_meanings (hashed into the schema version) is machine data and keeps its 0-based strings, never shown. The Euler landmarks' shown labels are RQ-334's. Code review 5547986569 on PR #226, F4 (applied per R-369): the GUI mock's half of the negative arm runs in the gui crate, since ledger, the build DAG's root, cannot reach gui. Gui review 5548034323, G2 (applied per R-369): the module also owns the outcome class's name, the black class \"bounded / nothing yet\"."
+  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: one module owns the conversion, the (state, detail) function and the body and pair names it is built from, in the ledger crate beside pair_bodies unless the code reviewer agrees otherwise; the states with no body or pair read by their payload §2 names; ledger::payload::detail_meanings (hashed into the schema version) is machine data and keeps its 0-based strings, never shown. The Euler landmarks' shown labels are R-549's (RQ-334): E_j, body j in the middle, shown E_{j+1} through this module, built by TASK-M8-11 (REQ-GUI-054). Code review 5547986569 on PR #226, F4 (applied per R-369): the GUI mock's half of the negative arm runs in the gui crate, since ledger, the build DAG's root, cannot reach gui. Gui review 5548034323, G2 (applied per R-369): the module also owns the outcome class's name, the black class \"bounded / nothing yet\"."
 - id: REQ-GUI-189
   area: GUI
   statement: "On the mock engine, the console must be a window of exactly two scopes, top to bottom, the header bar (the filters All, Warnings, Errors, Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the log (the entry list); opened from the footer or from Windows › Console it must land in navigation mode on the header bar scope itself, and opening by itself on an error must take no focus; in navigation mode on a scope ↑ and ↓, and Tab and Shift+Tab, must move between the two scopes and stay in the window; Enter on the header bar must go in onto All, ← and → must move across every header element in visual order, the search field, Copy, Clear and × included, and Esc must go back up to the header bar scope; the search field must behave as §G3's text field; × must be a focusable button whose Enter, or a click, closes the console and returns the focus to whatever opened it, and Esc from the window's top level must close it too; Enter on the log must start interaction, in which ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go to the first and last entry and Shift gives ×10, over the whole filtered log, not only the rows drawn, and Esc must return to navigation mode on the log scope; a click on a console control must move the keyboard's focus onto it, in navigation mode, except that a click on the search field must start typing at once, in interaction mode with the blue ring, §G3's typing rules then holding (Esc and Enter stop and keep the text, Tab and Shift+Tab move on to the window's next or previous section) (R-456); and the ring and the breadcrumb must follow (\"Console › Header › Copy\", \"Console › Log\")."
@@ -20853,6 +20872,23 @@
   - R-542
   milestone: M7
   note: "PR #270's code review, 2; closed by TASK-M7-51, which builds the inspector (gui re-review G6, applied per R-369). The Picture base's upload is its own file picker, labelled as the prototype has it (\"Your image…\"), distinct from File › Import picture (the pxpack restore). *Was:* \"Closed by TASK-M7-49.\""
+- id: REQ-GUI-341
+  area: GUI
+  statement: "On entering an invariant chart ((L_z, E) or (L_z, K)) the four frozen controls (z_α, z_β, z_μ₁, z_μ₂), the chart's parameters, must be set from z₀'s configuration and mass blocks, or from the lock where one is set, and must then be edited like any chart parameter (Design axiom 6), one undoable SetField each (R-549; RQ-350)."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 2. Invariant-momentum charts `(Lz, E)` and `(Lz, K)`
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: "Design axioms (the six that must survive contact with a code agent)"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui invariant_chart_params: switching from the latent chart to (L_z, E) with no lock sets the four controls to z₀'s z_α, z_β, z_μ₁, z_μ₂ bit for bit; with a lock set, to the lock's; editing one is one undoable SetField that moves only that parameter; control: a chart entered with its previous parameters kept fails"
+  rulings:
+  - R-549
+  milestone: M8
+  note: "R-549 (RQ-350 (a), as applied). Closed by TASK-M8-06, the Manifold view's Chart section (applied per R-369)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -24315,22 +24351,24 @@
   note: "The bound is the standalone tool's measured value; the Rust Inspector's gate: REQ-VAL-121 (calibration)."
 - id: REQ-VAL-022
   area: VAL
-  statement: "Decode → canonicalise → z must round-trip with max ‖z − z′‖ ≤ 1.2×10⁻¹³ over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly."
+  statement: "Decode → canonicalise → z must round-trip with max ‖z − z′‖ ≤ 1.2×10⁻¹³ over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole at equal masses and collinear ones on the equator exactly."
   source:
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Status — as built (supersedes stale details below)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*"
   verify:
     method: numerical gate
-    detail: "2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole and collinear → w = 0 exactly"
+    detail: "2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole at equal masses and collinear → w = 0 exactly"
   rulings:
   - R-10
   - R-21
   - R-71
+  - R-549
   milestone: M2
   rq:
-  - RQ-355
   - RQ-475
   - RQ-476
   note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration)."
@@ -29072,8 +29110,9 @@
   - R-22
   - R-73
   - R-449
+  - R-549
   milestone: M2
-  note: "R-449 (16 Oct 2026) supersedes R-22's display half: \"0-based throughout\" now means storage, computation, the code, the WGSL and the exports; the shown names are REQ-GUI-188's. The shown numbers are not the Burrau literature's (RQ-335)."
+  note: "R-449 (16 Oct 2026) supersedes R-22's display half: \"0-based throughout\" now means storage, computation, the code, the WGSL and the exports; the shown names are REQ-GUI-188's. The shown numbers are not the Burrau literature's: R-449's map applies everywhere, Burrau included, and the Burrau presets' legends and the Inspector show each body's mass beside its number (R-549, RQ-335; REQ-GUI-087)."
 - id: REQ-SYS-017
   area: SYS
   statement: "The CPU-f64 instantiation of the kernel must ship as the Precision ring (hover dwell-tier, click inspector, offline uniform-survey certifier) and expose `computeIC(chart, uv, simKey)`, `computeQuad(chart, quadID, simKey)`, `stepOnce(state, dt, params)` and `decodeOnly(chart, uv, simKey)` with the signatures of parity §1."

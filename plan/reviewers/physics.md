@@ -32,7 +32,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-015 — on an (L_z,E) chart, E_0 is constant along the L_z axis and monotone along E to within f32 rounding of the target
 - [ ] REQ-VAL-019 — import the literature ICs; compare E, L_z after multiplying back by the recorded rescale
 - [ ] REQ-VAL-021 — 2×10⁴ random ICs, each handle applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)
-- [ ] REQ-VAL-022 — 2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole and collinear → w = 0 exactly
+- [ ] REQ-VAL-022 — 2×10⁴ random z, |z| < 4: max round-trip error ≤ 1.2×10⁻¹³; canonical CoM ≤ 1.7×10⁻¹⁶ from origin; equilateral → pole at equal masses and collinear → w = 0 exactly
 - [ ] REQ-VAL-121 — the proposal re-measures the bounds on the Rust decode/encode (reference tool: 1.2×10⁻¹³ round trip, 1.6×10⁻¹⁴ handles) and states the gates; recorded in decisions.md
 - [ ] REQ-VAL-174 — the imported Burrau rest start, multiplied back by the recorded rescale, gives M = 12, R = 2.2361 and E = −12.8167
 

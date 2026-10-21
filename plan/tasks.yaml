@@ -2403,7 +2403,7 @@
   title: "Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure's axis labels"
   depends_on: [TASK-M8-05, TASK-M6-26, TASK-M6-38]
   needs: [REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026]
-  requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161]
+  requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161, REQ-GUI-341]  # REQ-GUI-341: an invariant chart's frozen controls (R-549, RQ-350)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-07
