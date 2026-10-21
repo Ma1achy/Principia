@@ -34,9 +34,9 @@ generalised leapfrog  2.0        15–20     unstable over long runs (explained 
   not kept. Implicit midpoint holds the residual at 1e-15–1e-13; the leapfrog's grows as h² per orbit and keeps
   growing, and the energy breaks once it reaches about 1.8e-2, in every run, at every step size, under both time
   transformations. The control is implicit midpoint started deliberately off the constraint: it stays bounded at
-  1e-3 and 1e-2, and at 3e-2 holds under one time transformation and diverges under the other. The earlier "worse at
+  1e-3 and 1e-2, and at 3e-2 holds under one time transformation and diverges under the other. My earlier "worse at
   smaller steps" was a misread: smaller steps break later (2.2, 4.4, 8.8 orbits); the figure quoted was the maximum
-  over runs that had already diverged.
+  over runs that had already diverged. Nothing below depends on it; it adds one row to the warning table's reasons.
 
 **Proposed:**
 - **The user chooses both, freely, and no combination is forbidden** (Malachy, 21 Oct: "don't forbid combos of
