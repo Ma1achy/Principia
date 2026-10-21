@@ -577,19 +577,18 @@ fn check_held(n: u32, held: &Held) {
         held.pole.iter().chain(&held.equator).all(|&w| w < 1e-12),
         "a held w past rounding"
     );
-    let ratios: Vec<f64> = held
-        .masses
-        .iter()
-        .flat_map(|m| [(m[1] / m[0]).ln(), (m[2] / m[0]).ln()])
-        .collect();
+    let spread = |k: usize| {
+        let r: Vec<f64> = held.masses.iter().map(|m| (m[k] / m[0]).ln()).collect();
+        r.iter().any(|&x| x > 2.0) && r.iter().any(|&x| x < -2.0)
+    };
     assert!(
         held.masses.len() == n
             && held
                 .masses
                 .iter()
                 .all(|m| (m.iter().sum::<f64>() - 1.0).abs() < 1e-15)
-            && ratios.iter().any(|&r| r > 2.0)
-            && ratios.iter().any(|&r| r < -2.0),
+            && spread(1)
+            && spread(2),
         "the collinear masses do not spread across the mass block"
     );
 }
