@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*106 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*107 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -58,7 +58,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-040 — re-run the escape validation against check 2's ground truth and against the legacy t = 30 set, which the validation harness regenerates on the config slices (config_stability, config_basin; fixtures/slices.toml) at t = 30 under the legacy classifier (docs/reference/prin-rs/src/outcome.rs) and checks in as a fixture (R-166); record precision, recall (previously 100% / 96.3% on the legacy set) and the tau gap (previously 383×) for both
 - [ ] REQ-VAL-041 — closure |dr| per eta and fitted order; fail if the order is below the occupant's (the check that exposed §0's first-order error)
 - [ ] REQ-VAL-042 — each orbit returns to rest in the same configuration after one period; order reported
-- [ ] REQ-VAL-044 — runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`
+- [ ] REQ-VAL-044 — runs on logH-TTL, selected by run_reversible; asserts time symmetry via the reversibility measure `xi`; a request to run it on an occupant with run_reversible false is refused
 - [ ] REQ-VAL-045 — radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12
 - [ ] REQ-VAL-047 — Lagrange circular: equilateral residual at every sampled t within a tight f64 tolerance; figure-eight shape-sphere curve matches the published one
 - [ ] REQ-VAL-051 — Measure the |Δn̂| distributions of escapers and bound trajectories across t = 25–30; record the gap ratio (claimed 383x, 7.04e-05 vs 2.70e-02; prin-rs reports at best 6.8x) and assert the chosen tau lies within the gap and that outcomes are unchanged across the middle of the gap.
@@ -127,6 +127,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 
 **M8**
 - [ ] REQ-ENC-028 — the proposal measures κ and the chart-encode vs direct-inject difference over near-degenerate and random ICs and states both values; recorded in decisions.md
+- [ ] REQ-INT-093 — cargo xtask gate browser-nsub-table: in Chrome stable and Safari (R-110), the wasm host generator's tables for every configuration of REQ-INT-091's fixture equal the fixture's bits; control: the fixture with one entry one ulp off fails the gate
 - [ ] REQ-GUI-122 — on a region containing a catalogue orbit, a seed refines to it and matches its catalogue period
 - [ ] REQ-GUI-149 — the proposal shows the fitted α on the fixture at the default settings and the tolerance with its margin
 - [ ] REQ-GUI-150 — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not
@@ -244,7 +245,7 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 
 ## 7. Determinism and parity
 
-- [ ] Every branch input is a comparison against a compile-time constant, an integer counter or single-rounded arithmetic: `N_sub` is the 64-threshold bucket lookup (`THR[n] = round_f32((r_sub/n^{2/3})²)`), collision is `d² < r_coll²`, the horizon is an integer macro-step counter. `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"; `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
+- [ ] Every branch input is a comparison against a compile-time constant, a value every backend receives bit-identically, an integer counter or single-rounded arithmetic: `N_sub` is the bucket lookup over the sim key's thresholds (`THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)`, generated on the host per sim key, R-502), collision is `d² < r_coll²`, the horizon is an integer macro-step counter. `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"; `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
 - [ ] Every multi-op branch input — `d²`, the windowed `|Δn̂|`, `E_rel` and any other — is enumerated and written with explicit `fma` in a fixed form, not left to a backend switch. `decisions.md` § "R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*"; `docs/contracts/principia_integrator_contract.md` § "And FMA contraction is a live question"
 - [ ] Every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) excludes samples by `ftle_valid` explicitly and never relies on NaN propagation: one NaN poisons a sum or mean, and WGSL's `min`/`max`/`clamp` with NaN operands are implementation-defined. `decisions.md` § "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
 - [ ] No constant that differs between the f32 and f64 instantiations appears in a control-flow decision. `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
@@ -260,7 +261,7 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 - [ ] Word crossings are ordered by crossing fraction `τ`, with the fixed tie-break and the half-open endpoint rule, so word content is as deterministic as its branches. `docs/contracts/principia_integrator_contract.md` § "Part 5 — Units and the horizon (inherited scale gauge)"; `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
 - [ ] Ground-truth physics is validated on the f64 CPU reference against external truth; the GPU inherits correctness through parity; chaotic benchmarks (Burrau) are compared at structural features only. `docs/notes/principia_validation_ground_truth_note.md` § "The correctness factoring: validate on CPU, inherit on GPU"; `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
 - [ ] The independent convergence reference is a separate CPU arbitrary-precision integrator with convergence gating (double-double a fast screen only; R-265: the reference itself serves as the screen, and the shared kernel is f32 and f64 only); the inspector's reference is RK45. `decisions.md` § "R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*"
-- [ ] Yoshida-6 coefficients are checked against Yoshida (1990) before entering the shared source. `decisions.md` § "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
+- [ ] Yoshida-4 and Yoshida-6 coefficients carry their citation (Yoshida 1990; Yoshida-6 its Table 1, solution A) and pass the convergence-order test at orders 4 and 6, whose digit-changed controls fail, before entering the shared source; the paper is not added (R-501). `decisions.md` § "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"; `decisions.md` § "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
 
 ## 8. Integrator and payload physics
 

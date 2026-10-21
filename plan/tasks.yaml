@@ -674,7 +674,7 @@
   title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
   depends_on: [TASK-M2-08, TASK-M2-14]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047]
+  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075, REQ-CHART-078]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M2-29
@@ -736,9 +736,9 @@
 - id: TASK-M2-36
   milestone: M2
   title: "Tilt and slice on every chart: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3) ⚑"
-  depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22)
+  depends_on: [TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13, TASK-M2-28]  # R-473 J10: the charts (M2-08, M2-11 to M2-13), their descriptors (M2-14) and navigation (M2-22); M2-28 for the exponential map's fold, which the tilted fold arm tests (physics review 5593301205 of PR #255, P1, applied per R-369)
   needs: []
-  requirements: [REQ-CHART-062, REQ-CHART-063, REQ-CHART-065, REQ-CHART-066]
+  requirements: [REQ-CHART-062, REQ-CHART-063, REQ-CHART-064, REQ-CHART-065, REQ-CHART-066]  # REQ-CHART-064: R-507 (RQ-375 ruled), T2's scale
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M2-37
@@ -759,10 +759,10 @@
   pitfalls: []
 - id: TASK-M2-39
   milestone: M2
-  title: "T4's units for a tilt mixing a chart parameter with a hidden coordinate, as RQ-375 rules (R-473) ⚑"
-  depends_on: [TASK-M2-36]
+  title: "Under Tip as sheet, a window pixel whose (a, b) leave the chart's square is past the edge, blank past a bounded one (R-512) ⚑"
+  depends_on: [TASK-M2-36, TASK-M2-38]  # re-scoped (R-507 U4, R-512, R-513 Q4): a leaf; REQ-CHART-077 moved to TASK-M2-40
   needs: []
-  requirements: [REQ-CHART-064]
+  requirements: [REQ-CHART-076]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M2-40
@@ -770,7 +770,7 @@
   title: "Saved charts in the kernel: the oblique latent chart and the curved parent with its tilt, composed tilts, and the bitwise reopen (R-475) ⚑"
   depends_on: [TASK-M2-36]
   needs: []
-  requirements: [REQ-CHART-073]
+  requirements: [REQ-CHART-073, REQ-CHART-077]  # REQ-CHART-077: R-513 Q4, the composition built once
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M2-41
@@ -781,6 +781,14 @@
   requirements: [REQ-GEN-037, REQ-GEN-038, REQ-GEN-039, REQ-GEN-040, REQ-GEN-041, REQ-GEN-042, REQ-DEC-048]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M2-42
+  milestone: M2
+  title: "The pipeline_runtime teardown SIGSEGV stops: reproduce it, find the cause, fix it, and check for it"
+  depends_on: [TASK-M1-05, TASK-M1-08]  # the CI flake on PRs #235 and #254, after R-276 and R-333; applied per R-369
+  needs: [REQ-RENDER-011]
+  requirements: [REQ-VAL-192]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -794,15 +802,15 @@
   title: Stepper occupants and the capability profile
   depends_on: [TASK-M3-01]
   needs: [REQ-INT-002]
-  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032]
+  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090, REQ-VAL-191]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-03
   milestone: M3
-  title: "Substep control: the frozen N_sub bucket table and total_substeps"
+  title: "Substep control: the per-sim-key N_sub threshold table, its bucket tree and total_substeps"
   depends_on: [TASK-M3-01]
   needs: [REQ-GEN-007, REQ-PAY-013, REQ-PAY-027, REQ-TOOL-003]
-  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034]
+  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034, REQ-INT-091, REQ-INT-092, REQ-INT-094]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M3-04
@@ -842,7 +850,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -1885,6 +1893,14 @@
   requirements: [REQ-GUI-251, REQ-GUI-252, REQ-GUI-254, REQ-GUI-255, REQ-GUI-256, REQ-GUI-257, REQ-GUI-258, REQ-GUI-259, REQ-GUI-260, REQ-GUI-262]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M6-51
+  milestone: M6
+  title: "The GUI track (R-390): a latent view saved at a tilt, tilted again in the orthonormal frame of its projected targets, the stored pair kept (R-475, R-514) ⚑"
+  depends_on: [TASK-M6-49]  # R-475 L4, R-514: a leaf; numbered past the links port's (unmerged) TASK-M6-50
+  needs: []
+  requirements: [REQ-GUI-265]
+  reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2280,7 +2296,7 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48]  # TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253); TASK-M6-48 for tilt_map, the Gram factor's map (R-474 R7)
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48, TASK-M6-49]  # TASK-M6-49 for the View entry Save view as chart (R-475; gui review G4 on PR #255); TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253); TASK-M6-48 for tilt_map, the Gram factor's map (R-474 R7)
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
   requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056, REQ-CHART-071]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
@@ -2561,8 +2577,8 @@
   milestone: M8
   title: "Browser gates: Tier-N on real browsers, and the Playwright fragment goldens"
   depends_on: [TASK-M8-38, TASK-M7-18]
-  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059]
-  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144]
+  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059, REQ-INT-091]
+  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144, REQ-INT-093]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M8-41
@@ -2615,8 +2631,8 @@
   pitfalls: []
 - id: TASK-M8-47
   milestone: M8
-  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning as RQ-372 rules (R-467)"
-  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf, waiting for RQ-372
+  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning only for warped axes (R-467, R-506)"
+  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf; RQ-372 ruled by R-506
   needs: []
   requirements: [REQ-GUI-228]
   reviewers: [code, qa, gui, physics]
@@ -2625,7 +2641,7 @@
   milestone: M8
   title: "On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑"
   depends_on: [TASK-M8-06, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18]
-  needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073]
+  needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077]
   requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
@@ -2639,7 +2655,7 @@
   pitfalls: []
 - id: TASK-M8-50
   milestone: M8
-  title: "Lines ▾, its editors, the axes and presets, Grid and t_end out of Overlays, and lines in the exported view state (R-476 L2, §8b, §9)"
+  title: "Lines ▾, its editors, the axes and presets, Grid, t_end and class edges out of Overlays, and lines in the exported view state (R-476 L2, §8b, §9; R-509)"
   depends_on: [TASK-M7-42, TASK-M7-43, TASK-M8-05, TASK-M8-08, TASK-M8-23, TASK-M8-03]
   needs: []
   requirements: [REQ-GUI-246, REQ-GUI-247, REQ-GUI-248]
@@ -2647,7 +2663,7 @@
   pitfalls: []
 - id: TASK-M8-51
   milestone: M8
-  title: "The line system's open questions as RQ-377 rules: the expression syntax and playhead list, the trace fade's distance, label collisions with trace ticks, new contour sets' default style"
+  title: "The line system's open questions as R-509 rules them: the stain's expression syntax and the ledger's fields, the trace fade's proxy, trace labels winning, Screen contour the default"
   depends_on: [TASK-M7-43, TASK-M8-49, TASK-M8-50]
   needs: []
   requirements: [REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249, REQ-GUI-250]
@@ -2667,6 +2683,14 @@
   depends_on: [TASK-M8-01, TASK-M8-28, TASK-M8-31, TASK-M8-32, TASK-M8-33, TASK-M7-44, TASK-M8-48, TASK-M8-50, TASK-M8-46, TASK-M8-52, TASK-M2-21, TASK-M2-36, TASK-M2-37, TASK-M2-40]
   needs: []
   requirements: [REQ-TOOL-176, REQ-TOOL-177, REQ-TOOL-178, REQ-GUI-263]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M8-54
+  milestone: M8
+  title: "The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑"
+  depends_on: [TASK-M8-51]  # R-509 Y3: a leaf, waiting for RQ-341; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
+  needs: []
+  requirements: [REQ-GUI-266]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M0-35

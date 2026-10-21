@@ -557,6 +557,10 @@ pub const FGW_CAPACITY: u32 = 76;
 /// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
 pub const FGW_LENGTH_SENTINEL: u32 = 127;
 
+/// The most branch-cut crossings one accepted substep holds, one per cut (payload §3; symbolic_dynamics_contract §1;
+/// the register's `max_crossings_per_substep`): the capacity of the march's per-substep crossing list.
+pub const MAX_CROSSINGS_PER_SUBSTEP: u32 = 2;
+
 /// `length_raw`: bits 25–31 of the word's `.w`, element 3 of its `vec4<u32>`; 0…76 valid, 127 truncated
 /// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.
 #[inline]

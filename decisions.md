@@ -475,6 +475,10 @@ At the top level: telemetry §2's frame record and its five stages. Beneath them
 Files: dd_telemetry_and_tiers §2, §5, §5.5, §7; debug_tooling_plan; the step-6 GUI docs.
 
 ## R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*
+*Amended by R-500 and R-501.*
+*Still in force: the Yoshida-6 coefficients are checked before they enter the shared source, now by their citation and
+a convergence-order test, not against the paper (R-501); the negative weight's label is fixed, and Part 6's sentence
+that carried it is withdrawn (R-500).*
 *24 Sep 2026 · recorded; applied before Yoshida-6 enters the shared source*
 
 Files: dd_integrator :81–90, §6; integrator_contract :366.
@@ -1104,9 +1108,11 @@ All four readings in RQ-118 are accepted.
 25 Sep 2026.*
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
+*Amended by R-503 (the exponential map).*
 *25 Sep 2026 · applied in step 7 · amended by R-157*
-*Still in force: the shape sphere is 2-to-1 over its φ hemispheres, and `DoubleCover` is retired for the shape sphere
-only; it stays the full-range Burrau chart's value (R-157).*
+*Still in force: the shape sphere's spherical map is 2-to-1 over its φ hemispheres (its exponential map's value is
+computed from its cap, R-503), and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau
+chart's value (R-157).*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
@@ -1262,6 +1268,9 @@ code runs it. `FINDINGS.md:96`'s Eq. 20 statement is a documentation error, note
 as a selectable time mode. M3's re-run of the 32-case matrix confirms the default.
 
 ## R-162 — The reversible occupant is logH's TTL time mode
+*Refined by R-500.*
+*Still in force: all of it; "the reversible occupant" is the profile's `run_reversible` occupant, logH's TTL time mode
+only (R-500).*
 *25 Sep 2026 · applied in step 7*
 
 The reversible occupant is logH's TTL time mode (Mikkola–Tanikawa), as prin-rs built it. Aarseth–Zare with
@@ -7439,7 +7448,10 @@ Adds REQ-GUI-178; REQ-GUI-095's statement, verify, rulings, sources and note cha
 *Amended by R-468 (20 Oct 2026; its fill is Extend, the default of two modes, beside Fit, the view's square scaled
 to the window's shorter side, chosen in View › "F3 fills by: Extend / Fit"). Read by R-467 (the figure filling the
 window is a presentation view: a pixel past `[0,1]²` that is not part of the chart draws the canvas background).*
-*Still in force: all of it, as Extend, the default; R-468 adds Fit beside it.*
+*Amended in part by R-472 (20 Oct 2026; §10's row "F3 gains Fit beside Extend": the mode named in the sidecar and
+present mode following it).*
+*Still in force: all of it, as Extend, the default; R-468 adds Fit beside it, and R-472 names the mode in the
+sidecar.*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "Export &
 share" (sentences added), REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100 (reqio: notes), REQ-GUI-179 and REQ-GUI-180
 (reqio, new), TASK-M6-30 (new), TASK-M6-24 and TASK-M8-32 (notes), TASK-M8-05, `plan/tasks.yaml`,
@@ -7717,8 +7729,11 @@ and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-07
 presentation legends, the Domain preview's "forbidden in view: N%" standing).*
 *Superseded in part by R-471 (20 Oct 2026; port B1 as the default: an energy-type axis is warped by default, every
 pixel of `[0,1]²` feasible, and B1's affine axis is its linear option).*
-*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471); the counting and its
-statistics are unchanged (R-470).*
+*Superseded in part by R-506 (20 Oct 2026; port B1 as the default for every physical-quantity axis, the virial
+ratio and the mass ratio included: each is warped to its feasible range by default, B1's affine axis its linear
+option).*
+*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506); the counting and
+its statistics are unchanged (R-470).*
 *10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
 added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
 added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
@@ -12869,8 +12884,14 @@ Adds REQ-GUI-218 to REQ-GUI-224.
 toggles ruled, closing RQ-374: forbidden region stays, over blank pixels only, and NaN / invalid pixels draws only
 while a debug view is the figure; D5's View › Debug view read as one of the debug views, a baked pipeline variant
 (R-41), never a flag bit; whether D4's unclassified `decode_failed` draws blank is RQ-379).*
-*Still in force: all of it; R-470 rules D9's two toggles and reads D5 as a baked variant, and D4's `#141418` for a
-failure the chart does not classify stands while RQ-379 is open.*
+*Amended in part by R-506 (20 Oct 2026; clause 4's decoder-bug warning is for a warped axis only: a Chart-builder
+chart's in-square failure on a linear axis is not a system, blank and unwarned; RQ-372 closed).*
+*Amended in part by R-511 (20 Oct 2026; D4's `decode_failed` sample the chart does not classify draws blank, not
+`#141418`; `sim_failed` keeps `#141418`; RQ-379 closed).*
+*Extended by R-505.*
+*Still in force: all of it; R-470 rules D9's two toggles and reads D5 as a baked variant; R-511 draws D4's
+unclassified `decode_failed` blank, `sim_failed` and a system's non-finite values keeping `#141418`; R-506 limits
+clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505).*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (a cell and the fallback's sentences reworded, two paragraphs added),
 `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)" (a
@@ -13457,7 +13478,7 @@ six questions, one grouped entry with six parts) and RQ-378 (a flattened oblique
 more entry, RQ-379, holds a point where the words do not settle what a presentation view draws (R-470, G2).
 
 *"This replaces every partial note … since R-466" (applied per R-369).* The partial notes since R-466 are R-467 and
-R-468, ported this morning and not yet merged (PR #253). Where this instruction disagrees with them it holds, and
+R-468, ported this morning and merged the same day (PR #253, `d3ec0a50`). Where this instruction disagrees with them it holds, and
 their entries carry "Amended in part by R-4xx" lines; their text is kept (the porting rule). The points, each recorded
 in the ruling that settles it: R-467's debug view and its toggles (R-470, G3 and G4, closing RQ-374), its failure
 colour in a presentation view (R-470, G2; RQ-379), R-468's F3 modes (R-472, X2: named in the sidecar, present mode
@@ -13479,8 +13500,12 @@ ruling applied by a follow-up task):*
   centre unchanged.
 - **A3. "The last valid value"** is found along the edit's own path, the straight line from the accepted value to the
   requested one in the edited field (`z₀` for a pan or a slice; the chart parameter for a parameter edit), by bisection
-  on its fraction `λ ∈ [0, 1]` until the two ends are adjacent f64 values, at most 64 steps, the valid end kept: the
-  last valid value to rounding. No tolerance is introduced (not an R-71 calibration).
+  on its fraction `λ ∈ [0, 1]`, each step halving the interval between the two ends' f64 bit patterns read as ordered
+  integers (the f64s of `[0, 1]` in order, fewer than 2⁶²), until the two ends are adjacent f64 values, at most 62
+  steps, the valid end kept: the last valid value to rounding. No tolerance is introduced (not an R-71 calibration).
+  *Corrected on physics review 5586890917 of PR #255, F4 (applied per R-369):* halving `λ` itself reaches adjacent
+  f64s only near `λ ≥ ½`, in about 53 steps, and for a boundary at small `λ` never within 64. *Was:* "by bisection on
+  its fraction `λ ∈ [0, 1]` until the two ends are adjacent f64 values, at most 64 steps".
 - **A4. The drag.** A drag's edit is clamped every frame (R-458); once the clamp binds, further pointer motion beyond
   it sends nothing new, and a motion back inside sends the value again. The history entry's after is the last clamped
   value (gui_state_contract §2, a drag one entry).
@@ -13507,6 +13532,10 @@ Adds REQ-CHART-060 (the stop), REQ-CHART-061 (C6, the fuzz; R-477) and REQ-GUI-2
 undo, the slider and the readout).
 
 ## R-470 — A pixel that is not a system draws blank, the view's background, in every view, the outcome view included, never a palette colour; the hatch survives only as the optional Overlays › Chart › forbidden region, off by default, over blank pixels only; NaN, ±∞, `sim_failed`, `decode_failed` and the classification behind the hatch show only in the debug views; R-408's statistics are unchanged *(amends R-407, R-446 and R-467; closes RQ-374)*
+*Amended in part by R-511 (20 Oct 2026; G2's open case ruled: a `decode_failed` sample the chart does not classify
+is blank, as a not-a-system pixel, the forbidden-region overlay drawing over it; `sim_failed` keeps `#141418`).*
+*Still in force: all of it; G2's `#141418` stands for `sim_failed` and a system's non-finite values, and R-511 closes
+RQ-379.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (the bounded row, a paragraph added, "Blank, never a colour"),
 `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)" (a
@@ -13611,6 +13640,14 @@ RQ-379), REQ-COL-109 (note: G4), REQ-GUI-079 (statement, verify, rulings, note: 
 (note).
 
 ## R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels "not a system" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*
+*Amended in part by R-506 (20 Oct 2026; H3 and H5: every physical-quantity axis, the virial ratio and the mass
+ratio included, is warped to its feasible range by default, the mass ratio through the mass link; RQ-372 closed).*
+*Amended in part by R-508 (20 Oct 2026; H3: the warp's `t > 1` side continues, affine, its `t < 0` side and the `s`
+axis bounded; RQ-376 closed).*
+*Amended in part by R-512 (20 Oct 2026; E3 and H9, RQ-402 closed: E3 reads over the chart's square, a window
+pixel whose own `(a, b)` leave it past the edge, blank past a bounded one).*
+*Still in force: all of it; R-506 carries E1 and E2 to every physical-quantity axis, R-508 declares the `t > 1`
+side and R-512 reads E3 over the chart's square, H9's meanwhile becoming the rule.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
 (the kind-3 row) and § "Past the unit square — each axis's extension type (R-407)" (the affine row) and § "Tilt (basis
 edit)" (a sentence), `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel
@@ -13684,7 +13721,10 @@ The human's words, §3 of the instruction R-469 holds, with the §0 lines it res
   and `I₀` the centre's, so both mappings span one physical rectangle at the centre and the linear chart shows the
   parabola's infeasible corners blank (N1). A Chart-builder axis keeps its own range (§G7). The stop (P2) keeps the
   centre feasible: "the right edge" is `validate`'s layer-2 boundary at the centre (`|L_z| ≤ √(2I(E − U))`, `K ≥ 0`),
-  which physics reviews.
+  which physics reviews. One rectangle, not one parametrisation (physics review 5586890917 of PR #255, F2): the
+  centre pixel `(½, ½)` decodes to `K = K_max·2^(−γ_K)` under the warp and to `K_max/2` under the linear map, the same
+  only at `γ_K = 1`, a calibration not yet made (REQ-CHART-044); untilted, the two agree on the row `t = 1`, at the
+  point `(½, 0)`, and in `L_z = 0` on the column `s = ½`.
 - **H5. The linear option's in-square pixels are not a decoder bug; RQ-372 is answered for energy-type axes.** E2
   makes infeasible pixels inside the window part of the design ("not a system"), so they draw blank and log no R-467
   clause-4 warning. Under the default warp a builder energy-type axis is valid by construction inside the square
@@ -13701,6 +13741,23 @@ The human's words, §3 of the instruction R-469 holds, with the §0 lines it res
 - **H8. Where it is built.** The warp per axis, per pixel, and the linear option in the kernel (TASK-M2-37,
   REQ-CHART-067 to REQ-CHART-070); the option's control on the real engine (TASK-M8-48, REQ-GUI-242); the sidecar
   (TASK-M8-32, REQ-TOOL-169); the builder's default (TASK-M8-18, a note on its axis-kind requirement, REQ-CHART-040).
+- **H9. E3 under Tip as sheet (physics review 5586890917 of PR #255, F1; RQ-402).** E3's "every pixel feasible under
+  every tilt" holds for every pixel whose own chart parameters `(a, b)` lie in the chart's square: there the warp,
+  evaluated with the pixel's own `U`, `I` and masses (H6), gives `K ≥ 0` and `|L_z| ≤ √(2IK)` by construction. With
+  one target and both angles set, Tip as sheet's in-plane block `cos m·I + (1 − cos m)·k kᵀ` (R-474 K1) is not
+  diagonal, and it sends window pixels inside `[−1, 1]²` to `(a, b)` outside the square: over a 65 × 65 window grid
+  the review measured the largest `|a|`, `|b|` at 1.0037 at (10°, 4.14°), 1.032 at (30°, 12.4°) and 1.183 at (−45°,
+  77.9°), exactly 1 only on the diagonal. There the axes' types act on `(a, b)` (R-472 X3a), so on a bounded warped
+  axis those pixels are past its edge, not a system, and draw blank under the default map. Lean each axis and
+  `X ≠ Y` keep `(a, b)` in the square. Whether E3 means the chart's own square, or the tilt must keep every window
+  pixel's `(a, b)` inside it, changes what the default view draws, which the words do not settle: **RQ-402**.
+  Meanwhile the types act as X3a says; REQ-CHART-061's and REQ-CHART-069's every-pixel arms are narrowed to the
+  pixels whose `(a, b)` lie in the square, and what the others draw waits (REQ-CHART-076, `rq: RQ-402`, TASK-M2-39).
+- **H10. The mapping control (gui review 5586902228 of PR #255, G7 and G9; applied per R-369).** The Chart section
+  offers the mapping of each energy-type axis the chart has, `E`, `L_z`, `K` and `KE` (H1: `KE` is `K`'s quantity; no
+  chart offers `PE` until REQ-CHART-070 writes its warp), and, on a Chart-builder chart, of each other
+  physical-quantity axis (R-506): one row per axis after Save view as chart, each a two-option radio, warped /
+  linear, registered in the Chart sub-scope in that order (§G3), reached with Tab and changed in interaction mode.
 
 *What it amends:* **R-408**'s port B1, superseded as the default by the warp (§10's row): B1 is the linear option's
 rule now; R-408's statistics are unchanged (R-470, N4). Read with it: R-407 (the warp's axes are bounded, §2.1),
@@ -13713,6 +13770,9 @@ REQ-GUI-242 (the option's control) and REQ-TOOL-169 (the sidecar); changes REQ-C
 note), REQ-CHART-056 (verify, rulings, note), REQ-CHART-040 (note), REQ-GUI-109 (note) and REQ-GUI-228 (note).
 
 ## R-472 — Extension stands: R-407's four types, past a bounded edge a pixel blank; F3 has Extend and Fit, a GUI state field, remembered, named in the sidecar, present mode following it; a tilted, sliced or saved chart extends by its axes' types, nothing written per chart *(amends R-407 and R-468)*
+*Amended in part by R-512 (20 Oct 2026; X3a's question, RQ-402 closed: a window pixel whose `(a, b)` leave the
+square under Tip as sheet is past the edge, the types acting on it as X3a says, blank past a bounded edge).*
+*Still in force: all of it; R-512 answers X3a's "whether that is meant".*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (the F3 bullet: the
 sidecar and present mode) and § "Export & share" (the sidecar), `docs/design/principia_chart_reference.md` § "5.4 Past
 the unit square — each axis's extension type (R-407)" (a paragraph added, "Blank, and tilted charts"),
@@ -13761,12 +13821,17 @@ The human's words, §4 of the instruction R-469 holds, with the §0 line it rest
   on which the chart's axis types act, as for an untilted chart; the hidden coordinate's offset `d` is a latent
   control's (affine: the decoder accepts any `z`) or a mass logit's (T3: in logits, affine), so it needs no type. A
   saved chart's axes are its parent's (a curved chart) or affine (a latent view saved as an oblique chart, R-475, S2).
-  Built with T2 (TASK-M2-36, REQ-CHART-066), physics-reviewed with T2's pole-crossing case (⚑, R-473).
+  Built with T2 (TASK-M2-36, REQ-CHART-066), physics-reviewed with T2's pole-crossing case (⚑, R-473). Inside the
+  window too: under Tip as sheet with one target and both angles set, `(a, b)` can leave the square for `(u, v)`
+  inside `[−1, 1]²`, and the types act there as well; whether that is meant is RQ-402 (R-471, H9; physics review
+  5586890917 of PR #255, F1).
 - **X3b. Fit and a tilted chart.** Fit shows the view's square alone (R-468 E2), so the extension does not arise in
   Fit; under Extend it is X3a's.
 
 *What it amends:* **R-407**, as R-470 does (past a bounded edge blank); **R-468** (the sidecar, X2b; present mode the
-human's words, X2c). Read with it: R-406 (Extend), R-470.
+human's words, X2c). And it amends R-406 in part, §10's row "R-406 | F3 gains Fit beside Extend (X2)": R-406's fill
+is Extend, the default, Fit beside it, the mode named in the sidecar and present mode following it; R-406 carries the
+forward line (added on code review 5586921473 of PR #255, F3). Read with it: R-470.
 
 R-472 is in the "design" group of `plan/rule_groups.yaml`, with R-406 and R-468.
 
@@ -13774,6 +13839,13 @@ Adds REQ-CHART-066 (X3) and REQ-TOOL-168 (the sidecar's `f3_fill`); changes REQ-
 REQ-GUI-100 (note).
 
 ## R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*
+*Amended in part by R-507 (20 Oct 2026; T4's units, RQ-375 closed: the human's proposal withdrawn; the screen axis
+in units of the axis's full range at zoom 1, the hidden coordinate in its slider span, the latent chart's tilt the
+decoder's basis edit; J3's meanwhile no longer applies).*
+*Amended in part by R-513 (20 Oct 2026; J9, RQ-403 closed: a new tilt `R′` of a saved curved chart into its
+own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`).*
+*Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
+composition runs into the saved target.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -13888,6 +13960,16 @@ The human's words, §5 of the instruction R-469 holds, with the §0 lines it res
   REQ-CHART-063 T3, REQ-CHART-065 T6, REQ-CHART-066 X3), T5 with E (TASK-M2-37, REQ-CHART-069), the units once
   RQ-375 is ruled (TASK-M2-39, REQ-CHART-064), and the Manifold view on every chart on the real engine (TASK-M8-48,
   REQ-GUI-241). The mock's charts are latent (R-468 clause 4), so the mock's tilt is R-474's alone.
+- **J11. The sliders a curved chart's axes set (gui review 5586902228 of PR #255, G2; applied per R-369).** On a
+  curved chart the Slice centre sliders of the coordinates the chart's axes write (on the shape sphere `z_α`, `z_β`;
+  on `(L_z, E)` the momentum block's four) are not hidden coordinates: they stay in the section and in the keyboard
+  order, read-only and dimmed, each showing the centre's value, with the tooltip "set by the chart's axes: pan to
+  move it"; Enter on one does nothing, as on a dimmed reset (R-466). Pan moves the centre in the chart's own
+  parameters. On the latent chart nothing changes (R-457). REQ-GUI-241.
+- **J12. The waits (code review 5586921473 of PR #255, F1).** As first ported, the requirements said to wait on
+  RQ-375 (REQ-CHART-064) carried no `rq:` key. R-507 rules RQ-375, so REQ-CHART-064 waits on nothing and TASK-M2-36
+  closes it with T2 (applied per R-369: T2 is not built without its scale); the requirements that wait on RQ-402 and
+  RQ-403 carry the key.
 
 *What it amends:* chart_decoder_contract Part 4's "curve axes tilt only at a lock" and "free-floating curve-axis tilt
 is ill-defined", for the dev GUI's tilt (the words above), and Part 5's per-axis "curve? — if so, tilt requires a
@@ -13896,11 +13978,15 @@ with it: R-92 (a curved chart's tilt re-integrates), R-407 (X3), R-474 (the rota
 
 R-473 is in the "physics" group of `plan/rule_groups.yaml`, with R-407.
 
-Adds REQ-CHART-062, REQ-CHART-063, REQ-CHART-064 (`rq: RQ-375`), REQ-CHART-065 and REQ-GUI-241; changes
+Adds REQ-CHART-062, REQ-CHART-063, REQ-CHART-064 (waiting on RQ-375 until R-507; J12), REQ-CHART-065 and
+REQ-GUI-241; changes
 REQ-CHART-007 (statement, verify, rulings, note), REQ-GUI-034 (statement, rulings, note), REQ-GUI-003 (note) and
 REQ-SYS-011 (statement, rulings, note).
 
 ## R-474 — RQ-340 is ruled: two tilt maps, "Tip as sheet", the nav cube's axis-angle map and the default, and "Lean each axis", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*
+*Amended in part by R-514 (20 Oct 2026; K1 and R1 on a latent chart saved at a tilt, RQ-404 closed: both maps
+act in the orthonormal frame of the saved plane and the projected target, carrying the stored pair).*
+*Still in force: all of it; R-514 gives the frame both maps act in on a latent chart saved at a tilt.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (RQ-340's sentence
 reworded, with its earlier words kept; a paragraph added, "Two tilt maps"), `docs/gui/principia_render_gui_spec.md` §
 "G2. Explore — the everyday view (`01_main.png`)" (Tilt: the map) and § "The compass: look and views (R-451, R-452)"
@@ -13984,8 +14070,9 @@ question (ii) was answered by R-457 (one target or two, the user's choice). R1 t
   the saved views and the exports. A saved view or export with no `tilt_map` field, made before this ruling, reopens
   under `Lean`, the map it was made with, so it stays bitwise as saved.
 - **K7. The selector.** The Tilt section gains "map: Tip as sheet / Lean each axis", two radio options after the
-  rotation `γ`, registered in the keyboard scope tree (§G3). The Tilt reset and Home leave it, as they leave the
-  targets (R-466 K4).
+  rotation `γ`, registered in the keyboard scope tree (§G3): in the Tilt sub-scope they follow `γ` and precede the
+  Tilt reset, the sub-scope's last element (R-466), reached with Tab and the arrows and chosen in interaction mode
+  (gui review 5586902228 of PR #255, G7). The Tilt reset and Home leave it, as they leave the targets (R-466 K4).
 - **K8. R6 and B11.** The compass's Cube view draws `View::basis` under the active map, in the cube's frame (R-451 B2,
   unchanged otherwise). Under Tip as sheet `q̂₁`, `q̂₂` are orthonormal at every tilt, so `s = 1` (R-451 B11's test) and
   the cube always draws a plane; at the corners `τ₁ = ±τ₂ = ±90°` (`m = 127.3°`) it draws it. Under Lean each axis B11
@@ -14029,6 +14116,26 @@ question (ii) was answered by R-457 (one target or two, the user's choice). R1 t
   are expected unchanged. The implementer's own tests (`crates/gui/src/tests/compass_cross_section.rs`,
   `mock_compass_cube.rs`, `mock_compass.rs`, `mock_manifold_view.rs`, `degenerate_tilt_guards.rs`, `compass_support.rs`)
   are theirs to change. The list is a survey of the current tree; the qa reviewer confirms it against the build.
+  Also, since `tilt_map` joins the slice frame in `SimConfig`'s canonical text (K6), the two qa files that pin that
+  text byte for byte: `crates/engine/tests/qa_TASK-M0-18.rs` (`SIM_TEXT`, :57-61, its `"slice":{}`) and
+  `crates/prin/tests/qa_TASK-M0-18.rs` (`expected_config_text`, :162-185, its `"slice":{{}}`), as R-476 M12 names
+  them for TASK-M8-50 (code review 5586921473 of PR #255, F2; applied per R-369). The slice frame is not in the tree
+  yet (TASK-M6-38 builds `SliceFrame`, and what those files pin then is that task's); the qa files that build
+  `SimConfig` by a struct literal (`slice: Slice {}` at `crates/engine/tests/qa_TASK-M0-18.rs`:29,
+  `qa_TASK-M1-11.rs`:289, `qa_TASK-M2-22.rs`:106, `qa_TASK-M6-24.rs`:49, `qa_TASK-M6-28.rs`:40, `qa_TASK-M6-29.rs`:47,
+  `crates/gui/tests/qa_TASK-M6-24.rs`:86 and `crates/gui/tests/qa_TASK-M6-26.rs`:1152; the gui `qa_TASK-M6-24.rs` added
+  on code review 5587720942 of PR #255, F5, applied per R-369) change only where the new field breaks the literal, the field then set
+  to its default and no assertion changed.
+- **K15. A switch to Lean each axis with an angle past ±90° (gui review 5586902228 of PR #255, G1; applied per
+  R-369).** Under Tip as sheet an angle may be stored past ±90°, which Lean each axis's range does not hold. Choosing
+  Lean each axis clamps each such angle to ±90°, its sign kept, in the same history entry as the map change, so one
+  Ctrl+Z restores the map and the angles together; the sliders and number boxes then read the clamped value, and the
+  contract holds it. A switch back to Tip as sheet leaves the angles as they are.
+- **K16. "So the normal tips towards the hidden axis" (R1; physics review 5586890917 of PR #255, F5).** In the
+  3-space `(e_a, e_b, e_X)` the untilted plane's normal is `e_X`, and K1's rotation tips the normal away from `e_X`,
+  toward `−(τ₁ e_a + τ₂ e_b)/m`; it is the plane, and `q₁` under a single `τ₁`, that tips toward `e_X`. The human's
+  words are quoted as written above; the contract's restatement says the plane tips toward `e_X` (flagged per
+  R-369: a correction of the ruling's own wording; the rotation K1 writes, and R1's sign, are unchanged).
 
 *What it amends:* **R-451** (its drawing follows the active map, not the code's one map; B11 holds under Lean each
 axis only, and under Tip as sheet the corner points give a plane, which the cube draws), **R-457** (with `X = Y` the
@@ -14042,6 +14149,12 @@ Adds REQ-GUI-231 to REQ-GUI-238, REQ-CHART-071, REQ-TOOL-167 and REQ-TOOL-170; c
 REQ-GUI-192, REQ-GUI-193, REQ-GUI-203, REQ-GUI-205 and REQ-GUI-209 (notes) and REQ-GUI-091 (note).
 
 ## R-475 — "Save view as chart", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's "Saved" group, its name editable and its provenance shown; "twelve tilt directions" is the full count
+*Amended in part by R-513 (20 Oct 2026; L5, RQ-403 closed: a new tilt into the saved target composes the
+rotations, `(a, b, d) = R·R′·(u, v, 0)`, and the saved target is offered again).*
+*Amended in part by R-514 (20 Oct 2026; L4, RQ-404 closed: on a latent view saved at a tilt the named dimensions are
+projected off the saved plane and normalised, vanishing ones dropped, the maps act in the orthonormal frame and the
+stored pair is kept, so the view reopens bitwise).*
+*Still in force: all of it but L4's and L5's meanwhiles, which R-514 and R-513 replace.*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "1.1 Affine slices — the "no tilt" case" (a
 paragraph added, S1 and S5), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the top bar's View entry, the Chart bullet's Save view as chart), § "Export & share" (the sidecar) and § "G9. Import
@@ -14088,17 +14201,40 @@ review; the human may veto any):*
   view unchanged (S3): one `SetField` on `SimConfig`'s chart id and params, one history entry, so one Ctrl+Z returns to
   the chart as it was. The saved chart stays in the picker until deleted, as a preset is (§G7's Delete): the Saved group
   is the GUI's own settings, beside the Chart builder's presets (REQ-GUI-108, REQ-GUI-160's store), kept across
-  sessions and never undoable. Flagged: the undo entry is the switch, not the list.
+  sessions and never undoable. Flagged: the undo entry is the switch, not the list. **Deleting** (gui review
+  5586902228 of PR #255, G10; applied per R-369): a saved chart is deleted from the Saved group as §G7's Delete
+  deletes a preset, at once and not undoable, the list being the GUI's settings. Deleting the active saved chart
+  leaves the view as it is, its definition being `SimConfig`'s chart id and params (L8), so nothing re-integrates; the
+  picker then names it "unsaved chart", its provenance kept, until another chart is picked or it is saved again. An
+  undo past the save still returns the chart active before it, which the history holds.
 - **L4. S2, a latent view.** The oblique chart is the latent chart with the saved `z₀`, `q₁` and `q₂` exactly as they
   are (under Lean each axis the pair may not be orthogonal, and is reported so), its axes affine (chart_reference
   §1.1, R-407), its tilt zero and its targets the six dimensions off the saved plane (J1, R-473): R-457's targets read
   against the new plane's own axes. Its centre `(u, v)`, window and base point (R-466, REQ-GUI-224) are the saved view's,
-  so its resets and Home return to it.
+  so its resets and Home return to it. *Narrowed on gui review 5586902228 of PR #255, G3:* that holds as written for a
+  plane saved untilted, spanned by two named dimensions, whose six other dimensions are orthogonal to it. A plane
+  saved at a tilt mixes the target in: at most five named dimensions (four with two targets) are orthogonal to it, the
+  target is not off it, and
+  under Lean the pair is not orthonormal, so Tip as sheet's rotation and Lean's formula would run in a non-orthonormal
+  frame and C5 would not hold. Which targets such a chart offers, and how the maps act on its pair, is tilt maths the
+  words do not settle: **RQ-404**. Meanwhile such a saved chart is sliced, saved again and reopened as above, and its
+  Tilt section is dimmed, with a tooltip naming RQ-404; its tilt waits (REQ-GUI-265, `rq: RQ-404`, TASK-M6-51).
+  *Was:* "only five named dimensions are orthogonal to it" (physics review 5587614130 of PR #255, item 5: with two
+  targets and both angles set the plane meets span(e_a, e_b, e_X, e_Y), so four are). **The compass's tilt mode is
+  refused too** (gui review 5587650119 of PR #255, G12; applied per R-369): on such a chart a tilt-mode drag on the
+  plane and the tilt arrows in interaction mode (REQ-GUI-181) emit no edit, and the status line says "Tilt waits on
+  RQ-404 for a chart saved at a tilt"; the dimmed controls stay in the keyboard order, inert, Enter doing nothing, as
+  R-473 J11 has it (REQ-GUI-240).
 - **L5. S2, a curved chart.** The saved chart is the parent chart (id and parameters) with the slice centre (its own
   parameters' centre and the hidden coordinates' values) and the tilt (the angles, the targets and the map; `R` is
   recomputed from them, R-474 R3) as its base. Its own parameters are the saved view's window offsets, so a new tilt
   `R′` acts first and the saved `R` after: `(u′, v′, d′) = R′·(u, v, 0)`, then `(a, b, d) = R·(u′, v′, 0)`, `d′` added to
-  the new target and `d` to the saved one. Physics reviews the composition (TASK-M2-40, REQ-CHART-073).
+  the new target and `d` to the saved one. Physics reviews the composition (TASK-M2-40, REQ-CHART-073). For a new
+  target other than the saved one this is the block composition `(R ⊕ 1)·(1 ⊕ R′)` in `(a, b, d_saved, d_new)`: `d′`
+  never enters `R`, so it is not the 3 × 3 product `R·R′`, which would feed `d′` into `R`'s third input (physics review
+  5586890917 of PR #255, F3; REQ-CHART-073's verify corrected). With the new target the saved one, whether `d′` and
+  `d` add or `R` acts on `(u′, v′, d′)`, the words do not say: **RQ-403**. Meanwhile a saved curved chart's target
+  dropdowns do not offer its saved target, and that case waits (REQ-CHART-077, `rq: RQ-403`, TASK-M2-39).
 - **L6. S3, bitwise.** Reopened at zero tilt the saved chart evaluates the same arithmetic as the view it was saved
   from: the latent chart `z₀ + u·q₁ + v·q₂` on the stored vectors; a curved one the parent's T2 path with the stored
   `R`, the new tilt's identity path taking no arithmetic (R-473, J6). C8 (R-477) tests both.
@@ -14112,7 +14248,9 @@ review; the human may veto any):*
   where one exists locally, is §11's, queued: **RQ-378**. Nothing waits on it.
 - **L10. Where it is built.** On the mock for latent views (TASK-M6-49, REQ-GUI-239 and REQ-GUI-240); the kernel's
   saved chart and its composition (TASK-M2-40, REQ-CHART-073); curved charts on the real engine (TASK-M8-48,
-  REQ-GUI-244).
+  REQ-GUI-244). TASK-M8-05, which closes REQ-GUI-078 and so its View entry, depends on TASK-M6-49, which builds that
+  entry on the mock, as R-467 D13 added the earlier View entries' tasks (gui review 5586902228 of PR #255, G4;
+  applied per R-369).
 
 *What it amends:* chart_reference §1.1's "Raw tilts replace rather than compose — the chart constructor is the commit
 mechanism" is not changed: Save view as chart is that commit mechanism, and with it tilts compose (S1). Read with it:
@@ -14124,6 +14262,10 @@ Adds REQ-GUI-239, REQ-GUI-240, REQ-GUI-244 and REQ-CHART-073; changes REQ-GUI-07
 entry), REQ-GUI-108 (note) and REQ-CHART-016 (note).
 
 ## R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)
+*Amended in part by R-509 (20 Oct 2026; RQ-377's six parts ruled: the stain's expression syntax, any ledger-declared
+payload field, the trace fade's proxy where defined, trace labels winning, class edges moving to the line system,
+Screen contour the default; M3's class edges in Overlays ▾ and M10's meanwhile replaced).*
+*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -14196,21 +14338,32 @@ ruling on, read with R-469 to R-477.
   library is the GUI's own settings, kept per user; a shared view embeds the styles it uses.
 - **M6. The real engine only.** The line system is the render's, and Lines ▾ and its editors are built against it
   (M7 and M8); the mock draws its own stand-in figure (R-390) and gains no line system. With the contract's `Overlays`
-  changed (M3), the mock's Overlays ▾ and Display window drop the two toggles in the same task (TASK-M8-50).
+  changed (M3), the mock's Overlays ▾ and Display window drop the two toggles in the same task (TASK-M8-50). *On gui
+  review 5586902228 of PR #255, G5 (applied per R-369):* the mock's top bar still shows **Lines ▾** beside Overlays ▾,
+  so its bar is `01_main.png`'s and REQ-GUI-078 leaves nothing out: there it is dimmed, its count reads 0, its tooltip
+  says the line system draws on the real engine, and `Alt+L` does nothing. TASK-M8-50's mock capture shows that and
+  the toggles gone; the menu, its count, `Alt+L` and the presets drawing are a real-engine capture.
 - **M7. L4.** An energy-type variable (`E`, `K`, `U`, `L_z`, the warped axes' `h`, `v` in their own units) is
   evaluated through the chart's decode at the pixel, the per-pixel warp included (R-471 E3), so on a tilted chart a
   contour of `E` is the level set on the tilted plane, and under the linear option it is the same quantity on an
   affine axis. Physics reviews it (TASK-M7-43).
 - **M8. The axes' default.** §8b's Screen preset is "the dev default"; it replaces §G2's "Axis labels carry the short
   axis name and the range at each end", which is the Ends only preset, offered.
-- **M9. Keys.** `Alt+L` shows or hides all lines (§2); no binding uses it (§G3).
+- **M9. Keys.** `Alt+L` shows or hides all lines (§2); no binding uses it (§G3). *On gui review 5586902228 of PR #255,
+  G6 (applied per R-369):* it is a global key, acting wherever the focus is, in either mode, as Home does (§G3's
+  table); it is not the Figure's L, which it never triggers (no listening starts); while a text field is being typed
+  in it types what the platform types (on macOS "¬"), as every key does there (R-460).
 - **M10. L5.** `principia_lines.md` §11's six questions are one review-queue entry with six parts, **RQ-377**, each
   part with its options, what is built meanwhile and what waits; the requirements that wait carry `rq: RQ-377` and are
-  closed by one leaf task (TASK-M8-51), so the rest of the line system does not wait.
+  closed by one leaf task (TASK-M8-51), so the rest of the line system does not wait. *As first ported those
+  requirements carried no `rq:` key (code review 5586921473 of PR #255, F1); R-509 rules RQ-377, and only part (3)'s
+  real distance waits, on RQ-341, with the key (REQ-GUI-266, TASK-M8-54).*
 - **M11. Where it is built.** The line engine (TASK-M7-42: the pass, the model and styles, the drawing, smart ink,
   labels); contours (TASK-M7-43: the variables, evaluation, levels, extraction and L4); traces (TASK-M8-49); Lines ▾,
   the editors, axes, presets and persistence (TASK-M8-50); RQ-377's parts (TASK-M8-51, a leaf). Each test of
-  `principia_lines.md` §12 is in its requirement's verify, with its failing arm.
+  `principia_lines.md` §12 is in its requirement's verify, with its failing arm. REQ-GUI-078's "Lines ▾ with a count"
+  moves to REQ-GUI-247, which TASK-M8-50 closes, since TASK-M8-05 cannot depend on TASK-M8-50, which depends on it
+  (gui review 5586902228 of PR #255, G4; applied per R-369).
 - **M12. qa's files (R-290, forced by M3; decided per R-369).** These pin the overlay set with `grid` and
   `t_end_contours` in it, or the Overlays ▾ menu with "grid" and "t_end contours", and **must change** in TASK-M8-50's
   qa commit and only there, the PR listing each `M` line with its reason and the code reviewer confirming no other
@@ -14222,6 +14375,10 @@ ruling on, read with R-469 to R-477.
   `tests/conformance.rs`, `crates/gui/src/explore/overlays_menu.rs`, `crates/gui/src/windows/display.rs`,
   `crates/gui/src/tests/mock_windows_open.rs`, `mock_tile_bounds.rs` and `crates/prin/tests/profile.rs`). The list is a
   survey of the current tree; the qa reviewer confirms it against the build.
+- **M13. The keyboard (gui review 5586902228 of PR #255, G7; applied per R-369).** Lines ▾ is an element of the top
+  bar's scope, after Overlays ▾, reached and opened as Overlays ▾ is (Enter opens it, the arrows move between its
+  entries, Enter acts, Esc closes it); the contour-set editor and the style library open as windows (§G5), each a
+  scope of sections that Tab moves through, staying in the window (R-409), every control in them registered.
 
 *What it amends:* render_gui_spec §G2's Overlays ▾ and Figure, §G5's Display window overlays, the render contract's
 Part 7 (the trace's drawing) and trajectory_viewing §3's drawing, as M3, M4 and M8 say; REQ-GUI-079 and REQ-GUI-101
@@ -14233,6 +14390,12 @@ Adds REQ-RENDER-087 to REQ-RENDER-098 and REQ-GUI-245 to REQ-GUI-250; changes RE
 (statement, rulings, note) and REQ-GUI-053 (note).
 
 ## R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating
+*Amended in part by R-512 (20 Oct 2026; C6, RQ-402 closed: "every pixel inside `[0,1]²`" reads over the chart's
+square, a pixel whose own `(a, b)` leave it past the edge).*
+*Amended in part by R-514 (20 Oct 2026; C5 on a latent chart saved at a tilt, RQ-404 closed: checked on the
+orthonormal frame's images, the stored pair keeping its own lengths and angle).*
+*Still in force: all of it; R-512 reads C6 over the chart's square and R-514 says where C5 is checked on a chart
+saved at a tilt.*
 *20 Oct 2026 · applied in the verify of each requirement R-469 to R-476 add or change (C1 in REQ-CHART-072, reqio, new;
 C9 in REQ-COL-108), TASK-M3-37 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by the tasks those
 requirements name*
@@ -15131,3 +15294,874 @@ R-484 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-TOOL-177 (RT1, T1), REQ-TOOL-178 (T2), REQ-TOOL-179 (RT2, T3), REQ-TOOL-180 (RT3's record, writer and reader),
 REQ-TOOL-181 (RT4, T4) and REQ-GUI-263 (RT3 in the GUI); changes REQ-TOOL-070 and REQ-TOOL-146 (notes).
+
+## R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*
+*20 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability
+profile" (the table's column split, a paragraph defining the flags, the profile and the reversibility bullet), § "Part
+2b — Regularisation is a SECOND swappable axis, not a property of the stepper" (logH's row), § "The table gains two
+rows" (the columns and the paragraph after them) and § "Part 6 — Three boundaries stated honestly (deferred work lands
+here)" (the reversibility paragraph), `docs/design/principia_dd_integrator.md` § "2. Consolidated contract" (the
+profile), § "3.2 Occupants" (Yoshida-4's and Yoshida-6's notes) and § "5. Unit tests" (test 3),
+`docs/design/principia_dd_validation_orbits.md` § "3. Proposed suite" (the reversibility row), R-57's and R-162's
+heading blocks (a forward line each), REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032 and REQ-VAL-044 (reqio),
+REQ-VAL-190 (new), TASK-M3-02, TASK-M3-07, TASK-M3-08 and TASK-M3-29, `plan/rule_groups.yaml`, and
+`docs/archive/review_queue/M0.md` (RQ-369, filed on TASK-M3-02's branch, taken from it unchanged with its ruling); built
+by TASK-M3-02, TASK-M3-07, TASK-M3-08 and TASK-M3-29*
+
+The human's words, a message of 20 Oct 2026, its first item (R-501 to R-505 quote the others):
+
+> RQ-369: (c). Split the flag. step_reversible: KDK, Yoshida-4, Yoshida-6 and TTL
+> leapfrog true; Euler, RK4, AZ+RK4 false; regularised occupants measured by dd test 3,
+> not asserted. run_reversible: logH-TTL only (R-162). Both diagnostic routes gate on
+> step_reversible. Fix Part 6 and dd §3.2: a symmetric composition with a negative
+> weight is still reversible at a fixed step. What breaks reversal is adaptive
+> substepping and COM projection.
+
+RQ-369 (filed by TASK-M3-02's implementer) gave three options: (a) `reversible: true` for KDK, Yoshida-4 and
+Yoshida-6, the flag meaning the `STEP`; (b) `reversible: false` for all three, the flag meaning the bound occupant;
+(c) "Split the flag's meaning in Part 2 (a `STEP`-level and an occupant-level reversibility), as a definition (R-72)
+TASK-M3-02 writes." The human chose (c) and gave the definition and the values; nothing is left for TASK-M3-02 to
+define.
+
+*What it decides:*
+- **The profile is `{order, force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}`** (with Part
+  2b's re-registration field). `reversible` leaves it.
+- **`step_reversible`** — the occupant's `STEP` is time-symmetric at a fixed step: `STEP(dt)`, momentum negation,
+  `STEP(dt)`, negation returns the state to rounding level, with no wrapper projection or substepping (dd_integrator §5,
+  test 3). True for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog; false for Euler, RK4 and Aarseth–Zare + RK4. For
+  the regularised occupants it is measured by dd test 3, not asserted: the test records each built one's residual and
+  its profile carries the measured verdict.
+- **`run_reversible`** — the bound occupant's whole run is time-symmetric, as the reversibility test binds it: logH's
+  TTL time mode only (R-162). Every other occupant is false.
+- **Both diagnostic routes gate on `step_reversible`:** Part 6's (a), the recorded schedule replayed in reverse, and
+  its (b), a fixed step with COM projection disabled. REQ-INT-032 reads `step_reversible: true`.
+- **Part 6 and dd §3.2 are fixed:** a symmetric composition with a negative weight is still reversible at a fixed
+  step; what breaks the reversal of a run is the wrapper's adaptive substepping and COM projection. Part 6's "Yoshida's
+  `w₂ < 0` middle step … break[s] naive integrate → negate → integrate" and dd §3.2's "is why naive time-reversal
+  fails" are kept as *Was:* notes.
+
+*Applied per R-369 (flagged):*
+- **"TTL leapfrog"** is read as both time-transformed leapfrogs the corpus names: logH's TTL time mode (Mikkola–Tanikawa,
+  R-162) and Aarseth–Zare + time-transformed leapfrog, the allowed future occupant (Part 2a, R-168). Both are
+  regularised, so their `step_reversible` is the measured one; the table shows "✓ (measured, dd test 3)", the value the
+  human expects, and a measurement that disagrees goes to the review queue.
+- **"Measured by dd test 3, not asserted"** is read as: dd test 3 runs each built regularised occupant's `STEP` (Heggie,
+  logH in each time mode, Aarseth–Zare + RK4), records the residual and sets the profile's `step_reversible` from it; it
+  asserts no rounding-level bound for them, as it does for KDK, Yoshida-4 and Yoshida-6. The failing arm is that a
+  built regularised occupant missing from the measurement, or a profile that differs from its measured verdict, fails
+  (REQ-VAL-190, TASK-M3-08, which builds logH and Heggie after TASK-M3-07's Aarseth–Zare + RK4). The verdict's
+  rounding-level criterion is test 3's own, the one TASK-M3-02 uses for the steppers. *Flagged:* the human listed
+  Aarseth–Zare + RK4 as false and the TTL leapfrog as true and also said the regularised occupants are measured; the two
+  agree only if the measurements do, which the review queue would take if they did not.
+- **`run_reversible`'s consumer** is REQ-VAL-044's reversibility test on the brake orbits (TASK-M3-29), which binds
+  logH-TTL; REQ-INT-032's diagnostic reads `step_reversible`.
+
+*What it refines:* **R-162**: its "the reversible occupant" is the `run_reversible` occupant. *What it amends:*
+**R-57**, as to integrator contract Part 6's sentence: R-57 fixed its label (`w₂` → the negative weight); R-500
+withdraws the claim the label was attached to.
+
+*Review round 1, PR #258 (physics review 5587467237 P3, P4; qa review 5587466555 item 3), applied per R-369:* on a
+regularised occupant's extended state, test 3's "momentum-negate" is the occupant's time-reversal map, a definition
+TASK-M3-08 writes and the physics reviewer checks (REQ-INT-095, R-72); "rounding level" is a calibration (REQ-VAL-191,
+R-71), proposed by TASK-M3-02 and used by REQ-VAL-032 and REQ-VAL-190; REQ-VAL-190 gains its controls (a known-asymmetric
+stepper at the same `dt` must read not reversible; a profile with one regularised occupant's flag flipped fails; a
+measurement missing one built occupant fails). Integrator contract Part 6 reads "the symmetric steppers" (P7).
+
+*Review round 2, PR #258 (qa review 5587775086 E), applied per R-369, physics to confirm:* for a regularised occupant,
+test 3's residual and its norm are taken on the full extended state, the domain of REQ-INT-095's map (REQ-VAL-190,
+REQ-VAL-191).
+
+R-500 is in the "physics" group of `plan/rule_groups.yaml`, with R-162.
+
+Adds REQ-VAL-190, and on review REQ-INT-095 and REQ-VAL-191; changes REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032 and REQ-VAL-044 (statement, verify,
+rulings, source, note).
+
+## R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*
+*Amended by R-515 (Yoshida-4's digits).*
+*Still in force: the coefficients carry their citation, the paper is not added, and the convergence-order test and the
+algebraic order-condition check guard the transcription; Yoshida-4's printed digits are R-515's, `w₁` correctly rounded
+and `w₀ = 1 − 2w₁` computed in f64.*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (the citations; Yoshida-6's
+transcription check), § "5. Unit tests" (test 1a) and § "6. Deferred / flagged" (the Yoshida-6 item settled), R-57's
+heading block (a forward line), REQ-INT-056 (reqio), REQ-INT-090 (new), TASK-M3-02 and `plan/rule_groups.yaml`; built
+by TASK-M3-02*
+
+The human's words (R-500 quotes the message's first item):
+
+> Yoshida Table 1: don't add the paper. Add the coefficients with the citation, and a
+> convergence-order test (4 and 6) that fails on a transcription error.
+
+*What it decides:*
+- **The paper is not added to the corpus.** dd §3.2's "the paper is in the lit-review set" had it; it is not in the
+  repository.
+- **The coefficients carry their citation** where the corpus prints them (dd §3.2) and in the shared source:
+  Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150, 262–268. Yoshida-6's
+  `w₁`, `w₂`, `w₃` are its Table 1, solution A; Yoshida-4's weights are the same paper's fourth-order closed form.
+- **A convergence-order test at orders 4 and 6** (dd §5, test 1a; REQ-INT-090): on the Kepler-embedded fixture, the
+  fitted orders of Yoshida-4 and Yoshida-6 over a dt ladder are 4 and 6, and each coefficient with one printed digit
+  changed fails the test. It takes the place of R-57's "checked against Yoshida (1990)" as the check of the
+  transcription.
+
+*Applied per R-369 (flagged):*
+- **Yoshida-4's citation.** The human's item is headed "Yoshida Table 1", which holds the sixth-order solutions;
+  Yoshida-4's weights are the closed form in the paper's text, so Yoshida-4 is cited to the paper, not to Table 1.
+- **The pass criterion** is the fitted order of the maximum relative energy error over one orbit rounding to 4 and to
+  6, and the control's to less; the dt ladder is TASK-M3-02's, named in its PR. The order test's controls change each
+  free coefficient's 4th significant digit, `w₀` recomputed; the test measures and prints its detection floor (estimated
+  at about the 7th significant digit for Yoshida-4 and the 10th for Yoshida-6 at f64). The later digits are REQ-INT-037's
+  equality and an algebraic check of the order conditions' residuals on the shipped f64 constants (at most `3·10⁻¹⁵` for
+  Yoshida-4 and `5·10⁻¹⁴` for Yoshida-6; controls at the 15th and the 13th significant digit; dd §5, test 1a). *As first
+  ported:* "A changed digit breaks the order conditions, … TASK-M3-02 chooses the ladder so that each control fails",
+  which review round 1 found unmeetable for the late digits (below). The fitted quantity and the bounds are put to the
+  physics reviewer to confirm.
+- REQ-INT-037's digit equality and REQ-INT-056's citation check stay; REQ-INT-090 is the order test.
+
+*What it amends:* **R-57**: the Yoshida-6 coefficients are checked by the citation and the convergence-order test, not
+against a copy of the paper; R-57's label fix stands (amended by R-500 as to Part 6's sentence).
+
+*Review round 1, PR #258 (code review 5587492719 C5, physics review 5587467237 P1, P2, qa review 5587466555 items 1 and
+6), applied per R-369:* the order test's controls, detection floor, fitted quantity and the algebraic check are as above;
+TASK-M3-02's acceptance checks Yoshida-4's citation as well. dd §3.2's sentence that the printed Yoshida-4 digits "are
+that closed form evaluated in f64" was false: they agree with it to 15 significant digits (`w₁` to 16; *as first corrected:* "to 16", physics review 5587771187 P8), are not its correctly rounded
+f64 values, and give `w₀ + 2w₁ = 0.9999999999999998` in f64. The sentence is corrected, and **RQ-405** was filed for the
+human; R-515 rules it, `w₁` printed correctly rounded and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1`
+exactly. *Was:* "whether the digits change is **RQ-405**, filed for the human, the printed digits standing meanwhile and
+REQ-INT-037 held on it."
+
+*Review round 2, PR #258 (code review 5587795260 C7, physics review 5587771187 P8, qa review 5587775086 A and B), applied
+per R-369:* TASK-M3-02's `occupant_coefficients` asserts `w₀ + 2w₁ = 1` exactly in f64, under R-515 (*was:* "asserts
+`|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`, REQ-INT-090's bound, under RQ-405's (a)"); RQ-405's interim Yoshida-4 digits agree with the closed form to 15 significant digits (`w₁` to 16), not 16; the
+algebraic check adds Yoshida-6's nested fifth-order condition (the coefficient of `[A₁,[A₁,A₃]]`), measured at
+`4.0·10⁻¹⁶` on the shipped constants, which makes the set complete to order 6, for physics to confirm.
+
+R-501 is in the "physics" group of `plan/rule_groups.yaml`, with R-57.
+
+Adds REQ-INT-090; changes REQ-INT-056 (statement, verify, rulings, note), and on review REQ-INT-037 (`rq: RQ-405`, which
+R-515 removes).
+
+## R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made
+concrete", `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" (`N_max`'s
+and `r_sub`'s rows) and § "Part 4 — Determinism, and the substep as the subtle seam" (the rule),
+`docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)" (rule 1),
+`docs/contracts/principia_lowering_contract.md` § "Part 3 — The baking rules (compile-time vs uniform)" (the wrapper
+config row), `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" and
+`docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)" (`saturated`), REQ-INT-028 (reqio),
+REQ-INT-091 to REQ-INT-094 (new), TASK-M3-03, TASK-M3-06, TASK-M8-40, `plan/MILESTONES.md` § "M3 — The integrator,
+events and physics validation (CPU, native)", `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-370,
+filed on TASK-M3-03's branch, taken from it unchanged with its ruling); built by TASK-M3-03, TASK-M3-06 and
+TASK-M8-40*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-370: (b). Thresholds generated per sim key on the host, shipped as exact f32 bits,
+> read by constant index. The pow is computed with a pinned pure-software libm so native
+> and wasm give identical bits. A maximum table length is a calibration value, refused
+> above it. A test asserts the default config reproduces the build-time table bitwise.
+
+RQ-370's option (b): "The thresholds are generated per configuration on the host, in f64 libm from the sim key's
+`r_sub`, `gamma_sub` and `N_max`, and shipped as f32 bit patterns in a uniform; the comparison tree reads them by
+constant index. … "frozen at build time" becomes "frozen per dispatch", the table needs a fixed largest length (a
+calibration value, R-71), and TASK-M3-03's generator moves from `cargo xtask codegen` into the host."
+
+*What it decides:*
+- **Per sim key, on the host.** The thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` are generated from the sim
+  key's `r_sub`, `gamma_sub` and `N_max` on the host and shipped in `SimUniforms` as exact f32 bit patterns; the
+  comparison tree reads them by constant index. `r_sub`, `gamma_sub` and `N_max` stay user-adjustable sim-key
+  uniforms (integrator contract Part 3, the Run window), and the tree equals `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1,
+  N_max)` for every sim key, not only the default.
+- **A pinned pure-software libm** computes the `pow` (in f64, rounded once to f32), so the native and the wasm hosts
+  give identical bits (REQ-INT-091; the wasm leg REQ-INT-093).
+- **The table's maximum length is a calibration value** (R-71, REQ-INT-094), proposed by TASK-M3-03 with its evidence
+  and confirmed at the M3 gate; an `N_max` above it is refused, never truncated.
+- **The default config reproduces the build-time table bitwise** (REQ-INT-092): at `r_sub = 0.05`, `γ_sub = 1.5`,
+  `N_max = 64`, the host generator's 64 entries equal the build-time table `cargo xtask codegen` generates and checks
+  in.
+
+*Applied per R-369 (flagged):*
+- **The formula for any `γ_sub`.** dd §3.3's `THR[n] = round_f32((r_sub/n^{2/3})²)` holds at `γ_sub = 1.5` only;
+  with `γ_sub` on the sim key it is written `round_f32((r_sub·n^{−1/γ_sub})²)`, the same at 1.5.
+- **The table's shape.** `SimUniforms` holds the maximum length's entries, all from the one formula, so the table is
+  monotone and the tree generated once over it reads constant indices; `N_sub = min(bucket(d²), N_max)`. The bits'
+  layout in `SimUniforms` and the crate that supplies the pure-software libm, pinned in `Cargo.lock`, are TASK-M3-03's,
+  named in its PR.
+- **The wasm leg** is checked where the browser build exists: TASK-M8-40 runs the wasm host's generator over
+  REQ-INT-091's fixture of configurations and compares the bits (REQ-INT-093), as R-113 placed the browser leg of
+  REQ-INT-028; TASK-M3-03 proves the native host and the pure-software build.
+- **The refusal** is the generator's typed error, which dispatch returns (TASK-M3-06 binds the table in
+  `SimUniforms`); `N_max < 1` is refused as well.
+
+*Review round 1, PR #258 (code review 5587492719 C2, C4; qa review 5587466555 items 2, 5 and 7), applied per R-369:*
+the sweep is finished in canonical_spec §2, parity_contract (Tier B), export_animation_contract Part 5,
+systems_architecture, integrator contract Part 2c rule 2, dd §3.3's rule, the determinism note's rule 1, REQ-INT-061 and
+the code and physics checklists; TASK-M3-06's binding gains an acceptance line (`sim_uniforms_nsub_table`, closing
+REQ-INT-028's "shipped in SimUniforms" in part); REQ-INT-093 is a numerical gate with a control that must fail;
+REQ-INT-091's fixture comes from an independent reference (Python's `decimal` at 50 digits, correctly rounded to f32),
+its entries where the generator's f64-then-f32 legitimately differs listed with the reason; `cargo xtask codegen`
+evaluates the default table on its own build-time path through the pinned libm, not the host generator's function.
+
+*Review round 2, PR #258 (qa review 5587775086 D), applied per R-369:* `reference.py` rounds the 50-digit decimal straight
+to f32, never through f64, and the fixture's listed exceptions cover the pinned libm's sub-ulp f64 error as well as a
+double rounding.
+
+R-502 is in the "physics" group of `plan/rule_groups.yaml`, with R-34.
+
+Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 (statement, verify, rulings, note), and on review REQ-INT-061 (statement).
+
+## R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*
+*20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the exponential map's
+radius, the hemisphere-redundancy paragraph) and § "5.4 Past the unit square — each axis's extension type (R-407)"
+(the exponential map's row), `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the
+validation contract" (n-to-1), R-141's heading block (a forward line, its "Still in force" line reworded), REQ-CHART-014
+(reqio, note), REQ-CHART-075 (new), TASK-M2-28, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-371,
+filed on PR #252's branch, taken from it unchanged with its ruling); built by TASK-M2-28*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-371: (b). Computed from the cap: bijective when the cap is within one closed
+> hemisphere; when it straddles, a per-pixel fold (count once unless the mirror is in
+> view; equator counts once). The map's radius is bounded at π; past it is the domain's
+> end.
+
+RQ-371's option (b): "Computed from the cap, as the `ν` charts' is from their range: bijective where the cap lies in one
+closed hemisphere, and a ruling for the straddling case."
+
+*What it decides:*
+- **Bijective** where the exponential map's cap lies within one closed hemisphere (`w ≥ 0` everywhere on it, or
+  `w ≤ 0`).
+- **A per-pixel fold** where the cap straddles the equator: a pixel counts once unless its mirror `w → −w` is in view,
+  when the pair counts once; an equator pixel counts once.
+- **The radius is bounded at π:** a pixel with `r = ‖d‖ > π` is the domain's end, not a system, out of the count and
+  the total (chart_reference §5.4).
+- The spherical map keeps n-to-1 with n = 2 (R-141).
+
+*Applied per R-369 (flagged):*
+- **The pair's representative** is its `w > 0` pixel, the canonical decode's hemisphere (`β ∈ [0, π]` keeps `w ≥ 0`).
+- **"In view"** is the cap: `[0,1]²`'s pixels with `r ≤ π`. Past the square the map is bounded (R-468 E7) and adds no
+  multiplicity, as chart_decoder_contract Part 5 says of every chart.
+- **The value's name.** chart_decoder_contract Part 5's n-to-1 reads "a fixed finite number of pixels share each
+  system"; the straddling cap's is n-to-1 with a per-pixel fold, at most 2, which the n-to-1 bullet now says. A new
+  fifth value is not added.
+- **Flagged, not ruled:** a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an in-square pixel that is not a
+  system; R-467 makes an in-square validity failure a decoder bug with a console warning, and RQ-372 (open, another
+  batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as the human wrote it: the domain's end.
+
+*What it amends:* **R-141**, for the exponential map: its "the shape sphere is 2-to-1 over its φ hemispheres" is the
+spherical map's value; the exponential map's is computed from its cap.
+
+*Review round 1, PR #258 (physics review 5587467237 P5, P6; qa review 5587466555 item 4), applied per R-369:* the
+per-pixel rule is stated (a pixel counts 1 if `w ≥ 0`, or if its mirror point lies outside the cap; `w = 0` is the
+computed ±0.0; "in view" is the log map of the mirrored point landing in `[0,1]²` with `r ≤ π`); REQ-CHART-075's
+fixture is a grid symmetric under `w → −w` (`n0` on the equator, `e2 = ŵ`, odd resolution, so mirrored pairs are index
+pairs and one row lies at `w = 0`), its expected total counted by that rule by hand, with a control on the `r > π`
+arm. How pixels on the `r = π` circle count, all mapping to `−n0`, is a definition TASK-M2-28 writes and the physics
+reviewer checks (REQ-CHART-078, R-72). The requirement keeps the id REQ-CHART-075, first added as REQ-CHART-060.
+
+*Review round 2, PR #258 (physics review 5587771187 P9, qa review 5587775086 C), applied per R-369:* REQ-CHART-075's
+fixture keeps every pixel centre at `|r − π| > 10⁻⁶`, and its `r > π` arm requires `s√2·(N−1)/N > π`, so that at least
+one pixel centre in the counted half lies past `r = π` and the control can fail.
+
+R-503 is in the "physics" group of `plan/rule_groups.yaml`, with R-141.
+
+*PR #252 merged before this port, carrying RQ-371 into `REVIEW_QUEUE.md` as an open entry; applied per R-369:* this
+branch's merge of `main` moves it out again, the archived copy in `docs/archive/review_queue/M0.md` (the same text,
+with R-503's ruling line) being the record. R-503 is built by TASK-M2-28, not TASK-M2-14, so TASK-M2-14's merge
+re-homes nothing.
+
+Adds REQ-CHART-075, and on review REQ-CHART-078; changes REQ-CHART-014 (note).
+
+## R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*
+*20 Oct 2026 · applied in REQ-COL-108 and REQ-COL-110 (reqio), TASK-M2-34 (the goldens deliverable, an acceptance
+line and the notes), `plan/MILESTONES.md` § "M2 — Charts, decode and encode", `plan/rule_groups.yaml`, `REVIEW_QUEUE.md`
+(RQ-373 moved out) and `docs/archive/review_queue/M0.md` (RQ-373, with its ruling); the `fixtures/golden/BASELINES.md`
+rows are TASK-M2-34's; built by TASK-M2-34*
+
+The human's words (R-500 quotes the message's first item):
+
+> RQ-373: (a).
+
+RQ-373's option (a): "Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row
+leading with the ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with
+REQ-COL-110's NaN / Inf style."
+
+*What it decides:*
+- **R-504 is the gate decision R-110 asks for** ("no re-baselining without a gate decision"). TASK-M2-34 re-baselines
+  the goldens R-467 D15 lists as changing, `m1-outcome/outcome` and `m1-outcome/outcome_edited` (tile 22, the forbidden
+  sample, from the hatch to the canvas background) and `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp` (the ramp's
+  invalid value from the hatch to `#141418`), as it renders them; each row leads with R-504 and keeps its history.
+  `m1-synthetic/known_escaper` and the `_override` twins are expected unchanged, and the debug catalogue's goldens do
+  not change (D15); one that does change is reported, not re-baselined under R-504.
+- **The M2 gate confirms** the canvas background's value (the GUI's clear colour the golden harness records) and the
+  changed tiles, with REQ-COL-110's NaN / Inf style.
+- TASK-M2-34's PR no longer waits.
+
+*Applied per R-369:* the confirmation is recorded with REQ-COL-110's at the M2 gate (its verify names the background
+and the tiles), REQ-COL-110 being the M2 calibration the human named; `rq: RQ-373` leaves REQ-COL-108.
+
+R-504 is in the "design" group of `plan/rule_groups.yaml`, with R-454 and R-467.
+
+Changes REQ-COL-108 (verify, rulings, rq, note) and REQ-COL-110 (verify, rulings, note).
+
+## R-505 — The NaN / Inf style is proposed by the task that needs it, and it is not magenta, which sits at τ from escape body 2 *(extends R-467 D6)*
+*20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "6. Debug views as presets" (the debug view's
+paragraph), `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every
+debug view)" (R-467's bullet), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (the debug view's paragraph), R-467's heading block (a forward line), REQ-COL-110 (reqio), TASK-M2-34
+and `plan/rule_groups.yaml`; built by TASK-M2-34*
+
+The human's words (R-500 quotes the message's first item):
+
+> REQ-COL-110: the task proposes it; not magenta, which sits at τ from escape body 2.
+
+*What it decides:* the NaN / Inf style (R-467 D6, REQ-COL-110) is proposed by TASK-M2-34, as filed, and is not
+magenta: R-16's flat magenta `#FF00FF` sits at τ = 0.101 from escape body 2's `#E034C6` (R-429; debug_tooling_plan
+§ "F. Structural views", its measurement), the outcome palette's swatch for an escape of body 2 (`detail` = 1).
+
+*Applied per R-369:* "not magenta" is checked as each of the style's colours lying farther than τ from `#FF00FF` in
+OKLab, unsimulated and under each simulation, beside REQ-COL-055's measurement against every palette entry; the gui
+reviewer checks it and the human confirms the style at the M2 gate (R-504).
+
+*What it extends:* **R-467 D6**, a constraint added to the style's calibration.
+
+R-505 is in the "design" group of `plan/rule_groups.yaml`, with R-467.
+
+Changes REQ-COL-110 (statement, verify, rulings, note).
+
+## R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*
+*20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
+extension type (R-407)" (RQ-372's sentence reworded, with its earlier words kept), `docs/design/principia_chart_reference.md`
+§ "2.1 Feasibility, and the warp that makes every pixel valid" (a paragraph added, "Every physical-quantity axis") and §
+"5.4 Past the unit square — each axis's extension type (R-407)" (B1's sentence reworded, with its earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)" (a sentence) and § "G12. Console
+(`12_console.png`)" (RQ-372's sentence reworded, with its earlier words kept), R-408's, R-467's and R-471's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-372, moved with its ruling), REQ-GUI-228 (reqio: statement, verify,
+rulings, `rq` removed, note), REQ-CHART-067, REQ-CHART-068 and REQ-CHART-070 (reqio: statement, verify, rulings, note),
+REQ-CHART-040, REQ-CHART-056 and REQ-GUI-109 (reqio, notes), TASK-M8-47 (no longer waiting), TASK-M2-37 and TASK-M8-18
+(notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-37 (⚑), TASK-M8-18 and TASK-M8-47*
+
+The human's words (20 Oct 2026), ruling RQ-372, from a batch of rulings on the review queue whose other items are
+other ports' (the batch is recorded verbatim in the orchestrator's notes):
+
+> RQ-372: every physical-quantity axis follows R-471: warped to its feasible range by
+> default, linear as an option with non-systems blank. The decoder-bug warning only for
+> a warped axis. Mass ratio warps through the mass link.
+
+The batch ends "Vetoable decisions: all stand.": the decisions applied per R-369 that the orchestrator's summary put to
+the human stand, none vetoed; nothing changes by it.
+
+RQ-372 asked whether a Chart-builder physical-quantity axis whose range leaves the slice's reach inside `[0,1]²` is
+kept feasible by the builder (a), may fail there with no decoder-bug warning (b), or fails with an informational line
+(c). R-471 had answered it for the energy-type axes (H5) and left it open for the virial ratio and the mass ratio.
+
+*What it decides:*
+- **RQ-372 is ruled by axis mapping, as R-471 answered it for energy:** a warped axis is option (a), a linear one
+  option (b).
+- **Every physical-quantity axis follows R-471,** the Chart builder's energy, `L_z`, virial ratio, mass ratio and the
+  rest of render_gui_spec §G7's list: **warped to its feasible range by default**, so every pixel of `[0,1]²` is
+  feasible by construction; **linear as an option**, under which the pixels that are not a system draw blank (R-470).
+- **The decoder-bug warning (R-467, clause 4) is only for a warped axis.**
+- **The mass ratio warps through the mass link,** chart_reference §0.1's softmax, so every pixel's masses are positive
+  and sum to 1.
+
+*Where the words leave a choice, decided per R-369 (the warps under physics review; the human may veto any):*
+- **W1. "Only for a warped axis".** A Chart-builder chart logs R-467's decoder-bug warning for a pixel inside `[0,1]²`
+  that is not a system when every physical-quantity axis it has is warped, the chart then valid there by construction;
+  a chart with any axis under its linear option logs none, its in-square failures being by design (R-471 E2). Gallery
+  charts warn as R-467 has it, their energy-type axes under the linear option excepted (R-471 H5). Flagged: a chart
+  with one warped and one linear axis cannot tell per pixel which axis a failure belongs to, so it warns for neither.
+- **W2. The warps not written.** chart_reference §2.1 writes the energy-type warps; nothing writes the virial ratio's,
+  or how a mass-ratio range maps into the logits. They are definition requirements (R-72), joined to the one R-471 H2
+  opened for `PE`: **REQ-CHART-070** now asks for the warp of every physical-quantity axis §2.1 does not write, each as
+  a chart_reference §2.1 paragraph under physics review, by TASK-M2-37, before the builder offers that axis
+  (TASK-M8-18 depends on TASK-M2-37 already). Until then no chart offers it.
+- **W3. The mass ratio.** A mass-ratio axis moves the mass logits (the link's pre-image, R-473 T3's rule), the ratio
+  read through the softmax: every pixel inside and past the square has positive masses summing to 1. Its range is
+  given as a ratio and mapped into the logits as W2's paragraph writes. Under its linear option the ratio is mapped
+  linearly onto its range, so a ratio at or below zero is not a system and draws blank.
+- **W4. Extension and statistics.** A warped physical-quantity axis is bounded past its edge (the warp's type, as R-471
+  H3), its pixels there the domain's end, out of R-408's count and total; under its linear option it is R-408's B1
+  axis, affine, its unreachable pixels forbidden. R-408's statistics are otherwise unchanged (R-470, N4).
+- **W5. The stop.** Under a linear option the navigation stop (R-469) keeps the centre feasible, as for an energy axis.
+- **W6. RQ-372 is closed** and moves to the archive with this ruling; REQ-GUI-228 loses its `rq` and TASK-M8-47 no
+  longer waits.
+- **W7. Where it is built.** The warp of every physical-quantity axis and its linear option in the kernel (TASK-M2-37:
+  REQ-CHART-067, REQ-CHART-068, REQ-CHART-070); the builder's default (TASK-M8-18, REQ-CHART-040's note); the warning
+  (TASK-M8-47, REQ-GUI-228). Physics reviews TASK-M2-37 and TASK-M8-47, as before.
+
+*What it amends:* **R-471** (H3: the virial ratio and the mass ratio are no longer B1's by default; H5: RQ-372, left open
+for them, is closed), **R-467** (clause 4's warning, for a warped axis only; "That holds for charts built in the Chart
+builder too" holds under the default mapping) and **R-408** (port B1 as the default, now for every physical-quantity
+axis, superseded in part as R-471 did for energy). It closes **RQ-372**.
+
+R-506 is in the "physics" group of `plan/rule_groups.yaml`, with R-471.
+
+Changes REQ-GUI-228 (statement, verify, rulings, `rq` removed, note), REQ-CHART-067, REQ-CHART-068 and REQ-CHART-070
+(statement, verify, rulings, note) and REQ-CHART-040, REQ-CHART-056 and REQ-GUI-109 (notes).
+
+## R-507 — T4's units: the screen axis in units of the axis's full range at zoom 1, the hidden coordinate in its slider span, so no unit depends on zoom; the latent chart's tilt stays the decoder's basis edit; the human's half-width proposal is withdrawn *(closes RQ-375; amends R-473)*
+*20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (RQ-375's sentence
+reworded, with its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (Tilt, a clause), R-473's heading block, `docs/archive/review_queue/M0.md` (RQ-375, moved with its
+ruling), REQ-CHART-064 (reqio: statement, verify, rulings, note), TASK-M2-36 (closes REQ-CHART-064), TASK-M2-39
+(re-scoped, R-475 and R-471's waits), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-36 (⚑)*
+
+The human's words (20 Oct 2026), ruling RQ-375, from the batch R-506 quotes:
+
+> RQ-375: my T4 proposal is withdrawn. Units must not depend on zoom: the screen axis in
+> units of the axis's full range at zoom 1, the hidden coordinate in its slider span.
+> Latent chart stays the decoder's basis edit.
+
+RQ-375 held R-473 T4's proposal (each screen axis in units of the window's half-width, the hidden coordinate in its
+slider span), the conflict it made with T2's "On the latent chart, T2 is exactly the decoder's basis edit", and three
+options; (b), the proposal on curved charts only, was applied meanwhile (R-473 J3).
+
+*What it decides:*
+- **T4's proposal is withdrawn.** A window half-width depends on zoom; the units must not.
+- **On a tilt mixing a chart parameter with a hidden coordinate, each screen axis is in units of the axis's full range
+  at zoom 1, and the hidden coordinate in units of its own slider span.**
+- **The latent chart's tilt stays the decoder's basis edit** (T2's sentence, as written).
+
+*Where the words leave a choice, decided per R-369 (tilt maths: under physics review; the human may veto any):*
+- **U1. The scaled rotation.** On a curved chart the rotation `R(τ₁, τ₂)` acts on `(ã, b̃, d̃)`: `ã`, `b̃` the
+  pixel's chart-parameter offsets from the view's centre, each divided by its axis's full range at zoom 1, the
+  parameter span the chart preset's window covers when the zoom reads × 1.00 (R-466, REQ-GUI-224); `d̃` the hidden
+  coordinate's offset divided by that coordinate's slider span, the Slice centre slider's range (§G2). After the
+  rotation `ã`, `b̃` are multiplied back by their full ranges and `d̃` by its span. So a given `τ` turns the same
+  direction in the chart's parameters at every zoom, a zoom changing only how much of it the window shows.
+- **U2. Untilted and the latent chart.** At `τ₁ = τ₂ = 0` the scale takes no arithmetic (R-473 J6), so the untilted
+  chart is bitwise today's. On the latent chart the tilt is the basis edit in the latent coordinates, `q₁`, `q₂` and a
+  unit latent direction, with no scale (RQ-375's option (b) as it applied there).
+- **U3. A saved curved chart** (R-475 L5) stores its tilt in these units, its parent's full ranges at zoom 1, so it
+  reopens bitwise at every zoom.
+- **U4. J3's meanwhile no longer applies**, and REQ-CHART-064 is restated by this ruling with no `rq`. T2 is not built
+  without its scale, so TASK-M2-36 closes REQ-CHART-064 with REQ-CHART-062; TASK-M2-39, its former leaf, is re-scoped to
+  the two tilt cases that wait (RQ-402, RQ-403; R-471 H9, R-475 L5). As first ported REQ-CHART-064 carried no `rq:` key
+  though R-473 said it waited (code review 5586921473 of PR #255, F1; R-473 J12).
+
+*What it amends:* **R-473** (T4's proposal, withdrawn by the human; J3's meanwhile, replaced by U1). It closes
+**RQ-375**.
+
+R-507 is in the "physics" group of `plan/rule_groups.yaml`, with R-473.
+
+Changes REQ-CHART-064 (statement, verify, rulings, note).
+
+## R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*
+*20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every
+pixel valid" (RQ-376's sentences reworded, with their earlier words kept) and § "5.4 Past the unit square — each axis's
+extension type (R-407)" (the invariant and Burrau `K` rows and the `K` bullet, with their earlier words kept), R-471's
+heading block, `docs/archive/review_queue/M0.md` (RQ-376, moved with its ruling), REQ-CHART-067 and REQ-CHART-056
+(reqio: statement, verify, rulings, note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-37 (⚑) and
+TASK-M8-05 (the statistic, ⚑)*
+
+The human's words (20 Oct 2026), ruling RQ-376, from the batch R-506 quotes:
+
+> RQ-376: (b). t > 1 continues, t < 0 and the s axis bounded.
+
+RQ-376's option (b) was "Affine past `t = 1`, bounded past `t = 0`: a one-sided declaration, `K` continuing beyond
+`K_max` (for `E` and `L_z` the same through their lines of the warp, R-471 H1), counted as R-408 counts an affine
+axis". The physics review of PR #255 (5586890917, F6) found that option's "for `E` and `L_z` the same" and option (c)'s
+"`L_z`'s `±√(2 I K_max)` range staying bounded" muddled: an `L_z` axis's line of the warp has edges only at `s ∉ [0,1]`,
+where `|L_z| > L_max` is always infeasible, and `L_max = √(2IK(t))` grows with `t`. The human's words settle it as
+(b) on the `t` axes with the `s` axis bounded, which is the reading applied (flagged per R-369: the entry's option text
+is corrected by the ruling's own words, not by the port).
+
+*What it decides:*
+- **Option (b).** Past `t = 1` the warp's `t` axis **continues**; past `t < 0` it stays bounded; and **the `s` axis
+  stays bounded** past either edge.
+
+*Where the words leave a choice, decided per R-369 (an extension declaration under physics review, R-407 clause 3;
+the human may veto any):*
+- **V1. Which axes.** The warp's `t` axis wherever it appears: `K` (`KE`) and `E` on the invariant charts `(L_z, K)` and
+  `(L_z, E)`, the Burrau family's `K` axes (`(ν, K)`, `Φ_θ,K`, `Φ_strip,K`), which are §2.1's `K(t)`, and a lone
+  energy-type `t` axis (R-471 H1), as option (b) said "through their lines of the warp". `L_z`'s `s` axis is bounded on
+  both sides. A Chart-builder axis under R-506's warp takes the sides its own warp's paragraph writes (REQ-CHART-070).
+- **V2. "Continues".** Past `t = 1` the warp's formula runs on: `K = K_max·t^γ_K > K_max`, `E = U + K`, `L_max(t) =
+  √(2IK(t))` growing, so every pixel with `s ∈ [0,1]` is feasible and is a system. That side has R-407's affine type
+  (the formula continues), one-sided; the axis's primary range for R-408 is `t ≥ 0`, so a pixel past `t = 1` is in the
+  count and the total, and one below `t = 0` is the domain's end. `t ↦ K` is monotone on `t ≥ 0`, so no system is drawn
+  twice.
+- **V3. Inside `[0,1]²` nothing changes;** past `t = 1`, pixels that drew blank draw their systems.
+- **V4. The linear option** (R-471 E2) is affine on both sides already (B1); unchanged.
+- **V5. Tilted,** the types act on the chart's own parameters `(a, b)` (R-472 X3a).
+- **V6. RQ-376 is closed** and moves to the archive; REQ-CHART-067's extension type and REQ-CHART-056's statistic
+  follow, as the entry said. Built by TASK-M2-37 and TASK-M8-05, both physics-reviewed.
+
+*What it amends:* **R-471** (H3's "bounded … its `t > 1` side is RQ-376"). Read with it: R-407 (clause 3, the
+declaration), R-408 (the count). It closes **RQ-376**.
+
+R-508 is in the "physics" group of `plan/rule_groups.yaml`, with R-471.
+
+Changes REQ-CHART-067 and REQ-CHART-056 (statement, verify, rulings, note).
+
+## R-509 — `principia_lines.md` §11's six questions are ruled: contours in the stain's expression syntax; the playhead reads any ledger-declared payload field; the trace fade uses the proxy where it is defined, else no fade and says so, the real distance waiting on RQ-341; trace labels win; class edges move to the line system; Screen contour the default, smart ink opt-in *(closes RQ-377; amends R-476)*
+*20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note and § "11. Open questions", the pointer,
+with their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (Overlays ▾ loses its Stain group, with its earlier words kept; Lines ▾, the six answers and Class
+edges) and § "Display — the last stages" (the overlays, with their earlier words kept),
+`docs/contracts/principia_gui_state_contract.md` § 2 (a clause), `docs/design/principia_trajectory_viewing.md` § "3.
+Hover trace — projection onto the current (tilted, sliced) plane" (a clause), `docs/gui/design/GUI_DESIGN_NOTES.md` §
+"01 Explore — the everyday view" (conformed), `docs/read_first/principia_INDEX.md` § "Design documents — the
+reasoning" (a clause), R-476's heading block, `docs/archive/review_queue/M0.md` (RQ-377, moved with its ruling),
+REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250 (reqio: statement, verify, rulings, note), REQ-GUI-266
+(reqio, new, `rq: RQ-341`), REQ-GUI-247, REQ-GUI-079 and REQ-GUI-101 (reqio: statement, verify, rulings, note),
+TASK-M8-51 (no longer waiting), TASK-M8-50 (class edges), TASK-M8-54 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M8-50, TASK-M8-51 and TASK-M8-54*
+
+The human's words (20 Oct 2026), ruling RQ-377, from the batch R-506 quotes:
+
+> RQ-377: 1 reuse the stain's expression syntax; 2 any ledger-declared payload field;
+> 3 proxy where defined, else no fade and say so, the real distance waits on RQ-341;
+> 4 trace labels win; 5 class edges move to the line system; 6 Screen contour default,
+> smart ink opt-in.
+
+*What it decides:* RQ-377's six parts, one each:
+- **(1) A contour expression reuses the stain's expression syntax** (the entry's option (b)).
+- **(2) The playhead reads any ledger-declared payload field** (option (a), "any payload field", narrowed to the
+  fields the ledger declares).
+- **(3) The trace fade uses the proxy where it is defined; elsewhere there is no fade, and the GUI says so.** The real
+  off-plane distance waits on RQ-341.
+- **(4) Trace labels win** over contour labels (option (b)).
+- **(5) Class edges move to the line system** (option (a)).
+- **(6) Screen contour is the default style for a new contour set; smart ink is opt-in** (option (a)).
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **Y1. (1)** "The stain's expression syntax" is the stain graph's: a node's expression as the Code view writes it
+  (render_gui_spec Part II §10), the subset §4.1's operators, functions and comparisons need. A contour expression is
+  typed in it, parsed to §4.1's tree, with §4.1's variables and totality unchanged; a malformed one reports its
+  position in the contour-set editor. Flagged: the Code view shows WGSL; a contour expression is not a fragment.
+- **Y2. (2)** "Ledger-declared" is the generation root's ledger (`principia_dd_generation_root.md` §3.8, every field's
+  entry): a playhead variable may be any field with a ledger entry, read at the playhead; a name with no entry is
+  refused. §4.1's `t_end`, `state`, `d_min`, `drift`, `ftle` are among them.
+- **Y3. (3)** The proxy is the mock-ups' (§11 Q3), the scale-normalised Jacobi momentum magnitude. It is "defined" on a
+  chart whose plane holds it at zero, the shape chart of the mock-ups, whose momenta are held at zero, so there it
+  measures how far a state is off the plane; on every other chart the trace draws at full opacity and its settings say
+  "fade: no off-plane distance on this chart (RQ-341)". Physics reviews "where defined" (TASK-M8-51). The general
+  definition, the encode per step and the metric RQ-341 raises, is **REQ-GUI-266** (`rq: RQ-341`), closed by a leaf
+  task, **TASK-M8-54**. When it lands it supersedes, on the charts it covers, REQ-GUI-249's no-fade arm and its settings
+  line, and TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit (gui review 5587650119 of PR #255, G13;
+  applied per R-369).
+- **Y4. (4)** Where a contour label and a trace's tick label would overlap, the tick label is kept and the contour's
+  skipped; among contour sets §7's list order stands.
+- **Y5. (5)** Class edges become the Lines preset **Class edges**: contours of the categorical field the active stain's
+  class channel reads, the edges between neighbouring pixels of different class, drawn by the line system in a style.
+  Overlays ▾ loses its Stain group, the Display window (§G5) its class edges, and `RenderState`'s `Overlays` loses
+  `class_edges`, which moves into `Lines`, as R-476 M3 moved `grid` and `t_end_contours`. TASK-M8-50 builds it with
+  M3's move, in the same files: R-476 M12's qa list holds, its reason now also `class_edges` and the overlay count
+  (eleven toggles; the doc's "fourteen", :55), and the code reviewer confirms no other assertion is weakened.
+- **Y6. (6)** A new contour set takes Screen contour (§3's first style); smart ink is a per-set option, off until turned
+  on.
+- **Y7. RQ-377 is closed** and moves to the archive. REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250 are
+  restated with the answers; TASK-M8-51 no longer waits. As first ported they carried no `rq:` key though R-476 M10
+  said so (code review 5586921473 of PR #255, F1); only REQ-GUI-266 waits, with the key.
+
+*What it amends:* **R-476** (M3's keeping class edges in Overlays ▾; M10's meanwhile, replaced by the answers). It closes
+**RQ-377**.
+
+R-509 is in the "design" group of `plan/rule_groups.yaml`, with R-476.
+
+Adds REQ-GUI-266 (`rq: RQ-341`); changes REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249, REQ-GUI-250, REQ-GUI-247,
+REQ-GUI-079 and REQ-GUI-101 (statement, verify, rulings, note).
+
+## R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied
+*20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-378, a "Parked" line; the entry stays open), REQ-GUI-244 (reqio, note),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; nothing is built*
+
+The human's words (20 Oct 2026), on RQ-378, from the batch R-506 quotes:
+
+> RQ-378: parked until RQ-341.
+
+*What it decides:* a deferral, by the human's ruling (only the human defers, `plan/WORKFLOW.md` § "No deferral").
+RQ-378 stays in the review queue, open and blocked on RQ-341 (the decoder's Jacobian along all eight latent
+directions, which a flattened chart `(z₀, J q̂₁, J q̂₂)` needs); when RQ-341 is ruled it returns to the human.
+Meanwhile its option (a), applied since R-475 L9, stands: Save view as chart on a curved chart saves the parent chart,
+its slice centre and its tilt, and nothing more is built. Nothing waits on it.
+
+R-510 is in the "design" group of `plan/rule_groups.yaml`, with R-475.
+
+Changes REQ-GUI-244 (note).
+
+## R-511 — A `decode_failed` sample the chart does not classify as not a system draws blank in a presentation view, as a not-a-system pixel, the forbidden-region overlay drawing over it too; `sim_failed` keeps `#141418` *(closes RQ-379; amends R-467 and R-470)*
+*20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
+extension type (R-407)" (two sentences reworded, with their earlier words kept),
+`docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default palette"
+(three sentences reworded, with their earlier words kept), `docs/contracts/principia_render_contract.md` § "Presentation
+layer (hand-written, small, reused by every debug view)" (RQ-379's sentence reworded, with its earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (RQ-379's clause reworded, with its earlier
+words kept) and § "G2. Explore — the everyday view (`01_main.png`)" (Overlays ▾'s forbidden region, a clause) and §
+"G6. Legend — generated by evaluating the stain (`06_legend.png`)" (η_E's tags, two clauses),
+`docs/design/principia_dd_chazy_final_motion.md` § "10.1 The two rules that hold in every stain" and § "10.11 One
+body at a time (R-443)" (a clause each, with their earlier words kept), R-467's and R-470's heading blocks, `docs/archive/review_queue/M0.md` (RQ-379, moved with its ruling), REQ-COL-108 and
+REQ-COL-111 (reqio: statement, verify, rulings, note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; and, per Z7,
+colour_composition § "1.4 …" (the table row and the list of what draws black) and § "4.1 Backbone & `Option`
+occupants", render_gui_spec § "G1. …" (the clause it contradicted, replaced) and § "G6. …" (the black key, the
+free-fall paragraph), dd_chazy_final_motion § "7. Validity and styles" and § "10.10 Legends", GUI_DESIGN_NOTES, REQ-COL-072,
+notes on REQ-COL-002 and REQ-COL-101, TASK-M7-37, TASK-M2-34, TASK-M2-32 and `plan/reviewers/gui.md`; built by
+TASK-M2-34, TASK-M7-37 and TASK-M8-08*
+
+The human's words (20 Oct 2026), ruling RQ-379, from the batch R-506 quotes:
+
+> RQ-379: (b), blank. sim_failed keeps #141418.
+
+RQ-379's option (b): "blank, as a not-a-system pixel, the forbidden-region overlay then drawing over it too", for a
+`decode_failed` sample the chart does not classify as not a system (a non-finite decode, η_E's `ENERGY_UNSCALABLE` and
+`ENERGY_INFEASIBLE`, the mass block's `M01_TINY`); (a), R-467 D4's `#141418`, was applied meanwhile.
+
+*What it decides:*
+- **Option (b).** Such a sample draws **blank**, the view's background, in every presentation view, as a pixel that is
+  not a system does, and the forbidden-region overlay draws over it too.
+- **`sim_failed` keeps `#141418`.**
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **Z1. Which samples.** Every `decode_failed` sample the chart does not classify, whatever its tag (each of the
+  decoder's `DEGENERATE` tags, any added later, and a non-finite decode; colour_composition §1.4): blank, inside
+  `[0,1]²` and past it, with no legend key and outside every display share and its total, as R-467 D2 has a blank
+  pixel. Option (c)'s split by tag is not taken.
+- **Z2. What reads what.** The chart's classification, REQ-COL-102's lane, stays the chart's (R-446): the decoder's
+  outcomes never set it, and R-408's statistics, which read it, are unchanged (R-470, N4). A presentation occupant
+  draws the background for the lane's not-a-system pixels and for every `decode_failed` sample; Overlays › Chart ›
+  forbidden region hatches the same set.
+- **Z3. `#141418` stays** for `sim_failed` of each detail, a system's non-finite value a field or ramp reads, a
+  reserved state code and a ramp's or compaction's invalid value (R-470 G2, R-467 D4).
+- **Z4. The debug views are unchanged:** View › Debug view still shows the sample with `debug_invalid` under "decode or
+  sim failure".
+- **Z5. The goldens.** The outcome scene's `decode_failed` sample (`crates/validation/src/golden_scene.rs`) draws blank
+  where R-467 drew it `#141418`, so `m1-outcome/outcome` and `m1-outcome/outcome_edited` change in that tile too;
+  TASK-M2-34 renders them and reports the hashes, under RQ-373's gate decision (flagged: RQ-373 lists the tiles R-467
+  changes, and this is one more).
+- **Z6. RQ-379 is closed** and moves to the archive; REQ-COL-108 and REQ-COL-111 follow, as the entry said.
+- **Z7. Carried through (gui review 5587650119 of PR #255, G11; applied per R-369).** Every place that drew a
+  presentation `decode_failed` sample `#141418`, or counted it in the black key's share, is reworded with its earlier
+  words kept: colour_composition §1.4's table row and its list of what draws black, and §4.1's outcome-class exception;
+  render_gui_spec §G1's clause and §G6's black key and free-fall paragraph; dd_chazy_final_motion §7 and §10.10;
+  GUI_DESIGN_NOTES' "Presentation views draw no hatch"; REQ-COL-072 (statement and verify) and TASK-M7-37, unbuilt;
+  TASK-M2-34's acceptance line; notes on REQ-COL-002, REQ-COL-101 and TASK-M2-32, whose task has merged (TASK-M2-34
+  changes the built behaviour through REQ-COL-108, re-checked at the M2 gate); and the gui checklist,
+  `plan/reviewers/gui.md`.
+
+*What it amends:* **R-467** (D4's `decode_failed`, now blank) and **R-470** (G2's open case). It closes **RQ-379**.
+
+R-511 is in the "design" group of `plan/rule_groups.yaml`, with R-467 and R-470.
+
+Changes REQ-COL-108 and REQ-COL-111 (statement, verify, rulings, note).
+
+## R-512 — Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge, and blank past a bounded one; E3 and C6 read over the chart's square *(closes RQ-402; amends R-471, R-472 and R-477)*
+*20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (RQ-402's clause
+reworded, with its earlier words kept), `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that
+makes every pixel valid" (RQ-402's clause reworded, with its earlier words kept), R-471's, R-472's and R-477's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-402, moved with its ruling), REQ-CHART-076 (reqio: statement, verify,
+rulings, `rq` removed, note), REQ-CHART-061 and REQ-CHART-069 (reqio: statement, rulings, note), REQ-CHART-066
+(reqio: verify, rulings, note), TASK-M2-39
+(re-scoped, no longer waiting), TASK-M2-36, TASK-M2-37 and TASK-M2-38 (notes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M2-39 (⚑)*
+
+The human's words (20 Oct 2026), ruling RQ-402, from a second batch of rulings on the review queue whose other items
+are other ports' (the batch is recorded verbatim in the orchestrator's notes):
+
+> RQ-402 (a): pixels whose (a,b) leave the square are past the edge and blank; E3/C6 read over the square.
+
+The batch ends "Vetoable decisions: all stand.": the decisions applied per R-369 that the orchestrator's summary put to
+the human stand, none vetoed; nothing changes by it.
+
+RQ-402's option (a) was "E3 and C6 read over the chart's own square: every pixel whose `(a, b)` lie in `[0,1]²` is
+feasible; the others are past the edge (X3a) and draw blank, as the types say"; (b) scaled the window down so the
+rotated window stayed in the square, and (c) withheld Tip as sheet on a chart with a bounded axis. (a) was applied
+meanwhile (R-471 H9).
+
+*What it decides:*
+- **Option (a).** Under Tip as sheet with one target and both angles set, a window pixel inside `[−1, 1]²` whose own
+  chart parameters `(a, b)` leave the chart's square is **past the edge**, and **blank**.
+- **E3 and C6 read over the chart's square:** every pixel whose own `(a, b)` lie in the square is feasible under every
+  tilt (R-471 E3), and C6's every-pixel arm (R-477) is over those pixels.
+
+*Where the words leave a choice, decided per R-369 (the extension under physics review, R-407 clause 3; the human may
+veto any):*
+- **F1. "Past the edge and blank", with the types.** Option (a) says "as the types say": such a pixel's axes'
+  types act on its `(a, b)` as past the window (R-472 X3a, unchanged). Past a bounded edge, which is every edge the
+  entry asked about (a warped `L_z`'s `s` axis on either side, the warp's `t < 0` side, R-508), the pixel is not a
+  system and draws blank (R-470). Past the warp's continuing `t > 1` side (R-508 V2), the one side the types continue,
+  the pixel is that side's system, as past the window; it was never infeasible, so the entry's failure does not arise
+  there. Settled by the docs, not a reading of ours (physics review 5591497181 of PR #255, P1): the option the human
+  chose says "draw blank, as the types say", and the types are R-508 V2's (`t > 1` continues) and V5's (tilted, they
+  act on `(a, b)`). *Was:* "Flagged: the human's "blank" read as the bounded case; read for every edge it would
+  contradict R-508 V2 inside the window only, which nothing else in the corpus does.", and "(flagged)" in the heading.
+- **F2. Tip as sheet is unchanged:** no scale (option (b)) and no withholding (option (c)). Lean each axis, a single
+  angle and `X ≠ Y` keep every window pixel's `(a, b)` in the square (R-471 H9).
+- **F3. Statistics.** A blank pixel past a bounded edge inside the window is the domain's end, as past the window:
+  outside R-408's count and its total (R-471 H3, R-506 W4); a pixel past `t = 1` is in both (R-508 V2). R-408's
+  statistics are otherwise unchanged (R-470, N4).
+- **F4. The overlay and the debug views** treat such a pixel as one past a bounded edge outside the window (R-470 G7):
+  blank, the hatch only through Overlays › Chart › forbidden region or a debug view; nothing new.
+- **F5. RQ-402 is closed** and moves to the archive. REQ-CHART-076 is restated with the answer and loses its `rq`;
+  REQ-CHART-061's and REQ-CHART-069's narrowed arms stand, their pointers to RQ-402 now to this ruling. TASK-M2-39
+  builds REQ-CHART-076's test, no longer waiting, and keeps that requirement alone (RQ-403's half moves to TASK-M2-40,
+  R-513 Q4).
+
+*What it amends:* **R-471** (E3, read over the chart's square; H9's meanwhile now the rule), **R-472** (X3a's "whether
+that is meant is RQ-402", answered) and **R-477** (C6's "every pixel inside `[0,1]²`", read over the chart's square).
+It closes **RQ-402**.
+
+R-512 is in the "physics" group of `plan/rule_groups.yaml`, with R-471.
+
+Changes REQ-CHART-076 (statement, verify, rulings, `rq` removed, note), REQ-CHART-061 and REQ-CHART-069 (statement,
+rulings, note) and REQ-CHART-066 (verify, rulings, note: past `t = 1` the continuing side's system; physics review
+5591497181 of PR #255, P1).
+
+## R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*
+*20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "1.1 Affine slices — the "no tilt" case" (a
+sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (RQ-403's
+clause reworded, with its earlier words kept), R-473's and R-475's heading blocks, `docs/archive/review_queue/M0.md`
+(RQ-403, moved with its ruling), REQ-CHART-077 (reqio: statement, verify, rulings, `rq` removed, note), REQ-CHART-073
+(reqio: statement, rulings, note), REQ-GUI-244 (reqio: verify, rulings, note), REQ-GUI-241 (reqio: statement,
+rulings, note), TASK-M2-40 (closes REQ-CHART-077), TASK-M2-39
+(no longer closes it), TASK-M8-48 (needs REQ-CHART-077; a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
+by TASK-M2-40 (⚑) and TASK-M8-48 (⚑)*
+
+The human's words (20 Oct 2026), ruling RQ-403, from the batch R-512 quotes:
+
+> RQ-403 (b): rotations compose, (a,b,d) = R·R′·(u,v,0).
+
+RQ-403's option (b) was "The rotations compose: `(a, b, d) = R·(u′, v′, d′)`, that is `R·R′·(u, v, 0)`"; (a) added the
+two offsets, `d + d′`, and (c), applied meanwhile (R-475 L5), did not offer the saved target to a new tilt.
+
+*What it decides:*
+- **Option (b).** A new tilt `R′` of a saved curved chart into its own saved target composes with the saved rotation
+  `R`: `(u′, v′, d′) = R′·(u, v, 0)`, then `(a, b, d) = R·(u′, v′, d′)`, that is `R·R′·(u, v, 0)`, `d` added to the
+  saved target. The offsets are not added.
+
+*Where the words leave a choice, decided per R-369 (the composition under physics review; the human may veto any):*
+- **Q1. One rule for every new target.** The new tilt's offset on the saved target enters `R`'s third input; an offset
+  on any other target is added to that target. With the new target the saved one this is (b); with a new target other
+  than the saved one the offset on the saved target is 0, and it is L5's block composition `(R ⊕ 1)·(1 ⊕ R′)` in
+  `(a, b, d_saved, d_new)`, unchanged (REQ-CHART-073). With two new targets (`X ≠ Y`), one the saved target, the same
+  rule applies per target.
+- **Q2. The units.** Both rotations act in R-507 U1's scaled coordinates, the parent's full ranges at zoom 1 and the
+  saved target's slider span (U3), so `R·R′` composes in one scaled 3-space and the result does not depend on zoom.
+- **Q3. The saved target is offered again** in the Tilt section's target dropdowns of a saved curved chart; L5's
+  meanwhile ends. Untilted (`τ′ = 0`), `R′` is the identity and takes no arithmetic, so the saved chart reopens
+  bitwise (S3, R-473 J6).
+- **Q4. Where it is built (applied per R-369: the composition is built once).** The kernel's saved chart composes both
+  cases, so REQ-CHART-077 moves from TASK-M2-39 to TASK-M2-40, which builds REQ-CHART-073's composition, as R-507 U4
+  folded T4's units into T2; TASK-M2-39 keeps REQ-CHART-076 alone and no longer depends on TASK-M2-40. The real
+  engine's dropdowns offer the saved target (TASK-M8-48: REQ-GUI-241's statement, REQ-GUI-244's verify arm with its
+  control; it needs REQ-CHART-077). Physics reviews both.
+- **Q5. RQ-403 is closed** and moves to the archive; REQ-CHART-077 is restated with the answer and loses its `rq`.
+
+*What it amends:* **R-475** (L5's "whether `d′` and `d` add or `R` acts on `(u′, v′, d′)`", ruled, and its meanwhile)
+and **R-473** (J9's composition, into the saved target). It closes **RQ-403**.
+
+R-513 is in the "physics" group of `plan/rule_groups.yaml`, with R-473.
+
+Changes REQ-CHART-077 (statement, verify, rulings, `rq` removed, note), REQ-CHART-073 (statement, rulings, note),
+REQ-GUI-244 (verify, rulings, note) and REQ-GUI-241 (statement, rulings, note: its dropdowns offer the saved target;
+code review 5591496358 of PR #255, C1).
+
+## R-514 — A latent view saved at a tilt tilts again in an orthonormal frame: the named dimensions projected off the saved plane and normalised, vanishing ones dropped, are its targets; both maps act in that frame; the stored pair is kept, so the view reopens bitwise *(closes RQ-404; amends R-474, R-475 and R-477)*
+*20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "1.1 Affine slices — the "no tilt" case" (a
+sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (RQ-404's
+clause reworded, with its earlier words kept), R-474's, R-475's and R-477's heading blocks,
+`docs/archive/review_queue/M0.md` (RQ-404, moved with its ruling), REQ-GUI-265 (reqio: statement, verify, rulings, `rq`
+removed, note), REQ-GUI-240 (reqio: statement, verify, rulings, note), TASK-M6-51 (no longer waiting), TASK-M6-49 (a
+note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-51 (⚑)*
+
+The human's words (20 Oct 2026), ruling RQ-404, from the batch R-512 quotes:
+
+> RQ-404 (a): named dimensions projected off the saved plane and normalised, vanishing ones
+> dropped; maps act in the orthonormal frame; the stored pair is kept so the view reopens bitwise.
+
+RQ-404's option (a) was "The named dimensions other than the plane's own, each projected off the saved plane and
+normalised (Gram–Schmidt), any that vanish dropped; each map acts in the orthonormal frame `(q̂₁, q̂₂⊥, t̂)`, the stored
+lengths re-applied"; (b) offered only the named dimensions exactly orthogonal to the plane, and (c) re-expressed the
+plane in a frame of its own at saving.
+
+*What it decides:*
+- **Option (a).** On a latent view saved at a tilt, the tilt targets are **the named dimensions projected off the saved
+  plane and normalised, the vanishing ones dropped**; **both maps act in the orthonormal frame**; and **the stored pair
+  is kept**, so the view reopens bitwise.
+
+*Where the words leave a choice, decided per R-369 (tilt maths under physics review, TASK-M6-51 ⚑; the human may veto
+any):*
+- **I1. The frame.** From the stored pair, by Gram–Schmidt in this order: `q̂₁ = q₁/|q₁|`, `q̂₂⊥ = normalise(q₂ −
+  (q₂·q̂₁) q̂₁)`. A target `e` is projected off the plane, `t = e − (e·q̂₁) q̂₁ − (e·q̂₂⊥) q̂₂⊥`, and normalised, `t̂ =
+  t/|t|`; with two targets the second is orthogonalised against the first as well, so the frame `(q̂₁, q̂₂⊥, t̂_X,
+  t̂_Y)` is orthonormal. The stored `(z₀, q₁, q₂)` are never replaced by the frame (S3, L4).
+- **I2. Which named dimensions.** Option (a)'s: every named dimension other than the plane's own, the two latent
+  dimensions its first parent's axes were (R-457's `e_a`, `e_b`, in the provenance, L2), so the earlier target is
+  offered again, projected. A dimension **vanishes** when `|t|² ≤ 10⁻¹²`, the threshold of the GUI's degenerate-basis
+  sine test (REQ-GUI-203; `|t|` is the sine of its angle to the plane), and is dropped; a second target that vanishes
+  against the first is the one-target case. A projected entry is listed under its name marked, as "<name> ⊥
+  (projected)" (gui review 5591485827 of PR #255, G14: the exact form, the name kept); an entry
+  already orthogonal is listed as it is. For a plane saved untilted every projection is exact, and the six off it are
+  L4's, unchanged.
+- **I3. The maps in the frame.** R-474's maps written with `e_a → q̂₁`, `e_b → q̂₂⊥`, `e_X → t̂_X` (`e_Y → t̂_Y`): Tip as
+  sheet's Rodrigues rotation (K1) in `(q̂₁, q̂₂⊥, t̂_X)`, Lean each axis's `u₁ = cos τ₁ q̂₁ + sin τ₁ t̂_X`, `u₂ = cos τ₂
+  q̂₂⊥ + sin τ₂ t̂_Y` (R1). Each is a linear map `M(τ)` of the plane into the latent space, `M q̂₁` its first axis and `M
+  q̂₂⊥` its second.
+- **I4. The stored pair is kept.** The tilted pair is `(M q₁, M q₂)`: the stored vectors carried by `M`, written in the
+  frame (`q₁ = |q₁| q̂₁`, `q₂ = (q₂·q̂₁) q̂₁ + (q₂·q̂₂⊥) q̂₂⊥`), so the stored lengths are re-applied and, under Tip as sheet,
+  the angle between them kept. At `τ = 0`, `M` is the identity and takes no arithmetic (R-473 J6), so the saved chart
+  reopens bitwise (S3, C8). For a stored pair that is orthonormal (saved under Tip as sheet, or with one angle, or `X ≠
+  Y`) the tilted pair is exactly the map's axes in the frame. Flagged for physics: for a pair saved under Lean with `X
+  = Y` and both angles set, carrying the stored `q₂` rather than giving `M q̂₂⊥` the length `|q₂|` is what keeps the
+  tilt continuous at `τ = 0`.
+- **I5. C5 on such a chart.** Under Tip as sheet `M` is orthogonal: `M q̂₁` and `M q̂₂⊥` are orthonormal at every tilt and
+  the carried pair keeps its Gram matrix. C5's check runs on the frame's images, and on the pair where it was stored
+  orthonormal; Lean each axis's control still fails orthogonality off the axes.
+- **I6. The meanwhile ends with TASK-M6-51.** TASK-M6-49 still builds the guard (the Tilt section dimmed, the compass's
+  tilt mode refused, the dimmed controls kept in the keyboard order, inert), since the tilt itself is TASK-M6-51's,
+  which depends on it; its tooltip and status line no longer name RQ-404 and read "Tilt of a chart saved at a tilt is
+  not built yet" (REQ-GUI-240). TASK-M6-51 lifts the guard: when it lands REQ-GUI-265 supersedes REQ-GUI-240's
+  tilt-saved arms, the tests of them changing in TASK-M6-51, qa's in its qa commit, as R-509 Y3 has it. The readouts
+  (R-474 R8, R9) show each tilted axis's components as for any chart.
+- **I7. RQ-404 is closed** and moves to the archive; REQ-GUI-265 is restated with the answer and loses its `rq`.
+
+*What it amends:* **R-475** (L4's "Which targets such a chart offers, and how the maps act on its pair", ruled, and
+its meanwhile), **R-474** (K1's and R1's frame on such a chart) and **R-477** (C5, where it is checked on such a chart).
+It closes **RQ-404**.
+
+R-514 is in the "physics" group of `plan/rule_groups.yaml`, with R-474.
+
+Changes REQ-GUI-265 (statement, verify, rulings, `rq` removed, note) and REQ-GUI-240 (statement, verify, rulings,
+note).
+
+## R-515 — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (Yoshida-4's weights and their
+paragraph) and § "5. Unit tests" (test 1a's measured values), R-501's heading block (a forward line and its "Still in
+force" line) and its review-round text, REQ-INT-037 and REQ-INT-090 (reqio), TASK-M3-02, `plan/rule_groups.yaml`,
+`REVIEW_QUEUE.md` (RQ-405 moved out) and `docs/archive/review_queue/M0.md` (RQ-405, with its ruling); built by
+TASK-M3-02*
+
+The human's words (20 Oct 2026, in a message whose other items are ported on other branches):
+
+> RQ-405 (c): w₁ correctly rounded, w₀ = 1 − 2w₁.
+
+RQ-405's option (c): "Print `w₁` correctly rounded and `w₀ = 1 − 2w₁` as computed in f64 (`−1.702414383919315`), so
+that `w₀ + 2w₁ = 1` holds exactly in f64, as Yoshida-6's `w₀` is already computed from its consistency condition."
+
+*What it decides:*
+- **`w₁ = 1.3512071919596575`**, the closed form `1 / (2 − 2^{1/3})` (exact `1.351207191959657634…`) correctly rounded
+  to f64.
+- **`w₀ = −1.702414383919315`**, the f64 result of `1 − 2w₁`; the subtraction is exact, so `w₀ + 2w₁` is exactly 1 in
+  f64 and in real arithmetic on the shipped values. It stands for the closed form's `−2^{1/3} · w₁`
+  (`−1.702414383919315268…`), from which it differs by `9.9·10⁻¹⁷` relative.
+- **REQ-INT-037's `w₀ + 2w₁ = 1`** is an exact equality in f64, no longer read within rounding.
+
+*Applied per R-369:*
+- **The printed form.** Each weight is printed as the shortest decimal that parses to its f64 (`w₁` to 17 significant
+  digits, `w₀` to 16), and REQ-INT-037's "all printed digits" is read as the printed value parsing to the shipped f64.
+- **The test.** TASK-M3-02's `occupant_coefficients` asserts that `w₀` is bitwise `1 − 2w₁` in f64 and that `w₀ + 2w₁`
+  evaluates to exactly `1.0`; its control is RQ-405's interim digits (`1.3512071919596578`, `−1.7024143839193157`),
+  which give `0.9999999999999998` and must fail. It replaces the interim `|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`.
+- **REQ-INT-090's values on the new digits** (measured in exact rational arithmetic on the f64 values): Yoshida-4's
+  `|Σw − 1|` is 0 and `|Σw³| / Σ|w|³` is `5.5·10⁻¹⁷` (was `2.9·10⁻¹⁶`), and its one-unit-of-the-15th-digit controls
+  give at least `9.9·10⁻¹⁵` (was `9.8·10⁻¹⁵`), above the unchanged `3·10⁻¹⁵` bound. The convergence-order test's
+  controls are unchanged.
+- **The kick coefficients** `(w₀ + w₁)/2` stay as dd §3.2 writes them, evaluated in f64 from the shipped weights.
+
+*What it amends:* **R-501**, as to Yoshida-4's digits: its review rounds kept the printed digits under RQ-405's (a)
+with a rounding bound on `w₀ + 2w₁`; Yoshida-4's digits are now this ruling's, the identity exact. R-501's citation,
+order test and algebraic check stand.
+
+R-515 is in the "physics" group of `plan/rule_groups.yaml`, with R-501.
+
+Changes REQ-INT-037 (statement, verify, source, rulings, note; `rq: RQ-405` removed) and REQ-INT-090 (verify, rulings,
+note).

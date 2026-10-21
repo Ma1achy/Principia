@@ -86,7 +86,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_dd_generation_root.md` — the Generation Root: layout table + link registry; the roots of the build DAG. "This document **is** the ledger"
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
-- `docs/design/principia_lines.md` — the line system: contours, traces, axes, grids and styles over the finished figure, outside the node graph (adopted by R-476; its §11 queued as RQ-377)
+- `docs/design/principia_lines.md` — the line system: contours, traces, axes, grids and styles over the finished figure, outside the node graph (adopted by R-476; its §11 queued as RQ-377 and ruled by R-509)
 
 ---
 

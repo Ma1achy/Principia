@@ -38,7 +38,7 @@ Regularisation is a second occupant slot independent of the stepper (`none` / AZ
 ## Acceptance tests
 - `cargo test -p kernel regularisation_compose` — every stepper composes with every regularisation occupant; `none` is always available (REQ-INT-017).
 - `cargo test -p kernel owns_time_mapping_composed` — enumerate every stepper × regularisation pair: owns_time_mapping == (regularisation != none); for AZ, ADVANCE ends with physical time exactly t_target (REQ-INT-021).
-- Review (physics): the AZ+RK4 profile has symplectic = false and reversible = false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant type (REQ-INT-024).
+- Review (physics): the AZ+RK4 profile has symplectic = false, step_reversible = false and run_reversible = false (R-500; *was:* "reversible = false"); the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant type (REQ-INT-024).
 - `cargo xtask gate lc-inverse` — at rho angle 179.9°: f32 relative error ≈ 5.96e-8 and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form (REQ-INT-044).
 - `cargo xtask gate az-final-step` — figure-eight closure after one period ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order (REQ-INT-049).
 - `cargo test -p kernel tau_schedule_bound` — property test over fuzzed ICs: the substep count per sync interval never exceeds the Law 18 bound computed on the fixed tau-schedule (REQ-INT-054).

@@ -1391,178 +1391,6 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
 
-## RQ-372: R-467 says every chart is valid inside `[0,1]²`, "charts built in the Chart builder too", and makes an in-square validity failure a decoder bug with a console warning; a builder physical-quantity axis has a range that can leave the slice's reach inside the square, which the Domain preview exists to show *(conflict, R-467, R-407, R-408 B1, R-26, REQ-GUI-109, REQ-GUI-228; context: TASK-M8-18, TASK-M8-47)*
-
-*Found porting R-467 (F2). Nothing is chosen. For the human: yes, it changes what the Chart builder must build.*
-
-- **File, section:**
-  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction: the
-    feasibility warp, the simplex map, and the decode accepting any z. That holds for charts built in the Chart builder
-    too." and clause 4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning
-    naming the chart and pixel. The real engine should produce zero."; clause 6: "The Chart builder's Domain preview
-    "forbidden in view: N%" (R-408, §G7) stays: it is a diagnostic for building charts, not a presentation view."
-  - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)": "physical quantity (energy,
-    `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed** …)"; "a physical-quantity axis mapped
-    linearly onto its range is affine, the fallback hatching what fails validation"; "**The Domain preview:** the
-    chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the
-    boundary's formula, and "forbidden in view: N%"."
-  - `plan/requirements.yaml` REQ-GUI-109, verify detail: "N% equals the fraction of a uniform grid over the view that
-    validate rejects"; its note: "With the egui layer shown the Chart builder's view is [0,1]²".
-  - `decisions.md` § "R-408 — …", B1: "Under this ruling its primary range is unbounded, so its unreachable pixels fail
-    validity and count as forbidden."
-- **Conflict:** nothing in the corpus makes a builder axis's range feasible on the slice. An energy axis whose range
-  reaches below the slice's potential `U` fails `validate`'s layer 2 at those pixels inside `[0,1]²`, and the Domain
-  preview's N% over `[0,1]²` is non-zero exactly then. Under clause 4 each such chart would log a "decoder bug" warning
-  for a chart the person built that way, while the context says such a chart cannot exist.
-- **Options seen:**
-  - (a) The builder keeps every chart valid inside the square: a physical-quantity axis's range is clamped or warped to
-    the slice's reach (as the invariant charts' warp is, chart_reference §2.1), so N% is 0 inside `[0,1]²` and a
-    failure there is a decoder bug, warned; the Domain preview then shows forbidden regions only past the square or
-    before Apply.
-  - (b) A builder chart may be invalid inside the square: its in-square failures draw the background (presentation)
-    and the hatch (debug view), as R-467 settles for every chart, but log no decoder-bug warning; the warning is for the
-    gallery charts (R-467 D11's list) only.
-  - (c) As (b), with a different, informational console line for a builder chart ("chart <name>: N% of the view is
-    outside its domain").
-- **Applied meanwhile:** R-467's drawing applies to every chart (R-467 D3, F6); the warning is built for the gallery
-  charts and the mock (REQ-GUI-227, TASK-M8-46; REQ-GUI-226, TASK-M6-46). Nothing in the builder changes.
-- **Waits:** REQ-GUI-228 (`rq: RQ-372`), a Chart-builder chart's in-square warning, closed by TASK-M8-47, a leaf task
-  nothing depends on.
-- **R-471 bears on it (20 Oct 2026, a note; the entry stays open, narrowed).** The human ruled that energy-type axes
-  are warped by default, every pixel of `[0,1]²` feasible, with a linear mapping as an option whose infeasible pixels
-  are "not a system" (E1, E2). For an energy-type builder axis (energy, `L_z`) that is option (a) under the default and
-  option (b) under the linear option: no decoder-bug warning for its in-square pixels (R-471 H5). The question stays
-  open for the builder's other physical quantities, the virial ratio and the mass ratio, for which nothing is ruled;
-  REQ-GUI-228 waits for those alone.
-
-## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
-
-*Filed porting R-467 (D15), as the human asked: "The outcome goldens re-baselined under RQ-330 may need another
-re-baseline; list them, don't re-baseline without a gate decision." Nothing is re-baselined.*
-
-- **File, section:**
-  - `fixtures/golden/BASELINES.md`, the rows `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
-    `m1-synthetic/known_escaper` (each "R-454 (re-baselined under R-444 to R-446, RQ-330 …)"), and the rows
-    `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`.
-  - `crates/validation/src/golden_scene.rs`, the `outcome` scene: "a sample whose chart point is forbidden
-    ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101, REQ-COL-102)", tile 22; the
-    `length_ramp` and `d_min_ramp` scenes: "127 in the invalid pattern", "NaN in the invalid pattern".
-  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*": no re-baselining without
-    a gate decision.
-- **What changes under R-467:**
-  - `m1-outcome/outcome` and `m1-outcome/outcome_edited`: tile 22, the forbidden sample, from the hatch to the canvas
-    background (R-467 D2, D3). No other tile changes.
-  - `m1-synthetic/known_escaper`: no forbidden sample and no hatched pixel; expected unchanged.
-  - `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`: a field ramp is a presentation occupant (R-467 D1), so its
-    invalid value draws `#141418` (D4) where the hatch was; their `_override` twins draw the node's override colour and
-    are expected unchanged.
-  - The debug catalogue's goldens do not change (D1).
-- **Options seen:**
-  - (a) Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row leading with the
-    ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with REQ-COL-110's NaN /
-    Inf style.
-  - (b) As (a), but `length_ramp` and `d_min_ramp` keep the hatch: a field ramp is read as a debug occupant, which
-    narrows R-467 D1.
-  - (c) Hold the re-baseline for the M2 gate itself, TASK-M2-34 waiting until then.
-- **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
-  change and waits for this ruling before it merges.
-- **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
-
-## RQ-375: T4's units: mixing a chart parameter with a hidden coordinate under a tilt needs a common scale; the human proposes each screen axis in units of the window's half-width and the hidden coordinate in units of its own slider span, and on the latent chart that proposal departs from T2's "exactly the decoder's basis edit" *(the human's queued question, physics, R-473 T4, R-469 §11; context: TASK-M2-36, TASK-M2-39)*
-
-*Queued by the human (R-469 §11: "T4's units for mixing a chart parameter with a hidden coordinate"; R-473 T4: "Queue
-it as an RQ with this as the proposal; do not settle it silently"). For the human: yes (physics, ⚑).*
-
-- **File, section:**
-  - `decisions.md` § "R-473 — …", the human's words: "**T4. Units.** Mixing a chart parameter with a hidden coordinate
-    needs a common scale. Proposed: each screen axis in units of the window half-width; the hidden coordinate in units
-    of its own slider span. This makes `τ = 45°` mean the same visual lean on every chart."
-  - The same, T2: "A pixel at window offset `(u, v)` maps to `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`" and "On the latent
-    chart, T2 is exactly the decoder's basis edit."
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" ("Tilt on every chart (R-473)"): the
-    rotation acts on the chart's own parameters, the scale queued here.
-- **The question:** in what units `a`, `b` (the chart's own parameters, in their axes' units) and `d` (a hidden latent
-  control, in its own) are compared, so that a rotation between them means something. The latent chart's basis edit
-  compares `q₁`, `q₂` and a unit latent direction in the latent metric; under the proposal the hidden coordinate is
-  scaled by its slider span, which on the latent chart changes what a given `τ` does there.
-- **Options seen:**
-  - (a) The proposal on every chart: each screen axis in half-widths of the window, the hidden coordinate in its slider
-    span. `τ = 45°` is the same visual lean everywhere; on the latent chart the basis edit is no longer the contract's
-    unit-vector form.
-  - (b) The proposal on curved charts only, the latent chart keeping the decoder's basis edit exactly (its own units,
-    the latent metric), so T2's latent sentence holds as written.
-  - (c) One metric for all charts, the latent metric pulled back through each chart map (needs the decoder's Jacobian
-    and a metric, which RQ-341 and RQ-346 raise).
-- **Applied meanwhile:** (b), per R-369 (R-473 J3): the proposal on the curved charts, the latent chart unchanged.
-- **Waits:** REQ-CHART-064 (`rq: RQ-375`), the units' requirement, closed by TASK-M2-39, a leaf task nothing depends
-  on. The tilt itself (TASK-M2-36) is built under (b).
-
-## RQ-376: Whether an energy chart's `t > 1` side (`K > K_max`, feasible) should be declared affine rather than bounded *(the human's queued question, physics, R-469 §11, R-407 clause 3, R-471; context: TASK-M2-37)*
-
-*Queued by the human (R-469 §11: "Whether an energy chart's `t > 1` side (`K > K_max`, feasible) should be declared
-affine rather than bounded. chart_reference §2.1 leaves this for physics review."). For the human: yes (physics).*
-
-- **File, section:**
-  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid": "Its
-    `t > 1` side (`K > K_max`) stays feasible; declaring it would be a later declaration, needing physics review
-    (R-407, clause 3), and is not made."
-  - The same, § "5.4 …": "Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) is left undeclared, as on the warp
-    (R-407, A5)."
-  - `decisions.md` § "R-471 — …": energy-type axes are warped by default, so every energy-type axis has this side.
-- **The question:** past `t = 1` the warp's `K = K_max·t^γ_K` is still feasible (`K > K_max ≥ 0`), so the axis could
-  continue as affine there, while past `t = 0` it cannot. Bounded draws that side blank (R-470) and leaves it out of the
-  count (R-408).
-- **Options seen:**
-  - (a) Bounded on both sides, as today: past `t > 1` the domain's end, blank.
-  - (b) Affine past `t = 1`, bounded past `t = 0`: a one-sided declaration, `K` continuing beyond `K_max` (for `E` and
-    `L_z` the same through their lines of the warp, R-471 H1), counted as R-408 counts an affine axis.
-  - (c) Affine past `t = 1` for `K` and `E` only, `L_z`'s `±√(2 I K_max)` range staying bounded.
-- **Applied meanwhile:** (a), the corpus as written. Nothing waits; a ruling for (b) or (c) is a follow-up change to
-  REQ-CHART-067's extension type and REQ-CHART-056's statistic.
-
-## RQ-377: `principia_lines.md` §11's six open questions: the expression language, the playhead quantities, the trace fade's off-plane distance, label collisions, class edges, and new contour sets' default style *(the human's queued questions, R-476 L5, R-469 §11; context: TASK-M7-42, TASK-M7-43, TASK-M8-49, TASK-M8-50, TASK-M8-51)*
-
-*Queued by the human (R-469 §11: "`principia_lines.md` §11's six questions"; R-476 L5: "Queue them as RQ entries; do
-not rule on them"). One entry with six parts, one per question (R-476 M10). For the human: yes, each part, as each
-changes what the line system builds.*
-
-- **File, section:** `docs/design/principia_lines.md` § "11. Open questions", quoted in each part below; read with
-  § "4.1 The expression", § "7. Labels" and § "8. Traces".
-- **(1) Expression language.** "A purpose-built mini-language (proposed; total, sandboxed, GPU-compilable), or reuse the
-  stain graph's Code view syntax?"
-  - Options: (a) the purpose-built language (§4.1, proposed); (b) the stain graph's Code view syntax.
-  - Applied meanwhile: contour expressions are held as §4.1's tree (its variables, operators, functions and totality),
-    built and tested without a surface syntax; the contour-set editor picks a variable or one of §4.1's examples from a
-    list.
-  - Waits: REQ-RENDER-097's typed expression (the parser and its error reporting), closed by TASK-M8-51.
-- **(2) Playhead quantities.** "Allow any payload field, or a curated list?"
-  - Options: (a) any payload field; (b) a curated list.
-  - Applied meanwhile: the fields §4.1's table names (`t_end`, `state`, `d_min`, `drift`, `ftle`).
-  - Waits: REQ-RENDER-097's playhead clause, closed by TASK-M8-51.
-- **(3) Off-plane distance for the trace fade.** "The general definition is the distance in z from the trajectory's
-  encoded point to the slice plane, which needs the encode at every step (and the metric RQ-341 raises). The mock-up uses
-  a proxy: the scale-normalised Jacobi momentum magnitude, which this shape chart holds at zero."
-  - Options: (a) the general definition, the encode per step and a metric (RQ-341, RQ-346); (b) the mock-ups' proxy;
-    (c) a per-chart distance, each chart naming its own.
-  - Applied meanwhile: no fade; every trace draws at full opacity (`fade: None`).
-  - Waits: REQ-GUI-249 (`rq: RQ-377`), closed by TASK-M8-51.
-- **(4) Label collisions.** "Between contour labels and the trace's tick labels: which wins?"
-  - Options: (a) contour labels win; (b) the trace's tick labels win; (c) the later in the Lines list wins, as §7 orders
-    contour sets.
-  - Applied meanwhile: §7's rule within the contour sets; between contour labels and a trace's ticks nothing is
-    suppressed.
-  - Waits: REQ-RENDER-098 (`rq: RQ-377`), closed by TASK-M8-51.
-- **(5) Class edges.** "Should they move onto the line system as "contours of a categorical field", or stay in the
-  stain?"
-  - Options: (a) move them onto the line system; (b) keep them in the stain, an Overlays ▾ toggle.
-  - Applied meanwhile: (b), as today (R-476 M3 keeps class edges in Overlays ▾). Nothing waits.
-- **(6) Default style for new contour sets.** "Screen contour (white with outline), or smart ink on by default?"
-  - Options: (a) Screen contour; (b) smart ink on.
-  - Applied meanwhile: (a), Screen contour, the library's first style (§3).
-  - Waits: REQ-GUI-250 (`rq: RQ-377`), the default's confirmation, closed by TASK-M8-51.
-- **Waits, in all:** REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250, each closed by TASK-M8-51, a leaf
-  task nothing depends on; the rest of the line system is built meanwhile.
-
 ## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
 
 *Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
@@ -1579,28 +1407,9 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
   flat chart", offered where the decoder's Jacobian at the centre has rank 2 (it needs the derivative RQ-341 raises);
   (c) yes, with the flattened chart shown only as provenance, not offered.
 - **Applied meanwhile:** (a). Nothing waits.
+- **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
+  open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
 
-## RQ-379: A `decode_failed` sample the chart does not classify as not a system (a non-finite decode, η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`): blank, as P1 suggests, or `#141418`, as R-467 clause 2 has it *(conflict, R-469 P1, R-470 N1 and N3, R-467 clause 2, REQ-COL-108; context: TASK-M2-34)*
-
-*Found porting R-470 (G2). For the human: yes, it changes what a presentation view draws.*
-
-- **File, section:**
-  - `decisions.md` § "R-469 — …", the human's words, P1: "Every pixel a chart draws is either a valid three-body system
-    or explicitly "not a system"."
-  - `decisions.md` § "R-470 — …", N1: "A pixel that is not a system draws **blank** … This covers: a bounded axis past
-    its edge; layer-2 infeasibility; a failed `Φ`; a layer-3 failure." and N3: "NaN, Inf, `sim_failed`,
-    `decode_failed`, and the classification behind the hatch are shown **only in the debug views**".
-  - `decisions.md` § "R-467 — …", the human's words, clause 2: "Non-finite values (NaN, Inf), sim_failed and
-    decode_failed likewise never appear as a category in a presentation view. They keep R-446's black #141418."
-  - `docs/design/principia_colour_composition.md` § "1.4 …": "the decoder's own outcomes, its `DEGENERATE` tags … and a
-    non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it".
-- **The conflict:** such a sample has no decoded state to integrate, so it is no system, which P1 makes "explicitly
-  not a system", blank; N1's list does not name it, and R-467 clause 2 draws `decode_failed` `#141418`, which N3's
-  "shown only in the debug views" is consistent with (black is not a category).
-- **Options seen:** (a) `#141418`, R-467 D4 as it stands; (b) blank, as a not-a-system pixel, the forbidden-region
-  overlay then drawing over it too; (c) blank for the decoder's `DEGENERATE` tags, `#141418` for a non-finite decode.
-- **Applied meanwhile:** (a), per R-369 (R-470 G2). Nothing waits; a ruling for (b) or (c) is a follow-up change to
-  REQ-COL-108 and REQ-COL-111.
 
 ## RQ-380: Whether a chart preset may optionally pin links ("designed under stick-breaking"), and what loading it does if the current links differ *(the human's queued question, R-478 W4, the link-functions instruction §6; context: TASK-M6-50, TASK-M8-52)*
 
@@ -1794,3 +1603,90 @@ carries.*
   - (c) (a) only while the decoder is off its default, the chart named alone nowhere on the figure.
 - **Applied meanwhile:** (a), D4 being the human's later and more specific words (R-479 E7). Nothing waits; a ruling
   for (b) or (c) is a follow-up change to REQ-GUI-258.
+
+## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
+
+*Found merging PR #258 (R-500 to R-505, R-515) into PR #255 (R-469 to R-477, R-506 to R-514). Nothing is chosen.
+R-503 flagged this and left it to RQ-372; R-506 has since ruled RQ-372 for the Chart builder's physical-quantity axes
+only, so the flag has no entry to wait on.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map" (R-503): "**The radius is bounded at π (R-503,
+    closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches where `s√2 > π`, is past the antipode of
+    `n0`, where the map wraps; it is the domain's end, not a system, out of the count and the total (§5.4)."
+  - `decisions.md` § "R-503 — …", "Flagged, not ruled": "a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an
+    in-square pixel that is not a system; R-467 makes an in-square validity failure a decoder bug with a console
+    warning, and RQ-372 (open, another batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as
+    the human wrote it: the domain's end."
+  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction" and clause
+    4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning naming the chart
+    and pixel. The real engine should produce zero."
+  - `decisions.md` § "R-506 — …", W1: "Gallery charts warn as R-467 has it, their energy-type axes under the linear
+    option excepted (R-471 H5)."
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": "Inside the square every gallery chart
+    is valid by construction, so a pixel the chart classifies as not a system there (a validity failure, or a
+    `Chart::map` that fails) is a decoder bug"; REQ-GUI-227: "a pixel a gallery chart classifies as not a system inside
+    [0,1]² must log REQ-GUI-226's console warning".
+- **Also in the conflict:** REQ-CHART-078, the definition of how pixels exactly on `r = π` count, offers "counted
+  once, like the equator, or as the domain's end"; if TASK-M2-28 defines them as the domain's end, those in-square
+  pixels meet the same warning.
+- **Conflict:** with `s√2 > π` the exponential map classifies its pixels past `r = π` inside the square as not a system
+  (REQ-CHART-075), by design; REQ-GUI-227 and §G12 then log "decoder bug" for them on every such view, and REQ-CHART-058's
+  sweep ("the real engine should log none") would fail for that chart. R-506 W1 excepts only the energy-type axes'
+  linear option.
+- **Options seen:**
+  - (a) The exponential map's `r > π` pixels are by design, as an energy-type axis's linear option is: they draw blank
+    and log no warning; §G12 and REQ-GUI-227 name the exception.
+  - (b) The chart keeps the square inside its cap: `s` is bounded so that `s√2 ≤ π`, every pixel inside `[0,1]²` a
+    system. Past the square the exponential map is bounded and declares nothing (chart_reference §5.4; R-503, "Past
+    the square the map is bounded"), so R-503's `r > π` arm becomes unreachable: REQ-CHART-075's "a pixel with r > π
+    must be the domain's end", R-503 review round 2's fixture requirement `s√2·(N−1)/N > π`, and TASK-M2-28's
+    acceptance line and its control ("one that counts the pixels with r > π") would be retired or amended, and, if
+    TASK-M2-28 merges first, (b) changes built code.
+  - (c) The warning stands for them, as R-506 W1 reads literally.
+- **Applied meanwhile:** both texts as merged; nothing in the code changes. TASK-M2-28 builds REQ-CHART-075 as R-503
+  has it.
+- **Waits:** REQ-GUI-227's warning for the exponential map (TASK-M8-46), and REQ-CHART-058's sweep if it covers that
+  map with `s√2 > π`. Under option (b): REQ-CHART-075's `r > π` clause, its verify's fixture `s√2·(N−1)/N > π` (R-503
+  review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
+  (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.
+
+## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°`, a reachable corner, maps the whole window onto one line of systems; the corpus gives what the chart shows there no `system_image`, fold or statistics *(silence, R-474 R8 and K15, R-451 B11, R-473, R-408; context: TASK-M2-36)*
+
+*Found answering physics review 5593414323 of PR #255 (P4), while restating the tilted fold's criterion without
+dividing by `N_d`. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "**Lean each axis**, an option
+    (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed
+    (`u₁·u₂ = sin τ₁ sin τ₂`)"; "The range `τ ∈ [−90°, +90°]` above is Lean each axis's"; "Under Lean each axis an area
+    statistic weights each pixel by the Gram factor `√(|u₁|²|u₂|² − (u₁·u₂)²)` (R-408)".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract": the
+    four `system_image` values, "ray-degenerate — whole lines of pixels map to the same system".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (applied per R-369): the fold is
+    kept iff `N_b = 0` for `N ∝ u₁ × u₂`.
+- **What the corpus does say (gui review 5593448572 of PR #255, G1):** the corner is reachable and handled on the GUI's
+  side. `decisions.md` § "R-474 — …", R8: the readout flags "the degenerate corner `τ₁ = ±τ₂ = ±90°`, where the plane
+  collapses to a line, which R-451 B11 already handles"; K15: Lean each axis's range is closed at ±90°, and a switch
+  to it clamps each angle to ±90°. `docs/gui/principia_render_gui_spec.md` § "G2. …", the compass: The map; the
+  Readout's "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" line, ending "(Lean each axis)" under that
+  map (R-451 B11, R-474); the Drag text: "a tilt-mode drag acts as anywhere else", the GUI's guards declining where
+  `s < 10⁻⁶` on the plane's own basis, no `z₀` edit sent (R-451 B11; REQ-GUI-203).
+- **Silence (narrowed):** what the chart shows there. At `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and
+  `u₂ = ±e_X`, so `(R·e_a) × (R·e_b) = 0` and the Gram factor is 0: every pixel maps to the slice centre's `(a, b)` and
+  `d = ±u ± v`, whole lines of pixels decoding to one system. No text gives that view's `system_image`, its fold
+  (the tilted fold's criterion has no normal there) or its area statistics (every pixel's Gram weight is 0). Under
+  Tip as sheet `R` is a rotation and keeps rank 2, with two targets the tilted vectors are orthonormal, and an edge-on
+  view (`N_d = 0`) keeps rank 2; none of these is in question.
+- **Options seen:**
+  - (a) The view stays as R-474 and R-451 B11 have it and the chart reports ray-degenerate, its statistics weighted 0
+    as the Gram factor says; the label then reads ray-degenerate and every legend share is undefined (0 of a total of
+    0), which the legend would have to show.
+  - (b) The edit path refuses the second angle at 90° when the first is at 90° with one target (a stop, as R-469 P2
+    stops an edit), the readout saying why.
+  - (c) Lean each axis's range is open, `(−90°, 90°)`, for both angles together.
+  - Options (b) and (c) would amend R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines, which reach and
+    handle the corner today.
+- **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
+- **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
+  ruled); TASK-M2-36 does not wait for the rest.

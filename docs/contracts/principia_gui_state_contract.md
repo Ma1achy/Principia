@@ -131,7 +131,7 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   - `RenderState` gains `Lines` (R-476; `principia_lines.md` §3): the styles a view uses, its contour sets, its traces'
     settings and its axes, exported with the view, each edit one undoable `SetField` (`RenderField::Lines`) that
     re-integrates nothing (a render key). `Overlays` loses `grid` and `t_end_contours`, which become the Lines presets
-    Grid and t_end (R-476, L2). The personal style library is the GUI's own settings. A hover is never recorded.
+    Grid and t_end (R-476, L2), and `class_edges`, which becomes the preset Class edges (R-509). The personal style library is the GUI's own settings. A hover is never recorded.
   - **The sidecar.** An export's provenance record (the pxpack, the snapshot JSON, the share link) carries, beside
     `SimConfig` and `RenderState` in their canonical serialisation, `ViewUI`'s F3 fill mode as `f3_fill=extend|fit`
     (R-472); `tilt_map`, the curved chart's tilt, the axis mappings and a saved chart's definition ride in `SimConfig`.

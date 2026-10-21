@@ -87,7 +87,7 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 axes, grids) draws its own overlay pass, outside the graph and after the gamut clamp, before the colour-vision
 simulation, which sees the lines too; it changes no pixel's colour value and never touches the sim key. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
 
-**Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default the hatched invalid pattern (R-79, R-132). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
+**Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default `#141418` in a presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (R-79, R-132, R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (R-79, R-132)" (stale value, replaced by R-467). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
 **The occupant rules `cargo xtask lint wgsl` checks (R-72; REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005; TASK-M1-15).**
 Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §3.5 and the colouring's seams 5 and 6
@@ -368,16 +368,19 @@ with dd_colouring §3.1's sRGB transfer.
   sample, a reserved `state` code, a non-finite value and a ramp's invalid value draw `#141418`, unless a node overrides
   its invalid colour. The "not yet" stipple is unchanged. The hatch stays the debug views': View › Debug view
   (`principia_render_gui_spec.md` §G2) draws it for a forbidden pixel and for a decode or sim failure, and a NaN / Inf
-  style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count.
+  style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count. The
+  task that needs the style proposes it; it is not magenta, which sits at τ from escape body 2 (R-505).
 - **Blank in every view, the hatch an optional overlay, the failures debug-only (R-470).** The background a pixel that
   is not a system draws is blank, the view's background colour, never a palette colour in any view, the outcome view
   included. The hatch is drawn outside the debug views only by the optional overlay Overlays › Chart › forbidden region
-  (off by default), `debug_invalid(frag_xy)` over exactly the pixels the chart classifies as not a system and nothing
-  else (REQ-COL-111). NaN, `±∞`, `sim_failed`, `decode_failed` and the chart's classification are shown only in the
+  (off by default), `debug_invalid(frag_xy)` over exactly the pixels the chart classifies as not a system and the
+  `decode_failed` samples (R-511), and nothing else (REQ-COL-111). NaN, `±∞`, `sim_failed`, `decode_failed` and the chart's classification are shown only in the
   debug views. View › Debug view is one of them, built as a baked variant of the render's pipeline (R-41: a variant,
   never a flag bit): `RenderState`'s `debug_view` selects the variant compiled with the debug arm, and the presentation
-  variant is compiled without it, so a presentation view cannot draw a debug style. A presentation view's `#141418`
-  for a `decode_failed` sample the chart does not classify is RQ-379's to confirm.
+  variant is compiled without it, so a presentation view cannot draw a debug style. A `decode_failed` sample the chart
+  does not classify draws blank in a presentation view, as a pixel that is not a system, the overlay drawing over it;
+  `sim_failed` keeps `#141418` (R-511, ruling RQ-379). *Was:* "A presentation view's `#141418` for a `decode_failed`
+  sample the chart does not classify is RQ-379's to confirm."
 
 ### Live-state & array inspection
 
