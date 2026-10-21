@@ -19,9 +19,12 @@
 //!   never one flat colour; amended by qa for TASK-M1-17), neither hatched nor on the ramp; the largest finite f16
 //!   is on the ramp; a NaN in the same view is hatched; `ftle` with `ftle_valid` false is hatched
 //!   (`qa_f16_scalar_views_d_min_*`, `qa_debug_fields_raw_ftle_*`).
-//! - REQ-COL-001 (R-132): a field ramp draws its invalid pixels (the word `length`'s sentinel 127, `d_min`'s NaN) in
-//!   the hatched pattern; the node's override changes those pixels alone, to its declared colour; `d_min`'s unset
-//!   value stays in the "not yet" style either way (`qa_field_ramp_*`).
+//! - REQ-COL-001 (R-132), as REQ-COL-108 amends it (R-467 D14, amended by qa for TASK-M2-34): a field ramp is a
+//!   presentation view and draws no hatch, so its invalid pixels (the word `length`'s sentinel 127, `d_min`'s NaN) and
+//!   its `sim_failed` samples, whatever their payload (R-399, R-511 Z3: a forced failure holding +∞ included), draw
+//!   bounded / nothing yet's `#141418` (colour_composition §1.4); the node's override changes those pixels alone, to
+//!   its declared colour; `d_min`'s unset value of a sample that did not fail stays in the "not yet" style either way
+//!   (`qa_field_ramp_*`).
 //! - R-400 (amended by qa for TASK-M1-17): `ftle` and `diffusion`, whose declared ranges are unbounded and so span
 //!   zero, sit on `ramp_coolwarm` over the symmetric `[−M, M]`, `M` the larger magnitude of the measured ends.
 //! - REQ-TOOL-161: `rho_angle`'s view places angles a whole number of turns apart, negative ones included, at one
@@ -74,6 +77,12 @@ enum Want {
     Twilight(f64),
     Literal(f32),
     Flat(Rgb),
+}
+
+/// A presentation view's invalid colour, bounded / nothing yet's `#141418` (R-467 clause 2, D4; colour_composition
+/// §1.4), decoded here from its 8-bit sRGB code (amended by qa for TASK-M2-34).
+fn present_black() -> Rgb {
+    present::srgb8([0x14, 0x14, 0x18])
 }
 
 impl Want {
@@ -736,25 +745,31 @@ fn ramp_wants(field: &str, s: &Scene) -> Vec<(Want, bool)> {
             .iter()
             .map(|&l| {
                 if l == 127 {
-                    (Want::Hatch, true)
+                    (Want::Flat(present_black()), true)
                 } else {
                     (Want::Viridis(f64::from(l) / 76.0), false)
                 }
             })
             .collect(),
+        // A `sim_failed` sample draws `#141418` whatever its payload holds, its unset +∞ and its stored 0.0 included
+        // (R-467, R-399, R-511 Z3; payload §2: a failed sample's scalars are not read); amended by qa for TASK-M2-34.
         _ => d_min_reads(s)
             .into_iter()
-            .map(|r| match r {
+            .enumerate()
+            .map(|(i, r)| match r {
+                _ if s.read(i as u32).state == STATE_SIM_FAILED => {
+                    (Want::Flat(present_black()), true)
+                }
                 None => (Want::NotYet, false),
-                Some(None) => (Want::Hatch, true),
+                Some(None) => (Want::Flat(present_black()), true),
                 Some(Some(v)) => (Want::Viridis((v / 2.0).clamp(0.0, 1.0)), false),
             })
             .collect(),
     }
 }
 
-/// With the override off, the invalid pixels are hatched and the rest on the ramp (or "not yet"); with it on, the invalid
-/// pixels take the declared override colour, which differs from the hatch, and no other pixel changes.
+/// With the override off, the invalid pixels draw `#141418` and the rest are on the ramp (or "not yet"); with it on, the
+/// invalid pixels take the declared override colour, which differs from the hatch, and no other pixel changes.
 fn check_ramp(field: &str, off: (&Scene, &[Rgb]), on: (&Scene, &[Rgb])) {
     let wants = ramp_wants(field, off.0);
     assert!(
@@ -827,6 +842,44 @@ mod qa_field_ramp_sentinel_on_ramp {
             let (a, b) = (render(&h, &off), render(&h, &on));
             let a = painted(&a, 2, Want::Literal(127.0));
             check_ramp("length", (&off, &a), (&on, &b))
+        }
+    );
+}
+
+/// R-467 D14 and REQ-COL-108's control: a field ramp that still hatches its invalid lane (length's 127) is caught
+/// (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_field_ramp_hatches_invalid {
+    use super::*;
+    negative_control!(
+        qa_field_ramp_invalid_lane_and_override,
+        "a field ramp drawing length's 127 in the hatch, as before R-467, is caught",
+        expected = "is not `length`'s ramp look",
+        {
+            let h = gpu();
+            let (off, on) = (ramp_scene("length", false), ramp_scene("length", true));
+            let (a, b) = (render(&h, &off), render(&h, &on));
+            let a = painted(&a, 2, Want::Hatch);
+            check_ramp("length", (&off, &a), (&on, &b))
+        }
+    );
+}
+
+/// R-399, R-467 and R-511 Z3: a field ramp drawing a forced failure's unset +∞ in the "not yet" stipple, as if its
+/// payload were read, is caught (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_field_ramp_failure_stippled {
+    use super::*;
+    negative_control!(
+        qa_field_ramp_invalid_lane_and_override,
+        "a field ramp drawing d_min's forced failure (+inf) in the \"not yet\" stipple is caught",
+        expected = "is not `d_min`'s ramp look",
+        {
+            let h = gpu();
+            let (off, on) = (ramp_scene("d_min", false), ramp_scene("d_min", true));
+            let (a, b) = (render(&h, &off), render(&h, &on));
+            let a = painted(&a, 0, Want::NotYet);
+            check_ramp("d_min", (&off, &a), (&on, &b))
         }
     );
 }

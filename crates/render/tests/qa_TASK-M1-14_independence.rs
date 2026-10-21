@@ -12,9 +12,12 @@
 //!   `r` of `K = 9` at `OKLab(L = (r + ½)/K, 0, 0)`; hue draws it on the hue wheel at L = 0.75, C = 0.12, hue `r/K`
 //!   turns; event is §1.4's palette, its hex values typed in from the doc; R-448's rank, bounded / nothing yet first,
 //!   then collision 1–2, 1–3, 2–3, triple collision, escape body 1, 2, 3, triple ejection; and in every mode `running`,
-//!   `sim_failed`, `decode_failed` and the reserved codes are the bounded / nothing yet class, rank 0, not the "not
-//!   yet" style or the invalid pattern (R-446) (`qa_m1_14_independence_modes_*`). Amended by qa for TASK-M2-32 as
-//!   R-444 to R-448 force: `K = 11` became 9, the degenerate and t = 0 classes left, the styles left the outcome class.
+//!   `sim_failed` and the reserved codes are the bounded / nothing yet class, rank 0, not the "not yet" style or the
+//!   invalid pattern (R-446) (`qa_m1_14_independence_modes_*`). Amended by qa for TASK-M2-32 as R-444 to R-448 force:
+//!   `K = 11` became 9, the degenerate and t = 0 classes left, the styles left the outcome class. Amended by qa for
+//!   TASK-M2-34 as R-511 forces: `decode_failed` of every `detail` draws the canvas background in every mode (event's
+//!   occupant, greyscale's and hue's closing post, REQ-COL-108), an appearance of its own, the harness's recorded
+//!   background (`golden_scene::BACKGROUND`), so its tiles bound every class's.
 //!
 //! The slice is my own: 16 × 8 samples, one quad each, 8 px tiles. Its first 37 tiles, in a snake, walk an Eulerian
 //! circuit of the complete graph on the nine classes, so every pair of classes meets at least once; the next hold
@@ -59,14 +62,32 @@ enum Cell {
     Reserved(u32),
 }
 
-/// What a tile shows, by §4.1 ("What every mode keeps") as R-446 changes it: its class, `running`, the failures and
-/// the reserved codes being the bounded / nothing yet class, rank 0.
+/// The appearance of a `decode_failed` tile: the canvas background, no class (R-511; added by qa for TASK-M2-34).
+const BLANK: u32 = K;
+
+/// What a tile shows, by §4.1 ("What every mode keeps") as R-446 and R-511 change it: its class, `running`,
+/// `sim_failed` and the reserved codes being the bounded / nothing yet class, rank 0; `decode_failed` the canvas
+/// background, [`BLANK`].
 fn appearance(c: Cell) -> u32 {
     match c {
         Cell::Class(r) => r,
-        Cell::Running | Cell::Failed | Cell::DecodeFailed | Cell::Reserved(_) => 0,
+        Cell::Running | Cell::Failed | Cell::Reserved(_) => 0,
+        Cell::DecodeFailed => BLANK,
     }
 }
+
+/// The canvas background the harness records (R-467 D2, R-504), 8-bit sRGB.
+fn background8() -> [u8; 3] {
+    validation::golden_scene::BACKGROUND
+}
+
+/// The closing post of greyscale and hue mode as R-511 has it (REQ-COL-108): a `decode_failed` sample draws the canvas
+/// background, every other colour passed on (added by qa for TASK-M2-34).
+const BLANK_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
+    if (ctx.sample.state == 5u) { return canvas_background(); }
+    return rgb;
+}
+";
 
 /// The payload of `c` at sample `i`, `(state, detail, t_end_step)`, from colour composition §1.4, R-448's ranking and
 /// payload §2's codes: bounded; collision 1–2 (pair 2), 1–3 (pair 1), 2–3 (pair 0); triple collision; escapes of
@@ -219,6 +240,7 @@ const RANK: &str = "fn qa_rank(ctx: Ctx) -> i32 {
 #[cfg(feature = "controls")]
 const STYLES_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     let s = ctx.sample.state;
+    if (s == 5u) { return canvas_background(); }
     if (s == 3u) { return debug_not_yet(ctx.frag_xy); }
     if (s == 4u || s > 5u) { return debug_invalid(ctx.frag_xy); }
     return rgb;
@@ -243,7 +265,8 @@ fn event() -> Mode {
 }
 
 /// Greyscale mode, `B = (r + ½)/K` plus `leak` times another payload field, `t_end_step`'s parity: a mode coloured by
-/// something besides the field when `leak` is not 0. No post: no sample of the outcome class takes a style (R-446).
+/// something besides the field when `leak` is not 0. Its post draws `decode_failed` blank (R-511, [`BLANK_POST`]); no
+/// sample of the outcome class takes a style (R-446).
 fn greyscale_with(leak: f32) -> Mode {
     Mode {
         name: "greyscale",
@@ -254,7 +277,7 @@ fn greyscale_with(leak: f32) -> Mode {
 }}
 "
         )),
-        post: None,
+        post: Some(BLANK_POST.to_owned()),
     }
 }
 
@@ -262,7 +285,8 @@ fn greyscale() -> Mode {
     greyscale_with(0.0)
 }
 
-/// Hue mode, class `r` at `t = r/turns` on the hue wheel, the brightness None.
+/// Hue mode, class `r` at `t = r/turns` on the hue wheel, the brightness None, its post drawing `decode_failed` blank
+/// (R-511, [`BLANK_POST`]).
 fn hue_with(turns: u32) -> Mode {
     Mode {
         name: "hue",
@@ -273,7 +297,7 @@ fn hue_with(turns: u32) -> Mode {
 "
         )),
         brightness: Occupant::None,
-        post: None,
+        post: Some(BLANK_POST.to_owned()),
     }
 }
 
@@ -509,7 +533,9 @@ const EVENT_HEX: [[u8; 3]; 9] = [
 ];
 
 /// What §4.1 defines for `mode` at pixel `(x, y)` of a tile holding `c`: linear RGB for greyscale and hue's classes;
-/// event's classes are checked in 8-bit sRGB against `EVENT_HEX`. Running and the failures are class 0 (R-446).
+/// event's classes are checked in 8-bit sRGB against `EVENT_HEX`. Running, `sim_failed` and the reserved codes are
+/// class 0 (R-446); `decode_failed` is the canvas background in every mode (R-511), 8-bit in event, its OKLab
+/// elsewhere.
 fn check_mode(mode: &str, slice: &[Vec<Cell>], rgb: &[Rgb], turns: u32) {
     let lab = oklab(rgb);
     let width = COLS * TILE;
@@ -525,6 +551,15 @@ fn check_mode(mode: &str, slice: &[Vec<Cell>], rgb: &[Rgb], turns: u32) {
         let (x, y) = (k as u32 % width, k as u32 / width);
         let c = slice[(y / TILE) as usize][(x / TILE) as usize];
         let want = match (appearance(c), mode) {
+            (BLANK, "event") => {
+                assert_eq!(
+                    srgb8(rgb[k]),
+                    background8(),
+                    "event: pixel ({x}, {y}), {c:?}, is not the canvas background"
+                );
+                continue;
+            }
+            (BLANK, _) => present::linear_to_oklab(present::srgb8(background8())),
             (r, "event") => {
                 assert_eq!(
                     srgb8(rgb[k]),
@@ -581,7 +616,8 @@ negative_control!(
 
 #[test]
 fn qa_m1_14_independence_modes_rank_failures_zero() {
-    // R-446: running and every failure are the bounded / nothing yet class, rank 0, in every mode; no style.
+    // R-446: running, sim_failed and the reserved codes are the bounded / nothing yet class, rank 0, in every mode; no
+    // style. R-511: decode_failed is the canvas background (amended by qa for TASK-M2-34).
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let s = slice();
     for m in [event(), greyscale(), hue()] {
@@ -603,3 +639,48 @@ negative_control!(
         check_mode("greyscale", &s, &render_rgb(&h, &s, &styled), K);
     }
 );
+
+/// R-511's controls: a greyscale or hue mode with no blank post, `decode_failed` at rank 0 as before R-511, fails; and
+/// so does the edge-map check, `decode_failed` then sharing bounded's appearance in two modes but not in event (added
+/// by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_m1_14_independence_decode_failed_ranked {
+    use super::*;
+    negative_control!(
+        qa_m1_14_independence_modes_rank_failures_zero,
+        "greyscale drawing decode_failed at rank 0, as before R-511, fails",
+        expected = "DecodeFailed, is",
+        {
+            let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+            let s = slice();
+            let ranked = Mode {
+                post: None,
+                ..greyscale()
+            };
+            check_mode("greyscale", &s, &render_rgb(&h, &s, &ranked), K);
+        }
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m1_14_independence_decode_failed_edges {
+    use super::*;
+    negative_control!(
+        qa_m1_14_independence_edge_maps_agree,
+        "hue drawing decode_failed at rank 0, as before R-511, loses the edges event draws",
+        expected = "the edge maps differ",
+        {
+            let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+            let s = slice();
+            let ranked = Mode {
+                post: None,
+                ..hue()
+            };
+            let renders: Vec<(&str, Vec<Rgb>)> = [event(), greyscale(), ranked]
+                .iter()
+                .map(|m| (m.name, oklab(&render_rgb(&h, &s, m))))
+                .collect();
+            check_agree(&s, &renders);
+        }
+    );
+}
