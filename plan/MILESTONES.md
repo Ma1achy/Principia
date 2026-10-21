@@ -282,20 +282,20 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 176 requirements** (and every earlier gate still green):
+**Exit gate — 178 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
 - INT (2): REQ-INT-072, REQ-INT-075
 - EVT (1): REQ-EVT-022
-- PAY (19): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094, REQ-PAY-096
+- PAY (20): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094, REQ-PAY-096, REQ-PAY-109
 - GEN (2): REQ-GEN-017, REQ-GEN-030
 - SCHED (52): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088, REQ-SCHED-098…100
 - REF (13): REQ-REF-001…010, REQ-REF-045, REQ-REF-052…053
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (2): REQ-COL-007, REQ-COL-071
 - GUI (1): REQ-GUI-009
-- TOOL (18): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…166
+- TOOL (19): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…166, REQ-TOOL-187
 - VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
 - PERF (24): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093, REQ-PERF-095
 - SYS (8): REQ-SYS-030…037
@@ -351,17 +351,17 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   TASK-M7-35 to TASK-M7-40), after the M3 event tasks and the M7 backbone tasks they use (RQ-316). Its calibrations
   (ε, `h_far`, `os_ratio`, settling, `I_max`'s quantisation, the palettes, the energy lightness range and `q`'s
   compaction) are confirmed at this gate; the human decides RQ-311 (the default palette) there. Requirements waiting on
-  RQ-310, RQ-311, RQ-313, RQ-314, RQ-317 to RQ-320 hold the gate until those are ruled.
+  RQ-311, RQ-313, RQ-314, RQ-317 to RQ-320 hold the gate until those are ruled (RQ-310 ruled by R-545).
   The one-body views (R-443; TASK-M7-41, with `chazy_escaper` and `chazy_qk` in TASK-M7-36): their palettes and the
   mass tie tolerance are confirmed at this gate too; the human decides RQ-321 (the escaper definition) and RQ-322 (the
   grey `#8A8A90`) before it.
 
 <!-- gate:M7 -->
-**Exit gate — 215 requirements** (and every earlier gate still green):
+**Exit gate — 216 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
-- GEN (4): REQ-GEN-019…022
+- GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
 - RENDER (28): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096
 - COL (101): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134

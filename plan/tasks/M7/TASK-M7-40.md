@@ -25,7 +25,8 @@ for the M7 gate (R-71).
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
 
 ## Deliverables
-- The first-commit latch, stored as RQ-310 rules, and the "when it was decided" view.
+- The "when it was decided" view, offline only in v1 (R-545, RQ-310): computed over a recorded run, the first-commit
+  time of the current coarse class taken from the trajectory; no second latch is stored in the payload.
 - The previous-class comparison, placed as RQ-320 rules, and the "what just changed" view.
 - The calibration proposal for the "when it was decided" lightness by time and the "what just changed" dimming, with
   renders, in the PR (REQ-COL-106).
@@ -36,11 +37,13 @@ for the M7 gate (R-71).
 - Review (gui): the time-lightness mapping (palest by t = 10 to darkest at t = 800, grey never) with renders on `preset_shape_h1`, and the "what just changed" dimming with renders, confirmed by the human at the M7 gate (REQ-COL-106).
 
 ## Notes
-- This task waits on two rulings: RQ-310 (the latch's bits; for the human) for REQ-COL-082, and RQ-320 (where the
+- RQ-310 is ruled (R-545): the "when it was decided" view is offline only in v1, so REQ-COL-082 no longer waits.
+  *Was:* "This task waits on two rulings: RQ-310 (the latch's bits; for the human) for REQ-COL-082, and RQ-320 (where the …".
+- This task waits on RQ-320 (where the
   previous frame's class lives) for REQ-COL-083; REQ-COL-106 carries both. It starts when they are ruled; no other task
   waits on it.
 - The dimming and the time-lightness mapping are this task's calibration, REQ-COL-106, moved from REQ-COL-087 in the
   PR #223 review (R-71: proposed by the task that needs it).
 - Physics reviews this task because its first-commit latch is a second forward-only latch in the march, persisted in
-  the payload as RQ-310 rules: payload physics state, as `I_max` is in TASK-M7-35 (applied per R-369, the PR #223 code
+  the payload as RQ-310 would rule (now offline only, R-545, so nothing is persisted; physics still reviews the offline latch): payload physics state, as `I_max` is in TASK-M7-35 (applied per R-369, the PR #223 code
   review).

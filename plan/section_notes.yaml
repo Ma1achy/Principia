@@ -936,7 +936,7 @@
   note: "the human's prin-rs counts (R-443), evidence for the escaper palette's calibration (REQ-COL-099)"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.3 Open questions"
-  reason: gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325)
+  reason: gap (RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325)
   note: "each open question is an RQ entry; the requirements waiting on them carry rq:"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.4 Not done, and natural next steps"

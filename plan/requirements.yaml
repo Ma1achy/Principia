@@ -5671,7 +5671,9 @@
   - R-36
   - R-70
   - R-86
+  - R-545
   milestone: M0
+  note: "R-545 (21 Oct 2026, RQ-310): bits 10–14 go to `I_max` (TASK-M7-35, REQ-PAY-105) and bit 15 to the departed bit (TASK-M3-11, REQ-VAL-055), each a versioned ledger edit made by the task that stores it, which updates this layout test; until each lands those bits stay reserved and this holds as built (applied per R-369, R-545 D2)."
 - id: REQ-PAY-014
   area: PAY
   statement: "`state` must be the mutually exclusive enum 0 escape, 1 bounded, 2 collision, 3 running, 4 sim_failed, 5 decode_failed; codes 6–7 are reserved and a binary decoder must treat an unknown non-running state as finished and untrusted."
@@ -5700,7 +5702,9 @@
     detail: "pack every field at max value; assert bits 10–15 are zero; the static disjointness test lists them as reserved"
   rulings:
   - R-36
+  - R-545
   milestone: M0
+  note: "R-545 (21 Oct 2026, RQ-310): bits 10–14 are assigned to `I_max` and bit 15 to the departed bit, each a new use made as this requirement says, a ledger edit that changes the schema version, by TASK-M7-35 and TASK-M3-11; until each lands the bits stay reserved and decode as zero (applied per R-369, R-545 D2)."
 - id: REQ-PAY-016
   area: PAY
   statement: "The continuation table must be exactly payload §3's frozen table (`inverse = [1,0,3,2]`, `cont_symbol[0..2]` as listed, each an involution so `predecessor_symbol == cont_symbol`, and `continuation_index` derived by inverting `cont_symbol`, holding 3 (\"invalid\") in the four cells where `next = inverse(prev)`, R-307), generated from the Rust layout definition identically into the Rust kernel/host and the WGSL fragment side. The table functions are total (R-321, amending R-319): each input is `debug_assert!`-ed < 4 in Rust, then masked to 2 bits (`& 3`) in Rust and WGSL, so an input ≥ 4 reads the cell at `input & 3` and no out-of-range return value exists; `continuation_index` returns 3 only for its four inverse cells. The digit argument of `continuation_symbol` and `predecessor_symbol` is `debug_assert!`-ed < 3, then clamped with `min(d, 2)` (R-324), so a digit ≥ 3 reads the digit-2 row; no table row is added."
@@ -6398,8 +6402,9 @@
   rulings:
   - R-37
   - R-59
+  - R-545
   milestone: M3
-  note: "Where the per-sample departed bit lives is tracked in open-questions.md (R-37's entry)."
+  note: "The per-sample departed bit is `sample_descriptor` bit 15 (R-545, RQ-310; REQ-VAL-055)."
 - id: REQ-PAY-057
   area: PAY
   statement: "Every stability metric must be a fixed-size O(1) accumulator updated in place each step, never a time-series."
@@ -7040,7 +7045,7 @@
 - id: REQ-PAY-093
   area: PAY
   kind: calibration
-  statement: "The declared §3.8 `range` of each of `QuadReduction`'s f16 members `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread`, and its `overflow` (saturate or inf) where an end is unbounded or lies beyond ±65504, which the corpus does not give, must be proposed with its evidence by the task that builds `QuadReduction`, checked by the physics reviewer, and confirmed by the human at the M5 gate (R-71; R-418 adds the last three, proposed as [0, ∞) with overflow saturate)."
+  statement: "The declared §3.8 `range` of each of `QuadReduction`'s f16 members `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread`, and its `overflow` (saturate or inf) where an end is unbounded or lies beyond ±65504, which the corpus does not give, must be proposed with its evidence by the task that builds `QuadReduction`, checked by the physics reviewer, and confirmed by the human at the M5 gate (R-71; R-418 adds the last three, proposed as [0, ∞) with overflow saturate); `alpha_energy`'s range is proposed with its view centred on its analytic 1.0, `lin` as §3.7's \"Scales\" line says, its range and that placement settled together at the M5 gate (R-545, RQ-278 (c))."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.8 Metadata schema (what every entry must carry)
@@ -7064,6 +7069,8 @@
     section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
   - file: docs/design/principia_dd_generation_root.md
     section: Validity and diagnostics
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: review checklist
     detail: "the PR gives each member's range and overflow with its evidence (the values §3.7 and the refinement-criterion reports measure, e.g. `error_ratio` 204.8 and 1.8e+04, and why each end sits where it does); each range lies within ±65504 or the entry states its overflow (R-248); the three R-418 adds are proposed as [0, ∞) with overflow saturate; the physics reviewer checks each; the human confirms all eight at the M5 gate"
@@ -7074,8 +7081,9 @@
   - R-306
   - R-312
   - R-418
+  - R-545
   milestone: M5
-  note: "Pre-flight of TASK-M5-01 (R-388): R-306 gives TASK-M5-01 the members' §3.8 entries, and §3.8 fails generation on an incomplete entry, but the corpus gives no range for these five. Proposed provisionally until the M5 gate (R-182). Ends that follow from a member's definition are derived and cited, not calibrated (physics review 5480220637 of PR #185): `error_ratio` ≥ 0 (a ratio of spreads), `roundtrip_error` ≥ 0 (a displacement), `alpha_area` possibly negative (§3.7: the floor is refused on a negative exponent, R-42), and §3.7's \"an infinite deviation is the correct answer\" bearing on `error_ratio`'s `overflow` (inf, not saturate). Only the ends no definition gives are calibrated. R-418 (RQ-268, option (a)): `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join, TASK-M5-01 proposing each [0, ∞) with overflow saturate; their no-escape values are REQ-REF-006's and REQ-REF-053's."
+  note: "Pre-flight of TASK-M5-01 (R-388): R-306 gives TASK-M5-01 the members' §3.8 entries, and §3.8 fails generation on an incomplete entry, but the corpus gives no range for these five. Proposed provisionally until the M5 gate (R-182). Ends that follow from a member's definition are derived and cited, not calibrated (physics review 5480220637 of PR #185): `error_ratio` ≥ 0 (a ratio of spreads), `roundtrip_error` ≥ 0 (a displacement), `alpha_area` possibly negative (§3.7: the floor is refused on a negative exponent, R-42), and §3.7's \"an infinite deviation is the correct answer\" bearing on `error_ratio`'s `overflow` (inf, not saturate). Only the ends no definition gives are calibrated. R-418 (RQ-268, option (a)): `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join, TASK-M5-01 proposing each [0, ∞) with overflow saturate; their no-escape values are REQ-REF-006's and REQ-REF-053's. R-545 (21 Oct 2026, RQ-278): `alpha_area`'s row is a declaration, `diverging` over (−∞, ∞) (option (a)); `alpha_energy` keeps `lin` centred on 1.0, its range and placement settled with this proposal at the M5 gate (option (c)); `running_mean_divergence` and `coherence` are REQ-PAY-109's (option (d))."
 - id: REQ-PAY-094
   area: PAY
   kind: definition
@@ -7314,7 +7322,7 @@
   note: "Read literally, §5.5's \"when\" column puts a transient whose most separated body has ratio above h_far in the hierarchy row, drawing it dark against R-442's ruling 5; a definition taking the hierarchy row only for HE, PE and excursion satisfies both, so this is not an RQ (applied per R-369; the PR #223 physics review, F4)."
 - id: REQ-PAY-105
   area: PAY
-  statement: "`I_max`, the running maximum of the moment of inertia about the centre of mass, must be a forward-only latch that starts at I_0, is updated at every step (not every snapshot), is held per sample and per ensemble copy, and persists across persist boundaries like `d_min`'s, so that the classifier reads only the live state and it."
+  statement: "`I_max`, the running maximum of the moment of inertia about the centre of mass, must be a forward-only latch that starts at I_0, is updated at every step (not every snapshot), is held per sample and per ensemble copy, and persists across persist boundaries like `d_min`'s, so that the classifier reads only the live state and it, stored in descriptor bits 10–14 (R-545)."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: "6. The latch: `I_max`"
@@ -7322,19 +7330,19 @@
     section: 9. Gaps between the prototype and Principia
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: unit test
     detail: "the latch equals the offline maximum of I over a fixture trajectory at every step, within REQ-PAY-106's quantisation once stored; it never decreases; it equals I_0 at step 0; resumed across many persist boundaries it equals a single uninterrupted latch; two ensemble copies of one sample carry their own values"
   rulings:
   - R-442
+  - R-545
   milestone: M7
-  rq:
-  - RQ-310
-  note: "Where it is stored is RQ-310 (the spec proposes descriptor bits 10–14, which payload §2 holds reserved)."
+  note: "R-545 (21 Oct 2026, RQ-310, option (a)): stored in `sample_descriptor` bits 10–14, log-quantised in half-octaves (REQ-PAY-106), a versioned assignment like `last_symbol`'s; the spending is a ledger edit that changes the schema version."
 - id: REQ-PAY-106
   area: PAY
-  kind: calibration
-  statement: "The quantisation of the stored `I_max` latch (proposed: log, half-octave steps, 5 bits, 32 levels up to 2¹⁶) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  statement: "The stored `I_max` latch must be log-quantised in half-octaves, 32 levels up to 2¹⁶, in `sample_descriptor` bits 10–14 (R-545), and its effect on the OS-candidate labels against the unquantised latch must be measured and recorded in the task's PR."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: "6. The latch: `I_max`"
@@ -7344,15 +7352,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
-    method: review checklist
-    detail: "the proposal gives the quantisation and its range and shows, on fixture and chart trajectories, that the stored latch changes no OS-candidate label against the unquantised one (or how many it changes); evidence: the drill-down's §11.2 (not measured in prin-rs PR #32)"
+    method: unit test
+    detail: "cargo test -p kernel chazy_i_max_quantisation: the stored latch round-trips to the half-octave level below the unquantised value at every level up to 2¹⁶, saturating at the top; bits 10–14 hold it and no other descriptor bit moves; the PR records, on fixture and chart trajectories, how many OS-candidate labels the stored latch changes against the unquantised one; control: a linear quantisation fails the level check"
   rulings:
   - R-71
   - R-442
+  - R-545
   milestone: M7
-  rq:
-  - RQ-310
+  note: "R-545 (21 Oct 2026, RQ-310, option (a)): the human's words give the quantisation, so this is no longer a calibration (applied per R-369, R-545 D1); first proposed as a calibration of the spec's \"log, half-octave steps, 5 bits, 32 levels up to 2¹⁶\"."
 - id: REQ-PAY-107
   area: PAY
   statement: "`chazy_escaper` must be a generated read-side categorical accessor, a body index 0–2, derived at read from the live state and the `ICDescriptor`'s masses with nothing stored: the body most separated from its pair, the argmax over b of |r_b − R_cm(other two)| / |r_i − r_j| with (i, j) the pair not containing b, the same hierarchy-ratio choice the classifier uses for HE/PE; on a tie the lowest body index wins."
@@ -7391,6 +7401,25 @@
   rulings:
   - R-443
   milestone: M7
+- id: REQ-PAY-109
+  area: PAY
+  kind: definition
+  statement: "`running_mean_divergence`'s and `coherence`'s formulas and declared §3.8 ranges, each with its citation and neither spanning zero, must be defined in dd_generation_root §3.7 and the ledger by the task that needs them and reviewed by the physics reviewer before merge (R-72, R-545), so both stay `lin` on viridis."
+  source:
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Layout and §3.8 entries
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger declared_ranges: both members are declared with ranges that do not span zero, each citing §3.7's formula, and the numeric template places neither on ramp_coolwarm; control: a fixture lin entry declared (−∞, ∞) is placed on ramp_coolwarm; physics reviewer approves each formula and range before merge"
+  rulings:
+  - R-72
+  - R-545
+  milestone: M5
+  note: "R-545 (21 Oct 2026, RQ-278, option (d)). The human names TASK-M1-21, merged before the ruling; the follow-up TASK-M5-32 writes it (applied per R-369, R-545 A1)."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -7504,7 +7533,7 @@
   milestone: M0
 - id: REQ-GEN-008
   area: GEN
-  statement: "The payload schema version must be the content hash of the ledger, including the continuation table, so any ledger or continuation-table change changes the version automatically."
+  statement: "The payload schema version must be the content hash of the ledger's columns that decide the payload's layout or the kernel's output, including the continuation table, so any change to one of those columns or to the continuation table changes the version automatically; `scale`, and any render-only column a ruling names, must leave the hash (R-545)."
   source:
   - file: decisions.md
     section: R-36 — Schema version = content hash of the ledger *(PL-1)*
@@ -7516,16 +7545,19 @@
     section: 3. The word buffer — `free_group_word`
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: unit test
-    detail: "Change one ledger row, then one continuation-table entry: the schema version changes each time; unchanged ledger gives a stable version."
+    detail: "Change one ledger row's layout column (a bit offset), then one continuation-table entry: the schema version changes each time; unchanged ledger gives a stable version; a change to a row's `scale` alone leaves the version unchanged (R-545)."
   rulings:
   - R-22
   - R-36
   - R-63
   - R-113
+  - R-545
   milestone: M0
-  note: "R-113 (RQ-93 M0-12): the compatibility signature carrying the version is REQ-GEN-017 (M5)."
+  note: "R-545 (21 Oct 2026, RQ-297, option (a)): the version hashes only the layout and kernel columns; `scale` leaves the hash. TASK-M0-12 built the whole-ledger hash; REQ-GEN-043 (TASK-M7-53) takes `scale` out of it, applied per R-369."
 - id: REQ-GEN-009
   area: GEN
   statement: "Ledger-generated per-field debug shaders must mount into frag/debug/generated/ (or a scanned virtual directory) and surface through the same scan as hand-written debug shaders."
@@ -7667,7 +7699,7 @@
   milestone: M3
 - id: REQ-GEN-017
   area: GEN
-  statement: "The schema version must be the content hash of the canonicalised ledger, must be part of the payload compatibility signature, and any ledger change must invalidate every cached payload so that no stale-schema payload is ever served."
+  statement: "The schema version must be the content hash of the canonicalised ledger's columns that decide the payload's layout or the kernel's output (R-36, R-545), must be part of the payload compatibility signature, and any layout or kernel change must invalidate every cached payload so that no stale-schema payload is ever served; a ledger `scale` change must not (it re-styles the view with zero recompute, dd_colouring seam 5)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 2. Consolidated contract
@@ -7681,12 +7713,16 @@
     section: "Part 1 — Two-level keying: identity vs validity"
   - file: docs/design/principia_dd_simstate_payload.md
     section: "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: unit test
-    detail: "flip one bit offset → hash and signature change; the cache test serves zero stale-schema payloads"
+    detail: "flip one bit offset → hash and signature change; the cache test serves zero stale-schema payloads; change one field's `scale` alone → hash and signature unchanged, the cached payload served (R-545)"
   rulings:
   - R-36
+  - R-545
   milestone: M5
+  note: "R-545 (21 Oct 2026, RQ-297, option (a)): \"a layout or kernel change\", not \"any ledger change\"; the hash change itself is REQ-GEN-043's."
 - id: REQ-GEN-018
   area: GEN
   statement: "|det J_D| must match the analytic link derivatives wherever closed forms exist."
@@ -8126,6 +8162,26 @@
   - R-481
   milestone: M2
   note: R-481 A3, G5 (20 Oct 2026).
+- id: REQ-GEN-043
+  area: GEN
+  statement: "The payload schema version must hash only the ledger columns that decide the payload's layout or the kernel's output; `scale`, and any render-only column a ruling names, must leave the hash, so that a ledger scale change re-styles the view with zero recompute (R-545; dd_colouring seam 5)."
+  source:
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 2. Consolidated contract
+  - file: docs/design/principia_dd_generation_root.md
+    section: 4. Seams (obligations → integration tests)
+  - file: docs/design/principia_dd_colouring.md
+    section: 4. Seams (obligations → integration tests)
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger schema_version_columns: changing one entry's scale leaves the schema version unchanged, changing a bit offset, a width, a type or a continuation-table entry changes it; cargo test -p render ledger_scale_restyle_zero_recompute: with the regenerated ledger the view re-styles, the cache serves the same payload and the dispatch counter is unchanged; control: a variant hashing scale fails"
+  rulings:
+  - R-36
+  - R-545
+  milestone: M7
+  note: "R-545 (21 Oct 2026, RQ-297, option (a)). Closed by TASK-M7-53 (applied per R-369, R-545 C1)."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -12914,15 +12970,16 @@
     section: 4. Seams (obligations → integration tests)
   - file: decisions.md
     section: "R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: unit test
     detail: "seam 5: change a field's ledger scale; the view re-styles and the dispatch counter is unchanged"
   rulings:
   - R-411
+  - R-545
   milestone: M7
-  rq:
-  - RQ-297
-  note: "R-411 (RQ-265's option (c)): each ledger scale names one range-free form, shared by the user-facing compaction (dd_colouring §3.6) and the debug views."
+  note: "R-411 (RQ-265's option (c)): each ledger scale names one range-free form, shared by the user-facing compaction (dd_colouring §3.6) and the debug views. R-545 (21 Oct 2026, RQ-297, option (a)): this stands as written; the schema version no longer hashes `scale` (REQ-GEN-043), so the ledger scale change re-styles with zero recompute. TASK-M7-05 (merged) built the render side; the zero-recompute arm end to end runs in TASK-M7-53, applied per R-369."
 - id: REQ-COL-033
   area: COL
   statement: "The sRGB transfer, linear-sRGB ↔ OKLab (M1, M2, inverse coefficients, M1⁻¹) and OKLCH polar forms must be exactly those of dd_colouring §3.1, transcription-checked against Ottosson's reference implementation before entering the shared source."
@@ -13925,7 +13982,7 @@
   milestone: M7
 - id: REQ-COL-082
   area: COL
-  statement: "The \"when it was decided\" view must colour each sample by its final class with lightness by how early that coarse class settled for good (palest by t = 10, darkest at t = 800, grey never), live from a second forward-only latch holding the time the current coarse class was first committed, reset whenever it changes."
+  statement: "The \"when it was decided\" view must be offline only in v1 (R-545): computed over a recorded run, it colours each sample by its final class with lightness by how early that coarse class settled for good (palest by t = 10, darkest at t = 800, grey never), the time the current coarse class was first committed, reset whenever it changes, taken from the trajectory; no second latch is stored in the payload."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.8 Time views
@@ -13933,15 +13990,16 @@
     section: 10.8.1 When it was decided
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: unit test
-    detail: "the latch holds the first-commit time and resets on a change of coarse class, on a fixture trajectory; the view renders a never-settled sample grey and an earlier-settled one lighter"
+    detail: "cargo test -p kernel chazy_decided_latch: over a recorded fixture trajectory the first-commit time of the current coarse class is held and resets on a change of coarse class; the view renders a never-settled sample grey and an earlier-settled one lighter; the payload layout has no second latch and the live stain library offers no live \"when it was decided\" view (R-545)"
   rulings:
   - R-442
+  - R-545
   milestone: M7
-  rq:
-  - RQ-310
-  note: "Its storage is RQ-310; without the latch the view is offline only. The lightness by time is REQ-COL-106's calibration."
+  note: "R-545 (21 Oct 2026, RQ-310, option (a)): offline only in v1, no second latch stored. The lightness by time is REQ-COL-106's calibration."
 - id: REQ-COL-083
   area: COL
   statement: "The \"what just changed\" view must draw white where the coarse Chazy class changed since the previous playhead and dim the rest."
@@ -14471,11 +14529,11 @@
   rulings:
   - R-71
   - R-442
+  - R-545
   milestone: M7
   rq:
-  - RQ-310
   - RQ-320
-  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. Where the comparison lives is RQ-320; the latch's storage is RQ-310."
+  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. Where the comparison lives is RQ-320. R-545 (21 Oct 2026, RQ-310): the \"when it was decided\" view is offline only in v1, so no latch is stored; its lightness by time is still calibrated here."
 - id: REQ-COL-107
   area: COL
   kind: definition
@@ -22116,15 +22174,17 @@
     section: 04 Windows
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: GUI screenshot
-    detail: "screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)"
+    detail: "screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113); the substeps-per-pixel histogram draws the frame record's `substep_histogram` (REQ-TOOL-187, R-545)"
   rulings:
   - R-68
   - R-113
+  - R-545
   milestone: M8
-  rq:
-  - RQ-286
+  note: "R-545 (21 Oct 2026, RQ-286, option (a)): the histogram draws the frame record's `substep_histogram: [u32; 16]` (REQ-TOOL-187, TASK-M5-28); its bin edges are RQ-520."
 - id: REQ-TOOL-099
   area: TOOL
   statement: "The profiler's leak detector must flag steady memory growth while idle."
@@ -23741,6 +23801,26 @@
   - R-521
   milestone: M7
   note: "R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026). Closed by TASK-M7-45. Physics review is required (⚑). Code review F1 of PR #265 (applied per R-369): kept to the destinations M7 builds; the animation spec, snapshot JSON and share link carry the hashes where TASK-M8-31 and TASK-M8-32 build them, checked by REQ-TOOL-176 (TASK-M8-53). *Was:* \"Every destination (the embedded record's tier 1, the PNG tEXt chunk, snapshot JSON, a share link, the profiler header and an animation spec) must carry\" and the verify's \"each of the six destinations\"."
+- id: REQ-TOOL-187
+  area: TOOL
+  statement: "The frame record must carry `substep_histogram: [u32; 16]`, the frame's per-pixel substep counts in equal bins of width N_max/16 with cap hits as their own last bin, counted on the GPU and read back with R-288's counters on the existing telemetry readback without stalling the frame, written after `substeps_total` in profiler schema v1 and v2 (R-545)."
+  source:
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine frame_substep_histogram: a synthetic frame whose pixels take known substep counts, cap hits among them, records each pixel in its bin and the cap hits in the last, the 16 entries summing to the pixel count; the next frame's histogram is reset; it comes back on the telemetry readback without stalling the frame; a profiler file written before it reads with the key not recorded; control: a histogram not reset between frames fails"
+  rulings:
+  - R-288
+  - R-545
+  milestone: M5
+  rq:
+  - RQ-520
+  note: "R-545 (21 Oct 2026, RQ-286, option (a)): a schema v1 change made by the ruling; v2 (R-534) carries it as v1 plus. The bin edges wait on RQ-520 (the porter adds `rq: [RQ-520]`; reqio's add takes no rq). Closed by TASK-M5-28 (applied per R-369, R-545 B2)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -24714,7 +24794,7 @@
   note: "pitfall: \"2.4 Should it terminate?\" — the current ground truth shares a term with the criterion; the config chart's base rates are too high to discriminate. R-103: the checks belong to the harness; production ends the loop at escape. Each check's pass threshold, horizon and fixture: REQ-VAL-123 and REQ-VAL-124 (calibration)."
 - id: REQ-VAL-055
   area: VAL
-  statement: "δ_dep must be set by a recorded measurement, and the placement of the per-sample 'departed' bit must be decided and written into the ledger."
+  statement: "δ_dep must be set by a recorded measurement, and the per-sample 'departed' bit must be written into the ledger as `sample_descriptor` bit 15 (R-545)."
   source:
   - file: decisions.md
     section: "R-37 — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*"
@@ -24724,13 +24804,16 @@
     section: Why closure is here, at this width, unconditionally
   - file: open-questions.md
     section: Pending-changes register
+  - file: decisions.md
+    section: "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
   verify:
     method: numerical gate
-    detail: "Measurement report of |n̂(t) − n̂(0)| distributions on periodic-orbit and generic fixtures justifying δ_dep; ledger row for the departed bit exists and schema version changes."
+    detail: "Measurement report of |n̂(t) − n̂(0)| distributions on periodic-orbit and generic fixtures justifying δ_dep; the ledger row for the departed bit at descriptor bit 15 exists, the generated layout test lists it, and the schema version changes."
   rulings:
   - R-37
+  - R-545
   milestone: M3
-  note: "R-37: set by measurement; no protocol is given. The departed bit's placement is tracked in open-questions.md (R-37's entry)."
+  note: "R-37: set by measurement; no protocol is given. R-545 (21 Oct 2026, RQ-310): the departed bit is descriptor bit 15, a versioned assignment; δ_dep's value stays a measurement (open-questions item 9)."
 - id: REQ-VAL-056
   area: VAL
   statement: "Parity, branch determinism and the toolchain must be proven in a native cargo test before the browser build is developed on top."

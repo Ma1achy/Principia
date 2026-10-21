@@ -1474,7 +1474,7 @@
   title: The frame record, percentiles and the bounded telemetry file
   depends_on: [TASK-M5-21]
   needs: [REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008]
-  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140]
+  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140, REQ-TOOL-187]  # REQ-TOOL-187: R-545 (RQ-286), applied per R-369; its bin edges wait on RQ-520
   reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M5-29
@@ -1499,6 +1499,14 @@
   depends_on: [TASK-M5-02, TASK-M3-06]  # R-420: the echo row moved after TASK-M5-02 and TASK-M3-06
   needs: [REQ-INT-026, REQ-TOOL-011]
   requirements: [REQ-TOOL-164, REQ-TOOL-165]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M5-32
+  milestone: M5
+  title: "`running_mean_divergence` and `coherence`: formulas and one-signed declared ranges (R-545, RQ-278)"
+  depends_on: [TASK-M1-21, TASK-M5-01]  # R-545 A1: the follow-up of TASK-M1-21's ledger work (merged in PR #208), applied per R-369
+  needs: [REQ-GEN-035]
+  requirements: [REQ-PAY-109]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M6-01
@@ -2317,6 +2325,14 @@
   needs: []
   requirements: [REQ-COL-133, REQ-COL-134]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M7-53
+  milestone: M7
+  title: "The schema version hashes only the layout and kernel columns; a ledger scale edit re-styles with zero recompute (R-545, RQ-297)"
+  depends_on: [TASK-M7-05, TASK-M5-06]  # R-545 C1, applied per R-369
+  needs: [REQ-GEN-008, REQ-GEN-017]
+  requirements: [REQ-GEN-043]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-01
   milestone: M8

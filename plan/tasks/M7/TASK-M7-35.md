@@ -45,7 +45,8 @@ parameters and the latch's quantisation are proposed with their evidence for the
   parameters constants-register entries marked provisional until the M7 gate (R-427), and its `chazy_class` read-side
   accessor generated beside `energy_drift`.
 - The `I_max` latch in the march: local per step, per sample and per copy, starting at `I_0`; persisted in the payload
-  once RQ-310 rules where, with REQ-PAY-106's quantisation.
+  in descriptor bits 10–14 (R-545, RQ-310), log-quantised in half-octaves with REQ-PAY-106's quantisation, a ledger
+  edit that changes the schema version, the generated layout test updated as `last_symbol`'s was.
 - The Fewbody reference (`fewbody_resolved`, three-body) in `crates/validation`.
 - The ten fixtures of §12.1 as tests, each with its control arm; the live-playhead property test.
 - The calibration proposals for ε, `h_far` (with the gate and δ), `os_ratio`, settling τ and the latch's quantisation,
@@ -56,7 +57,7 @@ parameters and the latch's quantisation are proposed with their evidence for the
 - `cargo test -p validation chazy_fewbody` — the reference arms: H for three flying apart, B-stable for the hierarchy (`ma_stable` true), HE at d = 50 and unresolved at d = 20 (tidal ratios 8 × 10⁻⁶ and 1.25 × 10⁻⁴), δ = 10⁻⁵ (REQ-VAL-184).
 - `cargo test -p kernel chazy_i_max_latch` — the latch equals the offline maximum of `I` over a fixture trajectory at every step, never decreases, is `I_0` at step 0, survives persist boundaries as one uninterrupted latch, and differs between two ensemble copies of one sample (REQ-PAY-105).
 - `cargo test -p kernel chazy_live_playhead` — property test: for random ICs the label at `t` from a run stopped at `t` equals the label at `t` from the run continued; control: a variant reading the state at `t + Δ` fails (REQ-VAL-187).
-- Review (physics): the proposals for ε = 0.05 (REQ-EVT-028), `h_far` = 5 with the hierarchy gate and δ = 10⁻⁵ (REQ-EVT-029), `os_ratio` = 25 measured at the snapshot cadence while the latch updates every step (REQ-EVT-030), settling off (REQ-EVT-031) and the latch's log half-octave 5-bit quantisation (REQ-PAY-106), each with the drill-down's §4.1 and §11.2 evidence, confirmed by the human at the M7 gate.
+- Review (physics): the proposals for ε = 0.05 (REQ-EVT-028), `h_far` = 5 with the hierarchy gate and δ = 10⁻⁵ (REQ-EVT-029), `os_ratio` = 25 measured at the snapshot cadence while the latch updates every step (REQ-EVT-030), settling off (REQ-EVT-031) each with the drill-down's §4.1 and §11.2 evidence, confirmed by the human at the M7 gate; and the latch's log half-octave 5-bit quantisation as ruled (R-545), with its measured effect on the OS-candidate labels (REQ-PAY-106).
 
 ## Notes
 - The rule's order differs between the spec's table and the code in two places: B-stable against transient at E > 0
@@ -65,8 +66,10 @@ parameters and the latch's quantisation are proposed with their evidence for the
   clauses only. The fixtures reach neither case.
 - `classify` enforces the E > 0 certificate by its order but never tests E in the dispersal step or the two-stage H;
   whether to guard them with E ≥ 0 is RQ-325, and REQ-PAY-099 waits on it for those clauses (drill-down §2).
-- Where `I_max` is stored is RQ-310 (for the human). Until it rules, the latch is local and per step, and the
-  persistence test runs on the latch's local value; REQ-PAY-105 and REQ-PAY-106 wait on it.
+- Where `I_max` is stored is ruled (R-545, RQ-310): descriptor bits 10–14, log-quantised in half-octaves (32 levels to
+  2¹⁶). REQ-PAY-105 and REQ-PAY-106 no longer wait. *Was:* "Where `I_max` is stored is RQ-310 (for the human). Until it
+  rules, the latch is local and per step, and the persistence test runs on the latch's local value; REQ-PAY-105 and
+  REQ-PAY-106 wait on it."
 - Outside the fixtures `R_0` is computed from the initial state; the fixtures pass `R_0 = 1`, as written (§12.1).
 - Applied per R-369: the classifier's code placement (shared kernel source, generated accessor) is this task's; the
   accessor must read only the live state, the masses, `E_0`, `R_0` and `I_max`.
