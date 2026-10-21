@@ -2291,7 +2291,7 @@
   title: "Chart position's colour slot: the bases (Gradient, Site blend, Palette), the layers, the brightness occupants and the calibrations (R-542 SM6, SM11)"
   depends_on: [TASK-M7-47, TASK-M7-04, TASK-M7-05, TASK-M7-06, TASK-M7-08, TASK-M7-10]
   needs: []
-  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129]
+  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129, REQ-COL-136]  # REQ-COL-136: the Torus gradient (R-543)
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M7-49
@@ -2299,7 +2299,7 @@
   title: "Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)"
   depends_on: [TASK-M7-48, TASK-M7-44]  # TASK-M7-44: the picture's tier in R-484's table (R-542 H5)
   needs: []
-  requirements: [REQ-COL-130, REQ-COL-131]
+  requirements: [REQ-COL-130, REQ-COL-131, REQ-COL-137, REQ-COL-138]  # REQ-COL-137, REQ-COL-138: the wrap mode and the tileable checkerboard (R-543)
   reviewers: [code, qa, gui]  # gui: SM8 and SM10 are the GUI's, the picture's and the fade's look (the human's message; PR #270 code review 2, gui re-review G6)
   pitfalls: []
 - id: TASK-M7-50

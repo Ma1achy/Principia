@@ -16,15 +16,15 @@
 | SCHED | 100 |
 | REF | 52 |
 | RENDER | 100 |
-| COL | 134 |
+| COL | 137 |
 | GUI | 315 |
 | TOOL | 184 |
 | VAL | 191 |
 | PERF | 95 |
 | SYS | 84 |
-| **total** | **1690** |
+| **total** | **1693** |
 
-Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 142 calibration, 137 definition, 1414 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,12 +37,12 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 176 |
 | M6 | 220 |
-| M7 | 215 |
+| M7 | 218 |
 | M8 | 330 |
 
 ## Sections
 
-1333 sections in 50 files: 1106 yield at least one requirement; 227 yield none and are listed below with the reason.
+1334 sections in 50 files: 1107 yield at least one requirement; 227 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |

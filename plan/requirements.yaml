@@ -15056,7 +15056,7 @@
 - id: REQ-COL-129
   area: COL
   kind: calibration
-  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app) and the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
+  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app), the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form), the Torus gradient's constants (R 0.074, r 0.037, L₀ 0.70, r_L 0.12) and its default Repeats (2), and the tileable checkerboard's chroma and lightness factors (0.8, 0.8) and its parity step (± 0.07) (R-543); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
   source:
   - file: docs/design/principia_state_map.md
     section: SM13. Queue, don't rule
@@ -15068,19 +15068,22 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: review checklist
     detail: "each value is a register entry citing R-542 and RQ-487, proposed with the prototype's value and its gamut check (0 out-of-gamut samples) or, for a tolerance, the app's measured worst error, confirmed at the M7 gate; no test picks its own tolerance"
   rulings:
   - R-71
   - R-542
+  - R-543
   milestone: M7
   rq:
   - RQ-487
-  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\""
+  note: "SM13 Q8 (RQ-487); κ added per R-369 (R-542 H7); the identity's tolerances added (R-542 H13; PR #270 qa F2, physics P2). Closed by TASK-M7-48; the identity's tolerances proposed by TASK-M7-47; the one projection's native–WGSL agreement tolerance proposed by TASK-M7-52 (PR #270 code re-review, C5, applied per R-369), which measures it and uses its measured value in REQ-COL-134's and REQ-COL-135's tests until the M7 gate confirms it, as TASK-M2-25 uses REQ-DEC-043's factor. RQ-487 concerns the tiling defaults and the other constants only; TASK-M7-52 does not close this requirement and does not wait on RQ-487. *Was (C5):* \"Closed by TASK-M7-48, the tolerances proposed by TASK-M7-47.\" *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The state map's default constants must be calibrated: tiles across (6), index palette chroma (0.08), layer line width (0.045 of a cell), dot radius (0.13), 2D plane gradient (L 0.75, ±0.095).\" The Torus's and the tileable checkerboard's constants added by R-543 (H7; REQ-COL-136, REQ-COL-138), proposed by TASK-M7-48 and TASK-M7-49 with their gamut evidence (0 of 240²; 0 of 64 cells at a limit), confirmed at the M7 gate with SM6's. *Was (R-543):* \"… and the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form); proposed with …\""
 - id: REQ-COL-130
   area: COL
-  statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis, the built-ins (checkerboard, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct."
+  statement: "A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis by default (the wrap mode and dim setting are REQ-COL-137's, R-543), the built-ins (checkerboard, the tileable checkerboard of REQ-COL-138, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct."
   source:
   - file: docs/design/principia_state_map.md
     section: SM8. Image mode
@@ -15088,15 +15091,18 @@
     section: "SM11. Colouring Chart position: a base, then layers"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_picture: at t = 0 on the view's own chart the picture is reproduced at the square's texels; past the square it is the mirror image at 0.62; the grid's red and blue bars sit on the top and left edges; controls: a wrapped (not mirrored) extension, an undimmed outside, and a picture stored in a sim struct, each fail"
+    detail: "cargo test -p render chart_position_picture: at t = 0 on the view's own chart the picture is reproduced at the square's texels; past the square, at the defaults (Mirror, dim on), it is the mirror image at 0.62; the grid's red and blue bars sit on the top and left edges; controls: a wrapped (not mirrored) extension at the defaults, an undimmed outside, and a picture stored in a sim struct, each fail"
   rulings:
   - R-542
+  - R-543
   milestone: M7
   rq:
   - RQ-499
-  note: "SM8. The picture is a RenderState field, its tier assigned in R-484's table (R-542 H5). Brightness under a Picture is the code's (RQ-499). Closed by TASK-M7-49."
+  note: "SM8. The picture is a RenderState field, its tier assigned in R-484's table (R-542 H5). Brightness under a Picture is the code's (RQ-499). Closed by TASK-M7-49. Amended by R-543: Mirror and dim are the defaults of the wrap mode (REQ-COL-137). *Was (R-543):* \"A Picture base must pull back an image laid on the target's square through the flow: nearest texel at the point's (u, v), mirror-repeated and dimmed (×0.62) past the square on an affine axis, the built-ins (checkerboard, grid, rings) or the user's own, uploaded, bound as a render-side texture, never a sim struct.\""
 - id: REQ-COL-131
   area: COL
   statement: "The fade off the slice must be opt-in, off by default, on the view's own chart only, reading R-509's distance, and stated as breaking injectivity; the ensemble colour must be the nominal copy (copy 0)."
@@ -15196,6 +15202,64 @@
   - R-542
   milestone: M8
   note: "PR #270's code re-review, C1 and C3 (R-542 H11, applied per R-369). Closed by TASK-M8-58; TASK-M7-47, TASK-M8-10 and TASK-M8-49 each carry its arm for their consumer. PR #270's code re-review, C4 (applied per R-369): the host consumers stay bitwise; the fragment consumer, compiled with fast-math under R-297, is held to REQ-COL-129's projection agreement tolerance as REQ-COL-134 is; the emitted WGSL snippet is exempt from the symbol check, whose control still fires on a hand-written projection. *Was (verify):* \"cargo test -p render shared_projection_callers: for each consumer built, its projected points and statuses over seeded states are bitwise equal to the shared source's, and no projection, leaving rule or curve nearest point is defined outside crates/kernel's module (a symbol check over crates/render and crates/gui); each consumer's task runs its own arm (TASK-M7-47, TASK-M8-10, TASK-M8-49, TASK-M8-58), this requirement closed when the last lands; controls: a consumer with a copied projection one constant changed, and a projection function defined outside crates/kernel, each fail\" PR #270's physics re-review, P1 (R-542 H16, applied per R-369): the fragment arm's statuses follow REQ-COL-134's margin band; the host arms stay bitwise, statuses included. *Was (verify, C4):* \"cargo test -p render shared_projection_callers: for each host consumer built (TASK-M8-10, TASK-M8-49 and TASK-M8-58, which call the kernel function on the CPU), its projected points and statuses over seeded states are bitwise equal to the shared source's; for the fragment consumer (TASK-M7-47, the generated WGSL, which R-297 lets compile with fast-math), its points agree with the native build within REQ-COL-129's projection agreement tolerance and its statuses are equal, as REQ-COL-134's are; and no projection, leaving rule or curve nearest point is defined outside crates/kernel's module (a symbol check over crates/render and crates/gui, the snippet cargo xtask build-kernel emits to crates/render/wgsl/ exempt); each consumer's task runs its own arm (TASK-M7-47, TASK-M8-10, TASK-M8-49, TASK-M8-58), this requirement closed when the last lands; controls: a consumer with a copied projection one constant changed fails (on the fragment arm the test shows the copy differs from the native build by more than the tolerance, so the control can fire), and a hand-written projection function anywhere outside crates/kernel, the emitted snippet excepted, fails the symbol check\""
+- id: REQ-COL-136
+  area: COL
+  statement: "Chart position's Gradient base must offer a Torus gradient on flat charts and the cylinder: periodic in chart units with a set number of periods across the home square, one-to-one within a period, seamless across periods, and in gamut with no per-pixel clipping."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: "SM6. Colour maps: one-to-one on the quotient, so they own lightness"
+  - file: docs/design/principia_state_map.md
+    section: "SM11. Colouring Chart position: a base, then layers"
+  - file: docs/design/principia_state_map.md
+    section: SM12. Tests (each with the arm that fires)
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
+  verify:
+    method: property test
+    detail: "cargo test -p render chart_position_torus: Torus seam: the colour at (u, v) equals the colour at (u + P, v) and (u, v + P_y) to 1e-12, P and P_y one period in chart units from the Repeats count (n across, max(1, round(n·H/W)) down; on the cylinder θ once round and s n times over the square), over a sweep reaching well past the square (ten squares past each edge), on a flat chart of each aspect and the cylinder, at every Repeats (1, 2, 3, 4, 6, 8); Torus one-to-one: within one period the minimum OKLab separation between distinct points of a 200² grid is > 0, and the signed radial chroma (a, b)·(cos θ, sin θ) is > 0 at every grid point, read from the map's output (the tube clear of the L axis; R-543 H4); Torus gamut: 0 samples out of sRGB on a 240² (θ, φ) sweep, and no sample changed by a clamp in the shader path; controls: a period computed in squashed or compacted units, an off-by-one in the period count (n + 1 periods, or round(n·H/W) + 1 rows), R ≤ r (R = r), L and chroma swapped (r_L and r exchanged, the tube self-intersecting), constants raised past the gamut (R, r × 1.10) and a per-pixel clamp added over them, each fail (R-543's check, docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py, shows each arm firing on the prototype's transcription)"
+  rulings:
+  - R-543
+  milestone: M7
+  rq:
+  - RQ-506
+  - RQ-507
+  note: "R-543 §2.1, §4 item 1, §5 Torus seam, Torus one-to-one, Torus gamut; SM6, SM11, SM12. Offered on the plane and cylinder quotients (R-543 H9); on the cylinder θ once round is a whole period, REQ-COL-127's multiple of 6 being the tilings' count (applied per R-369). Its constants (R 0.074, r 0.037, L₀ 0.70, r_L 0.12) and its default of 2 Repeats are REQ-COL-129's calibration values, confirmed at the M7 gate (R-543 H7). It spends L on position: a brightness node after it raises REQ-GUI-336's warning. A system that has left takes the navigation edge it left by, as the tilings do (RQ-498 (a)). The period counts are the code's (RQ-506 (a)); the tile that separates systems a period apart is RQ-507's. The Repeats control is REQ-GUI-340's, the legend's period REQ-GUI-339's. Closed by TASK-M7-48. *Was (PR #272's code review, C1):* the verify's \"and R > r on the constants (the tube clear of the L axis; R-543 H4)\", which a swapped formula with unchanged constants passes."
+- id: REQ-COL-137
+  area: COL
+  statement: "The Picture base must offer a wrap mode past its square (Repeat, Mirror or Clamp) and a separate dim setting; the defaults must be Mirror and dim on, so existing stains render unchanged."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: docs/design/principia_state_map.md
+    section: "SM11. Colouring Chart position: a base, then layers"
+  - file: docs/design/principia_state_map.md
+    section: SM12. Tests (each with the arm that fires)
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render chart_position_picture_wrap: Wrap arm: the same Picture under Repeat and under Mirror is identical on [0, 1)², s = 0 included, and differs past the square; at the square's closed far edge s = 1, which is inside it (SM8), Repeat reads texel 0 and Mirror texel N − 1, asserted on a sweep that reaches s = 1 on each axis; Repeat is s − ⌊s⌋, Mirror the triangle wave, Clamp the edge texel (max(0, min(1 − 10⁻⁹, s))); dimming (×0.62) applies past the square only, with the tickbox on, whatever the wrap mode; Wrap defaults bitwise: a stain saved without the wrap and dim fields, as every stain before R-543, loads at Mirror with dimming on and renders bitwise as R-542's look-up (mirrored, always dimmed past the square), and a Gradient 2D and a Palette hex stain render bitwise with the fields present and absent (the prototype checks all three); controls: a wrap setting that is not wired through (Repeat rendering as Mirror), the edge rule moved (s = 1 read as texel N − 1 under Repeat), the default wrap flipped to Repeat, the default dim flipped off, an old Gradient 2D stain loading as the Torus (or any Gradient other than 2D), and a Palette hex stain whose tiling or count changes when the Torus's Repeats field is present, each fail"
+  rulings:
+  - R-543
+  milestone: M7
+  note: "R-543 §2.2, §4 item 2, §5 Wrap arm, Wrap defaults bitwise; SM8, SM11, SM12. The wrap mode and the dim setting are RenderState fields beside the picture (R-542 H5), no sim struct (SM2). Wrap defaults bitwise needs the app and is this task's (R-543 H8). The inspector's controls and the node's label are REQ-GUI-340's, the readout REQ-GUI-339's. Closed by TASK-M7-49. *Was (PR #272's qa review 5602907732, Q1 and Q2, applied per R-369; R-543 H11):* the verify's \"identical inside the square\", which s = 1 contradicts under SM8's edge rule, and its controls without the edge rule, the Gradient 2D leg's or the Palette hex leg's arm."
+- id: REQ-COL-138
+  area: COL
+  statement: "The built-in pictures must include a tileable checkerboard whose colours wrap, so it tiles the plane with no seam under Repeat."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: docs/design/principia_state_map.md
+    section: SM12. Tests (each with the arm that fires)
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render chart_position_tileable_checker: \"Checkerboard, tileable\" is 8 × 8 cells, cell (i, j) the Torus at its centre (θ = 2π(i + ½)/8, φ = 2π(j + ½)/8), chroma × 0.8, r_L × 0.8 about L₀, ± 0.07 in L by parity, 0 of 64 cells at a channel limit; Tileable checker seam: under Repeat the cell across each seam has opposite parity and the colour difference across the seam equals that between neighbouring cells inside (along x every neighbouring step in the row; along y the picture's own step from cell 7 to cell 8, which wraps to cell 0; R-543 H5); the existing Checkerboard is unchanged; control: the old checkerboard silently substituted (its parity holds under Repeat, its colour ramp jumps at the seam), fails"
+  rulings:
+  - R-543
+  milestone: M7
+  note: "R-543 §2.3, §4 item 3, §5 Tileable checker seam; SM8, SM12. Its 0.8, 0.8 and 0.07 are REQ-COL-129's calibration values (R-543 H7). The Flow preset uses it (REQ-GUI-337). Closed by TASK-M7-49."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -20756,13 +20820,18 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: 1. Layout — four surfaces
+  - file: docs/design/principia_state_map.md
+    section: "SM11. Colouring Chart position: a base, then layers"
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_problems (board 1's Problems rows on the prototype's settings; its row buttons are board-only, §G13); cargo test -p gui state_map_problems: each L-spending warning raised exactly for its bases (a 1D gradient, the sphere's 3D and the cylinder's 2D gradient; Shape n̂'s position map and Bands where they exist), none for the L-fixed bases; the lightness-layers warning raised under Replace-L with a lightness layer and a brightness node, and not under Multiply; the four counts equal the frame's statuses, read from the engine through the snapshot; controls: a warning missing on an L-spending base, one raised on an L-fixed base, a lightness-layers warning missing under Replace-L, one raised under Multiply, and counts computed in the GUI, each fail"
+    detail: "cargo xtask screenshot state_map_problems (board 1's Problems rows on the prototype's settings; its row buttons are board-only, §G13); cargo test -p gui state_map_problems: each L-spending warning raised exactly for its bases (a 1D gradient, the sphere's 3D and the cylinder's 2D gradient, and the Torus on the plane and on the cylinder (R-543); Shape n̂'s position map and Bands where they exist), none for the L-fixed bases; the lightness-layers warning raised under Replace-L with a lightness layer and a brightness node, and not under Multiply; the four counts equal the frame's statuses, read from the engine through the snapshot; controls: a warning missing on an L-spending base, no warning under the Torus with a brightness node (on the plane or the cylinder), one raised on an L-fixed base, a lightness-layers warning missing under Replace-L, one raised under Multiply, and counts computed in the GUI, each fail"
   rulings:
   - R-542
+  - R-543
   milestone: M7
-  note: "SM15. The lightness-layers control and the snapshot path added (PR #270 gui G5); board 1's row buttons are board-only (R-542 H14). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The Problems pane must warn where a brightness node replaces L that the base spends on position or that lightness layers are drawn in, and must report left / ended / past-edge / undetermined counts per compile.\""
+  note: "SM15. The lightness-layers control and the snapshot path added (PR #270 gui G5); board 1's row buttons are board-only (R-542 H14). Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The Problems pane must warn where a brightness node replaces L that the base spends on position or that lightness layers are drawn in, and must report left / ended / past-edge / undetermined counts per compile.\" The Torus, on the plane and the cylinder, and its control arm added by R-543 (§2.1; SM11, SM15; PR #272's gui review 5602711944, G1, applied per R-369). *Was (R-543):* the verify's L-spending bases \"(a 1D gradient, the sphere's 3D and the cylinder's 2D gradient; Shape n̂'s position map and Bands where they exist)\", without the Torus or its arm."
 - id: REQ-GUI-337
   area: GUI
   statement: "The library must carry the seven state map presets (Classic shape colour, Where now, Graph paper, Basin tiles, Displacement, Picture flow, Mixing — the prototype's labels), each inserting an ordinary editable graph equal to the prototype's smPreset settings."
@@ -20773,15 +20842,18 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: 11. Presets = whole graphs
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_presets (board 5); cargo test -p gui state_map_presets: each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load; control: a preset whose graph differs from smPreset, fails"
+    detail: "cargo xtask screenshot state_map_presets (board 5); cargo test -p gui state_map_presets: each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load, version 9's since R-543: Flow (Picture flow) is Picture over the tileable checkerboard, Past its square Repeat, Dim past the square off, no brightness; control: a preset whose graph differs from smPreset, fails"
   rulings:
   - R-542
+  - R-543
   milestone: M7
   rq:
   - RQ-499
-  note: "SM15. The prototype's labels, RQ-499 (a) applied (PR #270 gui G2); the file's names (Where, Basins, Flow) are the queued alternative. Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The library must carry the seven state-map presets, each inserting an ordinary editable graph.\""
+  note: "SM15. The prototype's labels, RQ-499 (a) applied (PR #270 gui G2); the file's names (Where, Basins, Flow) are the queued alternative. Closed by TASK-M7-51. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"The library must carry the seven state-map presets, each inserting an ordinary editable graph.\" Amended by R-543 (§2.4, H6): the Flow preset is the tileable checkerboard under Repeat with dimming off, the prototype's version 9 smPreset, the one deliberate visual change. *Was (R-543):* \"each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load;\""
 - id: REQ-GUI-338
   area: GUI
   statement: "Every saved stain must load and render as before the state map, with nothing migrated."
@@ -20801,7 +20873,7 @@
   note: "SM15 tests (1) and (2). A stain with a brightness node under Replace-L's chroma scaling is RQ-496. Closed by TASK-M7-51."
 - id: REQ-GUI-339
   area: GUI
-  statement: "In Explore, a Chart position stain's legend must be its colour slot drawn with no brightness over the target chart in the chart's own aspect ratio, with a ring at the hovered system (white inside, grey and pinned inside the edge when it is past it), placed as the stain's own colour key before the brightness key, the trace block and the debug key; and a pan or zoom into the extension must never show an uncovered pixel."
+  statement: "In Explore, a Chart position stain's legend must be its colour slot drawn with no brightness over the target chart in the chart's own aspect ratio, with a ring at the hovered system (white inside, grey and pinned inside the edge when it is past it), placed as the stain's own colour key before the brightness key, the trace block and the debug key; and a pan or zoom into the extension must never show an uncovered pixel; under a Torus gradient the legend must state the period in chart units, and the hovered pixel's readout must name a Picture's wrap mode (R-543)."
   source:
   - file: docs/design/principia_state_map.md
     section: SM9. Legend and the hovered pixel
@@ -20811,18 +20883,26 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: docs/design/principia_state_map.md
+    section: "SM6. Colour maps: one-to-one on the quotient, so they own lightness"
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_legend (board 6's legend block; the shell per §G13's R-542 bullet, the hover trace kept, RQ-501); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the legend keeps the target's aspect ratio (2 : 1 on the sphere, the triangle on the simplex) and draws no brightness; the ring sits at the hovered pixel's own colour in the legend, grey and pinned 5 px inside the edge for a system past it; controls: the old grid dropped before the new one lands, a ring computed with other integrator settings, a square legend on the sphere, and a legend drawn with the brightness, each fail"
+    detail: "cargo xtask screenshot state_map_legend (board 6's legend block; the shell per §G13's R-542 bullet, the hover trace kept, RQ-501); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the legend keeps the target's aspect ratio (2 : 1 on the sphere, the triangle on the simplex) and draws no brightness; the ring sits at the hovered pixel's own colour in the legend, grey and pinned 5 px inside the edge for a system past it; under a Torus gradient the legend states the period in chart units at each Repeats, equal to REQ-COL-136's: P = (x_max − x_min)/n across and P_y = (y_max − y_min)/max(1, round(n·H/W)) down on a flat chart, and on the cylinder 2π round θ and (y_max − y_min)/n along s, and under a Picture the hovered pixel's readout names its wrap mode (\"Picture · repeat\"); controls: a Torus legend with no period, a stated period other than P or P_y (one in squashed units, one from n + 1 periods or round(n·H/W) + 1 rows, the cylinder's θ period as 2π/n), a readout without the wrap mode, the old grid dropped before the new one lands, a ring computed with other integrator settings, a square legend on the sphere, and a legend drawn with the brightness, each fail"
   rulings:
   - R-542
+  - R-543
   milestone: M8
   rq:
   - RQ-501
-  note: "SM9, SM3 Never a gap. The legend per SM9's transcription of smLegend (PR #270 gui G3); the hover trace stays (RQ-501 (a)). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel.\""
+  - RQ-506
+  note: "SM9, SM3 Never a gap. The legend per SM9's transcription of smLegend (PR #270 gui G3); the hover trace stays (RQ-501 (a)). Closed by TASK-M8-66. *Was (the bundle's draft, reworded by the port; R-542 H8):* \"In Explore the legend must be the colour slot drawn over the target chart with a ring at the hovered system, and a pan or zoom into the extension must never show an uncovered pixel.\" The Torus's period and the readout's wrap mode added by R-543 (§2.1, §2.2; H6), the ruling's text where the prototype is silent (RQ-506 (a)). *Was (R-543):* \"In Explore, a Chart position stain's legend must be its colour slot drawn with no brightness over the target chart in the chart's own aspect ratio, with a ring at the hovered system (white inside, grey and pinned inside the edge when it is past it), placed as the stain's own colour key before the brightness key, the trace block and the debug key; and a pan or zoom into the extension must never show an uncovered pixel.\" *Was (PR #272's qa review 5602907732, Q3, applied per R-369):* the verify's \"under a Torus gradient the legend states the period in chart units at each Repeats\", with no value, and its one period arm \"a Torus legend with no period\". The period's wording and placement in the legend stay RQ-506 (a)'s."
 - id: REQ-GUI-340
   area: GUI
-  statement: "Chart position's inspector must offer SM7's colour frame (the chart; the view, on the view's own chart only), the Picture base's choice (the built-ins and an uploaded picture) and the fade off the slice (off by default, the view's own chart only), each reachable from the keyboard and each edit one SetField and one undo entry."
+  statement: "Chart position's inspector must offer SM7's colour frame (the chart; the view, on the view's own chart only), the Picture base's choice (the built-ins and an uploaded picture), the Torus gradient's Repeats (1, 2, 3, 4, 6 or 8 across, 2 by default, shown only when Torus is chosen), the Picture's Past its square (Repeat, Mirror or Clamp, Mirror by default) and its Dim past the square (on by default), the Picture node's label naming its wrap mode (\"Picture · repeat\"; R-543), and the fade off the slice (off by default, the view's own chart only), each reachable from the keyboard and each edit one SetField and one undo entry."
   source:
   - file: docs/design/principia_state_map.md
     section: SM7. Colour frame and deep zoom
@@ -20832,13 +20912,22 @@
     section: SM10. Time, ensemble and fade
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: docs/design/principia_state_map.md
+    section: "SM6. Colour maps: one-to-one on the quotient, so they own lightness"
+  - file: docs/design/principia_state_map.md
+    section: "SM11. Colouring Chart position: a base, then layers"
+  - file: decisions.md
+    section: "R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot state_map_picture (board 3's Picture inspector; the shell per §G13's R-542 bullet); cargo test -p gui state_map_picture_controls: the colour frame's view option, and the fade, are offered on the view's own chart only; the built-ins and an upload set the Picture field (RenderState); each control is reached and changed from the keyboard (§G3, R-409); each edit is one SetField and one undo entry (R-52, R-69); controls: a view frame or fade offered on another target, a fade on by default, and an edit making two undo entries, each fail"
+    detail: "cargo xtask screenshot state_map_picture (board 3's Picture inspector; the shell per §G13's R-542 bullet); cargo test -p gui state_map_picture_controls: the colour frame's view option, and the fade, are offered on the view's own chart only; the built-ins and an upload set the Picture field (RenderState); each control is reached and changed from the keyboard (§G3, R-409); each edit is one SetField and one undo entry (R-52, R-69); Repeats is offered only under the Torus, its values 1, 2, 3, 4, 6 and 8 in that order (labelled as SM11 transcribes them), with 2 selected by default; Past its square and Dim past the square default to Mirror and on and set the Picture's RenderState fields; the node's label names the wrap mode (R-543); controls: Repeats shown under another gradient, a Repeats default other than 2, a Repeats value missing or one extra, a Picture node's label that leaves out the wrap mode, a wrap or dim default other than Mirror and on, a view frame or fade offered on another target, a fade on by default, and an edit making two undo entries, each fail"
   rulings:
   - R-542
+  - R-543
   milestone: M7
-  note: "PR #270's code review, 2; closed by TASK-M7-51, which builds the inspector (gui re-review G6, applied per R-369). The Picture base's upload is its own file picker, labelled as the prototype has it (\"Your image…\"), distinct from File › Import picture (the pxpack restore). *Was:* \"Closed by TASK-M7-49.\""
+  rq:
+  - RQ-506
+  note: "PR #270's code review, 2; closed by TASK-M7-51, which builds the inspector (gui re-review G6, applied per R-369). The Picture base's upload is its own file picker, labelled as the prototype has it (\"Your image…\"), distinct from File › Import picture (the pxpack restore). *Was:* \"Closed by TASK-M7-49.\" The Repeats, Past its square and Dim past the square controls and the node's label added by R-543 (§2.1, §2.2; H6; RQ-506 (a) for the label). *Was (R-543):* \"Chart position's inspector must offer SM7's colour frame (the chart; the view, on the view's own chart only), the Picture base's choice (the built-ins and an uploaded picture) and the fade off the slice (off by default, the view's own chart only), each reachable from the keyboard and each edit one SetField and one undo entry.\" *Was (PR #272's gui review 5602711944, G2, applied per R-369):* the verify's \"Repeats is offered only under the Torus, with 2 selected by default\", with no arm for the default, the offered set or the label."
 - id: REQ-GUI-341
   area: GUI
   statement: "On the shape sphere chart a trace must carry on across the equator (R-544 item 8): at a syzygy the trace's signed n̂ passes from one hemisphere into the other and the trace is drawn there, continuous, never folded or reflected back at the equator, as Listen already reads it."
