@@ -19267,9 +19267,13 @@ conflicts are queued, not ruled:
 - **RQ-506:** the code and the ruling's text: the legend states no period and the hovered-pixel readout does not name
   the wrap mode in the prototype, and the code's period counts (`max(1, round(n·H/W))`; `s` `n` times over the
   cylinder's square) go past the text's. Meanwhile (a): the ruling's text where the code is silent, the code's counts.
-- **RQ-507:** "Left its starting tile" separates systems one Torus period apart only when the Palette's count is at least
-  the Torus's Repeats, since under Chart position the tile is the Palette's (SM11), and the brightness node it needs
-  replaces the L the Torus spends. Meanwhile (a), the code.
+- **RQ-507:** "Left its starting tile" separates systems one Torus period apart only for some Palettes, since under
+  Chart position the tile is the Palette's (SM11): for square and triangle tiles where the Palette's count is at least
+  the Torus's Repeats, for hexagons (along y) and brick (along x) only with the margin their extent sets (`2/√3` and 2
+  tile units), never across stripes, not past the square under squashed spacing, and on the cylinder only in `s`, where
+  the Palette's own `s` count must be at least the Repeats; only (b), the Torus's own period cell, separates in every
+  case. And the brightness node it needs replaces the L the Torus spends. Meanwhile (a), the code. *Was (PR #272's
+  physics review, P1):* "only when the Palette's count is at least the Torus's Repeats".
 
 What agrees: SM6's rule, a fixed chroma never clipped per pixel (the Torus's gamut, 0 of 240²); SM6's circle × circle
 row, which the Torus realises; SM11's chart units by default and its whole periods on the cylinder; SM3's copies, which

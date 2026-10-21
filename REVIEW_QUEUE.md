@@ -3171,7 +3171,7 @@ and the disagreement is queued. Nothing is ruled.*
 - **Applied meanwhile:** (a). REQ-GUI-339 carries the legend's period and the readout (TASK-M8-66), REQ-GUI-340 the
   node's label (TASK-M7-51), each with `rq: RQ-506`; REQ-COL-136's verify uses the code's counts.
 
-## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, which separates systems one Torus period apart only when the Palette is at least as fine as the period, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
+## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, which separates systems one Torus period apart only for some tilings, counts and spacings, never across stripes or past the square under squashed spacing, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
 
 *Found by R-543's port. Nothing is ruled.*
 
@@ -3182,14 +3182,40 @@ and the disagreement is queued. Nothing is ruled.*
   "Brightness, unchanged in meaning": "*left its starting tile*, which under Chart position compares the Palette's tile
   now and at `t = 0`"; the prototype's graph strip: ""tile" is the Palette's tiling"; its Palette offers 4, 6, 8, 12, 18
   or 24 tiles across and the Torus 1, 2, 3, 4, 6 or 8 periods.
-- **The conflict:** the tile is the Palette's, sized by its own count `m`, not the Torus's Repeats `n`. A move of one
-  period along an axis is `m/n` Palette tiles, so it always changes the tile when `m ≥ n`, but where `m < n` (`n = 6`
-  with `m = 4`; `n = 8` with `m = 4` or `6`) a system one period away can sit in the same tile and is not separated. And the separation is a brightness node,
-  which replaces the L the Torus spends on position, so it costs the one-to-one map within a period that the Torus is
-  for (the warning §2.1 names).
+- **The conflict:** the tile is the Palette's, from its own tiling, its count `m` and its spacing setting, not the
+  Torus's Repeats `n`. In chart units a move of one period along an axis is `m/n` Palette tile units, and it changes
+  the tile at every position only when that is at least the tile's extent along the axis (the prototype's `smTile`,
+  `smPattern`, `smTileXY` and `smHexRound`; measured on a transcription, a one-period move from each of 200² positions
+  in the latent chart's home square, R-543's PR):
+  - **square and triangles:** `m ≥ n` on both axes (0 of 40,000 stay at `m = n`); where `m < n` (`n = 6` with `m = 4`;
+    `n = 8` with `m = 4` or `6`) a system one period away can stay in its tile (10,000 of 40,000 for squares at `m = 6`,
+    `n = 8`);
+  - **hexagons** (pointy-top, one unit wide, `2/√3 ≈ 1.155` tall): along x `m ≥ n` (at `m = n`, 0 of 40,000 stay at 4
+    and 6, 14 at 8, on tile edges); along y `m/n ≥ 2/√3`, so `m = n`
+    is not enough (936 to 1,032 of 40,000 stay at `m = n` = 4, 6, 8);
+  - **brick** (2 units wide, 1 tall): along y `m ≥ n`; along x `m/n ≥ 2` (at `m = n` half the positions stay; 10,000 of
+    40,000 at `m = 6`, `n = 4`);
+  - **stripes:** stripes along x never separate a move along y, nor stripes along y a move along x, whatever `m`;
+  - **squashed-square spacing** (`sm_tspace = square`): the tiles are laid in tanh-compacted units and grow without
+    bound in chart units past the square, while the period stays fixed, so far enough out a one-period move never
+    changes the tile (`m = 6`, `n = 2`: the move from `u = 0` to `3` changes it, from 3 to 6, 6 to 9 and 9 to 12 does
+    not; 10,000 of 10,000 stay over `[3, 30]²`);
+  - **the cylinder:** round θ there is nothing to separate (the Torus's θ is once round and θ + 2π is the same system),
+    so the cost is in `s` only, where the Palette's count is `max(1, round(n_θ(m)·H/W))`, not `m`: on the 720 × 360
+    chart it is 3 for every `m` in {4, 6, 8} (then 6, 9, 12), so the condition is that count `≥ n`, and at `m = 8`,
+    `n = 4` a one-period move in `s` stays in its tile at 2,500 of 10,000 positions.
+
+  And the separation is a brightness node, which replaces the L the Torus spends on position, so it costs the
+  one-to-one map within a period that the Torus is for (the warning §2.1 names). It also tells a system that moved one
+  period from one that stayed, but not one period from two.
 - **Options seen:**
-  - (a) As the code has it: the Palette's tile, its count the Palette's; the separation holds where `m ≥ n`, and the
-    legend says which tile is compared.
+  - (a) As the code has it: the Palette's tile, its tiling, count and spacing the Palette's; the separation holds only
+    where the conditions above hold (square and triangles at `m ≥ n`; hexagons and brick with the margin their extent
+    sets; never across stripes; not past the square under squashed spacing; on the cylinder the Palette's `s` count at
+    least `n`), and the legend says which tile is compared.
   - (b) Under a Torus base, Left its starting tile compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods.
-  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph.
+  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph. This cures
+    none of the cases above but `m < n` for square and triangles: hexagons along y and brick along x need a margin past
+    a whole multiple of 1, stripes and squashed spacing never separate, and on the cylinder the `s` count is not `m`.
+    Only (b), the Torus's own period cell, separates a one-period move in every case.
 - **Applied meanwhile:** (a), the code. REQ-COL-128 is unchanged; REQ-COL-136's note cites this entry.
