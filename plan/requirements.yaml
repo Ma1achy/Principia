@@ -927,6 +927,25 @@
   - R-481
   milestone: M2
   note: R-481 A2, G4 (amends R-10; 20 Oct 2026).
+- id: REQ-DEC-049
+  area: DEC
+  kind: definition
+  statement: "The decoder must have a latent Jacobian, beside REQ-DEC-033 and sharing its method (R-550, RQ-341 (a)): a CPU, f64, central-difference Jacobian ∂x/∂z with 8 columns, one per latent direction, with the step rule of REQ-DEC-034's J_D, taken at a latent point of the decoder's output in the compass view's coordinates (R-550's Jacobi or Shape set) after canonicalisation, the scale gauge and η_E; the compass's physical views must read J q̂₁ and J q̂₂ from it on the orthonormalised pair, and its area stretch must be √(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²) on that pair, so that it does not move with the zoom σ or the tilts' shear; it is not J_D and the linear path does not read it."
+  source:
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui compass_latent_jacobian: on a smooth fixture decoder with an analytic Jacobian the eight central-difference columns agree with it to the method's truncation bound; on the real decoder each column equals the two-evaluation central difference along its latent direction, in f64; with E* set the Jacobian has rank 7 (the decoder's image on the energy shell) and without it rank 8 on R-550's sets; the stretch on the orthonormalised pair is unchanged when σ doubles and when both tilts are set; controls: a one-sided difference fails the fixture's bound, a Jacobian taken before η_E differs on an E* chart, and a stretch on the un-orthonormalised q moves with σ, each fail; review checklist (physics reviewer)"
+  rulings:
+  - R-452
+  - R-550
+  milestone: M6
+  note: "R-550 (RQ-341 (a)), J1: a definition requirement (R-72) closed by TASK-M6-35, the task that needs it; written into principia_deep_zoom.md §2 as \"The latent Jacobian\". Physics review is required."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -18617,49 +18636,44 @@
   note: "R-452 (C6 applied per R-369); closed by TASK-M6-34. REQ-GUI-183's three siblings stay TASK-M6-31's record; this adds the view buttons after them."
 - id: REQ-GUI-199
   area: GUI
-  statement: "On the mock engine, the compass's Jacobi and Shape views must push the slice plane through the decoder's Jacobian at z₀, or at the hovered pixel while the pointer is over the figure, u₁ = J q₁ and u₂ = J q₂ orthonormalised, and draw the Plücker grid of u₁ ∧ u₂ over the view's eight physical coordinates with the Plücker view's colouring, outline and hover, and a readout of the dominant pair and the area stretch √(|J q₁|²|J q₂|² − (J q₁ · J q₂)²); the Jacobian, its coordinates and the stretch must be those RQ-341, RQ-342, RQ-343, RQ-345 and RQ-346 settle (proposed: Jacobi ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ as the decoder writes them; Shape n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ), never the reference's synthetic Jacobian; where J q₁ ∧ J q₂ vanishes the view must say so rather than draw; and the help text must say that these views change as the slice moves, because the Jacobian depends on z₀, while the Plücker view does not."
+  statement: "On the mock engine, the compass's Jacobi and Shape views must push the slice plane through the latent Jacobian J (R-550: the eight-column, f64, central-difference ∂x/∂z of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and η_E) at z₀, or at the hovered pixel's latent point on an affine chart while the pointer is over the figure, u₁ = J q̂₁ and u₂ = J q̂₂ with q̂₁, q̂₂ the slice plane's pair orthonormalised, and draw the Plücker grid of u₁ ∧ u₂ over the view's eight physical coordinates, each divided by its fixed reference range (angles by the length of their domain, masses by 1, momenta by the decoder's momentum saturation bound q_max, Shape's rates and L_z by REQ-GUI-343's ranges), with the Plücker view's colouring, outline and hover, and a readout of the dominant pair and the area stretch √(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²) on the orthonormalised pair; Jacobi's eight must be α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M, each named as the decoder writes it, and Shape's θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M, θ and φ in R-14's convention (φ the polar angle from +w), the rates d/dt at t = 0 of the decoded state's mass-weighted ρ̃, λ̃, the sphere's poles named as the chart's singularities; never the reference's synthetic Jacobian; where J q̂₁ ∧ J q̂₂ vanishes the view must say so rather than draw; and the help text must name the metric and say that these views change as the slice moves, because the Jacobian depends on z₀, while the Plücker view does not."
   source:
   - file: decisions.md
     section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
   - file: docs/gui/principia_render_gui_spec.md
     section: "The compass: look and views (R-451, R-452)"
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
   verify:
     method: unit test
-    detail: "cargo test -p gui compass_physical_views: on a fixture with a known linear decoder J, the grid equals the normalised bivector of J q₁ ∧ J q₂ within 1e-12 and the stretch equals the Gram factor; on the real decoder, a slice edit changes the grid where J depends on z₀ and leaves the Plücker grid unchanged; moving the pointer over the figure evaluates J at the hovered pixel's latent point (affine chart) and leaving it returns to z₀; a plane on which J q₁ ∧ J q₂ = 0 shows the degenerate message; controls: the reference's synthetic Jacobian, and a grid from un-orthonormalised u₁, u₂, each fail; review checklist (physics reviewer): the coordinate sets, the Jacobian, the stage read (before or after η_E) and the physical metric are as RQ-341 to RQ-343, RQ-345 and RQ-346's rulings give them"
+    detail: "cargo test -p gui compass_physical_views: on a fixture with a known linear decoder J, the grid equals the normalised bivector of J q̂₁ ∧ J q̂₂ within 1e-12 and the stretch equals the Gram factor on the orthonormalised pair, unchanged when the zoom σ doubles and when both tilts are set; the Jacobi and Shape grids are labelled with R-550's eight coordinates and each row is divided by its reference range; on the real decoder, a slice edit changes the grid where J depends on z₀ and leaves the Plücker grid unchanged; with E* set the grid is read after η_E; moving the pointer over the figure evaluates J at the hovered pixel's latent point (affine chart) and leaving it returns to z₀; a plane on which J q̂₁ ∧ J q̂₂ = 0 shows the degenerate message; controls: the reference's synthetic Jacobian, a grid from un-orthonormalised u₁, u₂, a stretch taken on the un-orthonormalised q (which moves with σ), a grid read before η_E on an E* chart, and R-452's proposed sets (a row always 0), each fail; review checklist (physics reviewer): the Jacobian, the coordinate sets, the stage read and the metric are R-550's"
   rulings:
   - R-390
   - R-452
+  - R-550
   milestone: M6
-  rq:
-  - RQ-341
-  - RQ-342
-  - RQ-343
-  - RQ-345
-  - RQ-346
-  note: "R-452; closed by TASK-M6-35, which waits on RQ-341, RQ-342, RQ-343, RQ-345 and RQ-346 (the Jacobian, the two coordinate sets, the energy normalisation's stage and the physical metric, under the physics review the human asked for; RQ-345 and RQ-346 filed in the fix round of PR #227, physics review P7 and P8). C4 (the hovered pixel on an affine chart) applied per R-369."
+  note: "R-452; R-550 (RQ-341 to RQ-343, RQ-345 and RQ-346 ruled, 21 Oct 2026): the latent Jacobian (REQ-DEC-049), the full-rank sets, the state after η_E, the fixed-range metric. Closed by TASK-M6-35, which no longer waits. C4 (the hovered pixel on an affine chart) applied per R-369 and kept (R-550 J2). *Was:* \"the Jacobian, its coordinates and the stretch must be those RQ-341, RQ-342, RQ-343, RQ-345 and RQ-346 settle (proposed: Jacobi ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ as the decoder writes them; Shape n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ)\", with u₁ = J q₁, u₂ = J q₂ and the stretch on the un-orthonormalised q."
 - id: REQ-GUI-200
   area: GUI
-  statement: "On the mock engine, a click on cell (i, j) of the compass's Jacobi or Shape view must set the slice plane to the latent preimage of that physical plane at z₀, q₁ ∝ J⁺ e_i and q₂ ∝ J⁺ e_j Gram–Schmidt orthonormalised, J⁺ the pseudo-inverse of the Jacobian RQ-341 settles, over the coordinates RQ-342 and RQ-343 settle, by the construction RQ-344, RQ-345 and RQ-346 settle; where the preimage is no 2-plane it must refuse the click and log why to the console; and every steer must be one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following."
+  statement: "On the mock engine, a click on cell (i, j) of the compass's Jacobi or Shape view must set the slice plane to the latent preimage of that physical plane at z₀, q₁ ∝ J⁻¹ e_i and q₂ ∝ J⁻¹ e_j Gram–Schmidt orthonormalised, J the latent Jacobian over R-550's full-rank coordinates (so J⁺ = J⁻¹ and no metric on z enters), read after η_E; it must refuse the click and log the reason to the console where the smaller singular value of [P e_i, P e_j], P = J J⁺, is below REQ-GUI-342's tolerance (a chart singularity, such as the Shape view's poles or a saturated link, and on an E*-normalised chart a cell whose plane needs the direction normal to the energy shell, logged \"normal to the energy shell\"); and every steer must be one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following as after the Chart builder's Apply (§G7)."
   source:
   - file: decisions.md
     section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
   - file: docs/gui/principia_render_gui_spec.md
     section: "The compass: look and views (R-451, R-452)"
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui mock_compass_steer_physical: on the linear-decoder fixture, clicking physical cell (i, j) with e_i, e_j in J's range gives a plane whose pushforward lights (i, j) at ±1 within the tolerance RQ-344's ruling gives; a rank-deficient case (a coordinate outside J's range, or J⁺e_i ∥ J⁺e_j) is refused with a console line naming the reason and no SetField; each accepted steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a rank-deficient case, and a steer that skips the Gram–Schmidt step, each fail; review checklist (physics reviewer): the construction is as RQ-344, RQ-345 and RQ-346's rulings give it"
+    detail: "cargo test -p gui mock_compass_steer_physical: on the linear-decoder fixture (full rank), clicking any physical cell (i, j) gives a plane whose pushforward lights (i, j) at ±1 to rounding; on an E*-normalised chart a cell needing the energy shell's normal is refused with a console line \"normal to the energy shell\" and no SetField, and a cell at the Shape view's pole is refused naming the chart's pole; each accepted steer is one SetField, logged, undone by one Ctrl+Z, the Manifold view's sliders showing the plane as after Apply; controls: a steer accepted on a refused case, a steer that skips the Gram–Schmidt step, and a refusal test on [J⁺e_i, J⁺e_j] (the (a1) test, which scales with J) in place of [P e_i, P e_j], each fail; review checklist (physics reviewer): the construction is R-550's"
   rulings:
   - R-390
   - R-452
+  - R-550
   milestone: M6
-  rq:
-  - RQ-341
-  - RQ-342
-  - RQ-343
-  - RQ-344
-  - RQ-345
-  - RQ-346
-  note: "R-452; closed by TASK-M6-35, which waits on RQ-341 to RQ-346 (the Jacobian over all eight latent directions, the coordinate sets whose cells the steer acts on, the steer's construction, the energy normalisation's stage and the physical metric, under the physics review the human asked for). RQ-342 and RQ-343 added here in the fix round of PR #227: with a full-rank set the steer is J⁻¹ and RQ-344's options matter only for a rank-deficient one (physics review P6)."
+  note: "R-452; R-550 (RQ-341 to RQ-346 ruled, 21 Oct 2026): the full-rank sets make the steer J⁻¹, RQ-344's (a2) projector test refuses, and the state is read after η_E. Closed by TASK-M6-35, which no longer waits. *Was:* \"J⁺ the pseudo-inverse of the Jacobian RQ-341 settles, over the coordinates RQ-342 and RQ-343 settle, by the construction RQ-344, RQ-345 and RQ-346 settle; where the preimage is no 2-plane it must refuse the click\"."
 - id: REQ-GUI-201
   area: GUI
   statement: "On the mock engine, a primary click on the figure with no drag must pin that sample's trajectory in the Trajectory panel, the pin holding the sample's IC so that a later pan, zoom or slice edit leaves it, and a click on another point moving it; hover must never replace a pinned trajectory, and the cursor moving into the panel, or anywhere off the figure, must never clear the panel, which without a pin keeps the last sample hovered until the pointer hovers another point of the figure; the panel's first tab must read \"pinned\" while a pin is held, with an unpin button returning it to following the cursor; the path drawn on the figure and the hover label must keep following the pointer, pinned or not (REQ-GUI-085); P in the Figure scope must pin the sample under the pointer, as K locks there, in navigation and interaction mode alike; and the pin must be ViewUI state, not undoable and emitting no SetField on SimConfig."
@@ -19520,7 +19534,7 @@
   - R-510
   - R-513
   milestone: M8
-  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\"."
+  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) was parked until RQ-341 (R-510); RQ-341 is ruled (R-550, 21 Oct 2026), so RQ-378 is with the human again and stays open (the 21 Oct batch leaves it open), its option (a) applied; nothing waits on it. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\". *Was (before R-550):* \"RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it.\""
 - id: REQ-GUI-245
   area: GUI
   statement: "The hover, pinned and kept traces must be drawn by the line system (principia_lines.md §8): each computeIC state projected through the chart's forward map into its own coordinates, breaking where the path leaves the chart and never joined across a pixel that is not a system, with time ticks, colour, arrows, animation, length and the incomplete-run mark as §8 has them (its markers and icon sets, R-538's, are REQ-GUI-272); the same Trace and renderer must serve the orbit viewer (the Inspector window and the Trajectory panel's views), nothing specific to the slice view."
@@ -19917,7 +19931,7 @@
   note: "R-475 L4 (gui review 5586902228 of PR #255, G3); R-514 (RQ-404 ruled, option (a)), I1 to I7. Closed by TASK-M6-51, no longer waiting; it lifts TASK-M6-49's guard (REQ-GUI-240). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"On the mock engine, a latent view saved at a tilt must offer the tilt targets, and each tilt map must act on its saved pair, as RQ-404 rules.\", the verify's \"the dropdowns list the targets RQ-404's ruling gives and the basis is as it says, with its control; C5's check under Sheet\", and \"Waits for RQ-404; closed by TASK-M6-51, a leaf task. Meanwhile the Tilt section is dimmed (REQ-GUI-240).\" Gui review 5591485827 of PR #255, G14: the exact label, \"<name> ⊥ (projected)\" (R-514 I2). *Was:* \"a projected one listed \"⊥ (projected)\"\" and the verify's \"the earlier target marked \"⊥ (projected)\"\"."
 - id: REQ-GUI-266
   area: GUI
-  statement: "A trace's fade off the plane on a chart with no proxy must use the general off-plane distance, the distance in z from the trajectory's encoded point to the slice plane, encoded per step, in the metric RQ-341 rules (R-509 (3): the real distance waits on RQ-341); once it lands it must supersede REQ-GUI-249's no-fade arm and its settings line on the charts it covers: there the trace fades by that distance and the settings no longer say \"fade: no off-plane distance on this chart (RQ-341)\"."
+  statement: "A trace's fade off the plane on a chart with no proxy must use the general off-plane distance, the distance in z from the trajectory's encoded point to the slice plane, encoded per step, in the metric on z RQ-522 rules (R-509 (3): the real distance waited on RQ-341, whose ruling, R-550, gives the latent Jacobian and no metric on z); once it lands it must supersede REQ-GUI-249's no-fade arm and its settings line on the charts it covers: there the trace fades by that distance and the settings no longer say \"fade: no off-plane distance on this chart (RQ-341)\"."
   source:
   - file: decisions.md
     section: "R-509 — `principia_lines.md` §11's six questions are ruled: contours in the stain's expression syntax; the playhead reads any ledger-declared payload field; the trace fade uses the proxy where it is defined, else no fade and says so, the real distance waiting on RQ-341; trace labels win; class edges move to the line system; Screen contour the default, smart ink opt-in *(closes RQ-377; amends R-476)*"
@@ -19925,15 +19939,18 @@
     section: 8. Traces
   - file: docs/design/principia_lines.md
     section: 11. Open questions
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_fade_distance: on the latent chart a trace in the slice is at full opacity and one leaving it fades to the floor by the ruled distance; on the latent chart the settings line naming RQ-341 is gone; controls: a fade by the proxy on a chart that does not define it differs, and a settings line naming RQ-341 left in place on the latent chart fails; review (physics)"
   rulings:
   - R-509
+  - R-550
   milestone: M8
   rq:
-  - RQ-341
-  note: "R-509 Y3. Waits for RQ-341; closed by TASK-M8-54, a leaf task. Meanwhile no fade there (REQ-GUI-249). Physics review is required (⚑); it does not merge on the code reviewer's word alone. gui review 5587650119 of PR #255, G13 (applied per R-369): it supersedes REQ-GUI-249's no-fade arm and settings line where it applies; TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit."
+  - RQ-522
+  note: "R-509 Y3; R-550 J7. Waits for RQ-522 (the metric on z; RQ-341 was ruled by R-550 without one); closed by TASK-M8-54, a leaf task. Meanwhile no fade there (REQ-GUI-249). Physics review is required (⚑); it does not merge on the code reviewer's word alone. gui review 5587650119 of PR #255, G13 (applied per R-369): it supersedes REQ-GUI-249's no-fade arm and settings line where it applies; TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit. *Was:* \"in the metric RQ-341 rules\" and \"Waits for RQ-341\"."
 - id: REQ-GUI-267
   area: GUI
   statement: "On the real engine, with the controls shown or hidden, pan must move the view's window and zoom scale it past the chart's [0,1]² in any direction (R-537 EX1): F3's Extend only adding window area at the same scale (R-406), Fit scaling the view's own square wherever it sits (R-468 E2; RQ-416), and nothing about what a pixel means changing with F3; the only navigation limit must be R-469's stop on the centre (EX3), validate evaluated on the centre after the axes' types have folded it, so that a pan across a periodic seam or over a pole never stops, an affine latent axis never stops, and on a chart whose square is its whole domain the centre stops at the last valid value while the window shows blank past it."
@@ -20889,6 +20906,40 @@
   - R-549
   milestone: M8
   note: "R-549 (RQ-350 (a), as applied). Closed by TASK-M8-06, the Manifold view's Chart section (applied per R-369)."
+- id: REQ-GUI-342
+  area: GUI
+  kind: calibration
+  statement: "The physical steer's refusal tolerance, the bound below which the smaller singular value of [P e_i, P e_j] (P = J J⁺) refuses a click (R-550, RQ-344's (a2) test), must be a calibrated value (R-71), proposed by TASK-M6-35 from that singular value measured over the decoder's image with E* unset and set, and confirmed at the M6 gate."
+  source:
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: review checklist
+    detail: "physics reviewer: TASK-M6-35's proposal record gives the measured smaller singular value over a fixed, recorded sample of the decoder's image (E* unset and set), the proposed tolerance and its margin, and REQ-GUI-200's test reads that value; confirmed at the M6 gate"
+  rulings:
+  - R-71
+  - R-550
+  milestone: M6
+  note: "R-550 (RQ-344 (a), (a2)), J3. Closed by TASK-M6-35, proposed for the M6 gate."
+- id: REQ-GUI-343
+  area: GUI
+  kind: definition
+  statement: "Each physical coordinate of the compass's Shape view that RQ-346's ruling does not name a class for (θ̇, φ̇, L_z and Ṙ: neither an angle, a mass nor a Jacobi momentum) must have a stated, fixed reference range (R-550, RQ-346 (c)), derived from the decoder's own bounds (q_max, the masses' and the angles' domains) and never measured over the chart's image, written by TASK-M6-35 (R-72) into render_gui_spec § \"The compass: look and views (R-451, R-452)\" under physics review, and the compass's grid and help text must use it."
+  source:
+  - file: decisions.md
+    section: "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: review checklist
+    detail: "physics reviewer: render_gui_spec's compass section states each of the four ranges as a fixed expression in the decoder's bounds, none a spread over the image; REQ-GUI-199's test divides each row by it; control: a range recomputed from the current view (which moves when the slice moves) fails the review"
+  rulings:
+  - R-72
+  - R-550
+  milestone: M6
+  note: "R-550 J4 (flagged): the ruling's words give angles, masses and momenta their ranges; the Shape view's rates and L_z are a missing definition. Closed by TASK-M6-35."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

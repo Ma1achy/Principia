@@ -6,7 +6,7 @@
 
 | area | count |
 |---|---|
-| DEC | 48 |
+| DEC | 49 |
 | ENC | 34 |
 | CHART | 79 |
 | INT | 96 |
@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 100 |
 | COL | 136 |
-| GUI | 316 |
+| GUI | 318 |
 | TOOL | 187 |
 | VAL | 191 |
 | PERF | 95 |
 | SYS | 85 |
-| **total** | **1700** |
+| **total** | **1703** |
 
-Of these: 142 calibration, 140 definition, 1418 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 143 calibration, 142 definition, 1418 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -36,13 +36,13 @@ Of these: 142 calibration, 140 definition, 1418 obligation. Retired (kept for th
 | M3 | 209 |
 | M4 | 106 |
 | M5 | 178 |
-| M6 | 220 |
+| M6 | 223 |
 | M7 | 218 |
 | M8 | 331 |
 
 ## Sections
 
-1416 sections in 52 files: 1111 yield at least one requirement; 305 yield none and are listed below with the reason.
+1416 sections in 52 files: 1112 yield at least one requirement; 304 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -197,7 +197,6 @@ Of these: 142 calibration, 140 definition, 1418 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)* | **MISSING REASON** | |
 | R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)* | **MISSING REASON** | |
 | R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)* | **MISSING REASON** | |
 | R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)* | **MISSING REASON** | |
@@ -598,7 +597,6 @@ Of these: 142 calibration, 140 definition, 1418 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
 - uncovered section with no reason: decisions.md § R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
 - uncovered section with no reason: decisions.md § R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*
 - uncovered section with no reason: decisions.md § R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*

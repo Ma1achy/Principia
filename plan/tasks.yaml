@@ -1800,9 +1800,9 @@
 - id: TASK-M6-35
   milestone: M6
   title: "The compass's Jacobi and Shape views and the physical steer (R-452)"
-  depends_on: [TASK-M6-34]  # waits on RQ-341 to RQ-346 as well (R-452)
+  depends_on: [TASK-M6-34]  # RQ-341 to RQ-346 ruled by R-550; no longer waits
   needs: []
-  requirements: [REQ-GUI-199, REQ-GUI-200]
+  requirements: [REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-342, REQ-GUI-343]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M6-36
@@ -2784,8 +2784,8 @@
   pitfalls: []
 - id: TASK-M8-54
   milestone: M8
-  title: "The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑"
-  depends_on: [TASK-M8-51]  # R-509 Y3: a leaf, waiting for RQ-341; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
+  title: "The trace fade's general off-plane distance, as RQ-522 rules (R-509 part 3, R-550 J7) ⚑"
+  depends_on: [TASK-M8-51]  # R-509 Y3, R-550 J7: a leaf, waiting for RQ-522 (RQ-341 ruled by R-550); numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
   needs: []
   requirements: [REQ-GUI-266]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
