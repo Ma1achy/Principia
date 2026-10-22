@@ -148,9 +148,10 @@ impl CapabilityProfile {
         total_substeps as u64 * self.force_evals as u64
     }
 
-    /// The exponent of a step's error per local dynamical time in the substep law's fixed ratio `κ` of step to local
-    /// timescale: `order` (Part 2's definition). It ranks occupants at one sim key's `κ`, up to each one's error
-    /// constant; it is not an error bound.
+    /// The exponent of a step's error per local dynamical time in the substep law's ratio `κ` of step to local
+    /// timescale, fixed per pair by the sim key's `dt_macro` and `r_sub` and the closest pair's mass `mᵢ + mⱼ`:
+    /// `order` (Part 2's definition). It ranks occupants at one `κ`, up to each one's error constant; it is not an
+    /// error bound.
     #[inline]
     pub const fn error_exponent(&self) -> u32 {
         self.order

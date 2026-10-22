@@ -121,18 +121,25 @@ from an occupant's name:
   `total_substeps_log2 + log₂ force_evals`, to within the floor's 1. Effort compares across occupants in this form,
   never as the bare count.
 - *The error exponent.* dd_integrator §3.3's law, `N_sub = ⌈(r_sub/r_min)^{γ_sub}⌉` clamped to `[1, N_max]`, at the
-  default `γ_sub = 1.5` scales as the two-body time at the closest approach, `τ_local = √(r_min³ / (G m_pair))`, so an
-  unsaturated substep `h_sub = dt_macro / N_sub` holds `h_sub / τ_local` near the sim key's fixed ratio
-  `κ = dt_macro · √(G m_pair / r_sub³)` (below it by the ceiling's rounding, and below it where `N_sub = 1`), however
-  deep the encounter. An order-`p` step's relative error per local dynamical time is then `O(κ^p)` at every
+  default `γ_sub = 1.5` scales as the two-body time at the closest approach, `τ_local = √(r_min³ / (G m_pair))`,
+  `m_pair = mᵢ + mⱼ` the masses of the closest pair, so an unsaturated substep `h_sub = dt_macro / N_sub` holds
+  `h_sub / τ_local` near the fixed ratio `κ = dt_macro · √(G m_pair / r_sub³)` (below it by the ceiling's rounding, and
+  below it where `N_sub = 1`), however deep the encounter. `κ` is fixed per pair, set by the sim key's `dt_macro` and
+  `r_sub` and by the pair's mass: mass is a latent direction of each sample, never an external global (canonical_spec
+  §1), so `κ` varies across the samples of one sim key on a chart with a mass axis, and within one unequal-mass
+  trajectory takes up to three values, one per closest pair. An order-`p` step's relative error per local dynamical time is then `O(κ^p)` at every
   unsaturated substep: `order` is the exponent the law's fixed ratio is raised to, which is how "a 6th-order step is
-  worth more than a Euler step of the same size" (`κ < 1`). It ranks occupants at one sim key's `κ` only up to each
-  one's error constant; it is not an error bound, and no threshold is set on it (a threshold would be a calibration,
+  worth more than a Euler step of the same size" (`κ < 1`). It ranks occupants at one `κ` only up to each one's error
+  constant; a sim key has one occupant (Part 3), so occupants are compared across sim keys at equal `κ`; it is not an error bound, and no threshold is set on it (a threshold would be a calibration,
   R-71). Where the law saturates (`N_sub = N_max`, the stored `saturated` bit, Part 6) `h_sub / τ_local` exceeds `κ`,
   growing as `(r_sub/r_min)^{3/2} / N_max`, and the exponent no longer bounds the step: that is the integration floor,
   a confidence gradient, not a terminal (Part 6; deep_zoom § "Reserved: the integration floor"). At a `γ_sub` other
   than 1.5 the ratio is not fixed, `h_sub / τ_local ∝ r_min^{γ_sub − 3/2}`, and the exponent compares occupants at
-  one `r_min` only.
+  one `r_min` only. *Was (fix round 1, physics re-check 5607961477 P7: `κ` is fixed per pair, not per sim key, and
+  `m_pair` was not defined):* "`τ_local = √(r_min³ / (G m_pair))`, so an unsaturated substep `h_sub = dt_macro / N_sub`
+  holds `h_sub / τ_local` near the sim key's fixed ratio `κ = dt_macro · √(G m_pair / r_sub³)` (below it by the
+  ceiling's rounding, and below it where `N_sub = 1`), however deep the encounter." and "It ranks occupants at one sim
+  key's `κ` only up to each one's error constant;".
 
 **FTLE confidence** is the triple `(symplectic, saturated, order)`. The FTLE (payload §5) is read off the Benettin
 shadow, integrated by the same occupant. On a `symplectic: true` occupant the step preserves phase-space volume, so its
