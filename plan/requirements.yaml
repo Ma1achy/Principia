@@ -8250,7 +8250,7 @@
   milestone: M7
 - id: REQ-GEN-023
   area: GEN
-  statement: "Files under frag/debug/ must be tagged category: debug, the dev GUI showing them and a polished GUI hiding them by filtering on ViewUI.debugVisible."
+  statement: "Files under frag/debug/ must be tagged category: debug, the dev GUI showing them and a replacement GUI, if there ever is one (v2 web's, R-571), hiding them by filtering on ViewUI.debugVisible."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
@@ -8261,8 +8261,10 @@
   verify:
     method: unit test
     detail: "debugVisible = false removes exactly the debug-tagged entries from the list"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): the dev GUI is the native app's and v1 web's; a replacement GUI, if there ever is one, is v2 web's (gui_state_contract §3 as reworded in PR #282, gui re-check 5608439139). *Was:* \"and a polished GUI hiding them by filtering on ViewUI.debugVisible\"."
 - id: REQ-GEN-024
   area: GEN
   kind: definition
