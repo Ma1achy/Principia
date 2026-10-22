@@ -12011,7 +12011,7 @@
   milestone: M7
 - id: REQ-RENDER-063
   area: RENDER
-  statement: "The display chain must run, after the stain, in the order style → render→display scale → gamut clamp → colour-vision simulation → screen, with all stages before the display scale running at render resolution and the scale step doing bilinear upscale below native and box downsample above."
+  statement: "The display chain must run, after the stain, in the order Print graph (where style was, R-485) → render→display scale → gamut clamp → colour-vision simulation → screen, with all stages before the display scale running at render resolution and the scale step doing bilinear upscale below native and box downsample above."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Part 4 — Semantic rules
@@ -12023,11 +12023,14 @@
     section: 4.3 Display stage (terminal, outside the pipeline)
   - file: decisions.md
     section: R-67 — The display chain *(closes RQ-23)*
+  - file: docs/design/principia_print_graph.md
+    section: 2. Where it sits
   verify:
     method: unit test
     detail: "with render_scale ≠ 1 and a CVD mode set, verify the CVD matrix is applied to the post-scale, post-clamp buffer; scale step is a no-op at native"
   rulings:
   - R-67
+  - R-485
   milestone: M7
 - id: REQ-RENDER-064
   area: RENDER
@@ -12098,7 +12101,7 @@
   milestone: M7
 - id: REQ-RENDER-069
   area: RENDER
-  statement: "The display chain must be stain → style → display scale → gamut clamp → colour-vision simulation → screen, with the compositor (blurred backdrop, fresh cover, trace/overlays) above the colour stage and blur a compositor pass."
+  statement: "The display chain must be stain → Print graph (where style was, R-485) → display scale → gamut clamp → colour-vision simulation → screen, with the compositor (blurred backdrop, fresh cover, trace/overlays) above the colour stage and blur a compositor pass."
   source:
   - file: docs/design/principia_systems_architecture.md
     section: 2. Component inventory, by rung
@@ -12113,6 +12116,7 @@
     detail: "CVD simulation is applied to the final in-gamut, display-scaled colours; pass order asserted"
   rulings:
   - R-67
+  - R-485
   milestone: M7
 - id: REQ-RENDER-070
   area: RENDER
@@ -12435,8 +12439,10 @@
   rulings:
   - R-67
   - R-476
+  - R-487
+  - R-531
   milestone: M7
-  note: R-476 L1, M2 (flagged). Closed by TASK-M7-42.
+  note: "R-476 L1, M2 (flagged). R-487, R-531 (20 Oct 2026): this pass is the pass drawn over; the line sets marked `through_medium` are drawn by the same renderer before the Print graph (REQ-RENDER-114). Closed by TASK-M7-42."
 - id: REQ-RENDER-088
   area: RENDER
   statement: "The line system's data model must be principia_lines.md §3's: LineStyle (stroke, dash, outline, ink, label, units), LabelStyle, LineRef (a style by name with partial overrides), ContourSet, Trace, Axes and Lines { styles, contours, traces, axes }; a line refers to a style by name and may override single fields without forking it; editing a style updates every line that uses it; PrintPt sizes in points for exports."
@@ -12471,19 +12477,22 @@
   note: R-476 L1. Closed by TASK-M7-42.
 - id: REQ-RENDER-090
   area: RENDER
-  statement: "Smart ink, an option on any style, must take the figure under the lines (stain plus display chain to the clamp), its WCAG relative luminance averaged over a disc of radius px around each vertex, compared in log contrast against the tie point (0.179 for #F5F4F0 and #111114), switching only when the other ink wins by more than hysteresis, the outline taking the opposite ink; modes LightDark and KeepHue (OKLab lightness to a target contrast)."
+  statement: "Smart ink, an option on any style, must take the figure under the lines (for a line drawn over, stain plus display chain to the clamp, the Print graph's output included; for a line drawn through the medium, the stain's output; R-531), its WCAG relative luminance averaged over a disc of radius px around each vertex, compared in log contrast against the tie point (0.179 for #F5F4F0 and #111114), switching only when the other ink wins by more than hysteresis, the outline taking the opposite ink; modes LightDark and KeepHue (OKLab lightness to a target contrast)."
   source:
   - file: decisions.md
     section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
   - file: docs/design/principia_lines.md
     section: 6. Smart ink
+  - file: decisions.md
+    section: "R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*"
   verify:
     method: unit test
     detail: "cargo test -p render smart_ink: over a split background the ink differs on the two sides and stays put within the hysteresis band (§12 smart ink); KeepHue keeps the hue within 1° in OKLCH; control: hysteresis 0 flickers on a mottled strip (the ink changes more than once along it)"
   rulings:
   - R-476
+  - R-531
   milestone: M7
-  note: R-476 L1. Closed by TASK-M7-42.
+  note: "R-476 L1. R-531 O1 (20 Oct 2026): restated with R-531, as the ruling asks; the printed and through arms are verified by REQ-RENDER-114 (TASK-M7-67). Closed by TASK-M7-42."
 - id: REQ-RENDER-091
   area: RENDER
   statement: "Labels must be placed along each line every spacing px of arc length, rotated to the local tangent and kept upright, a label overlapping one already placed skipped, placement running across all contour sets in list order (the top set wins), on, above or below the line with an offset, an optional gap under the label, format, precision, units with a proper minus sign, and a halo; a trace's time ticks are labels in the same engine."
@@ -12658,6 +12667,324 @@
   - R-537
   milestone: M8
   note: "R-537 EX8(d). Closed by TASK-M8-57. The demo overdraws by half a pixel; the rule is a shared edge. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-RENDER-101
+  area: RENDER
+  statement: "A Print graph must be data in the format `principia.print/1`: `format`, `name`, `settings` (its public knobs), `nodes` (id → `{ type, params, in }`, each `in` port naming `node` or `node.port`) and `out`; a parameter written \"$name\" or \"$name+k\" must read a setting; a preset must be usable as a node, `preset:<name>`, running its graph as a sub-graph; editor positions must never be part of the graph; and the graph must serialise in the one canonical serialisation (R-309, JCS by R-318), its node ids sorted and carrying no meaning."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.1 A graph is data
+  - file: docs/design/principia_print_graph.md
+    section: 1. What it is
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_graph_model: §4.1's Linocut graph parses and serialises back bitwise; \"$depth\" and \"$seed+2\" resolve to the setting and the setting plus 2; `{ \"type\": \"preset:Polaroid\" }` expands to the Polaroid graph as a sub-graph; two equal graphs whose node ids differ only in order serialise equal; controls: a graph carrying editor positions is refused, a \"$missing\" reference fails naming the setting, and a preset that includes itself fails naming the cycle"
+  rulings:
+  - R-486
+  - R-491
+  milestone: M7
+  note: "R-486: the data format is the Python prototype's, as the design doc §4 merges it. Closed by TASK-M7-54."
+- id: REQ-RENDER-102
+  area: RENDER
+  statement: "Every Print graph port must be typed, one of `image` (linear RGB + alpha, f16), `scalar` (one channel, [0,1] unless stated), `direction` (a unit tangent field and its coherence), `ground` (surface colour plus tooth height) and `mask` (one channel, {0,1}); a wire between mismatched types must be refused, naming both ports and types; and an unconnected input must take the default its node type declares."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.2 Port types
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_port_types: an `image` → `direction` wire is refused with both ports and types named; an unconnected `ground` input of `linocut` takes `paper` and an unconnected `field` input `white`, as the lab's defaults declare; control: a validator that accepts every wire passes the mismatched fixture and fails the test"
+  rulings:
+  - R-486
+  milestone: M7
+  note: "R-485's §4 list, \"port typing and the editor's wire refusal\": the model's refusal here, the editor's in REQ-GUI-361. Closed by TASK-M7-54."
+- id: REQ-RENDER-103
+  area: RENDER
+  statement: "Print graph node types must be a registry, the Print graph's own and never the stain's codegen, each entry declaring its id, label, category, a one-paragraph doc, typed inputs with their defaults, typed outputs, its parameters each with a type, default, range, step and unit (`ref_px`, `device_px` or `fraction` for a length), its passes in WGSL, a cost class (`light`, `medium`, `heavy`), a motion policy (`full`, `reduced`, `bypass`), whether it is `temporally_stable`, whether it is a `screen_medium` (R-525 V1) and its listed deviations from the lab (R-492); the lab's `source` category, holding the Render node, must be labelled \"Print source\"."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_print_graph.md
+    section: 1. What it is
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 12. Display stage — global, outside the pipeline
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  - file: decisions.md
+    section: "R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*"
+  - file: decisions.md
+    section: "R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, \"keep in gamut\", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; \"Edit stain…\"; no figure ring under the trace; one colour node; `α_min = 0`; \"none\" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_registry_entries: every registered entry carries each declared field, the Render node's category reads \"Print source\" and no Print graph category reads \"Source\" or \"post\"; the generated WGSL of a two-node graph compiles under naga and holds each node's passes; controls: an entry without a motion policy, and one without `temporally_stable`, each fail to register, and the stain's codegen given a Print graph node refuses it"
+  rulings:
+  - R-486
+  - R-492
+  - R-525
+  - R-558
+  milestone: M7
+  note: "R-485's §4 list, \"the registry and codegen\". The lab's `doc` strings are the starting text (design doc §4.3). \"Print source\" and \"print stage\" are the human's ruling on RQ-497 (R-558; R-557 records the follow-up). Cost classes are provisional until REQ-PERF-096 measures them (applied per R-369). Closed by TASK-M7-54."
+- id: REQ-RENDER-104
+  area: RENDER
+  statement: "The Print graph registry must be checked at build time: every parameter must have a range and a unit, every input a type, and every preset must reference only registered node types and in-range values; a preset naming an unknown node type or an out-of-range value must fail the build, naming the preset, the node and the parameter."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_registry_check (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails"
+  rulings:
+  - R-492
+  milestone: M7
+  note: Closed by TASK-M7-54.
+- id: REQ-RENDER-105
+  area: RENDER
+  statement: "The Print graph must run as the print stage of the display chain, where R-67 had style, on the stain's finished colours (SimState → stain → [the line sets drawn through] → Print graph → display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen); its default, Plain, must be the bitwise identity; and a Print graph edit must be a render-only change that re-integrates nothing, never touches the sim key and leaves the quad cache and quad requests unchanged."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 2. Where it sits
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_colour_composition.md
+    section: 4.3 Display stage (terminal, outside the pipeline)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 12. Display stage — global, outside the pipeline
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*"
+  - file: decisions.md
+    section: "R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_stage: under Plain the stage's output bytes equal its input bytes on every frame of the stain golden suite (§11 test 1); the pass order is asserted stain → print → display scale → gamut clamp → CVD; changing the graph leaves the sim key, the quad cache and the quad requests unchanged; controls: any non-Plain preset fixture differs from its input, and a Plain that resamples its input fails the identity"
+  rulings:
+  - R-67
+  - R-485
+  - R-487
+  - R-531
+  milestone: M7
+  note: "R-485's §4 list, \"the graph executor, with Plain as bitwise identity\". Closed by TASK-M7-26 (applied per R-369: the style stage's task becomes the print stage's)."
+- id: REQ-RENDER-106
+  area: RENDER
+  statement: "Measurement must never read the print: every readback, the colour readout's source, area statistics, the legend's evaluation and every stain golden must read the pre-print colours or the payload, so that with any Print graph active they read bitwise what they read under Plain."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_measurement_blind (§11 test 2, the engine's half): with a heavy preset fixture active, the colour readout's buffer, the area statistics' input and a stain golden read bitwise what they read under Plain; mutation arm: a readout wired after the print stage fails"
+  rulings:
+  - R-489
+  milestone: M7
+  note: The GUI's readouts are REQ-GUI-365. Closed by TASK-M7-26.
+- id: REQ-RENDER-107
+  area: RENDER
+  statement: "Debug views must bypass the Print graph: View › Debug view (a baked variant, R-41, R-467) and every stain whose colour occupant is a debug view (render contract Part 6, a `debug/` occupant) must be drawn with Plain, never styled."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 2. Where it sits
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: decisions.md
+    section: "R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_debug_bypass: with a non-Plain graph set, View › Debug view and a stain whose colour occupant is `debug/` render bitwise as under Plain; control: a presentation stain under the same graph differs from Plain"
+  rulings:
+  - R-487
+  milestone: M7
+  note: R-487 K1. Closed by TASK-M7-26.
+- id: REQ-RENDER-108
+  area: RENDER
+  kind: definition
+  statement: "How a Print graph edited past the slot template marks which of its nodes are the sheet (printed over the whole frame) and which the marks (printed only where the figure is a system) must be defined in `principia_print_graph.md` §3 by the task that needs it and reviewed by the gui reviewer before merge (R-72; R-485's reviewers, applied per R-369)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_print_graph.md
+    section: "5. The slot chain: palette and medium compose"
+  - file: decisions.md
+    section: "R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*"
+  verify:
+    method: review checklist
+    detail: "§3 says, for a graph built in the editor, how a node is known to be sheet or mark (for example a registry flag or the slot the node descends from), and what a node fed by both is; the gui reviewer checks that the slot template's own split (Ground, Age, Viewing the sheet) falls out of it unchanged"
+  rulings:
+  - R-72
+  - R-533
+  milestone: M7
+  note: R-533 G2. Closed by TASK-M7-26.
+- id: REQ-RENDER-109
+  area: RENDER
+  statement: "The Print graph must be deterministic: the same `RenderState` must give the same pixels, bitwise on one backend and within the golden runner's cross-backend tolerance (REQ-VAL-138) across backends; every random draw must come from a seeded stream, a `seed` parameter or a stream wired between nodes, never from the clock, the frame counter or a platform random."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 6.1 Determinism
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_determinism (§11 test 3): the same graph rendered twice gives the same bytes; control: changing only `seed` changes the bytes, and a fixture node that reads the frame counter fails a two-frame comparison of an unchanged figure"
+  rulings:
+  - R-490
+  milestone: M7
+  note: Closed by TASK-M7-55.
+- id: REQ-RENDER-110
+  area: RENDER
+  statement: "A Print graph node whose lengths are in `device_px`, and the sheet anchored to the screen, must keep their look when `render_scale ≠ 1` and at export, in the pixels RQ-538 rules: `device_px` \"true screen pixels\" and screen-anchored coordinates, while the Print graph runs before the display scale at render resolution."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: docs/design/principia_print_graph.md
+    section: 6.3 Anchoring and stability under motion and playback
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_quality_device_note.md
+    section: "5. Timescale cascade (each layer absorbs what's too fast for the one above)"
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_device_px_scale: the CRT, LCD and LED matrix nodes and a sheet-only graph rendered at render_scale 0.5, 1 and 2, displayed, agree in pitch and anchoring as RQ-538's ruling says; control: a node counting `device_px` in the wrong pixels fails the pitch arm at render_scale 0.5"
+  rulings:
+  - R-490
+  milestone: M7
+  rq:
+  - RQ-538
+  note: "Waits on RQ-538 (applied meanwhile: none; every other task tests `device_px` nodes and the anchored sheet at render_scale 1). Closed by TASK-M7-69, a leaf."
+- id: REQ-RENDER-111
+  area: RENDER
+  statement: "Every Print graph length parameter must declare a unit: `ref_px` (the default for marks: pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time), `device_px` (only for nodes that model the display itself, listed), or `fraction` (a fraction of the figure width); a preset rendered at 512² and at 2048² downsampled must agree within REQ-RENDER-112's tolerance for every `ref_px` and `fraction` node, `device_px` nodes exempt and listed."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_scale_invariance (§11 test 4): the harness renders each registered `ref_px` and `fraction` node at 512² and at 2048² downsampled and compares within REQ-RENDER-112; the `device_px` exemption list is printed and equals the registry's; control: a fixture node deliberately left in `device_px` but not listed fails"
+  rulings:
+  - R-490
+  milestone: M7
+  note: "The harness lands here and each port task runs it on its nodes (REQ-COL-143 to REQ-COL-151). Closed by TASK-M7-55."
+- id: REQ-RENDER-112
+  area: RENDER
+  kind: calibration
+  statement: "The tolerance within which a Print graph node rendered at 512² and at 2048² downsampled must agree (design doc §6.2, \"within tolerance\"; its metric and threshold) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the metric and threshold with the measured spread over the Analyse and Generate nodes and the fixture that must fail; a reviewer checks it; the human confirms it at the M7 gate"
+  rulings:
+  - R-71
+  - R-490
+  milestone: M7
+  note: "TASK-M7-55 proposes it; the human confirms it at the M7 gate (R-71)."
+- id: REQ-RENDER-113
+  area: RENDER
+  statement: "The Print graph's sheet (paper tooth, canvas weave, grain, the ground) must be anchored to the screen, fixed while the figure pans and zooms beneath it; noise-driven marks must be seeded from screen-anchored coordinates and the graph's seed, never the frame, so two frames with an unchanged figure give identical output for every `temporally_stable` node; and `boil` (off | per frame | every N frames) must be a graph setting recorded with the graph, off by default."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 6.3 Anchoring and stability under motion and playback
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_stability (§11 test 5): at render_scale 1, two frames with an unchanged figure give identical output for every `temporally_stable` node, and a sheet-only graph's output is unchanged by a pan of the figure; controls: `boil: per frame` differs between the two frames, and a fixture sheet seeded from figure coordinates moves under the pan and fails"
+  rulings:
+  - R-490
+  milestone: M7
+  note: "At render_scale ≠ 1 the anchoring waits on RQ-538 (REQ-RENDER-110). Closed by TASK-M7-55."
+- id: REQ-RENDER-114
+  area: RENDER
+  statement: "`LineStyle` must gain `through_medium: bool`, default false, which a `LineRef` may override; the line sets marked through must be composited onto the stain's output before the Print graph and every other set drawn over, after the gamut clamp and before the colour-vision simulation, by the one line renderer called twice with complementary filters, axes included; smart ink for a line drawn over must read the figure to the clamp, the Print graph's output included, and for a line drawn through the stain's output."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 2. Where it sits
+  - file: docs/design/principia_print_graph.md
+    section: 7.3 Lines
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_lines.md
+    section: 2. Where it sits
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: docs/design/principia_lines.md
+    section: 6. Smart ink
+  - file: docs/design/principia_colour_composition.md
+    section: 4.3 Display stage (terminal, outside the pipeline)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: decisions.md
+    section: "R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*"
+  - file: decisions.md
+    section: "R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render lines_through_medium (§11 test 6): a contour set drawn over renders identically with and without a Print graph; marked through, it differs; axes follow the same switch; smart ink over a printed figure takes its luminance from the printed picture, and through from the stain's output; controls: a single pass that draws every set after the Print graph fails the through arm, and a set drawn over placed before the gamut clamp fails the over arm"
+  rulings:
+  - R-476
+  - R-487
+  - R-531
+  milestone: M7
+  note: "R-485's §4 list, \"`through_medium` in the line renderer\"; R-487 K2 (the `LineRef` override); R-531 O1 and O2. Closed by TASK-M7-67."
+- id: REQ-RENDER-115
+  area: RENDER
+  statement: "Under a Print graph other than Plain, a pixel that is not a system (the chart's not-a-system classification and a `decode_failed` sample, read from the classification the stain reads) must show the sheet and never the marks: the marks (Palette, Medium, On the ground, Unfinished) replaced by the bare Ground, Age and Viewing then acting on it as on the rest of the frame, the view's background with the Ground slot empty; no palette colour may reach such a pixel, and with Overlays › Chart › forbidden region on its hatch is drawn there over the sheet."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_print_graph.md
+    section: "5. The slot chain: palette and medium compose"
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_colour_composition.md
+    section: 4.3 Display stage (terminal, outside the pipeline)
+  - file: decisions.md
+    section: "R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_sheet_not_a_system (§11 test 11): under a slot-chain graph every not-a-system pixel equals the graph's bare sheet there (Ground, then Age and Viewing), no palette colour appears on one (R-477 C9), with Ground empty it equals the background through Age and Viewing, and under Plain it is R-470's blank; control: an executor that runs the marks on every pixel fails"
+  rulings:
+  - R-470
+  - R-489
+  - R-533
+  milestone: M7
+  note: R-533 G1, G3, G4. Closed by TASK-M7-64.
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -13091,7 +13418,7 @@
   milestone: M7
 - id: REQ-COL-026
   area: COL
-  statement: "The display stage (style, display scale, gamut clamp, CVD) must be settings outside every occupant and preset, never seen by the codegen, and CVD simulation must apply uniformly to everything displayed (main render, sphere preview, equirect unwrap, node thumbnails)."
+  statement: "The display stage (the Print graph in style's place, R-485; display scale, gamut clamp, CVD) must be settings outside every occupant and preset, never seen by the stain's codegen, and CVD simulation must apply uniformly to everything displayed (main render, sphere preview, equirect unwrap, node thumbnails)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 4.3 Display stage (terminal, outside the pipeline)
@@ -13112,10 +13439,11 @@
     detail: "enable deutan: every surface including thumbnails is simulated; no preset serialises CVD"
   rulings:
   - R-67
+  - R-485
   milestone: M7
 - id: REQ-COL-027
   area: COL
-  statement: "Style must apply to the figure only, and scientific checks must run with plain style."
+  statement: "The Print graph (in style's place, R-485) must apply to the figure only, and every scientific check and stain golden must render with the Print graph set to Plain explicitly, never inheriting the user's."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 4.3 Display stage (terminal, outside the pipeline)
@@ -13125,12 +13453,21 @@
     section: Display — the last stages
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 04 Windows
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
   verify:
-    method: review checklist
-    detail: golden-image and validation harnesses force style = plain
+    method: unit test
+    detail: "cargo test -p render goldens_force_plain: the golden-image and validation harnesses set Plain explicitly; control: a harness run with a user RenderState holding a non-Plain graph still renders Plain, and one that inherits it fails a stain golden"
   rulings:
   - R-67
+  - R-485
+  - R-489
   milestone: M7
+  note: "R-489 (20 Oct 2026): goldens and scientific checks run under Plain. Closed by TASK-M7-26."
 - id: REQ-COL-028
   area: COL
   statement: "The debug views must be presets over the one colouring system (field views as FieldRamp presets, structural views as ctx.quad presets, quad boundary lines as a post-chain bandmask on distance-to-quad-edge), forming a section of the preset library in the six groups colour_composition §9.6 lists (R-546): ROUNDTRIP and the agreement presets in decoded-IC, the §B–§D payload field views and §E's live-shape and accumulator views in diagnostic, and the per-sample cost and quad cache age views in profiling; and the addressing presets must follow §9.7's convention, TL = RB with G = 0 and centre = BG with R = 0."
@@ -13401,7 +13738,7 @@
   note: "R-383: the reference implementation is DaltonLens-Python (https://github.com/DaltonLens/DaltonLens-Python) at commit 3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d: Simulator_Vienot1999 (protan, deutan) and Simulator_Brettel1997 (tritan) on LMSModel_sRGB_SmithPokorny75; the method's sources are Viénot, Brettel & Mollon 1999 and Brettel, Viénot & Mollon 1997; the golden values in fixtures/cvd/ are generated from it in linear sRGB."
 - id: REQ-COL-043
   area: COL
-  statement: "The display chain must run in the fixed order SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen, so that the colour-vision simulation sees the final in-gamut colours."
+  statement: "The display chain must run in the fixed order SimState → stain → [the line sets drawn through] → Print graph → display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen, so that the colour-vision simulation sees the final in-gamut colours."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Display — the last stages
@@ -13417,18 +13754,23 @@
     section: "R-107 — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*"
   - file: decisions.md
     section: "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
+  - file: docs/design/principia_print_graph.md
+    section: 2. Where it sits
   verify:
     method: unit test
-    detail: "with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(style(stain)))"
+    detail: "with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(print(stain))), under Plain gamut_clamp(display_scale(stain))"
   rulings:
   - R-67
   - R-107
   - R-111
+  - R-485
+  - R-487
+  - R-531
   milestone: M7
   note: "GUI_DESIGN_NOTES now lists display scale and gamut clamp in this order (conformed to R-67, R-107). R-111: the chain starts at SimState (render_gui_spec and GUI_DESIGN_NOTES conformed)."
 - id: REQ-COL-044
   area: COL
-  statement: "The style stage must be optional and apply to the figure only, offering in v1 plain, watercolour & pencil (the poster's painted treatment) and the seven print presets (the paper.design halftone presets with the poster's patches: per-plate slip, cell ceiling), as the poster's implementation (workbench/principia_poster_both_sides.html and its press module) defines them."
+  statement: "R-130's eight styles must be Print graph presets beside the lab's 103, 111 in all: \"Watercolour & pencil\" and the seven print presets under R-130's names (Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone), a twelfth gallery family labelled \"Poster\", R-130's Default always shown as \"Poster › Default\"; each a graph of registry nodes matching its definition in the design doc (REQ-COL-153) within REQ-COL-142's tolerance."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Display — the last stages
@@ -13436,13 +13778,21 @@
     section: 04 Windows
   - file: decisions.md
     section: R-130 ✱ — The styles are the poster's *(closes RQ-107)*
+  - file: docs/design/principia_print_graph.md
+    section: 7.1 The Print panel (replaces Display › Style)
+  - file: decisions.md
+    section: "R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*"
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
   verify:
-    method: GUI screenshot
-    detail: "screenshots of each v1 preset (plain, watercolour & pencil, the seven print presets) against 04_windows.png's Display window; chrome and legend are unstyled"
+    method: golden image
+    detail: "cargo test -p render print_port_poster: the eight presets are registered in the family \"Poster\" and each renders within REQ-COL-142's tolerance of its definition's reference render; controls: a Poster preset whose graph drops its halftone's per-plate slip fails its golden, and a preset labelled bare \"Default\" fails the label check"
   rulings:
   - R-130
+  - R-485
+  - R-532
   milestone: M7
-  note: "R-130: the styles are the poster's; render_gui_spec's 'print · Poster78, more' is read as the seven print presets."
+  note: "R-130: the styles are the poster's. R-485 (20 Oct 2026) supersedes R-130's v1 style list; R-532 (RQ-396) ports its eight styles as Print graph presets, 111 in all. *Was:* \"The style stage must be optional and apply to the figure only, offering in v1 plain, watercolour & pencil (the poster's painted treatment) and the seven print presets (…), as the poster's implementation (workbench/principia_poster_both_sides.html and its press module) defines them.\" Closed by TASK-M7-65 (was TASK-M7-26)."
 - id: REQ-COL-045
   area: COL
   statement: "Colour-vision simulation must offer off, deuteranopia, protanopia, tritanopia and achromatopsia."
@@ -15514,6 +15864,417 @@
   - R-558
   milestone: M7
   note: "RQ-489 (a), R-558 S1; Part 4's rule: excepted by the task that builds it. Closed by TASK-M7-47."
+- id: REQ-COL-142
+  area: COL
+  kind: calibration
+  statement: "The Print graph's port fidelity tolerance, ΔE in OKLab as a median and a p99 over a node's or preset's render against its lab reference (design doc §10), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md; set by the first port task and then fixed."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the two thresholds with the measured median and p99 of every Analyse and Generate node against its reference and the control that must fail; a reviewer checks it; the human confirms it at the M7 gate"
+  rulings:
+  - R-71
+  - R-492
+  milestone: M7
+  note: "R-492 (applied per R-369 there): set by the first port task, confirmed at its milestone gate. TASK-M7-56 proposes it."
+- id: REQ-COL-143
+  area: COL
+  statement: "The Print graph's Analyse and Generate category, its 5 node types (brightness, flow, edges, noise, paper), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) (no lab preset is completed by this category: each preset is ported by the task of the last category its nodes need); every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_analyse_generate: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-56. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-144
+  area: COL
+  statement: "The Print graph's Adjust & combine category, its 13 node types (blur, smear, levels, neon, palette, duotone, mix, glow, grain, vignette, pigment, invert, posterize), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its one preset (Inverse palette), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_adjust_combine: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-57. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-145
+  area: COL
+  statement: "The Print graph's Paint category, its 15 node types (strokes, kuwahara, relief, watercolour, pencil, hatching, pastel, inkwash, tempera, cracks, crosshatch, graphitepencil, fineliner, marker, biro), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 26 presets (Acrylic, sculptural; Oil; Light painting; Light painting, overexposed; Watercolour pencil; Watercolour pencil, limited palette; Watercolour pencil, earth; Watercolour pencil, nocturne; Gouache; Egg tempera; Encaustic; Graphite; Charcoal; Chalk pastel; Ink wash; Light painting, solid; Cross-hatching, ruled; Cross-hatching, round the forms; Pencil, HB; Pencil, 6B; Fineliner; Fineliner, stipple, sepia; Marker; Marker, ruled strokes; Biro; Biro, on feint-ruled paper), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_paint: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-58. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-146
+  area: COL
+  statement: "The Print graph's Print category, its 9 node types (offset, halftone, riso, stipple, engrave, mezzotint, linocut, cyanotype, plotter), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 11 presets (Offset press (NASA Facts, 1978); Halftone; Risograph; Stipple (after Luminet, 1979); Limited palette, then halftone; Engraving; Mezzotint; Linocut; Cyanotype; Pen plotter; Fluoro palette, risograph), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_print: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-59. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-147
+  area: COL
+  statement: "The Print graph's Screen category, its 10 node types (dither, dotmatrix, crt, lcd, gameboy, mcmap, ascii, teletext, eink, ledmatrix), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 31 presets (Dither, 8×8, two colours; Dither, 4×4, original colours; Dither, gradient noise, three colours; Dot matrix, colour ribbon; Dot matrix, black ribbon; CRT television; Old LCD; Block-game map art; Block-game map, three shades, no dither; ASCII, white terminal; ANSI art, 16 colours; ASCII, 8-bit colour; ASCII, green terminal; ASCII, own colours; ASCII, amber, on a CRT; ASCII, typed on paper; Game Boy; Duotone, on a CRT; Dot matrix, no scan lines; Dot matrix, colour, no scan lines; Dither, 8×8, three colours; Dither, random; Dither, 2×2, Game Boy greens; Teletext; Teletext, separated graphics; Teletext, on a CRT; E-ink; E-ink, four greys, worn panel; LED matrix; LED matrix, amber; LED matrix, red, coarse), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_screen: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-60. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-148
+  area: COL
+  statement: "The Print graph's Craft category, its 11 node types (mcblocks, marbling, mosaic, glass, kintsugi, cutpaper, thread, crossstitch, bricks, knit, tetris), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 16 presets (Blocks; Blocks, big; Marbling; Mosaic; Stained glass; Kintsugi; Cut paper; Thread painting; Cross-stitch; Cross-stitch, sampler on bare cloth; Brick mosaic; Brick mosaic, big studs; Fair Isle knit; Knit, two colours; Tetris; Tetris, picture's colours), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_craft: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-61. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-149
+  area: COL
+  statement: "The Print graph's Photographic category, its 5 node types (polaroid, thinfilm, negative, film35, shatter), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 9 presets (Polaroid; Thin film; Film negative; 35mm film, developed; Light painting, on a Polaroid; Light painting, solid, on a Polaroid; Shattered glass; Shattered pane; Through cracked goggles), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_photographic: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-62. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-150
+  area: COL
+  statement: "The Print graph's Machines category, its 2 node types (stereogram, scope), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99) and its 5 presets (Stereogram, random dots; Stereogram, picture's colours; Stereogram, wallpaper; Oscilloscope; Oscilloscope, dense, amber), each converted from the lab's graph to `principia.print/1` and matched to `images/presets/`; every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_machines: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails"
+  rulings:
+  - R-485
+  - R-486
+  - R-492
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-63. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-151
+  area: COL
+  statement: "The Print graph's Slots category, its 6 node types (palslot, ground, onground, unfinished, age, view), must be ported from the lab's GLSL to WGSL into the registry, each node at its defaults on the bundled source image matched to `docs/gui/reference/print_graph/images/nodes/` within the ΔE tolerance REQ-COL-142 sets (OKLab, median and p99); every deviation the design requires (units, seeding, a field in place of a stand-in) listed in the node's registry entry and never tuned to match (R-492); and every `ref_px` or `fraction` node passing the scale test (REQ-RENDER-111) and every `temporally_stable` node the stability test (REQ-RENDER-113). The slot chain (render → Palette → Medium → On the ground ◄ Ground → Unfinished → Age → Viewing → output) must be itself a graph, the template the Print panel edits, each slot holding a sub-graph (`preset:…`) and an empty slot the identity; Palette must act on the finished colour, never before the stain's lightness channel is composed (R-524)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "5. The slot chain: palette and medium compose"
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: docs/design/principia_colour_composition.md
+    section: 7. Preset table & golden-image obligation
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  - file: decisions.md
+    section: "R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_slots: every node of the category, and every preset listed, renders within REQ-COL-142's median and p99 of its reference or is listed in its registry entry with the deviation's reason (§11 test 9); the category's `ref_px` and `fraction` nodes pass §11 test 4 and its `temporally_stable` nodes test 5; controls: one node rendered with a default parameter doubled exceeds the tolerance and fails, a node compared to another node's reference fails, and a registry entry whose listed deviation is removed while the port still deviates fails; the slot chain with Palette \"limited\", Medium Watercolour pencil, Ground cold-press and Age 40 years equals the same four sub-graphs wired as nodes, bitwise, and with every slot empty equals Plain; control: a Palette slot spliced before the stain's lightness composition changes the stain's lightness channel and fails"
+  rulings:
+  - R-486
+  - R-492
+  - R-524
+  milestone: M7
+  note: "R-485's §4 list, \"one port task per category … each with its node and preset goldens\". Closed by TASK-M7-64. Each lab preset is ported by the task of the last category its nodes need, in the order Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic, Machines (applied per R-369); the four \"Driven by the data\" presets are REQ-COL-159's."
+- id: REQ-COL-152
+  area: COL
+  statement: "A registry node type that models a display (the design doc §6.2's `device_px` effects: CRT scanlines, LCD subpixels, LED pitch) must carry the `screen_medium` flag, set from the lab's catalogue and listed; a Medium must be a screen medium when its sub-graph holds a flagged node; choosing a screen medium must set the Viewing slot empty in the same edit; the user may set Viewing again and it stays as set; and leaving the screen medium must not restore an earlier Viewing choice."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "5. The slot chain: palette and medium compose"
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  - file: decisions.md
+    section: "R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_screen_medium: the flagged list equals the PR's list; choosing \"CRT television\" with Viewing set empties Viewing in one RenderField::Print edit; setting Viewing again keeps it; choosing Linocut after it leaves Viewing as it is; control: a medium whose sub-graph holds `crt` only inside a `preset:` node is still a screen medium, and a check that looks only at top-level nodes fails it"
+  rulings:
+  - R-525
+  milestone: M7
+  note: "R-525 V1, V2; the panel's reason (V3) is REQ-GUI-358. Closed by TASK-M7-64."
+- id: REQ-COL-153
+  area: COL
+  kind: definition
+  statement: "Each of R-130's eight styles as a Print graph preset (Watercolour & pencil, and the seven print presets Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone) must be defined in `principia_print_graph.md` as a graph of the registry's nodes whose look is R-130's, transcribed from R-130's sources (the poster's painted treatment and press module, and paper.design's CMYK halftone shader, Apache-2.0, as render_gui_spec's *Was* note cites them), with any node the lab's set lacks (the halftone's per-plate misregistration and cell ceiling) added to the registry with its licence, by the task that needs it, and reviewed by the gui reviewer before merge (R-72; R-485's reviewers, applied per R-369)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.1 The Print panel (replaces Display › Style)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  - file: decisions.md
+    section: "R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*"
+  verify:
+    method: review checklist
+    detail: "the design doc holds the eight definitions, each a `principia.print/1` graph with its settings, and each added node's registry entry and licence; `workbench/` is not cited as normative (R-159); the gui reviewer checks each look against R-130's description"
+  rulings:
+  - R-72
+  - R-130
+  - R-532
+  milestone: M7
+  note: R-532 S1. Closed by TASK-M7-65.
+- id: REQ-COL-154
+  area: COL
+  statement: "A Print graph must be able to read a payload field as a read-only `scalar` input, `{ \"type\": \"field\", \"params\": { \"name\": … } }`, the same value the stain reads, never written; its range must be the stain's window for that field when the stain colours by the same field (`RANGE_AUTO` included), and otherwise the field's own `range_norm` default (its ledger-declared range where it has one, `t_end` → lin [0, T], measured over the draw where it has none); Chart position must not be a field input; and a field absent from the payload must take the node's declared default, the input reporting \"field not available at this tier\", never silently replaced by brightness."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: decisions.md
+    section: "R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*"
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render print_field_input: with the stain colouring `t_end` through a fixed window the input equals the stain's normalised `t_end` bitwise at every pixel, and under `RANGE_AUTO` it follows the stain's window; with the stain not colouring `t_end` it uses lin [0, T] and is unchanged by a zoom; with `ftle` absent at the tier the input takes the default and reports the status; controls: an input normalised over the visible range changes under the zoom and fails, a fallback to brightness fails, and `chart_position` as a field name is refused"
+  rulings:
+  - R-526
+  - R-557
+  milestone: M7
+  note: "R-485's §4 list, \"field inputs\"; physics-reviewed (R-485: the field inputs read the same values, with the same normalisation, as the stain). R-557 (RQ-478). Closed by TASK-M7-66."
+- id: REQ-COL-155
+  area: COL
+  kind: definition
+  statement: "Which window a Print graph field input takes when two nodes of the stain's backbone read the same field through `range_norm` with different windows must be defined in `principia_print_graph.md` §4.4 by the task that needs it and reviewed by the physics reviewer before merge (R-72); it invents no value."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: review checklist
+    detail: "§4.4 names the rule (for example the node nearest the colour slot, or the one the legend reads); the physics reviewer checks that it reads a window the stain already has and invents none"
+  rulings:
+  - R-72
+  - R-557
+  milestone: M7
+  note: R-557 A1. Closed by TASK-M7-66.
+- id: REQ-COL-156
+  area: COL
+  kind: definition
+  statement: "The payload field that \"Unfinished where uncertain\" and that Craquelure read in place of their lab stand-in (`edges`, fringe density) must be defined in `principia_print_graph.md` §4.4, each from the fields the ledger declares, by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: decisions.md
+    section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  verify:
+    method: review checklist
+    detail: "§4.4 names each preset's field, a ledger field present at a stated tier, with the reason it carries the preset's meaning (uncertainty; sensitivity); the physics reviewer checks it"
+  rulings:
+  - R-72
+  - R-536
+  milestone: M7
+  note: R-536 D2. Closed by TASK-M7-66.
+- id: REQ-COL-157
+  area: COL
+  kind: definition
+  statement: "What an invalid sample of a present field (a NaN ensemble spread, a `t_end` from a `sim_failed` sample, an FTLE failing `ftle_valid`) feeds the Print graph's neighbourhood nodes (Relief's blur on the height, the wash's mask feeding a blur), excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), must be defined in `principia_print_graph.md` §4.4 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: decisions.md
+    section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  verify:
+    method: review checklist
+    detail: "§4.4 says what such a sample contributes to a neighbourhood operation and what its own pixel shows; the physics reviewer checks that no NaN reaches a blur and that an invalid sample never reads as a valid extreme"
+  rulings:
+  - R-72
+  - R-536
+  milestone: M7
+  note: R-536 D4. Closed by TASK-M7-66.
+- id: REQ-COL-158
+  area: COL
+  kind: calibration
+  statement: "The threshold windows `lo` and `hi` of \"Wet where chaotic\" (lab: 0.45, 0.65) and \"Unfinished where uncertain\" (lab: 0.5, 0.62), on the normalised real field in place of fringe density, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md; never tuned to match the lab (R-492)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: decisions.md
+    section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  verify:
+    method: review checklist
+    detail: "the PR proposes each window with the field's measured distribution over the reference views and the share of the figure each window marks; the physics reviewer checks it; the human confirms it at the M7 gate"
+  rulings:
+  - R-71
+  - R-536
+  milestone: M7
+  note: "R-536 D2. TASK-M7-66 proposes it; the human confirms it at the M7 gate (R-71)."
+- id: REQ-COL-159
+  area: COL
+  statement: "The four \"Driven by the data\" presets (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain) must each record in their registry entry the stand-in their lab graph actually uses (Relief of lifetime `brightness`; the other three `edges`, fringe density, where Wet's and Unfinished's `brightness` is a threshold window on it, not a stand-in), as R-492's deviation, and must read the real field in place of the stand-in node only: `t_end` for the relief, the ensemble spread for the wash, and REQ-COL-156's fields for the other two, the windows kept on the real field; each matched to its lab reference with that deviation listed."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: docs/design/principia_print_graph.md
+    section: 10. Porting from the lab
+  - file: decisions.md
+    section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  - file: decisions.md
+    section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  verify:
+    method: golden image
+    detail: "cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made by substituting the fixture's field for the stand-in in the lab's graph, or lists the deviation; controls: Wet with its threshold node replaced too fails the graph-shape check, and a preset reading brightness when its field is present fails"
+  rulings:
+  - R-492
+  - R-536
+  milestone: M7
+  note: R-536 D1, D2. Closed by TASK-M7-66.
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -16755,9 +17516,10 @@
     section: R-67 — The display chain *(closes RQ-23)*
   verify:
     method: GUI screenshot
-    detail: "screenshots of Explore (01_main.png) and Stain (02_stain.png): no display bar; style / scale / gamut / CVD are reachable only from the Display window"
+    detail: "screenshots of Explore (01_main.png) and Stain (02_stain.png): no display bar; the Print graph / scale / gamut / CVD are reachable only from the Display window"
   rulings:
   - R-67
+  - R-485
   milestone: M8
 - id: REQ-GUI-081
   area: GUI
@@ -21425,6 +22187,168 @@
   - R-554
   milestone: M8
   note: "R-554 L5 (RQ-474 (a)). Gui review 5604048081 of PR #274, G3, applied per R-369: REQ-GUI-241 (TASK-M8-48) lists the hidden-coordinate targets; this arm is TASK-M8-58's, which defines REQ-CHART-084. Closed by TASK-M8-58."
+- id: REQ-GUI-358
+  area: GUI
+  statement: "Display › Print, the Print panel, must replace Style: a Plain / Print toggle at the top, Plain the default; the slots top to bottom (Palette, Medium with the preset families as groups, Ground, On the ground, Unfinished, Age, Viewing), each a dropdown with a small live thumbnail of the current view in that choice and its graph's settings beneath it, not its node parameters; Boil (off, per frame, every N frames; off by default); a preset gallery of the 111 presets as live thumbnails in 12 families, R-130's eight labelled \"Poster\", its Default always \"Poster › Default\", picking one filling the Medium slot; Edit graph…; and Reset to Plain, one undo entry; while the Medium is a screen medium, beneath Viewing, \"Viewing assumes a sheet: off by default for a screen medium\"; and a field input whose field is absent shows \"field not available at this tier\". Each edit is one `RenderField::Print` SetField, a drag on a setting coalescing into one entry (R-96)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.1 The Print panel (replaces Display › Style)
+  - file: docs/design/principia_print_graph.md
+    section: 4.4 Payload fields as inputs
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
+  - file: decisions.md
+    section: "R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*"
+  - file: decisions.md
+    section: "R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*"
+  - file: decisions.md
+    section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot print_panel (against boards/panel.png with §G13's three departures) and cargo test -p gui print_panel: the gallery holds 111 presets in 12 families; \"Poster › Default\" appears and no bare \"Default\"; picking Linocut fills Medium; Reset is one undo entry; a settings drag is one entry; the Viewing reason shows under CRT television whether or not Viewing is back on; every control is reached from the keyboard; controls: a slot showing node parameters in place of settings, a bare \"Default\", and a Reset making two entries, each fail"
+  rulings:
+  - R-96
+  - R-485
+  - R-490
+  - R-525
+  - R-532
+  milestone: M8
+  note: "R-485's §4 list, \"the slot chain and the simple panel\" (the slot chain is REQ-COL-151). R-525 V3. Closed by TASK-M8-68."
+- id: REQ-GUI-359
+  area: GUI
+  kind: calibration
+  statement: "The Print panel's thumbnail budget (the design doc §7.1's \"low resolution, lazily, at most a few per frame\": the thumbnail size and the number rendered per frame) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.1 The Print panel (replaces Display › Style)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  verify:
+    method: review checklist
+    detail: "the PR proposes both with the frame time measured on the reference machine while the gallery fills; a reviewer checks them; the human confirms them at the M8 gate"
+  rulings:
+  - R-71
+  milestone: M8
+  note: "TASK-M8-68 proposes it; the human confirms it at the M8 gate (R-71)."
+- id: REQ-GUI-360
+  area: GUI
+  statement: "Each line set's style panel must offer \"Through the medium\", off by default, setting `through_medium` in its style or as its `LineRef`'s override."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.3 Lines
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: decisions.md
+    section: "R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot lines_style_through_medium and cargo test -p gui line_through_medium_toggle: a new contour set shows the box unticked; ticking it is one SetField and one undo entry and the set draws through the Print graph; control: a box that edits the shared style when the set overrides it fails"
+  rulings:
+  - R-487
+  milestone: M8
+  note: R-487 K2. Closed by TASK-M8-68.
+- id: REQ-GUI-361
+  area: GUI
+  statement: "Edit graph… must open the Print graph editor, the Stain's node editor component reused (same wiring, typed ports, undo and keyboard scopes) on the same graph the slots show, refusing a wire between mismatched port types with the reason shown; node positions, the canvas's pan and zoom and the selection must be `ViewUI`'s, so moving a node is no undo entry; and every node that is not `temporally_stable` must be marked."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.2 The graph editor
+  - file: docs/design/principia_print_graph.md
+    section: 4.2 Port types
+  - file: docs/design/principia_print_graph.md
+    section: 6.3 Anchoring and stability under motion and playback
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot print_graph_editor and cargo test -p gui print_editor: an edit in the editor shows in the slots and the reverse; an `image` → `direction` drag is refused with the reason; moving a node adds no undo entry and leaves the serialised graph unchanged; Kuwahara and stained glass are marked unstable; controls: an editor that accepts the mismatched wire, and a node move recorded as an undo entry, each fail"
+  rulings:
+  - R-486
+  - R-491
+  milestone: M8
+  note: "R-485's §4 list, \"the graph editor (reusing the Stain's)\" and the editor's half of \"port typing and the editor's wire refusal\". Closed by TASK-M8-69."
+- id: REQ-GUI-362
+  area: GUI
+  statement: "A custom Print graph node (user WGSL) must be the Stain's occupant mechanism (render contract: \"Custom is not a node kind, it is an occupant\"), editable in the Print graph editor, and must travel as round-trip tier 3."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 7.2 The graph editor
+  - file: docs/design/principia_print_graph.md
+    section: 9. Provenance
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui print_custom_node: a custom WGSL node compiles into the Print graph through the occupant path, shows its source in the editor and is recorded in tier 3; control: a custom node recorded in tier 2 fails the tier check"
+  rulings:
+  - R-491
+  milestone: M8
+  note: Closed by TASK-M8-69.
+- id: REQ-GUI-363
+  area: GUI
+  statement: "While any Print graph other than Plain is active, a badge must name it (\"Print: Linocut\") in the figure's header strip, the chrome above the plot, never over the figure; under Plain there is none."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  - file: decisions.md
+    section: "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot print_badge and cargo test -p gui print_badge: under Linocut the header strip reads \"Print: Linocut\" and the badge's rect is disjoint from the plot's; under Plain no badge; control: a badge drawn in the canvas corner fails the disjointness check"
+  rulings:
+  - R-489
+  - R-523
+  milestone: M8
+  note: R-523 (RQ-397). Closed by TASK-M8-70.
+- id: REQ-GUI-364
+  area: GUI
+  statement: "With a Print graph active, the export dialog must offer the figure Styled or Plain and default to Plain for figure export, the Print graph travelling in the record either way (`RenderState.print`)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui print_export_choice: with Linocut active the dialog opens on Plain and the exported pixels equal the Plain render; Styled exports the printed pixels; both records carry the graph; control: a dialog that defaults to Styled fails"
+  rulings:
+  - R-489
+  - R-491
+  milestone: M8
+  note: Closed by TASK-M8-70.
+- id: REQ-GUI-365
+  area: GUI
+  statement: "The Inspector, Measure, the legend, the colour readout under the cursor and area statistics must read the pre-print colours or the payload, so a Print graph changes no number the instrument reports."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui print_readouts_blind (§11 test 2, the GUI's half): with a heavy preset active every listed readout reads bitwise what it reads under Plain; mutation arm: a colour readout wired after the print stage fails"
+  rulings:
+  - R-489
+  milestone: M8
+  note: The engine's half is REQ-RENDER-106. Closed by TASK-M8-70.
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -24538,6 +25462,115 @@
   - R-547
   milestone: M2
   note: R-547 (RQ-299). Closed by TASK-M2-49.
+- id: REQ-TOOL-190
+  area: TOOL
+  statement: "The frame record must carry the print stage: `stage_ms` and `stages` gain `post` between `colour` and `upload` (the Print graph's own scopes nested under it), and each frame records `post_level` (`\"full\"`, `\"reduced\"` or `\"plain\"`), both `null` in a frame that runs no print stage, under every tier; the profiler's file is schema v2 (`principia-profile-v2`) for these keys, and every reader still accepts v1, reporting both keys as not recorded."
+  source:
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: "5. The artefact: one file, plain text, readable by the sender"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Profiler
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  - file: decisions.md
+    section: "R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)*"
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine frame_record_print_stage: a frame with a Print graph records `post` between `colour` and `upload` and its `post_level`; a headless frame records both `null`; the file's header reads `principia-profile-v2`; a v1 file reads with both keys not recorded, never 0 ms or `full`; controls: a frame record with `post` after `upload` fails the order check, and a v1 reader that rejects the v2 keys fails"
+  rulings:
+  - R-488
+  - R-534
+  - R-557
+  milestone: M8
+  note: "R-534: schema v2 is v1 plus the print stage, `post_level` and the benchmark's lines; this requirement holds the print stage's part, and the benchmark's lines are the benchmark plan's. Closed by TASK-M8-72."
+- id: REQ-TOOL-191
+  area: TOOL
+  statement: "`RenderState.print` must be recorded by value everywhere `RenderState` goes (snapshot JSON, a share link, pxpack, the embedded record, the `tEXt` chunk, the profiler header's `config` and an animation spec): a preset as the graph it expanded to, with its preset id as a label, so a later build's change to a built-in preset never changes what an old record reproduces; a non-Plain graph with settings, a sub-preset and a field input must survive every export path bitwise."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 9. Provenance
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine print_round_trip (§11 test 10; R-484 RT1): such a graph survives each of the seven destinations bitwise; control: a record that stores a preset by id alone fails after the built-in preset fixture is changed"
+  rulings:
+  - R-484
+  - R-491
+  milestone: M8
+  note: "R-485's §4 list, \"provenance and round trip\". Closed by TASK-M8-71."
+- id: REQ-TOOL-192
+  area: TOOL
+  statement: "In R-484's one tier table every field of `PrintGraph` must have its tier: the graph with its built-in nodes, their parameters, settings and wires tier 2 (colour); a custom WGSL node's source tier 3 (custom source), dropped first; a record without tier 3 must recreate the Print graph with each custom node shown as missing and the figure rendered without it, badged; and a record without tier 2 must render Plain, badged as a fallback."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 9. Provenance
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine print_tiers: every `PrintGraph` field is in the tier table; an image too small for tier 3 recreates the graph with the custom node missing and the fallback badge set; one too small for tier 2 recreates Plain, badged; control: a `PrintGraph` field added to a fixture without a tier fails the table's completeness check (RT4)"
+  rulings:
+  - R-484
+  - R-491
+  milestone: M8
+  note: Closed by TASK-M8-71.
+- id: REQ-TOOL-193
+  area: TOOL
+  statement: "Across animation keyframes, a Print graph's numeric settings must interpolate and a change of its graph structure or preset must be a cut at the keyframe."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 9. Provenance
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine print_keyframes: `depth` 0.2 → 0.8 over ten frames passes through 0.5 at the midpoint; Linocut → Halftone switches at the keyframe with no blended frame; control: an interpolator that cross-fades the two graphs fails"
+  rulings:
+  - R-491
+  milestone: M8
+  note: Closed by TASK-M8-71.
+- id: REQ-TOOL-194
+  area: TOOL
+  kind: definition
+  statement: "Which Print graph settings count as numeric for keyframe interpolation (whether an integer or seed-like setting, `seed` or `boil`'s N, interpolates, steps or cuts) must be defined in `principia_print_graph.md` §9 by the task that needs it and reviewed by the gui reviewer before merge (R-72; R-485's reviewers, applied per R-369)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 9. Provenance
+  - file: docs/design/principia_print_graph.md
+    section: 6.1 Determinism
+  - file: decisions.md
+    section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
+  verify:
+    method: review checklist
+    detail: "§9 classes every setting type; the gui reviewer checks that no interpolated value ever feeds a seeded stream a non-integer seed"
+  rulings:
+  - R-72
+  - R-491
+  milestone: M8
+  note: Closed by TASK-M8-71.
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -29371,6 +30404,191 @@
   - R-422
   milestone: M5
   note: "R-422 (RQ-269, option (a) of (c)); closed by TASK-M5-02 and enforced by REQ-PERF-035 (TASK-M6-15). The human's \"N = 1 never refines\" holds only at E = 0; at E ≥ 1 an N = 1 quad holds E+1 copies and Part 6's split test can still split it on its footprint's copy spread, so the statement and verify cover both (flagged and recorded in R-422; physics review 5484757609, F1, on PR #197)."
+- id: REQ-PERF-096
+  area: PERF
+  statement: "Every Print graph node's cost class (`light`, `medium`, `heavy`) must be measured, not guessed: each node timed at 1024² on the reference machine and assigned its class from the numbers by REQ-PERF-097's thresholds, the measurements recorded with the build hash, and every provisional class in the registry replaced by the measured one."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.3 Cost classes
+  - file: docs/design/principia_print_graph.md
+    section: 4.3 Node types are a registry
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench print_cost_classes on the human's Mac (R-186): every registered node timed at 1024² (median of repeated runs), the table recorded in the PR and in the registry; control: a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`"
+  rulings:
+  - R-488
+  milestone: M7
+  note: "R-485's §4 list, \"the cost-class measurement task\". Design doc §8.3 says \"the port's first task measures every node\"; a node can be timed only once it is ported, so the measurement runs after the port tasks and each port task's class is provisional until then (applied per R-369). Closed by TASK-M7-68."
+- id: REQ-PERF-097
+  area: PERF
+  kind: calibration
+  statement: "The Print graph's cost-class thresholds (the times at 1024² on the reference machine dividing `light`, `medium` and `heavy`) and the resolution factor (½ or ¼) each `reduced` node runs at while moving must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.3 Cost classes
+  - file: docs/design/principia_print_graph.md
+    section: 8.1 Degrade while moving
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the thresholds and each `reduced` node's factor from REQ-PERF-096's table, with the gaps in the measured distribution they sit in; a reviewer checks them; the human confirms them at the M7 gate"
+  rulings:
+  - R-71
+  - R-488
+  milestone: M7
+  note: "TASK-M7-68 proposes them; the human confirms them at the M7 gate (R-71)."
+- id: REQ-PERF-098
+  area: PERF
+  statement: "While the camera moves (the frame record's `camera_delta > 0`) or a drag is in progress, each Print graph node must run by its motion policy (`full` as is; `reduced` at its REQ-PERF-097 factor and upsampled; `bypass` replaced by the identity); on settle (no camera change for `settle_ms`, with hysteresis) the graph must render at full quality once and hold it; the playhead advancing must not be motion; and if full quality cannot hold the playback rate the frame record must say so and nothing else change."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.1 Degrade while moving
+  - file: docs/design/principia_print_graph.md
+    section: 11. Tests (each with an arm that can fail)
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui print_motion_degrade (§11 test 7): a scripted pan under a named tier records `post_level` dropping while the camera moves and returning to `full` within `settle_ms` of the last camera change; a playing playhead in a still view stays `full`; a playback the full graph cannot hold records the shortfall and changes no setting; controls: a still view never leaves `full`, and an executor that treats the playhead as motion fails the playback arm"
+  rulings:
+  - R-488
+  - R-557
+  milestone: M8
+  note: "R-485's §4 list, \"motion degrade\". R-557 (RQ-479's playback sentence). Closed by TASK-M8-72."
+- id: REQ-PERF-099
+  area: PERF
+  kind: calibration
+  statement: "The Print graph's `settle_ms` (the design's default 250 ms) and its hysteresis must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.1 Degrade while moving
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  verify:
+    method: review checklist
+    detail: "the PR proposes both from scripted pans and stops on the reference machine (how often settle fires mid-gesture against how long the reduced look lingers); a reviewer checks them; the human confirms them at the M8 gate"
+  rulings:
+  - R-71
+  - R-488
+  milestone: M8
+  note: "R-488: each a calibration, which the plan PR names. TASK-M8-72 proposes them; the human confirms them at the M8 gate (R-71)."
+- id: REQ-PERF-100
+  area: PERF
+  kind: definition
+  statement: "What the frame record's `post_level` records when only the per-node motion policies act (under a named tier or Custom, the whole-graph fallback not running), and which level a frame records when some nodes run `reduced` or `bypass` and others `full`, must be defined in `principia_print_graph.md` §8.2 by the task that needs it and reviewed by the perf reviewer before merge (R-72; R-485's reviewers, applied per R-369)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.1 Degrade while moving
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: review checklist
+    detail: "§8.2 states the rule for every mix of per-node levels and the whole-graph level; the perf reviewer checks that §11 test 7's arms are decidable under it under every tier"
+  rulings:
+  - R-72
+  - R-557
+  milestone: M8
+  note: "R-557 B1: under a named tier or Custom \"the level then set only by the per-node policies and settle\". Closed by TASK-M8-72."
+- id: REQ-PERF-101
+  area: PERF
+  statement: "The print stage's time must be excluded from the Auto arbiter's rung solve: the budget the rung is solved against must not depend on which Print graph is active, Plain included, so a Print graph never moves N, E, depth, render_scale or FTLE gating; only the Print graph's own degrade answers its cost."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: docs/design/principia_print_graph.md
+    section: 3. What never changes because of it
+  - file: docs/design/principia_quality_device_note.md
+    section: 3. The quality ladder
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine print_rung_excluded: under Auto, at the same scene and device model, the resting rung (N, E, depth, render_scale, FTLE gating) is identical with Plain and with a heavy Print graph; control: a solve that reserves the print share only while a graph is active fails (R-557 B2's arm)"
+  rulings:
+  - R-489
+  - R-557
+  milestone: M8
+  note: R-557 (RQ-479). Closed by TASK-M8-73.
+- id: REQ-PERF-102
+  area: PERF
+  statement: "The Print graph's post level (the whole-graph fallback: full, then reduced, then Plain, where the print stage's cost would exceed its share of the frame budget) must be the arbiter's, a motion-regime lever beside render_scale, never part of the rung, solved from the measured cost classes and never from a per-frame reading; it must run only under Auto, and under a named tier or Custom the fallback must not run, with `post_level` recorded in every case."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.1 Degrade while moving
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: docs/design/principia_print_graph.md
+    section: 8.3 Cost classes
+  - file: docs/design/principia_quality_device_note.md
+    section: "5. Timescale cascade (each layer absorbs what's too fast for the one above)"
+  - file: docs/design/principia_quality_device_note.md
+    section: "10. Two sanctities: the user, and observability"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 2. What to record — and the rule that makes it useful
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine print_post_level_lever: under Auto a heavy graph whose modelled cost exceeds the share drops to reduced and then Plain while moving and returns on settle; under a named tier and under Custom the same pan never changes the whole-graph level; only the arbiter module writes it; controls: injected per-frame noise on `stage_ms.post` with the model unchanged leaves the level unchanged (a per-frame reader fails), and a fallback that runs under a named tier fails"
+  rulings:
+  - R-488
+  - R-557
+  milestone: M8
+  note: R-557 (RQ-495), B1, B3. Closed by TASK-M8-73.
+- id: REQ-PERF-103
+  area: PERF
+  kind: definition
+  statement: "Whether the budget the Auto rung is solved against is the whole frame budget or the frame budget less a fixed print share must be defined in `principia_print_graph.md` §8.2 by the task that needs it and reviewed by the perf reviewer before merge (R-72; R-485's reviewers, applied per R-369)."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: review checklist
+    detail: "§8.2 states the rule; the perf reviewer checks that under it the resting rung does not depend on which Print graph is active (REQ-PERF-101's arm)"
+  rulings:
+  - R-72
+  - R-557
+  milestone: M8
+  note: R-557 B2. Closed by TASK-M8-73.
+- id: REQ-PERF-104
+  area: PERF
+  kind: calibration
+  statement: "The print stage's share of the frame budget, and the cost the arbiter's model assigns each cost class per megapixel, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: 8.2 The budget
+  - file: docs/design/principia_print_graph.md
+    section: 8.3 Cost classes
+  - file: decisions.md
+    section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
+  - file: decisions.md
+    section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the share and the per-class costs from REQ-PERF-096's table and scripted pans on the reference machine; a reviewer checks them; the human confirms them at the M8 gate"
+  rulings:
+  - R-71
+  - R-488
+  - R-557
+  milestone: M8
+  note: "R-488 (the share, a calibration the plan PR names); R-557 B2. TASK-M8-73 proposes them; the human confirms them at the M8 gate (R-71)."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

@@ -962,38 +962,8 @@
 # The Print graph and the benchmark (R-485 to R-499), ported docs first: the human's message (R-485) puts the docs in
 # one PR and the tasks and requirements in the next. Until that plan PR cites these sections, each is recorded here as
 # planned; the plan PR removes each note as its requirement cites the section (applied per R-369).
-- file: decisions.md
-  section: "R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's \"Style\", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+# The Print graph's plan PR (plan/print-graph-tasks, 22 Oct 2026) cites the Print graph's sections and removed their
+# notes; the benchmark's (R-493 to R-499, R-528 to R-530, R-535 and principia_benchmark.md) stay planned for its own.
 - file: decisions.md
   section: "R-493 — One scenario runner and one scenario registry serve `prin profile`, `cargo xtask bench` and the GUI's \"Run benchmark\"; they differ only in which scenarios they select"
   reason: "planned (the plan PR)"
@@ -1023,18 +993,6 @@
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: decisions.md
-  section: "R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
   section: "R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built"
   reason: gap (RQ-391)
   note: "a deferral by the human's ruling, with no target: RQ-391 stays open; nothing is built"
@@ -1051,33 +1009,9 @@
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: decisions.md
-  section: "R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
   section: "R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)*"
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: decisions.md
-  section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement"
 - file: docs/design/principia_benchmark.md
   section: "Principia: the benchmark"
   reason: "informative only"
@@ -1139,105 +1073,25 @@
   reason: "informative only"
   note: "title and adoption note"
 - file: docs/design/principia_print_graph.md
-  section: "1. What it is"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "2. Where it sits"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "3. What never changes because of it"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
   section: "4. The data model"
   reason: "parent heading (obligations are in its subsections)"
   note: "its subsections"
-- file: docs/design/principia_print_graph.md
-  section: "4.1 A graph is data"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "4.2 Port types"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "4.3 Node types are a registry"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "4.4 Payload fields as inputs"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "5. The slot chain: palette and medium compose"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: docs/design/principia_print_graph.md
   section: "6. Determinism, scale and time"
   reason: "parent heading (obligations are in its subsections)"
   note: "its subsections"
 - file: docs/design/principia_print_graph.md
-  section: "6.1 Determinism"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "6.2 Units: a medium must look the same at every export size"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "6.3 Anchoring and stability under motion and playback"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
   section: "7. The GUI"
   reason: "parent heading (obligations are in its subsections)"
   note: "its subsections"
-- file: docs/design/principia_print_graph.md
-  section: "7.1 The Print panel (replaces Display › Style)"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "7.2 The graph editor"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "7.3 Lines"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: docs/design/principia_print_graph.md
   section: "8. Cost and motion"
   reason: "parent heading (obligations are in its subsections)"
   note: "its subsections"
 - file: docs/design/principia_print_graph.md
-  section: "8.1 Degrade while moving"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "8.2 The budget"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "8.3 Cost classes"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "9. Provenance"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "10. Porting from the lab"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
-  section: "11. Tests (each with an arm that can fail)"
-  reason: "planned (the plan PR)"
-  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
-- file: docs/design/principia_print_graph.md
   section: "12. Open questions (for the review queue, not the agent to settle)"
   reason: "gap (RQ-391)"
-  note: "the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, planned (the plan PR); 4 deferred by the human's ruling (R-527), RQ-391 open"
+  note: "the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, built by TASK-M7-64 (R-524, R-525), TASK-M8-68 (R-525 V3) and TASK-M7-66 (R-526); 4 deferred by the human's ruling (R-527), RQ-391 open"
 - file: docs/design/principia_listen.md
   section: "Principia — Listen: the trajectory heard as sound"
   reason: parent heading (obligations are in its subsections)

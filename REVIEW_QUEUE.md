@@ -307,3 +307,44 @@ trajectories fade, and how fast).*
     plane's image, under RQ-346's metric.
 - **Applied meanwhile:** none; nothing changes: on a chart with no proxy the trace does not fade and its settings say
   so (REQ-GUI-249, R-509). What waits: REQ-GUI-266 (`rq`), TASK-M8-54, a leaf.
+
+## RQ-538: A Print graph length in `device_px` is "true screen pixels" and the sheet is "anchored to the screen", but the Print graph runs before the display scale, where every stage runs at render resolution, and under Auto `render_scale` changes while the camera moves *(silence: the design doc against the render contract; R-490, R-487, R-531, R-557; REQ-RENDER-110; context: TASK-M7-69)*
+
+*Found writing the Print graph plan (the human's request of 21 Oct 2026 to add the bundles' tasks). Nothing is
+chosen. For the human: no physics; it changes how a screen medium (a CRT's scanlines, an LCD's subpixels, an LED's
+pitch) and the paper's tooth look whenever `render_scale ≠ 1`, so it is a design question, not a routine one.*
+
+- **File, section:**
+  - `docs/design/principia_print_graph.md` § "6.2 Units: a medium must look the same at every export size":
+    "**`device_px`**: true screen pixels. Only for effects that model the display itself: CRT scanlines, LCD
+    subpixels, LED pitch." and "**`ref_px`** …: pixels on a 1024-wide figure, scaled by `output_width / 1024` at render
+    time."
+  - `docs/design/principia_print_graph.md` § "6.3 Anchoring and stability under motion and playback": "**The sheet is
+    anchored to the screen.** Paper tooth, canvas weave, grain and the ground stay fixed while the figure pans and
+    zooms beneath them." and "Noise-driven marks … are seeded from screen-anchored coordinates and the graph's seed".
+  - `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules", the composite order: "**display
+    scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the
+    display-sized swap chain; all prior stages run at render resolution)", and the Print graph stage: "SimState →
+    stain → [the line sets marked `through_medium`] → **Print graph** → display scale → gamut clamp → …" (R-487,
+    R-531).
+  - `docs/design/principia_quality_device_note.md` § "5. Timescale cascade (each layer absorbs what's too fast for the
+    one above)": the motion regime's levers, `render_scale` among them, beside the post level (R-557).
+- **The silence:** the Print graph writes a render-resolution buffer, which the display scale then resamples to the
+  screen. A `device_px` length measured in that buffer is a screen pixel only at `render_scale = 1`; at any other
+  scale a CRT's scanline pitch, drawn at one render pixel, is resampled to `1/render_scale` screen pixels, blurred
+  below native and averaged away above. The same holds for "screen-anchored" coordinates: a sheet seeded from render
+  pixels rescales on the screen when Auto moves `render_scale` during a pan, so the sheet the design keeps still would
+  change grain at every motion-regime step. Neither the design doc nor the render contract says which pixels
+  `device_px` and the screen anchoring are counted in, or what a `device_px` node does at export, where no screen
+  exists (§6.2 exempts `device_px` nodes from the scale-invariance test, but does not say what width they use).
+- **Options seen:**
+  - (a) `device_px` and the screen anchoring are counted in display pixels mapped back into the render buffer: a
+    length of `n` device pixels is `n · render_scale` render pixels, and the anchoring coordinate is the pixel's
+    screen position; the effect is still resampled by the display scale, so below native a one-pixel scanline is
+    approximated, never exact. At export, a display pixel is an export pixel.
+  - (b) As (a), and nodes flagged `device_px` (and the sheet) run after the display scale, at display resolution,
+    a second print pass, so a scanline is exactly one screen pixel at every `render_scale`; the chain gains a stage.
+  - (c) `device_px` is counted in render pixels as written, and the design doc §6.2's "true screen pixels" is read as
+    "true pixels of the buffer the Print graph writes"; a screen medium coarsens while Auto lowers `render_scale`.
+- **Applied meanwhile:** none. REQ-RENDER-110 (`rq`) and its leaf task TASK-M7-69 wait; every other Print graph task
+  proceeds, testing `device_px` nodes and the anchored sheet at `render_scale = 1`, where the three options agree.
