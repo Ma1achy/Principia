@@ -488,17 +488,16 @@ negative_control!(
     }
 );
 
-/// Within the tolerance: a state moved off the curve by a few ε lands on the curve, at `ν` within the tolerance of its
-/// own.
-#[test]
-fn qa_encode_curve_projection_within() {
+/// Within the tolerance: a state moved off the curve by a few ε, the projection run at `tol_run`, lands on the curve,
+/// at `ν` within the tolerance of its own.
+fn check_within(tol_run: f64) {
     let mut rng = SplitMix::new(19);
     let t = tol::<f64>();
     for _ in 0..64 {
         let nu = uniform(&mut rng, 0.1, 0.9);
         let x = off_curve(nu, 4.0 * f64::EPSILON, &mut rng);
         let e = enc::<f64>(&x);
-        let p = project(&e, euclid_plane::<f64>().nu_span::<f64>(), t);
+        let p = project(&e, euclid_plane::<f64>().nu_span::<f64>(), tol_run);
         let at = match p.landing {
             CurveLanding::OnCurve { nu } | CurveLanding::Projected { nu } => nu,
             CurveLanding::Latent => {
@@ -509,6 +508,18 @@ fn qa_encode_curve_projection_within() {
         assert!((at - nu).abs() <= t, "landed at ν = {at}, not γ({nu})'s");
     }
 }
+
+#[test]
+fn qa_encode_curve_projection_within() {
+    check_within(tol::<f64>());
+}
+
+negative_control!(
+    qa_encode_curve_projection_within,
+    "a projection that lands only exact curve points (run at tol = 0) drops a state a few ε off the curve to latent z",
+    expected = "falls back",
+    check_within(0.0)
+);
 
 // ── REQ-ENC-020: the metric against a brute-force search ───────────────────────────────────────────────────────────
 
