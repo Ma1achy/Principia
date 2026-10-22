@@ -45,7 +45,8 @@ pub use ledger::constants::{GAMMA_K, K_MAX};
 /// crate's tests and the `shape-roundtrip` gate, as `r_pole`'s is.
 pub use ledger::constants::{SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
 /// dd_integrator §5 test 3's rounding-level criterion's register entries (REQ-VAL-191, proposed; TASK-M3-02), the
-/// criterion, its domain's lower edges at f64 and f32 and its upper edge, for the kernel crate's tests, as `r_pole`'s is.
+/// criterion, its domain's lower edges at f64 and f32 and its upper edge, for the kernel crate's tests, as `r_pole`'s
+/// is.
 pub use ledger::constants::{
     STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX, STEP_REVERSAL_TOL,
 };

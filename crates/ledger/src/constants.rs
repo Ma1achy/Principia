@@ -919,23 +919,26 @@ pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.7845136104
 /// dd_integrator §5 test 3's rounding-level criterion (REQ-VAL-191), as `k` in `k·ε_R`, `ε_R` the precision's machine
 /// epsilon: the residual of `STEP(dt)`, momentum negation, `STEP(dt)`, negation, its Euclidean norm over the positions
 /// and momenta divided by the state's, below which the state counts as returned. TASK-M3-02's proposal (R-71),
-/// provisional until the M3 gate (R-427). The criterion holds only in the domain where it discriminates and the step is
-/// conditioned by the start state's `τ`, [`STEP_REVERSAL_EDGE_F64`] (10⁻²) `≤ dt/τ ≤` [`STEP_REVERSAL_EDGE_MAX`] (0.5)
-/// at f64 and [`STEP_REVERSAL_EDGE_F32`] (0.3) `≤ dt/τ ≤` [`STEP_REVERSAL_EDGE_MAX`] at f32, `τ` the state's shortest
-/// two-body time `√(r³ / (G(mᵢ + mⱼ)))`: there dd's named controls, RK4 and Yoshida-4 with its stages made asymmetric
-/// `(w₁, w₁, w₀)`, read above it at the same dt; outside it a residual under the criterion says nothing, and no verdict
-/// is taken there (REQ-VAL-191). Its evidence, `crates/kernel/tests/occupant.rs` (`step_reversibility`,
-/// `step_reversibility_upper_edge`, `step_reversibility_domain`), on three fixtures, a generic state, a close pair and
-/// Burrau's (3, 4, 5) start at rest (`τ` 1.09, 0.0502 and 1.73), over dt from 10⁻¹ to 10⁻³/64, at each edge,
-/// `dt = edge·τ`, and across the domain at 16 points per decade: in the domain, KDK, Yoshida-4 and Yoshida-6 at most
-/// 2.0 `ε_R` (Yoshida-6, Burrau, f64, dt/τ 0.49), so 16 covers them by 8×; the controls read least at the lower edges,
-/// RK4 88, 192 and 143 `ε_R` at f64 (close pair, generic, Burrau), 5.5× to 12× the criterion, and 303, 720 and 493
-/// `ε_R` at f32, 19× to 45×; the asymmetric Yoshida-4 at least 5.4·10⁷ `ε_R` at f64 and 2.2·10⁵ `ε_R` at f32. Below the
-/// domain a control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 (its stages satisfy `Σw = 1`
-/// and `Σw³ = 0`, so the first term odd under reversal of their order is the `h⁴` commutator `[A₁, A₃]`) and
-/// `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls under the
-/// precision's rounding: at f32, dt/τ 0.1, RK4 reads 0.72 and 0.27 `ε_R`, and at dt/τ 0.199, 18.6 `ε_R`, no margin; at
-/// f64, dt/τ 3·10⁻⁴, the asymmetric Yoshida-4 reads 49 `ε_R` and RK4 0.
+/// provisional until the M3 gate (R-427). The criterion holds only in its domain, [`STEP_REVERSAL_EDGE_F64`] (10⁻²)
+/// `≤ dt/τ ≤` [`STEP_REVERSAL_EDGE_MAX`] (1) at f64 and [`STEP_REVERSAL_EDGE_F32`] (0.4) `≤ dt/τ ≤`
+/// [`STEP_REVERSAL_EDGE_MAX`] at f32, where `τ` is the step's shortest two-body time: the least `√(r³ / (G m_pair))`,
+/// `G = 1`, `m_pair = mᵢ + mⱼ`, over the three pairs at every position at which test 3 evaluates the force, every force
+/// evaluation of `STEP(dt)` from the state and of `STEP(dt)` from its momentum-negated result, the start's positions
+/// included (the f64 step's positions at either precision). The start's positions alone do not bound the step's
+/// conditioning: a pair already approaching, or one a stage brings close (Burrau's start at rest), passes far closer
+/// within one step than the start's `τ` says (qa reviews 5608308863 Q1 and Q2). In the domain dd's named controls, RK4
+/// and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, read above the criterion at the same dt; outside it a
+/// residual under the criterion says nothing, and no verdict is taken there (REQ-VAL-191). Its evidence,
+/// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_upper_edge`,
+/// `step_reversibility_domain`), on six fixtures, a generic state, a close pair, Burrau's (3, 4, 5) start at rest and
+/// three approaching pairs (equal masses, speed and impact parameter 1 and 0.05, 5 and 0.05, 2 and 0.003), at the dt
+/// ladder, at each edge and across the domain at 16 points per decade: KDK, Yoshida-4 and Yoshida-6 at most 1.3 `ε_R`
+/// at f64 and 0.92 `ε_R` at f32, so 16 covers them by 12×; RK4 at least 68 `ε_R` at f64 and 98 `ε_R` at f32, both on
+/// the approach at the lower edge, 4.3× and 6.1× the criterion; the asymmetric Yoshida-4 at least 5.2·10⁷ `ε_R` at f64
+/// and 7.7·10⁴ `ε_R` at f32. Below the domain a control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric
+/// Yoshida-4 (its stages satisfy `Σw = 1` and `Σw³ = 0`, so the first term odd under reversal of their order is the
+/// `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in
+/// `Φ_{−h}∘Φ_h`), falls under the precision's rounding.
 pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "step_reversal_tol",
     16.0,
@@ -944,11 +947,10 @@ pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "M3",
 );
 
-/// The f64 edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ`, `τ` the state's shortest
-/// two-body time, at which test 3 discriminates at f64. TASK-M3-02's proposal (R-71), provisional until the M3 gate
-/// (R-427). Its evidence, [`STEP_REVERSAL_TOL`]'s: at `dt = 10⁻²·τ` RK4 reads 88 and 192 `ε_R` (close pair, generic),
-/// 5.5× and 12× the criterion; the f64 transition lies between dt/τ 9.2·10⁻⁴, where RK4 reads 0.22 `ε_R`, and
-/// 9.2·10⁻³, where it reads 114 `ε_R`.
+/// The f64 lower edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ`, `τ` the step's shortest
+/// two-body time ([`STEP_REVERSAL_TOL`]'s), at which test 3 discriminates at f64. TASK-M3-02's proposal (R-71),
+/// provisional until the M3 gate (R-427). Its evidence, [`STEP_REVERSAL_TOL`]'s: at the edge RK4 reads 68 `ε_R` on the
+/// approach, 4.3× the criterion, and 86 to 5.2·10³ `ε_R` on the other fixtures.
 pub const STEP_REVERSAL_EDGE_F64: ConstantBuilder = proposed(
     "step_reversal_edge_f64",
     1e-2,
@@ -957,29 +959,29 @@ pub const STEP_REVERSAL_EDGE_F64: ConstantBuilder = proposed(
     "M3",
 );
 
-/// The f32 edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ` at which test 3 discriminates at
-/// f32. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its evidence, [`STEP_REVERSAL_TOL`]'s: at
-/// `dt = 0.3·τ` RK4 reads 303 and 720 `ε_R`, 19× and 45× the criterion; at dt/τ 0.199 it reads 18.6 `ε_R`, no margin,
-/// and at 0.1, 0.72 and 0.27 `ε_R`.
+/// The f32 lower edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ`, `τ` the step's, at which
+/// test 3 discriminates at f32. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its evidence,
+/// [`STEP_REVERSAL_TOL`]'s: at the edge RK4 reads 98 `ε_R` on the approach, 6.1× the criterion, and 120 to 1.8·10³
+/// `ε_R` on the other fixtures; on the approach it reads 22 `ε_R` at dt/τ 0.30, 1.4×, and 3.6 `ε_R` at 0.21. *Was:*
+/// 0.3, on the start's `τ` (fix rounds 2 to 4).
 pub const STEP_REVERSAL_EDGE_F32: ConstantBuilder = proposed(
     "step_reversal_edge_f32",
-    0.3,
+    0.4,
     Admissibility::CanonicalUnits,
     "REQ-VAL-191",
     "M3",
 );
 
-/// The upper edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191), at f64 and f32: the largest `dt/τ` at which the
-/// criterion is applied. Above it a step can carry a pair of the start state far closer than `τ` says, so the step's
-/// own conditioning amplifies rounding past the criterion, a symmetric step included: on Burrau's start at rest, at
-/// dt/τ 1.0, a stage of Yoshida-4 brings a pair from 3 apart to 0.26 (qa review 5608308863 Q1). TASK-M3-02's proposal
-/// (R-71), provisional until the M3 gate (R-427). Its evidence, over five fixtures (a generic state, a close pair, a
-/// hierarchical triple, a rotating Lagrange triangle and Burrau's start) at 16 points per decade: KDK, Yoshida-4 and
-/// Yoshida-6 at most 2.0 `ε_R` at f64 and 1.4 `ε_R` at f32 from each lower edge to 0.5, 1.1 and 1.7 at 0.56, 3.4 and
-/// 1.9 at 0.65, and past the criterion from 0.75 (30 and 51 `ε_R`) up; the controls stay above it throughout.
+/// The upper edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191), at f64 and f32: the largest `dt/τ`, `τ` the step's,
+/// at which the criterion is applied. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its
+/// evidence, [`STEP_REVERSAL_TOL`]'s, and a sweep of eleven fixtures (those six, a hierarchical triple, a rotating
+/// Lagrange triangle and approaches at speed 0.75 and 2 with impact parameters 0.01 and 0.003) at 32 points per decade:
+/// KDK, Yoshida-4 and Yoshida-6 at most 2.2 `ε_R` up to dt/τ 1, 2.0 from 1 to 1.2, 3.9 up to 2, and up to 22 `ε_R` at
+/// f64 and 44 `ε_R` at f32 between 2 and 4, where the step's conditioning amplifies rounding past the criterion. *Was:*
+/// 0.5, on the start's `τ` (fix round 4).
 pub const STEP_REVERSAL_EDGE_MAX: ConstantBuilder = proposed(
     "step_reversal_edge_max",
-    0.5,
+    1.0,
     Admissibility::CanonicalUnits,
     "REQ-VAL-191",
     "M3",
