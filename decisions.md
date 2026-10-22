@@ -23640,8 +23640,10 @@ verbatim:
   UI" and "TS GUI" sites in the live corpus point at R-571 with a *Was:* (render_gui_spec §G14, gui_state_contract
   §2 and §3, the IC inspector scratchpad, the temporal note's frame-loop paragraph), REQ-GEN-023 follows its source,
   and `plan/reviewers/gui.md` follows the spec. Two crate doc comments repeat "a polished GUI"
-  (`crates/render/src/registry.rs`, `crates/engine/src/contract/view_ui.rs`); no code is changed here, and they are
-  listed in PR #282 for a later task.
+  (`crates/render/src/registry.rs`, `crates/engine/src/contract/view_ui.rs`); no code is changed here: each is a deliverable of the
+  unmerged task that touches its file, TASK-M8-19 (`registry.rs`, with the `debugVisible` filter) and TASK-M8-01
+  (`view_ui.rs`, with the ViewUI struct) (gui re-check 5608472158 of PR #282, fix round 4, applied per R-369; *was:*
+  "they are listed in PR #282 for a later task").
 - **The reel**: REQ-TOOL-084 (the reel produced by the blocking exporter, a segment loading its spec when clicked) is
   machinery and stays in M8; a note says its presentation is v2 web's.
 
