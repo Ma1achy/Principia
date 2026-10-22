@@ -23503,11 +23503,13 @@ Changes REQ-GUI-244 (rulings, note).
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
 *21 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, §1, §6, §9 and §11,
 `docs/design/principia_systems_architecture.md` §3 (v1 web's crossings, measured), §5 (seam 12) and §6,
-`docs/contracts/principia_gui_state_contract.md` §1, `docs/contracts/principia_caching_contract.md` Part 6a,
-`docs/gui/principia_render_gui_spec.md` (its header and §G1), `docs/contracts/principia_export_animation_contract.md`
-Part 7, `README.md`, `REVIEW_QUEUE.md` (RQ-550, RQ-551), `plan/MILESTONES.md` (M8 and the build orders),
-`plan/WORKFLOW.md`, `plan/reviewers/code.md`, the requirements below and TASK-M8-37, TASK-M8-38 and TASK-M8-41; the
-record is `docs/incoming/2026-10-21_browser/`*
+`docs/contracts/principia_gui_state_contract.md` §1, §2, §3 and §7, `docs/contracts/principia_caching_contract.md` Part
+6a, `docs/gui/principia_render_gui_spec.md` (its header, §G1 and §G14), `docs/gui/design/GUI_DESIGN_NOTES.md`,
+`docs/design/principia_temporal_architecture_note.md`, `docs/notes/ic_inspector_scratchpad.md`,
+`docs/contracts/principia_export_animation_contract.md` Part 7, `docs/read_first/principia_INDEX.md`, `README.md`,
+`REVIEW_QUEUE.md` (RQ-550, RQ-551), `plan/MILESTONES.md` (M8 and the build orders), `plan/WORKFLOW.md`,
+`plan/reviewers/code.md`, `plan/reviewers/gui.md`, the requirements below and TASK-M8-01, TASK-M8-19, TASK-M8-37,
+TASK-M8-38 and TASK-M8-41; the record is `docs/incoming/2026-10-21_browser/`*
 
 The human's covering message, 21 Oct 2026, verbatim:
 
