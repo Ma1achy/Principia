@@ -272,9 +272,9 @@ enum Stand {
 /// tolerance `burrau_nu_half_tol`, proposed by TASK-M2-10 and provisional until the M2 gate, citing REQ-VAL-118; and
 /// the round trip's `eps_phys`, `k` in `ε_phys = k·ε_R`, proposed by TASK-M2-16 and provisional until the M2 gate,
 /// citing REQ-ENC-024 (inverse-encode contract Part 4); and dd_integrator §5 test 3's rounding-level criterion
-/// `step_reversal_tol` and its domain's two edges, `step_reversal_edge_f64` and `step_reversal_edge_f32`, proposed by
-/// TASK-M3-02 and provisional until the M3 gate, citing REQ-VAL-191.
-const TABLE: [(&str, Stand); 27] = [
+/// `step_reversal_tol` and its domain's three edges, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
+/// `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate, citing REQ-VAL-191.
+const TABLE: [(&str, Stand); 28] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -305,6 +305,7 @@ const TABLE: [(&str, Stand); 27] = [
     ("step_reversal_tol", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_f64", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_f32", Stand::Until("M3", "REQ-VAL-191")),
+    ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.

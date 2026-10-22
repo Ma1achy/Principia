@@ -17,7 +17,10 @@
 //! - REQ-VAL-032, REQ-VAL-191: dd §5 test 3 per dt over a dense grid of `dt/τ` inside the criterion's domain, on qa's
 //!   own fixtures, at f64 and f32: KDK, Yoshida-4 and Yoshida-6 at or below `step_reversal_tol`, and the asymmetric
 //!   controls (RK4, and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`) above it at each dt, not only on the
-//!   worst residual; the tolerance and both edges are read from the register through `validation`.
+//!   worst residual, over the closed domain `[edge, step_reversal_edge_max]` at 16 points per decade with both edges;
+//!   the tolerance and the three edges are read from the register through `validation`; the fixtures include an
+//!   approaching pair, whose step's conditioning the start's `τ`, from positions alone, does not bound. A second control takes the
+//!   reversible steppers past the upper edge on Burrau's start, where they read above the criterion.
 
 use std::collections::BTreeMap;
 
@@ -31,7 +34,8 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use spirv_std::num_traits::{Signed, ToPrimitive, Zero};
 use validation::{
-    negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_TOL,
+    negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX,
+    STEP_REVERSAL_TOL,
 };
 
 // ── REQ-INT-014, REQ-INT-015: the table ──────────────────────────────────────────────────────────────────────────
@@ -1149,7 +1153,11 @@ order_control!(
 const TOL: f64 = STEP_REVERSAL_TOL.number();
 
 /// qa's fixtures, none of them the implementer's: a hierarchical triple (a tight 0–1 binary, the third orbiting it),
-/// an equilateral Lagrange configuration in rigid rotation, and Burrau's (3, 4, 5) Pythagorean start at rest.
+/// an equilateral Lagrange configuration in rigid rotation, Burrau's (3, 4, 5) Pythagorean start at rest, and an
+/// approaching pair: equal masses 1, bodies 0 and 1 a unit apart moving at each other with speed 1 at impact parameter
+/// 0.05 (a near-parabolic encounter, relative energy about 0), the third at rest 5 away. `τ`, from positions alone,
+/// does not see the approach: within one step at `dt/τ ≤ step_reversal_edge_max` the pair can pass far closer than
+/// the start's separation.
 fn fixtures<R: Pr>() -> Vec<(&'static str, State<R>)> {
     let st = |m: [f64; 3], r: [[f64; 2]; 3], p: [[f64; 2]; 3]| State {
         m: m.map(R::of),
@@ -1178,6 +1186,14 @@ fn fixtures<R: Pr>() -> Vec<(&'static str, State<R>)> {
                 [3.0, 4.0, 5.0],
                 [[1.0, 3.0], [-2.0, -1.0], [1.0, -1.0]],
                 [[0.0; 2]; 3],
+            ),
+        ),
+        (
+            "approach",
+            st(
+                [1.0, 1.0, 1.0],
+                [[-0.5, 0.0], [0.5, 0.05], [0.0, 5.0]],
+                [[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]],
             ),
         ),
     ]
@@ -1227,16 +1243,27 @@ fn residual<R: Pr>(step: &dyn Fn(&State<R>, R) -> State<R>, s: &State<R>, dt: R)
     diff / norm / R::EPS
 }
 
-/// The `dt/τ` at which the per-dt check runs at an edge: the edge itself, then 8 points per decade up to 2, the
-/// largest `dt/τ` step_reversal_tol's evidence reaches.
-fn grid(edge: f64) -> Vec<f64> {
-    let mut v = vec![edge];
-    let mut x = edge;
-    while x * 10f64.powf(0.125) <= 2.0 {
-        x *= 10f64.powf(0.125);
+/// The domain's upper edge, `step_reversal_edge_max` (REQ-VAL-191, provisional until M3), at both precisions.
+fn edge_max() -> f64 {
+    STEP_REVERSAL_EDGE_MAX.number()
+}
+
+/// The `dt/τ` of a grid from `lower` to `upper`: `lower` itself, then 16 points per decade, then `upper` itself.
+fn grid_to(lower: f64, upper: f64) -> Vec<f64> {
+    let mut v = vec![lower];
+    let mut x = lower;
+    while x * 10f64.powf(1.0 / 16.0) < upper {
+        x *= 10f64.powf(1.0 / 16.0);
         v.push(x);
     }
+    v.push(upper);
     v
+}
+
+/// The `dt/τ` at which the per-dt check runs from a lower edge: the closed domain `[edge, step_reversal_edge_max]`,
+/// both edges included, at 16 points per decade.
+fn grid(edge: f64) -> Vec<f64> {
+    grid_to(edge, edge_max())
 }
 
 fn edge<R: Pr>() -> f64 {
@@ -1317,6 +1344,7 @@ const EXCEEDS: &str = "a step-reversible occupant's residual exceeds";
 #[test]
 fn qa_step_reversibility_controls_per_dt() {
     assert!(TOL > 0.0 && edge::<f64>() > 0.0 && edge::<f32>() > edge::<f64>());
+    assert!(edge_max() > edge::<f32>(), "the f32 domain is empty");
     let mut f = controls_at::<f64>(&grid(edge::<f64>()));
     f.extend(controls_at::<f32>(&grid(edge::<f32>())));
     check_cells(&f, NOT_ABOVE);
@@ -1368,4 +1396,59 @@ negative_control!(
         ),
         EXCEEDS
     )
+);
+
+/// The cells at which KDK, Yoshida-4 or Yoshida-6 at `R` on Burrau's start read above [`TOL`], over `R`'s lower edge
+/// to `upper` at 16 points per decade, both ends included.
+fn burrau_reversible<R: Pr>(upper: f64) -> Vec<String> {
+    let s = fixtures::<R>()
+        .into_iter()
+        .find(|(n, _)| *n == "burrau")
+        .expect("Burrau's start is among qa's fixtures")
+        .1;
+    let t = tau(&s);
+    let mut f = Vec::new();
+    for (name, o) in [
+        ("KDK", Occupant::Kdk),
+        ("Yoshida-4", Occupant::Yoshida4),
+        ("Yoshida-6", Occupant::Yoshida6),
+    ] {
+        for x in grid_to(edge::<R>(), upper) {
+            let r = residual(
+                &|s: &State<R>, dt: R| shipped(Selection::Production(o), s, dt),
+                &s,
+                R::of(x * t),
+            );
+            let bad = r > TOL;
+            println!(
+                "{name} at {}, burrau (τ {t:.4}), dt/τ {x:.4e}: {r:.3e} ε{}",
+                R::NAME_,
+                if bad { "  <- FAILS" } else { "" }
+            );
+            if bad {
+                f.push(format!(
+                    "{name} at {}, burrau, dt/τ {x:.4e}: {r:.3e} ε",
+                    R::NAME_
+                ));
+            }
+        }
+    }
+    f
+}
+
+/// On Burrau's start, the fixture whose steps carry a pair far closer than its start's `τ`, KDK, Yoshida-4 and
+/// Yoshida-6 return the state within `step_reversal_tol` up to and at the domain's upper edge
+/// `step_reversal_edge_max`, at f64 and f32 (REQ-VAL-032, REQ-VAL-191).
+#[test]
+fn qa_step_reversibility_upper_edge() {
+    let mut f = burrau_reversible::<f64>(edge_max());
+    f.extend(burrau_reversible::<f32>(edge_max()));
+    check_cells(&f, EXCEEDS);
+}
+
+negative_control!(
+    qa_step_reversibility_upper_edge,
+    "the f64 grid taken past step_reversal_edge_max to dt/τ 1, where a stage's close approach conditions a symmetric step past the criterion",
+    expected = "a step-reversible occupant's residual exceeds",
+    check_cells(&burrau_reversible::<f64>(1.0), EXCEEDS)
 );
