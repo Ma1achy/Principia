@@ -22,13 +22,14 @@ Watercolour & pencil and the seven print presets (Default, Drops, Newspaper, Vin
 ## Deliverables
 - `docs/design/principia_print_graph.md` — a subsection defining the eight (REQ-COL-153), with a "Removed lines" note.
 - `crates/render/print_presets/poster/` — the eight preset files; any added node in `crates/render/src/print/nodes/` with its licence.
-- Test `print_port_poster`.
+- Golden suite `print-poster`.
 
 ## Acceptance tests
-- `cargo test -p render print_port_poster` — REQ-COL-044's verify (the eight presets are registered in the family "Poster" and each renders within REQ-COL-142's tolerance of its definition's reference render; controls: a Poster preset whose graph drops its halftone's per-plate slip fails its golden, and a preset labelled bare "Default" fails the label check).
+- `cargo xtask golden print-poster` — REQ-COL-044's verify (against the baselines in `fixtures/golden/print/` (R-146, R-110; the M8 browser suite checks the same baselines) (each definition's reference render, pinned there), the eight presets are registered in the family "Poster" and each renders within REQ-COL-142's tolerance of its definition's reference render; controls: a Poster preset whose graph drops its halftone's per-plate slip fails its golden, and a preset labelled bare "Default" fails the label check).
 - Definition: the design doc holds the eight definitions, each a `principia.print/1` graph with its settings, and each added node's registry entry and licence; `workbench/` is not cited as normative (R-159); the gui reviewer checks each look against R-130's description (REQ-COL-153).
 
 ## Notes
 - `workbench/` is never cited as normative (R-159): the definition in the design doc is.
 - The definition is reviewed by the gui reviewer, not the physics reviewer: R-485 (the human's point 5) names physics review for the field inputs only (applied per R-369).
 - Reviewers (R-485, the human's point 5): the gui and perf reviewers for the Print graph, with code and qa as always; the physics reviewer for the field inputs only.
+- **Fix round 8 of PR #281 (qa review 5608745757, finding 1, applied per R-369):** the acceptance lines follow REQ-COL-044's new verify; a golden-image verify runs under `cargo xtask golden <suite>` with its baselines in `fixtures/golden/print/` (R-146, R-110). *Was:* "Test `print_port_poster`."; "`cargo test -p render print_port_poster` — REQ-COL-044's verify (the eight presets are registered in the family "Poster" and each renders within REQ-COL-142's tolerance of its definition's reference render; controls: a Poster preset whose graph drops its halftone's per-plate slip fails its golden, and a preset labelled bare "Default" fails the label check).".
