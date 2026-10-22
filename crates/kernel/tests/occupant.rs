@@ -22,8 +22,14 @@
 //!   (Yoshida-4) or 13th (Yoshida-6) significant digit, each way, exceeds the bound (REQ-INT-090).
 //! - `step_reversibility`: dd test 3, `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, returns the state within the
 //!   rounding-level criterion `step_reversal_tol` (REQ-VAL-191, proposed) for KDK, Yoshida-4 and Yoshida-6 at f64 and
-//!   f32 over the dt ladder, with no projection or substepping; it prints the evidence, those residuals beside RK4's,
-//!   Euler's and the asymmetric Yoshida-4's (REQ-VAL-032, REQ-VAL-191).
+//!   f32, on every fixture, at every dt of the ladder in the criterion's domain and at its edge, `dt/τ` at least
+//!   `step_reversal_edge_f64` or `step_reversal_edge_f32`, with no projection or substepping; it prints the evidence,
+//!   those residuals beside Euler's, the cells outside the domain labelled non-discriminating; its control is
+//!   Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)` (REQ-VAL-032, REQ-VAL-191).
+//! - `step_reversibility_domain`: dd test 3's named controls, RK4 and the asymmetric Yoshida-4, read above the
+//!   criterion on every fixture at `dt = edge·τ` and at every dt of the ladder above the edge, at f64 and f32, so the
+//!   domain is one where test 3 can fail; its control is the f32 edge taken down to `dt/τ = 10⁻¹`, where RK4 reads
+//!   below the criterion (REQ-VAL-191).
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
