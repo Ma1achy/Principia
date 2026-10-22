@@ -23549,7 +23549,7 @@ is the human's text, the applied text of this ruling:
 > 6. **Unchanged:**
 >    - Charts with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`,
 >      the Invariant warp), keep their forbidden region past the square as now.
->    - Periodic and pole-crossing charts keep RQ-409 (a).
+>    - Periodic and pole-crossing charts keep RQ-409 (a). [Porter's note: RQ-409 (a) is ruled by R-552.]
 >    - The trace's "leaves / re-enters the chart" on a latent chart stays: that is a trajectory state projected back onto
 >      the axes, not a navigation limit.
 >
@@ -23581,9 +23581,8 @@ is the human's text, the applied text of this ruling:
   stops").
 - **Zoom-out is unbounded** (item 2). There is no cap from a fixed view range, a multiple of the home view or a number
   of chart squares. The only limits are the existing ones, the frame budget and the baseline cover (caching contract
-  Part 4), and a frame's cost is set by the screen, not by the view's extent. That is RQ-409 (a) (R-537 U14, applied
-  meanwhile on periodic charts; ruled (a) in the batch rulings of the open PR #274) carried to every chart whose axes
-  are affine.
+  Part 4), and a frame's cost is set by the screen, not by the view's extent. That is RQ-409 (a) (R-537 U14, on periodic charts;
+  ruled (a) by R-552, PR #274 merged and the entry archived on main) carried to every chart whose axes are affine.
 - **Every pixel is a system, everywhere** (item 3): no hatch, no blank and no "not a system" on these charts at any pan
   or zoom, as R-467's context already says ("Latent and flat charts never produce a forbidden pixel anywhere").
 - **Far out the field goes flat, and that is correct** (item 4). The decoder saturates every coordinate
@@ -23595,14 +23594,14 @@ is the human's text, the applied text of this ruling:
   anchor, TASK-M8-57), never a stop on the pan or the zoom.
 - **Unchanged** (item 6): the charts with a bounded axis, or an affine axis that runs off the physical domain (the mass
   simplex, Burrau `L_z`, the Invariant warp), keep their not-a-system region past the square; periodic and
-  pole-crossing charts keep RQ-409 (a); the trace's "leaves / re-enters the chart" on a latent chart stays, a
+  pole-crossing charts keep RQ-409 (a) (R-552); the trace's "leaves / re-enters the chart" on a latent chart stays, a
   trajectory state projected back onto the axes, not a navigation limit (R-538).
 - **The reference demos' 3× cap and `clampView`** (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
   `docs/gui/reference/state_map/state_flow.html`, and their copies under `docs/incoming/`) exist only because the
   demos' maps are precomputed images. They are never ported. Where the corpus cites the demos or the prototype's
   navigation limit, it now says so: the INDEX's two entries, the GUI spec's new paragraph and state map SM3's
-  added line, marked R-570. RQ-409's own quotation of the 3× cap is left as it stands: PR #274's batch rulings rule it with the
-  human's words "The demo's 3× cap applies only to its fixed maps", and moves the entry to the archive.
+  added line, marked R-570. RQ-409's own quotation of the 3× cap is left as it stands: R-552 rules it (a) with the human's words
+  "The demo's 3× cap applies only to its fixed maps", and the entry is archived on main.
 
 *What the port found (the instruction's "What to check").* No spec, contract or requirement caps pan or zoom-out on a
 latent or flat chart: chart_decoder_contract Part 4 and render_gui_spec §G2 already give R-469's stop on the centre as
@@ -23647,7 +23646,7 @@ that owns its code.
 *Applied per R-369:* a slider's span is the range its handle covers and never a clamp, so a zoom past Navigate's zoom
 row is kept and shown with the handle at the end of the rail (render_gui_spec §G2; REQ-GUI-357), rather than a wider
 span; each requirement goes to the task that owns its code, with no new task; the mock's `MAX_ROOT_COPIES` gets no
-requirement; RQ-409's entry is not edited here, PR #274 archiving it; the three tests run at the decoder's default
+requirement; RQ-409's entry is not edited here, R-552 having ruled it (a) and archived it; the three tests run at the decoder's default
 links while RQ-536 is open.
 
 *22 Oct 2026, on the same PR: RQ-535 decided per R-369 by the orchestrator, not a human ruling: (a), coarser levels

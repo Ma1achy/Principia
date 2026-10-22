@@ -3317,6 +3317,8 @@
   - R-467
   - R-570
   milestone: M8
+  rq:
+  - RQ-536
   note: "R-570 items 3 and 4, its test far_field_saturates. Closed by TASK-M8-57. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-536: under the edge-reaching simplex link, or softmax_tanh with μ_max above about 11.5, the far field reaches the M01_TINY fence; that arm waits."
 - id: REQ-CHART-088
   area: CHART

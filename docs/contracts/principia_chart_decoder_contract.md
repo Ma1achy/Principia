@@ -348,7 +348,7 @@ system; nothing clamps, rescales, wraps or fades the view to hide it, and the re
 any pixel. **Precision is not a navigation limit:** at large chart coordinates the f32 floor arrives sooner, and the
 precision ladder handles it (`principia_deep_zoom.md` §2 and §4), never a stop on the pan or the zoom. Unchanged: a
 chart with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`, the
-Invariant warp), keeps its not-a-system region past the square; periodic and pole-crossing charts keep RQ-409 (a), no
+Invariant warp), keeps its not-a-system region past the square; periodic and pole-crossing charts keep RQ-409 (a) (R-552), no
 zoom-out limit beyond the frame budget and the baseline cover; and the trace's "leaves / re-enters the chart" on a
 latent chart is a trajectory state projected back onto the axes, not a navigation limit.
 
