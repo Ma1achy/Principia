@@ -16442,7 +16442,7 @@
   note: R-532 S1. Closed by TASK-M7-65.
 - id: REQ-COL-154
   area: COL
-  statement: "A Print graph must be able to read a payload field as a read-only `scalar` input, `{ \"type\": \"field\", \"params\": { \"name\": … } }`, the same value the stain reads, never written; its range must be the stain's window for that field when the stain colours by the same field (`RANGE_AUTO` included), and otherwise the field's own `range_norm` default (its ledger-declared range where it has one, `t_end` → lin [0, T], measured over the draw where it has none); Chart position must not be a field input; and a field absent from the payload must take the node's declared default, the input reporting \"field not available at this tier\", never silently replaced by brightness."
+  statement: "A Print graph must be able to read a payload field as a read-only `scalar` input, `{ \"type\": \"field\", \"params\": { \"name\": … } }`, the same value the stain reads, never written; its range must be the stain's window for that field when the stain colours by the same field, that is when a node of the stain's backbone reads that field through `range_norm` (R-557 A1; the window that node's, fixed or `RANGE_AUTO`), and otherwise the field's own `range_norm` default (its ledger-declared range where it has one, `t_end` → lin [0, T], measured over the draw where it has none, over the valid samples only); Chart position must not be a field input; a field absent at the tier, known by `has_<feature>` (a baked const, or the `has_ensemble` uniform, R-145) and never by a per-sample NaN test, must take the node's declared default, the input reporting \"field not available at this tier\", never silently replaced by brightness; and an invalid sample of a present field, known by its validity predicate and never by NaN propagation or `isnan`, must be excluded from any measured range (render contract Part 2, R-255) and follow REQ-COL-157's definition."
   source:
   - file: docs/design/principia_print_graph.md
     section: 4.4 Payload fields as inputs
@@ -16452,14 +16452,24 @@
     section: "R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*"
   - file: decisions.md
     section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
+  - file: decisions.md
+    section: "R-145 — The fragment side reads `has_ensemble` as a uniform *(closes RQ-75)*"
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
   verify:
     method: unit test
-    detail: "cargo test -p render print_field_input: with the stain colouring `t_end` through a fixed window the input equals the stain's normalised `t_end` bitwise at every pixel, and under `RANGE_AUTO` it follows the stain's window; with the stain not colouring `t_end` it uses lin [0, T] and is unchanged by a zoom; with `ftle` absent at the tier the input takes the default and reports the status; controls: an input normalised over the visible range changes under the zoom and fails, a fallback to brightness fails, and `chart_position` as a field name is refused"
+    detail: "cargo test -p render print_field_input: with the stain colouring `t_end` through a fixed window the input equals the stain's normalised `t_end` bitwise at every pixel, and under `RANGE_AUTO` it follows the stain's window; a stain that reads `t_end` only through a node other than a backbone `range_norm` does not colour by it, and the input uses lin [0, T]; with the stain not colouring `t_end` it uses lin [0, T] and is unchanged by a zoom; with the stain not colouring `ftle`, and again with it not colouring the ensemble spread, the input's window is the minimum and maximum of the valid samples over the draw and moves when the draw changes; the same draw with added samples failing `ftle_valid` (or with an invalid spread), holding NaN or out-of-range values, gives the same window bitwise; with `ftle` absent at the tier (`has_ftle` false), and with the ensemble spread absent at E = 0 (`has_ensemble` false), the input takes the default and reports the status; with `ftle` present at the tier and some samples failing `ftle_valid`, the status is not \"field not available at this tier\" and those samples follow REQ-COL-157's definition; controls: an input normalised over the visible range for `t_end` changes under the zoom and fails, a fixed window for `ftle` or the spread fails the moving-draw arm, a reduction that lets an invalid sample into the minimum or maximum fails the added-samples arm, a per-sample NaN test for absence fails the present-but-invalid arm, a fallback to brightness fails, and `chart_position` as a field name is refused"
   rulings:
+  - R-145
+  - R-255
   - R-526
   - R-557
   milestone: M7
-  note: "R-485's §4 list, \"field inputs\"; physics-reviewed (R-485: the field inputs read the same values, with the same normalisation, as the stain). R-557 (RQ-478). Closed by TASK-M7-66."
+  note: "R-485's §4 list, \"field inputs\"; physics-reviewed (R-485: the field inputs read the same values, with the same normalisation, as the stain). R-557 (RQ-478). Closed by TASK-M7-66. Fix round 5 of PR #281 (physics review 5608575083, P1, P2, applied per R-369): the measured branch (`ftle`, the spread) has its arm and its validity exclusion, an absent field (`has_<feature>`, the spread at E = 0 by the `has_ensemble` uniform) is told from an invalid sample (its predicate), and \"colours by the same field\" carries R-557 A1's meaning. *Was (statement):* \"A Print graph must be able to read a payload field as a read-only `scalar` input, `{ \"type\": \"field\", \"params\": { \"name\": … } }`, the same value the stain reads, never written; its range must be the stain's window for that field when the stain colours by the same field (`RANGE_AUTO` included), and otherwise the field's own `range_norm` default (its ledger-declared range where it has one, `t_end` → lin [0, T], measured over the draw where it has none); Chart position must not be a field input; and a field absent from the payload must take the node's declared default, the input reporting \"field not available at this tier\", never silently replaced by brightness.\" *Was (verify):* \"cargo test -p render print_field_input: with the stain colouring `t_end` through a fixed window the input equals the stain's normalised `t_end` bitwise at every pixel, and under `RANGE_AUTO` it follows the stain's window; with the stain not colouring `t_end` it uses lin [0, T] and is unchanged by a zoom; with `ftle` absent at the tier the input takes the default and reports the status; controls: an input normalised over the visible range changes under the zoom and fails, a fallback to brightness fails, and `chart_position` as a field name is refused\""
 - id: REQ-COL-155
   area: COL
   kind: definition
@@ -16497,20 +16507,25 @@
 - id: REQ-COL-157
   area: COL
   kind: definition
-  statement: "What an invalid sample of a present field (a NaN ensemble spread, a `t_end` from a `sim_failed` sample, an FTLE failing `ftle_valid`) feeds the Print graph's neighbourhood nodes (Relief's blur on the height, the wash's mask feeding a blur), excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), must be defined in `principia_print_graph.md` §4.4 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
+  statement: "What an invalid sample of a present field (a NaN ensemble spread, a `t_end` from a `sim_failed` sample, an FTLE failing `ftle_valid`, and an invalid sample, by its own validity predicate, of each field REQ-COL-156 defines) feeds the Print graph's neighbourhood nodes (Relief's blur on the height, the wash's mask feeding a blur), excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), must be defined in `principia_print_graph.md` §4.4 by the task that needs it and reviewed by the physics reviewer before merge (R-72)."
   source:
   - file: docs/design/principia_print_graph.md
     section: 4.4 Payload fields as inputs
   - file: decisions.md
     section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
+  - file: decisions.md
+    section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
   verify:
-    method: review checklist
-    detail: "§4.4 says what such a sample contributes to a neighbourhood operation and what its own pixel shows; the physics reviewer checks that no NaN reaches a blur and that an invalid sample never reads as a valid extreme"
+    method: unit test
+    detail: "§4.4 says what such a sample contributes to a neighbourhood operation and what its own pixel shows; the physics reviewer checks that no NaN reaches a blur and that an invalid sample never reads as a valid extreme; and cargo test -p render print_field_input: on a fixture field holding an invalid sample of each kind (a NaN spread, a `sim_failed` `t_end`, an `ftle` failing `ftle_valid`, and an invalid sample of each REQ-COL-156 field), Relief's blurred height and the wash's blurred mask are finite at every pixel, the invalid sample's neighbours take the values §4.4's definition gives, and the invalid pixel does not read as the window's minimum or maximum; controls: an executor that lets the NaN into the blur fails, and one that maps the invalid sample to 0 or to 1 fails"
   rulings:
   - R-72
+  - R-255
   - R-536
   milestone: M7
-  note: R-536 D4. Closed by TASK-M7-66.
+  note: "R-536 D4. Closed by TASK-M7-66. Fix round 5 of PR #281 (physics review 5608575083, P3, applied per R-369): the definition has a runtime arm that can fail, and covers REQ-COL-156's fields. *Was (statement):* \"What an invalid sample of a present field (a NaN ensemble spread, a `t_end` from a `sim_failed` sample, an FTLE failing `ftle_valid`) feeds the Print graph's neighbourhood nodes (Relief's blur on the height, the wash's mask feeding a blur), excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), must be defined in `principia_print_graph.md` §4.4 by the task that needs it and reviewed by the physics reviewer before merge (R-72).\" *Was (verify):* \"§4.4 says what such a sample contributes to a neighbourhood operation and what its own pixel shows; the physics reviewer checks that no NaN reaches a blur and that an invalid sample never reads as a valid extreme\""
 - id: REQ-COL-158
   area: COL
   kind: calibration
@@ -16522,15 +16537,15 @@
     section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
   verify:
     method: review checklist
-    detail: "the PR proposes each window with the field's measured distribution over the reference views and the share of the figure each window marks; the physics reviewer checks it; the human confirms it at the M7 gate"
+    detail: "the PR proposes each window with its evidence: the physics fixtures it is measured on (named payloads, such as the slices of fixtures/slices.toml, never the lab's reference images), the tier, E and T of each, the normalisation it is calibrated under (the field's own `range_norm` default, the case where the stain does not colour by the field, REQ-COL-154), the field's measured distribution on those payloads, the share of the figure each window marks, and the share it marks when the stain colours by the field under `RANGE_AUTO`; the physics reviewer checks it; the human confirms it at the M7 gate"
   rulings:
   - R-71
   - R-536
   milestone: M7
-  note: "R-536 D2. TASK-M7-66 proposes it; the human confirms it at the M7 gate (R-71)."
+  note: "R-536 D2. TASK-M7-66 proposes it; the human confirms it at the M7 gate (R-71). Fix round 5 of PR #281 (physics review 5608575083, P5, applied per R-369): the evidence names its payloads, tier, E, T and normalisation, and shows the marked share under the stain's window. *Was (verify):* \"the PR proposes each window with the field's measured distribution over the reference views and the share of the figure each window marks; the physics reviewer checks it; the human confirms it at the M7 gate\""
 - id: REQ-COL-159
   area: COL
-  statement: "The four \"Driven by the data\" presets (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain) must each record in their registry entry the stand-in their lab graph actually uses (Relief of lifetime `brightness`; the other three `edges`, fringe density, where Wet's and Unfinished's `brightness` is a threshold window on it, not a stand-in), as R-492's deviation, and must read the real field in place of the stand-in node only: `t_end` for the relief, the ensemble spread for the wash, and REQ-COL-156's fields for the other two, the windows kept on the real field; each matched to its lab reference with that deviation listed."
+  statement: "The four \"Driven by the data\" presets (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain) must each record in their registry entry the stand-in their lab graph actually uses (Relief of lifetime `brightness`; the other three `edges`, fringe density, where Wet's and Unfinished's `brightness` is a threshold window on it, not a stand-in), as R-492's deviation, and must read the real field in place of the stand-in node only: `t_end` for the relief, the ensemble spread for the wash, and REQ-COL-156's fields for the other two, the windows kept on the real field at REQ-COL-158's values; each matched to a reference made from its lab graph with the real field, normalised by REQ-COL-154's rule, and REQ-COL-158's windows, any further deviation of the kinds print_graph §10 and R-492 name (units, seeding) listed, never tuned to match."
   source:
   - file: docs/design/principia_print_graph.md
     section: 4.4 Payload fields as inputs
@@ -16542,12 +16557,12 @@
     section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
   verify:
     method: golden image
-    detail: "cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made by substituting the fixture's field for the stand-in in the lab's graph, or lists the deviation; controls: Wet with its threshold node replaced too fails the graph-shape check, and a preset reading brightness when its field is present fails"
+    detail: "cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made from the lab's graph with the stand-in replaced by the fixture's field normalised by REQ-COL-154's rule and its threshold windows set to REQ-COL-158's (R-536 D2, R-492), a mismatch beyond the tolerance accepted only where it comes from a deviation of the kinds print_graph §10 and R-492 name (screen-pixel units, frame-seeded noise) listed in the registry entry; controls: Wet with its threshold node replaced too fails the graph-shape check, a preset reading brightness when its field is present fails, a reference keeping the lab's windows where REQ-COL-158's differ is refused by the reference check, and a mismatch beyond the tolerance listed as a deviation of any other kind fails"
   rulings:
   - R-492
   - R-536
   milestone: M7
-  note: R-536 D1, D2. Closed by TASK-M7-66.
+  note: "R-536 D1, D2. Closed by TASK-M7-66. Fix round 5 of PR #281 (physics review 5608575083, P4, applied per R-369): the reference takes REQ-COL-154's normalisation and REQ-COL-158's windows, and only units and seeding deviations may explain a mismatch. *Was (statement):* \"The four \"Driven by the data\" presets (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain) must each record in their registry entry the stand-in their lab graph actually uses (Relief of lifetime `brightness`; the other three `edges`, fringe density, where Wet's and Unfinished's `brightness` is a threshold window on it, not a stand-in), as R-492's deviation, and must read the real field in place of the stand-in node only: `t_end` for the relief, the ensemble spread for the wash, and REQ-COL-156's fields for the other two, the windows kept on the real field; each matched to its lab reference with that deviation listed.\" *Was (verify):* \"cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made by substituting the fixture's field for the stand-in in the lab's graph, or lists the deviation; controls: Wet with its threshold node replaced too fails the graph-shape check, and a preset reading brightness when its field is present fails\""
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
