@@ -83,6 +83,15 @@ ulp, and the criterion holds while the step spans at least 16 ulps.
 
 Jacobian cost: microseconds per quad on the CPU, amortised over `N²` samples. Negligible.
 
+**The latent Jacobian (R-550, RQ-341 (a)).** A second Jacobian shares this method and is not `J_D`: a CPU, f64,
+central-difference Jacobian `∂x/∂z` of the decoder with **8 columns**, one per latent direction (two decode evaluations
+per direction, the step rule `J_D`'s), at a latent point (`z₀`, or the hovered pixel's on an affine chart). It is taken
+of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and `η_E` (RQ-345 (b)), so
+it differentiates the state the integrator starts from. The compass's Jacobi and Shape views and their steer read it
+(render_gui_spec § "The compass: look and views (R-451, R-452)"): `J q̂₁`, `J q̂₂` on the slice plane's orthonormalised
+pair, the area stretch `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on that pair, so it does not move with the zoom σ or the
+tilts' shear. The linear path never reads it.
+
 ---
 
 ## 3. Three-layer quadtree
@@ -132,6 +141,12 @@ both alike, and nothing clamps, rescales, wraps or fades the view to hide the fl
 ## Reserved: the integration floor
 
 There is a second floor the decode guard doesn't catch — adjacent ICs *distinct* in physical coordinates, but f32 integration error exceeds their difference, so outcomes differ by rounding noise rather than real structure (Trani's numerical chaos, at pixel scale), and/or trajectories saturate the substep cap at close encounters. This floor is a **confidence gradient, not a terminal wall** (integrator contract Part 6, regularisation and the integration floor): saturated/suspect trajectories still reach real dynamical outcomes — they're *flagged* (the `saturated` descriptor bit; a high `suspect_fraction`), not terminated — so the structure is *computed with low confidence*, not cut off. The `saturated` bit and the derived suspect predicates exist in the payload (§2), so nothing is foreclosed; the scheduler uses saturation + high `suspect_fraction` as the **integration floor refinement-stop** (stop subdividing what the integrator can't resolve), not a sample-terminal. The sliding `MAX_REL_DEPTH` and the screen-space floor bound the work regardless of where this floor sits. Not a section — a reserved concern.
+
+**The floor follows the occupant (R-563).** The substep saturation above is the floor with regularisation off,
+unchanged. A regularised occupant (the default, Heggie × RK4, R-560) has no substep cap: its bound is a step budget, a
+rate of steps per unit physical time per copy, and a copy that runs out of it is **undetermined, never discarded**;
+the separation floor firing and steps held at the entry cap are its counted, non-terminal signals, the under-resolved
+markers there (integrator contract Part 6). How the scheduler's floor stop reads them is RQ-526.
 
 ---
 

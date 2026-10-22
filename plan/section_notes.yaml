@@ -871,6 +871,10 @@
   reason: informative only
   note: "the human's message of 14 Oct 2026 (R-428 quotes it): no veto on #209 (the alias test on the workspace target in ci-workspace, gate.yml's cpu-workspace job), the constants lint's skip of #[cfg(test)] code, constants::MILESTONES's names M0 … M8, or the narrowed local mutants runs with CI's full run as the gate; an act, recorded only; changes no requirement"
 - file: decisions.md
+  section: "R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it"
+  reason: informative only
+  note: "the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked \"accepted by R-559\" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes"
+- file: decisions.md
   section: "R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts"
   reason: informative only
   note: "the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement"
@@ -936,8 +940,8 @@
   note: "the human's prin-rs counts (R-443), evidence for the escaper palette's calibration (REQ-COL-099)"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.3 Open questions"
-  reason: gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325)
-  note: "each open question is an RQ entry; the requirements waiting on them carry rq:"
+  reason: informative only
+  note: "the open questions, each an RQ entry, all ruled: RQ-310 by R-545, RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467; their obligations are in the requirements they changed"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.4 Not done, and natural next steps"
   reason: informative only
@@ -1070,6 +1074,10 @@
   section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement"
 - file: docs/design/principia_benchmark.md
   section: "Principia: the benchmark"
   reason: "informative only"
@@ -1241,7 +1249,7 @@
 - file: docs/design/principia_listen.md
   section: "14. What the demo is not"
   reason: informative only
-  note: "where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries"
+  note: "where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-349 and REQ-SYS-060"
 - file: docs/design/principia_state_map.md
   section: "The state map: every pixel coloured by where its system is now"
   reason: informative only

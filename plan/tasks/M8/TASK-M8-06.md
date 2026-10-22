@@ -1,7 +1,7 @@
 # TASK-M8-06 — Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure's axis labels
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161
+- **Closes:** REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161, REQ-GUI-345
 - **Depends on:** TASK-M8-05, TASK-M6-26, TASK-M6-38
 - **Needs (earlier milestones):** REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026
 - **Reviewers:** code, qa, physics, gui
@@ -29,6 +29,7 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` (left panel) — screenshot against 01_main.png's left panel, read with R-457: one group, sub-sections in that order, eight named Slice centre sliders, no z₀ values under Navigate and no step under Tilt (REQ-GUI-081). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 01_main` and `cargo test -p gui preset_display_names` — screenshot against 01_main.png; every shipped preset's display name is built from its axis names (REQ-GUI-082).
+- `cargo test -p gui invariant_chart_params` — entering (L_z, E) with no lock sets the four frozen controls to z₀'s z_α, z_β, z_μ₁, z_μ₂ bit for bit, with a lock set to the lock's; editing one is one undoable SetField that moves only that parameter; control: a chart entered with its previous parameters kept fails (REQ-GUI-345; R-549, RQ-350).
 - `cargo test -p gui navigate_z0_fields` — drag and typed entry on centre u, v, the zoom and each of the eight Slice centre sliders' number boxes emit the same SetField as the slider and round-trip through the snapshot; Navigate has no single-coordinate z₀ box (centre u, v pan within the plane, which edits z₀) (REQ-GUI-083).
 - `cargo xtask screenshot 01_main` (axis labels, before and after a pan) — screenshot against 01_main.png; after a pan the end values update (REQ-GUI-084).
 - `cargo xtask screenshot 01_main` (direction labels) — slider/direction labels distinguish 'one mass logit' from 'only m₀' (REQ-GUI-034).

@@ -9,7 +9,7 @@
 - **Size:** ~800 lines, the tests included
 
 ## Goal
-**This task waits on RQ-440 and RQ-442** (R-540 H14). Listen's horizon and dwell, display and gestures, `principia_listen.md` §10 to §12: the moving hover's run extended on dwell or pin to Listen's `Horizon`, the trace and the sound switching together; the spectrum, the spectrogram (display only, dB above its local mean), its event lane and the readout; sweep a row and the four known orbits, the tests' calibration set.
+R-555 rules RQ-440 and RQ-442, so this task no longer waits. Listen's horizon and dwell, display and gestures, `principia_listen.md` §10 to §12: the moving hover's run extended on dwell or pin to Listen's `Horizon`, the trace and the sound switching together; the spectrum, the spectrogram (display only, dB above its local mean), its event lane and the readout; sweep a row and the four known orbits, the tests' calibration set.
 
 ## References
 - `decisions.md` § "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
@@ -30,6 +30,6 @@
 - cargo test -p gui listen_known_orbits: each known orbit loads §12's masses, positions and velocities, total mass 1 and G = 1, pinned and run to the horizon at once; a sweep's pointer positions are §12's and it sends no SetField; pressing it again stops it; control: a known orbit's IC off §12's digits fails (REQ-GUI-323).
 
 ## Notes
-- **Waits on RQ-440 and RQ-442** (R-540 H14). The task does not start until they are ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first).
-- **Applied meanwhile (R-540 H8):** RQ-464 (a): the moving hover to the map's own horizon under pointer_channels §3's step budget, on to Listen's `Horizon` on dwell or pin, the map unchanged. A ruling other than this is a follow-up change.
+- **No longer waits:** R-555 rules RQ-440 and RQ-442. *Was:* "**Waits on RQ-440 and RQ-442** (R-540 H14). …"
+- **Ruled by R-555 (was applied meanwhile, R-540 H8):** RQ-464 (a): the moving hover to the sim key's `t_max` under pointer_channels §3's step budget, S10's 20 the demo's maps' horizon, on to Listen's `Horizon` on dwell or pin, the trace and the sound together, the map unchanged. The readout names t_c's branch (RQ-467, R-555 A7).
 - Where the spectrum and the spectrogram sit in the GUI is TASK-M8-64's and TASK-M8-63's (R-541 G4, G7; *was:* "TASK-M8-61's and TASK-M8-63's", before PR #267's split); this task draws them.
