@@ -108,33 +108,56 @@ each one's `STEP` and records its residual, and the profile carries what it meas
 
 **What the profile's `order` sets (R-72; REQ-INT-078, a definition the physics reviewer approves; TASK-M3-02).**
 `total_substeps_log2 = ⌊log₂ total_substeps⌋` (payload §5) counts `STEP` calls. The profile gives a count its
-meaning, in three readings, each read from the profile and none from an occupant's name:
+meaning, in two readings, and `order` sets a third thing, the error exponent; each is read from the profile and none
+from an occupant's name:
 - *Encounter stress, the complexity proxy proper.* For an occupant with `owns_time_mapping: false` the count is the
   wrapper's substep law (`N_sub` from `r_min`, Part 4), not the occupant's, so on one trajectory it is the same for
   every such occupant and `order` does not change it: it reads as how hard the close encounters were. It is compared
   between samples of one sim key, whose occupant is one (Part 3). For `owns_time_mapping: true` the count is the
-  occupant's own schedule (Part 2a, Cost 2), read only against samples of the same occupant.
+  occupant's own schedule (Part 2a, Cost 2), read only against samples of the same occupant. It is never a confidence
+  grade: under the substep law more substeps answer a shorter local timescale, not a finer resolution of the same one
+  (next item).
 - *Cost.* A run made `total_substeps · force_evals` force evaluations, so its cost in `log₂` is
   `total_substeps_log2 + log₂ force_evals`, to within the floor's 1. Effort compares across occupants in this form,
   never as the bare count.
-- *Resolution.* A `STEP` of size `h` of an order-`p` occupant commits a local error `O(h^{p+1})`, and a run of mean
-  step `h̄` a global error `O(h̄^p)`. With `step_count` macro-steps taken (payload §5), `h̄ = dt_macro · step_count /
-  total_substeps`, so each doubling of the steps per macro-step is worth `p` bits of accuracy: 1 for Euler, 2 for KDK,
-  4 for Yoshida-4 and RK4, 6 for Yoshida-6. The run's **resolution** is
-  `ρ = order · (total_substeps_log2 − ⌊log₂ step_count⌋)`, in bits, at least 0 (a difference the two floors invert
-  reads 0) and within `order` of `order · log₂(total_substeps / step_count)`. It is ordinal: it ranks the runs of one
-  occupant by how much finer than the macro-step they were integrated, and compares occupants only up to each one's
-  error constant; it is not an error bound, and no threshold is set on it (a threshold would be a calibration, R-71).
-  Bits past the precision's own (24 at f32, 53 at f64) carry nothing.
+- *The error exponent.* dd_integrator §3.3's law, `N_sub = ⌈(r_sub/r_min)^{γ_sub}⌉` clamped to `[1, N_max]`, at the
+  default `γ_sub = 1.5` scales as the two-body time at the closest approach, `τ_local = √(r_min³ / (G m_pair))`, so an
+  unsaturated substep `h_sub = dt_macro / N_sub` holds `h_sub / τ_local` near the sim key's fixed ratio
+  `κ = dt_macro · √(G m_pair / r_sub³)` (below it by the ceiling's rounding, and below it where `N_sub = 1`), however
+  deep the encounter. An order-`p` step's relative error per local dynamical time is then `O(κ^p)` at every
+  unsaturated substep: `order` is the exponent the law's fixed ratio is raised to, which is how "a 6th-order step is
+  worth more than a Euler step of the same size" (`κ < 1`). It ranks occupants at one sim key's `κ` only up to each
+  one's error constant; it is not an error bound, and no threshold is set on it (a threshold would be a calibration,
+  R-71). Where the law saturates (`N_sub = N_max`, the stored `saturated` bit, Part 6) `h_sub / τ_local` exceeds `κ`,
+  growing as `(r_sub/r_min)^{3/2} / N_max`, and the exponent no longer bounds the step: that is the integration floor,
+  a confidence gradient, not a terminal (Part 6; deep_zoom § "Reserved: the integration floor"). At a `γ_sub` other
+  than 1.5 the ratio is not fixed, `h_sub / τ_local ∝ r_min^{γ_sub − 3/2}`, and the exponent compares occupants at
+  one `r_min` only.
 
-**FTLE confidence** is the pair `(symplectic, ρ)`. The FTLE (payload §5) is read off the Benettin shadow, integrated
-by the same occupant. On a `symplectic: true` occupant the step preserves phase-space volume, so its error does not
-bias the exponent in kind, and `ρ` grades the run; on a `symplectic: false` occupant (Euler, RK4) the step's numerical
+**FTLE confidence** is the triple `(symplectic, saturated, order)`. The FTLE (payload §5) is read off the Benettin
+shadow, integrated by the same occupant. On a `symplectic: true` occupant the step preserves phase-space volume, so its
+error does not bias the exponent in kind; on a `symplectic: false` occupant (Euler, RK4) the step's numerical
 dissipation or excitation of phase-space volume enters the exponent at the order of its error, so the FTLE is marked
-integrator-biased whatever its `ρ`, and is not compared with a symplectic occupant's. Whether the FTLE has a value at
-all stays `ftle_valid`'s (payload §6; R-253, R-254). `kernel::occupant::CapabilityProfile` reads all three
-(`force_evaluations`, `resolution_bits`, `ftle_confidence`), with `drift_reads_dynamics` (`symplectic`) and the two
-reversibility gates (`step_reversible`, `run_reversible`).
+integrator-biased, and is not compared with a symplectic occupant's. A trajectory whose `saturated` bit is set was
+stepped past the ratio the law holds, so its FTLE is computed with low confidence, the integration floor's (Part 6);
+an unsaturated one was stepped at `κ`, where `order` grades the occupant. `total_substeps_log2` is not part of it: it
+reads encounter stress, and a saturated run has the most substeps. Whether the FTLE has a value at all stays
+`ftle_valid`'s (payload §6; R-253, R-254). `kernel::occupant::CapabilityProfile` reads them (`force_evaluations`,
+`error_exponent`, `ftle_confidence` given the `saturated` bit), with `drift_reads_dynamics` (`symplectic`) and the two
+reversibility gates (`step_reversible`, `run_reversible`). *Was (TASK-M3-02's first draft, physics review 5607707487
+P3: under the substep law the extra substeps measure encounter depth, so `ρ` ranked a saturated run, the
+lowest-confidence state, highest):* "in three readings" (the third): "*Resolution.* A `STEP` of size `h` of an
+order-`p` occupant commits a local error `O(h^{p+1})`, and a run of mean step `h̄` a global error `O(h̄^p)`. With
+`step_count` macro-steps taken (payload §5), `h̄ = dt_macro · step_count / total_substeps`, so each doubling of the
+steps per macro-step is worth `p` bits of accuracy: 1 for Euler, 2 for KDK, 4 for Yoshida-4 and RK4, 6 for Yoshida-6.
+The run's **resolution** is `ρ = order · (total_substeps_log2 − ⌊log₂ step_count⌋)`, in bits, at least 0 (a
+difference the two floors invert reads 0) and within `order` of `order · log₂(total_substeps / step_count)`. It is
+ordinal: it ranks the runs of one occupant by how much finer than the macro-step they were integrated, and compares
+occupants only up to each one's error constant; it is not an error bound, and no threshold is set on it (a threshold
+would be a calibration, R-71). Bits past the precision's own (24 at f32, 53 at f64) carry nothing." and "**FTLE
+confidence** is the pair `(symplectic, ρ)`. … so its error does not bias the exponent in kind, and `ρ` grades the run;
+… so the FTLE is marked integrator-biased whatever its `ρ` … `kernel::occupant::CapabilityProfile` reads all three
+(`force_evaluations`, `resolution_bits`, `ftle_confidence`)".
 
 **Euler is kept deliberately, as a debug occupant.** It makes energy drift blow up violently and visibly, which makes "energy-drift view + Euler" a *test that the diagnostic plumbing works* — you *want* to see it explode. It is not a production option; it is the integrator-side analogue of a debug shader. The profile (`symplectic: false`) is what stops it being mistaken for one.
 

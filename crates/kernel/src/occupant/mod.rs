@@ -11,7 +11,7 @@
 //! force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (R-19, R-500; the re-registration
 //! field is Part 2b's, added with the regularisations), and downstream features read the profile, never the occupant's
 //! name: [`CapabilityProfile::drift_reads_dynamics`] for energy drift, [`CapabilityProfile::reversibility_diagnostic`]
-//! and [`CapabilityProfile::reversibility_test`] for reversal, and [`CapabilityProfile::resolution_bits`],
+//! and [`CapabilityProfile::reversibility_test`] for reversal, and [`CapabilityProfile::error_exponent`],
 //! [`CapabilityProfile::force_evaluations`] and [`CapabilityProfile::ftle_confidence`] for the `total_substeps_log2`
 //! complexity proxy and FTLE confidence, Part 2's definition (REQ-INT-078). [`table`] is the Part 2 / Part 2a table and
 //! each occupant's default tier binding.
@@ -99,15 +99,19 @@ pub struct CapabilityProfile {
     pub owns_time_mapping: bool,
 }
 
-/// FTLE confidence as the profile reads it (integrator_contract Part 2, REQ-INT-078): whether the occupant's own error
-/// leaves the exponent unbiased in kind, and the run's resolution in bits.
+/// FTLE confidence (integrator_contract Part 2, REQ-INT-078): whether the occupant's own error leaves the exponent
+/// unbiased in kind, whether the trajectory reached the integration floor, and the error exponent the substep law's
+/// fixed step-to-timescale ratio is raised to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FtleConfidence {
     /// Whether the occupant is symplectic, so that its error does not bias the exponent by a numerical dissipation or
     /// excitation of phase-space volume.
     pub volume_preserving: bool,
-    /// [`CapabilityProfile::resolution_bits`] of the run.
-    pub resolution_bits: u32,
+    /// The trajectory's `saturated` bit: the substep law hit `N_max`, so the step outran the ratio the law holds and
+    /// the FTLE was computed below the integration floor's confidence (Part 6).
+    pub saturated: bool,
+    /// [`CapabilityProfile::error_exponent`].
+    pub error_exponent: u32,
 }
 
 impl CapabilityProfile {
@@ -144,25 +148,22 @@ impl CapabilityProfile {
         total_substeps as u64 * self.force_evals as u64
     }
 
-    /// The run's resolution in bits, `order · (total_substeps_log2 − step_count_log2)`: each doubling of the steps per
-    /// macro-step is worth `order` bits of accuracy (Part 2's definition). `step_count_log2` is `⌊log₂ step_count⌋` of
-    /// the macro-steps taken, as `total_substeps_log2` is of the steps; `total_substeps ≥ step_count`, so the difference
-    /// is at least 0 up to the floors, and a floor that inverts it reads 0.
+    /// The exponent of a step's error per local dynamical time in the substep law's fixed ratio `κ` of step to local
+    /// timescale: `order` (Part 2's definition). It ranks occupants at one sim key's `κ`, up to each one's error
+    /// constant; it is not an error bound.
     #[inline]
-    pub const fn resolution_bits(&self, total_substeps_log2: u32, step_count_log2: u32) -> u32 {
-        self.order * total_substeps_log2.saturating_sub(step_count_log2)
+    pub const fn error_exponent(&self) -> u32 {
+        self.order
     }
 
-    /// FTLE confidence (Part 2's definition): `symplectic`, and the run's [`CapabilityProfile::resolution_bits`].
+    /// FTLE confidence (Part 2's definition): `symplectic`, the trajectory's `saturated` bit, and the
+    /// [`CapabilityProfile::error_exponent`]. `total_substeps_log2` is not part of it: it reads encounter stress.
     #[inline]
-    pub const fn ftle_confidence(
-        &self,
-        total_substeps_log2: u32,
-        step_count_log2: u32,
-    ) -> FtleConfidence {
+    pub const fn ftle_confidence(&self, saturated: bool) -> FtleConfidence {
         FtleConfidence {
             volume_preserving: self.symplectic,
-            resolution_bits: self.resolution_bits(total_substeps_log2, step_count_log2),
+            saturated,
+            error_exponent: self.error_exponent(),
         }
     }
 }

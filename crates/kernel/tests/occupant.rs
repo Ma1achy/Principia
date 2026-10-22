@@ -651,8 +651,8 @@ negative_control!(
 
 /// The readings Part 2 defines, per profile checked: energy drift reads the dynamics (`symplectic`), the
 /// reversibility diagnostic qualifies (`step_reversible`), the reversibility test binds it (`run_reversible`), the
-/// substep count is the wrapper's law (`!owns_time_mapping`), the bits one doubling of the steps is worth (`order`),
-/// and the force evaluations a step costs (`force_evals`).
+/// substep count is the wrapper's law (`!owns_time_mapping`), the error exponent (`order`), and the force evaluations
+/// a step costs (`force_evals`).
 type Reading = (&'static str, bool, bool, bool, bool, u32, u32);
 
 /// [`EXPECTED`]'s rows' readings, then [`RUN_REVERSIBLE`]'s.
@@ -695,12 +695,11 @@ fn profiles(table: &[Row]) -> Vec<(&'static str, CapabilityProfile)> {
         .collect()
 }
 
-/// Checks each profile's readings against [`READINGS`], and the resolution and cost readings at their edges: the
-/// floor difference `total_substeps_log2 − step_count_log2` at 3, 1, 0 and inverted (read 0), and the cost at no steps
-/// and at `u32::MAX` steps.
+/// Checks each profile's readings against [`READINGS`], FTLE confidence on a saturated and an unsaturated trajectory,
+/// and the cost reading at no steps and at `u32::MAX` steps.
 fn check_readers(profiles: &[(&str, CapabilityProfile)]) {
     assert_eq!(profiles.len(), READINGS.len(), "the profiles checked");
-    for (&(got, p), &(name, dynamics, diagnostic, test, wrapper, bits, evals)) in
+    for (&(got, p), &(name, dynamics, diagnostic, test, wrapper, exponent, evals)) in
         profiles.iter().zip(&READINGS)
     {
         assert_eq!(got, name, "the profiles' order");
@@ -716,26 +715,16 @@ fn check_readers(profiles: &[(&str, CapabilityProfile)]) {
             wrapper,
             "{name}'s substep reading"
         );
-        for (subs, steps, doublings) in [
-            (10, 7, 3),
-            (8, 7, 1),
-            (7, 7, 0),
-            (6, 7, 0),
-            (0, 31, 0),
-            (31, 0, 31),
-        ] {
+        assert_eq!(p.error_exponent(), exponent, "{name}'s error exponent");
+        for saturated in [false, true] {
             assert_eq!(
-                p.resolution_bits(subs, steps),
-                bits * doublings,
-                "{name}'s resolution reading at ({subs}, {steps})"
-            );
-            assert_eq!(
-                p.ftle_confidence(subs, steps),
+                p.ftle_confidence(saturated),
                 FtleConfidence {
                     volume_preserving: dynamics,
-                    resolution_bits: bits * doublings,
+                    saturated,
+                    error_exponent: exponent,
                 },
-                "{name}'s FTLE confidence at ({subs}, {steps})"
+                "{name}'s FTLE confidence, saturated {saturated}"
             );
         }
         assert_eq!(p.force_evaluations(0), 0, "{name}'s cost of no steps");
@@ -755,7 +744,7 @@ fn capability_profile_readers() {
 negative_control!(
     capability_profile_readers,
     "a table giving Yoshida-6 order 4",
-    expected = "Yoshida-6's resolution reading at (10, 7)",
+    expected = "Yoshida-6's error exponent",
     {
         let mut t = table();
         t[3].profile.order = 4;
