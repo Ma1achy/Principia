@@ -1495,7 +1495,7 @@ corpus, the spec follows the authority:
 
 ## G14. Settled by the notes (record)
 
-1. The dev GUI is a debug layer (F3) with the final UI's structure and every feature.
+1. The dev GUI is a debug layer (F3), and the native app's and v1 web's UI, with every feature; a separate final UI, if there ever is one, is v2 web's (R-571; *was:* "with the final UI's structure and every feature").
 2. Explore and Stain are the two modes; everything else is a window or a tool.
 3. "Manifold view" is one group: chart, navigation, centre, slice and tilt, rotation.
 4. Run settings live in a window, not on the page.
