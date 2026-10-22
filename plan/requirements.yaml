@@ -16260,8 +16260,10 @@
   verify:
     method: review checklist
     detail: "every dev-GUI write is a set_field call and every read a snapshot field; no direct engine call"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): the TS production GUI is v2 web's, if there ever is one; the native app and v1 web run the egui binding, and this requirement holds for it as written (gui review 5608379011 of PR #282)."
 - id: REQ-GUI-034
   area: GUI
   statement: "Derived, invariant and coupled slice/tilt directions of the direction library and the lock must be tangent vectors evaluated at the chart centre with the axis's residual convention, and the UI must label whether a line is a raw-control line or a physical one-quantity direction; the Tilt section's own tilt on a curved chart is R-473's rotation on the chart's own parameters (REQ-GUI-241)."
@@ -31167,7 +31169,7 @@
   note: "R-547 (RQ-365 (c)): split from REQ-SYS-015. Closed by TASK-M2-25, when it emits shape() from the translation. Fix round 1 of PR #274 (qa Q9, applied per R-369). *Was (verify):* \"read_side.wgsl's shape() is a build output of the translation, not a string literal in crates/ledger/src/gen/read.rs; the scan (the mass/config/momentum formulae, mu_rho|mu_lambda|m01 among them, outside the shared source, .wgsl included) finds no hit; the twin test against kernel::shape still passes\""
 - id: REQ-SYS-086
   area: SYS
-  statement: "In v1 web, wherever the browser cannot do something the native app does, the app must say so where the native app has the feature: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571)."
+  statement: "In v1 web, wherever the browser cannot do something the native app does through a control, the app must say so where the native app has that control: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571)."
   source:
   - file: decisions.md
     section: "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
@@ -31175,11 +31177,11 @@
     section: G1. Rules that hold everywhere
   verify:
     method: review checklist
-    detail: "the gui reviewer lists each native feature v1 web lacks (at least the compute fast-math control, R-303, and each feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check"
+    detail: "the gui reviewer lists each native feature with a control that v1 web lacks (at least the compute fast-math control, R-303, and each such feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check"
   rulings:
   - R-303
   - R-571
   milestone: M8
   rq:
   - RQ-550
-  note: "R-571 (21 Oct 2026): \"Where the browser cannot do something the native app does, v1 web says so in the app; it does not get a different design.\" Read as R-303's pattern, applied per R-369. Closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550."
+  note: "R-571 (21 Oct 2026): \"Where the browser cannot do something the native app does, v1 web says so in the app; it does not get a different design.\" Read as R-303's pattern, applied per R-369. Closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550. Gui review 5608379011 of PR #282, applied per R-369: this covers gaps that have a native control; the gaps with none, runtime-authored colour occupants in the scanned filesystem (systems_architecture §3, v1 web's row 7), persistence across reloads (row 11) and `prin profile query --live` (row 14), are left explicitly to RQ-550, whose ruling must settle what v1 web does for each. *Was (statement):* \"In v1 web, wherever the browser cannot do something the native app does, the app must say so where the native app has the feature: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571).\" *Was (verify):* \"the gui reviewer lists each native feature v1 web lacks (at least the compute fast-math control, R-303, and each feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check\""
