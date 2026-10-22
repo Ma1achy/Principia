@@ -13712,7 +13712,7 @@
     section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
   verify:
     method: unit test
-    detail: "cargo test -p render goldens_force_plain: the golden-image and validation harnesses set Plain explicitly; control: a harness run with a user RenderState holding a non-Plain graph still renders Plain, and one that inherits it fails a stain golden"
+    detail: "cargo test -p render goldens_force_plain: the golden-image and validation harnesses set Plain explicitly; control: a harness run with a user RenderState holding a non-Plain graph still renders Plain, and one that inherits it fails a stain golden; cargo test -p gui print_figure_only: under a non-Plain graph the chrome's and the legend's pixels equal Plain's and only the figure's differ; control: a print stage applied to the whole swap chain changes the chrome and fails"
   rulings:
   - R-67
   - R-485
@@ -14043,7 +14043,7 @@
   - R-485
   - R-532
   milestone: M7
-  note: "R-130: the styles are the poster's. R-485 (20 Oct 2026) supersedes R-130's v1 style list; R-532 (RQ-396) ports its eight styles as Print graph presets, 111 in all. *Was:* \"The style stage must be optional and apply to the figure only, offering in v1 plain, watercolour & pencil (the poster's painted treatment) and the seven print presets (…), as the poster's implementation (workbench/principia_poster_both_sides.html and its press module) defines them.\" Closed by TASK-M7-65 (was TASK-M7-26)."
+  note: "R-130: the styles are the poster's. R-485 (20 Oct 2026) supersedes R-130's v1 style list; R-532 (RQ-396) ports its eight styles as Print graph presets, 111 in all. *Was:* \"The style stage must be optional and apply to the figure only, offering in v1 plain, watercolour & pencil (the poster's painted treatment) and the seven print presets (the paper.design halftone presets with the poster's patches: per-plate slip, cell ceiling), as the poster's implementation (workbench/principia_poster_both_sides.html and its press module) defines them.\" Closed by TASK-M7-65 (was TASK-M7-26)."
 - id: REQ-COL-045
   area: COL
   statement: "Colour-vision simulation must offer off, deuteranopia, protanopia, tritanopia and achromatopsia."

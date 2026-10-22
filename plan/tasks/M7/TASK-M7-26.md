@@ -32,7 +32,7 @@ The graph executor, in the display chain where style was: SimState → stain →
 - `crates/render/src/display/chain.rs` — the print stage in style's place, and the debug-view bypass.
 - `xtask golden` and the validation harness setting Plain explicitly.
 - `docs/design/principia_print_graph.md` §3 — the sheet-node definition (REQ-RENDER-108), with the gui reviewer's approval.
-- Tests `print_stage`, `print_measurement_blind`, `print_debug_bypass`, `goldens_force_plain`.
+- Tests `print_stage`, `print_measurement_blind`, `print_debug_bypass`, `goldens_force_plain`, `print_figure_only`.
 
 ## Acceptance tests
 - `cargo test -p render print_stage` — REQ-RENDER-105's verify (under Plain the stage's output bytes equal its input bytes on every frame of the stain golden suite (§11 test 1); the pass order is asserted stain → print → display scale → gamut clamp → CVD; changing the graph leaves the sim key, the quad cache and the quad requests unchanged; controls: any non-Plain preset fixture differs from its input, and a Plain that resamples its input fails the identity).
@@ -40,6 +40,7 @@ The graph executor, in the display chain where style was: SimState → stain →
 - `cargo test -p render print_debug_bypass` — REQ-RENDER-107's verify (with a non-Plain graph set, View › Debug view and a stain whose colour occupant is `debug/` render bitwise as under Plain; control: a presentation stain under the same graph differs from Plain).
 - Definition: §3 says, for a graph built in the editor, how a node is known to be sheet or mark (for example a registry flag or the slot the node descends from), and what a node fed by both is; the gui reviewer checks that the slot template's own split (Ground, Age, Viewing the sheet) falls out of it unchanged (REQ-RENDER-108).
 - `cargo test -p render goldens_force_plain` — REQ-COL-027's verify (the golden-image and validation harnesses set Plain explicitly; control: a harness run with a user RenderState holding a non-Plain graph still renders Plain, and one that inherits it fails a stain golden).
+- `cargo test -p gui print_figure_only` — REQ-COL-027's figure-only arm: under a non-Plain graph the chrome's and the legend's pixels equal Plain's and only the figure's differ; control: a print stage applied to the whole swap chain changes the chrome and fails (PR #281, code review 5608337157 F3).
 
 ## Notes
 - **Was the style stage (applied per R-369):** R-485 replaces style with the Print graph and supersedes R-130, so this task, which held the style stage, now holds the print stage; R-130's eight styles are Print graph presets in TASK-M7-65 (R-532), which closes REQ-COL-044. The task's earlier text is kept below under "Was".

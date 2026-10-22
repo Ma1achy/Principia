@@ -23,7 +23,7 @@ Time every registered node at 1024² on the reference machine (the human's Mac, 
 - Test `print_cost_class_matches`.
 
 ## Acceptance tests
-- `cargo xtask bench print_cost_classes on the human's Mac` — REQ-PERF-096's verify (every registered node timed at 1024² (median of repeated runs), the table recorded in the PR and in the registry; control: a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`).
+- `cargo xtask bench print_cost_classes`, on the human's Mac (R-186) — REQ-PERF-096's verify (every registered node timed at 1024² (median of repeated runs), the table recorded in the PR and in the registry; control: a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`).
 - Calibration: the PR proposes the thresholds and each `reduced` node's factor from REQ-PERF-096's table, with the gaps in the measured distribution they sit in; a reviewer checks them; the human confirms them at the M7 gate (REQ-PERF-097).
 
 ## Notes

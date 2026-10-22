@@ -2135,7 +2135,7 @@
   pitfalls: [PIT-3]
 - id: TASK-M7-21
   milestone: M7
-  title: "The display chain: style → display scale → gamut clamp → colour-vision simulation → screen"
+  title: "The display chain: Print graph → display scale → gamut clamp → colour-vision simulation → screen, the line passes either side (R-485, R-531)"
   depends_on: [TASK-M7-12, TASK-M7-20, TASK-M5-12, TASK-M5-23, TASK-M5-26]
   needs: [REQ-RENDER-042, REQ-RENDER-052, REQ-RENDER-038, REQ-RENDER-006, REQ-RENDER-047]
   requirements: [REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066, REQ-COL-059]
