@@ -17,10 +17,12 @@
 //! - REQ-VAL-032, REQ-VAL-191: dd §5 test 3 per dt over a dense grid of `dt/τ` inside the criterion's domain, on qa's
 //!   own fixtures, at f64 and f32: KDK, Yoshida-4 and Yoshida-6 at or below `step_reversal_tol`, and the asymmetric
 //!   controls (RK4, and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`) above it at each dt, not only on the
-//!   worst residual, over the closed domain `[edge, step_reversal_edge_max]` at 16 points per decade with both edges;
-//!   the tolerance and the three edges are read from the register through `validation`; the fixtures include an
-//!   approaching pair, whose step's conditioning the start's `τ`, from positions alone, does not bound. A second control takes the
-//!   reversible steppers past the upper edge on Burrau's start, where they read above the criterion.
+//!   worst residual, over the closed domain `[edge, step_reversal_edge_max]` at 16 points per decade with both edges,
+//!   and the top decade at 64; the tolerance and the three edges are read from the register through `validation`.
+//!   `τ` is the step's, as `step_reversal_tol` defines it: the least two-body time over every position at which test 3
+//!   evaluates the force, recorded by qa's own f64 rules of dd §3.2, checked to end where the shipped steps end. The
+//!   fixtures include two approaching pairs, which the start's `τ` does not see; the upper-edge control reads `τ` from
+//!   the start alone and fails there (qa review Q2).
 
 use std::collections::BTreeMap;
 
@@ -1153,11 +1155,12 @@ order_control!(
 const TOL: f64 = STEP_REVERSAL_TOL.number();
 
 /// qa's fixtures, none of them the implementer's: a hierarchical triple (a tight 0–1 binary, the third orbiting it),
-/// an equilateral Lagrange configuration in rigid rotation, Burrau's (3, 4, 5) Pythagorean start at rest, and an
-/// approaching pair: equal masses 1, bodies 0 and 1 a unit apart moving at each other with speed 1 at impact parameter
-/// 0.05 (a near-parabolic encounter, relative energy about 0), the third at rest 5 away. `τ`, from positions alone,
-/// does not see the approach: within one step at `dt/τ ≤ step_reversal_edge_max` the pair can pass far closer than
-/// the start's separation.
+/// an equilateral Lagrange configuration in rigid rotation, Burrau's (3, 4, 5) Pythagorean start at rest, and two
+/// approaching pairs. The first: equal masses 1, bodies 0 and 1 a unit apart moving at each other with speed 1 at
+/// impact parameter 0.05 (a near-parabolic encounter), the third at rest 5 away. The second: unequal masses 2 and 0.5,
+/// 1.2 apart at impact parameter 0.02, momenta ±2 (speeds 1 and 4, zero total momentum), the third, mass 1, at rest 4
+/// away. The start's positions do not show an approach (qa review Q2): within one step a pair can pass far closer than
+/// it starts.
 fn fixtures<R: Pr>() -> Vec<(&'static str, State<R>)> {
     let st = |m: [f64; 3], r: [[f64; 2]; 3], p: [[f64; 2]; 3]| State {
         m: m.map(R::of),
@@ -1196,21 +1199,169 @@ fn fixtures<R: Pr>() -> Vec<(&'static str, State<R>)> {
                 [[1.0, 0.0], [-1.0, 0.0], [0.0, 0.0]],
             ),
         ),
+        (
+            "unequal approach",
+            st(
+                [2.0, 0.5, 1.0],
+                [[-0.6, 0.0], [0.6, 0.02], [0.0, -4.0]],
+                [[2.0, 0.0], [-2.0, 0.0], [0.0, 0.0]],
+            ),
+        ),
     ]
 }
 
-/// The state's shortest two-body time `τ = min √(r³/(G(mᵢ + mⱼ)))`, `G = 1` (step_reversal_tol's definition).
-fn tau<R: Pr>(s: &State<R>) -> f64 {
+/// Three bodies' positions.
+type Pos = [[f64; 2]; 3];
+
+/// The shortest two-body time at positions `r`, `min √(r³/(G m_pair))` over the three pairs, `G = 1`,
+/// `m_pair = mᵢ + mⱼ` (step_reversal_tol's definition).
+fn tau_at(m: &[f64; 3], r: &Pos) -> f64 {
     [(0, 1), (1, 2), (0, 2)]
         .iter()
         .map(|&(i, j)| {
-            let d: Vec<f64> = (0..2)
-                .map(|k| s.r[i][k].into() - s.r[j][k].into())
-                .collect();
-            let r = (d[0] * d[0] + d[1] * d[1]).sqrt();
-            (r * r * r / (s.m[i].into() + s.m[j].into())).sqrt()
+            let (dx, dy) = (r[i][0] - r[j][0], r[i][1] - r[j][1]);
+            let d = (dx * dx + dy * dy).sqrt();
+            (d * d * d / (m[i] + m[j])).sqrt()
         })
         .fold(f64::INFINITY, f64::min)
+}
+
+/// A rule of dd §3.2 as qa writes it, at f64: a composition of KDK steps with drift sequence `d` (KDK `[1]`), or RK4.
+#[derive(Clone, Copy)]
+enum Rule {
+    Drifts(&'static [f64]),
+    Rk4,
+}
+
+const KDK_D: [f64; 1] = [1.0];
+const Y4_D: [f64; 3] = [f64::YOSHIDA4_W1, f64::YOSHIDA4_W0, f64::YOSHIDA4_W1];
+const Y4_ASYM_D: [f64; 3] = [f64::YOSHIDA4_W1, f64::YOSHIDA4_W1, f64::YOSHIDA4_W0];
+const Y6_D: [f64; 7] = [
+    f64::YOSHIDA6_W3,
+    f64::YOSHIDA6_W2,
+    f64::YOSHIDA6_W1,
+    f64::YOSHIDA6_W0,
+    f64::YOSHIDA6_W1,
+    f64::YOSHIDA6_W2,
+    f64::YOSHIDA6_W3,
+];
+
+fn accel(m: &[f64; 3], r: &Pos, at: &mut Vec<Pos>) -> Pos {
+    at.push(*r);
+    Geom::new(m, r).accel
+}
+
+impl Rule {
+    /// One f64 step of the rule from `s`, each position at which it evaluates the force pushed onto `at`: for a
+    /// composition the start's and each drift's end (the closing kick's is the step's end); for RK4 its four stages'
+    /// and the step's end (the next step's first).
+    fn step(self, s: &State<f64>, dt: f64, at: &mut Vec<Pos>) -> State<f64> {
+        let m = s.m;
+        match self {
+            Rule::Drifts(d) => {
+                let n = d.len();
+                let mut st = *s;
+                for i in 0..=n {
+                    let a = accel(&m, &st.r, at);
+                    let c = (if i == 0 { 0.0 } else { d[i - 1] } + if i == n { 0.0 } else { d[i] })
+                        / 2.0;
+                    st.p = std::array::from_fn(|b| {
+                        std::array::from_fn(|k| st.p[b][k] + c * dt * m[b] * a[b][k])
+                    });
+                    if i < n {
+                        st.r = std::array::from_fn(|b| {
+                            std::array::from_fn(|k| st.r[b][k] + d[i] * dt * st.p[b][k] / m[b])
+                        });
+                    }
+                }
+                st
+            }
+            Rule::Rk4 => {
+                // ẏ = (p/m, m·a(r)) on y = (r, p).
+                let mut f = |r: &Pos, p: &Pos| -> (Pos, Pos) {
+                    let a = accel(&m, r, at);
+                    let v: Pos = std::array::from_fn(|b| [p[b][0] / m[b], p[b][1] / m[b]]);
+                    let fp: Pos = std::array::from_fn(|b| [m[b] * a[b][0], m[b] * a[b][1]]);
+                    (v, fp)
+                };
+                let add = |x: &Pos, h: f64, k: &Pos| -> Pos {
+                    std::array::from_fn(|b| [x[b][0] + h * k[b][0], x[b][1] + h * k[b][1]])
+                };
+                let (r, p) = (s.r, s.p);
+                let (k1r, k1p) = f(&r, &p);
+                let (k2r, k2p) = f(&add(&r, dt / 2.0, &k1r), &add(&p, dt / 2.0, &k1p));
+                let (k3r, k3p) = f(&add(&r, dt / 2.0, &k2r), &add(&p, dt / 2.0, &k2p));
+                let (k4r, k4p) = f(&add(&r, dt, &k3r), &add(&p, dt, &k3p));
+                let comb = |x: &Pos, a: &Pos, b: &Pos, c: &Pos, d: &Pos| -> Pos {
+                    std::array::from_fn(|i| {
+                        std::array::from_fn(|k| {
+                            x[i][k] + dt / 6.0 * (a[i][k] + 2.0 * b[i][k] + 2.0 * c[i][k] + d[i][k])
+                        })
+                    })
+                };
+                let out = State {
+                    m,
+                    r: comb(&r, &k1r, &k2r, &k3r, &k4r),
+                    p: comb(&p, &k1p, &k2p, &k3p, &k4p),
+                };
+                at.push(out.r);
+                out
+            }
+        }
+    }
+}
+
+/// How `τ` is read: the step's (the criterion's, REQ-VAL-191), or the start state's positions alone (as it was read
+/// before qa review Q2, for the control).
+#[derive(Clone, Copy, PartialEq)]
+enum Tau {
+    Step,
+    Start,
+}
+
+/// The step's shortest two-body time at `dt`: the least [`tau_at`] over every position at which test 3 evaluates the
+/// force, `STEP(dt)` from `s` and `STEP(dt)` from its momentum-negated result, the start's included, at f64.
+fn step_tau(rule: Rule, s: &State<f64>, dt: f64) -> f64 {
+    let mut at = Vec::new();
+    let forward = rule.step(s, dt, &mut at);
+    rule.step(&negate(&forward), dt, &mut at);
+    at.iter()
+        .map(|r| tau_at(&s.m, r))
+        .fold(f64::INFINITY, f64::min)
+}
+
+/// The `dt` at which `rule`'s test 3 from `s` reads `dt/τ = x`, `τ` the step's, by bisection in `log dt` over
+/// `[10⁻⁴·x·τ₀, (1 + 10⁻⁹)·x·τ₀]`, `τ₀` the start's: at the top `dt/τ ≥ x`, the start's positions being among the
+/// step's (the `10⁻⁹` absorbs the rounding of `dt/τ` where the start's `τ` is the step's). Returns
+/// the bracket's end at or above `x` when `up`, else the end below it, and its `dt/τ`.
+fn dt_at(rule: Rule, s: &State<f64>, x: f64, up: bool) -> (f64, f64) {
+    let tau0 = tau_at(&s.m, &s.r);
+    let ratio = |dt: f64| dt / step_tau(rule, s, dt);
+    let (mut lo, mut hi) = (1e-4 * x * tau0, (1.0 + 1e-9) * x * tau0);
+    assert!(
+        ratio(hi) >= x && ratio(lo) < x,
+        "the bracket holds dt/τ = {x}"
+    );
+    for _ in 0..60 {
+        let mid = (lo * hi).sqrt();
+        if ratio(mid) >= x {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    let dt = if up { hi } else { lo };
+    (dt, ratio(dt))
+}
+
+/// The `dt` at which test 3 from `s` reads `dt/τ = x`, with `τ` read as `tau`, and its `dt/τ`: for the step's, from
+/// [`dt_at`], the bracket's end at or above `x` at the lower edge `lower`, below it elsewhere; for the start's,
+/// `x·τ₀`.
+fn placed(rule: Rule, s: &State<f64>, x: f64, lower: f64, tau: Tau) -> (f64, f64) {
+    match tau {
+        Tau::Step => dt_at(rule, s, x, x <= lower),
+        Tau::Start => (x * tau_at(&s.m, &s.r), x),
+    }
 }
 
 fn negate<R: Pr>(s: &State<R>) -> State<R> {
@@ -1228,19 +1379,21 @@ fn flat<R: Pr>(s: &State<R>) -> Vec<f64> {
         .collect()
 }
 
-/// dd test 3's residual: `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, its Euclidean distance from the start over
-/// `(r, p)` divided by the start's norm, in units of `R`'s epsilon. No projection, no substepping.
-fn residual<R: Pr>(step: &dyn Fn(&State<R>, R) -> State<R>, s: &State<R>, dt: R) -> f64 {
-    let back = negate(&step(&negate(&step(s, dt)), dt));
-    let (a, b) = (flat(&back), flat(s));
+fn rel<R: Pr>(a: &State<R>, b: &State<R>) -> f64 {
+    let (a, b) = (flat(a), flat(b));
     let diff = a
         .iter()
         .zip(&b)
         .map(|(x, y)| (x - y).powi(2))
         .sum::<f64>()
         .sqrt();
-    let norm = b.iter().map(|y| y * y).sum::<f64>().sqrt();
-    diff / norm / R::EPS
+    diff / b.iter().map(|y| y * y).sum::<f64>().sqrt()
+}
+
+/// dd test 3's residual: `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, its Euclidean distance from the start over
+/// `(r, p)` divided by the start's norm, in units of `R`'s epsilon. No projection, no substepping.
+fn residual<R: Pr>(step: &dyn Fn(&State<R>, R) -> State<R>, s: &State<R>, dt: R) -> f64 {
+    rel(&negate(&step(&negate(&step(s, dt)), dt)), s) / R::EPS
 }
 
 /// The domain's upper edge, `step_reversal_edge_max` (REQ-VAL-191, provisional until M3), at both precisions.
@@ -1248,12 +1401,12 @@ fn edge_max() -> f64 {
     STEP_REVERSAL_EDGE_MAX.number()
 }
 
-/// The `dt/τ` of a grid from `lower` to `upper`: `lower` itself, then 16 points per decade, then `upper` itself.
-fn grid_to(lower: f64, upper: f64) -> Vec<f64> {
+/// The `dt/τ` of a grid from `lower` to `upper`: `lower` itself, then `n` points per decade, then `upper` itself.
+fn grid_to(lower: f64, upper: f64, n: f64) -> Vec<f64> {
     let mut v = vec![lower];
     let mut x = lower;
-    while x * 10f64.powf(1.0 / 16.0) < upper {
-        x *= 10f64.powf(1.0 / 16.0);
+    while x * 10f64.powf(1.0 / n) < upper {
+        x *= 10f64.powf(1.0 / n);
         v.push(x);
     }
     v.push(upper);
@@ -1263,9 +1416,11 @@ fn grid_to(lower: f64, upper: f64) -> Vec<f64> {
 /// The `dt/τ` at which the per-dt check runs from a lower edge: the closed domain `[edge, step_reversal_edge_max]`,
 /// both edges included, at 16 points per decade.
 fn grid(edge: f64) -> Vec<f64> {
-    grid_to(edge, edge_max())
+    grid_to(edge, edge_max(), 16.0)
 }
 
+/// The domain's lower edge at `R`: `step_reversal_edge_f64` or `step_reversal_edge_f32` (REQ-VAL-191, provisional
+/// until M3).
 fn edge<R: Pr>() -> f64 {
     if R::EPS == f64::EPSILON {
         STEP_REVERSAL_EDGE_F64.number()
@@ -1275,27 +1430,38 @@ fn edge<R: Pr>() -> f64 {
 }
 
 /// The cells, fixture by `dt/τ` of `ratios`, at which `step` at `R` fails: reads above [`TOL`] when `reversible`,
-/// at or below it when a control. Each residual is printed.
+/// at or below it when a control. With [`Tau::Step`], each cell's `dt` is the one at which `rule`'s step reads that
+/// `dt/τ` (the bracket's end inside `[edge, step_reversal_edge_max]`), and a cell whose `dt/τ` falls outside it fails;
+/// with [`Tau::Start`], `dt = x·τ₀`. Each residual is printed.
 fn per_dt<R: Pr>(
     name: &str,
     step: &dyn Fn(&State<R>, R) -> State<R>,
+    rule: Rule,
+    tau: Tau,
     ratios: &[f64],
     reversible: bool,
 ) -> Vec<String> {
     let mut failed = Vec::new();
-    for (fixture, s) in fixtures::<R>() {
-        let t = tau(&s);
+    let (lower, upper) = (edge::<R>(), edge_max());
+    for ((fixture, s), (_, s64)) in fixtures::<R>().into_iter().zip(fixtures::<f64>()) {
         for &x in ratios {
-            let r = residual(step, &s, R::of(x * t));
+            let (dt, ratio) = placed(rule, &s64, x, lower, tau);
+            if tau == Tau::Step && !(lower <= ratio && ratio <= upper) {
+                failed.push(format!(
+                    "{name}, {fixture}: dt/τ {x:.4e} placed at {ratio:.4e}, outside the domain"
+                ));
+                continue;
+            }
+            let r = residual(step, &s, R::of(dt));
             let bad = if reversible { r > TOL } else { r <= TOL };
             println!(
-                "{name} at {}, {fixture} (τ {t:.4}), dt/τ {x:.4e}: {r:.3e} ε{}",
+                "{name} at {}, {fixture}, dt {dt:.4e}, dt/τ {ratio:.4e}: {r:.3e} ε{}",
                 R::NAME_,
                 if bad { "  <- FAILS" } else { "" }
             );
             if bad {
                 failed.push(format!(
-                    "{name} at {}, {fixture}, dt/τ {x:.4e}: {r:.3e} ε",
+                    "{name} at {}, {fixture}, dt {dt:.4e}, dt/τ {ratio:.4e}: {r:.3e} ε",
                     R::NAME_
                 ));
             }
@@ -1314,11 +1480,7 @@ fn check_cells(failed: &[String], what: &str) {
 }
 
 fn y4_asymmetric<R: Pr>(s: &State<R>, dt: R) -> State<R> {
-    compose(
-        &[f64::YOSHIDA4_W1, f64::YOSHIDA4_W1, f64::YOSHIDA4_W0],
-        s,
-        dt,
-    )
+    compose(&Y4_ASYM_D, s, dt)
 }
 
 fn rk4<R: Pr>(s: &State<R>, dt: R) -> State<R> {
@@ -1326,10 +1488,12 @@ fn rk4<R: Pr>(s: &State<R>, dt: R) -> State<R> {
 }
 
 fn controls_at<R: Pr>(ratios: &[f64]) -> Vec<String> {
-    let mut f = per_dt::<R>("RK4", &rk4::<R>, ratios, false);
+    let mut f = per_dt::<R>("RK4", &rk4::<R>, Rule::Rk4, Tau::Step, ratios, false);
     f.extend(per_dt::<R>(
         "Yoshida-4 asymmetric (w₁, w₁, w₀)",
         &y4_asymmetric::<R>,
+        Rule::Drifts(&Y4_ASYM_D),
+        Tau::Step,
         ratios,
         false,
     ));
@@ -1339,8 +1503,9 @@ fn controls_at<R: Pr>(ratios: &[f64]) -> Vec<String> {
 const NOT_ABOVE: &str = "a control reads not above";
 const EXCEEDS: &str = "a step-reversible occupant's residual exceeds";
 
-/// The asymmetric controls read above `step_reversal_tol` at each `dt` inside the domain, at f64 and f32 (physics's
-/// request): the per-dt form of REQ-VAL-191's "the asymmetric controls above it at the same dt".
+/// The asymmetric controls read above `step_reversal_tol` at each `dt` inside the domain, `τ` each control's own
+/// step's, at f64 and f32 (physics's request): the per-dt form of REQ-VAL-191's "the asymmetric controls above it at
+/// the same dt".
 #[test]
 fn qa_step_reversibility_controls_per_dt() {
     assert!(TOL > 0.0 && edge::<f64>() > 0.0 && edge::<f32>() > edge::<f64>());
@@ -1352,21 +1517,40 @@ fn qa_step_reversibility_controls_per_dt() {
 
 negative_control!(
     qa_step_reversibility_controls_per_dt,
-    "the controls at f64, dt/τ 10⁻³, a decade below the f64 edge",
+    "the controls at f64, dt/τ a decade below the f64 edge, placed by the start's τ",
     expected = "a control reads not above",
-    check_cells(&controls_at::<f64>(&[edge::<f64>() / 10.0]), NOT_ABOVE)
+    {
+        let x = [edge::<f64>() / 10.0];
+        let mut f = per_dt::<f64>("RK4", &rk4::<f64>, Rule::Rk4, Tau::Start, &x, false);
+        f.extend(per_dt::<f64>(
+            "Yoshida-4 asymmetric",
+            &y4_asymmetric::<f64>,
+            Rule::Drifts(&Y4_ASYM_D),
+            Tau::Start,
+            &x,
+            false,
+        ));
+        check_cells(&f, NOT_ABOVE)
+    }
 );
 
-fn reversible_at<R: Pr>(ratios: &[f64]) -> Vec<String> {
+/// The step-reversible occupants, each with qa's f64 rule of dd §3.2 whose force evaluations give its step's `τ`.
+fn reversible() -> [(&'static str, Occupant, Rule); 3] {
+    [
+        ("KDK", Occupant::Kdk, Rule::Drifts(&KDK_D)),
+        ("Yoshida-4", Occupant::Yoshida4, Rule::Drifts(&Y4_D)),
+        ("Yoshida-6", Occupant::Yoshida6, Rule::Drifts(&Y6_D)),
+    ]
+}
+
+fn reversible_at<R: Pr>(ratios: &[f64], tau: Tau) -> Vec<String> {
     let mut f = Vec::new();
-    for (name, o) in [
-        ("KDK", Occupant::Kdk),
-        ("Yoshida-4", Occupant::Yoshida4),
-        ("Yoshida-6", Occupant::Yoshida6),
-    ] {
+    for (name, o, rule) in reversible() {
         f.extend(per_dt::<R>(
             name,
             &|s: &State<R>, dt: R| shipped(Selection::Production(o), s, dt),
+            rule,
+            tau,
             ratios,
             true,
         ));
@@ -1374,12 +1558,12 @@ fn reversible_at<R: Pr>(ratios: &[f64]) -> Vec<String> {
     f
 }
 
-/// KDK, Yoshida-4 and Yoshida-6 return each fixture within `step_reversal_tol` at each `dt` inside the domain, at
-/// f64 and f32, negative weights included (REQ-VAL-032).
+/// KDK, Yoshida-4 and Yoshida-6 return each fixture within `step_reversal_tol` at each `dt` inside the domain, `τ` the
+/// step's, at f64 and f32, negative weights included (REQ-VAL-032).
 #[test]
 fn qa_step_reversibility_per_dt() {
-    let mut f = reversible_at::<f64>(&grid(edge::<f64>()));
-    f.extend(reversible_at::<f32>(&grid(edge::<f32>())));
+    let mut f = reversible_at::<f64>(&grid(edge::<f64>()), Tau::Step);
+    f.extend(reversible_at::<f32>(&grid(edge::<f32>()), Tau::Step));
     check_cells(&f, EXCEEDS);
 }
 
@@ -1391,6 +1575,8 @@ negative_control!(
         &per_dt::<f64>(
             "Yoshida-4 asymmetric",
             &y4_asymmetric::<f64>,
+            Rule::Drifts(&Y4_ASYM_D),
+            Tau::Step,
             &grid(edge::<f64>()),
             true
         ),
@@ -1398,57 +1584,85 @@ negative_control!(
     )
 );
 
-/// The cells at which KDK, Yoshida-4 or Yoshida-6 at `R` on Burrau's start read above [`TOL`], over `R`'s lower edge
-/// to `upper` at 16 points per decade, both ends included.
-fn burrau_reversible<R: Pr>(upper: f64) -> Vec<String> {
-    let s = fixtures::<R>()
-        .into_iter()
-        .find(|(n, _)| *n == "burrau")
-        .expect("Burrau's start is among qa's fixtures")
-        .1;
-    let t = tau(&s);
-    let mut f = Vec::new();
-    for (name, o) in [
-        ("KDK", Occupant::Kdk),
-        ("Yoshida-4", Occupant::Yoshida4),
-        ("Yoshida-6", Occupant::Yoshida6),
-    ] {
-        for x in grid_to(edge::<R>(), upper) {
-            let r = residual(
-                &|s: &State<R>, dt: R| shipped(Selection::Production(o), s, dt),
-                &s,
-                R::of(x * t),
-            );
-            let bad = r > TOL;
-            println!(
-                "{name} at {}, burrau (τ {t:.4}), dt/τ {x:.4e}: {r:.3e} ε{}",
-                R::NAME_,
-                if bad { "  <- FAILS" } else { "" }
-            );
-            if bad {
-                f.push(format!(
-                    "{name} at {}, burrau, dt/τ {x:.4e}: {r:.3e} ε",
-                    R::NAME_
-                ));
+/// The domain's top decade at `R`, from `step_reversal_edge_max/10` or `R`'s lower edge, whichever is higher, to
+/// `step_reversal_edge_max`, at 64 points per decade.
+fn top<R: Pr>() -> Vec<f64> {
+    grid_to(edge::<R>().max(edge_max() / 10.0), edge_max(), 64.0)
+}
+
+/// The domain's top decade ([`top`]): where a
+/// step's stages carry a pair closer than the start's positions show (Burrau's start at rest, the approaches; qa reviews
+/// Q1 and Q2), KDK, Yoshida-4 and Yoshida-6 return each fixture within `step_reversal_tol`, `τ` the step's, at f64 and
+/// f32 (REQ-VAL-032, REQ-VAL-191).
+#[test]
+fn qa_step_reversibility_upper_edge() {
+    // The fixtures reach what the start's `τ` misses: on Burrau's start and the approaches, each step at the upper
+    // edge passes a pair closer than the start shows, so the step's `τ` places a shorter `dt` than the start's.
+    for (_, _, rule) in reversible() {
+        for (fixture, s) in fixtures::<f64>() {
+            let x = edge_max();
+            let step = placed(rule, &s, x, edge::<f64>(), Tau::Step).0;
+            let start = placed(rule, &s, x, edge::<f64>(), Tau::Start).0;
+            println!("{fixture}: dt at dt/τ {x}, step's τ {step:.4e}, start's {start:.4e}");
+            if fixture == "burrau" || fixture.ends_with("approach") {
+                // 10⁻⁶ keeps a rounding-level difference from counting.
+                assert!(
+                    step < start * (1.0 - 1e-6),
+                    "{fixture}: the step's τ places dt {step:.4e}, not below the start's {start:.4e}"
+                );
             }
         }
     }
-    f
-}
-
-/// On Burrau's start, the fixture whose steps carry a pair far closer than its start's `τ`, KDK, Yoshida-4 and
-/// Yoshida-6 return the state within `step_reversal_tol` up to and at the domain's upper edge
-/// `step_reversal_edge_max`, at f64 and f32 (REQ-VAL-032, REQ-VAL-191).
-#[test]
-fn qa_step_reversibility_upper_edge() {
-    let mut f = burrau_reversible::<f64>(edge_max());
-    f.extend(burrau_reversible::<f32>(edge_max()));
+    let mut f = reversible_at::<f64>(&top::<f64>(), Tau::Step);
+    f.extend(reversible_at::<f32>(&top::<f32>(), Tau::Step));
     check_cells(&f, EXCEEDS);
 }
 
 negative_control!(
     qa_step_reversibility_upper_edge,
-    "the f64 grid taken past step_reversal_edge_max to dt/τ 1, where a stage's close approach conditions a symmetric step past the criterion",
+    "the same grid with τ read from the start's positions alone, blind to an approaching pair (qa review Q2)",
     expected = "a step-reversible occupant's residual exceeds",
-    check_cells(&burrau_reversible::<f64>(1.0), EXCEEDS)
+    check_cells(
+        &reversible_at::<f64>(&top::<f64>(), Tau::Start),
+        EXCEEDS
+    )
+);
+
+/// The step's `τ` is read from the shipped step's own force evaluations: qa's f64 rule of dd §3.2 for each occupant
+/// ends where the shipped occupant's f64 step ends, from each fixture at the domain's upper edge, to `10⁻⁹` of the
+/// state's norm (a few ulps of the coefficients, amplified by the step's conditioning), so the positions it records
+/// are the shipped step's.
+fn check_rules(rules: &[(&str, Selection, Rule)]) {
+    for &(name, o, rule) in rules {
+        for (fixture, s) in fixtures::<f64>() {
+            let (dt, _) = dt_at(rule, &s, edge_max(), false);
+            let d = rel(&shipped(o, &s, dt), &rule.step(&s, dt, &mut Vec::new()));
+            println!("{name}, {fixture}, dt {dt:.4e}: rule against shipped {d:.3e}");
+            assert!(
+                d <= 1e-9,
+                "{name}'s rule is not the shipped step on {fixture}: {d:.3e}"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_step_tau_positions_are_the_steps() {
+    let mut rules: Vec<(&str, Selection, Rule)> = reversible()
+        .iter()
+        .map(|&(n, o, r)| (n, Selection::Production(o), r))
+        .collect();
+    rules.push(("RK4", Selection::Production(Occupant::Rk4), Rule::Rk4));
+    check_rules(&rules);
+}
+
+negative_control!(
+    qa_step_tau_positions_are_the_steps,
+    "Yoshida-4's stages recorded in the asymmetric order (w₁, w₁, w₀)",
+    expected = "is not the shipped step",
+    check_rules(&[(
+        "Yoshida-4",
+        Selection::Production(Occupant::Yoshida4),
+        Rule::Drifts(&Y4_ASYM_D)
+    )])
 );
