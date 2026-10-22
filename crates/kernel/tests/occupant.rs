@@ -1625,7 +1625,8 @@ condition_test!(
 // ── step_reversibility (REQ-VAL-032, REQ-VAL-191; dd §5 test 3) ─────────────────────────────────────────────────
 
 /// The dt ladder (applied per R-369: this task's, named in its PR): `10⁻¹` and `10⁻²` above the default macro-step,
-/// `dt_macro = 10⁻³` (dd_integrator §2, R-132), and `10⁻³/64`, the macro-step at the default `N_max = 64` substeps.
+/// `dt_macro = 10⁻³` (dd_integrator §2, R-132), and `10⁻³/64`, the smallest substep at the default `dt_macro` and
+/// `N_max = 64`.
 const DT_LADDER: [f64; 4] = [1e-1, 1e-2, 1e-3, 1e-3 / 64.0];
 
 /// The criterion, `step_reversal_tol` (REQ-VAL-191, provisional until M3), in units of the precision's epsilon.
