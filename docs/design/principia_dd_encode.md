@@ -68,6 +68,57 @@ At f64, `π̂` is what the CPU's `atan2(+0, x < 0)` returns, so the select pins 
 GPU-f32 agree on the half-axis, `±0` operands included. `λ̃_y = 0` with `λ̃_x > 0` needs no select: either zero gives
 `β = ±0`, and the clamp sets `s_β` to `ε_z` for both.
 
+**The curve's closed form** (defined per R-72, applied per R-369; TASK-M2-18, REQ-ENC-011). `C(x)`'s triangle is read
+in the Burrau convention (`principia_chart_reference.md` §4.2: the right angle at body 0, each side opposite the body of
+its mass): the legs `a = ‖r₁ − r₀‖`, `b = ‖r₂ − r₀‖` and the side `c = ‖r₂ − r₁‖`. The acute angle is
+`θ = atan2(a, b)` (`tan θ = a/b`, the angle at `r₂`), and `ν(θ) = sec θ − tan θ`, evaluated as `cos θ/(1 + sin θ)` as
+the acute-angle charts evaluate it (§4.5). The mass coupling `μ₁ = log(b/c)`, `μ₂ = log(a/c)` is checked against
+`C(x)`'s `μₖ = log(mₖ/m₀)`, and its two differences are reported. `x` is on the curve where `ν(θ)` lies in the chart's
+`ν` span and `d(ν(θ)) ≤ tol`, §3.4's metric and tolerance: the metric's mass term is 0 exactly where the coupling holds
+on `γ(ν)`'s triangle, so the one test decides both. There the argmin is bypassed. On the δm strip, whose masses leave
+the curve's off its `v = 0` row, `θ` is read off the triangle alone and `v` is the blend's least squares,
+`v = (m − m_B)·(m_t − m_B)/‖m_t − m_B‖²`; the projection, which is the curve's, does not apply there.
+
+**The composition: kind 4, then Part 6 step 4** (defined per R-72, applied per R-369; TASK-M2-18, REQ-ENC-008,
+REQ-ENC-026). Step 4's "where possible" reads `c(x)` off `C(x)` axis by axis (Part 5), so on a curve chart kind 4
+supplies the curve axis's coordinate, and step 4 then decides chart against latent, as for every chart:
+1. **Kind 4, the curve axis.** On the curve (kind 4 (a), above), the closed form's coordinate, `θ` read directly on the
+   acute-angle charts; else, where `d(ν*) ≤ tol` (kind 4 (b), §3.4), `ν*`'s (at an end of the span, the axis's end, 0
+   or 1, exactly); else no coordinate: the curve chart cannot represent the point (kind 4 (b)), and `x` falls back to
+   latent `z` with no comparison.
+2. **The other axis** is read by its own kind: `K` by the warp's inverse, `L_z` by the band's, the Euclid plane's `m`
+   an annotation.
+3. **Step 4**, `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, decides chart against latent. It is still needed: `d` does not see
+   the momentum blocks (`K`, `L_z`, the rest start).
+
+A chart landing needs both tests to pass: an input with `d(ν(θ)) > tol` and `d(ν*) > tol` falls back to latent `z`
+though its decode at `ν(θ)` lies within `ε_phys`, and an off-curve input within `tol` of `ν*` is placed at `ν*`, not at
+`ν(θ)`. `tol` is the caller's, as `‖·‖_phys` and `ε_phys` are (Part 6 step 4); at `tol = 0` a curve chart represents
+only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so there it places essentially no
+state: the lookup passes REQ-ENC-026's tolerance (code review 5606284432 of PR #275, C4). The curve encode (the
+closed form, `past_fold` among it, `d`, `ν*`, the edge flag and the landing on the curve) goes to the caller beside the
+chart point, on every curve chart. The δm strip is not a curve chart (above): its `θ` is the triangle's, its `v` the
+blend's, and step 4 alone decides.
+
+**The fold: an input at `θ > π/4`** (defined per R-72, REQ-ENC-022; TASK-M2-18). On the
+acute-angle charts, `θ ∈ (0, π/4]` and `ν ∈ [√2 − 1, 1)` (§4.5), an input whose closed form gives `θ > π/4` (`a > b`,
+so `ν(θ) < √2 − 1`) is the leg-swapped twin of a fold shape: bodies 1 and 2 exchanged, which under the Burrau mass
+convention exchanges two masses, a body relabelling and a distinct labelled system (`principia_chart_reference.md`
+§4.5; R-27). Encode does **not relabel** it: the gauge group it quotients by (§3.3) holds no body permutation, and the
+relabelled pixel's decode is the other labelled system, which Part 6 step 4's comparison refuses. Nor does it refuse
+the input: latent `z` represents it (Part 6 case 3). It **falls back to latent `z`** and raises the flag `past_fold`,
+decided as `a² > b²` in §3.4's branch-input form (equal legs, the isosceles triangle, are not past it), so that a lookup
+can say the state is the fold's twin, at `θ′ = π/2 − θ` with bodies 1 and 2 exchanged. Its `ν(θ)` is past the fold's
+end, so it is no chart point (§3.4, "Past the span"), and the projection over the chart's span finds the chart's edge
+nearest it; only a twin within `tol` of that edge, which can happen only next to the isosceles triangle where the two
+labellings meet, is projected there, as any point within `tol` of the chart is. On a full-range `ν` chart
+(`DoubleCover`, R-27) the twin is its own chart point, at `ν′ = (1 − ν)/(1 + ν)`, and lands there.
+`past_fold` is computed on every curve chart and reaches the lookup in the curve encode (the composition, above), so
+the lookup reports it in each case: on a folded chart where the twin falls back to latent `z`, that the state is the
+fold shape's leg-swapped twin at `θ′ = π/2 − θ`, bodies 1 and 2 exchanged, not relabelled; on a folded chart where the
+twin is projected to the edge, the same, beside the chart point; on a full-range chart, where it lands, that the state
+lies on the leg-swapped half (`ν < √2 − 1`).
+
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
@@ -128,7 +179,43 @@ Generic input is not on the Burrau embed. Projection:
 ν* = argmin_ν  d²(ν) = ‖ n(α,β) − n(α_γ(ν), β_γ(ν)) ‖²  +  ‖ m − m_γ(ν) ‖²
 ```
 
-— shape-sphere **chordal** distance ⊕ mass-simplex **Euclidean** distance, unit weights (both O(1)-normalised). 1-D minimisation over a smooth curve (Brent/golden-section grade); report `d(ν*)`; beyond tolerance → the curve chart cannot represent the point → fall back to latent z. **The metric and weights are a pin of this drill-down — confirm/veto.** On-curve inputs bypass the argmin via the closed form (§3.1) — and the two paths agreeing *is a test* (5.7).
+— shape-sphere **chordal** distance ⊕ mass-simplex **Euclidean** distance, unit weights (both O(1)-normalised). 1-D minimisation over a smooth curve (Brent/golden-section grade); report `d(ν*)`; beyond tolerance → the curve chart cannot represent the point → fall back to latent z. **The metric and weights are confirmed by R-24.** On-curve inputs bypass the argmin via the closed form (§3.1) — and the two paths agreeing *is a test* (5.7).
+
+**As built** (defined per R-72, applied per R-369; TASK-M2-18, REQ-ENC-017, REQ-ENC-020). The one source is
+`kernel::encode::curve` beside the curve embeds; every consumer calls its `nearest` (R-542), never a second
+implementation.
+- **The points.** `n(α, β)` is `C(x)`'s shape point, the shape map of its mass-weighted Jacobi vectors
+  (`principia_chart_reference.md` §3.1), its `w` read as `|w|` as `β` reads `|λ̃_y|` (R-438), so it lies on the upper
+  hemisphere where the embed's points do; `n(α_γ(ν), β_γ(ν))` is the embed's `γ(ν)` through the same weighting and
+  map, and `m_γ(ν)` its masses.
+- **Past the span** (defined per R-72, applied per R-369). The search runs over the chart's own `ν` span, the `ν` its
+  decode gives at its curve axis's two ends, not over the family's `(0, 1)`. The curve axis (`ν`, or `θ` on the
+  acute-angle charts) of every Burrau chart is bounded (`principia_chart_reference.md` §5.4; `K` continues past
+  `t = 1`, R-508, and `L_z` and δm are affine): past its edge the chart shows no system, so a `ν` past the span is no
+  chart point. A closed form past the span does not land; the search does not leave the span, and where the curve's
+  nearest point lies past an edge, `ν*` is that edge (flagged), and the landing is decided by `d(ν*)` as anywhere else.
+- **The minimiser.** A grid of 65 points, 64 cells, the span's edges included, then 80 golden-section steps inside the
+  best grid point's two neighbouring cells, each step one evaluation, a fixed count; `ν*` is the better of the grid's
+  best and the golden section's, so an edge minimum is the edge itself. A tie keeps the earlier point; a NaN start is
+  replaced.
+- **The landing on the curve.** On the curve (§3.1, the argmin bypassed); else projected to `ν*` where
+  `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s. `d` is reported in every case. This is kind 4's part of a curve chart's
+  encode: the curve axis's coordinate, which Part 6 step 4 then tests with the chart's other axis (§3.1, "The
+  composition"). `tol = k·ε_R`, `ε_R` the precision's machine epsilon, one `k` for both
+  precisions as `ε_phys` takes it (Part 4): REQ-ENC-026's calibration (R-71), proposed at `k = 128` by
+  `fixtures/gates/curve_projection/`, provisional until the M2 gate.
+- **The branch inputs** (the human's ruling on RQ-298, 21 Oct 2026: a branch input that must agree across backends is
+  built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal). Every
+  comparison reads a squared distance or a squared length, each square formed as `IeeeBits::product(x, x)` of a
+  difference `x` taken as 0 below `2^⌊e/4⌋`, `e` the precision's least normal exponent (`2⁻³¹` at f32), so that its
+  partial products are normal, and the squares added in one fixed order, no `fma` written: the search's comparisons,
+  `d² ≤ tol²` with `tol² = product(tol, tol)`, the fold's `a² > b²`, and the guards of the selects. The search's
+  points are formed alike on every backend: the golden ratio `(√5 − 1)/2` is a constant, correctly rounded at each
+  width and formed from its bits, never a runtime `sqrt`; the grid's `1/64` is `2⁻⁶`, formed from its bits, so the
+  spacing `(hi − lo)·2⁻⁶` and the fractions `k·2⁻⁶` are exact, no division formed; each point is then one product in
+  `IeeeBits::product`'s form and one add. The values the distances are formed from are the decode's own (the embed's
+  divisions, the weighting's `sqrt`) and `C`'s, which a backend rounds within its own bounds; two backends can differ
+  on a comparison only where two distances lie within those roundings of each other.
 
 ### 3.5 Conditioning (numbers, and the tolerance rule)
 
@@ -158,7 +245,7 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 4. **Scale step:** feed the Burrau state at 2× scale → `lookup_rescaled` with `λ = 1/2`... precisely `I_in = 4·I_canon` ⇒ recorded `λ = 1/2`, `E_canon = 2·E_in`, timing conversion factor `I_in^{3/4}` — assert the whole table row.
 5. **Burrau closure:** physical `(3,4,5)` → encode → masses `(5,4,3)/12`, right angle recovered, `ν` matches `ν(θ) = sec θ − tan θ`; decode back → same triangle to `ε_phys`.
 6. **Infeasible invariant entry:** `(L_z, E)` with `K* < L_z²/2` → projected/clamped/rejected per the validation ladder, flagged, never silent, never NaN.
-7. **Curve projection consistency:** exact on-curve input — argmin and closed form agree on `ν` to tolerance; off-curve input — `d(ν*)` reported, latent fallback taken beyond tolerance, and `E ∘` fallback still satisfies T2.
+7. **Curve projection consistency:** exact on-curve input — argmin and closed form agree on `ν` to tolerance; off-curve input — `d(ν*)` reported, latent fallback taken beyond tolerance, and `E ∘` fallback still satisfies T2. The distance is §3.4's metric (R-24).
 8. **Conditioning formulation:** a near-clamp input where the z-residual is ~10⁵× the physical residual — asserting that the *physical* tolerance passes while a naive z-tolerance would fail (the test that keeps future contributors honest about §3.5).
 9. **Coincident-pair rejection:** `ρ → 0` inputs reject at step 2 with the correct reason, both precisions, same branch.
 10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
@@ -187,7 +274,7 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 
 ## 6. Deferred / flagged
 
-- **Projection metric pin (§3.4)** — chordal-⊕-Euclidean, unit weights: confirm or veto; whatever wins goes in the shared source with the curve embeds.
+- ~~**Projection metric pin (§3.4)**~~ — **settled by R-24:** chordal-⊕-Euclidean, unit weights, confirmed; in the shared source with the curve embeds (`kernel::encode::curve`, TASK-M2-18).
 - ~~**Operational order of steps 0/1 (§3.2)**~~ — **settled by R-23:** 1a → 0 → 1b → 2 → 3 is normative, in the contract's numbering as here; pinned in the **shared source** so both instantiations (CPU-f64, GPU-f32) inherit the identical sequence.
 - **Batch import ergonomics** (CSV of literature ICs → encode → tagged report per row) — a validation-phase tool, not contract; noted so the import seam test has a harness to live in.
 

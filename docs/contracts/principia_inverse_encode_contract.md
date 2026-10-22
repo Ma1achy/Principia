@@ -156,7 +156,9 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
 **Kind 4 — coupled curve.** Two directions:
 
 - *(a) on-curve encode:* exact closed form — recover the acute angle from the canonical config, then `ν(θ) = sec θ − tan θ`; verify the Burrau mass coupling via `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
-- *(b) is x on the curve at all?* Generic input isn't. Project: `ν* = argmin_ν dist(C(x), γ(ν))` (1D minimisation over a smooth curve — cheap and robust), report distance-to-curve. If the distance exceeds tolerance, the curve chart *cannot represent the point*: fall back to latent z (case 3 of Part 6), which is always available.
+- *(b) is x on the curve at all?* Generic input isn't. Project: `ν* = argmin_ν d²(ν)`, `d²(ν) = ‖n(α,β) − n(α_γ(ν), β_γ(ν))‖² + ‖m − m_γ(ν)‖²`, the shape sphere's chordal distance ⊕ the mass simplex's Euclidean one at unit weights (R-24; `principia_dd_encode.md` §3.4) (1D minimisation over a smooth curve — cheap and robust), report distance-to-curve `d(ν*)`. If the distance exceeds tolerance (REQ-ENC-026), the curve chart *cannot represent the point*: fall back to latent z (case 3 of Part 6), which is always available.
+- *On the curve and past its span* (defined per R-72, applied per R-369; TASK-M2-18). `x` is on the curve where the closed form's `ν` lies in the chart's `ν` span and `d` there is within the tolerance; then (b) is bypassed. The search runs over the chart's own `ν` span: the curve axis (`ν`, or `θ` on the acute-angle charts) of every Burrau chart is bounded (`principia_chart_reference.md` §5.4), so a `ν` past it is no chart point. An input at `θ > π/4` on a folded chart is not relabelled; it falls back to latent z, flagged (`principia_dd_encode.md` §3.1, REQ-ENC-022).
+- *Into the chart: kind 4, then Part 6 step 4* (defined per R-72, applied per R-369; TASK-M2-18; `principia_dd_encode.md` §3.1, "The composition"). Kind 4 supplies the curve axis's coordinate of `c(x)`: the closed form's on the curve (a), `ν*`'s where `d(ν*) ≤ tol` (b), and none where `d(ν*) > tol`, which falls back to latent z (b). The chart's other axis is read by its own kind, and Part 6 step 4's `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys` then decides chart against latent, as for every chart. A chart landing needs both.
 
 **Annotation axes.** Nothing to invert — no IC content by definition.
 
@@ -204,6 +206,10 @@ and its slice and conventions pin the other six (chart_decoder_contract Part 5),
 frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
 construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
 coordinate, and nothing is compared for it.
+On a curve chart (Part 5, kind 4) `c(x)`'s curve coordinate is kind 4's at REQ-ENC-026's curve tolerance
+(`principia_dd_encode.md` §3.1, "The composition"; code review 5606284432 of PR #275, C4, applied per R-369), and that
+tolerance is the lookup's to pass, as `‖·‖_phys` and `ε_phys` are. At a tolerance of 0 such a chart places essentially
+no state, rounding alone putting `d > 0` on its own curve, so every state would land in latent `z`.
 
 **On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
 with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
