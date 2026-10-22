@@ -1,7 +1,7 @@
 # TASK-M2-25 — Portable WGSL decode and encode, the DECODE preset and the agreement preset
 
 - **Milestone:** M2
-- **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057
+- **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057, REQ-SYS-085
 - **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16, TASK-M1-19
 - **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063
 - **Reviewers:** code, qa, physics
@@ -42,6 +42,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - `cargo xtask gate decode-agreement` — the agreement preset |E(fragment-decode) − E₀|, with E₀ the decode stage's K₀ + V₀ (R-86), is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (R-133); a deliberate dispatch scramble shows spatial disagreement (REQ-COL-006).
 - `cargo xtask golden decode-preset` — the DECODE preset rendered for each M2 chart (latent affine slice, shape sphere, (L_z, E), (L_z, K), ternary mass, Euclid ν plane, θ × K strip) matches a CPU-decoded reference image (REQ-RENDER-027; the Burrau int lattice and Anosova are REQ-RENDER-082, TASK-M4-06).
 - `cargo test -p render decode_preset_vs_decode_only` — fragment-decoded (m, r, p) against the f64 `decodeOnly()` within REQ-DEC-043's calibrated f32 decode factor (R-133; Tier N is set at M4); Σm = 1, CoM = 0 and I = 1 hold (REQ-TOOL-029).
+- `cargo test -p render read_side_shape_generated` — `read_side.wgsl`'s `shape()` is a build output of the rust-gpu → SPIR-V → WGSL translation of `kernel::shape`, not a string literal in `crates/ledger/src/gen/read.rs`; REQ-SYS-015's full-reach scan (`.wgsl` included) finds no hit; the twin test against `kernel::shape` still passes; control: a hand-written `mu_rho` formula planted in a `.wgsl` file, and one planted in a string in `crates/ledger/src/gen/read.rs`, are each found by the scan (REQ-SYS-085; R-547, RQ-365 (c)).
 - Definition: `ctx.chart.z` on charts whose Φ does not produce z, written into colour_composition §3 and approved by the physics reviewer (REQ-COL-057).
 
 ## Notes

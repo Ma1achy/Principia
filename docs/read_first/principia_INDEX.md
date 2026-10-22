@@ -89,7 +89,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
 - `docs/design/principia_lines.md` — the line system: contours, traces, axes, grids and styles over the finished figure, outside the node graph (adopted by R-476; its §11 queued as RQ-377 and ruled by R-509)
-- `docs/design/principia_print_graph.md` — the Print graph: post-processing as a node graph after the stain, the figure printed in a medium, Plain the identity, never read by measurement; it replaces Display › Style (adopted by R-485 to R-492; its §12 queued as RQ-388 to RQ-391, ruled by R-524 to R-526, RQ-391 deferred by R-527)
+- `docs/design/principia_print_graph.md` — the Print graph: post-processing as a node graph after the stain, the figure printed in a medium, Plain the identity, never read by measurement; it replaces Display › Style (adopted by R-485 to R-492; its §12 queued as RQ-388 to RQ-391, ruled by R-524 to R-526, RQ-391 deferred by R-527; PR #268's review's RQ-478, RQ-479 and RQ-495 ruled by R-557)
 - `docs/design/principia_benchmark.md` — the benchmark: telemetry §1.1's fixed suite as data-driven scenarios, one runner, Run benchmark and `prin bench`, the result file and `prin bench report` (adopted by R-493 to R-499; its §10 queued as RQ-392 to RQ-394 and ruled by R-528 to R-530)
 
 ---

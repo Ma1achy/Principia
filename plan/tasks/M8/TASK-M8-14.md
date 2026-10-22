@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068
-- **Depends on:** TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28
+- **Depends on:** TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28, TASK-M2-47
 - **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008, REQ-GUI-188
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none

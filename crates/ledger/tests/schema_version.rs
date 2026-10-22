@@ -559,6 +559,11 @@ const BURRAU: [&str; 10] = [
 /// crossing list the kernel's word path takes. It sizes a kernel-local list, never a stored bit, so it is not hashed.
 const MARCH: [&str; 1] = ["max_crossings_per_substep"];
 
+/// The curve projection's search (TASK-M2-18; dd_encode §3.4): its grid's `log₂`, its golden-section step count and
+/// the golden ratio `1/φ`, the encode's minimiser's own constants. They decide which `ν*` a search finds, never what a
+/// stored bit means, so they are not hashed.
+const CURVE_SEARCH: [&str; 3] = ["curve_grid_log2", "curve_golden_steps", "inv_phi"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -572,7 +577,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
-    // capacity (TASK-M3-15).
+    // capacity (TASK-M3-15), or the curve projection's search (TASK-M2-18).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -582,7 +587,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || CALIBRATIONS.contains(&k.name)
                 || WARP.contains(&k.name)
                 || BURRAU.contains(&k.name)
-                || MARCH.contains(&k.name),
+                || MARCH.contains(&k.name)
+                || CURVE_SEARCH.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -615,6 +621,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the march's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in CURVE_SEARCH {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the curve search's entry `{name}` is not an unhashed register entry"
         );
     }
 }

@@ -1,7 +1,7 @@
 # TASK-M5-28 — The frame record, percentiles and the bounded telemetry file
 
 - **Milestone:** M5
-- **Closes:** REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140
+- **Closes:** REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140, REQ-TOOL-187
 - **Depends on:** TASK-M5-21
 - **Needs (earlier milestones):** REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008
 - **Reviewers:** code, qa, perf, physics
@@ -31,6 +31,7 @@ readback (R-294).
 - `decisions.md` § "R-288 — R-281's counters: two per-frame atomic u32 counters in telemetry §2, on the existing readback *(closes RQ-171)*"
 - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - `decisions.md` § "R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*"
+- `decisions.md` § "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
 
 ## Deliverables
 - Doc change: `docs/gui/principia_render_gui_spec.md` § "Profiler" — the `deep_zoom_03` scenario (chart, camera path, depth and frame count) (definition, REQ-TOOL-130), with the "Removed lines" note; the scenario registered with `prin profile`.
@@ -45,8 +46,17 @@ readback (R-294).
 - `crates/kernel` (R-294, REQ-TOOL-140): the survey entry point binds the per-frame `d_min` counter buffer, and the
   `d_min` packer increments it atomically on the GPU; one packer path for the f32 and f64 instantiations, no `#[cfg]`
   or type-dependent branch in its logic (code checklist § 1), and no mutable static.
+- The frame record's `substep_histogram: [u32; 16]` (R-545, RQ-286; REQ-TOOL-187): per-pixel substep counts binned
+  on the GPU into an atomic u32 buffer beside the `d_min` counters, reset each frame and read back with them on the
+  existing readback, written into that frame's record after `substeps_total`; the bin edges as RQ-520 rules.
 
 ## Acceptance tests
+- `cargo test -p engine frame_substep_histogram` — a synthetic frame whose pixels take known substep counts, cap hits
+  among them, records `substep_histogram` with each pixel in its bin and the cap hits in the last, 16 entries summing to
+  the pixel count; the next frame's histogram is reset; it comes back on the telemetry readback without stalling the
+  frame; the JSON Schema and the reader accept a v1 frame without the key and reject one with it `null` or with a
+  length other than 16; controls: a histogram not reset between frames fails, and a schema that requires the key, or
+  accepts it `null`, fails (REQ-TOOL-187).
 - `cargo test -p engine frame_record_fields` — a recorded frame deserialises with every field present (REQ-TOOL-050).
 - `cargo test -p prin report_percentiles` — synthetic frame log: percentiles and the motion-only headline match hand-computed values (REQ-TOOL-051).
 - `cargo test -p engine telemetry_bounded` — a simulated long 60 fps session with idle stretches produces a file below a bound and keeps every motion frame (REQ-TOOL-052).
@@ -57,6 +67,12 @@ readback (R-294).
 - Review checklist (perf) — file sizes of a long 60 fps session with idle stretches under the chosen scheme and N, with every motion frame kept; the proposed value is marked pending and the human confirms it at the M5 gate, then it is recorded in `decisions.md` (REQ-TOOL-117).
 
 ## Notes
+- R-545 (RQ-286): `substep_histogram` is this task's (applied per R-369: it is the frame record's task and shares
+  R-288's readback); REQ-TOOL-187's bin edges wait on RQ-520, the field and its readback do not.
+- A frame without `substep_histogram` (written before R-545) is telemetry §5's stated exception (fix round 1 of PR
+  #274, qa Q4, applied per R-369), so qa's hand-written v1 frames stay valid and no qa file changes:
+  `crates/engine/tests/qa_TASK-M0-17.rs` (:40-80, `check_bases_accepted`), `qa_TASK-M0-51.rs:44`,
+  `qa_TASK-M0-47_stream.rs:52`, `crates/prin/tests/qa_TASK-M0-18.rs:578`, `crates/prin/tests/qa_TASK-M0-51.rs:86`.
 - Calibrations (R-71) this task proposes: REQ-TOOL-117.
 - Definitions (R-72) this task writes: REQ-TOOL-130.
 - R-113 (RQ-93 M0-4): REQ-TOOL-006's deep_zoom_03 scenario and its 600-frame run are split off as REQ-TOOL-130 and closed here; M0 runs a synthetic scenario (TASK-M0-18).

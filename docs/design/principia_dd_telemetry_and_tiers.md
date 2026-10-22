@@ -49,6 +49,8 @@ quads_computed     new quads this frame
 quads_reused       cache hits
 samples            quads x N^2 x (E+1) — the actual integration work
 substeps_total     the honest cost measure; steps are not comparable across steppers
+substep_histogram  [u32; 16], substeps per pixel this frame: equal bins of width N_max/16, cap hits their own
+                   last bin (R-545, RQ-286; the bin edges are RQ-520)
 playhead_dt        how far time moved
 camera_delta       pan/zoom magnitude — 0 for a static frame
 tree_depth_max     and leaf count
@@ -62,12 +64,18 @@ Both are atomic counters, counted in release builds as well as debug ones, and r
 profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
 sole automatic return of simulation data (R-142, R-288).
 
+`substep_histogram` (R-545, RQ-286) is what the Profiler's substeps-per-pixel histogram draws
+(`principia_render_gui_spec.md` § "Profiler"). It is counted on the GPU beside the two counters above and read back
+with them on the existing readback, a schema v1 change made by the ruling; schema v2 (R-534) is v1 plus, so it
+carries it too. A file written before it reads with the key not recorded, never as zeros.
+
 **The print stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
 `post`, its ms, between `colour` and `upload`, and each frame records `post_level`, the degrade level that ran (`full`,
 `reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump the profiler schema to
 v2 (§5, "Schema v2"; R-534). *Was:* "They bump profiler schema v1 (§5, "The bumped schema"; the version is RQ-399)."
 The stage is named the print stage (the human's ruling on RQ-497, 21 Oct 2026: "print stage"); its keys stay `post` and `post_level`, as the
-rulings on RQ-479 and RQ-495 name them (applied per R-369). *Was:* "The post stage", here and in §5.
+human's rulings on RQ-479 and RQ-495 name them (R-557; applied per R-369). The stage's time is recorded but excluded
+from the Auto arbiter's rung solve, and `post_level` is recorded under every tier, Auto, named or Custom (R-557). *Was:* "The post stage", here and in §5.
 
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
@@ -242,7 +250,10 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 **Profiler schema v1: the keys and the nesting (R-56, R-72).** This is the definition REQ-TOOL-120 asks for. Its typed
 form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
-key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+key. One key is the stated exception: the frame record's `substep_histogram`, which the human's ruling adds to
+schema v1 (R-545, RQ-286), may be missing from a frame written before it; the schema and the reader both accept such a
+frame and report the histogram as not recorded, never as zeros. Where the key is present it is an array of exactly 16
+integers, never `null` (fix round 1 of PR #274, qa Q4, applied per R-369). A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 The typed form gives every count and size an explicit width, u32 or u64, never `usize` (R-329).
 
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores_available`, `cpu_cores_total`, `gpu_cores`,
@@ -357,6 +368,7 @@ frame's end:
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
 frame_ms        wall clock
 quads_computed  quads_reused  samples  substeps_total
+substep_histogram  [u32; 16]: §2's per-pixel substep bins (R-545, RQ-286)
 playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
 camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
 tree_depth_max  leaf_count
