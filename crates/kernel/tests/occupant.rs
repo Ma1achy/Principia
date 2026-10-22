@@ -1646,22 +1646,18 @@ fn dynamical_time<R: P>(s: &State<R>) -> f64 {
     tau
 }
 
-/// The smallest `dt/τ` at which test 3 discriminates at `R`, the domain `step_reversal_tol`'s proposal states
-/// (REQ-VAL-191; its register doc): `10⁻²` at f64 and `10⁻¹` at f32. In it dd's named controls, RK4 and the asymmetric
-/// Yoshida-4, read above the criterion on every fixture at every dt of the ladder (`step_reversibility_domain`). Below
-/// it a control's time-asymmetry, `O((dt/τ)⁴)` relative for the asymmetric Yoshida-4 and `O((dt/τ)⁵)` for RK4, is under
-/// the precision's rounding, and a residual under the criterion says nothing.
-fn smallest_discriminating_ratio<R: P>() -> f64 {
+/// The domain's edge at `R`, the smallest `dt/τ` at which test 3 discriminates, as `step_reversal_tol`'s proposal
+/// states it (REQ-VAL-191; its register doc): `10⁻²` at f64 and `0.3` at f32. At the edge itself, `dt = edge·τ` on
+/// every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and the asymmetric Yoshida-4, read
+/// above the criterion (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for
+/// the asymmetric Yoshida-4 and `O((dt/τ)⁵)` for RK4, falls
+/// under the precision's rounding, and a residual under the criterion says nothing.
+fn domain_edge<R: P>() -> f64 {
     if R::EPS == f64::EPSILON {
         1e-2
     } else {
-        1e-1
+        0.3
     }
-}
-
-/// Whether test 3 discriminates at `R` and `dt/τ`.
-fn discriminates<R: P>(ratio: f64) -> bool {
-    ratio >= smallest_discriminating_ratio::<R>()
 }
 
 /// dd test 3's residual of `step` from `s` at `dt`: `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, its distance from
@@ -1672,21 +1668,25 @@ fn reversal<R: P>(step: Step<R>, s: &State<R>, dt: R) -> f64 {
     rel_diff(&negated(&back), s) / R::EPS
 }
 
-/// The residuals of `step` at `R`, one per dt of the ladder and fixture, `(dt/τ, dt, fixture, residual)`, each printed
-/// and those outside the domain labelled.
-fn reversals<R: P>(name: &str, step: Step<R>) -> Vec<(f64, f64, &'static str, f64)> {
+/// One residual: `dt/τ`, `dt`, the fixture, and the residual in `ε`.
+type Residual = (f64, f64, &'static str, f64);
+
+/// The residuals of `step` at `R` on every fixture, at every dt of the ladder and at `dt = edge·τ`, each printed and
+/// those below `edge` labelled outside the domain.
+fn reversals<R: P>(name: &str, step: Step<R>, edge: f64) -> Vec<Residual> {
     let mut out = Vec::new();
-    for dt in DT_LADDER {
-        for (fixture, s) in fixtures::<R>() {
-            let ratio = dt / dynamical_time(&s);
+    for (fixture, s) in fixtures::<R>() {
+        let tau = dynamical_time(&s);
+        for dt in DT_LADDER.into_iter().chain([edge * tau]) {
+            let ratio = dt / tau;
             let r = reversal(step, &s, R::of(dt));
-            let domain = if discriminates::<R>(ratio) {
+            let domain = if ratio >= edge {
                 ""
             } else {
                 " (outside the domain: non-discriminating)"
             };
             println!(
-                "{name} at {}, dt {dt:.4e}, {fixture} (dt/τ {ratio:.2e}): residual {r:.3e} ε{domain}",
+                "{name} at {}, {fixture}, dt {dt:.4e} (dt/τ {ratio:.3e}): residual {r:.3e} ε{domain}",
                 R::NAME
             );
             out.push((ratio, dt, fixture, r));
@@ -1695,10 +1695,11 @@ fn reversals<R: P>(name: &str, step: Step<R>) -> Vec<(f64, f64, &'static str, f6
     out
 }
 
-/// Checks that `step` returns every fixture within [`TOL`] at every dt of the ladder in the domain, at `R`.
+/// Checks that `step` returns every fixture within [`TOL`] at every dt of the domain, at `R`.
 fn check_reversible_at<R: P>(name: &str, step: Step<R>) {
-    for (ratio, dt, fixture, r) in reversals(name, step) {
-        if discriminates::<R>(ratio) {
+    let edge = domain_edge::<R>();
+    for (ratio, dt, fixture, r) in reversals(name, step, edge) {
+        if ratio >= edge {
             assert!(
                 r <= TOL,
                 "{name}'s residual {r:.3e} ε at {}, dt {dt:.4e}, {fixture} exceeds step_reversal_tol {TOL} ε",
@@ -1721,8 +1722,8 @@ fn step_reversibility() {
     check_reversible("Yoshida-6", y6, y6);
     // Euler, not step-reversible, printed as evidence for REQ-VAL-191; dd's named controls are checked by
     // `step_reversibility_domain`.
-    reversals::<f64>("Euler", euler);
-    reversals::<f32>("Euler", euler);
+    reversals::<f64>("Euler", euler, domain_edge::<f64>());
+    reversals::<f32>("Euler", euler, domain_edge::<f32>());
 }
 
 negative_control!(
@@ -1732,12 +1733,11 @@ negative_control!(
     check_reversible("Yoshida-4 asymmetric", y4_asymmetric, y4_asymmetric)
 );
 
-/// Checks that `step`, not step-reversible, reads above [`TOL`] on every fixture at every dt of the ladder in the domain
-/// at `R`:
-/// the domain is one where test 3 can fail.
-fn check_discriminates_at<R: P>(name: &str, step: Step<R>, discriminating: fn(f64) -> bool) {
-    for (ratio, dt, fixture, r) in reversals(name, step) {
-        if discriminating(ratio) {
+/// Checks that `step`, not step-reversible, reads above [`TOL`] on every fixture at `dt = edge·τ` and at every dt of
+/// the ladder above it, at `R`: the domain is one where test 3 can fail.
+fn check_discriminates_at<R: P>(name: &str, step: Step<R>, edge: f64) {
+    for (ratio, dt, fixture, r) in reversals(name, step, edge) {
+        if ratio >= edge {
             assert!(
                 r > TOL,
                 "{name} reads {r:.3e} ε at {}, dt {dt:.4e}, {fixture}, not above step_reversal_tol {TOL} ε: \
@@ -1748,30 +1748,24 @@ fn check_discriminates_at<R: P>(name: &str, step: Step<R>, discriminating: fn(f6
     }
 }
 
-/// dd test 3's controls, RK4 and the asymmetric Yoshida-4, at f64 and f32 over the domain.
-fn check_domain(discriminating64: fn(f64) -> bool, discriminating32: fn(f64) -> bool) {
-    check_discriminates_at::<f64>("RK4", rk4, discriminating64);
-    check_discriminates_at::<f32>("RK4", rk4, discriminating32);
-    check_discriminates_at::<f64>(
-        "Yoshida-4 asymmetric (w₁, w₁, w₀)",
-        y4_asymmetric,
-        discriminating64,
-    );
-    check_discriminates_at::<f32>(
-        "Yoshida-4 asymmetric (w₁, w₁, w₀)",
-        y4_asymmetric,
-        discriminating32,
-    );
+/// dd test 3's controls, RK4 and the asymmetric Yoshida-4, at f64 and f32 over the domains of edges `edge64` and
+/// `edge32`.
+fn check_domain(edge64: f64, edge32: f64) {
+    let y4a = "Yoshida-4 asymmetric (w₁, w₁, w₀)";
+    check_discriminates_at::<f64>("RK4", rk4, edge64);
+    check_discriminates_at::<f32>("RK4", rk4, edge32);
+    check_discriminates_at::<f64>(y4a, y4_asymmetric, edge64);
+    check_discriminates_at::<f32>(y4a, y4_asymmetric, edge32);
 }
 
 #[test]
 fn step_reversibility_domain() {
-    check_domain(discriminates::<f64>, discriminates::<f32>);
+    check_domain(domain_edge::<f64>(), domain_edge::<f32>());
 }
 
 negative_control!(
     step_reversibility_domain,
-    "a domain that takes f32 down to dt/τ 10⁻²",
+    "the first draft's f32 edge, dt/τ 10⁻¹",
     expected = "test 3 does not discriminate there",
-    check_domain(discriminates::<f64>, |ratio| ratio >= 1e-2)
+    check_domain(domain_edge::<f64>(), 1e-1)
 );
