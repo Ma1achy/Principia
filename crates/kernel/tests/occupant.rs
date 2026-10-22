@@ -1650,8 +1650,8 @@ fn dynamical_time<R: P>(s: &State<R>) -> f64 {
 /// states it (REQ-VAL-191; its register doc): `10⁻²` at f64 and `0.3` at f32. At the edge itself, `dt = edge·τ` on
 /// every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and the asymmetric Yoshida-4, read
 /// above the criterion (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for
-/// the asymmetric Yoshida-4 and `O((dt/τ)⁵)` for RK4, falls
-/// under the precision's rounding, and a residual under the criterion says nothing.
+/// the asymmetric Yoshida-4 and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in
+/// `Φ_{−h}∘Φ_h`), falls under the precision's rounding, and a residual under the criterion says nothing.
 fn domain_edge<R: P>() -> f64 {
     if R::EPS == f64::EPSILON {
         1e-2

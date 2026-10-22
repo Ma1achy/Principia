@@ -923,15 +923,16 @@ pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.7845136104
 /// at f64 and `dt/τ ≥ 0.3` at f32, `τ` the state's shortest two-body time `√(r³ / (G(mᵢ + mⱼ)))`: there dd's named
 /// controls, RK4 and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, read above it at the same dt; outside it
 /// a residual under the criterion says nothing, and no verdict is taken there (REQ-VAL-191). Its evidence,
-/// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_domain`), on two fixtures (`τ` 1.09
-/// and 0.0502) over dt from 10⁻¹ to 10⁻³/64 and at each edge, `dt = edge·τ`: in the domain, KDK, Yoshida-4 and
-/// Yoshida-6 at most 3.6 `ε_R` (Yoshida-6, f32, dt/τ 2.0), so 16 covers them by 4.4×; the controls at the edges, where
-/// they read least, RK4 88 and 192 `ε_R` at f64 (close pair, generic), 5.5× and 12× the criterion, and 303 and 720
-/// `ε_R` at f32, 19× and 45×; the asymmetric Yoshida-4 at least 5.4·10⁷ `ε_R` at f64 and 2.2·10⁵ `ε_R` at f32. Below
-/// the domain a control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 (its stages satisfy
-/// `Σw = 1` and `Σw³ = 0`, so the first term odd under reversal of their order is the `h⁴` commutator `[A₁, A₃]`) and
-/// `O((dt/τ)⁵)` for RK4, falls under the precision's rounding: at f32, dt/τ 0.1, RK4 reads 0.72 and 0.27 `ε_R`, and
-/// at dt/τ 0.199, 18.6 `ε_R`, no margin; at f64, dt/τ 3·10⁻⁴, the asymmetric Yoshida-4 reads 49 `ε_R` and RK4 0.
+/// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_domain`), on two fixtures (`τ` 1.09 and
+/// 0.0502) over dt from 10⁻¹ to 10⁻³/64 and at each edge, `dt = edge·τ`: in the domain, KDK, Yoshida-4 and Yoshida-6 at
+/// most 3.6 `ε_R` (Yoshida-6, f32, dt/τ 2.0), so 16 covers them by 4.4×; the controls at the edges, where they read
+/// least, RK4 88 and 192 `ε_R` at f64 (close pair, generic), 5.5× and 12× the criterion, and 303 and 720 `ε_R` at f32,
+/// 19× and 45×; the asymmetric Yoshida-4 at least 5.4·10⁷ `ε_R` at f64 and 2.2·10⁵ `ε_R` at f32. Below the domain a
+/// control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 (its stages satisfy `Σw = 1` and
+/// `Σw³ = 0`, so the first term odd under reversal of their order is the `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁶)`
+/// for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls under the precision's
+/// rounding: at f32, dt/τ 0.1, RK4 reads 0.72 and 0.27 `ε_R`, and at dt/τ 0.199, 18.6 `ε_R`, no margin; at f64, dt/τ
+/// 3·10⁻⁴, the asymmetric Yoshida-4 reads 49 `ε_R` and RK4 0.
 pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "step_reversal_tol",
     16.0,
