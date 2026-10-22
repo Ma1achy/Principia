@@ -919,11 +919,16 @@ pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.7845136104
 /// dd_integrator §5 test 3's rounding-level criterion (REQ-VAL-191), as `k` in `k·ε_R`, `ε_R` the precision's machine
 /// epsilon: the residual of `STEP(dt)`, momentum negation, `STEP(dt)`, negation, its Euclidean norm over the positions
 /// and momenta divided by the state's, below which the state counts as returned. TASK-M3-02's proposal (R-71),
-/// provisional until the M3 gate (R-427). Its evidence, `crates/kernel/tests/occupant.rs` (`step_reversibility`), on
-/// two fixtures over dt from 10⁻¹ to 10⁻³/64: KDK, Yoshida-4 and Yoshida-6 at most 3.6 `ε_R` (Yoshida-6, f32, dt 10⁻¹),
-/// so 16 covers them by 4.4×; Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, at f64, at least 49 `ε_R` (dt
-/// 10⁻³/64), 3× above it. At f32 the asymmetric control falls below it from dt 10⁻³ down (1.6 `ε_R`): there the
-/// time-asymmetry, `O(dt²)`, is under f32's rounding.
+/// provisional until the M3 gate (R-427). The criterion holds only in the domain where it discriminates, `dt/τ ≥ 10⁻²`
+/// at f64 and `dt/τ ≥ 10⁻¹` at f32, `τ` the state's shortest two-body time `√(r³ / (G(mᵢ + mⱼ)))`: there dd's named
+/// controls, RK4 and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, read above it at the same dt; outside it
+/// a residual under the criterion says nothing, and no verdict is taken there (REQ-VAL-191). Its evidence,
+/// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_domain`), on two fixtures (`τ` 1.09
+/// and 0.0502) over dt from 10⁻¹ to 10⁻³/64: in the domain, KDK, Yoshida-4 and Yoshida-6 at most 3.6 `ε_R` (Yoshida-6,
+/// f32, dt/τ 2.0), so 16 covers them by 4.4×, and the controls at least 5.7·10³ `ε_R` at f64 (RK4, dt/τ 0.020) and
+/// 18.6 `ε_R` at f32 (RK4, dt/τ 0.20). Below the domain a control's time-asymmetry, `O(dt²)` for the asymmetric
+/// Yoshida-4, falls under the precision's rounding: the asymmetric Yoshida-4 reads 49 `ε_R` at f64 and 1.6 `ε_R` at f32
+/// at dt/τ 3·10⁻⁴ and 0.020, and RK4 0 and 0.
 pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "step_reversal_tol",
     16.0,
