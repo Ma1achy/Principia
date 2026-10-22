@@ -22,12 +22,15 @@
 //!   (Yoshida-4) or 13th (Yoshida-6) significant digit, each way, exceeds the bound (REQ-INT-090).
 //! - `step_reversibility`: dd test 3, `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, returns the state within the
 //!   rounding-level criterion `step_reversal_tol` (REQ-VAL-191, proposed) for KDK, Yoshida-4 and Yoshida-6 at f64 and
-//!   f32, on every fixture, at every dt of the ladder in the criterion's domain and at its edge, `dt/τ` at least
-//!   `step_reversal_edge_f64` or `step_reversal_edge_f32`, with no projection or substepping; it prints the evidence,
-//!   those residuals beside Euler's, the cells outside the domain labelled non-discriminating; its control is
-//!   Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)` (REQ-VAL-032, REQ-VAL-191).
+//!   f32, on every fixture (with Burrau's start), at every dt of the ladder in the criterion's domain and at its edges,
+//!   `dt/τ` from `step_reversal_edge_f64` or `step_reversal_edge_f32` up to `step_reversal_edge_max`, with no
+//!   projection or substepping; it prints the evidence, those residuals beside Euler's, the cells outside the domain
+//!   labelled non-discriminating; its control is Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)` (REQ-VAL-032,
+//!   REQ-VAL-191).
+//! - `step_reversibility_upper_edge`: the same across the whole domain at 16 points per decade; its control takes the
+//!   upper edge to `dt/τ = 1`, where Burrau's start conditions a symmetric step past the criterion (REQ-VAL-191).
 //! - `step_reversibility_domain`: dd test 3's named controls, RK4 and the asymmetric Yoshida-4, read above the
-//!   criterion on every fixture at `dt = edge·τ` and at every dt of the ladder above the edge, at f64 and f32, so the
+//!   criterion on every fixture at `dt = edge·τ` and at every dt of the ladder in the domain, at f64 and f32, so the
 //!   domain is one where test 3 can fail; its control is the f32 edge taken down to `dt/τ = 10⁻¹`, where RK4 reads
 //!   below the criterion (REQ-VAL-191).
 
@@ -48,7 +51,8 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use spirv_std::num_traits::{One, Signed, ToPrimitive, Zero};
 use validation::{
-    negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_TOL,
+    negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX,
+    STEP_REVERSAL_TOL,
 };
 
 // ── Shared ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1654,18 +1658,43 @@ fn dynamical_time<R: P>(s: &State<R>) -> f64 {
     tau
 }
 
-/// The domain's edge at `R`, the smallest `dt/τ` at which test 3 discriminates, as `step_reversal_tol`'s proposal
+/// The domain's lower edge at `R`, the smallest `dt/τ` at which test 3 discriminates, as `step_reversal_tol`'s proposal
 /// states it (REQ-VAL-191): the register's `step_reversal_edge_f64` (10⁻²) and `step_reversal_edge_f32` (0.3). At the
-/// edge itself, `dt = edge·τ` on every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and the
-/// asymmetric Yoshida-4, read above the criterion (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for
-/// the asymmetric Yoshida-4 and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in
-/// `Φ_{−h}∘Φ_h`), falls under the precision's rounding, and a residual under the criterion says nothing.
+/// edge itself, `dt = edge·τ` on every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and
+/// the asymmetric Yoshida-4, read above the criterion (`step_reversibility_domain`). Below it a control's
+/// time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵`
+/// terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls under the precision's rounding, and a residual under the
+/// criterion says nothing.
 fn domain_edge<R: P>() -> f64 {
     if R::EPS == f64::EPSILON {
         STEP_REVERSAL_EDGE_F64.number()
     } else {
         STEP_REVERSAL_EDGE_F32.number()
     }
+}
+
+/// The domain's upper edge, the register's `step_reversal_edge_max` (0.5), at both precisions: above it a step can
+/// carry a pair of the start state far closer than `τ` says (Burrau's start: at `dt/τ` 1.0 a stage of Yoshida-4 brings
+/// a pair from 3 apart to 0.26), so the step's own conditioning amplifies rounding past the criterion, a symmetric step
+/// included, and a residual over it says nothing about time-asymmetry.
+fn upper_edge() -> f64 {
+    STEP_REVERSAL_EDGE_MAX.number()
+}
+
+/// Burrau's (3, 4, 5) Pythagorean start at rest (dd_integrator §5's golden anchor), a fixture of test 3's only: its
+/// steps bring pairs far closer than its start's `τ`.
+fn burrau<R: P>() -> State<R> {
+    state(
+        [3.0, 4.0, 5.0],
+        [[1.0, 3.0], [-2.0, -1.0], [1.0, -1.0]],
+        [[0.0; 2]; 3],
+    )
+}
+
+/// Test 3's fixtures: [`fixtures`] and [`burrau`].
+fn reversal_fixtures<R: P>() -> [(&'static str, State<R>); 3] {
+    let [a, b] = fixtures::<R>();
+    [a, b, ("burrau", burrau())]
 }
 
 /// dd test 3's residual of `step` from `s` at `dt`: `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, its distance from
@@ -1679,16 +1708,16 @@ fn reversal<R: P>(step: Step<R>, s: &State<R>, dt: R) -> f64 {
 /// One residual: `dt/τ`, `dt`, the fixture, and the residual in `ε`.
 type Residual = (f64, f64, &'static str, f64);
 
-/// The residuals of `step` at `R` on every fixture, at every dt of the ladder and at `dt = edge·τ`, each printed and
-/// those below `edge` labelled outside the domain.
-fn reversals<R: P>(name: &str, step: Step<R>, edge: f64) -> Vec<Residual> {
+/// The residuals of `step` at `R` on every fixture of test 3, at every dt of the ladder and at `dt = lower·τ` and
+/// `dt = upper·τ`, each printed and those outside `[lower, upper]` labelled outside the domain.
+fn reversals<R: P>(name: &str, step: Step<R>, lower: f64, upper: f64) -> Vec<Residual> {
     let mut out = Vec::new();
-    for (fixture, s) in fixtures::<R>() {
+    for (fixture, s) in reversal_fixtures::<R>() {
         let tau = dynamical_time(&s);
-        for dt in DT_LADDER.into_iter().chain([edge * tau]) {
+        for dt in DT_LADDER.into_iter().chain([lower * tau, upper * tau]) {
             let ratio = dt / tau;
             let r = reversal(step, &s, R::of(dt));
-            let domain = if ratio >= edge {
+            let domain = if in_domain(ratio, lower, upper) {
                 ""
             } else {
                 " (outside the domain: non-discriminating)"
@@ -1703,24 +1732,57 @@ fn reversals<R: P>(name: &str, step: Step<R>, edge: f64) -> Vec<Residual> {
     out
 }
 
-/// Checks that `step` returns every fixture within [`TOL`] at every dt of the domain, at `R`.
-fn check_reversible_at<R: P>(name: &str, step: Step<R>) {
-    let edge = domain_edge::<R>();
-    for (ratio, dt, fixture, r) in reversals(name, step, edge) {
-        if ratio >= edge {
+/// Whether `ratio` is in the domain `[lower, upper]`, both edges included.
+fn in_domain(ratio: f64, lower: f64, upper: f64) -> bool {
+    lower <= ratio && ratio <= upper
+}
+
+/// The ratios of a grid over `[lower, upper]`, 16 per decade, both edges included.
+fn domain_grid(lower: f64, upper: f64) -> Vec<f64> {
+    let step = 10f64.powf(1.0 / 16.0);
+    let mut out = vec![lower];
+    let mut x = lower * step;
+    while x < upper {
+        out.push(x);
+        x *= step;
+    }
+    out.push(upper);
+    out
+}
+
+/// Checks that `step` returns every fixture of test 3 within [`TOL`] at every dt of the domain `[lower, upper]` at `R`:
+/// those of the ladder and the edges, and with `dense`, a grid of 16 per decade across it.
+fn check_reversible_in<R: P>(name: &str, step: Step<R>, lower: f64, upper: f64, dense: bool) {
+    let mut cells = reversals(name, step, lower, upper);
+    if dense {
+        for (fixture, s) in reversal_fixtures::<R>() {
+            let tau = dynamical_time(&s);
+            for ratio in domain_grid(lower, upper) {
+                cells.push((
+                    ratio,
+                    ratio * tau,
+                    fixture,
+                    reversal(step, &s, R::of(ratio * tau)),
+                ));
+            }
+        }
+    }
+    for (ratio, dt, fixture, r) in cells {
+        if in_domain(ratio, lower, upper) {
             assert!(
                 r <= TOL,
-                "{name}'s residual {r:.3e} ε at {}, dt {dt:.4e}, {fixture} exceeds step_reversal_tol {TOL} ε",
+                "{name}'s residual {r:.3e} ε at {}, dt {dt:.4e} (dt/τ {ratio:.3e}), {fixture} exceeds \
+                 step_reversal_tol {TOL} ε",
                 R::NAME
             );
         }
     }
 }
 
-/// [`check_reversible_at`] at f64 and f32.
+/// [`check_reversible_in`] over the register's domain, at f64 and f32.
 fn check_reversible(name: &str, step64: Step<f64>, step32: Step<f32>) {
-    check_reversible_at(name, step64);
-    check_reversible_at(name, step32);
+    check_reversible_in(name, step64, domain_edge::<f64>(), upper_edge(), false);
+    check_reversible_in(name, step32, domain_edge::<f32>(), upper_edge(), false);
 }
 
 #[test]
@@ -1730,8 +1792,8 @@ fn step_reversibility() {
     check_reversible("Yoshida-6", y6, y6);
     // Euler, not step-reversible, printed as evidence for REQ-VAL-191; dd's named controls are checked by
     // `step_reversibility_domain`.
-    reversals::<f64>("Euler", euler, domain_edge::<f64>());
-    reversals::<f32>("Euler", euler, domain_edge::<f32>());
+    reversals::<f64>("Euler", euler, domain_edge::<f64>(), upper_edge());
+    reversals::<f32>("Euler", euler, domain_edge::<f32>(), upper_edge());
 }
 
 negative_control!(
@@ -1741,11 +1803,36 @@ negative_control!(
     check_reversible("Yoshida-4 asymmetric", y4_asymmetric, y4_asymmetric)
 );
 
-/// Checks that `step`, not step-reversible, reads above [`TOL`] on every fixture at `dt = edge·τ` and at every dt of
-/// the ladder above it, at `R`: the domain is one where test 3 can fail.
-fn check_discriminates_at<R: P>(name: &str, step: Step<R>, edge: f64) {
-    for (ratio, dt, fixture, r) in reversals(name, step, edge) {
-        if ratio >= edge {
+/// KDK, Yoshida-4 and Yoshida-6 across the domain, its edges `lower64`, `lower32` and `upper`, on a grid of 16 per
+/// decade, at f64 and f32.
+fn check_reversible_dense(lower64: f64, lower32: f64, upper: f64) {
+    for (name, s64, s32) in [
+        ("KDK", kdk as Step<f64>, kdk as Step<f32>),
+        ("Yoshida-4", y4, y4),
+        ("Yoshida-6", y6, y6),
+    ] {
+        check_reversible_in(name, s64, lower64, upper, true);
+        check_reversible_in(name, s32, lower32, upper, true);
+    }
+}
+
+#[test]
+fn step_reversibility_upper_edge() {
+    check_reversible_dense(domain_edge::<f64>(), domain_edge::<f32>(), upper_edge());
+}
+
+negative_control!(
+    step_reversibility_upper_edge,
+    "the upper edge taken to dt/τ 1, where Burrau's start conditions the step past the criterion",
+    expected = "exceeds step_reversal_tol",
+    check_reversible_dense(domain_edge::<f64>(), domain_edge::<f32>(), 1.0)
+);
+
+/// Checks that `step`, not step-reversible, reads above [`TOL`] on every fixture of test 3 at `dt = lower·τ`,
+/// `dt = upper·τ` and at every dt of the ladder between, at `R`: the domain is one where test 3 can fail.
+fn check_discriminates_at<R: P>(name: &str, step: Step<R>, lower: f64, upper: f64) {
+    for (ratio, dt, fixture, r) in reversals(name, step, lower, upper) {
+        if in_domain(ratio, lower, upper) {
             assert!(
                 r > TOL,
                 "{name} reads {r:.3e} ε at {}, dt {dt:.4e}, {fixture}, not above step_reversal_tol {TOL} ε: \
@@ -1756,14 +1843,15 @@ fn check_discriminates_at<R: P>(name: &str, step: Step<R>, edge: f64) {
     }
 }
 
-/// dd test 3's controls, RK4 and the asymmetric Yoshida-4, at f64 and f32 over the domains of edges `edge64` and
-/// `edge32`.
+/// dd test 3's controls, RK4 and the asymmetric Yoshida-4, at f64 and f32 over the domains of lower edges `edge64` and
+/// `edge32` and the register's upper edge.
 fn check_domain(edge64: f64, edge32: f64) {
     let y4a = "Yoshida-4 asymmetric (w₁, w₁, w₀)";
-    check_discriminates_at::<f64>("RK4", rk4, edge64);
-    check_discriminates_at::<f32>("RK4", rk4, edge32);
-    check_discriminates_at::<f64>(y4a, y4_asymmetric, edge64);
-    check_discriminates_at::<f32>(y4a, y4_asymmetric, edge32);
+    let upper = upper_edge();
+    check_discriminates_at::<f64>("RK4", rk4, edge64, upper);
+    check_discriminates_at::<f32>("RK4", rk4, edge32, upper);
+    check_discriminates_at::<f64>(y4a, y4_asymmetric, edge64, upper);
+    check_discriminates_at::<f32>(y4a, y4_asymmetric, edge32, upper);
 }
 
 #[test]
