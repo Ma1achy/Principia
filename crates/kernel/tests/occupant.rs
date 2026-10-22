@@ -41,7 +41,9 @@ use kernel::Real;
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use spirv_std::num_traits::{One, Signed, ToPrimitive, Zero};
-use validation::{negative_control, STEP_REVERSAL_TOL};
+use validation::{
+    negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_TOL,
+};
 
 // ── Shared ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1647,16 +1649,16 @@ fn dynamical_time<R: P>(s: &State<R>) -> f64 {
 }
 
 /// The domain's edge at `R`, the smallest `dt/τ` at which test 3 discriminates, as `step_reversal_tol`'s proposal
-/// states it (REQ-VAL-191; its register doc): `10⁻²` at f64 and `0.3` at f32. At the edge itself, `dt = edge·τ` on
-/// every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and the asymmetric Yoshida-4, read
-/// above the criterion (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for
+/// states it (REQ-VAL-191): the register's `step_reversal_edge_f64` (10⁻²) and `step_reversal_edge_f32` (0.3). At the
+/// edge itself, `dt = edge·τ` on every fixture, and at every dt of the ladder above it, dd's named controls, RK4 and the
+/// asymmetric Yoshida-4, read above the criterion (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for
 /// the asymmetric Yoshida-4 and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in
 /// `Φ_{−h}∘Φ_h`), falls under the precision's rounding, and a residual under the criterion says nothing.
 fn domain_edge<R: P>() -> f64 {
     if R::EPS == f64::EPSILON {
-        1e-2
+        STEP_REVERSAL_EDGE_F64.number()
     } else {
-        0.3
+        STEP_REVERSAL_EDGE_F32.number()
     }
 }
 
