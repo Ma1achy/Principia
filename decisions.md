@@ -23630,6 +23630,12 @@ verbatim:
   corpus sites that say "the browser build"; §0's definition covers them, and none is reworded.
 - **The spike brief** (`docs/experiments/briefs/principia_spike_brief.md`, "Direction chosen: whole CPU engine in Rust
   → wasm, thin TS GUI shell") is the plan of record (`principia_INDEX.md`) and is left as written.
+- **Gui review 5608379011 of PR #282 (fix round 1)**: the sites still promising a final, production or TS GUI point at
+  R-571 with a *Was:* (render_gui_spec's header, gui_state_contract §1 and §7, canonical_spec §1 item 5, and
+  `docs/gui/design/GUI_DESIGN_NOTES.md`, reconciled too rather than left); TASK-M8-37's goal and REQ-SYS-047
+  acceptance line drop the DOM GUI and the TS shell (none of RQ-551's options has a DOM GUI); REQ-GUI-033 gains R-571
+  and a note; REQ-SYS-086 covers gaps with a native control, and the control-less gaps (runtime-authored occupants,
+  persistence across reloads, `prin profile query --live`) are RQ-550's to settle.
 - **The reel**: REQ-TOOL-084 (the reel produced by the blocking exporter, a segment loading its spec when clicked) is
   machinery and stays in M8; a note says its presentation is v2 web's.
 
@@ -23645,4 +23651,5 @@ Changes REQ-SYS-046 (statement, verify, rulings, source, note), REQ-SYS-047 (sta
 note),
 REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and
 REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
-REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note) and adds REQ-SYS-086.
+REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note) and adds REQ-SYS-086
+(restated in fix round 1: statement, verify, note).

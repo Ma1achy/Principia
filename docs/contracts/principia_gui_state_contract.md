@@ -17,7 +17,7 @@ The dev GUI is allowed to be ugly and throwaway *precisely because* it is a thin
 > - **The egui dev binding (now; the native app's and v1 web's, R-571):** a Rust immediate-mode **debug menu** (toggled with `F3`), compiled into the same wasm binary and calling the surface *natively* — a typed `SetField` enum + snapshot, no marshalling. The firewall is a fact of the **crate graph**: the engine crate marks *only* the state surface `pub` (scheduler, cache, kernel, payload buffers stay crate-private), so the gui crate depends on the engine crate yet *cannot reach past the surface* — a stray "egui callback into a sim object" is unexpressible because the internals aren't visible. Language-boundary strength, in-process.
 > - **The TS production binding (v2 web's, if there is one; R-571, *was:* "(later)"):** a thin TS GUI (React/HTML/whatever) across the wasm↔JS membrane, calling the *same* surface through a wasm-bindgen layer. The firewall is a fact of the **binary**: no shared linker, so the engine *cannot* import the GUI.
 >
-> **The dev binding earns no privilege for being in-process.** egui reads a snapshot and emits `SetField` exactly as the TS GUI will, and must *not* mutate engine state through a `&mut` borrow even though the same binary makes that physically possible. Exercising `set_field`/snapshot from day one is precisely what makes the eventual TS swap a drop-in rather than a cliff — the marshalled path is never left untested.
+> **The dev binding earns no privilege for being in-process.** egui reads a snapshot and emits `SetField` exactly as a TS GUI would (R-571: v2 web's, if there ever is one; *was:* "exactly as the TS GUI will"), and must *not* mutate engine state through a `&mut` borrow even though the same binary makes that physically possible. Exercising `set_field`/snapshot from day one is precisely what would make a TS swap, v2 web's if it ever comes (R-571; *was:* "the eventual TS swap"), a drop-in rather than a cliff — the marshalled path is never left untested.
 
 The boundary must stay a **data** boundary, not an **object** one — under *both* bindings; only the seductive failure differs. wasm-bindgen makes it easy to hand JS a **live handle to a Rust struct with callable methods** (the moment the TS GUI calls `engine.scheduler.request_refine(quad)` the firewall is decorative); in-process, the egui equivalent is holding a `&mut` into engine state. Both are barred — the rule is identical:
 - **In:** `set_field(path, value)` — plain serialised data. **Out:** a state snapshot — plain serialised data. The TS side holds **no Rust handles**, only the last snapshot it was handed. That is the whole of §1's subscribe/emit rule, now with teeth.
@@ -362,7 +362,7 @@ QualitySettings = { N (samples per quad axis), max_rel_depth, render_scale, lock
 
 ## 7. What a replacement GUI must honour (the teardown contract)
 
-The polished GUI, whenever it arrives, must satisfy exactly and only:
+A replacement GUI, if there ever is one (v2 web's, R-571; the native app and v1 web keep this spec's GUI), must satisfy exactly and only (*was:* "The polished GUI, whenever it arrives, must"):
 
 - read state via the subscribe interface; emit edits via `setField` — never touch engine internals (§1).
 - treat the scanned registry as its source of selectable occupants; respect the `category` tag for filtering (§3).

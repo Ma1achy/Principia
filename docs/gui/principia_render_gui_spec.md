@@ -1,8 +1,9 @@
 # Principia — Dev GUI (egui / F3)
 
 *Status: canonical. Rewritten in step 6 (24 Sep 2026). This is the single source of truth for the **developer GUI**: the
-egui debug layer over the wgpu render, toggled with F3. It is not the final UI, but it has the same structure and every
-feature. It is the interface of the native app **and of v1 web**, the whole native app compiled to run in the
+egui debug layer over the wgpu render, toggled with F3. It is the native app's UI and v1 web's, with every feature; a
+separate final UI, if there ever is one, is v2 web's (R-571; was: "It is not the final UI, but it has the same structure
+and every feature."). It is the interface of the native app **and of v1 web**, the whole native app compiled to run in the
 browser, with the same interface, features and stains (R-571). A production TS GUI, if there ever is one, is v2
 web's, a separate product designed later; it would re-skin the same operations through the same contract
 (`principia_gui_state_contract.md` §1, §7). Was: "The production (TS) GUI is out of scope; it re-skins the same
@@ -51,7 +52,7 @@ data. The two words name one object. The **figure** is the rendered slice.
   with no separate interface design. Where the browser cannot do something the native app does, the app says so where
   the native app has the feature: the control is shown disabled, with a note that the browser cannot do it, as the
   Run window's fast-math control is (R-303); it is never removed, moved or redesigned (REQ-SYS-086; applied per R-369:
-  "says so in the app" is read as R-303's pattern). Which features those are waits on what v1 web may cross, RQ-550.
+  "says so in the app" is read as R-303's pattern). Which features those are waits on what v1 web may cross, RQ-550. A gap with no native control to disable (runtime-authored colour occupants from the scanned filesystem, persistence across reloads, `prin profile query --live`) is RQ-550's to settle (applied per R-369, gui review 5608379011 of PR #282).
 - **With the layer hidden, the figure fills the window (R-406), by one of two modes (R-468).** **Extend**, the
   default and R-406's fill: F3 hiding egui makes the figure fill the whole window, showing more of the field at the
   same scale in every direction, never the shown view stretched: each point of the field keeps the screen position it

@@ -583,6 +583,11 @@ Nothing is ruled. For the human: yes, it changes what v1 web builds or offers.*
   - (d) **The rule as written.** Every native feature that needs another crossing is disabled in v1 web and says so in
     the app (R-571's own fallback): by the table, downloads, imports, the clipboard, Listen, the saved stores and the
     rest.
+- **Its ruling must also settle the gaps with no native control to disable** (REQ-SYS-086 covers only gaps that have
+  one; gui review 5608379011 of PR #282, applied per R-369): (i) runtime-authored colour occupants, the fragment
+  registry being "the scanned filesystem" (row 7), where the browser has no folder to scan; (ii) persistence across
+  reloads, the stores and the quality model (row 11); (iii) `prin profile query --live` (row 14). For each: crossed,
+  replaced, or absent, and if absent, what v1 web shows.
 - **Applied meanwhile:** the rule stands as written and nothing is built (M8); the measured list sits beside it, a
   record, not a rule. REQ-SYS-059 and REQ-SYS-051 carry `rq: RQ-550`, and REQ-SYS-086's list of what v1 web says it
   cannot do waits on it.
