@@ -926,9 +926,10 @@ pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.7845136104
 /// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_domain`), on two fixtures (`τ` 1.09
 /// and 0.0502) over dt from 10⁻¹ to 10⁻³/64: in the domain, KDK, Yoshida-4 and Yoshida-6 at most 3.6 `ε_R` (Yoshida-6,
 /// f32, dt/τ 2.0), so 16 covers them by 4.4×, and the controls at least 5.7·10³ `ε_R` at f64 (RK4, dt/τ 0.020) and
-/// 18.6 `ε_R` at f32 (RK4, dt/τ 0.20). Below the domain a control's time-asymmetry, `O(dt²)` for the asymmetric
-/// Yoshida-4, falls under the precision's rounding: the asymmetric Yoshida-4 reads 49 `ε_R` at f64 and 1.6 `ε_R` at f32
-/// at dt/τ 3·10⁻⁴ and 0.020, and RK4 0 and 0.
+/// 18.6 `ε_R` at f32 (RK4, dt/τ 0.20). Below the domain a control's time-asymmetry, relative `O((dt/τ)⁴)` for the
+/// asymmetric Yoshida-4 (its stages satisfy `Σw = 1` and `Σw³ = 0`, so the first term odd under reversal of their order
+/// is the `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁵)` for RK4, falls under the precision's rounding: the asymmetric
+/// Yoshida-4 reads 49 `ε_R` at f64 and 1.6 `ε_R` at f32 at dt/τ 3·10⁻⁴ and 0.020, and RK4 0 and 0.
 pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "step_reversal_tol",
     16.0,
