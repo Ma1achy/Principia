@@ -23636,6 +23636,12 @@ verbatim:
   acceptance line drop the DOM GUI and the TS shell (none of RQ-551's options has a DOM GUI); REQ-GUI-033 gains R-571
   and a note; REQ-SYS-086 covers gaps with a native control, and the control-less gaps (runtime-authored occupants,
   persistence across reloads, `prin profile query --live`) are RQ-550's to settle.
+- **Gui re-checks 5608412017 and 5608439139 of PR #282 (fix rounds 2 and 3)**: the remaining "polished GUI", "final
+  UI" and "TS GUI" sites in the live corpus point at R-571 with a *Was:* (render_gui_spec §G14, gui_state_contract
+  §2 and §3, the IC inspector scratchpad, the temporal note's frame-loop paragraph), REQ-GEN-023 follows its source,
+  and `plan/reviewers/gui.md` follows the spec. Two crate doc comments repeat "a polished GUI"
+  (`crates/render/src/registry.rs`, `crates/engine/src/contract/view_ui.rs`); no code is changed here, and they are
+  listed in PR #282 for a later task.
 - **The reel**: REQ-TOOL-084 (the reel produced by the blocking exporter, a segment loading its spec when clicked) is
   machinery and stays in M8; a note says its presentation is v2 web's.
 
@@ -23651,5 +23657,5 @@ Changes REQ-SYS-046 (statement, verify, rulings, source, note), REQ-SYS-047 (sta
 note),
 REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and
 REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
-REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note) and adds REQ-SYS-086
-(restated in fix round 1: statement, verify, note).
+REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
+rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
