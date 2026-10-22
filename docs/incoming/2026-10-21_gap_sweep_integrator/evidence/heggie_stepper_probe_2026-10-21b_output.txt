@@ -1,0 +1,48 @@
+
+=== time transformation: Eq.20 product; one period is tau = 3.2445, using tau_end = 3.25
+  ORDER (state error at tau_end against RK4 at h/16 of the finest)
+           h          rk4    kdk_naive       gen_lf      imp_mid
+     0.05078     6.770e-5      1.450e1     5.636e-1     1.698e-2
+     0.02539     4.316e-6      7.050e0     1.569e-1     4.278e-3
+     0.01270     2.710e-7      3.857e0     4.025e-2     1.072e-3
+     0.00635     1.695e-8      1.202e0     1.013e-2     2.680e-4
+     0.00317     1.059e-9     5.081e-1     2.536e-3     6.702e-5
+       order         3.99         1.21         1.95         2.00
+  calls/step          4.0          3.0         20.0          9.7
+  gen_lf at h = tau_end/256: max |dE/E| 2.669e2, calls/step 16.8, t reached NaN
+  gen_lf at h = tau_end/512: max |dE/E| 2.277e3, calls/step 15.6, t reached NaN
+  gen_lf at h = tau_end/1024: max |dE/E| 2.600e94, calls/step 22.3, t reached NaN
+  imp_mid started off Eq.(9): sum_q 1.144e-16 -> 1.157e-13 after 100 periods, max |dE/E| 2.354e-4
+  imp_mid started off Eq.(9): sum_q 1.000e-3 -> 1.004e-3 after 100 periods, max |dE/E| 2.390e-4
+  imp_mid started off Eq.(9): sum_q 1.005e-2 -> 1.176e-2 after 100 periods, max |dE/E| 2.633e-4
+  imp_mid started off Eq.(9): sum_q 3.045e-2 -> 3.321e-2 after 100 periods, max |dE/E| 3.329e-4
+  ENERGY over 100 periods at h = tau_end/128 (regularised energy, |dE/E|)
+         arm          max        final        calls    t reached
+         rk4     5.026e-7     5.015e-7        51200       633.67
+   kdk_naive     3.457e78          NaN        38400          NaN
+      gen_lf      4.744e3          NaN       191569          NaN
+     imp_mid     2.354e-4     3.419e-6       746611       633.71
+
+=== time transformation: Eq.22 n=3/2 (production); one period is tau = 25.9868, using tau_end = 25.984375
+  ORDER (state error at tau_end against RK4 at h/16 of the finest)
+           h          rk4    kdk_naive       gen_lf      imp_mid
+     0.40601     3.191e-5      5.969e0     1.432e-1     1.170e-2
+     0.20300     2.022e-6      4.297e0     3.592e-2     2.917e-3
+     0.10150     1.272e-7      2.479e0     8.985e-3     7.288e-4
+     0.05075     7.971e-9      1.350e0     2.247e-3     1.822e-4
+     0.02538    4.995e-10     7.157e-1     5.616e-4     4.554e-5
+       order         3.99         0.77         2.00         2.00
+  calls/step          4.0          3.0         19.8          9.0
+  gen_lf at h = tau_end/256: max |dE/E| 2.958e5, calls/step 87.3, t reached 581.23
+  gen_lf at h = tau_end/512: max |dE/E| 1.501e68, calls/step 28.6, t reached NaN
+  gen_lf at h = tau_end/1024: max |dE/E| 4.681e65, calls/step 57.3, t reached NaN
+  imp_mid started off Eq.(9): sum_q 1.144e-16 -> 5.447e-13 after 100 periods, max |dE/E| 2.342e-4
+  imp_mid started off Eq.(9): sum_q 1.000e-3 -> 1.002e-3 after 100 periods, max |dE/E| 2.439e-4
+  imp_mid started off Eq.(9): sum_q 1.005e-2 -> 1.073e-2 after 100 periods, max |dE/E| 2.761e-4
+  imp_mid started off Eq.(9): sum_q 3.045e-2 -> inf after 100 periods, max |dE/E| 1.141e3
+  ENERGY over 100 periods at h = tau_end/128 (regularised energy, |dE/E|)
+         arm          max        final        calls    t reached
+         rk4     2.617e-6     2.239e-6        51200       632.53
+   kdk_naive    7.769e299    7.769e299        38400        31.86
+      gen_lf      9.029e4     3.132e-1      1149563       395.74
+     imp_mid     2.342e-4     1.755e-5       750858       632.51

@@ -882,7 +882,7 @@
   title: The regularisation axis and the Aarseth–Zare occupant
   depends_on: [TASK-M3-04, TASK-M3-05]
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-017, REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
+  requirements: [REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M3-08
@@ -890,7 +890,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -962,7 +962,7 @@
   title: Terminal states, precedence and the terminal latch
   depends_on: [TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-14, TASK-M3-16]
   needs: [REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-031]
-  requirements: [REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-033, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058]
+  requirements: [REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058]  # REQ-INT-033 retired by R-562
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1, PIT-1.4, PIT-1.6, PIT-2.4]
 - id: TASK-M3-18
@@ -1125,6 +1125,30 @@
   requirements: [REQ-CHART-072]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M3-39
+  milestone: M3
+  title: "Every stepper × regularisation pair: its exact composition, the measured pair table and its warnings (R-561)"
+  depends_on: [TASK-M3-08]
+  needs: []
+  requirements: [REQ-INT-097, REQ-INT-098, REQ-INT-099, REQ-INT-017]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M3-40
+  milestone: M3
+  title: "The fixed sync quantum: one grid of physical time, the march stopping only on it, live, catch-up and re-boot bitwise (R-565)"
+  depends_on: [TASK-M3-08]
+  needs: []
+  requirements: [REQ-INT-100]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4]
+- id: TASK-M3-41
+  milestone: M3
+  title: "The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies' reading (R-563, R-564, R-566)"
+  depends_on: [TASK-M3-40]
+  needs: []
+  requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -1456,9 +1480,9 @@
 - id: TASK-M5-21
   milestone: M5
   title: "Frame loop: the live set, off-loop catch-up and atomic promotion"
-  depends_on: [TASK-M5-08, TASK-M5-14, TASK-M4-12]
-  needs: [REQ-SCHED-002, REQ-SCHED-004, REQ-SCHED-008, REQ-SCHED-009, REQ-PERF-010]
-  requirements: [REQ-SCHED-034, REQ-SCHED-035, REQ-SCHED-037, REQ-SCHED-051]
+  depends_on: [TASK-M5-08, TASK-M5-14, TASK-M4-12, TASK-M3-40]  # TASK-M3-40: the fixed sync quantum (R-565)
+  needs: [REQ-SCHED-002, REQ-SCHED-004, REQ-SCHED-008, REQ-SCHED-009, REQ-PERF-010, REQ-INT-100]
+  requirements: [REQ-SCHED-034, REQ-SCHED-035, REQ-SCHED-037, REQ-SCHED-051, REQ-SCHED-103]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-1]
 - id: TASK-M5-22
@@ -2689,9 +2713,9 @@
 - id: TASK-M8-24
   milestone: M8
   title: "Run window: integration, escape and refinement settings under their contract names (04_windows.png)"
-  depends_on: [TASK-M8-05, TASK-M6-28]
-  needs: [REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002]
-  requirements: [REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047]
+  depends_on: [TASK-M8-05, TASK-M6-28, TASK-M3-39]  # TASK-M3-39: the pair table and its warnings (R-561)
+  needs: [REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002, REQ-INT-098]
+  requirements: [REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047, REQ-GUI-351, REQ-GUI-352]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-2.2]
 - id: TASK-M8-25
@@ -2753,9 +2777,9 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
-  needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
-  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169]
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40, TASK-M7-45, TASK-M3-39]  # R-467 D13: the background and Fit (code review F4 on PR #253); TASK-M6-48, TASK-M2-37 and TASK-M2-40 for the sidecar's tilt_map, mappings and saved charts (R-471 to R-475); TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369); TASK-M3-39 the pair table whose warning the sidecar carries (R-561)
+  needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072, REQ-INT-098]
+  requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169, REQ-GUI-353]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
   pitfalls: []
 - id: TASK-M8-33

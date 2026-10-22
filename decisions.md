@@ -2488,6 +2488,9 @@ payload's `dE_max` and `dLz_max` (R-70, R-86). TASK-M0-10 now builds the pack/un
 and `roundtrip_ctl` over the entries TASK-M0-09 transcribed.
 
 ## R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*
+*Refined by R-566 (the radial collision gate's energy).*
+*Still in force: all of it; under a regularised occupant the two-body radial collision gate's `|dE/E| < 1e-12` is the
+regularised energy's (R-566).*
 *29 Sep 2026 · applied in TASK-M0-02 (PR #54)*
 
 "2. RQ-157: all five as recommended (1 superseded, 2 and 3 ported with calibration and definition requirements, 4 not
@@ -16560,6 +16563,9 @@ Adds REQ-GUI-266 (`rq: RQ-341`); changes REQ-RENDER-097, REQ-RENDER-098, REQ-GUI
 REQ-GUI-079 and REQ-GUI-101 (statement, verify, rulings, note).
 
 ## R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied
+*Amended by R-568 (RQ-378 parked again, with no target).*
+*Still in force: all of it but the return to the human when RQ-341 is ruled: RQ-378 stays open with (a) applied and
+nothing waiting, and returns when the human raises it (R-568).*
 *20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-378, a "Parked" line; the entry stays open), REQ-GUI-244 (reqio, note),
 `plan/tasks.yaml` and `plan/rule_groups.yaml`; nothing is built*
 
@@ -22991,3 +22997,505 @@ R-559 is in the "one_off" group of `plan/rule_groups.yaml`, as R-431 is.
 
 Changes the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062, REQ-CHART-075, REQ-GUI-258,
 REQ-COL-129 and REQ-COL-135 (the mark only); no statement or verify changes.
+
+## R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the bundle's instruction and decisions as
+delivered, the source design and the three probes), `docs/contracts/principia_integrator_contract.md` § "Part 2 —
+Occupants and the capability profile" (Yoshida-4's row and a paragraph after the table) and § "Part 2b — Regularisation
+is a SECOND swappable axis, not a property of the stepper" (Heggie's row), `docs/design/principia_dd_integrator.md` §
+"3.2 Occupants" (a paragraph), `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar", REQ-GUI-102,
+REQ-INT-006 and REQ-INT-014 (reqio), TASK-M3-08, TASK-M8-24, `REVIEW_QUEUE.md` (RQ-529, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-08 and TASK-M8-24*
+
+R-560 to R-566 are the gap sweep's PR 1, "The integrator contract, corrected" (the bundle's `designs/integrator_findings.md`
+§1, §2, §10 and §11). The human's covering message, 21 Oct 2026, verbatim:
+
+> New instruction from me, Malachy. The attached bundle is the gap sweep from 21 Oct: start with INSTRUCTION.md, which
+> groups it into four PRs. Every decision in it is mine, quoted in DECISIONS_2026-10-21.md; quote them verbatim and
+> record the rulings from the next free R-number. Do PR 1 (the integrator contract) first. Tell me before you start if
+> you'd split the PRs differently, and queue anything that conflicts rather than resolving it.
+
+`INSTRUCTION.md`'s header, verbatim:
+
+> From me, Malachy. Everything in this bundle is mine to rule and I have ruled it; my words are in
+> `DECISIONS_2026-10-21.md` and inside each design's "Decided" section. Quote them verbatim wherever you record a ruling.
+> Record the rulings in `decisions.md` from the next free R-number, grouped as the PRs below, each naming the rulings it
+> amends and any queue entries it closes.
+>
+> Native app first throughout. Where anything here conflicts with a ruling or a queue entry these texts don't address,
+> queue it rather than resolving it. The security rule stands: never delete or modify anything outside the repo and
+> build/scratch directories without asking.
+
+`INSTRUCTION.md` § "PR 1", its first item, verbatim:
+
+> - **Default occupant: Heggie × RK4.** "Yep Heggie x RK4 as default". RK4 is what every Heggie result was measured
+>   with. REQ-GUI-102's default and the render GUI spec's Run window (§G5) change with it.
+
+`DECISIONS_2026-10-21.md` § "Integrator", its first item, verbatim:
+
+> - Default occupant Heggie × RK4. "Yep Heggie x RK4 as default"
+
+*What it decides:*
+- **The default occupant is Heggie 1974 stepped with RK4**, the composed occupant (stepper × regularisation, Part 2b).
+  The render GUI spec's Run window and REQ-GUI-102 read "Heggie × RK4"; REQ-INT-006's default config selects it, with
+  R-161's Eq. 22 at n = 3/2 as Heggie's time transformation. *Was:* "Heggie with KDK leapfrog is the general default"
+  (render GUI spec § "Run — from the top bar"), "occupant = Heggie×KDK" (REQ-GUI-102's test), and Yoshida-4 marked
+  "Medium–High (default)" in integrator contract Part 2's table.
+- **The evidence** (the design §1): Heggie's every result, 31 of 32 gallery cases among them, was taken with RK4; the
+  explicit leapfrog a reader of "Heggie with KDK" would write is first order and diverges (R-561's table).
+
+*Applied per R-369:*
+- **The tier column.** Integrator contract Part 2's last column is each stepper's default binding by tier when the
+  regularisation is `none`; the default occupant is Heggie × RK4 at every tier meanwhile. The column binds KDK at
+  Potato–Low and Yoshida-6 at Ultra–Extreme (R-4 makes the markdown's tier tables the defaults), and the ruling says
+  nothing of tiers, so whether a tier keeps another default is queued, RQ-529. TASK-M3-02's `table.rs` tier binding is
+  unchanged by this: it is the per-stepper binding.
+- **REQ-INT-014** keeps its statement and test (TASK-M3-02 builds it now); a note says its tier column is the binding
+  with regularisation `none` (R-560).
+- **The inspector cross-check** (physics review 5605806092 of PR #277, F9): integrator contract Part 6's
+  "Integrator-family mismatch" paragraph assumed a symplectic GPU; under Heggie × RK4 the GPU drifts secularly too, so
+  a note says the oscillating-against-drifting contrast holds for a symplectic active occupant, and the
+  match-integrator mode stands for every occupant.
+
+R-560 is in the "physics" group of `plan/rule_groups.yaml`, with R-161.
+
+Changes REQ-GUI-102 (statement, verify, rulings, note), REQ-INT-006 (statement, verify, source, rulings) and
+REQ-INT-014 (note, rulings).
+
+## R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured
+*Amended by R-567 (Heggie × the generalised leapfrog, measured bad).*
+*Still in force: all of it; the table gains Heggie × the generalised (Störmer–Verlet) leapfrog, measured bad, with
+its warning (R-567).*
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2b — Regularisation is a SECOND
+swappable axis, not a property of the stepper" (a subsection, "Every stepper × regularisation pair runs; the pairs
+measured not to work carry a warning (R-561)", with the pair table) and § "The table gains two rows" (Aarseth–Zare's
+KDK sentence), `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (a paragraph),
+`docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" and § "Export & share" (the sidecar), REQ-INT-017
+(reqio), REQ-INT-097, REQ-INT-098, REQ-INT-099, REQ-GUI-351, REQ-GUI-352 and REQ-GUI-353 (new), TASK-M3-07, TASK-M3-39
+(new), TASK-M8-24, TASK-M8-32, `REVIEW_QUEUE.md` (RQ-525, new) and `plan/rule_groups.yaml`; built by TASK-M3-39,
+TASK-M8-24 and TASK-M8-32*
+
+`INSTRUCTION.md` § "PR 1", its second item, verbatim:
+
+> - **Every regularisation × stepper pair is allowed, regularisation off included.** A pair measured not to work carries
+>   a warning beside the selector, in the Problems panel and in each export's settings. My words: "don't forbid combos
+>   of integrators & regularisers… maybe just have a warning somewhere that they might not work". Each such pair is
+>   still defined exactly, so its results reproduce. REQ-INT-006 and -017 become "every pair runs, and the pairs
+>   measured not to work carry a warning", with a table of pairs marked measured good, measured bad or not measured.
+
+`DECISIONS_2026-10-21.md` § "Integrator", its second item, verbatim:
+
+> - Every integrator × regularisation pair allowed (regularisation off included), with a warning where a pair is
+>   measured not to work. "don't forbid combos of integrators & regularisers… maybe just have a warning somewhere that
+>   they might not work. Better design Imo." / "the regularisation method (with it being off also) along with the
+>   integrator are all swappable / able to be chosen by the user"
+
+*What it decides:*
+- **Every pair runs.** The regularisation (`none`, Aarseth–Zare, Heggie, logH) and the stepper are chosen separately and
+  freely; no pair is forbidden or blocked.
+- **A pair measured not to work carries a warning**, stating what was measured, in three places: beside the occupant
+  selector in the Run window, in the Problems panel, and in each export's settings (the sidecar every image, snapshot
+  and share link carries, render GUI spec § "Export & share").
+- **Each pair is defined exactly.** On a non-separable regularised Hamiltonian (Aarseth–Zare, Heggie) KDK is the
+  explicit kick–drift–kick (kick at `(u, p)`, drift at `(u, p½)`, kick at `(u₁, p½)`) and a Yoshida step is the same
+  composition with Yoshida's coefficients (integrator contract Part 2b).
+- **The table.** Integrator contract Part 2b marks each pair measured good, measured bad or not measured, with the
+  evidence: Heggie × RK4 good (order 3.99, energy bounded at 5e-7 to 3e-6 over 100 orbits of the figure-eight),
+  Heggie × KDK bad (order 0.8–1.2, diverging); the rest not measured by the design. *Was:* "Aarseth–Zare × RK4 good
+  (Part 2a's collision passage);" among the evidence; that status is the port's, below (physics review 5605806092 of
+  PR #277, F7). REQ-INT-006 and REQ-INT-017 become "every pair runs, and the pairs measured not to work carry a warning".
+
+*Applied per R-369:*
+- **The composed occupant's profile is the pair's.** The explicit composition is not symplectic on a non-separable
+  Hamiltonian, so the profile of Heggie × KDK and the like says `symplectic` false, and `step_reversible` is dd test 3's
+  measurement (R-500), not the stepper's Part 2 row.
+- **Euler stays in the debug selection** (REQ-INT-015): its pairs run there, like every other pair.
+- **A status changes only by a measurement.** The criterion for "measured not to work" is a definition (R-72,
+  REQ-INT-099), written by TASK-M3-39 and approved by the physics reviewer: the design's measurement (order over a
+  halving ladder and the regularised energy over 100 orbits of the figure-eight at a fixed fictitious step) is its
+  starting point. TASK-M3-39 measures the not-measured regularised pairs the same way, and a pair that fails gains its
+  warning in the table.
+- **Which "Problems panel".** The only Problems pane in the corpus is the stain editor's (render GUI spec Part II
+  §1, compile errors and the state map's warnings); the ruling does not say which panel shows an integrator warning,
+  so it is queued, RQ-525. REQ-GUI-352 waits on it; the selector's and the sidecar's warnings do not.
+- **The sidecar's field.** The record carries the occupant (its regularisation and stepper, already on the sim key,
+  integrator contract Part 2) and, for a measured-bad pair, its warning text; a receiver shows it.
+
+- **Aarseth–Zare × RK4 is marked measured good** in the table on Part 2a's collision passage (`d_min = 1.35e-11`,
+  energy drift `6.2e-15`) and the 32-case matrix, which ran it under the same RK4 and step control as Heggie. The
+  design measured only Heggie's pairs, and that passage is a different measurement from REQ-INT-099's criterion, so
+  REQ-INT-098's gate re-measures it by the criterion (physics review 5605806092 of PR #277, F7).
+- **Each regularisation's own time transformations.** REQ-INT-098's gate measures each regularised pair under its
+  regularisation's own time transformation(s): Heggie's Eq. 20 and Eq. 22, Aarseth–Zare's one, logH's logH and TTL
+  modes; "both of Heggie's time transformations" applies to the Heggie pairs (F7).
+- **The Yoshida pairs' order** (F5): on a non-separable Hamiltonian the Yoshida step takes the explicit KDK in
+  dd_integrator §3.2's drift order (`w₁, w₀, w₁`; `w₃, w₂, w₁, w₀, w₁, w₂, w₃`), and adjacent half-kicks are not
+  merged, three evaluations per sub-step: §3.2's merged kicks equal the sequence on a separable Hamiltonian only.
+
+- **After qa review 5607548278 of PR #277:** logH's pair forms are written into Part 2b by TASK-M3-39, from logH's
+  equations as TASK-M3-08 transcribes them (REQ-INT-084 covers logH's own equations, not its pairs), physics-reviewed
+  (Q1); the pair table has one cell per pair and time transformation, Heggie's Eq. 20 and Eq. 22 and logH's two modes
+  each a row, a status and its warning being the cell's for the transformation in force, with no rule combining
+  verdicts across them: the design measured Heggie's pairs under both transformations with one verdict, and the
+  human's texts give no combination rule, so the table follows the measurement (Q2); the Euler pairs are offered in
+  the debug selection only (REQ-INT-015, Q6).
+
+*Not settled here:* the pairs the table marks not measured carry no warning until measured.
+
+R-561 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-017 (statement, verify, source, rulings). Adds REQ-INT-097 (the pair definitions), REQ-INT-098 (the
+pair table and its warnings), REQ-INT-099 (the criterion, a definition), REQ-GUI-351 (the selector's warning),
+REQ-GUI-352 (the Problems panel's warning, `rq: RQ-525`) and REQ-GUI-353 (the export settings' warning).
+
+## R-562 — Regularisation is v1, not v2: integrator contract Part 6's "v2" text and REQ-INT-033 are removed
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated
+honestly (deferred work lands here)" (the regularisation paragraph), § "Part 7 — Detectors as the `SimState` producer"
+(the `N_max` coupling bullet) and the closing line, `docs/contracts/principia_scheduler_contract.md` § "The absolute
+floor is emergent", `docs/design/principia_dd_integrator.md` § "6. Deferred / flagged" (the KS item), REQ-INT-033
+(retired, reqio), TASK-M3-17, `REVIEW_QUEUE.md` (RQ-530, new) and `plan/rule_groups.yaml`*
+
+`INSTRUCTION.md` § "PR 1", its third item, verbatim:
+
+> - **Regularisation is v1, not v2.** Remove the "v2" text (integrator contract Part 6) and REQ-INT-033.
+
+*What it decides:*
+- **Regularisation ships in v1**: Part 2b's regularisation occupants (`none`, Aarseth–Zare, Heggie, logH), Heggie × RK4
+  the default (R-560).
+- **Part 6's v2 text goes**, kept as a *Was:*; its substep reading stays for regularisation off (R-563). The closing
+  line and Part 7's "the same floor KS regularisation (v2) would lift" go with it, each kept as a *Was:*.
+- **REQ-INT-033 is retired** ("v1 must handle close approaches by substepping capped at `N_max` with the `saturated`
+  flag, with Kustaanheimo–Stiefel regularisation deferred to v2"); TASK-M3-17 no longer closes it. Its substep half
+  stays required by REQ-INT-029 and REQ-EVT-007.
+
+*Applied per R-369:* the v2 text named one method, Kustaanheimo–Stiefel, which is not among Part 2b's occupants. The
+ruling does not say whether KS joins them, so its place is queued, RQ-530, and `principia_dd_decoder.md` § "6. Deferred / flagged"'s
+"KS-regularised state representation (v2)" is left as it stands until then.
+
+R-562 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Retires REQ-INT-033.
+
+## R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated
+honestly (deferred work lands here)" and § "Part 7 — Detectors as the `SimState` producer" (the terminal states),
+`docs/contracts/principia_scheduler_contract.md` § "The absolute floor is emergent" and § "Part 4 — Terminal vs
+refinable, tied to the two floors", `docs/design/principia_deep_zoom.md` § "Reserved: the integration floor",
+REQ-SCHED-063 and REQ-SCHED-077 (reqio), REQ-INT-101 (new), TASK-M3-41 (new), TASK-M6-10, `REVIEW_QUEUE.md` (RQ-526,
+new) and `plan/rule_groups.yaml`; built by TASK-M3-41 and TASK-M6-10*
+
+`INSTRUCTION.md` § "PR 1", its fourth item, verbatim:
+
+> - **The integration floor follows the occupant.**
+>   - Regularisation off: the existing substep machinery is unchanged.
+>   - Regularised: running out of the step budget makes the result undetermined, never discarded. The separation floor
+>     and the entry-cap hits are counted, non-terminal signals. Re-point REQ-SCHED-063 and -077.
+
+*What it decides:*
+- **Regularisation off:** `N_sub`, `N_max` and the sticky `saturated` bit, as integrator contract Parts 3, 4 and 7 have
+  them, unchanged; REQ-SCHED-063's stop on saturated, high-suspect quads stands for it.
+- **Regularised:** a copy that runs out of its step budget (R-564) stops, is not finite, and its footprint reads
+  undetermined (refinement policy §1); it is never discarded. The **separation floor** (a pair separation below the
+  floor `TINY`, the time transformation's denominator floored, prin-rs `r_floored`) and **entry-cap hits** (steps held
+  at the interval's entry cap, prin-rs `n_cap_hits`) let the run advance under-resolved; each is counted, and neither
+  ends the run.
+- **The evidence** (the design §2): over 35 charts at `t = 13` with a 480,000-step whole-run budget, running out was
+  the only failure mechanism present and every chart cleared; a too-small budget manufactures work; `error_ratio` is
+  blind to a truncated run, so the budget's outcome is read directly.
+- **REQ-SCHED-063 and REQ-SCHED-077 are re-pointed** to the floor that follows the occupant.
+
+*Applied per R-369:*
+- **The definitions are transcribed** from the prin-rs reference set (`docs/reference/prin-rs/src/integrate/heggie/driver.rs`,
+  `.../az/driver.rs`; reference, not authority, R-159) into integrator contract Part 6.
+- **Per occupant** (physics review 5605806092 of PR #277, F3; transcribed from `.../heggie/driver.rs`,
+  `.../az/driver.rs` and `.../logh/driver.rs`, cited as the contract): Heggie's signal fires when any `Rᵢ < TINY` and
+  floors `dt/dτ`, `R₁R₂R₃` under Eq. 20 and `R₁R₂R₃ / S^{3/2}` under the default Eq. 22 with `S` floored; Aarseth–Zare's
+  fires when `A` or `B` is below `TINY` (`ab_floored`), the denominator the floored `A·B`; logH floors its own drift
+  denominator, and its signal fires when that denominator is below `TINY` or either denominator is not positive. An
+  entry-cap hit is counted when the per-step size asks for more than the interval's entry size (`cons[0] > cons[1]`),
+  before the predictive limit and the landing clamp, under every regularised occupant. *Was:* "a pair separation below
+  the floor `TINY`, the time transformation's denominator floored" for all three, and "steps held at the interval's
+  entry cap".
+- **Every floored Heggie step is counted** (physics review 5606990734 of PR #277, P1): the reference's `r_floored`
+  tests `Rᵢ < TINY` but floors `dt/dτ`, so `dt/dτ` can be floored while every `Rᵢ ≥ TINY` and the step go uncounted.
+  Heggie's signal therefore fires when `dt/dτ` or (under Eq. 22) `S` is below `TINY`, as well as on the reference's
+  `Rᵢ` test, so every step on which the floor acts is counted, as logH's is; integrator contract Part 6 says it
+  differs from the reference and why. `Rᵢ` is tested, never floored. *Was:* "Heggie's signal fires when any
+  `Rᵢ < TINY`" above, which stands as the reference's test.
+- **`TINY` is a calibration** (R-71, REQ-INT-105): it is in neither the corpus nor the reference set, which names it
+  only. TASK-M3-07, the first task that floors at it, proposes it per working precision from Aarseth–Zare's `A` and
+  `B`; TASK-M3-08 re-runs the proposal on Heggie's and logH's own floored quantities (Heggie's pre-floor `dt/dτ` and
+  `S` under both time transformations, logH's drift denominator in both modes) and closes REQ-INT-105, so the value
+  the M3 gate confirms rests on all three regularisations' evidence (physics review 5606990734 of PR #277, P2, applied
+  per R-369). *Was:* "TASK-M3-07, the first task that floors at it, proposes it per working precision."
+- **A copy out of budget stops** (F4): integrator contract Part 7 says it stops the copy, which is undetermined, never
+  discarded and never a physical-outcome label, matching Part 6. *Was:* "is not a terminal label either", which read
+  as though the march continued.
+- **What is queued.** How a budget-exhausted copy and the two counts are stored in `SimState` (a state value, a
+  descriptor bit, counters; payload §2 and RQ-310's contested bits), whether an undetermined-by-budget footprint splits
+  (refinement policy §1 splits an undetermined footprint, which is the "manufactured work"), and which of the signals
+  stops a quad at the floor (scheduler Part 4) are not in the texts: RQ-526. REQ-INT-101 and the regularised arm of
+  REQ-SCHED-063 wait on it; the floor with regularisation off does not.
+
+R-563 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SCHED-063 (statement, verify, source, rulings, `rq: RQ-526`) and REQ-SCHED-077 (statement, verify,
+rulings). Adds REQ-INT-101 (`rq: RQ-526`) and REQ-INT-105 (`TINY`, a calibration).
+
+## R-564 — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns
+what)" (a row, `step_budget_rate`) and § "Part 6 — Three boundaries stated honestly (deferred work lands here)",
+REQ-INT-102 and REQ-INT-103 (new), TASK-M3-41 (new), `REVIEW_QUEUE.md` (RQ-527, new) and `plan/rule_groups.yaml`;
+built by TASK-M3-41*
+
+`INSTRUCTION.md` § "PR 1", its fifth item, verbatim:
+
+> - **The step budget is a rate**, steps per unit physical time. The calibration value starts at about 4e4 per unit time
+>   per copy.
+
+*What it decides:*
+- **The budget is a rate**, steps per unit physical time, per ensemble copy, so it is defined for a live playhead with
+  no fixed end; every loop stays bounded (integrator contract Part 2c, rule 3). *Was:* prin-rs's whole-run count,
+  `max_steps = 480,000`, measured at `t_max = 13`.
+- **Its value is a calibration** (R-71, REQ-INT-103), starting at about 4e4 per unit time per copy, about twice the
+  worst measured pixel mean, confirmed at the M3 gate. It is not a confirmed value.
+- **The evidence** (the design §2): at `t = 50` the 480,000 sized at `t = 13` left 42 of 576 pixels of `burrau_nu_k`
+  exhausted, and the step rate was nearly the same at 13 and at 50 (p99 per unit time about 1.8e4 on `burrau_nu_k`,
+  4.5e3, 1.1e3 and 3e2 on the others; prin-rs `budget_horizon_probe`).
+
+*Applied per R-369:* how the rate is accounted along a run (against the elapsed grid time, per sync interval, or with
+an allowance) changes which copies are undetermined, and the texts do not say: RQ-527. REQ-INT-102 and the
+calibration REQ-INT-103 carry `rq: RQ-527`.
+
+R-564 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-102 and REQ-INT-103 (a calibration), both `rq: RQ-527`.
+
+## R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2a — Widening the slot:
+`owns_time_mapping`, and the `advance` signature" (payload purity, and a subsection, "The sync grid is a fixed quantum
+of physical time (R-565)"), § "Part 3 — Parameter ownership (who owns what)" (the escape window's row and a row,
+`Δ_sync`), `docs/contracts/principia_scheduler_contract.md` § "Part 7 — The frame loop (lockstep presentation)",
+`docs/contracts/principia_caching_contract.md` § "Part 7 — The current-state cache (resume points, hard-capped)",
+`docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)",
+`docs/design/principia_dd_integrator.md` § "3.6 Detectors (per `STEP`, on the projected state)",
+`docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion" and § "3. Standing rules earned in this sequence",
+REQ-INT-080, REQ-EVT-017 and REQ-TOOL-038 (reqio), REQ-INT-100 and REQ-SCHED-103 (new), TASK-M3-07, TASK-M3-12,
+TASK-M3-23, TASK-M3-40 (new), TASK-M5-21, `REVIEW_QUEUE.md` (RQ-524 and RQ-531, new) and `plan/rule_groups.yaml`;
+built by TASK-M3-40 and TASK-M5-21*
+
+`INSTRUCTION.md` § "PR 1", its sixth item, verbatim:
+
+> - **The sync grid is a fixed quantum of physical time**, the same for every run and independent of the horizon and of
+>   frame timing. Steps are sized from it, the march stops only on it, and the playhead reads boundary states. Live
+>   march, catch-up and re-boot then reach the same state bitwise. Time windows such as the closure window are stated in
+>   physical time.
+
+*What it decides:*
+- **One grid, `t = k·Δ_sync`**, for every regularised run, never `t_max / n_sync`. *Was:* REQ-INT-080's "the number of
+  sync boundaries n_sync over the horizon".
+- **Steps are sized from `Δ_sync`**, never from the target a call asks for, and **the march stops only on the grid**:
+  `ADVANCE` reaches the latest boundary at or before its target. **The playhead reads boundary states.** Live march,
+  catch-up and re-boot reach the same state bitwise.
+- **Time windows are in physical time**: the closure window is 0.4 time units (R-29), never a count of boundaries.
+- **`Δ_sync` is a calibration** (R-71), REQ-INT-080 re-pointed to it: the design measured 0.1 at about 2% more steps
+  and 0.0125, about a display frame, at about 50%, with at most 4 of 1024 labels flipped (prin-rs `sync_grid_probe`).
+
+*Applied per R-369:*
+- **`Δ_sync` is a constant of the build**, read from the constants register as `r_pole` is (R-433), so a change at the
+  M3 gate re-integrates; it is not a Run-window field, being the same for every run.
+- **The frame loop** (scheduler Part 7): under a regularised occupant each frame advances the live set to the latest
+  boundary at or before the playhead, zero or more whole quanta, and promotion reads a quad standing on the playhead's
+  boundary (REQ-SCHED-103).
+- **REQ-TOOL-038's standing rule** holds by construction for the sync grid; the harness still asserts the run's step
+  parameters and `Δ_sync` equal the run under test's.
+- **The proposal states the window on the grid**: REQ-INT-080's proposal gives how 0.4 maps onto `Δ_sync`.
+- **Terminal events still latch at their step** (physics review 5605806092 of PR #277, F8): "the march stops only on
+  the grid" governs where `ADVANCE` returns for a copy still marching; a collision, a non-finite state or a run-out
+  budget latches at the step it fires on and ends that copy's march there, as integrator contract Part 7 and the
+  scheduler's per-step collision latch have it (integrator contract Part 2a, scheduler contract Part 7).
+- **What is queued.** The unregularised macro-step grid, `dt_macro = max(1e-3, T/65535)` (R-132), depends on the
+  horizon above `T = 65.535`, and the ruling names "the sync grid" only: RQ-524. REQ-EVT-013's escape re-bind test
+  counts "+1, +2, +3, +4 and +8 sync boundaries", a count the fixed quantum changes the meaning of: RQ-531.
+
+R-565 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-080 (statement, verify, source, rulings), REQ-EVT-017 (statement, verify, rulings) and REQ-TOOL-038
+(statement, verify, source, rulings). Adds REQ-INT-100 (the fixed quantum, bitwise) and REQ-SCHED-103 (the frame loop
+on it).
+
+## R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "COM projection and invariant monitoring"
+(a paragraph), `docs/design/principia_dd_integrator.md` § "3.5 Invariant monitoring (per `STEP`, post-projection)",
+`docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not" (the radial
+collision gate's row), R-257's heading block (a forward line), REQ-VAL-045 (reqio), REQ-INT-104 and REQ-VAL-195 (new),
+TASK-M3-08, TASK-M3-41 (new), `REVIEW_QUEUE.md` (RQ-528, new) and `plan/rule_groups.yaml`; built by TASK-M3-08 and
+TASK-M3-41*
+
+`INSTRUCTION.md` § "PR 1", its seventh item, verbatim:
+
+> - **Energy.** The two-body collision gate (REQ-VAL-045) and any per-step suspect flag under a regularised occupant read
+>   the regularised energy. The Cartesian energy is for diagnostics, read only from runs that did not stop at an event.
+
+`INSTRUCTION.md`'s closing paragraph (after § "PR 4 — Small things", closing the whole instruction), its first
+sentence, verbatim (*was:* "`INSTRUCTION.md` § "PR 1", its closing line, verbatim:"; code review 5607516021 of PR #277,
+F1):
+
+> One PR each, with the test output pasted into each.
+
+*What it decides:*
+- **Two energies, named.** The regularised energy, read from the occupant's regularised state, and the Cartesian
+  energy, `E` of integrator contract Part 1, read from the physical state.
+- **Acceptance and the per-step suspect flag read the regularised energy** under a regularised occupant: the two-body
+  radial collision gate's `|dE/E| < 1e-12` (dd_validation_orbits §2, R-257) and `SUSPECT_ENERGY`.
+- **The Cartesian energy is for diagnostics**, read only from runs that did not stop at an event.
+- **The evidence** (the design §11): after a close passage the Cartesian read-out is 280× to 7100× worse than the
+  regularised one on the radial collision, which stays at round-off; a run parked at a collision reads its own
+  cancellation, which produced five wrong conclusions in a row in prin-rs.
+
+*Applied per R-369:*
+- **logH's regularised energy** has no coordinate transformation to be read from; which quantity it is, is a
+  definition (R-72, REQ-INT-104) written by TASK-M3-08 with the equations it transcribes (R-160).
+- **The gate's control** (physics review 5605806092 of PR #277, F1): REQ-VAL-045's arm that fires is the reader
+  itself: the value the gate reads is bitwise the occupant's regularised-energy drift, and the Cartesian read-out of
+  the same run after the passage, printed beside it, differs from it, so a gate whose reader returns the Cartesian
+  value fails the reader check; and the design §11's own control: over a halving ladder of `η` the Cartesian read-out
+  after the passage does not fall with `η`. *Was:* "shows it worse than the regularised one after the passage, so the
+  gate fails if it is pointed at the wrong energy": with the regularised value at round-off, 280× of it can still pass
+  `|dE/E| < 1e-12`, so that arm need not fire.
+- **The suspect predicate's control** (F2): REQ-VAL-195's arm that fires is structural: the predicate's input is
+  bitwise the regularised drift latch, and a variant fed the Cartesian drift receives a different input and fails.
+  *Was:* "the predicate pointed at the Cartesian drift fires on the same run", which depends on a threshold far above
+  a post-passage drift of 1e-12 to 1e-11 and may never fire.
+- **The suspect threshold and the default occupant** (F6): R-560 makes the default Heggie × RK4, which is not
+  symplectic, and SUSPECT_ENERGY reads its regularised energy, while REQ-INT-085's calibration measured only the
+  occupants with regularisation `none`. A new requirement, REQ-INT-106, measures and records Heggie × RK4's
+  regularised drift on dd tests 2 and 7 and which predicates it lights under REQ-INT-085's proposed thresholds, closed
+  by TASK-M3-41: TASK-M3-05, which closes REQ-INT-085, comes before Heggie is built (TASK-M3-08). Whether the threshold must leave the default
+  occupant unlit on test 2's orbit is a choice the texts do not settle, so it is folded into RQ-528, option (d);
+  meanwhile it is recorded with no requirement, as RK4's is.
+- **What is queued.** The payload stores one energy drift (`ΔE_max`, `ΔE_final`, payload §5), from which the suspect
+  predicate is derived at read; where the regularised drift lives, and how a drift view draws a run that stopped at an
+  event, are not in the texts: RQ-528. REQ-VAL-195 waits on it; the gate does not.
+
+*What it refines:* **R-257**, as to the radial collision gate's energy: the gate's values stand, and under a regularised
+occupant its `|dE/E|` is the regularised energy's.
+
+R-566 is in the "physics" group of `plan/rule_groups.yaml`, with R-257's gate.
+
+Changes REQ-VAL-045 (verify, rulings, note). Adds REQ-INT-104 (the regularised energy per occupant, a definition) and
+REQ-VAL-195 (the energies' reading, `rq: RQ-528`), and, after physics review 5605806092 of PR #277, REQ-INT-106 (the
+default occupant against the suspect threshold, F6).
+
+**Tasks (R-560 to R-566).** TASK-M3-39 (new, M3): every pair, its exact composition, the measured table and its
+warnings. TASK-M3-40 (new, M3): the fixed sync quantum, bitwise. TASK-M3-41 (new, M3): the step budget as a rate, the
+undetermined outcome, the counted signals and the energies' reading, waiting on RQ-526, RQ-527 and RQ-528. TASK-M3-07
+(REQ-INT-017's test, REQ-INT-080 on `Δ_sync`), TASK-M3-08 (REQ-INT-006's test, REQ-VAL-045's energy, REQ-INT-104),
+TASK-M3-12 (REQ-EVT-017 on `Δ_sync`), TASK-M3-17 (REQ-INT-033 gone), TASK-M3-23 (REQ-TOOL-038), TASK-M5-21
+(REQ-SCHED-103), TASK-M6-10 (REQ-SCHED-063 and -077 re-pointed), TASK-M8-24 (REQ-GUI-102's default, REQ-GUI-351,
+REQ-GUI-352) and TASK-M8-32 (REQ-GUI-353) take their requirements' changes. TASK-M3-02, being built on
+`task/TASK-M3-02`, is unchanged by these rulings: its stepper rows, profile flags and per-stepper tier binding stand
+(R-560, applied per R-369), and its follow-up is named in the porting PR. After physics review 5605806092 of PR #277,
+TASK-M3-41 takes REQ-INT-106, the default occupant against the suspect threshold (F6), and TASK-M3-07 the proposal of
+`TINY` (REQ-INT-105, F3).
+
+## R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the follow-up, byte for byte, the record
+copy of `designs/integrator_findings.md` being the human's own updated file and the later probe and its output in
+`evidence/`, each byte for byte, its README giving the sha256s; *was:* "the record copy of
+`designs/integrator_findings.md` changed as the follow-up says, its README giving both sha256s"),
+`docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to
+work carry a warning (R-561)" (the pair table's note 4, and the implicit steppers' paragraph), R-561's heading block (a
+forward line), REQ-INT-006, REQ-INT-017 and REQ-INT-098 (reqio), TASK-M3-39, `REVIEW_QUEUE.md` (RQ-532, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-39*
+
+The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), its header and item 1, verbatim:
+
+> # Follow-up to the gap-sweep bundle, 21 Oct 2026 (evening)
+>
+> From me, Malachy. Two small things to fold into the PRs already in hand. Quote my words verbatim.
+>
+> ## 1. PR 1: the generalised leapfrog is explained
+>
+> In `designs/integrator_findings.md`, replace the bullet that begins "The generalised (Störmer–Verlet) leapfrog" and
+> says "reported unexplained", and change the table row's "(not explained; see below)" to "(explained below)". The new
+> bullet:
+>
+> > The generalised (Störmer–Verlet) leapfrog, also implicit, reaches order 2 over one orbit but grows without bound
+> > over 100. **Cause, measured:** it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`, which is quadratic in the regularised
+> > positions (`qᵢ = Qᵢ²`). Implicit midpoint keeps every quadratic invariant exactly; a partitioned method like
+> > Störmer–Verlet keeps only those mixing positions with momenta (Hairer, Lubich & Wanner, ch. IV.2), so Eq. (9) is
+> > not kept. Implicit midpoint holds the residual at 1e-15–1e-13; the leapfrog's grows as h² per orbit and keeps
+> > growing, and the energy breaks once it reaches about 1.8e-2, in every run, at every step size, under both time
+> > transformations. The control is implicit midpoint started deliberately off the constraint: it stays bounded at
+> > 1e-3 and 1e-2, and at 3e-2 holds under one time transformation and diverges under the other. The earlier "worse at
+> > smaller steps" was a misread: smaller steps break later (2.2, 4.4, 8.8 orbits); the figure quoted was the maximum
+> > over runs that had already diverged.
+>
+> In the warning table of REQ-INT-006/-017, the pair Heggie × generalised leapfrog is **measured bad**, with that reason
+> in one line: "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2". It stays allowed,
+> with the warning, like every other pair.
+>
+> The evidence is `examples/heggie_stepper_probe.rs` in prin-rs (its header and its third section, the causal arm).
+
+*What it decides:*
+- **The record is corrected.** The design's §1 bullet is the new one and its table row reads "(explained below)"; the
+  record copy in `docs/incoming/2026-10-21_gap_sweep_integrator/designs/` is the human's own updated file, byte for
+  byte, as he sent it with the follow-up, and its README gives the sha256s. His file says "My earlier" where the
+  follow-up's quoted bullet says "The earlier", and adds "Nothing below depends on it; it adds one row to the warning
+  table's reasons."; this ruling quotes the follow-up. *Was:* "the record copy … is changed so, and its README gives
+  the sha256 before and after" (a hand edit, replaced by his file on his instruction, `4ee461e5`).
+- **Heggie × the generalised (Störmer–Verlet) leapfrog is measured bad**, the cause measured: it does not keep Heggie's
+  Eq. (9), the residual growing as h² per orbit until the energy breaks at about 1.8e-2, in every run, at every step
+  size, under both time transformations; the control is implicit midpoint started off the constraint.
+- **Its warning** is the human's line: "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches
+  ~2e-2".
+- **"Worse at smaller steps" is withdrawn** as a misread: smaller steps break later (2.2, 4.4, 8.8 orbits).
+- **It stays allowed, with the warning, like every other pair.**
+
+*Applied per R-369:*
+- **Where it sits in the table.** Integrator contract Part 2b's pair table has a column per Part 2 stepper (Euler,
+  KDK, Yoshida-4, Yoshida-6, RK4); the generalised leapfrog is none of them, and the port of R-561 recorded the two
+  implicit steppers as "not occupants". So the pair is a numbered note under the table (note 4), measured bad with
+  the evidence and the warning, and the implicit steppers' paragraph points at it, its old words kept as a *Was:*.
+- **What is queued.** "It stays allowed … like every other pair" reads as the generalised leapfrog being a selectable
+  stepper, which it is not in the contract; making it one (and the implicit midpoint rule with it) changes what is
+  built, so it is queued, RQ-532. Meanwhile the pair is in the table with its warning and neither implicit stepper is
+  built; REQ-INT-098's gate re-measures the built pairs and keeps note 4 as the design's measurement.
+- **The evidence** is prin-rs `examples/heggie_stepper_probe.rs`, its header and its third section, the causal arm, a
+  later version of the probe than the bundle's two-section `evidence/heggie_stepper_probe.rs`. It and its output are
+  recorded byte for byte as `evidence/heggie_stepper_probe_2026-10-21b.rs` and
+  `evidence/heggie_stepper_probe_2026-10-21b_output.txt`, as the human sent them; they are data, never built or run.
+  *Was:* "The evidence is cited, not copied or built".
+
+*What it amends:* **R-561**, as to its table: Heggie × the generalised leapfrog is measured bad, with its warning.
+
+R-567 is in the "physics" group of `plan/rule_groups.yaml`, with R-561.
+
+Changes REQ-INT-006 (rulings, note), REQ-INT-017 (verify, rulings) and REQ-INT-098 (verify, rulings, note).
+
+## R-568 — RQ-378 is parked again, a deferral by ruling with no target: the entry stays open, its option (a) stays applied, nothing waits, and it returns when the human raises it *(amends R-510)*
+*21 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-378, a dated line), R-510's heading block (a forward line),
+REQ-GUI-244 (reqio, rulings and note) and `plan/rule_groups.yaml`; nothing is built*
+
+The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), item 2, verbatim:
+
+> ## 2. RQ-378 stays parked
+>
+> RQ-341 is now ruled, which was R-510's condition for RQ-378 to come back to me. It came back and I parked it again:
+> "yeah ok we can park that for now then". Record that as a new deferral by ruling, with no target: the entry stays
+> open, (a) stays applied, nothing waits, and it returns when I raise it.
+
+*What it decides:* a deferral, by the human's ruling (only the human defers, `plan/WORKFLOW.md` § "No deferral"), with
+no target. RQ-341 is ruled by R-550 (*was:* "by the 21 Oct batch (PR #274)", before R-550 was on main), which met R-510's
+condition, and RQ-378 came back to the human, who parked it again. RQ-378 stays in the review queue, open; its
+option (a), applied since R-475 L9, stands (Save view as chart on a curved chart saves the parent chart, its slice
+centre and its tilt, and nothing more is built); nothing waits on it; and it returns when the human raises it, not on
+any other ruling.
+
+*What it amends:* **R-510**, as to the entry's return: it no longer returns when RQ-341 is ruled, but when the human
+raises it.
+
+R-568 is in the "design" group of `plan/rule_groups.yaml`, with R-510.
+
+Changes REQ-GUI-244 (rulings, note).

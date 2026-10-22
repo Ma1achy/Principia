@@ -927,6 +927,8 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
   That record is the export's sidecar: with `SimConfig` it carries the tilt map (`tilt_map=sheet|lean`, R-474), a
   curved chart's tilt (R-473), each energy-type axis's mapping (R-471) and a saved chart's definition (R-475), and
   beside it F3's fill mode (`f3_fill=extend|fit`, R-472) and the lines (`Lines`, R-476).
+  With `SimConfig` it carries the occupant, its regularisation and stepper, and, for a pair measured not to work, its
+  warning, the measured text (R-561).
   With `SimConfig` it carries the links, each block's id and parameter values, written in full even at the defaults
   (R-483, X1, X2), and beside it the build hash and the schema version, so a receiver refuses a decoder it lacks
   rather than substituting one (R-483, X4). Importing any of these is the identity on `SimConfig` and `RenderState`
@@ -989,8 +991,13 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
-  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
-  default, Aarseth–Zare is kept for benchmarks; Part 2b).
+  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
+  Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
+  selectors, and every pair can be chosen (the Euler pairs in the debug selection only, Euler never being a production
+  option, REQ-INT-015; applied per R-369, qa review 5607548278 of PR #277, Q6); a pair measured not to work shows its warning beside the selectors, the
+  integrator contract's measured text, and stays selectable (R-561; Part 2b's pair table). The warning is also in the
+  Problems panel (which panel is RQ-525) and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
+  leapfrog is the general default".
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
   is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates. In
   the browser build the control is shown disabled, with a note that the browser chooses the mode (R-303).
