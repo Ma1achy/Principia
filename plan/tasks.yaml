@@ -3099,7 +3099,7 @@
   title: "Degrade while moving: per-node motion policies, settle, the playhead not motion, and the print stage in the frame record (`stage_ms.post`, `post_level`, schema v2) (R-488, R-534, R-557)"
   depends_on: [TASK-M7-68, TASK-M5-28, TASK-M6-18, TASK-M8-68]
   needs: []
-  requirements: [REQ-PERF-098, REQ-PERF-099, REQ-PERF-100, REQ-TOOL-190]
+  requirements: [REQ-PERF-098, REQ-PERF-099, REQ-PERF-100, REQ-TOOL-190, REQ-TOOL-195]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-73

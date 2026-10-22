@@ -964,9 +964,11 @@ scale → gamut clamp → colour-vision simulation → screen (R-111). The stain
   - **Reset to Plain**, one undo entry.
   - While any Print graph but Plain is active, a badge names it ("Print: Linocut", R-489) in the figure's header strip,
     above the plot, never over the figure (R-523, ruling RQ-397; *was:* "its place on the canvas is RQ-397"). Measurement never reads the print, and goldens and scientific checks run under Plain (R-489). The look is
-    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485), with three departures (§G13): its canvas
-    corner badge is the header strip's (R-523), its "103 in 11 families" is 111 in 12 (R-532), and its IBM Plex is not
-    copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1).
+    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485), with four departures (§G13): its canvas
+    corner badge is the header strip's (R-523), its "103 in 11 families" is 111 in 12 (R-532), its IBM Plex is not
+    copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1), and its six slots gain "On the ground", between Ground and
+    Unfinished, which the slots above require (applied per R-369, gui review 5608411706 of PR #281, F3). *Was:* "with
+    three departures (§G13): …, and its IBM Plex is not copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1)."
 - *Was (before R-485, which with R-486 supersedes R-130; R-130's eight styles are ported as additional Print graph
   presets, R-532, ruling RQ-396, where this note read "R-130's styles are kept as RQ-396 decides"):*
   **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
@@ -1482,7 +1484,9 @@ corpus, the spec follows the authority:
   never over the figure; its gallery header, "103 in 11 families", is 111 in 12 by R-532 (R-130's eight in a family of
   their own, "Poster"). `panel.png` and `bench.png` are drawn in IBM Plex (`boards/source/boards.html`); their fonts
   are not copied, the dev GUI's being Ubuntu and Ubuntu Mono (§G1). (gui review 5596618095 of PR #268, G4, applied per
-  R-369.)
+  R-369.) `panel.png` draws six slots, Palette, Medium, Ground, Unfinished, Age and Viewing; the panel has seven, "On the
+  ground" between Ground and Unfinished, as § "Display — the last stages" and `principia_print_graph.md` §5 and §7.1
+  require (gui review 5608411706 of PR #281, F3, applied per R-369).
 
 ## G14. Settled by the notes (record)
 

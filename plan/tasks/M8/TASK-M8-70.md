@@ -9,7 +9,7 @@
 - **Size:** ~400 lines, the tests included
 
 ## Goal
-While a Print graph other than Plain is active the figure's header strip names it ("Print: Linocut"), never over the figure (R-523); the export dialog offers Styled and Plain and defaults to Plain for figure export, the graph travelling in the record either way; and the Inspector, Measure, the legend, the colour readout under the cursor and area statistics read the pre-print colours (the GUI's half of §11 test 2).
+While a Print graph other than Plain is active the figure's header strip names it ("Print: Linocut"), never over the figure (R-523), and hides it while a debug view bypasses the print; the export dialog offers Styled and Plain and defaults to Plain for figure export, the graph travelling in the record either way; and the Inspector, Measure, the legend, the colour readout under the cursor and area statistics read the pre-print colours (the GUI's half of §11 test 2).
 
 ## References
 - `docs/design/principia_print_graph.md` § "3. What never changes because of it"
@@ -25,9 +25,10 @@ While a Print graph other than Plain is active the figure's header strip names i
 - Screenshot case `print_badge`; tests `print_badge`, `print_export_choice`, `print_readouts_blind`.
 
 ## Acceptance tests
-- `cargo xtask screenshot print_badge` and `cargo test -p gui print_badge` — REQ-GUI-363's verify (under Linocut the header strip reads "Print: Linocut" and the badge's rect is disjoint from the plot's; under Plain no badge; control: a badge drawn in the canvas corner fails the disjointness check).
+- `cargo xtask screenshot print_badge` and `cargo test -p gui print_badge` — REQ-GUI-363's verify (under Linocut the header strip reads "Print: Linocut" and the badge's rect is disjoint from the plot's; under Plain no badge; with Linocut set and View › Debug view on, no badge, and turning the debug view off brings it back; controls: a badge drawn in the canvas corner fails the disjointness check, and a badge that ignores the debug view fails the debug arm).
 - `cargo test -p gui print_export_choice` — REQ-GUI-364's verify (with Linocut active the dialog opens on Plain and the exported pixels equal the Plain render; Styled exports the printed pixels; both records carry the graph; control: a dialog that defaults to Styled fails).
 - `cargo test -p gui print_readouts_blind` — REQ-GUI-365's verify (with a heavy preset active every listed readout reads bitwise what it reads under Plain; mutation arm: a colour readout wired after the print stage fails).
 
 ## Notes
 - Reviewers (R-485, the human's point 5): the gui and perf reviewers for the Print graph, with code and qa as always; the physics reviewer for the field inputs only.
+- **Fix round 2 of PR #281 (gui review 5608411706, F6, applied per R-369):** the header claims only what is drawn, so the badge is hidden while a debug view bypasses the print (REQ-RENDER-107) and returns when it closes. *Was:* the Goal's "never over the figure (R-523); the export dialog" and the acceptance line `cargo xtask screenshot print_badge` and `cargo test -p gui print_badge` — REQ-GUI-363's verify (under Linocut the header strip reads "Print: Linocut" and the badge's rect is disjoint from the plot's; under Plain no badge; control: a badge drawn in the canvas corner fails the disjointness check).
