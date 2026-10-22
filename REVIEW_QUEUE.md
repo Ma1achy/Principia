@@ -617,16 +617,25 @@ Nothing is ruled. For the human: yes, it changes how v1 web is built.*
 - **Options seen:**
   - (a) **egui in the engine's worker**, painting onto the transferred OffscreenCanvas through the engine's `wgpu`
     context (gui_state_contract §1's egui binding as written); the main thread a small loader and input pump, no GUI
-    and no state. Cost: in the browser the GUI shares the frame loop's thread, unlike the native split (R-113), so a
-    long frame delays the GUI's redraw (the scheduler is time-budgeted per frame in the worker); text entry and the
-    clipboard need the main thread's help (RQ-550's rows 1 and 8).
+    and no state. Cost: in the browser the GUI shares the frame loop's thread, so R-113's split (the thread that
+    draws the GUI never runs the scheduler, the cache or the GPU work) would not hold for GUI drawing in the browser;
+    a long frame delays the GUI's redraw, and the mitigation, the scheduler time-budgeted per frame on that thread, is
+    the one Part 6, item 3, quoted above, records as having "failed under real load — the scheduler hitched the
+    gesture and the DOM GUI froze". The other way, egui's layout, tessellation and paint take from the worker's frame
+    budget, and the frame record's `stage_ms` has only its fixed stages (integrate, reduce, colour, upload, present,
+    and `post` for the Print graph; `principia_dd_telemetry_and_tiers.md` §2, R-56, R-488), so that time would show
+    in none of them. Text entry and the clipboard need the main thread's help (RQ-550's rows 1 and 8).
   - (b) **egui on the main thread, in a wasm context of its own**: the gui crate against the engine surface, with
     `set_field` and the snapshot posted between the two contexts as serialised data; the engine and the frame loop stay
     in the worker. R-113's split holds as natively; REQ-SYS-059's three become messages between two wasm contexts.
     Cost: two surfaces (the figure on the worker's OffscreenCanvas, the GUI on a main-thread canvas above it) or a
     compositing step; the main-thread bundle holds the GUI but no engine state.
   - (c) **No worker**: the whole app on the main thread, as egui's own web target runs, the frame loop time-budgeted.
-    Against Part 6, item 3, quoted above; REQ-SYS-039, -040, -041, -044, -045, -049 and -050 would go.
+    Against Part 6, item 3, quoted above. With no worker at all, the inspector worker goes too, and in the browser
+    REQ-SYS-039, -040, -041, -044, -045, -049 and -050 would go, as would the browser form of REQ-SYS-031 (the main
+    thread never waits on scheduler work; here it runs it), REQ-SYS-060 (trajectory integration and sonification in
+    the inspector worker) and REQ-PERF-072 (the hover integration in an inspector worker); those three are closed by
+    native tasks and carry no `rq`.
 - **Applied meanwhile:** none; the layout stands as written in the corpus and nothing is built (M8). The requirements
   above carry `rq: RQ-551`; REQ-SYS-047's GUI clause is changed by R-571 itself (the GUI is the native app's; a TS GUI
   shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
