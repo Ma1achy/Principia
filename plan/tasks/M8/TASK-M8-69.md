@@ -1,7 +1,7 @@
 # TASK-M8-69 — The Print graph editor: the Stain's node editor reused on the slots' graph, typed wire refusal, positions in `ViewUI`, unstable nodes marked, and custom WGSL nodes (R-486, R-491)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-361, REQ-GUI-362
+- **Closes:** REQ-GUI-361, REQ-GUI-362, REQ-RENDER-116
 - **Depends on:** TASK-M8-68, TASK-M8-20, TASK-M8-21
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, perf
@@ -27,6 +27,8 @@ Edit graph… opens the Stain's node editor component on the Print graph: the sa
 ## Acceptance tests
 - `cargo xtask screenshot print_graph_editor` and `cargo test -p gui print_editor` — REQ-GUI-361's verify (an edit in the editor shows in the slots and the reverse; an `image` → `direction` drag is refused with the reason; moving a node adds no undo entry and leaves the serialised graph unchanged; Kuwahara and stained glass are marked unstable; controls: an editor that accepts the mismatched wire, and a node move recorded as an undo entry, each fail).
 - `cargo test -p gui print_custom_node` — REQ-GUI-362's verify (a custom WGSL node compiles into the Print graph through the occupant path, shows its source in the editor and is recorded in tier 3; control: a custom node recorded in tier 2 fails the tier check).
+- Definition, and `cargo test -p gui print_custom_node` — REQ-RENDER-116's verify (§7.2 states the rule; a custom WGSL node registers with the class and policy it gives, and the arbiter's modelled print cost includes it; control: a custom node registered with no class or policy fails REQ-RENDER-103's check, and a modelled cost that omits the custom node fails).
 
 ## Notes
 - Reviewers (R-485, the human's point 5): the gui and perf reviewers for the Print graph, with code and qa as always; the physics reviewer for the field inputs only.
+- **Fix round 3 of PR #281 (perf review 5608473498, F4, applied per R-369):** REQ-RENDER-116 (new, a definition, perf-reviewed) gives a custom WGSL node its cost class and motion policy, written into print_graph §7.2 by this task. *Was:* "**Closes:** REQ-GUI-361, REQ-GUI-362".

@@ -9,7 +9,7 @@
 - **Size:** ~300 lines, the bench and the table included
 
 ## Goal
-Time every registered node at 1024² on the reference machine (the human's Mac, R-186), propose the thresholds dividing `light`, `medium` and `heavy` and each `reduced` node's factor (½ or ¼), and replace every provisional class in the registry with the measured one. The table is what the arbiter's post level is solved from (TASK-M8-73).
+Time every registered node at 1024² on the reference machine (the human's Mac, R-186), at its registry defaults and at the heaviest value of each parameter any of the 111 presets sets, as the median of 60 timed runs after 10 warm-up runs, the class taken from the heavier; propose the thresholds dividing `light`, `medium` and `heavy` and each `reduced` node's factor (½ or ¼), and replace every provisional class in the registry with the measured one. The table is what the arbiter's post level is solved from (TASK-M8-73).
 
 ## References
 - `docs/design/principia_print_graph.md` § "8.3 Cost classes"
@@ -23,10 +23,11 @@ Time every registered node at 1024² on the reference machine (the human's Mac, 
 - Test `print_cost_class_matches`.
 
 ## Acceptance tests
-- `cargo xtask bench print_cost_classes`, on the human's Mac (R-186) — REQ-PERF-096's verify (every registered node timed at 1024² (median of repeated runs), the table recorded in the PR and in the registry; control: a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`).
+- `cargo xtask bench print_cost_classes`, on the human's Mac (R-186) — REQ-PERF-096's verify (every registered node timed at 1024² at its defaults and at its presets' heaviest settings (median of 60 timed runs after 10 warm-up runs, GPU timestamps), the class from the heavier, the table recorded in the PR and in the registry; controls: a node classed from its defaults where a preset's heavier setting crosses a threshold fails, and a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`).
 - Calibration: the PR proposes the thresholds and each `reduced` node's factor from REQ-PERF-096's table, with the gaps in the measured distribution they sit in; a reviewer checks them; the human confirms them at the M7 gate (REQ-PERF-097).
 
 ## Notes
 - §8.3 says the port's first task measures every node; a node can be timed only once it exists, so this task follows the port tasks, whose classes are provisional until it lands (applied per R-369).
 - Benchmarks run on the human's Mac (R-186).
 - Reviewers (R-485, the human's point 5): the gui and perf reviewers for the Print graph, with code and qa as always; the physics reviewer for the field inputs only.
+- **Fix round 3 of PR #281 (perf review 5608473498, F6, applied per R-369):** nodes are timed at their defaults and at the heaviest setting any preset uses, the class from the heavier, as the median of 60 timed runs after 10 warm-up runs (the profiler's 60-frame window; percentiles, not means). *Was:* "`cargo xtask bench print_cost_classes`, on the human's Mac (R-186) — REQ-PERF-096's verify (every registered node timed at 1024² (median of repeated runs), the table recorded in the PR and in the registry; control: a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`)."; "me every registered node at 1024² on the reference machine (the human's Mac, R-186), propose the thresholds dividing `light`, `medium` and `heavy` and each `reduced` node's factor (½ or ¼), and replace every provisional class in the registry with the measured one. The table is what the arbiter's post level is solved from (TASK-M8-73).".

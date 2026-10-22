@@ -3075,7 +3075,7 @@
   title: "The Print graph editor: the Stain's node editor reused on the slots' graph, typed wire refusal, positions in `ViewUI`, unstable nodes marked, and custom WGSL nodes (R-486, R-491)"
   depends_on: [TASK-M8-68, TASK-M8-20, TASK-M8-21]
   needs: []
-  requirements: [REQ-GUI-361, REQ-GUI-362]
+  requirements: [REQ-GUI-361, REQ-GUI-362, REQ-RENDER-116]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-70
@@ -3107,7 +3107,7 @@
   title: "The print stage's budget: excluded from the Auto rung solve, the post level the arbiter's motion-regime lever under Auto only, the budget's definition and the print share (R-557)"
   depends_on: [TASK-M8-72, TASK-M6-17, TASK-M6-18]
   needs: []
-  requirements: [REQ-PERF-101, REQ-PERF-102, REQ-PERF-103, REQ-PERF-104]
+  requirements: [REQ-PERF-101, REQ-PERF-102, REQ-PERF-103, REQ-PERF-104, REQ-PERF-105]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M0-35
