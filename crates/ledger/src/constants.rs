@@ -933,12 +933,14 @@ pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.7845136104
 /// `step_reversibility_domain`), on six fixtures, a generic state, a close pair, Burrau's (3, 4, 5) start at rest and
 /// three approaching pairs (equal masses, speed and impact parameter 1 and 0.05, 5 and 0.05, 2 and 0.003), at the dt
 /// ladder, at each edge and across the domain at 16 points per decade: KDK, Yoshida-4 and Yoshida-6 at most 1.3 `ε_R`
-/// at f64 and 0.92 `ε_R` at f32, so 16 covers them by 12×; RK4 at least 68 `ε_R` at f64 and 98 `ε_R` at f32, both on
-/// the approach at the lower edge, 4.3× and 6.1× the criterion; the asymmetric Yoshida-4 at least 5.2·10⁷ `ε_R` at f64
-/// and 7.7·10⁴ `ε_R` at f32. Below the domain a control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric
-/// Yoshida-4 (its stages satisfy `Σw = 1` and `Σw³ = 0`, so the first term odd under reversal of their order is the
-/// `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in
-/// `Φ_{−h}∘Φ_h`), falls under the precision's rounding.
+/// at f64 and 0.92 `ε_R` at f32 there, and at most 3.31 `ε_R` at f64 and 2.35 `ε_R` at f32 (Burrau, dt/τ 0.777 and
+/// 0.764) on qa's placement, 1,993 cells over the domain (`crates/kernel/tests/qa_TASK-M3-02.rs`), so 16 covers them by
+/// 4.8×; RK4 at least 68 `ε_R` at f64 and 98 `ε_R` at f32, both on the approach at the lower edge, 4.3× and 6.1× the
+/// criterion; the asymmetric Yoshida-4 at least 5.2·10⁷ `ε_R` at f64 and 7.7·10⁴ `ε_R` at f32. Below the domain a
+/// control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 (its stages satisfy `Σw = 1` and
+/// `Σw³ = 0`, so the first term odd under reversal of their order is the `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁶)`
+/// for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls under the precision's
+/// rounding.
 pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
     "step_reversal_tol",
     16.0,
@@ -976,9 +978,10 @@ pub const STEP_REVERSAL_EDGE_F32: ConstantBuilder = proposed(
 /// at which the criterion is applied. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its
 /// evidence, [`STEP_REVERSAL_TOL`]'s, and a sweep of eleven fixtures (those six, a hierarchical triple, a rotating
 /// Lagrange triangle and approaches at speed 0.75 and 2 with impact parameters 0.01 and 0.003) at 32 points per decade:
-/// KDK, Yoshida-4 and Yoshida-6 at most 2.2 `ε_R` up to dt/τ 1, 2.0 from 1 to 1.2, 3.9 up to 2, and up to 22 `ε_R` at
-/// f64 and 44 `ε_R` at f32 between 2 and 4, where the step's conditioning amplifies rounding past the criterion. *Was:*
-/// 0.5, on the start's `τ` (fix round 4).
+/// KDK, Yoshida-4 and Yoshida-6 at most 2.2 `ε_R` up to dt/τ 1 on that sweep and 3.31 `ε_R` on qa's placement (Burrau,
+/// f64, dt/τ 0.777), 4.8× under the criterion, 2.0 from 1 to 1.2, 3.9 up to 2, and up to 22 `ε_R` at f64 and 44 `ε_R`
+/// at f32 between 2 and 4, where the step's conditioning amplifies rounding past the criterion. *Was:* 0.5, on the
+/// start's `τ` (fix round 4).
 pub const STEP_REVERSAL_EDGE_MAX: ConstantBuilder = proposed(
     "step_reversal_edge_max",
     1.0,
