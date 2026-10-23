@@ -11,7 +11,8 @@
 //! - REQ-COL-110 (`debug_view_styles_nan_inf_mirror`, `debug_view_styles_nan_inf_proposal`): `debug_nan_inf` on the
 //!   GPU is its CPU mirror at every pixel, its colours `present.wgsl`'s constants, and `PRESENT_INVALID` is
 //!   `#141418`'s; the proposal's measurement, against every palette entry REQ-COL-055 measures (the outcome palette's
-//!   two sets, the `dbg_*` palettes, the LUTs, the grey ramp and the hue circle), the hatch, the stipple and `#FF00FF`,
+//!   two sets, the `dbg_*` palettes, the LUTs, the grey ramp and the hue circle), the Chazy palettes (`principia_dd_
+//!   chazy_final_motion.md` §10), the hatch, the stipple and `#FF00FF`,
 //!   unsimulated and under each colour-vision simulation, the tightest distances printed for the gui reviewer and the
 //!   M2 gate (run with `--nocapture`).
 //!
@@ -591,10 +592,61 @@ const MODES: [Option<CvdMode>; 5] = [
     Some(CvdMode::Achromatopsia),
 ];
 
-/// The colours the style is measured against, linear: every palette entry REQ-COL-055 measures, the hatch's two, the
-/// stipple's grey and dot, and `#FF00FF`.
+/// The Chazy palettes, 8-bit sRGB, as `principia_dd_chazy_final_motion.md` § "10. Stains and palettes" gives them, each
+/// section's table whole (a swatch two sections share is listed under both): §10.2's seven classes and collision,
+/// §10.3's four families, §10.4's Okabe–Ito variant, §10.6's status, §10.7's filter mute, §10.11.1's body lens and
+/// §10.11.4's escaper map. §10.5.2's and §10.11.5's tables reuse §10.2's and §10.11.4's swatches.
+const CHAZY: [(&str, &[u32]); 7] = [
+    (
+        "§10.2",
+        &[
+            0x141418, 0x14BBC2, 0x55AEE8, 0xA497EA, 0xE4896A, 0xCC9C42, 0x7BB76E, 0xDA85B6,
+        ],
+    ),
+    ("§10.3", &[0x14BBC2, 0xE4896A, 0x141418, 0x7BB76E, 0xDA85B6]),
+    (
+        "§10.4",
+        &[
+            0x000000, 0x56B4E9, 0x0072B2, 0xCC79A7, 0xE69F00, 0xF0E442, 0x009E73,
+        ],
+    ),
+    (
+        "§10.6",
+        &[
+            0xE2E3E8, 0x2F6DB5, 0x160928, 0xE08A2E, 0x16A394, 0x7BB76E, 0xDA85B6,
+        ],
+    ),
+    ("§10.7", &[0x3A3B40]),
+    (
+        "§10.11.1",
+        &[0xE4896A, 0xCC9C42, 0x4158BD, 0x8A8A90, 0x141418, 0xDA85B6],
+    ),
+    (
+        "§10.11.4",
+        &[
+            0xE58870, 0x69BA7C, 0x80A3F0, 0xA24B36, 0x287C42, 0x4665AE, 0x8A8A90, 0x141418,
+            0xDA85B6,
+        ],
+    ),
+];
+
+/// The Chazy palettes' entries ([`CHAZY`]), linear, each named by its section and hex.
+fn chazy() -> Vec<(String, Rgb)> {
+    CHAZY
+        .iter()
+        .flat_map(|(section, swatches)| {
+            swatches
+                .iter()
+                .map(move |h| (format!("Chazy {section} #{h:06X}"), palettes::hex(*h)))
+        })
+        .collect()
+}
+
+/// The colours the style is measured against, linear: every palette entry REQ-COL-055 measures, the Chazy palettes
+/// (REQ-COL-110's verify; [`CHAZY`]), the hatch's two, the stipple's grey and dot, and `#FF00FF`.
 fn against() -> Vec<(String, Rgb)> {
     let mut out = palettes::entries();
+    out.extend(chazy());
     let [violet, cyan] = prelude::hatch().colours;
     out.push((format!("the hatch {violet:02X?}"), present::srgb8(violet)));
     out.push((format!("the hatch {cyan:02X?}"), present::srgb8(cyan)));
@@ -604,14 +656,30 @@ fn against() -> Vec<(String, Rgb)> {
     out
 }
 
+/// The entry of `entries` nearest `c` under `mode`, both seen as the screen shows them: its distance and its name.
+fn nearest(mode: Option<CvdMode>, c: Rgb, entries: &[(String, Rgb)]) -> (f64, String) {
+    let q = seen(mode, c);
+    entries
+        .iter()
+        .map(|(name, p)| (distance(seen(mode, *p), q), name.clone()))
+        .fold((f64::INFINITY, String::new()), |a, b| {
+            if b.0 < a.0 {
+                b
+            } else {
+                a
+            }
+        })
+}
+
 /// REQ-COL-110's measurement of the style `colours` (8-bit sRGB), printed: under each mode, each colour's tightest
-/// distance and its entry, its distance from `#FF00FF`, and the two colours' distance from each other, the pattern's
-/// contrast. Each colour must be farther than τ from `#FF00FF` under every mode (R-505) and from every entry
+/// distance and its entry, overall and among the Chazy palettes alone, its distance from `#FF00FF`, and the two
+/// colours' distance from each other, the pattern's contrast. Each colour must be farther than τ from `#FF00FF` under every mode (R-505) and from every entry
 /// unsimulated; under a simulation, a colour within τ of an entry is distinct by its pattern only if the two colours,
 /// simulated, are farther than τ apart, as REQ-COL-061 holds the hatch.
 fn check_proposal(colours: [[u8; 3]; 2]) {
     let tau = tau();
     let entries = against();
+    let chazy = chazy();
     let magenta = palettes::hex(0xFF00FF);
     let style = colours.map(present::srgb8);
     let hexes = colours.map(|c| format!("#{:02X}{:02X}{:02X}", c[0], c[1], c[2]));
@@ -621,25 +689,18 @@ fn check_proposal(colours: [[u8; 3]; 2]) {
     );
     for mode in MODES {
         let label = mode.map_or("unsimulated", |m| m.label());
-        let nearest = style.map(|c| {
-            let q = seen(mode, c);
-            entries
-                .iter()
-                .map(|(name, p)| (distance(seen(mode, *p), q), name.clone()))
-                .fold((f64::INFINITY, String::new()), |a, b| {
-                    if b.0 < a.0 {
-                        b
-                    } else {
-                        a
-                    }
-                })
-        });
+        let tightest = style.map(|c| nearest(mode, c, &entries));
+        let in_chazy = style.map(|c| nearest(mode, c, &chazy));
         let from_magenta = style.map(|c| distance(seen(mode, c), seen(mode, magenta)));
         let contrast = distance(seen(mode, style[0]), seen(mode, style[1]));
         eprintln!(
             "{label}: {} {:.4} from {}, {:.4} from #FF00FF; {} {:.4} from {}, {:.4} from #FF00FF; squares {contrast:.4} \
              apart",
-            hexes[0], nearest[0].0, nearest[0].1, from_magenta[0], hexes[1], nearest[1].0, nearest[1].1, from_magenta[1]
+            hexes[0], tightest[0].0, tightest[0].1, from_magenta[0], hexes[1], tightest[1].0, tightest[1].1, from_magenta[1]
+        );
+        eprintln!(
+            "{label}, the Chazy palettes alone: {} {:.4} from {}; {} {:.4} from {}",
+            hexes[0], in_chazy[0].0, in_chazy[0].1, hexes[1], in_chazy[1].0, in_chazy[1].1
         );
         for k in 0..2 {
             assert!(
@@ -648,13 +709,13 @@ fn check_proposal(colours: [[u8; 3]; 2]) {
                 hexes[k],
                 from_magenta[k]
             );
-            let clear = nearest[k].0 > tau;
+            let clear = tightest[k].0 > tau;
             assert!(
                 clear || (mode.is_some() && contrast > tau),
                 "{label}: {} is {:.4} from {}, within τ, its squares {contrast:.4} apart",
                 hexes[k],
-                nearest[k].0,
-                nearest[k].1
+                tightest[k].0,
+                tightest[k].1
             );
         }
     }
@@ -670,4 +731,41 @@ negative_control!(
     "a magenta style, R-16's #FF00FF, fails (R-505)",
     expected = "#FF00FF is within τ of #FF00FF",
     check_proposal([[0xFF, 0x00, 0xFF], [0x00, 0x40, 0x00]])
+);
+
+/// Every Chazy swatch is among `entries`, under its section's name and as its linear colour, and §10's tables hold 29
+/// distinct swatches.
+fn check_measures_chazy(entries: &[(String, Rgb)]) {
+    let mut distinct: Vec<u32> = CHAZY.iter().flat_map(|(_, s)| s.iter().copied()).collect();
+    distinct.sort_unstable();
+    distinct.dedup();
+    assert_eq!(distinct.len(), 29, "§10's tables hold 29 distinct swatches");
+    for (section, swatches) in CHAZY {
+        for &h in swatches {
+            let name = format!("Chazy {section} #{h:06X}");
+            assert!(
+                entries
+                    .iter()
+                    .any(|(n, c)| *n == name && *c == palettes::hex(h)),
+                "{name} is not measured"
+            );
+        }
+    }
+}
+
+#[test]
+fn debug_view_styles_nan_inf_against_chazy() {
+    check_measures_chazy(&against());
+}
+
+negative_control!(
+    debug_view_styles_nan_inf_against_chazy,
+    "a measured set without the Chazy palettes fails (REQ-COL-110's verify)",
+    expected = "Chazy §10.2 #141418 is not measured",
+    check_measures_chazy(
+        &against()
+            .into_iter()
+            .filter(|(n, _)| !n.starts_with("Chazy"))
+            .collect::<Vec<_>>()
+    )
 );
