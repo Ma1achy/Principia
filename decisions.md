@@ -23684,7 +23684,10 @@ Adds REQ-GUI-354 to REQ-GUI-356; changes REQ-GUI-274, REQ-GUI-275 and REQ-GUI-33
 and REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (rulings, note). PR #278's fix round 1 (gui review
 5624167760, applied per R-369) changes REQ-GUI-328 (statement, verify, rulings, source, note; TASK-M8-62's acceptance
 and notes), REQ-GUI-355 and REQ-GUI-356 (statement, verify, note), PB8 to PB10 and PB12 here, `principia_lines.md` §8,
-render_gui_spec §G2 and §G6, and TASK-M8-58's and TASK-M8-63's notes and acceptance.
+render_gui_spec §G2 and §G6, and TASK-M8-58's and TASK-M8-63's notes and acceptance. PR #278's fix round 2 (gui
+re-check 5624244294, applied per R-369) changes REQ-GUI-274 (statement, verify, note: the off-screen pin covers the
+primary copy of every shown trace, kept traces included, as R-538's "only the primary copy pins" has it) and
+REQ-GUI-328 (verify, note), with TASK-M8-58's and TASK-M8-62's acceptance and notes.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
