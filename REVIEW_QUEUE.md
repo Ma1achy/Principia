@@ -666,6 +666,8 @@ lowered", and gave no lowest value. For the human: yes, it sets what the Run win
   stays; (ii) it is raised (the u16 rule holds at any `T`, so the cap is not needed for exactness).
 - **Applied meanwhile:** (a) and (i): `T_horizon ∈ (0, 200]`, default 50, a value at or below 0 refused with its reason.
   Nothing waits.
+  Above 200 the field clamps to 200, as before R-575; the arrows and a drag stop at one keyboard step above 0, never at
+  0 (fix round 1 of PR #283, gui review 5627122883, G8, applied per R-369).
 
 ## RQ-556: What the header strip states about the horizon, against REQ-SYS-061's "The interactive atlas must state its predictability horizon" *(found by R-574's port; R-574 against REQ-SYS-061 and philosophy §4.1; context: TASK-M8-41)*
 
@@ -737,4 +739,6 @@ where the choice changes what passes: for the human.*
   read "ended at `t = …`" after it; (b) each run stops at its first event as the atlas does; the chord ends at the
   earlier end, and a pair that ends before parting reads "settled before the runs parted"; (c) (a) under a regularised
   occupant, (b) with regularisation off.
-- **Applied meanwhile:** (a). Nothing waits.
+- **Applied meanwhile:** (a). REQ-VAL-196 and REQ-VAL-197 carry `rq: RQ-558`, so a ruling for (b) or (c) traces to
+  them (fix round 1 of PR #283, physics review 5627073272, F2). *Was:* "(a). Nothing waits."
+- **Waits:** TASK-M8-76 (REQ-VAL-196, REQ-VAL-197).

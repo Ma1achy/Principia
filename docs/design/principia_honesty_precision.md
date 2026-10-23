@@ -59,8 +59,16 @@ point.
 |---|---|---|
 | **f32** | GPU, the survey kernel, a one-pixel dispatch | what coloured the pixel: the same decode path, integrator occupant and nominal copy as the atlas |
 | **f32 nudged** | GPU, the same dispatch | the f32 run from its decoded IC moved one ulp per component |
-| **f64** | CPU, `computeIC` | the Inspector's standard |
-| **f64 nudged** | CPU | the f64 run from its IC moved one ulp per component |
+| **f64** | CPU, `computeIC`: the shared kernel at f64 under the f32 run's sim key | the same integrator occupant, coefficients and step rule as the f32 run, never the Inspector's adaptive RK45 |
+| **f64 nudged** | CPU, the same | the f64 run from its IC moved one ulp per component |
+
+**One integrator for all four runs** (physics review 5627073272 of PR #283, F3; applied per R-369). Both f64 runs, and
+both nudged runs, take the f32 run's sim key: the same occupant (stepper × regularisation), coefficients and step rule,
+so the chords measure precision and nothing else. An f64 run under another integrator would mix truncation error into
+the f32–f64 chord, the "category error dressed as a bug" of integrator contract Part 6 ("Integrator-family mismatch in
+cross-checks"); the marks were measured so, with Heggie at both precisions and one step rule (`parting_probe.rs`).
+*Was:* the f64 row "| **f64** | CPU, `computeIC` | the Inspector's standard |" and the nudged row "| **f64 nudged** |
+CPU | the f64 run from its IC moved one ulp per component |".
 
 **The nudge.** Each component of the decoded Cartesian IC, the three bodies' positions and velocities in the plane
 (twelve numbers), is moved one ulp toward `+∞` at its run's precision (`next_up`), as the probe does. f32 against
@@ -119,6 +127,9 @@ and the panel says "unreliable". How far is "far off" is a calibration (R-71, RE
     check of the field REQ-SYS-061 states.
   - "unreliable" when the self-check fails (§3.2).
 
+**The wording that ships** is the three forms above (REQ-GUI-370); the human's "the atlas shows t = 30; this point's f32
+run parted at t = 18" is his illustration of them, not a fourth form (gui review G9).
+
 *Applied per R-369 (the port):* the trust line and the fates' wording key on the "parted at" mark, as the draft's
 single threshold did and the human's example does; "faithful until" is drawn and reported beside them ("faithful
 until `t = …`").
@@ -130,6 +141,17 @@ click inspector's panels, hosted in the Inspector window (§G8) and Explore's Tr
 runs and their readouts are on by default in the Inspector; in the Trajectory panel, on for a pinned or kept
 trajectory (a click pins one, R-453), off while the panel follows the cursor. The toggle and the two marks are
 `ViewUI`. An exported Inspector figure carries all four runs' settings.
+
+**In the Trajectory panel** (gui review 5627122883 of PR #283, G6; applied per R-369): a collapsible **Precision**
+section, after Numbers in R-541 G4's panel order (render_gui_spec §G2). Collapsed it is one row, the trust line; expanded
+it holds the marks, editable, the separation plot, the starting gap and the fates side by side; the f32 run is dashed
+over the f64 in the panel's previews. The four runs and every readout are the same as the Inspector's.
+
+**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the clicked
+trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit after the
+view has moved. The f32 run is the survey kernel's one-pixel dispatch of that IC through the same decode path, so for
+an atlas pixel of the current view it is bitwise what coloured the pixel; the trust line reads the current atlas
+playhead `t_p`.
 
 ### 3.5 Nothing changes in the atlas
 
@@ -199,7 +221,8 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
 - **regular_orbit_does_not_part**: figure-eight: every pair reads "did not part by `T`" at the 0.1 mark. *Fails if* the
   mark fires.
 - **chaotic_orbit_parts**: Burrau: `t_part(f32)` and `t_part(f64)` both found, f32's earlier. *Fails if* either is
-  missing.
+  missing. The fixture's horizon may need to exceed 50 (up to 200) for f64–f64′ to part: in the probe it parted by
+  50 in only 5 % of ICs (19 % in the deep interior); the task records the horizon it uses.
 - **nudge_is_one_ulp**: each of the twelve components of the nudged IC is `next_up` of the run's own, at its precision.
   *Fails if* a component is unmoved or moved by more (control: a nudge by `ε·|x|` fails on a component near a power of
   two).
@@ -211,7 +234,11 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   Never read off one trajectory. Its expected value and tolerance are RQ-557 and REQ-VAL-199.
 - **agreement_wording**: the same fate latched after parting reads "not evidence". Mutation: drop the before/after
   check and it reads "settled": fails.
-- **self_check_unreliable**: a chord series whose two marks are one boundary apart at a large FTLE reads "unreliable".
-  *Fails if* the self-check is absent.
+- **self_check_unreliable**: with Δ = 0.1, a chord series whose two marks are one boundary apart (a measured gap of
+  0.1) at λ = 0.7, where `ln(100)/λ ≈ 6.6` is expected, reads "unreliable" (the noise floor or saturation). Control:
+  the same gap at λ = 46, where `ln(100)/λ ≈ 0.1` is expected, reads its times, not "unreliable". *Fails if* the
+  self-check is absent, or keyed the wrong way round on λ. *Was:* "a chord series whose two marks are one boundary
+  apart at a large FTLE reads "unreliable". *Fails if* the self-check is absent." (backwards: at a large FTLE that gap
+  is the expected one; physics review 5627073272 of PR #283, F1).
 - **atlas_unchanged**: the atlas frame is bitwise the same with the viewer's runs on and off. *Fails if* the viewer
   writes to the atlas's colours or stains.

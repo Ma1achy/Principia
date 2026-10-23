@@ -23751,6 +23751,21 @@ The design's "Decided" section, verbatim:
 - **Two tasks, M8:** TASK-M8-74 builds the job, `prin batch`, the folder and the payload (after TASK-M8-02, TASK-M4-17's
   prebake path and TASK-M7-44's tier table); TASK-M8-75 the Result window, the result view and Compare.
 
+*Fix round 1 of PR #283 (gui review 5627122883, G1 to G5; applied per R-369):*
+- **Zoom and pan in a result view** are display magnification of the stored pixels, square per cell: no chart
+  construction, no `SimConfig` edit, no sim key, no history; *Explore from here* builds a live view from the result's
+  own `SimConfig`, bitwise (`principia_results.md` §3.4, render_gui_spec §G1, REQ-GUI-367).
+- **The view source** is engine state, `ViewSource = Live | Result(id)`, set by the open-result request (as undo and
+  redo are requests), not an edit, entering no undo history; the snapshot carries it, and the badge and the disabled
+  controls read it (`principia_gui_state_contract.md` §2, REQ-GUI-367).
+- **The Result window lists the design's fields**, prefilled from the view (the horizon, `E` and `r_coll` among them),
+  not only those that differ; the predictability warning is tested at both precisions (REQ-GUI-366).
+- **The badge is tested on a result view**: its text, its place in the header strip, the frame and per-cell zoom
+  (REQ-GUI-367).
+- **Where things sit:** Make a result… in File (after Import picture…), Measure's side panel and the Inspector; Open
+  result… in File; Compare (a labelled toggle), Make the f32 twin and the difference map with its counts and
+  distribution in the Result window's Compare section (REQ-GUI-368).
+
 R-572 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
@@ -23795,7 +23810,7 @@ TASK-M8-76 (new), TASK-M4-16 and TASK-M8-17, `REVIEW_QUEUE.md` (RQ-556, RQ-557 a
 >   atlas.** The horizon stays 50 by default and can be raised **or lowered**, so the Run window's `T_horizon ∈ [50, 200]`
 >   and R-132 are amended. The README's "Honesty" line is reworded as the draft gives.
 
-`DECISIONS_2026-10-21.md` § "Honesty", its first three items, verbatim (the fourth, the horizon, is R-575's):
+`DECISIONS_2026-10-21.md` § "Honesty", its first two items, verbatim (the third, the horizon, is R-575's):
 
 > - Run f32 nudged by the smallest amount as well as f64 nudged. "Do fp32 nudged the smallest amount also"
 > - The "parted" threshold: research and test. "research & test" -> done: two marks, 1e-3 (faithful until) and 0.1
@@ -23859,6 +23874,23 @@ The design's "Decided" section, its first three items, verbatim:
 - **One task, M8:** TASK-M8-76, after TASK-M8-17 (the Inspector's CPU/GPU comparison, which keeps REQ-VAL-106) and
   TASK-M4-16 (the f32 GPU trace).
 
+*Fix round 1 of PR #283 (physics review 5627073272, F1 to F4; gui review 5627122883, G6, G7, G9; applied per R-369):*
+- **The self-check's control is the right way round**: "unreliable" belongs to a small λ, where `ln(100)/λ` is long;
+  two marks one boundary apart at a large FTLE is the expected gap (F1; REQ-VAL-198, TASK-M8-76).
+- **`rq` fields**: REQ-VAL-199 carries `rq: RQ-557`, REQ-VAL-196 and REQ-VAL-197 `rq: RQ-558` (F2).
+- **One integrator for all four runs**: both f64 runs and both nudged runs take the f32 run's sim key, occupant,
+  coefficients and step rule, never RK45 (integrator contract Part 6; F3; `principia_honesty_precision.md` §3.1,
+  REQ-VAL-196).
+- **The quote's count**: this entry quoted "its first three items … (the fourth …)" of `DECISIONS_2026-10-21.md` §
+  "Honesty", which has three; it now reads "its first two items … (the third …)" (F4).
+- **The Trajectory panel's Precision section**, after Numbers in R-541 G4's order, collapsed the trust line, expanded
+  the marks, the separation plot, the starting gap and the fates (G6; render_gui_spec §G2, REQ-GUI-369).
+- **Whatever the IC's source** (an atlas pixel, an Inspector edit, Create & locate, a kept orbit after the view moved),
+  the runs and the trust line are of the clicked trajectory's own IC, the line reading the current atlas playhead (G7;
+  REQ-GUI-370).
+- **The trust line's tests** state the faithful mark below 10 and add an "unreliable" check; §G8 points at
+  REQ-GUI-370's three forms, the human's example being his illustration (G9).
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
@@ -23894,6 +23926,12 @@ state contract's "`[50, 200]`" read so, each kept as a *Was:*.
 RQ-555, with its options (a) any `T > 0` and (i) 200 stays applied meanwhile: `T_horizon ∈ (0, 200]`, default 50, a
 value at or below 0 refused with its reason. Nothing waits. The merged mock Run window's `T_RANGE` (TASK-M6-28,
 `crates/gui/src/windows/run.rs`) is TASK-M8-24's to change, with the field.
+
+*Fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369):* above 200 the field **clamps** to 200, as
+before R-575 (only RQ-555 can move the cap); only a value at or below 0 is refused. The arrows and a drag stop at one
+keyboard step above 0, never at 0. The mock's clamp (`crates/gui/src/windows/run.rs:315`, `T_RANGE.0`) and its test
+`mock_windows_open_run_t_horizon_steps_in_its_range` ("At the bottom of the range ↓ stays") are TASK-M8-24's to change.
+REQ-GUI-102's verify and TASK-M8-24's `run_fields` follow (*was:* "refuses 0 and 201 with the reason").
 
 R-575 is in the "values" group of `plan/rule_groups.yaml`.
 

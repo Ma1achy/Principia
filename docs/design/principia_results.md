@@ -97,6 +97,16 @@ A folder, `<name>__<build8>.principia-result/`:
 `SimConfig`. Zoom shows square pixels, one per grid cell, and the scrubber snaps to the stored times. A live view has
 no such badge.
 
+**Zoom and pan in a result view** (gui review 5627122883 of PR #283, G1; applied per R-369) are display magnification
+of the stored result pixels, each cell a square: they are not chart construction (render_gui_spec §G1), edit no
+`SimConfig` field and no sim key, and enter no undo history. *Explore from here* builds a live view from the result's own
+`SimConfig`, bitwise.
+
+**The view source** (G2; applied per R-369): which source the figure draws from is engine state, a view-source field
+`Live | Result(id)` (`principia_gui_state_contract.md` §2). File › Open result… sets it to `Result(id)` and *Explore from
+here* or closing the result sets it to `Live`; opening a result is not an edit and enters no undo history. The snapshot
+carries the view source, and the badge and the disabled sim-key controls read it.
+
 *Applied per R-369 (the port):* with one copy per pixel, the result view colours the nominal copy, one sample per
 pixel; with all copies stored, it colours each copy and averages, as the live view does
 (`principia_sampling_msaa_note.md`). Which source the engine draws from (the live march or an opened result) is engine
@@ -105,6 +115,13 @@ state, set through the contract by an open-result request, since the engine neve
 said* "`ViewUI` gains the Result window and a result mode" (§4).
 
 ### 3.5 Compare
+
+**Where it lives** (gui review G5; applied per R-369): the header strip holds badges only (R-523) and nothing sits on
+the figure (§G1), so Compare is a section of the **Result window**, which, while a result view is open, shows that
+result's record. The section holds **Compare with live** (a toggle that flips the figure between the result and the
+live view, its label on the toggle) and **Make the f32 twin**; once the twin has run, the per-pixel difference map
+shows in the same section as an image at the grid's size, with its counts and the distribution of the differences
+beside it.
 
 A **flip** against the live view, labelled "visual only: different sampling", since the live view is adaptive. The
 measured comparison is **Make the f32 twin**: the same job at f32, then a per-pixel difference map with its counts and
