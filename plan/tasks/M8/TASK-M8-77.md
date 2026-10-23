@@ -1,0 +1,52 @@
+# TASK-M8-77 — The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)
+
+- **Milestone:** M8
+- **Closes:** REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378
+- **Depends on:** TASK-M8-31, TASK-M8-05, TASK-M6-43
+- **Needs (earlier milestones):** REQ-GUI-213
+- **Reviewers:** code, qa, gui, physics
+- **Pitfalls:** none
+- **Size:** ~500 lines, the tests included
+
+## Goal
+Windows › Sequence… docks the Sequence window along the bottom of Explore, below the bottom row, its top edge a splitter. Add keyframe (K in its scope) captures the whole `SimConfig` and `RenderState` at the timeline cursor; a keyframe shows its values, Go to (one undoable entry), Update, a drag in time clamped between its neighbours, and its playhead policy. The timeline shows keyframes as diamonds, the nine read-only lanes lit where a field differs, segments coloured by the planner's class with their frame counts, and cut marks. A segment sets its own easing (R-576), cut or dissolve at a chart change, shows R-520's rule at a link-parameter change and REQ-TOOL-075's fixed rules. Save… and Open… a `.principia-seq.json`, the identity, refusing a link it cannot recreate. The lane table is written into `principia_sequence.md` §3.3 (R-72). Sequence edits are undoable in the history RQ-559 rules (R-577).
+
+## References
+- `docs/design/principia_sequence.md` § "3.1 The Sequence window"
+- `docs/design/principia_sequence.md` § "3.2 Keyframes"
+- `docs/design/principia_sequence.md` § "3.3 The timeline and its lanes"
+- `docs/design/principia_sequence.md` § "3.4 Segments: easing per segment, and transitions"
+- `docs/design/principia_sequence.md` § "3.5 Saving: the `.principia-seq.json` file"
+- `docs/gui/principia_render_gui_spec.md` § "Sequence — keyframed view animations (R-576, R-577)"
+- `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+- `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system (retained)"
+- `docs/contracts/principia_export_animation_contract.md` § "Part 6 — Sharing: the spec is the object, the video is its shadow"
+- `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `decisions.md` § "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
+- `decisions.md` § "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+- `decisions.md` § "R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it"
+- `decisions.md` § "R-52 — Undo lives in the state contract *(GU-1 (a))*"
+- `decisions.md` § "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+- `decisions.md` § "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
+- `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+
+## Deliverables
+- `crates/gui/src/windows/sequence.rs` — the docked Sequence window: header bar, timeline with lanes and segment classes, the keyframe and segment inspector, its keys.
+- The lane table (every `SimConfig` and `RenderState` field in exactly one lane), an exhaustive match, written into `principia_sequence.md` §3.3 (REQ-GUI-375, R-72).
+- `.principia-seq.json` save and open through the engine's spec object (TASK-M8-31) in the canonical serialisation with the build hash, schema version and link entry hashes.
+- Tests: `sequence_window`, `keyframe_is_whole`, `lanes_light_on_change`, `lane_table_exhaustive` (with its compile-fail control), `segment_controls`, `seq_file_roundtrip`, `sequence_undo`.
+
+## Acceptance tests
+- `cargo test -p gui sequence_window` — Windows › Sequence… docks the window between the bottom row and the footer, the canvas shrinking and no panel rect overlapping another; a drag of its splitter changes its height, which a relaunch on the same settings restores and a double-click resets; Tab cycles header bar, timeline and inspector; K with the focus in the Sequence adds one keyframe and leaves the lock unchanged, and K with the focus in the Figure locks and adds none; Esc from its top level puts the focus on the Figure and the window stays open (controls: a K that adds a keyframe from the Figure's scope, and a window drawn over the bottom row, fail) (REQ-GUI-372).
+- `cargo test -p gui keyframe_is_whole` — capture, edit every field of SimConfig and RenderState, Go to: the state equals the captured one bitwise and the undo depth rises by exactly 1; Update after an edit makes the keyframe equal the view bitwise; a keyframe dragged past its right neighbour stops before it, the order unchanged; the policy control offers exactly hold, advance with wall time and set to a value (controls: a capture that skips any one field, enumerated over every field, fails; a Go to sent as one history entry per field fails) (REQ-GUI-373).
+- `cargo test -p gui lanes_light_on_change` — keyframes differing only in a stain uniform light only Stain and the segment is (c); a tilt lights Plane and makes it (b); a chart change shows a cut mark; each segment's label is its frame count at the spec's fps (controls: a timeline that lights Plane for the stain-only pair, and one that shows no cut mark at the chart change, fail) (REQ-GUI-374).
+- Definition: the table lists every field of SimConfig and RenderState with its lane; physics reviewer approved; cargo test -p gui lane_table_exhaustive: every field maps to exactly one lane through an exhaustive match (control: a field added to SimConfig with no lane fails to compile, shown by a compile-fail test) (REQ-GUI-375).
+- `cargo test -p gui segment_controls` — setting segment 1's easing leaves segment 2's unchanged and the spec records both; a chart-change segment offers cut and dissolve, a dissolve taking a length; a link-parameter segment shows R-520's words and offers no control; the fixed rules are labels with no control (controls: one easing shared by all segments, and a segment offering a cut at a link-parameter change, fail) (REQ-GUI-376).
+- `cargo test -p gui seq_file_roundtrip` — save then open is bitwise the identity on every keyframe and segment; the file carries the build hash, the schema version and each link's entry hash; a file with one link entry hash changed opens as "state present, cannot recreate" naming that link (controls: a reader that substitutes the build's link, and a writer that drops a segment's easing, fail) (REQ-GUI-377).
+- `cargo test -p gui sequence_undo` — each kind of edit is undone and redone by one step, a drag of a keyframe being one step, and the sequence after the undo equals the sequence before the edit bitwise (control: an edit that enters no history fails) (REQ-GUI-378).
+
+## Notes
+- R-576 and R-577 (21 Oct 2026, gap sweep PR 2b), from `keyframes_reel.md`. Where it docks, its keys, the clamp on a drag in time, the Navigate and Run lanes are applied per R-369 (R-577).
+- **RQ-559 (the Sequence's undo) is open:** REQ-GUI-378 waits on it; the rest of this task does not. Go to is one entry in the contract's history whatever is ruled.
+- **RQ-560 (a cut at a link-parameter change) is open:** meanwhile R-520 as written, the segment showing its rule and offering no choice; nothing waits.
+- The segment classes are TASK-M8-31's planner's (REQ-TOOL-074); this task only shows them. Physics reviews the lane table (R-72).

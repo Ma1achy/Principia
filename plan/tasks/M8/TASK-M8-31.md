@@ -1,7 +1,7 @@
 # TASK-M8-31 — Keyframes, the export planner and the spec object: serialise, share, re-render
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185
+- **Closes:** REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185, REQ-TOOL-197
 - **Depends on:** TASK-M8-30, TASK-M7-31, TASK-M7-45
 - **Needs (earlier milestones):** REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002
 - **Reviewers:** code, qa, physics, perf
@@ -9,7 +9,7 @@
 - **Size:** ~500 lines
 
 ## Goal
-A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}, provenance-complete, URL-encodable and re-renderable; everything a result is conditional on serialises with it. Interpolation eases z₀ componentwise, log-lerps zoom, moves the basis along the Grassmannian geodesic re-orthonormalised per frame, eases slices, lerps render uniforms per their scale metadata, and treats chart switches as cuts or dissolves. The planner classifies each segment as fixed-view time playback, view animation or render-only animation, prices each and reports the estimate before the job runs; the ladder re-runs per frame wherever the sim key moves. Exported artefacts embed or link the spec, and receiving it re-renders bit-comparable playback. The spotlight reel is built by the blocking exporter from a curated spec list. The same spec re-renders bit-identically on one backend and within parity tolerance across backends, labels flipping only on chaotic trajectories (R-84).
+A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], segments: [(easing, transition)], fps, duration}, one segment between each pair of neighbouring keyframes with its own easing curve (R-576), provenance-complete, URL-encodable and re-renderable; everything a result is conditional on serialises with it. Interpolation eases z₀ componentwise, log-lerps zoom, moves the basis along the Grassmannian geodesic re-orthonormalised per frame, eases slices, lerps render uniforms per their scale metadata, and treats chart switches as cuts or dissolves. The planner classifies each segment as fixed-view time playback, view animation or render-only animation, prices each and reports the estimate before the job runs; the ladder re-runs per frame wherever the sim key moves. Exported artefacts embed or link the spec, and receiving it re-renders bit-comparable playback. The same spec re-renders bit-identically on one backend and within parity tolerance across backends, labels flipping only on chaotic trajectories (R-84).
 
 ## References
 - `docs/contracts/principia_export_animation_contract.md` § "Part 2 — The two playback types and their costs"
@@ -23,30 +23,34 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 - `decisions.md` § "R-84 — Branch decisions across precisions *(closes RQ-35)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*"
+- `decisions.md` § "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
+- `docs/design/principia_sequence.md` § "3.4 Segments: easing per segment, and transitions"
 
 ## Deliverables
-- `crates/engine/src/contract/animation.rs` — the spec object and its URL encoding.
+- `crates/engine/src/contract/animation.rs` — the spec object, its segments each with its easing curve and transition (R-576), and its URL encoding.
+- The definition of the easing curves, the default curve and the three playhead policies, written into export_animation_contract Part 3 (REQ-TOOL-197, R-72).
 - `crates/engine/src/export/{keyframes,planner}.rs` — interpolation and segment classification with estimates.
-- `xtask/src/reel.rs` — `cargo xtask reel <spec-list>` builds the spotlight reel through the exporter.
 - Golden suite `spec-rerender` (same backend bit-identical; second backend within parity tolerance, flips reported).
-- Tests: `planner_segments`, `keyframe_interp` (proptest), `spec_url_roundtrip`, `spec_rerender_payload`, `keyframe_sim_key_reintegrates`, `export_embeds_spec`, `keyframe_link_params`, `export_link_param_flag`.
+- Tests: `planner_segments`, `keyframe_interp` (proptest), `spec_url_roundtrip`, `easing_curves`, `spec_rerender_payload`, `keyframe_sim_key_reintegrates`, `export_embeds_spec`, `keyframe_link_params`, `export_link_param_flag`.
 
 ## Acceptance tests
 - `cargo test -p engine planner_segments` — a three-segment spec is classified (a) / (b) / (c) and an estimate is shown before start; the (c) segment triggers no integration (REQ-TOOL-074).
 - `cargo test -p engine keyframe_interp` — random keyframe pairs: every interpolated basis is orthonormal; zoom midpoint equals the geometric mean; a chart change yields no interpolated chart (REQ-TOOL-075).
-- `cargo test -p engine spec_url_roundtrip` — serialise, URL-encode, decode, re-render: the frames match the original (REQ-TOOL-076).
+- `cargo test -p engine spec_url_roundtrip` — serialise, URL-encode, decode, re-render: the frames match the original; a two-segment spec whose segments carry different easing curves renders each segment's frames at its own curve's progress, and the decoded spec keeps both curves (control: a renderer that applies the first segment's curve to both segments fails) (REQ-TOOL-076). *Was:* "— serialise, URL-encode, decode, re-render: the frames match the original (REQ-TOOL-076)." (R-576).
 - `cargo test -p engine spec_rerender_payload` — serialise → URL → deserialise → re-render reproduces the payload bytes (REQ-TOOL-095).
 - `cargo test -p engine keyframe_sim_key_reintegrates` — a keyframed sim-key change triggers re-integration for the affected frames (REQ-TOOL-096).
 - `cargo test -p engine export_embeds_spec` — an exported video's embedded spec re-renders identical frames (REQ-TOOL-083).
-- Review checklist (code reviewer) of `xtask/src/reel.rs` and the reel player's click-to-load — the reel build script invokes the exporter over the spec list; clicking a segment loads its spec (REQ-TOOL-084).
 - `cargo xtask golden spec-rerender` — render a spec twice on one backend: bit-identical frames; on a second backend: label / class images identical outside chaotic regions (flips there reported), values within parity tolerance (REQ-VAL-100).
 - Definition: the spec-object URL encoding and the principia://view query format written into export_animation_contract Part 6 and approved by the physics reviewer (REQ-TOOL-129).
 - `cargo test -p engine keyframe_link_params` — REQ-TOOL-175's verify (R-520; *was:* `keyframe_link_cut`).
 - `cargo test -p engine export_link_param_flag` — REQ-TOOL-185's verify (R-520).
+- Definition: the section names each curve with its formula, the default curve, and each playhead policy's effect on the playhead at each frame, with one worked example; physics reviewer approved; cargo test -p engine easing_curves: every defined curve gives s(0) = 0 and s(1) = 1 exactly and is non-decreasing at 1001 evenly spaced points of [0, 1] (control: a curve whose s(1) is 1 − 2⁻²⁰ fails) (REQ-TOOL-197).
 
 ## Notes
 - The URL encoding of the spec (and the `principia://view?…` link TASK-M8-32 uses) is not specified.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-129 (R-72 definition) (classification accepted by R-132).
 - R-483 X7 (20 Oct 2026): a link-id change between keyframes is a cut. **R-520 (20 Oct 2026) rules RQ-384** ("blocking export only, flagged"): in a blocking export a link parameter differing between keyframes with the same link ids eases linearly, every frame re-integrated, and the export is flagged; live playback keeps the cut. Physics review covers it (⚑; this task's reviewers include physics). *Was:* "a link or parameter change between keyframes is a cut; interpolating parameters is RQ-384 (meanwhile never)."
-- **R-521 H2, H5 (code review F1 of PR #265, applied per R-369):** the spec object's sidecar carries the four entry hashes beside the build hash and the schema version (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. **R-520 F2 (physics review P1):** each eased parameter is clamped into `[min(a, b), max(a, b)]`, the keyframe's frame takes its value bit for bit, and the spec's `easing` curve gives the progress `s`.
+- **R-521 H2, H5 (code review F1 of PR #265, applied per R-369):** the spec object's sidecar carries the four entry hashes beside the build hash and the schema version (dd_generation_root §3.9, "Each entry's own hash"); TASK-M8-53's `every_destination_links` (REQ-TOOL-176) checks them. **R-520 F2 (physics review P1):** each eased parameter is clamped into `[min(a, b), max(a, b)]`, the keyframe's frame takes its value bit for bit, and the segment's own `easing` curve gives the progress `s` (R-576).
 - **Code review F9 of PR #265 (applied per R-369):** this task depends on TASK-M7-45, which generates the entry hashes the spec's sidecar carries (R-521 H5). *Was:* "- **Depends on:** TASK-M8-30, TASK-M7-31".
+- **R-576 (21 Oct 2026, gap sweep PR 2b):** easing is set per segment, between keyframes: the spec carries `segments: [(easing, transition)]`, one per pair of neighbouring keyframes, and the progress `s` of every eased field, R-520's link parameters included, is the segment's own curve's (REQ-TOOL-076, REQ-TOOL-175). The curves, the default and the playhead policies' semantics are REQ-TOOL-197's definition (R-72), physics-reviewed. *Was* (the R-520 F2 note above): "and the spec's `easing` curve gives the progress `s`."
+- **R-578 (21 Oct 2026, gap sweep PR 2b; applied per R-369):** the reel builder and REQ-TOOL-084 move to TASK-M8-79 with the manifest, the refusal and the takeover. *Was:* the goal's "The spotlight reel is built by the blocking exporter from a curated spec list.", the deliverable "`xtask/src/reel.rs` — `cargo xtask reel <spec-list>` builds the spotlight reel through the exporter." and the acceptance line "Review checklist (code reviewer) of `xtask/src/reel.rs` and the reel player's click-to-load — the reel build script invokes the exporter over the spec list; clicking a segment loads its spec (REQ-TOOL-084)."

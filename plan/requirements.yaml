@@ -22927,6 +22927,283 @@
   - R-489
   milestone: M8
   note: The engine's half is REQ-RENDER-106. Closed by TASK-M8-70.
+- id: REQ-GUI-372
+  area: GUI
+  statement: "The Sequence window must open from Windows › Sequence… docked along the bottom of Explore, below the bottom row (Compass, Time, Legend) and above the footer, its top edge a splitter (R-462) whose position is remembered with the layout, the console docking over it as over the bottom row; its keyboard model must be §G3's for a window, with the sections header bar, timeline and inspector in that order, K adding a keyframe and Delete removing the selected one with the focus in its scope, the Figure's K staying the lock, and Esc from its top level returning the focus to the Figure with the window left open."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.1 The Sequence window
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui sequence_window: Windows › Sequence… docks the window between the bottom row and the footer, the canvas shrinking and no panel rect overlapping another; a drag of its splitter changes its height, which a relaunch on the same settings restores and a double-click resets; Tab cycles header bar, timeline and inspector; K with the focus in the Sequence adds one keyframe and leaves the lock unchanged, and K with the focus in the Figure locks and adds none; Esc from its top level puts the focus on the Figure and the window stays open (controls: a K that adds a keyframe from the Figure's scope, and a window drawn over the bottom row, fail)"
+  rulings:
+  - R-462
+  - R-577
+  milestone: M8
+  note: "R-577; where it docks and its keys applied per R-369. Closed by TASK-M8-77."
+- id: REQ-GUI-373
+  area: GUI
+  statement: "A keyframe must be whole: Add keyframe must capture every field of SimConfig and RenderState at the timeline cursor; Go to must give the view the keyframe's SimConfig and RenderState bitwise as one undoable history entry; Update must replace the keyframe's state with the view's, whole; a keyframe dragged in time must be clamped strictly between its neighbours; and its playhead policy must be one of hold, advance with wall time or set to a value."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.2 Keyframes
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui keyframe_is_whole: capture, edit every field of SimConfig and RenderState, Go to: the state equals the captured one bitwise and the undo depth rises by exactly 1; Update after an edit makes the keyframe equal the view bitwise; a keyframe dragged past its right neighbour stops before it, the order unchanged; the policy control offers exactly hold, advance with wall time and set to a value (controls: a capture that skips any one field, enumerated over every field, fails; a Go to sent as one history entry per field fails)"
+  rulings:
+  - R-577
+  milestone: M8
+  note: R-577 (the draft's keyframe_is_whole). Closed by TASK-M8-77.
+- id: REQ-GUI-374
+  area: GUI
+  statement: "The timeline must show wall time across with keyframes as diamonds, read-only lanes Navigate, Plane, Chart, Links, Playhead, Stain, Print, Lines and Run that light over a segment where a field in the lane differs between its two keyframes, segments coloured by the planner's class (a), (b) or (c) with their frame counts, and a cut mark at a segment whose chart or any link id changes."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.3 The timeline and its lanes
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui lanes_light_on_change: keyframes differing only in a stain uniform light only Stain and the segment is (c); a tilt lights Plane and makes it (b); a chart change shows a cut mark; each segment's label is its frame count at the spec's fps (controls: a timeline that lights Plane for the stain-only pair, and one that shows no cut mark at the chart change, fail)"
+  rulings:
+  - R-577
+  milestone: M8
+  note: "R-577 (the draft's lanes_light_on_change); the draft's Camera lane is Navigate, and Run is added (applied per R-369). The class is TASK-M8-31's planner's (REQ-TOOL-074). Closed by TASK-M8-77."
+- id: REQ-GUI-375
+  area: GUI
+  kind: definition
+  statement: "The lane of every field of SimConfig and RenderState, each field in exactly one of Navigate, Plane, Chart, Links, Playhead, Stain, Print, Lines and Run, must be defined in principia_sequence.md §3.3 by the task that needs it and reviewed by the physics reviewer before merge, and the table must be exhaustive at compile time."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.3 The timeline and its lanes
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: review checklist
+    detail: "the table lists every field of SimConfig and RenderState with its lane; physics reviewer approved; cargo test -p gui lane_table_exhaustive: every field maps to exactly one lane through an exhaustive match (control: a field added to SimConfig with no lane fails to compile, shown by a compile-fail test)"
+  rulings:
+  - R-72
+  - R-577
+  milestone: M8
+  note: "R-577 (applied per R-369): the draft names the lanes and no field's lane. Closed by TASK-M8-77."
+- id: REQ-GUI-376
+  area: GUI
+  statement: "A selected segment must offer its own easing curve (R-576), set without changing any other segment's; at a chart change, a cut or a dissolve with its length; at a link-parameter change, R-520's rule shown with its words \"link parameters interpolated: every frame a different decoder\" and no choice offered; and REQ-TOOL-075's fixed rules shown, not offered."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: "3.4 Segments: easing per segment, and transitions"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui segment_controls: setting segment 1's easing leaves segment 2's unchanged and the spec records both; a chart-change segment offers cut and dissolve, a dissolve taking a length; a link-parameter segment shows R-520's words and offers no control; the fixed rules are labels with no control (controls: one easing shared by all segments, and a segment offering a cut at a link-parameter change, fail)"
+  rulings:
+  - R-576
+  - R-577
+  milestone: M8
+  note: "R-576, R-577. The draft's cut-or-interpolate choice at a link-parameter change is RQ-560; meanwhile R-520 as written, no choice (option (a)), nothing waiting. Closed by TASK-M8-77."
+- id: REQ-GUI-377
+  area: GUI
+  statement: "Save… must write the spec as `<name>.principia-seq.json` in the canonical serialisation (R-309) with the build hash, the schema version and each link's entry hash (R-521), and Open… must read it back as the identity on every keyframe's SimConfig and RenderState and on every segment (R-484); a file naming a link the build lacks, or whose entry hash differs, must open as \"state present, cannot recreate\", naming the link, and never be recreated under another link."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: "3.5 Saving: the `.principia-seq.json` file"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-309 — `SimConfig` and `RenderState` have one canonical serialisation; the profiler header's `config` uses it *(closes RQ-181)*"
+  - file: decisions.md
+    section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui seq_file_roundtrip: save then open is bitwise the identity on every keyframe and segment; the file carries the build hash, the schema version and each link's entry hash; a file with one link entry hash changed opens as \"state present, cannot recreate\" naming that link (controls: a reader that substitutes the build's link, and a writer that drops a segment's easing, fail)"
+  rulings:
+  - R-309
+  - R-521
+  - R-577
+  milestone: M8
+  note: R-577. Closed by TASK-M8-77.
+- id: REQ-GUI-378
+  area: GUI
+  statement: "Every edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing or transition) must be undoable and redoable, one entry per edit and a drag one entry, in the history RQ-559 rules."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: "3.5 Saving: the `.principia-seq.json` file"
+  - file: decisions.md
+    section: R-52 — Undo lives in the state contract *(GU-1 (a))*
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui sequence_undo: each kind of edit is undone and redone by one step, a drag of a keyframe being one step, and the sequence after the undo equals the sequence before the edit bitwise (control: an edit that enters no history fails)"
+  rulings:
+  - R-52
+  - R-577
+  milestone: M8
+  rq:
+  - RQ-559
+  note: "R-577. Which history, the window's own (the draft) or the contract's one (R-52), is RQ-559; this requirement waits on it. Closed by TASK-M8-77."
+- id: REQ-GUI-379
+  area: GUI
+  statement: "Play preview must run the sequence through the live frame loop from the timeline cursor, with link-parameter changes and dissolves shown as cuts at the segment's second keyframe (R-520 F3), under the banner \"Preview: not converged; cuts where the export interpolates\" in the Sequence's header bar, each frame's state sent with \"no history\" (R-101), so that stopping it leaves the undo depth unchanged."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.6 Preview and the proof strip
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui preview_cuts_links: a segment easing a link parameter previews holding the first keyframe's value until the second keyframe and its value from there, the banner shown while it plays, and the undo depth equal before and after; the same segment's export is eased and flagged (controls: a preview that interpolates the parameter, and one whose frames enter the history, fail)"
+  rulings:
+  - R-101
+  - R-577
+  milestone: M8
+  note: "R-577 (the draft's preview_cuts_links); the preview's frames enter no undo as playback's do (R-101, applied per R-369). Closed by TASK-M8-78."
+- id: REQ-GUI-380
+  area: GUI
+  statement: "Proof strip must render one small frame per keyframe and one per segment midpoint through the blocking exporter at its lowest export quality tier, each frame bitwise the frame the exporter writes at the same time, size and tier."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.6 Preview and the proof strip
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui proof_equals_export: a three-keyframe spec gives five proof frames, each equal bitwise to the frame an export at the same time, size and tier writes (control: a proof frame taken from the live loop fails)"
+  rulings:
+  - R-577
+  milestone: M8
+  note: "R-577 (the draft's proof_equals_export, at the same time, size and tier, applied per R-369). Closed by TASK-M8-78."
+- id: REQ-GUI-381
+  area: GUI
+  statement: "Export… in the Sequence window must open the planner before anything runs, with one row per segment giving its class, its frames, its integration cost ((a) one march to the segment's end, (b) 0 → t_frame per frame, (c) none), its flags (link parameters interpolated; a dissolve is two renders) and its estimated time, then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start must run the export as a background job with progress, ETA, the last frame's thumbnail and Cancel."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.7 The planner and export
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Sequence — keyframed view animations (R-576, R-577)
+  - file: decisions.md
+    section: "R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain"
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui sequence_planner: a three-segment spec of classes (a), (b) and (c) gives three rows whose costs are one march to the segment's end, one 0 → t_frame march per frame and none, a link-easing segment flagged and a dissolve flagged as two renders; nothing integrates until Start; Start runs off the GUI thread with progress, ETA and the last frame's thumbnail updating, and Cancel stops it (controls: a planner that starts the job on opening, and one that prices a (c) segment above zero, fail)"
+  rulings:
+  - R-489
+  - R-577
+  milestone: M8
+  note: "R-577. The job is TASK-M8-30's (export contract Part 4). Closed by TASK-M8-78."
+- id: REQ-GUI-382
+  area: GUI
+  statement: "Spotlights must open from Windows › Spotlights…, a window under §G5's rules (R-461), listing the reel's segments in order, each with its provenance (chart, horizon, integrator, build, date), with Play reel (from the selected segment's first frame, or the first segment's), Stop, and Open the sequence (the selected segment's whole spec into the Sequence window); with no reel in the build it must read \"No reel in this build\" with Play reel disabled; natively the film must play only from it, in the Explore canvas, never at launch."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: "3.4 The native presentation: the Spotlights window"
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.5 What is v2 web's
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Spotlights — the reel, natively (R-578)
+  - file: decisions.md
+    section: "R-461 — Every window is dragged by its title bar and resized from its edges and corners, stays at least partly on screen, and remembers its position and size across sessions"
+  - file: decisions.md
+    section: "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui spotlights_window: with a fixture reel of three segments the window lists three rows with each spec's provenance; Play reel with segment 2 selected shows segment 2's first film frame in the Explore canvas; Open the sequence puts segment 2's spec into the Sequence window bitwise; with no reel it reads \"No reel in this build\" and Play reel is disabled; a launch shows the live view, not the film (controls: a Play that starts at frame 0 with segment 2 selected, and a launch that opens on the reel, fail)"
+  rulings:
+  - R-461
+  - R-571
+  - R-578
+  milestone: M8
+  note: "R-578; the native presentation rough, cold start and the gallery v2 web's (R-571; applied per R-369). Closed by TASK-M8-79."
+- id: REQ-GUI-383
+  area: GUI
+  statement: "During the reel a pointer press, drag or scroll on the figure, or any key with the focus in the Figure scope (a modifier alone excepted), must take over at the displayed frame: the frame mapped through the manifest by its index, its state recomputed from its spec as the exporter did and loaded live, every field of SimConfig and RenderState bitwise the exporter's, as one undoable history entry, the interaction consumed; the spec loaded into the live sequence player at that frame's wall time with the transport playing, its frames entering no undo; a recomputed state whose hash is not the manifest's logged as an error (source app) naming the segment and the frame; and at the spec's end the player stopping at its last keyframe, playing on to the horizon if that keyframe's playhead policy is advance and paused otherwise."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.3 The takeover
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Spotlights — the reel, natively (R-578)
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: Part 7 — The spotlight reel (attract mode)
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui takeover_identity: a click at film frame i of segment k loads SimConfig and RenderState whose canonical hash equals manifest entry i's, with that frame's playhead, the transport playing and the following frames following the spec live; one undo restores the view from before the reel; the click neither pans nor locks; a manifest entry with a wrong hash logs one error naming segment k and frame i; a spec played to its end with an advance policy keeps playing and with hold pauses (controls: a manifest off by one frame at a segment boundary, a takeover that pauses, and a takeover that adds one history entry per field, fail)"
+  rulings:
+  - R-484
+  - R-578
+  milestone: M8
+  note: "R-578 (the draft's takeover_identity; the human: \"Yeah keep playing\"). A takeover in a segment the film interpolates and live playback cuts is RQ-561; meanwhile its option (a), the takeover frame exact and live continuing under R-520 F3, nothing waiting. What counts as an interaction, the hash check and the spec's end applied per R-369. Closed by TASK-M8-79."
+- id: REQ-GUI-384
+  area: GUI
+  statement: "From the takeover until the live identity's baseline cover is complete, the film frame must be the snapshot backdrop (caching contract Part 5, blurred) under the live render, every displayed frame showing the backdrop or a live render over it and never the canvas background; the backdrop must then go."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.3 The takeover
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 5 — The stale backdrop: blur means loading"
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui no_blank_handover: with the live render held back by a test clock, every displayed frame from the click to the complete baseline cover has no pixel of the canvas background, and the first frame after it has no backdrop (control: a handover that clears to the background before the first live cover fails)"
+  rulings:
+  - R-578
+  milestone: M8
+  note: "R-578 (the draft's no_blank_handover); the backdrop is caching Part 5's snapshot fallback, which names the reel's handoff (applied per R-369). Closed by TASK-M8-79."
+- id: REQ-GUI-385
+  area: GUI
+  statement: "While the film plays, the figure's header strip must show the badge \"preview\" and the segment's provenance (chart, horizon, integrator, build, date), changing with the segments, never over the plot (R-523); the badge must go with the backdrop after the handover."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.2 Playing the film
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Spotlights — the reel, natively (R-578)
+  - file: decisions.md
+    section: "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui preview_marker: the badge is present on every film frame of a fixture reel, inside the header strip's rect and outside the plot's, and absent from the first frame after the backdrop goes; the provenance shown changes at each segment boundary (controls: a film frame without the badge, and a badge drawn over the plot, fail)"
+  rulings:
+  - R-523
+  - R-578
+  milestone: M8
+  note: "R-578 (the draft's preview_marker); a badge in the header strip per R-523 (applied per R-369). Closed by TASK-M8-79."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -24086,17 +24363,23 @@
   milestone: M8
 - id: REQ-TOOL-076
   area: TOOL
-  statement: "A keyframe animation must serialise as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}, provenance-complete, URL-encodable and re-renderable."
+  statement: "A keyframe animation must serialise as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], segments: [(easing, transition)], fps, duration}, one segment between each pair of neighbouring keyframes, each with its own easing curve (R-576), provenance-complete, URL-encodable and re-renderable."
   source:
   - file: docs/contracts/principia_export_animation_contract.md
     section: Part 3 — The keyframe system (retained)
   - file: docs/contracts/principia_export_animation_contract.md
     section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  - file: docs/design/principia_sequence.md
+    section: "3.4 Segments: easing per segment, and transitions"
+  - file: decisions.md
+    section: "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
   verify:
     method: unit test
-    detail: "serialise, URL-encode, decode, re-render: the frames match the original"
-  rulings: []
+    detail: "serialise, URL-encode, decode, re-render: the frames match the original; a two-segment spec whose segments carry different easing curves renders each segment's frames at its own curve's progress, and the decoded spec keeps both curves (control: a renderer that applies the first segment's curve to both segments fails)"
+  rulings:
+  - R-576
   milestone: M8
+  note: "R-576 (21 Oct 2026, the human: \"The easing functions is set between key frames of the animation\"; amends REQ-TOOL-076): easing is per segment; the transition at a chart change is in the segment too (applied per R-369). Closed by TASK-M8-31. *Was:* \"A keyframe animation must serialise as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}, provenance-complete, URL-encodable and re-renderable.\", and the verify \"serialise, URL-encode, decode, re-render: the frames match the original\"."
 - id: REQ-TOOL-077
   area: TOOL
   statement: "Export must run the same frame loop with a hard barrier over all visible quads per captured frame: a frame is captured only when every visible quad is at the frame's t and required refinement, with no moving fallback, blur or progressive fill in exported pixels."
@@ -24182,17 +24465,22 @@
   milestone: M8
 - id: REQ-TOOL-084
   area: TOOL
-  statement: "The spotlight reel must be produced by the blocking exporter from a curated list of spec objects, each segment showing its spec's provenance and loading that spec live when clicked."
+  statement: "The spotlight reel must be produced once per release, offline, by the blocking exporter (`cargo xtask reel`) from a curated list of spec objects (`reel/specs/NN_name.principia-seq.json`, in NN order), as one film file and a manifest giving each segment's spec and its first and last film frame and, for every film frame, its segment, its frame and wall time within the spec and the hash of the SimConfig and RenderState it was rendered from; each segment must show its spec's provenance."
   source:
   - file: docs/contracts/principia_export_animation_contract.md
     section: Part 7 — The spotlight reel (attract mode)
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.1 The reel builder and its manifest
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
   verify:
-    method: review checklist
-    detail: "the reel build script invokes the exporter over the spec list; clicking a segment loads its spec"
+    method: unit test
+    detail: "cargo test -p xtask reel_manifest: a reel built from three fixture specs has one manifest entry per film frame, each entry's segment, frame within the spec and state hash equal to those the exporter rendered that frame from, and each segment's provenance (chart, horizon, integrator, build, date) taken from its spec (control: a manifest shifted by one frame at a segment boundary fails)"
   rulings:
   - R-571
+  - R-578
   milestone: M8
-  note: "R-571 (21 Oct 2026): this is the reel's machinery, built and tested natively (so in v1 web too); its presentation, the spotlight reel that passes for Explore (designs/reel_click.md, in the gap sweep's bundle), is v2 web's."
+  note: "R-571 (21 Oct 2026): this is the reel's machinery, built and tested natively (so in v1 web too); its presentation, the spotlight reel that passes for Explore (designs/reel_click.md, in the gap sweep's bundle), is v2 web's. R-578 (21 Oct 2026): the film is rendered once per release, offline, and only played by the app; the manifest maps every frame to its spec and state; what a click does is the takeover, REQ-GUI-383; moved from TASK-M8-31 to TASK-M8-79 with the reel builder (applied per R-369). *Was:* \"The spotlight reel must be produced by the blocking exporter from a curated list of spec objects, each segment showing its spec's provenance and loading that spec live when clicked.\", and the verify, a review checklist, \"the reel build script invokes the exporter over the spec list; clicking a segment loads its spec\"."
 - id: REQ-TOOL-085
   area: TOOL
   statement: "Hovering an IC pixel must overlay that IC's trajectory computed by one CPU f64 computeIC integration of the decoded IC and projected onto the current chart's actual (q1, q2) basis vectors, with no GPU-payload trace path."
@@ -25806,7 +26094,7 @@
   note: "R-483 X6, H6 (20 Oct 2026). R-522: RQ-386 (whether tier 2 splits) is parked until this measurement; the PR reports tier 2's size and fit, and the orchestrator returns RQ-386 to the human with them. *Was:* the verify's \"for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record\". Physics review P4 of PR #265 (applied per R-369): the typical edited stain is the named fixture tier2_typical_stain. *Was:* the verify's \"for a typical edited one\"."
 - id: REQ-TOOL-175
   area: TOOL
-  statement: "A keyframe's state must be its `SimConfig`, links included: a change of a link id between keyframes must be a cut everywhere, and a change of a link parameter a cut in live playback; in a blocking export, between keyframes whose link ids are the same, each differing link parameter must ease linearly in its value, a + s·(b − a) with s the segment's progress under the spec's easing curve, clamped into [min(a, b), max(a, b)], each keyframe's own frame taking that keyframe's value bit for bit, with every frame re-integrated at its own values, a type (b) segment priced before the job runs."
+  statement: "A keyframe's state must be its `SimConfig`, links included: a change of a link id between keyframes must be a cut everywhere, and a change of a link parameter a cut in live playback; in a blocking export, between keyframes whose link ids are the same, each differing link parameter must ease linearly in its value, a + s·(b − a) with s the segment's progress under the segment's own easing curve (R-576), clamped into [min(a, b), max(a, b)], each keyframe's own frame taking that keyframe's value bit for bit, with every frame re-integrated at its own values, a type (b) segment priced before the job runs."
   source:
   - file: decisions.md
     section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
@@ -25820,8 +26108,9 @@
   rulings:
   - R-483
   - R-520
+  - R-576
   milestone: M8
-  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-185). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\" Physics review P1 of PR #265 (applied per R-369): the eased value is clamped into [min(a, b), max(a, b)], the keyframe's frame takes its value bit for bit, and the easing curve gives the progress s; the verify gains the non-dyadic arm at b = hi. *Was:* the statement's \"each differing link parameter must ease linearly in its value with every frame re-integrated at its own values,\" and the verify's \"; controls: a blocking export that cuts\"."
+  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-185). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\" Physics review P1 of PR #265 (applied per R-369): the eased value is clamped into [min(a, b), max(a, b)], the keyframe's frame takes its value bit for bit, and the easing curve gives the progress s; the verify gains the non-dyadic arm at b = hi. *Was:* the statement's \"each differing link parameter must ease linearly in its value with every frame re-integrated at its own values,\" and the verify's \"; controls: a blocking export that cuts\". R-576 (21 Oct 2026): the progress s is the segment's own easing curve's, easing being per segment. *Was:* \"under the spec's easing curve\"."
 - id: REQ-TOOL-176
   area: TOOL
   statement: "Every destination (snapshot JSON, a share link, the profiler header, the embedded record, the tEXt chunk and an animation spec) must carry a non-default link and parameter that read back equal to the set value, and at the defaults every link field must still be present. Each must also carry, beside the build hash and the schema version, the four entry hashes of its links (R-521)."
@@ -26177,6 +26466,75 @@
   - R-558
   milestone: M8
   note: "Fix round 2 of PR #281 (gui review 5608411706, F1): render_gui_spec § \"Profiler\", \"the profiler shows it beside the five\" and names it \"print stage\" (the human's ruling on RQ-497, R-558). Closed by TASK-M8-72."
+- id: REQ-TOOL-197
+  area: TOOL
+  kind: definition
+  statement: "The easing curves a segment may take (each a map of [0, 1] onto [0, 1], non-decreasing, with s(0) = 0 and s(1) = 1), the default curve, and the semantics of the three playhead policies (hold, advance with wall time, set to a value) must be defined in export_animation_contract Part 3 by the task that needs them and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: Part 3 — The keyframe system (retained)
+  - file: docs/design/principia_sequence.md
+    section: "3.4 Segments: easing per segment, and transitions"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
+  verify:
+    method: review checklist
+    detail: "the section names each curve with its formula, the default curve, and each playhead policy's effect on the playhead at each frame, with one worked example; physics reviewer approved; cargo test -p engine easing_curves: every defined curve gives s(0) = 0 and s(1) = 1 exactly and is non-decreasing at 1001 evenly spaced points of [0, 1] (control: a curve whose s(1) is 1 − 2⁻²⁰ fails)"
+  rulings:
+  - R-72
+  - R-576
+  milestone: M8
+  note: "R-576 (applied per R-369): the corpus names `easing` and \"playhead policy\" and defines neither; the draft names the three policies. Closed by TASK-M8-31."
+- id: REQ-TOOL-198
+  area: TOOL
+  statement: "The reel build must refuse a spec whose link entry hashes do not match the build's: `cargo xtask reel` must stop before rendering anything, exit non-zero naming the spec and the link, and write no film and no manifest."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.1 The reel builder and its manifest
+  - file: decisions.md
+    section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask reel_build_refuses: a fixture spec with one link entry hash changed makes cargo xtask reel exit non-zero, its message naming the spec and the link, and leaves no film and no manifest (control: the same specs with matching hashes build a film and a manifest)"
+  rulings:
+  - R-521
+  - R-578
+  milestone: M8
+  note: "R-578 (\"the build refuses any spec whose link hashes don't match\"). Closed by TASK-M8-79."
+- id: REQ-TOOL-199
+  area: TOOL
+  statement: "Playing the reel must compute nothing: the app must decode the shipped film and show it, integrating nothing, dispatching no march and sending no SetField, and stopping the film must leave the view bitwise as it was."
+  source:
+  - file: docs/design/principia_spotlight_reel.md
+    section: 3.2 Playing the film
+  - file: decisions.md
+    section: "R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui reel_plays_without_compute: playing 120 frames of a fixture film counts 0 integrations, 0 march dispatches and 0 SetFields, and Stop leaves SimConfig, RenderState and the undo depth bitwise as before (control: a player that renders each frame's spec live fails)"
+  rulings:
+  - R-578
+  milestone: M8
+  note: "R-578, the human: \"The film is not computed in the app … The app only plays it; the engine starts computing at the takeover.\" Closed by TASK-M8-79."
+- id: REQ-TOOL-200
+  area: TOOL
+  statement: "Every export started from the Sequence window must write the spec's `.principia-seq.json` beside its output, whatever the format, equal bitwise to the file Save… writes for that spec."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.7 The planner and export
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui export_writes_seq: an export as PNG frames and one as GIF each leave a .principia-seq.json beside the output, bitwise the file Save… writes for the spec (control: an export with no file beside it fails)"
+  rulings:
+  - R-577
+  milestone: M8
+  note: "R-577. How a GIF, MP4 or WebM carries the spec in itself is the video carrier's design (gap sweep PR 2c), not this requirement's (applied per R-369). Each PNG frame's own record is REQ-TOOL-185's. Closed by TASK-M8-78."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -31243,6 +31601,21 @@
   - R-557
   milestone: M8
   note: "Fix round 3 of PR #281 (perf review 5608473498, F3, applied per R-369): print_graph §8.3 and the quality device note §1 and §2 do not contradict each other here; they are silent, so a definition, not an RQ. Closed by TASK-M8-73."
+- id: REQ-PERF-110
+  area: PERF
+  statement: "The Sequence planner's estimate must carry its basis: a segment's cost the samples it marches (the export's pixels times its copies, E + 1) times the physical time each is marched, over this machine's throughput of that quantity per wall second measured from its frame records, shown as a range from the cost over the fastest to the cost over the slowest throughput measured; with no measurement it must read \"no measurement on this machine yet\" and show no number; proof frames must be timed and enter the measurement."
+  source:
+  - file: docs/design/principia_sequence.md
+    section: 3.7 The planner and export
+  - file: decisions.md
+    section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui planner_no_guess: with no frame records the estimate reads \"no measurement on this machine yet\" and contains no digit; with records of throughputs 2 and 4 units per second, a segment costing 8 units reads 2 s to 4 s; after a proof strip its frames' times are in the measurement (controls: an estimate from a default throughput with no records, and one ignoring the slowest record, fail)"
+  rulings:
+  - R-577
+  milestone: M8
+  note: "R-577 (the draft's planner_no_guess: \"never a number\"); the cost's unit and the range's ends applied per R-369. Closed by TASK-M8-78."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
