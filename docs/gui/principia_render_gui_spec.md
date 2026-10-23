@@ -419,6 +419,9 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
   view's default. The orbit turns the view of the sphere, never the data (trajectory_viewing §4), and is the panel's
   own `ViewUI` state; it is not the compass's, which has none (R-409);
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
+- **for a pinned or kept trajectory, where its precision runs out (R-574)**: the trust line about the atlas pixel and
+  the two marks, "faithful until" and "parted at", from the four runs of `docs/design/principia_honesty_precision.md`
+  §3, with the f32 run dashed over the f64 in the previews; off while the panel follows the cursor;
 - a playhead for this orbit;
 - **listen**: **Listen** (R-540, `docs/design/principia_listen.md`), the trajectory heard as sound, the panel's Listen
   section (below) and `Listen…` (§G5). It follows the cursor, or the pinned or kept trajectory of the tab shown. Its
@@ -998,7 +1001,9 @@ corpus's top display bar (R-67).
 
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
-- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
+- **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, default 50, raised or
+  lowered, `∈ (0, 200]` meanwhile, Part 5; R-132 as amended by R-575, its range RQ-555; *was:* "`∈ [50, 200]`, default
+  50"),
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
   Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
@@ -1020,6 +1025,21 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 
 The surfaces with no artboard (the Custom quality fields, the utilisation ceiling, the Profiler's Arbiter tab, the
 passive-logging switch and indicator, the compute fast-math control and the Profiler's fast-math line, R-297) are checked by presence only, not layout, until the M8 dev GUI (R-129).
+
+### Result… — the full-precision batch run (R-572)
+
+`docs/design/principia_results.md` is its design. **File › Make a result…**, the Measure tool's kept region (§G10) and
+the Inspector (§G8) open the **Result** window, prefilled from the view: it lists every field that differs from the
+view (the region, a uniform `nx × ny` grid with refinement off, precision **f64** by default or **f32**, the horizon,
+`E` and `r_coll`, the stored times, the horizon by default plus any playheads added, and the copies, one per pixel by
+default or all `E + 1`), with a cost and size estimate from a timed 64-pixel pilot and a warning when `T` passes the
+precision's predictability horizon. **Start** runs the job in the background, with rows done, failures and time left;
+**Cancel** keeps what finished ("cancelled at 37 %") and **Resume** continues it; **Copy command** gives
+`prin batch --job job.json`. **File › Open result…** opens a result view: the badge "Result · f64 · 1024² · T 50" in
+the figure's header strip (R-523), drawn from the stored payload with nothing integrated, stain edits live, sim-key
+edits disabled with the reason, **Explore from here**, the scrubber snapping to the stored times; **Compare** flips
+against the live view ("visual only: different sampling") and **Make the f32 twin** gives the per-pixel difference
+map. Like the other windows here, it moves and resizes (R-461).
 
 ### Trace… — every trace setting (R-541 G5)
 
@@ -1308,6 +1328,12 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 is in the Trajectory panel and `Listen…` only (R-556, RQ-466 (a)). *Was:* "**listen** is here too. (Against R-541 G1's
 one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
 holds no sound control. Gui review 5595359543 of PR #267, G1.)"
+- **Where its precision runs out (R-574).** On by default: four runs of the IC (f32 on the GPU as the atlas ran it,
+  f64, and each nudged by one ulp), the f32 run dashed over the f64 in panes 2 and 3, a separation plot of their
+  shape-sphere chords with the two marks, "faithful until" (10⁻³) and "parted at" (0.1), shown and editable, the
+  fates side by side, and **the trust line** about the atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30;
+  this point's f32 run parted at t = 18" (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas
+  changes with it.
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
   doesn't move.
 - **Readouts:** latent `z`, `α, β`, masses (each body's mass beside its number, e.g. "body 1 (m = 5/12)", R-549),

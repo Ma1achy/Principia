@@ -1078,6 +1078,9 @@ Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: 
 encoder, and MP4/WebM through WebCodecs where supported.
 
 ## R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+*Amended by R-575 (the horizon: default 50, raised or lowered, not floored at 50).*
+*Still in force: all three changes, except that T is no longer floored at 50: its default stays 50 and it can be
+raised or lowered (R-575), its lowest value RQ-555; `dt_macro = max(1e-3, T/65535)` stands.*
 *25 Sep 2026 · applied in step 7*
 
 - REQ-COL-055: the invalid colour must collide with no palette entry. Propose a hatched pattern, not a flat colour.
@@ -23663,3 +23666,236 @@ REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, RE
 REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
 REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
 rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
+
+## R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*
+*21 Oct 2026 · applied in `docs/design/principia_results.md` (new), `docs/read_first/principia_00_philosophy.md` § "The
+prebake — a measuring instrument", the three-rungs table and § "7.3 Dump tiers — and the default is not an image",
+`docs/gui/principia_render_gui_spec.md` § "Result… — the full-precision batch run (R-572)" (new),
+`docs/contracts/principia_gui_state_contract.md` §2 (the open windows), `docs/design/principia_dd_image_embedding.md`
+§6 (tier 1's `run` block), `docs/read_first/principia_INDEX.md`, REQ-SYS-007 (reqio), REQ-SYS-087 to REQ-SYS-090,
+REQ-TOOL-196 and REQ-GUI-366 to REQ-GUI-368 (new), TASK-M8-74 and TASK-M8-75 (new) and `plan/rule_groups.yaml`; the
+record is `docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-74 and TASK-M8-75*
+
+R-572 to R-575 are the gap sweep's PR 2a, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/results.md` and `designs/honesty_precision.md`. The orchestrator split the bundle's PR 2 into three and told
+the human: 2a these two designs, 2b `keyframes_reel.md` and `reel_click.md`, 2c `export_details.md`,
+`video_carrier_test.md`, `uploaded_picture.md` and `ic_save.md`. The bundle's `INSTRUCTION.md` header and the human's
+covering message are quoted in R-560.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its lead, verbatim:
+
+> Each file in `designs/` has six parts: what exists, the gap, the proposal, the rulings it touches, the decisions
+> (already made, in a "Decided" section), and tests. Write each as a design doc and add its requirements and tests.
+
+Its `results.md` item, verbatim:
+
+> - `results.md`: "Result", the full-precision batch job, end to end (f32 or f64 only). Delete "payload summary" from
+>   TASK-M8-02, which defines nothing and is used nowhere. Philosophy §2's "arbitrary precision" text becomes the
+>   sentence the draft gives. REQ-SYS-007's parked dump tier needs amending; queue it if that is a larger change.
+
+`DECISIONS_2026-10-21.md` § "Results", verbatim:
+
+> Results
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+> - Called "Result". "Yeah call it result."
+> - Which times are saved: the user chooses. "let the user choose ig"
+> - One copy per pixel or all jittered copies: an option. "make that an option"
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> - Called **Result** ("Yeah call it result").
+> - **Which times are saved: the user chooses** ("let the user choose ig"): the horizon by default, plus any playheads
+>   the user adds. Open question 2 is closed.
+> - **One copy per pixel or all `E+1` copies: an option** ("make that an option"), one copy by default. Open question 3
+>   is closed.
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:*
+- **A Result** is the prebake (philosophy §2) made reachable from the app, end to end: the Result window, prefilled
+  from the view, from File › Make a result…, Measure's kept region or the Inspector; one `job.json` the app runs in the
+  background and `prin batch --job job.json` runs with the same code; a result folder
+  (`<name>__<build8>.principia-result/`: `result.json`, `payload.prin`, `image.png`, `log.txt`); the result view,
+  badged in the header strip (R-523), drawn from the payload with nothing integrated; and Compare, a labelled flip and
+  the f32 twin's difference map (`principia_results.md` §3).
+- **f32 or f64 only**: f64 by default, the shared kernel on CPU threads; f32 the survey kernel on the GPU (R-265).
+- **Its name** is "Result" in the GUI and "batch" for the job; `prin survey` stays the headless live path (open
+  question 1, (a)).
+- **The stored times**: the horizon by default, plus any playheads the user adds (open question 2, (a)).
+- **The copies**: one per pixel by default, the nominal copy with the per-pixel reductions; all `E + 1` copies an
+  option (open question 3, (c)).
+- **Philosophy §2** reads the draft's sentence: "… the shared kernel at f64 on the CPU, or f32 on the GPU for a fast
+  uniform pass. Arbitrary precision lives only in R-33's independent reference, which checks a result rather than
+  making one (R-265)."; the three-rungs table reads "f64 (f32, labelled)" for the prebake and "f64" for the Inspector.
+  *Was:* "CPU at arbitrary precision, or GPU at emulated double/double-double." and "arbitrary", "f64 and up" (kept as
+  *Was:* lines there). R-265 holds; it amended §7.1 and §7.7 only, which stay as they are.
+- **REQ-SYS-007 is amended, not queued.** The change is a reword: philosophy §7.3's reduced tier is unparked as the
+  Result's payload and its per-copy tier as the copies option; tiled prebake (§7.2's VRAM tiling), the trajectory
+  tiers, extended precision, headless datasets, the regularisation matrix and the GPU-port lever stay parked. §7.3
+  gains a note saying so. Nothing else of §7 or of R-265 moves, so it is not "a larger change".
+
+*Applied per R-369:*
+- **The payload's field list and layout are a definition** (R-72, REQ-SYS-090): §7.3 calls the reduced tier's field
+  list "a CONTRACT, not a convenience" and gives no list, so the task that builds the payload writes it into
+  `principia_results.md` §3.3, from the `SimState` payload and the reduction fields, and the physics reviewer approves
+  it.
+- **The pilot** is 64 pixels on an 8 × 8 lattice spread over the grid, timed; the estimate scales its measured time.
+- **The result view's source** (the live march or an opened result) is engine state, set through the contract by an
+  open-result request, because the engine never reads `ViewUI` (`principia_gui_state_contract.md` §2); `ViewUI` gains
+  the Result window. *The draft said* "`ViewUI` gains the Result window and a result mode".
+- **With one copy per pixel** the result view colours the nominal copy, one sample per pixel; with all copies stored
+  it colours each and averages, as the live view does (`principia_sampling_msaa_note.md`).
+- **The embedding's `run` block** is in tier 1 (`principia_dd_image_embedding.md` §6), assigned in `tiers.rs` like
+  every other field (REQ-TOOL-181), so a result's image never drops it (REQ-TOOL-196).
+- **Two tasks, M8:** TASK-M8-74 builds the job, `prin batch`, the folder and the payload (after TASK-M8-02, TASK-M4-17's
+  prebake path and TASK-M7-44's tier table); TASK-M8-75 the Result window, the result view and Compare.
+
+R-572 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
+resume), REQ-SYS-089 (the folder and payload), REQ-SYS-090 (the payload's fields, a definition), REQ-TOOL-196 (the
+`run` block in tier 1), REQ-GUI-366 (the Result window), REQ-GUI-367 (the result view) and REQ-GUI-368 (Compare).
+
+## R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it
+*21 Oct 2026 · applied in `plan/tasks/M8/TASK-M8-02.md` and `docs/design/principia_results.md` §4*
+
+`DECISIONS_2026-10-21.md` § "Results", its first item, verbatim:
+
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:* TASK-M8-02's `prin survey` deliverable lists its outputs as "image, frame records". *Was:* "(payload
+summary, image, frame records)". No requirement named it (REQ-SYS-048's statement is "the Paper-2 numbers"), so no
+requirement changes. The full-precision payload is the Result's (R-572), written by `prin batch`.
+
+R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
+*21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
+§4 (the real-space bullet and row) and §5 (a lead bullet) and its closing line, `docs/gui/principia_render_gui_spec.md`
+§G2 (the Trajectory panel) and §G8 (the Inspector), `README.md` (the Honesty line), `docs/read_first/principia_INDEX.md`,
+REQ-VAL-106, REQ-TOOL-127 and REQ-SYS-061 (reqio), REQ-VAL-196 to REQ-VAL-199 and REQ-GUI-369 to REQ-GUI-371 (new),
+TASK-M8-76 (new), TASK-M4-16 and TASK-M8-17, `REVIEW_QUEUE.md` (RQ-556, RQ-557 and RQ-558, new) and
+`plan/rule_groups.yaml`; the record, with the probe its marks were measured with, is
+`docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-76*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `honesty_precision.md` item, verbatim:
+
+> - `honesty_precision.md`: in the trajectory viewer, four runs of the clicked point (f32, f64, and each nudged by one
+>   ulp), with two marks:
+>   - **"faithful until"** at shape-sphere chord 10⁻³;
+>   - **"parted at"** at chord 0.1.
+>
+>   Both are measured (`evidence/parting_probe_output.txt`) and from the literature, both visible and editable. The
+>   one-line trust text appears in the trajectory inspector panel when a trajectory is clicked. **Nothing changes in the
+>   atlas.** The horizon stays 50 by default and can be raised **or lowered**, so the Run window's `T_horizon ∈ [50, 200]`
+>   and R-132 are amended. The README's "Honesty" line is reworded as the draft gives.
+
+`DECISIONS_2026-10-21.md` § "Honesty", its first three items, verbatim (the fourth, the horizon, is R-575's):
+
+> - Run f32 nudged by the smallest amount as well as f64 nudged. "Do fp32 nudged the smallest amount also"
+> - The "parted" threshold: research and test. "research & test" -> done: two marks, 1e-3 (faithful until) and 0.1
+>   (parted at), shown in the trajectory inspector panel. "yes sure that trust thing text is fine if you show it in the
+>   trajectory inspector panel when you click on a trajectory"
+
+The design's "Decided" section, its first three items, verbatim:
+
+> - **Four runs, not three**: f32, f64, and **each nudged by one ulp** ("Do fp32 nudged the smallest amount also").
+>   f32 against nudged f32 gives f32's own sensitivity at this point.
+> - **Two marks, measured and from the literature**, both shown and editable:
+>   - **Faithful until**: f32 and f64 within a shape-sphere chord of **10⁻³**, the reliability threshold of Boekholt &
+>     Portegies Zwart (2015, 2020, 2023), stated as keeping the difference in the linear regime.
+>   - **Parted at**: chord **0.1**, the decorrelation threshold (separation at the system's own scale: Boekholt 2015,
+>     Hernandez et al. 2020); random shapes average 4/3.
+>   - Measured over 1000 ICs, four regions, Heggie to t = 50 (prin-rs PR #34, `parting_probe`): first-event fates agree
+>     **99.9%** before the 10⁻³ mark and **25%** after the 0.1 mark (n = 16, so thin). Median parting at 0.1: deep
+>     interior 12, preset_shape 26, near-field 43, config_stability 39 (14% parted), pooled 22. A single global "f32
+>     trustworthy to ~23" is right pooled and wrong for any given point, which is why the readout is per point.
+>   - Self-check: in a chaotic region the gap between the two marks is about ln(100)/λ. A gap far off that says the
+>     reading is in the noise floor or saturation, and the panel says "unreliable".
+> - **Where the trust line shows**: in the trajectory inspector panel when you click a trajectory, e.g. "the atlas shows
+>   t = 30; this point's f32 run parted at t = 18". **Nothing changes in the atlas**: it stays f32 on the GPU, coloured as
+>   now ("Why would we show different colours in the atlas for precision?").
+
+*What it decides:*
+- **Four runs of the clicked point**: f32 (the survey kernel's one-pixel GPU dispatch, what coloured the pixel), f64
+  (`computeIC`), and each nudged by one ulp per component of its decoded IC (`principia_honesty_precision.md` §3.1).
+- **The chord** `|n_a − n_b|` between signed shape-sphere unit vectors (0 to 2), read at the sync boundaries, for
+  f32–f64, f64–f64′ and f32–f32′; **two marks**, "faithful until" at **10⁻³** and "parted at" at **0.1**, the human's
+  values, measured and from the literature, both shown and editable (§3.2). They are not calibrations: the human gave
+  them.
+- **The self-check** ("unreliable" when the gap between the marks is far from `ln(100)/λ`); how far is a calibration
+  (R-71, REQ-VAL-198).
+- **What the user sees**: f64 solid and f32 dashed in real space and on the sphere, a separation plot, the marks, the
+  starting gap, the fates side by side, and the trust line about the atlas pixel (§3.3).
+- **Where the trust line shows**: the trajectory inspector panel when a trajectory is clicked, the click inspector's
+  panels in the Inspector window and Explore's Trajectory panel (R-65), on by default in the Inspector and for a pinned
+  or kept trajectory in the Trajectory panel, off while it follows the cursor (§3.4).
+- **Nothing changes in the atlas**: f32 on the GPU, coloured as now. The draft's stain preset "How far f32 sees" is not
+  made, and its header text for the atlas is not applied; what the header states is RQ-556 (§3.5).
+- **The README's Honesty line** reads the draft's: "*It shows where its precision runs out: open any point to watch its
+  single- and double-precision orbits part, and when. Failed runs are kept and counted, never painted over.*" *Was:*
+  "*What it can't resolve is hatched, and it reports where its precision runs out.*"
+- **Amends** trajectory viewing §4 (real space was "CPU-f64 intuition sugar … no comparison claimed") and §5 (the
+  overlay was "optional; off by default"), each kept as a *Was:*. REQ-VAL-106 follows (on by default, statement and
+  verify); REQ-TOOL-127's definition gains the `r_i(t)` series and the nudge, its divergence criterion now R-574's marks.
+
+*Applied per R-369:*
+- **The trust line and the fates' wording key on "parted at"**, as the draft's single threshold did and the human's
+  example does; "faithful until" is drawn and reported beside them.
+- **The nudged runs are not drawn on the two views**; they are in the separation plot.
+- **The runs are of the nominal copy** (the draft's open question 3; "copies on request" is not taken up by the human's
+  texts), as the f32 run must be to equal the atlas pixel's.
+- **The nudge**: each of the decoded Cartesian IC's twelve components moved by `next_up` at its run's precision, as the
+  probe does; how the GPU dispatch takes it after its own decode, and a zero component under flushed subnormals, are
+  REQ-TOOL-127's to define.
+- **Queued, not resolved:** the header's statement against REQ-SYS-061 (RQ-556); the ensemble-ratio gate's expected
+  value, which the probe's readings do not settle (RQ-557); whether the runs carry on past their first terminal event,
+  as measured, or stop as the atlas does (RQ-558, its option (a), as measured, applied meanwhile).
+- **One task, M8:** TASK-M8-76, after TASK-M8-17 (the Inspector's CPU/GPU comparison, which keeps REQ-VAL-106) and
+  TASK-M4-16 (the f32 GPU trace).
+
+R-574 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
+note) and REQ-SYS-061 (rulings, rq, note). Adds REQ-VAL-196 (the four runs), REQ-VAL-197 (the chord and the marks),
+REQ-VAL-198 (the self-check's band, a calibration), REQ-VAL-199 (the ensemble ratio, a calibration, `rq: RQ-557`),
+REQ-GUI-369 (what the viewer shows), REQ-GUI-370 (the trust line) and REQ-GUI-371 (the atlas unchanged).
+
+## R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar",
+`docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units
+and the horizon (inherited scale gauge)", `docs/design/principia_dd_integrator.md` § "2. Consolidated contract",
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_honesty_precision.md` §3.6, REQ-INT-081,
+REQ-INT-026 and REQ-GUI-102 (reqio), TASK-M3-06, TASK-M8-24, `REVIEW_QUEUE.md` (RQ-555, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-06 and TASK-M8-24*
+
+`DECISIONS_2026-10-21.md` § "Honesty", its last item, verbatim:
+
+> - Default horizon stays 50, and it must be raisable AND lowerable (not capped at 50). "Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **Horizon**: default stays 50, and it can be **raised or lowered**, not floored at 50 ("Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"). Amends the Run window's `T_horizon ∈ [50,
+>   200]` (render_gui_spec §G5) and R-132. The header states the horizon; the viewer states each point's parting.
+
+*What it decides:* `T_horizon`'s default stays 50, and the Run window takes values below 50 as well as above. R-132's
+"T keeps [50, 200], with a default of 50" is amended as to the lower end; its `dt_macro = max(1e-3, T/65535)` stands,
+and keeps `⌈T/dt_macro⌉ ≤ 65535` at every `T`. The Run window's, the integrator contract's, dd_integrator's and the
+state contract's "`[50, 200]`" read so, each kept as a *Was:*.
+
+*Applied per R-369:* the human gave no lowest value, and "raised" is already possible to 200, so the range is queued,
+RQ-555, with its options (a) any `T > 0` and (i) 200 stays applied meanwhile: `T_horizon ∈ (0, 200]`, default 50, a
+value at or below 0 refused with its reason. Nothing waits. The merged mock Run window's `T_RANGE` (TASK-M6-28,
+`crates/gui/src/windows/run.rs`) is TASK-M8-24's to change, with the field.
+
+R-575 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (statement, rulings, source, note) and
+REQ-GUI-102 (statement, verify, rulings, source, note).
