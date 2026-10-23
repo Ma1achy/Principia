@@ -24863,12 +24863,12 @@
     section: GPU
   verify:
     method: review checklist
-    detail: "§5 gives the trace's dispatch form, buffer layout (n(t) and r_i(t)), sampling at the sync boundaries and the nudge's form under the GPU's subnormal handling, and its chunking, and cites R-574's marks as the criterion; trace_chunked: at T = 200 the trace runs as more than one dispatch, each bounded and returning, and its n(t) and r_i(t) series are bitwise the same at two chunk sizes (control: a trace issued as one dispatch to T fails the dispatch count); REQ-TOOL-040, REQ-VAL-106 and REQ-VAL-196 use it; physics reviewer approved"
+    detail: "§5 gives the trace's dispatch form, buffer layout (n(t) and r_i(t)), sampling at the sync boundaries and the nudge's form under the GPU's subnormal handling, and its chunking, and cites R-574's marks as the criterion; trace_chunked: at T = 200 every dispatch's macro steps are at or under the per-dispatch bound that TASK-M4-09's chunk planner gives (REQ-PERF-081's calibration; the test sets a bound under T/2) and the dispatch count is ⌈steps / bound⌉, both taken from the shared planner, and the trace's n(t) and r_i(t) series are bitwise the same at two bounds (controls: a trace issued as one dispatch to T, and one split in a fixed two ways, fail); REQ-TOOL-040, REQ-VAL-106 and REQ-VAL-196 use it; physics reviewer approved"
   rulings:
   - R-72
   - R-574
   milestone: M4
-  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf."
+  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails."
 - id: REQ-TOOL-128
   area: TOOL
   kind: definition
@@ -31335,14 +31335,18 @@
     section: 1. The single mechanism
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: 3. Percentiles, not means — and the specific thresholds
+  - file: docs/design/principia_benchmark.md
+    section: 3. The suite
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 1.1 The fixed suite — comparability across devices
   verify:
     method: benchmark
-    detail: "cargo xtask bench precision-runs-frame, on the human's Mac (R-186), with its prin profile output in the PR: frame time p50/p95/p99/max and frac_frames_over_41.7ms while a pin's four runs are in flight on a chaotic IC, at T = 50 and at T = 200, equal the no-pin baseline within noise (REQ-SYS-060's form and thresholds; no new number); the f64 runs run on the inspector worker"
+    detail: "cargo xtask bench precision-runs-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no pin and once with a pin on a chaotic near-field IC whose four runs are re-issued each time they finish, so that four runs are in flight throughout the window, at T = 50 and at T = 200; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-pin baseline within noise (REQ-SYS-060's form; no new number); the f64 runs run on the inspector worker; the bench fails if no runs were in flight at the window's end"
   rulings:
   - R-186
   - R-574
   milestone: M8
-  note: "Perf review 5627960807 of PR #283, P2 (applied per R-369). Closed by TASK-M8-76."
+  note: "Perf review 5627960807 of PR #283, P2 (applied per R-369). Closed by TASK-M8-76. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield with a re-issued pin; \"form and thresholds\" reads \"form\" (REQ-SYS-060 states no threshold)."
 - id: REQ-PERF-107
   area: PERF
   statement: "While a Result job (R-572) runs, at f64 on the CPU pool or at f32 on the GPU, the live frame loop must keep its budget (REQ-SCHED-043 applied to this job: lower priority than the frame loop, pre-emptible, yielding)."
@@ -31355,17 +31359,21 @@
     section: GPU
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: 3. Percentiles, not means — and the specific thresholds
+  - file: docs/design/principia_benchmark.md
+    section: 3. The suite
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 1.1 The fixed suite — comparability across devices
   verify:
     method: benchmark
-    detail: "cargo xtask bench result-job-frame, on the human's Mac (R-186), with its prin profile output in the PR: frame time p50/p95/p99/max and frac_frames_over_41.7ms during motion while an f64 job and, separately, an f32 job run equal the no-job baseline within noise (REQ-SYS-060's form; no new number)"
+    detail: "cargo xtask bench result-job-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no job and once each while a Result job runs at f64 and at f32, the job being that scenario's view at T = 200, E and r_coll as the view has them, one copy per pixel, on a square grid whose side the bench doubles from 256 until the job's pilot estimate (results §3.1) exceeds the window; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-job baseline within noise (REQ-SYS-060's form; no new number); the bench fails if the job is not still running when the window ends"
   rulings:
   - R-186
   - R-572
   milestone: M8
-  note: "Perf review 5627960807 of PR #283, P4 (a); applied per R-369. Closed by TASK-M8-74."
+  note: "Perf review 5627960807 of PR #283, P4 (a); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield and a named job sized from its pilot to outlast the window, still running at its end."
 - id: REQ-PERF-108
   area: PERF
-  statement: "A Result job must bound its resources: the f64 pool leaves at least one core free and is configurable (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that return and carry state (REQ-PERF-010's mechanism), never one dispatch per row to T, its live states sized from (E+1) × sizeof (philosophy §7.2)."
+  statement: "A Result job must bound its resources: the f64 pool leaves at least one core free and is configurable (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that return and carry state (REQ-PERF-010's mechanism), never one dispatch per row to T, its live states sized from (E+1) × sizeof (philosophy §7.2); and it budgets its memory before allocating it, refusing a job that does not fit with its reason before it starts (telemetry §6.2a)."
   source:
   - file: docs/design/principia_results.md
     section: "3.2 Where it runs: the job"
@@ -31375,16 +31383,18 @@
     section: 6.3 Device loss, timeouts, driver resets
   - file: docs/read_first/principia_00_philosophy.md
     section: 7.2 Tiled prebake
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.2a Budgeting before allocating
   verify:
     method: unit test
-    detail: "result_job_resources: the f64 pool's size is the available cores less the configured reserve, at least one by default (control: a pool of every core fails); at T = 200 an f32 row runs as more than one dispatch and the payload is bitwise the same at two chunk sizes (control: one dispatch per row to T fails the dispatch count); the f32 live-state buffer's size is the rows in flight × nx × (E+1) × sizeof(SimState) (control: a buffer sized for nx·ny fails)"
+    detail: "result_job_resources: the f64 pool's size is the available cores less the configured reserve, at least one by default (control: a pool of every core fails); at T = 200, for an f32 row, every dispatch's macro steps are at or under the per-dispatch bound that TASK-M4-09's chunk planner gives (REQ-PERF-081's calibration; the test sets a bound under T/2) and the dispatch count is ⌈steps / bound⌉, both taken from the shared planner, and the payload is bitwise the same at two bounds (controls: one dispatch per row to T, and a fixed two-way split, fail); the f32 live-state buffer's size is the rows in flight × nx × (E+1) × sizeof(SimState) (control: a buffer sized for nx·ny fails); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (control: a job that allocates before budgeting fails)"
   rulings:
   - R-572
   milestone: M8
-  note: "Perf review 5627960807 of PR #283, P4 (b), (c); applied per R-369. Closed by TASK-M8-74."
+  note: "Perf review 5627960807 of PR #283, P4 (b), (c); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q1, Q2; applied per R-369): the f32-row check asserts the planner's bound and ⌈steps / bound⌉, a fixed two-way split failing; the refusal before allocating moves here from REQ-PERF-109, a unit test (my call: REQ-PERF-109 is a benchmark, run as its own process, and cannot carry a unit test)."
 - id: REQ-PERF-109
   area: PERF
-  statement: "A Result job must stream payload.prin row by row as rows finish, so its peak memory does not depend on nx·ny, and must budget its memory before allocating it, refusing a job that does not fit with its reason before it starts."
+  statement: "A Result job must stream payload.prin row by row as rows finish, so its peak memory does not depend on nx·ny (the budget before allocating is REQ-PERF-108's)."
   source:
   - file: docs/design/principia_results.md
     section: "3.2 Where it runs: the job"
@@ -31394,11 +31404,11 @@
     section: 6.2a Budgeting before allocating
   verify:
     method: benchmark
-    detail: "result_job_memory (in the form of REQ-TOOL-078): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (controls: a writer that holds the payload until the end grows with nx·ny and fails; a job that allocates before budgeting fails)"
+    detail: "cargo xtask bench result-job-memory, on the human's Mac (R-186), its own process, with its output in the PR (REQ-TOOL-078's export-memory form): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny) (control: a writer that holds the payload until the end grows with nx·ny and fails)"
   rulings:
   - R-572
   milestone: M8
-  note: "Perf review 5627960807 of PR #283, P4 (d); applied per R-369. Closed by TASK-M8-74."
+  note: "Perf review 5627960807 of PR #283, P4 (d); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q1; applied per R-369): the flat-memory check is a benchmark in its own process, since a reading inside cargo test shares the process with parallel tests; its refusal half moves to REQ-PERF-108. Was: statement \"A Result job must stream payload.prin row by row as rows finish, so its peak memory does not depend on nx·ny, and must budget its memory before allocating it, refusing a job that does not fit with its reason before it starts.\"; verify \"result_job_memory (in the form of REQ-TOOL-078): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (controls: a writer that holds the payload until the end grows with nx·ny and fails; a job that allocates before budgeting fails)\"."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

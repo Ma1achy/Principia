@@ -42,7 +42,7 @@ Of these: 155 calibration, 156 definition, 1505 obligation. Retired (kept for th
 
 ## Sections
 
-1463 sections in 54 files: 1195 yield at least one requirement; 268 yield none and are listed below with the reason.
+1463 sections in 54 files: 1196 yield at least one requirement; 267 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -51,7 +51,7 @@ Of these: 155 calibration, 156 definition, 1505 obligation. Retired (kept for th
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 46 |
-| planned (the plan PR) | 23 |
+| planned (the plan PR) | 22 |
 | rationale | 12 |
 | superseded (kept for the record) | 4 |
 
@@ -267,7 +267,6 @@ Of these: 155 calibration, 156 definition, 1505 obligation. Retired (kept for th
 | Principia: the benchmark | informative only | title and adoption note |
 | 1. What exists, and what this adds | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 2. A scenario is data | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 3. The suite | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 4. The sweep, and the three run modes | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 5. Running it | parent heading (obligations are in its subsections) | its subsections |
 | 5.1 From the GUI | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
