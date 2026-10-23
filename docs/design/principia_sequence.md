@@ -114,7 +114,11 @@ table is (R-484). The draft's "Camera" lane is **Navigate** here, since no contr
 
 **Segments are coloured by their class**, (a) time playback, (b) view animation or (c) recolour only, as TASK-M8-31's
 planner classifies them (Part 2, REQ-TOOL-074), each labelled with its frame count at the spec's fps. A segment whose
-chart or any link id changes shows a **cut mark** at its second keyframe.
+chart or any link id changes shows a **cut mark** at its second keyframe. **The frame count is the frames the segment
+owns** under export contract Part 3's frame grid (fix round 19 of PR #286, qa review 5634897299, Q2; applied per
+R-369, Part 3's rule that a shared frame belongs to the segment it starts): `f_{k+1} − f_k`, and one more for the last
+segment, which owns both its ends; so keyframes at 0, 0.56 s and 1 s at 10 fps (own frames 0, 6 and 10) label their
+segments 6 and 5, and the labels sum to the spec's frames from the first keyframe's to the last's.
 
 ### 3.4 Segments: easing per segment, and transitions
 
