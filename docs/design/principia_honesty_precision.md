@@ -152,11 +152,16 @@ runs run from the clicked trajectory's own IC, under the trajectory's own sim ke
 the current view's).
 - **An atlas pixel of the current view**: the f32 run is the survey kernel's one-pixel dispatch through the atlas's
   decode path, bitwise what coloured the pixel, and the trust line takes REQ-GUI-370's three forms at the current atlas
-  playhead `t_p`. A **kept orbit** counts as an atlas pixel only while the view it was kept from is unchanged: the same
-  sim key and the same chart view (`z₀`, the basis and the zoom level), bitwise. A stain or playhead edit leaves it
-  unchanged; a pan, zoom, slice, chart or sim-key edit changes it.
-- **Any other IC** (one edited in the Inspector, one built in Create & locate, possibly off the slice, or a kept orbit
-  once its view has moved): there is no decode path, so the f32 run is the same survey kernel's one-pixel dispatch
+  playhead `t_p`. An atlas pixel needs a live view: while the view source is `Result` (`principia_results.md` §3.4),
+  no pixel is an atlas pixel. A **kept orbit** counts as an atlas pixel only while the view it was kept from is
+  unchanged: the view source `Live`, the same sim key and the same chart view (`z₀`, the basis and the zoom level),
+  bitwise; a result opened over it, even one whose `SimConfig` is bitwise the same, changes it. A stain or playhead
+  edit leaves it unchanged; a pan, zoom, slice, chart or sim-key edit changes it (gui review 5627389542 of PR #283, R1;
+  applied per R-369).
+- **Any other IC** (one edited in the Inspector, one built in Create & locate, possibly off the slice, a kept orbit
+  once its view has moved, or a pixel clicked in a result view, whose IC is its grid cell's and whose runs are under
+  the result's own `SimConfig`: an f64 result's colour, and an f32 result's uniform grid with refinement off, are not
+  the atlas's decode path; R1): there is no decode path, so the f32 run is the same survey kernel's one-pixel dispatch
   from the IC rounded to f32 (Cartesian), the nudge following the rounding and the starting gap being the f32
   rounding. The trust line makes no atlas claim, never "The atlas colour here …"; its forms mirror the atlas forms one
   for one, "these runs" in place of "the atlas colour here" (gui review 5627280803 of PR #283, N1; applied per

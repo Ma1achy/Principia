@@ -92,7 +92,11 @@ A folder, `<name>__<build8>.principia-result/`:
 ### 3.4 Reopening: the result view
 
 *File › Open result…* gives a **result view**: a badge "Result · f64 · 1024² · T 50" in the figure's header strip
-(R-523) and a distinct frame. It draws from the payload and **integrates nothing**. Stain edits stay live and undoable
+(R-523) and a distinct frame. It draws from the payload and **integrates nothing** (the click inspector's four runs
+aside: a pixel clicked in a result view is not an atlas pixel, its runs are from its grid cell's IC under the result's
+own `SimConfig`, and its trust line takes the "Not an atlas pixel:" forms, `principia_honesty_precision.md` §3.4; an
+orbit kept in a live view stops counting as an atlas pixel once a result is opened; gui review 5627389542 of PR #283,
+R1, applied per R-369). Stain edits stay live and undoable
 (R-69); sim-key edits are disabled, with the reason; *Explore from here* leaves for a live view with the same
 `SimConfig`. Zoom shows square pixels, one per grid cell, and the scrubber snaps to the stored times. A live view has
 no such badge.

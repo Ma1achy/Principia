@@ -23919,6 +23919,13 @@ The design's "Decided" section, its first three items, verbatim:
   (TASK-M8-76's goal, §G8's bullet; N4).
 - §G8's quote of this PR's own fix-round-1 wording is dropped; it never reached `main` (N5).
 
+*Fix round 4 of PR #283 (gui review 5627389542, R1; applied per R-369, the review's first option):* while the view
+source is `Result` (R-572), a clicked pixel is not an atlas pixel: its trust line takes the "Not an atlas pixel:"
+forms, its runs from its grid cell's IC under the result's own `SimConfig` (an f64 result's colour and an f32 result's
+refinement-off grid are not the atlas's decode path). "The view it was kept from is unchanged" also needs the view
+source `Live`; a result opened over a kept orbit, even with a bitwise-equal `SimConfig`, changes it (honesty §3.4,
+render_gui_spec §G8, `principia_results.md` §3.4, REQ-GUI-370, TASK-M8-76).
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
