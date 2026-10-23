@@ -6,7 +6,8 @@
 //! disagreement. The colour-space maps are [`crate::colour::space`]'s, the one Rust source of dd_colouring §3.1's
 //! transforms, in f64. The data the shaders embed, the published LUT stops (R-122) and the proposed hatch
 //! (REQ-COL-055), is read from the ledger that generates them; the hand-written layer's constants, the "not yet" grey
-//! and its stipple (REQ-COL-053, REQ-COL-064), are written here again, and the tests compare them. Colours are linear
+//! and its stipple (REQ-COL-053, REQ-COL-064), the NaN / Inf style (REQ-COL-110) and the presentation views' invalid
+//! colour (R-467), are written here again, and the tests compare them. Colours are linear
 //! RGB unless a name says sRGB.
 
 use ledger::constants::{HUE_WHEEL_C, HUE_WHEEL_L};
@@ -194,6 +195,55 @@ pub fn debug_not_yet(frag_xy: [f64; 2]) -> Rgb {
     } else {
         not_yet()
     }
+}
+
+/// The NaN / Inf style's two colours, as 8-bit sRGB (REQ-COL-110; R-467 D6, R-505): indigo `#6000F4`, OKLab lightness
+/// 0.486, drawn where `⌊x⌋ / 4` and `⌊y⌋ / 4` have one parity, and dark green `#004000`, 0.322, where they differ.
+/// Proposed, R-71, by TASK-M2-34, for the M2 gate (R-504): each the 8-bit colour near its seed farthest in OKLab from
+/// every palette entry REQ-COL-055 measures, the hatch's and the stipple's colours and `#FF00FF`, indigo 0.117 from its
+/// nearest and green 0.109, and each farther than τ = 0.101 from `#FF00FF` under every simulation; the measurement is
+/// `render/tests/debug_view_styles.rs`'s. `present.wgsl`'s `DBG_NAN_INF_INDIGO` and `DBG_NAN_INF_GREEN` are their
+/// linear values.
+pub const NAN_INF_SRGB8: [[u8; 3]; 2] = [[0x60, 0x00, 0xf4], [0x00, 0x40, 0x00]];
+
+/// The NaN / Inf style's square, in pixels (REQ-COL-110, proposed): a checkerboard of `NAN_INF_CELL` ×
+/// `NAN_INF_CELL` squares.
+pub const NAN_INF_CELL: i64 = 4;
+
+/// Which of the NaN / Inf style's two colours `debug_nan_inf` draws at the pixel `frag_xy`: 0, indigo, where
+/// `⌊x⌋ / NAN_INF_CELL` and `⌊y⌋ / NAN_INF_CELL` have one parity, 1, green, where they differ: the low bits'
+/// exclusive or, as `present.wgsl` takes it.
+pub fn nan_inf_square(frag_xy: [f64; 2]) -> usize {
+    let [x, y] = frag_xy.map(|c| (c.floor() as i64).div_euclid(NAN_INF_CELL));
+    ((x ^ y) & 1) as usize
+}
+
+/// `debug_nan_inf(frag_xy)`: the debug view's style for a non-finite sample (R-467 D6; REQ-COL-110), the
+/// checkerboard's colour at the pixel.
+pub fn debug_nan_inf(frag_xy: [f64; 2]) -> Rgb {
+    srgb8(NAN_INF_SRGB8[nan_inf_square(frag_xy)])
+}
+
+/// The presentation views' invalid colour, as 8-bit sRGB (R-467 clause 2, D4; REQ-COL-108): bounded / nothing yet's
+/// black `#141418` (colour_composition §1.4), drawn for a `sim_failed` sample, a reserved `state` code, a non-finite
+/// value and a ramp's or compaction's invalid value in place of the hatch, unless the node overrides its invalid colour.
+/// `present.wgsl`'s `PRESENT_INVALID` is its linear value.
+pub const PRESENT_INVALID_SRGB8: [u8; 3] = [0x14, 0x14, 0x18];
+
+/// `PRESENT_INVALID`: [`PRESENT_INVALID_SRGB8`], decoded to linear.
+pub fn present_invalid() -> Rgb {
+    srgb8(PRESENT_INVALID_SRGB8)
+}
+
+/// The canvas background's default, as 8-bit sRGB (R-467 D2; REQ-COL-108): `#0A0A0A`, the colour the GUI clears its
+/// window to, `gui::app::clear_colour`, egui 0.36's dark theme's `extreme_bg_color`, `Color32::from_gray(10)`. The
+/// render's background is a uniform its caller sets (`ledger::gen::prelude::uniform_words_with`); this is the value a
+/// caller that sets none draws, and the one the golden harness records (`validation::golden_scene`).
+pub const CANVAS_BACKGROUND_SRGB8: [u8; 3] = [0x0a, 0x0a, 0x0a];
+
+/// [`CANVAS_BACKGROUND_SRGB8`], decoded to linear, as the f32 the uniform holds.
+pub fn canvas_background() -> [f32; 3] {
+    srgb8(CANVAS_BACKGROUND_SRGB8).map(|c| c as f32)
 }
 
 /// The canonical quiet NaN's bits (lowering Part 3a), the absence sentinel.

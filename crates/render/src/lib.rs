@@ -30,6 +30,12 @@
 //! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
 //! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
 //!
+//! The presentation views and View › Debug view (TASK-M2-34; R-467, R-511): a presentation view draws no hatch, a
+//! pixel that is not a system and a `decode_failed` sample the canvas background, the uniform its caller sets, and
+//! every other failure and non-finite value `#141418` ([`present::present_invalid`]); the debug view, a baked variant
+//! of the assembler's ([`assemble::View`]), draws the hatch, `debug_invalid` and the NaN / Inf style over the stain and
+//! counts each, its CPU twin [`debug_view`].
+//!
 //! The display stage (colour_composition §4.3), outside the pipeline: the colour-vision simulation pass and its CPU
 //! mirror ([`display::cvd`]; dd_colouring §3.8; TASK-M7-20).
 //!
@@ -43,6 +49,7 @@ pub mod colour;
 pub mod compositor;
 pub mod coords;
 pub mod debug_bake;
+pub mod debug_view;
 pub mod display;
 pub mod embed;
 pub mod export;

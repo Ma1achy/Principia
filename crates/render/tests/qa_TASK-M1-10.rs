@@ -2,9 +2,11 @@
 //! - REQ-COL-002: the outcome field's canonical default palette is colour_composition §1.4's nine classes, read from
 //!   `state` plus the `detail` union alone. Amended by qa for TASK-M2-32, as R-444 to R-446 force: there is no
 //!   "degenerate" or "collision at start" class; a collision at `t_end_step == 0` draws its pair's or the triple
-//!   collision's colour (R-445); running, sim_failed, decode_failed and the reserved codes draw bounded / nothing yet's
-//!   `#141418`, not the "not yet" style or the invalid pattern (R-446); the triple outcomes are `#F29620` and `#611597`
-//!   (R-445); editing any one swatch changes only its class (`qa_col002_*`).
+//!   collision's colour (R-445); running, sim_failed and the reserved codes draw bounded / nothing yet's `#141418`, not
+//!   the "not yet" style or the invalid pattern (R-446); amended by qa for TASK-M2-34, as R-511 forces: decode_failed
+//!   of every detail draws the canvas background, the harness's recorded uniform, as a pixel that is not a system, and
+//!   no swatch edit changes it; the triple outcomes are `#F29620` and `#611597` (R-445); editing any one swatch changes
+//!   only its class (`qa_col002_*`).
 //! - REQ-COL-004: the `detail` legend and palette segment switch on `state` (dd_colouring §2, §5 test 8's legend half;
 //!   R-22's pair ids, named as a person reads them since R-449: "escape body 1/2/3", "collision 2–3/1–3/1–2", never
 //!   "body 0" or a pair by its id) (`qa_col004_*`).
@@ -93,11 +95,18 @@ fn is_not_yet_style(seen: &[[u8; 3]]) -> bool {
         && seen.contains(&dot)
 }
 
-/// What a sample of the outcome palette must show: since R-446 every sample draws a swatch, the occupant's param of
-/// that name, 8-bit sRGB, flat (no "not yet" style or invalid pattern in the outcome view).
+/// What a sample of the outcome palette must show: a swatch, the occupant's param of that name, 8-bit sRGB, flat (no
+/// "not yet" style or invalid pattern in the outcome view, R-446); or, for `decode_failed` since R-511, the canvas
+/// background, the harness's recorded value (`golden_scene::BACKGROUND`), no param's (amended by qa for TASK-M2-34).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Want {
     Swatch(&'static str, u32),
+    Background,
+}
+
+/// The canvas background the harness records, 8-bit sRGB (R-467 D2, R-504).
+fn background8() -> [u8; 3] {
+    validation::golden_scene::BACKGROUND
 }
 
 /// QA's outcome samples: `(state, detail, t_end_step, want)`, 18 of them, one tile each. Every class appears, several
@@ -136,8 +145,9 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
     (BOUNDED, 3, 1000, Want::Swatch("bounded", BOUNDED_BLACK)),
     // A reserved code is no physical outcome: bounded / nothing yet (R-444, R-446).
     (6, 0, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
-    // `decode_failed`, whatever its failure category, is bounded / nothing yet (R-446).
-    (DECODE_FAILED, 0, 0, Want::Swatch("bounded", BOUNDED_BLACK)),
+    // `decode_failed`, whatever its failure category, draws the canvas background (R-511; it was bounded / nothing yet
+    // under R-446).
+    (DECODE_FAILED, 0, 0, Want::Background),
     (7, 1, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
     (
         COLLISION,
@@ -155,7 +165,7 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
     (RUNNING, 2, 0, Want::Swatch("bounded", BOUNDED_BLACK)),
     (RUNNING, 0, 500, Want::Swatch("bounded", BOUNDED_BLACK)),
     (SIM_FAILED, 1, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
-    (DECODE_FAILED, 3, 7, Want::Swatch("bounded", BOUNDED_BLACK)),
+    (DECODE_FAILED, 3, 7, Want::Background),
     // A triple collision at step 0 is a triple collision (R-445).
     (
         COLLISION,
@@ -281,9 +291,19 @@ fn check_outcome(s: &Scene, image: &[[f32; 4]]) {
         for ((x, y), p) in tile(s, image, i) {
             assert_eq!(p[3], 1.0, "sample {i} pixel ({x}, {y}): alpha {}", p[3]);
             let got = [p[0], p[1], p[2]].map(encode8);
-            let Want::Swatch(_, h) = want;
+            let w8 = match want {
+                Want::Swatch(_, h) => rgb8(h),
+                Want::Background => {
+                    assert_ne!(
+                        background8(),
+                        rgb8(BOUNDED_BLACK),
+                        "the background is #141418"
+                    );
+                    background8()
+                }
+            };
             assert!(
-                got == rgb8(h),
+                got == w8,
                 "sample {i} (state {state}, detail {detail}, t_end_step {t}) pixel ({x}, {y}) is {got:02X?}, not {want:?}"
             );
         }
@@ -355,6 +375,46 @@ fn qa_col002_editing_each_swatch_changes_only_its_class() {
         let e = outcome_scene(Some((param, colour)));
         check_edit(&s, &base, &render(&h, &e), param, colour);
     }
+}
+
+/// R-511's control: an occupant that draws `decode_failed` bounded's `#141418`, as before R-511, fails (added by qa
+/// for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_col002_decode_failed_black {
+    use super::*;
+    negative_control!(
+        qa_col002_each_class_renders_its_section_1_4_colour,
+        "an occupant that draws decode_failed in bounded's #141418, as before R-511, fails",
+        expected = "sample 9 (state 5, detail 0, t_end_step 0)",
+        {
+            let h = gpu();
+            let s = outcome_scene(None);
+            let image = render_altered(&h, &s, "ctx.sample.state == STATE_DECODE_FAILED", "false");
+            check_outcome(&s, &image);
+        }
+    );
+}
+
+/// R-511's control on the edit: `decode_failed` that follows bounded's edit, as a sample of its class would, fails
+/// (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_col002_decode_failed_follows_bounded {
+    use super::*;
+    negative_control!(
+        qa_col002_editing_each_swatch_changes_only_its_class,
+        "decode_failed drawn bounded's swatch changes with bounded's edit",
+        expected = "editing `bounded`: sample 9",
+        {
+            let h = gpu();
+            let s = outcome_scene(None);
+            let from = "ctx.sample.state == STATE_DECODE_FAILED";
+            let base = render_altered(&h, &s, from, "false");
+            let colour = edit_colour(6);
+            let e = outcome_scene(Some(("bounded", colour)));
+            let edited = render_altered(&h, &e, from, "false");
+            check_edit(&s, &base, &edited, "bounded", colour);
+        }
+    );
 }
 
 negative_control!(

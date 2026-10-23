@@ -4,8 +4,8 @@
 //! (`validation::golden_scene`, `m1-outcome` and `debug-views`):
 //! - REQ-COL-002: one sample per class renders exactly §1.4's sRGB values, the nine classes physical outcomes only; a
 //!   collision and a triple collision at `t_end_step == 0` their own classes' colours (R-445); running, `sim_failed`
-//!   and `decode_failed` of each `detail` and the reserved codes `#141418` (R-446); a forbidden-region sample the hatch
-//!   (REQ-COL-101); the swatches are the occupant's params, both sets', and editing one changes only its class
+//!   of each `detail` and the reserved codes `#141418` (R-446); `decode_failed` of each `detail` and a forbidden-region
+//!   sample the canvas background the harness records (R-511, R-467; REQ-COL-101, REQ-COL-108); the swatches are the occupant's params, both sets', and editing one changes only its class
 //!   (`outcome_palette_*`).
 //! - REQ-COL-004: the `detail` legend switches per state, and the view draws each state's segment from it
 //!   (`detail_legend_per_state`).
@@ -124,45 +124,49 @@ fn encode8(c: f32) -> u8 {
 enum Want {
     /// A swatch: every pixel exactly the f32 nearest the sRGB decode of this 8-bit code, so it encodes back to it.
     Srgb(u32),
-    /// The hatch, `debug_invalid`: a sample in a forbidden chart region (R-446).
-    Hatch,
+    /// The canvas background the harness records, exactly: a `decode_failed` sample (R-511) or one in a forbidden
+    /// chart region (R-467).
+    Background,
 }
 
 /// The outcome scene's samples' wants, in [`OUTCOME_SAMPLES`]' order, from §1.4's table: bounded, the collisions per
 /// pair, the triple collision, the escapes per body, the triple ejection; the collision of pair 2 at t = 0 in collision
-/// 1–2's red and the triple collision at t = 0 in its orange (R-445); running, `sim_failed` and `decode_failed` of each
-/// `detail` and the reserved codes in `#141418` (R-446); the forbidden sample in the hatch.
+/// 1–2's red and the triple collision at t = 0 in its orange (R-445); running, `sim_failed` of each `detail` and the
+/// reserved codes in `#141418` (R-446); `decode_failed` of each `detail` and the forbidden sample the background
+/// (R-511, R-467).
 fn outcome_wants() -> Vec<Want> {
     let c = |k: usize| Want::Srgb(SECTION_1_4[k].1);
     let mut out: Vec<Want> = (0..9).map(c).collect();
     out.extend([c(1), c(4)]);
-    out.extend([c(0); 11]);
+    out.extend([c(0); 5]);
+    out.extend([Want::Background; 4]);
+    out.extend([c(0); 2]);
     assert_eq!(
         out.len(),
         OUTCOME_FORBIDDEN as usize,
         "the forbidden sample is last"
     );
-    out.push(Want::Hatch);
+    out.push(Want::Background);
     assert_eq!(out.len(), OUTCOME_SAMPLES.len(), "a want per sample");
     out
 }
 
 /// Checks that every sample of the outcome scene `s`'s `image` shows `wants`' colour, and alpha 1: a swatch exactly
-/// (its f32 bits, the declared default's, and its 8-bit sRGB code), the hatch within [`TOL`].
+/// (its f32 bits, the declared default's, and its 8-bit sRGB code), the background exactly, its f32 bits the recorded
+/// value's.
 fn check_outcome(s: &Scene, image: &[[f32; 4]], wants: &[Want]) {
     assert_eq!(wants.len(), OUTCOME_SAMPLES.len());
     for (i, want) in wants.iter().enumerate() {
         let i = i as u32;
         for ((x, y), got) in tile(s, image, i) {
             assert_eq!(got[3], 1.0, "sample {i} pixel ({x}, {y}): alpha {}", got[3]);
-            let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
             let ok = match *want {
                 Want::Srgb(h) => {
                     let exact = present::srgb8(hex(h)).map(|c| c as f32);
                     [got[0], got[1], got[2]] == exact
                         && [got[0], got[1], got[2]].map(encode8) == hex(h)
                 }
-                Want::Hatch => near(got, present::debug_invalid(frag)),
+                Want::Background => [got[0], got[1], got[2]] == present::canvas_background(),
             };
             assert!(
                 ok,
@@ -519,7 +523,8 @@ fn check_view_is_legend(s: &Scene, image: &[[f32; 4]]) {
 }
 
 /// The outcome legend's segment of each state code, by swatch param: keyed by state, as the detail legend is. Every
-/// state but escape and collision is the bounded / nothing yet class alone (R-446), the reserved codes 6 and 7 too.
+/// state but escape, collision and `decode_failed` is the bounded / nothing yet class alone (R-446), the reserved codes
+/// 6 and 7 too; `decode_failed` has none, its samples drawn blank, in no key (R-511 Z1).
 fn check_outcome_segments(segment: impl Fn(u32) -> Vec<usize>) {
     let want: [&[&str]; 8] = [
         &[
@@ -537,7 +542,7 @@ fn check_outcome_segments(segment: impl Fn(u32) -> Vec<usize>) {
         ],
         &["bounded"],
         &["bounded"],
-        &["bounded"],
+        &[],
         &["bounded"],
         &["bounded"],
     ];

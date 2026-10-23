@@ -1,13 +1,15 @@
-//! The outcome view as R-444 to R-448 leave it (TASK-M2-32): physical outcomes only, failures in black, forbidden chart
-//! regions hatched from the chart, and the OKLab-uniform variant.
-//! - REQ-COL-101 (`outcome_view_failures_*`): running, `sim_failed` of each `detail`, `decode_failed` of each `detail`, a
+//! The outcome view as R-444 to R-448 leave it (TASK-M2-32), with R-467 and R-511 (TASK-M2-34): physical outcomes
+//! only, failures in black, a pixel that is not a system and a `decode_failed` sample blank, and the OKLab-uniform
+//! variant.
+//! - REQ-COL-101 (`outcome_view_failures_*`), as REQ-COL-108 changes it: running, `sim_failed` of each `detail`, a
 //!   reserved `state` code and bounded draw exactly bounded / nothing yet's `#141418`, on the CPU twin
 //!   (`render::colour::outcome::shown`) and on the GPU; on the latent chart, whose `validate` is `Valid` everywhere, a
 //!   sample carrying each decoder tag (`ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, `M01_TINY`) and a non-finite decode,
-//!   each shown by the decoder at its chart point, draws `#141418` with REQ-COL-102's field clear; a sample the field
-//!   marks forbidden draws `debug_invalid(frag_xy)`, pixel-identical to a render of the hatch alone, whatever its
-//!   payload; a `decode_failed` sample the chart does not hatch draws `#141418`; in greyscale and hue mode running and
-//!   failures sit at rank 0 and a forbidden sample keeps the hatch. REQ-COL-102's CPU fill
+//!   each shown by the decoder at its chart point, keeps REQ-COL-102's field clear and draws the canvas background, as
+//!   every `decode_failed` sample does (R-511); a sample the field marks forbidden draws exactly the background uniform,
+//!   whatever its payload (R-467); in greyscale and hue mode running and failures sit at rank 0 and a forbidden or
+//!   `decode_failed` sample draws the background. The forbidden rows read the background, a uniform this file sets to
+//!   a value of its own ([`BG`]), so a pixel equal to it is the uniform's. REQ-COL-102's CPU fill
 //!   (`engine::chart_class`) is checked at the unit square's edges, outside it, where `Φ` fails to evaluate and where
 //!   `validate` rejects.
 //! - REQ-COL-103 (`outcome_oklab_variant_*`): the variant renders exactly its eight swatches and `#141418`; each
@@ -29,11 +31,11 @@ use render::colour::outcome::{self, Shown, OKLAB_UNIFORM, SWATCHES};
 use render::present::{self, Rgb};
 use render::raster::Grid;
 use validation::chart::{self, Chart, ChartOut, Float, Latent, ValidationResult};
-use validation::golden_scene::{render_stain, STATE_DECODE_FAILED, STATE_SIM_FAILED};
+use validation::chart_class;
+use validation::golden_scene::{render_stain_with, Inputs, STATE_DECODE_FAILED, STATE_SIM_FAILED};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::synthetic::Synthetic;
-use validation::{chart_class, energy_norm, Defaults, Degenerate, StickBreakingLinks};
 
 #[path = "support/outcome_modes.rs"]
 mod modes;
@@ -51,75 +53,21 @@ const RUNNING: u32 = 3;
 /// Bounded / nothing yet's swatch, `#141418` (R-446).
 const BLACK: [u8; 3] = [0x14, 0x14, 0x18];
 
+/// The canvas background this file's renders take, linear RGB: a value of its own, no palette's, exact in f32, so a
+/// pixel equal to it is the uniform's (R-467 D2; REQ-COL-108).
+const BG: [f32; 3] = [0.25, 0.125, 0.0625];
+
 /// The largest per-channel difference, linear RGB, allowed between a computed colour and its CPU value.
 const TOL: f64 = 1e-5;
 
 // ── The chart points REQ-COL-102's field is classified from ──────────────────────────────────────────────────────
 
-/// A decoder outcome the outcome view must not hatch (R-446): the decoder raises it after `Φ`, at a chart point the
-/// chart accepts.
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum Case {
-    /// `DEGENERATE(ENERGY_UNSCALABLE)`: the rest start under an energy target above its potential.
-    Unscalable,
-    /// `DEGENERATE(ENERGY_INFEASIBLE)`: an energy target below the potential.
-    Infeasible,
-    /// `DEGENERATE(M01_TINY)`: the inner pair's mass below the mass block's ε.
-    M01Tiny,
-    /// A non-finite decoder output: `η_E` toward the largest finite target overflows the descriptor's `K_0`.
-    NonFinite,
-}
-
-const CASES: [Case; 4] = [
-    Case::Unscalable,
-    Case::Infeasible,
-    Case::M01Tiny,
-    Case::NonFinite,
-];
-
-/// The latent chart pinned at `z0`, its plane's directions zero, so every `(u, v)` maps to `z0`.
-fn pinned(z0: [f64; 8]) -> Latent<f64> {
-    Latent {
-        z0,
-        q1: [0.0; 8],
-        q2: [0.0; 8],
-    }
-}
-
-/// `case`'s latent chart, which the decoder reaches `case` on at `(½, ½)`.
-fn case_chart(case: Case) -> Latent<f64> {
-    let mut z0 = [0.0; 8];
-    match case {
-        Case::Unscalable | Case::Infeasible => {}
-        Case::M01Tiny => {
-            z0[6] = 30.0;
-            z0[7] = 30.0;
-        }
-        Case::NonFinite => z0[2] = -30.0,
-    }
-    pinned(z0)
-}
-
-/// Whether the shared decoder raises `case` at `chart`'s `(½, ½)`: the tag in `D ∘ Φ`'s `degenerate`, or, for the
-/// non-finite decode, a non-finite descriptor under no tag.
-fn raised(case: Case, chart: &Latent<f64>) -> bool {
-    let energy = |e: f64| energy_norm::decode_chart::<Defaults, f64, _>(chart, 0.5, 0.5, Some(e)).0;
-    match case {
-        Case::Unscalable => energy(0.0).degenerate == Some(Degenerate::EnergyUnscalable),
-        Case::Infeasible => energy(-1.0).degenerate == Some(Degenerate::EnergyInfeasible),
-        Case::M01Tiny => {
-            chart::decode::<StickBreakingLinks, f64, _>(chart, 0.5, 0.5).degenerate
-                == Some(Degenerate::M01Tiny)
-        }
-        Case::NonFinite => {
-            let d = energy(f64::MAX);
-            d.degenerate.is_none() && !d.descriptor.K_0.is_finite()
-        }
-    }
-}
+#[path = "support/decoder_cases.rs"]
+mod decoder_cases;
+use decoder_cases::{case_chart, pinned, raised, Case, CASES};
 
 /// A test chart that rejects past `from` along `u`, as `result`, and is the latent chart pinned at `z0` otherwise: the
-/// layer-2 or layer-3 failure REQ-COL-102 hatches.
+/// layer-2 or layer-3 failure REQ-COL-102 marks forbidden.
 struct Walled {
     latent: Latent<f64>,
     from: f64,
@@ -188,8 +136,8 @@ fn classified(at: At) -> bool {
 enum Want {
     /// Bounded / nothing yet's `#141418`, in event mode; rank 0 in the others.
     Black,
-    /// The hatch, `debug_invalid(frag_xy)`.
-    Hatch,
+    /// The canvas background, the uniform [`BG`], exactly (R-467, R-511).
+    Background,
 }
 
 /// A sample of the failures scene: its name, payload `(state, detail, t_end_step)`, where it sits and its want.
@@ -205,7 +153,8 @@ struct Row {
 /// non-finite derived quantity, reserved), `decode_failed` of each `detail` and the reserved codes 6 and 7, each on a
 /// plain chart point; each decoder case under each `decode_failed` detail at its own chart point (REQ-DEC-038 gives no
 /// map from tag to detail, so every detail is drawn); then samples in a forbidden region, the walled chart's and the
-/// unevaluated latent chart's, with a physical, a running, a failed and a reserved payload each.
+/// unevaluated latent chart's, with a physical, a running, a failed and a reserved payload each. Every `decode_failed`
+/// sample and every forbidden one wants the background (R-467, R-511).
 fn rows() -> Vec<Row> {
     let row = |name, payload, at, want| Row {
         name,
@@ -230,7 +179,7 @@ fn rows() -> Vec<Row> {
             "decode_failed",
             (STATE_DECODE_FAILED, d, 0),
             At::Plain,
-            Want::Black,
+            Want::Background,
         ));
     }
     out.push(row("reserved 6", (6, 0, 40), At::Plain, Want::Black));
@@ -241,30 +190,40 @@ fn rows() -> Vec<Row> {
                 "decoder case",
                 (STATE_DECODE_FAILED, d, 0),
                 At::Decoder(case),
-                Want::Black,
+                Want::Background,
             ));
         }
     }
     for at in [At::Rejected, At::Unevaluated] {
         out.extend([
-            row("forbidden bounded", (BOUNDED, 0, 1000), at, Want::Hatch),
-            row("forbidden collision", (COLLISION, 2, 40), at, Want::Hatch),
-            row("forbidden escape", (ESCAPE, 1, 120), at, Want::Hatch),
-            row("forbidden running", (RUNNING, 0, 20), at, Want::Hatch),
+            row(
+                "forbidden bounded",
+                (BOUNDED, 0, 1000),
+                at,
+                Want::Background,
+            ),
+            row(
+                "forbidden collision",
+                (COLLISION, 2, 40),
+                at,
+                Want::Background,
+            ),
+            row("forbidden escape", (ESCAPE, 1, 120), at, Want::Background),
+            row("forbidden running", (RUNNING, 0, 20), at, Want::Background),
             row(
                 "forbidden sim_failed",
                 (STATE_SIM_FAILED, 0, 40),
                 at,
-                Want::Hatch,
+                Want::Background,
             ),
-            row("forbidden reserved", (6, 0, 40), at, Want::Hatch),
+            row("forbidden reserved", (6, 0, 40), at, Want::Background),
         ]);
         for d in 0..4 {
             out.push(row(
                 "forbidden decode_failed",
                 (STATE_DECODE_FAILED, d, 0),
                 at,
-                Want::Hatch,
+                Want::Background,
             ));
         }
     }
@@ -319,7 +278,7 @@ fn gpu() -> GpuHarness {
     GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// `set` rendered in `mode`, `swatch_set` at `set_param` where given.
+/// `set` rendered in `mode`, `swatch_set` at `set_param` where given, the canvas background [`BG`].
 fn render(
     h: &GpuHarness,
     set: &Synthetic,
@@ -327,15 +286,20 @@ fn render(
     mode: &Mode,
     param: &dyn Fn(&str) -> Option<Vec<f64>>,
 ) -> Vec<[f32; 4]> {
-    render_stain(
+    render_stain_with(
         h.device(),
         h.queue(),
         &stain(mode),
         set,
         &context(n),
         &|_, name| param(name),
+        Inputs {
+            background: BG,
+            ..Inputs::default()
+        },
     )
     .unwrap_or_else(|e| panic!("{}: {e}", mode.name))
+    .pixels
 }
 
 fn defaults(_: &str) -> Option<Vec<f64>> {
@@ -357,10 +321,6 @@ fn altered(from: &str, to: &str) -> String {
     outcome::WGSL.replace(from, to)
 }
 
-/// A colour occupant drawing the hatch on every pixel: the GPU's own `debug_invalid`, the forbidden rows' reference.
-const HATCH_PROBE: &str =
-    "fn colour(ctx: Ctx) -> vec3<f32> { return debug_invalid(ctx.frag_xy); }\n";
-
 /// Column `x`'s pixels in an image of `n` tiles, with their positions.
 fn tile(image: &[[f32; 4]], n: usize, x: u32) -> Vec<((u32, u32), [f32; 4])> {
     let width = n as u32 * TILE;
@@ -378,24 +338,14 @@ fn black() -> [f32; 3] {
 }
 
 /// Checks the failures scene's event-mode render `image` against the want of each row `which` picks: `#141418`
-/// exactly, or the hatch pixel-identical to `probe`, the hatch rendered alone, and within [`TOL`] of the CPU's
-/// `debug_invalid`; alpha 1.
-fn check_event(rows: &[Row], which: Which, image: &[[f32; 4]], probe: &[[f32; 4]]) {
+/// exactly, or the background uniform [`BG`] exactly; alpha 1.
+fn check_event(rows: &[Row], which: Which, image: &[[f32; 4]]) {
     for (x, r) in rows.iter().enumerate().filter(|(_, r)| which(r)) {
-        for (((px, py), got), (_, hatch)) in tile(image, rows.len(), x as u32)
-            .into_iter()
-            .zip(tile(probe, rows.len(), x as u32))
-        {
-            let frag = [f64::from(px) + 0.5, f64::from(py) + 0.5];
+        for ((px, py), got) in tile(image, rows.len(), x as u32) {
             let ok = got[3] == 1.0
                 && match r.want {
                     Want::Black => got[..3] == black(),
-                    Want::Hatch => {
-                        got == hatch
-                            && (0..3).all(|c| {
-                                (f64::from(got[c]) - present::debug_invalid(frag)[c]).abs() <= TOL
-                            })
-                    }
+                    Want::Background => got[..3] == BG,
                 };
             assert!(
                 ok,
@@ -431,22 +381,16 @@ fn check_lane(rows: &[Row], lane: &dyn Fn(&Row) -> bool) {
 type Which = fn(&Row) -> bool;
 
 /// Renders the failures scene in event mode, the outcome occupant `colour`, the field from `lane`, and checks the rows
-/// `which` picks.
+/// `which` picks. `lane` is first checked against REQ-COL-102's field: since R-511 a presentation render draws a
+/// forbidden and a `decode_failed` sample alike, so a field set from the decoder's tags shows only where it is set.
 fn failures_event(which: Which, colour: Option<String>, lane: &dyn Fn(&Row) -> bool) {
     let h = gpu();
     let rows = rows();
-    check_lane(&rows, &validity_lane);
+    check_lane(&rows, lane);
     let set = payload(&rows, lane);
     let mode = colour.map_or_else(event, event_with);
     let image = render(&h, &set, rows.len(), &mode, &defaults);
-    let probe = render(
-        &h,
-        &set,
-        rows.len(),
-        &event_with(HATCH_PROBE.to_owned()),
-        &defaults,
-    );
-    check_event(&rows, which, &image, &probe);
+    check_event(&rows, which, &image);
 }
 
 fn every(_: &Row) -> bool {
@@ -458,23 +402,41 @@ fn state_is(r: &Row, state: u32) -> bool {
 }
 
 #[test]
-fn outcome_view_failures_render_black_or_the_hatch() {
+fn outcome_view_failures_render_black_or_the_background() {
     failures_event(every, None, &validity_lane);
 }
 
 negative_control!(
-    outcome_view_failures_render_black_or_the_hatch,
-    "an occupant deciding the hatch from decode_failed's detail fails",
-    expected = "decode_failed (5, 1, 0) at Plain",
+    outcome_view_failures_render_black_or_the_background,
+    "an occupant drawing blank from the payload alone, not the chart, fails",
+    expected = "forbidden bounded (1, 0, 1000) at Rejected",
     failures_event(
         every,
         Some(altered(
-            "if (ctx.validity.forbidden) {",
-            "if (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u) {",
+            "if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {",
+            "if (ctx.sample.state == STATE_DECODE_FAILED) {",
         )),
         &validity_lane,
     )
 );
+
+#[cfg(feature = "controls")]
+mod outcome_view_failures_render_black_or_the_background_hatch {
+    use super::*;
+    negative_control!(
+        outcome_view_failures_render_black_or_the_background,
+        "an occupant still drawing the forbidden region with the hatch fails (R-467)",
+        expected = "forbidden bounded (1, 0, 1000) at Rejected",
+        failures_event(
+            |r| matches!(r.at, At::Rejected | At::Unevaluated),
+            Some(altered(
+                "return canvas_background();",
+                "return debug_invalid(ctx.frag_xy);",
+            )),
+            &validity_lane,
+        )
+    );
+}
 
 #[test]
 fn outcome_view_failures_running_not_stippled() {
@@ -517,20 +479,19 @@ negative_control!(
 );
 
 #[test]
-fn outcome_view_failures_decode_failed_not_white() {
+fn outcome_view_failures_decode_failed_blank() {
     failures_event(|r| state_is(r, STATE_DECODE_FAILED), None, &validity_lane);
 }
 
 negative_control!(
-    outcome_view_failures_decode_failed_not_white,
-    "an occupant drawing decode_failed white, as \"degenerate\" was, fails",
+    outcome_view_failures_decode_failed_blank,
+    "an occupant drawing decode_failed black, as R-446 had it before R-511, fails",
     expected = "decode_failed (5, 0, 0) at Plain",
     failures_event(
         |r| state_is(r, STATE_DECODE_FAILED),
         Some(altered(
-            "    return select(uniforms.bounded, uniforms.oklab_bounded, v);",
-            "    if (s == STATE_DECODE_FAILED) { return vec3<f32>(1.0, 1.0, 1.0); }\n    \
-             return select(uniforms.bounded, uniforms.oklab_bounded, v);",
+            "if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {",
+            "if (ctx.validity.forbidden) {",
         )),
         &validity_lane,
     )
@@ -548,8 +509,8 @@ fn outcome_view_failures_field_not_from_the_decoder() {
 
 negative_control!(
     outcome_view_failures_field_not_from_the_decoder,
-    "a field set from the decoder's tags hatches the tagged samples, and fails",
-    expected = "decoder case (5, 0, 0) at Decoder(Unscalable)",
+    "a field set from the decoder's tags marks the tagged samples forbidden, and fails",
+    expected = "decoder case (5, 0, 0) at Decoder(Unscalable): REQ-COL-102's field",
     {
         let from_tags = |r: &Row| match r.at {
             At::Decoder(case) => case != Case::NonFinite,
@@ -560,16 +521,13 @@ negative_control!(
 );
 
 /// Checks the failures scene's render in `mode`, `image`, against the rank: every black row the colour of rank 0,
-/// `rank0`, within [`TOL`], and every forbidden row pixel-identical to `probe`, the hatch rendered alone.
-fn check_ranked(mode: &str, rows: &[Row], image: &[[f32; 4]], probe: &[[f32; 4]], rank0: Rgb) {
+/// `rank0`, within [`TOL`], and every forbidden or `decode_failed` row the background uniform [`BG`] exactly.
+fn check_ranked(mode: &str, rows: &[Row], image: &[[f32; 4]], rank0: Rgb) {
     for (x, r) in rows.iter().enumerate() {
-        for (((px, py), got), (_, hatch)) in tile(image, rows.len(), x as u32)
-            .into_iter()
-            .zip(tile(probe, rows.len(), x as u32))
-        {
+        for ((px, py), got) in tile(image, rows.len(), x as u32) {
             let ok = match r.want {
                 Want::Black => (0..3).all(|c| (f64::from(got[c]) - rank0[c]).abs() <= TOL),
-                Want::Hatch => got == hatch,
+                Want::Background => got[..3] == BG,
             };
             assert!(
                 ok,
@@ -581,23 +539,16 @@ fn check_ranked(mode: &str, rows: &[Row], image: &[[f32; 4]], probe: &[[f32; 4]]
 }
 
 /// Renders the failures scene in greyscale and hue mode (R-448: `K = 9`), the field from `lane`, and checks running and
-/// the failures at rank 0 and the forbidden rows in the hatch: greyscale's rank 0 the None-colour row at
-/// `B = ½/K`, hue's the hue wheel at `t = 0`.
+/// the failures at rank 0 and the forbidden and `decode_failed` rows in the background: greyscale's rank 0 the
+/// None-colour row at `B = ½/K`, hue's the hue wheel at `t = 0`.
 fn failures_ranked(lane: &dyn Fn(&Row) -> bool) {
     let h = gpu();
     let rows = rows();
     let set = payload(&rows, lane);
-    let probe = render(
-        &h,
-        &set,
-        rows.len(),
-        &event_with(HATCH_PROBE.to_owned()),
-        &defaults,
-    );
     let grey0 = present::oklab_to_linear([0.5 / f64::from(K), 0.0, 0.0]);
     for (mode, rank0) in [(greyscale(), grey0), (hue(), present::hue_wheel(0.0))] {
         let image = render(&h, &set, rows.len(), &mode, &defaults);
-        check_ranked(mode.name, &rows, &image, &probe, rank0);
+        check_ranked(mode.name, &rows, &image, rank0);
     }
 }
 
@@ -608,16 +559,16 @@ fn outcome_view_failures_rank_zero_in_every_mode() {
 
 negative_control!(
     outcome_view_failures_rank_zero_in_every_mode,
-    "a field set from the decoder's tags hatches the tagged samples in greyscale too, and fails",
-    expected = "greyscale: decoder case (5, 0, 0) at Decoder(Unscalable)",
-    failures_ranked(&|r: &Row| matches!(r.at, At::Decoder(_)) || validity_lane(r))
+    "a field that marks nothing forbidden ranks the forbidden samples in greyscale, and fails",
+    expected = "greyscale: forbidden bounded (1, 0, 1000) at Rejected",
+    failures_ranked(&|_: &Row| false)
 );
 
 /// Checks the CPU twin `shown` (`render::colour::outcome::shown`): every `state` code 0 to 7 and `detail` 0 to 3, the
-/// field set or clear, a forbidden sample always `Forbidden`, and a clear one the class §1.4 gives it: a collision its
-/// pair's or the triple collision's, an escape its body's or the triple ejection's, and every other state, bounded,
-/// running, `sim_failed`, `decode_failed` and the reserved codes, bounded / nothing yet. The failures scene's rows
-/// against their wants, under the field from the chart.
+/// field set or clear, a forbidden sample always `Forbidden`, a clear `decode_failed` one `DecodeFailed` (R-511), and a
+/// clear one the class §1.4 gives it: a collision its pair's or the triple collision's, an escape its body's or the
+/// triple ejection's, and every other state, bounded, running, `sim_failed` and the reserved codes, bounded / nothing
+/// yet. The failures scene's rows against their wants, under the field from the chart.
 fn check_twin(shown: &dyn Fn(u32, u32, bool) -> Shown) {
     assert_eq!(SWATCHES[0].srgb8, BLACK, "bounded / nothing yet's swatch");
     for state in 0..8 {
@@ -628,32 +579,27 @@ fn check_twin(shown: &dyn Fn(u32, u32, bool) -> Shown) {
                 "a forbidden sample, state {state} detail {detail}"
             );
             let want = match (state, detail) {
-                (COLLISION, 3) => 4,
-                (COLLISION, d) => 3 - d as usize,
-                (ESCAPE, d) => 5 + d as usize,
-                _ => 0,
+                (STATE_DECODE_FAILED, _) => Shown::DecodeFailed,
+                (COLLISION, 3) => Shown::Swatch(4),
+                (COLLISION, d) => Shown::Swatch(3 - d as usize),
+                (ESCAPE, d) => Shown::Swatch(5 + d as usize),
+                _ => Shown::Swatch(0),
             };
             assert_eq!(
                 shown(state, detail, false),
-                Shown::Swatch(want),
+                want,
                 "state {state} detail {detail}, the field clear"
             );
         }
     }
     for r in rows() {
         let (state, detail, _) = r.payload;
+        let got = shown(state, detail, validity_lane(&r));
         let want = match r.want {
-            Want::Black => Shown::Swatch(0),
-            Want::Hatch => Shown::Forbidden,
+            Want::Black => got == Shown::Swatch(0),
+            Want::Background => matches!(got, Shown::Forbidden | Shown::DecodeFailed),
         };
-        assert_eq!(
-            shown(state, detail, validity_lane(&r)),
-            want,
-            "{} {:?} at {:?}",
-            r.name,
-            r.payload,
-            r.at
-        );
+        assert!(want, "{} {:?} at {:?}: {got:?}", r.name, r.payload, r.at);
     }
 }
 
@@ -664,14 +610,29 @@ fn outcome_view_failures_cpu_twin() {
 
 negative_control!(
     outcome_view_failures_cpu_twin,
-    "a twin hatching sim_failed fails",
+    "a twin drawing sim_failed blank fails (R-511: sim_failed keeps #141418)",
     expected = "state 4 detail 0, the field clear",
-    check_twin(&|s, d, f| if s == STATE_SIM_FAILED {
-        Shown::Forbidden
+    check_twin(&|s, d, f| if s == STATE_SIM_FAILED && !f {
+        Shown::DecodeFailed
     } else {
         outcome::shown(s, d, f)
     })
 );
+
+#[cfg(feature = "controls")]
+mod outcome_view_failures_cpu_twin_decode_failed {
+    use super::*;
+    negative_control!(
+        outcome_view_failures_cpu_twin,
+        "a twin drawing decode_failed black, the class R-446 gave it, fails (R-511)",
+        expected = "state 5 detail 0, the field clear",
+        check_twin(&|s, d, f| if s == STATE_DECODE_FAILED && !f {
+            Shown::Swatch(0)
+        } else {
+            outcome::shown(s, d, f)
+        })
+    );
+}
 
 // ── REQ-COL-102's CPU fill ───────────────────────────────────────────────────────────────────────────────────────
 
@@ -856,34 +817,37 @@ fn variant_rows() -> Vec<Row> {
             "decode_failed",
             (STATE_DECODE_FAILED, 1, 0),
             At::Plain,
-            Want::Black,
+            Want::Background,
         ),
-        row("forbidden", (COLLISION, 0, 40), At::Rejected, Want::Hatch),
+        row(
+            "forbidden",
+            (COLLISION, 0, 40),
+            At::Rejected,
+            Want::Background,
+        ),
     ]);
     out
 }
 
-/// The 8-bit sRGB each variant row must show under the set `set`: the class's swatch, `#141418` for the failures;
-/// `None` for the forbidden row.
+/// The 8-bit sRGB each variant row must show under the set `set`: the class's swatch, `#141418` for running and
+/// `sim_failed`; `None`, the background, for the `decode_failed` and forbidden rows (R-511, R-467).
 fn variant_wants(set: &[outcome::Swatch]) -> Vec<Option<[u8; 3]>> {
     let mut out: Vec<Option<[u8; 3]>> = set.iter().map(|s| Some(s.srgb8)).collect();
-    out.extend([Some(BLACK); 3]);
-    out.push(None);
+    out.extend([Some(BLACK); 2]);
+    out.extend([None; 2]);
     out
 }
 
 /// Checks a render of the variant scene, `image`, against `wants`: each class's swatch exactly, the f32 nearest its
-/// sRGB decode, and the forbidden row pixel-identical to `probe`.
-fn check_swatches(what: &str, image: &[[f32; 4]], probe: &[[f32; 4]], wants: &[Option<[u8; 3]>]) {
+/// sRGB decode, and the `decode_failed` and forbidden rows the background uniform [`BG`] exactly; alpha 1.
+fn check_swatches(what: &str, image: &[[f32; 4]], wants: &[Option<[u8; 3]>]) {
     for (x, want) in wants.iter().enumerate() {
-        for (((px, py), got), (_, hatch)) in tile(image, wants.len(), x as u32)
-            .into_iter()
-            .zip(tile(probe, wants.len(), x as u32))
-        {
-            let ok = match want {
-                Some(c) => got[..3] == present::srgb8(*c).map(|v| v as f32) && got[3] == 1.0,
-                None => got == hatch,
-            };
+        for ((px, py), got) in tile(image, wants.len(), x as u32) {
+            let ok = got[3] == 1.0
+                && match want {
+                    Some(c) => got[..3] == present::srgb8(*c).map(|v| v as f32),
+                    None => got[..3] == BG,
+                };
             assert!(
                 ok,
                 "{what}: sample {x} pixel ({px}, {py}) is {got:?}, not {want:02X?}"
@@ -905,12 +869,11 @@ fn variant_params(set: u32, edit: Option<&'static str>) -> impl Fn(&str) -> Opti
     }
 }
 
-/// The variant scene, its probe and a render of it through `mode`'s occupant under params.
+/// The variant scene and a render of it through `mode`'s occupant under params.
 struct VariantScene {
     h: GpuHarness,
     set: Synthetic,
     n: usize,
-    probe: Vec<[f32; 4]>,
 }
 
 impl VariantScene {
@@ -918,18 +881,10 @@ impl VariantScene {
         let h = gpu();
         let rows = variant_rows();
         let set = payload(&rows, &validity_lane);
-        let probe = render(
-            &h,
-            &set,
-            rows.len(),
-            &event_with(HATCH_PROBE.to_owned()),
-            &defaults,
-        );
         VariantScene {
             h,
             set,
             n: rows.len(),
-            probe,
         }
     }
 
@@ -939,20 +894,19 @@ impl VariantScene {
 }
 
 /// Renders the variant scene through `mode`'s occupant: the sRGB set by default, the variant at `swatch_set = 1`, each
-/// class exactly, failures `#141418` and the forbidden sample the hatch in both; the variant with escape body 2's
+/// class exactly, running and `sim_failed` `#141418` and the `decode_failed` and forbidden samples the background in
+/// both; the variant with escape body 2's
 /// swatch edited, that class alone changed.
 fn check_variant(mode: &Mode) {
     let v = VariantScene::new();
     check_swatches(
         "the default",
         &v.at(mode, &defaults),
-        &v.probe,
         &variant_wants(&SWATCHES),
     );
     check_swatches(
         "the variant",
         &v.at(mode, &variant_params(1, None)),
-        &v.probe,
         &variant_wants(&OKLAB_UNIFORM),
     );
     let mut edited = OKLAB_UNIFORM;
@@ -960,7 +914,6 @@ fn check_variant(mode: &Mode) {
     check_swatches(
         "the variant, edited",
         &v.at(mode, &variant_params(1, Some("oklab_escape_body_1"))),
-        &v.probe,
         &variant_wants(&edited),
     );
 }
