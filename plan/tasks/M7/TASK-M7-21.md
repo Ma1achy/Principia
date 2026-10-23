@@ -1,4 +1,4 @@
-# TASK-M7-21 — The display chain: style → display scale → gamut clamp → colour-vision simulation → screen
+# TASK-M7-21 — The display chain: Print graph → display scale → gamut clamp → colour-vision simulation → screen, the line passes either side (R-485, R-531)
 
 - **Milestone:** M7
 - **Closes:** REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066, REQ-COL-059
@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-After the stain, the fixed display chain runs style → render→display scale → gamut clamp → colour-vision simulation → screen (R-67): every stage before the scale at render resolution, the scale step a bilinear upscale below native and a box downsample above (a no-op at native), so the simulation sees the final in-gamut, display-scaled colours. The compositor (blurred backdrop, fresh cover, trace/overlays) sits above the colour stage and blur is a compositor pass; occupants emit layer content, so per-layer CVD equals post-composite CVD for opaque quads.
+After the stain, the fixed display chain runs SimState → stain → [the line sets drawn through] → Print graph (where style was, R-485) → render→display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen (R-67, R-487, R-531): every stage before the scale at render resolution, the scale step a bilinear upscale below native and a box downsample above (a no-op at native), so the simulation sees the final in-gamut, display-scaled colours. The compositor (blurred backdrop, fresh cover, trace/overlays) sits above the colour stage and blur is a compositor pass; occupants emit layer content, so per-layer CVD equals post-composite CVD for opaque quads.
 
 ## References
 - `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules"
@@ -30,14 +30,14 @@ After the stain, the fixed display chain runs style → render→display scale �
 - `decisions.md` § "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
 
 ## Deliverables
-- `crates/render/src/display/chain.rs` — the fixed pass order; style is the identity (plain) until TASK-M7-26.
+- `crates/render/src/display/chain.rs` — the fixed pass order, with a slot for each line pass (TASK-M7-42 draws the pass over, TASK-M7-67 the pass through); the Print graph is the identity (Plain) until TASK-M7-26.
 - `crates/render/shaders/wgsl/compositor/display_scale.wgsl`, `gamut_clamp.wgsl`.
 - `fixtures/golden/display-chain/` and the `display-chain` golden suite.
 
 ## Acceptance tests
 - `cargo test -p render display_chain_order` — with render_scale ≠ 1 and a CVD mode set, the CVD matrix is applied to the post-scale, post-clamp buffer; the scale step is a no-op at native (REQ-RENDER-063).
 - `cargo xtask golden display-chain` — CVD simulation is applied to the final in-gamut, display-scaled colours; pass order asserted (REQ-RENDER-069).
-- `cargo test -p render cvd_sees_in_gamut` — with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(style(stain))) (REQ-COL-043).
+- `cargo test -p render cvd_sees_in_gamut` — with an out-of-gamut stain output and CVD on, the CVD stage's input is in gamut and equals gamut_clamp(display_scale(print(stain))), under Plain gamut_clamp(display_scale(stain)) (REQ-COL-043).
 - `cargo test -p render cvd_layer_linearity` (proptest) — seam 7 linearity check on random opaque layers: per-layer CVD equals post-composite CVD (REQ-RENDER-066).
 - Definition: the gamut-clamp method written into colour_composition §4.3 (identity on in-gamut colours) and approved by the physics reviewer (REQ-COL-059).
 
@@ -45,3 +45,4 @@ After the stain, the fixed display chain runs style → render→display scale �
 - Gap: the gamut-clamp method (per-channel clip, or a chroma-reducing clamp in OKLCH) is not given.
 - RQ-80 ruled: R-111 — the display chain names `SimState`, not `SimResult` (REQ-COL-043; render_gui_spec and GUI_DESIGN_NOTES renamed in step 7); the vocabulary lint (TASK-M0-16) covers the docs.
 - Closes, for gaps the corpus leaves open: REQ-COL-059 (R-72 definition) (classification accepted by R-132).
+- **R-485, R-487, R-531 (PR #281, code review 5608337157 F2):** REQ-RENDER-063, REQ-RENDER-069 and REQ-COL-043 are restated with the Print graph in style's place and the line passes either side, and this task follows them. *Was:* the title "The display chain: style → display scale → gamut clamp → colour-vision simulation → screen"; the Goal's "runs style → render→display scale → gamut clamp → colour-vision simulation → screen (R-67):"; the Deliverable "the fixed pass order; style is the identity (plain) until TASK-M7-26."; and the acceptance line's "equals gamut_clamp(display_scale(style(stain)))".

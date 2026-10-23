@@ -197,6 +197,10 @@ The colour depends only on the sample's system, never on where its pixel sits. S
 - **Never a gap while navigating.** The prototype keeps a coarse **base grid per chart** over its whole reachable
   domain. On a repeating chart that is the square, drawn through every image (R-407's group); on an affine chart it is
   the navigation limit. It is drawn under everything, then the last finished view grid, then the new one.
+  - *Amended by R-570:* the prototype's navigation limit, its `clampView`, exists only because its maps are
+    precomputed images, and it is never ported. In the app a latent or flat chart has no limit on pan or zoom-out
+    (`principia_chart_decoder_contract.md` Part 4), so the coarse fill is the quadtree's baseline cover over the
+    viewport, whatever its extent.
   - The first prototype restarted its integration on every frame of a drag and drew nothing until a grid finished, so
     the extension went black. That was a bug in the prototype, now fixed.
   - Measured after the fix, black fraction of the canvas while dragging into the extension: 0 at every sample, on the
