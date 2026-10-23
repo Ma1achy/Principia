@@ -109,7 +109,8 @@ negative_control!(
 /// `shape_roundtrip_bound` (REQ-CHART-053), the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044), the
 /// Burrau ν = 1/2 gate's `burrau_nu_half_tol` (REQ-VAL-118), and the acute-angle Burrau charts' `burrau_theta_min`
 /// and `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046), and
-/// the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027).
+/// the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1
+/// `zero_class` (REQ-ENC-037).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
     check_lists(
@@ -131,6 +132,7 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("shape_roundtrip_bound", "M2", "REQ-CHART-053"),
             ("eps_phys", "M2", "REQ-ENC-024"),
             ("decode_sanity", "M2", "REQ-ENC-027"),
+            ("zero_class", "M2", "REQ-ENC-037"),
         ],
     );
 }

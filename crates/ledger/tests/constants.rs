@@ -590,8 +590,8 @@ const R433: &str = "R-433 — ";
 /// `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046),
 /// [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
 /// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), the round trip's `eps_phys`
-/// (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027), for M2; `r_pole`, citing REQ-INT-086, and
-/// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max`, citing
+/// (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1 `zero_class` (REQ-ENC-037), for
+/// M2; `r_pole`, citing REQ-INT-086, and `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max`, citing
 /// REQ-VAL-191 (TASK-M3-02), for M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
 /// names the six floors' entries.
@@ -621,7 +621,8 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "shape_vec_js_tol",
             "shape_roundtrip_bound",
             "eps_phys",
-            "decode_sanity"
+            "decode_sanity",
+            "zero_class"
         ],
         "the entries provisional until M2"
     );

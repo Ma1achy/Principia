@@ -23,9 +23,10 @@
 //! 1. **Hypercube bounds** in the controls' clamp space (§ "Layer 1's space and bounds", REQ-ENC-023): a control fails
 //!    iff the block inverse clamped it, its `lookup_clamped` bit; so does the coincident inner pair (R-13). The remedy
 //!    is the clamp, the moved controls shown ([`Moved`]), unless it changes the class of `L_z` or `E`
-//!    ([`Class`]; § "A qualitatively different IC"), which is rejected. A state whose entered `L_z` or `E` is not finite
-//!    (the coincident pair's `U = −∞`) has no class to change there, so its clamp stands: there is no coincident-bodies
-//!    rejection (R-13).
+//!    ([`Class`]; § "A qualitatively different IC"), which is rejected. The zero class is a band relative to each
+//!    value's scale ([`Classes`]; § "The zero class in floating point", REQ-ENC-036), so a physically zero `L_z` or `E`
+//!    has one class whatever its rounding. A state whose entered `L_z` or `E` is not finite (the coincident pair's
+//!    `U = −∞`) has no class to change there, so its clamp stands: there is no coincident-bodies rejection (R-13).
 //! 2. **Chart feasibility**, on a chart landing: the chart's own `validate` at its point (R-26), whose project and clamp
 //!    move the lock to the point it gives and whose reject is the lookup's. A latent landing has no layer-2 constraint.
 //! 3. **Decode sanity** of the lock as a pixel decodes it, the chart's decode at a chart landing, else the free decode
@@ -51,10 +52,10 @@ use kernel::chart::{
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeSphere, ValidationResult,
 };
 use kernel::decode::{self, config, mass, Ic};
-use kernel::encode::by_kind::{encode_into_within, invariants, ByKind, Invariants, Landing};
+use kernel::encode::by_kind::{encode_into_within, invariants, ByKind, Landing};
 use kernel::encode::{encode, SimplexClamp};
 use kernel::generated::links::Selection;
-use ledger::constants::{DECODE_SANITY, EPS_PHYS};
+use ledger::constants::{DECODE_SANITY, EPS_PHYS, ZERO_CLASS};
 
 /// An exact entry (Part 6, "Exact IC (full lock)").
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -120,15 +121,19 @@ pub struct Tolerances {
     pub curve_tol: f64,
     /// Layer 3's tolerance on the CoM and `Σpᵢ` residuals ([`residuals`]; REQ-ENC-027).
     pub sanity: f64,
+    /// Layer 1's zero-class band, relative to each value's scale ([`Classes`]; REQ-ENC-036, REQ-ENC-037).
+    pub zero_class: f64,
 }
 
 impl Tolerances {
-    /// The register's `eps_phys` and `decode_sanity`, each times f64's epsilon, and the caller's `curve_tol`.
+    /// The register's `eps_phys`, `decode_sanity` and `zero_class`, each times f64's epsilon, and the caller's
+    /// `curve_tol`.
     pub fn register(curve_tol: f64) -> Tolerances {
         Tolerances {
             eps_phys: EPS_PHYS.number() * f64::EPSILON,
             curve_tol,
             sanity: DECODE_SANITY.number() * f64::EPSILON,
+            zero_class: ZERO_CLASS.number() * f64::EPSILON,
         }
     }
 }
@@ -256,21 +261,62 @@ fn refuse(layer: Layer, failed: Failed) -> Rejected {
     Rejected { layer, failed }
 }
 
-/// `sign(x)` as a class, `x` against 0 (`−0` is 0); `None` where `x` is not finite.
-fn class(x: f64) -> Option<std::cmp::Ordering> {
-    x.is_finite().then(|| x.partial_cmp(&0.0)).flatten()
+/// A state's two classifying constants and their scales (§ "The zero class in floating point", REQ-ENC-036).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Classes {
+    /// `L_z = Σ rᵢ × pᵢ`.
+    pub lz: f64,
+    /// `L_z`'s scale, `Σ‖rᵢ‖‖pᵢ‖`.
+    pub lz_scale: f64,
+    /// `E = K + U`.
+    pub e: f64,
+    /// `E`'s scale, `K + |U|`.
+    pub e_scale: f64,
 }
 
-/// The class a clamp from `before` to `after` changes, `L_z`'s first; none where `before`'s `L_z` or `E` is not finite
-/// (§ "Layer 1's space and bounds": such a state, the coincident pair's `U = −∞` among them, has no class there to
-/// change, so its clamp stands).
-pub fn changed(before: &Invariants<f64>, after: &Invariants<f64>) -> Option<Class> {
-    let moved = |b: f64, a: f64| class(b).is_some_and(|c| class(a) != Some(c));
+impl Classes {
+    /// `x`'s constants and scales.
+    pub fn of(x: &Ic<f64>) -> Classes {
+        let inv = invariants(x);
+        let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+        Classes {
+            lz: inv.lz,
+            lz_scale: (0..3).map(|i| norm(x.r[i]) * norm(x.p[i])).sum(),
+            e: inv.e,
+            e_scale: inv.k + inv.u.abs(),
+        }
+    }
+}
+
+/// The class of `x` at `scale`: `Equal` (class 0) where `|x| ≤ band·scale`, else `sign(x)`; `None` where `x` or
+/// `scale` is not finite.
+fn class(x: f64, scale: f64, band: f64) -> Option<std::cmp::Ordering> {
+    if !(x.is_finite() && scale.is_finite()) {
+        None
+    } else if x.abs() <= band * scale {
+        Some(std::cmp::Ordering::Equal)
+    } else {
+        x.partial_cmp(&0.0)
+    }
+}
+
+/// The class a clamp from `before` to `after` changes at the zero-class `band`, `L_z`'s first; none where `before`'s
+/// `L_z` or `E` is not finite (§ "Layer 1's space and bounds": such a state, the coincident pair's `U = −∞` among
+/// them, has no class there to change, so its clamp stands).
+pub fn changed(before: &Classes, after: &Classes, band: f64) -> Option<Class> {
+    let moved =
+        |b: Option<std::cmp::Ordering>, a: Option<std::cmp::Ordering>| b.is_some() && a != b;
     if !(before.lz.is_finite() && before.e.is_finite()) {
         None
-    } else if moved(before.lz, after.lz) {
+    } else if moved(
+        class(before.lz, before.lz_scale, band),
+        class(after.lz, after.lz_scale, band),
+    ) {
         Some(Class::Rotation)
-    } else if moved(before.e, after.e) {
+    } else if moved(
+        class(before.e, before.e_scale, band),
+        class(after.e, after.e_scale, band),
+    ) {
         Some(Class::Energy)
     } else {
         None
@@ -503,7 +549,8 @@ where
     // Layer 1: the clamp stands unless it changes a class.
     if moved.controls != 0 {
         let after = decode::decode::<S, f64>(&decode::Latent::new(z)).ic;
-        if let Some(class) = changed(&invariants(&e.canonical.ic), &invariants(&after)) {
+        let before = Classes::of(&e.canonical.ic);
+        if let Some(class) = changed(&before, &Classes::of(&after), tol.zero_class) {
             let failed = Failed::Clamp {
                 controls: moved.controls,
                 class,

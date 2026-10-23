@@ -4,8 +4,8 @@
 //! negative control (R-176).
 
 use engine::lookup::{
-    changed, lookup, lookup_partial, residuals, sanity, slice, Class, Exact, Failed, Layer, Locked,
-    Moved, Notices, Partial, Rejected, Tolerances, ORDER,
+    changed, lookup, lookup_partial, residuals, sanity, slice, Class, Classes, Exact, Failed,
+    Layer, Locked, Moved, Notices, Partial, Rejected, Tolerances, ORDER,
 };
 use kernel::chart::mixed::Coordinate;
 use kernel::chart::{
@@ -13,10 +13,11 @@ use kernel::chart::{
     ValidationResult,
 };
 use kernel::decode::{self, Decoded, Ic};
-use kernel::encode::by_kind::{invariants, ByKind, Coord, Invariants, Landing};
+use kernel::encode::by_kind::{invariants, ByKind, Coord, Landing};
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal, Selection};
 use kernel::payload::PayloadReal;
+use ledger::constants::ZERO_CLASS;
 use validation::negative_control;
 use validation::roundtrip::{charts, phys};
 
@@ -948,69 +949,126 @@ negative_control!(
     check_sanity(0.25)
 );
 
-fn inv(lz: f64, e: f64) -> Invariants<f64> {
-    Invariants {
+/// Classes at unit scales: `L_z = lz`, `E = e`.
+fn inv(lz: f64, e: f64) -> Classes {
+    Classes {
         lz,
-        k: 0.0,
-        u: 0.0,
+        lz_scale: 1.0,
         e,
+        e_scale: 1.0,
     }
 }
 
-/// Checks [`changed`]: a class is `sign` with 0 its own; a change of `L_z`'s is named first; an entered value that is
-/// not finite has none; and the notices' `lookup_clamped` reads each moved field.
-fn check_changed(tiny: f64) {
+/// Checks [`changed`] at the register's band `b`, `out` a value past it at unit scale: a class is `sign` outside the
+/// band and 0 within it, its edge included; a change of `L_z`'s is named first; an entered value that is not finite
+/// has none; [`Classes::of`] gives each value's scale; and the notices' `lookup_clamped` reads each moved field.
+fn check_changed(out: f64) {
+    let b = tol().zero_class;
     assert_eq!(
-        changed(&inv(0.0, -1.0), &inv(tiny, -1.0)),
+        changed(&inv(0.0, -1.0), &inv(out, -1.0), b),
         Some(Class::Rotation)
     );
     assert_eq!(
-        changed(&inv(0.0, -1.0), &inv(-tiny, -1.0)),
+        changed(&inv(0.0, -1.0), &inv(-out, -1.0), b),
         Some(Class::Rotation)
     );
     assert_eq!(
-        changed(&inv(1.0, -1.0), &inv(-1.0, 1.0)),
+        changed(&inv(1.0, -1.0), &inv(-1.0, 1.0), b),
         Some(Class::Rotation)
     );
     assert_eq!(
-        changed(&inv(1.0, 0.0), &inv(2.0, tiny)),
+        changed(&inv(1.0, 0.0), &inv(2.0, out), b),
         Some(Class::Energy)
     );
     assert_eq!(
-        changed(&inv(1.0, 0.0), &inv(2.0, -tiny)),
+        changed(&inv(1.0, 0.0), &inv(2.0, -out), b),
         Some(Class::Energy)
     );
     assert_eq!(
-        changed(&inv(1.0, -1.0), &inv(2.0, f64::NAN)),
+        changed(&inv(1.0, -1.0), &inv(2.0, f64::NAN), b),
         Some(Class::Energy)
     );
-    assert_eq!(changed(&inv(1.0, -1.0), &inv(3.0, -2.0)), None);
-    assert_eq!(changed(&inv(0.0, 0.0), &inv(0.0, 0.0)), None);
+    assert_eq!(changed(&inv(1.0, -1.0), &inv(3.0, -2.0), b), None);
+    assert_eq!(changed(&inv(0.0, 0.0), &inv(0.0, 0.0), b), None);
+    for edge in [b, -b] {
+        assert_eq!(
+            changed(&inv(0.0, -1.0), &inv(edge, -1.0), b),
+            None,
+            "L_z on the band's edge is class 0"
+        );
+        assert_eq!(
+            changed(&inv(1.0, edge), &inv(1.0, 0.0), b),
+            None,
+            "E on the band's edge is class 0"
+        );
+    }
+    let wide = Classes {
+        lz_scale: 4.0,
+        e_scale: 4.0,
+        ..inv(2.0 * b, -2.0 * b)
+    };
     assert_eq!(
-        changed(&inv(0.0, -1.0), &inv(-0.0, -1.0)),
+        changed(&wide, &inv(0.0, 0.0), b),
+        None,
+        "the band is relative to the scale"
+    );
+    assert_eq!(
+        changed(&inv(0.0, -1.0), &inv(-0.0, -1.0), b),
         None,
         "−0 is not 0's class"
     );
     assert_eq!(
-        changed(&inv(1.0, f64::NEG_INFINITY), &inv(1.0, 5.0)),
+        changed(&inv(1.0, f64::NEG_INFINITY), &inv(1.0, 5.0), b),
         None,
         "−∞ has a class"
     );
     assert_eq!(
-        changed(&inv(f64::NAN, -1.0), &inv(1.0, -1.0)),
+        changed(&inv(f64::NAN, -1.0), &inv(1.0, -1.0), b),
         None,
         "NaN has a class"
     );
     assert_eq!(
-        changed(&inv(0.0, f64::NEG_INFINITY), &inv(tiny, 5.0)),
+        changed(&inv(0.0, f64::NEG_INFINITY), &inv(out, 5.0), b),
         None,
         "an entered E of −∞ leaves L_z no class to change"
     );
     assert_eq!(
-        changed(&inv(f64::INFINITY, -1.0), &inv(1.0, 1.0)),
+        changed(&inv(f64::INFINITY, -1.0), &inv(1.0, 1.0), b),
         None,
         "an entered L_z of ∞ leaves E no class to change"
     );
+    let unscaled = Classes {
+        lz_scale: f64::INFINITY,
+        ..inv(1.0, -1.0)
+    };
+    assert_eq!(
+        changed(&unscaled, &inv(-1.0, -1.0), b),
+        None,
+        "a scale not finite gives no class"
+    );
+    assert_eq!(
+        changed(&inv(1.0, -1.0), &unscaled, b),
+        Some(Class::Rotation),
+        "nor after the clamp"
+    );
+    let x = Ic {
+        m: [0.5, 0.25, 0.25],
+        r: [[3.0, 4.0], [0.0, -2.0], [-6.0, 0.0]],
+        p: [[0.0, 1.0], [0.6, 0.8], [-0.6, -1.8]],
+    };
+    let i = invariants(&x);
+    let want = Classes {
+        lz: i.lz,
+        lz_scale: 5.0 + 2.0 + 6.0 * 1.8973665961010275,
+        e: i.e,
+        e_scale: i.k - i.u,
+    };
+    let got = Classes::of(&x);
+    assert_eq!(
+        (got.lz, got.e, got.e_scale),
+        (want.lz, want.e, want.e_scale)
+    );
+    assert!((got.lz_scale - want.lz_scale).abs() <= 1e-14, "{got:?}");
     let quiet = Notices {
         moved: Moved::default(),
         projected: None,
@@ -1043,21 +1101,160 @@ fn check_changed(tiny: f64) {
     }
     let t = Tolerances::register(3.0);
     assert_eq!(
-        (t.eps_phys, t.curve_tol, t.sanity),
-        (64.0 * f64::EPSILON, 3.0, 16.0 * f64::EPSILON)
+        (t.eps_phys, t.curve_tol, t.sanity, t.zero_class),
+        (
+            64.0 * f64::EPSILON,
+            3.0,
+            16.0 * f64::EPSILON,
+            16777216.0 * f64::EPSILON
+        )
     );
 }
 
 #[test]
 fn lookup_validation_ladder_classes() {
-    check_changed(f64::MIN_POSITIVE);
+    let b = tol().zero_class;
+    check_changed(f64::from_bits(b.to_bits() + 1));
 }
 
 negative_control!(
     lookup_validation_ladder_classes,
-    "0 to 0 changes no class",
+    "a value on the band's edge is class 0, so it changes no class",
     expected = "left: None",
-    check_changed(0.0)
+    check_changed(tol().zero_class)
+);
+
+/// A collinear, equal-mass state moving along its line, `L_z = 0` in exact arithmetic, turned by `angle`.
+fn collinear(angle: f64) -> Ic<f64> {
+    let x = Ic {
+        m: [1.0 / 3.0; 3],
+        r: [[-1.0, 0.0], [0.2, 0.0], [1.3, 0.0]],
+        p: [[0.3, 0.0], [-0.5, 0.0], [0.2, 0.0]],
+    };
+    gauge(&x, angle, [0.0, 0.0])
+}
+
+/// The 64 orientations `2πk/64`.
+fn orientations() -> impl Iterator<Item = f64> {
+    (0..64).map(|k| std::f64::consts::TAU * f64::from(k) / 64.0)
+}
+
+/// Checks the zero class's gauge invariance (§ "The zero class in floating point", REQ-ENC-036): the collinear state
+/// at each of 64 orientations gets one verdict at the zero-class band `band`, the contract's: its true `L_z` is class
+/// 0, and the clamp of `β` at the line moves it off 0, so each is rejected as a change of the sense of rotation.
+fn check_orientations(band: f64) {
+    let t = Tolerances {
+        zero_class: band,
+        ..tol()
+    };
+    let verdicts: Vec<Result> = orientations()
+        .map(|a| {
+            lookup::<Defaults, _, _>(&latent_chart(), &Exact::Physical(collinear(a)), phys, &t)
+        })
+        .collect();
+    for (k, v) in verdicts.iter().enumerate() {
+        assert_eq!(
+            v.as_ref().err().map(|r| (r.layer, r.failed)),
+            Some((
+                Layer::Hypercube,
+                Failed::Clamp {
+                    controls: 0b10,
+                    class: Class::Rotation
+                }
+            )),
+            "orientation {k} of 64 has its own verdict"
+        );
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band() {
+    check_orientations(tol().zero_class);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band,
+    "an exact-zero comparison gives a rounded L_z = 0 the sign of its rounding, so the verdict follows the orientation",
+    expected = "has its own verdict",
+    check_orientations(0.0)
+);
+
+/// `C`'s and the decode's rounding of `L_z` and `E`, in f64's ε relative to their scales, and the smallest class
+/// change a clamp makes: over `n` states decoded from latent `z` on `[−8, 8]⁸`, past every control's saturation, each
+/// against a random gauge image of itself (offsets and boosts on `[−8, 8)²`, scales `2^±12`, either parity; `C(g·x)`
+/// against `C(x)`, one canonical state) and against the decode of its own `z` where encode clamped no control; and the
+/// collinear state's canonical `|L_z|` at the 64 orientations, and, after `β`'s clamp, the least `|L_z|`.
+struct Rounding {
+    lz: f64,
+    e: f64,
+    clamp: f64,
+}
+
+fn rounding(n: usize) -> Rounding {
+    use validation::decode_f32_eps::SplitMix;
+    use validation::gauge::{uniform, Gauge};
+    let eps = f64::EPSILON;
+    let mut rng = SplitMix::new(36);
+    let (mut lz, mut en) = (0.0_f64, 0.0_f64);
+    let mut worst = |a: &Classes, b: &Classes| {
+        let dl = (a.lz - b.lz).abs() / a.lz_scale.max(b.lz_scale);
+        let de = (a.e - b.e).abs() / a.e_scale.max(b.e_scale);
+        lz = lz.max(dl / eps);
+        en = en.max(de / eps);
+    };
+    for _ in 0..n {
+        let z: [f64; 8] = std::array::from_fn(|_| uniform(&mut rng, -8.0, 8.0));
+        let x = d(z);
+        let g = Gauge::random(&mut rng, 8.0, 12.0);
+        let (ex, ey) = (e(&x), e(&g.act(&x)));
+        let (cx, cy) = (Classes::of(&ex.canonical.ic), Classes::of(&ey.canonical.ic));
+        worst(&cx, &cy);
+        if ey.report.clamped_controls == 0 {
+            worst(&cy, &Classes::of(&d(ey.z.z)));
+        }
+    }
+    let mut clamp = f64::INFINITY;
+    for a in orientations() {
+        let ec = e(&collinear(a));
+        let c = Classes::of(&ec.canonical.ic);
+        lz = lz.max(c.lz.abs() / c.lz_scale / eps);
+        let after = Classes::of(&d(ec.z.z));
+        clamp = clamp.min(after.lz.abs() / after.lz_scale / eps);
+    }
+    Rounding { lz, e: en, clamp }
+}
+
+/// Checks the zero-class band `k` (REQ-ENC-037) against the measurement over 2²⁰ states: the worst rounding times 4 is
+/// within it, and it times 4 is below the smallest class change a clamp makes.
+fn check_band(k: f64) {
+    let m = rounding(1 << 20);
+    println!(
+        "zero-class band: rounding of L_z {:.2} ε, of E {:.2} ε; smallest clamp change {:.3e} ε; k = {k}",
+        m.lz, m.e, m.clamp
+    );
+    assert!(
+        4.0 * m.lz.max(m.e) <= k,
+        "the rounding, {:.2} ε for L_z and {:.2} ε for E, is not within k = {k} by 4×",
+        m.lz,
+        m.e
+    );
+    assert!(
+        4.0 * k <= m.clamp,
+        "k = {k} is not below the smallest clamp change, {:.3e} ε, by 4×",
+        m.clamp
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_measure() {
+    check_band(ZERO_CLASS.number());
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_measure,
+    "a band of one ε does not cover C's rounding",
+    expected = "is not within k",
+    check_band(1.0)
 );
 
 // ── REQ-ENC-019: coincident bodies ─────────────────────────────────────────────────────────────────────────────────

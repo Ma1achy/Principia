@@ -891,6 +891,21 @@ pub const DECODE_SANITY: ConstantBuilder = proposed(
     "M2",
 );
 
+/// Lookup's layer-1 zero-class band, `k` in `|L_z| ≤ k·ε_R·Σ‖rᵢ‖‖pᵢ‖` and `|E| ≤ k·ε_R·(K + |U|)` for class 0
+/// (inverse-encode § "Chart-aware validation", "The zero class in floating point"; REQ-ENC-036, REQ-ENC-037): 2²⁴, so
+/// `k·ε` ≈ 3.7e-9 at f64. TASK-M2-19's proposal (R-71): `lookup_validation_ladder_zero_band_measure`, 2²⁰ states
+/// decoded from latent `z` on `[−8, 8]⁸` against a random gauge image of each (offsets and boosts on `[−8, 8)²`,
+/// scales `2^±12`, either parity) and against the decode of their own unclamped `z`, measures a worst rounding of
+/// 1.41e4 `ε` for `L_z` and 2.62e6 `ε` for `E`, so 2²⁴ covers it by 6.4×; `β`'s clamp at a collinear `L_z = 0` state
+/// moves `L_z` by at least 8.1e9 `ε` of its scale, 483× above the band.
+pub const ZERO_CLASS: ConstantBuilder = proposed(
+    "zero_class",
+    16777216.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-037",
+    "M2",
+);
+
 // ── The steppers' coefficients (dd_integrator §3.2; REQ-INT-037, REQ-INT-056; R-501, R-515) ─────────────────────
 //
 // The free weights of Yoshida's two compositions, as dd_integrator §3.2 prints them; each consistency weight `w₀` and
@@ -1136,6 +1151,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
     DECODE_SANITY,
+    ZERO_CLASS,
     CURVE_GRID_LOG2,
     CURVE_GOLDEN_STEPS,
     INV_PHI,
