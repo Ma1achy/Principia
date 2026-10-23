@@ -471,9 +471,11 @@ colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
 *24 Sep 2026 · recorded; applied in step 6*
-*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a saturation
-collapse, f64 `J_D`'s in-plane columns 0 at a quad whose f64 sample points are distinct, raises no precision warning;
-every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raises it as here (deep_zoom §4; REQ-GUI-012).*
+*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad every
+collapsed adjacent pair of which is a saturation collapse, f64 `J_D`'s column along the pair's in-plane direction 0 and
+the pair's f64 sample points distinct, raises no precision warning; every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR`
+raises it as here (deep_zoom §4; REQ-GUI-012). Was: "a saturation collapse, f64 `J_D`'s in-plane columns 0 at a quad
+whose f64 sample points are distinct, raises no precision warning".*
 
 Raised on `DECODE_SWITCHOVER` over visible quads and on `AT_F32_FLOOR`. Files: deep_zoom §2; scheduler_contract Part 4;
 the step-6 GUI docs; gui_state_contract §2.
@@ -23674,6 +23676,14 @@ f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample poi
 collapse, which raises no precision warning; the genuine floor, `J_D ≠ 0`, still warns. Option (c) is out by W13 and
 item 5. Applied in deep_zoom §4, render_gui_spec §G2 and REQ-GUI-012 (TASK-M6-21); RQ-553 moved to
 `docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 3 of PR #279 (physics review 5624781454, P5; gui review 5624788928, G5 to G7), applied per
+R-369: RQ-553's test is per direction, so the bands along the axes are covered: a collapse between adjacent samples
+along in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
+points are distinct, and the warning is suppressed only for a quad every collapsed pair of which is one; this
+supersedes the 23 Oct line above's "a collapse at which f64 `J_D`'s columns along the view's plane are 0 while the
+quad's f64 sample points are distinct". REQ-GUI-012 gains the band arm and two genuine-floor cases whose controls can
+fail; TASK-M6-21 names where the classification is made.*
 
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 

@@ -127,12 +127,15 @@ f64 decode is flat there too: `σ` rounds to 1 in f64 past about 37 and `tanh` t
 differences (§2 a) are 0, and the full and the linearised decoders' samples collapse because the field is flat, not
 because f32 has run out; (iii) and (iv) fire at home zoom. Stopping refinement there is harmless, the field being flat.
 **A saturation collapse raises no precision warning** (RQ-553, decided per R-369 by the orchestrator, not a human
-ruling; recorded against R-54 and R-570 item 5): at a quad where f64 `J_D`'s columns along the view's plane are 0 while
-the quad's f64 sample points are distinct, the collapse is saturation, a true flat image, and the warning that
-`DECODE_SWITCHOVER` and `AT_F32_FLOOR` raise (R-54, `principia_render_gui_spec.md` §G2) is not raised for it.
-Everywhere else it is raised as R-54 defines it, so the genuine floor, where `J_D ≠ 0` and only the offsets fall below
-what the arithmetic resolves, still warns (REQ-GUI-012). Nothing clamps, rescales, wraps or fades the view to hide the
-flat field. *Was:* "Far from the origin the decoder saturates (`principia_chart_reference.md` §0), and the f64 decode is flat there too (`σ` rounds to 1 in f64 past about 37 and `sech²` underflows, so `J_D`'s columns are 0): the full and the linearised decoders' samples collapse because the field is flat, not because f32 has run out, and (iv) fires at home zoom. Stopping refinement there is harmless, the field being flat. What the user is told is open: `AT_F32_FLOOR` raises the precision warning (R-54, `principia_render_gui_spec.md` §G2), which would say that f32 has run out where the cause is saturation, against R-570 item 5 and W13 ("never lies"); that conflict is RQ-553, not settled here. Nothing clamps, rescales, wraps or fades the view to hide the flat field."
+ruling; recorded against R-54 and R-570 item 5). The test is per direction: a collapse between adjacent samples along
+an in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
+points are distinct. The warning that `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raise (R-54, `principia_render_gui_spec.md`
+§G2) is not raised for a quad every collapsed pair of which is a saturation collapse, a true flat image, as in the
+fully saturated far field and in the bands along the axes (`principia_chart_reference.md` §5.4), flat along one axis
+only. Everywhere else it is raised as R-54 defines it, so the genuine floor, where `J_D ≠ 0` and only the offsets fall
+below what the arithmetic resolves, or where the f64 sample points themselves coincide, still warns (REQ-GUI-012).
+Nothing clamps, rescales, wraps or fades the view to hide the flat field. *Was (fix round 2, gui review 5624788928, G6):*
+"at a quad where f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample points are distinct, the collapse is saturation, a true flat image, and the warning that `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raise (R-54, `principia_render_gui_spec.md` §G2) is not raised for it." *Was:* "Far from the origin the decoder saturates (`principia_chart_reference.md` §0), and the f64 decode is flat there too (`σ` rounds to 1 in f64 past about 37 and `sech²` underflows, so `J_D`'s columns are 0): the full and the linearised decoders' samples collapse because the field is flat, not because f32 has run out, and (iv) fires at home zoom. Stopping refinement there is harmless, the field being flat. What the user is told is open: `AT_F32_FLOOR` raises the precision warning (R-54, `principia_render_gui_spec.md` §G2), which would say that f32 has run out where the cause is saturation, against R-570 item 5 and W13 ("never lies"); that conflict is RQ-553, not settled here. Nothing clamps, rescales, wraps or fades the view to hide the flat field."
 
 ---
 
