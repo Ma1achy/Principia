@@ -4,8 +4,8 @@
 //! negative control (R-176).
 
 use engine::lookup::{
-    changed, lookup, lookup_partial, residuals, sanity, slice, Class, Classes, Exact, Failed,
-    Layer, Locked, Moved, Notices, Partial, Rejected, Tolerances, ORDER,
+    after, changed, lookup, lookup_partial, moves, residuals, sanity, slice, Class, Classes, Exact,
+    Extents, Failed, Layer, Locked, Moved, Moves, Notices, Partial, Rejected, Tolerances, ORDER,
 };
 use kernel::chart::mixed::Coordinate;
 use kernel::chart::{
@@ -1112,7 +1112,7 @@ fn check_changed(out: f64) {
             64.0 * f64::EPSILON,
             3.0,
             16.0 * f64::EPSILON,
-            16777216.0 * f64::EPSILON
+            16.0 * f64::EPSILON
         )
     );
 }
@@ -1185,15 +1185,15 @@ negative_control!(
     check_orientations(0.0)
 );
 
-/// `C`'s and the decode's rounding of `L_z` and `E`, in f64's ε relative to their scales, and the smallest class
-/// change a clamp makes: over `n` states decoded from latent `z` on `[−8, 8]⁸`, past every control's saturation, each
-/// against a random gauge image of itself (offsets and boosts on `[−8, 8)²`, scales `2^±12`, either parity; `C(g·x)`
-/// against `C(x)`, one canonical state) and against the decode of its own `z` where encode clamped no control; and the
-/// collinear state's canonical `|L_z|` at the 64 orientations, and, after `β`'s clamp, the least `|L_z|`.
+/// The rounding the zero-class band absorbs, in f64's ε relative to each scale (§ "The zero class in floating point",
+/// REQ-ENC-037): over `n` states decoded from latent `z` on `[−8, 8]⁸`, all but one in nine with one control set to
+/// ±20, past its clamp, each against a random gauge image of itself (offsets and boosts on `[−8, 8)²`, scales
+/// `2^±12`, either parity): `C`'s rounding of `L_z` and `E` (`C(g·x)` against `C(x)`, one canonical state, each at
+/// its own entry's extents), and, where both clamp the same controls, the rounding of the clamps' [`moves`] and of the
+/// values after them.
 struct Rounding {
-    lz: f64,
-    e: f64,
-    clamp: f64,
+    class: f64,
+    moves: f64,
 }
 
 fn rounding(n: usize) -> Rounding {
@@ -1201,66 +1201,389 @@ fn rounding(n: usize) -> Rounding {
     use validation::gauge::{uniform, Gauge};
     let eps = f64::EPSILON;
     let mut rng = SplitMix::new(36);
-    let (mut lz, mut en) = (0.0_f64, 0.0_f64);
-    let mut worst = |a: &Classes, b: &Classes| {
-        let dl = (a.lz - b.lz).abs() / a.lz_scale.max(b.lz_scale);
-        let de = (a.e - b.e).abs() / a.e_scale.max(b.e_scale);
-        lz = lz.max(dl / eps);
-        en = en.max(de / eps);
+    let (mut class, mut moved) = (0.0_f64, 0.0_f64);
+    let rel = |a: f64, b: f64, sa: f64, sb: f64| {
+        let scale = sa.max(sb);
+        if scale > 0.0 {
+            (a - b).abs() / scale / eps
+        } else {
+            0.0
+        }
     };
     for _ in 0..n {
-        let z: [f64; 8] = std::array::from_fn(|_| uniform(&mut rng, -8.0, 8.0));
+        let mut z: [f64; 8] = std::array::from_fn(|_| uniform(&mut rng, -8.0, 8.0));
+        let pick = (rng.next_u64() % 18) as usize;
+        if pick < 16 {
+            z[pick / 2] = if pick.is_multiple_of(2) { -20.0 } else { 20.0 };
+        }
         let x = d(z);
-        let g = Gauge::random(&mut rng, 8.0, 12.0);
-        let (ex, ey) = (e(&x), e(&g.act(&x)));
-        let (cx, cy) = (Classes::of(&ex.canonical.ic), Classes::of(&ey.canonical.ic));
-        worst(&cx, &cy);
-        if ey.report.clamped_controls == 0 {
-            worst(&cy, &Classes::of(&d(ey.z.z)));
+        let gx = Gauge::random(&mut rng, 8.0, 12.0).act(&x);
+        let (ex, ey) = (e(&x), e(&gx));
+        let (tx, ty) = (
+            Extents::entered(&x, ex.canonical.lambda),
+            Extents::entered(&gx, ey.canonical.lambda),
+        );
+        let (cx, cy) = (
+            Classes::within(&ex.canonical.ic, &tx),
+            Classes::within(&ey.canonical.ic, &ty),
+        );
+        class = class
+            .max(rel(cx.lz, cy.lz, cx.lz_scale, cy.lz_scale))
+            .max(rel(cx.e, cy.e, cx.e_scale, cy.e_scale));
+        if ex.blocks.clamped != 0 && ex.blocks.clamped == ey.blocks.clamped {
+            let (mx, my) = (
+                moves::<Defaults>(&ex, &ex.z.z, &tx),
+                moves::<Defaults>(&ey, &ey.z.z, &ty),
+            );
+            moved = moved
+                .max(rel(mx.lz, my.lz, mx.lz_scale, my.lz_scale))
+                .max(rel(mx.e, my.e, mx.e_scale, my.e_scale))
+                .max(rel(
+                    mx.lz_after,
+                    my.lz_after,
+                    mx.lz_after_scale,
+                    my.lz_after_scale,
+                ))
+                .max(rel(
+                    mx.e_after,
+                    my.e_after,
+                    mx.e_after_scale,
+                    my.e_after_scale,
+                ));
         }
     }
-    let mut clamp = f64::INFINITY;
-    for a in orientations() {
-        let ec = e(&collinear(a));
-        let c = Classes::of(&ec.canonical.ic);
-        lz = lz.max(c.lz.abs() / c.lz_scale / eps);
-        let after = Classes::of(&d(ec.z.z));
-        clamp = clamp.min(after.lz.abs() / after.lz_scale / eps);
+    Rounding {
+        class,
+        moves: moved,
     }
-    Rounding { lz, e: en, clamp }
 }
 
-/// Checks the zero-class band `k` (REQ-ENC-037) against the measurement over 2²⁰ states: the worst rounding times 4 is
-/// within it, and it times 4 is below the smallest class change a clamp makes.
-fn check_band(k: f64) {
-    let m = rounding(1 << 20);
+/// The measurement over 2²⁰ states, made once for the tests that read it.
+fn measured() -> &'static Rounding {
+    static ONCE: std::sync::OnceLock<Rounding> = std::sync::OnceLock::new();
+    ONCE.get_or_init(|| rounding(1 << 20))
+}
+
+/// Checks the zero-class band against the measurement, each inequality on its own `k`: `C`'s worst rounding times 4
+/// is within `k_class`, and the moves' worst rounding times 4 is within `k_moves`.
+fn check_band(k_class: f64, k_moves: f64) {
+    let m = measured();
     println!(
-        "zero-class band: rounding of L_z {:.2} ε, of E {:.2} ε; smallest clamp change {:.3e} ε; k = {k}",
-        m.lz, m.e, m.clamp
+        "zero-class band: rounding of the classes {:.2} ε, of the moves {:.2} ε; k = {}",
+        m.class,
+        m.moves,
+        ZERO_CLASS.number()
     );
     assert!(
-        4.0 * m.lz.max(m.e) <= k,
-        "the rounding, {:.2} ε for L_z and {:.2} ε for E, is not within k = {k} by 4×",
-        m.lz,
-        m.e
+        4.0 * m.class <= k_class,
+        "C's rounding, {:.2} ε, is not within k = {k_class} by 4×",
+        m.class
     );
     assert!(
-        4.0 * k <= m.clamp,
-        "k = {k} is not below the smallest clamp change, {:.3e} ε, by 4×",
-        m.clamp
+        4.0 * m.moves <= k_moves,
+        "the moves' rounding, {:.2} ε, is not within k = {k_moves} by 4×",
+        m.moves
     );
 }
 
 #[test]
 fn lookup_validation_ladder_zero_band_measure() {
-    check_band(ZERO_CLASS.number());
+    check_band(ZERO_CLASS.number(), ZERO_CLASS.number());
 }
 
 negative_control!(
     lookup_validation_ladder_zero_band_measure,
-    "a band of one ε does not cover C's rounding",
-    expected = "is not within k",
-    check_band(1.0)
+    "a band of one ε does not cover C's rounding of the classes",
+    expected = "C's rounding",
+    check_band(1.0, ZERO_CLASS.number())
+);
+
+#[test]
+fn lookup_validation_ladder_zero_band_measure_moves() {
+    check_band(ZERO_CLASS.number(), ZERO_CLASS.number());
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_measure_moves,
+    "a band of one ε does not cover the moves' rounding",
+    expected = "the moves' rounding",
+    check_band(ZERO_CLASS.number(), 1.0)
+);
+
+/// A collinear state moving along its line, the outer body's momentum `t` against the inner pair's ±1, turned by
+/// `angle` and moved: `L_z = 0` exactly, and `β` at the line, so its clamp fires.
+fn along(t: f64, angle: f64) -> Ic<f64> {
+    let x = Ic {
+        m: [1.0 / 3.0; 3],
+        r: [[-1.0, 0.0], [0.2, 0.0], [1.3, 0.0]],
+        p: [[1.0, 0.0], [-1.0 - t, 0.0], [t, 0.0]],
+    };
+    gauge(&x, angle, [0.5, -0.2])
+}
+
+/// A rest start at the mass ratio `small : 1 : 1`, the masses summing to 1, whose mass controls clamp.
+fn rest(small: f64) -> Ic<f64> {
+    let total = small + 2.0;
+    Ic {
+        m: [small / total, 1.0 / total, 1.0 / total],
+        r: [[0.0, 0.0], [1.0, 0.1], [0.3, 1.2]],
+        p: [[0.0; 2]; 3],
+    }
+}
+
+/// `x` entered under a gauge element with a boost and an offset, so that `C` removes a momentum and a translation
+/// larger than the state's own.
+fn boosted(x: &Ic<f64>, u: [f64; 2], s: f64) -> Ic<f64> {
+    validation::gauge::Gauge {
+        a: [40.0, -25.0],
+        u,
+        theta: 0.4,
+        s,
+        mirror: false,
+    }
+    .act(x)
+}
+
+/// `z` with `L_z = 0` up to rounding and a momentum control past its clamp: `z_q1` (`p_ρy`) where `pull`, else `z_q0`
+/// (`p_ρx`). `α = (π/2)σ(1)`, `β = π/2`, equal masses; `p_λx` cancels `‖ρ‖·p_ρy`.
+fn q_case(pull: bool) -> [f64; 8] {
+    let alpha = std::f64::consts::FRAC_PI_2 / (1.0 + (-1.0_f64).exp());
+    let (mu_rho, mu_lambda) = (1.0 / 6.0, 2.0 / 9.0);
+    let ratio = (alpha.cos() / mu_rho.sqrt()) / (alpha.sin() / mu_lambda.sqrt());
+    let logit = |q: f64| {
+        let u = (q / 2.0 + 1.0) / 2.0;
+        (u / (1.0 - u)).ln()
+    };
+    if pull {
+        [1.0, 0.0, 0.0, 40.0, logit(2.0 * ratio), 0.0, 0.0, 0.0]
+    } else {
+        [1.0, 0.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    }
+}
+
+/// The clamp-rule table (§ "The class a clamp moves", REQ-ENC-038): each state, its clamped controls and the class
+/// its clamp changes in exact arithmetic.
+fn table() -> Vec<(&'static str, Ic<f64>, u32, Option<Class>)> {
+    let mut rows = Vec::new();
+    for angle in [0.0, 0.3, 2.0] {
+        for t in [1e-4, 1e-6, 1e-8] {
+            rows.push(("β, p_λ ≠ 0", along(t, angle), 0b10, Some(Class::Rotation)));
+        }
+        rows.push(("β, p_λ = 0", along(0.0, angle), 0b10, None));
+    }
+    for small in [1e-6, 1e-9] {
+        rows.push(("masses at rest", rest(small), 0b1100_0000, None));
+    }
+    rows.push(("masses and α at rest", rest(1e-12), 0b1100_0001, None));
+    for u in [[3.0, 1.0], [-2.5, 4.0]] {
+        rows.push((
+            "masses at rest, boosted",
+            boosted(&rest(1e-6), u, 1.0),
+            0b1100_0000,
+            None,
+        ));
+        rows.push((
+            "β, p_λ = 0, boosted",
+            boosted(&along(0.0, 0.0), u, 1e-3),
+            0b10,
+            None,
+        ));
+    }
+    rows.push(("q₁ = p_ρy", d(q_case(true)), 0b1000, Some(Class::Rotation)));
+    rows.push(("q₀ = p_ρx", d(q_case(false)), 0b100, None));
+    rows
+}
+
+/// Checks `classify`, the class a clamp of the entered `x`, encoded, changes, on the clamp-rule table.
+fn check_clamp_rule(classify: impl Fn(&Ic<f64>, &Encoded<f64>) -> Option<Class>) {
+    for (what, x, bits, want) in table() {
+        let en = e(&x);
+        assert_eq!(en.blocks.clamped, bits, "{what}: the clamped controls");
+        assert_eq!(classify(&x, &en), want, "{what}: {x:?}");
+    }
+}
+
+/// The rule: [`changed`] on [`moves`].
+fn by_rule(x: &Ic<f64>, en: &Encoded<f64>) -> Option<Class> {
+    let b = tol().zero_class;
+    let ext = Extents::entered(x, en.canonical.lambda);
+    let before = Classes::within(&en.canonical.ic, &ext);
+    changed(
+        &before,
+        &after(&before, &moves::<Defaults>(en, &en.z.z, &ext), b),
+        b,
+    )
+}
+
+/// The class of `v` at `scale` through the band `b`, as the decoded value would give it: the controls' reading.
+#[cfg(feature = "controls")]
+fn banded(v: f64, scale: f64, b: f64) -> Option<std::cmp::Ordering> {
+    (v.is_finite() && scale.is_finite()).then(|| {
+        if v.abs() <= b * scale {
+            std::cmp::Ordering::Equal
+        } else {
+            v.total_cmp(&0.0)
+        }
+    })
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule() {
+    check_clamp_rule(by_rule);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule,
+    "the decoded value read through a band wider than the rounding (round 3's 2^24 eps) takes β's moves of L_z for \
+     rounding",
+    expected = "β, p_λ ≠ 0",
+    check_clamp_rule(|x: &Ic<f64>, en: &Encoded<f64>| {
+        let ext = Extents::entered(x, en.canonical.lambda);
+        let (a, b) = (Classes::within(&en.canonical.ic, &ext), Classes::within(&d(en.z.z), &ext));
+        let k = 16_777_216.0 * f64::EPSILON;
+        if banded(a.lz, a.lz_scale, k) != banded(b.lz, b.lz_scale, k) {
+            Some(Class::Rotation)
+        } else if banded(a.e, a.e_scale, k) != banded(b.e, b.e_scale, k) {
+            Some(Class::Energy)
+        } else {
+            None
+        }
+    })
+);
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_unmoved() {
+    check_clamp_rule(by_rule);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_unmoved,
+    "rejecting every clamp on a class-0 state rejects the clamps that leave L_z at 0",
+    expected = "p_λ = 0",
+    check_clamp_rule(|_: &Ic<f64>, en: &Encoded<f64>| {
+        let c = Classes::of(&en.canonical.ic);
+        (en.blocks.clamped != 0
+            && banded(c.lz, c.lz_scale, tol().zero_class) == Some(std::cmp::Ordering::Equal))
+        .then_some(Class::Rotation)
+    })
+);
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_extents() {
+    check_clamp_rule(by_rule);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_extents,
+    "the decoded value read at the canonical state's own scales takes the rounding of C's boost for a class",
+    expected = "masses at rest, boosted",
+    check_clamp_rule(|_: &Ic<f64>, en: &Encoded<f64>| {
+        let (a, b) = (Classes::of(&en.canonical.ic), Classes::of(&d(en.z.z)));
+        let k = tol().zero_class;
+        (banded(a.lz, a.lz_scale, k) != banded(b.lz, b.lz_scale, k)
+            || banded(a.e, a.e_scale, k) != banded(b.e, b.e_scale, k))
+        .then_some(Class::Rotation)
+    })
+);
+
+/// Checks the table end to end at the zero-class band `band`: lookup refuses each row whose clamp changes a class,
+/// naming it and the clamped controls, and locks every other, clamped.
+fn check_clamp_verdicts(band: f64) {
+    let t = Tolerances {
+        zero_class: band,
+        ..tol()
+    };
+    for (what, x, bits, want) in table() {
+        let got = lookup::<Defaults, _, _>(&latent_chart(), &Exact::Physical(x), phys, &t);
+        match want {
+            Some(class) => assert_eq!(
+                got.err(),
+                Some(Rejected {
+                    layer: Layer::Hypercube,
+                    failed: Failed::Clamp {
+                        controls: bits,
+                        class
+                    }
+                }),
+                "{what}: the clamp's verdict"
+            ),
+            None => assert_eq!(
+                got.map(|l| l.notices.moved.controls).ok(),
+                Some(bits),
+                "{what}: the clamp's verdict"
+            ),
+        }
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_verdicts() {
+    check_clamp_verdicts(tol().zero_class);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_verdicts,
+    "a band of the whole scale reads every move as rounding",
+    expected = "the clamp's verdict",
+    check_clamp_verdicts(1.0)
+);
+
+/// Checks [`after`] at the register's band `b`, `out` past it: a constant in class 0 takes the move alone at the move's
+/// own scale, however large the state's; any other takes its value on the clamped parameters at that value's scale;
+/// and a move within its own band leaves class 0 as it was.
+fn check_after(out: f64) {
+    let b = tol().zero_class;
+    let at = |lz: f64, lz_scale: f64, e: f64, e_scale: f64| Classes {
+        lz,
+        lz_scale,
+        e,
+        e_scale,
+    };
+    let moves = |lz: f64, lz_scale: f64, e: f64, e_scale: f64| Moves {
+        lz,
+        lz_scale,
+        e,
+        e_scale,
+        lz_after: 7.0,
+        lz_after_scale: 8.0,
+        e_after: -0.75,
+        e_after_scale: 1.5,
+    };
+    let big = at(1e-6, 1e12, -1.0, 1.0);
+    let small = moves(out * 1e-9, 1e-9, 0.25, 0.5);
+    assert_eq!(
+        after(&big, &small, b),
+        at(out * 1e-9, 1e-9, -0.75, 1.5),
+        "class 0 takes the move alone, a sign class its value after"
+    );
+    assert_eq!(
+        changed(&big, &after(&big, &small, b), b),
+        Some(Class::Rotation),
+        "a move far below the state's band is read at its own scale"
+    );
+    let within = moves(b * 1e-9, 1e-9, 0.0, 0.0);
+    assert_eq!(
+        changed(&big, &after(&big, &within, b), b),
+        None,
+        "a move within its own band is no move"
+    );
+    let zero_e = at(1.0, 1.0, 0.0, 1.0);
+    assert_eq!(
+        after(&zero_e, &moves(0.5, 0.5, -out, 1.0), b),
+        at(7.0, 8.0, -out, 1.0)
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_after() {
+    check_after(f64::from_bits(tol().zero_class.to_bits() + 1));
+}
+
+negative_control!(
+    lookup_validation_ladder_after,
+    "a move on its band's edge is class 0, so it changes no class",
+    expected = "a move far below the state's band",
+    check_after(tol().zero_class)
 );
 
 // ── REQ-ENC-019: coincident bodies ─────────────────────────────────────────────────────────────────────────────────

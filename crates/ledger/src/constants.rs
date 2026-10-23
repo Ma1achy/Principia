@@ -891,16 +891,18 @@ pub const DECODE_SANITY: ConstantBuilder = proposed(
     "M2",
 );
 
-/// Lookup's layer-1 zero-class band, `k` in `|L_z| ≤ k·ε_R·Σ‖rᵢ‖‖pᵢ‖` and `|E| ≤ k·ε_R·(K + |U|)` for class 0
-/// (inverse-encode § "Chart-aware validation", "The zero class in floating point"; REQ-ENC-036, REQ-ENC-037): 2²⁴, so
-/// `k·ε` ≈ 3.7e-9 at f64. TASK-M2-19's proposal (R-71): `lookup_validation_ladder_zero_band_measure`, 2²⁰ states
-/// decoded from latent `z` on `[−8, 8]⁸` against a random gauge image of each (offsets and boosts on `[−8, 8)²`,
-/// scales `2^±12`, either parity) and against the decode of their own unclamped `z`, measures a worst rounding of
-/// 1.41e4 `ε` for `L_z` and 2.62e6 `ε` for `E`, so 2²⁴ covers it by 6.4×; `β`'s clamp at a collinear `L_z = 0` state
-/// moves `L_z` by at least 8.1e9 `ε` of its scale, 483× above the band.
+/// Lookup's layer-1 zero-class band, `k` in `|v| ≤ k·ε_R·S_v` for class 0, `S_v` the first-order bound on the
+/// rounding of `L_z` or `E`, on the entered state's extents, or of a clamp's move or the value after it
+/// (inverse-encode § "Chart-aware validation", "The zero class in floating point" and "The class a clamp moves";
+/// REQ-ENC-036, REQ-ENC-037, REQ-ENC-038): 16, so `k·ε` ≈ 3.55e-15 at f64. The band absorbs rounding only; a clamp's
+/// class is read from its move, so `k` has no bound below. TASK-M2-19's proposal (R-71):
+/// `lookup_validation_ladder_zero_band_measure`, 2²⁰ states decoded from latent `z` on `[−8, 8]⁸`, 16 in every 18
+/// with one control pushed to `±20` so that it clamps, each against a random gauge image of itself (offsets and
+/// boosts on `[−8, 8)²`, scales `2^±12`, either parity), measures a worst difference of 1.18 `ε` of the bound for
+/// `C`'s `L_z` and `E` and 1.95 `ε` for the moves and the values after them, so 16 covers both by 8×.
 pub const ZERO_CLASS: ConstantBuilder = proposed(
     "zero_class",
-    16777216.0,
+    16.0,
     Admissibility::CanonicalUnits,
     "REQ-ENC-037",
     "M2",

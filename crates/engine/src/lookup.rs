@@ -23,9 +23,11 @@
 //! 1. **Hypercube bounds** in the controls' clamp space (§ "Layer 1's space and bounds", REQ-ENC-023): a control fails
 //!    iff the block inverse clamped it, its `lookup_clamped` bit; so does the coincident inner pair (R-13). The remedy
 //!    is the clamp, the moved controls shown ([`Moved`]), unless it changes the class of `L_z` or `E`
-//!    ([`Class`]; § "A qualitatively different IC"), which is rejected. The zero class is a band relative to each
-//!    value's scale ([`Classes`]; § "The zero class in floating point", REQ-ENC-036), so a physically zero `L_z` or `E`
-//!    has one class whatever its rounding. A state whose entered `L_z` or `E` is not finite (the coincident pair's
+//!    ([`Class`]; § "A qualitatively different IC"), which is rejected. The zero class is a band that absorbs
+//!    rounding only, relative to the bound on each value's rounding on the entered state's extents ([`Classes`],
+//!    [`Extents`]; § "The zero class in floating point", REQ-ENC-036), so a physically zero `L_z` or `E` has one class
+//!    whatever its rounding; the clamped state is classed by the rule, from each clamp's move in closed form, not by
+//!    its decoded value ([`moves`], [`after`]; § "The class a clamp moves", REQ-ENC-038). A state whose entered `L_z` or `E` is not finite (the coincident pair's
 //!    `U = −∞`) has no class to change there, so its clamp stands: there is no coincident-bodies rejection (R-13).
 //! 2. **Chart feasibility**, on a chart landing: the chart's own `validate` at its point (R-26), whose project and clamp
 //!    move the lock to the point it gives and whose reject is the lookup's. A latent landing has no layer-2 constraint.
@@ -51,7 +53,7 @@ use kernel::chart::{
     BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Constraint, EuclidPlane,
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeSphere, ValidationResult,
 };
-use kernel::decode::{self, config, mass, Ic};
+use kernel::decode::{self, config, mass, momentum, Ic};
 use kernel::encode::by_kind::{encode_into_within, invariants, ByKind, Landing};
 use kernel::encode::{encode, SimplexClamp};
 use kernel::generated::links::Selection;
@@ -121,7 +123,8 @@ pub struct Tolerances {
     pub curve_tol: f64,
     /// Layer 3's tolerance on the CoM and `Σpᵢ` residuals ([`residuals`]; REQ-ENC-027).
     pub sanity: f64,
-    /// Layer 1's zero-class band, relative to each value's scale ([`Classes`]; REQ-ENC-036, REQ-ENC-037).
+    /// Layer 1's zero-class band, relative to the bound on each value's rounding ([`Classes`], [`Moves`]; REQ-ENC-036,
+    /// REQ-ENC-037).
     pub zero_class: f64,
 }
 
@@ -261,29 +264,78 @@ fn refuse(layer: Layer, failed: Failed) -> Rejected {
     Rejected { layer, failed }
 }
 
+/// The entered state's extents in the canonical units, the magnitudes `C` rounds from (§ "The zero class in floating
+/// point", REQ-ENC-036): `R = λ·maxᵢ‖rᵢ‖` and `P = λ^{−1/2}·maxᵢ‖pᵢ‖` of the entry, `λ = I_in^{−1/2}`, before its
+/// translation, boost, rotation and rescale.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Extents {
+    /// `R`.
+    pub r: f64,
+    /// `P`.
+    pub p: f64,
+}
+
+impl Extents {
+    /// The extents of the entry `x`, whose canonical form has `λ = lambda`.
+    pub fn entered(x: &Ic<f64>, lambda: f64) -> Extents {
+        let extent = |v: &[[f64; 2]; 3]| v.iter().map(|w| w[0].hypot(w[1])).fold(0.0, f64::max);
+        Extents {
+            r: lambda * extent(&x.r),
+            p: extent(&x.p) / lambda.sqrt(),
+        }
+    }
+}
+
 /// A state's two classifying constants and their scales (§ "The zero class in floating point", REQ-ENC-036).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Classes {
     /// `L_z = Σ rᵢ × pᵢ`.
     pub lz: f64,
-    /// `L_z`'s scale, `Σ‖rᵢ‖‖pᵢ‖`.
+    /// `L_z`'s scale, `Σ((1 + R)‖rᵢ‖‖pᵢ‖ + R‖pᵢ‖ + ‖rᵢ‖P)`.
     pub lz_scale: f64,
     /// `E = K + U`.
     pub e: f64,
-    /// `E`'s scale, `K + |U|`.
+    /// `E`'s scale, `Σ((1 + R)‖pᵢ‖²/2 + ‖pᵢ‖P)/mᵢ + Σ mᵢmⱼ/rᵢⱼ·(1 + R + 2R/rᵢⱼ)`.
     pub e_scale: f64,
 }
 
 impl Classes {
-    /// `x`'s constants and scales.
+    /// `x`'s constants and their scales at no entered extent: `Σ‖rᵢ‖‖pᵢ‖` and `K + |U|`.
     pub fn of(x: &Ic<f64>) -> Classes {
+        Classes::within(x, &Extents::default())
+    }
+
+    /// `x`'s constants and their scales, `x` the canonical form of an entry of extents `ext`.
+    pub fn within(x: &Ic<f64>, ext: &Extents) -> Classes {
         let inv = invariants(x);
         let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+        // To first order: each position rounded by `R`, each momentum by `P`, and the rescale, `I_in` read from
+        // positions rounded by `R`, scaling every vector by `1 + R`.
+        let rescale = 1.0 + ext.r;
+        let lz_scale: f64 = (0..3)
+            .map(|i| {
+                let (r, p) = (norm(x.r[i]), norm(x.p[i]));
+                rescale * r * p + ext.r * p + r * ext.p
+            })
+            .sum();
+        let kinetic: f64 = (0..3)
+            .map(|i| {
+                let p = norm(x.p[i]);
+                (rescale * p * p / 2.0 + p * ext.p) / x.m[i]
+            })
+            .sum();
+        let potential: f64 = [(0, 1), (0, 2), (1, 2)]
+            .iter()
+            .map(|&(i, j)| {
+                let d = norm([x.r[i][0] - x.r[j][0], x.r[i][1] - x.r[j][1]]);
+                x.m[i] * x.m[j] / d * (rescale + 2.0 * ext.r / d)
+            })
+            .sum();
         Classes {
             lz: inv.lz,
-            lz_scale: (0..3).map(|i| norm(x.r[i]) * norm(x.p[i])).sum(),
+            lz_scale,
             e: inv.e,
-            e_scale: inv.k + inv.u.abs(),
+            e_scale: kinetic + potential,
         }
     }
 }
@@ -320,6 +372,269 @@ pub fn changed(before: &Classes, after: &Classes, band: f64) -> Option<Class> {
         Some(Class::Energy)
     } else {
         None
+    }
+}
+
+/// The clamped state's classes by the rule (§ "The class a clamp moves", REQ-ENC-038), not by its decoded value: a
+/// constant in class 0 at `band` is 0 but for rounding, so after the clamp it is the move alone at the move's scale;
+/// any other is its value on the clamped parameters at that value's scale.
+pub fn after(before: &Classes, moves: &Moves, band: f64) -> Classes {
+    let zero = |v: f64, scale: f64| class(v, scale, band) == Some(std::cmp::Ordering::Equal);
+    let (lz, lz_scale) = if zero(before.lz, before.lz_scale) {
+        (moves.lz, moves.lz_scale)
+    } else {
+        (moves.lz_after, moves.lz_after_scale)
+    };
+    let (e, e_scale) = if zero(before.e, before.e_scale) {
+        (moves.e, moves.e_scale)
+    } else {
+        (moves.e_after, moves.e_after_scale)
+    };
+    Classes {
+        lz,
+        lz_scale,
+        e,
+        e_scale,
+    }
+}
+
+/// What layer 1's clamps move (§ "The class a clamp moves", REQ-ENC-038): the change of `L_z` and of `E` from the
+/// entered state's parameters to the clamped ones, in exact arithmetic on those parameters, and the scale each is
+/// zero within.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Moves {
+    /// `ΔL_z`.
+    pub lz: f64,
+    /// `ΔL_z`'s scale.
+    pub lz_scale: f64,
+    /// `ΔE`.
+    pub e: f64,
+    /// `ΔE`'s scale.
+    pub e_scale: f64,
+    /// `L_z` after the clamps, evaluated on the clamped parameters.
+    pub lz_after: f64,
+    /// Its scale.
+    pub lz_after_scale: f64,
+    /// `E` after the clamps, evaluated on the clamped parameters.
+    pub e_after: f64,
+    /// Its scale.
+    pub e_after_scale: f64,
+}
+
+/// A value `v` of the entered state's parameters, its change `d` under the clamps and its value `w` after them, each
+/// with its first-order rounding in units of `ε`: `|δv| ≤ ε·r`, `|δd| ≤ ε·s` and `|δw| ≤ ε·t`. Each operation forms
+/// `d` from its operands' changes, never as the difference of two rounded values, and `w` from its operands' values
+/// after the clamps; a parameter no clamp moved has `d = s = 0` exactly.
+#[derive(Clone, Copy, Debug)]
+struct Dual {
+    v: f64,
+    d: f64,
+    w: f64,
+    r: f64,
+    s: f64,
+    t: f64,
+}
+
+impl Dual {
+    /// A parameter, `v` before and `w` after the clamps, `moved` iff a clamp moved it, its rounding `round`; the
+    /// clamp's image rounded once.
+    fn param(v: f64, w: f64, moved: bool, round: f64) -> Dual {
+        let d = if moved { w - v } else { 0.0 };
+        Dual {
+            v,
+            d,
+            w: if moved { w } else { v },
+            r: round,
+            s: if moved { d.abs() + round } else { 0.0 },
+            t: if moved { w.abs() } else { round },
+        }
+    }
+
+    /// `cos θ` and `sin θ`, `θ → θ'`, `θ`'s rounding `round`: `Δcos = −2 sin((θ + θ')/2) sin((θ' − θ)/2)` and
+    /// `Δsin = 2 cos((θ + θ')/2) sin((θ' − θ)/2)`.
+    fn trig(t: f64, u: f64, moved: bool, round: f64) -> (Dual, Dual) {
+        let u = if moved { u } else { t };
+        let (mean, half) = (0.5 * (t + u), 0.5 * (u - t));
+        let image = if moved { u.abs() } else { round };
+        let one = |v: f64, slope: f64, w: f64, slope_w: f64, d: f64| Dual {
+            v,
+            d,
+            w,
+            r: slope.abs() * round + v.abs(),
+            s: if moved { d.abs() + round } else { 0.0 },
+            t: slope_w.abs() * image + w.abs(),
+        };
+        (
+            one(
+                t.cos(),
+                t.sin(),
+                u.cos(),
+                u.sin(),
+                -2.0 * mean.sin() * half.sin(),
+            ),
+            one(
+                t.sin(),
+                t.cos(),
+                u.sin(),
+                u.cos(),
+                2.0 * mean.cos() * half.sin(),
+            ),
+        )
+    }
+
+    fn add(self, o: Dual) -> Dual {
+        let (v, d, w) = (self.v + o.v, self.d + o.d, self.w + o.w);
+        Dual {
+            v,
+            d,
+            w,
+            r: self.r + o.r + v.abs(),
+            s: self.s + o.s + d.abs(),
+            t: self.t + o.t + w.abs(),
+        }
+    }
+
+    fn neg(self) -> Dual {
+        Dual {
+            v: -self.v,
+            d: -self.d,
+            w: -self.w,
+            ..self
+        }
+    }
+
+    fn sub(self, o: Dual) -> Dual {
+        self.add(o.neg())
+    }
+
+    fn half(self) -> Dual {
+        Dual {
+            v: 0.5 * self.v,
+            d: 0.5 * self.d,
+            w: 0.5 * self.w,
+            r: 0.5 * self.r,
+            s: 0.5 * self.s,
+            t: 0.5 * self.t,
+        }
+    }
+
+    /// `Δ(xy) = Δx·y' + x·Δy`.
+    fn mul(self, o: Dual) -> Dual {
+        let (v, d, w) = (self.v * o.v, self.d * o.w + self.v * o.d, self.w * o.w);
+        Dual {
+            v,
+            d,
+            w,
+            r: self.r * o.v.abs() + self.v.abs() * o.r + v.abs(),
+            s: self.s * o.w.abs()
+                + self.d.abs() * o.t
+                + self.r * o.d.abs()
+                + self.v.abs() * o.s
+                + d.abs(),
+            t: self.t * o.w.abs() + self.w.abs() * o.t + w.abs(),
+        }
+    }
+
+    /// `Δ(x/y) = Δx/y' − x·Δy/(y·y')`, `y` positive.
+    fn div(self, o: Dual) -> Dual {
+        let (x, y, z) = (self.v, o.v, o.w);
+        let (v, d, w) = (x / y, self.d / z - x * o.d / (y * z), self.w / z);
+        let slope = self.d.abs() / (z * z) + x.abs() * o.d.abs() * (y + z) / (y * z * y * z);
+        Dual {
+            v,
+            d,
+            w,
+            r: (self.r + v.abs() * o.r) / y + v.abs(),
+            s: self.s / z
+                + x.abs() * o.s / (y * z)
+                + self.r * o.d.abs() / (y * z)
+                + o.r * slope
+                + d.abs(),
+            t: (self.t + w.abs() * o.t) / z + w.abs(),
+        }
+    }
+
+    /// `Δ√x = Δx/(√x + √x')`, `x` positive.
+    fn sqrt(self) -> Dual {
+        let (a, b) = (self.v.sqrt(), self.w.sqrt());
+        let den = a + b;
+        let d = self.d / den;
+        Dual {
+            v: a,
+            d,
+            w: b,
+            r: self.r / (2.0 * a) + a,
+            s: self.s / den + self.r * d.abs() * (0.5 / a + 0.5 / b) / den + d.abs(),
+            t: self.t / (2.0 * b) + b,
+        }
+    }
+}
+
+/// [`Moves`] of the encoded `e` under its clamps, `z` the clamped controls, `ext` the entry's extents, under `S`
+/// (§ "The class a clamp moves", REQ-ENC-038; dd_decoder §3.1, §3.2, §3.4). The entered state's parameters are the
+/// block inverses': `α`, `β`, the masses and the Jacobi momenta `q = (p_ρ, p_λ)` in the canonical frame. A clamped
+/// control takes its link's value at its clamped `z`; every other keeps its own. With `M₀₁ = m₀ + m₁`,
+/// `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `a = ‖ρ‖ = cos α/√μ_ρ` and `b = ‖λ‖ = sin α/√μ_λ`:
+/// `L_z = a·q₁ + b·(cos β·q₃ − sin β·q₂)`, `K = (q₀² + q₁²)/2μ_ρ + (q₂² + q₃²)/2μ_λ` and
+/// `U = −(m₀m₁/a + m₀m₂/r₀₂ + m₁m₂/r₁₂)`, `r₀₂ = ‖λ + (m₁/M₀₁)ρ‖`, `r₁₂ = ‖λ − (m₀/M₀₁)ρ‖`, `ρ = (a, 0)`,
+/// `λ = b·(cos β, sin β)`. The parameters' rounding, in units of `ε`: `mᵢ` for each mass, `R·(√μ_ρ + √μ_λ) + α`
+/// for `α`, `R/b + R/a + β` for `β` and `P + (R/a + R + 1)·maxₖ|qₖ|` for each `qₖ`, `R/a` the canonical frame's
+/// own, its rotation being `ρ`'s direction, and `R` the rescale's.
+pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: &Extents) -> Moves {
+    let bits = e.blocks.clamped;
+    let on = |k: u32| bits & (1 << k) != 0;
+    let (za, zb) = config::angles::<S, f64>([z[0], z[1]]);
+    let (alpha, beta) = (e.blocks.alpha, e.blocks.beta);
+    let j = &e.blocks.jacobi;
+    let q = [j.p_rho[0], j.p_rho[1], j.p_lambda[0], j.p_lambda[1]];
+    let zq = momentum::controls::<S, f64>([z[2], z[3], z[4], z[5]]);
+    let m = e.canonical.ic.m;
+    let mass_moved = bits & 0b1100_0000 != 0;
+    let m2 = mass::decode::<S, f64>([z[6], z[7]]).m;
+    let ms: [Dual; 3] = std::array::from_fn(|k| Dual::param(m[k], m2[k], mass_moved, m[k]));
+    let m01 = ms[0].add(ms[1]);
+    let mu_rho = ms[0].mul(ms[1]).div(m01);
+    let mu_lambda = ms[2].mul(m01);
+    let alpha_round = ext.r * (mu_rho.v.sqrt() + mu_lambda.v.sqrt()) + alpha.abs();
+    let (cos_a, sin_a) = Dual::trig(alpha, za, on(0), alpha_round);
+    let a = cos_a.div(mu_rho.sqrt());
+    let b = sin_a.div(mu_lambda.sqrt());
+    // The frame's rotation is `ρ`'s direction, rounded by `R/a`; it turns every canonical vector by as much.
+    let over = |len: f64| if len > 0.0 { ext.r / len } else { 0.0 };
+    let frame = over(a.v);
+    let beta_round = over(b.v) + frame + beta.abs();
+    let q_bound = q.iter().fold(0.0_f64, |acc, v| acc.max(v.abs()));
+    let q_round = ext.p + (frame + ext.r + 1.0) * q_bound;
+    let qs: [Dual; 4] =
+        std::array::from_fn(|k| Dual::param(q[k], zq[k], on(2 + k as u32), q_round));
+    let (c, s) = Dual::trig(beta, zb, on(1), beta_round);
+    let lz = a.mul(qs[1]).add(b.mul(c.mul(qs[3]).sub(s.mul(qs[2]))));
+    let square = |x: Dual| x.mul(x);
+    let kinetic = square(qs[0])
+        .add(square(qs[1]))
+        .half()
+        .div(mu_rho)
+        .add(square(qs[2]).add(square(qs[3])).half().div(mu_lambda));
+    let (w0, w1) = (ms[0].div(m01), ms[1].div(m01));
+    let (bc, y) = (b.mul(c), b.mul(s));
+    let r02 = square(bc.add(w1.mul(a))).add(square(y)).sqrt();
+    let r12 = square(bc.sub(w0.mul(a))).add(square(y)).sqrt();
+    let potential = ms[0]
+        .mul(ms[1])
+        .div(a)
+        .add(ms[0].mul(ms[2]).div(r02))
+        .add(ms[1].mul(ms[2]).div(r12))
+        .neg();
+    let energy = kinetic.add(potential);
+    Moves {
+        lz: lz.d,
+        lz_scale: lz.s,
+        e: energy.d,
+        e_scale: energy.s,
+        lz_after: lz.w,
+        lz_after_scale: lz.t,
+        e_after: energy.w,
+        e_after_scale: energy.t,
     }
 }
 
@@ -546,11 +861,12 @@ where
             }
         }
     }
-    // Layer 1: the clamp stands unless it changes a class.
+    // Layer 1: the clamp stands unless it changes a class, read from the parameters, not from the decoded value.
     if moved.controls != 0 {
-        let after = decode::decode::<S, f64>(&decode::Latent::new(z)).ic;
-        let before = Classes::of(&e.canonical.ic);
-        if let Some(class) = changed(&before, &Classes::of(&after), tol.zero_class) {
+        let ext = Extents::entered(x, e.canonical.lambda);
+        let before = Classes::within(&e.canonical.ic, &ext);
+        let after = after(&before, &moves::<S>(e, &z, &ext), tol.zero_class);
+        if let Some(class) = changed(&before, &after, tol.zero_class) {
             let failed = Failed::Clamp {
                 controls: moved.controls,
                 class,
