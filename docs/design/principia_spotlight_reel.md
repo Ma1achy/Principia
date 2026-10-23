@@ -76,14 +76,22 @@ almost fake being the explore view." **Any interaction takes over live at that e
 - **Any interaction takes over**: a pointer press, drag or scroll on the figure, any key with the focus in the Figure
   scope (a modifier pressed alone excepted), or a touch on any control that would send a `SetField` (§3.2). The
   interaction is consumed by the takeover; it does not also pan, zoom, lock or set the control (applied per R-369).
-- **By keyboard.** Play reel gives the focus to the Figure scope, keyboard navigation shown as §G3 has it (on if Play
-  reel was pressed from the keyboard, off from the mouse, R-460), so the next key takes over. Every key there takes
-  over, Tab, Esc, `?` and Ctrl+Z included, as the human's "a key" says; no key is excepted. **The keyboard's way out of
-  the film is therefore a key, which takes over, then one Ctrl+Z, which undoes the takeover's entry and returns the view
-  to the one before the reel, as Stop does.** Stop itself is the mouse's. *Was:* "Stop in the Spotlights window is
-  reached by mouse, or by Windows › Spotlights…, which gives the open window the focus" (fix round 1 of PR #286, gui
-  review 5631060675, F4 (a); replaced in fix round 2 of PR #286, gui review 5631227164, G3, since Tab from the Figure is itself a key that takes over; applied
-  per R-369).
+- **By keyboard** (fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369, keeping every drawn control reachable by §G3's keys, R-450 A7,
+  REQ-GUI-190). Play reel leaves the focus in the Spotlights window, on **Stop** (the ring shown if Play reel was
+  pressed from the keyboard, R-460), so Enter there stops the film and the window's other controls stay reachable by
+  §G3's keys. Esc from the window's top level returns the focus to what opened it, the top bar's Windows menu, as the
+  console's does (§G12); from the top bar every big scope is reached by Tab and Shift+Tab as usual (Shift+Tab reaches the
+  footer and the console, and the top bar holds Profiler…), landing on a scope never taking over. With the focus in the
+  Figure scope, reached by Tab or a click, **every key takes over**, Tab, Esc, `?` and Ctrl+Z included, as the human's
+  "a key" says; touching a control that would send a `SetField` takes over (§3.2). A key there, then one Ctrl+Z, also
+  returns the view to the one before the reel, but it is not the keyboard's Stop: it starts the engine and leaves a redo
+  entry. *Was* (fix round 2): "Play reel gives the focus to the Figure scope, keyboard navigation shown as §G3 has it (on
+  if Play reel was pressed from the keyboard, off from the mouse, R-460), so the next key takes over. Every key there
+  takes over, Tab, Esc, `?` and Ctrl+Z included, as the human's "a key" says; no key is excepted. **The keyboard's way
+  out of the film is therefore a key, which takes over, then one Ctrl+Z, which undoes the takeover's entry and returns
+  the view to the one before the reel, as Stop does.** Stop itself is the mouse's." (fix round 2 of PR #286, gui review
+  5631227164, G3), itself replacing "Stop in the Spotlights window is reached by mouse, or by Windows › Spotlights…,
+  which gives the open window the focus" (fix round 1 of PR #286, gui review 5631060675, F4 (a)).
 - **At that exact frame.** The displayed frame's index gives, through the manifest, its segment, its spec and its frame
   within the spec. The app recomputes that frame's state from the spec as the exporter did (Part 3's interpolation,
   TASK-M8-31) and loads it live: chart, view, stain, links, playhead, every field of `SimConfig` and `RenderState`,
@@ -124,7 +132,8 @@ almost fake being the explore view." **Any interaction takes over live at that e
 
 A plain window, no polish. **Spotlights** opens from Windows › Spotlights…, a window under §G5's rules (R-461). It lists
 the reel's segments in order, each with its provenance (chart, horizon, integrator, build, date), and offers **Play
-reel** (from the selected segment's first frame, or the first segment's), **Stop**, and **Open the sequence**, which
+reel** (from the selected segment's first frame, or the first segment's; the focus then on Stop, §3.3), **Stop**, and
+**Open the sequence**, which
 loads the selected segment's whole spec into the Sequence window (`principia_sequence.md`). With no reel in the build
 it reads "No reel in this build" and Play reel is disabled.
 
@@ -171,7 +180,8 @@ Each with what makes it fail.
   returns to the view before the reel. *Fails on* an
   off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
 - **film_holds_explore**: while the film plays, moving the cursor over the figure sends no hover, the Legend shows no
-  keys, the decoder badge is absent, `t` reads "—", the Profiler opens without taking over, the top bar's undo does
+  keys, the decoder badge is absent, `t` reads "—", the Profiler opens and Stop is pressed by keyboard without taking
+  over, the top bar's undo does
   nothing and Ctrl+Z in the Figure takes over; touching the Manifold view's slider takes over. *Fails if* a hover is
   sent, a decoder badge or a number for `t` is shown, the Profiler takes over, the top bar's undo acts, or the slider's
   edit lands on the hidden live view.

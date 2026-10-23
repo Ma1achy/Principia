@@ -24386,6 +24386,16 @@ reported as a disagreement. Nothing waits.
   reached by mouse, or by Windows › Spotlights…".
 - **G5:** REQ-GUI-386's verify has a control for each property it checks.
 
+*Fix round 3 of PR #286 (gui review 5631344897, H1; applied per R-369, the orchestrator's decision):* the human's
+"Click, drag, scroll or a key" does not say where the focus lands, and the Figure landing was fix round 1's own choice,
+which left Stop, the Profiler, the console and the top bar unreachable by keyboard while the film plays (R-450 A7,
+REQ-GUI-190, §G12). Play reel now leaves the focus on Stop in the Spotlights window; Esc from its top level returns the
+focus to the top bar's Windows menu, which opened it, as the console's Esc returns it (§G12); from there every big
+scope is reached by Tab and Shift+Tab as usual, a landing never taking over; and with the focus in the Figure every key
+still takes over. A key then one Ctrl+Z is no longer called the keyboard's way out: it starts the engine and leaves a
+redo entry, which Stop does not. Fix round 2's G3 line stands but for its "Stop is the mouse's" and the way out, which
+this replaces. *Was* (fix round 1, F4 (a)): "Play reel gives the focus to the Figure scope, so the next key takes over."
+
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199

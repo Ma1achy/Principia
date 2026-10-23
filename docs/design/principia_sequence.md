@@ -222,8 +222,10 @@ Each with what makes it fail.
   before it and the undo depth unchanged; a pan during the preview stops it and pans the user's view; a cursor moved
   over the figure does not stop it; Esc stops it and leaves the focus. *Fails* if a frame is sent as an edit, if the
   view stays at the preview's frame, if the pan lands on the preview's state, or if a hover or an Esc does more.
-- **preview_holds_explore**: during a preview of another stain and chart, the Legend shows no keys, the decoder badge is
-  absent, `t` reads "—" and no hover is sent. *Fails if* the Legend or the badge describes the user's view.
+- **preview_holds_explore**: during a preview of another stain and chart, the header strip shows the preview badge, the
+  Legend shows no keys, the decoder badge is absent, `t` reads "—", no hover is sent and the Manifold view shows the
+  user's values. *Fails if* the preview badge is missing, the Legend or the decoder badge describes the user's view, `t`
+  shows a number, a hover is sent or its sample drawn, or the Manifold view shows the preview frame's values.
 - **proof_equals_export**: a proof frame is bitwise the exported frame at the same time, size and tier. *Fails if* it
   came from the live loop.
 - **planner_no_guess**: with no frame records the estimate reads "no measurement on this machine yet" and shows no
