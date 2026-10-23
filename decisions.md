@@ -24257,6 +24257,16 @@ these texts don't address, queue it rather than resolving it"):*
 - **F5, undo:** §3.5 and REQ-GUI-378 no longer say every sequence edit is undoable; RQ-559, which also offers no undo,
   decides, nothing applied meanwhile, and REQ-GUI-378 waits on it.
 
+*Fix round 2 of PR #286 (gui review 5631227164, G1, G2, G4; applied per R-369):*
+- **G1, what ends a preview:** a `SetField` that enters the history, or an undo or redo request (requests, not
+  `SetField`s); a no-history `SetField` (the hover's, the clock's advance) does not. *Was* (fix round 1): "any
+  `SetField` ends it" and "(any `SetField` the GUI would send: a pan, a slider, Home, a stain edit, undo or redo)".
+- **G2, Explore during a preview:** the snapshot's state is the user's, so nothing reading it describes the figure: a
+  header-strip badge **preview** and no decoder badge (R-523), the Legend without keys ("Preview: the legend returns
+  when it stops"), `t` "—", the hover held off; the Manifold view and the other controls show the user's view, which
+  they edit, a touch ending the preview. REQ-GUI-387 (new) holds it.
+- **G4, Esc:** Esc in the Sequence during a preview stops it and does nothing else; the next Esc acts as §G3 has it.
+
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375
@@ -24364,6 +24374,17 @@ reported as a disagreement. Nothing waits.
   over at the displayed frame, consumed. REQ-GUI-386 (new) holds it.
 - **F4 (c):** REQ-GUI-383's verify tests a click, a drag, a scroll and a key, and a modifier pressed alone that does
   not take over.
+
+*Fix round 2 of PR #286 (gui review 5631227164, G1, G3, G5; applied per R-369):*
+- **G1:** the live player after a takeover stops at a `SetField` that enters the history, or at undo or redo; the
+  hover, a no-history `SetField`, does not stop it. *Was* (fix round 1): "the first user edit (any `SetField` the user's
+  input sends …)".
+- **G3, keys:** every key in the Figure scope takes over, Tab, Esc, `?` and Ctrl+Z included, as "a key" says; no key is
+  excepted. The keyboard's way out of the film is a key, which takes over, then one Ctrl+Z, which returns the view to the
+  one before the reel, as Stop does; Stop is the mouse's. The top bar's undo and Ctrl+Z with the focus in a window do
+  nothing while the film plays. *Was* (fix round 1): "undo and redo are disabled" and "Stop in the Spotlights window is
+  reached by mouse, or by Windows › Spotlights…".
+- **G5:** REQ-GUI-386's verify has a control for each property it checks.
 
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 

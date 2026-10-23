@@ -59,8 +59,10 @@ almost fake being the explore view." **Any interaction takes over live at that e
   R-369). The hover is held off: the GUI sends no `RenderField::Hover` while the film plays, and the hover trace and
   label are not drawn. The decoder badge is not shown, the header strip holding only the preview badge and the
   provenance; the Legend shows no keys, only the line "Film: the legend returns when live"; the top bar's status and
-  Time's readout show "—" for `t`; the Inspector and Trajectory panel show nothing new. Undo and redo (Ctrl+Z, the top
-  bar) are disabled. Every control of the Manifold view, the Compass, Time (the scrubber and the transport), the
+  Time's readout show "—" for `t`; the Inspector and Trajectory panel show nothing new. Undo and redo from outside the
+  Figure scope (the top bar's undo, Ctrl+Z with the focus in a window) do nothing; Ctrl+Z with the focus in the Figure
+  is a key, so it takes over (§3.3; *was:* "Undo and redo (Ctrl+Z, the top bar) are disabled.", fix round 2 of PR #286, gui review 5631227164, G3; applied per
+  R-369). Every control of the Manifold view, the Compass, Time (the scrubber and the transport), the
   Trajectory panel and the top bar's Run… and Overlays ▾ / Lines ▾ that would send a `SetField` takes over at the
   displayed frame when touched, and the touch is consumed (§3.3). Windows that send nothing (Profiler, the console,
   Spotlights itself) work as usual.
@@ -75,9 +77,13 @@ almost fake being the explore view." **Any interaction takes over live at that e
   scope (a modifier pressed alone excepted), or a touch on any control that would send a `SetField` (§3.2). The
   interaction is consumed by the takeover; it does not also pan, zoom, lock or set the control (applied per R-369).
 - **By keyboard.** Play reel gives the focus to the Figure scope, keyboard navigation shown as §G3 has it (on if Play
-  reel was pressed from the keyboard, off from the mouse, R-460), so the next key takes over; Stop in the Spotlights
-  window is reached by mouse, or by Windows › Spotlights…, which gives the open window the focus (fix round 1 of PR
-  #286, gui review 5631060675, F4 (a); applied per R-369).
+  reel was pressed from the keyboard, off from the mouse, R-460), so the next key takes over. Every key there takes
+  over, Tab, Esc, `?` and Ctrl+Z included, as the human's "a key" says; no key is excepted. **The keyboard's way out of
+  the film is therefore a key, which takes over, then one Ctrl+Z, which undoes the takeover's entry and returns the view
+  to the one before the reel, as Stop does.** Stop itself is the mouse's. *Was:* "Stop in the Spotlights window is
+  reached by mouse, or by Windows › Spotlights…, which gives the open window the focus" (fix round 1 of PR #286, gui
+  review 5631060675, F4 (a); replaced in fix round 2 of PR #286, gui review 5631227164, G3, since Tab from the Figure is itself a key that takes over; applied
+  per R-369).
 - **At that exact frame.** The displayed frame's index gives, through the manifest, its segment, its spec and its frame
   within the spec. The app recomputes that frame's state from the spec as the exporter did (Part 3's interpolation,
   TASK-M8-31) and loads it live: chart, view, stain, links, playhead, every field of `SimConfig` and `RenderState`,
@@ -93,9 +99,11 @@ almost fake being the explore view." **Any interaction takes over live at that e
   held. The entry closes when the player stops.
 - **The player stops** at the spec's end, at its last keyframe, after which the transport plays on to the horizon by
   the clock (R-101) if that keyframe's playhead policy is advance, and is paused otherwise; or at the first user edit
-  (any `SetField` the user's input sends, a pan, a slider, Home, a stain edit), which stops the player, closes the
+  (a `SetField` that enters the history: a pan, a slider, Home, a stain edit), which stops the player, closes the
   takeover's entry at the frame then shown, and then applies as its own entry, never overwritten by the player; or at
-  undo, which stops it and undoes the takeover's entry. *Was:* "the transport plays, and the spec is loaded into the
+  undo, which stops it and undoes the takeover's entry, or redo. A no-history `SetField`, the hover's, does not stop it:
+  the hover works as in any live view. (*Was:* "(any `SetField` the user's input sends, a pan, a slider, Home, a stain
+  edit)", fix round 2 of PR #286, gui review 5631227164, G1; applied per R-369.) *Was:* "the transport plays, and the spec is loaded into the
   live sequence player (`principia_sequence.md` §3.6) at that frame's wall time, so any keyframed motion it was in the
   middle of continues live. That playback is playback: its frames enter no undo (R-101). At the spec's end the player
   stops at its last keyframe, and the transport plays on to the horizon if that keyframe's playhead policy is advance,
@@ -159,11 +167,14 @@ Each with what makes it fail.
   the view bitwise as it was. *Fails if* the player renders the spec live.
 - **takeover_identity**: a click, a drag, a scroll and a key in the Figure scope at film frame `i` each load exactly the
   spec, state and playhead of that frame, and playing continues; a modifier pressed alone does not take over; a pan
-  during the live motion stops the player and stays; one undo returns to the view before the reel. *Fails on* an
+  during the live motion stops the player and stays, while a cursor moved over the figure does not stop it; one undo
+  returns to the view before the reel. *Fails on* an
   off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
 - **film_holds_explore**: while the film plays, moving the cursor over the figure sends no hover, the Legend shows no
-  keys, the decoder badge is absent and Ctrl+Z does nothing; touching the Manifold view's slider takes over. *Fails if*
-  a hover is sent, or the slider's edit lands on the hidden live view.
+  keys, the decoder badge is absent, `t` reads "—", the Profiler opens without taking over, the top bar's undo does
+  nothing and Ctrl+Z in the Figure takes over; touching the Manifold view's slider takes over. *Fails if* a hover is
+  sent, a decoder badge or a number for `t` is shown, the Profiler takes over, the top bar's undo acts, or the slider's
+  edit lands on the hidden live view.
 - **no_blank_handover**: from the interaction until live has resolved, every displayed frame is the film backdrop or a
   live render over it. *Fails if* any frame shows nothing.
 - **preview_marker**: the badge is present on every film frame and gone after the handover. *Fails if* a film frame

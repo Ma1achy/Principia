@@ -41,6 +41,8 @@ selects. Its scope's shortcuts (R-409): **K** adds a keyframe and **Delete** rem
 stays the lock (§G4, R-556); a scope's letter acts only with the focus in that scope, so the two never meet. Esc from
 the window's top level returns the focus to the Figure and leaves the window open.
 
+While a preview plays, Esc in the Sequence stops it and nothing else (§3.6).
+
 **Getting back in by keyboard.** The Sequence is a window, not a big scope: §G3's Tab order of big scopes (1 top bar …
 8 footer, R-405) is unchanged. **Windows › Sequence…** on an open Sequence gives it the focus, landing on its header
 bar in navigation mode, as opening it does; the top bar's menus are reached by keyboard as big scope 1 (§G3), so the
@@ -136,8 +138,22 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
   - **When it stops or ends** (Stop, Play preview again, Esc in the Sequence, or the spec's end), the preview goes and
     the view is the user's view from before it, bitwise, since it was never changed. To keep a preview's frame the user
     moves the cursor there and uses a keyframe's Go to, or Update.
-  - **A user edit while it plays** (any `SetField` the GUI would send: a pan, a slider, Home, a stain edit, undo or redo)
-    first stops the preview, and then applies to the user's view, an ordinary entry; the preview never overwrites it.
+  - **Esc in the Sequence while a preview plays** stops the preview and does nothing else: the focus and the keyboard's
+    mode stay where they were. The next Esc acts as §G3 has it (§3.1) (fix round 2 of PR #286, gui review 5631227164, G4; applied per R-369).
+  - **A user edit while it plays** (a `SetField` that enters the history: a pan, a slider, Home, a stain edit) or an
+    undo or redo request first ends the preview, and then applies to the user's view as usual; the preview never
+    overwrites it. A no-history `SetField` (the hover's, the clock's advance) does not end it. *Was:* "(any `SetField`
+    the GUI would send: a pan, a slider, Home, a stain edit, undo or redo) first stops the preview, and then applies to
+    the user's view, an ordinary entry; the preview never overwrites it." (fix round 2 of PR #286, gui review 5631227164, G1; applied per R-369: undo and
+    redo are requests, not `SetField`s, and the hover is a no-history `SetField`.)
+  - **The rest of Explore while it plays** (fix round 2 of PR #286, gui review 5631227164, G2; applied per R-369). The figure shows the preview's frames, but
+    the snapshot's `SimConfig` and `RenderState` are the user's, so nothing that reads them may describe the figure: the
+    header strip shows a badge **preview** (R-523) and no decoder badge; the Legend shows no keys, only the line
+    "Preview: the legend returns when it stops"; the top bar's status and Time's readout show "—" for `t`; the hover is
+    held off (no `Hover` is sent and no hover trace, label or sample is drawn, since its sample would name an IC of the
+    user's chart, not the preview's); the Inspector and Trajectory panel show nothing new. The Manifold view, Compass,
+    Time and the other controls keep showing the user's view, which is what they edit: touching one is a user edit,
+    which ends the preview first.
   - *Was:* "It is playback, and playback never enters undo (R-101): each frame's state is sent with "no history", and
     stopping it leaves the undo depth as it was." (fix round 1 of PR #286, gui review 5631060675, F2; applied per
     R-369: R-101 covers only the clock's playhead, and R-69 makes every `SimConfig` and `RenderState` edit undoable, so
@@ -203,8 +219,11 @@ Each with what makes it fail.
   opens as "cannot recreate", naming the link, and a reader that substitutes the build's link fails.
 - **preview_cuts_links**: a segment interpolating a link parameter previews as a cut at its second keyframe and is
   flagged in the planner; the preview sends no `SetField`, and when it stops or ends the state is bitwise the state
-  before it and the undo depth unchanged; a pan during the preview stops it and pans the user's view. *Fails* if a
-  frame is sent as an edit, if the view stays at the preview's frame, or if the pan lands on the preview's state.
+  before it and the undo depth unchanged; a pan during the preview stops it and pans the user's view; a cursor moved
+  over the figure does not stop it; Esc stops it and leaves the focus. *Fails* if a frame is sent as an edit, if the
+  view stays at the preview's frame, if the pan lands on the preview's state, or if a hover or an Esc does more.
+- **preview_holds_explore**: during a preview of another stain and chart, the Legend shows no keys, the decoder badge is
+  absent, `t` reads "—" and no hover is sent. *Fails if* the Legend or the badge describes the user's view.
 - **proof_equals_export**: a proof frame is bitwise the exported frame at the same time, size and tier. *Fails if* it
   came from the live loop.
 - **planner_no_guess**: with no frame records the estimate reads "no measurement on this machine yet" and shows no

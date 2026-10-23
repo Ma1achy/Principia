@@ -1414,8 +1414,11 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
 - **Play preview** runs the sequence in the live frame loop, link parameters and dissolves as cuts (R-520 F3), under
   the banner "Preview: not converged; cuts where the export interpolates". It is a transient view the engine plays from
   a preview request carrying the spec: no `SetField` is sent, nothing enters the history, and when it stops or ends
-  the view is the user's view from before it, bitwise; a user edit while it plays stops it first and applies to the
-  user's view. *Was:* "its frames entering no undo (R-101)." (fix round 1 of PR #286, gui review 5631060675, F2;
+  the view is the user's view from before it, bitwise; a user edit that enters the history, or an undo or redo, while
+  it plays stops it first and applies to the user's view, the hover not stopping it; Esc in the Sequence stops it and
+  does nothing else. While it plays the header strip shows a badge **preview** and no decoder badge, the Legend only
+  "Preview: the legend returns when it stops", `t` reads "—" and no hover is sent (fix round 2 of PR #286, gui review 5631227164, G1, G2, G4; applied per
+  R-369). *Was:* "its frames entering no undo (R-101)." (fix round 1 of PR #286, gui review 5631060675, F2;
   applied per R-369).
   **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
   tier.
@@ -1438,12 +1441,14 @@ is `docs/design/principia_spotlight_reel.md`.
 - **Playing:** the film plays in the Explore canvas, the live view paused and hidden beneath, nothing computed; the
   header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot, and no decoder
   badge. Play reel gives the focus to the Figure scope. While it plays the hover is held off (no `Hover` sent), the
-  Legend shows only "Film: the legend returns when live", `t` reads "—", and undo and redo are disabled. Stop leaves
-  the view as it was.
-- **The takeover:** a press, drag or scroll on the figure, a key in the Figure scope (a modifier alone excepted), or a
+  Legend shows only "Film: the legend returns when live", `t` reads "—", and the top bar's undo and redo do nothing.
+  Stop leaves the view as it was. *Was:* "and undo and redo are disabled." (fix round 2 of PR #286, gui review 5631227164, G3).
+- **The takeover:** a press, drag or scroll on the figure, any key in the Figure scope (Tab, Esc and Ctrl+Z included; a
+  modifier alone excepted), or a
   touch on any control that would send a `SetField` takes over at the displayed frame, consumed: its spec's state
   loaded live, bitwise the exporter's, and it keeps playing, live, the player's frames coalesced into the takeover's one
-  undoable entry until the spec ends or a user edit stops it. The film frame stays as the backdrop until the live
+  undoable entry until the spec ends, or a user edit that enters the history, an undo or a redo stops it (the hover
+  does not). The keyboard's way out of the film is a key, then one Ctrl+Z, which returns to the view before the reel. The film frame stays as the backdrop until the live
   baseline cover is complete; then the badge goes. (Fix round 1 of PR #286, gui review 5631060675, F2 and F4; applied
   per R-369.)
 
