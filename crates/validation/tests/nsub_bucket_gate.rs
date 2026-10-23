@@ -582,6 +582,13 @@ fn nsub_bucket_gate_floor() {
             "{law:?}: {:?}",
             m.first_mismatch
         );
+        // Both sides of each edge: below THR[n] is n + 1, above it n, so 1 … N_max, and N_max once, below THR[N_max − 1].
+        assert_eq!(
+            m.n_sub_range,
+            (1, law.n_max),
+            "{law:?}: both sides of every edge"
+        );
+        assert_eq!(m.saturated, 1, "{law:?}: N_max only below THR[N_max − 1]");
     }
     let whole = measure(&input(FLOOR, None)).expect("measures");
     assert_eq!(whole.failures(), 0, "{:?}", whole.first_mismatch);
