@@ -30,7 +30,7 @@ The corpus gives four build orders. They agree, and the milestones follow them.
 
 | Build order | Says | Milestones |
 |---|---|---|
-| canonical_spec §1, item 6, and §11 ("Milestone/implementation build plan") | "Native-first … prove parity/toolchain → validate physics numerically → build the browser product on top." | M0 (toolchain) → M3–M4 (physics validated natively, then parity on the GPU) → M8 (browser product) |
+| canonical_spec §1, item 6, and §11 ("Milestone/implementation build plan") | "Native-first … prove parity/toolchain → validate physics numerically → build v1 web on top" (R-571; *was:* "build the browser product on top") | M0 (toolchain) → M3–M4 (physics validated natively, then parity on the GPU) → M8 (the native app and v1 web, R-571) |
 | debug_tooling_plan, "Build order within Phase 0 (the only forced staggering)" | 0a generation root → 0b synthetic payload harness → 0c the kernel bring-up mode, then the §A fragment presets (UV first; DECODE once the decode port lands; ROUNDTRIP once encode lands; R-75) → structural views as soon as `RenderQuad` is defined → cross-checks per seam as components arrive. "Build the eyes before the thing seen." | 0a → M0; 0b, the bring-up mode and the UV preset → M1; the DECODE and ROUNDTRIP presets → M2; cross-checks land with their seam (M2–M6) |
 | render_contract Part 6, "Why first, concretely" | "Build order stands: contract + SDK → debug catalogue → flat compute → quads → adaptive." | M0 → M1 → M4 → M5 → M6 |
 | deep_zoom §3, "Three-layer quadtree" | "Built in three layers, each a working system … This is the build order": 0 flat grid → 1 quad cache + ancestor fallback → 2 adaptive refinement. | M4 → M5 → M6 |
@@ -372,9 +372,12 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - PERF (2): REQ-PERF-068…069
 <!-- /gate:M7 -->
 
-## M8 — The dev GUI, tooling, the browser product and the release gates
+## M8 — The dev GUI, tooling, v1 web and the release gates
 
-canonical_spec §11: "build the browser product on top".
+canonical_spec §11: "build v1 web on top" (R-571; *was:* "build the browser product on top"). M8 ships the native app
+and v1 web, the whole native app compiled to run in the browser, with the same interface, features and stains, on
+the GitHub Pages site (TASK-M8-41). v2 web, a purpose-built browser product designed later as its own thing, is in
+no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser product and the release gates".
 
 - The dev GUI against the artboards in `docs/gui/design/`. R-68 applies: the artboards set layout, and
   corpus values win.
@@ -383,13 +386,14 @@ canonical_spec §11: "build the browser product on top".
 - Export and animation.
 - The full profiler and debug tooling UI.
 - The frame budget, end to end.
-- The browser build: wasm engine worker, `OffscreenCanvas`, and the two membranes.
+- The browser build, v1 web (R-571): the whole native app in the browser; the wasm engine worker, `OffscreenCanvas`,
+  and the two membranes, as written until RQ-550 (what v1 web crosses) and RQ-551 (where its GUI runs) are ruled.
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 - The Chazy legends (R-442; TASK-M8-45), on the generated legend.
   With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
 
 <!-- gate:M8 -->
-**Exit gate — 347 requirements** (and every earlier gate still green):
+**Exit gate — 348 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (9): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084
@@ -403,5 +407,5 @@ canonical_spec §11: "build the browser product on top".
 - TOOL (53): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185
 - VAL (18): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092
-- SYS (24): REQ-SYS-039…062
+- SYS (25): REQ-SYS-039…062, REQ-SYS-086
 <!-- /gate:M8 -->

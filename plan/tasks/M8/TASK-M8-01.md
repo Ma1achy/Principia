@@ -13,6 +13,7 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 
 ## References
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
 - `decisions.md` § "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
 - `decisions.md` § "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
 - `decisions.md` § "R-106 — The link ids are the chart's link functions *(closes RQ-66)*"
@@ -31,6 +32,7 @@ The GUI-facing surface exists, defined once in Rust: the three typed structs of 
 - `crates/engine/src/contract/state/provenance.rs` — serde of SimConfig + RenderState as the provenance object.
 - `crates/engine/src/state_surface.rs` — the engine's `pub` re-export of this surface; the engine applies SetFields to SimConfig / RenderState and has no ViewUI parameter anywhere.
 - Tests: `schema_fields`, `provenance_roundtrip`, `two_clients`, `snapshot_bound`.
+- `crates/engine/src/contract/view_ui.rs:2`, the module doc comment: "a polished GUI may define its own" reworded to "a replacement GUI, if there ever is one (v2 web's, R-571), may define its own", following gui_state_contract §2 (R-571; gui re-check 5608472158 of PR #282, applied per R-369).
 
 ## Acceptance tests
 - `cargo test -p engine schema_fields` — schema test: each listed field lives in the named struct; playback transport and the linked views are ViewUI fields and are absent from SimConfig; SimConfig's link ids are the chart registry's link-function ids (REQ-GUI-036).

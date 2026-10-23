@@ -8250,7 +8250,7 @@
   milestone: M7
 - id: REQ-GEN-023
   area: GEN
-  statement: "Files under frag/debug/ must be tagged category: debug, the dev GUI showing them and a polished GUI hiding them by filtering on ViewUI.debugVisible."
+  statement: "Files under frag/debug/ must be tagged category: debug, the dev GUI showing them and a replacement GUI, if there ever is one (v2 web's, R-571), hiding them by filtering on ViewUI.debugVisible."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
@@ -8261,8 +8261,10 @@
   verify:
     method: unit test
     detail: "debugVisible = false removes exactly the debug-tagged entries from the list"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): the dev GUI is the native app's and v1 web's; a replacement GUI, if there ever is one, is v2 web's (gui_state_contract §3 as reworded in PR #282, gui re-check 5608439139). *Was:* \"and a polished GUI hiding them by filtering on ViewUI.debugVisible\"."
 - id: REQ-GEN-024
   area: GEN
   kind: definition
@@ -16260,8 +16262,10 @@
   verify:
     method: review checklist
     detail: "every dev-GUI write is a set_field call and every read a snapshot field; no direct engine call"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): the TS production GUI is v2 web's, if there ever is one; the native app and v1 web run the egui binding, and this requirement holds for it as written (gui review 5608379011 of PR #282)."
 - id: REQ-GUI-034
   area: GUI
   statement: "Derived, invariant and coupled slice/tilt directions of the direction library and the lock must be tangent vectors evaluated at the chart centre with the axis's residual convention, and the UI must label whether a line is a raw-control line or a physical one-quantity direction; the Tilt section's own tilt on a curved chart is R-473's rotation on the chart's own parameters (REQ-GUI-241)."
@@ -23074,8 +23078,10 @@
   verify:
     method: review checklist
     detail: "the reel build script invokes the exporter over the spec list; clicking a segment loads its spec"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): this is the reel's machinery, built and tested natively (so in v1 web too); its presentation, the spotlight reel that passes for Explore (designs/reel_click.md, in the gap sweep's bundle), is v2 web's."
 - id: REQ-TOOL-085
   area: TOOL
   statement: "Hovering an IC pixel must overlay that IC's trajectory computed by one CPU f64 computeIC integration of the decoded IC and projected onto the current chart's actual (q1, q2) basis vectors, with no GPU-payload trace path."
@@ -30450,8 +30456,12 @@
   verify:
     method: review checklist
     detail: "build produces two binaries; main-thread bundle contains no engine state"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-040
   area: SYS
   statement: "Input deltas must reach the engine through a SharedArrayBuffer written with `Atomics` and read at the top of every frame (pointer events coalesced), and discrete settings through `set_field(path, value)`."
@@ -30463,7 +30473,11 @@
     detail: "burst of pointermoves produces one SAB state, not queued messages"
   rulings:
   - R-52
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-041
   area: SYS
   statement: "The input backend must be chosen once at boot — SAB when cross-origin isolated, otherwise one coalesced `postMessage` per main-thread rAF tick — behind the same engine interface."
@@ -30473,8 +30487,12 @@
   verify:
     method: unit test
     detail: "boot without isolation selects postMessage; engine code path identical"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-042
   area: SYS
   statement: "Cross-origin isolation on GitHub Pages must come from a self-hosted, same-origin `coi-serviceworker` beside `index.html`."
@@ -30501,7 +30519,11 @@
     detail: "message rate ≤ ~10 Hz; payload contains no quad tree or payload data; the GUI repaints every frame between snapshots from the last one received"
   rulings:
   - R-94
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-044
   area: SYS
   statement: "Click-to-inspect must send cursor coordinates to the engine, which runs the f64 re-integration fire-and-forget in the inspector worker (a second wasm context) and posts the result back."
@@ -30511,8 +30533,12 @@
   verify:
     method: review checklist
     detail: "inspector runs in a separate worker; main thread never blocks"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-045
   area: SYS
   statement: "Resize must be observed on the main thread (`ResizeObserver`), sent as one message, and reconfigure the swapchain in the worker."
@@ -30522,32 +30548,46 @@
   verify:
     method: unit test
     detail: resize event yields one message and one reconfigure
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-046
   area: SYS
-  statement: "Principia must be a browser-based WebGPU application, publicly released via GitHub Pages, that renders the planar three-body problem's 8-dimensional symmetry-reduced IC manifold itself as the image, each sample being one IC coloured by the fate/diagnostics of its trajectory."
+  statement: "Principia must be a WebGPU application built native-first, publicly released via GitHub Pages as v1 web — the whole native app compiled to run in the browser, with the same interface, the same features and the same stains, and no separate interface design (R-571) — that renders the planar three-body problem's 8-dimensional symmetry-reduced IC manifold itself as the image, each sample being one IC coloured by the fate/diagnostics of its trajectory."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 0. What Principia is
+  - file: decisions.md
+    section: "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
   verify:
     method: review checklist
-    detail: "the release build loads from the GitHub Pages site in a WebGPU browser and renders an IC-manifold slice whose samples are ICs coloured by outcome"
-  rulings: []
+    detail: "the release build loads from the GitHub Pages site in a WebGPU browser and renders an IC-manifold slice whose samples are ICs coloured by outcome; its GUI is the gui crate's, compiled to wasm32 with the engine, with no second GUI codebase under web/; every window the native app opens (render_gui_spec §G5) opens in it, and its stain library lists the native app's stains (R-571)"
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): three stages, the native app first, then v1 web (this release), then v2 web, a separate browser product in no milestone yet. TASK-M8-41 depends on TASK-M8-42, the screen sweep, so the build it checks is the whole app (applied per R-369). *Was:* the statement \"Principia must be a browser-based WebGPU application, publicly released via GitHub Pages, that renders …\", and the verify ended at \"coloured by outcome\"."
 - id: REQ-SYS-047
   area: SYS
-  statement: "The whole CPU engine (scheduler, cache, quadtree, allocation ring, physics reference) must be Rust compiled to wasm, and the GUI must be a thin TypeScript shell owning only DOM and view-scratch state."
+  statement: "The whole CPU engine (scheduler, cache, quadtree, allocation ring, physics reference) must be Rust compiled to wasm, and the GUI must be the native app's own (egui), compiled with it, a thin TypeScript GUI shell being v2 web's (R-571)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 1. The substrate (the defining decision)
   - file: docs/design/principia_systems_architecture.md
     section: "3. The membrane — the deployment view (demoted, not diminished)"
+  - file: decisions.md
+    section: "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
   verify:
     method: review checklist
-    detail: "the engine crate builds to wasm and contains all CPU-side state; the TS shell holds no scheduler/cache/physics state (code review of the TS package)"
-  rulings: []
+    detail: "the engine crate builds to wasm and contains all CPU-side state; the browser build's GUI is the gui crate's, and web/ holds no GUI and no scheduler/cache/physics state (code review of the web package)"
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): v1 web is the whole native app in the browser, so its GUI is the native app's; a TS GUI shell, if there ever is one, is v2 web's. What the main thread holds in v1 web waits on RQ-551. *Was:* \"and the GUI must be a thin TypeScript shell owning only DOM and view-scratch state\"; verify \"the TS shell holds no scheduler/cache/physics state (code review of the TS package)\"."
 - id: REQ-SYS-048
   area: SYS
   statement: "The native build must be able to run the survey headless from the same kernel as the browser build, producing the Paper-2 numbers."
@@ -30574,8 +30614,12 @@
   verify:
     method: review checklist
     detail: "the main-thread bundle contains no engine state; two worker wasm instances exist (engine, inspector)"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-050
   area: SYS
   statement: "Field edits must reach the engine worker via SharedArrayBuffer when cross-origin-isolated and via postMessage otherwise, and snapshots back must be throttled to about 10 Hz."
@@ -30591,7 +30635,11 @@
     detail: "both transports deliver the same edit sequence; snapshot rate is capped"
   rulings:
   - R-94
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-051
   area: SYS
   statement: "Big data must never cross either membrane: the payload, quad tree and reductions are only summarised across GPU↔CPU and wasm↔JS, and each is a data boundary — the GUI holds no wasm handles, only the last snapshot."
@@ -30607,8 +30655,12 @@
   verify:
     method: review checklist
     detail: "no wasm-bindgen object handle is exported to JS; snapshot payload size is GUI-sized"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-550
+  note: "R-571 (21 Oct 2026): v1 web, the whole native app in the browser, needs more crossings than the TS GUI this rule was drawn for (downloads, file drops, the clipboard, audio and more), measured in systems_architecture §3, \"v1 web, and what it crosses\", and queued, RQ-550. The rule is not redesigned: meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-052
   area: SYS
   statement: "The engine crate must mark only the state surface (the SimConfig / RenderState / ViewUI schema, set_field and the snapshot) pub, keeping the scheduler, cache, kernel and payload buffers crate-private so the GUI crate cannot reach past it."
@@ -30654,8 +30706,10 @@
   verify:
     method: review checklist
     detail: "review the wasm-bindgen layer: exported functions take/return serialised data only; no exported struct with callable methods reaches the scheduler or other internals"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  note: "R-571 (21 Oct 2026): the TS binding is v2 web's, if there is one; v1 web runs the egui binding, and the data-boundary rule holds for it as written."
 - id: REQ-SYS-056
   area: SYS
   statement: "The canvas must be the only non-data crossing: under the TS binding the OffscreenCanvas is transferred to the engine worker once at startup and never again, and no state may ride on the canvas under either binding."
@@ -30665,8 +30719,12 @@
   verify:
     method: review checklist
     detail: "review the TS startup path: one transferControlToOffscreen / postMessage transfer, no later canvas messages carrying state"
-  rulings: []
+  rulings:
+  - R-571
   milestone: M8
+  rq:
+  - RQ-551
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-057
   area: SYS
   statement: "With no suitable GPU the application must fall back to the CPU path, indicate it loudly and permanently in the UI, and record the reason (no adapter / adapter lacks required features / backend init failed) in telemetry."
@@ -30704,7 +30762,11 @@
     detail: "the wasm exports are set_field, snapshot and the one-time canvas init"
   rulings:
   - R-94
+  - R-571
   milestone: M8
+  rq:
+  - RQ-550
+  note: "R-571 (21 Oct 2026): v1 web, the whole native app in the browser, needs more crossings than the TS GUI this rule was drawn for (downloads, file drops, the clipboard, audio and more), measured in systems_architecture §3, \"v1 web, and what it crosses\", and queued, RQ-550. The rule is not redesigned: meanwhile it stands as written, and nothing is built."
 - id: REQ-SYS-060
   area: SYS
   statement: "Trajectory integration and sonification must run in the dedicated inspector worker, separate from the render-loop worker, and never block the GPU survey, the frame loop or the main thread."
@@ -31184,3 +31246,21 @@
   - R-547
   milestone: M2
   note: "R-547 (RQ-365 (c)): split from REQ-SYS-015. Closed by TASK-M2-25, when it emits shape() from the translation. Fix round 1 of PR #274 (qa Q9, applied per R-369). *Was (verify):* \"read_side.wgsl's shape() is a build output of the translation, not a string literal in crates/ledger/src/gen/read.rs; the scan (the mass/config/momentum formulae, mu_rho|mu_lambda|m01 among them, outside the shared source, .wgsl included) finds no hit; the twin test against kernel::shape still passes\""
+- id: REQ-SYS-086
+  area: SYS
+  statement: "In v1 web, wherever the browser cannot do something the native app does through a control, the app must say so where the native app has that control: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571)."
+  source:
+  - file: decisions.md
+    section: "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  verify:
+    method: review checklist
+    detail: "the gui reviewer lists each native feature with a control that v1 web lacks (at least the compute fast-math control, R-303, and each such feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check"
+  rulings:
+  - R-303
+  - R-571
+  milestone: M8
+  rq:
+  - RQ-550
+  note: "R-571 (21 Oct 2026): \"Where the browser cannot do something the native app does, v1 web says so in the app; it does not get a different design.\" Read as R-303's pattern, applied per R-369. Closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550. Gui review 5608379011 of PR #282, applied per R-369: this covers gaps that have a native control; the gaps with none, runtime-authored colour occupants in the scanned filesystem (systems_architecture §3, v1 web's row 7), persistence across reloads (row 11) and `prin profile query --live` (row 14), are left explicitly to RQ-550, whose ruling must settle what v1 web does for each. *Was (statement):* \"In v1 web, wherever the browser cannot do something the native app does, the app must say so where the native app has the feature: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571).\" *Was (verify):* \"the gui reviewer lists each native feature v1 web lacks (at least the compute fast-math control, R-303, and each feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check\""

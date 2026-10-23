@@ -125,6 +125,8 @@ The structural point: the two regimes govern *what the GPU computes*; this invar
 
 Non-blocking-on-one-thread is not enough. Under real load the CPU scheduler still stalls the gesture, and — the sharper failure — **the DOM GUI freezes**, because it shares the main thread with the scheduler and gets starved when scheduling spikes. The fix is structural, and under the substrate decision (`principia_spike_brief.md`) it is *doubly* structural: **the entire frame loop — WebGPU device, scheduler, cache, quadtree, all compute and render — is the wasm engine, running in a Web Worker via `OffscreenCanvas`. The main thread is a thin TS shell: an input pump and a DOM-GUI host, a *different binary*, and it owns no simulation state.** This is the wasm↔JS membrane (systems-architecture §3); the firewall is now enforced by the linker, not merely by discipline.
 
+**v1 web (R-571).** The browser build is v1 web, the whole native app compiled to run in the browser: its GUI is the native app's egui GUI, not a DOM GUI, and a TS DOM GUI is v2 web's, if there is one. Where egui runs in v1 web (in this worker, or on the main thread in a wasm context of its own) and what the main thread then holds is queued, RQ-551, and what v1 web crosses between wasm and the browser, RQ-550 (systems-architecture §3). The split below stands as written until they are ruled.
+
 **The native build (R-113).** The worker is the browser's form of this split. In the native build the frame loop runs on a **dedicated render thread**, off the input/GUI thread; the invariant is the same — the thread that takes input and draws the GUI never runs the scheduler, the cache or the GPU work.
 
 ```
