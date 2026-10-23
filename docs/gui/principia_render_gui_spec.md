@@ -820,6 +820,13 @@ and R-409 G4 for text fields; its scope applied per R-369). The footer and the c
 level returns the focus to the Figure, and Windows › Sequence… on an open Sequence gives it the focus again, on its
 header bar in navigation mode (fix round 1 of PR #286, gui review 5631060675, F3; applied per R-369).
 
+**Spotlights (R-578, §G9a).** A window too, with two sections in this order: the header bar (Play reel, Stop, Open the
+sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select a segment). The order does not depend on
+state: Stop stays in it, disabled when nothing plays, and with no reel the list is still there. Esc from its top level
+returns the focus to the top bar's Windows menu and leaves it open; Windows › Spotlights… on an open Spotlights gives
+it the focus on Stop while the film plays, on its header bar otherwise (fix round 4 of PR #286, gui review 5631472413,
+J1, J2; applied per R-369; `principia_spotlight_reel.md` §3.4).
+
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
 console (§G12), as a click does, with the focus inside it. The console is a window with exactly two scopes, top to
@@ -1437,11 +1444,18 @@ The reel's machinery, natively, with a rough presentation; its polished presenta
 is `docs/design/principia_spotlight_reel.md`.
 - **Where:** Windows › Spotlights…, a window under §G5's rules (R-461): the reel's segments in order, each with its
   provenance (chart, horizon, integrator, build, date); **Play reel**, **Stop**, **Open the sequence** (into Sequence).
-  With no reel in the build: "No reel in this build", Play reel disabled.
+  With no reel in the build: "No reel in this build", Play reel disabled. Its sections, in §G3's order: the header bar
+  (Play reel, Stop, Open the sequence, ×) and the segment list, where Enter starts interaction and ↑ ↓, Home and End
+  select a segment; the order is the same in every state, no reel, the film playing or not, Stop staying in it,
+  disabled when nothing plays. × closes it; closed while the film plays, it stops the film first, as Stop does. Esc
+  from its top level returns the focus to the top bar's Windows menu, the window staying open, and Windows ›
+  Spotlights… on an open Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise, the
+  keyboard's way back (fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369;
+  `principia_spotlight_reel.md` §3.4).
 - **Playing:** the film plays in the Explore canvas, the live view paused and hidden beneath, nothing computed; the
   header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot, and no decoder
   badge. Play reel leaves the focus on Stop in the Spotlights window, and Esc from the window's top level returns it to
-  the top bar's Windows menu, so Stop, the window and the top bar stay reachable by §G3's keys (*was:* "Play reel gives
+  the top bar's Windows menu, Spotlights staying open (fix round 4, J1), so Stop, the window and the top bar stay reachable by §G3's keys (*was:* "Play reel gives
   the focus to the Figure scope."; fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369). While it plays the hover is held off (no `Hover` sent), the
   Legend shows only "Film: the legend returns when live", `t` reads "—", and the top bar's undo and redo do nothing.
   Stop leaves the view as it was. *Was:* "and undo and redo are disabled." (fix round 2 of PR #286, gui review 5631227164, G3).

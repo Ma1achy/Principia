@@ -79,8 +79,12 @@ almost fake being the explore view." **Any interaction takes over live at that e
 - **By keyboard** (fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369, keeping every drawn control reachable by §G3's keys, R-450 A7,
   REQ-GUI-190). Play reel leaves the focus in the Spotlights window, on **Stop** (the ring shown if Play reel was
   pressed from the keyboard, R-460), so Enter there stops the film and the window's other controls stay reachable by
-  §G3's keys. Esc from the window's top level returns the focus to what opened it, the top bar's Windows menu, as the
-  console's does (§G12); from the top bar every big scope is reached by Tab and Shift+Tab as usual (Shift+Tab reaches the
+  §G3's keys. Esc from the window's top level returns the focus to the top bar's Windows menu, which opened it, and **leaves
+  Spotlights open**, as Esc leaves the docked Sequence open (§G9a); only the focus's return to its opener is the
+  console's (§G12), not its closing. **Windows › Spotlights…** on an open Spotlights gives it the focus again, on **Stop**
+  while the film plays and on its header bar scope otherwise, the keyboard's way back (fix round 4 of PR #286, gui
+  review 5631472413, J1; applied per R-369; *was* (fix round 3): "Esc from the window's top level returns the focus to
+  what opened it, the top bar's Windows menu, as the console's does (§G12);"); from the top bar every big scope is reached by Tab and Shift+Tab as usual (Shift+Tab reaches the
   footer and the console, and the top bar holds Profiler…), landing on a scope never taking over. With the focus in the
   Figure scope, reached by Tab or a click, **every key takes over**, Tab, Esc, `?` and Ctrl+Z included, as the human's
   "a key" says; touching a control that would send a `SetField` takes over (§3.2). A key there, then one Ctrl+Z, also
@@ -137,6 +141,23 @@ reel** (from the selected segment's first frame, or the first segment's; the foc
 loads the selected segment's whole spec into the Sequence window (`principia_sequence.md`). With no reel in the build
 it reads "No reel in this build" and Play reel is disabled.
 
+**Its keyboard order (§G3; fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369).** Spotlights has
+two sections, top to bottom, as the console has (R-450): the **header bar** (Play reel, Stop, Open the sequence and the
+close button ×, in that visual order) and the **segment list**. Opened, it lands on the header bar scope, its first
+section (§G3). Tab and Shift+Tab, and ↑ and ↓ on a section scope, move between the two, staying in the window. Enter on
+the header bar goes in, onto Play reel; ← and → cross every header control in that order, stopping at the row's ends;
+Enter on a control acts as its click. Enter on the segment list starts interaction: ↑ and ↓ move the selection one
+segment, Home and End to the first and the last, the selected row kept in view; Esc or Enter returns to navigation mode
+on the list. **The order never depends on state:** with no reel the list scope is still there, reading "No reel in this
+build", and its keys do nothing; Play reel and Open the sequence are disabled but stay in the order; Stop stays in the
+order whether or not the film plays, disabled when nothing plays; a disabled control is landed on and Enter on it does
+nothing. Play reel, pressed from the keyboard or the mouse, moves the focus to Stop, its right-hand neighbour. Esc from
+Stop goes up to the header bar scope, and Esc from a section scope returns the focus to the top bar's Windows menu,
+the window staying open (§3.3). × (Enter on it, or a click) closes Spotlights and returns the focus to the top bar's
+Windows menu; closed while the film plays, it **stops the film first, exactly as Stop does**, the view as it was
+before the reel and nothing entering the history. The breadcrumb reads "Spotlights › Header › <control>" (Play reel,
+Stop, Open the sequence, Close) and "Spotlights › Segments".
+
 ### 3.5 What is v2 web's
 
 The presentation: playing the reel at cold start (the app opening on it, the window `principia_lowering_contract.md`'s
@@ -179,9 +200,15 @@ Each with what makes it fail.
   during the live motion stops the player and stays, while a cursor moved over the figure does not stop it; one undo
   returns to the view before the reel. *Fails on* an
   off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
+- **spotlights_window**: the window's two sections are in the order of §3.4 in every state (no reel, a reel, the film
+  playing or not), Stop in the order, disabled when nothing plays; ↓ in the segment list selects segment 2; Play reel
+  then puts the focus on Stop; Esc twice puts it on the top bar's Windows menu with Spotlights still open; Windows ›
+  Spotlights… puts it back on Stop; × while the film plays stops it as Stop does. *Fails if* the order changes with the
+  state, Stop leaves the order, Esc closes the window, the way back lands elsewhere, or closing leaves the film
+  playing (fix round 4 of PR #286, gui review 5631472413, J1, J2).
 - **film_holds_explore**: while the film plays, moving the cursor over the figure sends no hover, the Legend shows no
   keys, the decoder badge is absent, `t` reads "—", the Profiler opens and Stop is pressed by keyboard without taking
-  over, the top bar's undo does
+  over (Stop reached again by Windows › Spotlights…, which lands on it while the film plays), the top bar's undo does
   nothing and Ctrl+Z in the Figure takes over; touching the Manifold view's slider takes over. *Fails if* a hover is
   sent, a decoder badge or a number for `t` is shown, the Profiler takes over, the top bar's undo acts, or the slider's
   edit lands on the hidden live view.

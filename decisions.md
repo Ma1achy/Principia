@@ -24396,6 +24396,15 @@ still takes over. A key then one Ctrl+Z is no longer called the keyboard's way o
 redo entry, which Stop does not. Fix round 2's G3 line stands but for its "Stop is the mouse's" and the way out, which
 this replaces. *Was* (fix round 1, F4 (a)): "Play reel gives the focus to the Figure scope, so the next key takes over."
 
+*Fix round 4 of PR #286 (gui review 5631472413, J1, J2; applied per R-369, the orchestrator's decision):* fix round 3
+left open whether Esc closes Spotlights and how the keyboard gets back to Stop, and gave no keyboard order (R-450 A7,
+REQ-GUI-190). Esc from Spotlights' top level returns the focus to the top bar's Windows menu and leaves the window open,
+as the docked Sequence stays open; only the return to the opener is the console's. Windows › Spotlights… on an open
+Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise. Its sections, in §G3's order,
+are the header bar (Play reel, Stop, Open the sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select
+a segment), the same in every state, Stop staying in it, disabled when nothing plays. × while the film plays stops the
+film first, as Stop does. Round 3's paragraph stands but for its "as the console's does", which this narrows.
+
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199
