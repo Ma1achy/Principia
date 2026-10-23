@@ -71,6 +71,12 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
   has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
   squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
   (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
+- **The 2 × 2 rule is the only stop (perf review 5625031178 of PR #279, P7; applied per R-369).** The line above's
+  "the cover's smallest common ancestor where one exists" is superseded: the chain stops at the first level at which
+  the viewport lies within at most 2 × 2 ancestor squares, about `⌈log2(cover quads per axis)⌉` levels above the cover,
+  wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
+  ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
+  Part 3).
 
 ---
 

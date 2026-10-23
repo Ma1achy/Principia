@@ -23707,6 +23707,13 @@ without dispatching at 10⁶ ×, each asserting its precondition; the pinned anc
 the cover's smallest common ancestor where one exists, a viewport straddling a line through the lattice origin having
 none (scheduler_contract Part 3; caching_contract Part 4, a line added).*
 
+*23 Oct 2026, fix round 8 of PR #279 (perf review 5625031178, P7), applied per R-369: the 2 × 2 rule is the only stop
+of the pinned ancestor chain, the first level at which the viewport lies within at most 2 × 2 ancestor squares, about
+`⌈log2(cover quads per axis)⌉` levels above the cover, independent of the zoom and the pan; the fix-round-7 line's "the
+cover's smallest common ancestor where one exists" is superseded, a smallest common ancestor sitting about `m` levels
+higher for a view straddling `x = 2^m` roots, which would tie the chain's length to the pan. REQ-SCHED-104's arm (3)
+gains a far-pan case.*
+
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
