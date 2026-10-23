@@ -13,6 +13,7 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "02 Stain — the plain node-graph editor"
+- `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
 - `docs/gui/principia_render_gui_spec.md` § "0. The core claim"
 - `docs/gui/principia_render_gui_spec.md` § "Part II — The stain editor"
 - `docs/gui/principia_render_gui_spec.md` § "1. Layout — four surfaces"
@@ -33,6 +34,7 @@ Stain mode is the plain node-graph editor over one object — the RenderState st
 - `crates/gui/src/stain/{mode,library,preview,problems}.rs`, extending the track's Stain layout (TASK-M6-29, R-390) on the real stain graph.
 - `crates/gui/src/stain/your_stains.rs` — user stains as serialised graphs (import / export files).
 - `crates/render/src/registry/filter.rs` — `debugVisible` filtering on the `category` tag.
+- `crates/render/src/registry.rs:65`, the `Category` doc comment: "the polished GUI hides [`Category::Debug`]" reworded to "a replacement GUI, if there ever is one (v2 web's, R-571), hides [`Category::Debug`]", following gui_state_contract §3 (R-571; gui re-check 5608472158 of PR #282, applied per R-369).
 - Tests: `debug_visible_filter`, `your_stains_roundtrip`; screenshot cases `02_stain/layout`, `02_stain/preview_{sphere,slice}`, `02_stain/library_filter`, `02_stain/aspect_{square,wide}`, `03_chartbuilder/aspect_{square,wide}`.
 
 ## Acceptance tests
