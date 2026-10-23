@@ -3147,7 +3147,7 @@
   title: "Sequence: Play preview, the proof strip, the planner's estimate and its basis, and export with the spec beside it (R-577)"
   depends_on: [TASK-M8-77, TASK-M8-30, TASK-M5-28, TASK-M8-32]
   needs: [REQ-TOOL-050]
-  requirements: [REQ-GUI-379, REQ-GUI-380, REQ-GUI-381, REQ-PERF-110, REQ-TOOL-200, REQ-GUI-387]  # REQ-GUI-387: fix round 2 of PR #286 (gui G2)
+  requirements: [REQ-GUI-379, REQ-GUI-380, REQ-GUI-381, REQ-PERF-110, REQ-TOOL-200, REQ-GUI-387, REQ-GUI-388]  # REQ-GUI-387: fix round 2 of PR #286 (gui G2); REQ-GUI-388: fix round 12 (perf P6)
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-79
@@ -3155,7 +3155,7 @@
   title: "The spotlight reel's machinery, natively: the reel builder and its manifest, the film played without compute, the takeover that keeps playing, the Spotlights window (R-578)"
   depends_on: [TASK-M8-78, TASK-M5-26]
   needs: [REQ-RENDER-045]
-  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b))
+  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386, REQ-PERF-111]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b)); REQ-PERF-111: fix round 12 (perf P4)
   reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
   pitfalls: []
 - id: TASK-M0-35
