@@ -923,8 +923,23 @@ does after a takeover in such a segment, and which specs the reel may hold.*
 - **The question:** the film is a blocking export, so in a segment that eases link parameters or dissolves between
   charts it shows what live playback cannot. A takeover there is exact at its frame, but the live view then continues
   differently from the film.
+- **The second question (added by fix round 6 of PR #286, physics review 5631678451, P4 (b)):** after a takeover
+  mid-way through a link-parameter ease, what does the live player hold until the segment's second keyframe? R-520 F3:
+  "live playback shows the change and never interpolates it"; REQ-TOOL-175: "live playback of the same spec gives a cut
+  at the second keyframe, the frames before it at 5 and from it at 4, none between"; `principia_spotlight_reel.md` §3.3:
+  "the frame's spec is loaded live … and the live engine continues from there" and "It keeps playing … now live". The
+  takeover loads the eased value (say 4.6); R-520 F3 as written then puts the next frame at the first keyframe's value
+  (4.6 → 5, re-integrating, then 5 → 4 at the keyframe). Options seen: (i) hold the takeover's value until the second
+  keyframe, then cut; (ii) R-520 F3 as written, back to the first keyframe's value; (iii) whatever (c) above gives,
+  the export's ease continued live.
+- **A dissolve frame (P4 (a), applied per R-369, not a question):** a dissolve frame was rendered from two states and a
+  weight, so its manifest entry carries both hashes, the weight and which state live shows at that frame; the takeover
+  loads that state.
 - **Options seen:** (a) the takeover frame exact, live continuing under R-520 F3 (cut at the segment's second
   keyframe), the difference after that frame expected and not reported; (b) the reel build refuses a spec with such a
   segment, so live always continues what the film shows; (c) live playback after a takeover interpolates link
   parameters and composites dissolves as the export does (amending R-520 F3 for this case).
-- **Applied meanwhile:** (a). Nothing waits.
+- **Applied meanwhile:** (a), made determinate without deciding either question: in a dissolve the takeover loads the
+  state live shows at that frame; after a takeover in a link-parameter ease the live player holds the takeover's value
+  until the second keyframe, then cuts (option (i) of the second question, as an interim only). Nothing waits.
+  *Was:* "(a). Nothing waits." (fix round 6 of PR #286, physics review 5631678451, P4; applied per R-369).

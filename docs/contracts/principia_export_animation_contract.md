@@ -51,6 +51,37 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. The screen that makes a spec is
   `principia_sequence.md` (R-577). *Was:* "A keyframe animation serialises as `{keyframes: [(t_wall, ViewState,
   RenderState, playhead policy)], easing, fps, duration}`" (stale value, replaced by R-576).
+  **The frame grid, the progress and the playhead (fix round 6 of PR #286, physics review 5631678451, P1; applied per
+  R-369; fixed points of REQ-TOOL-197's definition, which TASK-M8-31 completes with the curves and the default).**
+  - *Frames.* Frame `f = 0, 1, 2, …` is at wall time `f / fps` from the spec's start. A keyframe's **own frame** is the
+    frame nearest its `t_wall`, `f_k = ⌊t_wall_k · fps + ½⌋` in f64, so a `t_wall` off the frame grid (a drag sets it
+    continuously, `principia_sequence.md` §3.2) still has one frame. The keyframes' own frames must increase strictly:
+    the exporter and the reel build refuse a spec in which two keyframes share a frame, naming both, and the Sequence
+    keeps a dragged keyframe's frame strictly between its neighbours' and refuses an fps that would give two keyframes
+    one frame, saying which. Frames before the first keyframe's frame take the first keyframe's state; frames after the
+    last keyframe's frame take the last keyframe's state, the playhead under its policy.
+  - *The segment-local fraction.* Segment `k` runs from frame `f_k` to frame `f_{k+1}`, and at frame `f` in it
+    `u = (f − f_k) / (f_{k+1} − f_k)`, the quotient of two integers in f64, so `u` is exactly 0 and 1 at its ends. The
+    frame two segments share, `f_{k+1}`, belongs to the segment it starts (`u = 0` there); the last keyframe's frame
+    belongs to the last segment (`u = 1`). Either way it is that keyframe's own frame.
+  - *One `s` per frame.* `s = ease_k(u)`, the segment's own curve (R-576), one value per frame, drives **every**
+    interpolated field of the segment: `z₀` componentwise, `a + s·(b − a)`; the zoom, log-lerped,
+    `exp(ln a + s·(ln b − ln a))`; the basis, at parameter `s` along the Grassmannian geodesic; the slice values; the
+    render uniforms per their scale metadata; and R-520's link parameters. No field takes `u` directly and none has a
+    second curve, so the zoom's anchor never moves against the pan inside a segment. Each keyframe's own frame takes
+    that keyframe's `SimConfig` and `RenderState` bit for bit, every field, as R-520 F2 has it for the link parameters,
+    so a manifest's hash at a keyframe's frame is the keyframe's.
+  - *Linear is offered.* The curves offered include **linear**, `s(u) = u`; the others and the default are the
+    definition's.
+  - *The playhead* (`RenderState`'s `Playhead { t }`) is not eased by the render-uniform rule: over segment `k` it
+    follows keyframe `k`'s policy, `p_k` being keyframe `k`'s playhead. **Hold**: `p_k` at every frame of the segment.
+    **Advance with wall time**: `p_k + r_k · (f − f_k) / fps`, where `r_k`, in units of `t` per wall second, is stored
+    in the spec with the policy, as `advance { rate }`, set when the policy is chosen from the Transport's speed at that
+    moment and editable (the Transport's `speed` is `ViewUI`, which the engine never reads, so the spec carries its
+    own). **Set to a value**: the playhead is eased, `p_k + s · (p_{k+1} − p_k)`, keyframe `k`'s playhead being the
+    value set on it. Every frame's playhead is clamped into `[0, T]`, `T` that frame's horizon (`SimConfig`'s
+    `Horizon { t }`); an advance that reaches `T` stays there for the rest of the segment. After the last keyframe the
+    last keyframe's policy runs on, as REQ-GUI-383 has it.
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
   link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live

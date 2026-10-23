@@ -43,6 +43,10 @@ almost fake being the explore view." **Any interaction takes over live at that e
   first and last film frame; and for **every film frame**, its segment, its frame within the spec, its wall time within
   the spec, and the hash of the `SimConfig` and `RenderState` the exporter rendered it from, in their canonical
   serialisation (R-309). The takeover maps a frame by its index, never by a time read back from the film's delays.
+  A **dissolve frame** is two renders composited (export contract Part 3), so its entry carries both states' hashes,
+  the blend weight, and which of the two live playback shows at that frame (the outgoing state before the segment's
+  second keyframe's frame, the incoming from it, R-520 F3's cut) (fix round 6 of PR #286, physics review 5631678451,
+  P4 (a); applied per R-369).
 - **The build refuses** a spec whose link entry hashes do not match the build's (R-521; "never substitute",
   `principia_dd_image_embedding.md` §6): `cargo xtask reel` stops before rendering anything, exits non-zero, and names
   the spec and the link. The reel is built per release, so the live view can always recreate what the film showed.
@@ -122,9 +126,21 @@ almost fake being the explore view." **Any interaction takes over live at that e
   and is paused otherwise (applied per R-369)." (fix round 1 of PR #286, gui review 5631060675, F2; applied per R-369:
   R-101 covers only the clock's playhead.)
 - **Inside a segment the film interpolates and live playback cuts** (link parameters, R-520, and dissolves), live
-  cannot continue what the film showed. Which way that goes is RQ-561. Meanwhile, its option (a): the takeover frame is
-  exact, as above, and live playback continues under R-520 F3, cutting at the segment's second keyframe; the difference
-  after the takeover frame is expected and not reported as a disagreement.
+  cannot continue what the film showed. Which way that goes is RQ-561. Meanwhile, its option (a), made determinate (fix
+  round 6 of PR #286, physics review 5631678451, P4; applied per R-369, an interim that decides neither of RQ-561's
+  questions):
+  - **In a dissolve** the takeover loads the state live playback shows at that frame, the one the manifest entry names
+    (§3.1): the outgoing state before the segment's second keyframe's frame, the incoming from it. Its hash is compared
+    with that state's; the composite is not a state, and its difference from the film frame is not a disagreement.
+  - **In a link-parameter ease** the takeover loads the frame's eased value (say `μ_max` = 4.6 between 5 and 4), as
+    above. The live player then **holds that value** until the segment's second keyframe's frame and cuts there to the
+    keyframe's value: it never interpolates (R-520 F3) and never jumps back to the first keyframe's value, which would
+    re-integrate twice. Whether this hold, or R-520 F3's frames at the first keyframe's value, is what live does is
+    RQ-561's second question.
+  - The difference after the takeover frame is expected and not reported as a disagreement.
+  *Was:* "Meanwhile, its option (a): the takeover frame is exact, as above, and live playback continues under R-520 F3,
+  cutting at the segment's second keyframe; the difference after the takeover frame is expected and not reported as a
+  disagreement."
 - **No blank, no jump.** The film frame stays as the backdrop, the snapshot of caching Part 5 (blurred, under its
   coherence discipline), until the live identity's baseline cover is complete (caching Part 4); then it and the
   preview badge go. From the interaction to then, every displayed frame is the film backdrop or a live render over it,

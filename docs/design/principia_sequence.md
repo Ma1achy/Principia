@@ -57,9 +57,12 @@ click does (R-456). (Fix round 1 of PR #286, gui review 5631060675, F3; applied 
   - **Go to**: the view takes the keyframe's `SimConfig` and `RenderState`, bitwise, as one undoable history entry
     (as Home is one, R-466);
   - **Update**: the keyframe takes the view's state, whole;
-  - **drag in time**, its `t_wall` clamped strictly between its neighbours', so keyframes never reorder;
-  - **playhead policy**: **hold**, **advance with wall time** or **set to a value** (Part 3's "playhead policy"; its
-    exact semantics are REQ-TOOL-197's definition).
+  - **drag in time**, its `t_wall` clamped strictly between its neighbours', so keyframes never reorder, and so that
+    its own frame stays strictly between theirs (export contract Part 3's frame grid; fix round 6 of PR #286, physics
+    review 5631678451, P1);
+  - **playhead policy**: **hold**, **advance with wall time** (with its rate, in `t` per wall second, set from the
+    Transport's speed when chosen and editable) or **set to a value** (Part 3's "playhead policy"; its semantics are
+    export contract Part 3's, fix round 6 of PR #286, P1, the rest REQ-TOOL-197's definition).
 
 ### 3.3 The timeline and its lanes
 
@@ -69,8 +72,8 @@ sees why a segment costs what it does:
 
 | lane | what it holds |
 |---|---|
-| Navigate | pan and zoom within the plane (they only re-address, R-92) |
-| Plane | the slice and the basis: the slice centre off the plane, the tilt, the slice frame |
+| Navigate | pan and zoom within the plane (they only re-address, R-92): the in-plane part of `z₀`, the in-plane scale of the basis, and the lock |
+| Plane | the slice plane, the sim key's navigation part (R-92): `z₀`'s out-of-plane part, span{q₁, q₂} and the in-plane orientation |
 | Chart | the chart and its construction |
 | Links | the decoder's links and their parameters (R-483) |
 | Playhead | the playhead and the keyframe's playhead policy |
@@ -79,7 +82,17 @@ sees why a segment costs what it does:
 | Lines | the line system (R-476) |
 | Run | every other `SimConfig` field: the occupant, the horizon, `E`, the thresholds |
 
-Every field of `SimConfig` and `RenderState` is in exactly one lane. The table assigning each field is a definition
+**`z₀`, `q₁` and `q₂` are split as R-92 splits them** (fix round 6 of PR #286, physics review 5631678451, P3; applied
+per R-369). A pan and an off-plane move both change `z₀`, and a zoom and a tilt both change `q₁, q₂`, so no lane can
+take those fields whole. Between a segment's two keyframes they are decomposed by **the same function that computes the
+sim key's slice plane** (R-92), never a second copy: Plane lights where the slice plane differs, and Navigate where the
+in-plane part of `z₀`, the in-plane scale or the lock differs. A segment that lights only Navigate therefore never
+changes the sim key, and one that changes the slice plane always lights Plane; a tilt may light both. *Was:* "| Navigate
+| pan and zoom within the plane (they only re-address, R-92) |" and "| Plane | the slice and the basis: the slice centre
+off the plane, the tilt, the slice frame |".
+
+Every other field of `SimConfig` and `RenderState` is in exactly one lane (*was:* "Every field of `SimConfig` and
+`RenderState` is in exactly one lane."). The table assigning each field is a definition
 (R-72, REQ-GUI-375), written here by the task that builds the lanes and kept exhaustive at compile time, as the tier
 table is (R-484). The draft's "Camera" lane is **Navigate** here, since no control is named after a camera
 (`principia_render_gui_spec.md` §G1); "Run" is added so that every field has a lane (both applied per R-369).
@@ -93,7 +106,10 @@ chart or any link id changes shows a **cut mark** at its second keyframe.
 **Easing is set per segment, between keyframes (R-576).** The spec object carries one segment between each pair of
 neighbouring keyframes, each with its own easing curve, which gives the segment's progress `s ∈ [0, 1]` at each frame
 for every eased field (Part 3), the link parameters of R-520 included. The curves offered and the default are a
-definition (R-72, REQ-TOOL-197), written into export contract Part 3 by TASK-M8-31.
+definition (R-72, REQ-TOOL-197), written into export contract Part 3 by TASK-M8-31. One `s` per frame, from the
+segment-local fraction `u` on the frame grid, drives every interpolated field, the zoom and the basis included; linear
+is among the curves; the playhead follows its keyframe's policy (export contract Part 3; fix round 6 of PR #286,
+physics review 5631678451, P1; applied per R-369).
 
 A selected segment offers:
 
@@ -211,8 +227,12 @@ Each with what makes it fail.
   captured one bitwise, and Go to adds exactly one history entry. *Fails on* any field missed.
 - **lanes_light_on_change**: keyframes differing only in a stain uniform light only Stain, and the segment is (c).
   *Fails if* Plane lights. Control: a tilt lights Plane and makes the segment (b); a chart change shows a cut mark.
-- **lane_table_exhaustive**: every field of `SimConfig` and `RenderState` has exactly one lane. *Fails* to compile when a
-  field is added without one.
+- **lane_table_exhaustive**: every field of `SimConfig` and `RenderState` has exactly one lane, `z₀`, `q₁` and `q₂`
+  through R-92's split. *Fails* to compile when a field is added without one.
+- **lanes_follow_r92**: a pan-only pair lights Navigate and not Plane, its sim keys equal; an off-plane move and a tilt
+  light Plane; across random pairs, a pair lighting only Navigate has equal sim keys. *Fails if* a pan-only pair lights
+  Plane, an off-plane move lights only Navigate, or the split is computed apart from the sim key's function (fix round 6
+  of PR #286, physics review 5631678451, P3).
 - **segment_easing**: two segments with different curves: each segment's frames follow its own curve. *Fails if* one
   curve is applied to both.
 - **seq_file_roundtrip**: save then open is the identity, bitwise. Control: a file with one changed link entry hash

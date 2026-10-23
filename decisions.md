@@ -24165,6 +24165,16 @@ covering message are quoted in R-560; the lead of its PR 2 section in R-577.
   keyframe (R-520 F2).
 - **TASK-M8-31 builds it** (the spec object is its deliverable); the Sequence window's segment controls are TASK-M8-77's.
 
+*Fix round 6 of PR #286 (physics review 5631678451, P1 to P3; applied per R-369, the orchestrator's decision; no
+ruling changed):* the definition said which curve gives `s` but not its argument. Export contract Part 3 now fixes the
+frame grid (a keyframe's own frame the nearest, `⌊t_wall·fps + ½⌋`, the frames strictly increasing, a spec where two
+share one refused), the segment-local fraction `u = (f − f_k)/(f_{k+1} − f_k)`, the shared frame belonging to the
+segment it starts; one `s` per frame for every interpolated field, the zoom's log-lerp and the basis's geodesic
+included, each keyframe's own frame bitwise its keyframe in every field; linear among the curves; and the playhead:
+hold, advance at a rate the spec stores (`advance { rate }`), or eased by `s` under "set to a value", clamped into
+`[0, T]`. REQ-TOOL-197 carries them with a test; REQ-TOOL-175's first arm names its linear curve (P2). The lane table
+splits `z₀, q₁, q₂` by R-92's decomposition, through the sim key's own function (P3; REQ-GUI-375).
+
 R-576 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds
@@ -24410,6 +24420,13 @@ which segment is selected before any key or click. When Spotlights opens with a 
 a segment is always selected while there is a reel; ↑ and ↓ move the selection, Home and End go to the first and the
 last; with no reel there is no selection, and Play reel and Open the sequence are disabled. §3.4's "or the first
 segment's" is dropped as moot.
+
+*Fix round 6 of PR #286 (physics review 5631678451, P4; applied per R-369, the orchestrator's decision; no ruling
+changed):* a dissolve frame is two renders composited, so its manifest entry carries both states' hashes, the weight
+and which state live shows at that frame, and a takeover there loads that state. After a takeover mid-way through a
+link-parameter ease, the live player holds the takeover's value until the segment's second keyframe and then cuts, as
+RQ-561's interim only; which value live holds is added to RQ-561 as its second question. TASK-M8-79 gains the physics
+reviewer, as TASK-M8-31 has it for R-520.
 
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
