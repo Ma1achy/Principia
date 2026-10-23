@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>State map in Explore</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+.ov{position:absolute;background:#1b1b1bee;border:1px solid #3c3c3c;border-radius:4px;font-size:12px}
+.btn{background:#262626;border:1px solid #3c3c3c;color:#dcdcdc;border-radius:3px;padding:3px 10px;font:inherit;font-size:12px}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#fff}
+.call{position:absolute;font-size:12px;color:#dcdcdc;width:250px;line-height:1.45;background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;padding:8px 10px}
+</style>
+</helmet>
+<div style="width:1280px;height:760px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;display:flex;flex-direction:column">
+
+<div style="height:36px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;background:#1b1b1b;border-bottom:1px solid #3c3c3c;font-size:13px">
+<b style="font-weight:500">Principia</b><span style="color:#a8a8a8">Explore</span>
+<div style="width:1px;height:20px;background:#3c3c3c"></div>
+<span style="color:#a8a8a8">Chart</span><span>Latent z_α × z_β</span>
+<span style="color:#a8a8a8;margin-left:10px">Stain</span><button class="btn on" type="button">Chart position</button><button class="btn" type="button">Edit graph…</button>
+</div>
+
+<div style="position:relative;flex:1;overflow:hidden">
+<img src="/_blob/dde8d4c523587b21cbbcc0c5d023d8f3" alt="Latent z_α × z_β coloured by where each system is at t = 8 (prototype render)" style="position:absolute;left:50%;top:50%;width:640px;height:640px;margin:-320px 0 0 -320px;image-rendering:pixelated">
+
+<div class="ov" style="right:24px;top:24px;width:120px;height:120px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;color:#a8a8a8;font-size:11px">
+<span style="font-size:13px;color:#dcdcdc">Compass</span><span>unchanged</span></div>
+
+<div class="ov" style="left:24px;bottom:24px;width:280px;padding:10px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between"><span style="font-weight:500">Chart position · plane</span><span style="color:#a8a8a8">legend</span></div>
+<div style="display:flex;gap:10px;align-items:flex-start">
+<div style="width:120px;height:120px;border:1px solid #3c3c3c;border-radius:3px;position:relative;box-sizing:border-box;background-image:url(/_blob/f34e33df2314e528f8affffa5d24290d);background-size:cover;image-rendering:pixelated">
+<span style="position:absolute;right:-6px;top:30px;width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #000"></span>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#a8a8a8">
+<span>→ z_α · green … red</span><span>↑ z_β · blue … yellow</span><span>one lightness: free for brightness</span>
+<span style="margin-top:6px;color:#dcdcdc">ring = the hovered system</span>
+<span>on the edge: it has left, drawn clamped</span>
+</div>
+</div>
+<div style="font-size:11px;color:#a8a8a8;border-top:1px solid #2a2a2a;padding-top:6px">Key shape follows the chart: square here, 2 : 1 on the sphere, a triangle on the simplex.</div>
+</div>
+
+<div class="ov" style="left:560px;top:250px;padding:8px 10px;display:flex;flex-direction:column;gap:3px;width:250px">
+<span style="font-weight:500">Pixel [z_α, z_β]</span>
+<span style="color:#a8a8a8">now: left the chart across the right edge</span>
+<span style="color:#a8a8a8">drawn at the edge it crossed · run still going</span>
+<span style="color:#a8a8a8">masses [m₁, m₂, m₃]</span>
+</div>
+
+<div class="ov" style="right:24px;bottom:24px;width:280px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#a8a8a8">
+<span style="color:#dcdcdc;font-size:12px">64 × 64 · t = 8.00</span>
+<span>left the chart 1432 · clamped</span>
+<span>ended 3242 · holding end state</span>
+<span>refining… coarse base shown underneath</span>
+</div>
+
+<span class="call" style="left:24px;top:220px">Panning into the wrapped or extended area: a coarse base grid fills first, so the view is never black.</span>
+<span class="call" style="left:24px;top:60px">The compass, play bar and chart controls do not change. The state map is a stain, picked like any other.</span>
+</div>
+
+<div style="height:58px;flex:none;background:#1b1b1b;border-top:1px solid #3c3c3c;display:flex;align-items:center;gap:12px;padding:0 16px;font-size:12px">
+<button class="btn" type="button" aria-label="Back to t = 0">⏮</button>
+<button class="btn on" type="button" aria-label="Pause">❚❚</button>
+<span class="mono" style="width:110px">t = 8.00 / 13</span>
+<div style="flex:1;height:4px;background:#2a2a2a;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:61.5%;background:#1a7ca3;border-radius:2px"></div><div style="position:absolute;left:61.5%;top:-5px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#dcdcdc"></div></div>
+<span style="color:#a8a8a8">scrub: the picture is the state at the playhead</span>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

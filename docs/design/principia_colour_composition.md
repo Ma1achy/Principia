@@ -278,10 +278,13 @@ collision 2–3's hue (264° against 265°) and becomes indistinguishable from i
 transforms): purple is 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 2–3 and from the hatch's violet,
 0.272 from escape body 2, 0.277 from bounded, 0.316 from the stipple's `#909090` dot and 0.580 from the hatch's cyan
 `#48FFFF`, so it clears every entry and the hatch and stipple colours by at least 0.19, as R-445 says; the orange is
-0.188 from the dot. The human's figure for the palette's closest pair is 0.185, collision 1–3 against escape body 3, "with
-the t = 0 class gone"; measured, the closest pair is 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, the
-pair that was collision @ t=0's, since the orange stays as triple collision (0.185 is the closest pair with the orange
-left out). Transcribed as ruled, the measured value beside it: RQ-331.
+0.188 from the dot. **The palette's closest pair is 0.175** (R-546, RQ-331): triple collision `#F29620` against escape body 1 `#F0DE32`,
+with the swatches as ruled. With the t = 0 class gone it stays 0.175 (the same two colours as the old t = 0 pair);
+0.185 holds only with the orange left out. *Was:* "The human's figure for the palette's closest pair is 0.185,
+collision 1–3 against escape body 3, "with the t = 0 class gone"; measured, the closest pair is 0.175, triple collision
+`#F29620` against escape body 1 `#F0DE32`, the pair that was collision @ t=0's, since the orange stays as triple
+collision (0.185 is the closest pair with the orange left out). Transcribed as ruled, the measured value beside it:
+RQ-331."
 
 **The OKLab-uniform variant (R-447; REQ-COL-103, REQ-COL-105).** A second preset of the outcome palette: each chromatic
 class keeps its own OKLab hue at L = 0.72 and C = 0.123, so only hue varies and any brightness-slot field reads
@@ -298,12 +301,15 @@ cleanly; bounded stays `#141418`. **The sRGB palette above stays the default.**
 | escape body 3 | 208° | `#09B9CD` |
 | triple ejection | 305° | `#B790E2` |
 
-The hues are the sRGB classes' own, rounded to a degree. R-447 gives C = 0.123 as "the largest chroma in gamut at every
-hue at that L"; measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the
-largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°. The swatches as ruled measure L 0.719 to
+The hues are the sRGB classes' own, rounded to a degree. C = 0.123 is in gamut at every listed hue (the narrowest,
+208°, admits 0.1238) (R-546, RQ-332); the largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°,
+recorded, not adopted. *Was:* "R-447 gives C = 0.123 as "the largest chroma in gamut at every hue at that L";
+measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the largest chroma in
+gamut at every hue at L = 0.72 is 0.1224, near 199.8°." The swatches as ruled measure L 0.719 to
 0.721, C 0.122 to 0.124 and each hue within 0.5° of its row; `#6EB976`, `#D99349` and `#09B9CD` differ by one or two
-8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Transcribed as
-ruled: RQ-332. Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
+8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Those three
+roundings are recorded, not adopted: the ruled hex values stand (R-546, RQ-332 (a)). *Was:* "Transcribed as ruled:
+RQ-332." Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
 swatch is within 0.5°; escape body 3's `#09B9CD` measures 208.54°, 0.54° from its row's 208° and 0.04° from its class's
 208.5°, and stays: R-455 (RQ-366) reads the 0.5° against the class's own hue, a tolerance below hex quantisation at this
 chroma (one green or blue step moves the hue about 0.7°). **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
@@ -330,6 +336,33 @@ R-443 adds `chazy_escaper`, the escaping body's index, and the one-body views th
 its energy form, the escaper map and its mass-rank forms), with their palettes, in the drill-down's §10.11. The "no
 separate `escaper` field" above concerns the event outcome, whose escaping body is `detail`; `chazy_escaper` belongs to
 the separate Chazy system (R-443) and does not change it, and the escaper map is a Chazy stain, not this map filtered.
+
+### 1.5 A point on a chart: Chart position's colour slot (R-542)
+
+*Added by R-542 (`principia_state_map.md` SM11, SM14). Shape n̂'s nodes above are unchanged.*
+
+Beside n̂, a colour occupant may read **a point on a chart's quotient**: Chart position's `point⟨q⟩`, q ∈ sphere ·
+plane · cylinder · simplex (render GUI spec Part II §3), the place the sample's system has reached on a target chart,
+with its status (state map SM1, SM5). Its colour slot is a **base** and an ordered list of **layers**, the composition
+of §1.1 to §1.3:
+
+- **Gradient**: Family B over the point. The 2D and 3D gradients are one-to-one on the quotient (state map SM6); the 1D
+  gradients run one three-stop OKLab ramp; round θ is the hue circle.
+  The Torus gradient (R-543), on the plane and the cylinder, is periodic in chart units and one-to-one within a period
+  (state map SM6).
+- **Site blend**: Family A. On the sphere it is the §2 static sets, one code path with Shape n̂'s Site blend; on a flat
+  point, §2's lattice sites, with flat distance `−|x − p|²`, the same kernels and the same blend spaces.
+- **Palette**: categorical by tile. Each tile of a tiling (square, hexagons, triangles, brick, stripes; on the sphere
+  latitude × longitude cells, Fibonacci cells, meridian wedges, latitude bands) takes one swatch, by index or by golden
+  angle.
+- **Picture**: an image pulled back through the flow (§3's image input; state map SM8).
+  Past its square it follows its wrap mode (Repeat, Mirror or Clamp) and a separate dim setting, Mirror and dimmed by
+  default (R-543).
+- **Layers**: `bandmask` with band patterns (grid lines, checkerboard, tile edges, stripes, rings; on the sphere its
+  own), and `site_overlay` for site dots, in order, each with its spacing, colour and opacity.
+
+The definitions, values and tests are state map SM6, SM8, SM11 and SM12. The tiling defaults are starting calibrations
+(R-71): the prototype's values, confirmed at the M7 gate (RQ-487 (a), R-558).
 
 ---
 
@@ -360,6 +393,11 @@ are constant across the slice; the codegen detects this and hoists physics sites
 **one mass point**. Default: the slice-centre masses `z₀`. When a pixel is inspected, the inspected
 pixel's masses. The preview must **state which mass point it is showing**, because physics landmarks
 (and any physics-dependent colouring) are only meaningful relative to it.
+
+**Flat lattice sites (R-542).** For a flat point (§1.5) the sites are a square or hexagonal lattice in the chart's tile
+coordinates, `n` across, a whole number of them round θ on a cylinder. They are static and uniform-hoistable, compared
+by flat distance `−|x − p|²` (state map SM11), and feed only Chart position's Site blend and its site-dot layer. The
+sphere's sets above are unchanged.
 
 ---
 
@@ -448,6 +486,15 @@ palette colour (R-470).
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
 (z))` residual). This is what dissolves most of the §A kernel modes (§6) and enables **agreement
 presets** (fragment-decode vs kernel-payload) as live checks of that translation.
+
+**Chart position's reads (R-542; `principia_state_map.md` SM2).** Chart position computes its point at read, from the
+payload lane's live state at the playhead and its masses, through the encode `ROUNDTRIP` already runs; it adds no
+field to any lane's buffer. A Picture base reads one image, a texture bound in a render-side bind group, never a sim
+struct. The uploaded picture is a `RenderState` field, assigned its tier in R-484's table by the task that builds it
+(applied per R-369). Chart position also reads the target chart and its inverse, which seam 6 and render contract
+Part 4 keep from a colour occupant; it is a named exception to seam 6, as ROUNDTRIP and DECODE are, listed in render
+contract Part 4 and in the lint, the target's inverse generated to WGSL from the one Rust source (R-116; R-558,
+RQ-489 (a)). *Was:* "that is RQ-489, and the source waits on it."
 
 ---
 
@@ -561,6 +608,27 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   The Chazy fields hold a value for a `running` sample, so they never draw the "not yet" style
   (`principia_dd_chazy_final_motion.md` §7, R-442).
 
+**Chart position as a colour occupant (R-542; state map SM2, SM6, SM11).** Its 2D and 3D gradients carry position in
+all three OKLab axes, lightness included, which is what makes them one-to-one on the quotient. A brightness node after
+an L-spending base (a 1D gradient, the sphere's 3D gradient or the cylinder's 2D gradient), or under lightness layers,
+raises a Problems warning (render GUI spec Part II §1). The plane's 2D gradient, the sphere's longitude gradient, Site
+blend and the index Palette hold L fixed, so a brightness node can take it. SM2's "the brightness slot is None" means that a
+base spending L on position takes a brightness node only with that Problems warning, Multiply keeping its L, and
+SM15's Replace-L chroma scaling is an option of the Replace-L combiner, "keep in gamut", off by default and set on by
+the Displacement and Mixing presets, so the truth table above stands for every stain at the default (R-558, RQ-496
+(a)). *Was:* "SM2's "the brightness slot is None" meets the combiner choice of render contract Part 4 and SM11, and
+SM15's Replace-L chroma scaling meets the truth table above (RQ-496); meanwhile the truth table stands for every
+stain, Replace-L unscaled." Its statuses keep their own style
+in every mode, as above: a left or past-the-end sample under "none" its grey, `sim_failed` `#141418`, `decode_failed`
+and not a system blank (R-511, R-470); with a brightness node the stain ends in the one post that draws each style over
+the combiner's output, as greyscale mode does (applied per R-369).
+
+**The vMF shape colouring is not one-to-one (R-558, RQ-483 (a)).** It stays the hue carrier it is, and nothing in it
+changes: at a fixed L no continuous colouring of the sphere is one-to-one, and the vMF blend gives the antipodal
+shapes `±(1,1,1)/√3` one grey bin at κ = 1, 3 and 6 (`principia_state_map.md` SM6; `principia_dd_colouring.md`
+§3.2). The one-to-one sphere map is Chart position's 3D gradient, a separate node; it is not offered as a shape
+colouring.
+
 ### 4.2 Post chain
 
 Replaces the single post slot. An **ordered array of post nodes** (data), each `vec3(+ctx) → vec3`,
@@ -577,13 +645,36 @@ A **fixed terminal stage** applied to the finished output, **as settings, not no
 never sees them and they are not part of any occupant or preset:
 
 ```
-style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
+[lines through]  →  print graph  →  render→display scale  →  gamut_clamp  →  [lines over]  →  cvd_sim(mode)  →  screen
 ```
+
+*(Was, before R-531: `[lines through]  →  print graph  →  [lines over: RQ-395]  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+*(Was, before R-485 and R-487: `style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+**The Print graph (R-485 to R-492; `principia_print_graph.md`)** stands where style was. It is a node graph of its own,
+after the stain and separate from it: its registry, its codegen and its WGSL are its own, the stain's codegen never sees
+it, and it is no stain occupant or preset; its settings are `RenderState.print` (R-491). Its default, **Plain**, is the
+bitwise identity. It reads the stain's finished colours and, as read-only maps, payload fields normalised by the stain's
+own window rule (`principia_print_graph.md` §4.4); nothing reads its output but the stages after it, so measurement,
+the legend, the readout and every scientific check read the stain (R-489). Debug views bypass it (R-487 K1: View › Debug
+view and every `debug/` occupant), and are never styled.
+
+**The two line passes (R-487).** One line renderer is called twice with complementary filters on `LineStyle.through_medium`
+(`principia_lines.md` §3): the line sets marked through are composited onto the stain's output **before** the Print
+graph, so the medium draws them; the rest are drawn **after** it, crisp on any medium, in R-476 M2's place, the next
+paragraph's: after the gamut clamp and before the colour-vision simulation (R-531, ruling RQ-395, the design doc §2's
+diagram corrected to match). Smart ink for a line drawn over reads the figure to the clamp, the Print graph's output
+included; for a line drawn through, the stain's output (`principia_lines.md` §6). A pixel that is not a system takes the
+Print graph's sheet, never its marks (R-533). *Was:* "Where the pass drawn over sits is RQ-395: the design doc §2 puts
+it before the display scale, R-476 M2 after the gamut clamp; until RQ-395 is ruled it keeps R-476 M2's place, the next
+paragraph's."
 
 **Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system (R-476)** draws its lines after the gamut clamp and
 before the colour-vision simulation, which sees them as it sees the rest of the figure (`principia_lines.md` §2;
 applied per R-369). **Style** is optional and applies to
-the figure only; scientific checks run with plain. *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
+the figure only; scientific checks run with plain. *(R-485: style is the Print graph, above; its default is Plain,
+and goldens and scientific checks run under Plain, R-489.)* *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
 
 **CVD is here, not in the pipeline, and this is a category correction, not a convenience.** CVD
 simulation asks "what does this *finished encoding* look like to a deuteranope/protanope/…?" — it
@@ -732,6 +823,13 @@ independent-integrator convergence reference): the composition engine and the re
 two implementations of the same maps, and agreement to tolerance certifies the port. A preset is not
 "done" until its golden image matches.
 
+**The Print graph's goldens (R-489, R-492).** Every stain golden and every scientific check renders with the Print graph
+set to **Plain** explicitly, never the user's. The Print graph's own nodes and presets have a golden obligation of their
+own, against the lab rather than the two HTML files: each node at its defaults and each preset on the bundled source
+image, matched to `docs/gui/reference/print_graph/images/nodes/` and `images/presets/` within the ΔE (OKLab, median
+and p99) tolerance the first port task sets, each deviation the design requires listed in its registry entry, never
+tuned (`principia_print_graph.md` §10, §11 test 9).
+
 **Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
 golden test. §7.1 is the checklist; the two reference HTML files are the oracle for each entry (R-122).
 
@@ -804,9 +902,11 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 ## 9. The stain editor's composition resolutions (R-72; REQ-COL-054)
 
 Render GUI spec §16 lists eight "standing composition-spec gaps" whose resolutions the stain editor assumes. Each is
-written here from the passages that already carry it. The open parts are raised in `REVIEW_QUEUE.md`, not written in:
-RQ-280 (the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four
-the passages settle) and RQ-282 (a ramp of custom stops).
+written here from the passages that already carry it. The parts the passages left open were ruled by R-546 and are written in: RQ-280 (the addressing convention's third
+channels and its indexes, §9.7), RQ-281 (the debug groups' membership, §9.6) and RQ-282 (gradient magnitude, §9.4; a
+ramp of custom stops is defined apart). *Was:* "The open parts are raised in `REVIEW_QUEUE.md`, not written in: RQ-280
+(the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four the
+passages settle) and RQ-282 (a ramp of custom stops)."
 
 **9.1 Colour source as an axis.** Where a value comes from is one axis, independent of the slot it fills and of the
 mapping that colours it. In the graph a source is a `source` node with one parameter, the ctx field it reads; picking
@@ -839,8 +939,11 @@ sequential clamped mix (§1.3, R-122). It is evaluated per fragment, never baked
 difference of another colour node from three evaluations at ±ε on the sphere, and the ramp is an ordinary §1.2 ramp,
 so it is a field through a ramp, not a mode of its own. The gradient magnitude of the rendered *map* is a different
 thing: a post occupant, a screen-space finite difference over the colour buffer, distinct from the |∇c| evaluated on
-the sphere (render contract Part 4). Whether the item also means that the GUI's gradient editor, "built-in LUT or
-custom stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282.
+the sphere (render contract Part 4). §16's item is this reading alone (R-546, RQ-282 (a)). Render GUI spec §9's
+custom-stop ramp, the gradient editor's "built-in LUT or custom stops, cyclic", is defined separately, here, by
+TASK-M7-11 when its graph model needs it (R-72, REQ-COL-140): its stops, their positions, its interpolation space and
+how `cyclic` applies. *Was:* "Whether the item also means that the GUI's gradient editor, "built-in LUT or custom
+stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282."
 
 **9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
 footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no
@@ -852,17 +955,24 @@ per quad, as `ctx.quad.impurity` is.
 
 **9.6 The debug taxonomy.** The library's debug section is the six groups of render GUI spec §11: addressing,
 quad-structure, decoded-IC, validity, diagnostic and profiling. Every entry is a locked debug preset over the one
-colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four:
+colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four, and
+R-546 (RQ-281) the other two and the cross-checks:
 - **addressing**: the presets that colour a position, `ctx.screen.uv → RG` (fragment addressing) and `ctx.quad.uv →
   RG` (structural addressing) (§6), in the channel convention of §9.7;
 - **quad-structure**: §6's `ctx.quad` presets, `s_depth`, `s_impurity` and `s_state`;
 - **decoded-IC**: the decoded-IC payload quantities (§1.2), the `ICDescriptor` views of debug tooling plan §E (its
   masses, scalar and `E₀` rows), which "certify the **decoder**, independent of any integration" (debug tooling plan
-  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6);
-- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2).
+  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6); and ROUNDTRIP and the agreement
+  presets, because they certify the decoder (R-546, RQ-281);
+- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2);
+- **diagnostic**: the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and
+  accumulator views (R-546, RQ-281);
+- **profiling**: views of per-sample cost (`total_substeps`, the substep-log proxy) and of quad cache age (R-546,
+  RQ-281). These colour measurements that are always taken, so telemetry §5.5 stands: profiling's measurement is
+  first-class, and only its views are filed here.
 
-Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the §B–§D
-payload field views and §E's live-shape and accumulator views, is RQ-281.
+*Was:* "Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the
+§B–§D payload field views and §E's live-shape and accumulator views, is RQ-281."
 
 **9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
 spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
@@ -870,12 +980,14 @@ spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v`
   draws "`u`'s in red and `v`'s in green, blue 0", and "in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
   so the two agree unless the δ path is wrong" (debug tooling plan §F), which holds only with the RG view's blue 0
   too; §6's UV view is one preset over either source, so `ctx.screen.uv → RG` takes the same;
-- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B;
-- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G;
-- **index = grey**: an index written as one value on all three channels.
+- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B, G = 0 (R-546, RQ-280);
+- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G, R = 0 (R-546, RQ-280);
+- **index = grey**: an index written as one value on all three channels, one grey preset per index: `ctx.quad.index`,
+  `ctx.tile.tile_index` and `ctx.tile.sample_index` (R-546, RQ-280). Each maps its index to grey in [0, 1] by a
+  stated rule, written here by TASK-M7-17 (R-72, REQ-COL-139).
 
-The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
-`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
+*Was:* "The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
+`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280."
 
 **9.8 Boundaries are an overlay.** Quad and tile boundaries are Tier-1 overlays (render GUI spec §12.1): a function of
 the position within the cell, drawn by an ordinary post node from `ctx.quad.uv` or `ctx.tile.uv`, with no data

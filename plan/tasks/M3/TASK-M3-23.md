@@ -20,6 +20,8 @@
 - `docs/contracts/principia_integrator_contract.md` § "One thing deliberately NOT decided"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
+- `docs/contracts/principia_integrator_contract.md` § "The sync grid is a fixed quantum of physical time (R-565)"
+- `decisions.md` § "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
 ## Deliverables
 - `crates/validation/src/compare/mod.rs` — `Arm { stepper, regularisation, step_control, discretisation }`, `compare(arms, ics)` returning a typed refusal on mismatch.
 - Provenance block per arm; a shared `RampConstants` passed to every panel.
@@ -28,7 +30,7 @@
 ## Acceptance tests
 - `cargo test -p validation compare_refuses_stepper_mismatch` — two arms with different steppers (e.g. GBS logH vs RK4 Heggie) → the harness returns an error, not a result (REQ-TOOL-031).
 - Review (physics): comparison output ramp constants identical across panels; each arm's provenance block names stepper, regularisation and full profile (REQ-TOOL-032).
-- `cargo test -p validation diagnostic_same_discretisation` — the diagnostic asserts its n_sync, t_max and step parameters equal the run under test's and refuses otherwise; a persistence check with per-window rescaled n_sync is rejected (REQ-TOOL-038).
+- `cargo test -p validation diagnostic_same_discretisation` — the diagnostic asserts its Δ_sync, horizon and step parameters equal the run under test's and refuses otherwise; a persistence check with a per-window rescaled sync grid or step parameter is rejected (REQ-TOOL-038; R-565). *Was:* "its n_sync, t_max and step parameters … per-window rescaled n_sync".
 - `cargo test -p validation logh_heggie_same_arms` — the logH-vs-Heggie harness asserts both arms share the RK4 stepper and step control; a run with a different stepper or step control on one arm is refused (REQ-VAL-053).
 - Review (code): no code path selects an occupant from trajectory state; the occupant is a user/sim-key choice (REQ-INT-019).
 - Part 2b states the judging criterion, the trigger and the report location, without any automatic switching; physics reviewer approved (REQ-INT-074).

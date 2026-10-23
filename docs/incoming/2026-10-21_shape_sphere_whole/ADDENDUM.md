@@ -1,0 +1,3 @@
+Addendum from me, Malachy, to the shape sphere ruling just sent. My words: "you might as well just have full access to all the angles and just let the symmetry be obvious." Quote them verbatim.
+
+In the initial-condition constructor (the editor showing the triangle, the bodies and where the system lands on the shape sphere): every angle is reachable, both hemispheres, with no limit. The mirror twin is shown, not enforced: a faint marker at (θ, π − φ) on the sphere, with the inspector's "mirror twin of …" note, so the symmetry is visible rather than imposed. Dragging the point across the equator flips the triangle's orientation in the triangle view, which is correct. Fold this into the same PR and the same ruling.

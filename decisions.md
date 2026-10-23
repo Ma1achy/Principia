@@ -145,6 +145,10 @@ decisions in the drill-downs and contracts, without a REVIEW_QUEUE entry and a r
 <ruling>". A removed decision with neither is a bug.
 
 ## R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*
+*Refined by R-549.*
+*Still in force: all of it, its quoted words unchanged; "L⁺ (w = +1) at the top" and "the poles are the Lagrange
+points" hold at equal masses: under the current masses `L±`, the equilateral configurations, sit at `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`
+(R-549, RQ-355).*
 *24 Sep 2026 · applied in step 3*
 
 The convention was validated by the human:
@@ -339,6 +343,10 @@ validation_ground_truth_note :99; parity_contract :13; systems_architecture :45;
 dd_integrator :92; spike_brief :61.
 
 ## R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*
+*Corrected by R-547.*
+*Still in force: every branch input that consumes multi-op arithmetic, the change-11 `|Δn̂|` and `E_rel` included, is
+enumerated rather than relying on a backend switch; "explicit fma" is corrected: such an input is built only from
+operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547).*
 *24 Sep 2026 · recorded; applied before the parity gate on a second backend*
 
 Rule 6 extends to every branch input that consumes multi-op arithmetic, the change-11 `|Δn̂|` and `E_rel` included. The branch
@@ -352,6 +360,11 @@ The divergence-vs-horizon table is regenerated or retired as part of the re-run.
 dd_predictability_horizon; `workbench/tb_az.py`.
 
 ## R-36 — Schema version = content hash of the ledger *(PL-1)*
+*Amended by R-545 (21 Oct 2026; RQ-297: the schema version hashes only the ledger columns that decide the payload's
+layout or the kernel's output; `scale`, and any render-only column a ruling names, leaves the hash; "a layout or kernel
+change").*
+*Still in force: the schema version is a content hash, never a hand-bumped integer, now over the ledger's layout and
+kernel columns (R-545).*
 *24 Sep 2026 · applied in step 5*
 
 Files: dd_generation_root §4, §5 test 7, §6; caching_contract :12; render_contract :59, :182; payload :161, :276.
@@ -458,6 +471,14 @@ colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
 *24 Sep 2026 · recorded; applied in step 6*
+*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad that has
+at least one collapsed adjacent pair, every one of which is a saturation collapse, f64 `J_D`'s column along the pair's
+in-plane direction 0 and the pair's f64 sample points distinct, raises no precision warning; every other
+`DECODE_SWITCHOVER`, an `ℓ_switch` switchover with no collapsed pair included, and every other `AT_F32_FLOOR` raises it
+as here (deep_zoom §4; REQ-GUI-012). Was (fix round 3): "a quad every collapsed adjacent pair of which is a saturation
+collapse, f64 `J_D`'s column along the pair's in-plane direction 0 and the pair's f64 sample points distinct, raises no
+precision warning; every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raises it as here". Was: "a saturation collapse, f64 `J_D`'s in-plane columns 0 at a quad
+whose f64 sample points are distinct, raises no precision warning".*
 
 Raised on `DECODE_SWITCHOVER` over visible quads and on `AT_F32_FLOOR`. Files: deep_zoom §2; scheduler_contract Part 4;
 the step-6 GUI docs; gui_state_contract §2.
@@ -469,6 +490,12 @@ the step-6 GUI docs; gui_state_contract §2.
 scratchpad_pointer_channels :132–134; caching_contract :133.
 
 ## R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*
+*Extended by R-534 (20 Oct 2026; RQ-399: the Print graph's post stage, `post_level` and the benchmark lines make
+profiler schema v2, `principia-profile-v2`, and every reader accepts v1).*
+*Amended in part by R-545 (21 Oct 2026; RQ-286: the frame record gains `substep_histogram: [u32; 16]`, a schema v1
+change made by the ruling).*
+*Still in force: all of it; schema v1 stays as defined, five stages, its frame record gaining `substep_histogram`
+(R-545), and v2 is v1 plus R-534's additions.*
 *24 Sep 2026 · recorded; the measurement struct lands with the first frame loop, the schema in step 6*
 
 At the top level: telemetry §2's frame record and its five stages. Beneath them: nested scopes, GPU passes, allocations and events.
@@ -489,6 +516,9 @@ Files: dd_integrator :81–90, §6; integrator_contract :366.
 Files: canonical_spec §2, §11; gpu_determinism_note and parity_contract if branch words fork.
 
 ## R-59 — Fix D1 to D6 as listed *(sheet §8)*
+*Amended by R-544 (D5's shape-sphere value).*
+*Still in force: D1 to D6 as listed; D5's `system_image` in place of `has_redundant_hemisphere` stands, the shape
+sphere's value now one-to-one over the whole sphere, not the 2-to-1 cover (R-544).*
 *24 Sep 2026 · D1–D3 applied in step 5 with R-29 and R-37; D4–D6 applied with R-42, R-27 and R-40*
 
 - D1: the stale escape remnants (integrator_contract :318, :340, :357; dd_integrator :283).
@@ -523,6 +553,10 @@ As written in payload §3: any change to the continuation table changes the sche
 
 ## R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*
 *25 Sep 2026 · applied in step 6*
+*Extended by R-542 (21 Oct 2026; the stain graph gains the `point⟨q⟩` field subtype and the Chart position source,
+`principia_state_map.md` SM15; render_gui_spec Part II §3, §3.1, §5, §6, §9 and §11).*
+*Still in force: the stain editor is a free, typed node graph, render_gui_spec Part II standing; R-542 adds a
+subtype and a source to it.*
 
 render_gui_spec Part II stands. gui_state_contract §5's four-slot, fixed-wiring description predates Part II and is
 updated to the graph. Files: gui_state_contract §5, §7; render_gui_spec Part II header.
@@ -543,6 +577,13 @@ applies to exported animations only, and one sentence there says so. Files: expo
 render_gui_spec §G2.
 
 ## R-67 — The display chain *(closes RQ-23)*
+*Amended by R-487 (20 Oct 2026; the human's P3: lines, traces, axes and grids are drawn over the Print graph by default,
+a line set opting in to being rendered through it, `through_medium`, as `principia_print_graph.md` §2 draws the chain;
+where the lines drawn over sit against R-476 M2 is RQ-395, ruled by R-531: after the gamut clamp, R-476 M2's place).
+Read with R-485 (the Print graph stands where style was).*
+*Still in force: the order stain → [the Print graph, where style was] → display scale → gamut clamp → colour-vision
+simulation → screen, the simulation seeing the final in-gamut colours; the Display window plus the Overlays menu in
+place of the top display bar. R-487 adds the two line passes, through before the Print graph and over after it.*
 *25 Sep 2026 · applied in step 6*
 
 stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut
@@ -859,9 +900,10 @@ override it.
 During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
-*Extended by R-540 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open points; the
-default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never retrigger" are read
-with it, RQ-450 and RQ-452).*
+*Extended by R-540 and R-555 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open
+points; the default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never
+retrigger" are read with it, RQ-450 and RQ-452; R-555 rules the three as R-540 applied them, and §4's "below which the
+sound is meaningless" is reworded "below which no line is resolved, and Listen says so").*
 *25 Sep 2026 · applied in step 7 · amended by R-144*
 *Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and
 R-72 requirements, and the rest stays working notes; §3 is normative too (R-144); §4 is read with `principia_listen.md`,
@@ -907,6 +949,10 @@ TASK-M0-02 checks that each standing obligation exists in a consolidated doc, an
 INDEX and REQ-SYS-008. Archives are never cited.
 
 ## R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*
+*Amended by R-544 (the hemisphere toggle is removed).*
+*Still in force: every fix and split in RQ-93 to RQ-100 as written, with these choices; of RQ-95's, the M2 goldens
+and the projection selector in the Manifold view's Chart section, shown when the chart is the shape sphere; the
+hemisphere toggle is removed (R-544).*
 *25 Sep 2026 · applied in step 7*
 
 Every proposed fix and split in RQ-93 to RQ-100 is accepted as written, with these choices:
@@ -1024,6 +1070,9 @@ overlay: a Profiler tab. Passive logging: a Profiler switch, with its indicator 
 they're checked by presence only, not layout.
 
 ## R-130 ✱ — The styles are the poster's *(closes RQ-107)*
+*Superseded by R-485 and R-486 (20 Oct 2026; the human's P1 and P2: post-processing is the Print graph, its node set
+and presets the lab's, and the v1 list "become[s] presets of the graph, still available"; how the eight non-plain
+styles are kept is RQ-396, ruled by R-532: ported as additional presets).*
 *25 Sep 2026 · applied in step 7 · design; the human may veto*
 
 The styles are defined by the poster's implementation (`workbench/principia_poster_both_sides.html` and its press
@@ -1037,6 +1086,9 @@ Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: 
 encoder, and MP4/WebM through WebCodecs where supported.
 
 ## R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+*Amended by R-575 (the horizon: default 50, raised or lowered, not floored at 50).*
+*Still in force: all three changes, except that T is no longer floored at 50: its default stays 50 and it can be
+raised or lowered (R-575), its lowest value RQ-555; `dt_macro = max(1e-3, T/65535)` stands.*
 *25 Sep 2026 · applied in step 7*
 
 - REQ-COL-055: the invalid colour must collide with no palette entry. Propose a hatched pattern, not a flat colour.
@@ -1113,10 +1165,11 @@ All four readings in RQ-118 are accepted.
 
 ## R-141 — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*
 *Amended by R-503 (the exponential map).*
+*Amended by R-544 (the decode gauge and the 2-to-1 cover are removed for the shape sphere).*
 *25 Sep 2026 · applied in step 7 · amended by R-157*
-*Still in force: the shape sphere's spherical map is 2-to-1 over its φ hemispheres (its exponential map's value is
-computed from its cap, R-503), and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau
-chart's value (R-157).*
+*Still in force: `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau chart's value
+(R-157). The decode gauge and the 2-to-1 cover are removed: the shape sphere chart is the whole sphere, each pixel its
+own system, one-to-one on either map (R-544).*
 
 The shape sphere's φ hemispheres are reflection-equivalent: the canonical decode gauges `λ̃_y → −λ̃_y`, so both
 hemispheres decode to the same system. Its `system_image` is the existing n-to-1 category with n = 2 ("2-to-1 over the φ
@@ -1430,6 +1483,9 @@ Crates without the `controls` feature are skipped, not failed.
 Bench is removed from the per-commit `ci`.
 
 ## R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*
+*Amended by R-544 (the canonicaliser's fold check).*
+*Still in force: TASK-M2-08's round-trip gate composes Φ alone; the decode keeps each pixel's signed n̂, so there is
+no canonicaliser fold to check (R-544).*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M2-08's round-trip gate composes Φ alone. The canonicaliser's fold is checked separately, on the upper hemisphere
@@ -2443,6 +2499,9 @@ payload's `dE_max` and `dLz_max` (R-70, R-86). TASK-M0-10 now builds the pack/un
 and `roundtrip_ctl` over the entries TASK-M0-09 transcribed.
 
 ## R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*
+*Refined by R-566 (the radial collision gate's energy).*
+*Still in force: all of it; under a regularised occupant the two-body radial collision gate's `|dE/E| < 1e-12` is the
+regularised energy's (R-566).*
 *29 Sep 2026 · applied in TASK-M0-02 (PR #54)*
 
 "2. RQ-157: all five as recommended (1 superseded, 2 and 3 ported with calibration and definition requirements, 4 not
@@ -7741,8 +7800,10 @@ pixel of `[0,1]²` feasible, and B1's affine axis is its linear option).*
 *Superseded in part by R-506 (20 Oct 2026; port B1 as the default for every physical-quantity axis, the virial
 ratio and the mass ratio included: each is warped to its feasible range by default, B1's affine axis its linear
 option).*
-*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506); the counting and
-its statistics are unchanged (R-470).*
+*Amended in part by R-544 (21 Oct 2026; B3's and B7's both-hemispheres wording and the 2-to-1 fold, and B4's
+one-hemisphere toggle, go: the shape sphere is the whole sphere, with no hemisphere mode).*
+*Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506), and the shape
+sphere's one-hemisphere case and 2-to-1 fold (R-544); the counting and its statistics are unchanged (R-470).*
 *10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
 added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
 added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
@@ -8347,6 +8408,7 @@ REQ-COL-065's statement, verify, rulings, sources, note and `rq` and REQ-COL-066
 sources; adds no requirement.
 
 ## R-412 — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+*Superseded by R-544 (withdrawn with the hemisphere toggle: the shape sphere chart has no one-hemisphere view).*
 *10 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (sentences added and
 reworded) and § "5.4 Past the unit square — each axis's extension type (R-407)" (the sphere's row; a sentence
 reworded), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
@@ -10010,7 +10072,7 @@ The human's words are R-440's quote, its second remark ("Call 5").
   the outcome palette draws degenerate's white (colour_composition §1.4; R-96).
 - **A line in the GUI docs** says so, so that nobody reads the uniform tag colour as a bug.
 - **The exceptions §3.7 gives** (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3, as they
-  follow from §3.7; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
+  follow from §3.7, and accepted by R-559; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
   their potential, and two kinds of pixel are not tagged so:
   - where `E* = V₀` exactly, the IC is already at the target: the decode is untouched and untagged, and the pixel
     integrates. On a free-fall slice `V₀` varies and is negative, so only an `E* < 0` inside its range has such a
@@ -10035,6 +10097,9 @@ The human's words are R-440's quote, its second remark ("Call 5").
 Changes no requirement.
 
 ## R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default
+*Read by R-548 (21 Oct 2026; the port's entries ruled: the seven-class default stands, B `#141418` near-neutral and held
+to chroma ≤ 0.009, the rule's order transient before B-stable and B-stable before excursion, H, HP, P and the
+two-stage H only at E ≥ 0; RQ-311 to RQ-318, RQ-320, RQ-324 and RQ-325 ruled).*
 *Read by R-467 (20 Oct 2026; in every Chazy stain a `sim_failed` or `decode_failed` sample, a reserved `state` code
 and a NaN draw B's `#141418`, and a pixel the chart classifies forbidden the canvas background; RQ-319 ruled).*
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` (new; the spec transcribed),
@@ -10178,6 +10243,9 @@ the escaper map's columns `chazy_escaper` = 0, 1, 2 as body 1, 2, 3, and the thr
 through TASK-M2-33's one display conversion, REQ-GUI-188; R-449's text names "the Chazy spec and its follow-ups").*
 *Still in force: all of it; `k` and `chazy_escaper` stay 0-based in storage and computation, and a machine-readable
 export keeps them 0-based and says so (REQ-GEN-036); only the names a person reads are R-449's.*
+*Read by R-548 (21 Oct 2026; the one-body views read `chazy_escaper` always, their legends counting where it differs
+from the event's escape detail; the grey `#8A8A90` stays, held to chroma ≤ 0.009; the three panels are one figure;
+RQ-321 to RQ-323 ruled).*
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
 added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
 time (R-443)", § "11.1.1 Decided (R-443)", § "11.2.2 One-body palettes, measured (R-443)" and § "12.3 One body at a
@@ -10278,7 +10346,11 @@ which is RQ-321.
 new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
 2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*
-*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*Amended in part by R-546 (21 Oct 2026; RQ-331: the nine-class palette's closest pair stays 0.175, triple collision
+`#F29620` against escape body 1 `#F0DE32`, the same two colours as the old t = 0 pair; 0.185 holds only with the orange
+left out; the quoted words are kept).*
+*Still in force: all of it, but the message's "rises from 0.175 to 0.185" (R-546); its 0-based class names are the
+internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (the table, the mnemonic paragraph, "how the table reads the payload" and the triple
 outcomes' paragraph rewritten) and § "4.1 Backbone & `Option` occupants" (event mode's reading),
@@ -10651,7 +10723,11 @@ stands as written.*
 *Its gate named by R-454 (17 Oct 2026; closes RQ-330): the three goldens re-baselined under R-444 to R-446, and the
 new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown, as for R-444; same hues, same swatches).*
-*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*Amended in part by R-546 (21 Oct 2026; RQ-332: its parenthesis reads "in gamut at every listed hue (the narrowest,
+208°, admits 0.1238)"; C = 0.123 and the ruled hex swatches stand, the three one-step roundings recorded, not adopted;
+the quoted words are kept).*
+*Still in force: all of it, its parenthesis read as R-546 words it; its 0-based class names are the internal ids, shown
+by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (a paragraph and a table added), `docs/contracts/principia_render_contract.md` §
 "Presentation layer (hand-written, small, reused by every debug view)" (a clause of R-445's sentence), REQ-COL-103 and
@@ -11464,6 +11540,11 @@ slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section
 Adds REQ-GUI-191 to REQ-GUI-193.
 
 ## R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice
+*Amended in part by R-550 (21 Oct 2026; RQ-341 to RQ-346 ruled: the physical views' Jacobian is the eight-column
+`∂x/∂z` read after `η_E`, the Jacobi and Shape sets are the full-rank ones, the steer is `J⁻¹` with the projector
+test's refusal, and each physical coordinate is divided by a fixed reference range).*
+*Still in force: all of it but 3.2's proposed Jacobi and Shape sets, the views' "J_D machinery", the stretch on the
+un-orthonormalised `q`, 3.4's `J_D⁺` and its rank test, and C4's "until RQ-341 is ruled", which R-550 settles.*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new), § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the Compass scope) and § "G13. Where the artboards are overridden" (the references),
@@ -12902,9 +12983,13 @@ chart's in-square failure on a linear axis is not a system, blank and unwarned; 
 *Amended in part by R-511 (20 Oct 2026; D4's `decode_failed` sample the chart does not classify draws blank, not
 `#141418`; `sim_failed` keeps `#141418`; RQ-379 closed).*
 *Extended by R-505.*
+*Amended in part by R-554 (21 Oct 2026; clause 4: the shape sphere's exponential-map pixels with `r > π` inside
+`[0,1]²`, and those on `r = π` if REQ-CHART-078 makes them the domain's end, are by design, blank and unwarned;
+RQ-470 closed).*
 *Still in force: all of it; R-470 rules D9's two toggles and reads D5 as a baked variant; R-511 draws D4's
 unclassified `decode_failed` blank, `sim_failed` and a system's non-finite values keeping `#141418`; R-506 limits
-clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505).*
+clause 4's warning to a warped axis; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505); R-554 excepts the exponential
+map's pixels past `r = π` from clause 4's warning.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (a cell and the fallback's sentences reworded, two paragraphs added),
 `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)" (a
@@ -13547,6 +13632,9 @@ undo, the slider and the readout).
 ## R-470 — A pixel that is not a system draws blank, the view's background, in every view, the outcome view included, never a palette colour; the hatch survives only as the optional Overlays › Chart › forbidden region, off by default, over blank pixels only; NaN, ±∞, `sim_failed`, `decode_failed` and the classification behind the hatch show only in the debug views; R-408's statistics are unchanged *(amends R-407, R-446 and R-467; closes RQ-374)*
 *Amended in part by R-511 (20 Oct 2026; G2's open case ruled: a `decode_failed` sample the chart does not classify
 is blank, as a not-a-system pixel, the forbidden-region overlay drawing over it; `sim_failed` keeps `#141418`).*
+*Amended in part by R-533 (20 Oct 2026; RQ-398: under a Print graph other than Plain, a pixel that is not a system
+takes the print's sheet, its Ground, Age and Viewing, never its marks; under Plain, and in every debug view, it stays blank as
+below).*
 *Still in force: all of it; G2's `#141418` stands for `sim_failed` and a system's non-finite values, and R-511 closes
 RQ-379.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
@@ -13787,8 +13875,11 @@ note), REQ-CHART-056 (verify, rulings, note), REQ-CHART-040 (note), REQ-GUI-109 
 square under Tip as sheet is past the edge, the types acting on it as X3a says, blank past a bounded edge).*
 *Amended in part by R-537 (20 Oct 2026; X2's Extend is no longer the only way to see past the square: pan and zoom
 reach the extension with the controls shown, and Extend only adds window area).*
+*Refined by R-552 (21 Oct 2026; X2's "with no extension": no window area beyond the view's own square, which Fit
+scales wherever the view sits, RQ-416).*
 *Still in force: all of it; R-512 answers X3a's "whether that is meant"; Extend and Fit stand, and R-537 adds the
-extension with the controls shown.*
+extension with the controls shown; R-552 reads X2's "with no extension" as no window area beyond the view's own
+square.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (the F3 bullet: the
 sidecar and present mode) and § "Export & share" (the sidecar), `docs/design/principia_chart_reference.md` § "5.4 Past
 the unit square — each axis's extension type (R-407)" (a paragraph added, "Blank, and tilted charts"),
@@ -13860,8 +13951,11 @@ in units of the axis's full range at zoom 1, the hidden coordinate in its slider
 decoder's basis edit; J3's meanwhile no longer applies).*
 *Amended in part by R-513 (20 Oct 2026; J9, RQ-403 closed: a new tilt `R′` of a saved curved chart into its
 own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`).*
+*Amended in part by R-554 (21 Oct 2026; J1 and J2: the shape sphere's tilt targets gain the physical `p_λ`
+components, tilted by their physical value; RQ-474 closed).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
-composition runs into the saved target.*
+composition runs into the saved target; R-554 adds the physical `p_λ` targets, J2's latent-control rule holding for
+every other target.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -15333,6 +15427,578 @@ R-484 is in the "design" group of `plan/rule_groups.yaml`.
 Adds REQ-TOOL-177 (RT1, T1), REQ-TOOL-178 (T2), REQ-TOOL-179 (RT2, T3), REQ-TOOL-180 (RT3's record, writer and reader),
 REQ-TOOL-181 (RT4, T4) and REQ-GUI-263 (RT3 in the GUI); changes REQ-TOOL-070 and REQ-TOOL-146 (notes).
 
+## R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's "Style", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*
+*Amended in part by R-532 (20 Oct 2026; RQ-396: R-130's eight styles are ported as additional presets beside the
+lab's 103, 111 in all).*
+*Still in force: all of it; "still available" is met by R-532's eight presets.*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` (added, the bundle's design with an adoption note and
+the review queue's pointers), `docs/gui/reference/print_graph/` (added: the lab, the Python prototype, the catalogue,
+the capture tools, the reference images and the boards, with a README), `docs/read_first/principia_INDEX.md` §
+"Design documents — the reasoning" and § "GUI" (lines added), `docs/gui/principia_render_gui_spec.md` § "Display — the
+last stages" (the Print panel), `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside
+the pipeline)", `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules" (the Print graph stage),
+`docs/contracts/principia_gui_state_contract.md` § 2, R-130's heading block and RQ-396 (new); the tasks and
+requirements follow in the plan PR (the human's step 2, its second bullet)*
+
+The human's words: a message of 20 Oct 2026, the human's own, typed, with an attachment, the bundle
+`principia_print_graph_bundle.zip` (its `README.md`, `INSTRUCTION.md`, the two design docs `principia_print_graph.md`
+and `principia_benchmark.md`, and the reference material); the message and the bundle's `INSTRUCTION.md` were recorded
+verbatim in the orchestrator's notes. The message, whole:
+
+> Attached: principia_print_graph_bundle.zip. It holds two designs, the Print graph
+> (post-processing) and the benchmark. They are independent except that the benchmark
+> measures the Print graph's stage.
+>
+> 1. Unzip it to a scratch folder outside the repo. Do not commit the bundle as is.
+>    Read README.md, then INSTRUCTION.md, then both design docs
+>    (principia_print_graph.md, principia_benchmark.md) in full.
+>    Look at the five boards in boards/, the contact sheets in images/, and the lab
+>    itself (reference/print_graph_lab/index.html, served locally) before writing anything.
+>
+> 2. Follow INSTRUCTION.md's order: docs first, then the plan, then code.
+>    - One PR for the docs:
+>      - the rulings P1–P8 and B1–B7 in decisions.md, quoting my words from its §0;
+>      - both design docs into docs/design/;
+>      - every amendment in its §3 table, each with a "Removed lines" note.
+>      Stop after that PR for my review.
+>    - Then a PR for the plan: tasks and requirements. Phase the Print graph's port by
+>      node category, with every one of the 78 node types and 103 presets in a task.
+>      Move prin profile and xtask bench onto the one runner with their existing outputs
+>      unchanged. Include the first Full benchmark run on the reference machine, which
+>      replaces the docs' estimated times.
+>    - Then code, task by task. Paste the actual test output in every PR.
+>
+> 3. Reference material goes in the repo under docs/gui/reference/print_graph/:
+>    - the lab (reference/print_graph_lab/);
+>    - the Python prototype (reference/fx_prototype/);
+>    - catalogue/;
+>    - tools/;
+>    - images/;
+>    - the boards.
+>    It is reference, not code to build on: port the lab's nodes and take the
+>    prototype's data format, as the design doc §1 says.
+>
+> 4. The images are the port's visual references (Print graph doc §10). Match each node
+>    and preset within the tolerance the first port task sets. Where the design requires
+>    a deviation from the lab (units, seeding, real payload fields in place of the lab's
+>    brightness stand-in), list it in that node's registry entry. Never tune to match.
+>
+> 5. Reviewers: GUI and perf for the Print graph; perf and QA for the benchmark;
+>    physics only for the Print graph's field inputs (design doc §4.4).
+>
+> 6. Do not rule on either doc's open questions (Print graph §12, benchmark §10).
+>    Queue them in REVIEW_QUEUE.md. If anything in the bundle contradicts an existing
+>    ruling or doc on origin/main, queue it and tell me. Don't resolve it yourself.
+
+`INSTRUCTION.md` §0, the human's words the fifteen rulings rest on, whole:
+
+> ## 0. My words
+>
+> - On the benchmark: "it goes for like a load of different like pre-built scenarios and then tries to do like a load of
+>   different stuff and we profile that … I can test it on like different devices a lot easier, and then I can just
+>   export the profiling results and then give it back to the agents … if I ever send this to like a friend who's got a
+>   better or worse graphics card than me, it also makes it really easy for me to get their profiling results."
+> - On post-processing: "I want the post-processing effects stuff properly implemented and integrated into this version
+>   of Principia."
+> - On presentation frames (Polaroid, banknote, posters): separate, later.
+> - On lines: "over by default, can optionally be rendered with the post processing".
+> - On motion: degrade while moving.
+
+`INSTRUCTION.md`'s "How to work this", whole:
+
+> 1. **Docs first.** Write the rulings below into `decisions.md`, with my words from §0. Add both design docs under
+>    `docs/design/`, and amend the docs listed in §3. Each amendment gets a "Removed lines" note. Nothing is built until
+>    the docs are merged.
+> 2. **Then the plan.** Tasks and requirements. The Print graph's port is phased **by node category**, every node and
+>    preset in a task. None is dropped or left "for later" without a task.
+> 3. **Then code.** Each PR pastes its actual test output.
+> 4. **Reviewers:**
+>    - the Print graph: the GUI reviewer and the perf reviewer;
+>    - the benchmark: the perf reviewer and QA.
+>
+>    Neither design touches physics, so no physics review is needed, **except** the Print graph's field inputs (§4.4 of
+>    its doc), which read payload fields. The physics reviewer checks that they read the same values, with the same
+>    normalisation, as the stain.
+> 5. **Do not rule on either doc's open questions.** Queue them as RQ entries.
+
+And its P1:
+
+> **P1.** Post-processing is the **Print graph**: a node graph after the stain, separate from it. It replaces the
+> Display window's "Style", and supersedes R-130's v1 list (plain, watercolour & pencil, seven print presets). Those
+> become presets of the graph, still available.
+
+*The split (applied per R-369):* `INSTRUCTION.md`'s fifteen rulings are fifteen R-numbers in its order, P1 to P8 as
+R-485 to R-492 and B1 to B7 as R-493 to R-499. This entry holds the message, §0 and "How to work this"; each of the
+others quotes its own ruling and the §0 line it rests on. The bundle's `INSTRUCTION.md` §3 (the docs to amend), §4 (what
+the plan must contain) and §5 (the tests) are quoted where they apply: §3's table here and in R-487, R-493 and R-497;
+§4 in R-485 (the Print graph) and R-493 (the benchmark); §5 in R-492 and R-499.
+
+*What it decides:* P1 as the human wrote it. The design is the bundle's `principia_print_graph.md`, "Everything here is
+a proposal for the rulings in the accompanying instruction" as delivered: it is `docs/design/principia_print_graph.md`
+from these rulings on, read with R-485 to R-492, which adopt it.
+
+- **The Print graph** turns the finished, coloured figure into a picture made in a medium. It reads the stain's
+  finished colours, and payload fields only as read-only maps (R-486, design doc §4.4); its output is a styled image
+  that no measurement reads (R-489); its default is **Plain**, the identity; it never re-integrates.
+- **It replaces "Style".** The Display window's Style (render_gui_spec § "Display — the last stages") becomes the
+  Print panel (design doc §7.1): Plain / Print, the slots, the preset gallery, Edit graph… and Reset. The stage sits
+  where R-67's chain had "style" (R-487).
+- **R-130 is superseded.** Its v1 list, plain, watercolour & pencil and the seven print presets (render_gui_spec names
+  them: Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone), "become presets of the graph, still available".
+  None of the eight non-plain styles is among the lab's 103 presets by name, and P2 makes the lab's set the node and
+  preset set; how the eight are kept is queued, not decided here (RQ-396).
+- **Reviewers** (the message's point 5 and "How to work this" 4): the Print graph's tasks are reviewed by the gui and
+  perf reviewers, and the physics reviewer reviews its field inputs only (design doc §4.4: they read the same values,
+  with the same normalisation, as the stain); the benchmark's (R-493 to R-499) by the perf and qa reviewers. The code
+  reviewer reviews every task as always (`plan/WORKFLOW.md`).
+- **What the plan must contain for the Print graph** (`INSTRUCTION.md` §4, the human's words, whole):
+
+  > **Print graph:**
+  > - the registry and codegen;
+  > - the graph executor, with Plain as bitwise identity;
+  > - port typing and the editor's wire refusal;
+  > - the slot chain and the simple panel;
+  > - the graph editor (reusing the Stain's);
+  > - the cost-class measurement task;
+  > - motion degrade;
+  > - field inputs;
+  > - one port task per category (Analyse and Generate, Adjust & combine, Paint, Print, Screen, Craft, Photographic,
+  >   Machines, Slots), each with its node and preset goldens;
+  > - `through_medium` in the line renderer;
+  > - provenance and round trip.
+
+  The plan PR writes these, with every one of the 78 node types and 103 presets in a task (the message's point 2).
+- **Presentation frames** (Polaroid border, banknote, posters) are not part of the Print graph: "separate, later" (§0).
+  Whether they become a later Frame stage is the design doc's §12 question 4, queued (RQ-391).
+
+*The reference material (the message's point 3; applied per R-369):* `docs/gui/reference/print_graph/` holds the lab
+(`reference/print_graph_lab/`, with its font and a licence note), the Python prototype (`reference/fx_prototype/`),
+`catalogue/`, `tools/`, `images/` and `boards/` (with `boards/source/`), and a README saying it is reference, not code
+to build on. R-476 M1's "no reference folder keeps scripts or data" does not apply to this folder: the human's point 3
+names the prototype, the catalogue and the tools. The bundle's `README.md`, `INSTRUCTION.md` and two design docs are not
+copied there (the docs are in `docs/design/`, the rulings here): "Do not commit the bundle as is". The bundle was read
+as data; nothing in it was run.
+
+*What it amends:* it supersedes R-130 (with R-486, its heading block says so) and replaces render_gui_spec § "Display
+— the last stages"'s Style, whose earlier words are kept there as a *Was* note.
+
+*Also applied (gui review 5596618095 of PR #268, G2 and G3): `docs/gui/principia_render_gui_spec.md` § "1. Layout —
+four surfaces" (Part II), § "12. Display stage — global, outside the pipeline" (the order, the Print graph in style's place and as a
+node graph of its own, as colour_composition §4.3 has it) and § "13. Invariants" (11), and `docs/gui/design/GUI_DESIGN_NOTES.md`
+§ Display (conformed), each with its earlier words kept.*
+
+R-485 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*
+*Amended in part by R-532 (20 Oct 2026; RQ-396: the preset set is the lab's 103 plus R-130's eight, 111 in all) and
+by R-536 (RQ-401: each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses;
+the port reads the real field).*
+*Still in force: all of it but the preset count, which R-532 makes 111.*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` §§ 1, 4, 10 (adopted), `docs/gui/reference/print_graph/`
+(the lab, the prototype and the catalogue), `docs/contracts/principia_gui_state_contract.md` § 2 (`PrintGraph`), RQ-401
+(new); the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P2, with the §0 line it rests on:
+
+> - On post-processing: "I want the post-processing effects stuff properly implemented and integrated into this version
+>   of Principia."
+
+> **P2. The node set is the lab's.** All 78 node types and all 103 presets in `reference/print_graph_lab/` (the
+> "Principia Print Graph" artifact), ported from GLSL to WGSL. **The data format is the prototype's**
+> (`reference/fx_prototype/`): JSON graphs, settings, `$setting` references, presets usable as nodes, explicit seeded
+> streams. The design doc §4 is the merged format.
+
+*What it decides:* P2 as the human wrote it. The lab is `docs/gui/reference/print_graph/reference/print_graph_lab/`
+and the prototype `docs/gui/reference/print_graph/reference/fx_prototype/` (R-485); the porting checklist is
+`docs/gui/reference/print_graph/catalogue/node_catalogue.json` (78 types: the lab's `image` source, labelled Render, and
+`output` among them) and `catalogue/presets.json` (103 presets, in the 11 families of `catalogue/preset_families.json`).
+The format is the design doc §4: a graph is data (`principia.print/1`), its ports typed (§4.2), its node types a
+registry checked at build time (§4.3), payload fields read-only inputs (§4.4).
+
+*Checked in the port (applied per R-369):* the bundle's catalogue and images agree by name. `images/nodes/` holds 76
+JPEGs and its `index.json` (77 files), one per type less `image` (Render) and `output`; `images/presets/` holds 103
+JPEGs and its `index.json` (104 files), one per preset, every preset in exactly one family. Nothing is missing or extra.
+The lab's caption and the design doc §4.4 name different stand-ins for the four "Driven by the data" presets (RQ-401).
+
+R-486 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*
+*Amended in part by R-531 (20 Oct 2026; RQ-395, option (c): the lines drawn over keep R-476 M2's place, after the
+gamut clamp and before the colour-vision simulation; the design doc §2's diagram is corrected to match).*
+*Still in force: all of it but the design doc's place for the lines drawn over; K1 and K2 stand.*
+*20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the
+pipeline)" and § "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4
+— Semantic rules" (the composite order), `docs/design/principia_lines.md` § "2. Where it sits" and § "3. The data model"
+(`LineStyle.through_medium`), `docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the order), R-67's
+heading block, RQ-395 (new); the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P3, with the §0 line it rests on:
+
+> - On lines: "over by default, can optionally be rendered with the post processing".
+
+> **P3.** Lines, traces, axes and grids are drawn **over** the Print graph by default. A line set can opt in to being
+> rendered through it (`through_medium`). This amends R-67's chain as the doc's §2 draws it.
+
+`INSTRUCTION.md` §3's rows for it, the human's words:
+
+> | `decisions.md` | P1–P8 and B1–B7. R-130 superseded by P1–P2; R-67 amended by P3 |
+> | `principia_colour_composition.md` §4.3 and §7 | the chain with the Print graph and the two line passes |
+> | `principia_render_contract.md` | the Print graph stage; debug views bypass it |
+> | the lines doc (`principia_lines.md`, from the earlier bundle) | `LineStyle.through_medium` |
+
+*What it decides:* P3 as the human wrote it. The design doc §2's chain:
+
+```
+SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► [line sets drawn over] ─►
+          display scale ─► gamut clamp ─► colour-vision simulation ─► screen
+```
+
+- `LineStyle` gains `through_medium: bool`, default `false` (`principia_lines.md` §3). A line set marked through is
+  composited onto the stain's output **before** the Print graph; every other line set is drawn after it. Axes are a line
+  set, so the same switch applies. The two passes are the same line renderer called twice with complementary filters.
+- **Debug views bypass the Print graph** (design doc §2): a debug view is never styled.
+- The colour-vision simulation sees the styled picture, as R-67 orders.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **K1. Which views are debug views.** View › Debug view (R-467, R-470; a baked variant, R-41) and every stain whose
+  colour occupant is a debug view (`principia_render_contract.md` Part 6: a `debug/` occupant). Neither is styled.
+- **K2. A line set's switch.** `through_medium` is a `LineStyle` field, so a line set takes it from its style or sets it
+  as an override in its `LineRef` (`principia_lines.md` §3: a line "may override single fields"); the line set's style
+  panel shows "Through the medium" (design doc §7.3), off by default.
+
+*Queued, not decided:* the design doc's chain puts the lines drawn over **before** the display scale and the gamut
+clamp; R-476 M2 puts the line system's pass **after** the gamut clamp, before the colour-vision simulation, and smart ink
+reads "stain plus display chain to the clamp" (REQ-RENDER-090). Where the pass drawn over sits is RQ-395; until it is
+ruled the docs keep R-476 M2's place for the lines drawn over, and the lines drawn through sit before the Print graph,
+which no earlier ruling places.
+
+*What it amends:* R-67's chain, "stain → style → display scale → gamut clamp → colour-vision simulation → screen": the
+Print graph stands where style was (R-485), the lines drawn through sit before it and the lines drawn over after it
+(RQ-395 for exactly where). R-67's other words stand.
+
+*Also applied (gui review 5596618095 of PR #268, G2 and G3), with R-531: render_gui_spec § "12. Display stage —
+global, outside the pipeline" (the order) and § "13. Invariants" (11), and GUI_DESIGN_NOTES § Display (conformed).*
+
+R-487 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion
+*Amended in part by R-557 (21 Oct 2026; RQ-479: the print stage's time is recorded but excluded from the arbiter's
+rung solve; RQ-495: the whole-graph fallback is the arbiter's post level, under Auto only).*
+*Still in force: all of it but "the tier controller's accounting includes it", and the fallback's owner and reach: the
+whole-graph fallback runs only under Auto, as the arbiter's post level, solved from the measured cost classes.*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 8 (adopted), `docs/design/principia_dd_telemetry_and_tiers.md`
+§ 2 and § 5 (`stage_ms.post`, `post_level`); the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P4, with the §0 line it rests on:
+
+> - On motion: degrade while moving.
+
+> **P4. Degrade while moving** (doc §8.1):
+> - per-node motion policies (`full`, `reduced`, `bypass`);
+> - a whole-graph fallback when over budget;
+> - full quality on settle.
+>
+> The playhead advancing is not motion.
+
+*What it decides:* P4 as the human wrote it, as the design doc §8 specifies it: motion is the frame record's
+`camera_delta > 0` or a drag in progress; `reduced` runs at half or quarter resolution and upsamples; over the post
+stage's share of the frame budget the whole graph drops a level, reduced then Plain; on settle (no camera change for
+`settle_ms`, default 250 ms, with hysteresis) it renders once at full quality and holds it. The post stage is a stage
+of the telemetry frame record (`stage_ms.post`), the tier controller's accounting includes it, and the level that ran
+is recorded per frame (`post_level: full | reduced | plain`). `settle_ms`'s 250 ms is the design's default and the
+post stage's share of the budget is not given: each is a calibration (R-71), which the plan PR names.
+
+R-488 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain
+*Amended in part by R-523 (20 Oct 2026; RQ-397: the print badge sits in the figure's header strip, never over the
+figure).*
+*Amended in part by R-533 (20 Oct 2026; RQ-398: a pixel that is not a system takes the print's sheet, never its
+marks).*
+*Still in force: all of it but the badge's place, "the canvas corner badge".*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 3 (adopted), `docs/design/principia_colour_composition.md`
+§ "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
+rules", `docs/gui/principia_render_gui_spec.md` § "Export & share" and § "Display — the last stages", RQ-397 and RQ-398
+(new); the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P5:
+
+> **P5. The instrument stays honest** (doc §3):
+> - measurement never reads the print;
+> - goldens run under Plain;
+> - a styled figure is badged;
+> - figure export defaults to Plain.
+
+*What it decides:* P5 as the human wrote it, as the design doc §3 specifies it. The Inspector, Measure, the legend, the
+colour readout under the cursor, area statistics and every scientific check read the pre-print colours or the payload;
+a test that renders a figure sets Plain explicitly and never inherits the user's Print graph; while a Print graph other
+than Plain is active the canvas corner badge names it ("Print: Linocut"); the export dialog offers Styled and Plain and
+defaults to Plain for figure export, as `principia_dd_image_embedding.md` §9 keeps the embedding off for figure export.
+
+*Queued, not decided:* the badge is a label over the figure, which render_gui_spec §G1 forbids ("The figure is never
+covered") but for the Home button, as RQ-387 found for R-479's decoder badge (RQ-397); and whether the Print graph draws
+over a pixel that is not a system, which R-470 draws blank, never a palette colour (RQ-398).
+
+R-489 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 6 (adopted); the tasks and requirements follow in the
+plan PR*
+
+The human's words, `INSTRUCTION.md` P6:
+
+> **P6. Determinism, units and stability** as the doc's §6:
+> - seeded only;
+> - lengths in `ref_px`, `device_px` or `fraction`;
+> - the sheet anchored to the screen;
+> - `boil` off by default.
+
+*What it decides:* P6 as the human wrote it, as the design doc §6 specifies it: the same `RenderState` gives the same
+pixels, bitwise on one backend and within the parity contract's colour tolerance across backends; every random draw
+comes from a seeded stream, never the clock, the frame counter or a platform random; `ref_px` is pixels on a
+1024-wide figure scaled by `output_width / 1024`, `device_px` true screen pixels (only for effects that model the display
+itself), `fraction` a fraction of the figure width; the sheet (tooth, weave, grain, ground) stays fixed while the figure
+pans and zooms beneath it, and noise-driven marks are seeded from screen-anchored coordinates and the graph's seed;
+`boil: off | per frame | every N frames` is a graph setting, off by default; each registry entry declares
+`temporally_stable`.
+
+R-490 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 9 (adopted), `docs/contracts/principia_gui_state_contract.md`
+§ 2, `docs/design/principia_dd_image_embedding.md` § "6. What travels" (the tier table); the tasks and requirements
+follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P7, and §3's rows for it:
+
+> **P7. Provenance** (doc §9): `RenderState.print` is recorded **by value**. A graph of built-in nodes is round-trip
+> tier 2; custom WGSL is tier 3.
+
+> | `principia_gui_state_contract.md` §2 | `RenderState.print: PrintGraph`; editor positions in `ViewUI` |
+> | `principia_dd_image_embedding.md` §6 | the Print graph travels in `RenderState`, tier 2 and tier 3 as P7 |
+
+*What it decides:* P7 as the human wrote it, read with R-484 (the round-trip rule). `RenderState` gains `print:
+PrintGraph`, in its canonical serialisation (R-309, R-318), so it travels in snapshot JSON, share links, pxpack, the
+embedded record, the `tEXt` chunk, the profiler header's `config` and the animation spec; a preset is recorded as the
+graph it expanded to, with its preset id as a label, so a later build's change to a built-in preset cannot change what
+an old record reproduces; editor positions are `ViewUI`'s, so moving a node is no undo entry and two equal graphs
+serialise equal. In R-484's tiers: the graph, its built-in nodes, settings and wires are tier 2 (colour, `RenderState`
+as built-ins); a custom WGSL node's source is tier 3 (custom source), dropped first; a record that dropped tier 3
+recreates with the custom node shown as missing and the figure rendered without it, badged (design doc §9). Across
+keyframes numeric settings interpolate and a change of graph structure or preset is a cut. Every field of
+`PrintGraph` is in R-484's one tier table (RT4).
+
+R-491 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` §§ 10, 11 (adopted), `docs/design/principia_colour_composition.md`
+§ "7. Preset table & golden-image obligation", `docs/gui/reference/print_graph/images/`; the tasks and requirements
+follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` P8 and §5, with the message's point 4:
+
+> **P8. Fidelity to the lab** is measured per node and per preset against the bundled reference renders (doc §10).
+> Deviations the design requires (units, seeding, real fields in place of the lab's brightness stand-in) are listed in
+> the registry entry, not tuned to match.
+
+> ## 5. Tests
+>
+> Both docs end with their tests (§11 and §9), each with an arm that can fail. They are part of this instruction.
+
+> 4. The images are the port's visual references (Print graph doc §10). Match each node
+>    and preset within the tolerance the first port task sets. Where the design requires
+>    a deviation from the lab (units, seeding, real payload fields in place of the lab's
+>    brightness stand-in), list it in that node's registry entry. Never tune to match.
+
+*What it decides:* P8 and point 4 as the human wrote them. The references are `docs/gui/reference/print_graph/images/nodes/`
+(each node at its defaults on the bundled source image, `images/source_config_stability.jpg`) and `images/presets/`;
+the measure is ΔE in OKLab, median and p99, its thresholds set in the first port task and then fixed (design doc §10);
+the 512² JPEGs may be regenerated as exact PNGs at any size by the bundled tools (the README there). The design doc §11's
+ten tests, each with its arm that can fail, are part of the rulings: Plain bitwise identity, measurement blind to the
+print, determinism, scale invariance, stability, lines over and through, motion degrade, the registry, port fidelity
+and the round trip.
+
+*Applied per R-369:* the tolerance is a value the corpus does not give, so it is a calibration requirement (R-71), set by
+the first port task and confirmed at its milestone gate, as point 4 says.
+
+R-492 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-493 — One scenario runner and one scenario registry serve `prin profile`, `cargo xtask bench` and the GUI's "Run benchmark"; they differ only in which scenarios they select
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` (added, the bundle's design with an adoption note and the
+review queue's pointers), `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a line added),
+`docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices" (a pointer);
+the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` B1, with the §0 line the benchmark's rulings rest on:
+
+> - On the benchmark: "it goes for like a load of different like pre-built scenarios and then tries to do like a load of
+>   different stuff and we profile that … I can test it on like different devices a lot easier, and then I can just
+>   export the profiling results and then give it back to the agents … if I ever send this to like a friend who's got a
+>   better or worse graphics card than me, it also makes it really easy for me to get their profiling results."
+
+> **B1. One scenario runner and one registry** serve `prin profile`, `cargo xtask bench` and the GUI's "Run benchmark".
+> They differ only in which scenarios they select.
+
+`INSTRUCTION.md` §4's benchmark list, the human's words, whole:
+
+> **Benchmark:**
+> - the scenario format and loader;
+> - moving `prin profile` and `xtask bench` onto the one runner (B1), with their existing outputs unchanged, tested;
+> - the suite's scenario files;
+> - the GUI dialog, run overlay and results sheet;
+> - the result file and schema bump;
+> - `report` and `compare`;
+> - the first Full run on the reference machine, which replaces the doc's estimated times with measured ones.
+
+*What it decides:* B1 as the human wrote it. The design is the bundle's `principia_benchmark.md`: it is
+`docs/design/principia_benchmark.md` from these rulings on, read with R-493 to R-499, which adopt it. It makes telemetry
+§1.1's fixed suite concrete and changes nothing in the telemetry doc's frame record, percentiles, tier axes or failure
+handling but what R-488 and R-497 add. The plan PR writes §4's list, `prin profile`'s `synthetic_frames` and `cargo
+xtask bench`'s `trivial-kernel` moved onto the one runner with their outputs unchanged (the message's point 2), and the
+first Full run on the reference machine, whose measured times replace the design doc §4's estimates. Benchmarks run on
+the human's Mac (R-186).
+
+*Checked in the port (applied per R-369):* the design doc §1's "Exists" list, written against origin/main `d7e6f50`,
+holds on this base: `prin profile` registers one scenario, `synthetic_frames` (`crates/prin/src/profile/run.rs`);
+`cargo xtask bench` runs one bench, `trivial-kernel`, with its baseline in `fixtures/bench/trivial-kernel/`; the Profiler
+window's task is TASK-M8-28 (the window, the leak detector, the summaries and `prin profile query --live`), not yet
+built; and TASK-M0-19's benchmark runner (`validation::bench`) is the runner `cargo xtask bench` drives today.
+
+R-493 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-494 — A benchmark scenario is data: a file in `bench/scenarios/`, validated at load, with a full canonical start state, a frame-indexed timeline reusing the export keyframe spec, and a suite hash
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 2 (adopted); the tasks and requirements follow in the
+plan PR*
+
+The human's words, `INSTRUCTION.md` B2:
+
+> **B2. Scenarios are data** (doc §2):
+> - files in `bench/scenarios/`, validated at load;
+> - a full canonical start state;
+> - frame-indexed timelines reusing the export keyframe spec;
+> - a suite hash.
+
+*What it decides:* B2 as the human wrote it, as the design doc §2 specifies it (`principia.bench.scenario/1`): `start`
+is a full `SimConfig` and `RenderState` in their canonical serialisation; the timeline is the export contract's keyframe
+spec (`principia_export_animation_contract.md` Part 3) stepped in frames, its edits sent as `SetField`; `settle` runs to
+convergence or `max_frames`, the cap recorded when it bites; `requires` (`gpu`, `window`) makes a runner skip and record
+the skip, never pass; unknown keys and stale `SetField` paths are refused at load; the suite hash is the content hash
+of the scenario files, and two results compare only where it matches.
+
+R-494 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-495 — The suite is the design doc's §3 table, swept across the whole tier ladder with the quality arbiter off, plus one arbiter row per scenario; the run modes are Quick, Full and Soak
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` §§ 3, 4 (adopted); the tasks and requirements follow in the
+plan PR*
+
+The human's words, `INSTRUCTION.md` B3:
+
+> **B3. The suite is the doc's §3 table**, swept across the whole tier ladder with the arbiter off, plus one arbiter
+> row. The run modes are Quick, Full and Soak (§4).
+
+*What it decides:* B3 as the human wrote it: the scenarios of the design doc §3 (`cold-start`, `settle-<chart>` over its
+chart set, `pan-nearfield`, `zoom-ladder`, `playhead-march`, `scrub`, `tilt-drag`, `stain-switch`, `print-<class>`,
+`lines`, `memory-ramp`, `export-1024`, `export-4096`, `soak`), each recording which axis bound, per frame (telemetry
+§3.5); the tier fixed during a swept row, tiers the device will fail included; and the modes of §4. §4's times are
+estimates until the first Full run on the reference machine replaces them (R-493).
+
+R-495 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-496 — The benchmark runs from the Profiler window's "Run benchmark…" or `prin bench`; a run hides the chrome, ignores input but Esc, and on abort still writes a valid file marked incomplete
+*Amended in part by R-535 (20 Oct 2026; RQ-400: a run draws into a fixed-size offscreen surface in Fit, which the
+window only shows; present mode's fill is not used) and extended by R-530 (RQ-394: a phone run records the
+visual-viewport size, requests a wake lock and is marked "mobile, best effort").*
+*Still in force: all of it but "the figure fills the window (present mode, R-406)".*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 5 (adopted), `docs/gui/principia_render_gui_spec.md` §
+"Profiler" (Run benchmark… and the results sheet), RQ-400 (new); the tasks and requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` B4, and §3's row for the Profiler:
+
+> **B4. Run from the Profiler window or `prin bench`** (§5). The run hides the chrome, ignores input except Esc, and
+> on abort still writes a valid, marked-incomplete file.
+
+> | `principia_render_gui_spec.md` §G5 Display | "Style" becomes the Print panel (Print graph doc §7.1); Profiler window gains "Run benchmark…" and the results sheet |
+
+*What it decides:* B4 as the human wrote it, as the design doc §5 specifies it: the dialog (mode, a plain statement of
+what is recorded, plug in), the run (the chrome hidden, a thin progress strip, Esc aborts, any other input ignored), the
+results sheet (per scenario p50, p95, p99 during motion, frac over 41.7 ms, time to settle, the bound axis; the
+suggested tier; Save file…, Copy summary and Apply suggested tier, applying one undo entry and never automatic), `prin
+bench run | show | report | compare`, and the browser build's same dialog and runner.
+
+*Queued, not decided:* the design doc's run fills the window "(present mode, R-406), so every device draws the same
+surface"; under R-406 and R-468's Extend, the default, a larger window shows more of the field, so the work depends on
+the window's size, against R-499 (RQ-400).
+
+R-496 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-497 — One plain-text result file, profiler schema v1 plus a benchmark block, carrying no score
+*Amended in part by R-534 (20 Oct 2026; RQ-399: the file is profiler schema v2, `principia-profile-v2`, one schema
+holding the benchmark lines; readers accept v1).*
+*Still in force: all of it but "profiler schema v1 plus a benchmark block", which is schema v2; K3 stands for v1 files.*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 6 (adopted), `docs/design/principia_dd_telemetry_and_tiers.md`
+§ 2 and § 5 (the post stage, `post_level`, how earlier files are read, the benchmark block), RQ-399 (new); the tasks and
+requirements follow in the plan PR*
+
+The human's words, `INSTRUCTION.md` B5, and §3's row for the telemetry doc:
+
+> **B5. One plain-text result file**: profiler schema v1 plus a benchmark block (§6). It carries no score.
+
+> | `principia_dd_telemetry_and_tiers.md` §2 and §5 | `stage_ms.post` and per-frame `post_level`, which bump profiler schema v1 (R-56: say how old files are read); the benchmark block; a pointer from §1.1 to `principia_benchmark.md` |
+
+*What it decides:* B5 and the row as the human wrote them. The file is `principia-bench-<device-slug>-<YYYYMMDD-HHMM>.jsonl`,
+JSON Lines and plain text (telemetry §5): line 1 the session header plus `bench` (`mode`, `suite_hash`, `complete`, each
+scenario `ran | skipped(reason) | aborted`, power and thermal state at start); per scenario a `scenario_begin` line, the
+frame records downsampled by §5's rule and a `scenario_end` summary; last, the run summary, the suggested tier and the
+inversion table. Its size target is under 20 MB for Full. There is no single number (telemetry §8).
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **K3. How earlier files are read (the row's "R-56: say how old files are read").** A profiler file written before
+  the post stage, schema v1 as R-56 and telemetry §5 define it, stays readable: a reader takes its frames with no post
+  stage and no `post_level`, reports both as not recorded, never as 0 ms or `full`; `prin profile diff` between it and
+  a later file lists `post` and its scopes as only in one file, the missing-scope rule (render_gui_spec § "Profiler"),
+  and compares the rest; `prin bench report` and `compare` read it as a trace with no benchmark block. Writers write
+  only the later form.
+
+*Queued, not decided:* telemetry §5 makes schema v1 a closed set (`stage_ms` and `stages` have "exactly the five stages
+as keys … and nothing else"; each line "exactly" its listed keys, any other line "not schema v1"), R-56 names its five
+stages, and the row says the post stage "bump[s] profiler schema v1"; B5 calls the result file "profiler schema v1 plus
+a benchmark block". Whether the bump is a new version (and its name), and whether the benchmark block is part of it, is
+RQ-399; until it is ruled, the telemetry doc names the later form "the bumped schema" and points at RQ-399.
+
+R-497 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-498 — `prin bench report` turns one or more result files into the design doc's §7 fixed-structure Markdown report, for agents
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 7 (adopted); the tasks and requirements follow in the
+plan PR*
+
+The human's words, `INSTRUCTION.md` B6:
+
+> **B6. `prin bench report`** turns one or more files into the fixed-structure Markdown report in §7, for agents.
+
+*What it decides:* B6 as the human wrote it: the report's sections in order (device and build; where the budget went;
+the worst five frames with their work records; anomalies; against the reference; reproduce), and with several files a
+device comparison table, per scenario each device's p95 during motion and its bound axis.
+
+R-498 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-499 — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail
+*Read with R-535 (20 Oct 2026; RQ-400: the fixed-size offscreen surface makes the work independent of the window).*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` §§ 8, 9 (adopted); the tasks and requirements follow in the
+plan PR*
+
+The human's words, `INSTRUCTION.md` B7 (and §5, quoted under R-492):
+
+> **B7. The work is deterministic** (§8): the same suite on the same build does identical work on every device.
+
+*What it decides:* B7 as the human wrote it, as the design doc §8 specifies it: timelines step in frames; no
+wall-clock-driven behaviour inside a swept row (the arbiter off, no frame-time-adaptive decision, degrade-while-moving by
+its policy, R-488, not a measured budget), its adaptive form measured in the arbiter row; fixed seeds everywhere (the
+Print graph's by R-490); warm-up frames excluded and pipeline compile time on its own line. The design doc §9's nine
+tests, each with its arm that can fail, are part of the rulings: deterministic work, one runner, abort, skip not pass,
+validation, suite hash, the summary is the records, readable, and the report's structure. Whether the run's window size
+changes the work is RQ-400.
+
+R-499 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*
 *20 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability
 profile" (the table's column split, a paragraph defining the flags, the profile and the reversibility bullet), § "Part
@@ -15547,6 +16213,10 @@ R-502 is in the "physics" group of `plan/rule_groups.yaml`, with R-34.
 Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 (statement, verify, rulings, note), and on review REQ-INT-061 (statement).
 
 ## R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*
+*Amended by R-544 (the per-pixel fold goes).*
+*Still in force: the exponential map's `system_image` is computed from its cap, bijective now whether or not the cap
+straddles the equator, its mirror pixels distinct systems (R-544); its radius is bounded at π and past it is the
+domain's end.*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the exponential map's
 radius, the hemisphere-redundancy paragraph) and § "5.4 Past the unit square — each axis's extension type (R-407)"
 (the exponential map's row), `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the
@@ -15666,6 +16336,9 @@ R-505 is in the "design" group of `plan/rule_groups.yaml`, with R-467.
 Changes REQ-COL-110 (statement, verify, rulings, note).
 
 ## R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*
+*Amended in part by R-554 (21 Oct 2026; W1: the exception for the energy axes' linear option also covers the shape
+sphere's exponential-map pixels past `r = π`; RQ-470 closed).*
+*Still in force: all of it; R-554 extends W1's exception to the exponential map's pixels past `r = π`.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
 extension type (R-407)" (RQ-372's sentence reworded, with its earlier words kept), `docs/design/principia_chart_reference.md`
 § "2.1 Feasibility, and the warp that makes every pixel valid" (a paragraph added, "Every physical-quantity axis") and §
@@ -15901,6 +16574,9 @@ Adds REQ-GUI-266 (`rq: RQ-341`); changes REQ-RENDER-097, REQ-RENDER-098, REQ-GUI
 REQ-GUI-079 and REQ-GUI-101 (statement, verify, rulings, note).
 
 ## R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied
+*Amended by R-568 (RQ-378 parked again, with no target).*
+*Still in force: all of it but the return to the human when RQ-341 is ruled: RQ-378 stays open with (a) applied and
+nothing waiting, and returns when the human raises it (R-568).*
 *20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-378, a "Parked" line; the entry stays open), REQ-GUI-244 (reqio, note),
 `plan/tasks.yaml` and `plan/rule_groups.yaml`; nothing is built*
 
@@ -16589,17 +17265,17 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
 *Where the words leave a choice, decided per R-369 (the human may veto any):*
 - **B1. Which of the two.** The figure's header strip: a one-line strip of the chrome at the top of the figure region, above the plot
   and outside it, left-aligned, holding badges only. The strip takes its height from the top of the figure region
-  (gui review G1 of PR #265, applied per R-369). The shown rect, the rect R-406, R-468 and REQ-GUI-229 use, is the
+  (gui review G1 of PR #265, applied per R-369, accepted by R-559). The shown rect, the rect R-406, R-468 and REQ-GUI-229 use, is the
   whole of the region below the strip at that region's own aspect, the field drawn at one scale across it, more or
   less of the field showing as the region resizes and never a rescale (R-462, render_gui_spec §G2's Layout; R-537:
   no centred square, no margins, no gaps); the axis labels' strips and the Home button hang from it, so Home sits at
   its top-right, below the strip; render_gui_spec §G13 records the departure from `01_main` (gui review G3 of PR
-  #265, applied per R-369). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
+  #265, applied per R-369, accepted by R-559). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
   rect R-406, R-468 and REQ-GUI-229 use; render_gui_spec §G13 records the departure from `01_main`" (stale value,
   replaced by gui review G3 of PR #265, applied per R-369). At launch and after Home, the chart's unit square
   [0,1]² spans the shown rect's shorter side, centred in it, at one scale in both directions, with the extended
   field drawn around it (R-537); a resize then keeps that scale (gui review 5595357065's note on PR #265, applied
-  per R-369). It
+  per R-369, accepted by R-559). It
   sits beside what it
   describes, as D4's "beside the chart name" wanted, where the top bar's status would put it a panel away. The status
   line stays open to a later badge that is about the session rather than the figure.
@@ -16623,7 +17299,464 @@ R-523 is in the "design" group of `plan/rule_groups.yaml`, with R-479.
 
 Changes REQ-GUI-258 and REQ-GUI-263 (statement, verify, rulings, note).
 
+## R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "5. The slot chain: palette and medium compose" (a
+"Ruled" note under the table), § "12. Open questions (for the review queue, not the agent to settle)" (the note, with
+its earlier words kept) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
+(the slots' sentence), `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause),
+`plan/rule_groups.yaml`, `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-388, moved with its
+ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-388 to RQ-401 but RQ-397, in full:
+
+> RQ-388 no. RQ-389 Viewing off by default for screen media, with the reason shown. RQ-390 the stain's normalisation. RQ-391 later. RQ-392 prompt. RQ-393 files by hand. RQ-394 yes, best effort, marked mobile.
+> RQ-395 (c). RQ-396 port R-130's eight as additional presets. RQ-398 (c). RQ-399 bump to v2, readers accept v1. RQ-400 fixed-size offscreen surface in Fit. RQ-401 record the lab's actual stand-in; the port reads the real field.
+> Vetoable decisions: all stand.
+
+"Vetoable decisions: all stand" is the human's acceptance of the "applied per R-369" choices R-485 to R-499 made, which
+stand as applied. R-524 to R-536 port the thirteen answers, one ruling per entry, in number order, RQ-397 excepted:
+main closed it by R-523 (the human's "[the Print graph port's badge entry]"), and this port archives it with that
+ruling and applies R-523 to the print badge (`principia_print_graph.md` §3, render_gui_spec § "Display — the last
+stages").
+
+On RQ-388 the human wrote: "RQ-388 no." RQ-388 asked whether the Print graph's Palette slot may run before the stain's
+lightness channel is composed, so a limited palette quantises hue while the stain's lightness field stays exact. Its
+option (a): "no: Palette acts on the finished colour, as the lab's does and as R-485 places the whole graph"; (a) was
+applied meanwhile.
+
+*What it decides:* **option (a).** The Palette slot acts on the finished colour, the stain's output, as the lab's slot
+does; the Print graph never reaches into the stain's backbone (render contract Part 4, L-ownership), and no palette
+occupant is added to the stain's post chain.
+
+*Applied per R-369 (mechanical):* the design doc's §5 and §12 and the Print panel say so; nothing else changes.
+
+*What it amends:* none; R-485's placement stands. It closes **RQ-388**.
+
+R-524 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "5. The slot chain: palette and medium compose" (a
+"Ruled" note under the table) and § "12. Open questions (for the review queue, not the agent to settle)" (the note),
+`docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the slots' sentence), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-389, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-389, from the batch R-524 quotes:
+
+> RQ-389 Viewing off by default for screen media, with the reason shown.
+
+RQ-389 asked whether the Viewing slot's lighting should be disabled for screen media (CRT, LCD), where a raking light on
+a sheet is meaningless. Its options: "(a) always offered, as the lab does; (b) disabled (greyed, with the reason) while
+the Medium is a screen medium, by a registry flag on the medium's nodes; (c) offered, with a screen-specific Viewing set
+(glare, reflection) for screen media." (a) was applied meanwhile.
+
+*What it decides:* (b)'s rule with "off by default" in place of "disabled": while the Medium is a screen medium the
+Viewing slot is off by default, and the panel shows why. It is still offered: the user may turn it on.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **V1. What a screen medium is.** A registry flag, `screen_medium`, on a node type that models a display (the design
+  doc §6.2's `device_px` effects: CRT scanlines, LCD subpixels, LED pitch); a Medium is a screen medium when its
+  sub-graph holds a node with the flag. The Slots port task sets the flag from the lab's catalogue and lists the nodes
+  it set it on.
+- **V2. "Off by default".** Choosing a screen medium sets the Viewing slot empty (the identity) in the same edit, one
+  undo entry; the user may set Viewing again, and it stays as set. Leaving the screen medium does not restore an earlier
+  Viewing choice.
+- **V3. The reason.** Beneath the Viewing slot, while the Medium is a screen medium: "Viewing assumes a sheet: off by
+  default for a screen medium", shown whether or not Viewing has been turned back on.
+
+*What it amends:* none. It closes **RQ-389**.
+
+R-525 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*
+*RQ-478, the range it left open, is ruled by R-557 (21 Oct 2026).*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (cited in the note)
+and § "12. Open questions (for the review queue, not the agent to settle)" (the note), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-390, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-390, from the batch R-524 quotes:
+
+> RQ-390 the stain's normalisation.
+
+RQ-390 asked whether a payload field read by the Print graph at deep zoom is normalised over the visible range, as the
+stain does, or over a fixed window recorded with the graph. Its option (a): "the visible range, the stain's own window
+rule, as §4.4 has it"; (a) was applied meanwhile.
+
+*What it decides:* the stain's normalisation, not a fixed window recorded with the graph: a field input is normalised
+as the stain normalises the same field, and `RenderState.print` gains no field for a window. Option (a)'s "visible
+range" is not decided: the stain's `range_norm` keeps a field's declared range fixed (`t_end` → lin [0, T]) and measures
+only an unbounded field over the draw, so whether a field-driven medium rescales while zooming, and which range applies
+when the stain does not colour by that field, is queued as RQ-478 (physics review 5596610796 of PR #268, P2). Meanwhile
+the human's words apply literally: each field's own `range_norm` rule. *Was:* "**option (a).** A field input is
+normalised exactly as the stain normalises the same field, over the visible range with the stain's own window rule
+(design doc §4.4), so a field-driven medium rescales while zooming as the stain does. No fixed window is recorded with
+the graph, and `RenderState.print` gains no field for one." (stale value, replaced by P2's RQ-478).
+
+*Applied per R-369 (mechanical):* the design doc's §4.4 sentence stands, with a note pointing to RQ-478, and its §12
+note records the ruling.
+
+*What it amends:* none. It closes **RQ-390**.
+
+R-526 is in the "physics" group of `plan/rule_groups.yaml` (the field's normalisation, physics-reviewed, R-485).
+
+## R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built
+*20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-391, a "Parked" line; the entry stays open),
+`docs/design/principia_print_graph.md` § "12. Open questions (for the review queue, not the agent to settle)" (the note)
+and its adoption note, `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause),
+`plan/rule_groups.yaml` and `plan/section_notes.yaml`; nothing is built*
+
+The human's words (20 Oct 2026), on RQ-391, from the batch R-524 quotes:
+
+> RQ-391 later.
+
+RQ-391 asked whether the Export Styles' frames (Polaroid border, banknote, poster) become a later "Frame" stage after
+the Print graph. Its options: "(a) a Frame stage after the Print graph, its own design later; (b) frames as Print graph
+presets, a sub-graph like any other; (c) frames as an export option only, outside `RenderState`." Nothing was built
+meanwhile (§0: "separate, later").
+
+*What it decides:* a deferral, by the human's ruling (only the human defers, `plan/WORKFLOW.md` § "No deferral"). The
+question is not answered now and no event or date is set for it: RQ-391 stays in the review queue, open and parked, as
+R-510 and R-522 parked theirs, and returns to the human when the human raises it. Nothing is built, and the lab's
+Polaroid medium stays a medium, ported with the rest (R-486).
+
+*Applied per R-369 (flagged):*
+- **L1. The reading.** "later" is read as deferring the question, matching §0's "separate, later", not as choosing
+  option (a), whose words also say "later"; a veto turns it into (a), a Frame stage whose design is a later task.
+- **L2. Where it stays.** RQ-391 is not archived: a deferred entry stays open in the queue so that it is not lost
+  (R-510, R-522).
+
+*What it amends:* none. RQ-391 stays open.
+
+R-527 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-528 — On first launch an opt-in prompt offers the benchmark's Quick suite; nothing runs unless the user accepts *(closes RQ-392)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "10. Open questions (for the review queue)" (the note)
+and its adoption note, `docs/design/principia_dd_telemetry_and_tiers.md` § "4. Deriving the tier instead of choosing it"
+(the first-launch sentence), `docs/gui/principia_render_gui_spec.md` § "Profiler" (a First launch bullet),
+`docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-392, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-392, from the batch R-524 quotes:
+
+> RQ-392 prompt.
+
+RQ-392 asked whether a first launch shows an opt-in prompt to run the benchmark's Quick suite or runs Quick silently and
+shows the result. Its option (a): "an opt-in prompt, the design's default reading"; (a)'s reading was the design's
+meanwhile, with nothing run at launch.
+
+*What it decides:* **option (a).** The first launch asks; the suite runs only if the user accepts (telemetry §8:
+"Explicit, opt-in, run when asked").
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **F1. Once.** The prompt is shown at the first launch of an install, in the GUI and the browser build, never under
+  `prin`; its answer is kept in the GUI's own settings, never `SimConfig` or `RenderState`, and is not undoable. It is
+  not shown again whatever the answer; Run benchmark… stays in the Profiler window.
+- **F2. Its two answers.** "Run Quick…" opens the Run benchmark dialog with Quick chosen, so the plain statement of what
+  is recorded is read before anything runs (R-496); "Not now" closes it, and the device keeps the default tier.
+
+*What it amends:* none. It closes **RQ-392**.
+
+R-528 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-529 — Benchmark results come back as files, by hand; there is no upload *(closes RQ-393)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "6. The result file" (a paragraph) and § "10. Open
+questions (for the review queue)" (the note), `docs/gui/principia_render_gui_spec.md` § "Profiler" (a Collecting
+results bullet), `plan/rule_groups.yaml`, `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-393,
+moved with its ruling); nothing is built beyond R-496's buttons*
+
+The human's words (20 Oct 2026), ruling RQ-393, from the batch R-524 quotes:
+
+> RQ-393 files by hand.
+
+RQ-393 asked whether results are collected only as files by hand or by an explicit upload ("Send to Malachy") that
+would need hosting. Its option (a): "by hand only (Save file…, Copy summary)"; (a) was applied meanwhile.
+
+*What it decides:* **option (a).** A result file comes back as a file its owner sends, by Save file… or Copy summary.
+There is no upload, no hosting and no "Send" button.
+
+*What it amends:* none. It closes **RQ-393**.
+
+R-529 is in the "design" group of `plan/rule_groups.yaml`, with R-497.
+
+## R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best effort" *(closes RQ-394)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "5.3 In the browser build" (a paragraph) and § "10.
+Open questions (for the review queue)" (the note), `docs/gui/principia_render_gui_spec.md` § "Profiler" (the run's
+bullet), R-496's heading block, `plan/rule_groups.yaml`, `plan/section_notes.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-394, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-394, from the batch R-524 quotes:
+
+> RQ-394 yes, best effort, marked mobile.
+
+RQ-394 asked whether a phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best
+effort". Its option (a): "yes, all three"; meanwhile a phone ran as any browser build.
+
+*What it decides:* **option (a).** On a phone the browser build records the visual-viewport size, requests a wake lock,
+and marks the run "mobile, best effort".
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **M1. What a phone is.** A browser build whose browser reports itself mobile, by `navigator.userAgentData.mobile`
+  where it is exposed, else by the user agent string's mobile token; a browser that reports neither is not marked, and
+  the header's field is `null` (the R-308 / R-303 pattern), never guessed.
+- **M2. What is recorded.** The header's `bench` gains `mobile` ("best effort" or `null`), the visual viewport's size at
+  start (CSS width and height and the device pixel ratio) and the wake lock's outcome (`granted`, `refused`,
+  `unsupported`); a refused lock does not stop the run. The results sheet, `report` and `compare` show the mark.
+- **M3. The work.** The scenarios draw into R-535's fixed surface, so the viewport is recorded, not drawn to, and a
+  phone does the same work as any device.
+
+*What it amends:* none; it extends R-496 for phones. It closes **RQ-394**.
+
+R-530 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "2. Where it sits" (the diagram corrected, the
+delivered one kept as *Was*) and its adoption note, `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
+rules" (the Print graph stage's chain, with its earlier words kept), `docs/design/principia_colour_composition.md` § "4.3
+Display stage (terminal, outside the pipeline)" (the chain and the two line passes, with their earlier words kept),
+`docs/design/principia_lines.md` § "2. Where it sits" and § "6. Smart ink" (with their earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the order, with its earlier words kept), R-67's
+and R-487's heading blocks, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-395, moved with its
+ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-395, from the batch R-524 quotes:
+
+> RQ-395 (c).
+
+RQ-395 asked where the lines drawn over the Print graph sit, before the display scale and the gamut clamp as the design
+doc §2 draws it, or after the gamut clamp as R-476 M2 placed the line system, and what smart ink reads for each pass.
+Its option (c): "(b), with the design doc's diagram corrected to match", where (b) is "R-476 M2's place for the lines
+drawn over (after the gamut clamp, at display resolution, crisp after any scale), only the lines drawn through moving
+before the Print graph; smart ink for the lines over reads the figure to the clamp, as REQ-RENDER-090 says, and for the
+lines through the stain's output." (b)'s placement was applied meanwhile.
+
+*What it decides:* **option (c).** The chain is SimState → stain → [the lines drawn through] → Print graph → display
+scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen. Smart ink for a line drawn over reads
+the figure to the clamp; for a line drawn through, the stain's output. The design doc §2's diagram is corrected to that
+chain, the delivered diagram kept beside it as *Was*.
+
+*Applied per R-369 (flagged):*
+- **O1. What "the figure to the clamp" holds.** With a Print graph active it includes the print: the Print graph runs
+  before the display scale, so smart ink for a line drawn over reads the printed picture, as REQ-RENDER-090's "stain
+  plus display chain to the clamp" now reads; the plan PR restates REQ-RENDER-090 with R-531 in its rulings.
+- **O2. The test.** The design doc §11 test 6 (lines over and through) stands as written, its order arm written against
+  this chain.
+
+*What it amends:* **R-487**, the design doc §2's place for the lines drawn over; K1 and K2 stand. R-67's chain, as R-487
+amended it, is this one. It closes **RQ-395**.
+
+R-531 is in the "design" group of `plan/rule_groups.yaml`, with R-487.
+
+## R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "7.1 The Print panel (replaces Display › Style)" (a
+note) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the gallery and the
+*Was* note's heading, with their earlier words kept), R-130's, R-485's and R-486's heading blocks,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-396, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-396, from the batch R-524 quotes:
+
+> RQ-396 port R-130's eight as additional presets.
+
+RQ-396 asked how R-130's styles stay "still available" (P1) when none of watercolour & pencil and the seven print
+presets (Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone) is among the lab's 103, which P2 makes the preset
+set. Its option (a): "Eight more presets beside the 103, each a graph of lab nodes approximating its R-130 style (the
+poster's look transcribed into the design doc as each preset's definition), 111 in all." Meanwhile the 103 were
+planned and the eight waited.
+
+*What it decides:* **option (a).** The eight are ported as presets beside the lab's 103, 111 in all; Plain is the Print
+graph's Plain and needs no preset.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **S1. What each is built from.** Each of the eight is a graph of the registry's nodes whose look is R-130's,
+  transcribed from R-130's sources (the poster's `window.stainPaint` and press module, and paper.design's CMYK halftone
+  shader, Apache-2.0, as render_gui_spec's *Was* note cites them) into the design doc as the preset's definition by the
+  preset port task; `workbench/` is never cited as normative (R-159). Their fidelity reference is that definition, not
+  a lab image. A look the lab's nodes cannot make (the halftone's per-plate misregistration and cell ceiling) is a node
+  added to the registry, a definition requirement (R-72) of that task, carrying its licence.
+- **S2. Names and family.** R-130's names, as the file names them: "Watercolour & pencil" and the seven print presets
+  under their own names; the eight form a twelfth family of the gallery, labelled "Poster", so the gallery has 12
+  families; the label carries no ruling id, and the docs cite R-130 and R-532 beside it. R-130's "Default" is always
+  shown with its family, "Poster › Default", never as a bare "Default", so it is not read as Plain, the Print graph's
+  default (gui review 5596618095 of PR #268, G5, applied per R-369). *Was:* "the eight form a twelfth family of the
+  gallery, "Poster (R-130)", so the gallery has 12 families." (stale value, replaced by G5).
+
+*What it amends:* **R-485** ("still available" is met by these eight) and **R-486** (the preset set is the lab's 103
+and these eight). R-130 stays superseded; its styles live on as presets. It closes **RQ-396**.
+
+R-532 is in the "design" group of `plan/rule_groups.yaml`, with R-485 and R-486.
+
+## R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "3. What never changes because of it" (a bullet) and §
+"11. Tests (each with an arm that can fail)" (test 11), `docs/contracts/principia_render_contract.md` § "Part 4 —
+Semantic rules" (the Print graph stage, a sentence), `docs/design/principia_colour_composition.md` § "4.3 Display stage
+(terminal, outside the pipeline)" (a sentence), R-470's and R-489's heading blocks, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-398, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-398, from the batch R-524 quotes:
+
+> RQ-398 (c).
+
+RQ-398 asked whether the Print graph draws over a pixel that is not a system, which R-470 draws blank, the view's
+background, never a palette colour, in every view. Its option (c): "the sheet (ground, age, viewing) prints the whole
+frame, the marks only where the figure is a system." Nothing was applied meanwhile.
+
+*What it decides:* **option (c).** Under a Print graph other than Plain, a pixel that is not a system shows the
+medium's sheet, never its marks. Under Plain, and in every debug view (which the Print graph never touches, R-487 K1),
+R-470's blank is unchanged.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **G1. Sheet and marks.** The sheet is the slot chain's Ground, Age and Viewing; the marks are Palette, Medium, On the
+  ground and Unfinished (design doc §5). At a not-a-system pixel the marks are replaced by the bare Ground, and Age and
+  Viewing then act on it as on the rest of the frame; with the Ground slot empty the pixel stays the view's background
+  through them.
+- **G2. Which pixels.** Exactly those R-470 draws blank: the chart's not-a-system classification and a `decode_failed`
+  sample the chart does not classify (R-511), read from the same classification the stain reads, past a bounded edge
+  included. How a graph edited past the slot template marks its sheet nodes is a definition requirement (R-72) of the
+  executor task.
+- **G3. What stays true.** No palette colour reaches such a pixel, since the Palette is a mark (R-477 C9); no count,
+  share or legend reads it (R-470, R-489). With Overlays › Chart › forbidden region on, its hatch is drawn on those
+  pixels over the sheet, as it is drawn over blank under Plain (R-470).
+- **G4. The test.** The design doc §11 gains test 11, with C9's control.
+
+*What it amends:* **R-470**, under a Print graph other than Plain only, and **R-489**, which queued it. It closes
+**RQ-398**.
+
+R-533 is in the "design" group of `plan/rule_groups.yaml`, with R-489.
+
+## R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability
+across devices", § "2. What to record — and the rule that makes it useful" (the post stage) and § "5. The artefact: one
+file, plain text, readable by the sender" ("Schema v2", with the earlier words kept), `docs/design/principia_benchmark.md`
+§ "6. The result file" (a note) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Profiler" (the post
+stage and what `prin profile diff` reads, with their earlier words kept), R-56's and R-497's heading blocks,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-399, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-399, from the batch R-524 quotes:
+
+> RQ-399 bump to v2, readers accept v1.
+
+RQ-399 asked whether the post stage's bump of the closed profiler schema v1 is a new version, and whether the benchmark
+block is part of it. Its option (a): "A new version, `principia-profile-v2`: v1 plus the post stage, `post_level` and
+the benchmark lines, one schema; v1 files read as R-497 K3 says." Meanwhile the telemetry doc called it "the bumped
+schema".
+
+*What it decides:* **option (a).** Schema v2 is v1 plus the post stage, `post_level`, the header's `bench`, the
+`scenario_begin` and `scenario_end` lines and the run summary, one schema; the header line's `schema` is
+`"principia-profile-v2"`. Writers write v2; every reader accepts v1, a v1 file read as R-497 K3 says.
+
+*Applied per R-369 (the human may veto any):*
+- **W1. Both closed.** Schema v1 stays as defined (R-56: five stages), and a v1 file is checked against v1's closed
+  set, a v2 file against v2's. A v2 trace that is not a benchmark result has no benchmark lines.
+- **W2. The readers.** `prin profile diff` and `query`, `prin bench show`, `report` and `compare` and the Profiler's
+  import read both; `prin profile diff` exits 2 only when it cannot read a file as v1 or v2.
+
+*What it amends:* **R-497**, B5's "profiler schema v1 plus a benchmark block", which is schema v2. It extends **R-56**,
+whose v1 stands. It closes **RQ-399**.
+
+R-534 is in the "design" group of `plan/rule_groups.yaml`, with R-497.
+
+## R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "5.1 From the GUI" (a note), § "8. Determinism of the
+work" (a bullet) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Profiler" (the run's bullet, with its
+earlier words kept), R-496's and R-499's heading blocks, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md`
+(RQ-400, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-400, from the batch R-524 quotes:
+
+> RQ-400 fixed-size offscreen surface in Fit.
+
+RQ-400 asked how a run's work stays the same on every device when, under R-406 and R-468's Extend, a bigger window
+shows more of the field. Its option (a), the nearest: "The scenario's `start` fixes the figure's size (a fixed render
+target, say 1024², letterboxed in the window), present mode's fill not used during a run; the work then identical on
+every device." Nothing was applied meanwhile.
+
+*What it decides:* (a)'s fixed target, as an **offscreen surface**, drawn **in Fit** (R-468): every scenario draws into
+one surface of a fixed size, the same on every device and whatever its window, so the work is the surface's (R-499).
+The window only shows that surface. Present mode's fill (R-406) is not used during a run.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **O1. The size.** One size for the suite, recorded in the header's `bench` and part of the suite hash (R-494). The
+  human named no size, so it is a calibration value (R-71), named by the plan PR's run-overlay task and confirmed at
+  its milestone gate; "say 1024²" in the entry is not taken as the value.
+- **O2. Fit.** R-468's Fit, the chart scaled to fill the surface. Which square Fit scales is open on main (RQ-416, R-537
+  EX1 against R-472 X2); either answer gives the same work on every device, since the surface is the same, so this
+  ruling does not wait on it.
+- **O3. The window.** It shows the surface scaled to fit and letterboxed, the chrome hidden and the progress strip
+  shown (R-496); showing it is display, not work, and its time is the `present` stage's. A headless `prin bench run`
+  uses the same surface.
+
+*What it amends:* **R-496**, "the figure fills the window (present mode, R-406), so every device draws the same
+surface". R-499 holds through it. It closes **RQ-400**.
+
+R-535 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (the note, with its
+earlier words kept) and its adoption note, `docs/gui/reference/print_graph/README.md` (a citation), R-486's heading
+block, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-401, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-401, from the batch R-524 quotes:
+
+> RQ-401 record the lab's actual stand-in; the port reads the real field.
+
+RQ-401 asked which stand-in the four "Driven by the data" presets use, since the lab's caption says fringe density, the
+design doc §4.4 says brightness, and the graphs use either or both. Its option (a), the nearest: "per preset, each
+stand-in node (`brightness` or `edges`) the graph contains is replaced by the field §4.4's family names ("Relief of
+lifetime" → `t_end`; "Wet where chaotic" → the ensemble spread; "Unfinished where uncertain" → the spread or the
+predictability horizon; Craquelure → a sensitivity field such as `ftle`), each listed in the registry entry as R-492's
+deviation." Nothing was applied meanwhile; the four presets' port waited.
+
+*What it decides:* each of the four presets' registry entries records, as R-492's deviation, the stand-in its lab graph
+actually uses, read from the graph, not from the caption or §4.4's sentence; and the port reads the real field in place
+of it.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **D1. What is recorded.** From `catalogue/presets.json`, read by the node each graph feeds from the image: Relief of
+  lifetime, `brightness` (`n0 → br → bb → rl.height`, the only graph whose `brightness` reads the image); Wet where
+  chaotic, Unfinished where uncertain and Craquelure, `edges` (fringe density). In Wet where chaotic and Unfinished
+  where uncertain the `brightness` node reads `edges`' output, `n0 → ed → th → mx2.mask`: it is a threshold window on
+  the stand-in (Wet: `lo 0.45, hi 0.65`; Unfinished: `lo 0.5, hi 0.62`), not a stand-in (physics review 5596610796 of
+  PR #268, P1, applied per R-369). *Was:* "Relief of lifetime, `brightness`; Wet where chaotic and Unfinished where
+  uncertain, `brightness` and `edges` (fringe density); Craquelure, `edges`." (stale value, replaced by P1's reading of
+  the graphs).
+- **D2. Only the stand-in node is replaced.** The node standing in for the data reads the preset's real field instead:
+  Relief of lifetime's `brightness`, `t_end` (§4.4's example); Wet where chaotic's `edges`, the ensemble spread (§4.4:
+  "wet where the spread is high"); Unfinished where uncertain's and Craquelure's `edges`, a field the corpus does not
+  name, so each is a definition requirement (R-72) of the field-inputs task, from the fields the ledger declares, under
+  physics review (R-485's reviewers); it is not chosen here. The threshold windows stay, now on the normalised real
+  field; their `lo` and `hi` were set against fringe density, so they are a calibration (R-71) of the field-inputs task,
+  never tuned to match the lab (R-492) (P1). *Was:* "**D2. Every stand-in node is replaced.** Each `brightness` or
+  `edges` node standing in for the data reads the preset's real field instead" (stale value, replaced by P1).
+- **D3. Normalisation.** The stain's (R-526; which range that is, is RQ-478).
+- **D4. Invalid samples.** A present field can be invalid at one sample: a NaN ensemble spread where the spread is
+  undetermined, a `t_end` from a `sim_failed` sample, an FTLE that fails `ftle_valid`. The field-driven nodes are
+  neighbourhood operations (Relief's blur on the height, the wash's mask feeding a blur), so what such a sample feeds
+  them, excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), is a
+  definition requirement (R-72) of the field-inputs task under physics review (physics review 5596610796, P4, applied
+  per R-369). Not resolved here.
+
+*What it amends:* none; it applies R-492's deviation rule to R-486's four presets. It closes **RQ-401**.
+
+R-536 is in the "design" group of `plan/rule_groups.yaml`, with R-486.
+
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
+*Amended by R-544 (the hemisphere's fold at the equator).*
+*Amended in part by R-552 (21 Oct 2026; Q1 to Q6 and U4, U6 and U9's entries ruled: Q3's outline is built, as an
+Overlays › Chart toggle on by default; EX5's comments and the console's pick apply once the human defines them).*
+*Amended in part by R-553 (21 Oct 2026; EX5's readout: the label `decode_failed` and its detail only while a debug view
+is the figure, as U7 applied; RQ-417 closed).*
+*Amended in part by R-554 (21 Oct 2026; EX7(b) on a tilted view: the pole maps only where `N_a = 0` and `N_b = 0`,
+decided on the stored angles; the tilted equator fold not applied, the human's shape sphere ruling governing it;
+RQ-472 closed).*
+*Still in force: all of it but the hemisphere's fold at the equator, EX2's fold type, EX5's fold among the repeats and
+EX7(b)'s equator map, which go with the hemisphere toggle (R-544); θ's period and the pole maps stand; R-552 confirms
+each option (a) applied meanwhile, builds the outline U14 left unbuilt, and leaves EX5's comments and the console's
+pick for the human to define; R-553 keeps EX5's label and detail to a debug view; R-554 narrows EX7(b)'s pole maps on
+a tilted view.*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
 `docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
 "Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
@@ -16971,8 +18104,24 @@ REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 ## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
 *Amended in part by R-541 (21 Oct 2026; I2's place for the trace settings, the trace's entry in Lines ▾, becomes the
 `Trace…` window, the Trajectory panel's Trace section and Overlays ▾ › Trace).*
-*Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
-defaults stand.*
+*Amended by R-544 (the hemisphere's trace fold).*
+*Amended in part by R-553 (21 Oct 2026; TM8's readout: `decode_failed`, its detail and "forbidden" only while a debug
+view is the figure, the count line "not a system: N samples" in a presentation view; TM9's guard (b): `sim_failed`,
+not incomplete; TF3 the default length's; T18's fade arm only where an off-plane distance is defined; RQ-412 to
+RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429 closed, each as applied meanwhile).*
+*Amended in part by R-554 (21 Oct 2026; F6's T16 and T16b cells read "within the calibrated threshold (REQ-GUI-283)"
+in place of "within 3× the median", the quoted words unchanged; T15's second arm runs on the physical `p_λ` tilt
+target; RQ-473 and RQ-474 closed).*
+*Amended by R-569 (21 Oct 2026; J11's playback, TF3: a new trace while playing restarts at `t = 0`, and paused at
+`t = 0` the line is drawn dotted; TM6's pin: an icon is placed by its whole measured extent, the start icon included;
+TM7: a repeat's icons are never moved).*
+*Still in force: all of it but I2's place for the settings, which R-541 replaces, and TM7's hemisphere, the trace
+folding at the equator with the toggle on, which goes with the toggle (R-544); the settings, their order and their
+defaults stand. R-553 rules the queued questions as applied meanwhile: TM8's readout labels in a debug view only,
+TM9's guard (b) `sim_failed`, TF3 the default length's, T18's fade arm only where a distance is defined. R-554 reads
+F6's T16 and T16b cells "within the calibrated threshold (REQ-GUI-283)" and runs T15's second arm on the physical
+`p_λ` target. TM6's pin "to the nearest point just inside the view's edge" is read as R-569 places it, by the icon's
+whole extent, and J11 with R-569's restart and dotted line.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -17636,6 +18785,14 @@ R-539 is in the "design" group of `plan/rule_groups.yaml`, with R-466.
 Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).
 
 ## R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
+*Amended by R-555.*
+*Amended in part by R-556 (21 Oct 2026; RQ-465 (a): S4's second row reads "of the default length (RQ-427 (a))").*
+*Still in force: all of it, but where R-555 rules its queued entries: the defaults (Sine (pure) and sound off at
+launch, with reverb, Doppler and stereo width on), S2's short runs (a moving run too short to analyse plays its mean
+rates), S3's fit (any whole number of octaves), S4's last-half window, S6's `φ` sentence, S7's floor (10× the larger of
+4.9e-8 and Lagrange's measured shape rms to t ≤ 60), S8's strike, attack and strikes, S10's moving horizon (the sim
+key's `t_max`), and its build, which no longer waits on RQ-440 and RQ-442; and S4's second row qualified to the
+default length (R-556)*
 *21 Oct 2026 · applied in `docs/design/principia_listen.md` (new: the design, transcribed from the demo's code),
 `docs/incoming/2026-10-21_trace_listen/` (the bundle as delivered), `docs/gui/reference/trace/` (`trace_sound.html`,
 version 9, and its images), `docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4.
@@ -17814,7 +18971,7 @@ text; its preface and S1 to S14, verbatim:
 > | `Listen` | When | What plays |
 > |---|---|---|
 > | **Follow the head (default)** | while the trace is playing or being scrubbed | the spectrum of the window around the head, re-voiced as the head moves |
-> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3) |
+> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3), of the default length (RQ-427 (a)) |
 > | Whole run | always | the whole run as one chord |
 >
 > **Windows** (`Window`, in follow mode):
@@ -17823,7 +18980,7 @@ text; its preface and S1 to S14, verbatim:
 > |---|---|
 > | **Fixed, centred (default)** | `W = min(Fixed × t_c, t_end)` (default `6 t_c`), centred on `t`, shifted inside the run near its ends so every moment has a full window |
 > | Grows | `[0, t₁]`, everything drawn so far |
-> | Grows, last half | `[t₁/2, t₁]` |
+> | Grows, last half | `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)` |
 >
 > For the growing windows, `t₁ = min(t_end, max(t, min(t_end, 0.5 t_c)))`, so the window is never empty.
 >
@@ -17853,7 +19010,9 @@ text; its preface and S1 to S14, verbatim:
 > | Stereo | `θ` (both directions folded) | `φ` |
 > | Mono | everything summed in power | — |
 >
-> So in the default a system that winds one way round the sphere is heard on one side.
+> So in the default a system that winds one way round the sphere is heard on one side. Under *Stereo by winding* the
+> chord voices only the winding spectra; `φ` is heard through the follow track, and a `φ`-only line is panned by the
+> winding spectra at its bin.
 >
 > ## S7. Loudness
 >
@@ -17874,7 +19033,7 @@ text; its preface and S1 to S14, verbatim:
 > ## S8. Instruments
 >
 > **The spectrum decides the pitches and their weights; the instrument only decides the timbre each partial is voiced
-> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Warm sine**.
+> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Sine (pure)**.
 > Transcribe `INSTRUMENTS` and `makeVoice` from the demo; a recipe has:
 >
 > | Field | Meaning |
@@ -17887,8 +19046,8 @@ text; its preface and S1 to S14, verbatim:
 > | `vib`, `bvib`, `trem` | vibrato (rate, cents), vibrato on `b` alone, tremolo |
 > | `unison` | detuned copies of `a` |
 > | `breath` | band-passed noise tracking `f` |
-> | `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level |
-> | `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |
+> | `att`, `glide`, `oct`, `lvl` | attack (its time constant `att/3`), minimum glide, octave offset, level |
+> | `strike`, `sus` | **struck**: the note rises over 4 ms, then from 20 ms decays with time constant `strike/3` **to `sus × level`** (`sus` 0.25 by default), never to zero |
 > | `retrig` | a note event (filter or FM envelope) when the partial moves on, gain held |
 >
 > **Struck instruments** (glass bell, electric piano, marimba, music box, harp, kalimba, steel drum, vibraphone, celesta,
@@ -17896,10 +19055,11 @@ text; its preface and S1 to S14, verbatim:
 >
 > - They are **struck once and ring at their floor**. The first build re-struck them on a timer and they sounded like a
 >   loop; the second decayed to zero and they played once and died. The floor is the fix for both.
-> - **They are struck again on the trajectory's own beats** (`Strikes on`):
+> - **A voice whose line has moved more than a quarter-tone (1/48 octave) since it last sounded is struck again, in
+>   every mode.** `Strikes on` adds the trajectory's own beats:
 >   - each syzygy the head passes (**default**);
 >   - every crossing time ÷ 1, 2 or 4;
->   - only when a line changes, i.e. a voice's partial has moved more than a quarter-tone since it last sounded.
+>   - only when a line changes: no beats are added, only the line-change strike above.
 >
 > Families, for the menu (GUI file G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
 > textures (2).
@@ -17921,10 +19081,10 @@ text; its preface and S1 to S14, verbatim:
 >
 > | Effect | Driven by | Mapping |
 > |---|---|---|
-> | Reverb (on, ×1.40) | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
-> | Doppler (off, ×1.50) | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
+> | **Reverb (on, ×1.40)** | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
+> | **Doppler (on, ×1.50)** | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
 > | Bit-crush (off, ×0.60) | spectral entropy `H` | `bits = round(clamp(15 − 40 a · max(0, H − 0.12), 3, 16))`: a clean line stays clean, noise frays |
-> | Stereo width (on, ×1.50) | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
+> | **Stereo width (on, ×1.50)** | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
 >
 > All four inputs are scale-free, so the effects obey S1's scale invariance too. Chain: voices and events → bit-crush →
 > width matrix → dry + convolver → compressor → output.
@@ -18002,6 +19162,15 @@ text; its preface and S1 to S14, verbatim:
 >   signal. Recommendation (a): mark it stale, replaced by this ruling. (b) Keep separations as a fourth `Signal`.
 > - **Q5. Close-approach threshold** `0.2 R` and the event depth scale are demo choices. Recommendation (a): keep them,
 >   stated as parameters.
+
+*Edited by R-555 (21 Oct 2026), as the human's words order (RQ-454 with the Listen effects follow-up, RQ-455 to
+RQ-458): S4's last-half row, S6's sentence on `φ`, S8's default, its `att` and `strike` rows and its strikes, and S9's
+reverb, Doppler and width rows, bold as the defaults. Was: S4 "| Grows, last half | `[t₁/2, t₁]` |"; S8 "39
+instruments, default **Warm sine**.", "| `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level
+|", "| `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |",
+"**They are struck again on the trajectory's own beats** (`Strikes on`):" and "only when a line changes, i.e. a
+voice's partial has moved more than a quarter-tone since it last sounded."; S9 "| Reverb (on, ×1.40) |", "| Doppler
+(off, ×1.50) |", "| Stereo width (on, ×1.50) |". S6 gained its last sentence. The rest is quoted as delivered.*
 
 *Where the words leave a choice, or the file and the demo's code disagree, decided per R-369 (routine or mechanical;
 the human may veto any), flagged where they read the words:*
@@ -18092,6 +19261,15 @@ Adds REQ-GUI-309 to REQ-GUI-323; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, 
 REQ-VAL-103 (notes).
 
 ## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
+*Amended by R-555.*
+*Amended in part by R-556 (21 Oct 2026; RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466 ruled: G1 reads "Every
+setting is set in at most two places", G2's keys "Space keep the current trajectory", G5's footer "of the default
+length (RQ-427 (a))" and G10's One place row "a `Lines ▾` that holds a trace control"; the outline of the chart's
+square is one toggle, in Overlays › Chart, on by default and reached from the Trace group and `Trace…`, whose entries
+no longer wait (P5); P2 to P4 and P6 to P11's meanwhiles stand as ruled).*
+*Still in force: all of it, but G6's defaults, which R-555 sets: sound off at launch, Sine (pure), and reverb, Doppler
+and width on; P8's code defaults stand for the rest; and G1, G2's keys, G5's footer and G10's One place row as
+R-556 rewords them, P5's outline entries built as one toggle with Overlays › Chart's (R-556)*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (Overlays ▾'s Trace group, Lines ▾'s list, the trace settings' place, the left panel, the Trajectory panel's kept
 orbits and its order, the bottom band's Listen, the legend's bullet; sentences and paragraphs added, the replaced words
@@ -18147,7 +19325,7 @@ text; its preface and G1 to G11, verbatim:
 > **Everything about one trajectory lives in one place: the Trajectory panel.** That covers its previews, its trace and
 > its sound. The view shows the trace, and the bottom band's Time column shows the trajectory over time.
 >
-> **Every setting appears in at most two places**: an everyday control in the panel, and the full set in a window
+> **Every setting is set in at most two places**: an everyday control in the panel, and the full set in a window
 > (`Trace…`, `Listen…`), opened like `Profiler…` and `Export…`. Nothing about a trajectory is in the left panel, which
 > is about the chart.
 >
@@ -18165,7 +19343,7 @@ text; its preface and G1 to G11, verbatim:
 >
 >   A trace is an overlay, so it lives with the overlays.
 > - **No `Lines ▾` and no `Listen ▾`.** An earlier art-board pass had both; they are withdrawn.
-> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, `K` keep the current trajectory, `L` sound on/off. Add them to
+> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, Space keep the current trajectory, `L` sound on/off. Add them to
 >   the keyboard sheet.
 >
 > ## G3. The left panel
@@ -18210,7 +19388,7 @@ text; its preface and G1 to G11, verbatim:
 > | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
 >
 > Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
-> (follow-up F3).
+> (follow-up F3), of the default length (RQ-427 (a)).
 >
 > ## G6. The `Listen…` window
 >
@@ -18222,12 +19400,12 @@ text; its preface and G1 to G11, verbatim:
 >
 > | Group | Controls (default **bold**) |
 > |---|---|
-> | Sound | **♪ sound on**, `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Warm sine**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
+> | Sound | ♪ sound on (**off** at launch), `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Sine (pure)**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
 > | Loudness | **follows the shape's movement** / normalised; min level **15%**; max **100%**; volume **60%** |
 > | Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
 > | Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
 > | Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
-> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, Doppler ← expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
+> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, **Doppler ← expansion (×1.50)**, bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
 >
 > **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
 > textures (2), one instrument per row in the build. The art board compresses rows to fit.
@@ -18271,7 +19449,7 @@ text; its preface and G1 to G11, verbatim:
 >
 > | Test | Passes when | Fires on |
 > |---|---|---|
-> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a surviving `Lines ▾`) |
+> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a `Lines ▾` that holds a trace control) |
 > | Band height | turning ♪ on changes no pixel of the view's size; expanding the strip changes it by exactly the band's growth | the strip pushing the view on sound-on |
 > | Shared axis | the spectrogram's playhead x equals the scrubber thumb's x at every `t` | two axes |
 > | Window highlight | the bright arc on the shape sphere covers exactly the samples in `windowAt(t)` | an off-by-window highlight |
@@ -18315,7 +19493,10 @@ read the words:*
   kept with its trajectory, each edit one `SetField` as the others are (R-538 I1). The window's Kept traces rows are
   the tabs' list. Its key… button opens the icon key (R-538 TM4).
 - **P8. `Listen…`.** Its controls are `principia_listen.md`'s with the code's defaults (RQ-454: sound off at launch,
-  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. The instrument menu's families name no
+  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. *R-555 (21 Oct 2026) rules RQ-454 with
+  the human's Listen effects follow-up: sound off at launch and Sine (pure), with reverb, Doppler and width on; G6's
+  Sound and Effects rows are edited to bold them, as the human's words order. Was: "**♪ sound on**", "instrument
+  (**Warm sine**)" and "Doppler ← expansion (off, ×1.50)".* The instrument menu's families name no
   instrument and the code has none: that is RQ-459, applied meanwhile with the task that builds the menu writing the
   assignment (R-72), the counts met.
 - **P9. The bottom band's sizes.** G7's 196 px, 420 px and 360 px meet R-462's splitters, and "cube only" leaves the
@@ -18379,3 +19560,4941 @@ R-541 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-538.
 
 Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (statement, note), REQ-GUI-079 and
 REQ-GUI-097 (notes).
+
+## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended in part by R-543 (21 Oct 2026; SM8's mirror-repeat and dimming past the Picture's square becomes the default of
+a wrap mode, Repeat, Mirror or Clamp, with a separate dim setting; SM6 and SM11 gain the Torus gradient, SM8 the tileable
+checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboard under Repeat, dimming off).*
+*Amended by R-544 (the shape sphere target's mirror).*
+*Amended by R-558.*
+*Still in force: all of it but SM8's one fixed treatment past the Picture's square, which R-543 makes the default
+(Mirror, dimmed) of a wrap mode, and the Flow preset's picture and settings, which R-543 replaces, every saved
+stain rendering as before (R-543); and, for the shape sphere chart only, SM1's mirror identification, SM3's
+hemisphere fold and in-square mirror pixels, SM4's hemisphere row and SM7's identity modulo the mirror: the shape
+sphere target is the whole sphere, read by its signed n̂, and its identity holds point for point (R-544);
+and what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names, the brightness slot under a Picture
+and the fade's function the file's; Replace-L's chroma scaling an option, off by default; Chart position a named
+seam-6 exception, no longer waiting on RQ-489.*
+*21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
+prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
+`docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
+Derived — computed at read, NOT stored" (a row), `docs/design/principia_colour_composition.md` § "1.5 A point on a chart:
+Chart position's colour slot (R-542)" (new), § "2. Site-set kinds", § "3. The `ctx` contract" and § "4.1 Backbone &
+`Option` occupants" (paragraphs added), `docs/design/principia_dd_colouring.md` § "3.2 The vMF engine" (Q4's sentence),
+`docs/gui/principia_render_gui_spec.md` Part II § "1. Layout — four surfaces", § "3. The node graph — model" (the subtype
+list, with its earlier words kept), § "3.1 Node kinds", § "5. Sources & multi-source", § "6. Port typing & wire rules",
+§ "9. Node inspector — morphing editors" and § "11. Presets = whole graphs", and § "G6. Legend — generated by evaluating
+the stain (`06_legend.png`)" (added), `docs/read_first/principia_INDEX.md` (rows), RQ-480 to RQ-489 and RQ-496 to RQ-499
+(new), REQ-COL-112 to REQ-COL-132, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-339 (reqio, new), TASK-M7-46 (done) and
+TASK-M7-47 to TASK-M7-51 and TASK-M8-66 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-47 to
+TASK-M7-51 and TASK-M8-66, TASK-M7-47 waiting on RQ-489 and TASK-M7-50 on RQ-496; after PR #270's review,
+RQ-500 to RQ-505 (new), RQ-489, RQ-496, RQ-497, RQ-498 and RQ-501 (restated), REQ-COL-133 to REQ-COL-135 and
+REQ-GUI-340 (reqio, new), TASK-M7-52 (new, built before every projection's consumer), TASK-M8-10, TASK-M8-49 and
+TASK-M8-58 (a dependency each) and
+`docs/gui/principia_render_gui_spec.md` § "G13. Where the artboards are overridden" (a bullet)*
+
+The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
+
+> A new instruction from me, Malachy, 21 Oct 2026, in `principia_state_map_bundle.zip` (unzip it to
+> `docs/incoming/2026-10-21_state_map/` and commit the bundle as-is):
+>
+> `principia_state_map.md`: the state map. A new stain node, **Chart position**, gives each sample its own system's
+> position on a chosen chart at the playhead (or t = 0, or a fixed t). It works on every chart, the shape sphere included,
+> and is coloured by a base (Gradient, Site blend, Palette, Picture) with layers on top (grid lines, checkerboard, tile or
+> cell edges, stripes, rings, site dots) — the shape sphere's colour composition, on the chart's point (SM11). Shape n̂
+> is a different node and is unchanged.
+>
+> Read it in full, with `README.md`, the prototype `demo/state_flow.html` (open it in a browser and play it) and the art
+> boards in `boards/`, before changing anything. Docs first, then plan, then code.
+>
+> Port:
+> - §0 is my words: quote them verbatim in the ruling, never paraphrased. Take the next free R-number, one ruling, with
+>   the SM items as the applied text per R-369 (mechanical consequences and routine choices; I may veto any).
+> - Port `principia_state_map.md` to `docs/design/principia_state_map.md`, headings unchanged, and add it to
+>   `docs/read_first/principia_INDEX.md`.
+> - The prototype's code is the transcription source. Where the md and the code disagree, the code wins and the
+>   disagreement is queued, not resolved.
+> - **SM2 is a hard constraint: no change to `SimState`, the payload, the `ICDescriptor` or any layout.** The field is
+>   derived at read in the fragment stage from data it already has (`r, p` at the playhead, the masses, the `state`
+>   lane, the WGSL encode). If anything turns out to need a stored field, stop and queue it; do not add one.
+> - **Shape n̂ is settled in §0:** a separate node, kept exactly as it is, nothing migrated. **The node name is settled in
+>   §0:** Chart position. **The exact last position is settled in §0:** not stored; the edge clamp (SM5a) is the
+>   behaviour.
+> - Apply SM14's "What this changes" rows to the docs they name, recording each replaced line as "stale value,
+>   replaced by R-xxx".
+> - File each "Queue, don't rule" item (Q1–Q9) as an RQ with its recommendation as option (a). Do not rule them
+>   yourself. Q4 concerns the existing vMF shape colouring: record it, change nothing in it.
+> - Requirements: `requirements_patch.yaml` is a draft in `plan/tools/reqio.py` patch format. Replace `R-NEW` with the
+>   ruling's number and each `MILESTONE` with the right one from `plan/MILESTONES.md`, check every `source` heading
+>   against the ported doc (`plan/tools/sections.py`), then apply it with `reqio.py` and run `python3 plan/check_plan.py`.
+>   Physics reviewer on the Chart position, projection and four-results requirements (SM1, SM4, SM5); the GUI ones go
+>   with `boards/`. Every test in SM12 keeps its failing arm, as written — the copies test is the bitwise IC identity, not
+>   a colour comparison at t = 20, which cannot fire (measured).
+> - Tasks: one for the docs port (this PR), then tasks for the colour pipeline (SM1–SM7, SM11) and the GUI (SM8–SM10,
+>   SM15), cut from the requirements.
+> - Put the prototype and `boards/` under `docs/gui/reference/state_map/` as reference mocks, like the lines canvas.
+>   They are not ported as code; the scripts in `tests/` are reference only.
+>
+> Check against what is open. This assumes:
+> - the extension rules (R-407, R-412, R-469, R-470) and EX7's canonical addressing from the extension bundle;
+> - the trace follow-up's F1 (where a projection has no value);
+> - L-ownership in the render contract.
+>
+> If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and queue it
+> rather than resolving it.
+>
+> Open a PR for the docs port with the ruling, and paste the doc diffs' summary and any conflicts found in the
+> description. Do not touch anything outside the repo and build or scratch directories without asking.
+
+and `principia_state_map.md`'s §0, "My words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "we take this idea of where we're sort of coloring the initial condition based upon where it ends up in some sort of
+> > chart. So in the shape sphere thing, we are coloring over time where the pixel trajectory is on the shape sphere
+> > chart and evolving over time. Now, what if we could generalize that to any chart? So you would almost see, for
+> > example, on a chart of, say, momentum, you would see how the pixel's momentum evolves over time, if that makes sense.
+> > Or you would do it with, maybe, any other sort of, like, latent parameter in a way. Because you could take a slice
+> > even and do wacky stuff like just say this entire slice area right now is an image, and then you could like see how
+> > stuff almost like flows. … I think from memory, people do this with pendulum sort of fractal stuff, so we could
+> > probably do that here."
+>
+> > "I just don't want it to completely break everything, so I want you to like actually consider everything carefully
+> > here. Because it also has interacts, you know, properly as well, of like the extension stuff"
+>
+> > "We can't have this changing any of the sim structs btw ? Can it work with the current data the shaders have access
+> > to ?"
+>
+> > "Can this be made a sort of generalisation of the shape sphere colour map system that allowed us to do a lot of
+> > possible ways to colour the shape sphere? So we could have the same sort of tiling patterns + layers + combinations
+> > of stuff? Maybe could have more stuff?"
+>
+> > "Just stop where it last was if it collided etc? That's cleaner?"
+>
+> > "I wouldn't store the exact last position, I don't want to change the structs or anything that side"
+>
+> > "Also I think the artefact doesn't really have a generalisation of the shape sphere colour map stuff idk. Its
+> > confusing. Also need you to design art boards on how the gui for this will look in the stain graph editor. Plus how
+> > this will work in the stain graph editor."
+>
+> > "Idk still feel like we need the shape n mode. This generalisation is still assuming like a spherical coordinate system
+> > / unwrap.. which is weird? We need to tile & colour the plane differently in these modes"
+>
+> > "Agreed" — to: Shape n̂ kept as its own mode; a colour vocabulary per quotient (a linear position map and real tilings
+> > on the plane, θ round the hue circle on the cylinder, triangles in the masses); tilings laid in chart units by default.
+>
+> > "Why in this are you confusing the rest of the sting graph? I just want it to be... You can choose to color the plane a
+> > certain way. Either with a gradient, either with a site blend, either with a palette. And then you can also
+> > additionally add, you know, extra lines, be it grid lines, checkerboard patterns, tiles, etc. Or you can just choose to
+> > be purely tiled, you know, there's like the layers to it, like we did the shapesphere thing. Again, you're sort of
+> > confusing a lot of the different bits of the system into this one thing here."
+>
+> > "Yep" — to: on a flat chart, the colour slot is a base (Gradient · Site blend · Palette · Picture) plus optional layers
+> > on top (grid lines, checkerboard, tile edges, stripes, contours, a site overlay), the same composition as the shape
+> > sphere's; Shape n̂, the brightness slot, Replace-L and the post chain unchanged; the state map only supplies the point.
+>
+> > "Shape sphere chart can use this mode also btw, just shape n node is different to this node, understood? What are
+> > you calling this node? We need a good name for it that is simple and clear"
+>
+> > "Chart position" — chosen for the node, one node with a time setting (playhead, t = 0 or a fixed t) in place of the
+> > two working names "Where now" and "Where at t = 0".
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and SM1 to SM15, verbatim:
+
+> *21 Oct 2026. New. A colouring, not a computation: each sample is coloured by its own system's position, at the
+> playhead, on a chart. The node is **Chart position**. It works on every chart, the shape sphere included, and is coloured by a base plus
+> layers (SM11). Shape n̂ is a different node and stays exactly as it is. The prototype `demo/state_flow.html` is the reference; where this file and it disagree, the
+> prototype's code is the transcription source and the disagreement is queued. Quote §0 verbatim in the ruling.*
+>
+> ## SM1. Definition
+>
+> For a sample with live state `x(t)` at the playhead, and a **target chart** `T`:
+>
+> ```
+> colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )
+> ```
+>
+> - `E` is the encode (`principia_dd_encode.md`), the quotient map onto the decode's canonical section: scale and
+>   rotation are removed, mirror images identified.
+> - `P_T` is the target chart's projection, the one the trace uses (`principia_trajectory_viewing.md` §3; trace
+>   follow-up F1). It returns one of four results, listed in SM5.
+> - `fold_T` maps the point onto `T`'s **quotient**, its group of images (R-407 types): θ mod 2π, the shape sphere's
+>   `n̂`, the canonical mirror.
+> - `C_T` is a colour map, **one-to-one and continuous on that quotient** (SM6).
+>
+> **The target is the view's own chart by default.** Then, at `t = 0`, every sample sits where it started, and the
+> picture is the colour map itself, i.e. the legend. As the playhead moves, it flows.
+>
+> **Image mode** replaces `C_T` with a look-up in a picture laid on `T`'s square (SM8). Each pixel shows the colour of
+> the picture at the place its system has reached. This is the "slice as an image" in §0, and it is a pull-back: one
+> gather per pixel, with no scatter.
+>
+> ## SM2. It changes no sim struct and reads only what the fragment already has
+>
+> | Needed | Where it already is |
+> |---|---|
+> | the live state `r, p` at the playhead | `SimState`, "the live state of a marching simulation at the playhead" (render contract; payload §1; generation root) |
+> | the masses | `ICDescriptor`, the payload lane's decoded-IC quantities |
+> | ended / failed | the `state` lane. Storage never holds NaN (R-79); a run stopped by its event holds its end state |
+> | the encode, including the chart inverses | WGSL generated from the one Rust source (R-116); `ROUNDTRIP` already runs it per pixel (colour composition §3, "Fragment-side recompute") |
+> | `fold_T` and `C_T` | pure maths in the stain node: no history, no buffer |
+>
+> It is a **derived field, computed at read** (payload §5), like the existing current-shape `n`. It needs no new
+> `SimState` field, no new accumulator and no kernel change. It is live-compatible: only the playhead state is read.
+>
+> Three things it adds, none of them a sim struct:
+>
+> 1. **A target other than the view's chart** needs that chart's inverse in the fragment pipeline as well (Q1).
+> 2. **Image mode** needs one texture binding for the picture: a render-side bind group.
+> 3. **The colour map owns lightness** (SM6), so under L-ownership (render contract) it is a full-colour occupant: the
+>    brightness slot is None.
+>
+> ## SM3. Source side: the extension comes for free, because the colour is a property of the system
+>
+> The colour depends only on the sample's system, never on where its pixel sits. So:
+>
+> - **Wrapped copies** (θ period, pole crossings, the hemisphere's fold; R-407, R-412) decode to the same system, and get
+>   the same colour by construction. No seam handling is needed or allowed. **But only if a copy reuses its canonical
+>   quad's samples (EX7's canonical addressing) and never re-decodes from its own coordinate.** `x + 2π` folded back
+>   is not `x` in the last bits: re-decoding each pixel from its own coordinate, as the prototype first did, gave ICs
+>   differing at the 12th decimal in 1 of 400 random copy pairs. **Whether that shows is a question of horizon, and at
+>   the prototype's it does not.** Measured on the shape sphere, released from rest, at `t = 20`: a relative IC
+>   perturbation of 1e-15, 1e-12 or 1e-9 moves the shape by more than 0.02 on **0 of 300** systems; 1e-6 on 2; 1e-3 on 61.
+>   The prototype's colour test of copies reads 0 differing pairs **with and without** the fix (0 of 1024 on the sphere,
+>   0 of 768 on θ × dilation), so at this horizon it cannot fire and proves nothing about the fix. The requirement rests
+>   on the IC identity, which can be tested bitwise, and on longer horizons, where it will show.
+> - **Never a gap while navigating.** The prototype keeps a coarse **base grid per chart** over its whole reachable
+>   domain. On a repeating chart that is the square, drawn through every image (R-407's group); on an affine chart it is
+>   the navigation limit. It is drawn under everything, then the last finished view grid, then the new one.
+>   - The first prototype restarted its integration on every frame of a drag and drew nothing until a grid finished, so
+>     the extension went black. That was a bug in the prototype, now fixed.
+>   - Measured after the fix, black fraction of the canvas while dragging into the extension: 0 at every sample, on the
+>     latent chart and on the sphere.
+>   - In the app this is the quadtree's own coarse-ancestor fill, not a new mechanism.
+> - **Affine extension** past `[0,1]²` holds new systems, coloured like any other.
+> - **Not a system** (forbidden; R-470) is the canvas background, never integrated.
+> - **The quadtree, refinement and deep zoom are unchanged.** It is a colouring: the scheduler's criterion does not read
+>   it (the firewall, scheduler contract Part 1). A coarse leaf shows its footprint's colour.
+>   - In chaotic regions the field is rough at every scale, so a leaf the criterion keeps coarse looks blocky. That is
+>     the coarse-ancestor fill doing its job, not a fault.
+>   - Whether the state map should feed the criterion is Q3.
+>
+> ## SM4. Destination side: why it must be a quotient, not a branch
+>
+> The trace picks each sample's branch by continuity with the previous one: θ ± 2π, the pole crossings
+> (`tiltProject`, `thetaHProject`). A per-pixel field has no previous sample, so it **cannot pick branches**. It must be
+> defined on the target's quotient, and `C_T` must be invariant under the target's identifications:
+>
+> | Target axis | Quotient | What `C_T` must do |
+> |---|---|---|
+> | periodic (θ) | the circle | carry θ round a closed hue circle |
+> | the shape sphere (θ, φ with pole crossing) | the sphere, via `n̂` | be a function of `n̂`, never of (θ, φ) |
+> | the hemisphere (R-412) | the sphere mod the mirror | be a function of the canonical (folded) `n̂` |
+> | affine (latent `z`, a physical quantity) | the line | compactify (SM6) |
+> | bounded (ν, a mass) | the interval | map linearly |
+> | a tilted axis (E, F) | not periodic and multi-valued in θ | take the branch nearest the slice (smallest out-of-plane `w`); this is a choice, Q2 |
+>
+> ## SM5. The four results of a projection
+>
+> | Result | When | Drawn as |
+> |---|---|---|
+> | **on the chart** | the projection exists | `C_T` |
+> | **left the chart** | a coordinate entering a shown axis with non-zero weight has no value (F1) | **at the edge it left by** (default, SM5a); or no value, in its own style |
+> | **past a bounded edge** | the nearest point lies past a bounded axis's end (F1's curve-axis row) | at that end (default, SM5a), counted apart from left; or no value |
+> | **undetermined** | the run failed (R-79's failed values; `sim_failed`) | the presentation black `#141418` (R-467) |
+>
+> ### SM5a. Left the chart: drawn at the edge it left by
+>
+> A system that leaves a chart is drawn **at the edge it went through**, not grey. On the latent chart it leaves because
+> α passes the decoder's limit, so `z_α` is `±∞`, and the side is known from the shape (`cos 2α = n₁`). The other
+> coordinate keeps its value now. The compaction sends `±∞` to the colour map's edge. The latent momenta (`|q|` past
+> `q_max`), the tilt's `z_q3`, and a curve axis's nearest point past its end clamp the same way. **This uses only the
+> current state**, so it needs no stored field (SM2).
+>
+> **It is not the same as "where it last was", and the difference is measured.** The true last on-chart position needs
+> history, and storing it is **ruled out by §0** (no struct change). It was measured once, offline, to know what the
+> clamp gives up:
+>
+> On the latent chart at `t = 8`, 400 random systems, 129 of them left, true exit found at Δt = 0.005, compared in the
+> compacted coordinates `s ∈ [−1, 1]`:
+> - **The axis it left by agrees.** |Δs| median 0.033, and it falls with Δt (0.267 at the prototype's Δt = 0.25), so in
+>   the limit the clamp *is* the exit point on that axis.
+> - **The other axis is where they differ.** |Δs| median 0.08, p90 0.54, max 1.25. The system keeps moving after it
+>   leaves: into the collision, or back round a close approach. The clamp shows that coordinate now; the last position
+>   shows it at the exit.
+>
+> So the clamp is exact in direction and current in the other coordinate. Half the left pixels differ little from the
+> last position; the tail differs a lot. Grey (no value) remains an option.
+>
+> **Ended runs hold their end state (absorbing).** A run stopped by its event sits at its last state. Option: *after
+> its end*, paint the outcome palette instead.
+>
+> Measured in the prototype at `t = 8` (64²–96² grids, the demo's integrator):
+> - On the shape sphere, the collided systems sit at the three binary-collision points and paint **three flat bands**.
+>   This is correct, and it shows the collision basins at a glance.
+> - On the latent chart, 3186 of 9216 have **left** (their α passed the decoder's limits near a collision).
+> - On the ν × dilation chart, 4854 of 6432 are **past a bounded edge**: most states are far from the right-triangle
+>   curve and project to its ends.
+>
+> ## SM6. Colour maps: one-to-one on the quotient, so they own lightness
+>
+> **No continuous one-to-one map from the sphere into a plane exists** (invariance of domain). So any fixed-lightness
+> colouring of `n̂` — including the vMF six-pole blend (`principia_dd_colouring.md` §3.2) — gives some distinct shapes
+> the same colour. That is acceptable for a hue carrier, and **not for this field**: two systems at different places
+> must not look the same. So the sphere map uses all three OKLab axes, linear in `n̂`. Measured (colours binned at 2e-3 in OKLab over a 300² grid of the sphere): the vMF blend at fixed L puts **antipodal shapes** (chord 2.000) in one bin at κ = 1, 3 and 6 — the pair `±(1,1,1)/√3`, both neutral grey — while the linear map's worst same-bin pair is 0.025 apart, the bin's own width. The state map is therefore a
+> **full-colour occupant**, and the vMF blend stays the shape colouring it already is (Q4).
+>
+> Per target, as prototyped:
+>
+> | Target quotient | Map (OKLab) |
+> |---|---|
+> | sphere `n̂` | `L = 0.64 + 0.20 n₃`, `a = 0.095 n₁`, `b = 0.095 n₂`: linear, so one-to-one |
+> | circle × line (θ × dilation) | `a, b = 0.09 (cos θ, sin θ)`, `L = 0.66 + 0.12 tanh(h/κ)`: a cylinder |
+> | simplex (masses) | `(a, b) = 0.15 Σ mᵢ ûᵢ` for three hue directions 120° apart, `L = 0.70`: an affine image of the triangle |
+> | line × line, interval × line | **linear**: `(a, b) = 0.095 (sₓ, s_y)`, `L = 0.75`. Revised (SM11): the first version put `x` along a 270° arc of hue, a polar unwrap of a flat chart, to avoid a grey centre. §0 rules out the unwrap; the grey centre is the chart origin and is accepted |
+> | circle × circle (none in the demo) | `x` round the hue circle, `y` round a circle in (L, C): a torus |
+>
+> Rules:
+> - **Compactification:** `s = tanh((z − c)/κ)` with `κ` the chart's home half-range (latent 3, momenta 0.3, the tilt's
+>   `s` π, dilation 0.6), so the home view spans about `s ∈ [−0.76, 0.76]`.
+> - **Chroma is fixed per map, never clipped per pixel** (clipping breaks linearity and injectivity), at the largest
+>   value that stays in sRGB gamut over the map's whole range. That was checked on a 200² grid for every map above: 0
+>   out-of-gamut samples.
+>
+> ## SM7. Colour frame and deep zoom
+>
+> - **Chart (default)**: absolute. The same colour means the same place in every view, so views are comparable.
+> - **View (option, the view's own chart only)**: `s = tanh((x − view centre)/view half-width)`.
+>   - It is needed at depth: in the absolute frame, the `t = 0` picture at a deep zoom is one flat colour, because the
+>     whole window is inside one colour step.
+>   - At `t > 0` most systems leave the window and saturate the relative map. That is expected and stated.
+> - **Precision**: the state is f32. The `t = 0` identity holds to **4e-7 (latent), 1.5e-6 (sphere), 5e-6 (simplex),
+>   2.7e-8 (momenta), 7e-8 (θ × h), 1.9e-6 (tilted E, F)** in chart units. On ν × h it holds to **4.9e-4**, which is the
+>   demo's 1/1000 curve table, not the method.
+>
+> ## SM8. Image mode
+>
+> - The picture is laid on `T`'s home square (equirect on the sphere; θ across on the cylinder).
+> - Past the square on an affine axis it is **mirror-repeated and dimmed**, so it stays continuous and says it is outside.
+> - The picture can be built in (checkerboard, grid, rings) or the user's own, uploaded.
+> - Played over time, a picture laid on the chart is stretched along the flow: smooth on regular islands, shredded where
+>   the dynamics are chaotic. That is the FTLE's meaning, seen directly; it is not a measurement of it.
+>
+> ## SM9. Legend and the hovered pixel
+>
+> The legend is the colour map (or the picture) over `T`'s square, with the hovered pixel's system marked where it is
+> now. On the view's own chart, the marker sits where the hovered pixel's current colour sits in the legend. The trace
+> of the same pixel would run to the same place: the trace is this field for one pixel. The prototype draws no trace,
+> only a ring on the hovered pixel.
+>
+> The marker is computed with the grid's own integrator settings, so it agrees with its pixel exactly.
+>
+> ## SM10. Time, ensemble and fade
+>
+> - **Time**: it is the field at the playhead. Scrubbing back is re-integration, as for every live field (temporal
+>   architecture note). The prototype instead keeps states every Δt = 0.25 to the horizon, so it can scrub instantly;
+>   that is a demo device, not a design.
+> - **Ensemble**: the nominal copy (copy 0). An OKLab mean over the `E+1` copies would turn undetermined regions grey,
+>   which is informative but not one-to-one (Q5).
+> - **Fade off the slice**: opt-in, off by default, view's own chart only (R-509's distance, as the trace).
+>   A fade spends lightness, so it is stated as breaking injectivity.
+>
+> ## SM11. Colouring Chart position: a base, then layers
+>
+> *Revised three times on 21 Oct 2026 (§0's last five quotes). The first version put one sphere kernel on every chart;
+> the second invented separate node kinds and mixed the source and brightness nodes into them; the third tied the sphere
+> to Shape n̂. This one: Chart position is one node, on any chart including the shape sphere, and its colour slot is
+> colour composition §1 as it stands — a base and layers — with the chart's point where Shape n̂ has n̂.*
+>
+> **Two different nodes.** *Shape n̂* is the existing node: the shape of the system, coloured by its own nodes (Site blend,
+> Bands, its position map), exactly as now. *Chart position ⟨chart⟩* is the new one: where the system is on a chosen
+> chart. On the shape sphere chart the two read the same point, and are still two nodes: Shape n̂ keeps its colouring,
+> Chart position takes a base and layers. The backbone is unchanged: one colour slot, one brightness slot, Replace-L or
+> Multiply, the post chain.
+>
+> **Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0 · a fixed t) · when it leaves the
+> chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing.
+>
+> **Its colour slot is a base plus layers** — the same shape as the shape sphere's colouring (a Family A or B occupant,
+> then `bandmask` / `site_overlay` combinators, colour composition §1.1–§1.3):
+>
+> *Base, one of:*
+>
+> | Base | Colour composition | Shape sphere | On the plane | Cylinder (θ × s) | Simplex (masses) |
+> |---|---|---|---|---|---|
+> | **Gradient** | Family B: a field over the point through a ramp | **3D**: `L = 0.64 + 0.20 n₃`, `(a, b) = 0.095 (n₁, n₂)`, one-to-one · round the longitude (hue circle) · pole to pole | **2D**: `(a, b) = 0.095 (sₓ, s_y)` at `L = 0.75`, one-to-one, L free · along x · along y · out from the centre | 2D: θ round the hue circle, `L = 0.66 + 0.12 tanh(s/0.6)` · round θ (hue circle) · along s | 2D: three primaries mixed by the masses at `L = 0.70` · along m₂ · along m₃ |
+> | **Site blend** | Family A: nearest / top-k / vMF, blend in OKLab or RGB | the sphere's site sets (`axes6`, `corner8`, `ico12`, `fib(N)`, `ring(N)`), the same code path as Shape n̂'s Site blend (agreement exactly 0) | sites on a square or hex lattice, plain flat distance `−|x − p|²` | the same, a whole number of sites round θ | the same lattice laid on the masses |
+> | **Palette** | categorical: each tile one palette colour — purely tiled | latitude × longitude cells (a multiple of 6 round θ) · Fibonacci cells · meridian wedges · latitude bands | square, hexagons, triangles, brick, stripes x / y | the same, closing round θ | triangles in the masses; stripes in m₂ / m₃ |
+> | **Picture** | the image pulled back through the flow (SM8) | equirectangular | over the square | wrapped in θ | over the triangle |
+>
+> 1D ramps run one fixed three-stop OKLab ramp (indigo → teal → yellow); round θ uses the hue circle, the one place hue is
+> native. Site colours and the palette are swatch sets, as on the sphere: **by index** — `(i mod 3, j mod 3)` picks one of
+> nine OKLab swatches at `L = 0.72`, `(a, b) = 0.08 (i mod 3 − 1, j mod 3 − 1)`, so every neighbour differs — or
+> **golden-angle** hues by tile.
+>
+> *Layers on top, in order, each optional* — every one a `bandmask` (a line or cell colour where its pattern is in band,
+> mixed in at its opacity), or for site dots a `site_overlay`:
+>
+> | Layer | In band where |
+> |---|---|
+> | grid lines | within 0.045 of a whole x or y |
+> | checkerboard | ⌊x⌋ + ⌊y⌋ is odd |
+> | hexagon / triangle / brick edges | a point 0.045 away lies in a different tile |
+> | stripes along x / y | ⌊x⌋ or ⌊y⌋ is odd |
+> | rings round the centre | within 0.045 of a whole distance from the chart's centre |
+> | site dots | within 0.13 of a lattice site |
+>
+> On the shape sphere the layers are the sphere's own: latitude / longitude lines, checkerboard (lat × lon), meridian
+> stripes, latitude bands, Fibonacci cell edges (a point 0.045 of the cell spacing away, along the surface, is in another
+> cell), site dots on the Fibonacci sites. Flat tile edges and rings are not offered there.
+>
+> Each layer has its own spacing (`n` across, 4–24), colour (dark, light, black, white) and opacity (25–100%).
+>
+> **Spacing on a flat chart is in chart units by default**: `n` across the chart's square, the same size continuing past it, and as many
+> down as keeps cells square on screen. *The squashed square* lays `n × n` over the compactified `[−1, 1]²`, the whole
+> unbounded chart, cells shrinking toward infinity. A system that has left the chart takes the cell at the navigation
+> edge it left by (SM5a). On the cylinder every count round θ is a multiple of 6, so every pattern closes across the seam.
+>
+> **Lightness.** The plane's 2D gradient, the sphere's longitude gradient, Site blend and the index palette hold L fixed, so a brightness node can take L
+> without losing position. The 1D ramps, the sphere's 3D gradient and the cylinder's 2D gradient spend L on position, and a brightness node after
+> them raises the Problems warning, as it does after Shape n̂'s position map and Bands. Layers are mostly lightness, and
+> under Replace-L their lines fade; that is a second, separate warning. The plane's 2D gradient is grey at the chart
+> origin, which on the latent charts is the Lagrange landmark (Q9).
+>
+> **Brightness, unchanged in meaning** and outside the colour slot: displacement `|e(t) − e(0)|`, a straight-line distance
+> on the quotient (`e` = n̂, `(cos θ, sin θ, s)`, `(sₓ, s_y)` or the masses: a distance only, never a colour); *left its
+> starting tile*, which under Chart position compares the Palette's tile now and at `t = 0`, and under Shape n̂ the
+> nearest site.
+>
+> **Only the 2D and 3D gradients must be one-to-one (SM6).** Site blends, palettes and layers are classifications, many-to-one by
+> design.
+>
+> **Fields that need history stay out of scope without a struct change** (Q7).
+>
+> ## SM12. Tests (each with the arm that fires)
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | Identity at `t = 0` | on every chart, target = view, every sample's projected point equals its own chart point to f32 round-trip (the prototype's figures, SM7) | a wrong projection, a missed fold, a mirror slip |
+> | Copies agree | every copy's sample is the canonical quad's sample: its IC is **bitwise** equal (the control, re-decoding from the copy's own coordinate, differs on 1 of 400 pairs). A colour comparison at `t = 20` is not the test: it reads 0 differing pairs with and without the fix | a copy re-decoded from its own coordinate; a colour computed from screen position |
+> | One-to-one | colours binned at 2e-3 over a 300² grid of each target's quotient: no bin holds points more than a bin's width apart. Controls that must **fail**: the vMF blend (antipodes, 2.000) and a closed hue circle on a line (1.993) | a fixed-lightness sphere map; a hue circle on a non-periodic axis |
+> | Invariance | `C_T` equal on identified points (θ and θ + 2π; `n̂` across a pole crossing) | a map written on (θ, φ) |
+> | Gamut | 0 out-of-gamut samples per map | per-pixel clipping |
+> | Edge clamp | for left systems, the clamp agrees with the exit point found at fine Δt on the axis it left by, and the gap falls with Δt (0.267 → 0.033 from Δt 0.25 to 0.005) | a clamp to the wrong side, or a finite clamp on an infinite coordinate |
+> | Never a gap | the canvas has no uncovered pixel during a drag or zoom into the extension (black fraction 0 at every sample) | the old grid dropped before the new one lands |
+> | Conserved axes | on the mass simplex the field is identical at every `t` | a mass leaking into the march |
+> | Four results | a latent-momentum target has left-the-chart pixels where `|q| > q_max`; ν targets have past-the-edge pixels; neither is drawn as a colour | left drawn as a clamped colour |
+> | No struct change | the build changes no `SimState`, payload or descriptor layout (`git diff` on the layout definition is empty) | a stored field |
+> | Firewall | the scheduler's decisions are identical with the state map on and off | the field read by the criterion |
+> | Shape n̂ unchanged | the Shape n̂ node, every one of its colour nodes (Position, Site blend over axes6 / fib / ico12 / corner8 with each kernel, Bands) gives bitwise the values it gave before the flat vocabularies were added: 7200 values over 400 random shapes × 6 settings, **0** differ (old build against new). The brightness slot is not in this test: Replace-L now scales chroma (below), which changes a sphere stain *with* a brightness node | a flat node's code reaching the sphere path |
+> | Same site blend on the sphere | Chart position ⟨shape sphere⟩ with Site blend (axes6 · Full · vMF κ 3 · OKLab) against the Shape n̂ node's Site blend at the same settings: worst difference **exactly 0** over 300 random shapes. Two nodes, one code path | a second implementation of the sphere's site blend |
+> | Neighbours differ | Palette by index (and Site blend's index swatches): across every tile boundary, sampled 2.5–8.6 thousand pairs per tiling, **0** pairs share a colour for square, hexagons, triangles, brick and both stripes | an index not stepping by ±1 to a neighbour; a hexagon or brick coloured by a 2-colouring |
+> | Layers in order | grid over checkerboard differs from checkerboard over grid wherever both are in band; a layer at 0% opacity changes nothing | layers applied as an unordered set |
+> | Whole periods | on the cylinder, the tile count round θ is a multiple of 6, so every base and layer closes: θ and θ + 2π give the same tile colour — **0 of 7200** differ, over 6 patterns × 6 counts | a count that is not a multiple of 3 (index colours) or 2 (checker), which draws a seam |
+> | Plane map one-to-one | binned at 2e-3 over a 300² grid of `[−1, 1]²`: worst same-bin pair **0.028** apart in s, inside the bin's own diagonal (0.030) | an angle or unwrap on a flat chart |
+> | Replace-L in gamut | chroma scaled by `min(1, L/0.75, (1 − L)/0.35)`: **0 of 99,710** out-of-gamut samples over every flat colour node at every brightness level used (0.18, 0.30, 0.50, 0.78, 0.84). Without the scaling, the 0.30 level clipped to near-black in the prototype, the undetermined colour | per-pixel clipping |
+>
+> ## SM13. Queue, don't rule
+>
+> - **Q1. A target other than the view's chart.** Recommendation (a): allowed, with the target's inverse generated into
+>   the fragment pipeline beside the view's. (b) The view's own chart only.
+> - **Q2. Tilted targets.** Recommendation (a): the branch nearest the slice, as prototyped. (b) Not offered as a
+>   target.
+> - **Q3. The state map and the criterion.** Recommendation (a): never a criterion input (the firewall). (b) A spread
+>   over it as a candidate signal, measured first.
+> - **Q4. The vMF shape colouring.** It is not one-to-one, by SM6's theorem. Recommendation (a): keep it as the hue
+>   carrier it is, and state that in colour composition §4.1. (b) Offer SM6's sphere map as an alternative shape
+>   colouring.
+> - **Q5. Ensemble colour.** Recommendation (a): the nominal copy. (b) The OKLab mean over copies, labelled as not
+>   one-to-one.
+> - **Q6. After its end.** Recommendation (a): hold the end state. (b) The outcome palette.
+> - **Q7. History fields** (winding on any chart, time in a tile, first passage). Recommendation (a): out of scope; each
+>   needs its own accumulator, which is a struct change. (b) Specify the accumulators, measured for cost first.
+> - **Settled by §0, not queued: the exact last position is not stored.** The edge clamp (SM5a) is the behaviour; no
+>   struct changes for it.
+> - **Q8. Tiling defaults** (SM11): pattern, tiles across (6) and the index palette chroma (0.08) are calibration
+>   values (R-71). Recommendation (a): adopt the prototype's as the starting values. Chart units as the default is
+>   settled by §0, not queued.
+> - **Q9. The plane's grey origin.** The linear map is achromatic at the chart origin. Recommendation (a): accept it — on
+>   the latent charts the origin is the Lagrange landmark, a named place, and it is far in L from the undetermined and
+>   no-value colours. (b) Offset the map so the achromatic point falls outside the home square.
+> - **Settled by §0, not queued: Shape n̂ stays its own mode.** Its nodes are unchanged and nothing is migrated.
+>
+> ## SM14. What this changes
+>
+> | Doc | Change |
+> |---|---|
+> | `principia_dd_simstate_payload.md` §5 | the derived table gains "chart position at the playhead", from `r, p`, the masses and the target chart; stores nothing |
+> | `principia_colour_composition.md` §3, §4.1 | the state map as a full-colour occupant (owns L; brightness None); image mode's texture input |
+> | `principia_render_gui_spec.md` | SM15: the `point⟨q⟩` field subtype, the two Where sources, the four colour nodes and two brightness nodes, the Problems entries, the presets, and the 2D legend |
+> | `principia_dd_colouring.md` §3.2 | Q4's sentence |
+> | `principia_colour_composition.md` §1–§2 | Shape n̂'s nodes unchanged. Added (SM11): a flat point as an input beside n̂; its Gradient fields; lattice site sets (square, hex) with flat distance; the Palette (categorical by tile); band patterns for layers (grid, checker, tile edges, stripes, rings, site dots) |
+> | none of the contracts' layouts | (SM2) |
+>
+> ## SM15. In the stain graph editor
+>
+> The state map adds one source and a few occupants to the existing stain graph (render GUI spec §0–§9). It does not add a
+> mode, and it does not touch the backbone. Art boards: `boards/` (1 editor, 2 base and layers, 3 inspectors, 4 ports,
+> 5 presets, 6 Explore).
+>
+> ```
+> Chart position ⟨chart⟩ at the playhead ─→ colour slot:  base ─→ layer 1 ─→ layer 2 ─→ … ─┐
+> Chart position at the playhead, at t = 0 ─→ brightness slot (unchanged) ─────────────────┴→ Replace-L / Multiply → post* → OUT
+> Shape n̂ ─→ its own colouring (unchanged), an alternative source in the same colour slot
+> ```
+>
+> **One new field subtype.** `field` gains `point⟨q⟩`, q ∈ sphere · plane · cylinder · simplex: a position on the
+> quotient plus the SM5 status (ok, clamped, past edge, undetermined). Port types and wire colours are unchanged. Shape
+> n̂ is a `point⟨sphere⟩`, and its nodes accept exactly that, as now.
+>
+> **The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0 · a fixed t), when it
+> leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing. At t = 0 it is the pixel's own IC
+> through the projection, with no march. It is one node; a brightness field that compares two times takes two copies of
+> it. *Shape n̂* is a separate node and is unchanged; on the shape sphere chart both are offered.
+>
+> **Colour slot.** From Shape n̂: its own nodes, unchanged. From Chart position, on any chart: a **base** (Gradient · Site blend ·
+> Palette · Picture) and an ordered list of **layers** (grid lines, checkerboard, hexagon / triangle / brick edges,
+> stripes, rings, site dots; on the sphere its own: lat / lon lines, checkerboard, stripes, Fibonacci cell edges, site
+> dots), each with spacing, colour and opacity (SM11). Layers are the existing `bandmask` and
+> `site_overlay` combinators with flat band patterns; the inspector shows them as a stack under the base, reorderable,
+> each removable.
+>
+> **Brightness slot and combine.** Unchanged: Displacement and Left its starting tile are brightness occupants like any
+> other, and Replace-L scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with L, so every level stays in gamut (0 of
+> 99,710 samples out). Before that, the 0.30 level clipped to near-black, the undetermined colour.
+>
+> **Inspector.** The library and the drag-off-a-pin menu offer only what the wired source takes. Swapping the source
+> between Shape n̂ and Chart position puts each base's counterpart in its place (Position ↔ Gradient, Site blend ↔ Site
+> blend, Bands ↔ Palette); changing Chart position's chart re-offers the bases and layers that exist on the new one. Every
+> setting stays on the graph, so switching back restores it exactly.
+>
+> **Problems.** Warning where a brightness node replaces L that the base spends on position (Shape n̂'s position map and
+> Bands; a 1D gradient; the sphere's 3D and the cylinder's 2D gradient). Warning where a brightness node replaces L under lightness layers.
+> Info per compile: left the chart (clamped), ended (held), past a bounded edge, undetermined, as counts; no SimState,
+> payload or descriptor change.
+>
+> **Presets** (prototype `smPreset`): Classic shape colour (the Shape n̂ node → Site blend, as today); and on Chart
+> position, on any chart: Where (Gradient 2D, 3D on the sphere); Graph paper (Gradient + checkerboard + grid lines); Basins
+> (Palette: hexagons, Fibonacci cells on the sphere); Displacement (Gradient + Displacement); Flow (Picture); Mixing
+> (Palette: square, lat × lon on the sphere, + Left its starting tile). A preset inserts an ordinary editable graph.
+>
+> **Explore.** The state map is a stain picked like any other. Compass, play bar and chart controls are unchanged. The
+> legend is the colour slot drawn over the target chart (base and layers), with a ring at the hovered system, drawn on the
+> edge when it has left.
+>
+> **Backwards compatibility.** Nothing to migrate: every saved stain loads and renders as before.
+>
+> **WGSL sketch.** The source compiles to calls that already exist: `encode(r, p)` (ROUNDTRIP), the target chart's
+> inverse, `fold_q`, the status. The base and each layer are functions of `Point` only.
+>
+> ```wgsl
+> struct Point { u: f32, v: f32, s: vec2<f32>, q: u32, status: u32 }   // chart coords, squashed coords, quotient, SM5 status
+> fn where_now(px: Px) -> Point { let z = encode(px.r, px.p); return fold(target_inverse(z)); }
+> fn gradient_2d_plane(pt: Point) -> vec3<f32> { return vec3(0.75, 0.095 * pt.s.x, 0.095 * pt.s.y); }   // OKLab
+> fn layer(base: vec3<f32>, pt: Point, kind: u32, n: f32, col: vec3<f32>, alpha: f32) -> vec3<f32> {
+>   return select(base, mix(base, col, alpha), in_band(kind, cell_xy(pt, n))); }                       // bandmask
+> ```
+>
+> **Tests.** (1) Every saved stain renders bitwise the same with the state map in the build. (2) That arm fires: removing
+> Shape n̂'s registration changes the render. (3) A mixed quotient on Displacement is an error, not a silent cast.
+> (4) Switching the source chart and back restores the base's settings exactly. (5) Layers compose in order: grid over
+> checkerboard differs from checkerboard over grid wherever both are in band.
+
+*The three points §0 settles, applied as settled (the human's message):* **Shape n̂** is a separate node, kept exactly
+as it is, nothing migrated (§0: "just shape n node is different to this node, understood?"; "Shape n̂ kept as its own
+mode"). **The node is called Chart position** (§0: ""Chart position" — chosen for the node"). **The exact last
+position is not stored** (§0: "I wouldn't store the exact last position, I don't want to change the structs"); SM5a's
+edge clamp is the behaviour.
+
+*Decided per R-369 (mechanical consequences and routine choices; the human may veto any):*
+
+- **H1. One node.** §0's last quote makes Chart position one node with a time setting; SM14's "the two Where sources"
+  is read as that one node, a brightness field that compares two times taking two copies of it (SM15).
+- **H2. The port.** `principia_state_map.md` is ported to `docs/design/`, every line of the file kept and its headings
+  unchanged; the port adds a header note, *Transcribed from the prototype (R-542)* paragraphs (what the code does where
+  the file is silent, transcribed from `state_flow.html`, not re-derived), and *Port's note* paragraphs naming the RQs.
+  Where the file and the code disagree, the code is carried and the file's words kept (RQ-499). The prototype was read
+  as source; no browser was available to run it.
+- **H3. `decode_failed`.** A `decode_failed` sample the chart does not classify as not a system draws blank, as R-511
+  draws it, and Chart position tests the `state` lane before it projects; SM5's undetermined is `sim_failed` only,
+  `#141418` (R-467, R-511).
+- **H4. The status styles under a brightness node.** Chart position's statuses keep their own style in every mode; with
+  a brightness node the stain ends in the one post that draws each style over the combiner's output, as colour
+  composition §4.1's greyscale mode does.
+- **H5. The picture.** Image mode's picture is a `RenderState` field, its tier assigned in R-484's table by the task that
+  builds it (TASK-M7-49); the texture is a render-side bind group, no sim struct (SM2).
+- **H6. The chart inverses.** Where Chart position reads a chart's inverse in the fragment, it is generated to WGSL from
+  the one Rust source (R-116), never hand-written; whether it may read one at all is RQ-489.
+- **H7. The calibration values.** SM6's compaction scales `κ` (latent 3, momenta 0.3, the tilt's `s` π, dilation 0.6),
+  given no source, join Q8's tiling defaults in one calibration requirement (R-71), the prototype's values as the
+  starting values (RQ-487 (a)).
+- **H8. The requirements.** The draft `requirements_patch.yaml` is applied with `R-NEW` as R-542 and each `MILESTONE` as
+  M7 (the colour pipeline and the stain editor, `plan/MILESTONES.md` § "M7 — Colour composition and the display chain")
+  or M8 (Explore and the extension, § "M8"); every source heading is checked with `plan/tools/sections.py`; each verify
+  is completed with its cargo test and SM12's arm as written, the copies test the bitwise IC identity. Requirements are
+  added for the SM12 rows the draft lacked (Invariance, Conserved axes, Four results), for SM7's frame, SM8's Picture,
+  SM10's fade and ensemble, SM11's brightness occupants, SM15's tests (1) to (3), and the docs port. Each draft
+  statement the port reworded keeps the draft's words as a *Was* in its requirement's note (PR #270's code review, 3);
+  the edge-clamp requirement keeps the draft's "'none' must be available as a debug option", its difference from SM5,
+  SM11 and SM15 queued (RQ-505).
+- **H9. The tasks.** TASK-M7-46, the docs port, is done, closed by this ruling's PR. The colour pipeline: TASK-M7-47
+  (Chart position: SM1 to SM5, SM7; physics review on SM1, SM4 and SM5; waits on RQ-489), TASK-M7-48 (the bases, layers
+  and brightness occupants: SM6, SM11). The GUI: TASK-M7-49 (Picture, fade and ensemble: SM8, SM10), TASK-M7-50 (Replace-L's
+  chroma scaling, SM15; waits on RQ-496), TASK-M7-51 (the stain editor: SM15; the gui reviewer with `boards/`) and
+  TASK-M8-66 (Explore: the legend and ring of SM9, SM3's never-a-gap and copies, the firewall). The stain editor is
+  M7's (TASK-M7-22 to TASK-M7-24), so its state map work is M7's; the Explore legend is M8's (TASK-M8-22). Each
+  pipeline task states SM2's constraint. The inspector's controls for the picture's choice and upload, the fade's
+  toggle and SM7's colour frame are REQ-GUI-340's (PR #270's code review, 2), closed by TASK-M7-51, which builds the
+  inspector (gui re-review G6); TASK-M7-49 keeps the gui reviewer, the picture's and the fade's look on the figure
+  being GUI-facing. *Was:* "TASK-M7-49 has the gui reviewer, and its controls (…) are REQ-GUI-340's".
+- **H10. The queue.** Q1 to Q9 are RQ-480 to RQ-488, each with its recommendation as option (a), each (a) applied
+  meanwhile; Q4 is recorded in dd_colouring §3.2 and nothing in the vMF colouring changes.
+- **H11. One projection (PR #270's code review, 1; re-review C1 to C3).** SM1's `P_T` is "the target chart's
+  projection, the one the trace uses", so the target projections, the leaving rule and the curve axis's nearest point
+  are one Rust source in `crates/kernel`, beside the encode (the only crate rust-gpu compiles), its WGSL emitted to
+  `crates/render/wgsl/` as TASK-M2-25's decode and encode are. TASK-M7-52 builds it and tests its native build against
+  its generated WGSL (REQ-COL-134). Every consumer calls it, never a second implementation: Chart position (TASK-M7-47),
+  the hover trace's `z(t)` projection (TASK-M8-10), the line system's trace projection and its breaks (TASK-M8-49) and
+  the follow-up's per-axis leaving and curve projection (TASK-M8-58), each depending on TASK-M7-52 and each carrying a
+  check with a second implementation as its failing control (REQ-COL-135, closed by TASK-M8-58, the last). It reads no
+  chart from a colour occupant, so it does not wait on RQ-489. *Was:* "one Rust source, built by TASK-M7-52 and reused
+  by TASK-M7-47 (generated to WGSL for the fragment, R-116) and by TASK-M8-58's trace, which depends on it".
+- **H12. "Left" on main's encode (PR #270's physics review, P4).** Main's encode clamps (inverse encode contract Part 3)
+  and never returns a non-finite `z`, so the prototype's "both finite" test never fires there; the app's left status is
+  read from a shown coordinate's clamp, a definition TASK-M7-52 writes (R-72; REQ-COL-133), the clamp's margin
+  (`|q| ≥ q_max(1 − 2ε_q)`) stated in the four results' verify.
+- **H13. The tolerances (PR #270's qa review, F2; physics review, P2).** The `t = 0` identity's tolerances on the sphere
+  (the prototype's 1.5e-6, measured without R-141's gauge) and on ν × h (the prototype's 4.9e-4, its 1/1000 curve table)
+  join the calibration requirement, proposed with their measurement on the app by TASK-M7-47, never chosen by the test.
+- **H14. The boards (PR #270's gui review, G1 and G5).** The state map's boards are read for their new elements only, the
+  shell following `02_stain.png` and `01_main.png` (render GUI spec §G13's R-542 bullet, which names each departure).
+  Board 1's Problems-row buttons and board 4's "Set both to this chart" are not in SM15's text and are board-only, not
+  built. The Problems counts reach the GUI from the engine through the snapshot, never computed in the GUI
+  (gui_state_contract §1). The legend's colour block is the stain's own key, first, then the brightness key, R-541
+  P13's trace block and the debug view's key (§G6).
+- **H15. The consumers' agreement and its tolerance (PR #270's code re-review, C4 and C5; applied per R-369, accepted by R-559).** The host
+  consumers (TASK-M8-10, TASK-M8-49, TASK-M8-58) call the kernel function on the CPU and stay bitwise against it; Chart
+  position's fragment, which R-297 lets compile with fast-math, is held to the calibrated native–WGSL agreement
+  tolerance, as REQ-COL-134 is, its control shown to exceed it; the snippet `cargo xtask build-kernel` emits to
+  `crates/render/wgsl/` is exempt from REQ-COL-135's symbol check. TASK-M7-52 proposes that tolerance (R-71, R-297's
+  form), using its measured value until the M7 gate, and does not wait on RQ-487.
+- **H16. The status margin band (PR #270's physics re-review, P1; applied per R-369, after R-296).** A status is a
+  threshold on a continuous value (REQ-COL-133), so under R-297's fast-math a state within the agreement tolerance of a
+  link margin can change status on the GPU. REQ-COL-134 and REQ-COL-135's fragment arm hold the statuses equal outside
+  that band and accept either inside it, the point still held to the tolerance, the band's count reported and the seeds
+  including states just inside and just outside it; TASK-M7-52's proposal bounds or names the band's width, recorded as a
+  fixed constant. The host arms stay bitwise, statuses included.
+
+*Checked against `main` (4a32decf), `rulings/print-graph` (PR #268, 1b7ca0ed), `task/TASK-M2-24` (PR #262, 8096650d),
+`task/TASK-M2-34` (PR #269, a0cf17c5), `task/TASK-M2-28` (495deb17) and the rulings the file assumes (the human's
+message: "If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and
+queue it rather than resolving it"):* five conflicts are queued, not ruled:
+
+- **RQ-489:** Chart position reads the target chart and its inverse, which seam 6 and render contract Part 4 keep from
+  every colour occupant, a source included; and SM11's "a fixed t" (the human's message too: "or a fixed t") needs a
+  state other than the playhead's, which SM2 forbids storing. Meanwhile the playhead and `t = 0` only; TASK-M7-47 waits.
+- **RQ-496:** SM2's "the brightness slot is None" against L-ownership's combiner choice and SM11/SM15; SM15's Replace-L
+  chroma scaling against dd_colouring §3.5 ("Preserves hue and chroma exactly"), its test 6 and colour composition
+  §4.1's truth table (R-77), and against SM15's own "renders bitwise the same". Meanwhile Replace-L unscaled;
+  TASK-M7-50 waits.
+- **RQ-497:** main's Shape n̂ is a `vector` field with one colour editor, so SM15's Position and Bands counterparts are
+  the prototype's; §6's morphing against SM15's gate; §3.1's one-param source and band-masks as posts; board 4's sphere
+  paragraph against SM11; PR #268's Print graph sharing "Palette", "Flow", "field" and "post", and that branch's queued range
+  question for a payload field input. Meanwhile (a).
+- **RQ-498:** SM1 folds the mirror where SM4's shape-sphere row and the prototype's code read the signed `n̂`
+  (payload §5's `n`), and R-141's decode gauge puts a lower-hemisphere pixel's system on the upper hemisphere, so the
+  `t = 0` identity on a both-hemispheres view holds modulo the mirror; in-square mirror pixels (R-141, R-503 on
+  `task/TASK-M2-28`) agree to rounding, not bitwise; the trace draws a left or past-the-end sample as no value (R-538
+  TF1), where SM5a clamps, and SM12's Four results says the opposite of SM5a; the latent charts have no navigation edge
+  (R-469, R-537 EX3). Meanwhile (a), the code's reading. *Was (before PR #270's physics review, P1):* "the encode folds
+  the mirror, so on the shape sphere Chart position and Shape n̂ read mirror points where `n₃ < 0` …", the meanwhile
+  folding the target.
+- **RQ-499:** the code against the file: the preset names, the triangle palette's L, Picture under brightness, the fade
+  and the Fibonacci cells' swatches. Meanwhile the code.
+
+*Found by PR #270's review, queued, not ruled:* RQ-500 (gui G1), board 6's "Edit graph…" against PR #268's Print panel
+button, (c) applied meanwhile, no such button; RQ-501 (gui G1), board 6's ring with no hover trace or listen hint
+against R-541 and §G2, (a) applied, the trace kept and no figure ring while it is shown (re-review G7); RQ-502 (gui G4), the layers as their own graph node (boards 1, 4)
+against §3.1 and §9, (a) applied, one colour node; RQ-503 (physics P3), the prototype's `AMIN = 0.05` against R-21's
+`α_min = 0`, main's applied; RQ-504 (physics P1), the one-hemisphere view's target, the code's full sphere applied;
+RQ-505 (code 3), "none" as a debug option (the draft) against an ordinary setting (SM5, SM11, SM15, the code), the code
+applied. RQ-489's statement is corrected: the view chart's inverse is already in the encode `ROUNDTRIP` runs; only
+another target needs a second inverse (physics P5).
+
+What agrees: R-407's four extension types and R-412's mirror hemisphere (SM3, SM4); R-537 EX7(b)'s canonical quad and
+EX4's coarse-ancestor fill (SM3); R-470's blank for not a system and R-511's for `decode_failed`, as PR #269 draws them
+(H3); PR #269's field ramps' `#141418` for a non-finite value (SM5); TF1's definition of leaving, word for word SM5's;
+PR #262's encode as the quotient map (SM1, which also removes translation and the boost); `task/TASK-M2-28`'s
+exponential map, which has no θ or φ axis (SM4); PR #268's Print graph, a separate graph after the stain, its ruling
+showing the bare ground where a Chart position stain draws blank. No open branch adds an R, RQ, REQ or TASK id this port
+uses; the RQ ids PR #268 adds and the five another agent holds, between RQ-489 and RQ-496, are left alone.
+
+*What it extends:* **R-64** (the stain graph gains the `point⟨q⟩` subtype and the Chart position source; render GUI spec
+Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412, R-469, R-470, R-511, R-537 and R-538.
+
+R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
+
+Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
+
+## R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_state_map_tiling/` (the follow-up as delivered, and R-543's check
+`checks/r543_tiling_check.py` beside it), `docs/gui/reference/state_map/state_flow.html` (version 9 in place of version
+8), `docs/design/principia_state_map.md` (the header note; § "0. My words", the follow-up's words; § "SM6. Colour maps:
+one-to-one on the quotient, so they own lightness", § "SM8. Image mode", § "SM11. Colouring Chart position: a base, then
+layers", § "SM12. Tests (each with the arm that fires)" and § "SM15. In the stain graph editor", added to, no line
+changed), `docs/design/principia_colour_composition.md` § "1.5 A point on a chart: Chart position's colour slot (R-542)"
+(two sentences), `docs/read_first/principia_INDEX.md` (a row added, a row reworded), RQ-506 and RQ-507 (new),
+REQ-COL-136 to REQ-COL-138 (reqio, new), REQ-COL-129, REQ-COL-130, REQ-GUI-337, REQ-GUI-339 and REQ-GUI-340 (reqio,
+amended, each earlier text kept as its *Was*), TASK-M7-48, TASK-M7-49, TASK-M7-51 and TASK-M8-66 (closes, acceptance and
+notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-48 (the Torus), TASK-M7-49 (the wrap mode and the
+tileable checkerboard), TASK-M7-51 (the controls and the Flow preset) and TASK-M8-66 (the legend's period and the
+readout)*
+
+The human's words, a message of 21 Oct 2026, verbatim:
+
+> "Follow-up from me, Malachy, to the state map bundle (R-542). The attached INSTRUCTION.md is my ruling: colour maps
+> that tile the infinite plane (a Torus gradient, a wrap mode on the Picture base, a tileable checkerboard). Quote its
+> §0 verbatim, record it as a new ruling amending R-542, and apply it as its §6 says: spec, requirements, tests,
+> check_plan, one PR with the test output pasted in. Port from demo/state_flow.html. Queue anything it conflicts with
+> rather than resolving it."
+
+and the follow-up's `INSTRUCTION.md`, its heading and preface and its §0, "My words", verbatim, its spelling as written:
+
+> # State map follow-up: colour maps that tile the infinite plane
+>
+> A follow-up from me, Malachy, 21 Oct 2026, to the state map bundle (R-542, PR #270). This is a ruling of mine; quote
+> §0 verbatim wherever it is recorded.
+>
+> ## 0. My words
+>
+> > "i geuss what i'm reaching for are colour maps that tile cleanly over the whole infinire plane because the tiling is
+> > weird right now ?"
+>
+> To the proposal of a Torus gradient base and a Repeat wrap mode for the Picture base:
+>
+> > "yeah"
+>
+> And on the prototype built from it (`demo/state_flow.html` here, version 9 of the State Flow page):
+>
+> > "ok add this as follow up instructiosn bc i already sent of f that bundle"
+
+*The applied text (per R-369; the human may veto any).* `INSTRUCTION.md` §1 to §6, verbatim:
+
+> ## 1. What was wrong
+>
+> The Picture base is finite: it is laid on the target chart's home square, and SM8 extends it past the square by
+> **mirror-repeating and dimming** it. On a picture made of cells this does two bad things:
+>
+> - **The pattern breaks at every seam.** A mirror repeats the edge row, so the same cell appears on both sides of the
+>   square's edge (one bright, one dim) and a checkerboard stops being a checkerboard.
+> - **The colours fold back.** Past the edge the picture runs backwards, so a system far outside gets the colour of one
+>   just inside.
+>
+> Mirroring stays right for photos. For a cell picture it is wrong, and no base so far tiles the plane with no seam and
+> no special home square.
+>
+> ## 2. What to add
+>
+> ### 2.1 Torus gradient (a Gradient option, flat charts and the cylinder)
+>
+> A colour map periodic on the plane. Each period maps onto a torus inside OKLab:
+>
+> ```
+> X, Y  = position in periods, in CHART UNITS (never the squashed square), n periods across the home square;
+>         on the plane the y period count is round(n · H / W), as the Palette's tiling already does
+> θ = 2π X,  φ = 2π Y
+> (a, b) = (R + r cos φ) (cos θ, sin θ)
+> L      = L₀ + r_L sin φ
+> R = 0.074,  r = 0.037,  L₀ = 0.70,  r_L = 0.12
+> ```
+>
+> - On the cylinder, X is θ itself once round (wrap(θ)/2π), and only s repeats.
+> - A torus sits in 3-D colour without touching itself (R > r), so within one period the map is one-to-one and
+>   continuous; across periods it repeats exactly.
+> - Fixed shape, never clipped per pixel (SM6's rule). The constants are 0 out of gamut on a 240² sweep of (θ, φ), at
+>   0.975 of the largest scale that stays in gamut (`checks/torus_gam.js`). They are calibration values under R-71,
+>   confirmed at the M7 gate with the rest of SM6's.
+> - It spends L on position, so a brightness node after it gets the existing "no longer one-to-one" warning.
+> - The honest cost: a system exactly one period away gets the same colour. The legend states the period in chart
+>   units; "Left its starting tile" brightness already separates such systems.
+> - Setting: **Repeats** (1, 2, 3, 4, 6, 8 across the square; default 2). Shown only when Torus is chosen.
+> - SM6's table already lists circle × circle → torus; this realises it for the plane by making the plane periodic.
+>
+> ### 2.2 Picture wrap mode
+>
+> The Picture base gets **Past its square**: Repeat · Mirror · Clamp, and a separate tickbox **Dim past the square**.
+>
+> - Repeat: `s − floor(s)`. Mirror: the existing triangle wave. Clamp: the edge colour.
+> - **Defaults are Mirror with dimming on**, so every saved stain renders bitwise as before.
+> - The hovered-pixel readout and the graph strip name the wrap mode ("Picture · repeat").
+>
+> ### 2.3 A tileable built-in picture
+>
+> **Checkerboard, tileable**: 8 × 8 cells, cell (i, j) coloured by the torus at its centre
+> (θ = 2π(i + ½)/8, φ = 2π(j + ½)/8), chroma × 0.8, L × 0.8 about L₀, then ±0.07 L by parity. Its colours wrap, so under
+> Repeat it has no seam. 0 of 64 cells at a channel limit. The existing Checkerboard stays as it is: under Repeat its
+> parity holds but its colour ramp jumps at the seams, which is the picture's property, not the wrap mode's.
+>
+> ### 2.4 The Flow preset
+>
+> The Flow preset becomes **Checkerboard, tileable** with **Repeat** and dimming **off**. That is the one deliberate visual
+> change in this follow-up.
+>
+> ## 3. Spec changes (`docs/design/principia_state_map.md`)
+>
+> - **SM6:** add the Torus gradient to the plane and cylinder rows of the map table, with the constants and the
+>   periodicity cost above. Mark the circle × circle row as realised by it.
+> - **SM8:** replace "mirror-repeated and dimmed" with the wrap mode and the dim tickbox, defaults Mirror and on; say why
+>   Mirror is wrong for cell pictures (§1).
+> - **SM11:** add Torus to the Gradient row of the bases table (plane and cylinder); add the wrap setting to Picture;
+>   add "Checkerboard, tileable" to the built-in pictures.
+> - **SM11 lightness paragraph:** list the Torus gradient among the bases that spend L on position.
+> - **SM12:** add the tests in §5.
+> - **SM15:** the Flow preset as in §2.4. If my ruling on RQ-499 has renamed the presets by then, use the new name.
+> - Add a §0 entry quoting §0 here.
+>
+> ## 4. Requirements (via `plan/tools/reqio.py`, area COL; next free numbers)
+>
+> 1. "Chart position's Gradient base must offer a Torus gradient on flat charts and the cylinder: periodic in chart
+>    units with a set number of periods across the home square, one-to-one within a period, seamless across periods,
+>    and in gamut with no per-pixel clipping."
+> 2. "The Picture base must offer a wrap mode past its square (Repeat, Mirror or Clamp) and a separate dim setting; the
+>    defaults must be Mirror and dim on, so existing stains render unchanged."
+> 3. "The built-in pictures must include a tileable checkerboard whose colours wrap, so it tiles the plane with no seam
+>    under Repeat."
+>
+> Each cites the sections in §3, `rulings: [R-<this ruling>]`, milestone as the state map's own.
+>
+> ## 5. Tests (each with the arm that fires)
+>
+> | test | asserts | fires on |
+> |---|---|---|
+> | Torus seam | colour at (u, v) equals colour at (u + P, v) and (u, v + P_y) to 1e-12 over a sweep reaching well past the square (prototype: 2.7e-17) | a period computed in squashed or compacted units; an off-by-one in the period count |
+> | Torus one-to-one | within one period, distinct grid points have distinct colours (minimum OKLab separation > 0 on a 200² grid) | R ≤ r, or L and chroma swapped so the tube self-intersects |
+> | Torus gamut | 0 samples out of sRGB on a 240² (θ, φ) sweep, with no clipping in the shader path | constants raised past the gamut, or a per-pixel clamp added |
+> | Wrap defaults bitwise | a stain saved before this change renders bitwise identically (Gradient 2D, Picture, Palette hex; the prototype checks all three) | the default wrap or dim flipped |
+> | Wrap arm | the same Picture under Repeat and under Mirror differs past the square and is identical inside it | a wrap setting that is not wired through |
+> | Tileable checker seam | under Repeat, the cell across each seam has opposite parity and the colour difference across the seam equals that between neighbouring cells inside | the old checkerboard silently substituted |
+>
+> ## 6. How to apply
+>
+> - Record this as a new ruling in `decisions.md` from the next free R-number, quoting §0, naming R-542 as the ruling it
+>   amends.
+> - Spec, requirements and tests as above; then `check_plan`.
+> - Port from `demo/state_flow.html`: `SM_TORUS`, `smTorusXY`, `smTorusLab`, `smWrapFn`, and the `tchecker` branch of
+>   `smImage`. The constants are the prototype's; the algebra is short enough to transcribe, not re-derive.
+> - Where this conflicts with a ruling or a queue entry these texts do not address, queue it rather than resolving it.
+> - One PR. Paste the test output in it.
+> - The security rule stands: never delete or modify anything outside the repo and build/scratch directories without
+>   asking.
+
+*Decided per R-369 (mechanical consequences and routine choices; the human may veto any):*
+
+- **H1. The port adds only.** No line of `principia_state_map.md` is changed or removed: each R-543 rule is added beside
+  the line it amends, marked *(R-543)* or *Amended by R-543*, so R-542's port still holds the bundle's file as a
+  line-for-line subsequence (REQ-COL-112's verify). §3's "replace "mirror-repeated and dimmed"" is applied that way: SM8's
+  bullet stays and an *Amended by R-543* sub-bullet follows it. Colour composition §1.5 gains a sentence on the Torus
+  and one on the wrap mode.
+- **H2. The prototype.** `docs/gui/reference/state_map/state_flow.html` becomes version 9, the follow-up's
+  `demo/state_flow.html` byte for byte, so the spec's transcription source is the code it transcribes; its diff against
+  version 8 is the tiling only (51 lines), and version 8 stays in `docs/incoming/2026-10-21_state_map/demo/` as
+  delivered. The prototype was read as source; no browser was available to run it.
+- **H3. The check.** §5's numeric tests run on a transcription of the prototype in Python, standard library only, run
+  with `python3 -I`, reading and writing no file: `docs/incoming/2026-10-21_state_map_tiling/checks/r543_tiling_check.py`,
+  the port's own file beside the bundle's `torus_gam.js` (committed, not kept in a scratch directory, so a reviewer can
+  run it in their worktree; the bundle's four files are unchanged). It transcribes `SM_TORUS`, `smTorusXY` with
+  `smTileXY` and `smNTheta`, `smTorusLab`, `smWrapFn`, `smImage`'s `checker` and `tchecker` branches, `smPaint`'s Picture
+  look-up and `oklabToRgb`, and runs each test's passing arm and then its failing arm: 21 checks, 0 failed (Torus seam
+  1.6e-14; one-to-one 1.16e-3; gamut 0 of 240²; Wrap arm 0 inside, 19,200 of 24,000 past, and H11's edges, 0 of
+  25,600 differing on [0, 1)² and 321 of 321 far-edge samples at the stated texels; tileable seam 6e-17; the
+  constants at 0.9745 of the largest in-gamut scale, §2.1's 0.975). Its output is in R-543's PR. *Was (PR #272's qa
+  review 5602907732, Q1):* "19 checks, 0 failed", before H11's edge check and its arm.
+- **H4. One-to-one's arms (state map SM12, its *Port's note (R-543)*).** "Minimum OKLab separation > 0 on a 200² grid"
+  fires on R = r (separation 0 on the grid's row φ = π) but not on R < r or on L and chroma swapped (2.1e-6 and 1.4e-5),
+  because the tube meets the L axis between grid rows. The test keeps its assertion and its arms and adds one, read
+  from the map's output alone: the signed radial chroma `(a, b)·(cos θ, sin θ)` is > 0 at every point of the 200²
+  grid, the tube clear of the L axis. It fires on every arm, a changed formula as well as changed constants: on the
+  transcription it is 0.037 at the constants, 0 at R = r, −0.007 at R = 0.030 and −0.046 swapped. "L and chroma
+  swapped" is read as the tube's L amplitude `r_L` and chroma radius `r` exchanged. *Was (PR #272's code review, C1):*
+  "adds one: `R > r` on the constants, the tube clear of the L axis, which fires on every arm", which a swapped formula
+  with unchanged constants passes.
+- **H5. The tileable seam's step along y.** Inside a column the step between neighbouring cells varies with φ, so "the
+  colour difference across the seam equals that between neighbouring cells inside" is held, along y, to the picture's
+  own rule from cell 7 to cell 8, which wraps to cell 0; along x every neighbouring step in a row is equal, the seam's
+  included. The old checkerboard fails along x (0.383 across against 0.321 inside).
+- **H6. The requirements.** §4's three statements, verbatim, are REQ-COL-136 (the Torus; TASK-M7-48, which builds the
+  Gradient base), REQ-COL-137 (the wrap mode and dim; TASK-M7-49, which builds the Picture base) and REQ-COL-138 (the
+  tileable checkerboard; TASK-M7-49), M7, `rulings: [R-543]`, their sources the §3 sections and this heading, each
+  verify §5's rows with their arms. The rest is carried by the requirements that already own it, each earlier text kept
+  as its *Was*: REQ-COL-130's mirror and dim read "by default"; REQ-GUI-337's Flow preset follows the prototype's
+  `smPreset`, now version 9 (TASK-M7-51); REQ-GUI-340's inspector gains the Repeats setting, Past its square and Dim
+  past the square, the node's label naming the wrap mode (TASK-M7-51); REQ-GUI-339's legend states the Torus's period
+  and the hovered-pixel readout names the wrap mode (TASK-M8-66; RQ-506); REQ-GUI-336's Problems pane counts the
+  Torus, on the plane and the cylinder, among the bases that spend L, its "no longer one-to-one" warning under a
+  brightness node checked with an arm that fires (§2.1; TASK-M7-51; PR #272's gui review, G1, applied per R-369).
+- **H7. The calibration values.** The Torus's `R = 0.074`, `r = 0.037`, `L₀ = 0.70`, `r_L = 0.12`, its default of 2
+  Repeats, and the tileable checkerboard's 0.8 (chroma), 0.8 (`r_L`) and ± 0.07 (`L` by parity) join REQ-COL-129, the
+  state map's calibration requirement (R-71), confirmed at the M7 gate with SM6's, the prototype's values the starting
+  values (RQ-487 (a)), as R-542 H7 placed SM6's.
+- **H8. Wrap defaults bitwise** needs the app: it is REQ-COL-137's verify, TASK-M7-49's. A stain saved without the wrap
+  and dim fields, as every stain before R-543, loads at Mirror with dimming on and renders bitwise as R-542's look-up;
+  Gradient 2D and Palette hex render bitwise with the fields present and absent. On the transcription version 9's
+  look-up at its defaults equals version 8's on every texel (H3).
+- **H9. Where the Torus is offered.** "Flat charts and the cylinder" (§2.1, §4) is read as §3 has it, the plane and
+  cylinder quotients, which is where the code offers it (`SM_GRAD`): not the sphere or the simplex. On the cylinder θ
+  is once round, a whole period as the 2D gradient's hue circle is; REQ-COL-127's multiple of 6 is the tilings' count,
+  which the Torus does not use.
+- **H10. Flow keeps its name.** §2.4's preset is SM15's Flow, the file's name; the prototype's button reads "Picture
+  flow", the difference RQ-499 holds. Nothing is renamed here.
+- **H11. The Wrap arm's "inside" (state map SM8, SM12; applied per R-369, PR #272's qa review 5602907732, Q1).** §5's
+  "identical inside it" is read on `[0, 1)²`: the prototype's look-up counts `s = 1` inside the square (`u > 1` is
+  past it) and there reads texel 0 under Repeat and texel `N − 1` under Mirror (SM8), so the two modes agree on the
+  half-open square, `s = 0` included, and differ on its closed far edge. REQ-COL-137's verify asserts both, with an
+  arm (the edge rule moved) that fires; the check runs them (H3). §5's words are unchanged. Its Wrap defaults
+  bitwise legs for Gradient 2D and Palette hex get arms of their own (an old Gradient 2D stain loading as the Torus;
+  the Palette's tiling changing when the Repeats field is present), and REQ-GUI-339's legend period is checked for
+  its value, REQ-COL-136's `P` and `P_y`, with an arm for a wrong one (qa Q2, Q3).
+
+*Checked against `main` (a0a83ca3), `rulings/print-graph` (PR #268, 765fe6d0), `task/TASK-M2-28` (PR #271), `task/TASK-M2-34`
+(PR #269), `task/TASK-M2-24` (PR #262) and the open queue entries the follow-up touches (RQ-487, RQ-498, RQ-499):* two
+conflicts are queued, not ruled:
+
+- **RQ-506:** the code and the ruling's text: the legend states no period and the hovered-pixel readout does not name
+  the wrap mode in the prototype, and the code's period counts (`max(1, round(n·H/W))`; `s` `n` times over the
+  cylinder's square) go past the text's. Meanwhile (a): the ruling's text where the code is silent, the code's counts.
+- **RQ-507:** "Left its starting tile" separates systems one Torus period apart only where the Palette's tile
+  containing the system ends, in chart units along the move's axis, within one Torus period ahead of it, in the
+  move's direction, since under Chart
+  position the tile is the Palette's (SM11). Both counts per axis are `smTileXY`'s (rounded along y and along the
+  cylinder's `s`), and under squashed spacing the tile is measured through the compaction. So, in the cases the
+  port's survey measured, positions stay at some offered settings of hexagons, brick, stripes, squashed spacing
+  (inside the square at 8 offered pairs, each with `m < 2n`; past it at every offered pair), non-square charts, and
+  each of the cylinder's six tilings along `s`; squares and triangles on the flat charts measured stay separated at
+  every offered pair with `m ≥ n`. Of the three options, (b), the Torus's own period cell, changes on every
+  one-period move by construction. And the brightness
+  node it needs replaces the L the Torus spends. Meanwhile (a), the code. *Was (PR #272's physics review, P1):* "only
+  when the Palette's count is at least the Torus's Repeats". *Was (physics review 5602225811, P1 and P2):* the
+  per-case list, its squashed-spacing case "not past the square" and its y conditions in `m/n`. *Was (physics
+  review 5602328075, P1 to P3):* "within one Torus period of it", with no direction; "(toward the square's edge and
+  past it)"; "only (b), the Torus's own period cell, separates in every case". *Was (physics review 5602473583,
+  P2):* "the cylinder's squares and triangles along `s`".
+
+What agrees: SM6's rule, a fixed chroma never clipped per pixel (the Torus's gamut, 0 of 240²); SM6's circle × circle
+row, which the Torus realises; SM11's chart units by default and its whole periods on the cylinder; SM3's copies, which
+the Torus colours alike since it is a function of the chart point (θ wrapped on the cylinder); R-542 H5's picture as a
+`RenderState` field, the wrap mode and dim beside it, no sim struct (SM2); SM15's "every saved stain loads and renders as
+before", which the defaults keep. A system that has left takes the navigation edge it left by under the Torus as under
+the tilings, which RQ-498 already holds (no navigation edge on main's latent charts). No open branch adds an R, RQ, REQ
+or TASK id this port uses; the ruling and queue ids PR #268 holds, and the queue ids reserved for another agent, are
+left alone. The
+human's ruling on RQ-499, given the same day and not on `main`, keeps the file's preset names, as H10 does.
+
+*What it amends:* **R-542** (state map SM6, SM8, SM11, SM12 and SM15; SM8's fixed mirror and dim becomes a wrap mode's
+default, the Flow preset's picture and settings change). Read with R-71, R-369 and RQ-487, RQ-498 and RQ-499.
+
+R-543 is in the "design" group of `plan/rule_groups.yaml`, with R-542.
+
+Adds REQ-COL-136 to REQ-COL-138; amends REQ-COL-129, REQ-COL-130, REQ-GUI-337, REQ-GUI-339 and REQ-GUI-340.
+
+## R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_shape_sphere_whole/` (the instruction as delivered, its two
+addenda, the plain summary's two versions, the reply, and `checks/r544_check.py`, the port's check),
+`docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`" (the held values), § "3.3 The chart map"
+(the hemisphere paragraph, the exponential map's `system_image`, the tilted fold, past the unit square) and § "5.4
+Past the unit square — each axis's extension type (R-407)" (the
+sphere's rows), `docs/contracts/principia_chart_decoder_contract.md` § "Part 1 — The physics: what the 8D actually
+is", § "Part 2 — The decoder" (the canonicaliser), § "Past the unit square — each axis's extension type (R-407)" (the
+primary ranges, the one-hemisphere sentence, "Repeats and the canonical point") and § "Part 5 — Well-posedness and the
+validation contract" (n-to-1), `docs/contracts/principia_inverse_encode_contract.md` § "Part 5 — Inverse by axis kind
+(completing the four kinds)" and § "Chart-aware validation" (the `system_image` row),
+`docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set" (the
+shape sphere's row), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (the
+toggle, the fold past the square) and § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+(the constructor), `docs/design/principia_trajectory_viewing.md` § "4. Click inspector — the three-panel absolute
+surface" (pane 2), `docs/design/principia_lines.md` § "8. Traces" (repeats), `docs/design/principia_state_map.md` §
+"SM1. Definition", § "SM3. Source side: the extension comes for free, because the colour is a property of the system",
+§ "SM4. Destination side: why it must be a quotient, not a branch", § "SM7. Colour frame and deep zoom" and § "SM11.
+Colouring Chart position: a base, then layers" (port's notes and the hemisphere row), `docs/notes/ic_inspector_scratchpad.md`
+§ "Status — as built (supersedes stale details below)" (a sentence), the forward lines of R-59, R-113, R-141, R-178,
+R-408, R-412, R-503, R-537, R-538 and R-542, RQ-498 and RQ-504 (a dated line each), RQ-508 (new), the requirements
+named below (reqio), TASK-M2-43 and TASK-M8-67 (new), TASK-M2-28 and TASK-M8-44 (re-scoped), TASK-M2-36, TASK-M4-06, TASK-M7-47,
+TASK-M7-48, TASK-M8-05, TASK-M8-11, TASK-M8-06, TASK-M8-15, TASK-M8-55, TASK-M8-56, TASK-M8-58 and TASK-M8-66 (their requirements'
+changes), `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/reviewers/gui.md` and `plan/reviewers/physics.md` (regenerated)
+and `plan/rule_groups.yaml`; built by TASK-M2-43, TASK-M2-28, TASK-M8-44, TASK-M8-55, TASK-M8-56, TASK-M8-58 and
+TASK-M8-67*
+
+The human's covering message, 21 Oct 2026, verbatim:
+
+> New instruction from me, Malachy. The attached INSTRUCTION.md is my ruling: the shape sphere chart is the whole
+> sphere. Quote its §0 verbatim, record it as a new ruling amending R-113, R-141, R-412 and R-537 EX7, and apply it as
+> its §5 says. One PR with the test output pasted in. Queue anything it conflicts with rather than resolving it.
+
+`INSTRUCTION.md` §0, "My words", verbatim:
+
+> "One thing I don't really get why is the thing actually now thinking about it more is on the shapesphere chart, the
+> one hemisphere mode doesn't actually make any sense. It makes sense in terms of the initial condition inspector,
+> right? When it's like how it's the same system, right? Reflected, right? Because of how the like angle wrapping or
+> like symmetry reduction works and like the initial condition like generator thing. It makes sense there. But in terms
+> of like an actual chart that the Explorer uses and the Atlas uses and the Trace system uses and the Listening system
+> uses, basically just what everything else uses, it doesn't actually make any sense because, especially with traces,
+> like the system can go through the angles on the opposite hemisphere, on like the other side of the hemisphere. So
+> like removing it just doesn't make any sense because you're like cutting away like an entire set of angles and like
+> reflecting, and you're sort of lying because it did actually go through that angle. if you get me?"
+>
+> And, to the proposal in §1–§2 below:
+>
+> > "yes"
+
+The first addendum, the human's words, which it asks to be quoted verbatim:
+
+> "you might as well just have full access to all the angles and just let the symmetry be obvious."
+
+and its ruling, verbatim (`ADDENDUM.md`):
+
+> In the initial-condition constructor (the editor showing the triangle, the bodies and where the system lands on the
+> shape sphere): every angle is reachable, both hemispheres, with no limit. The mirror twin is shown, not enforced: a
+> faint marker at (θ, π − φ) on the sphere, with the inspector's "mirror twin of …" note, so the symmetry is visible
+> rather than imposed. Dragging the point across the equator flips the triangle's orientation in the triangle view,
+> which is correct. Fold this into the same PR and the same ruling.
+
+The second addendum, verbatim (`ADDENDUM_2.md`):
+
+> Second addendum from me, Malachy, to the shape sphere ruling: it supersedes the two mirror clauses of my RQ-498
+> ruling in rulings_2026-10-21.md ("the t = 0 identity on the sphere is stated modulo the mirror, under R-141" and
+> "in-square mirrors match to rounding"). On the shape sphere there is no mirror identification now, so the identity
+> holds point for point.
+
+The plain summary's second version, verbatim (`PLAIN_SUMMARY_2.md`; it is the later one and governs; the first
+version, `PLAIN_SUMMARY_1.md`, is kept as the record):
+
+> From me, Malachy. A plain summary of how the mirror and the shape sphere should work, to sit beside the shape sphere
+> instruction I sent. If anything in that instruction or my earlier rulings disagrees with this, this is what I mean;
+> queue the disagreement rather than guessing.
+>
+> There are two different shape spheres. Keep them apart.
+>
+> 1. The shape sphere in the initial-condition constructor. This is the small sphere in the editor, beside the triangle
+>    and the bodies, showing where the starting condition you are building sits. A triangle and its mirror image play
+>    out the same way and end the same way, and this is the one place where saying so is useful. So: every point on it
+>    is reachable, both halves, nothing blocked off. The mirror twin of the current point is shown as a faint marker, so
+>    the symmetry is obvious rather than enforced. Dragging across the equator flips the triangle in the triangle view.
+>
+> 2. The shape sphere chart. This is the chart you explore, render, trace and listen on, like any other chart. It is
+>    the whole sphere, always. The top half is the triangle one way round, the bottom half is it flipped, and the
+>    equator is where the bodies are in a line. Every point is its own real system. There is no hemisphere mode and no
+>    folding. A moving system crosses the equator whenever the bodies line up, so its trace carries on into the other
+>    half and you see it. Listen already works this way.
+>
+> The other charts were never the problem. Where they cannot show something, they say so and the trace leaves the
+> chart. Nothing is folded or faked. Do not change them for this.
+>
+> The rule underneath it: the mirror is a fact about fates ("these two end the same way"). It belongs in the
+> constructor, as information. It is not a reason to hide half of the chart a system moves through.
+>
+> One tidy-up: this supersedes the two mirror clauses of my RQ-498 ruling in rulings_2026-10-21.md ("the t = 0 identity
+> on the sphere is stated modulo the mirror, under R-141" and "in-square mirrors match to rounding"). On the shape
+> sphere chart the identity now holds point for point.
+
+The human's reply confirming the porter's restatement, verbatim (`REPLY.md`):
+
+> That's right on every point. Answers:
+>
+> - The compute shortcut: drop it. No folding of any kind on the shape sphere chart, visible or not. If the chart is
+>   ever too slow we'll add it back as a measured optimisation, as a separate decision.
+> - Make sure the agent doing the shape sphere work has the plain summary and the RQ-498 tidy-up before it continues.
+>   It does not need anything else I sent about other charts; nothing changes there.
+> - Redo #271 to match the whole-sphere chart.
+> - Where the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there
+>   already chose the full sphere with signed n̂, so they should agree.
+>
+> Go ahead with everything.
+
+**The ruling** is `INSTRUCTION.md` §2 and §4, as read in `docs/incoming/2026-10-21_shape_sphere_whole/`, with the
+addenda, the plain summary and the reply. "The compute shortcut" is §2 item 6's second bullet, the optional EX7 fold
+saving; "#271" is the open PR for TASK-M2-28. In short:
+
+1. The shape sphere chart is the whole sphere everywhere (Explore, the Atlas, traces, Listen, the state map, prints,
+   the batch job). Pixel `(θ, φ)` decodes to the system whose **signed** `n̂` is that point; R-14's `φ = π·(1 − t)`,
+   pole to pole, is the only φ span.
+2. R-141's decode gauge is removed for the shape sphere: "A lower-hemisphere pixel decodes to the true mirror
+   system" (§2 item 2; read as "The held momentum below the equator" below says). The chart's `system_image` is one-to-one over the sphere, n-to-1 only over its genuine
+   identifications, θ's period and the poles. R-157's `DoubleCover` for the full-range Burrau chart is untouched.
+3. The hemisphere toggle is removed from the Manifold view's Chart section, and R-412's remap is withdrawn with it.
+4. The mirror is no longer a repeat. R-537's repeats on the shape sphere are θ's period and the pole crossing only. A
+   pixel past the equator is its own system, with its own pick, readout, trajectory, outcome and inspector.
+5. The mirror becomes a test, not an identification. Where every coordinate the chart holds fixed is
+   mirror-equivariant (released from rest is), mirror-invariant fields are exactly symmetric across the equator and
+   signed fields exactly antisymmetric. Where one is not (a fixed `L_z ≠ 0`, say), the two hemispheres are different
+   systems and the test does not apply; the test says which case it is in.
+6. The fold survives in one place: the IC inspector notes a system's mirror twin ("mirror twin of the system at
+   `(θ, π − φ)`"). **§2 item 6's second bullet, the optional compute saving, is withdrawn by the reply**: no folding of
+   any kind on the shape sphere chart, visible or not; a measured optimisation, if one is ever wanted, is a separate
+   decision. §4's "Fold saving is exact" row goes with it.
+7. Area statistics are counted over the whole sphere. Where item 5's symmetry holds every fate is counted twice,
+   equally, so fractions are unchanged; that is a statement of the symmetry item 5 tests, not a fold. A statistic
+   measured under one hemisphere says so, beside R-544.
+8. Traces on the shape sphere use the signed `n̂` over the whole sphere, as Listen already does. "Show the canonical
+   bodies" in the trajectory panel may stay as a view of the bodies; it never folds the path.
+9. **Two shape spheres, kept apart** (the plain summary). The initial-condition constructor's sphere, the small sphere
+   in the Inspector beside the triangle and the bodies, is where the mirror is information: every point of both halves
+   is reachable, nothing blocked off; the current point's mirror twin is drawn as a faint marker at `(θ, π − φ)`, with
+   the inspector's "mirror twin of …" note; dragging the point across the equator flips the triangle in the triangle
+   view. The shape sphere chart is the other one, items 1 to 8. No other chart changes.
+10. The RQ-498 tidy-up (the second addendum): the two mirror clauses of the human's RQ-498 ruling in
+    `rulings_2026-10-21.md` are superseded; on the shape sphere chart the `t = 0` identity holds point for point.
+
+**What it amends and withdraws.** R-113: the hemisphere toggle's placement goes, the projection selector's stays.
+R-141: its decode gauge and its 2-to-1 cover go for the shape sphere; `DoubleCover`'s retirement for the shape sphere
+and R-157's restoration for the Burrau chart stand. R-412 is withdrawn: with no one-hemisphere view there is nothing to
+remap. R-537: EX2's "hemisphere's fold at the equator" type, EX5's fold among the repeats and EX7(b)'s "hemisphere fold
+at the equator" map go; θ's period and the pole maps stand. R-59: D5's `system_image` replacing
+`has_redundant_hemisphere` stands; the shape sphere's value it cites, the 2-to-1 cover, goes. Applied per R-369, each a
+mechanical consequence of items 1 to 4, the further rulings whose text turns on the fold: R-178 (its sentence that the
+canonicaliser's fold is checked on the upper hemisphere; the round trip composing `Φ` alone stands), R-408 (B3's and
+B7's "with both hemispheres drawn" and the 2-to-1 fold, and B4's one-hemisphere toggle, as ruled by R-412), R-503 (the
+exponential map's per-pixel fold: its cap is one-to-one now, whether or not it straddles the equator; the radius
+bounded at π and the domain's end past it stand), R-538 (TM7's "fold charts (the shape sphere, its hemisphere)" and the
+trace folding at the equator with the toggle on; J9's frame rule, the full sphere read unmirrored, already agrees) and
+R-542 (SM1's mirror identification and fold for the shape-sphere target, SM3's hemisphere fold and in-square mirror
+pixels, SM4's hemisphere row, and SM7's identity modulo the mirror, for the shape sphere chart only; every other
+chart's rows stand).
+
+**What it settles.** RQ-498 and RQ-504, where they turn on the hemisphere: the shape-sphere target is the full sphere
+with the signed `n̂`, the `t = 0` identity holds point for point, and there are no mirror pixels inside the square, so
+"in-square mirrors match to rounding" has nothing left to describe; the one-hemisphere view, RQ-504's subject, is gone.
+Both entries stay open in `REVIEW_QUEUE.md` with a dated line each, for the batch rulings PR that records the human's
+`rulings_2026-10-21.md` and archives them; RQ-498's other parts (left samples, the navigation edge, the bitwise copies
+of EX7 repeats) are not this ruling's.
+
+**Applied per R-369** (mechanical consequences and routine choices; reviewed by physics):
+- **The decode** (item 2). The shape sphere's `Φ` already places the pixel's own shape; what R-141 added is `C`'s
+  mirror step on the joined state. So the shape sphere's decode runs the one shared `C` (REQ-CHART-015) with its step 3
+  not taken: CoM at the origin and at rest, `I = 1`, `ρ̃` on `+x`, and `λ̃_y` keeping its sign. On every other chart
+  `C` is unchanged. Only the shape sphere's call changes.
+- **The held momentum below the equator** (items 2 and 5). `p_fixed` is held in the shape sphere's own frame, `ρ̃` on
+  `+x`, unmirrored, at every pixel (chart_reference §3, the held values; R-538 J9's frame rule: the full shape sphere
+  is read "unmirrored, `ρ` along `+x`"). So the lower pixel holds the same momentum components as the upper one, and
+  the two are mirror twins exactly when the held momentum is its own mirror image (its `y`-components zero, released
+  from rest included), which is item 5's equivariant case; otherwise they are different systems, item 5's "does not
+  apply". Mirroring `p_fixed` below the equator, as R-141's gauge did, would make every pair twins and leave item 5's
+  second case empty. So item 2's "the true mirror system" is read as the system at the mirrored shape with `p_fixed`
+  held in the unmirrored frame, which is the upper pixel's mirror image `Π·x` exactly when the held momentum's
+  `y`-components are zero (code review 5603292175 of PR #273, F4: the human's words quoted in item 2, this reading
+  stated here, for the human's veto).
+- **The mirror test's precision** (item 5, under §4's own words "bitwise where the integration is mirror-exact, else
+  to rounding"; physics review 5603309678 of PR #273, P2). The run from the exactly mirrored IC, `Π` applied to the
+  decoded state, is the run mirrored, bitwise. The two pixels of a pair decode to mirror images only to the decode's
+  rounding (their shapes within REQ-CHART-053's bound at every pixel; their states within `ε_phys`, REQ-ENC-024, on
+  the pixels whose `n̂` lies farther than a stated `δ` from each of the three binary-collision landmarks, with
+  `ulp/δ ≤ ε_phys`, since near a landmark `λ̃`'s direction is conditioned as `ulp/‖ρ̃‖` and a rounding-level
+  difference in `n̂` turns the state by `O(1)`; physics review 5603529679, P6, and 5603638748, P9: `φ = π(1 − t)` and
+  `π·t` do not sum to `π` exactly), so on a chaotic run their fates
+  can differ; fate equality and item 7's "counted twice" across pixel pairs are asserted on a named fixture whose
+  pair runs the test shows to stay close over its horizon, and the counts only for mirror-invariant classes (outcome,
+  escaper, collision pair), a signed class (a winding or braid class) mapping to its mirror class. A test detail under
+  §4's words, not a change to the ruling.
+- **The lookup** (the encode into the chart). The shape sphere's chart point is the state's signed `n̂`: the
+  shape read from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror land at
+  `(θ, φ)` and `(θ, π − φ)`. Inverse-encode's T1, `E(g·x) = E(x)` over the gauge group with its `Z₂` mirror, stands
+  for `z` and for every other chart. The landing test (inverse_encode_contract Part 6, "Where possible, at step 4")
+  compares, on the shape sphere chart, against `C(x)` with step 3 undone on the full state, the decode's own section,
+  so a lower-hemisphere state whose unmirrored momenta are the slice's lands and decodes back to itself (physics
+  review 5603309678 of PR #273, P1). The lowered GPU decode (the lowering contract's appendix row, TASK-M4-06) runs
+  `C` with step 3 not taken, as the CPU decode does (P3).
+- **`system_image`.** The spherical map's is bijective: θ's period and the pole rows are R-407's types, on edges of
+  measure zero that no pixel centre lies on, not a fold. The exponential map's is bijective over its cap, the pixels on
+  `r = π` counting as REQ-CHART-078 defines; the cap is still computed for its `r > π` domain's end. Under a tilt there
+  is no mirror pair to fold on the shape sphere, so the tilted view is one-to-one too.
+- **The tilted shape sphere.** The human's `rulings_2026-10-21.md`, RQ-472 (a), keeps "the equator fold … iff
+  `N_b = 0`" on a tilted view, where the reply rules "no folding of any kind on the shape sphere chart". That is a real
+  clash these texts don't settle: **RQ-508** (new). Meanwhile R-544: no fold on the shape sphere at any tilt; the
+  tilted shape sphere's fold arm (REQ-CHART-062, TASK-M2-36) and the tilted canonical maps (REQ-SCHED-101,
+  REQ-GUI-278) wait on it, the rest of their tasks not. RQ-472 (a)'s pole maps under a tilt are not this ruling's.
+- **The constructor** (item 9). It is the Inspector window's pane 2 sphere (render GUI spec §G8): its point is the
+  IC's signed `n̂`, draggable to every point of both halves, a drag setting the IC's shape as the shape sphere chart
+  places one (its masses and its momenta in the frame `ρ̃` on `+x` held); the twin is a faint marker, never a snap or
+  a limit. The twin is `Π·x`, positions and momenta reflected, `L_z` opposite; with held momenta that have a
+  `y`-component, dragging the point to the marker does not give the twin (physics review 5603309678, P5). A press
+  within 8 logical px of the point drags the point; any other drag orbits the 3D view or pans the unwrap as R-453 D7
+  and D8 have it (gui review 5603356729, G1). A drag changes the shape only: the IC keeps its own `√I`, the direction
+  of `ρ`, its CoM position and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`, so pane 1's triangle
+  changes shape, flipping when the point crosses the equator, and neither jumps in size nor turns (G2). A drag onto a
+  binary-collision landmark on the equator sets that IC through the decode, never the lookup, with no NaN; the run
+  ends `collision` at `t = 0`, its bodies within `r_coll` (R-60; integrator_contract Part 5); a lookup of that IC
+  elsewhere reads `lookup_clamped` (R-13); nothing is blocked off (G5; physics review 5603529679, P8 (b), (c)). A drag
+  does not reach `ρ̃ = 0` exactly: the unwrap's `(π, π/2)` decodes to `‖ρ̃‖ ≈ 6.8e−17` and a 3D pick gives a generic
+  `n̂`, so `V₀` and `E₀` there are `−∞` where the emitted `r₀ = r₁` and finite otherwise, drawn as R-436 and R-467
+  draw a non-finite value when they are not finite; no snap is added (physics review 5603638748, P10, its option
+  (ii)). At an exact `n̂ = (−1, 0, 0)`, `ρ̃ = 0` and `r₀ = r₁`, and the descriptor stores `V₀` and `E₀` as `−∞`
+  (dd_decoder §3.6, R-436). At `ρ̃ = 0` the direction of `ρ` is undefined: the constructor keeps the frame angle from the IC's last point with
+  `ρ̃ ≠ 0`, or the decode's R-437 angle 0 if it never had one, and a drag off the landmark restores `ρ` along it (a
+  definition, R-72; P8 (a)). REQ-GUI-060's "lower half shaded mirror-folded" goes: shading half the sphere as folded is the fold
+  enforced, not shown.
+- **Results measured under one hemisphere** are kept, with R-544 beside them, and not re-measured here (item 7; §5):
+  PR #271's goldens `shape-sphere/one_hemisphere` (an exponential cap in `w ≥ 0`) and `shape-sphere/both_flagged` (the
+  redundant hemisphere striped) and its `exp_map_system_image` counts, made under R-141's and R-503's fold on its
+  branch, and `fixtures/ic_inspector/shape_vec.json`, whose `n` is the canonical, upper-hemisphere representative of
+  each IC (a check of `shape_vec` on canonical states, which it still is). No statistic in the corpus was measured
+  under one hemisphere: the state map's sphere figures are the prototype's, which never gauged. The PR lists them for
+  the human to decide which to re-run.
+
+**Requirements.** Amended (reqio): REQ-CHART-002, REQ-CHART-014, REQ-CHART-020, REQ-CHART-037, REQ-CHART-054,
+REQ-CHART-056, REQ-CHART-057, REQ-CHART-062, REQ-CHART-075, REQ-CHART-078, REQ-CHART-079, REQ-SCHED-101, REQ-REF-054,
+REQ-COL-113, REQ-COL-115, REQ-COL-121, REQ-COL-124, REQ-GUI-054 (review round 1, G4), REQ-GUI-060, REQ-GUI-161,
+REQ-GUI-268, REQ-GUI-275 and REQ-GUI-278; a note each on REQ-DEC-002 (`C` stays one function, the shape sphere's decode calling it with step 3 not
+taken) and REQ-ENC-005 (T3 on the shape sphere, the mirror undone where `lookup_mirrored` is set). Added: REQ-CHART-081 (the signed decode), REQ-CHART-082 (the mirror test and its "does not apply" case),
+REQ-ENC-034 (the signed lookup), REQ-CHART-083 (the whole-sphere area statistics), REQ-GUI-341 (a trace through a
+syzygy), REQ-GUI-342 (no repeat at the equator), REQ-GUI-343 (the constructor's reach and the drag across the equator)
+and REQ-GUI-344 (the twin marker and the inspector's note). No requirement for the fold saving.
+
+**Tasks.** TASK-M2-43 (new, M2): the signed decode, the held momentum, the lookup and the spherical map's
+`system_image`, with the tests that asserted the 2-to-1 cover. TASK-M2-28 (re-scoped, after TASK-M2-43): the
+whole-sphere display, the exponential map's one-to-one cap and the equal-area projection; its open PR #271 is redone
+against the new scope. TASK-M8-44 (re-scoped): no hemisphere mode past `[0,1]²`, and the whole-sphere statistics.
+TASK-M8-67 (new, M8, gui): the constructor. TASK-M2-36 (the tilted shape sphere one-to-one, its arm waiting on
+RQ-508), TASK-M4-06 (the baked decode skips `C`'s mirror step; review round 1, P3), TASK-M8-11 (the panel's path
+through a syzygy; G4), TASK-M7-47 (the identity point for point; it now depends on TASK-M2-43), TASK-M7-48 (a note), TASK-M8-05 (the
+whole sphere), TASK-M8-06 (no toggle), TASK-M8-15 (no folded shading), TASK-M8-55 (no repeat at the equator), TASK-M8-56
+(no equator map), TASK-M8-58 (a trace through a syzygy) and TASK-M8-66 (no in-square mirrors) take their requirements'
+changes. The qa-file exceptions R-544 forces are named in TASK-M2-43 (`qa_TASK-M2-14.rs:883`, the fold assertions of
+`qa_TASK-M2-08.rs`) and TASK-M2-28 (`qa_TASK-M2-14.rs:884`).
+
+R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412.
+
+## R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*
+*21 Oct 2026 · the batch recorded whole in `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`; applied in
+`docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21's sentence), § "Layout and §3.8
+entries" (the §3.8 entries' range sentence, the two one-signed rows and `alpha_energy`'s row, with their earlier words
+kept) and § "4. Seams (obligations → integration tests)" (the schema-version seam), `docs/design/principia_dd_telemetry_and_tiers.md`
+§ "2. What to record" and § "5. The artefact: one file, plain text, readable by the sender" (`substep_histogram`),
+`docs/gui/principia_render_gui_spec.md` § "G5" › "Profiler" (the histogram's source), `docs/design/principia_dd_simstate_payload.md`
+§ "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved" (bits 10–15) and the Chazy fields'
+paragraph, `docs/design/principia_dd_chazy_final_motion.md` § "6. The latch: `I_max`" (Storage), § "10.8.1 When it
+was decided" and § "11.3 Open questions" (item 1), `open-questions.md` item 9, R-36's and R-56's heading blocks,
+`docs/archive/review_queue/M0.md` (RQ-278, RQ-286, RQ-297 and RQ-310, moved with their rulings), REQ-PAY-093,
+REQ-GEN-008, REQ-GEN-017, REQ-COL-032, REQ-TOOL-098, REQ-PAY-013, REQ-PAY-015, REQ-PAY-056, REQ-PAY-105, REQ-PAY-106,
+REQ-VAL-055, REQ-COL-082 and REQ-COL-106 (reqio), REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187 (reqio, new),
+TASK-M7-35 and TASK-M7-40 (notes, deliverables), TASK-M5-28 (a requirement), TASK-M5-32 and TASK-M7-53
+(new), `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; `REVIEW_QUEUE.md` gains
+RQ-520*
+
+**The batch.** The human's message of 21 Oct 2026 is recorded whole, byte for byte, in
+`docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (sha256
+`bcaad679c6e34c68ece556549fd39f35f8dfb954e7229475778b11ff4f406204`, 191 lines). It opens (lines 1–3):
+
+> A new instruction from me, Malachy, 21 Oct 2026: my rulings on the review queue, my review of PR #268, and my review of the decisions you made under R-369 since 20 Oct.
+>
+> Every ruling below is mine, in my words: quote each one verbatim in decisions.md. Where a ruling names an option letter, it is that entry's option as REVIEW_QUEUE.md words it.
+
+It leaves three entries open (line 181):
+
+> Left open, not ruled (3): RQ-378, RQ-386, RQ-391. They stay in REVIEW_QUEUE.md.
+
+RQ-378, RQ-386 and RQ-391 are each still an open entry in `REVIEW_QUEUE.md` (RQ-378 parked by R-510, RQ-386 by
+R-522, RQ-391 by R-527), and stay there unchanged.
+
+It ends with how to apply it (lines 185–192):
+
+> Applying them:
+> - Record the rulings in decisions.md from the next free R-number, grouped by area as in earlier batch rulings, each saying which entries it closes; my words verbatim, then what it decides and what it applies.
+> - Apply each to the docs it names, with the Removed lines notes, and to the requirements through plan/tools/reqio.py; then run python3 plan/check_plan.py.
+> - Move every ruled entry, unchanged, to docs/archive/review_queue/ (R-292). REVIEW_QUEUE.md keeps only the entries left open above.
+> - Where a ruling conflicts with another ruling or the corpus in a way these texts don't address, queue it as a new entry rather than resolving it. A ruling that needs a calibration value proposes it for the gate, as usual.
+> - One PR for the rulings, reviewed as usual. Paste check_plan's output and the list of entries moved into the description.
+> - Then update the state page so the queue shows only what is still open, and the R-369 list starts again from today.
+> - Do not touch anything outside the repo and build or scratch directories without asking.
+
+So the 126 rulings are recorded by area, one ruling per area, from the next free number, each naming the entries it
+closes, the human's words verbatim, then what it decides and what it applies:
+
+| Ruling | Area | Closes |
+|---|---|---|
+| R-545 | The batch, and the ledger, payload and schema | RQ-278, RQ-286, RQ-297, RQ-310 |
+| R-546 | Colour presets, debug groups and the palettes' measured figures | RQ-280, RQ-281, RQ-282, RQ-331, RQ-332, RQ-333 |
+| R-547 | Decode and encode numerics, cross-backend rounding and the toolchain | RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360, RQ-365 |
+| R-548 | The Chazy final-motion classification and its views | RQ-311 to RQ-318, RQ-320 to RQ-325 |
+| R-549 | Landmarks, body numbers, exports and the invariant charts | RQ-334, RQ-335, RQ-336, RQ-350, RQ-355 |
+| R-550 | The decoder's Jacobian and the physical views | RQ-341 to RQ-346 |
+| R-551 | The round-trip and random-IC gates | RQ-475, RQ-476, RQ-477 |
+| R-552 | The chart's extension past `[0,1]²` (R-537's questions) | RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420, RQ-430 |
+| R-553 | The trace and its markers (R-538's questions) | RQ-412 to RQ-415, RQ-417, RQ-418, RQ-421 to RQ-429 |
+| R-554 | The shape sphere's exponential map, tilts and their trace tests | RQ-470 to RQ-474 |
+| R-555 | Listen (R-540's questions), with the human's Listen effects follow-up | RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464, RQ-467 |
+| R-556 | The trace and Listen in the GUI (R-541's questions) | RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465, RQ-466 |
+| R-557 | The Print graph, and the human's review of PR #268 | RQ-478, RQ-479, RQ-495 |
+| R-558 | The state map (R-542's questions) | RQ-480 to RQ-489, RQ-496 to RQ-505 |
+| R-559 | The decisions made under R-369 since 20 Oct, reviewed | — |
+
+R-557 also records the message's PR #268 section (lines 5–9), and R-559 its line 183, the human's review of the
+decisions made under R-369 since 20 Oct. Every ruled entry moves unchanged to `docs/archive/review_queue/M0.md` with a
+ruling line, so `REVIEW_QUEUE.md` keeps only RQ-378, RQ-386 and RQ-391 and the new entries this port files. Line 191's
+state page is the orchestrator's, outside the repository: nothing here changes it.
+
+**The ledger, payload and schema.** The human's words (21 Oct 2026), from the batch file (lines 12, 17, 20 and 23):
+
+> - RQ-278 (Undeclared §3.7 ranges, and `alpha_energy` centred on 1.0): (a) for `alpha_area` only; (c) for `alpha_energy`; (d) for `running_mean_divergence` and `coherence`. "`running_mean_divergence` and `coherence` are one-signed: TASK-M1-21 (R-72) gives each a formula and declares a range that does not span zero, so both stay on viridis. `alpha_energy` keeps `lin` centred on its analytic 1.0, as §3.7 line 527 says, and its range and placement are settled with REQ-PAY-093 at the M5 gate. Line 488 is reworded to cite the table's rows as declarations, not as a default for 'no range given'."
+> - RQ-286 (Substeps-per-pixel histogram has no field in schema v1): (a). "The frame record gains `substep_histogram: [u32; 16]`: equal bins of width `N_max/16`, with cap hits as their own last bin. It is read back with R-288's counters on the existing readback. This is a schema v1 change made by this ruling."
+> - RQ-297 (Ledger `scale` edit: schema bump or zero recompute): (a). "The schema version hashes only the ledger columns that decide the payload's layout or the kernel's output. `scale`, and any render-only column a ruling names, leaves the hash. R-36 and generation_root :21 and :994 are reworded to 'a layout or kernel change'. Seam 5 and REQ-COL-032 stand as written."
+> - RQ-310 (Descriptor bits 10–15 for `I_max` and the departed bit): (a). "`I_max` takes descriptor bits 10–14, log-quantised in half-octaves (32 levels to 2¹⁶), as a versioned assignment like `last_symbol`'s bits 8–9 (the version is the ledger hash, R-36). Bit 15 is R-37's per-sample departed bit. The 'when decided' view is offline only in v1."
+
+**RQ-278** asked how dd_generation_root §3.7's `(−∞, ∞)` for `alpha_area`, `alpha_energy`, `running_mean_divergence`
+and `coherence` reads under R-426, which makes an undeclared range a ledger gap: (a) the table's rows as declarations,
+line 488 reworded; (b) line 488's members as gaps until declared; (c) for `alpha_energy`, a range that does not span
+zero, or a placement centred on 1.0 (R-72), with REQ-PAY-093's proposal at the M5 gate; (d) for the other two, a
+definition requirement giving each a formula and a range that does not span zero. Option (a)'s ledger half was applied
+meanwhile in TASK-M1-21's PR (#208).
+
+*What it decides:*
+- **`alpha_area`: option (a).** Its row is a declaration: `diverging` over `(−∞, ∞)`, citing §3.7's table, its sign
+  load-bearing (R-42, R-403). Nothing changes for it.
+- **`running_mean_divergence` and `coherence`: option (d).** Both are one-signed. Each gets a formula and a declared
+  range, with its citation, that does not span zero, a definition requirement (R-72, REQ-PAY-109), so both stay
+  `lin` on viridis and never on the diverging ramp.
+- **`alpha_energy`: option (c).** It keeps `lin` centred on its analytic 1.0, as §3.7's "Scales" line says; its range
+  and that placement are settled with REQ-PAY-093's proposal at the M5 gate.
+- **Line 488 is reworded** to cite the table's rows as declarations, not as a default for "no range given".
+
+*Where the words leave a choice, decided per R-369 (ledger definitions; reviewed by physics):*
+- **A1. Who writes the formulas.** The human names TASK-M1-21, which merged in PR #208 before this ruling, in the M1
+  milestone whose gate has passed (R-432). The definition is therefore a new task's, TASK-M5-32 (M5, after
+  TASK-M1-21 and TASK-M5-01, reviewed by code, qa and physics), the follow-up of TASK-M1-21's ledger work; it writes each
+  member's formula and declared range into dd_generation_root §3.7 and the ledger entries (`crates/ledger`). It is
+  placed at M5, beside REQ-PAY-093's confirmation, because both are `QuadReduction` members built at M5 (R-306).
+- **A2. Meanwhile** the two rows keep the ledger's `(−∞, ∞)` as built in PR #208, marked in §3.7 as waiting on
+  REQ-PAY-109; no numeric view draws a `QuadReduction` member before then (RQ-278's own note).
+- **A3. `alpha_energy`'s placement.** REQ-PAY-093 now names it: the M5 gate confirms a range for `alpha_energy` with a
+  view centred on 1.0, and TASK-M5-01's proposal record carries it. Its row reads "proposed (REQ-PAY-093), centred on
+  1.0".
+
+**RQ-286** asked what records the Profiler's substeps-per-pixel histogram, since profiler schema v1's frame record
+carries only `substeps_total`: (a) a frame-record field, `substep_histogram: [u32; n]`, read back with R-288's
+counters, a schema v1 change by ruling; (b) computed on demand from `total_substeps`; (c) the histogram dropped.
+
+*What it decides:* **option (a).** The frame record gains `substep_histogram: [u32; 16]`, read back with R-288's
+counters on the existing readback, a schema v1 change made by this ruling.
+
+*Where the words leave a choice, decided per R-369 (telemetry; reviewed by perf and physics):*
+- **B1. Schema v2.** R-534 makes v2 v1 plus the print stage and the benchmark lines, so v2's frame record carries
+  `substep_histogram` too; a v1 file written before it reads with the key absent, reported as not recorded, as R-497
+  K3 reads an earlier file. The key sits after `substeps_total` in §5's frame record.
+- **B2. Who builds it.** The kernel-side counts and the readback are TASK-M5-28's, the frame record's task
+  (REQ-TOOL-187, beside REQ-TOOL-140's counters); the Profiler draws it in TASK-M8-28 (REQ-TOOL-098).
+- **B3. The bins.** The words give 16 entries, "equal bins of width `N_max/16`" and "cap hits as their own last bin";
+  16 equal bins of width `N_max/16` span `[0, N_max]` with no room for a separate cap bin, and a separate cap bin needs a
+  17th entry or a different width. That is not decided here: **RQ-520** puts it to the human. REQ-TOOL-187
+  waits on it for the bin edges only; the field, its 16-entry size as ruled, and its readback do not wait.
+
+**RQ-297** asked whether a ledger `scale` edit moves the schema version, invalidating every cached payload (R-36,
+generation_root :994), or re-styles the view with zero recompute (seam 5, REQ-COL-032): (a) the hash covers only what
+decides the payload's layout and the kernel's output; (b) the whole-ledger hash stays and seam 5 is amended.
+
+*What it decides:* **option (a).**
+- **The schema version hashes only the ledger columns that decide the payload's layout or the kernel's output.**
+  `scale`, and any render-only column a ruling names, leaves the hash.
+- **R-36 and generation_root :21 and :994 read "a layout or kernel change".** R-36's heading block carries the forward
+  line, its words kept; :21 and :994 are reworded.
+- **Seam 5 and REQ-COL-032 stand as written:** a ledger scale change re-styles the view with zero recompute.
+
+*Where the words leave a choice, decided per R-369 (reviewed by code and physics):*
+- **C1. The requirements that said "any ledger change".** REQ-GEN-017 now reads "any layout or kernel change"; REQ-GEN-008,
+  built and proved by the merged TASK-M0-12, stays as built, its note pointing here. Neither earlier task (TASK-M0-12,
+  merged; TASK-M5-06, before M7) can pass a `scale` arm, so every `scale` arm is REQ-GEN-043's and the code change is a
+  new task's (fix round 1 of PR #274, qa Q2; *was:* "REQ-GEN-008 and REQ-GEN-017 now read "any change to a column that
+  decides the payload's layout or the kernel's output", their verify changing a layout column; `scale` named as
+  excluded. Both were built in merged tasks (TASK-M0-12, and TASK-M5-06 to come), so the code change is a new task's:"):
+  **TASK-M7-53** (M7, after TASK-M7-05, reviewed by code, qa and physics) closes REQ-GEN-043, `ledger::version`
+  hashing only those columns, with seam 5's end-to-end test: a regenerated ledger with one field's `scale` changed keeps
+  the schema version, the cache serves the same payload and the dispatch counter is unchanged, and a changed bit offset
+  moves it. REQ-COL-032 stays TASK-M7-05's, its hold lifted; its zero-recompute arm runs in TASK-M7-53. qa's
+  `crates/ledger/tests/qa_TASK-M0-12.rs:143-149`, which asserts that a `scale` change moves the version, is the qa
+  exception the ruling forces there, named in TASK-M7-53 (R-290).
+- **C2. Which columns.** The columns a ruling names render-only today: `scale` alone. A future render-only column is
+  named by its own ruling.
+
+**RQ-310** asked whether `I_max` and the "when decided" latch may take descriptor bits 10–15, which payload §2 holds
+reserved: (a) bits 10–14 for `I_max`, a versioned assignment, bit 15 for R-37's departed bit, "when decided" offline
+only; (b) as (a) with the second latch stored outside the descriptor; (c) `I_max` stored elsewhere; (d) not stored.
+
+*What it decides:* **option (a).**
+- **`I_max` takes descriptor bits 10–14,** log-quantised in half-octaves (32 levels to 2¹⁶), a versioned assignment
+  like `last_symbol`'s bits 8–9, the version being the ledger hash (R-36).
+- **Bit 15 is R-37's per-sample departed bit.**
+- **The "when decided" view is offline only in v1:** no second latch is stored.
+
+*Where the words leave a choice, decided per R-369 (payload layout; reviewed by physics):*
+- **D1. The quantisation is ruled.** REQ-PAY-106 was a calibration of "log, half-octave steps, 5 bits, 32 levels up to
+  2¹⁶" as proposed; the human's words give that quantisation, so REQ-PAY-106 is no longer a calibration: it requires
+  the ruled quantisation and records its measured effect on the OS-candidate labels as evidence.
+- **D2. The layout requirements built in M0.** REQ-PAY-013 and REQ-PAY-015 (TASK-M0-10, merged) describe the layout as
+  built. Each bit is spent by the task that stores it, a ledger edit that changes the schema version: bits 10–14 by
+  TASK-M7-35 (REQ-PAY-105), bit 15 by TASK-M3-11 (REQ-VAL-055). Until each lands those bits stay reserved and decode as
+  zero; each task updates the generated layout test as `last_symbol`'s did. Their notes say so; their statements are
+  unchanged.
+- **D3. The departed bit.** REQ-VAL-055's placement half is decided (bit 15); `δ_dep`'s value stays a measurement.
+  `open-questions.md` item 9 keeps only `δ_dep` open.
+- **D4. "Offline only".** The "when it was decided" view is computed from a recorded run, as drill-down §10.8.1 says
+  without the latch; REQ-COL-082 and TASK-M7-40 drop the stored latch, and REQ-COL-106's lightness by time stays its
+  calibration.
+
+*What it amends:* **R-36** (the schema version hashes the layout and kernel columns, not the whole ledger; RQ-297) and
+**R-56** (schema v1's frame record gains `substep_histogram`; RQ-286). It closes **RQ-278**, **RQ-286**, **RQ-297** and
+**RQ-310**.
+
+R-545 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-PAY-093, REQ-GEN-008 (note), REQ-GEN-017 (statement, rulings, note), REQ-COL-032, REQ-TOOL-098,
+REQ-PAY-105, REQ-COL-082 (`rq` removed; statement, verify, rulings, note), REQ-PAY-106 (statement, verify, kind cleared,
+`rq` removed), REQ-COL-106 (`rq` RQ-310 removed), REQ-VAL-055, REQ-PAY-056, REQ-PAY-013 and REQ-PAY-015 (notes, and
+REQ-VAL-055's statement); adds REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187.
+
+## R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*
+*21 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the closest pair's sentence and the variant's chroma sentence, with their earlier
+words kept) and § "9. The stain editor's composition resolutions (R-72; REQ-COL-054)" (the opening, 9.4, 9.6 and 9.7,
+with their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "16. Open / next" (the closed item's open
+parts) and the outcome legend's η_E sentence, R-444's and R-447's heading blocks, `docs/archive/review_queue/M0.md`
+(RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333, moved with their rulings), REQ-COL-028, REQ-COL-029, REQ-GUI-016,
+REQ-COL-104 and REQ-COL-105 (reqio: `rq` removed, rulings, verify, note), REQ-COL-101 and REQ-COL-103 (reqio, notes),
+REQ-COL-139 and REQ-COL-140 (reqio, new), TASK-M7-17 and TASK-M7-11 (a requirement each), TASK-M2-32 (notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-17, TASK-M7-11 and TASK-M7-18*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+13–15 and 38–40), which R-545 quotes in its opening:
+
+> - RQ-280 (Addressing convention: third channels and which index is grey): (a) + (c). "TL = RB carries G = 0 and centre = BG carries R = 0, as UV = RG carries B = 0. There is one grey preset per index (`ctx.quad.index`, `tile_index`, `sample_index`). Each maps its index to grey by a stated rule, written by TASK-M7-17 (R-72)."
+> - RQ-281 (Membership of the diagnostic and profiling debug groups): (b), plus (a)'s profiling half. "ROUNDTRIP and the agreement presets go in decoded-IC, because they certify the decoder. Diagnostic holds the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and accumulator views. Profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and quad cache age. These colour measurements that are always taken, so §5.5 stands: profiling's measurement is first-class, and only its views are filed here."
+> - RQ-282 ("Gradient-unifies-the-ramp": derived-field ramp, not custom stops): (a). "§16's item is the task file's reading, which colour_composition §9.4 already writes: `FieldRamp{gradient_magnitude}` against the map's post node. Render GUI spec §9's custom-stop ramp is defined separately by TASK-M7-11 when its graph model needs it (R-72)."
+> - RQ-331 (sRGB outcome palette's closest pair is 0.175): (a). "Record 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, as the nine-class palette's closest pair, with the swatches as ruled. Reword colour_composition §1.4's 'rises from 0.175 to 0.185' to 'stays 0.175 (the same two colours as the old t = 0 pair); 0.185 holds only with the orange left out'."
+> - RQ-332 (R-447's C = 0.123 is not "in gamut at every hue"): (a). "Keep C = 0.123 and the ruled hex swatches. Reword R-447's parenthesis to 'in gamut at every listed hue (the narrowest, 208°, admits 0.1238)'. The three one-step roundings are recorded, not adopted."
+> - RQ-333 (Which view is "the η_E debug view"): (a). "The η_E debug view" is the existing debug views: the `state` view shows `decode_failed`, and the `detail` view shows its failure category. Together they are R-467's View › Debug view. Nothing new is built. If a tag-by-tag view is wanted later, it is (b), a fragment-side decode preset. It is never (c): no payload change is made for a debug colour.
+
+**RQ-280** asked for the addressing channel convention's third channels (TL = RB's G and centre = BG's R), which index
+"index = grey" is, and how an integer maps to grey: (a) both third channels 0, as UV = RG's B is; (b) "index" is
+`ctx.quad.index`, mapped by a stated normalisation or a hash; (c) one preset per index, each with its own mapping.
+
+*What it decides:* **options (a) and (c).**
+- **TL = RB carries G = 0 and centre = BG carries R = 0,** as UV = RG carries B = 0.
+- **There is one grey preset per index:** `ctx.quad.index`, `tile_index` and `sample_index`.
+- **Each maps its index to grey by a stated rule, written by TASK-M7-17** (R-72), a definition requirement
+  (REQ-COL-139).
+
+*Where the words leave a choice, decided per R-369 (reviewed by physics, as REQ-COL-054's resolutions are):*
+- **A1. Where the rule is written.** colour_composition §9.7, beside the convention; the rule is a definition, not a
+  calibration, so it is reviewed and not confirmed at a gate. The three presets are addressing presets in the debug
+  section (§9.6), and TASK-M7-18 recreates them with the other debug views (REQ-COL-029).
+
+**RQ-281** asked what the diagnostic and profiling debug groups hold, where ROUNDTRIP, the agreement presets, the §B–§D
+payload field views and §E's live-shape and accumulator views go, and how a profiling group sits beside telemetry
+§5.5's "Profiling is FIRST-CLASS, not a debug mode": (a) diagnostic holds the payload field views, §E's live views and
+the cross-checks, profiling holds views of per-sample cost and quad cache age; (b) ROUNDTRIP and the agreement presets
+in decoded-IC, diagnostic holding the payload field views and §E's live views; (c) the render-modes prototype's
+grouping.
+
+*What it decides:* **option (b), plus (a)'s profiling half.**
+- **ROUNDTRIP and the agreement presets go in decoded-IC,** because they certify the decoder.
+- **Diagnostic holds the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and
+  accumulator views.**
+- **Profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and quad cache age.**
+- **Telemetry §5.5 stands:** these colour measurements that are always taken, so profiling's measurement is
+  first-class, and only its views are filed here.
+
+**RQ-282** asked whether render GUI spec §16's "gradient-unifies-the-ramp" is the task file's reading (a ramp over a
+derived field, colour_composition §9.4) or also the GUI's gradient editor of custom stops unifying §1.2's ramps: (a)
+the task file's reading, the custom stops defined separately by the task that needs them (R-72); (b) both, §1.2
+gaining `stops(…)`.
+
+*What it decides:* **option (a).** §16's item is the task file's reading, which colour_composition §9.4 already writes:
+`FieldRamp{gradient_magnitude}` against the map's post node. Render GUI spec §9's custom-stop ramp is defined
+separately by TASK-M7-11 when its graph model needs it (R-72), a definition requirement (REQ-COL-140).
+
+*Where the words leave a choice, decided per R-369 (reviewed by gui):*
+- **B1. What TASK-M7-11 defines and where.** The custom-stop ramp's stops, their positions, their interpolation space
+  and how `cyclic` applies, written into colour_composition §9.4 beside the resolution it is set apart from, reviewed
+  by the gui reviewer (TASK-M7-11's reviewers are code, qa and gui). TASK-M7-11 closes REQ-COL-140 and REQ-GUI-016,
+  whose hold is lifted.
+
+**RQ-331** asked whether the sRGB outcome palette's closest pair, measured at 0.175 (triple collision `#F29620`
+against escape body 1 `#F0DE32`) where R-444's message gives 0.185, is recorded as measured (a) or a swatch is changed
+to reach 0.185 (b).
+
+*What it decides:* **option (a).** 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, is the nine-class
+palette's closest pair, with the swatches as ruled. colour_composition §1.4 reads "stays 0.175 (the same two colours as
+the old t = 0 pair); 0.185 holds only with the orange left out" in place of "rises from 0.175 to 0.185".
+
+*Where the words leave a choice, decided per R-369:*
+- **C1. Where the reword lands.** The words "rises from 0.175 to 0.185" are R-444's message, quoted in R-444; §1.4
+  paraphrases them as "the human's figure … is 0.185". The quoted words stay; §1.4's sentence is reworded with the
+  human's text, and R-444's heading block carries the forward line. REQ-COL-104's evidence still gives both figures,
+  0.175 as the closest pair.
+
+**RQ-332** asked whether R-447's C = 0.123, in gamut at the eight listed hues but not "the largest chroma in gamut at
+every hue at that L" (0.1224), and three swatches one or two 8-bit steps from the rounding of (0.72, 0.123, hue), are
+kept (a), C retaken as 0.1224 (b), or the three swatches replaced by the computed rounding (c).
+
+*What it decides:* **option (a).** C = 0.123 and the ruled hex swatches stand. R-447's parenthesis reads "in gamut at
+every listed hue (the narrowest, 208°, admits 0.1238)". The three one-step roundings (`#6DB976`, `#D9934A`,
+`#07B9CD`) are recorded, not adopted.
+
+*Where the words leave a choice, decided per R-369:*
+- **D1. Rewording a quoted parenthesis.** The parenthesis is inside the human's words quoted in R-447. Quoted words are
+  not edited (as R-14's stayed under RQ-355 and R-449's under RQ-336, in this batch); R-447's heading block carries the
+  reworded parenthesis as its forward line and "Still in force" line, and colour_composition §1.4's paragraph uses it.
+
+**RQ-333** asked which view "the η_E debug view" (R-446) is: (a) the existing `state` and `detail` views; (b) a
+fragment-side decode preset drawing each tag; (c) a payload change, a further `detail` code.
+
+*What it decides:* **option (a).** "The η_E debug view" is the existing debug views: the `state` view shows
+`decode_failed`, and the `detail` view its failure category; together they are R-467's View › Debug view. Nothing new
+is built. A tag-by-tag view, if wanted later, is (b), a fragment-side decode preset; it is never (c): no payload change
+is made for a debug colour.
+
+*What it amends:* **R-444** (its message's "rises from 0.175 to 0.185": the closest pair stays 0.175; RQ-331) and
+**R-447** (its parenthesis: in gamut at every listed hue; RQ-332). Read with R-446 and R-467 (RQ-333), neither changed.
+It closes **RQ-280**, **RQ-281**, **RQ-282**, **RQ-331**, **RQ-332** and **RQ-333**.
+
+R-546 is in the "design" group of `plan/rule_groups.yaml`, with R-444 and R-447.
+
+Changes REQ-COL-028 (statement, verify, rulings, `rq` removed), REQ-COL-029, REQ-GUI-016 (`rq` removed, rulings, note),
+REQ-COL-104 and REQ-COL-105 (`rq` removed, rulings, verify, note), REQ-COL-101 and REQ-COL-103 (notes); adds
+REQ-COL-139 and REQ-COL-140.
+
+## R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*
+*21 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "0.3 Momentum — free Jacobi momenta" (the
+transcription hazard note, with its earlier words kept) and § "0.5 Scale gauge" (a clause), `docs/design/principia_dd_encode.md`
+§ "3.2 Canonicalisation `C` — the exact ordered procedure" (step 0's lines and a paragraph) and § "3.3 The gauge group
+action, explicit (this is what T1 sweeps)" (T1's sentence, with its earlier words kept),
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 1 — What encode is: a quotient map onto a section" (T1, a
+sentence), § "Part 2 — The scale gauge gap (missing from the original inverse policy)" and § "Part 6 — The canonical
+inverse policy, completed" (step 0), `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one
+measured failure)" (rules 2 and 6, with their earlier words kept), `docs/design/principia_dd_decoder.md` § "2.
+Consolidated contract (every clause that binds this component)" (the branch-input table's two rows) and § "3.1 Mass"
+(a paragraph), `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
+and `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
+(`d²`'s form, with the earlier words kept), `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the
+defining decision)" (item 2, a sentence) and § "2. The determinism law (the other defining decision)" (the checklist's
+last item), R-34's heading block, `plan/OPERATIONS.md` § "Toolchain" (a bullet), REQ-DEC-019, REQ-ENC-006,
+REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-ENC-003
+and REQ-SYS-015 (reqio: statement or verify, rulings, `rq` removed, note), REQ-DEC-017, REQ-DEC-022, REQ-INT-087,
+REQ-INT-088 and REQ-VAL-079 (reqio: rulings, `rq` removed, note; REQ-INT-088's statement a clause), REQ-ENC-035 to
+REQ-SYS-085 (reqio, new), TASK-M2-47 to TASK-M2-49 (new), TASK-M2-02, TASK-M2-07, TASK-M2-15 and
+TASK-M2-24 (the held requirements moved), TASK-M2-25 (REQ-SYS-085), TASK-M3-24, TASK-M4-04 and TASK-M8-14 (a
+dependency each), TASK-M2-03 and TASK-M2-15 (an acceptance line each), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365, moved with their
+rulings); built by TASK-M2-47, TASK-M2-48, TASK-M2-49, TASK-M2-25, TASK-M3-11, TASK-M4-01,
+TASK-M4-03 and TASK-M4-18*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+16, 18–19, 21–22 and 65–69), which R-545 quotes in its opening:
+
+> - RQ-283 (`Σpᵢ = 0` does not catch the full crossed-mass swap): (a). Reword chart_reference §0.3's note (:85–88) to: "verify by asserting the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` (or the kinetic-energy identity) at unequal masses: the test that catches a swap. `Σpᵢ = 0` catches only a one-sided swap." Make the matching change to REQ-DEC-019's acceptance detail (:383) and to TASK-M2-03's `decode_momentum` line.
+>
+> - RQ-295 (When `lookup_rescaled` fires on near-canonical input): (c). "Step 0 is skipped (`λ = 1`, `r` and `p` unchanged) where `|I_in − 1| ≤ τ_I`. `lookup_rescaled` fires exactly when step 0 ran. `τ_I` is a calibration (R-71) in eps of the precision, proposed by TASK-M2-07 from its measured `|I − 1|` of up to 3 eps."
+>
+> - RQ-296 (`C`'s output when `I_in` is 0, underflows or overflows): (d) + (a). "Step 0 rescales in two steps: first by a power of two (exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies apart. `I_in = 0` then happens only when the bodies coincide, and that case keeps the applied select: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0`."
+>
+> - RQ-298 (Explicit `fma` not fused on lavapipe; subnormal flushing forks branches): (a). "Rules 2 and 6, R-34 and REQ-INT-064 are corrected: a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal. TASK-M2-07's `IeeeBits::product` form is the pattern. Each of the twelve held requirements is rewritten and re-proved in its own task."
+>
+> - RQ-299 (Pinned nightly's MIR GVN miscompile in native release builds): (b) + (c), then (a). "The native build sets `-Zmir-enable-passes=-GVN`, scoped to the host target and not the SPIR-V build. A CI job runs the native tests at the release profile. The fault is reported upstream, and the pin moves to a fixed nightly once `rustc_codegen_spirv` builds against one."
+>
+> - RQ-360 (T1 fails for the mirror inside the deadband): (a). T1 and REQ-ENC-003 hold for every `g` off the band. On `|λ̃_y| ≤ δ_λ`, collinear states included, they hold for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`. R-82 is unchanged. Inverse-encode Part 1 and dd_encode §3.3 say so.
+>
+> - RQ-365 (The scan finds the read side's hand-written `shape()`): (c). REQ-SYS-015 is split:
+>   - Decode and encode close with TASK-M2-15.
+>   - The read side's `shape()` moves to a new requirement that TASK-M2-25 closes when it emits `shape()` from the translation.
+>   The acceptance scan keeps its full reach, `.wgsl` included.
+
+R-547 ports the seven answers on the decode and encode numerics, cross-backend rounding and the toolchain, in number
+order.
+
+**RQ-283.** chart_reference §0.3 named `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed
+factors keeps `Σpᵢ = 0` at every mass. Its option (a) was to name the conjugacy check (or the kinetic-energy identity)
+as the swap test and `Σpᵢ = 0` as the one-sided one; TASK-M2-03 asserts both meanwhile, with a control for each swap.
+
+*What it decides:* **option (a).**
+- **The swap test is the conjugacy `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ`, or the kinetic-energy identity, at unequal masses.**
+  `Σpᵢ = 0` catches only a one-sided swap. §0.3's note takes the human's words; REQ-DEC-019's acceptance detail and
+  TASK-M2-03's `decode_momentum` line match.
+- Nothing is rebuilt: TASK-M2-03 (merged) asserts the conjugacy already, so REQ-DEC-019 stands as built.
+
+**RQ-295.** Step 0 always rescaled and recorded `λ`, while seam 8 and REQ-ENC-014 have `lookup_rescaled` fire only if its
+operation did, and a canonical-frame decode has `I = 1` only to rounding. Option (c): raise it iff `|I_in − 1| > τ_I`, a
+new calibration, and skip step 0 where `|I_in − 1| ≤ τ_I`.
+
+*What it decides:* **option (c).**
+- **Step 0 is skipped (`λ = 1`, `r` and `p` unchanged) where `|I_in − 1| ≤ τ_I`, and `lookup_rescaled` fires exactly
+  when step 0 ran.** So `C` is an exact no-op in scale on canonical input, and a canonical input raises no notice.
+- **`τ_I` is a calibration (R-71), in eps of the precision,** proposed from TASK-M2-07's measured `|I − 1|` of up to 3
+  eps: REQ-ENC-035, for the M2 gate.
+
+**RQ-296.** Step 0 divides by `√I_in` before step 2's guard, and nothing defined `C`'s output where `I_in` is 0 (the
+bodies coincide) or rounds to 0 or `+∞` with the bodies apart. Option (d): rescale in two steps; option (a): skip step 0
+at `I_in = 0` and let `lookup_clamped` carry it, the select TASK-M2-07 applied.
+
+*What it decides:* **options (d) and (a).**
+- **Step 0 rescales in two steps, first by a power of two (exact), then by the remainder,** so `I_in` neither underflows
+  nor overflows for any finite state with the bodies apart.
+- **`I_in = 0` then happens only when the bodies coincide, and keeps the applied select:** divisor 1, `λ = 1`, `p = 0`,
+  `lookup_clamped`, `φ = +0` (R-13, R-436, R-437).
+
+**RQ-298.** An explicit `fma` is not fused on CI's lavapipe, against the determinism note's rule 6, and a GPU that
+flushes subnormals rounds differently from one that keeps them, which no rule addressed; twelve requirements whose
+branch inputs rest on the premise, or depart from it, were held. Option (a): correct rules 2 and 6, R-34 and
+REQ-INT-064, so that a branch input that must agree everywhere is built only from operations every IEEE backend rounds
+alike; TASK-M2-07's `IeeeBits::product` is the example.
+
+*What it decides:* **option (a).**
+- **Rules 2 and 6 of the determinism note, R-34 and REQ-INT-064 are corrected: a branch input that must agree across
+  backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be
+  subnormal.** An explicit `fma` is no longer the rule's form.
+- **TASK-M2-07's `IeeeBits::product` form is the pattern.**
+- **Each of the twelve held requirements is rewritten and re-proved in its own task.**
+
+**RQ-299.** The pinned nightly miscompiles plain Rust above opt-level 0 in rustc's MIR GVN pass, and the native build,
+the kernel's f64 instantiation included, is built on it; CI builds tests at opt-level 0 and does not see it.
+
+*What it decides:* **options (b) and (c), then (a).**
+- **The native build sets `-Zmir-enable-passes=-GVN`, scoped to the host target and not the SPIR-V build** (REQ-TOOL-188).
+- **A CI job runs the native tests at the release profile** (REQ-TOOL-189).
+- **The fault is reported upstream, and the pin moves to a fixed nightly once `rustc_codegen_spirv` builds against
+  one,** the flag then dropped.
+
+**RQ-360.** T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on
+both sides of `Π` (every `|λ̃_y| ≤ δ_λ`, every exactly collinear one) `E(Π·x)` and `E(x)` differ in the momenta's `y`
+components. Option (a): restrict T1 and REQ-ENC-003 there, the code unchanged.
+
+*What it decides:* **option (a).**
+- **T1 and REQ-ENC-003 hold for every `g` off the band.** On `|λ̃_y| ≤ δ_λ`, collinear states included, they hold for
+  translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`.
+- **R-82 is unchanged.** Inverse-encode Part 1 and dd_encode §3.3 say so. TASK-M2-15's `encode_t1_gauge` sweeps exactly
+  this (applied meanwhile), so REQ-ENC-003 stands as built.
+
+**RQ-365.** REQ-SYS-015's acceptance scan found the read side's hand-written WGSL `shape()`, a second implementation of
+dd_decoder §3.2's mass and configuration formulae that RQ-235's R-369 decision put there with a twin test. Option (c):
+split REQ-SYS-015.
+
+*What it decides:* **option (c).**
+- **Decode and encode close with TASK-M2-15** (merged): REQ-SYS-015 loses its hold.
+- **The read side's `shape()` moves to a new requirement, REQ-SYS-085, that TASK-M2-25 closes when it emits `shape()`
+  from the translation.**
+- **The acceptance scan keeps its full reach, `.wgsl` included;** its one hit outside decode and encode is the new
+  requirement's.
+
+*Where the words leave a choice, decided per R-369 (mechanical consequences; the forms under physics review):*
+- **N1. Held requirements of merged tasks move.** TASK-M2-07, TASK-M2-15, TASK-M2-02, TASK-M2-24 and TASK-M2-27 merged
+  with requirements held, not closed. Where a ruling changes what the code must do, the requirement moves to a new M2
+  task that builds it: REQ-ENC-006, REQ-ENC-014 and REQ-DEC-002 to TASK-M2-47 (step 0's skip, the two steps, the
+  notice, `C`'s branch inputs and `τ_I`'s proposal); REQ-DEC-011 and REQ-VAL-017 to TASK-M2-48 (`M₀₁` and
+  decode test 12, re-proved on Metal and lavapipe). The tasks that need REQ-DEC-002 or REQ-VAL-017 (TASK-M3-24,
+  TASK-M8-14, TASK-M4-04) gain the dependency; those reaching them already need nothing.
+- **N2. Requirements already in the corrected form are not rebuilt.** REQ-DEC-022 (TASK-M2-09's exact feasibility
+  sign) is R-547's pattern; it loses its hold and its task's proof and sweep stand. REQ-DEC-017 (TASK-M2-07's mirror
+  decision, `IeeeBits::product` with no `fma`) stands except the pair differences that feed it and the `ρ = 0` guard
+  (`ρ = r₁ − r₀`, `d02`, `d12`, `canon.rs:350-351`): plain float subtractions, subnormal for normal coordinates closer
+  than 2^−126, which a flushing backend returns as 0. They are rebuilt by TASK-M2-47 under REQ-DEC-002, whose seam sweep
+  gains states with normal coordinates and subnormal pair differences and a flush-to-zero control, and TASK-M2-48
+  depends on TASK-M2-47 (physics review 5603889088 of PR #274, P1). REQ-DEC-019 (RQ-283) and REQ-ENC-003 (RQ-360) were
+  built as ruled meanwhile, and stand. *Was:* "REQ-DEC-017 (TASK-M2-07's mirror decision, `IeeeBits::product` with no
+  `fma`) and REQ-DEC-022 (TASK-M2-09's exact feasibility sign) are R-547's pattern; they lose their hold and their
+  tasks' proofs and sweeps stand. … Physics confirms on this PR that N2's two proofs are the re-proof R-547 asks."
+- **N3. Unbuilt requirements are rewritten in place.** REQ-INT-058 and REQ-INT-064 (TASK-M4-01, TASK-M4-03),
+  REQ-INT-066 and REQ-EVT-021 (`d²`, TASK-M4-03), REQ-INT-087 and REQ-INT-088 (`disc_input`, TASK-M3-11) and
+  REQ-VAL-079 (TASK-M4-18) take the corrected rule; each task writes its form and proves it. Rule 2's `d²` form is
+  not written here: it is TASK-M4-03's, physics-reviewed.
+- **N4. `τ_I`'s proposer.** The human's words name TASK-M2-07, which has merged; TASK-M2-47 proposes it from
+  TASK-M2-07's measurement, re-measured on the CPU and on Metal and lavapipe at f64 and f32.
+- **N5. The toolchain task.** TASK-M2-49 (M2, code and qa) sets the host-target flag, adds the release-profile CI
+  job and RQ-299's reproducer as a test. Filing the upstream report on rust-lang/rust is outside the repo, so the PR
+  drafts it and the human files it. The pin's move, "then (a)", is a `rust-toolchain.toml` change in its own PR when a
+  fixed nightly that `rustc_codegen_spirv` builds against exists (R-414), and it drops the flag. No code or CI file
+  changes in this PR.
+- **N6. Where the doc lines go.** dd_decoder §3.1's two paragraphs on `fma(m₁, 1, m₀)` stay as the record of the form
+  built until TASK-M2-48, with a paragraph saying the premise fails; the branch-input table's `M01_TINY` row
+  points there, and its `INVARIANT_INFEASIBLE` row names the corrected rule. The canonical spec's checklist item and
+  the integrator contract's and dd_integrator's `d²` forms are reworded to the rule, their earlier words kept.
+
+*What it corrects:* **R-34** ("explicit fma at every branch input"): the enumeration stands; the form is R-547's.
+Read with it: R-82 (unchanged), R-13 and R-437 (the coincident case's select and `φ = +0`), R-116 (the translation
+`shape()` moves onto), R-71 (`τ_I`). It closes **RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365**.
+
+R-547 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-019, REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-DEC-011, REQ-VAL-017, REQ-INT-058, REQ-INT-064,
+REQ-INT-066, REQ-EVT-021, REQ-ENC-003 and REQ-SYS-015 (statement or verify, rulings, `rq` removed, note) and
+REQ-DEC-017, REQ-DEC-022, REQ-INT-087, REQ-INT-088 and REQ-VAL-079 (rulings, `rq` removed, note; REQ-INT-088's
+statement a clause); adds REQ-ENC-035 (calibration, `τ_I`), REQ-TOOL-188 and REQ-TOOL-189 (the toolchain) and
+REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-47 to TASK-M2-49.
+
+## R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
+*21 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes" (the halves
+paragraph, with its earlier words kept), § "3.2 The rule, in order" (the order and the two differences, with their
+earlier words kept), § "4. Validation" (a sentence), § "4.3 On real charts (48 × 48)", § "5.6 `chazy_escaper` and
+`chazy_qk` (R-443)", § "7. Validity and styles", § "8. Parity", § "9. Gaps between the prototype and Principia",
+§ "10.1 The two rules that hold in every stain", § "10.5.1 Seven classes × energy", § "10.6 Status", § "10.8.2 What just
+changed", § "10.10 Legends", § "10.11.1 Body lens", § "10.11.2 Body lens with energy", § "10.11.3 All three bodies",
+§ "10.11.4 Escaper map", § "11.2 Calibrations to confirm at a gate (R-71)", § "11.2.1 Palette separation, measured",
+§ "11.2.2 One-body palettes, measured (R-443)", § "11.3 Open questions" (a "Ruled" paragraph) and § "12.2 New, for
+Principia" (items 1, 4 and 5 reworded, items 10 and 11 added), `docs/contracts/principia_render_contract.md` § "Part 2
+— Fixed pipeline, swappable slots" (a sentence), `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold
+everywhere" and `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere" (the subtitle ban reworded),
+R-442's and R-443's heading blocks, `docs/archive/review_queue/M0.md` (RQ-311 to RQ-318 and RQ-320 to RQ-325, moved
+with their rulings), REQ-PAY-099, REQ-PAY-101, REQ-EVT-027, REQ-VAL-183, REQ-VAL-185, REQ-VAL-186, REQ-COL-074,
+REQ-COL-083, REQ-COL-087, REQ-COL-090 to REQ-COL-093, REQ-COL-098, REQ-COL-099, REQ-GUI-185, REQ-GUI-186 and
+REQ-GUI-187 (reqio: `rq` removed, statement or verify, rulings, source, note), REQ-COL-106 (reqio: RQ-320 removed,
+note), REQ-GUI-076 and REQ-COL-086 (reqio: statement, verify or note, rulings, source), `REVIEW_QUEUE.md`
+(RQ-521, new), TASK-M7-35 to TASK-M7-41 and TASK-M8-45 (references, acceptance, deliverables and notes),
+`plan/MILESTONES.md` (the M7 and M8 text), `plan/section_notes.yaml` (§11.3) and `plan/rule_groups.yaml`; built by
+TASK-M7-35 to TASK-M7-41 and TASK-M8-45*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 24–37), which R-545 quotes in its opening:
+
+> - RQ-311 (Seven-class default palette below τ, or Okabe–Ito): (a). "The seven-class palette stays the default (R-442 ruling 7), its within-palette shortfall (H / HP 0.083; HP / P 0.002 under deuteranopia) asserted by REQ-COL-086. Okabe–Ito is a preset one click away."
+> - RQ-312 (REQ-GUI-076's "Chazy subtitles" ban does not cover Chazy stains): (a) and (b) together. "The ban covers Chazy subtitles only, meaning captions naming the final-motion class over the figure. It does not cover the Chazy fields, stains or legends. Reword REQ-GUI-076, render_gui_spec §G1 line 69 and GUI_DESIGN_NOTES line 17 to 'Chazy subtitles (captions over the figure)', and scope the verify to 'no Chazy subtitle code path exists'."
+> - RQ-313 (Chazy HE gate and escape detector may disagree): (a). "Accepted: the escape event and the Chazy class answer different questions. An escape-terminated sample's class freezes at the fire-time state, and the legend help says the two can differ. REQ-EVT-027's test asserts the freeze, not agreement."
+> - RQ-314 (f32 parity for a categorical label: not Tier N): (a). "`chazy_class` is 'a label on a real trajectory' under the parity contract's scope table: it is reported, not asserted. REQ-VAL-183's measured disagreement rate and its band check are the gate. Reword the drill-down §8 'It is Tier N' to cite the scope-table row, and restrict 'read as the marginal labels' to the parabolic band, not the pair's binding sign."
+> - RQ-315 (Ship OS-candidate and B-stable marked provisional): (a). "Ship both. The status legend's help marks them provisional: OS-candidate is unvalidated (2–3 per seed later escaped as HE), and B-stable has never fired on random starts."
+> - RQ-316 (Chazy tasks placed in M7, legends in M8): (a), as applied. "TASK-M7-35 to M7-40 in M7, TASK-M8-45 in M8, each depending on the M3, M4 and M7 tasks it uses. The calibrations are confirmed at the M7 gate."
+> - RQ-317 (B's `#141418` is near-neutral (chroma 0.008), not hueless): (a). "B stays `#141418` (R-442). Test 05 §2.5 asserts OKLab chroma ≤ 0.009, a bound that covers this swatch (0.0080) and RQ-322's grey (0.0089), with a chromatic control well above it. Reword spec 03 / drill-down §10.1 'It has no hue (a = b = 0)' to 'near-neutral (chroma 0.008)'."
+> - RQ-318 (B-stable against transient ordering (E > 0)): (c). "Use the code's order, with transient tested before B-stable, and state in the rule that B-stable requires `E < 0`."
+> - RQ-320 ("What just changed" needs the previous frame's class): (a). "A render-side previous-class texture is written each frame and bound to a post node. The dimming is REQ-COL-106's calibration, proposed by TASK-M7-40."
+> - RQ-321 (Which escaping body the one-body views draw): (c). "The one-body views read `chazy_escaper` always. The legend counts the pixels where it names a different body from the event's escape detail."
+> - RQ-322 (One-body grey `#8A8A90` chroma 0.009): (a), with RQ-317 (a). "`#8A8A90` stays. It is held to the same chroma bound of ≤ 0.009 as `#141418`. Reword §10.11.2 'Grey and black have no hue' to 'near-neutral (chroma ≤ 0.009)'. The stipple dot distance of 0.020 is recorded, and by R-434's criterion (0.212) the grey clears."
+> - RQ-323 (Three body-lens panels hosted as one split figure): (a). "§10.11.3 is one figure. The view's canvas splits into three panels, each the body lens at its own `k`, all drawn from one payload at one playhead. This is a GUI layout with no new stain or node."
+> - RQ-324 (B-stable against excursion ordering (reachable, common)): (b). "Use the table's order: B-stable before excursion. A bound, Mardling–Aarseth-stable hierarchy reads B-stable throughout its outer orbit. Excursion means 'far out, bound, and not certified stable'. Add a fixture with a receding outer body past `h_far` (`v_r ≠ 0`) so the ordering test can fail."
+> - RQ-325 (Enforce "E < 0 rules out H, HP, P"): (b). "H, HP, P and the two-stage H each require `E ≥ 0`. An E < 0 state that passes their geometric tests falls through to B-stable, OS-candidate or B-so-far. Add the review's homothetic counter-example (`E = −0.1 U₀`) as a fixture that reads B-so-far."
+
+R-548 records the fourteen rulings on the Chazy port's entries (R-442's spec and R-443's follow-up) as one ruling, as
+R-113 did for its group. RQ-319, the same port's, was ruled by R-467; RQ-310, the descriptor bits, is R-545's.
+
+**RQ-311** asked whether the default seven-class final-motion palette, under τ within itself (H / HP 0.083; HP / P
+0.002 under deuteranopia), stays the default: (a) keep it (R-442), the shortfall asserted by REQ-COL-086, Okabe–Ito one
+click away; (b) make Okabe–Ito the default; (c) respace H, HP and P. *What it decides:* **option (a).** The seven-class
+palette stays the default (R-442 ruling 7); REQ-COL-086 asserts its within-palette shortfall as measured; **Okabe–Ito
+is a preset one click away.** The palettes are still confirmed as calibrations at the M7 gate (REQ-COL-087), with the
+default no longer an open question there.
+
+**RQ-312** asked whether REQ-GUI-076's ban on "Chazy subtitles" covers the Chazy stains: (a) record that it covers
+subtitles only, (b) reword REQ-GUI-076 and render_gui_spec §G1, (c) read it as covering every Chazy surface. *What it
+decides:* **(a) and (b) together.** **The ban covers captions naming the final-motion class over the figure, and not
+the Chazy fields, stains or legends.** REQ-GUI-076, render_gui_spec § "G1. Rules that hold everywhere" and
+GUI_DESIGN_NOTES § "Rules that hold everywhere" read "Chazy subtitles (captions over the figure)", the ruling's
+words; REQ-GUI-076's verify is scoped to "no Chazy subtitle code path exists". (The ruling's line numbers, 69 and 17,
+are the lines as they stood when the entry was filed; the sentence is at :111 and :36 on main. The words are what is
+applied.) REQ-GUI-185, REQ-GUI-186 and REQ-GUI-187 no longer wait.
+
+**RQ-313** asked whether the Chazy class and Principia's escape event may disagree at a pixel: (a) accept it, the
+legend help saying so; (b) the event gates the class; (c) the class's HE gate gates the event. *What it decides:*
+**option (a).** **The escape event and the Chazy class answer different questions.** An escape-terminated sample's
+class freezes at the fire-time state (§7, as written); **the legend help says the two can differ**; REQ-EVT-027's test
+asserts the freeze, not agreement.
+
+**RQ-314** asked how a categorical label fits the parity contract's tiers: (a) "a label on a real trajectory",
+reported not asserted, REQ-VAL-183's rate and band check the gate; (b) Tier N with a tolerance on the rate; (c)
+comparison-only branch inputs. *What it decides:* **option (a).** `chazy_class` is the parity contract's scope-table
+row "a label on a real trajectory" (`principia_parity_contract.md` § "Tier B — integer-exact *given the same branch
+decisions* (integer & packed fields)"): **reported, not asserted.** **REQ-VAL-183's measured disagreement rate and its
+band check are the gate**, with no threshold on the rate. The drill-down's §8 cites the row in place of "It is Tier N",
+and "read as the marginal labels" holds for the parabolic band only, not for a pair's binding, which is a sign (§3.4).
+
+**RQ-315** asked whether OS-candidate and B-stable ship, and how: (a) both, marked provisional in the status legend's
+help; (b) both, unmarked; (c) OS-candidate withheld. *What it decides:* **option (a).** **Both ship; the status
+legend's help marks them provisional:** OS-candidate is unvalidated (2–3 per seed later escaped as HE), and B-stable
+has never fired on random starts.
+
+**RQ-316** recorded the tasks' placement, (a) applied per R-369: TASK-M7-35 to TASK-M7-40 in M7, TASK-M8-45 in M8.
+*What it decides:* **option (a), as applied.** Each task depends on the M3, M4 and M7 tasks it uses; the calibrations
+are confirmed at the M7 gate. Nothing moves.
+
+**RQ-317** asked how B's `#141418`, OKLab chroma 0.0080, meets the spec's "no hue": (a) keep it, test 05 §2.5 asserting
+a stated chroma bound with a chromatic control well above it; (b) zero B's `a` and `b` under Replace-L; (c) a neutral
+near-black. *What it decides:* **option (a).** **B stays `#141418` (R-442).** **Test 05 §2.5 (the drill-down's §12.2
+item 5) asserts OKLab chroma ≤ 0.009**, a bound that covers this swatch (0.0080) and RQ-322's grey (0.0089), with a
+chromatic control well above it. The drill-down's §10.1 reads "near-neutral (chroma 0.008)" where it said the swatch has
+no hue (`a = b = 0`); §10.5.1's "Because B has no hue" follows (decided per R-369: the same sentence's consequence).
+
+**RQ-318** asked the order of B-stable and transient, which differ only for a Mardling–Aarseth-stable hierarchy with
+`E > 0`, a state not shown to exist: (a) the code's order; (b) the table's; (c) the code's, with B-stable stated to
+require `E < 0`. *What it decides:* **option (c).** **Transient is tested before B-stable, as prin-rs PR #32's
+`classify` does, and the rule states that B-stable requires `E < 0`.**
+
+**RQ-320** asked where "what just changed" finds the previous frame's class: (a) a render-side previous-class texture
+written each frame and bound to a post node, the dimming a calibration; (b) a payload latch; (c) offline only. *What it
+decides:* **option (a).** **A render-side previous-class texture is written each frame and bound to a post node.** The
+dimming is REQ-COL-106's calibration (R-71), proposed by TASK-M7-40.
+
+**RQ-321** asked which escaping body the one-body views draw: (a) `chazy_escaper` always; (b) the event's escape detail
+where the run has an escape event; (c) as (a), with the pixels where the two name different bodies counted in the
+legend. *What it decides:* **option (c).** **The one-body views read `chazy_escaper` always**, and **their legend
+counts the pixels where it names a different body from the event's escape detail.**
+
+**RQ-322** asked how the one-body grey `#8A8A90`, chroma 0.0089, meets §10.11.2's "no hue": (a) keep it, taking RQ-317's
+ruling; (b) an exactly neutral grey; (c) a neutral grey at another lightness. *What it decides:* **option (a), with
+RQ-317 (a).** **`#8A8A90` stays, held to the same chroma bound, ≤ 0.009, as `#141418`.** §10.11.2 reads "near-neutral
+(chroma ≤ 0.009)" where it said "Grey and black have no hue". **The stipple dot distance of 0.020 is recorded, and by
+R-434's criterion (0.212) the grey clears.**
+
+**RQ-323** asked where §10.11.3's three body-lens panels live: (a) one figure, the canvas split into three panels; (b)
+the v2 side by side; (c) an export only. *What it decides:* **option (a).** **§10.11.3 is one figure: the view's canvas
+splits into three panels, each the body lens at its own `k`, all drawn from one payload at one playhead, a GUI layout
+with no new stain or node.** Nothing of R-443 is deferred or dropped.
+
+**RQ-324** asked the order of B-stable and excursion, which differ for a bound, Mardling–Aarseth-stable hierarchy whose
+outer body is past `h_far` and receding (11,066 of 23,675 such hierarchies in the review): (a) the code's, excursion
+first; (b) the table's, B-stable first; (c) the code's, with a B-stable latch. *What it decides:* **option (b).**
+**B-stable is tested before excursion**, so **a bound, Mardling–Aarseth-stable hierarchy reads B-stable throughout its
+outer orbit**, and **excursion means "far out, bound, and not certified stable".** **A fixture with a receding outer
+body past `h_far` (`v_r ≠ 0`) is added, so the ordering test can fail** (§12.1's B-stable fixture has `v_r = 0` and
+passes under both orders).
+
+**RQ-325** asked whether the classifier enforces "E < 0 rules out H, HP and P", which `classify` does not (the review's
+homothetic expansion with `E = −0.1 U_0` reads H, then P): (a) keep the code, the checks empirical; (b) guard H, HP, P
+and the two-stage H with `E ≥ 0`, an E < 0 state that passes their geometric tests falling through to the later steps;
+(c) a label of its own for that state. *What it decides:* **option (b).** **H, HP, P and the two-stage H each require
+`E ≥ 0`.** An E < 0 state that passes their geometric tests falls through to B-stable, OS-candidate or B-so-far. **The
+review's homothetic counter-example (`E = −0.1 U₀`) is a fixture that reads B-so-far.** REQ-VAL-185's E < 0 arm and
+REQ-VAL-186's "no H, HP or P" are then guaranteed by the rule, and a failure of either is a bug.
+
+*Where the words leave a choice, decided per R-369 (the order under physics review; the layout and legends under gui
+review):*
+- **C1. The ruled order** (RQ-318, RQ-324, RQ-325), written into the drill-down's §3.2 as prin-rs PR #32's `classify`
+  with three changes: step 1 (dispersal) runs only at `E ≥ 0`; in step 2 the two-stage H fires only at `E ≥ 0`, and a
+  bound pair with a bound, receding outer body past the gate reads B-stable when step 4's test holds, and excursion
+  otherwise; step 4 (B-stable) requires `E < 0`. B-stable is the same test in step 2 and step 4. Transient stays step
+  3, before step 4, as RQ-318 (c) has it; excursion stays before transient, as the table and the code both order them.
+- **C2. Where a guarded state goes.** An E < 0 state that fails the two-stage H's guard is in step 2's last branch
+  (pair not bound, outer not bound), so it goes on to step 3 and reads B-stable, OS-candidate or B-so-far, as the words
+  say. An E < 0 state that passes step 1's geometric tests goes on to step 2, as `classify`'s "Otherwise go on" and
+  option (b)'s "the later steps" read; whether such a state may then read HE, PE or excursion in step 2, which the
+  words' list (B-stable, OS-candidate or B-so-far) leaves out, is a physics question the texts don't settle: RQ-521,
+  for the human. REQ-PAY-099 carries it for that clause only; the fixtures don't reach it, and the homothetic fixture
+  reads B-so-far under either reading (its hierarchy ratio is about 0.87, below `h_far`).
+- **C3. The two fixtures** are the drill-down's §12.2 items 10 and 11, ported by TASK-M7-35 with §12.1's (REQ-PAY-099).
+  The receding hierarchy is §12.1's B-stable fixture with a radial velocity added to body 2 that keeps it bound to the
+  pair and `ma_stable` true; its exact values, and the homothetic state's construction at 2.9 and at 3.2–3.5 times its
+  initial size, are written by the task with its physics review. Each has a control arm: the code's order reads
+  excursion on the first, and the unguarded rule reads H, then P on the second.
+- **C4. The legend help** (RQ-313, RQ-315): the final-motion and status legends' help says that the class and the
+  escape event can differ at a pixel, the two answering different questions; the status legend's help marks
+  OS-candidate and B-stable provisional, with the ruling's reasons (REQ-GUI-185, TASK-M8-45).
+- **C5. The count** (RQ-321) is shown in every one-body legend whose view reads `chazy_escaper` (the body lens, with
+  energy, the escaper map and its rank form), from the event's escape detail of each pixel whose run has an escape
+  event naming one body (`detail` 0–2), a triple ejection (`detail` 3) counting as different from every body
+  (REQ-GUI-187, TASK-M8-45).
+- **C6. The previous-class texture** (RQ-320): render contract Part 2 gains one sentence, that a post node may read a
+  render-side texture bound to it, this one; how the post node reads it beside this frame's coarse class is written
+  into Part 2 by TASK-M7-40 (R-72), which builds the view (REQ-COL-083).
+- **C7. The grey's bound** (RQ-322) is asserted with the energy lens (REQ-COL-091's verify): `#8A8A90` and `#141418`
+  at OKLab chroma ≤ 0.009.
+- **C8. Measured under the code's order.** prin-rs PR #32's measurements (the drill-down's §4, §10.6) were taken under
+  `classify`'s order; they are kept as the record with a sentence saying so, and are not re-measured here. TASK-M7-35's
+  proposals carry them as the evidence they are.
+- **C9. The entries close** and move to the archive with their rulings; every requirement and task that waited on them
+  no longer does, but REQ-PAY-099's C2 clause.
+
+*What it amends:* nothing of R-442 or R-443, whose rulings stand; the drill-down's transcribed order (R-442's
+"Applied per R-369": "the rule's order … the code is transcribed") changes in the three places C1 names, by these
+rulings. R-442 and R-443 gain a "Read by R-548" line, as R-467 gave them. It closes **RQ-311** to **RQ-318** and
+**RQ-320** to **RQ-325**, and opens **RQ-521**.
+
+R-548 is in the "physics" group of `plan/rule_groups.yaml`: it rules the classifier's order and its energy guards,
+with the colour and layout answers beside them.
+
+Changes REQ-PAY-099, REQ-PAY-101, REQ-EVT-027, REQ-VAL-183, REQ-VAL-185, REQ-VAL-186, REQ-COL-074, REQ-COL-083,
+REQ-COL-087, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-098, REQ-COL-099, REQ-GUI-185, REQ-GUI-186 and
+REQ-GUI-187 (`rq` removed; statement, verify or note; rulings; source), REQ-COL-106 (RQ-320 removed, note) and
+REQ-GUI-076 and REQ-COL-086 (statement, verify or note; rulings; source); REQ-PAY-099 gains `rq: RQ-521`. Adds no
+requirement.
+
+## R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*
+*21 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per
+macro-step — lockstep, ratified)" (the shape map's pole line, the table's Euler row, the labels' paragraph, with its
+earlier words kept) and § "5. Unit tests" (test 9), `docs/design/principia_chart_reference.md` § "Chart reference — the
+maths, for implementation" (the indexing note), § "2. Invariant-momentum charts `(Lz, E)` and `(Lz, K)`" (the human's
+sentences), § "3.3 The chart map" (three clauses) and § "3.4 Landmarks at known fixed coordinates" (the Lagrange
+sentence), `docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain
+(`06_legend.png`)" (a sentence) and § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" (the
+readouts), R-14's heading block, REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022 (reqio: statement or verify,
+rulings, `rq` removed, note), REQ-GUI-054 and REQ-GUI-087 (reqio: statement, verify, rulings, note), REQ-GUI-188,
+REQ-SYS-016, REQ-GEN-036, REQ-CHART-048 and REQ-CHART-017 (reqio: notes, rulings), REQ-GUI-345 (reqio, new),
+TASK-M8-06 (REQ-GUI-345), TASK-M8-11 (a note), `plan/tasks.yaml`, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355, moved with their rulings); built by
+TASK-M8-06, TASK-M8-10 and TASK-M8-11*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+41–43 and 59–64), which R-545 quotes in its opening:
+
+> - RQ-334 (Defining and labelling the Euler landmarks): (a). `E_j` is the collinear configuration with body `j` in the middle, and it is shown as `E_{j+1}` through R-449's one conversion function. Its antipodality to the other two bodies' binary collision is stated for equal masses only.
+>
+> - RQ-335 (Shown Burrau body numbers differ from the literature's): (a), both halves. R-449's map applies everywhere, Burrau included. The Burrau presets' legends and the Inspector show each body's mass beside its number, e.g. "body 1 (m = 5/12)".
+>
+> - RQ-336 (`.raw` and `.prnq` in R-449 item 5): Keep what was applied meanwhile. R-449 item 5 names prin-rs's dump formats as examples. The rule covers every machine-readable export the corpus defines, and any defined later. Add a note to REQ-GEN-036 saying so. The ruling's quoted words are not changed.
+>
+> - RQ-350 (Where an invariant chart's frozen configuration and masses come from): (a), as applied. The chart's parameters are the four frozen controls `(z_α, z_β, z_μ₁, z_μ₂)`. They are set from `z₀`'s configuration and mass blocks when the chart is entered, or from the lock where one is set, and edited like any chart parameter (Design axiom 6). Add this sentence to chart_reference §2.
+>
+> - RQ-355 (Lagrange configurations sit at the poles only at equal masses): (a), as applied. `L±` are the equilateral configurations under the current masses, at `w = √(3m₀m₁m₂)/(m₀m₁+m₀m₂+m₁m₂)`, and they are the poles only at equal masses. Reword these lines to add "at equal masses":
+>   - dd_integrator §5 test 9 (:297) and §3.7 (:213)
+>   - chart_reference §3.3 (:415, :429, :446) and §3.4 (:455): "are the two poles at equal masses"
+>   - REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022
+>   R-14 gets a forward note; its quoted words stay unchanged.
+
+R-549 ports the five answers on the shape sphere's landmarks, the shown body numbers, the exports' dump names and the
+invariant charts' parameters, in number order.
+
+**RQ-334.** The shape sphere's Euler landmarks `E₀, E₁, E₂` had no defined index, so R-449 could not say how they are
+shown. Option (a): `E_j` is the configuration with body `j` in the middle, shown `E_{j+1}`.
+
+*What it decides:* **option (a).**
+- **`E_j` is the collinear configuration with body `j` in the middle, and it is shown as `E_{j+1}` through R-449's one
+  conversion function.**
+- **Its antipodality to the other two bodies' binary collision is stated for equal masses only** (dd_integrator §3.7's
+  `ê_j = −b̂_j (equal masses)`, `b̂_j` the collision of pair `j`, the side opposite body `j`). With unequal masses
+  the Euler landmarks are the Euler central configurations (R-126).
+
+**RQ-335.** R-449's shown body numbers are not the Burrau literature's: at the classical point the shown body 1 is the
+mass-5 body. Option (a): R-449's map as ruled, everywhere, and the Burrau presets' legends and the Inspector show each
+body's mass beside its number; its first half was applied meanwhile.
+
+*What it decides:* **option (a), both halves.** R-449's map applies everywhere, Burrau included. **The Burrau presets'
+legends and the Inspector show each body's mass beside its number, e.g. "body 1 (m = 5/12)".**
+
+**RQ-336.** R-449 item 5 names `.raw` and `.prnq` dumps, which the live corpus does not define; REQ-GEN-036 covered
+every machine-readable export the corpus defines and any dump defined later (applied meanwhile).
+
+*What it decides:* **what was applied meanwhile stands.** R-449 item 5 names prin-rs's dump formats as examples; the rule
+covers every machine-readable export the corpus defines, and any defined later. REQ-GEN-036 gains a note saying so.
+**R-449's quoted words are not changed.**
+
+**RQ-350.** chart_reference §2 said the invariant charts "fix geometry and mass" but not where the frozen configuration
+and masses come from. Option (a): the chart's parameters are the four frozen controls in the decoder's own terms, set
+from `z₀` when the chart is entered or from the lock, edited as any chart parameter; TASK-M2-12 applied its
+representation.
+
+*What it decides:* **option (a), as applied.** **The chart's parameters are the four frozen controls `(z_α, z_β, z_μ₁,
+z_μ₂)`. They are set from `z₀`'s configuration and mass blocks when the chart is entered, or from the lock where one is
+set, and edited like any chart parameter (Design axiom 6).** The human's sentences are added to chart_reference §2.
+
+**RQ-355.** The corpus put the Lagrange (equilateral) configurations at the shape sphere's poles, `w = ±1`, for any
+masses, but R-14's mass-weighted map puts them there only at equal masses. Option (a): qualify the pole statements to
+equal masses, as TASK-M2-08 built them.
+
+*What it decides:* **option (a), as applied.**
+- **`L±` are the equilateral configurations under the current masses, at `w = √(3m₀m₁m₂)/(m₀m₁+m₀m₂+m₁m₂)`, and they are
+  the poles only at equal masses.** The lines the human names gain "at equal masses": dd_integrator §5 test 9 and §3.7's
+  shape map, chart_reference §3.3 (three places) and §3.4 ("are the two poles at equal masses"), and REQ-INT-003,
+  REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022.
+- **R-14 gets a forward note; its quoted words stay unchanged.** R-12's "no polar buffer" survives: a pole is a
+  nondegenerate triangle for any masses.
+- TASK-M2-08 (merged) computes `L±` from the shape map with the current masses and tests both cases, so REQ-INT-003,
+  REQ-CHART-018 and REQ-CHART-036 stand as built.
+
+*Where the words leave a choice, decided per R-369 (naming and placement; the landmarks under physics review):*
+- **L1. Where each half is built.** The Euler labels: REQ-GUI-054, TASK-M8-11 (which draws the landmarks); REQ-GUI-188's
+  note points there. The mass beside the number: REQ-GUI-087, TASK-M8-10 (every body label in the GUI), whose function
+  is REQ-GUI-188's. Nothing changes in TASK-M2-33 (merged), whose module gives the numbers.
+- **L2. Which surfaces show the mass.** "The Burrau presets' legends and the Inspector" is read as the legend under a
+  Burrau chart preset, and the Inspector on every chart, where it shows the masses anyway; the hover label and the
+  Trajectory panel are unchanged.
+- **L3. The invariant chart's entry in the GUI.** The kernel's representation is TASK-M2-12's (merged); the GUI's half,
+  setting the four controls on entry from `z₀` or the lock and editing them as chart parameters, is REQ-GUI-345,
+  closed by TASK-M8-06, the Manifold view's Chart section. REQ-CHART-048 and REQ-CHART-017 gain notes.
+- **L4. REQ-VAL-022.** It carries only RQ-355's "at equal masses" here; R-551 rewrites it for RQ-475 and RQ-476.
+
+*What it refines:* **R-14** ("L⁺ (w = +1) at the top", and its R-12 note's "the poles are the Lagrange points"): they
+hold at equal masses, its quoted words unchanged. Read with it: R-449 (the conversion function; unchanged), R-126 (the
+Euler central configurations), R-12 (no polar buffer, which stands). It closes **RQ-334, RQ-335, RQ-336, RQ-350 and
+RQ-355**.
+
+R-549 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-003, REQ-CHART-018, REQ-CHART-036 and REQ-VAL-022 (statement or verify, rulings, `rq` removed, note),
+REQ-GUI-054 and REQ-GUI-087 (statement, verify, rulings, note) and REQ-GUI-188, REQ-SYS-016, REQ-GEN-036,
+REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-345.
+
+## R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
+Jacobi and Shape bullet and the steer bullet reworded, with their earlier words kept) and § "G2. Explore — the everyday
+view (`01_main.png`)" (the line system's fade clause), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder —
+IC precision" (a paragraph added, "The latent Jacobian"), R-452's heading block, REQ-DEC-049 (reqio, new,
+definition), REQ-GUI-346 (reqio, new, calibration), REQ-GUI-347 (reqio, new, definition), REQ-GUI-199 and
+REQ-GUI-200 (reqio: statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (reqio: statement, `rq`
+RQ-341 replaced by RQ-522, note), REQ-GUI-244 (reqio, note), TASK-M6-35 (no longer waiting; three
+requirements added; its goal, deliverables, acceptance and notes), TASK-M8-54 (now waiting on RQ-522),
+`plan/tasks.yaml`, `plan/rule_groups.yaml`, RQ-522 (new) and `docs/archive/review_queue/M0.md` (RQ-341 to
+RQ-346, moved with their rulings); built by TASK-M6-35 (physics-reviewed)*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 44–58), which R-545 quotes in its opening:
+
+> - RQ-341 (An eight-column decoder Jacobian for the physical views): (a). Add an M6 definition requirement beside REQ-DEC-033 that shares its method: a CPU, f64, central-difference Jacobian `∂x/∂z` with 8 columns.
+>   - It is taken of the decoder's output in the view's coordinates, after canonicalisation and the scale gauge. Whether that is before or after `η_E` is RQ-345.
+>   - The views read `J q̂₁` and `J q̂₂` from it.
+>   - The area stretch is `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on the orthonormalised pair, so it does not move with zoom σ or tilt shear.
+>
+> - RQ-342 (The Jacobi view's coordinate set): (b). The eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each named as the decoder writes it. (c) is not adopted: it leaves the rank at 6 on its own, and weighting is the metric's job (RQ-346).
+>
+> - RQ-343 (The Shape view's coordinate set): (b). The eight are `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`.
+>   - `θ, φ` follow R-14's convention, with `φ` the polar angle from +w.
+>   - The rates are `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃, λ̃`.
+>   - The poles are named as the chart's singularities.
+>
+> - RQ-344 (The physical steer: inverse, rank test and refusals): (a) with the (a2) test.
+>   - The steer uses the full-rank sets of RQ-342 and RQ-343 (b), so `J⁺ = J⁻¹` and no metric on `z` enters.
+>   - A click is refused, with the reason logged, where the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is below a stated tolerance.
+>   - The Manifold view's sliders follow as after the Chart builder's Apply (§G7).
+>
+> - RQ-345 (Read the state before or after η_E): (b). The physical views and the steer read the state after `η_E`, the state the integrator starts from. On an `E*`-normalised chart, the steer refuses a cell whose plane needs the direction normal to the energy shell and logs "normal to the energy shell". The (a2) test of RQ-344 detects it.
+>
+> - RQ-346 (A metric on the physical coordinates): (c), with fixed ranges. Each coordinate is divided by a stated, fixed reference range: angles by their domain, masses by 1, and momenta by the decoder's momentum saturation bound. The grid uses that metric, and the help text names it.
+
+The six entries are R-452's physics review of the compass's Jacobi and Shape views (3.2) and its physical steer
+(3.4), which the human asked for before they are built; TASK-M6-35 waited on all six.
+
+**RQ-341** asked which Jacobian the physical views read: the corpus's `J_D` is `∂physical/∂(u, v)`, two columns into
+the particle frame (deep_zoom §2, REQ-DEC-033), not the eight-column `∂(view coordinates)/∂z` the views and the steer
+need, and no Gram factor was defined for it; its option (a) was a definition requirement for a CPU, f64,
+central-difference `∂x/∂z` with 8 columns beside REQ-DEC-033, the stretch read on the orthonormalised pair; (b) was to
+read the views off `J_D` by the chain rule and drop or rebuild the steer.
+
+*What it decides:* **option (a).**
+- **A new M6 definition requirement beside REQ-DEC-033, sharing its method:** a CPU, f64, central-difference Jacobian
+  `∂x/∂z` with 8 columns, one per latent direction (REQ-DEC-049).
+- **It is taken of the decoder's output in the view's coordinates, after canonicalisation and the scale gauge**; the
+  stage relative to `η_E` is RQ-345's, after it.
+- **The views read `J q̂₁` and `J q̂₂`**, `q̂₁`, `q̂₂` the slice plane's pair orthonormalised.
+- **The area stretch is `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on the orthonormalised pair,** so it does not move with
+  the zoom σ (`|q| = σ`, R-83) or the tilts' shear (`u₁ · u₂ = sin τ₁ sin τ₂`).
+
+**RQ-342** asked about the Jacobi view's proposed eight, `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`: `ρ̃ᵧ ≡ 0` on the
+decoder's image, the positions carry two degrees of freedom, the masses move none of them (rank 6). Its options: (a)
+keep them; (b) eight coordinates that chart the image, the full-rank set; (c) the momenta mass-weighted as well.
+
+*What it decides:* **option (b).** **The Jacobi view's eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each
+named as the decoder writes it.** **(c) is not adopted:** it leaves the rank at 6 on its own, and weighting is the
+metric's job (RQ-346).
+
+**RQ-343** asked about the Shape view's proposed eight, `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`: `n̂` is three numbers for two
+degrees of freedom, `R = 1` on the image, `ṅ` and `Ṙ` undefined, the masses and the rotation rate missing (rank 5).
+Its options: (a) keep them with the rates defined; (b) a chart of the image, the full-rank set; (c) drop the view.
+
+*What it decides:* **option (b).** **The Shape view's eight are `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`.**
+- **`θ, φ` follow R-14's convention, with `φ` the polar angle from `+w`.**
+- **The rates are `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃, λ̃`** (`ρ̃̇ = p_ρ/√μ_ρ`,
+  `λ̃̇ = p_λ/√μ_λ`).
+- **The poles are named as the chart's singularities.**
+
+**RQ-344** asked how the physical steer's latent preimage `q ∝ J⁺ e` is built: the Jacobian, a metric on `z`, a rank
+test and a rule for a coordinate outside `J`'s range. Its options: (a) as written, with a rank test, (a1) the smaller
+singular value of `[J⁺e_i, J⁺e_j]` or (a2) that of `[P e_i, P e_j]` with `P = J J⁺`, which lies in [0, 1] and is
+scale-free; (b) a weighted pseudo-inverse; (c) only the latent steer.
+
+*What it decides:* **option (a) with the (a2) test.**
+- **The steer uses the full-rank sets of RQ-342 and RQ-343 (b), so `J⁺ = J⁻¹` and no metric on `z` enters.**
+- **A click is refused, with the reason logged, where the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is
+  below a stated tolerance.** The tolerance is a calibration value (R-71), REQ-GUI-346.
+- **The Manifold view's sliders follow as after the Chart builder's Apply (§G7).**
+
+**RQ-345** asked whether the physical views and the steer read the state before or after the energy normalisation
+`η_E`, since with `E*` set every physical Jacobian has rank at most 7. Its options: (a) before `η_E`; (b) after it, the
+steer refusing the direction normal to the energy shell; (c) after it, with 7-coordinate sets on the level set.
+
+*What it decides:* **option (b).** **The physical views and the steer read the state after `η_E`, the state the
+integrator starts from.** **On an `E*`-normalised chart the steer refuses a cell whose plane needs the direction normal
+to the energy shell and logs "normal to the energy shell"**; RQ-344's (a2) test detects it (`P e` loses that direction).
+
+**RQ-346** asked which metric on the physical coordinates the grid and the steer use, their units differing. Its
+options: (a) the Euclidean metric in the coordinates as named; (b) the canonical pairing for Jacobi; (c) each
+coordinate scaled by a stated reference range.
+
+*What it decides:* **option (c), with fixed ranges.** **Each coordinate is divided by a stated, fixed reference range:
+angles by their domain, masses by 1, and momenta by the decoder's momentum saturation bound** (`q_max`, R-10, R-481).
+**The grid uses that metric, and the help text names it.** With the full-rank sets the steer is `J⁻¹` (RQ-344), which a
+fixed diagonal scaling leaves the same plane, so the grid shows the planes the steer reaches.
+
+*Where the words leave a choice, decided per R-369 (mechanical or routine; the Jacobian, the sets and the steer under
+physics review, as R-452 asks):*
+- **J1. Who writes the Jacobian.** REQ-DEC-049 is closed by TASK-M6-35, the task that needs it (R-72), on the
+  decoder's own CPU f64 path, with the central-difference rule REQ-DEC-034's `J_D` uses (two decode evaluations per
+  direction, deep_zoom §2); it is a separate Jacobian from `J_D`, which the linear path keeps (TASK-M6-07), and the
+  linear path does not read it. The definition is written into deep_zoom §2 as "The latent Jacobian".
+- **J2. The hovered pixel (R-452 C4) stands:** on an affine chart the pixel's latent point `z₀ + (2s−1)q₁ + (2t−1)q₂`;
+  on a nonlinear chart `z₀`, the help text saying so. C4's "until RQ-341 is ruled" no longer applies: RQ-341's
+  Jacobian is taken at a latent point, which a nonlinear chart's pixel does not have.
+- **J3. The tolerance** of RQ-344's (a2) test is a calibration (R-71), REQ-GUI-346: TASK-M6-35 proposes it from the
+  measured smaller singular value over the decoder's image (`E*` unset and set), and it is
+  confirmed at the M6 gate.
+- **J4. The reference ranges RQ-346's three classes do not name.** Shape's `θ̇`, `φ̇`, `L_z` and `Ṙ` are neither angles,
+  masses nor Jacobi momenta, and the ruling's words give no range for them. It is a missing definition, REQ-GUI-347
+  (R-72), written by TASK-M6-35 under physics review into render_gui_spec's compass section, each a fixed, stated range
+  derived from the decoder's own bounds (`q_max`, the masses' and the angles' domains), never a spread measured over the
+  chart's image (RQ-346's "fixed"). Flagged.
+- **J5. "Angles by their domain"** is each angle divided by the length of its domain: `α` and `β` as the decoder gives
+  them (dd_decoder §3.2), `θ` by 2π and `φ` by π (R-14).
+- **J6. The refusals' reasons.** A refusal names its cause in the console: "normal to the energy shell" (RQ-345), a pole
+  of the Shape view's sphere ("the chart's pole", RQ-343), or a saturated link; R-452's degenerate-pushforward message
+  (`J q̂₁ ∧ J q̂₂ = 0`, said, not drawn) stays for the views.
+- **J7. The trace fade's general distance (REQ-GUI-266).** R-509 Y3 has it wait on RQ-341 ("the real distance waits on
+  RQ-341"), REQ-GUI-266 naming "the distance in z … in the metric RQ-341 rules". RQ-341's ruling gives the eight-column
+  Jacobian and no metric on `z` (RQ-344's steer needs none), and RQ-346's metric is on the physical coordinates. Which
+  metric measures the distance from a trajectory's encoded point to the slice plane is not settled by these texts, and
+  it is physics (it changes what fades): **RQ-522** (new). REQ-GUI-266's `rq` moves to it; TASK-M8-54 waits on
+  it; meanwhile nothing changes (no fade on a chart with no proxy, its settings line saying so, REQ-GUI-249).
+- **J8. RQ-378.** R-510 parked it until RQ-341 is ruled, to return to the human then. RQ-341 is ruled here; the batch
+  leaves RQ-378 open ("Left open, not ruled (3): RQ-378, RQ-386, RQ-391. They stay in REVIEW_QUEUE.md."), so it stays
+  open in `REVIEW_QUEUE.md`, now with the human, its option (a) still applied (REQ-GUI-244's note).
+- **J9. TASK-M6-35 no longer waits.** It closes REQ-GUI-199, REQ-GUI-200 and REQ-DEC-049 to REQ-GUI-347, reviewed
+  by code, qa, gui and physics as before; its linear-decoder fixture stays, and its controls gain the un-orthonormalised
+  stretch (which moves with σ) and a reading before `η_E` (which differs on an `E*` chart).
+
+*What it amends:* **R-452** (3.2's proposed Jacobi and Shape sets, "proposed, not settled", now settled; the views'
+Jacobian, "the J_D machinery", now the eight-column `∂x/∂z`; the stretch, on the orthonormalised pair; 3.4's `J_D⁺`,
+now `J⁻¹` with the (a2) refusal; C4's "until RQ-341 is ruled"). Read with R-14 (the sphere's convention), R-83 (σ),
+R-509 (Y3's distance, J7) and R-510 (RQ-378, J8). It closes **RQ-341 to RQ-346**.
+
+R-550 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-DEC-049 (the eight-column Jacobian, definition), REQ-GUI-346 (the steer's tolerance, calibration) and
+REQ-GUI-347 (the reference ranges the ruling's classes do not name, definition); changes REQ-GUI-199 and REQ-GUI-200
+(statement, verify, rulings, source, `rq` removed, note), REQ-GUI-266 (statement, `rq`, note) and REQ-GUI-244 (note).
+
+## R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
+*21 Oct 2026 · applied in `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)"
+(the verified line's "exactly", with its earlier words kept, and the re-verified line's ball), REQ-VAL-022 (reqio:
+statement, verify, rulings, `rq` removed, note), REQ-VAL-021 and REQ-VAL-121 (reqio: statement, verify, rulings, `rq`
+removed, note), REQ-VAL-193 (reqio, new), TASK-M2-27 (REQ-VAL-022 and REQ-VAL-121 moved out, a note), TASK-M8-15 (a
+dependency), TASK-M2-50 (new), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-475, RQ-476
+and RQ-477, moved with their rulings); built by TASK-M2-50*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+128–130), which R-545 quotes in its opening:
+
+> - RQ-475 (What "exactly" means for pole and equator): (a) + (c). "Collinear → `z_β` sits at its clamp image with its `lookup_clamped` bit set, bit for bit; no equilateral state sets it. Equilateral → `|w − 1|` and collinear `|w|` lie within an R-71 calibrated bound, with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence." Reword the scratchpad's "exactly" to "to rounding (pole); at the clamp image (equator)".
+>
+> - RQ-476 (Round-trip domain is the ball ‖z‖ < 4): (a). "`|z| < 4` is the ball `‖z‖ < 4`. The gate is max `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³` over the fixed, recorded seed's 2×10⁴ draws, and the bound stays provisional under REQ-VAL-121."
+>
+> - RQ-477 (Random IC is g₀·D(z); Randomise reported separately): (c), consistent with RQ-476. "The gated distribution is `g₀·D(z)` with `z` in the ball, held at 1.6×10⁻¹⁴ unchanged. The Inspector's Randomise distribution runs as a second arm whose bound REQ-VAL-121 calibrates. It is reported until then and never used to loosen 1.6×10⁻¹⁴."
+
+R-551 ports the three answers on the IC Inspector's gates, which TASK-M2-27 built and merged with REQ-VAL-022 and
+REQ-VAL-121 held, in number order.
+
+**RQ-475.** The scratchpad and REQ-VAL-022 said equilateral states land on a shape-sphere pole and collinear ones on
+the equator "exactly", which floating point cannot promise for `w`, and which the chart meets at the equator only
+through its clamp.
+
+*What it decides:* **options (a) and (c).**
+- **A collinear state's `z_β` sits at its clamp image with its `lookup_clamped` bit set, bit for bit; no equilateral
+  state sets it.** That check is exact.
+- **An equilateral state's `|w − 1|` and a collinear state's `|w|` lie within an R-71 calibrated bound**, REQ-VAL-121's,
+  with the measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ as evidence.
+- **The scratchpad's "exactly" becomes "to rounding (pole); at the clamp image (equator)".**
+
+**RQ-476.** The round trip's domain, "`|z| < 4`", did not say whether it is a box or a ball, nor which seed.
+
+*What it decides:* **option (a).** **`|z| < 4` is the ball `‖z‖ < 4`. The gate is max `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³`
+over the fixed, recorded seed's 2×10⁴ draws, provisional under REQ-VAL-121.** The scratchpad's re-verified line names
+the ball.
+
+**RQ-477.** The handles gate's "2×10⁴ random ICs" did not name the distribution; qa found the Inspector's Randomise
+distribution past 1.6×10⁻¹⁴ on 3 seeds of 5.
+
+*What it decides:* **option (c), consistent with RQ-476.**
+- **The gated distribution is `g₀·D(z)` with `z` in the ball, held at 1.6×10⁻¹⁴ unchanged.** TASK-M2-27 built that
+  distribution, so REQ-VAL-021 stands as built.
+- **The Randomise distribution runs as a second arm whose bound REQ-VAL-121 calibrates; it is reported until then and
+  never used to loosen 1.6×10⁻¹⁴** (REQ-VAL-193).
+
+*Where the words leave a choice, decided per R-369 (placement and tasks; the bounds under physics review):*
+- **V1. The held requirements move.** REQ-VAL-022 and REQ-VAL-121 leave TASK-M2-27 (merged) for TASK-M2-50,
+  which judges the shape checks, adds the Randomise arm (REQ-VAL-193) and proposes the bounds; TASK-M2-27 keeps
+  REQ-VAL-021. TASK-M8-15, which needs REQ-VAL-022, gains the new task as a dependency.
+- **V2. Measured on the final `C`.** TASK-M2-50 depends on TASK-M2-47, because R-547 changes
+  canonicalisation's step 0, which the round trip runs.
+- **V3. The pole check at equal masses.** "Equilateral → `|w − 1|`" is read at equal masses, where `L±` are the poles
+  (R-549, RQ-355); the families draw equal-mass equilateral triangles.
+- **V4. One bound requirement.** The shape bounds and the Randomise arm's bound join REQ-VAL-121's calibration rather
+  than a new calibration requirement, since it already gates this Inspector's bounds at the M2 gate.
+
+*Read with:* R-71 (the calibration rule), R-549 (the poles at equal masses), R-547 (canonicalisation's step 0). It
+closes **RQ-475, RQ-476 and RQ-477**.
+
+R-551 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-022, REQ-VAL-021 and REQ-VAL-121 (statement, verify, rulings, `rq` removed, note); adds REQ-VAL-193.
+
+## R-552 — R-537's extension questions are ruled: a periodic axis's centre unwrapped in the view state, canonical in keys; the field's repeats at full strength; an Overlays › Chart outline of the primary square; no zoom-out limit beyond the frame budget; a level-0 pole repeat from its level-1 halves; Fit the view's own square; the canvas background until the first baseline cover; comments and the console's pick for the human to define; a tilted θ axis affine *(closes RQ-406, RQ-407, RQ-408, RQ-409, RQ-410, RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430; amends R-537; refines R-472)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Chart group, a toggle added; "Past the square with the controls shown", clauses added and citations
+updated), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+(R-407)" (the level-0 pole repeat, a sentence added; RQ-430's citation), `docs/contracts/principia_caching_contract.md`
+§ "Part 4 — Baseline-first: an absolute tier, not a priority weight" (the baseline cover's bullet, a sentence added),
+R-537's and R-472's heading blocks, REQ-GUI-348 (reqio, new), REQ-GUI-267, REQ-GUI-268, REQ-GUI-269 and REQ-GUI-270
+(reqio: statement, rulings, note), REQ-CHART-080 (reqio: statement, rulings, note), REQ-SCHED-101 (reqio: rulings,
+note), TASK-M8-55 (a requirement added; deliverables, acceptance and notes), TASK-M8-56 (notes), `plan/tasks.yaml`,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430,
+moved with their rulings); built by TASK-M8-55 and TASK-M8-56*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`
+(lines 70–75, 80, 83, 84 and 94), which R-545 quotes in its opening:
+
+> - RQ-406 (Periodic-axis view centre: unwrapped in the view state): (a). "On a periodic axis the view state stores the centre unwrapped. Keys and addresses use the canonical value."
+>
+> - RQ-407 (The field's repeats at full strength): (a). "Repeats of the field are drawn at full strength, because they are the same systems. A trace's repeats are fainter."
+>
+> - RQ-408 (Outline of the primary square past its edge): (a). "Add an Overlays › Chart toggle that outlines the chart's primary square. It is off by default and on in the debug view."
+>
+> - RQ-409 (No fixed zoom-out limit on periodic charts): (a). "Periodic charts have no zoom-out limit beyond the frame budget and the baseline cover. The demo's 3× cap applies only to its fixed maps."
+>
+> - RQ-410 (Level-0 pole repeat drawn from its level-1 halves): (a). "A level-0 repeat across a pole is drawn from its two level-1 children, as EX7(b) states. The bootstrap is not raised for pole-crossing charts."
+>
+> - RQ-411 (Comment pinned in a repeat attaches canonically): (a), ruled together with RQ-420. "A comment pinned in a repeat attaches to the canonical point and appears in every image. This applies once a comment on the figure is defined (RQ-420)."
+>
+> - RQ-416 (Fit scales the view's own square): (a). "Fit scales the view's own square, wherever the view sits, and draws whatever that square holds. 'With no extension' in R-472 X2 means no window area beyond that square."
+>
+> - RQ-419 (Frames before any ancestor exists): (a). "Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no snapshot), the canvas background is drawn. EX4's no-gaps check applies from then on."
+>
+> - RQ-420 (Comments on the figure and the console's pick are undefined): (b), with (a)'s condition. "EX5 names features I have not specified yet. I will define what a comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's pick is. EX5 applies to each once it is defined."
+>
+> - RQ-430 (A tilted θ axis is affine and does not repeat): (a). "Canonical folding applies along an axis only where every term with non-zero weight has that period. A tilted θ axis is therefore affine and does not repeat, while the untilted sphere's maps stand."
+
+RQ-406 to RQ-411 are the extension file's §4 questions Q1 to Q6 (R-537 U14), each with the file's recommendation as
+its option (a), applied meanwhile except Q3's outline, which nothing built; RQ-416, RQ-419 and RQ-420 are R-537's port's
+own entries (U4, U6, U9), and RQ-430 the trace follow-up port's (R-538 J8). Every ruling here is an option (a) the
+corpus already assumes, but RQ-408 (an overlay added), RQ-416 (a reading of R-472 X2's words) and RQ-420 (option (b):
+the human will define the two features).
+
+*What it decides:*
+- **RQ-406 (a).** On a periodic axis the view state stores the centre unwrapped; keys and addresses use the canonical
+  value (R-537 EX9, as applied).
+- **RQ-407 (a).** Repeats of the field are drawn at full strength, because they are the same systems; a trace's
+  repeats are fainter (their strength is RQ-412's, R-553).
+- **RQ-408 (a).** An Overlays › Chart toggle outlines the chart's primary square. Its default is ruled with RQ-461: the
+  human's reconciliation there ("There is one outline toggle with one state. It sits in Overlays › Chart and is reached
+  also from the Trace group and `Trace…`. It is on by default, as R-541 and the demo have it, and on in the debug
+  view.") supersedes this entry's "off by default" by its own words, so **the toggle is on by default and on in the
+  debug view**; its other routes are R-556's (RQ-461). Built now, by TASK-M8-55 (REQ-GUI-348).
+- **RQ-409 (a).** Periodic charts have no zoom-out limit beyond the frame budget and the baseline cover; the demo's 3×
+  cap applies only to its fixed maps.
+- **RQ-410 (a).** A level-0 repeat across a pole is drawn from its two level-1 children, as EX7(b) states; the
+  bootstrap is not raised for pole-crossing charts.
+- **RQ-411 (a), ruled with RQ-420.** A comment pinned in a repeat attaches to the canonical point and appears in every
+  image, once a comment on the figure is defined (RQ-420). Nothing is built until then.
+- **RQ-416 (a).** Fit scales the view's own square, wherever the view sits, and draws whatever that square holds;
+  R-472 X2's "with no extension" means no window area beyond that square (R-468 E2's reading, R-537 U4's meanwhile).
+- **RQ-419 (a).** Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with
+  no snapshot) the canvas background is drawn; EX4's no-gaps check applies from then on.
+- **RQ-420 (b), with (a)'s condition.** EX5 named features the human has not specified: the human will define what a
+  comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's pick is.
+  EX5 applies to each once it is defined. Nothing is built for either meanwhile, and no definition requirement is
+  opened: the definitions are the human's.
+- **RQ-430 (a).** Canonical folding applies along an axis only where every term with non-zero weight has that period, so
+  a tilted θ axis is affine and does not repeat (R-538 TF2.2, as applied); the untilted sphere's maps stand.
+
+*Where the words leave a choice, decided per R-369 (mechanical or routine):*
+- **E1. "On in the debug view"** (RQ-408, RQ-461) is read as: while a debug view is the figure (View › Debug view,
+  R-467) the outline is drawn whatever the toggle's state, as the debug view shows the hatch; leaving the debug view
+  returns the toggle's own state. The toggle is one field in the view's overlay state, saved with the overlays'
+  defaults (Overlays ▾'s "save as default") like every other overlay. The outline is the primary square `[0,1]²` of the
+  chart's own parameters, drawn as a figure mark (R-539) in the line system's overlay pass, a 1 px line in the axes'
+  colour, drawn where the square's edge is in view and nowhere else. Its look is a dark-mode look choice under R-390,
+  listed in TASK-M8-55's PR.
+- **E2. Who builds the outline.** TASK-M8-55, the extension's GUI task (RQ-408's context), closes REQ-GUI-348, the
+  toggle, its one state and its default; the Trace group's and `Trace…`'s routes to the same state are RQ-461's
+  (R-556), built by TASK-M8-61 and TASK-M8-62.
+- **E3. The untilted sphere's maps (RQ-430)** are θ's period and the pole maps of R-537 EX7(b). Its equator fold, a
+  hemisphere map, is the human's shape sphere ruling of 21 Oct's (R-544; *was:* "ported on its own branch, not yet merged"), which
+  makes the shape sphere chart the whole sphere with no fold; this ruling applies nothing to it and changes no fold.
+- **E4. RQ-420's features** stay out of EX5's tests until the human defines them; REQ-GUI-269 says so, and RQ-411's
+  attachment is recorded for that definition.
+- **E5. Nothing else changes:** each (a) was applied meanwhile (R-537 U4, U6, U14; R-538 J8), so REQ-GUI-267 to
+  REQ-GUI-270, REQ-SCHED-101 and REQ-CHART-080 change only in their citations and notes, but REQ-GUI-267 (the zoom-out
+  clause) and REQ-GUI-269 (comments and the pick, stated as undefined) gain a clause each.
+
+*What it amends:* **R-537** (U14: Q3's outline, "which nothing builds until it is ruled", is built; U4, U6 and U9's
+meanwhile readings are ruled; EX5's "comments and the console's pick" apply once the human defines them). *What it
+refines:* **R-472** (X2's "with no extension": no window area beyond the view's own square). Read with R-468 (E2),
+R-538 (TF2.2, J8), R-539 (figure marks) and R-541 (the outline on by default, as RQ-461 reconciles it). It closes
+**RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420 and RQ-430**.
+
+R-552 is in the "design" group of `plan/rule_groups.yaml`, with R-537.
+
+Adds REQ-GUI-348 (the outline toggle); changes REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270 and REQ-CHART-080
+(statement, rulings, note) and REQ-SCHED-101 (rulings, note).
+
+## R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says "not a system" and names the check, `decode_failed`, its detail and "forbidden" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*
+*21 Oct 2026 · applied in `docs/design/principia_lines.md` § "8. Traces" (the leaving table's curve row and the tilted
+axis's sentence, the repeats, not-a-system, ramp, animation, length and incomplete-run bullets: the entries' citations,
+the readout's count line and a `sim_failed` sentence), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the
+everyday view (`01_main.png`)" (the trace settings' paragraph and the not-a-system readout, citations), R-537's and R-538's heading blocks (a forward line each, their "Still in force" lines),
+REQ-GUI-272 to REQ-GUI-276, REQ-GUI-280, REQ-GUI-282 and REQ-INT-096 (reqio: rulings, source, notes; REQ-GUI-276 and
+REQ-GUI-280 the readout's count line), REQ-GUI-269, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-281 (reqio: notes),
+TASK-M8-58 and TASK-M8-55 (notes), `docs/archive/review_queue/M0.md` (RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to
+RQ-429, moved with their rulings) and `plan/rule_groups.yaml`; built by TASK-M8-58 and, RQ-417's readout, TASK-M8-55*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+76–79, 81, 82 and 85–93), which R-545 quotes in its opening:
+
+> - RQ-412 (A trace's repeats at half strength): (a). "A trace's repeats are drawn at half strength so the primary reads first."
+> - RQ-413 (Start icon: the star, with Pictures' triangle): (a). "The start icon is the star in every set except Pictures, which uses the initial triangle in body colours."
+> - RQ-414 (End event draws over a coincident syzygy): (a). "Where a syzygy and an end event coincide in time, the end event draws on top."
+> - RQ-415 (Edge chevrons and edge-pinned icons stay separate): (a). "Chevrons and edge-pinned icons stay separate: pins are events, chevrons are the line."
+> - RQ-417 (`decode_failed` and "forbidden" in a presentation readout): (b). "In a presentation view the readout says 'not a system' and names the failed check, for example 'a mass is ≤ 0'. The label `decode_failed`, its detail and the word 'forbidden' appear only while a debug view is the figure. The same rule covers RQ-425's readout line."
+> - RQ-418 (Non-finite step in `computeIC` is `sim_failed`): (a). "A non-finite step size ends the run at once with the label `sim_failed`, as the integrator contract says. The trace ends with the '?' icon. 'Incomplete' means only that the hover's step budget ran out."
+> - RQ-421 (Other θ branches on a tilted chart: an option, off): (a). "Only the continuous θ branch is drawn by default. Drawing the other branches, each faded by its own out-of-plane distance, is an option built when REQ-GUI-266's distance lands (RQ-341)."
+> - RQ-422 (Time ramp default stays Sunset): (a). "The time ramp defaults to Sunset (`#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`). Viridis is a preset."
+> - RQ-423 (Follow-up's "§3a", "T13" and "two bug classes"): (a). "F1 replaces the delivered bundle's §3 row 'Leaves the chart's reach' (I5). F2 adds three bug classes. No updated bundle is coming."
+> - RQ-424 (T15's boundary: `|q₃| ≥ q_max`): (a). "T15 tests the target component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019). The trace leaves at `|q₃| ≥ q_max`."
+> - RQ-425 (Trace sample past a curve axis's bounded edge): (a). "On a curve axis, a sample past a bounded edge is not drawn, the line breaks with no ring, and it is counted in its own readout line, 'past the domain's end: N', which is never a bug. On every other bounded axis TF1 rule 2 applies (the trace leaves, with rings). TM8's forbidden count keeps only samples that are not a system, and must read 0."
+> - RQ-426 (T18's fade arm only where a distance exists): (a). "T18's fade arm runs only where an off-plane distance is defined: R-509's proxy now, REQ-GUI-266's distance once RQ-341 is ruled. Everywhere else its point-stays arm runs and the settings line says there is no fade."
+> - RQ-427 (Paused traces: TF3 applies to the default length only): (a). "TF3's 'drawn to its end while paused' applies to the default length, `ToPlayhead`. A `Window` or `LastDt` length is kept as chosen, and a finished own-clock 'Once' holds its last frame, the whole trace."
+> - RQ-428 (A kept orbit's `Trace` round-trips through `Lines`): (a). "A kept orbit's `Trace` (its IC and style, ramp included) is `Lines` state and round-trips with `RenderState`. On reopening, the view redraws it. The Trajectory panel's kept-orbit tabs stay `ViewUI`."
+> - RQ-429 (TM8 tests the shown axes, not Part 6's ladder): (a). "TM8's not-a-system test checks the sample's chart point on the shown axes, after the types fold it. It never runs Part 6's validation ladder on the whole state."
+
+These are the fifteen trace entries R-537 and R-538 queued: the four questions of `principia_trace_markers.md` §12
+(RQ-412 to RQ-415), the two of the follow-up's F7 (RQ-421, RQ-422), and the conflicts and silences the ports found
+(RQ-417, RQ-418, RQ-423 to RQ-429). Every one is ruled by the option applied meanwhile (R-537 U7; R-538 I8, I10, I13,
+J2, J4 to J6 and J10 to J13), so nothing built or planned changes but the citations, the readout's count line
+(RQ-417 with RQ-425) and the requirements' `rq`-free notes.
+
+On RQ-412 the entry asked whether a trace's repeats are drawn at half strength (a, the file's recommendation), full
+(b), or by a setting, half by default (c). *What it decides:* **option (a): a trace's repeats are drawn at half
+strength, so the primary reads first** (R-538 TM7, as applied, I10). The entry's note stands: along an axis that mixes
+θ with a non-periodic coordinate there are no images (RQ-430's), so this is about the images of untilted periodic and
+pole-crossing charts; the other θ branches of a tilted chart are RQ-421's.
+
+On RQ-413 the entry asked whether the start icon is the star by default with the triangle as Pictures' (a), the star
+in every set (b), or the triangle offered in every set (c). *What it decides:* **option (a): the star in every set but
+Pictures, whose start icon is the initial triangle in body colours** (R-538 TM4's table, as applied).
+
+On RQ-414 the entry asked which draws on top where a syzygy and an end event coincide in time: the end event (a), the
+syzygy (b), or the syzygy hidden (c). *What it decides:* **option (a): the end event draws on top.**
+
+On RQ-415 the entry asked whether the window chevrons and the edge-pinned icons stay separate (a) or merge into one
+edge treatment (b). *What it decides:* **option (a): they stay separate; pins are events, chevrons are the line**
+(R-538 TM6, as applied).
+
+On RQ-417 the entry asked whether a presentation view's readout of a pixel that is not a system shows the label
+`decode_failed`, its detail and "forbidden" (a, R-537 EX5 and R-538 TM8 as written), shows only "not a system" and the
+failed check, the label and its detail only while a debug view is the figure (b, R-470 N3 holding for the readout), or
+(b) with a "details" toggle (c). *What it decides:*
+- **Option (b).** In a presentation view the readout says "not a system" and names the failed check (for example "a
+  mass is ≤ 0"); the label `decode_failed`, its detail and the word "forbidden" appear only while a debug view is the
+  figure. R-537 EX5's "and gives the label (`decode_failed`, its detail)" and R-538 TM8's readout ("forbidden: not
+  integrated", the label, detail 2) hold in a debug view only. This is R-537 U7's meanwhile, now ruled.
+- **The same rule covers RQ-425's readout line** (below): the trace's readout lines follow it.
+
+On RQ-418 the entry asked whether a step size that is not finite ends the run `sim_failed`, the trace ending with "?"
+(a), "incomplete" as R-538 TM9 says (b), or `sim_failed` with its own end icon (c). *What it decides:* **option (a): a
+non-finite step size ends the run at once with the label `sim_failed`, as the integrator contract says, and the trace
+ends with the "?" icon; "incomplete" means only that the hover's step budget ran out** (TM3). R-538 TM9's guard (b)
+"ends the run as incomplete" reads "ends the run `sim_failed`" (I8, as applied; REQ-INT-096).
+
+On RQ-421 the entry asked whether a tilted periodic chart draws the other θ branches, each faded by its own
+out-of-plane distance: no by default, an option (a), always (b), or never (c). *What it decides:* **option (a): only the
+continuous θ branch is drawn by default; drawing the other branches, each faded by its own out-of-plane distance, is an
+option built when REQ-GUI-266's distance lands** (RQ-341, another area of this batch, R-550). R-538 J13 as applied;
+REQ-GUI-278's "the other θ branches of a tilted chart are not drawn" is the default.
+
+On RQ-422 the entry asked whether the time ramp's default is Sunset (a) or Viridis (b). *What it decides:* **option (a):
+Sunset, `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`; Viridis is a preset** (R-538 TF4, J12).
+
+On RQ-423 the entry asked whether F1 replaces what the delivered bundle says on leaving, with three bug classes, as
+the human's message says (a), or an updated bundle with a §3a and a T13 is still to come (b). *What it decides:*
+**option (a): F1 replaces the delivered bundle's §3 row "Leaves the chart's reach" (R-538 I5); F2 adds three bug
+classes; no updated bundle is coming** (R-538 J2, as applied).
+
+On RQ-424 the entry asked which quantity and boundary T15 leaves at: the target component's own `|q₃|` at `≥ q_max`
+(a), the same at `> q_max` (b), or the proxy's magnitude (c). *What it decides:* **option (a): T15 tests the target
+component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019), and the trace leaves at `|q₃| ≥ q_max`** (R-538 J4).
+
+On RQ-425 the entry asked what a trace sample projected past a bounded edge is: on a curve axis not drawn, broken with
+no ring, counted in its own line, rule 2 elsewhere, TM8's count only for non-systems (a); rule 2 everywhere (b); or
+TM8 as written, the forbidden count then not always 0 (c). *What it decides:*
+- **Option (a).** On a curve axis a sample past a bounded edge is not drawn, the line breaks with no ring, and it is
+  counted in its own readout line, "past the domain's end: N", which is never a bug. On every other bounded axis TF1's
+  rule 2 applies: the trace leaves, with rings.
+- **TM8's forbidden count keeps only samples that are not a system, and must read 0** (R-538 J5, as applied).
+
+On RQ-426 the entry asked whether T18's fade arm runs only where an off-plane distance is defined (a), the distance to
+the curve becomes a second proxy (b), or T18 waits whole on RQ-341 (c). *What it decides:* **option (a): T18's fade arm
+runs only where an off-plane distance is defined, R-509's proxy now and REQ-GUI-266's distance once RQ-341 is ruled;
+everywhere else its point-stays arm runs and the settings line says there is no fade** (R-538 J6; R-509 Y3 stands).
+
+On RQ-427 the entry asked whether TF3's "drawn to its end while paused" is the default length's only (a), every
+length's (b), or the last `Δt` measured back from the end while paused (c). *What it decides:* **option (a): TF3 applies
+to the default length, `ToPlayhead`; a `Window` or `LastDt` length is kept as chosen, and a finished own-clock "Once"
+holds its last frame, the whole trace** (R-538 J11, as applied).
+
+On RQ-428 the entry asked whether a kept orbit's `Trace` round-trips through `Lines` with the kept-orbit tabs staying
+`ViewUI` (a), the kept orbits move into `RenderState` whole (b), or only the ramp round-trips (c). *What it decides:*
+**option (a): a kept orbit's `Trace` (its IC and style, the ramp included) is `Lines` state and round-trips with
+`RenderState`; on reopening the view redraws it; the Trajectory panel's kept-orbit tabs stay `ViewUI`** (R-538 J12).
+
+On RQ-429 the entry asked whether TM8's test is the not-a-system test of the sample's chart point on the shown axes,
+after the types fold it (a), Part 6's layers on the whole state with θ folded first (b), or dropped (c). *What it
+decides:* **option (a): TM8 checks the sample's chart point on the shown axes, after the types fold it, and never runs
+Part 6's validation ladder on the whole state** (R-538 J10, TF2.1).
+
+*Where the words leave a choice, decided per R-369 (the readout's wording, a GUI choice; reviewed by gui):*
+- **K1. The count line under RQ-417's rule.** TM8's readout line "in forbidden: N samples" carries the word
+  "forbidden", which RQ-417 keeps to a debug view. So in a presentation view the trace's readout counts those samples as
+  "not a system: N samples", and the line reads "in forbidden: N samples" only while a debug view is the figure; its
+  value and the warning on a non-zero count are unchanged. RQ-425's line, "past the domain's end: N samples", carries
+  no debug label and reads the same in every view. *Was:* "in forbidden: N samples" in every view (R-538 TM8, as
+  applied).
+- **K2. TM9's word.** R-538's applied text and the trace file say "incomplete" for both a spent step budget and a
+  non-finite step; the code, the requirements and the tests use `sim_failed` for the second, and the "?" end icon for
+  both (I8). Nothing else is renamed.
+- **K3. The entries close.** RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429 move to the archive with their
+  rulings; REQ-GUI-272 to REQ-GUI-282 and REQ-INT-096 cite R-553 for the options that were "applied meanwhile", their
+  statements unchanged but for REQ-GUI-276's and REQ-GUI-280's count line (K1). No requirement carried an `rq` for
+  these entries. The R-537 U7 and R-538 I8, I10, I13, J2, J4 to J6 and J10 to J13 meanwhiles are now the rulings.
+- **K4. Where it is built.** TASK-M8-58 builds the trace (REQ-GUI-271 to REQ-GUI-283, REQ-INT-096), TASK-M8-55 the
+  pick's readout (REQ-GUI-269), as before; physics reviews TASK-M8-58.
+
+*What it amends:* **R-537** (EX5's readout: the label and its detail in a debug view only, U7 ruled) and **R-538**
+(TM8's readout: "forbidden: not integrated", the label and its detail in a debug view only, the count line reading "not
+a system: N samples" in a presentation view; TM9's guard (b): `sim_failed`, not incomplete; TF3, J11: the default
+length's; TF6's T18: its fade arm only where a distance is defined). Read with it: R-470 N3 and R-467, which it
+follows; R-509 Y3, which stands. It closes **RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429**.
+
+R-553 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
+
+Changes REQ-GUI-276 and REQ-GUI-280 (statement or verify: the count line; rulings, source, note), REQ-GUI-272 to
+REQ-GUI-275, REQ-GUI-282 and REQ-INT-096 (rulings, source, note), REQ-GUI-269, REQ-GUI-277, REQ-GUI-278 and
+REQ-GUI-281 (notes).
+
+## R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (the exponential
+map's exception) and § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (undefined shares),
+`docs/design/principia_chart_reference.md` § "3.3 The chart map" (the radius paragraph, a sentence; the rank-losing
+corner's sentence, with its earlier words kept) and § "5.4 Past the unit square — each axis's extension type (R-407)"
+(the in-square sentence, the exception), `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)"
+(the corner after the Gram factor; the physical tilt targets, a paragraph) and § "Past the unit square — each axis's
+extension type (R-407)" (the tilted view's maps, with its earlier words kept), the heading blocks of R-467, R-473,
+R-506, R-537 and R-538 (a forward line each, their "Still in force" lines), REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101,
+REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (reqio: statement or verify, rulings, source, `rq` removed, note),
+REQ-CHART-058, REQ-GUI-106, REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (reqio), REQ-CHART-084 (reqio, new, a
+definition), TASK-M8-58 (closes REQ-CHART-084; notes), TASK-M2-36 and TASK-M8-56 (notes),
+`docs/archive/review_queue/M0.md` (RQ-470 to RQ-474, moved with their rulings) and `plan/rule_groups.yaml`; built by
+TASK-M2-36, TASK-M2-35, TASK-M8-46, TASK-M8-56 and TASK-M8-58*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+123–127), which R-545 quotes in its opening:
+
+> - RQ-470 (Exponential map past r = π: by design, no warning): (a). "An exponential-map pixel with `r > π` inside `[0,1]²`, and one exactly on `r = π` if REQ-CHART-078 makes it the domain's end, is the domain's end by design. It draws blank and logs no warning, the same exception R-506 W1 makes for the energy axes' linear option." §G12, REQ-GUI-227 and REQ-CHART-058's sweep name the exception.
+> - RQ-471 (Lean-each-axis degenerate corner: ray-degenerate, legend undefined): (a). "At `|τ₁| = |τ₂| = 90°` with one target the chart reports `ray-degenerate`. No fold is applied (there is no normal), every area weight is 0, and the legend shows each share as undefined ('—'), never 0%."
+> - RQ-472 (Tilted shape sphere: EX7(b) folds only where §3.3 allows): (a). "On a tilted view the equator fold is kept iff `N_b = 0`, and the pole maps iff `N_a = 0` and `N_b = 0`, each decided exactly on the stored angles as §3.3 decides. Otherwise the view is affine along that axis and draws no image (TF2.2). §3.3's pixel fold governs the statistics (EX7(g))."
+> - RQ-473 (T16/T16b jump threshold becomes a calibrated value): (a). "T16 and T16b hold the screen step within REQ-GUI-283's calibrated threshold, set inside the measured gap between genuine motion (≤ ~97× median, TF2.3) and the artefacts (the `2π·cos τ` wrap jump and the ~2000× flip). Their controls are unchanged and must still fail." Reword the "within 3× the median" cells in F6's table to "within the calibrated threshold (REQ-GUI-283)".
+> - RQ-474 (T15's physical-momentum arm needs a target): (a). "The shape sphere offers the physical `p_λ` components as tilt targets, defined by TASK-M8-58 (R-72) as demo tab F builds them, and T15's second arm runs on that target."
+
+These five entries touch the shape sphere chart, and RQ-470 to RQ-472 its hemisphere and mirror. The human's shape
+sphere ruling of the same day, R-544 (*was:* "ported on its own branch and not yet merged here"), makes the shape sphere chart the whole
+sphere, with no fold, toggle or hemisphere mode, and changes no other chart. The orchestrator's instruction for this
+port, from the human: these entries are recorded and applied verbatim, except that a clause which would put a fold or
+a hemisphere back onto the shape sphere chart is left unapplied, what is not hemisphere-specific applied, the shape
+sphere ruling governing that clause; an entry is queued only for a real clash. The human's reply on the overlap: "Where
+the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there already chose
+the full sphere with signed n̂, so they should agree." One real clash is RQ-472's equator fold on a tilted view
+against the shape sphere ruling's "no folding of any kind on the shape sphere chart"; that ruling's port (R-544) files it as
+its own entry, RQ-508, still open, so it is not queued again here.
+
+On RQ-470 the entry asked whether the exponential map's pixels past `r = π` inside `[0,1]²` (R-503's domain's end) are
+by design, blank with no warning, as an energy-type axis's linear option is (a); whether the chart keeps its square
+inside its cap, `s√2 ≤ π` (b); or whether R-467's decoder-bug warning stands for them (c). *What it decides:*
+- **Option (a).** An exponential-map pixel with `r > π` inside `[0,1]²`, and one exactly on `r = π` if REQ-CHART-078
+  makes it the domain's end, **is the domain's end by design: it draws blank and logs no warning**, the same exception
+  R-506 W1 makes for the energy axes' linear option.
+- **§G12, REQ-GUI-227 and REQ-CHART-058's sweep name the exception.** R-503's "Flagged, not ruled" is settled: R-503
+  applies as the human wrote it, and R-467's clause 4 no longer reaches those pixels.
+- Not hemisphere-specific: R-503's cap and its `r > π` arm do not turn on the fold, and stand under the shape sphere
+  ruling too.
+
+On RQ-471 the entry asked what Lean each axis shows with one target at `|τ₁| = |τ₂| = 90°`, where the window maps onto
+one line of systems: the chart reports ray-degenerate, its statistics weighted 0 (a); the edit path refuses the corner
+(b); or Lean each axis's range is open (c). *What it decides:*
+- **Option (a).** At `|τ₁| = |τ₂| = 90°` with one target **the chart reports `ray-degenerate`. No fold is applied
+  (there is no normal), every area weight is 0, and the legend shows each share as undefined ("—"), never 0%.**
+- R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines stand as they reach and handle the corner.
+- Not hemisphere-specific: it applies no fold, which agrees with the shape sphere ruling; it is applied whole.
+
+On RQ-472 the entry asked how R-537 EX7(b)'s pole maps and equator fold meet a tilted view: kept only where §3.3's
+exact conditions hold, `N_b = 0` for the equator fold and `N_a = 0` and `N_b = 0` for the pole maps, the view otherwise
+affine along that axis, §3.3's pixel fold governing the statistics (a); EX7(b)'s maps on every view (b); or RQ-430
+widened (c). *What it decides, as applied here:*
+- **The pole maps, applied: on a tilted view they are kept iff `N_a = 0` and `N_b = 0`, decided exactly on the stored
+  angles as §3.3 decides; otherwise the view is affine along that axis and draws no image (TF2.2).** The pole maps
+  are R-14's `φ` continuing over the pole on the whole sphere, not the hemisphere's; the shape sphere ruling keeps
+  θ's period and the pole maps, so this clause is applied.
+- **The equator fold, not applied.** "On a tilted view the equator fold is kept iff `N_b = 0`" would put a fold back
+  onto the shape sphere chart, where the shape sphere ruling has no fold of any kind; it is left unapplied, the shape
+  sphere ruling governing it, and that ruling's port files the clash (RQ-508, R-544). Meanwhile nothing builds an equator fold on a
+  tilted view (as before this ruling).
+- **"§3.3's pixel fold governs the statistics (EX7(g))", not applied.** §3.3's pixel fold on the shape sphere is the
+  mirror fold (R-141's 2-to-1 cover kept under a tilt where `N_b = 0`), hemisphere-specific in the same way; the shape
+  sphere ruling governs it. EX7(g)'s rule, each system counted once at its canonical address, stands for every map
+  that is applied.
+
+On RQ-473 the entry asked whether T16 and T16b's "within 3× the median" becomes a threshold set from the measured gap,
+an R-71 calibration value (a), a comparison with the run read in the untilted frame (b), or stays 3× on a fixture
+with no close approach (c). *What it decides:*
+- **Option (a).** **T16 and T16b hold the screen step within REQ-GUI-283's calibrated threshold**, set inside the
+  measured gap between genuine motion (≤ ~97× median, TF2.3) and the artefacts (the `2π·cos τ` wrap jump and the
+  ~2000× flip). **Their controls are unchanged and must still fail.** This is what was applied meanwhile.
+- **F6's table is reworded:** its "within 3× the median" cells read "within the calibrated threshold (REQ-GUI-283)".
+
+On RQ-474 the entry asked whether T15's second arm gets a physical-momentum tilt target, its definition a requirement
+(R-72) (a); runs on an untilted mixed-axis chart (b); or is dropped (c). *What it decides:*
+- **Option (a).** **The shape sphere offers the physical `p_λ` components as tilt targets, defined by TASK-M8-58
+  (R-72) as demo tab F builds them, and T15's second arm runs on that target.** R-473 J1 and J2's list of the shape
+  sphere's tilt targets, its latent controls, gains them.
+- Not hemisphere-specific: a tilt target is a hidden coordinate of the whole sphere.
+
+*Where the words leave a choice, decided per R-369 (tilt maths and the trace tests under physics review; the legend and
+console under gui review):*
+- **L1. RQ-470's warning.** REQ-GUI-227's console warning, §G12's rule and REQ-CHART-058's sweep exclude the
+  exponential map's pixels with `r > π`, and those on `r = π` if TASK-M2-28's REQ-CHART-078 makes them the domain's
+  end; they are counted apart as the domain's end (R-503's count and total), so the sweep's 0-forbidden gate covers the
+  cap. A failure of any other kind inside the cap still warns. REQ-GUI-227's verify gains the arm: the exponential map
+  at `s√2 > π` logs no warning, with the control that warning for an `r > π` pixel fails.
+- **L2. RQ-471's legend.** The chart's statistics report each share as undefined (0 of a total of 0) rather than 0,
+  and the legend draws "—" for it (REQ-GUI-106; render GUI spec §G6). The fold test of REQ-CHART-062 gains the corner's
+  arm: ray-degenerate, no fold, area weights 0, the shares undefined; TASK-M2-36 builds and tests it, the corner no
+  longer waiting.
+- **L3. RQ-472's pole maps on the stored angles.** `N` is §3.3's, `∝ (R·e_a) × (R·e_b)` from the active map's `R`; the
+  pole maps' condition `N_a = 0` and `N_b = 0` is decided exactly on the stored angles from each map's closed form, as
+  §3.3 decides `N_b`: under Tip as sheet `N_a = −τ₁ sin m/m` and `N_b = −τ₂ sin m/m`, so both vanish on a tilted view
+  only at `m == 180` (the plane mirrored, `d = 0` at every pixel); under Lean each axis
+  `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`, so on a tilted view they vanish together only at the corner
+  `|τ₁| = |τ₂| = 90°`, where there is no normal and RQ-471 applies no fold, so no pole map either; with two targets,
+  per hidden offset, `d_X = sin τ₁·u` and `d_Y = sin τ₂·v`, so iff `τ₁, τ₂ ∈ {0, ±180}`. Flagged: at the corner the
+  pole maps are read as folds under RQ-471's "no fold is applied".
+- **L4. F6's cells.** F6's table is the human's quoted text in R-538 (and the delivered bundle in
+  `docs/incoming/2026-10-20_trace_followup/`, a record); the quote is not edited. R-538's heading block carries the
+  rewording as a forward line, as R-14's quoted words stayed unchanged with a forward note (RQ-355's ruling), and
+  REQ-GUI-278's and REQ-GUI-279's verifies already read REQ-GUI-283's threshold.
+- **L5. RQ-474's targets.** "The physical `p_λ` components" are `p_λ,x` and `p_λ,y`, the decoded state's
+  mass-weighted Jacobi momentum of the outer pair in the shape sphere's own frame (`ρ` along `+x`, unmirrored, TF2.3);
+  as demo tab F builds them, the tilt adds `d` to that physical component at the slice centre, not to its latent
+  control, so it never saturates. That is the one target kind for which R-473 J2's "every hidden coordinate is set and
+  tilted through its latent control" does not hold, and REQ-CHART-062's control "a d added to a physical value" stays
+  a control for the latent targets. The definition, how the decode holds the other components and the masses and what
+  the readout names, is REQ-CHART-084, written into `principia_chart_decoder_contract.md` § "Tilt (basis edit)" by
+  TASK-M8-58 and checked by physics (R-72), before which the target is not offered.
+- **L6. The entries close.** RQ-470 to RQ-474 move to the archive. REQ-GUI-227 (`rq: RQ-470`), REQ-CHART-062
+  (`rq: RQ-471`), REQ-SCHED-101 (`rq: RQ-472`), REQ-GUI-278 (`rq: RQ-472`, `RQ-473`), REQ-GUI-279 (`rq: RQ-473`) and
+  REQ-GUI-277 (`rq: RQ-474`) lose their `rq`. TASK-M2-36's corner, TASK-M8-56's tilted pole maps and TASK-M8-58's
+  physical-momentum arm no longer wait; the tilted equator fold is not built (the shape sphere ruling).
+
+*What it amends:* **R-467** (clause 4: the exponential map's `r > π` pixels inside `[0,1]²` are by design and warn
+nothing), **R-506** (W1: its exception for the energy axes' linear option now also covers those pixels), **R-473** (J1
+and J2: the shape sphere's tilt targets gain the physical `p_λ` components, tilted by their physical value),
+**R-537** (EX7(b): on a tilted view the pole maps only where `N_a = 0` and `N_b = 0`) and **R-538** (TF6's T16 and
+T16b: within REQ-GUI-283's calibrated threshold, not 3×; T15's second arm on the new target). Read with it: R-503,
+whose flag it settles; R-474 R8 and K15 and R-451 B11, which stand. It closes **RQ-470 to RQ-474**.
+
+R-554 is in the "physics" group of `plan/rule_groups.yaml`, with R-473 and R-503.
+
+Changes REQ-GUI-227, REQ-CHART-062, REQ-SCHED-101, REQ-GUI-277, REQ-GUI-278 and REQ-GUI-279 (statement or verify,
+rulings, source, `rq` removed, note), REQ-CHART-058 and REQ-GUI-106 (statement, verify, rulings, source, note),
+REQ-GUI-283, REQ-CHART-079 and REQ-REF-054 (notes); adds REQ-CHART-084 (a definition, M8).
+
+## R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*
+*21 Oct 2026 · applied in `docs/design/principia_listen.md` (the adoption note; § "1. What is heard", § "2. The
+spectrum", § "3. Pitch", § "4. Follow the head, or the whole run", § "5. Voices", § "6. Channels", § "7. Loudness"
+(`RMS_FLOOR`, its measurement's record), § "8. Instruments", § "9. Events and effects" (the effects table's defaults and
+the Doppler line under it), § "10. Horizon and dwell", § "11. Display", § "12. Sweep and known orbits", § "13. Tests
+(each with the arm that fires)" and § "14. What the demo is not"; the replaced words kept as *Was*),
+`docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4. Audio-specific constraints, which are NOT
+the frame budget", RQ-450's rewording and the open points' paragraph, with their earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (the listen bullet's
+citations) and § "Listen… — every sound setting (R-541 G6)" (the Effects row and the defaults' sentence, with their
+earlier words kept), `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism" (the citations), R-540's
+S4, S6, S8 and S9 and R-541's G6 and P8 (edited as the human's words order, the earlier words kept) and their heading
+blocks, R-109's heading block (a clause), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-309 to REQ-GUI-321,
+REQ-GUI-329, REQ-VAL-102, REQ-VAL-103, REQ-VAL-114 and REQ-SYS-060 (reqio: statement, verify, rulings, source, `rq`
+removed, note, as each needs), REQ-GUI-349 and REQ-VAL-194 (reqio, new), TASK-M8-12, TASK-M8-59, TASK-M8-60,
+TASK-M8-64 and TASK-M8-65 (no longer waiting; TASK-M8-12 and TASK-M8-59 gain a requirement, TASK-M8-59 a dependency on
+TASK-M8-38), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-440 to RQ-444, RQ-450
+to RQ-458, RQ-464 and RQ-467, moved with their rulings); built by TASK-M8-12 (⚑ physics), TASK-M8-59 and TASK-M8-60*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+95–99, 105–113, 119 and 122), which R-545 quotes in its opening:
+
+> - RQ-440 (Listen's audio backend: one Rust synthesis graph, `cpal` out): (a), with one point made explicit. "Listen's voice and effects chain is one Rust synthesis graph, transcribed node for node from `trace_sound.html` (`makeVoice`, `INSTRUMENTS`, the bank, the effects). Natively it plays through `cpal` on its own audio thread. The browser build plays the same graph's samples in TASK-M8-38's shell (an AudioWorklet or `cpal`'s WebAudio backend), not a second Web Audio transcription."
+>
+> - RQ-441 (Listen's analysis runs on the CPU, in the inspector worker): (a). "Listen's analysis runs on the CPU in the inspector worker (REQ-SYS-060), from the trajectory viewer's own `computeIC` samples, at S2's sizes. It does not use the GPU integrator, and it does not reuse frequency diffusion's FFT."
+>
+> - RQ-442 (`RMS_FLOOR`: set above f64's floor, measured at t ≤ 60): a reconciliation of (a) and (b). "`RMS_FLOOR` is 10× the larger of two values, both under *Angles only*. The first is the f64 floor of an exactly rotating triangle, 4.9e-8. The second is the maximum shape rms of Lagrange over `t ≤ 60` with the shipped integrator, measured and recorded in `principia_listen.md` §7. S13's Lagrange test (level 0) is pinned at `t ≤ 60`, with a failing arm: a perturbed Lagrange must sound."
+>
+> - RQ-443 (The "separations → pitch" sketch row is marked stale): (a). "The sketch's 'listen · separations → pitch' is stale, replaced by R-540. REQ-GUI-090's 'must not be implemented' stands. There is no fourth `Signal`."
+>
+> - RQ-444 (`0.2 R` and the event depth scale kept as parameters): (a). "The close-approach threshold `0.2 R` and the depth scale `min(1, log₁₀(0.2R/d)/2)` stay as stated parameters in `principia_listen.md` §9. They are not calibrated."
+>
+> - RQ-450 (Every moving run is heard; the measured minimum becomes a warning): (a). "Every run that moves makes a sound. Below the 1.5-period cut, the mean rates play. REQ-VAL-103's minimum is still measured and recorded, and it sets the readout's 'too short to resolve a note' warning, not a silence. In §4, reword 'below which the sound is meaningless' to 'below which no line is resolved, and Listen says so'."
+>
+> - RQ-451 (Default "Angles + rotation" extends R-109's `θ, φ`): (a). "R-540 extends R-109. The default signal adds `ψ` so that Lagrange is heard, and *Angles only* is §4's `θ(t), φ(t)`. REQ-GUI-090's verify reads the selected signal. `sonify_input_is_theta_phi` asserts two things: the input is only the `computeIC` trajectory, and under *Angles only* it is exactly `θ, φ`."
+>
+> - RQ-452 (Struck instruments on a new hovered chord): (a), as the code. "The bank cross-fades over 140 ms. A struck instrument's strike on a new run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger. REQ-GUI-050 gains this sentence. The default instrument strikes nothing."
+>
+> - RQ-453 (Two entropy checks: `θ(t)` anchors kept, Listen's added): (c). "REQ-VAL-102 stays a check of the `θ(t)` spectrum with its anchors, 0.076 against 0.177. Listen's readout entropy gets its own anchors, measured with prin-rs's integrator and confirmed at the M8 gate (REQ-VAL-114). The demo's 0.309 against 0.352 is recorded as the demo's value."
+>
+> - RQ-454 (Listen's defaults follow the code: Sine, effects off, sound off): (a). "Defaults are Sine (pure), reverb off, width off, and sound off at launch. Bold these in S8, S9 and G6 in place of Warm sine, reverb on (×1.40) and width on (×1.50)."
+>
+> - RQ-455 ("Grows, last half" uses the code's window): (a). "Reword S4's row to `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)`."
+>
+> - RQ-456 (Struck decay at `strike/3`, attack at `att/3`): (a). "Reword S8's row: the note rises over 4 ms, then from 20 ms decays with time constant `strike/3` to `sus × level` (`sus` 0.25 by default). The attack's time constant is `att/3`."
+>
+> - RQ-457 (Line-change strikes happen in every mode): (a). "A voice whose line has moved more than a quarter-tone (1/48 octave) is struck again in every mode. `Strikes on` adds the beats (syzygy, or crossing time ÷ 1, 2 or 4). 'Only when a line changes' adds no beats, and S8 is reworded to say so."
+>
+> - RQ-458 (Under *Stereo by winding*, `φ` is heard in the follow track): (a). "Under *Stereo by winding*, the chord voices only the winding spectra. `φ` is heard through the follow track, and a `φ`-only line is panned by the winding spectra at its bin. S6 says this in one sentence."
+>
+> - RQ-464 (Moving hover uses the map's horizon; dwell extends to `Horizon`): (a). "A moving hover integrates to the sim key's `t_max` under §3's step budget, and S10's '20' is read as the demo's maps' horizon. On dwell (280 ms) or a pin, the run continues to Listen's `Horizon` where that is longer. The trace and the sound both switch; the map does not change."
+>
+> - RQ-467 (Moving runs near E = 0 must sound): (b) + (d). "Fit to hearing shifts by any whole number of octaves, so every moving run with a peak lands in 110–880 Hz. A moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates from the samples it has. The ~19-octave jump across E = 0 stays and the readout names it." REQ-GUI-312/313 then assert S13 with no exceptions.
+
+and the human's follow-up on Listen's effects, the same day, pasted after the batch and recorded whole at
+`docs/incoming/2026-10-21_rulings/listen_effects.md`, verbatim:
+
+> # Human's pasted instruction, 21 Oct 2026 (verbatim)
+>
+> Follow-up from me, Malachy, 21 Oct 2026, on Listen's effects. My words: "make, reverd from the systems spread, doppler
+> shift from expansion rate, and stereo width from it's angular momentum on by default. (think they add more depth to
+> the sound system?)" Quote them verbatim.
+>
+> Ruling: in principia_listen.md §9, Reverb (from the spread R/R₀, ×1.40), Doppler (from Ṙ t_c / R, ×1.50) and Stereo
+> width (from √(L_z²|E|), ×1.50) are ON by default, at their existing default amounts. Bit-crush stays off. Nothing else
+> in §9 changes: the mappings, ranges, chain and readout are as they are.
+>
+> This supersedes the effects part of my RQ-454 ruling (rulings_2026-10-21.md: "reverb off, width off"). If that
+> ruling is already recorded, record this as a new ruling from the next free R-number amending it; if not, record
+> RQ-454 with this change. The rest of RQ-454 stands: Sine (pure) as the instrument, and sound off at launch, so nothing
+> is heard until the user turns sound on.
+>
+> Apply:
+> - principia_listen.md §9's table: Reverb "(on; 0 to 2.5, ×1.40)", Doppler "(on; 0 to 3, ×1.50)", Stereo width
+>   "(on; 0 to 3, ×1.50)". Drop the "off in the code, on in the file, RQ-454" notes. Add one line under the table:
+>   Doppler detunes every voice by the same amount, so the intervals are kept but the pitch heard is the measured line
+>   shifted by the readout's ±n¢; the chord is never detuned, since Ṙ is taken as 0 there.
+> - decisions.md R-540 S9 and R-541 G6: bold all three as defaults.
+> - REQ-GUI-320: update the note; add to its verify that the default state has reverb, Doppler and width on at ×1.40,
+>   ×1.50 and ×1.50 with bit-crush off, with a control that the off states are still the identity.
+> - The demo code (trace_sound.html) is the transcription source and has these unchecked. This ruling overrides it for
+>   these three switches only; say so in the port's PR.
+> - check_plan, one PR with the test output pasted in. Queue anything this conflicts with rather than resolving it.
+> - The security rule stands: never delete or modify anything outside the repo and build/scratch directories without
+>   asking.
+
+RQ-454 was not yet recorded when the follow-up came, so, as the follow-up says ("if not, record RQ-454 with this
+change"), R-555 records RQ-454's batch words and the follow-up together and decides RQ-454 with the change: the
+follow-up's effects part replaces the batch's "reverb off, width off", and the rest of RQ-454 stands. The demo's code,
+`docs/gui/reference/trace/trace_sound.html`, the transcription source R-540 H2 makes the code win by, has the three
+switches unchecked; the follow-up overrides it for those three switches only, and everywhere else the code still wins.
+
+R-555 rules Listen's sixteen entries that R-540 filed (Q1 to Q5 of `principia_listen.md` S14, and the conflicts the
+port and PR #267's review found). The other Listen entries are the GUI's, ruled by R-556 (RQ-445 to RQ-449, RQ-459 to
+RQ-463, RQ-465, RQ-466).
+
+**RQ-440 (the audio backend).** It asked whether Listen's sound in prin-rs is (a) a Rust synthesis graph on `cpal`,
+the voice and effects chain transcribed node for node (the file's recommendation), or (b) web-only. Nothing was built.
+
+*What it decides:*
+- **Option (a), with one point made explicit: one graph.** Listen's voice and effects chain is one Rust synthesis
+  graph, transcribed node for node from `trace_sound.html` (`makeVoice`, `INSTRUMENTS`, the bank, the effects).
+- **Natively it plays through `cpal` on its own audio thread.**
+- **The browser build plays the same graph's samples** in TASK-M8-38's shell, through an AudioWorklet or `cpal`'s
+  WebAudio backend, and is never a second Web Audio transcription.
+
+*Decided per R-369 (routine; reviewed by code and perf):*
+- **A1. The requirement.** A new requirement, REQ-GUI-349, states the one graph and its two outputs, closed by
+  TASK-M8-59, which builds the graph (`principia_listen.md` §5, §8, §9). TASK-M8-12's audio out is the native `cpal`
+  stream the graph feeds; TASK-M8-59 now depends on TASK-M8-38 too, so the browser half is checked against the shell
+  that plays it. Its test renders the graph offline, with no device, and compares the samples with the output
+  callback's.
+
+**RQ-441 (where the analysis runs).** Options: (a) the CPU, from the trajectory viewer's `computeIC` samples, at S2's
+sizes, in the inspector worker (REQ-SYS-060), the file's recommendation, applied meanwhile from the build's start; (b)
+the GPU with the integrator.
+
+*What it decides:* **option (a).** Listen's analysis runs on the CPU in the inspector worker (REQ-SYS-060), from the
+trajectory viewer's own `computeIC` samples, at S2's sizes. **It does not use the GPU integrator, and it does not reuse
+frequency diffusion's FFT** (pointer_channels §6's reuse stays retired, REQ-TOOL-093). Nothing changes in the design;
+REQ-SYS-060 and REQ-GUI-311 say so.
+
+**RQ-442 (`RMS_FLOOR` against prin-rs's integrator).** Options: (a) measure Lagrange's shape rms under *Angles only*
+over `t ≤ 400` and set the floor at 10× its maximum (the file's recommendation); (b) keep 10⁻⁷. The physics review of
+PR #267 (P1) found the equal-mass Lagrange triangle linearly unstable, so (a) over `t ≤ 400` gives a floor of about 9
+that silences every run, and an f64 floor of 4.9e-8 that no integrator lowers.
+
+*What it decides:* **a reconciliation of (a) and (b).**
+- **`RMS_FLOOR` is 10× the larger of two values, both under *Angles only*:** the f64 floor of an exactly rotating
+  triangle, **4.9e-8**; and **the maximum shape rms of Lagrange over `t ≤ 60` with the shipped integrator**, measured
+  and recorded in `principia_listen.md` §7.
+- **S13's Lagrange test (level 0) is pinned at `t ≤ 60`, with a failing arm: a perturbed Lagrange must sound.**
+
+*Decided per R-369 (the floor and its test; reviewed by physics):*
+- **A2. The measurement.** "The maximum shape rms of Lagrange over `t ≤ 60`" is the largest §7 rms under *Angles
+  only* of §12's Lagrange rotating, integrated by prin-rs's `computeIC` with the shipped integrator at the defaults,
+  over every follow-mode frame's window and the whole-run chord with both ends in `[0, 60]`. TASK-M8-12 (⚑ physics)
+  measures it, records it with its method in §7, where the line waits for it, and sets `RMS_FLOOR`; a test re-runs the
+  measurement and fails if it disagrees with the record. Since the ruling gives the value's formula and the measurement
+  that fills it, it is a measurement recorded in the design, not a calibration confirmed at a gate.
+- **A3. The perturbed Lagrange.** The failing arm's Lagrange is §12's Lagrange rotating with body 1's `v_x` × 1.01, as
+  the figure-eight's perturbed copy is made; over `t ≤ 60` its shape moves far above the floor (the instability's
+  growth, P1), so it must read a level above 0. The arm fails if the floor is set so high that it is silent.
+- **A4.** REQ-GUI-316 carries the formula, the horizon and both arms; REQ-GUI-309's Lagrange (default signal) arm
+  already states `t ≤ 60`.
+
+**RQ-443 (the superseded sketch row).** Option (a), applied meanwhile (R-540 H13): stale, replaced by R-540.
+
+*What it decides:* **option (a).** The sketch's "listen · separations → pitch" is stale, replaced by R-540.
+REQ-GUI-090's "must not be implemented" stands. **There is no fourth `Signal`.** Nothing changes but the citations.
+
+**RQ-444 (the close-approach threshold and the depth scale).** Option (a), applied meanwhile (R-540 H7, H13): kept,
+stated as parameters.
+
+*What it decides:* **option (a).** `0.2 R` and the depth scale `min(1, log₁₀(0.2R/d)/2)` stay as stated parameters in
+`principia_listen.md` §9. **They are not calibrated** (no R-71 requirement follows).
+
+**RQ-450 (pointer_channels §4's length floor against S2's "every run heard").** Options: (a) S2 holds, every moving run
+sounds, REQ-VAL-103's measured minimum setting the readout's warning, applied meanwhile (R-540 H6); (b) §4 holds, below
+the minimum Listen is silent; (c) the mean rates play below it, marked as rates.
+
+*What it decides:* **option (a).** Every run that moves makes a sound; below the 1.5-period cut the mean rates play.
+REQ-VAL-103's minimum is still measured and recorded, and it sets the readout's "too short to resolve a note" warning,
+not a silence. **pointer_channels §4's "below which the sound is meaningless" is reworded "below which no line is
+resolved, and Listen says so"** (its earlier words kept, as the corpus does for a normative passage).
+
+**RQ-451 (the default signal adds `ψ` to R-109's `θ, φ`).** Options: (a) R-540 extends R-109, *Angles only* §4's
+mapping, applied meanwhile (R-540 H5); (b) *Angles only* the default; (c) `ψ` dropped.
+
+*What it decides:* **option (a).** The default signal, *Angles + rotation*, adds `ψ` so that Lagrange is heard, and
+*Angles only* is pointer_channels §4's `θ(t), φ(t)`. **REQ-GUI-090's verify reads the selected signal.** TASK-M8-12's
+`sonify_input_is_theta_phi` asserts two things: **the input is only the `computeIC` trajectory, and under *Angles only*
+it is exactly `θ, φ`.** R-109's forward line already says R-540 extends it; this ruling settles that extension.
+
+**RQ-452 (a struck instrument on each new hovered chord).** Options: (a) as the code, a strike under the bank's
+cross-fade being the instrument's timbre, applied meanwhile (R-540 H2); (b) a new chord enters a struck instrument at its
+floor, unstruck; (c) struck instruments silent while the hover moves.
+
+*What it decides:* **option (a), as the code.** The bank cross-fades over 140 ms. A struck instrument's strike on a new
+run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger. **REQ-GUI-050 gains this
+sentence.** The default instrument strikes nothing (Sine (pure) is not struck; RQ-454).
+
+**RQ-453 (the entropy anchors).** Options: (a) REQ-VAL-102 stays a check of `θ(t)`'s spectrum, applied meanwhile (R-540
+H6); (b) re-anchored to Listen's entropy, measured with prin-rs's integrator and confirmed at the M8 gate (REQ-VAL-114);
+(c) both.
+
+*What it decides:* **option (c).**
+- **REQ-VAL-102 stays a check of the `θ(t)` spectrum with its anchors, 0.076 against 0.177.**
+- **Listen's readout entropy gets its own anchors, measured with prin-rs's integrator and confirmed at the M8 gate
+  (REQ-VAL-114).**
+- **The demo's 0.309 against 0.352 is recorded as the demo's value.**
+
+*Decided per R-369 (a calibration's form, R-71; reviewed by physics):*
+- **A5. The anchors' requirement.** A new calibration requirement, REQ-VAL-194, closed by TASK-M8-12 beside
+  REQ-VAL-102 and REQ-VAL-114: Listen's readout entropy (`principia_listen.md` §2, the selected signal's mono spectrum
+  over the whole run) for the figure-eight and Burrau 3:4:5, §12's known orbits, at the defaults with the default
+  `Horizon` (60; Burrau to its collision), measured with prin-rs's `computeIC`, proposed with its evidence, confirmed by
+  the human at the M8 gate and recorded here, the figure-eight below Burrau. Its tolerance is REQ-VAL-114's, which now
+  covers both pairs of anchors; the demo's pair is evidence (R-540 H12), not the anchors.
+
+**RQ-454 (Listen's defaults), with the follow-up.** RQ-454 set the human's files (Warm sine, reverb and width on, sound
+on) against the demo's code (Sine (pure), reverb and width off, sound off); option (a), the code's, was applied
+meanwhile. The batch ruled (a); the follow-up, quoted above, replaces its effects part.
+
+*What it decides, the batch's (a) as the follow-up amends it:*
+- **The instrument defaults to Sine (pure),** and **the sound is off at launch**, so nothing is heard until the user
+  turns sound on (the rest of RQ-454 stands).
+- **Reverb (from the spread `R/R₀`, ×1.40), Doppler (from `Ṙ t_c / R`, ×1.50) and Stereo width (from `√(L_z²|E|)`,
+  ×1.50) are on by default, at their existing default amounts. Bit-crush stays off** (×0.60). Nothing else in §9
+  changes: the mappings, ranges, chain and readout are as they are.
+- **Applied as the follow-up lists:** `principia_listen.md` §9's table reads Reverb "(on; 0 to 2.5, ×1.40)", Doppler
+  "(on; 0 to 3, ×1.50)" and Stereo width "(on; 0 to 3, ×1.50)", the "off in the code, on in the file, RQ-454" notes
+  dropped, and one line under the table: Doppler detunes every voice by the same amount, so the intervals are kept but
+  the pitch heard is the measured line shifted by the readout's ±n¢; the chord is never detuned, since `Ṙ` is taken as
+  0 there. R-540's S9 and R-541's G6 bold all three as defaults; with RQ-454, R-540's S8 and R-541's G6 bold Sine (pure)
+  in place of Warm sine, and G6's sound is "off at launch". REQ-GUI-320's note, and its verify gains the default state
+  (reverb, Doppler and width on at ×1.40, ×1.50 and ×1.50, bit-crush off) with a control that the off states are still
+  the identity. REQ-GUI-317 and REQ-GUI-329 take the defaults.
+- **The override.** `trace_sound.html` has the three switches unchecked; this ruling overrides it for these three
+  switches only (said in the port's PR, as the follow-up asks).
+
+*Checked against the corpus for conflicts (the follow-up: "Queue anything this conflicts with rather than resolving
+it"):* none found. S13's tests read the analysis (the peaks, the levels, the effect inputs), which the effects do not
+touch, and the effects are applied to the voices; Doppler's detune is a function of the scale-free `Ṙ t_c / R`, so
+REQ-GUI-313's scale arm still holds with it on; the known-answer arm's Lagrange rotating has `Ṙ = 0` before it breaks up,
+and a chord takes `Ṙ` as 0. One consequence, stated, not a conflict: with width on, a run with `L_z = 0` (the
+figure-eight, released from rest) is mixed at the narrowest width, 0.15, as §9's mapping has it.
+
+**RQ-455 ("Grows, last half").** Option (a), the code's, applied meanwhile (R-540 H2).
+
+*What it decides:* **option (a).** S4's row is reworded to `[t₁ − W, t₁]`, with `W = max(min(t₁, ½t_c), t₁/2)`
+(R-540's S4 edited; `principia_listen.md` §4 carries it already).
+
+**RQ-456 (a struck note's decay).** Option (a), the code's, applied meanwhile.
+
+*What it decides:* **option (a).** S8's row is reworded: the note rises over 4 ms, then from 20 ms decays with time
+constant `strike/3` to `sus × level` (`sus` 0.25 by default). The attack's time constant is `att/3` (R-540's S8 edited,
+the `strike` and `att` rows; §8 carries it already).
+
+**RQ-457 (the line-change strike).** Option (a), the code's, applied meanwhile.
+
+*What it decides:* **option (a).** A voice whose line has moved more than a quarter-tone (1/48 octave) is struck again
+in every mode. `Strikes on` adds the beats (syzygy, or crossing time ÷ 1, 2 or 4). "Only when a line changes" adds no
+beats, and **S8 is reworded to say so** (R-540's S8 edited; §8 carries it already).
+
+**RQ-458 (`φ` under *Stereo by winding*).** Options: (a) as the code, applied meanwhile; (b) `φ` added to both sides,
+centred; (c) `φ` only under *Stereo*.
+
+*What it decides:* **option (a).** Under *Stereo by winding* the chord voices only the winding spectra; `φ` is heard
+through the follow track, and a `φ`-only line is panned by the winding spectra at its bin. **S6 says this in one
+sentence** (R-540's S6 edited; §6 carries it already).
+
+**RQ-464 (horizon and dwell).** Options: (a) the moving hover to the map's own horizon (the sim key's `t_max`) under
+pointer_channels §3's step budget, S10's "20" read as the demo's, on dwell or a pin on to Listen's `Horizon`, the map
+unchanged, applied meanwhile (R-540 H8); (b) Listen's `Horizon` dropped; (c) 20 while moving, as the file.
+
+*What it decides:* **option (a).** A moving hover integrates to the sim key's `t_max` under §3's step budget, and S10's
+"20" is read as the demo's maps' horizon (R-540's S10 stands as quoted, read so). On dwell (280 ms) or a pin, the run
+continues to Listen's `Horizon` where that is longer. The trace and the sound both switch; the map does not change.
+`principia_listen.md` §10's first bullet, which still read "to `t ≤ 20`", now says the sim key's `t_max`.
+
+**RQ-467 (moving runs near E = 0, and runs too short to analyse).** Options: (a) the code's silences stand, applied
+meanwhile; (b) Fit to hearing uncapped, any whole number of octaves; (c) a crossing time continuous across E = 0; (d)
+any of these, and a moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates.
+
+*What it decides:* **options (b) and (d).**
+- **Fit to hearing shifts by any whole number of octaves**, so every moving run with a peak lands in 110–880 Hz.
+- **A moving run with `t_end ≤ 10⁻⁶` or fewer than three samples plays its mean rates from the samples it has.**
+- **The ~19-octave jump across E = 0 stays, and the readout names it.**
+- **REQ-GUI-312 and REQ-GUI-313 then assert S13 with no exceptions.**
+
+*Decided per R-369 (what is heard follows the words; the mechanism reviewed by physics):*
+- **A6. The short run's rates.** A run with `t_end ≤ 10⁻⁶` or fewer than three samples (two at least: one sample does
+  not move) takes §2's mean rates over its samples, with no spectrum. §2's drop of a rate with `|f|·D ≤ 10⁻⁶` would drop
+  every rate of such a run, its `D` being at most 10⁻⁶, and silence it against the words; so for these runs a rate is
+  dropped only when it is exactly 0. The rates then go through the uncapped fit like any line.
+- **A7. Naming the jump.** The readout's pitch-mapping line names `t_c`'s branch, "t_c from E (bound)" or "t_c from I
+  (E ≥ 0)", beside the octave shift, so the jump across E = 0 is read where it happens; nothing else is added.
+- **A8. The tests.** REQ-GUI-312's verify drops its exceptions and gains arms on the physics review's silent cases
+  (figure-eight ICs with their velocities scaled to E = −3×10⁻⁴ and −10⁻⁴) and on a two-sample run; REQ-GUI-313's
+  gains an arm that a bound run at E = −10⁻⁴ is shifted past −8 octaves into 110–880 Hz. The controls are the ±8 cap and
+  the short-run fallback removed.
+
+*What it amends:* **R-540**, as to the defaults (S8's Sine (pure); S9's reverb, Doppler and width on), S4's last-half
+row, S6's sentence, S8's `strike` and `att` rows and its strikes, S7's floor (now R-555's formula), S3's fit (no ±8 cap),
+S2's short runs (they play), S10's moving horizon (read as the sim key's `t_max`), and its build's wait (no longer on
+RQ-440 and RQ-442); R-540's S-items are edited where the human's words order it (S4, S6, S8, S9), their earlier words
+kept beside them. **R-541**, as to G6's defaults (sound off at launch, Sine (pure), reverb, Doppler and width on) and
+P8's meanwhile. Read with R-109 (pointer_channels §4, the rewording RQ-450 orders) and R-144 (§3's step budget, RQ-464).
+It closes **RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467**.
+
+R-555 is in the "design" group of `plan/rule_groups.yaml`, with R-540 and R-541.
+
+Changes REQ-GUI-049, REQ-GUI-315, REQ-GUI-318, REQ-GUI-319, REQ-GUI-321, REQ-VAL-102 and REQ-VAL-103 (`rq` removed,
+rulings, note); REQ-GUI-050, REQ-GUI-090, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313,
+REQ-GUI-314, REQ-GUI-316, REQ-GUI-317, REQ-GUI-320 and REQ-GUI-329 (statement or verify as each needs, rulings,
+source, `rq` removed, note); REQ-VAL-114 and REQ-SYS-060 (statement or note, rulings); adds REQ-GUI-349 (the one
+synthesis graph, TASK-M8-59) and REQ-VAL-194 (Listen's entropy anchors, calibration, TASK-M8-12).
+
+## R-556 — The trace and Listen in the GUI, R-541's questions ruled: Listen's section collapsed until first used, then remembered per user; the expanded strip's spectrum in the Legend's column; R-538's six kept-trace colours, tested against the body colours and the stain classes; only the trace leaves Lines ▾; K the lock and Space keep; TASK-M8-65 writes the instrument families; every setting set in at most two places; one outline toggle, on by default; the Trajectory panel keeps its summary, playhead and buttons; the band's heights are splitter defaults; a paused trace drawn whole at the default length only; Listen in the Trajectory panel only *(closes RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466; amends R-540 and R-541)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Trace group: the outline's entry and the three routes; Lines ▾'s list; the Trajectory panel's status line,
+Listen section and playhead; the bottom band's heights, the cube-only compass and the strip's spectrum), § "G3.
+Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Figure's keys), § "Trace… — every trace setting
+(R-541 G5)" (the outline's entry, the footer, the kept colours), § "Listen… — every sound setting (R-541 G6)" (the
+families), § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" ("listen is here too"
+deleted, the earlier words kept) and § "G13. Where the artboards are overridden" (the mock menu bars, the kept #2),
+`docs/design/principia_lines.md` § "2. Where it sits" and § "8. Traces", `docs/design/principia_listen.md` § "4. Follow
+the head, or the whole run" and § "8. Instruments", `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday
+view", `docs/gui/reference/trace/artboards/Main.dc.html` (the top bar's keys), R-540's S4 row and R-541's G1, G2, G5 and
+G10 (reworded as the human says) and their heading blocks, `docs/archive/review_queue/M0.md` (RQ-445 to RQ-449, RQ-459
+to RQ-463, RQ-465 and RQ-466, moved with their rulings), REQ-GUI-324, REQ-GUI-328, REQ-GUI-330 and REQ-GUI-333 (reqio:
+statement, verify, rulings, source, `rq` removed, note), REQ-GUI-090 and REQ-GUI-329 (reqio: statement, rulings, source,
+`rq` removed, note), REQ-GUI-325 and REQ-GUI-334 (reqio: statement, rulings, `rq` removed, note), REQ-GUI-088,
+REQ-GUI-247, REQ-GUI-271, REQ-GUI-281, REQ-GUI-314 and REQ-GUI-326 (reqio: rulings, `rq` removed, note), TASK-M8-11,
+TASK-M8-12, TASK-M8-13, TASK-M8-50, TASK-M8-58, TASK-M8-61 to TASK-M8-65 (notes; TASK-M8-61's, TASK-M8-62's and
+TASK-M8-63's acceptance lines as the requirements now read) and `plan/rule_groups.yaml`; built by TASK-M8-61 to
+TASK-M8-65*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+100–104, 114–118, 120 and 121), which R-545 quotes in its opening:
+
+> - RQ-445 (Listen section collapsed until first used, then remembered): (a). "Listen is collapsed until first used, then remembered per user in the GUI's own settings, the same way R-461 remembers a window's place. It is never stored in the contract."
+> - RQ-446 (Expanded strip's spectrum borrows the Legend's column): (a). "When the strip is expanded (⏶), the spectrum at the head takes the Legend's column until `⏷`. The band stays at its expanded height (RQ-463) and does not grow to ≈520 px."
+> - RQ-447 (Kept-trace colours: R-538's six, checked against the stains): (b), with (a)'s check added as a test. "R-538 TM2's six (`#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2`) are the kept-trace cycle. A test checks them against the body colours and the stain classes, and only a colour that fails is replaced. The boards' `#5ab4ff` is illustrative and is never a trace colour, because it is Listen's left channel."
+> - RQ-448 (The trace leaves `Lines ▾`; the menu stays for other lines): (a). "Only the trace leaves `Lines ▾` (for `Overlays ▾ › Trace`, the Trajectory panel and `Trace…`). R-476's `Lines ▾` stays for contours, axes, grids, the presets and class edges. G10's 'a surviving `Lines ▾`' is reworded to 'a `Lines ▾` that holds a trace control'."
+> - RQ-449 (`K` stays lock, Space keeps; the new keys are Figure-scoped): (a). "`K` stays lock and Space stays keep (R-409, §G4). G2's 'K keep the current trajectory' is reworded to 'Space keep…', and the art board's top bar to '♪ L listen · T trace · Space keep'. `T`, `⇧T`, `Y` and `L` are Figure-scope shortcuts, as L already is."
+> - RQ-459 (The task assigns instruments to the menu families): (a). "TASK-M8-65 (`Listen…`) assigns the 39 instruments to the families and meets the counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2). gui reviews the assignment (R-72)."
+> - RQ-460 (Three routes to the same marker settings): (a). "Reword G1 to 'Every setting is set in at most two places'. `Overlays ▾ › Trace` holds view toggles of the same fields, with one state and one `SetField` behind all three routes."
+> - RQ-461 ("Outline the chart's square": one toggle, ruled with RQ-408): a reconciliation of RQ-408 (a) and this entry's (b). "There is one outline toggle with one state. It sits in Overlays › Chart and is reached also from the Trace group and `Trace…`. It is on by default, as R-541 and the demo have it, and on in the debug view."
+> - RQ-462 (The Trajectory panel keeps FTLE, `E₀`, playhead and buttons): (a). "The status line carries the summary (fate and `t_end`, FTLE, `E₀`) with G4's items. The panel's playhead and the Open full viewer… and IC Inspector… buttons stay after Numbers, as art board A has them. The kept list moves as G4 says."
+> - RQ-463 (Band sizes are splitter defaults; "cube only" hides buttons): (a). "196 px and 420 px are the band's default splitter heights, each remembered (R-462). While 'cube only' applies, the compass draws its cube in its current view, with its buttons hidden and out of the keyboard tree until `⏷`. Dragging the cube still works."
+> - RQ-465 (Paused trace drawn whole: default length only, or every length?): (a). "Paused, a trace of the default length (`ToPlayhead`) is drawn whole to its event or the horizon; a `Window` or `LastDt` trace stays as chosen. Listen's paused chord is the whole run whatever the trace length." Reword G5's footer and S4's row to "of the default length (RQ-427 (a))", as applied.
+> - RQ-466 (Listen lives in the Trajectory panel only): (a). "Listen is in the Trajectory panel and `Listen…` only. The Inspector holds no sound control." Delete "listen is here too" from §G8, and in REQ-GUI-090 change "(in the Trajectory panel and the Inspector)" to "(in the Trajectory panel)".
+
+Twelve of R-541's queued entries: the file's own questions Q6 to Q8 (RQ-445 to RQ-447) and the conflicts and silences
+its port and PR #267's review found (RQ-448, RQ-449, RQ-459 to RQ-463, RQ-465, RQ-466). Every one but RQ-461 is ruled
+as its option (a) or (b) was applied meanwhile (R-541 P2 to P11), the human adding words to some; RQ-461 reconciles
+two entries' options and settles RQ-408's default with it.
+
+**RQ-445** asked whether Listen's section in the Trajectory panel is (a) collapsed until first used, then remembered
+per user (the file's recommendation), or (b) always collapsed. *What it decides:* **option (a), as applied:** collapsed
+until first used, then remembered per user in the GUI's own settings, as R-461 remembers a window's place, **never in
+the contract**. REQ-GUI-334 (TASK-M8-64) carries it already; only its citations change.
+
+**RQ-446** asked whether the expanded strip's spectrum (a) borrows the Legend's column (G7) or (b) stacks under the
+spectrogram with the Legend kept, the band ≈ 520 px. *What it decides:*
+- **Option (a), as applied:** expanded (⏶), the spectrum at the head takes the Legend's column until `⏷`.
+- **The band stays at its expanded height** (RQ-463's second splitter height) **and never grows to ≈ 520 px.**
+  REQ-GUI-330's verify gains that control (*decided per R-369, reviewed by gui:* a band grown past its expanded height
+  to stack the spectrum fails).
+
+**RQ-447** asked whether the kept traces take (a) a new fixed cycle of six, distinct from the body colours and the
+stain classes and chosen against the stain palettes, replacing R-538's six if they fail that check, or (b) R-538 TM2's
+six, the boards' `#5ab4ff` illustrative. *What it decides:*
+- **Option (b), with (a)'s check added as a test.** R-538 TM2's six, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
+  #9EF0D2`, are the kept-trace cycle.
+- **A test checks them against the body colours and the stain classes; only a colour that fails is replaced.**
+- **The boards' `#5ab4ff` is illustrative and is never a trace colour**: it is Listen's left channel.
+
+*Where the words leave a choice, decided per R-369 (routine colour design, reviewed by gui):*
+- **K1. The check's criterion.** "Checks them against" is measured the way the corpus measures a categorical colour's
+  distinctness: OKLab distance, unsimulated, against τ = 0.101 (R-429, as REQ-COL-055 and REQ-COL-086 measure). Each of
+  the six must clear τ from each body colour (R-538 I3) and from each class colour of the categorical palettes the
+  corpus defines (colour_composition §1.4's outcome palette and the Chazy palettes, REQ-COL-086); the test prints each
+  colour's tightest distance. REQ-GUI-333's verify carries it.
+- **K2. A colour that fails.** It is replaced by a colour the task building the test (TASK-M8-61) proposes, clearing
+  the same check, reviewed by gui, and recorded in `principia_lines.md` §8 with the porting rule's note; the other five
+  are unchanged. None is replaced in this port: the check has not run.
+
+**RQ-448** asked whether, where R-541 G2 withdraws `Lines ▾`, (a) only the trace leaves it, (b) it is withdrawn whole,
+its lines moving to `Overlays ▾`, or (c) withdrawn with the line system's controls placed later. *What it decides:*
+- **Option (a), as applied:** only the trace leaves `Lines ▾`, for `Overlays ▾ › Trace`, the Trajectory panel and
+  `Trace…`. **R-476's `Lines ▾` stays** for contours, axes, grids, the presets and class edges.
+- **G10's "a surviving `Lines ▾`" is reworded to "a `Lines ▾` that holds a trace control"**: in R-541's G10 table, as
+  the human says, and in REQ-GUI-324's control.
+
+**RQ-449** asked whether (a) `K` stays lock and Space keep, G2's "K keep" read as Space, with `T`, `⇧T`, `Y` and `L`
+the Figure's scope shortcuts; (b) `K` becomes keep; or (c) the five keys are global. *What it decides:*
+- **Option (a), as applied:** `K` stays lock and Space stays keep (R-409, §G4). `T`, `⇧T`, `Y` and `L` are Figure-scope
+  shortcuts, as L already is.
+- **G2's "K keep the current trajectory" is reworded to "Space keep…"**, in R-541's G2 quote ("Space keep the current
+  trajectory"), and **the art board's top bar to "♪ L listen · T trace · Space keep"**, in
+  `docs/gui/reference/trace/artboards/Main.dc.html`, the trace bundle's reference board.
+
+**RQ-459** asked whether (a) the task that builds the instrument menu assigns the instruments to the families, meeting
+the counts, reviewed by gui (R-72), or (b) the human gives the assignment. *What it decides:* **option (a), as
+applied:** TASK-M8-65 (`Listen…`) assigns the 39 instruments to the families and meets the counts (pure 5, keys 3,
+struck 10, bowed and blown 7, voices 4, synths 8, textures 2); **gui reviews the assignment** (R-72). REQ-GUI-329's
+statement names the counts; `principia_listen.md` §8 says who writes it.
+
+**RQ-460** asked whether, where G1 says "Every setting appears in at most two places" and G2, G4 and G5 put some
+markers in three, (a) all three stay with one state behind them, (b) the panel's chips lose what `Overlays ▾` has, or
+(c) `Overlays ▾ › Trace` keeps only the trace, kept traces and `Trace…`. *What it decides:*
+- **Option (a), as applied.** **G1 is reworded to "Every setting is set in at most two places"**, in R-541's G1 quote.
+- **`Overlays ▾ › Trace` holds view toggles of the same fields, with one state and one `SetField` behind all three
+  routes.** REQ-GUI-324 says so already.
+
+**RQ-461** asked whether "outline the chart's square", on by default in R-541 G2 and G5, (a) waits on RQ-408 and is
+built as it rules, or (b) is R-541's answer to RQ-408, a toggle on by default in the Trace group and `Trace…`. RQ-408
+(R-537 Q3, ruled in R-552) asked for an outline of the chart's primary square, its option (a) an Overlays › Chart toggle,
+off by default and on in the debug view. *What it decides:* **a reconciliation of RQ-408 (a) and this entry's (b):**
+- **There is one outline toggle with one state.** It sits in Overlays › Chart (RQ-408 (a)'s place) and **is reached
+  also from the Trace group and `Trace…`**.
+- **It is on by default**, as R-541 and the demo have it, **and on in the debug view.** RQ-408's own words, "It is off
+  by default", are its option (a) as the human first ruled it; this entry, ruled with it, settles the default for both:
+  on. R-552 records RQ-408 and builds the toggle's state and its Overlays › Chart entry; this ruling's part is the
+  Trace group's and `Trace…`'s entries, which are now built (they no longer wait), each the same field.
+
+*Where the words leave a choice, decided per R-369 (mechanical, reviewed by gui):*
+- **O1. Where it is built.** The toggle's state and its Overlays › Chart entry are RQ-408's (R-552); TASK-M8-61 builds
+  the Trace group's entry (REQ-GUI-324) and TASK-M8-62 `Trace…`'s (REQ-GUI-328), each one `SetField` of that state.
+  Both follow TASK-M8-58, which follows the extension's GUI task, so the state exists before them.
+- **O2. The tests.** REQ-GUI-324's and REQ-GUI-328's verifies assert one field behind the three entries, on in a new
+  view state, with controls for a second state and for the outline off by default.
+
+**RQ-462** asked whether the Trajectory panel (a) keeps what G4 leaves out (the summary's FTLE and `E₀` on the status
+line, the panel's playhead and the two buttons after Numbers), (b) drops FTLE, `E₀` and the playhead, the buttons
+staying, or (c) drops the buttons too. *What it decides:* **option (a), as applied:** the status line carries the
+summary (fate and `t_end`, FTLE, `E₀`) with G4's items; the panel's playhead and the Open full viewer… and IC
+Inspector… buttons stay after Numbers, as art board A has them; the kept list moves as G4 says. REQ-GUI-088 and
+REQ-GUI-326 carry it; only their citations change.
+
+**RQ-463** asked whether G7's sizes are (a) defaults of R-462's splitters, the compass's buttons hidden and out of the
+keyboard tree while "cube only", a drag on it working as before; (b) fixed, the splitter disabled; or (c) the compass
+keeping its buttons. *What it decides:* **option (a), as applied:** 196 px and 420 px are the band's **default splitter
+heights, each remembered** (R-462); while "cube only" applies the compass draws its cube in its current view, **its
+buttons hidden and out of the keyboard tree until `⏷`**; **dragging the cube still works.** REQ-GUI-330 names the
+remembered heights and the drag (*decided per R-369, reviewed by gui:* its verify gains a dragged height surviving a
+restart and a drag on the cube-only compass moving the plane as before, each with a control).
+
+**RQ-465** asked whether R-541 G5's footer and R-540 S4, "the whole trace … is drawn" when nothing plays, mean (a) the
+default length's, as RQ-427 (a) and PR #263 apply it, Listen still playing the whole run; (b) every trace, reversing
+REQ-GUI-281's `Window` / `LastDt` arm; or (c) as (a), Listen's paused chord following the drawn span. *What it
+decides:*
+- **Option (a), as applied:** paused, a trace of the default length (`ToPlayhead`) is drawn whole to its event or the
+  horizon; a `Window` or `LastDt` trace stays as chosen. **Listen's paused chord is the whole run whatever the trace
+  length.**
+- **G5's footer and S4's row are reworded to "of the default length (RQ-427 (a))", as applied:** R-541's G5 footer
+  and R-540's S4 row in this file gain those words; render_gui_spec's `Trace…` footer and `principia_listen.md` S4
+  already read so and now cite this ruling. REQ-GUI-281's arm stands.
+
+**RQ-466** asked whether (a) listen is the Trajectory panel's only, the Inspector holding no sound control, or (b) the
+Inspector keeps listen as a view of the same state, the One place test adding it. *What it decides:*
+- **Option (a), as applied:** Listen is in the Trajectory panel and `Listen…` only. **The Inspector holds no sound
+  control.**
+- **"listen is here too" is deleted from §G8** (its earlier words kept as *Was*), **and REQ-GUI-090's "(in the
+  Trajectory panel and the Inspector)" becomes "(in the Trajectory panel)".**
+
+*Where the words leave a choice, decided per R-369 (mechanical, reviewed by gui):*
+- **M1. R-540's and R-541's quoted text.** R-541's G1 to G11 and R-540's S1 to S14 are the applied text (R-540, R-541:
+  "per R-369; the human may veto any"), not the human's words, so the rewordings the human names (G1, G2's keys, G5's
+  footer, G10's One place row, S4's row) are made in place in those quotes, the earlier words kept in this entry's
+  quotes of the entries and in the commit's Removed lines note. The human's own words in R-540 and R-541 (§0, "My
+  words") are untouched. `docs/incoming/2026-10-21_trace_listen/` is the bundle as delivered and is not edited.
+- **M2. The "applied meanwhile" notes.** Each doc, requirement and task line that called one of these entries "applied
+  meanwhile" now cites R-556 and the option; R-541's P2 to P11 stay as the record of what was applied, the forward line
+  under R-541's heading pointing here.
+- **M3. Nothing waits.** No task waited on these entries but the outline's two entries (RQ-461), now built by
+  TASK-M8-61 and TASK-M8-62.
+
+*What it amends:* **R-541** (G1's wording, G2's `K` key, G5's footer, G10's One place row; P5's meanwhile, the
+outline's two entries no longer waiting; P2 to P4 and P6 to P11's meanwhiles confirmed) and **R-540** (S4's row,
+qualified to the default length). Read with RQ-408 (R-552), RQ-427 (R-553), R-409, R-429, R-461, R-462, R-476 and
+R-538.
+
+R-556 is in the "design" group of `plan/rule_groups.yaml`, with R-541.
+
+Changes REQ-GUI-324, REQ-GUI-328, REQ-GUI-330 and REQ-GUI-333 (statement, verify, rulings, source, `rq` removed, note),
+REQ-GUI-090 and REQ-GUI-329 (statement, rulings, source, `rq` removed, note), REQ-GUI-325 and REQ-GUI-334 (statement,
+rulings, `rq` removed, note), and REQ-GUI-088, REQ-GUI-247, REQ-GUI-271, REQ-GUI-281, REQ-GUI-314 and REQ-GUI-326
+(rulings, `rq` removed, note). REQ-GUI-090's RQ-443 and RQ-451, REQ-GUI-314's RQ-455 and REQ-GUI-329's RQ-454 are R-555's.
+
+## R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*
+*21 Oct 2026 · applied in `docs/design/principia_print_graph.md` (the adoption note; § "3. What never changes because
+of it", a sentence; § "4.4 Payload fields as inputs", the note and the Read-only bullet, with their earlier words kept;
+§ "8.1 Degrade while moving", the note, step 2 and the playback sentence, with their earlier words kept; § "8.2 The
+budget", the note and the accounting sentence, with their earlier words kept; § "12. Open questions (for the review
+queue, not the agent to settle)", the note and question 3's premise, with their earlier words kept),
+`docs/design/principia_quality_device_note.md` § "3. The quality ladder", § "5. Timescale cascade (each layer absorbs
+what's too fast for the one above)" and § "10. Two sanctities: the user, and observability" (a sentence each),
+`docs/design/principia_dd_telemetry_and_tiers.md` § "2. What to record — and the rule that makes it useful" (the print
+stage's paragraph, a sentence), `docs/gui/principia_render_gui_spec.md` § "Profiler" (the print stage's paragraph, a
+sentence),
+`docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause), R-488's and R-526's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-478, RQ-479 and RQ-495, moved with their rulings),
+`plan/rule_groups.yaml` and `plan/section_notes.yaml`; no requirement on `main` holds these entries: the Print graph
+plan PR's field-inputs, post-stage budget and degrade tasks, on an unmerged branch, write their requirements from this
+ruling*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+5–9, 131–134 and 148–149), which R-545 quotes in its opening. On PR #268:
+
+> PR #268: I have reviewed it and approve it. With these follow-ups:
+> - Merge main into it and resolve the four conflicts (REVIEW_QUEUE.md, plan/rule_groups.yaml, plan/section_notes.yaml, docs/read_first/principia_INDEX.md), re-run python3 plan/check_plan.py, the reviewers re-check, then it merges.
+> - print_graph §4.4 says Chart position is not a field input.
+> - My rulings on RQ-479 and RQ-495 below land before the print graph plan PR's budget and degrade tasks.
+> - The Print graph's "post" stage and "Source" category take qualified names, as my RQ-497 ruling says.
+
+And on the three entries PR #268's reviews queued:
+
+> - RQ-478 (which range a Print graph field input is normalised over): (c).
+>   > "A field input uses the stain's window for that field when the stain colours by the same field, `RANGE_AUTO` included. Otherwise it uses the field's own `range_norm` default: its ledger-declared range where it has one (`t_end` → lin [0, T]), measured over the draw where it has none. Relief of lifetime therefore does not rescale while zooming unless the stain's `t_end` is set to auto. §4.4's 'over the visible range' and §12 q3's premise are corrected to match."
+>
+> - RQ-479 (whether post-stage cost may move the Auto rung): (a).
+>   > "The post stage's time is recorded (`stage_ms.post`, `post_level`) but is excluded from the arbiter's rung solve. Only the Print graph's own degrade answers it: per-node motion policies, the whole-graph fallback, then Plain. A Print graph never moves N, E, depth, render_scale or FTLE gating. R-488's 'the tier controller's accounting includes it' and §8.2's 'not exempt' are amended to match. §8.1's playback sentence becomes: if full quality cannot hold the playback rate, the frame record says so, and nothing else changes."
+>
+> - RQ-495 (who owns the post level, and whether the fallback runs under a pinned tier): (a), worded as a motion-regime lever.
+>   > "The post level is the arbiter's, a motion-regime lever beside render_scale (quality note §5, 'Medium'). It is never part of the rung and is solved from the measured cost classes (§8.3), not from a per-frame reading. It runs only under Auto. Under a named tier or Custom the arbiter is off, and only the per-node motion policies (step 1) and settle (step 3) apply; the whole-graph fallback does not run. `post_level` is recorded in every case."
+
+**PR #268.** The human approves it with four follow-ups, and all four are done on `main`. Main was merged into it
+with the four conflicts resolved (10689a03, "Merge main into rulings/print-graph (human review of PR #268, 21 Oct)"),
+`python3 plan/check_plan.py` re-run and the reviewers' re-checks posted; it merged at 45caf8be. Follow-ups 2 and 4
+are commit 765fe6d0: print_graph §4.4's bullet "**Not Chart position.**" says Chart position is not a Print graph
+field input, and the Print graph's stage is the **print stage** (print_graph §8.1, §8.2, telemetry §2 and §5,
+render_gui_spec § "Profiler") and the lab's `source` category the **"Print source"** (print_graph §4.3), its
+frame-record keys staying `stage_ms.post`, `post` and `post_level` (applied per R-369 in that commit). The RQ-497
+ruling they follow is R-558's. Follow-up 3 is this ruling: the rulings on RQ-479 and RQ-495 land in the docs here,
+before the print graph plan PR's budget and degrade tasks, which are written on an unmerged branch and take them from
+this ruling. Nothing else is left to apply for the PR #268 section.
+
+**RQ-478** asked which range a Print graph field input is normalised over: R-526 ruled "the stain's normalisation",
+and print_graph §4.4 and §12 q3 read that as "over the visible range", rescaling while zooming, where the stain's
+`range_norm` keeps a declared range fixed (`t_end` → lin [0, T]) and measures only an unbounded field over the draw;
+and nothing said which range applies when the stain does not colour by that field. Its options: (a) each field's own
+`range_norm` rule; (b) the visible range for every field input; (c) the stain's window when the stain binds the same
+field, (a) otherwise. Option (a) was applied meanwhile.
+
+*What it decides:*
+- **Option (c).** A field input uses the stain's window for that field when the stain colours by the same field,
+  `RANGE_AUTO` included; otherwise the field's own `range_norm` default: its ledger-declared range where it has one,
+  measured over the draw where it has none.
+- **Relief of lifetime does not rescale while zooming** unless the stain's `t_end` is set to auto.
+- **§4.4's "over the visible range" and §12 q3's premise are corrected,** each with its earlier words kept. It settles
+  the range R-526 left to RQ-478; R-526's text stands, its heading block naming this ruling.
+
+*Where the words leave a choice, decided per R-369 (the normalisation under physics review, as R-526's; the routine
+placements):*
+- **A1. "The same field".** The stain colours by the same field when a node of the stain's backbone reads that field
+  through `range_norm` (render_gui_spec §10.1); the window shared is that node's, fixed or `RANGE_AUTO`, as its
+  inspector sets it. Where two stain nodes read the field with different windows, which one the input takes is the
+  field-inputs task's definition (R-72), written under physics review in print_graph §4.4; it invents no value.
+- **A2. Where it lands.** print_graph §4.4 carries the rule; §12's note and q3's premise follow. No requirement on
+  `main` holds RQ-478: the Print graph plan PR's field-inputs requirement takes it.
+
+**RQ-479** asked whether the print stage's cost may move the Auto rung: R-488 counts it in the tier controller's
+accounting, and the rung sets N, E, depth and FTLE gating, so a heavy Print graph would change what the instrument
+reports, against R-489 and print_graph §3. Its options (the physics review's): (a) the post stage's cost excluded from
+the arbiter's rung solve, only §8.1's own degrade answering it; (b) it counts only toward render-key rungs; (c) as
+written, §3 amended. Nothing was applied meanwhile.
+
+*What it decides:*
+- **Option (a).** The print stage's time is recorded (`stage_ms.post`, `post_level`) but excluded from the arbiter's
+  rung solve. Only the Print graph's own degrade answers it: per-node motion policies, the whole-graph fallback, then
+  Plain.
+- **A Print graph never moves N, E, depth, render_scale or FTLE gating.** print_graph §3 says so beside "A Print graph
+  cannot change any number the instrument reports".
+- **R-488's "the tier controller's accounting includes it" and §8.2's "not exempt" go,** each kept as *Was*; R-488's
+  heading block names this ruling.
+- **§8.1's playback sentence becomes:** "If full quality cannot hold the playback rate, the frame record says so, and
+  nothing else changes."
+
+**RQ-495** asked who owns the post level, R-488's whole-graph fallback that reads the measured post-stage time each
+frame, against the quality device note's one writer, model-based, with no per-frame setting change and the arbiter off
+under a named tier; and whether the fallback runs under a pinned tier. Its options: (a) the post level is one of the
+arbiter's levers, the fallback running only under Auto, model-based, never under a named tier or Custom; (b) the
+fallback part of the Print graph, outside the arbiter, under every tier; (c) (b) under Auto, and under a pinned tier
+only while moving and recorded. Nothing was applied meanwhile.
+
+*What it decides:*
+- **Option (a), worded as a motion-regime lever.** The post level is the arbiter's, a lever of the motion regime
+  beside render_scale (the quality device note §5, "Medium"). It is never part of the rung, and it is solved from the
+  measured cost classes (print_graph §8.3), not from a per-frame reading.
+- **It runs only under Auto.** Under a named tier or Custom the arbiter is off, and only the per-node motion policies
+  (§8.1 step 1) and settle (step 3) apply; the whole-graph fallback (step 2) does not run.
+- **`post_level` is recorded in every case,** Auto, named tier or Custom.
+
+*Where the words leave a choice, decided per R-369 (routine and mechanical):*
+- **B1. RQ-479 and RQ-495 together.** RQ-479's "Only the Print graph's own degrade answers it: …, the whole-graph
+  fallback, then Plain" and RQ-495's "The post level is the arbiter's" are read as one rule: the arbiter writes the
+  post level (the fallback's level) under Auto, and the rung's solve never reads the print stage's time. The quality
+  device note's one writer holds (§1): the post level has one writer, the arbiter, and under a named tier or Custom no
+  writer, the level then set only by the per-node policies and settle. No clash is queued.
+- **B2. Step 2's words.** print_graph §8.1 step 2 now reads "Under Auto only, where the print stage's cost would exceed
+  its share of the frame budget, the whole graph drops a level: reduced, then Plain", the level the arbiter's, from the
+  measured cost classes; the print stage's share of the budget stays R-488's calibration (R-71), which the plan PR
+  names. The budget the rung is solved against does not depend on which Print graph is active, Plain included, since
+  a budget that did would move N, E, depth or FTLE gating with the graph, against RQ-479's words (perf review
+  5603942517 of PR #274, F1). Whether that budget is the whole frame budget or the frame budget less a fixed print
+  share is a definition (R-72) for the Print graph plan PR's post-stage budget task, beside the share's calibration; no
+  requirement on `main` holds it (B4), so it is noted here for that plan PR, whose budget requirement takes an arm with
+  a failing control: the resting rung under Auto is identical with Plain and with a heavy Print graph at the same
+  scene and device model, and a solve that reserves the share only while a graph is active fails.
+- **B3. The quality device note.** §3 says the print stage is excluded from the rung solve and its post level never
+  part of the rung; §5's Medium layer names the post level beside render_scale; §10 says the fallback does not run
+  with the arbiter off, `post_level` still recorded. telemetry §2 and render_gui_spec § "Profiler" say the same in a
+  sentence each. The benchmark's swept rows run with the arbiter off (R-495), so under this ruling the fallback does not
+  run there; benchmark §8's "uses its policy, not a measured budget" agrees and is unchanged.
+- **B4. No requirement on `main`** holds RQ-479 or RQ-495; the Print graph plan PR's post-stage budget and degrade
+  requirements take them.
+
+*What it amends:* **R-488** (P4's "the tier controller's accounting includes it", and the whole-graph fallback's owner
+and reach: under Auto only, as the arbiter's post level). Read with R-489 (P5, unchanged, now explicit for the cost
+loop) and R-526 (its open range, settled). It closes **RQ-478**, **RQ-479** and **RQ-495**.
+
+R-557 is in the "design" group of `plan/rule_groups.yaml`, with R-488 (RQ-478's part physics-reviewed, as R-526 is).
+
+Changes no requirement on `main`: none holds these entries, and the Print graph's requirements are the plan PR's.
+`plan/section_notes.yaml` gains this heading, "planned (the plan PR)", as R-524 to R-536 have.
+
+## R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*
+*21 Oct 2026 · applied in `docs/design/principia_state_map.md` (the adoption note; SM2's, SM5a's and SM10's notes; SM8's
+last sentence; SM11's and SM15's node lines, "a fixed t" struck; SM15's brightness and inspector paragraphs and its
+transcription's preset sentence; a "Ruled" paragraph after SM13; each with its earlier words kept),
+`docs/design/principia_colour_composition.md` § "1.5 A point on a chart: Chart position's colour slot (R-542)" (the
+calibration sentence), § "3. The `ctx` contract" (Chart position's reads) and § "4.1 Backbone & `Option` occupants"
+(the Chart position paragraph, and Q4's statement added), `docs/design/principia_dd_colouring.md` § "3.2 The vMF
+engine", § "3.5 Combiners" and § "5. Unit tests" (test 6), `docs/contracts/principia_render_contract.md` § "Part 4 —
+Semantic rules" (Chart position named among the exceptions), `docs/gui/principia_render_gui_spec.md` § "G13. Where the
+artboards are overridden" (the state map bullet), Part II § "3.1 Node kinds", § "6. Port typing & wire rules", § "9.
+Node inspector — morphing editors" and § "11. Presets = whole graphs", R-542's heading block,
+`docs/archive/review_queue/M0.md` (RQ-480 to RQ-489 and RQ-496 to RQ-505, moved with their rulings), REQ-COL-113,
+REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-121, REQ-COL-124, REQ-COL-125, REQ-COL-129, REQ-COL-130, REQ-COL-131,
+REQ-COL-132, REQ-SCHED-102, REQ-GUI-335, REQ-GUI-337, REQ-GUI-338 and REQ-GUI-339 (reqio: `rq` removed; statement,
+verify and note where the ruling changes them), REQ-COL-141 (reqio, new), TASK-M7-47 and TASK-M7-50 (no longer
+waiting), TASK-M7-48, TASK-M7-49, TASK-M7-51, TASK-M7-52 and TASK-M8-66 (notes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M7-47 to TASK-M7-52 and TASK-M8-66*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+135–147 and 150–179), which R-545 quotes in its opening:
+
+> - RQ-480 (Chart position may target any chart): (a). "A Chart position target may be any chart. Its inverse is generated into the fragment pipeline beside the view's own, from R-116's one Rust source." Whether a colour occupant may read a chart at all stays with RQ-489.
+>
+> - RQ-481 (Tilted targets use the branch nearest the slice): (a). "A tilted target (E, F) takes the branch nearest the slice: `k ∈ [−4, 4]`, smallest `|w|`, as `smWhere` does. It is a stated choice, named in SM4."
+>
+> - RQ-482 (State map never feeds the criterion): (a). "The state map is a colouring and never a criterion input (the firewall). SM12's Firewall test holds it." Any spread over it can come back as a separately proposed and measured candidate.
+>
+> - RQ-483 (vMF stays the hue carrier, documented as not one-to-one): (a). "The vMF shape colouring stays as it is, the hue carrier. Colour composition §4.1 states that it is not one-to-one (SM6: antipodal shapes `±(1,1,1)/√3` share one grey bin at κ = 1, 3, 6)."
+>
+> - RQ-484 (Ensemble colour: nominal copy or OKLab mean): (a). Chart position colours by the nominal copy (copy 0). An OKLab mean over the copies is not offered.
+>
+> - RQ-485 (After the run ends: hold or outcome palette): (a). An ended run holds its end state by default; "outcome colour" stays an option of the node.
+>
+> - RQ-486 (History fields): (a). Out of scope. Each needs an accumulator, which is a struct change, and SM2 forbids that.
+>
+> - RQ-487 (State-map constants as calibration values): (a). Take the prototype's values as the starting values, confirmed at the M7 gate. That covers the port's additions too: κ (3, 0.3, π, 0.6), layer line width 0.045, dot radius 0.13, and the plane gradient's L 0.75 and chroma 0.095.
+>
+> - RQ-488 (Grey origin of the plane gradient): (a). Accept it. On the latent charts the origin is the Lagrange landmark.
+>
+> - RQ-489 (Chart position against seam 6; "a fixed t"): (a), with the fixed t dropped.
+>   - Chart position gets a named seam-6 exception, as ROUNDTRIP and DECODE have, listed in render contract Part 4 and in the lint.
+>   - The target chart's inverse is generated to WGSL from the one Rust source (R-116).
+>   - The node's times are the playhead and t = 0 only. "A fixed t" was a mistake in my spec: it needs a stored state or a second march, and SM2 forbids both. Strike it from SM11 and SM15.
+>
+> - RQ-496 (Replace-L chroma scaling; SM2's "brightness slot is None"): (a).
+>   - Replace-L as ruled is unchanged and stays the default, so every saved stain renders bitwise as before.
+>   - The chroma scaling `min(1, L/0.75, (1 − L)/0.35)` becomes an option on the Replace-L combiner, "keep in gamut", default off. The state-map presets that use a brightness node (Displacement, Mixing) set it on.
+>   - SM2 item 3 means: a base that spends L on position takes a brightness node only with the Problems warning; Multiply keeps its L.
+>
+> - RQ-497 (Stain graph types and the Shape n̂ node): (a).
+>   - Shape n̂ stays a `vector` field with its one colour editor, exactly as on main.
+>   - `point⟨q⟩` is a fourth subtype that only Chart position carries. Site blend ↔ Site blend is the only swap.
+>   - §6's morphing stays; SM15's "offer only what the source takes" applies to the library and the drag-off menu only.
+>   - Chart position is a source with its own settings, and its layers are combinators inside the colour occupant.
+>   - Board 4's sphere paragraph is superseded by SM11.
+>   - Where both graphs show, the GUI says "Palette base" and "Picture flow".
+>   - Chart position is not a Print graph field input; print_graph §4.4 says so.
+>   - The Print graph's "post" stage and "Source" category are qualified the same way ("print stage", "Print source").
+>
+> - RQ-498 (The mirror, R-141's gauge, left samples, the navigation edge): (a), the code's reading, throughout.
+>   - Chart position ⟨shape sphere⟩ reads the signed n̂ over the full sphere. The t = 0 identity on the sphere is stated modulo the mirror, under R-141.
+>   - Bitwise copies hold for EX7 repeats; in-square mirrors match to rounding.
+>   - The clamp stays the default. The Four results test runs with "when it leaves: none".
+>   - On an affine chart the clamp's edge is the compacted edge s = ±1. The base grid is a demo device; the app fills gaps with EX4's coarse ancestor.
+>
+> - RQ-499 (Prototype code against the text, five items): (c), each on its own:
+>   - Preset names: the file's: Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing. "Where now" is the node's retired name.
+>   - Triangle palette L: the code's, 0.69 / 0.75 by orientation.
+>   - Picture under a brightness node: the file's. The brightness slot applies to every base, Picture included; the prototype skipped it.
+>   - The fade: one fade everywhere, the trace's `max(0.18, e^{−d/1.2})`.
+>   - Fibonacci cells: the code's, golden-angle always, because an index palette can't guarantee different neighbours on a Voronoi tiling.
+>
+> - RQ-500 (Two "Edit graph…" buttons): (a). Explore's stain button reads "Edit stain…"; the Print panel keeps PR #268's "Edit graph…". Until the shell builds it, (c) as applied.
+>
+> - RQ-501 (Board 6's ring against the hover trace): (a). The hover trace and its "L listen" label stay as R-541 and §G2 give them. The figure draws no ring while the trace is shown; the trace's start star marks the pixel and the legend carries SM9's ring.
+>
+> - RQ-502 (LAYERS as a node or inside the colour occupant): (a). One colour node, with the base and the layer stack in its inspector. Boards 1 and 4 get redrawn to match.
+>
+> - RQ-503 (The prototype's AMIN = 0.05 against R-21): (a). α_min = 0 stands. SM5a's latent figures are the prototype's, kept for reference only. The edge-clamp test runs on the latent momenta, and the α case is tested on a constructed state.
+>
+> - RQ-504 (The hemisphere view's target): (a). The one-hemisphere view targets the full sphere with the signed n̂, consistent with RQ-498 (a).
+>
+> - RQ-505 ("none" as debug-only or a node setting): (a). "None" is an ordinary setting of the node. REQ-COL-116's "debug option" wording is reworded to "an option of the node".
+
+The human's second addendum to the shape sphere ruling (21 Oct 2026), verbatim, which supersedes two clauses of the
+RQ-498 ruling above:
+
+> Second addendum from me, Malachy, to the shape sphere ruling: it supersedes the two mirror clauses of my RQ-498
+> ruling in rulings_2026-10-21.md ("the t = 0 identity on the sphere is stated modulo the mirror, under R-141" and
+> "in-square mirrors match to rounding"). On the shape sphere there is no mirror identification now, so the identity
+> holds point for point.
+
+and the human's later plain summary of it: "One tidy-up: this supersedes the two mirror clauses of my RQ-498 ruling in
+rulings_2026-10-21.md (…). On the shape sphere chart the identity now holds point for point." The human's reply on the
+overlap: "Where the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there
+already chose the full sphere with signed n̂, so they should agree."
+
+These twenty entries are the state map's (R-542): SM13's nine questions, Q1 to Q9 (RQ-480 to RQ-488), each with its
+recommendation as option (a) and that (a) applied meanwhile; the conflicts R-542's port found (RQ-489, RQ-496 to
+RQ-499); and those PR #270's review found (RQ-500 to RQ-505). Most rulings confirm what was applied meanwhile; four
+change it (RQ-489's fixed t struck and the seam exception named, RQ-496's scaling made an option, RQ-497's qualified
+names, RQ-499's names, Picture brightness and fade), and two only reword (RQ-483 in colour composition §4.1, RQ-505 in
+REQ-COL-116).
+
+**RQ-480 to RQ-488: SM13's questions.** Each asked the human to choose between SM13's recommendation (a) and its
+alternative (b).
+
+*What it decides:*
+- **RQ-480 (a).** A Chart position target may be any chart. Its inverse is generated into the fragment pipeline beside
+  the view's own, from R-116's one Rust source; that a colour occupant may read a chart at all is RQ-489's, ruled below.
+- **RQ-481 (a).** A tilted target (E, F) takes the branch nearest the slice: `k ∈ [−4, 4]`, the smallest `|w|`, as
+  `smWhere` does. It is a stated choice, and SM4's table names it ("this is a choice, Q2").
+- **RQ-482 (a).** The state map is a colouring and never a criterion input (the firewall), held by SM12's Firewall test
+  (REQ-SCHED-102). A spread over it may come back only as a separately proposed and measured candidate.
+- **RQ-483 (a).** The vMF shape colouring stays the hue carrier it is, unchanged, and colour composition §4.1 now says
+  it is not one-to-one (SM6: the antipodal shapes `±(1,1,1)/√3` share one grey bin at κ = 1, 3 and 6). SM6's sphere map
+  is not offered as a shape colouring.
+- **RQ-484 (a).** Chart position colours by the nominal copy (copy 0); no OKLab mean over the copies is offered.
+- **RQ-485 (a).** An ended run holds its end state by default; "outcome colour" stays an option of the node.
+- **RQ-486 (a).** History fields (winding on any chart, time in a tile, first passage) are out of scope: each needs an
+  accumulator, a struct change, which SM2 forbids.
+- **RQ-487 (a).** The prototype's values are the starting values, confirmed at the M7 gate: tiles across 6, the index
+  palette's chroma 0.08, and the port's additions, κ (3, 0.3, π, 0.6), the layer line width 0.045, the dot radius 0.13
+  and the plane gradient's L 0.75 and chroma 0.095. They are REQ-COL-129's calibration values (R-71).
+- **RQ-488 (a).** The plane's 2D gradient is grey at the chart origin, accepted: on the latent charts the origin is the
+  Lagrange landmark.
+
+**RQ-489: Chart position against seam 6, and "a fixed t".** It asked how Chart position, a colour occupant, may read
+the target chart and its inverse where seam 6 and render contract Part 4 keep every chart identifier from a colour
+occupant, and how "a fixed t" could read a state `SimState` does not hold. Option (a): a stated seam-6 exception, as for
+ROUNDTRIP and DECODE, the target's inverse generated from the one Rust source, a fixed t dropped.
+
+*What it decides:* **(a), with the fixed t dropped.**
+- **Chart position gets a named seam-6 exception**, as ROUNDTRIP and DECODE have, listed in render contract Part 4 and
+  in the lint (`cargo xtask lint wgsl`).
+- **The target chart's inverse is generated to WGSL from the one Rust source** (R-116).
+- **The node's times are the playhead and `t = 0` only.** "A fixed t" was a mistake in the human's spec (it needs a
+  stored state or a second march, which SM2 forbids) and is struck from SM11 and SM15, its earlier words kept.
+
+**RQ-496: Replace-L's chroma scaling, and SM2's "brightness slot is None".** It asked whether SM15's chroma scaling
+changes Replace-L for every stain, against dd_colouring §3.5, its test 6 and the §4.1 truth table, and what SM2 item 3
+means under L-ownership. Option (a): item 3 read as a Problems warning, Multiply keeping L; the scaling an option, the
+default unchanged.
+
+*What it decides:* **(a).**
+- **Replace-L as ruled (R-77) is unchanged and stays the default,** so every saved stain renders bitwise as before;
+  dd_colouring §3.5, its test 6 and colour composition §4.1's truth table hold at the default.
+- **The chroma scaling `min(1, L/0.75, (1 − L)/0.35)` becomes an option on the Replace-L combiner, "keep in gamut",
+  default off.** The state-map presets that use a brightness node, Displacement and Mixing, set it on.
+- **SM2 item 3 means:** a base that spends L on position takes a brightness node only with the Problems warning;
+  Multiply keeps its L.
+
+**RQ-497: the stain graph's types and nodes.** It set main's `vector` Shape n̂ with one colour editor against the
+state map's `point⟨sphere⟩` with Position, Site blend and Bands counterparts, SM15's hard filter against §6's morphing,
+§3.1's one-param source against Chart position's params and layers, board 4 against SM11, and two graphs sharing
+"Palette", "Flow", "field" and "post". Option (a) was the list the human's eight points now give.
+
+*What it decides:* **(a).**
+- **Shape n̂ stays a `vector` field with its one colour editor,** exactly as on main.
+- **`point⟨q⟩` is a fourth subtype that only Chart position carries.** Site blend ↔ Site blend is the only swap.
+- **§6's morphing stays;** SM15's "offer only what the source takes" applies to the library and the drag-off menu only.
+- **Chart position is a source with its own settings,** and its layers are combinators inside the colour occupant.
+- **Board 4's sphere paragraph is superseded by SM11.**
+- **Where both graphs show, the GUI says "Palette base" and "Picture flow".**
+- **Chart position is not a Print graph field input,** and the Print graph's "post" stage and "Source" category are
+  qualified the same way ("print stage", "Print source"). Both are already on main: PR #268's follow-ups wrote them
+  into print_graph §4.4, the frame record's stage name and the Print source node (R-557 records that review); this
+  port only cites them.
+
+**RQ-498: the mirror, R-141's gauge, left samples, the navigation edge.** Option (a), the code's reading throughout, was
+applied meanwhile: Chart position ⟨shape sphere⟩ from the signed `n̂` over the full sphere; the `t = 0` identity stated
+modulo the mirror; bitwise copies for EX7 repeats and rounding-level in-square mirrors; the clamp kept as the default,
+Four results under "none"; the clamp's edge `s = ±1` on an affine chart, the base grid a demo device.
+
+*What it decides:* **(a), the code's reading,** but for the two clauses the human's second addendum supersedes:
+- **Chart position ⟨shape sphere⟩ reads the signed `n̂` over the full sphere,** as applied (payload §5's `n`, no stored
+  field).
+- **Bitwise copies hold for EX7 repeats.**
+- **The clamp stays the default; the Four results test runs with "when it leaves: none".**
+- **On an affine chart the clamp's edge is the compacted edge `s = ±1`.** The base grid is a demo device; the app fills
+  gaps with EX4's coarse ancestor.
+- **Superseded, not applied:** "The t = 0 identity on the sphere is stated modulo the mirror, under R-141." and "in-square
+  mirrors match to rounding". The human's second addendum to the shape sphere ruling supersedes both ("On the shape
+  sphere there is no mirror identification now, so the identity holds point for point"). That ruling's own port (R-544; *was:* "on its
+  own branch, not yet merged") governs the shape sphere chart's identity and its mirror pixels and writes them where they
+  apply; this port writes neither clause anywhere and edits none of that ruling's sites. The text applied meanwhile
+  that still states them (REQ-COL-115's "on the shape sphere modulo the mirror", REQ-COL-121's note, TASK-M7-47's and
+  TASK-M8-66's notes, and state map SM3, SM4 and SM7's notes) is marked superseded where it is a note here, and left for
+  that port where it is the shape sphere's site.
+
+**RQ-499: the prototype's code against the file, five items.** Option (c), each on its own, as the human rules them:
+
+*What it decides:*
+- **Preset names: the file's** — Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing. "Where
+  now" is the node's retired name. *Was (applied meanwhile, (a)):* the prototype's labels, Where now, Basin tiles and
+  Picture flow.
+- **The triangle palette's L: the code's,** 0.69 / 0.75 by orientation, as applied.
+- **Picture under a brightness node: the file's.** The brightness slot applies to every base, Picture included; the
+  prototype skipped it. *Was (applied meanwhile):* no brightness under a Picture.
+- **The fade: one fade everywhere, the trace's** `max(0.18, e^{−d/1.2})`. *Was (applied meanwhile):* the prototype's
+  `max(0.18, 1/(1 + (d/0.35)²))`.
+- **Fibonacci cells: the code's,** golden-angle always, because an index palette can't guarantee different neighbours on
+  a Voronoi tiling; as applied.
+
+**RQ-500 to RQ-505: PR #270's review.**
+
+*What it decides:*
+- **RQ-500 (a).** Explore's stain button reads "Edit stain…"; the Print panel keeps PR #268's "Edit graph…". Until the
+  shell builds that button, (c) as applied: no stain button is added to Explore's top bar by the state map.
+- **RQ-501 (a).** The hover trace and its "L listen" label stay as R-541 and §G2 give them. The figure draws no ring
+  while the trace is shown; the trace's start star marks the pixel, and the legend carries SM9's ring. As applied.
+- **RQ-502 (a).** One colour node, with the base and the layer stack in its inspector. Boards 1 and 4 are redrawn to
+  match.
+- **RQ-503 (a).** `α_min = 0` stands (R-21). SM5a's latent figures are the prototype's, kept for reference only. The
+  edge-clamp test runs on the latent momenta, and the α case is tested on a constructed state. As applied.
+- **RQ-504 (a).** The one-hemisphere view targets the full sphere with the signed `n̂`, consistent with RQ-498 (a). The
+  shape sphere ruling (R-544; *was:* "its port on its own branch") removes the one-hemisphere view, and its full sphere with the signed
+  `n̂` is this answer, so the two agree, as the human's reply says; nothing hemisphere-specific is applied here.
+- **RQ-505 (a).** "None" is an ordinary setting of the node. REQ-COL-116's "debug option" is reworded to "an option of
+  the node".
+
+*Where the words leave a choice, decided per R-369 (state map tasks under their named reviewers; gui on the labels and
+boards, physics on the projection):*
+- **S1. The seam-6 exception is a requirement and a deliverable.** REQ-COL-141 asks for it: Chart position named in
+  render contract Part 4's exceptions and in the lint's list, with its reason, by TASK-M7-47, the task that builds the
+  source, as Part 4's rule for its other exceptions has it ("excepted by the task that builds it"). Part 4 names it now
+  as one to be added when built, as it names DECODE and ROUNDTRIP. TASK-M7-47 no longer waits.
+- **S2. "Keep in gamut" is built by TASK-M7-50** as a parameter of the Replace-L combiner (default off; its inspector
+  shows a checkbox), REQ-COL-132 restated; TASK-M7-50 no longer waits, and its "retired if (c)" note goes. The
+  Displacement and Mixing presets set it on (REQ-GUI-337, TASK-M7-51), so TASK-M7-51 now depends on TASK-M7-50.
+- **S3. "Where both graphs show"** is read as any window, panel or menu that lists the stain graph's and the Print
+  graph's nodes or presets together; there the stain graph's Palette base reads "Palette base" and its Flow preset
+  "Picture flow", and elsewhere the file's names stand (REQ-GUI-335, REQ-GUI-337; gui review).
+- **S4. Boards 1 and 4 are redrawn by TASK-M7-51,** the task the gui reviewer reviews against `boards/`: board 1's BASE
+  and LAYERS nodes become one colour node with the stack in its inspector, and board 4's Layer port row is dropped;
+  until then render GUI spec §G13 reads them so.
+- **S5. "Edit stain…" has no requirement yet,** as no task builds Explore's stain button; the label is recorded in §G13
+  and TASK-M8-66's note for the task that does.
+- **S6. RQ-497's print names** stay cited on main as "the human's ruling on RQ-497, 21 Oct 2026", which resolves to the
+  archived entry and its ruling line naming R-558; they are not reworded here.
+- **S7. RQ-498's superseded clauses.** Where text applied meanwhile states one of them as this port's own note
+  (REQ-COL-121's note, TASK-M7-47's and TASK-M8-66's notes) it is marked "superseded by the human's second addendum to
+  the shape sphere ruling", its words kept; REQ-COL-115's statement, REQ-COL-121's verify (the hemisphere's fold among
+  the repeat pairs) and state map SM3, SM4 and SM7's notes are the shape sphere ruling's sites, left for its port.
+
+*What it amends:* **R-542** (its applied text, SM1 to SM15: "a fixed t" struck from SM11 and SM15; the presets' names,
+the brightness slot under a Picture and the fade's function now the file's; Replace-L's chroma scaling an option,
+default off; Chart position a named seam-6 exception; and its queued entries closed). Read with R-21, R-77, R-116 and
+R-509, which it leaves as ruled. It closes **RQ-480 to RQ-489 and RQ-496 to RQ-505**.
+
+R-558 is in the "design" group of `plan/rule_groups.yaml`, with R-542.
+
+Changes REQ-COL-113, REQ-COL-117, REQ-COL-124, REQ-SCHED-102, REQ-GUI-338 and REQ-GUI-339 (`rq` removed, rulings,
+note); REQ-COL-115 and REQ-COL-121 (`rq` removed, note marking the superseded clause); REQ-COL-116 (statement reworded,
+`rq` removed, note); REQ-COL-125 and REQ-COL-129 (`rq` removed, note); REQ-COL-130, REQ-COL-131, REQ-COL-132,
+REQ-GUI-335 and REQ-GUI-337 (statement, verify, `rq` removed, rulings, note); adds REQ-COL-141 (Chart position's
+seam-6 exception, closed by TASK-M7-47).
+
+## R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it
+*21 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (two marks), R-441's, R-523's and R-542's
+texts (one, three and one mark), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" and § "G13. Where the artboards are overridden" (four marks), `plan/tasks/M2/TASK-M2-28.md`, `plan/tasks/M2/TASK-M2-36.md` and
+`plan/tasks/M7/TASK-M7-52.md` (four marks), the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062,
+REQ-CHART-075, REQ-GUI-258, REQ-COL-129 and REQ-COL-135 (reqio, note), `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (line
+183), which R-545 quotes in its opening:
+
+> Decisions under R-369 since 20 Oct: I have reviewed all 13. They stand. Mark them reviewed.
+
+The thirteen are the orchestrator's state page's list, "Decisions I made under R-369", "yours to veto, from 20 Oct
+onward. None of them held a merge", two of them flagged as the most worth a look.
+
+*What it decides:* all thirteen stand as applied, accepted by R-559. Where the repo records one, its "applied per
+R-369" (or "flagged for the human's veto") mark gains "accepted by R-559", the form a settled mark takes (R-354; as
+"applied per R-204, accepted by R-293" and R-431's "accepted by R-431"). Where one is recorded only in a PR's body, it
+is listed here, as R-431 listed #209's. Nothing else changes.
+
+| # | The decision, as the state page gave it | Where it is recorded; its mark |
+|---|---|---|
+| 1 | ⚑ PR #255, the tilted fold: a view folds only where the full `(a, b, d)` decode gives the same system; a tilted view is generically bijective, and the tilt now triggers a recompute, which changes area statistics under tilt | chart_reference §3.3, "Under a tilt the fold is the tilted view's"; TASK-M2-36's "The tilted fold" and TASK-M2-28's "Untilted only"; the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062 and REQ-CHART-075 — each "flagged for the human's veto as it changes area statistics; accepted by R-559" |
+| 2 | ⚑ R-441's "every pixel" read with §3.7's exceptions: `E* = V₀` keeps its contour on a free-fall slice, and the mass-block tags are kept, the human's quoted words unchanged | R-441, "The exceptions §3.7 gives" (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3) — "and accepted by R-559" |
+| 3 | PR #262 (TASK-M2-24): the GPU decode variants for `BurrauThetaK`, `BurrauThetaLz`, `BurrauThetaDeltaM` (and `ShapeSphere`) are built in that task, as its goal says every chart; qa holds `C` alone to REQ-DEC-043's factor; the factor's record lists every domain a test holds it on; a nextest display override prints `qa_m224_gpu_canon_turn`'s worst in CI; qa fixed its own test's `t < 0` case | PR #262's body only (its "Decisions (applied per R-369)"); the factor's record is in `crates/validation/src/decode_f32_eps.rs`, REQ-DEC-043's proposal for the M2 gate |
+| 4 | PR #255: the fold is decided by an exact closed form on the stored angles, with Pythagorean test angles of 108° and 144°; chart_reference §4.5's "hatches its negative-mass area" reworded to "drawn blank" in the R-537 PR's next main merge | chart_reference §3.3, "The decision is exact, on the stored angles"; TASK-M2-36's "The fold is decided exactly on the stored angles"; the same five requirement notes — each "flagged for the human's veto with the tilted fold; accepted by R-559". The §4.5 reword is on `main` (§4.5, "drawn blank (R-470; §5.4)", its *Was* kept) and needs no mark |
+| 5 | PR #257 (TASK-M2-35): the latent edge is `±710`, not `±40`, because `σ(−40)` is not 0 | PR #257's body only |
+| 6 | PRs #261 and #256: `M` lines on qa files accepted where the only non-qa commit was a merge | PRs #261's and #256's bodies only (the exception is CLAUDE.md § qa's, R-290, R-369) |
+| 7 | PR #263: a full mutants run on the bundle's reference `.rs` under `docs/incoming/` accepted rather than changing the workflow | PR #263's body only |
+| 8 | PR #265: the REQ-TOOL-183 collision with #263 renumbered to REQ-TOOL-185 and REQ-TOOL-186; the header strip's height source set in §G2 and §G13; at zoom 1 and Home, `[0,1]²` spans the shown rect's shorter side, centred, with the field drawn around it (R-537) | the renumbering: PR #265's body and its commit fa202733 only; the strip and the shown rect: R-523 B1 (gui reviews G1 and G3, and 5595357065's note, of PR #265), render_gui_spec §G2's Figure and the header strip's "Where it sits" and "The shown rect", §G13's departure, and REQ-GUI-258's note — each "accepted by R-559" |
+| 9 | PR #266 (TASK-M2-27): a ball radius of ≤ 0 or NaN is refused in the judge rather than hanging; the fixtures are in their own directories (`fixtures/gates/inspector-handles/`, `fixtures/gates/inspector-roundtrip/`) | PR #266's body only |
+| 10 | PR #268: left at head 1b7ca0ed for the human's review, main merged into it afterwards | PR #268's body and the merge commit 10689a03 only; the human's approval is R-557's |
+| 11 | PR #269 (TASK-M2-34): the `d_min_ramp_override` twin re-baselined under R-504, its row saying why, and on the gate list; two qa files go red because R-511 forces it (`M` exceptions, confirmed by physics) | PR #269's body and its branch's `BASELINES.md` row, not yet on `main`; the PR is open, so its mark lands with it |
+| 12 | PR #270 (the state map): the host consumers compare bitwise, the fragment stays within REQ-COL-129's tolerance, and TASK-M7-52 proposes the agreement tolerance, so RQ-487 does not block it; until the human rules, the code's signed `n̂` applies (RQ-498) and no figure ring is drawn while a trace is shown (RQ-501); the progress banner test counts done tasks from `tasks.yaml` | R-542 H15, TASK-M7-52's "REQ-COL-129's agreement entry", and the notes of REQ-COL-129 and REQ-COL-135 — each "accepted by R-559"; RQ-498's and RQ-501's meanwhile are now the human's rulings (R-558), their entries archived unchanged; the banner test: PR #270's body only |
+| 13 | The Print graph tasks written on a branch off PR #268's approved head (R-388's early start), the PR opened only after #268 merges | the orchestrator's state page only; the branch is unpushed |
+
+*Applied per R-369 (mechanical):* a mark is added only where a decision is recorded as a live statement; the earlier
+words a doc keeps as *Was* are history and are left alone. The requirement notes take the mark through reqio
+(`note`), with no ruling added to their `rulings`, since a mark changes no requirement. Decision 4's §4.5 reword was
+done on `main` before this ruling, so it has nothing to mark.
+
+R-559 is in the "one_off" group of `plan/rule_groups.yaml`, as R-431 is.
+
+Changes the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062, REQ-CHART-075, REQ-GUI-258,
+REQ-COL-129 and REQ-COL-135 (the mark only); no statement or verify changes.
+
+## R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the bundle's instruction and decisions as
+delivered, the source design and the three probes), `docs/contracts/principia_integrator_contract.md` § "Part 2 —
+Occupants and the capability profile" (Yoshida-4's row and a paragraph after the table) and § "Part 2b — Regularisation
+is a SECOND swappable axis, not a property of the stepper" (Heggie's row), `docs/design/principia_dd_integrator.md` §
+"3.2 Occupants" (a paragraph), `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar", REQ-GUI-102,
+REQ-INT-006 and REQ-INT-014 (reqio), TASK-M3-08, TASK-M8-24, `REVIEW_QUEUE.md` (RQ-529, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-08 and TASK-M8-24*
+
+R-560 to R-566 are the gap sweep's PR 1, "The integrator contract, corrected" (the bundle's `designs/integrator_findings.md`
+§1, §2, §10 and §11). The human's covering message, 21 Oct 2026, verbatim:
+
+> New instruction from me, Malachy. The attached bundle is the gap sweep from 21 Oct: start with INSTRUCTION.md, which
+> groups it into four PRs. Every decision in it is mine, quoted in DECISIONS_2026-10-21.md; quote them verbatim and
+> record the rulings from the next free R-number. Do PR 1 (the integrator contract) first. Tell me before you start if
+> you'd split the PRs differently, and queue anything that conflicts rather than resolving it.
+
+`INSTRUCTION.md`'s header, verbatim:
+
+> From me, Malachy. Everything in this bundle is mine to rule and I have ruled it; my words are in
+> `DECISIONS_2026-10-21.md` and inside each design's "Decided" section. Quote them verbatim wherever you record a ruling.
+> Record the rulings in `decisions.md` from the next free R-number, grouped as the PRs below, each naming the rulings it
+> amends and any queue entries it closes.
+>
+> Native app first throughout. Where anything here conflicts with a ruling or a queue entry these texts don't address,
+> queue it rather than resolving it. The security rule stands: never delete or modify anything outside the repo and
+> build/scratch directories without asking.
+
+`INSTRUCTION.md` § "PR 1", its first item, verbatim:
+
+> - **Default occupant: Heggie × RK4.** "Yep Heggie x RK4 as default". RK4 is what every Heggie result was measured
+>   with. REQ-GUI-102's default and the render GUI spec's Run window (§G5) change with it.
+
+`DECISIONS_2026-10-21.md` § "Integrator", its first item, verbatim:
+
+> - Default occupant Heggie × RK4. "Yep Heggie x RK4 as default"
+
+*What it decides:*
+- **The default occupant is Heggie 1974 stepped with RK4**, the composed occupant (stepper × regularisation, Part 2b).
+  The render GUI spec's Run window and REQ-GUI-102 read "Heggie × RK4"; REQ-INT-006's default config selects it, with
+  R-161's Eq. 22 at n = 3/2 as Heggie's time transformation. *Was:* "Heggie with KDK leapfrog is the general default"
+  (render GUI spec § "Run — from the top bar"), "occupant = Heggie×KDK" (REQ-GUI-102's test), and Yoshida-4 marked
+  "Medium–High (default)" in integrator contract Part 2's table.
+- **The evidence** (the design §1): Heggie's every result, 31 of 32 gallery cases among them, was taken with RK4; the
+  explicit leapfrog a reader of "Heggie with KDK" would write is first order and diverges (R-561's table).
+
+*Applied per R-369:*
+- **The tier column.** Integrator contract Part 2's last column is each stepper's default binding by tier when the
+  regularisation is `none`; the default occupant is Heggie × RK4 at every tier meanwhile. The column binds KDK at
+  Potato–Low and Yoshida-6 at Ultra–Extreme (R-4 makes the markdown's tier tables the defaults), and the ruling says
+  nothing of tiers, so whether a tier keeps another default is queued, RQ-529. TASK-M3-02's `table.rs` tier binding is
+  unchanged by this: it is the per-stepper binding.
+- **REQ-INT-014** keeps its statement and test (TASK-M3-02 builds it now); a note says its tier column is the binding
+  with regularisation `none` (R-560).
+- **The inspector cross-check** (physics review 5605806092 of PR #277, F9): integrator contract Part 6's
+  "Integrator-family mismatch" paragraph assumed a symplectic GPU; under Heggie × RK4 the GPU drifts secularly too, so
+  a note says the oscillating-against-drifting contrast holds for a symplectic active occupant, and the
+  match-integrator mode stands for every occupant.
+
+R-560 is in the "physics" group of `plan/rule_groups.yaml`, with R-161.
+
+Changes REQ-GUI-102 (statement, verify, rulings, note), REQ-INT-006 (statement, verify, source, rulings) and
+REQ-INT-014 (note, rulings).
+
+## R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured
+*Amended by R-567 (Heggie × the generalised leapfrog, measured bad).*
+*Still in force: all of it; the table gains Heggie × the generalised (Störmer–Verlet) leapfrog, measured bad, with
+its warning (R-567).*
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2b — Regularisation is a SECOND
+swappable axis, not a property of the stepper" (a subsection, "Every stepper × regularisation pair runs; the pairs
+measured not to work carry a warning (R-561)", with the pair table) and § "The table gains two rows" (Aarseth–Zare's
+KDK sentence), `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (a paragraph),
+`docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" and § "Export & share" (the sidecar), REQ-INT-017
+(reqio), REQ-INT-097, REQ-INT-098, REQ-INT-099, REQ-GUI-351, REQ-GUI-352 and REQ-GUI-353 (new), TASK-M3-07, TASK-M3-39
+(new), TASK-M8-24, TASK-M8-32, `REVIEW_QUEUE.md` (RQ-525, new) and `plan/rule_groups.yaml`; built by TASK-M3-39,
+TASK-M8-24 and TASK-M8-32*
+
+`INSTRUCTION.md` § "PR 1", its second item, verbatim:
+
+> - **Every regularisation × stepper pair is allowed, regularisation off included.** A pair measured not to work carries
+>   a warning beside the selector, in the Problems panel and in each export's settings. My words: "don't forbid combos
+>   of integrators & regularisers… maybe just have a warning somewhere that they might not work". Each such pair is
+>   still defined exactly, so its results reproduce. REQ-INT-006 and -017 become "every pair runs, and the pairs
+>   measured not to work carry a warning", with a table of pairs marked measured good, measured bad or not measured.
+
+`DECISIONS_2026-10-21.md` § "Integrator", its second item, verbatim:
+
+> - Every integrator × regularisation pair allowed (regularisation off included), with a warning where a pair is
+>   measured not to work. "don't forbid combos of integrators & regularisers… maybe just have a warning somewhere that
+>   they might not work. Better design Imo." / "the regularisation method (with it being off also) along with the
+>   integrator are all swappable / able to be chosen by the user"
+
+*What it decides:*
+- **Every pair runs.** The regularisation (`none`, Aarseth–Zare, Heggie, logH) and the stepper are chosen separately and
+  freely; no pair is forbidden or blocked.
+- **A pair measured not to work carries a warning**, stating what was measured, in three places: beside the occupant
+  selector in the Run window, in the Problems panel, and in each export's settings (the sidecar every image, snapshot
+  and share link carries, render GUI spec § "Export & share").
+- **Each pair is defined exactly.** On a non-separable regularised Hamiltonian (Aarseth–Zare, Heggie) KDK is the
+  explicit kick–drift–kick (kick at `(u, p)`, drift at `(u, p½)`, kick at `(u₁, p½)`) and a Yoshida step is the same
+  composition with Yoshida's coefficients (integrator contract Part 2b).
+- **The table.** Integrator contract Part 2b marks each pair measured good, measured bad or not measured, with the
+  evidence: Heggie × RK4 good (order 3.99, energy bounded at 5e-7 to 3e-6 over 100 orbits of the figure-eight),
+  Heggie × KDK bad (order 0.8–1.2, diverging); the rest not measured by the design. *Was:* "Aarseth–Zare × RK4 good
+  (Part 2a's collision passage);" among the evidence; that status is the port's, below (physics review 5605806092 of
+  PR #277, F7). REQ-INT-006 and REQ-INT-017 become "every pair runs, and the pairs measured not to work carry a warning".
+
+*Applied per R-369:*
+- **The composed occupant's profile is the pair's.** The explicit composition is not symplectic on a non-separable
+  Hamiltonian, so the profile of Heggie × KDK and the like says `symplectic` false, and `step_reversible` is dd test 3's
+  measurement (R-500), not the stepper's Part 2 row.
+- **Euler stays in the debug selection** (REQ-INT-015): its pairs run there, like every other pair.
+- **A status changes only by a measurement.** The criterion for "measured not to work" is a definition (R-72,
+  REQ-INT-099), written by TASK-M3-39 and approved by the physics reviewer: the design's measurement (order over a
+  halving ladder and the regularised energy over 100 orbits of the figure-eight at a fixed fictitious step) is its
+  starting point. TASK-M3-39 measures the not-measured regularised pairs the same way, and a pair that fails gains its
+  warning in the table.
+- **Which "Problems panel".** The only Problems pane in the corpus is the stain editor's (render GUI spec Part II
+  §1, compile errors and the state map's warnings); the ruling does not say which panel shows an integrator warning,
+  so it is queued, RQ-525. REQ-GUI-352 waits on it; the selector's and the sidecar's warnings do not.
+- **The sidecar's field.** The record carries the occupant (its regularisation and stepper, already on the sim key,
+  integrator contract Part 2) and, for a measured-bad pair, its warning text; a receiver shows it.
+
+- **Aarseth–Zare × RK4 is marked measured good** in the table on Part 2a's collision passage (`d_min = 1.35e-11`,
+  energy drift `6.2e-15`) and the 32-case matrix, which ran it under the same RK4 and step control as Heggie. The
+  design measured only Heggie's pairs, and that passage is a different measurement from REQ-INT-099's criterion, so
+  REQ-INT-098's gate re-measures it by the criterion (physics review 5605806092 of PR #277, F7).
+- **Each regularisation's own time transformations.** REQ-INT-098's gate measures each regularised pair under its
+  regularisation's own time transformation(s): Heggie's Eq. 20 and Eq. 22, Aarseth–Zare's one, logH's logH and TTL
+  modes; "both of Heggie's time transformations" applies to the Heggie pairs (F7).
+- **The Yoshida pairs' order** (F5): on a non-separable Hamiltonian the Yoshida step takes the explicit KDK in
+  dd_integrator §3.2's drift order (`w₁, w₀, w₁`; `w₃, w₂, w₁, w₀, w₁, w₂, w₃`), and adjacent half-kicks are not
+  merged, three evaluations per sub-step: §3.2's merged kicks equal the sequence on a separable Hamiltonian only.
+
+- **After qa review 5607548278 of PR #277:** logH's pair forms are written into Part 2b by TASK-M3-39, from logH's
+  equations as TASK-M3-08 transcribes them (REQ-INT-084 covers logH's own equations, not its pairs), physics-reviewed
+  (Q1); the pair table has one cell per pair and time transformation, Heggie's Eq. 20 and Eq. 22 and logH's two modes
+  each a row, a status and its warning being the cell's for the transformation in force, with no rule combining
+  verdicts across them: the design measured Heggie's pairs under both transformations with one verdict, and the
+  human's texts give no combination rule, so the table follows the measurement (Q2); the Euler pairs are offered in
+  the debug selection only (REQ-INT-015, Q6).
+
+*Not settled here:* the pairs the table marks not measured carry no warning until measured.
+
+R-561 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-017 (statement, verify, source, rulings). Adds REQ-INT-097 (the pair definitions), REQ-INT-098 (the
+pair table and its warnings), REQ-INT-099 (the criterion, a definition), REQ-GUI-351 (the selector's warning),
+REQ-GUI-352 (the Problems panel's warning, `rq: RQ-525`) and REQ-GUI-353 (the export settings' warning).
+
+## R-562 — Regularisation is v1, not v2: integrator contract Part 6's "v2" text and REQ-INT-033 are removed
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated
+honestly (deferred work lands here)" (the regularisation paragraph), § "Part 7 — Detectors as the `SimState` producer"
+(the `N_max` coupling bullet) and the closing line, `docs/contracts/principia_scheduler_contract.md` § "The absolute
+floor is emergent", `docs/design/principia_dd_integrator.md` § "6. Deferred / flagged" (the KS item), REQ-INT-033
+(retired, reqio), TASK-M3-17, `REVIEW_QUEUE.md` (RQ-530, new) and `plan/rule_groups.yaml`*
+
+`INSTRUCTION.md` § "PR 1", its third item, verbatim:
+
+> - **Regularisation is v1, not v2.** Remove the "v2" text (integrator contract Part 6) and REQ-INT-033.
+
+*What it decides:*
+- **Regularisation ships in v1**: Part 2b's regularisation occupants (`none`, Aarseth–Zare, Heggie, logH), Heggie × RK4
+  the default (R-560).
+- **Part 6's v2 text goes**, kept as a *Was:*; its substep reading stays for regularisation off (R-563). The closing
+  line and Part 7's "the same floor KS regularisation (v2) would lift" go with it, each kept as a *Was:*.
+- **REQ-INT-033 is retired** ("v1 must handle close approaches by substepping capped at `N_max` with the `saturated`
+  flag, with Kustaanheimo–Stiefel regularisation deferred to v2"); TASK-M3-17 no longer closes it. Its substep half
+  stays required by REQ-INT-029 and REQ-EVT-007.
+
+*Applied per R-369:* the v2 text named one method, Kustaanheimo–Stiefel, which is not among Part 2b's occupants. The
+ruling does not say whether KS joins them, so its place is queued, RQ-530, and `principia_dd_decoder.md` § "6. Deferred / flagged"'s
+"KS-regularised state representation (v2)" is left as it stands until then.
+
+R-562 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Retires REQ-INT-033.
+
+## R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated
+honestly (deferred work lands here)" and § "Part 7 — Detectors as the `SimState` producer" (the terminal states),
+`docs/contracts/principia_scheduler_contract.md` § "The absolute floor is emergent" and § "Part 4 — Terminal vs
+refinable, tied to the two floors", `docs/design/principia_deep_zoom.md` § "Reserved: the integration floor",
+REQ-SCHED-063 and REQ-SCHED-077 (reqio), REQ-INT-101 (new), TASK-M3-41 (new), TASK-M6-10, `REVIEW_QUEUE.md` (RQ-526,
+new) and `plan/rule_groups.yaml`; built by TASK-M3-41 and TASK-M6-10*
+
+`INSTRUCTION.md` § "PR 1", its fourth item, verbatim:
+
+> - **The integration floor follows the occupant.**
+>   - Regularisation off: the existing substep machinery is unchanged.
+>   - Regularised: running out of the step budget makes the result undetermined, never discarded. The separation floor
+>     and the entry-cap hits are counted, non-terminal signals. Re-point REQ-SCHED-063 and -077.
+
+*What it decides:*
+- **Regularisation off:** `N_sub`, `N_max` and the sticky `saturated` bit, as integrator contract Parts 3, 4 and 7 have
+  them, unchanged; REQ-SCHED-063's stop on saturated, high-suspect quads stands for it.
+- **Regularised:** a copy that runs out of its step budget (R-564) stops, is not finite, and its footprint reads
+  undetermined (refinement policy §1); it is never discarded. The **separation floor** (a pair separation below the
+  floor `TINY`, the time transformation's denominator floored, prin-rs `r_floored`) and **entry-cap hits** (steps held
+  at the interval's entry cap, prin-rs `n_cap_hits`) let the run advance under-resolved; each is counted, and neither
+  ends the run.
+- **The evidence** (the design §2): over 35 charts at `t = 13` with a 480,000-step whole-run budget, running out was
+  the only failure mechanism present and every chart cleared; a too-small budget manufactures work; `error_ratio` is
+  blind to a truncated run, so the budget's outcome is read directly.
+- **REQ-SCHED-063 and REQ-SCHED-077 are re-pointed** to the floor that follows the occupant.
+
+*Applied per R-369:*
+- **The definitions are transcribed** from the prin-rs reference set (`docs/reference/prin-rs/src/integrate/heggie/driver.rs`,
+  `.../az/driver.rs`; reference, not authority, R-159) into integrator contract Part 6.
+- **Per occupant** (physics review 5605806092 of PR #277, F3; transcribed from `.../heggie/driver.rs`,
+  `.../az/driver.rs` and `.../logh/driver.rs`, cited as the contract): Heggie's signal fires when any `Rᵢ < TINY` and
+  floors `dt/dτ`, `R₁R₂R₃` under Eq. 20 and `R₁R₂R₃ / S^{3/2}` under the default Eq. 22 with `S` floored; Aarseth–Zare's
+  fires when `A` or `B` is below `TINY` (`ab_floored`), the denominator the floored `A·B`; logH floors its own drift
+  denominator, and its signal fires when that denominator is below `TINY` or either denominator is not positive. An
+  entry-cap hit is counted when the per-step size asks for more than the interval's entry size (`cons[0] > cons[1]`),
+  before the predictive limit and the landing clamp, under every regularised occupant. *Was:* "a pair separation below
+  the floor `TINY`, the time transformation's denominator floored" for all three, and "steps held at the interval's
+  entry cap".
+- **Every floored Heggie step is counted** (physics review 5606990734 of PR #277, P1): the reference's `r_floored`
+  tests `Rᵢ < TINY` but floors `dt/dτ`, so `dt/dτ` can be floored while every `Rᵢ ≥ TINY` and the step go uncounted.
+  Heggie's signal therefore fires when `dt/dτ` or (under Eq. 22) `S` is below `TINY`, as well as on the reference's
+  `Rᵢ` test, so every step on which the floor acts is counted, as logH's is; integrator contract Part 6 says it
+  differs from the reference and why. `Rᵢ` is tested, never floored. *Was:* "Heggie's signal fires when any
+  `Rᵢ < TINY`" above, which stands as the reference's test.
+- **`TINY` is a calibration** (R-71, REQ-INT-105): it is in neither the corpus nor the reference set, which names it
+  only. TASK-M3-07, the first task that floors at it, proposes it per working precision from Aarseth–Zare's `A` and
+  `B`; TASK-M3-08 re-runs the proposal on Heggie's and logH's own floored quantities (Heggie's pre-floor `dt/dτ` and
+  `S` under both time transformations, logH's drift denominator in both modes) and closes REQ-INT-105, so the value
+  the M3 gate confirms rests on all three regularisations' evidence (physics review 5606990734 of PR #277, P2, applied
+  per R-369). *Was:* "TASK-M3-07, the first task that floors at it, proposes it per working precision."
+- **A copy out of budget stops** (F4): integrator contract Part 7 says it stops the copy, which is undetermined, never
+  discarded and never a physical-outcome label, matching Part 6. *Was:* "is not a terminal label either", which read
+  as though the march continued.
+- **What is queued.** How a budget-exhausted copy and the two counts are stored in `SimState` (a state value, a
+  descriptor bit, counters; payload §2 and RQ-310's contested bits), whether an undetermined-by-budget footprint splits
+  (refinement policy §1 splits an undetermined footprint, which is the "manufactured work"), and which of the signals
+  stops a quad at the floor (scheduler Part 4) are not in the texts: RQ-526. REQ-INT-101 and the regularised arm of
+  REQ-SCHED-063 wait on it; the floor with regularisation off does not.
+
+R-563 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SCHED-063 (statement, verify, source, rulings, `rq: RQ-526`) and REQ-SCHED-077 (statement, verify,
+rulings). Adds REQ-INT-101 (`rq: RQ-526`) and REQ-INT-105 (`TINY`, a calibration).
+
+## R-564 — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns
+what)" (a row, `step_budget_rate`) and § "Part 6 — Three boundaries stated honestly (deferred work lands here)",
+REQ-INT-102 and REQ-INT-103 (new), TASK-M3-41 (new), `REVIEW_QUEUE.md` (RQ-527, new) and `plan/rule_groups.yaml`;
+built by TASK-M3-41*
+
+`INSTRUCTION.md` § "PR 1", its fifth item, verbatim:
+
+> - **The step budget is a rate**, steps per unit physical time. The calibration value starts at about 4e4 per unit time
+>   per copy.
+
+*What it decides:*
+- **The budget is a rate**, steps per unit physical time, per ensemble copy, so it is defined for a live playhead with
+  no fixed end; every loop stays bounded (integrator contract Part 2c, rule 3). *Was:* prin-rs's whole-run count,
+  `max_steps = 480,000`, measured at `t_max = 13`.
+- **Its value is a calibration** (R-71, REQ-INT-103), starting at about 4e4 per unit time per copy, about twice the
+  worst measured pixel mean, confirmed at the M3 gate. It is not a confirmed value.
+- **The evidence** (the design §2): at `t = 50` the 480,000 sized at `t = 13` left 42 of 576 pixels of `burrau_nu_k`
+  exhausted, and the step rate was nearly the same at 13 and at 50 (p99 per unit time about 1.8e4 on `burrau_nu_k`,
+  4.5e3, 1.1e3 and 3e2 on the others; prin-rs `budget_horizon_probe`).
+
+*Applied per R-369:* how the rate is accounted along a run (against the elapsed grid time, per sync interval, or with
+an allowance) changes which copies are undetermined, and the texts do not say: RQ-527. REQ-INT-102 and the
+calibration REQ-INT-103 carry `rq: RQ-527`.
+
+R-564 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-102 and REQ-INT-103 (a calibration), both `rq: RQ-527`.
+
+## R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2a — Widening the slot:
+`owns_time_mapping`, and the `advance` signature" (payload purity, and a subsection, "The sync grid is a fixed quantum
+of physical time (R-565)"), § "Part 3 — Parameter ownership (who owns what)" (the escape window's row and a row,
+`Δ_sync`), `docs/contracts/principia_scheduler_contract.md` § "Part 7 — The frame loop (lockstep presentation)",
+`docs/contracts/principia_caching_contract.md` § "Part 7 — The current-state cache (resume points, hard-capped)",
+`docs/contracts/principia_canonical_spec.md` § "11. Still open / downstream (not yet fully in the corpus)",
+`docs/design/principia_dd_integrator.md` § "3.6 Detectors (per `STEP`, on the projected state)",
+`docs/read_first/principia_01_pitfalls.md` § "2.2 The criterion" and § "3. Standing rules earned in this sequence",
+REQ-INT-080, REQ-EVT-017 and REQ-TOOL-038 (reqio), REQ-INT-100 and REQ-SCHED-103 (new), TASK-M3-07, TASK-M3-12,
+TASK-M3-23, TASK-M3-40 (new), TASK-M5-21, `REVIEW_QUEUE.md` (RQ-524 and RQ-531, new) and `plan/rule_groups.yaml`;
+built by TASK-M3-40 and TASK-M5-21*
+
+`INSTRUCTION.md` § "PR 1", its sixth item, verbatim:
+
+> - **The sync grid is a fixed quantum of physical time**, the same for every run and independent of the horizon and of
+>   frame timing. Steps are sized from it, the march stops only on it, and the playhead reads boundary states. Live
+>   march, catch-up and re-boot then reach the same state bitwise. Time windows such as the closure window are stated in
+>   physical time.
+
+*What it decides:*
+- **One grid, `t = k·Δ_sync`**, for every regularised run, never `t_max / n_sync`. *Was:* REQ-INT-080's "the number of
+  sync boundaries n_sync over the horizon".
+- **Steps are sized from `Δ_sync`**, never from the target a call asks for, and **the march stops only on the grid**:
+  `ADVANCE` reaches the latest boundary at or before its target. **The playhead reads boundary states.** Live march,
+  catch-up and re-boot reach the same state bitwise.
+- **Time windows are in physical time**: the closure window is 0.4 time units (R-29), never a count of boundaries.
+- **`Δ_sync` is a calibration** (R-71), REQ-INT-080 re-pointed to it: the design measured 0.1 at about 2% more steps
+  and 0.0125, about a display frame, at about 50%, with at most 4 of 1024 labels flipped (prin-rs `sync_grid_probe`).
+
+*Applied per R-369:*
+- **`Δ_sync` is a constant of the build**, read from the constants register as `r_pole` is (R-433), so a change at the
+  M3 gate re-integrates; it is not a Run-window field, being the same for every run.
+- **The frame loop** (scheduler Part 7): under a regularised occupant each frame advances the live set to the latest
+  boundary at or before the playhead, zero or more whole quanta, and promotion reads a quad standing on the playhead's
+  boundary (REQ-SCHED-103).
+- **REQ-TOOL-038's standing rule** holds by construction for the sync grid; the harness still asserts the run's step
+  parameters and `Δ_sync` equal the run under test's.
+- **The proposal states the window on the grid**: REQ-INT-080's proposal gives how 0.4 maps onto `Δ_sync`.
+- **Terminal events still latch at their step** (physics review 5605806092 of PR #277, F8): "the march stops only on
+  the grid" governs where `ADVANCE` returns for a copy still marching; a collision, a non-finite state or a run-out
+  budget latches at the step it fires on and ends that copy's march there, as integrator contract Part 7 and the
+  scheduler's per-step collision latch have it (integrator contract Part 2a, scheduler contract Part 7).
+- **What is queued.** The unregularised macro-step grid, `dt_macro = max(1e-3, T/65535)` (R-132), depends on the
+  horizon above `T = 65.535`, and the ruling names "the sync grid" only: RQ-524. REQ-EVT-013's escape re-bind test
+  counts "+1, +2, +3, +4 and +8 sync boundaries", a count the fixed quantum changes the meaning of: RQ-531.
+
+R-565 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-080 (statement, verify, source, rulings), REQ-EVT-017 (statement, verify, rulings) and REQ-TOOL-038
+(statement, verify, source, rulings). Adds REQ-INT-100 (the fixed quantum, bitwise) and REQ-SCHED-103 (the frame loop
+on it).
+
+## R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*
+*21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "COM projection and invariant monitoring"
+(a paragraph), `docs/design/principia_dd_integrator.md` § "3.5 Invariant monitoring (per `STEP`, post-projection)",
+`docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not" (the radial
+collision gate's row), R-257's heading block (a forward line), REQ-VAL-045 (reqio), REQ-INT-104 and REQ-VAL-195 (new),
+TASK-M3-08, TASK-M3-41 (new), `REVIEW_QUEUE.md` (RQ-528, new) and `plan/rule_groups.yaml`; built by TASK-M3-08 and
+TASK-M3-41*
+
+`INSTRUCTION.md` § "PR 1", its seventh item, verbatim:
+
+> - **Energy.** The two-body collision gate (REQ-VAL-045) and any per-step suspect flag under a regularised occupant read
+>   the regularised energy. The Cartesian energy is for diagnostics, read only from runs that did not stop at an event.
+
+`INSTRUCTION.md`'s closing paragraph (after § "PR 4 — Small things", closing the whole instruction), its first
+sentence, verbatim (*was:* "`INSTRUCTION.md` § "PR 1", its closing line, verbatim:"; code review 5607516021 of PR #277,
+F1):
+
+> One PR each, with the test output pasted into each.
+
+*What it decides:*
+- **Two energies, named.** The regularised energy, read from the occupant's regularised state, and the Cartesian
+  energy, `E` of integrator contract Part 1, read from the physical state.
+- **Acceptance and the per-step suspect flag read the regularised energy** under a regularised occupant: the two-body
+  radial collision gate's `|dE/E| < 1e-12` (dd_validation_orbits §2, R-257) and `SUSPECT_ENERGY`.
+- **The Cartesian energy is for diagnostics**, read only from runs that did not stop at an event.
+- **The evidence** (the design §11): after a close passage the Cartesian read-out is 280× to 7100× worse than the
+  regularised one on the radial collision, which stays at round-off; a run parked at a collision reads its own
+  cancellation, which produced five wrong conclusions in a row in prin-rs.
+
+*Applied per R-369:*
+- **logH's regularised energy** has no coordinate transformation to be read from; which quantity it is, is a
+  definition (R-72, REQ-INT-104) written by TASK-M3-08 with the equations it transcribes (R-160).
+- **The gate's control** (physics review 5605806092 of PR #277, F1): REQ-VAL-045's arm that fires is the reader
+  itself: the value the gate reads is bitwise the occupant's regularised-energy drift, and the Cartesian read-out of
+  the same run after the passage, printed beside it, differs from it, so a gate whose reader returns the Cartesian
+  value fails the reader check; and the design §11's own control: over a halving ladder of `η` the Cartesian read-out
+  after the passage does not fall with `η`. *Was:* "shows it worse than the regularised one after the passage, so the
+  gate fails if it is pointed at the wrong energy": with the regularised value at round-off, 280× of it can still pass
+  `|dE/E| < 1e-12`, so that arm need not fire.
+- **The suspect predicate's control** (F2): REQ-VAL-195's arm that fires is structural: the predicate's input is
+  bitwise the regularised drift latch, and a variant fed the Cartesian drift receives a different input and fails.
+  *Was:* "the predicate pointed at the Cartesian drift fires on the same run", which depends on a threshold far above
+  a post-passage drift of 1e-12 to 1e-11 and may never fire.
+- **The suspect threshold and the default occupant** (F6): R-560 makes the default Heggie × RK4, which is not
+  symplectic, and SUSPECT_ENERGY reads its regularised energy, while REQ-INT-085's calibration measured only the
+  occupants with regularisation `none`. A new requirement, REQ-INT-106, measures and records Heggie × RK4's
+  regularised drift on dd tests 2 and 7 and which predicates it lights under REQ-INT-085's proposed thresholds, closed
+  by TASK-M3-41: TASK-M3-05, which closes REQ-INT-085, comes before Heggie is built (TASK-M3-08). Whether the threshold must leave the default
+  occupant unlit on test 2's orbit is a choice the texts do not settle, so it is folded into RQ-528, option (d);
+  meanwhile it is recorded with no requirement, as RK4's is.
+- **What is queued.** The payload stores one energy drift (`ΔE_max`, `ΔE_final`, payload §5), from which the suspect
+  predicate is derived at read; where the regularised drift lives, and how a drift view draws a run that stopped at an
+  event, are not in the texts: RQ-528. REQ-VAL-195 waits on it; the gate does not.
+
+*What it refines:* **R-257**, as to the radial collision gate's energy: the gate's values stand, and under a regularised
+occupant its `|dE/E|` is the regularised energy's.
+
+R-566 is in the "physics" group of `plan/rule_groups.yaml`, with R-257's gate.
+
+Changes REQ-VAL-045 (verify, rulings, note). Adds REQ-INT-104 (the regularised energy per occupant, a definition) and
+REQ-VAL-195 (the energies' reading, `rq: RQ-528`), and, after physics review 5605806092 of PR #277, REQ-INT-106 (the
+default occupant against the suspect threshold, F6).
+
+**Tasks (R-560 to R-566).** TASK-M3-39 (new, M3): every pair, its exact composition, the measured table and its
+warnings. TASK-M3-40 (new, M3): the fixed sync quantum, bitwise. TASK-M3-41 (new, M3): the step budget as a rate, the
+undetermined outcome, the counted signals and the energies' reading, waiting on RQ-526, RQ-527 and RQ-528. TASK-M3-07
+(REQ-INT-017's test, REQ-INT-080 on `Δ_sync`), TASK-M3-08 (REQ-INT-006's test, REQ-VAL-045's energy, REQ-INT-104),
+TASK-M3-12 (REQ-EVT-017 on `Δ_sync`), TASK-M3-17 (REQ-INT-033 gone), TASK-M3-23 (REQ-TOOL-038), TASK-M5-21
+(REQ-SCHED-103), TASK-M6-10 (REQ-SCHED-063 and -077 re-pointed), TASK-M8-24 (REQ-GUI-102's default, REQ-GUI-351,
+REQ-GUI-352) and TASK-M8-32 (REQ-GUI-353) take their requirements' changes. TASK-M3-02, being built on
+`task/TASK-M3-02`, is unchanged by these rulings: its stepper rows, profile flags and per-stepper tier binding stand
+(R-560, applied per R-369), and its follow-up is named in the porting PR. After physics review 5605806092 of PR #277,
+TASK-M3-41 takes REQ-INT-106, the default occupant against the suspect threshold (F6), and TASK-M3-07 the proposal of
+`TINY` (REQ-INT-105, F3).
+
+## R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the follow-up, byte for byte, the record
+copy of `designs/integrator_findings.md` being the human's own updated file and the later probe and its output in
+`evidence/`, each byte for byte, its README giving the sha256s; *was:* "the record copy of
+`designs/integrator_findings.md` changed as the follow-up says, its README giving both sha256s"),
+`docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to
+work carry a warning (R-561)" (the pair table's note 4, and the implicit steppers' paragraph), R-561's heading block (a
+forward line), REQ-INT-006, REQ-INT-017 and REQ-INT-098 (reqio), TASK-M3-39, `REVIEW_QUEUE.md` (RQ-532, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-39*
+
+The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), its header and item 1, verbatim:
+
+> # Follow-up to the gap-sweep bundle, 21 Oct 2026 (evening)
+>
+> From me, Malachy. Two small things to fold into the PRs already in hand. Quote my words verbatim.
+>
+> ## 1. PR 1: the generalised leapfrog is explained
+>
+> In `designs/integrator_findings.md`, replace the bullet that begins "The generalised (Störmer–Verlet) leapfrog" and
+> says "reported unexplained", and change the table row's "(not explained; see below)" to "(explained below)". The new
+> bullet:
+>
+> > The generalised (Störmer–Verlet) leapfrog, also implicit, reaches order 2 over one orbit but grows without bound
+> > over 100. **Cause, measured:** it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`, which is quadratic in the regularised
+> > positions (`qᵢ = Qᵢ²`). Implicit midpoint keeps every quadratic invariant exactly; a partitioned method like
+> > Störmer–Verlet keeps only those mixing positions with momenta (Hairer, Lubich & Wanner, ch. IV.2), so Eq. (9) is
+> > not kept. Implicit midpoint holds the residual at 1e-15–1e-13; the leapfrog's grows as h² per orbit and keeps
+> > growing, and the energy breaks once it reaches about 1.8e-2, in every run, at every step size, under both time
+> > transformations. The control is implicit midpoint started deliberately off the constraint: it stays bounded at
+> > 1e-3 and 1e-2, and at 3e-2 holds under one time transformation and diverges under the other. The earlier "worse at
+> > smaller steps" was a misread: smaller steps break later (2.2, 4.4, 8.8 orbits); the figure quoted was the maximum
+> > over runs that had already diverged.
+>
+> In the warning table of REQ-INT-006/-017, the pair Heggie × generalised leapfrog is **measured bad**, with that reason
+> in one line: "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2". It stays allowed,
+> with the warning, like every other pair.
+>
+> The evidence is `examples/heggie_stepper_probe.rs` in prin-rs (its header and its third section, the causal arm).
+
+*What it decides:*
+- **The record is corrected.** The design's §1 bullet is the new one and its table row reads "(explained below)"; the
+  record copy in `docs/incoming/2026-10-21_gap_sweep_integrator/designs/` is the human's own updated file, byte for
+  byte, as he sent it with the follow-up, and its README gives the sha256s. His file says "My earlier" where the
+  follow-up's quoted bullet says "The earlier", and adds "Nothing below depends on it; it adds one row to the warning
+  table's reasons."; this ruling quotes the follow-up. *Was:* "the record copy … is changed so, and its README gives
+  the sha256 before and after" (a hand edit, replaced by his file on his instruction, `4ee461e5`).
+- **Heggie × the generalised (Störmer–Verlet) leapfrog is measured bad**, the cause measured: it does not keep Heggie's
+  Eq. (9), the residual growing as h² per orbit until the energy breaks at about 1.8e-2, in every run, at every step
+  size, under both time transformations; the control is implicit midpoint started off the constraint.
+- **Its warning** is the human's line: "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches
+  ~2e-2".
+- **"Worse at smaller steps" is withdrawn** as a misread: smaller steps break later (2.2, 4.4, 8.8 orbits).
+- **It stays allowed, with the warning, like every other pair.**
+
+*Applied per R-369:*
+- **Where it sits in the table.** Integrator contract Part 2b's pair table has a column per Part 2 stepper (Euler,
+  KDK, Yoshida-4, Yoshida-6, RK4); the generalised leapfrog is none of them, and the port of R-561 recorded the two
+  implicit steppers as "not occupants". So the pair is a numbered note under the table (note 4), measured bad with
+  the evidence and the warning, and the implicit steppers' paragraph points at it, its old words kept as a *Was:*.
+- **What is queued.** "It stays allowed … like every other pair" reads as the generalised leapfrog being a selectable
+  stepper, which it is not in the contract; making it one (and the implicit midpoint rule with it) changes what is
+  built, so it is queued, RQ-532. Meanwhile the pair is in the table with its warning and neither implicit stepper is
+  built; REQ-INT-098's gate re-measures the built pairs and keeps note 4 as the design's measurement.
+- **The evidence** is prin-rs `examples/heggie_stepper_probe.rs`, its header and its third section, the causal arm, a
+  later version of the probe than the bundle's two-section `evidence/heggie_stepper_probe.rs`. It and its output are
+  recorded byte for byte as `evidence/heggie_stepper_probe_2026-10-21b.rs` and
+  `evidence/heggie_stepper_probe_2026-10-21b_output.txt`, as the human sent them; they are data, never built or run.
+  *Was:* "The evidence is cited, not copied or built".
+
+*What it amends:* **R-561**, as to its table: Heggie × the generalised leapfrog is measured bad, with its warning.
+
+R-567 is in the "physics" group of `plan/rule_groups.yaml`, with R-561.
+
+Changes REQ-INT-006 (rulings, note), REQ-INT-017 (verify, rulings) and REQ-INT-098 (verify, rulings, note).
+
+## R-568 — RQ-378 is parked again, a deferral by ruling with no target: the entry stays open, its option (a) stays applied, nothing waits, and it returns when the human raises it *(amends R-510)*
+*21 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-378, a dated line), R-510's heading block (a forward line),
+REQ-GUI-244 (reqio, rulings and note) and `plan/rule_groups.yaml`; nothing is built*
+
+The human's follow-up to the gap-sweep bundle, 21 Oct 2026 (evening), item 2, verbatim:
+
+> ## 2. RQ-378 stays parked
+>
+> RQ-341 is now ruled, which was R-510's condition for RQ-378 to come back to me. It came back and I parked it again:
+> "yeah ok we can park that for now then". Record that as a new deferral by ruling, with no target: the entry stays
+> open, (a) stays applied, nothing waits, and it returns when I raise it.
+
+*What it decides:* a deferral, by the human's ruling (only the human defers, `plan/WORKFLOW.md` § "No deferral"), with
+no target. RQ-341 is ruled by R-550 (*was:* "by the 21 Oct batch (PR #274)", before R-550 was on main), which met R-510's
+condition, and RQ-378 came back to the human, who parked it again. RQ-378 stays in the review queue, open; its
+option (a), applied since R-475 L9, stands (Save view as chart on a curved chart saves the parent chart, its slice
+centre and its tilt, and nothing more is built); nothing waits on it; and it returns when the human raises it, not on
+any other ruling.
+
+*What it amends:* **R-510**, as to the entry's return: it no longer returns when RQ-341 is ruled, but when the human
+raises it.
+
+R-568 is in the "design" group of `plan/rule_groups.yaml`, with R-510.
+
+Changes REQ-GUI-244 (rulings, note).
+
+## R-569 — Trace playback and icons: a new trace while playing restarts the playhead at `t = 0`; paused at `t = 0` the whole trace is drawn dotted, not yet played, and the legend keys it; every event, start and path icon placed wholly on screen by its measured extent, the start icon pinned, repeats never moved *(amends R-538)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_trace_playback/` (the instruction, the demos Trace Markers version
+29 and Trace Sound version 10, and the human's check and its output, as delivered, with a README giving each file's
+sha256), `docs/design/principia_lines.md` § "8. Traces" (the breaks bullet, a sentence; the off-screen icons bullet,
+reworded with its earlier words kept; a bullet added, "Every icon wholly on screen", reworded in PR #278's fix round 1
+with its earlier words kept; the repeats bullet, a clause; the animation bullet, two sub-bullets added),
+`docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added, "Trace
+playback and icon placement"), § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (the trace block,
+sentences added) and § "Trace… — every trace setting (R-541 G5)" (the footer, a sentence added),
+`docs/read_first/principia_INDEX.md` (a row added), R-538's heading block (a forward line, its "Still in force" line),
+RQ-533 and RQ-534 (new), REQ-GUI-354 to REQ-GUI-356 (reqio, new), REQ-GUI-274 (reqio: statement, verify, source,
+rulings, note), REQ-GUI-275 (reqio: statement, source, rulings, note), REQ-GUI-328 (reqio: statement, verify, source,
+rulings, note) and REQ-GUI-332 (reqio: statement, verify, source, rulings, rq, note), each earlier text kept as its
+*Was*, REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (reqio: rulings, note), TASK-M8-58 (closes, References,
+deliverables, acceptance, notes), TASK-M8-62 and TASK-M8-63 (References, deliverables, acceptance, notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-58, the legend's key line by TASK-M8-63 and the full
+key's line by TASK-M8-62*
+
+The human's instruction, `docs/incoming/2026-10-21_trace_playback/INSTRUCTION_trace_playback_2026-10-21.md`, whole and
+verbatim; its quoted paragraph is his words, and its rulings, tests and reference are his text, byte for byte as he
+pasted it:
+
+> # Trace playback and icons: three rulings, 21 Oct 2026
+>
+> From me, Malachy. Record these in `decisions.md` from the next free R-number as one ruling. Quote my words verbatim:
+>
+> > "When you're playing the trace animation and you hover on another point, it should restart the trace animation from
+> > the beginning. And when you are paused and the trace like timeline, the animation is at zero, the trace line should
+> > appear, I think, like dotted. So you can still see what it looks like, but it's like obviously sort of like visually
+> > showing. It's not actually like played through. And yeah, I think as well, it just has to do some work to make sure
+> > that always the icons are on screen, because I've noticed that sometimes […] the collision icons or other icons
+> > sometimes aren't always visible on screen. I think just because of like the size of the icons or like how they're
+> > being rotated or positioned or something."
+>
+> It amends R-538 (J11, TF3, and §6 "Off-screen icons, jumps and the window"), and touches REQ-GUI-271 to -276 and
+> TASK-M8-58. Queue anything it conflicts with rather than resolving it.
+>
+> ## The rulings
+>
+> 1. **A new trace while playing restarts at `t = 0`.** Under `animate: WithPlayhead`, with the transport playing, a
+>    hover or click that integrates a different IC sets the playhead to 0 and keeps playing. While paused the playhead
+>    does not move. Panning, zooming or re-projecting the same trace is not a new trace and does not restart it. The own
+>    clock already restarts per trace and is unchanged.
+> 2. **Paused at `t = 0`, the whole trace is drawn dotted.** Under `WithPlayhead`, transport paused, not scrubbed, and the
+>    playhead at exactly 0: the trace is drawn to its end (TF3 as now), but its line is dotted: round dots in the trace's
+>    own colour, each with its halo, the gap scaled with the line width. That marks it as not yet played. Its markers and
+>    icons draw as usual. It is a different mark from the dashed "unreliable" segments, and from §6's "join jumps" line,
+>    which is thin, white and between breaks. Anywhere else (playing, scrubbing, or paused at `t > 0`) nothing changes:
+>    TF3 and RQ-427 (a) stand. The legend gains one key line: "Dotted: paused at t = 0, not yet played".
+> 3. **Every icon is wholly on screen.** The anchor point is clamped today, but each icon is drawn around that point, and
+>    many reach well beyond it. The escape icon's speed lines run about 18 px behind it, the arrows set's collision about
+>    20 px out on each side, and both rotate with the trace. Near the edge, part of the icon was cut off. The rule:
+>    - Every event, start and path icon is placed so that its **whole drawn extent**, halo included and at its actual
+>      rotation and size, lies inside the view. The icon moves inward just far enough. Its faint state stays as it is
+>      today: faint only when the event point itself is off screen and pinned (§6).
+>    - The extent is the icon's own, measured from what it draws, not a hand-written radius per icon. A new icon or icon
+>      set then needs no table entry.
+>    - The start icon is pinned like the others. Today it is drawn at its raw point and can sit off screen.
+>    - Repeats (§7) are never moved or pinned, as now.
+>    - Where an icon is larger than the view on an axis (a tiny view), it is centred on that axis and not clamped.
+>
+> ## Tests
+>
+> - **trace_restart_on_new_point:** playing at `t = 6`, a hover onto a different IC puts the playhead at 0 and it is still
+>   playing. **Controls:** paused at `t = 6`, the same hover leaves the playhead at 6; and a pan of the same trace while
+>   playing does not reset it.
+> - **trace_dotted_at_zero:** paused at `t = 0`, the line pass is dotted and its drawn extent is the whole trace. **Control:**
+>   the same trace paused at `t = 8` draws solid lines, whole (TF3 unchanged).
+> - **icons_wholly_on_screen:** for every icon set, every event, start and path icon, at six rotations, and anchored at
+>   each corner and each edge midpoint: no opaque pixel of the icon touches the view's border row or column.
+>   **Control:** the same sweep with the extent clamp switched off (anchor-only, as before) touches the border in every
+>   case, or the test has no subject. Measured in the demo, before and after: 1728 of 1728 cases touched the border
+>   before the fix, and 0 of 1728 after.
+>
+> ## Reference
+>
+> The demo carries the rulings: `trace_markers.html` and `trace_sound.html` (Trace Markers v29, Trace Sound v10). See
+> `iconBox` and `withIcon` for the measured extent (one offscreen measurement per icon shape and 1/64 turn, cached),
+> `preview` in `drawTrace`, and `restartOnNewRun` in `compute`. The pictures set's chart rings (`circle`) now go through
+> the same placement; they were the last icons drawn outside it.
+
+*Where the words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged where they
+read the words. The three rulings are numbered PB1 to PB3 here, after the instruction's list:*
+- **PB4. Where it lands.** `principia_lines.md` §8 carries the three rules, in the animation bullet (PB1, PB2) and a new
+  bullet after the off-screen icons (PB3), the off-screen bullet's "pinned to the nearest point just inside the view's
+  edge" reworded to "pinned just inside the view's edge" with its earlier words kept (*Was*); render_gui_spec §G2 gains
+  a paragraph restating them beside the trace settings, §G6's trace block the key line, and §G5's footer a sentence. No
+  setting is added: none of the three is optional in the words, so `Trace` (§3) is unchanged.
+- **PB5. The transcription source** is the record folder's demos, Trace Markers version 29 and Trace Sound version 10,
+  whose `restartOnNewRun`, `preview` and `iconBox` and `withIcon` are byte-identical in both (read as text; neither was
+  run). The copies in `docs/gui/reference/trace/` (versions 28 and 9) stay as they are: R-541 placed them as layout
+  references, and R-569 cites the record folder.
+- **PB6. "A different IC" (PB1).** An IC other than the shown trace's, as integrated (the decoded IC its `Trace.ic`
+  holds); a hover or click on a pixel that is not a system integrates nothing and does not restart (the demo's `compute`
+  returns before `restartOnNewRun`; R-538 TM8). "Re-projecting the same trace" covers a tilt, a slice move and the
+  chart's repeats, which redraw the same run (the demo's `viewChanged` re-analyses the run and never restarts). The
+  restart is the Time panel's playhead, the one "With the playhead" uses (§8): that it is also the figure's global
+  playhead is **RQ-534**, (a) applied meanwhile. Pinning by a click on the pixel the hover already shows integrates the
+  same IC, so by the words it does not restart; the demo restarts there: **RQ-533**, the words applied meanwhile. So
+  does moving the hover into a repeat of the shown trace, a different pixel with the same IC (REQ-GUI-275): by the words
+  no restart, and the demos restart on every hover onto a system pixel (`trace_markers.html:837`, `:853`), the fourth
+  place RQ-533 records, (a) applied meanwhile (PR #278's fix round 6, gui re-check 5624466118 G2, applied per R-369).
+  *Was (before PR #278's fix round 8, qa re-check 5624560597 Q5, applied per R-369):* "(`trace_markers.html:837`,
+  `:851`)", `:851` being the pan.
+- **PB7. "Exactly 0" (PB2).** The playhead's `t` equal to 0.0, as a restart or a step back to the start sets it; the
+  demo's test is `playT <= 1e-9`, and its playhead is set to exactly 0 by every path that reaches it. A step while
+  paused is neither playing nor scrubbing (R-538 J11), so a step back to 0 draws the trace dotted; a held scrubber at 0
+  is scrubbing, so the line stays solid until it is let go.
+- **PB8. The dotted line (PB2), transcribed from `preview` in `drawTrace`.** Both passes, the dark outline (`w + 2.2`)
+  and the colour (`w`), take a dash of length ~0 with round caps and a gap of `max(4, 2.4·w)` px at the view's scale,
+  so each dot sits over its own halo and the gap scales with the width. The colour is the trace's own, the ramp's at
+  each time where the ramp is chosen (R-538 TF4). The dots take the whole line, the stretches otherwise dashed (leaving
+  the reach, an incomplete run's last stretch) included, as the demo draws them; their rings and "?" still mark them
+  (flagged: "the trace is drawn to its end …, but its line is dotted"). The extent is TF3's as RQ-427 (a) has it: the
+  default length to its end, a `Window` or `LastDt` length as chosen, dotted the same way (flagged: the words say "drawn
+  to its end (TF3 as now)", and TF3 as now keeps those two lengths). No head marker is drawn (TF3: the trace is not
+  drawn to the head). Every trace drawn under "With the playhead" is dotted so: the hover or pinned trace, each kept
+  trace, and their repeats at half strength, as the demo's `preview`, one test for the whole figure, draws them
+  (`trace_markers.html:520`, `:775-778`), the words' "the trace" not narrowing it (PR #278's fix round 1, gui review
+  5624167760 G3, applied per R-369).
+- **PB9. The legend's key line (PB2).** "The legend gains one key line": R-541 G8's `on the trace` block keys what the
+  figure draws for this run, so it gains the line while the trace is drawn dotted, its line drawn dotted as the figure
+  draws it; the full key (`Trace… › key…`) carries it always, as the demos' key does. The text is the words', "Dotted:
+  paused at t = 0, not yet played"; the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played"
+  (RQ-533, the words applied meanwhile). It is REQ-GUI-332's, the block's requirement (TASK-M8-63, which reaches
+  TASK-M8-58 through its dependencies). R-541 G8 is read with this, not amended: its block lists the figure's marks,
+  and this is one more. The full key's line is REQ-GUI-328's, the Trace… window's (TASK-M8-62), whose `key…` opens the
+  full key, since TASK-M8-63 does not reach TASK-M8-62 (PR #278's fix round 1, gui review 5624167760 G4, applied per
+  R-369).
+- **PB10. Which icons (PB3).** "Every event, start and path icon" is every icon the primary copy of each shown trace
+  (the hover or pinned trace and each kept trace) draws through the demo's `withIcon`, which clamps every call outside
+  its repeats' pass (`trace_markers.html:629`), kept traces' included (`:778`): the end icons and "?", the start star
+  and Pictures' triangle, the leave and re-enter rings (and the pictures set's chart rings, `circle`), the syzygy
+  markers and the window chevrons. The seam ticks and the direction arrows are line marks the demo draws raw at their
+  points, outside `withIcon` (`trace_markers.html:565`, the `m_seam` line, and `drawArrows`; `trace_sound.html:614`),
+  and the words name neither, so both are unchanged. The head marker and the time-tick labels are not icons (labels win,
+  R-509) and are unchanged. The ✕ at a not-a-system click is R-537's mark, drawn where it was clicked, and is unchanged.
+  *Was (before PR #278's fix round 1, gui review 5624167760 G2 and G3, applied per R-369):* ""Every event, start and
+  path icon" is every icon the primary trace draws through the demo's `withIcon`: the end icons and "?", the start star
+  and Pictures' triangle, the leave and re-enter rings (and the pictures set's chart rings, `circle`), the syzygy
+  markers, the window chevrons and the seam ticks."
+- **PB11. The measured extent (PB3), transcribed from `iconBox` and `withIcon`.** The box of what the icon draws,
+  halo included: drawn once per icon shape (with its colours and, for Pictures' triangle and a syzygy style, its own
+  variant) and per 1/64 turn of rotation, on an offscreen surface at 2×, a pixel counting where its alpha is above 8 of
+  255, padded one icon unit each side and cached; the anchor is then clamped on each axis so that the box, scaled by the
+  icon's size, lies in the view, unless the box is wider (or taller) than the view on that axis. The engine measures
+  its own drawing the same way: it is the rule ("measured from what it draws, not a hand-written radius per icon"), and
+  the 2×, 1/64 turn, alpha 8 and one-unit pad are the demo's, transcribed. They are routine and carry no physics; a
+  reviewer may change them for the engine's raster where the test below still passes.
+- **PB12. Faint (PB3).** "Faint only when the event point itself is off screen and pinned (§6)", as today (R-538 TM6):
+  moving an on-screen icon inward does not make it faint; with "Off-screen icons" unticked an off-screen icon is hidden
+  as today, and an on-screen one near the edge is still moved inward. REQ-GUI-356's verify tests it, an on-screen icon
+  moved inward drawn at full strength (PR #278's fix round 1, gui review 5624167760 G4, applied per R-369).
+- **PB13. Larger than the view (PB3).** The words: "centred on that axis and not clamped"; `withIcon` leaves such an
+  icon at its point, unclamped and not centred. **RQ-533**, the words applied meanwhile: centred in the view on that
+  axis.
+- **PB14. The tests.** `trace_restart_on_new_point` is REQ-GUI-354's verify, `trace_dotted_at_zero` and
+  `trace_dotted_pattern` REQ-GUI-355's and `icons_wholly_on_screen` REQ-GUI-356's, each with the controls the
+  instruction gives. "Opaque" is the measurement's alpha above 8 of 255 (the demo's check). "Every icon set" is the
+  four, "every event, start and path icon" PB10's, "six rotations" the check's (0, 0.7, 1.6, 2.5, 3.14 and −1.2 rad),
+  and the anchors the four corners and four edge midpoints. The instruction's 1728 is the demo's 4 sets × 6 rotations ×
+  8 anchors × 9 icons; the engine's count follows from its own icons, and the control must touch the border in every
+  case, or the test has no subject. The four run when TASK-M8-58 builds them; this port builds no code.
+  `trace_dotted_at_zero` runs in the gui crate, where the transport state is, and checks the style and extent the GUI
+  hands the line pass (REQ-GUI-281); its dot pattern is `trace_dotted_pattern`'s, in the render crate (PR #278's fix
+  round 5, qa review 5624411825 Q1, applied per R-369). *Was (before PR #278's fix round 6, gui re-check 5624466118 G3,
+  applied per R-369):* "`trace_dotted_at_zero` REQ-GUI-355's and" and "The three run when TASK-M8-58 builds them;".
+- **PB15. The tasks.** TASK-M8-58 closes REQ-GUI-354 to REQ-GUI-356 (the trace's playback and icons are its own),
+  reviewed by its reviewers; gui reviews the three. TASK-M8-63 builds REQ-GUI-332's key line, and TASK-M8-62 the full
+  key's line (REQ-GUI-328; PR #278's fix round 1). REQ-GUI-274's statement and verify take PB3's placement,
+  REQ-GUI-275's a repeat's icons never moved; REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 take notes
+  pointing at the new requirements.
+
+*Checked against `main` (da6a66cb) and the rulings branches then open, `rulings/batch-2026-10-21` (PR #274,
+whose R-553 rules the trace's queued questions RQ-412 to RQ-415 and RQ-427 as applied meanwhile, all of which R-569
+keeps) and `rulings/gap-integrator` (PR #277, nothing on the trace); both have since merged, and `main` (4f1c40c2) is
+merged into this branch:* TF3 and RQ-427 (a) stand, as the words say;
+R-538 TM6's pin and its option stand, the pin's place taken from the measured extent; TM7's repeats are never pinned,
+and now never moved; RQ-415's "pins are events, chevrons are the line" is unchanged (both are kept whole on screen);
+R-539's figure marks and R-541 G8's legend block take the new mark and its key line. Two conflicts are queued, not
+resolved: **RQ-533** (the words against the demos: the larger-than-view icon, the click that pins the hovered trace,
+the legend's wording) and **RQ-534** (the restart moves the Time panel's playhead, which is the figure's one global
+playhead, so the field's live march restarts with it). Listen follows the head (`principia_listen.md` §4), so its sound
+restarts with the trace; that is no conflict.
+
+*What it amends:* **R-538**: J11's playback (TF3) gains the restart while playing and the dotted line paused at
+`t = 0`; TM6's pin ("§6 'Off-screen icons, jumps and the window'") is placed by the icon's whole measured extent, the
+start icon included; TM7's repeats are never moved. Read with R-541 (G8, the legend's block), RQ-415 and RQ-427 (ruled by
+R-553 as applied, PR #274 merged; RQ-427 (a)'s default length as R-556 reads it on RQ-465), R-539 and R-537.
+
+Adds REQ-GUI-354 to REQ-GUI-356; changes REQ-GUI-274 (statement, verify, source, rulings, note), REQ-GUI-275 (statement,
+source, rulings, note) and REQ-GUI-332 (statement, verify, source, rulings, rq, note) and REQ-GUI-271 to REQ-GUI-273,
+REQ-GUI-276 and REQ-GUI-281 (rulings, note). PR #278's fix round 1 (gui review 5624167760, applied per R-369) changes
+REQ-GUI-328 (statement, verify, rulings, source, note; TASK-M8-62's References, deliverables, acceptance and notes),
+REQ-GUI-355 and REQ-GUI-356 (statement, verify, note), PB8 to PB10 and PB12 here, `principia_lines.md` §8,
+render_gui_spec §G2 and §G6, TASK-M8-58's notes and TASK-M8-63's deliverables, acceptance and notes. PR #278's fix round
+2 (gui re-check 5624244294, applied per R-369) changes REQ-GUI-274 (statement, verify, note: the off-screen pin covers
+the primary copy of every shown trace, kept traces included, as R-538's "only the primary copy pins" has it) and
+REQ-GUI-328 (verify, note), with TASK-M8-58's and TASK-M8-62's acceptance and notes. PR #278's fix round 3 (code review
+5624320665, applied per R-369) changes REQ-GUI-272 (note: its icons are REQ-GUI-356's set, not the seam ticks), this
+heading block, PB15 and this paragraph, and adds R-569 and `principia_lines.md` §8 to TASK-M8-63's References and
+render_gui_spec §G6 to TASK-M8-62's. PR #278's fix round 5 (qa review 5624411825, applied per R-369) changes
+REQ-GUI-354, REQ-GUI-355 and REQ-GUI-356 (verify, note), PB14 here, and TASK-M8-58's deliverables, acceptance and notes.
+PR #278's fix round 6 (gui re-check 5624466118, applied per R-369) changes REQ-GUI-354 (note) and REQ-GUI-356 (verify,
+note), RQ-533 (a fourth place added), and PB6 and PB14 here. PR #278's fix round 8 (qa re-check 5624560597, applied per
+R-369) corrects two demo line citations (the hover's `schedule` call, `trace_markers.html:853`; `clampPx`, `:611-612`)
+in RQ-533, PB6 and the notes of REQ-GUI-354 and REQ-GUI-274, each with a *Was*, and makes RQ-533's heading count four
+places.
+
+R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
+
+## R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s "no zoom-out limit" from periodic charts to every chart whose axes are affine)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_latent_unbounded/` (the instruction as delivered, and its README),
+`docs/contracts/principia_chart_decoder_contract.md` § "The operation table" (a paragraph added after "Pan and zoom
+past the square (R-537)"), `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type
+(R-407)" (a paragraph added), `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" (a paragraph added),
+`docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added),
+`docs/design/principia_state_map.md` § "SM3. Source side: the extension comes for free, because the colour is a property
+of the system" (a line added under its "Never a gap while navigating" bullet, marked R-570), `docs/read_first/principia_INDEX.md` § "GUI" (the trace demo's
+and the state map prototype's entries, a sentence each), `REVIEW_QUEUE.md` (RQ-535 and RQ-536, new), REQ-GUI-357,
+REQ-SCHED-104, REQ-CHART-087 and REQ-CHART-088 (reqio, new), REQ-GUI-267 (reqio, a note), TASK-M8-55, TASK-M8-56 and
+TASK-M8-57, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-55 (the GUI, REQ-GUI-357), TASK-M8-56 (the
+cost, REQ-SCHED-104, waiting on RQ-535) and TASK-M8-57 (the far field, REQ-CHART-087 and REQ-CHART-088)*
+
+The human's instruction of 21 Oct 2026, `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md`,
+the human's own, delivered by the orchestrator and recorded verbatim (sha256
+`ef4c4762d581d78f749d05650d03f76a8887a4320598f2f15913186bccf5e82c`). Its first quotation is the human's words; the rest
+is the human's text, the applied text of this ruling:
+
+> # Latent and flat charts: no limit on pan or zoom-out, 21 Oct 2026
+>
+> From me, Malachy. Record this in decisions.md from the next free R-number and quote my words verbatim:
+>
+> > "There's no arbitrary restriction right on the chart like extension stuff when it's like latent, right? Like it can
+> > basically, we can basically go to infinity, right? And also because we extend it as well, it means we can also zoom
+> > out as far as we want. So again, there should be no limit on how far we can zoom out."
+>
+> This states what R-407, the extension-display ruling ("Latent and flat charts never produce a forbidden pixel
+> anywhere") and RQ-409 (a) already imply, so nothing reads it otherwise. It extends RQ-409's "no zoom-out limit"
+> from periodic charts to every chart whose axes are affine.
+>
+> ## The behaviour
+>
+> 1. **Pan is unbounded** on a latent or flat chart. Any view centre is allowed, because every latent `z` decodes to a
+>    valid system. The navigation stop (R-469) never fires on these charts for pan, since the centre always passes
+>    `validate`.
+> 2. **Zoom-out is unbounded.** There is no cap from a fixed view range, a multiple of the home view, or a number of chart
+>    squares. The only limits are the existing ones: the frame budget and the baseline cover, which already span the
+>    viewport whatever its size. Cost per frame is set by the screen, not by the view's extent.
+> 3. **Every pixel is a system, everywhere.** No hatch, no blank, and no "not a system" on these charts at any pan or zoom.
+> 4. **Far out the field goes flat. That is correct, not a bug.** The decoder saturates every coordinate: configuration
+>    through a sigmoid, momenta to `±q_max`, masses through `μ_max·tanh`. Far from the origin neighbouring pixels decode
+>    to nearly the same system. Do not clamp, rescale, wrap or fade to "hide" this. The readout states the decoded system
+>    as for any pixel.
+> 5. **Precision is not a navigation limit.** At large chart coordinates the f32 deep-zoom floor arrives sooner, because
+>    the floor depends on where you zoom. That is handled by the existing precision ladder and the collapsed-decode
+>    guard, not by stopping the pan or zoom.
+> 6. **Unchanged:**
+>    - Charts with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`,
+>      the Invariant warp), keep their forbidden region past the square as now.
+>    - Periodic and pole-crossing charts keep RQ-409 (a).
+>    - The trace's "leaves / re-enters the chart" on a latent chart stays: that is a trajectory state projected back onto
+>      the axes, not a navigation limit.
+>
+> ## What to check
+>
+> - Find any site that caps pan or zoom-out on these charts (a view clamp, a max zoom constant, a "home × n" limit, a
+>   `[0,1]²`-relative bound) in code, specs, requirements or the GUI spec, and bring it to this ruling. The reference
+>   demos' 3× cap and `clampView` exist only because their maps are precomputed images. Say so where they are cited,
+>   and never port them.
+> - Queue anything that conflicts rather than resolving it.
+>
+> ## Tests
+>
+> - **latent_unbounded_navigation:** on a latent chart, zoom out to 10⁶ × the home view and pan the centre to `|z| = 10⁴`.
+>   Every pixel decodes to a valid system, none is classified not a system, and the view state records the values
+>   unclamped. **Control:** the same navigation on the mass simplex hatches past its edge, or the test cannot tell the
+>   two kinds of chart apart.
+> - **zoom_out_cost_bounded:** a frame at 10⁶ × the home view computes no more quads than the baseline cover of the
+>   viewport. **Control:** at home zoom the same count, so the cost does not grow with the view's extent.
+> - **far_field_saturates:** at `|z| = 10⁴`, the decoded states of adjacent pixels agree to within the saturation
+>   tolerance. **Control:** near the origin they differ, so the test sees structure where there is some.
+>
+> One PR, with the test output pasted in. The security rule stands.
+
+*What it decides:*
+- **Pan is unbounded on a latent or flat chart** (item 1). Any view centre is allowed, because every latent `z` decodes
+  to a valid system. R-469's stop, judged on the centre, never fires on these charts for a pan, as R-537 EX3 already
+  says ("affine latent axes: no stop at all") and REQ-CHART-060's test already checks ("on the latent chart … nothing
+  stops").
+- **Zoom-out is unbounded** (item 2). There is no cap from a fixed view range, a multiple of the home view or a number
+  of chart squares. The only limits are the existing ones, the frame budget and the baseline cover (caching contract
+  Part 4), and a frame's cost is set by the screen, not by the view's extent. That is RQ-409 (a) (R-537 U14, on periodic charts;
+  ruled (a) by R-552, PR #274 merged and the entry archived on main) carried to every chart whose axes are affine.
+- **Every pixel is a system, everywhere** (item 3): no hatch, no blank and no "not a system" on these charts at any pan
+  or zoom, as R-467's context already says ("Latent and flat charts never produce a forbidden pixel anywhere").
+- **Far out the field goes flat, and that is correct** (item 4). The decoder saturates every coordinate
+  (chart_reference §0: the configuration through a sigmoid, the momenta to `±q_max`, the masses through `μ_max·tanh`),
+  so far from the origin neighbouring pixels decode to nearly the same system. Nothing clamps, rescales, wraps or fades
+  the view to hide it, and the readout states the decoded system as for any pixel.
+- **Precision is not a navigation limit** (item 5). At large chart coordinates the f32 floor arrives sooner; the
+  existing ladder handles it (deep_zoom §2's switchover, R-90, and §4's `AT_F32_FLOOR`, with R-537 EX8's root-cell
+  anchor, TASK-M8-57), never a stop on the pan or the zoom.
+- **Unchanged** (item 6): the charts with a bounded axis, or an affine axis that runs off the physical domain (the mass
+  simplex, Burrau `L_z`, the Invariant warp), keep their not-a-system region past the square; periodic and
+  pole-crossing charts keep RQ-409 (a) (R-552); the trace's "leaves / re-enters the chart" on a latent chart stays, a
+  trajectory state projected back onto the axes, not a navigation limit (R-538).
+- **The reference demos' 3× cap and `clampView`** (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
+  `docs/gui/reference/state_map/state_flow.html`, and their copies under `docs/incoming/`) exist only because the
+  demos' maps are precomputed images. They are never ported. Where the corpus cites the demos or the prototype's
+  navigation limit, it now says so: the INDEX's two entries, the GUI spec's new paragraph and state map SM3's
+  added line, marked R-570. RQ-409's own quotation of the 3× cap is left as it stands: R-552 rules it (a) with the human's words
+  "The demo's 3× cap applies only to its fixed maps", and the entry is archived on main.
+
+*What the port found (the instruction's "What to check").* No spec, contract or requirement caps pan or zoom-out on a
+latent or flat chart: chart_decoder_contract Part 4 and render_gui_spec §G2 already give R-469's stop on the centre as
+the only limit, with no stop on an affine latent axis, and REQ-SCHED-057 forbids a depth cap. The code holds one cap
+and one placeholder limit:
+- `crates/gui/src/explore/manifold_view/mod.rs:56`, `ZOOM_RANGE: (f64, f64) = (-4.0, 48.0)` ("four octaves out"), read by
+  Navigate's zoom row at `crates/gui/src/explore/manifold_view/navigate.rs:88`, `Slider::new(&mut zoom,
+  ZOOM_RANGE.0..=ZOOM_RANGE.1)`, under egui 0.36's default `SliderClamping::Always`: a drag of the zoom slider cannot zoom
+  out past 2⁴ = 16 × the preset's window, and a drag from a zoom already past it jumps back into that range. The wheel
+  (`navigate.rs:207`, `zoom_by` at `navigate.rs:145`) and the keys (`mod.rs:642`) do not clamp, nor do the centre and
+  `z₀` fields or the Slice centre sliders (`centre.rs:54`, `SliderClamping::Never`). REQ-GUI-357 (new) brings it to this
+  ruling, closed by TASK-M8-55, which owns Navigate past the square on the real engine; the mock shares the code.
+- `crates/gui/src/mock/quads.rs:81`, `MAX_ROOT_COPIES: i32 = 4`: the mock's fake tile-bounds overlay lays copies of its
+  root out to four each way "so a far zoom out stays a bounded tree", and draws no tile bounds past them. It is
+  placeholder content (R-390), not a navigation cap, and the real quadtree's cover is REQ-SCHED-101's and REQ-SCHED-104's;
+  no requirement (applied per R-369).
+- Not chart navigation, so outside this ruling: `crates/gui/src/explore/trajectory.rs:143` and `:146`
+  (`PAN_ZOOM_RANGE`, `SPHERE_ZOOM_RANGE`, the Trajectory panel's own views, R-453) and
+  `crates/gui/src/stain/canvas.rs:44` and `:46` (`ZOOM_MIN`, `ZOOM_MAX`, the stain editor's canvas).
+
+*Conflicts, queued, not resolved:*
+- **RQ-535.** Item 2's "the baseline cover, which already span[s] the viewport whatever its size. Cost per frame is set
+  by the screen" against R-537 EX7(a): the root lattice's level-0 cells are the coarsest quads, each the size of the
+  root, so at 10⁶ × the home view the viewport touches about 10¹² roots and its baseline cover grows with the view's
+  extent. REQ-SCHED-104's test waits on it.
+- **RQ-536.** Item 3's "no 'not a system' on these charts at any pan or zoom" against the decoder's
+  `DEGENERATE(M01_TINY)` fence (dd_decoder §3.1; R-511 draws a `decode_failed` pixel blank): under the edge-reaching
+  simplex link (dd_generation_root §3, REQ-GEN-026) the far field reaches the corner `m₂ → 1`, where the fence fires,
+  and under `softmax_tanh` it can fire once `μ_max` (tunable, R-481) is set high enough. At the default links it never
+  fires. The tests run at the default links; the rest waits on it.
+
+*Requirements.* Added (reqio): REQ-GUI-357 (no control caps pan or zoom-out on a latent or flat chart, the zoom slider
+included; the test `latent_unbounded_navigation` with its control), REQ-SCHED-104 (`zoom_out_cost_bounded`, with its
+control; `rq: RQ-535`), REQ-CHART-087 (every pixel a system at any pan or zoom, and `far_field_saturates`, with its
+control; `rq: RQ-536`) and REQ-CHART-088 (the saturation tolerance, an R-71 calibration). Amended: REQ-GUI-267 (a note,
+and R-570 among its rulings).
+
+*Tasks.* TASK-M8-55 closes REQ-GUI-357; TASK-M8-56 closes REQ-SCHED-104 (its perf reviewer reviews the cost);
+TASK-M8-57 closes REQ-CHART-087 and REQ-CHART-088 (physics review, ⚑). No new task: each requirement sits with the task
+that owns its code.
+
+*Applied per R-369:* a slider's span is the range its handle covers and never a clamp, so a zoom past Navigate's zoom
+row is kept and shown with the handle at the end of the rail (render_gui_spec §G2; REQ-GUI-357), rather than a wider
+span; each requirement goes to the task that owns its code, with no new task; the mock's `MAX_ROOT_COPIES` gets no
+requirement; RQ-409's entry is not edited here, R-552 having ruled it (a) and archived it; the three tests run at the decoder's default
+links while RQ-536 is open.
+
+*22 Oct 2026, on the same PR: RQ-535 decided per R-369 by the orchestrator, not a human ruling: (a), coarser levels
+`L < 0` of the same quadtree, a level-`L` quad spanning `2^(−L) × 2^(−L)` level-0 roots in R-97's frame, the baseline
+cover taken at the level whose quads are the smallest still at least its on-screen size, so its count is set by the
+screen. Applied in `principia_scheduler_contract.md` Part 3, `principia_deep_zoom.md` and chart_decoder_contract Part 4
+(⚑ physics review of the addressing); REQ-SCHED-104 no longer waits. RQ-535 moved to
+`docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 1 of PR #279 (gui review 5624653641, physics review 5624655553), applied per R-369:
+REQ-GUI-357's verify drives each control its statement names, each with a clamp control, checks the far pixel's
+readout, and steps the zoom row by Enter then ↑ (render_gui_spec §G3, R-409), not + / −; RQ-552 queues η_E against
+item 3 (dd_decoder §3.7 allows it on the latent chart, R-511 draws its tags blank), and the qualifier reads "at the
+decoder's default links, η_E off (`None`)", both tests pinning `E* = None`; REQ-CHART-087's flatness is per coordinate,
+judged only where every coordinate the view varies is saturated (chart_reference §5.4), REQ-CHART-088 measured on those
+views; RQ-553 queues the precision warning in the flat far field against item 5 and W13, deep_zoom §4 recording it
+unsettled. The quoted instruction above is unchanged.*
+
+*23 Oct 2026, fix round 2 of PR #279 (physics review 5624721489, P4): RQ-553 decided per R-369 by the orchestrator, not
+a human ruling, recorded against item 5 and R-54: option (a), its test corrected to the derivative, a collapse at which
+f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample points are distinct being a saturation
+collapse, which raises no precision warning; the genuine floor, `J_D ≠ 0`, still warns. Option (c) is out by W13 and
+item 5. Applied in deep_zoom §4, render_gui_spec §G2 and REQ-GUI-012 (TASK-M6-21); RQ-553 moved to
+`docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 3 of PR #279 (physics review 5624781454, P5; gui review 5624788928, G5 to G7), applied per
+R-369: RQ-553's test is per direction, so the bands along the axes are covered: a collapse between adjacent samples
+along in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
+points are distinct, and the warning is suppressed only for a quad every collapsed pair of which is one; this
+supersedes the 23 Oct line above's "a collapse at which f64 `J_D`'s columns along the view's plane are 0 while the
+quad's f64 sample points are distinct". REQ-GUI-012 gains the band arm and two genuine-floor cases whose controls can
+fail; TASK-M6-21 names where the classification is made.*
+
+*23 Oct 2026, fix round 4 of PR #279 (gui review 5624846336, G8), applied per R-369: the suppression needs at least one
+collapsed adjacent pair, every one of which is a saturation collapse; a switchover at `ℓ_switch` with no collapsed pair
+(R-90) still warns. This supersedes fix round 3's "suppressed only for a quad every collapsed pair of which is one",
+which held vacuously for a quad with none. REQ-GUI-012 gains arm (e).*
+
+*23 Oct 2026, fix round 6 of PR #279 (perf review 5624936602), applied per R-369: REQ-SCHED-104 bounds the frame that
+lands a zoom-out (the in-motion cover) and, at rest, the quads computed and resident in view by the bound at home zoom
+(R-108), the cover holding at most `⌈extent / quad size⌉ + 1` quads per axis at every zoom and pan and "the same count"
+only where the two covers tile the viewport identically (scheduler_contract Part 3); RQ-554 queues the band quads'
+terminal stop at `AT_F32_FLOOR` (REQ-SCHED-062, `rq: RQ-554`), deep_zoom §4's "harmless" limited to quads whose
+in-plane `J_D` columns are all 0; REQ-SCHED-105 (R-72) asks for the addressing's behaviour where the coarsest levels'
+f64 centres and half-widths overflow; TASK-M6-21 gains perf as a reviewer and states its collapse record is CPU-side.*
+
+*23 Oct 2026, fix round 7 of PR #279 (perf review 5624992732), applied per R-369: REQ-SCHED-104's controls are counted
+without dispatching at 10⁶ ×, each asserting its precondition; the pinned ancestor chain of the cover, which levels
+`L < 0` leave with no top, stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares,
+the cover's smallest common ancestor where one exists, a viewport straddling a line through the lattice origin having
+none (scheduler_contract Part 3; caching_contract Part 4, a line added).*
+
+*23 Oct 2026, fix round 8 of PR #279 (perf review 5625031178, P7), applied per R-369: the 2 × 2 rule is the only stop
+of the pinned ancestor chain, the first level at which the viewport lies within at most 2 × 2 ancestor squares, about
+`⌈log2(cover quads per axis)⌉` levels above the cover, independent of the zoom and the pan; the fix-round-7 line's "the
+cover's smallest common ancestor where one exists" is superseded, a smallest common ancestor sitting about `m` levels
+higher for a view straddling `x = 2^m` roots, which would tie the chain's length to the pan. REQ-SCHED-104's arm (3)
+gains a far-pan case.*
+
+*23 Oct 2026, fix round 9 of PR #279 (perf review 5625066551, P8), applied per R-369: the stop has one definition, the
+first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first
+level whose square side is at least the viewport's extent, depending on where the view sits; arm (3)'s far-pan view is
+the origin-line view at 10⁶ × moved by exactly `2^40` roots along x, so the equality with that view at home is exact.*
+
+*23 Oct 2026, fix round 10 of PR #279 (perf review 5625109012, P9), applied per R-369: arm (3)'s geometry is pinned on
+both axes: the origin-line view is the home view centred at `(0, 0)`, the zoomed view that view scaled about the origin
+by `2^20` ("10⁶ ×" meaning `2^20` there), and the far-pan view that zoomed view moved by exactly `2^40` roots along both
+x and y, superseding the fix-round-9 line's "along x".*
+
+R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
+
+## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
+*21 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, §1, §6, §9 and §11,
+`docs/design/principia_systems_architecture.md` §3 (v1 web's crossings, measured), §5 (seam 12) and §6,
+`docs/contracts/principia_gui_state_contract.md` §1, §2, §3 and §7, `docs/contracts/principia_caching_contract.md` Part
+6a, `docs/gui/principia_render_gui_spec.md` (its header, §G1 and §G14), `docs/gui/design/GUI_DESIGN_NOTES.md`,
+`docs/design/principia_temporal_architecture_note.md`, `docs/notes/ic_inspector_scratchpad.md`,
+`docs/contracts/principia_export_animation_contract.md` Part 7, `docs/read_first/principia_INDEX.md`, `README.md`,
+`REVIEW_QUEUE.md` (RQ-550, RQ-551), `plan/MILESTONES.md` (M8 and the build orders), `plan/WORKFLOW.md`,
+`plan/reviewers/code.md`, `plan/reviewers/gui.md`, the requirements below and TASK-M8-01, TASK-M8-19, TASK-M8-37,
+TASK-M8-38 and TASK-M8-41; the record is `docs/incoming/2026-10-21_browser/`*
+
+The human's covering message, 21 Oct 2026, verbatim:
+
+> Follow-up from me, Malachy, to the gap-sweep bundle I just sent. The attached INSTRUCTION_browser.md is my ruling on
+> the browser: native app first, then v1 web = the whole native app in the browser on GitHub Pages, then a separate v2
+> web product later. It replaces the browser backlog note in that bundle's INSTRUCTION_now.md. Quote my words
+> verbatim, record it from the next free R-number, reconcile every site that describes "the browser product" to it,
+> and queue the membrane-rule conflict rather than redesigning it. One PR, after the bundle's PR 1.
+
+His ruling, `INSTRUCTION_browser.md` (sha256 `3978ad8038551c494aa09620fa514c1671cbf9bf9f7d649251122c53dfac4e10`),
+verbatim:
+
+> # The browser: v1 web is the native app in the browser
+>
+> From me, Malachy, 21 Oct 2026. My words, quoted verbatim:
+>
+> > "If we were to do a first browser build literally have the entire naive app but in browser"
+>
+> ("naive" meaning native.)
+>
+> > "so have we said now that the first version of the website is just going to be the full native app running in the
+> > browser on a github webpage or whatever?" … "maybe give instructions also for it to reconcile this? to be that"
+>
+> ## The ruling
+>
+> There are three stages, in this order:
+>
+> 1. **The native app.** Built first. Everything is designed for it.
+> 2. **v1 web.** The **whole native app, compiled to run in the browser**, with the same interface, the same features
+>    and the same stains, hosted on the GitHub Pages site (TASK-M8-41). It is not a separate product and has no
+>    separate interface design. Where the browser cannot do something the native app does, v1 web says so in the app;
+>    it does not get a different design.
+> 3. **v2 web.** A purpose-built browser product, designed later as its own thing. The spotlight reel that passes for
+>    Explore (`designs/reel_click.md`) belongs here: its machinery is built and tested natively, but the presentation is
+>    a v2 concern.
+>
+> This replaces the backlog note on the browser in `INSTRUCTION_now.md`.
+>
+> ## Reconcile the corpus to it
+>
+> Find every site that describes the browser product, and make it say the above. Known sites:
+>
+> - `plan/MILESTONES.md` M8: "the browser product" → v1 web as defined here. M8 ships the native app and v1 web; v2
+>   web is not in any milestone yet.
+> - `docs/gui/principia_render_gui_spec.md` header: "The production (TS) GUI is out of scope" → the spec is the
+>   interface of the native app **and of v1 web**; a production TS GUI, if there ever is one, is v2.
+> - `docs/contracts/principia_gui_state_contract.md` §1: the TS binding "(later)" → v2.
+> - `docs/design/principia_systems_architecture.md` (§3 and the membrane tables) and `docs/contracts/principia_canonical_spec.md`
+>   §11 ("build the browser product on top").
+> - TASK-M8-37, TASK-M8-38, TASK-M8-41, and REQ-SYS-046, -049, -051, -059 and any other requirement about the
+>   browser build, the wasm worker, `OffscreenCanvas` or the membranes.
+> - The README, wherever it says "in the browser".
+>
+> **The membrane rule is the one place I expect a real conflict.** REQ-SYS-059's "exactly three crossings" cannot hold
+> for the whole native app in a browser: downloads, file drops, the clipboard and audio all cross. Do not redesign
+> it. Measure what v1 web actually needs to cross, write that down beside the rule, and **queue** it with options for
+> me.
+>
+> Queue anything else that conflicts rather than resolving it. One PR, `check_plan` output pasted in. The security rule
+> stands: never delete or modify anything outside the repo and build/scratch directories without asking.
+
+*What it decides:*
+- **Three stages, in this order.** (1) The native app, built first; everything is designed for it. (2) v1 web: the
+  whole native app compiled to run in the browser, with the same interface, the same features and the same stains,
+  hosted on the GitHub Pages site (TASK-M8-41); not a separate product, with no separate interface design. (3) v2 web:
+  a purpose-built browser product, designed later as its own thing.
+- **Where the browser cannot do something the native app does, v1 web says so in the app**; it does not get a
+  different design.
+- **M8 ships the native app and v1 web.** v2 web is in no milestone yet.
+- **The GUI spec is the interface of the native app and of v1 web.** A production TS GUI, if there ever is one, is v2
+  web's; so is the TS binding gui_state_contract §1 called "(later)".
+- **The spotlight reel that passes for Explore** (`designs/reel_click.md`, in the gap sweep's bundle, ported on another
+  branch) is v2 web's as presentation; its machinery is built and tested natively.
+- **The membrane rule is not redesigned.** What v1 web needs to cross is measured and written beside the rule
+  (systems_architecture §3, "v1 web, and what it crosses"), and queued with options, RQ-550.
+- **Anything else that conflicts is queued, not resolved**: where the GUI runs in the browser and what the main thread
+  holds, RQ-551.
+
+*How each site was reconciled* (each old text kept as a *Was:* where it was changed):
+- canonical_spec §0: "A browser-based **WebGPU research instrument**" becomes a WebGPU research instrument with the
+  three stages, and "the browser build" and "the browser product" in the corpus are defined as v1 web. §1's lead and
+  item 1: the GUI is the native app's, compiled with the engine to wasm for v1 web; "a thin TS shell owning only DOM +
+  view-scratch state" is v2 web's. Item 5: "the later **TS production GUI**" is v2 web's, if there is one; v1 web's
+  crossings point at RQ-550. Item 6, §6 (Threading) and §9 (wall 12) point at v1 web, RQ-550 and RQ-551. §11: "build
+  the browser product on top" becomes "build v1 web on top", v2 web in no milestone.
+- systems_architecture §3: a paragraph and a table after the wasm↔JS table, "v1 web, and what it crosses", the
+  measurement R-571 asks for; seam 12, invariants 5 and 10 point at RQ-550 and RQ-551. The tables themselves are
+  unchanged.
+- gui_state_contract §1: the egui binding is the native app's and v1 web's; the TS binding is v2 web's (*was:*
+  "(later)"); the canvas bullet points at RQ-551.
+- caching_contract Part 6a: a paragraph, v1 web's GUI is the native app's egui, not a DOM GUI; the split stands as
+  written until RQ-550 and RQ-551 are ruled.
+- render_gui_spec: the header (*was:* "The production (TS) GUI is out of scope; it re-skins the same operations through
+  the same contract"), and a §G1 rule, "v1 web is this GUI".
+- export_animation Part 7: the reel's machinery native, its presentation v2 web's.
+- README: "natively or in the browser" becomes "natively, or in the browser as the same app".
+- `plan/MILESTONES.md`: M8's title and its browser bullet are v1 web's (*was:* "the browser product"); the build-order
+  row quotes canonical_spec §11 as it now reads. `plan/WORKFLOW.md`: `web/` is v1 web's page and shell (*was:* "the
+  browser product"). `docs/read_first/principia_INDEX.md` lists the record.
+
+*Applied per R-369:*
+- **"Says so in the app" is read as R-303's pattern**: the control stays where the native app has it, shown disabled,
+  with a note that the browser cannot do it; it is never removed, moved or redesigned. A new requirement, REQ-SYS-086,
+  closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550 (`rq`).
+- **REQ-SYS-046 is restated** for the three stages: a WebGPU application built native-first, released on GitHub Pages
+  as v1 web, the whole native app with the same interface, features and stains; its verify gains the check that the
+  Pages build's GUI is the gui crate's, every window opens and the stain library is the native app's.
+  TASK-M8-41, which closes it, now depends on TASK-M8-42 (the screen sweep), so the build it checks is the whole app.
+- **REQ-SYS-047's GUI clause is R-571's**: the GUI is the native app's (egui), compiled with the engine to wasm, a thin
+  TS GUI shell being v2 web's; what the main thread then holds waits on RQ-551 (`rq`).
+- **The other browser-layout requirements are marked, not changed**: REQ-SYS-039, REQ-SYS-040, REQ-SYS-041,
+  REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and REQ-SYS-056, each of which one of RQ-551's
+  options changes, carry `rq: RQ-551`; REQ-SYS-051 and REQ-SYS-059 carry `rq: RQ-550`; REQ-SYS-055 gains a note
+  (its TS binding is v2 web's; its data-boundary rule holds in v1 web as written). TASK-M8-37 and TASK-M8-38 say so
+  in their notes, and their titles name v1 web (TASK-M8-37's goal too); `plan/reviewers/code.md`'s wasm↔JS line
+  points at RQ-550.
+- **The browser-build clauses elsewhere stand, as v1 web's**: R-85 and R-110 (real browsers against the native
+  tolerances), R-131 and R-155 (the browser's encoders), R-134 (the Playwright suite), R-303 (fast-math "unknown"),
+  R-502 (the wasm leg), R-528 and R-530 (the benchmark's prompt and phones), R-555 (Listen's browser audio), and the
+  corpus sites that say "the browser build"; §0's definition covers them, and none is reworded.
+- **The spike brief** (`docs/experiments/briefs/principia_spike_brief.md`, "Direction chosen: whole CPU engine in Rust
+  → wasm, thin TS GUI shell") is the plan of record (`principia_INDEX.md`) and is left as written.
+- **Gui review 5608379011 of PR #282 (fix round 1)**: the sites still promising a final, production or TS GUI point at
+  R-571 with a *Was:* (render_gui_spec's header, gui_state_contract §1 and §7, canonical_spec §1 item 5, and
+  `docs/gui/design/GUI_DESIGN_NOTES.md`, reconciled too rather than left); TASK-M8-37's goal and REQ-SYS-047
+  acceptance line drop the DOM GUI and the TS shell (none of RQ-551's options has a DOM GUI); REQ-GUI-033 gains R-571
+  and a note; REQ-SYS-086 covers gaps with a native control, and the control-less gaps (runtime-authored occupants,
+  persistence across reloads, `prin profile query --live`) are RQ-550's to settle.
+- **Gui re-checks 5608412017 and 5608439139 of PR #282 (fix rounds 2 and 3)**: the remaining "polished GUI", "final
+  UI" and "TS GUI" sites in the live corpus point at R-571 with a *Was:* (render_gui_spec §G14, gui_state_contract
+  §2 and §3, the IC inspector scratchpad, the temporal note's frame-loop paragraph), REQ-GEN-023 follows its source,
+  and `plan/reviewers/gui.md` follows the spec. Two crate doc comments repeat "a polished GUI"
+  (`crates/render/src/registry.rs`, `crates/engine/src/contract/view_ui.rs`); no code is changed here: each is a deliverable of the
+  unmerged task that touches its file, TASK-M8-19 (`registry.rs`, with the `debugVisible` filter) and TASK-M8-01
+  (`view_ui.rs`, with the ViewUI struct) (gui re-check 5608472158 of PR #282, fix round 4, applied per R-369; *was:*
+  "they are listed in PR #282 for a later task").
+- **The reel**: REQ-TOOL-084 (the reel produced by the blocking exporter, a segment loading its spec when clicked) is
+  machinery and stays in M8; a note says its presentation is v2 web's.
+
+*What it amends:* no ruling. No earlier ruling described the browser product as a separate TS product; the corpus did
+(canonical_spec §1, from the spike), and is reconciled above. It replaces the browser item of the backlog in the
+bundle's `INSTRUCTION_now.md` (the bundle's `INSTRUCTION.md`, § "PR 4 — Small things": "three items added to the
+backlog (the browser build as the whole native app in the browser, cross-build links, accessibility)"); that item is
+not ported when PR 4 is.
+
+R-571 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-046 (statement, verify, rulings, source, note), REQ-SYS-047 (statement, verify, rulings, source, rq,
+note),
+REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and
+REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
+REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
+rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
+
+## R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*
+*21 Oct 2026 · applied in `docs/design/principia_results.md` (new), `docs/read_first/principia_00_philosophy.md` § "The
+prebake — a measuring instrument", the three-rungs table and § "7.3 Dump tiers — and the default is not an image",
+`docs/gui/principia_render_gui_spec.md` § "Result… — the full-precision batch run (R-572)" (new),
+`docs/contracts/principia_gui_state_contract.md` §2 (the open windows), `docs/design/principia_dd_image_embedding.md`
+§6 (tier 1's `run` block), `docs/read_first/principia_INDEX.md`, REQ-SYS-007 (reqio), REQ-SYS-087 to REQ-SYS-090,
+REQ-TOOL-196 and REQ-GUI-366 to REQ-GUI-368 (new), TASK-M8-74 and TASK-M8-75 (new) and `plan/rule_groups.yaml`; the
+record is `docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-74 and TASK-M8-75*
+
+R-572 to R-575 are the gap sweep's PR 2a, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/results.md` and `designs/honesty_precision.md`. The orchestrator split the bundle's PR 2 into three and told
+the human: 2a these two designs, 2b `keyframes_reel.md` and `reel_click.md`, 2c `export_details.md`,
+`video_carrier_test.md`, `uploaded_picture.md` and `ic_save.md`. The bundle's `INSTRUCTION.md` header and the human's
+covering message are quoted in R-560.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its lead, verbatim:
+
+> Each file in `designs/` has six parts: what exists, the gap, the proposal, the rulings it touches, the decisions
+> (already made, in a "Decided" section), and tests. Write each as a design doc and add its requirements and tests.
+
+Its `results.md` item, verbatim:
+
+> - `results.md`: "Result", the full-precision batch job, end to end (f32 or f64 only). Delete "payload summary" from
+>   TASK-M8-02, which defines nothing and is used nowhere. Philosophy §2's "arbitrary precision" text becomes the
+>   sentence the draft gives. REQ-SYS-007's parked dump tier needs amending; queue it if that is a larger change.
+
+`DECISIONS_2026-10-21.md` § "Results", verbatim:
+
+> Results
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+> - Called "Result". "Yeah call it result."
+> - Which times are saved: the user chooses. "let the user choose ig"
+> - One copy per pixel or all jittered copies: an option. "make that an option"
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> - Called **Result** ("Yeah call it result").
+> - **Which times are saved: the user chooses** ("let the user choose ig"): the horizon by default, plus any playheads
+>   the user adds. Open question 2 is closed.
+> - **One copy per pixel or all `E+1` copies: an option** ("make that an option"), one copy by default. Open question 3
+>   is closed.
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:*
+- **A Result** is the prebake (philosophy §2) made reachable from the app, end to end: the Result window, prefilled
+  from the view, from File › Make a result…, Measure's kept region or the Inspector; one `job.json` the app runs in the
+  background and `prin batch --job job.json` runs with the same code; a result folder
+  (`<name>__<build8>.principia-result/`: `result.json`, `payload.prin`, `image.png`, `log.txt`); the result view,
+  badged in the header strip (R-523), drawn from the payload with nothing integrated; and Compare, a labelled flip and
+  the f32 twin's difference map (`principia_results.md` §3).
+- **f32 or f64 only**: f64 by default, the shared kernel on CPU threads; f32 the survey kernel on the GPU (R-265).
+- **Its name** is "Result" in the GUI and "batch" for the job; `prin survey` stays the headless live path (open
+  question 1, (a)).
+- **The stored times**: the horizon by default, plus any playheads the user adds (open question 2, (a)).
+- **The copies**: one per pixel by default, the nominal copy with the per-pixel reductions; all `E + 1` copies an
+  option (open question 3, (c)).
+- **Philosophy §2** reads the draft's sentence: "… the shared kernel at f64 on the CPU, or f32 on the GPU for a fast
+  uniform pass. Arbitrary precision lives only in R-33's independent reference, which checks a result rather than
+  making one (R-265)."; the three-rungs table reads "f64 (f32, labelled)" for the prebake and "f64" for the Inspector.
+  *Was:* "CPU at arbitrary precision, or GPU at emulated double/double-double." and "arbitrary", "f64 and up" (kept as
+  *Was:* lines there). R-265 holds; it amended §7.1 and §7.7 only, which stay as they are.
+- **REQ-SYS-007 is amended, not queued.** The change is a reword: philosophy §7.3's reduced tier is unparked as the
+  Result's payload and its per-copy tier as the copies option; tiled prebake (§7.2's VRAM tiling), the trajectory
+  tiers, extended precision, headless datasets, the regularisation matrix and the GPU-port lever stay parked. §7.3
+  gains a note saying so. Nothing else of §7 or of R-265 moves, so it is not "a larger change".
+
+*Applied per R-369:*
+- **The payload's field list and layout are a definition** (R-72, REQ-SYS-090): §7.3 calls the reduced tier's field
+  list "a CONTRACT, not a convenience" and gives no list, so the task that builds the payload writes it into
+  `principia_results.md` §3.3, from the `SimState` payload and the reduction fields, and the physics reviewer approves
+  it.
+- **The pilot** is 64 pixels on an 8 × 8 lattice spread over the grid, timed; the estimate scales its measured time.
+- **The result view's source** (the live march or an opened result) is engine state, set through the contract by an
+  open-result request, because the engine never reads `ViewUI` (`principia_gui_state_contract.md` §2); `ViewUI` gains
+  the Result window. *The draft said* "`ViewUI` gains the Result window and a result mode".
+- **With one copy per pixel** the result view colours the nominal copy, one sample per pixel; with all copies stored
+  it colours each and averages, as the live view does (`principia_sampling_msaa_note.md`).
+- **The embedding's `run` block** is in tier 1 (`principia_dd_image_embedding.md` §6), assigned in `tiers.rs` like
+  every other field (REQ-TOOL-181), so a result's image never drops it (REQ-TOOL-196).
+- **Two tasks, M8:** TASK-M8-74 builds the job, `prin batch`, the folder and the payload (after TASK-M8-02, TASK-M4-17's
+  prebake path and TASK-M7-44's tier table); TASK-M8-75 the Result window, the result view and Compare.
+
+*Fix round 1 of PR #283 (gui review 5627122883, G1 to G5; applied per R-369):*
+- **Zoom and pan in a result view** are display magnification of the stored pixels, square per cell: no chart
+  construction, no `SimConfig` edit, no sim key, no history; *Explore from here* builds a live view from the result's
+  own `SimConfig`, bitwise (`principia_results.md` §3.4, render_gui_spec §G1, REQ-GUI-367).
+- **The view source** is engine state, `ViewSource = Live | Result(id)`, set by the open-result request (as undo and
+  redo are requests), not an edit, entering no undo history; the snapshot carries it, and the badge and the disabled
+  controls read it (`principia_gui_state_contract.md` §2, REQ-GUI-367).
+- **The Result window lists the design's fields**, prefilled from the view (the horizon, `E` and `r_coll` among them),
+  not only those that differ; the predictability warning is tested at both precisions (REQ-GUI-366).
+- **The badge is tested on a result view**: its text, its place in the header strip, the frame and per-cell zoom
+  (REQ-GUI-367).
+- **Where things sit:** Make a result… in File (after Import picture…), Measure's side panel and the Inspector; Open
+  result… in File; Compare (a labelled toggle), Make the f32 twin and the difference map with its counts and
+  distribution in the Result window's Compare section (REQ-GUI-368).
+
+*Fix round 3 of PR #283 (gui review 5627280803, N2; applied per R-369):* the result view's display zoom and pan live in
+the view source, `ViewSource = Live | Result { id, display_zoom, display_pan }`, changed by a result-display request
+that enters no history; the engine draws from it and the snapshot carries it, so the GUI keeps no copy of the payload
+(`principia_gui_state_contract.md` §2, `principia_results.md` §3.4, REQ-GUI-367).
+
+*Fix round 9 of PR #283 (perf review 5627960807, P4, P5; applied per R-369, as the review proposes):*
+- **The job's cost** (P4): the live frame loop keeps its budget while a job runs at f64 or f32, a Mac benchmark against
+  a no-job baseline (REQ-SCHED-043 applied to this job); the f64 pool leaves at least one core free, configurable
+  (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that carry state (REQ-PERF-010), its
+  live states sized from `(E+1) × sizeof` (philosophy §7.2); payload.prin is written row by row, peak memory
+  independent of `nx·ny`, budgeted before allocating (telemetry §6.2a) (`principia_results.md` §3.2, §6; TASK-M8-74).
+- **The pilot** runs off the main thread, and a field edit cancels and restarts it; a zoom or pan in a result view runs
+  no integration and dispatches no march (P5; `principia_results.md` §3.1, §3.4; REQ-GUI-366, REQ-GUI-367).
+
+*Fix round 10 of PR #283 (perf review 5628071919, Q1 to Q3; applied per R-369, as the review proposes):* the
+flat-memory check is the benchmark `cargo xtask bench result-job-memory` in its own process (REQ-PERF-109), and the
+refusal before allocating moves to REQ-PERF-108's unit test, since a benchmark requirement cannot carry it (Q1); the
+f32-row check asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is
+⌈steps / bound⌉, a fixed two-way split failing (Q2); `result-job-frame` holds the fixed suite's `pan-nearfield` and a
+job over that view at `T = 200` sized from its pilot to outlast the window, still running at its end (Q3)
+(`principia_results.md` §3.2, §6; REQ-PERF-107 to REQ-PERF-109; TASK-M8-74).
+
+*Fix round 12 of PR #283 (qa review 5628365538, Q6 to Q8; applied per R-369):* `result_window` tests the progress
+display, Cancel and Resume, and the f64 warning at `T = 100` (REQ-GUI-366); `result_folder_layout` tests the folder's
+name, its four files and result.json's fields, reading `<build8>` as the first eight characters of the build hash
+job.json records (REQ-SYS-089); TASK-M0-02's REQ-SYS-007 line follows this ruling's exception for the Result's payload,
+with a *Was:*.
+
+R-572 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
+resume), REQ-SYS-089 (the folder and payload), REQ-SYS-090 (the payload's fields, a definition), REQ-TOOL-196 (the
+`run` block in tier 1), REQ-GUI-366 (the Result window), REQ-GUI-367 (the result view) and REQ-GUI-368 (Compare).
+
+## R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it
+*21 Oct 2026 · applied in `plan/tasks/M8/TASK-M8-02.md` and `docs/design/principia_results.md` §4*
+
+`DECISIONS_2026-10-21.md` § "Results", its first item, verbatim:
+
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:* TASK-M8-02's `prin survey` deliverable lists its outputs as "image, frame records". *Was:* "(payload
+summary, image, frame records)". No requirement named it (REQ-SYS-048's statement is "the Paper-2 numbers"), so no
+requirement changes. The full-precision payload is the Result's (R-572), written by `prin batch`.
+
+R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
+*21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
+§4 (the real-space bullet and row) and §5 (a lead bullet) and its closing line, `docs/gui/principia_render_gui_spec.md`
+§G2 (the Trajectory panel) and §G8 (the Inspector), `README.md` (the Honesty line), `docs/read_first/principia_INDEX.md`,
+REQ-VAL-106, REQ-TOOL-127 and REQ-SYS-061 (reqio), REQ-VAL-196 to REQ-VAL-199 and REQ-GUI-369 to REQ-GUI-371 (new),
+TASK-M8-76 (new), TASK-M4-16 and TASK-M8-17, `REVIEW_QUEUE.md` (RQ-556, RQ-557 and RQ-558, new) and
+`plan/rule_groups.yaml`; the record, with the probe its marks were measured with, is
+`docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-76*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `honesty_precision.md` item, verbatim:
+
+> - `honesty_precision.md`: in the trajectory viewer, four runs of the clicked point (f32, f64, and each nudged by one
+>   ulp), with two marks:
+>   - **"faithful until"** at shape-sphere chord 10⁻³;
+>   - **"parted at"** at chord 0.1.
+>
+>   Both are measured (`evidence/parting_probe_output.txt`) and from the literature, both visible and editable. The
+>   one-line trust text appears in the trajectory inspector panel when a trajectory is clicked. **Nothing changes in the
+>   atlas.** The horizon stays 50 by default and can be raised **or lowered**, so the Run window's `T_horizon ∈ [50, 200]`
+>   and R-132 are amended. The README's "Honesty" line is reworded as the draft gives.
+
+`DECISIONS_2026-10-21.md` § "Honesty", its first two items, verbatim (the third, the horizon, is R-575's):
+
+> - Run f32 nudged by the smallest amount as well as f64 nudged. "Do fp32 nudged the smallest amount also"
+> - The "parted" threshold: research and test. "research & test" -> done: two marks, 1e-3 (faithful until) and 0.1
+>   (parted at), shown in the trajectory inspector panel. "yes sure that trust thing text is fine if you show it in the
+>   trajectory inspector panel when you click on a trajectory"
+
+The design's "Decided" section, its first three items, verbatim:
+
+> - **Four runs, not three**: f32, f64, and **each nudged by one ulp** ("Do fp32 nudged the smallest amount also").
+>   f32 against nudged f32 gives f32's own sensitivity at this point.
+> - **Two marks, measured and from the literature**, both shown and editable:
+>   - **Faithful until**: f32 and f64 within a shape-sphere chord of **10⁻³**, the reliability threshold of Boekholt &
+>     Portegies Zwart (2015, 2020, 2023), stated as keeping the difference in the linear regime.
+>   - **Parted at**: chord **0.1**, the decorrelation threshold (separation at the system's own scale: Boekholt 2015,
+>     Hernandez et al. 2020); random shapes average 4/3.
+>   - Measured over 1000 ICs, four regions, Heggie to t = 50 (prin-rs PR #34, `parting_probe`): first-event fates agree
+>     **99.9%** before the 10⁻³ mark and **25%** after the 0.1 mark (n = 16, so thin). Median parting at 0.1: deep
+>     interior 12, preset_shape 26, near-field 43, config_stability 39 (14% parted), pooled 22. A single global "f32
+>     trustworthy to ~23" is right pooled and wrong for any given point, which is why the readout is per point.
+>   - Self-check: in a chaotic region the gap between the two marks is about ln(100)/λ. A gap far off that says the
+>     reading is in the noise floor or saturation, and the panel says "unreliable".
+> - **Where the trust line shows**: in the trajectory inspector panel when you click a trajectory, e.g. "the atlas shows
+>   t = 30; this point's f32 run parted at t = 18". **Nothing changes in the atlas**: it stays f32 on the GPU, coloured as
+>   now ("Why would we show different colours in the atlas for precision?").
+
+*What it decides:*
+- **Four runs of the clicked point**: f32 (the survey kernel's one-pixel GPU dispatch, what coloured the pixel), f64
+  (`computeIC`), and each nudged by one ulp per component of its decoded IC (`principia_honesty_precision.md` §3.1).
+- **The chord** `|n_a − n_b|` between signed shape-sphere unit vectors (0 to 2), read at the sync boundaries, for
+  f32–f64, f64–f64′ and f32–f32′; **two marks**, "faithful until" at **10⁻³** and "parted at" at **0.1**, the human's
+  values, measured and from the literature, both shown and editable (§3.2). They are not calibrations: the human gave
+  them.
+- **The self-check** ("unreliable" when the gap between the marks is far from `ln(100)/λ`); how far is a calibration
+  (R-71, REQ-VAL-198).
+- **What the user sees**: f64 solid and f32 dashed in real space and on the sphere, a separation plot, the marks, the
+  starting gap, the fates side by side, and the trust line about the atlas pixel (§3.3).
+- **Where the trust line shows**: the trajectory inspector panel when a trajectory is clicked, the click inspector's
+  panels in the Inspector window and Explore's Trajectory panel (R-65), on by default in the Inspector and for a pinned
+  or kept trajectory in the Trajectory panel, off while it follows the cursor (§3.4).
+- **Nothing changes in the atlas**: f32 on the GPU, coloured as now. The draft's stain preset "How far f32 sees" is not
+  made, and its header text for the atlas is not applied; what the header states is RQ-556 (§3.5).
+- **The README's Honesty line** reads the draft's: "*It shows where its precision runs out: open any point to watch its
+  single- and double-precision orbits part, and when. Failed runs are kept and counted, never painted over.*" *Was:*
+  "*What it can't resolve is hatched, and it reports where its precision runs out.*"
+- **Amends** trajectory viewing §4 (real space was "CPU-f64 intuition sugar … no comparison claimed") and §5 (the
+  overlay was "optional; off by default"), each kept as a *Was:*. REQ-VAL-106 follows (on by default, statement and
+  verify); REQ-TOOL-127's definition gains the `r_i(t)` series and the nudge, its divergence criterion now R-574's marks.
+
+*Applied per R-369:*
+- **The trust line and the fates' wording key on "parted at"**, as the draft's single threshold did and the human's
+  example does; "faithful until" is drawn and reported beside them.
+- **The nudged runs are not drawn on the two views**; they are in the separation plot.
+- **The runs are of the nominal copy** (the draft's open question 3; "copies on request" is not taken up by the human's
+  texts), as the f32 run must be to equal the atlas pixel's.
+- **The nudge**: each of the decoded Cartesian IC's twelve components moved by `next_up` at its run's precision, as the
+  probe does; how the GPU dispatch takes it after its own decode, and a zero component under flushed subnormals, are
+  REQ-TOOL-127's to define.
+- **Queued, not resolved:** the header's statement against REQ-SYS-061 (RQ-556); the ensemble-ratio gate's expected
+  value, which the probe's readings do not settle (RQ-557); whether the runs carry on past their first terminal event,
+  as measured, or stop as the atlas does (RQ-558, its option (a), as measured, applied meanwhile).
+- **One task, M8:** TASK-M8-76, after TASK-M8-17 (the Inspector's CPU/GPU comparison, which keeps REQ-VAL-106) and
+  TASK-M4-16 (the f32 GPU trace).
+
+*Fix round 1 of PR #283 (physics review 5627073272, F1 to F4; gui review 5627122883, G6, G7, G9; applied per R-369):*
+- **The self-check's control is the right way round**: "unreliable" belongs to a small λ, where `ln(100)/λ` is long;
+  two marks one boundary apart at a large FTLE is the expected gap (F1; REQ-VAL-198, TASK-M8-76).
+- **`rq` fields**: REQ-VAL-199 carries `rq: RQ-557`, REQ-VAL-196 and REQ-VAL-197 `rq: RQ-558` (F2).
+- **One integrator for all four runs**: both f64 runs and both nudged runs take the f32 run's sim key, occupant,
+  coefficients and step rule, never RK45 (integrator contract Part 6; F3; `principia_honesty_precision.md` §3.1,
+  REQ-VAL-196).
+- **The quote's count**: this entry quoted "its first three items … (the fourth …)" of `DECISIONS_2026-10-21.md` §
+  "Honesty", which has three; it now reads "its first two items … (the third …)" (F4).
+- **The Trajectory panel's Precision section**, after Numbers in R-541 G4's order, collapsed the trust line, expanded
+  the marks, the separation plot, the starting gap and the fates (G6; render_gui_spec §G2, REQ-GUI-369).
+- **Whatever the IC's source** (an atlas pixel, an Inspector edit, Create & locate, a kept orbit after the view moved),
+  the runs and the trust line are of the clicked trajectory's own IC, the line reading the current atlas playhead (G7;
+  REQ-GUI-370).
+- **The trust line's tests** state the faithful mark below 10 and add an "unreliable" check; §G8 points at
+  REQ-GUI-370's three forms, the human's example being the human's illustration (G9).
+
+*Fix round 2 of PR #283 (physics review 5627216712, F5, F6; applied per R-369):*
+- **An IC that is not an atlas pixel of the current view** (an Inspector edit, a Create & locate IC, possibly off the
+  slice, or a kept orbit once its view has moved) has no decode path: its f32 run is the survey kernel's one-pixel
+  dispatch from the IC rounded to f32, under the trajectory's own sim key, and its trust line is prefixed "Not an atlas
+  pixel:", with no "The atlas colour here …". A kept orbit is an atlas pixel only while the view it was kept from is
+  unchanged. The four runs always use the trajectory's own sim key, never the current view's (`principia_honesty_precision.md`
+  §3.4, REQ-VAL-196, REQ-GUI-370, TASK-M8-76, render_gui_spec §G8). The fix-round-1 line above that says "Whatever the
+  IC's source … the line reading the current atlas playhead" holds for an atlas pixel only.
+- **RQ-558's Waits** reads "nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197", the
+  queue's form; option (a) stays applied meanwhile (F6).
+- **Wording:** the human's example is "the human's illustration" in honesty §3.3 and §G8.
+
+*Fix round 3 of PR #283 (gui review 5627280803, N1, N4, N5; applied per R-369):*
+- **The non-atlas trust line** is written out in three forms, one for one with the atlas forms, "Not an atlas pixel:"
+  and "these runs" in place of "the atlas colour here", read at the atlas playhead against the same marks, with the
+  same "estimate from FTLE" and "unreliable" (honesty §3.4, §G8, REQ-GUI-370). "The view it was kept from is
+  unchanged" is the same sim key and the same chart view (`z₀`, basis, zoom level), bitwise; a stain or playhead edit
+  keeps a kept orbit an atlas pixel (N1).
+- **The f32 run is bitwise what coloured the pixel only for an atlas pixel of the current view**; the runs use the
+  trajectory's own sim key; only an atlas pixel's IC is decoded; a non-atlas line carries no atlas claim
+  (TASK-M8-76's goal, §G8's bullet; N4).
+- §G8's quote of this PR's own fix-round-1 wording is dropped; it never reached `main` (N5).
+
+*Fix round 4 of PR #283 (gui review 5627389542, R1; applied per R-369, the review's first option):* while the view
+source is `Result` (R-572), a clicked pixel is not an atlas pixel: its trust line takes the "Not an atlas pixel:"
+forms, its runs from its grid cell's IC under the result's own `SimConfig` (an f64 result's colour and an f32 result's
+refinement-off grid are not the atlas's decode path). "The view it was kept from is unchanged" also needs the view
+source `Live`; a result opened over a kept orbit, even with a bitwise-equal `SimConfig`, changes it (honesty §3.4,
+render_gui_spec §G8, `principia_results.md` §3.4, REQ-GUI-370, TASK-M8-76).
+
+*Fix round 5 of PR #283 (gui review 5627439632, R2; applied per R-369, as the review proposes):* a kept orbit counts as
+an atlas pixel only if it was kept from an atlas pixel of a live view, the view source is `Live` now, and the view it
+was kept from is unchanged (sim key, `z₀`, basis and zoom level, bitwise). An orbit kept in a result view stays
+non-atlas even after *Explore from here* loads the result's `SimConfig` bitwise (honesty §3.4, render_gui_spec §G8,
+REQ-GUI-370, TASK-M8-76).
+
+*Fix round 6 of PR #283 (physics review 5627518149, F7, F8; applied per R-369):*
+- **The FTLE estimate and the self-check's `λ`** come from the `ftle` the IC's own f32 one-pixel dispatch writes,
+  bitwise the atlas's for an atlas pixel and that IC's own for any other, never the atlas pixel it was edited from.
+  When the sim key's FTLE tier is off or `ftle_valid` is false (R-254), the line shows no estimate and no self-check
+  verdict and states only the measured marks (F7; honesty §3.2, §3.3, §3.4, render_gui_spec §G8, REQ-GUI-370).
+- **Which f32 run is taken** follows fix rounds 4 and 5 in REQ-VAL-196 and TASK-M8-76: a kept orbit is an atlas pixel
+  only if kept from an atlas pixel of a live view, the view source is `Live` now and its view is bitwise unchanged;
+  while the view source is `Result` no pixel is an atlas pixel, and a result-view pixel runs from its grid cell's IC
+  under the result's `SimConfig`; `non_atlas_f32_start` gains the result-view cases (F8).
+- honesty §6 lists `non_atlas_f32_start` and `trust_line` (the review's observation).
+
+*Fix round 7 of PR #283 (physics review 5627584997, F9, F10; applied per R-369):*
+- **A valid `ftle` ≤ 0** (`ftle` is signed) also shows no estimate and no self-check verdict, only the measured marks,
+  alongside the tier off and `ftle_valid` false; never a negative or infinite estimate, nor "unreliable" from the sign
+  (F9).
+- **"bitwise the atlas's"** in fix round 6's line above reads "bitwise the atlas pixel's nominal copy's `ftle`": under
+  SSAA or an ensemble the atlas pixel's `ftle` is resolved over its samples, and the one-pixel dispatch is the nominal
+  copy (F10). Both in honesty §3.3, §3.4, §6, render_gui_spec §G8, REQ-GUI-370 and TASK-M8-76.
+
+*Fix round 8 of PR #283 (physics review 5627640864, F11; applied per R-369):* fix round 7's reason for F10 ("under SSAA
+or an ensemble the atlas pixel's `ftle` is resolved over its samples") is wrong and reads instead: each copy computes
+its own `ftle` (`principia_dd_generation_root.md` § "derived fields", the `ftle` row), and the pixel's colour is
+resolved over the copies' colours, display-only and never read back as data (`principia_render_contract.md` § "Averaging
+(SSAA colour resolve)"); the one-pixel dispatch is the nominal copy, so the estimate uses the nominal copy's `ftle`,
+never another copy's or a mean over the copies'. The conclusion of F10 stands (honesty §3.3, REQ-GUI-370, TASK-M8-76).
+
+*Fix round 9 of PR #283 (perf review 5627960807, P1 to P3; applied per R-369, as the review proposes):*
+- **The f32 trace's dispatch is bounded** (P1): it runs in chunks that return and carry state, interleaved with
+  frames, never one dispatch to `T` (telemetry §6.3, § "GPU"; REQ-PERF-010's mechanism). REQ-TOOL-127's definition
+  gains the bound and a test; TASK-M4-16, which defines the dispatch, names perf and depends on TASK-M4-09
+  (honesty §3.1).
+- **The four runs' cost is measured** (P2): a Mac benchmark (R-186) in REQ-SYS-060's form, with no new number — frame
+  p50/p95/p99/max and `frac_frames_over_41.7ms` with a pin's four runs in flight equal the no-pin baseline within
+  noise, at `T = 50` and `T = 200`, the f64 runs on the inspector worker; and `precision_view` counts the dispatches
+  (honesty §3.1, §6; TASK-M8-76).
+- **TASK-M8-17's goal** says the shape-divergence comparison is on by default in the Inspector, as its acceptance,
+  REQ-VAL-106 and this ruling do (P3).
+
+*Fix round 10 of PR #283 (perf review 5628071919, Q2, Q3; applied per R-369, as the review proposes):* `trace_chunked`
+asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is ⌈steps / bound⌉, a
+fixed two-way split failing (Q2); `precision-runs-frame` holds the fixed suite's `pan-nearfield` with the pin
+re-issued so four runs are in flight throughout, and reads "REQ-SYS-060's form", that requirement stating no
+thresholds (Q3) (honesty §3.1, §6; REQ-TOOL-127, REQ-PERF-106; TASK-M4-16, TASK-M8-76).
+
+*Fix round 12 of PR #283 (qa review 5628365538, Q1 to Q5; applied per R-369):* TASK-M8-76 depends on TASK-M8-75, which
+builds the result view its result-view cases need (Q1); REQ-VAL-197's tests add the default marks (10⁻³, 0.1) and a
+non-finite chord reading 2 (Q2, Q3); REQ-VAL-196's add RQ-558's option (a), each run's first event latched while it
+carries on to `T`, and the "ended at `t = …`" chords (Q4); `nudge_is_one_ulp` has zero components, `next_up(0.0)` on
+the CPU and, on the GPU, the form REQ-TOOL-127's definition gives, since honesty §3.1 already assigns a zero's form
+under flushed subnormals to that definition (a definition requirement, R-72), so no new RQ (Q5).
+
+R-574 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
+note) and REQ-SYS-061 (rulings, rq, note). Adds REQ-VAL-196 (the four runs), REQ-VAL-197 (the chord and the marks),
+REQ-VAL-198 (the self-check's band, a calibration), REQ-VAL-199 (the ensemble ratio, a calibration, `rq: RQ-557`),
+REQ-GUI-369 (what the viewer shows), REQ-GUI-370 (the trust line) and REQ-GUI-371 (the atlas unchanged).
+
+## R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar",
+`docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units
+and the horizon (inherited scale gauge)", `docs/design/principia_dd_integrator.md` § "2. Consolidated contract",
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_honesty_precision.md` §3.6, REQ-INT-081,
+REQ-INT-026 and REQ-GUI-102 (reqio), TASK-M3-06, TASK-M8-24, `REVIEW_QUEUE.md` (RQ-555, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-06 and TASK-M8-24*
+
+`DECISIONS_2026-10-21.md` § "Honesty", its last item, verbatim:
+
+> - Default horizon stays 50, and it must be raisable AND lowerable (not capped at 50). "Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **Horizon**: default stays 50, and it can be **raised or lowered**, not floored at 50 ("Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"). Amends the Run window's `T_horizon ∈ [50,
+>   200]` (render_gui_spec §G5) and R-132. The header states the horizon; the viewer states each point's parting.
+
+*What it decides:* `T_horizon`'s default stays 50, and the Run window takes values below 50 as well as above. R-132's
+"T keeps [50, 200], with a default of 50" is amended as to the lower end; its `dt_macro = max(1e-3, T/65535)` stands,
+and keeps `⌈T/dt_macro⌉ ≤ 65535` at every `T`. The Run window's, the integrator contract's, dd_integrator's and the
+state contract's "`[50, 200]`" read so, each kept as a *Was:*.
+
+*Applied per R-369:* the human gave no lowest value, and "raised" is already possible to 200, so the range is queued,
+RQ-555, with its options (a) any `T > 0` and (i) 200 stays applied meanwhile: `T_horizon ∈ (0, 200]`, default 50, a
+value at or below 0 refused with its reason. Nothing waits. The merged mock Run window's `T_RANGE` (TASK-M6-28,
+`crates/gui/src/windows/run.rs`) is TASK-M8-24's to change, with the field.
+
+*Fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369):* above 200 the field **clamps** to 200, as
+before R-575 (only RQ-555 can move the cap); only a value at or below 0 is refused. A press of ↓ (with or without Shift
+or Alt) or a drag that would take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T
+unchanged; ↓ never raises T (fix round 3, below). The mock's clamp (`crates/gui/src/windows/run.rs:315`, `T_RANGE.0`) and its test
+`mock_windows_open_run_t_horizon_steps_in_its_range` ("At the bottom of the range ↓ stays") are TASK-M8-24's to change.
+REQ-GUI-102's verify and TASK-M8-24's `run_fields` follow (*was:* "refuses 0 and 201 with the reason").
+
+*Fix round 3 of PR #283 (gui review 5627280803, N3; applied per R-369):* the floor is exact, replacing fix round 1's
+"stop at one keyboard step above 0": Shift+↓ at `T = 10` gives 0.2, not 20 or a refusal; ↓ at `T = 0.2` leaves 0.2;
+the mock's clamp to `lo = 0` reaching 0 fails (render_gui_spec §G5, RQ-555, REQ-GUI-102, TASK-M8-24).
+
+R-575 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (statement, rulings, source, note) and
+REQ-GUI-102 (statement, verify, rulings, source, note).

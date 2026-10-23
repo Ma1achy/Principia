@@ -68,8 +68,9 @@ R-18 retires in favour of `spread_event`. Source: rulings R-15 and R-18, step 3.
 8. Folded: landed in full, ruled by R-19 (RQ-17).
 9. Folded: payload memory table recomputed, closure and period in the debug catalogue; the caching signature already
    carries the payload schema version. **Ruled (R-37, applied in step 5):** `t_min` is replaced by a departure threshold `δ_dep` on the
-   shape sphere, and the closure fields are in the ledger. **Still open:** the value of `δ_dep` (by measurement), and where
-   the per-sample "departed" bit lives. Was open: the stated fraction that defines `t_min` (payload §1, "Define `t_min`
+   shape sphere, and the closure fields are in the ledger. **Still open:** the value of `δ_dep` (by measurement). **Ruled (R-545, RQ-310):** the per-sample "departed" bit is
+   descriptor bit 15. *Was:* "**Still open:** the value of `δ_dep` (by measurement), and where the per-sample
+   "departed" bit lives." Was open: the stated fraction that defines `t_min` (payload §1, "Define `t_min`
    gauge-covariantly"); and `principia_memory_tiers.md` §4's tier totals, still at the old 136 B width (with audit B10).
    *Carried by: REQ-VAL-055 (the value of `δ_dep` and where the departed bit lives), with REQ-PAY-056 (the departure
    latch).*

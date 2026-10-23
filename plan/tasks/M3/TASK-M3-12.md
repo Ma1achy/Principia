@@ -35,6 +35,8 @@ Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-t
 - `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
 - `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
 
+- `docs/contracts/principia_integrator_contract.md` § "The sync grid is a fixed quantum of physical time (R-565)"
+- `decisions.md` § "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
 ## Deliverables
 - `crates/kernel/src/detect/escape.rs` — `e_rel(b)`, `escaper()`, the window test on the lagged register, the ionisation gate.
 - Detector signature takes state + params only (no `r_esc`, receding or `k_esc` inputs).
@@ -48,7 +50,7 @@ Escape is detected post-step on the projected state iff `|Δn̂|` over the 0.4-t
 - Review (physics): the settling test does not read closure_min (REQ-EVT-011).
 - `cargo test -p kernel escape_two_conditions` — settled hierarchical escaper fires; bound hierarchy with settled shape but E_rel < 0 does not; mid-encounter flicker with E_rel > 0 but |Δn̂| ≥ tau does not; the detector has no r_esc/receding/k_esc inputs (REQ-EVT-015).
 - `cargo test -p kernel e_rel_total_mass` — unequal-mass fixture where the M_pair-only form gives E_rel > 0 and the total-mass form gives E_rel < 0: the detector returns the total-mass value and does not fire (REQ-EVT-016).
-- `cargo test -p kernel escape_window_grid` — for KDK/Yoshida the detector compares n̂ at the current macro-step boundary with n̂ held from 0.4 time units earlier on the macro-step grid; for AZ, Heggie and logH the same on the sync grid, for several n_sync values (REQ-EVT-017).
+- `cargo test -p kernel escape_window_grid` — for KDK/Yoshida the detector compares n̂ at the current macro-step boundary with n̂ held from 0.4 time units earlier on the macro-step grid; for AZ, Heggie and logH the same on the sync grid, for several Δ_sync values, the window spanning 0.4 time units at each; control: a window held as a fixed count of boundaries spans a different time at a second Δ_sync and fails (REQ-EVT-017; R-565). *Was:* "for several n_sync values".
 - `cargo test -p kernel escaper_largest_d` — two bodies with E_rel > 0 differing in d: the larger-d body (to the other two's CoM) is reported as escaper and in detail (REQ-EVT-018).
 - `cargo test -p kernel escape_tau_provisional` — the detector's tau is 1e-3 and lies inside 7.04e-05 … 2.70e-02; the constant's comment cites its source (REQ-EVT-024).
 - Review checklist (physics §9): the fixture definitions below give every parameter and expected outcome, and each fixture's control is discriminating (REQ-EVT-026).

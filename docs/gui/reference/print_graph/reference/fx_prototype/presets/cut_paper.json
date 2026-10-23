@@ -1,0 +1,104 @@
+{
+ "name": "Cut paper",
+ "doc": "One sheet per colour stacked by lightness, blade-cut, lit edges, shadows on the sheets beneath.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "rg": {
+   "op": "regions",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": 6,
+    "b": 2.5,
+    "mode": 9
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "t0": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed"
+   }
+  },
+  "t1": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+1"
+   }
+  },
+  "t2": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+2"
+   }
+  },
+  "t3": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+3"
+   }
+  },
+  "t4": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+4"
+   }
+  },
+  "t5": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+5"
+   }
+  },
+  "t6": {
+   "op": "noise",
+   "p": {
+    "scale": 1.4,
+    "octaves": 2,
+    "seed": "$seed+6"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "lab": "rg.labels",
+    "pal": "rg.palette",
+    "pt": "pt",
+    "t0": "t0",
+    "t1": "t1",
+    "t2": "t2",
+    "t3": "t3",
+    "t4": "t4",
+    "t5": "t5",
+    "t6": "t6"
+   },
+   "p": {
+    "f": "used = np.unique(lab); order = used[np.argsort(lum(pal[used]))]\nrank = np.zeros(pal.shape[0], int); rank[order] = np.arange(len(order)); R = rank[lab]\nT = (t0, t1, t2, t3, t4, t5, t6)\ndef tex(i): return (1+0.035*T[i] + 0.02*z(pt))[..., None]\nc0 = pal[order[0]]; g = c0.mean(); c0 = g+(c0-g)*0.9\nout = np.ones((H, W, 3))*c0*tex(0)\nfor i in range(1, len(order)):\n    m = R >= i\n    m = ndi.binary_opening(ndi.binary_closing(m, iterations=2), iterations=2)\n    m = gaussian(m.astype(float), 1.2) > 0.5\n    sh = gaussian(ndi.shift(m.astype(float), (4, 3), order=0), 4.0)\n    out = out*(1-0.38*sh*(~m))[..., None]\n    c = pal[order[i]]; g = c.mean(); c = g+(c-g)*0.9\n    lit = m & ~ndi.shift(m, (-1.5, -1.5), order=0)\n    sheet = c*tex(i)*(1+0.12*lit[..., None])\n    out = where(m[..., None], sheet, out)"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

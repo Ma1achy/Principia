@@ -288,7 +288,7 @@ does. When the record does not fit, the writer drops whole tiers from the bottom
 
 | Tier | Contents | Dropped |
 |---|---|---|
-| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
+| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. A Result's image (R-572, `principia_results.md` §3.3) adds its `run` block: precision, `nx × ny`, the stored times and the copies option, read as "result, f64, 1024²". | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
 | **2. Colour** | `RenderState` as built-ins: the colour mode's enum and every parameter, the ramp window, the overlays, the line system, the playhead, the hover and the debug view; and the sidecar's `f3_fill` (R-472). | Only after tier 3. |
 | **3. Custom source** | Each ejected WGSL node's source (custom frag shaders and nodes); the `source` flag (§2, bit 2). | First. |
 
@@ -298,6 +298,15 @@ tier is never cut. Every field's tier is assigned in one table, read by the writ
 (`principia_gui_state_contract.md` §2, `crates/engine/src/contract/tiers.rs`). The `tEXt` chunk has no capacity limit,
 so it always carries all three tiers. A view recreated without tier 2 renders the default stain; without tier 3, each
 custom node with its slot's default built-in occupant; either is badged as a fallback (§9).
+
+**The Print graph travels in `RenderState` (R-491; `principia_print_graph.md` §9).** `RenderState.print` is part of the
+record, **by value**: a preset is the graph it expanded to, with its preset id as a label, so a later build's change to
+a built-in preset never changes what an old record reproduces. The graph, its built-in nodes, their parameters,
+settings and wires are **tier 2** (colour); a custom WGSL node's source is **tier 3** (custom source), dropped first.
+A record without tier 3 recreates the Print graph with each custom node shown as missing and the figure rendered
+without it, badged; a record without tier 2 renders Plain, badged as a fallback (§9). Whether tier 2 splits further is
+RQ-386, and a Print graph is part of what tier 2 holds there. The figure export's default is Plain (R-489), the record
+carrying the graph either way.
 
 **The ramp window is not optional.** An auto-ranged ramp manufactures or hides the difference it
 is meant to show — measured, not hypothesised — so a recreated image without it is a different

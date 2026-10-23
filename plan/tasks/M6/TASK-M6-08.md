@@ -48,3 +48,4 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
   builds that path (REQ-TOOL-158); this task, which builds `DECODE_MODE`'s switchover, checks that every quad past
   ℓ_switch is routed onto it (REQ-TOOL-159; the human's "M5/M6", applied per R-369).
 - **R-537 EX8 (20 Oct 2026):** in a repeat the zoom is on the canonical quad, and far from the root the f32 centre is taken relative to the root cell's own origin; TASK-M8-57 builds that on this task's path (REQ-TOOL-182).
+- **RQ-554 (R-570's port, perf review 5624936602 of PR #279, P2):** a band quad on a latent or flat chart, saturated along one in-plane axis only, collapses, switches and stops terminally at `AT_F32_FLOOR` above the screen floor while its other axis stays structured; whether it keeps refining along that axis is open. REQ-SCHED-062's terminal stop is built as written meanwhile; only its behaviour on band quads waits (`rq: RQ-554`).

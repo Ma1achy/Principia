@@ -18,6 +18,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "05 Inspector — one IC, its trajectory, one timeline"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - `crates/gui/src/widgets/shape_sphere.rs` — sphere / unwrapped toggle, landmarks, turn checkbox, view-only rotation.
@@ -28,7 +29,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` (right panel) and `cargo test -p gui trajectory_buttons_open_inspector` — screenshot against 01_main.png's right panel; both buttons open the Inspector window (REQ-GUI-088).
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 05_inspectors` (sphere and unwrapped; turn cleared) — screenshots against 01_main.png and 05_inspectors.png in sphere and unwrapped modes; with 'turn' cleared two frames are identical (REQ-GUI-089).
-- `cargo test -p gui sphere_unwrap_agree` — points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged (REQ-GUI-054).
+- `cargo test -p gui sphere_unwrap_agree` — points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged; the figure-eight run through a collinear configuration draws n(t) across φ = π/2 at the signed n̂ in both views, with the canonical bodies shown and hidden; control: a path drawn from the canonical representative's n (|n₂|), which bounces at the equator, fails (REQ-GUI-054, R-544 item 8).
 - Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent; the human confirms it at the M8 gate (REQ-GUI-157). Proposed by TASK-M6-27 since R-390, the first task to need the value; this task uses it.
 
 ## Notes
@@ -38,9 +39,10 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - The Trajectory panel's file is `crates/gui/src/explore/trajectory.rs`, the one TASK-M6-27 creates for the panel's
   frame (its Deliverables name `crates/gui/src/explore/{time,legend,trajectory}.rs`); this task fills it, applied per
   R-369 (TASK-M1-14's pre-flight; was `trajectory_panel.rs`).
-- R-449 (16 Oct 2026): the shape sphere's landmark labels, the kept orbits' rows and the summary name the bodies 1-based through TASK-M2-33's conversion function: `BC₀₁`, `BC₁₂`, `BC₂₀` are shown `BC₁₂`, `BC₂₃`, `BC₁₃` (dd_integrator §3.7). The Euler landmarks' index is not defined; this task writes how they are shown (R-72), its reviewers deciding per R-369: RQ-334.
+- R-449 (16 Oct 2026): the shape sphere's landmark labels, the kept orbits' rows and the summary name the bodies 1-based through TASK-M2-33's conversion function: `BC₀₁`, `BC₁₂`, `BC₂₀` are shown `BC₁₂`, `BC₂₃`, `BC₁₃` (dd_integrator §3.7). The Euler landmarks: `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}` through the same function, its antipodality to the other two bodies' collision stated for equal masses only (R-549, RQ-334; REQ-GUI-054). *Was:* "The Euler landmarks' index is not defined; this task writes how they are shown (R-72), its reviewers deciding per R-369: RQ-334."
 - R-541 G4 (21 Oct 2026): the kept orbits become the header's tabs, each with its own previews, trace and sound
   (REQ-GUI-088, restated); this task builds the tabs and the panel's items as REQ-GUI-088 has them, and TASK-M8-61 the
   order, the status line and the Trace and Numbers sections over them (REQ-GUI-326), TASK-M8-64 the Listen section
   (REQ-GUI-334; PR #267's split, *was:* "the Trace, Listen and Numbers sections over them (REQ-GUI-326)"). What G4 leaves out (FTLE,
-  `E₀`, the playhead, the two buttons) is kept: RQ-462, its option (a) applied meanwhile.
+  `E₀`, the playhead, the two buttons) is kept: RQ-462 (a), ruled so by R-556.
+- R-544 (21 Oct 2026) item 8: "Show the canonical bodies" may stay as a view of the bodies, but must not fold the path; REQ-GUI-054 gains the syzygy arm (gui review 5603356729 of PR #273, G4, applied per R-369).

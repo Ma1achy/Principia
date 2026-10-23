@@ -39,6 +39,7 @@ REQ-GUI-188; the drill-down's §0).
 - `decisions.md` § "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
 - `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
 
 ## Deliverables
 - The `chazy_final`, `chazy_status`, `chazy_structure` and `chazy_q` read-side accessors, generated beside
@@ -57,20 +58,23 @@ REQ-GUI-188; the drill-down's §0).
 - Review (physics): §5.5's precedence and overlapping `q` are written, consistent with §10.5.2's cells, so that the review's transient overlap state reads `q > 1` and a B-so-far whose outer body approaches with outer `K/U > 1` reads `q < 1`, and REQ-PAY-102's and REQ-COL-078's tests use them (REQ-PAY-104).
 - `cargo test -p kernel chazy_escaper` — on `binary_plus_escaper(1, 0, 50, 2)` the escaper is 2, and on the same state relabelled it is the escaper's new index (0 and 1 among them); it equals `classify`'s hierarchy body on every §12.1 fixture; an equilateral state at rest built to tie exactly (scale 1) gives 0, the lowest index on a tie, with a control asserting its three ratios bitwise equal; control: a state whose most separated body is 1 gives 1 (REQ-PAY-107).
 - `cargo test -p kernel chazy_qk` — on `binary_plus_escaper(1, 0, 50, q)`, q = 2, 1 and 0.5, `chazy_qk[2]` equals q to f64 rounding; on every HE and PE fixture `chazy_qk[chazy_escaper]` equals `chazy_q`; every value ≥ 0 (REQ-PAY-108).
-- `cargo test -p kernel chazy_escape_freeze` — a fixture run to escape fire: `chazy_class` at every later playhead equals its value at the fire step (REQ-EVT-027).
+- `cargo test -p kernel chazy_escape_freeze` — a fixture run to escape fire: `chazy_class` at every later playhead equals its value at the fire step; the test asserts the freeze, not agreement with the event stain's escape (R-548, RQ-313) (REQ-EVT-027).
 - `cargo test -p validation chazy_energy_certificates` — property test: a free-fall chart and an E > 0 chart at t = 10, 50, 200 and the horizon on CPU-f64; no free-fall sample reads H, HP, P or transient, no E > 0 sample reads B-so-far, B-stable or OS-candidate; control: a fixture with the energy's sign flipped reaches a forbidden label (REQ-VAL-185).
 - `cargo xtask gate chazy-burrau` — the Burrau ICs in the validation harness, past the escape stop on its post-escape march (R-103), at the pinned `r_coll`, which the gate records; classified every step to its horizon: the last label HE, no step H, HP or P; a run ending in collision at that `r_coll` fails and is reported (REQ-VAL-186).
 
 ## Notes
-- REQ-EVT-027 waits on RQ-313 (escape-detector alignment); the freeze is built as the spec gives it, and the ruling
-  may add a gate. REQ-VAL-185 and REQ-VAL-186 wait on RQ-325 for the E < 0 half (no H, HP or P), which `classify` does
-  not enforce: under its option (a) they are empirical checks whose failure is a physics result to report. REQ-PAY-101
-  waits on RQ-324 for a stable hierarchy whose outer body is far out and receding (excursion or B-stable).
+- R-548 (21 Oct 2026): the escape event and the class answer different questions, the freeze is built as the spec
+  gives it and no gate is added (RQ-313, option (a)); the E < 0 half (no H, HP or P) is enforced by the rule's E ≥ 0
+  guard, so REQ-VAL-185's and REQ-VAL-186's checks assert it and a failure is a bug (RQ-325, option (b)); a stable
+  hierarchy whose outer body is far out and receding reads B-stable (RQ-324, option (b)). None of the three waits.
+  *Was:* "REQ-EVT-027 waits on RQ-313 (escape-detector alignment); the freeze is built as the spec gives it, and the
+  ruling may add a gate. REQ-VAL-185 and REQ-VAL-186 wait on RQ-325 … REQ-PAY-101 waits on RQ-324 for a stable
+  hierarchy whose outer body is far out and receding (excursion or B-stable)."
 - The Burrau gate runs past the escape stop because the production loop stops at fire (R-103), where the class can
-  read excursion or B (RQ-313); it runs at the pinned `r_coll` because Burrau is a close-encounter benchmark
+  read excursion or B (accepted, R-548, RQ-313); it runs at the pinned `r_coll` because Burrau is a close-encounter benchmark
   (REQ-VAL-049; applied per R-369).
 - Collision reaches these fields from the terminal latch (TASK-M3-17); the colour is TASK-M7-37's.
 - `chazy_escaper` and `chazy_qk` (R-443) extend this task, not a new one (applied per R-369): two accessors beside
-  the others, reading the same `out_kup`/`pair_kup` quantities. Which body the one-body views read as escaping is
-  RQ-321, a question for the views (TASK-M7-41), not for the field.
+  the others, reading the same `out_kup`/`pair_kup` quantities. The one-body views read `chazy_escaper` always (R-548,
+  RQ-321), a question for the views (TASK-M7-41), not for the field.
 - R-449 (16 Oct 2026): `chazy_escaper` and `chazy_qk[k]`'s `k` are body indices, 0-based in storage and computation; a machine-readable export that carries them keeps them 0-based and its header or schema says so (REQ-GEN-036, TASK-M2-33's); what a person reads is 1-based through TASK-M2-33's conversion module (REQ-GUI-188).

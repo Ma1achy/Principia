@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Print graph boards</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#1b1c1e;--panel:#232427;--line:#34363a;--fg:#e4e2dc;--mute:#b9b6ad;--dim:#8f8c84;--acc:#fff27a;--blue:#7fb6e0;--paper:#efe9dc}
+*{box-sizing:border-box}body{margin:0;background:#111;font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--fg);font-size:13px}
+.board{background:var(--bg);padding:26px 28px;margin:0 0 20px;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:22px;font-weight:500}.sub{color:var(--mute)}.hd{display:flex;gap:14px;align-items:baseline}
+.mono{font-family:'IBM Plex Mono',monospace}
+.box{fill:var(--panel);stroke:var(--line)}
+.lbl{fill:var(--fg);font:500 14px 'IBM Plex Sans'}.sm{fill:var(--mute);font:12px 'IBM Plex Mono'}
+.k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.slotrow{display:flex;align-items:flex-start;gap:12px}
+.slot{width:200px;display:flex;flex-direction:column;gap:6px}.slot img{width:200px;height:200px;display:block;border-radius:2px}
+.slot b{font-weight:500}.slot span{color:var(--mute);font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.4}
+.arrow{align-self:center;color:var(--dim);font-size:22px;margin-top:-40px}
+.win{background:var(--panel);border:1px solid var(--line);border-radius:4px;display:flex;flex-direction:column}
+.tb{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-weight:500}
+.row{display:grid;grid-template-columns:110px 1fr 60px;gap:10px;align-items:center;padding:6px 12px}
+.dd{background:#1b1c1e;border:1px solid var(--line);border-radius:3px;padding:5px 8px;display:flex;justify-content:space-between}
+.th{width:44px;height:44px;border-radius:2px;object-fit:cover}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}.seg span{padding:4px 12px}.seg .on{background:#3a3b3f;color:#fff}
+.set{display:grid;grid-template-columns:110px 1fr 46px;gap:10px;align-items:center;padding:3px 12px 3px 24px;color:var(--mute)}
+.sl{height:4px;background:#3a3b3f;border-radius:2px;position:relative}.sl i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:2px}
+.gal{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px}.gal figure{margin:0;display:flex;flex-direction:column;gap:4px}.gal img{width:100%;aspect-ratio:1;border-radius:2px;display:block}
+.gal figcaption{font-size:11px;color:var(--mute)}.gal .sel img{outline:2px solid var(--acc);outline-offset:1px}
+.btn{border:1px solid var(--line);border-radius:3px;padding:5px 12px;background:#2b2c30}
+.frames{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.frames figure{margin:0;display:flex;flex-direction:column;gap:6px}.frames img{width:100%;display:block;border-radius:2px;image-rendering:auto}
+table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--dim);font-weight:500;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+td.n{font-family:'IBM Plex Mono',monospace;color:var(--mute)}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;border:1px solid var(--line);color:var(--mute)}
+</style></head><body>
+
+<!-- 1 pipeline -->
+<section class="board" id="pipeline" style="width:1500px">
+ <div class="hd"><h1>Where the Print graph sits</h1><span class="sub">R-67's chain, with the two line passes made explicit. Measurement taps the stain, never the print.</span></div>
+ <svg width="1444" height="330" viewBox="0 0 1444 330">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8f8c84"/></marker></defs>
+  <g>
+   <rect class="box" x="0" y="110" width="120" height="64" rx="4"/><text class="lbl" x="60" y="140" text-anchor="middle">SimState</text><text class="sm" x="60" y="160" text-anchor="middle">payload</text>
+   <rect class="box" x="160" y="110" width="120" height="64" rx="4"/><text class="lbl" x="220" y="140" text-anchor="middle">Stain</text><text class="sm" x="220" y="160" text-anchor="middle">colours data</text>
+   <rect class="box" x="320" y="110" width="170" height="64" rx="4" style="stroke-dasharray:4 3"/><text class="lbl" x="405" y="137" text-anchor="middle">Lines, through</text><text class="sm" x="405" y="157" text-anchor="middle">through_medium=true</text>
+   <rect class="box" x="530" y="96" width="210" height="92" rx="4" style="stroke:#fff27a"/><text class="lbl" x="635" y="132" text-anchor="middle" style="fill:#fff27a">Print graph</text><text class="sm" x="635" y="152" text-anchor="middle">Plain = identity</text><text class="sm" x="635" y="170" text-anchor="middle">degrades while moving</text>
+   <rect class="box" x="780" y="110" width="160" height="64" rx="4"/><text class="lbl" x="860" y="137" text-anchor="middle">Lines, over</text><text class="sm" x="860" y="157" text-anchor="middle">the default</text>
+   <rect class="box" x="980" y="110" width="128" height="64" rx="4"/><text class="lbl" x="1044" y="137" text-anchor="middle">Display scale</text><text class="sm" x="1044" y="157" text-anchor="middle">+ gamut clamp</text>
+   <rect class="box" x="1148" y="110" width="130" height="64" rx="4"/><text class="lbl" x="1213" y="137" text-anchor="middle">CVD sim</text><text class="sm" x="1213" y="157" text-anchor="middle">sees the print</text>
+   <rect class="box" x="1318" y="110" width="120" height="64" rx="4"/><text class="lbl" x="1378" y="147" text-anchor="middle">Screen</text>
+  </g>
+  <g stroke="#8f8c84" stroke-width="1.5" fill="none" marker-end="url(#a)">
+   <path d="M120 142 H158"/><path d="M280 142 H318"/><path d="M490 142 H528"/><path d="M740 142 H778"/><path d="M940 142 H978"/><path d="M1108 142 H1146"/><path d="M1278 142 H1316"/>
+  </g>
+  <!-- measurement tap -->
+  <g stroke="#7fb6e0" stroke-width="1.5" fill="none" marker-end="url(#a)"><path d="M220 174 V250 H300"/><path d="M60 174 V270 H300"/></g>
+  <rect class="box" x="302" y="232" width="540" height="60" rx="4" style="stroke:#7fb6e0"/><text class="lbl" x="572" y="258" text-anchor="middle" style="fill:#7fb6e0">Measurement</text><text class="sm" x="572" y="278" text-anchor="middle">Inspector · Measure · legend · readout · area stats · goldens</text>
+  <!-- debug bypass -->
+  <g stroke="#8f8c84" stroke-width="1.2" fill="none" stroke-dasharray="5 4" marker-end="url(#a)"><path d="M220 110 V50 H1044 V108"/></g>
+  <text class="sm" x="632" y="40" text-anchor="middle">debug views bypass the Print graph (R-41)</text>
+  <!-- ViewUI note -->
+  <text class="sm" x="635" y="214" text-anchor="middle">RenderState.print · round-trip tier 2 (custom WGSL: tier 3)</text>
+ </svg>
+</section>
+
+<!-- 2 slot chain -->
+<section class="board" id="slots" style="width:1500px">
+ <div class="hd"><h1>The slot chain</h1><span class="sub">Palette and medium compose. Each slot holds a sub-graph; an empty slot is the identity. Rendered by the lab on a Principia render (config stability).</span></div>
+ <div class="slotrow">
+  <div class="slot"><img src="img/c_1_medium.jpg"><b>Medium</b><span>Watercolour pencil</span></div><div class="arrow">+</div>
+  <div class="slot"><img src="img/c_2_palette.jpg"><b>Palette</b><span>Poster pigments, nearest colour</span></div><div class="arrow">+</div>
+  <div class="slot"><img src="img/c_3_ground.jpg"><b>Ground · on the ground</b><span>cold-press watercolour</span></div><div class="arrow">+</div>
+  <div class="slot"><img src="img/c_4_unfinished.jpg"><b>Unfinished</b><span>72%, from the edges</span></div><div class="arrow">+</div>
+  <div class="slot"><img src="img/c_5_age.jpg"><b>Age</b><span>70 years, foxed, folded in four</span></div><div class="arrow">+</div>
+  <div class="slot"><img src="img/c_6_view.jpg"><b>Viewing</b><span>raking light</span></div>
+ </div>
+ <p class="sub" style="margin:0;max-width:110ch">Each frame adds one slot to the one before, rendered by the lab. The chain runs Palette → Medium → On the ground → Unfinished → Age → Viewing; the frames add them in the order a user would. The simple panel edits this template; the advanced editor shows the same graph as nodes.</p>
+</section>
+
+<!-- 3 print panel -->
+<section class="board" id="panel" style="width:1180px">
+ <div class="hd"><h1>The Print panel</h1><span class="sub">Replaces Display › Style. Slots edit settings; the gallery fills Medium; "Edit graph…" opens the Stain's node editor on the same graph.</span></div>
+ <div style="display:grid;grid-template-columns:520px 1fr;gap:24px;align-items:start">
+  <div class="win">
+   <div class="tb"><span>Display › Print</span><span class="seg"><span>Plain</span><span class="on">Print</span></span></div>
+   <div class="row"><span>Palette</span><div class="dd"><span>Poster pigments</span><span>▾</span></div><img class="th" src="img/s_palslot.jpg"></div>
+   <div class="set"><span>amount</span><div class="sl"><i style="width:100%"></i></div><span class="mono">1.00</span></div>
+   <div class="row"><span>Medium</span><div class="dd"><span>Paint › Watercolour pencil</span><span>▾</span></div><img class="th" src="img/p_0.jpg"></div>
+   <div class="set"><span>seed</span><div class="sl"><i style="width:3%"></i></div><span class="mono">3</span></div>
+   <div class="row"><span>Ground</span><div class="dd"><span>Cold-press watercolour</span><span>▾</span></div><img class="th" src="img/s_ground.jpg"></div>
+   <div class="set"><span>tooth</span><div class="sl"><i style="width:50%"></i></div><span class="mono">1.00</span></div>
+   <div class="row"><span>Unfinished</span><div class="dd"><span>Finished</span><span>▾</span></div><img class="th" src="img/s_unfinished.jpg"></div>
+   <div class="row"><span>Age</span><div class="dd"><span>New</span><span>▾</span></div><img class="th" src="img/s_age.jpg"></div>
+   <div class="row"><span>Viewing</span><div class="dd"><span>Flat</span><span>▾</span></div><img class="th" src="img/s_view.jpg"></div>
+   <div class="row"><span>Boil</span><div class="dd"><span>Off</span><span>▾</span></div><span></span></div>
+   <div style="display:flex;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line)"><span class="btn">Edit graph…</span><span class="btn">Reset to Plain</span></div>
+  </div>
+  <div class="win">
+   <div class="tb"><span>Presets</span><span class="sub" style="font-weight:400">103 in 11 families · live thumbnails of this view</span></div>
+   <div class="gal">
+    <figure class="sel"><img src="img/p_0.jpg"><figcaption>Watercolour pencil</figcaption></figure>
+    <figure><img src="img/p_1.jpg"><figcaption>Oil</figcaption></figure>
+    <figure><img src="img/p_2.jpg"><figcaption>Graphite</figcaption></figure>
+    <figure><img src="img/p_3.jpg"><figcaption>Linocut</figcaption></figure>
+    <figure><img src="img/p_4.jpg"><figcaption>Risograph</figcaption></figure>
+    <figure><img src="img/p_5.jpg"><figcaption>Offset press (1978)</figcaption></figure>
+    <figure><img src="img/p_6.jpg"><figcaption>CRT television</figcaption></figure>
+    <figure><img src="img/p_7.jpg"><figcaption>Cross-stitch</figcaption></figure>
+    <figure><img src="img/p_8.jpg"><figcaption>Polaroid</figcaption></figure>
+    <figure><img src="img/p_9.jpg"><figcaption>Stained glass</figcaption></figure>
+    <figure><img src="img/p_10.jpg"><figcaption>Engraving</figcaption></figure>
+    <figure><img src="img/p_11.jpg"><figcaption>Cyanotype</figcaption></figure>
+   </div>
+  </div>
+ </div>
+ <p class="sub" style="margin:0">Canvas corner badge while active: <span class="badge">Print: Watercolour pencil</span> · figure export defaults to Plain.</p>
+</section>
+
+<!-- 4 degrade -->
+<section class="board" id="degrade" style="width:1380px">
+ <div class="hd"><h1>Degrade while moving</h1><span class="sub">Watercolour pencil. Reduced levels here are a downsample of the full render, illustrative of the look, not a run of the port.</span></div>
+ <div class="frames">
+  <figure><img src="img/m_full.jpg"><b>Still: full</b><span class="sub mono">post_level = full</span></figure>
+  <figure><img src="img/m_half.jpg"><b>Moving: reduced ½</b><span class="sub mono">heavy nodes at half resolution</span></figure>
+  <figure><img src="img/m_quarter.jpg"><b>Over budget: reduced ¼</b><span class="sub mono">whole graph drops a level</span></figure>
+  <figure><img src="img/m_plain.jpg"><b>Last resort: Plain</b><span class="sub mono">bypass while moving</span></figure>
+ </div>
+ <svg width="1324" height="120" viewBox="0 0 1324 120">
+  <text class="sm" x="0" y="20">camera</text><rect x="90" y="8" width="1230" height="18" fill="#2b2c30"/><rect x="250" y="8" width="560" height="18" fill="#7fb6e0" opacity=".7"/>
+  <text class="sm" x="0" y="58">post_level</text>
+  <rect x="90" y="46" width="160" height="18" fill="#fff27a" opacity=".85"/><rect x="250" y="46" width="300" height="18" fill="#c9b44e" opacity=".8"/><rect x="550" y="46" width="260" height="18" fill="#8f7d2e" opacity=".8"/><rect x="810" y="46" width="70" height="18" fill="#8f7d2e" opacity=".8"/><rect x="880" y="46" width="440" height="18" fill="#fff27a" opacity=".85"/>
+  <path d="M810 70 V84 M880 70 V84 M810 78 H880" stroke="#b9b6ad"/><text class="sm" x="845" y="102" text-anchor="middle">settle_ms = 250</text>
+  <text class="sm" x="170" y="102" text-anchor="middle">full</text><text class="sm" x="400" y="102" text-anchor="middle">½</text><text class="sm" x="680" y="102" text-anchor="middle">¼ (over budget)</text><text class="sm" x="1100" y="102" text-anchor="middle">full, held</text>
+ </svg>
+ <p class="sub" style="margin:0">The playhead advancing is not motion: the view is still, so the medium stays at full quality, and screen-anchored seeding keeps the marks from shimmering.</p>
+</section>
+
+<!-- 5 benchmark -->
+<section class="board" id="bench" style="width:1240px">
+ <div class="hd"><h1>Run benchmark</h1><span class="sub">Profiler window. Values are filled by the run; nothing here is a measurement.</span></div>
+ <div style="display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:start">
+  <div class="win">
+   <div class="tb"><span>Run benchmark</span><span>×</span></div>
+   <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <span class="seg"><span class="on">Quick · ~2 min</span><span>Full · ~15–20 min</span><span>Soak · +10 min</span></span>
+    <p style="margin:0;color:var(--mute);line-height:1.5">Records your device, OS, driver and Principia build, the settings each scenario used, and how long every frame took. Nothing about you or your files. You can read the file before sending it.</p>
+    <p style="margin:0;color:var(--mute)">On battery: plug in for Full and Soak.</p>
+    <div style="display:flex;justify-content:flex-end;gap:8px"><span class="btn">Cancel</span><span class="btn" style="border-color:var(--acc);color:var(--acc)">Run</span></div>
+   </div>
+   <div style="border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+    <span class="k">During the run</span>
+    <div style="background:#0d0d0f;border-radius:3px;padding:8px 10px;display:flex;flex-direction:column;gap:4px" class="mono"><span>pan-nearfield · tier High</span><span style="color:var(--mute)">7 of 23 · 11 min left · Esc aborts</span></div>
+   </div>
+  </div>
+  <div class="win">
+   <div class="tb"><span>Results · principia-bench-&lt;device&gt;-&lt;date&gt;.jsonl</span><span class="badge">complete</span></div>
+   <table>
+    <tr><th>scenario</th><th>p50 moving</th><th>p95 moving</th><th>p99 moving</th><th>&gt; 41.7 ms</th><th>settle</th><th>bound</th></tr>
+    <tr><td>cold-start</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+    <tr><td>settle-near-field</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+    <tr><td>pan-nearfield</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+    <tr><td>playhead-march</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+    <tr><td>print-heavy</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+   </table>
+   <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line)"><span class="sub">Suggested tier: — (the highest that held 16.7 ms)</span><span style="display:flex;gap:8px"><span class="btn">Copy summary</span><span class="btn">Save file…</span><span class="btn">Apply suggested tier</span></span></div>
+  </div>
+ </div>
+ <p class="sub mono" style="margin:0">prin bench run --mode full · prin bench report FILE... --format md · prin bench compare A B</p>
+</section>
+</body></html>

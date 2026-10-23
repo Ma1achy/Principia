@@ -2049,6 +2049,8 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "ledger",
+ "num-bigint",
+ "num-rational",
  "proptest",
  "serde_json",
  "spirv-std",

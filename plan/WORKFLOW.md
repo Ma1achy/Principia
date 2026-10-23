@@ -95,7 +95,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 
 **Other directories:**
 - `xtask`: the runners.
-- `web/`: the browser product. Its unit tests run under Vitest (`npm --prefix web test -- <filter>`, the package's test
+- `web/`: v1 web's page and shell, the whole native app compiled to run in the browser (R-571; *was:* "the browser
+  product"). Its unit tests run under Vitest (`npm --prefix web test -- <filter>`, the package's test
   script running `vitest run`), and its browser suites under Playwright (R-146).
 - `fixtures/golden/` and `fixtures/gates/`: the test fixtures.
 

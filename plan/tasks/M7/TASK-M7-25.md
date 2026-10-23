@@ -9,7 +9,7 @@
 - **Size:** ~300 lines
 
 ## Goal
-The display stage (style, display scale, gamut clamp, CVD) is a set of settings outside every occupant and preset, never seen by the codegen, edited in the Display window (R-67), and colour-vision simulation applies uniformly to everything displayed: the main render, the sphere preview, the equirect unwrap and the node thumbnails.
+The display stage (the Print graph in style's place, R-485; display scale, gamut clamp, CVD) is a set of settings outside every occupant and preset, never seen by the codegen, edited in the Display window (R-67), and colour-vision simulation applies uniformly to everything displayed: the main render, the sphere preview, the equirect unwrap and the node thumbnails.
 
 ## References
 - `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)"
@@ -22,7 +22,7 @@ The display stage (style, display scale, gamut clamp, CVD) is a set of settings 
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 
 ## Deliverables
-- `crates/gui/src/windows/display.rs` — the Display window (order shown, CVD mode, render→display scale, gamut clamp; style placeholder until TASK-M7-26).
+- `crates/gui/src/windows/display.rs` — the Display window (order shown, CVD mode, render→display scale, gamut clamp; a Print placeholder until TASK-M8-68's Print panel).
 - Display settings held outside `RenderState`'s stain graph; the preview, unwrap and thumbnail paths routed through the display chain.
 - Screenshot scenario deutan-everywhere.
 
@@ -32,3 +32,4 @@ The display stage (style, display scale, gamut clamp, CVD) is a set of settings 
 ## Notes
 - Which state struct holds the display settings (RenderState or ViewUI) is not stated by the requirement; gui_state_contract §2 governs.
 - R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and fills the window with the real display settings, keeping REQ-COL-026.
+- **R-485 (PR #281, code review 5608337157 F2):** REQ-COL-026 is restated with the Print graph in style's place. *Was:* the Goal's "The display stage (style, display scale, gamut clamp, CVD)" and the Deliverable's "style placeholder until TASK-M7-26".
