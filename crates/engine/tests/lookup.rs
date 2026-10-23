@@ -230,8 +230,9 @@ negative_control!(
     check_raw(3.0)
 );
 
-/// Checks a physical state: the lock is `E(x)`'s `z`, the same under a gauge and at any scale of the masses, with
-/// `lookup_mirrored`, `λ` and the landing on the latent chart's plane where it holds `x`.
+/// Checks a physical state: the lock is `E(x)`'s `z`, the same under a gauge and for the same system in another mass
+/// unit (`mᵢ·M`, `pᵢ·M^{3/2}`), with `lookup_mirrored`, `λ`, `M` and the landing on the latent chart's plane where it
+/// holds `x`.
 fn check_physical(masses: [f64; 3]) {
     let x = generic();
     let lock = exact(&latent_chart(), Exact::Physical(x)).expect("a physical state is refused");
@@ -242,6 +243,7 @@ fn check_physical(masses: [f64; 3]) {
         "the state below its ρ is not mirrored"
     );
     assert_eq!(lock.notices.lambda, enc.report.lambda, "λ is not reported");
+    assert_eq!(lock.notices.mass, 1.0, "M is not reported");
     assert!(!lock.notices.past_fold);
     let moved = gauge(&x, 0.7, [3.0, -2.0]);
     let again = exact(&latent_chart(), Exact::Physical(moved)).expect("refused");
@@ -249,12 +251,18 @@ fn check_physical(masses: [f64; 3]) {
         phys(&d(lock.z), &d(again.z)) < 1e-13,
         "a gauge moves the lock"
     );
-    let scaled = Ic { m: masses, ..x };
+    let total: f64 = masses.iter().sum();
+    let scaled = Ic {
+        m: masses,
+        r: x.r,
+        p: x.p.map(|v| v.map(|c| c * total * total.sqrt())),
+    };
     let lock2 = exact(&latent_chart(), Exact::Physical(scaled)).expect("refused");
     assert!(
         phys(&d(lock.z), &d(lock2.z)) < 1e-13,
         "the masses {masses:?} are not read as proportions"
     );
+    assert_eq!(lock2.notices.mass, total, "M is not reported");
     // Upper: no mirror.
     let up = Ic {
         r: x.r.map(|v| [v[0], -v[1]]),
@@ -291,6 +299,75 @@ negative_control!(
     "other mass proportions are another system",
     expected = "are not read as proportions",
     check_physical([2.5, 1.0, 1.5])
+);
+
+/// `K/|U|` and `E` of `x`.
+fn virial(x: &Ic<f64>) -> (f64, f64) {
+    let i = invariants(x);
+    (i.k / -i.u, i.e)
+}
+
+/// The Lagrange equilateral relative equilibrium as the literature prints it (`G = mᵢ = 1`, so `M = 3`; side 1;
+/// `ω² = M/a³`), its momenta times `stretch`.
+fn lagrange(stretch: f64) -> Ic<f64> {
+    let (m, w, s3) = (1.0, 3.0_f64.sqrt(), 3.0_f64.sqrt());
+    let r = [[1.0 / s3, 0.0], [-0.5 / s3, 0.5], [-0.5 / s3, -0.5]];
+    Ic {
+        m: [m; 3],
+        r,
+        p: r.map(|v| [-w * v[1] * m * stretch, w * v[0] * m * stretch]),
+    }
+}
+
+/// Checks the mass unit (Part 6, "The physical form's masses"): the `M = 3` Lagrange entry, its momenta times
+/// `stretch`, locks with the entry's own `K/|U| = ½`, `E < 0` and `L_z > 0`, and records `M = 3`; the pair and triple
+/// forms record their perimeter, a raw `z` 1, and the partial form 1 by default or the given masses' sum.
+fn check_mass_unit(stretch: f64) {
+    let entry = lagrange(1.0);
+    let (ratio, energy) = virial(&entry);
+    assert!(
+        (ratio - 0.5).abs() < 1e-14 && energy < 0.0,
+        "{ratio}, {energy}"
+    );
+    let lock = exact(&latent_chart(), Exact::Physical(lagrange(stretch))).expect("refused");
+    let x = d(lock.z);
+    let (got, e_lock) = virial(&x);
+    assert!(
+        (got - ratio).abs() < 1e-12,
+        "the lock's K/|U| = {got} is not the entry's {ratio}"
+    );
+    assert!(e_lock < 0.0, "the lock's E = {e_lock} is not bound");
+    assert!(invariants(&x).lz > 0.0, "the lock's sense of rotation");
+    assert_eq!(lock.notices.mass, 3.0, "M = 3 is not recorded");
+    let mass = |entry: Exact| exact(&burrau(), entry).expect("refused").notices.mass;
+    assert_eq!(mass(Exact::Pythagorean { m: 2, n: 1 }), 12.0);
+    assert_eq!(mass(Exact::Triple([6, 8, 10])), 24.0);
+    assert_eq!(mass(Exact::Raw(e(&generic()).z.z)), 1.0);
+    let part = |masses| {
+        let p = Partial {
+            masses,
+            positions: None,
+            momenta: None,
+        };
+        lookup_partial::<Defaults, _, _>(&latent_chart(), &p, None, phys, &tol())
+            .expect("refused")
+            .notices
+            .mass
+    };
+    assert_eq!(part(None), 1.0);
+    assert_eq!(part(Some([1.0, 2.0, 3.0])), 6.0);
+}
+
+#[test]
+fn lookup_forms_mass_unit() {
+    check_mass_unit(1.0);
+}
+
+negative_control!(
+    lookup_forms_mass_unit,
+    "the momenta kept as entered, the old reading, is the entry with its momenta times M^{3/2}: unbound",
+    expected = "is not the entry's",
+    check_mass_unit(3.0 * 3.0_f64.sqrt())
 );
 
 /// Checks the fold flag reaches the lock: the leg-swapped twin `(4, 3, 5)` on the folded `(θ, K)` chart is past the
@@ -940,6 +1017,7 @@ fn check_changed(tiny: f64) {
         clamped: None,
         mirrored: false,
         lambda: 1.0,
+        mass: 1.0,
         past_fold: false,
     };
     assert!(!quiet.lookup_clamped());

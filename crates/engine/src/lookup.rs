@@ -8,13 +8,16 @@
 //!   `‖·‖_phys`, `ε_phys` and curve tolerance ([`Tolerances`]), and locked: the lock's anchor is its latent `z`, and its
 //!   chart point where it lands on the chart. A raw `z` keeps each control the clamp did not move bit for bit.
 //! - **Partial** ([`Partial`], [`lookup_partial`]): any of the three blocks, the rest filled with Part 6's defaults
-//!   (masses equal, or the Burrau system's on a Burrau chart ([`Fill`]); the configuration the Burrau triangle at the
-//!   locked `ν`, or `ν = ½`, on a Burrau chart, else its latent controls 0; the momenta at rest), then the same
-//!   encode, ladder and lock, and a slice through the lock spanning the unspecified controls ([`Slice`]; Part 6,
-//!   "The partial specification's blocks and slice basis", REQ-ENC-031).
+//!   (masses equal, `⅓` each, or the Burrau system's on a Burrau chart ([`Fill`]); the configuration the Burrau
+//!   triangle at the locked `ν`, or `ν = ½`, on a Burrau chart, else its latent controls 0; the momenta at rest), then
+//!   the same encode, ladder and lock, and a slice through the lock spanning the unspecified controls ([`Slice`];
+//!   Part 6, "The partial specification's blocks and slice basis", REQ-ENC-031).
 //!
-//! **The masses are proportions** (Part 6, "The physical form's masses"): an entry's masses are divided by their sum,
-//! `Σmᵢ = 1` being the section's unit of mass; positions and momenta are read in those units.
+//! **The masses** (Part 6, "The physical form's masses"): the section's unit of mass is `M = Σmᵢ = 1`, so an entry of
+//! mass `M` is carried to it by the change of mass unit with `G = 1` and the length unit kept, `mᵢ ← mᵢ/M`,
+//! `pᵢ ← pᵢ/M^{3/2}` (the velocities by `1/√M`), which keeps every ratio of the motion; `M` is recorded
+//! ([`Notices::mass`]). The pair and triple forms' masses are the sides, so their `M` is the perimeter; a raw `z` has
+//! `M = 1`; the partial form's default masses are `⅓` each, or the Burrau system's.
 //!
 //! **The ladder** ([`Layer`]; § "Chart-aware validation", in order):
 //! 1. **Hypercube bounds** in the controls' clamp space (§ "Layer 1's space and bounds", REQ-ENC-023): a control fails
@@ -165,6 +168,9 @@ pub struct Notices {
     pub mirrored: bool,
     /// `λ`, `lookup_rescaled`'s value.
     pub lambda: f64,
+    /// `M`, the entered masses' sum, the mass unit the entry was carried from to the section's `M = 1` (Part 6, "The
+    /// physical form's masses"): with `λ`, the multiply-back's factor (REQ-ENC-014).
+    pub mass: f64,
     /// A curve chart's fold flag (`kernel::encode::curve`; REQ-ENC-022).
     pub past_fold: bool,
 }
@@ -329,8 +335,10 @@ pub fn slice(z0: [f64; 8], free: BlockTouch) -> Option<Slice> {
     })
 }
 
-/// `x` with its masses divided by their sum; refused where a value is not finite or a mass is not positive.
-fn entered(x: &Ic<f64>) -> Result<Ic<f64>, Rejected> {
+/// `x` carried to the section's mass unit and `M`, its masses' sum (Part 6, "The physical form's masses"): with `G = 1`
+/// and the length unit kept, `mᵢ ← mᵢ/M`, `vᵢ ← vᵢ/√M`, so `pᵢ ← pᵢ/M^{3/2}`; refused where a value is not finite or a
+/// mass is not positive.
+fn entered(x: &Ic<f64>) -> Result<(Ic<f64>, f64), Rejected> {
     let finite =
         x.m.iter()
             .chain(x.r.iter().flatten())
@@ -341,16 +349,19 @@ fn entered(x: &Ic<f64>) -> Result<Ic<f64>, Rejected> {
     if !x.m.iter().all(|&m| m > 0.0) {
         return Err(refuse(Layer::Entry, Failed::MassNotPositive));
     }
-    Ok(Ic {
-        m: proportions(x.m),
-        ..*x
-    })
+    let total = x.m[0] + x.m[1] + x.m[2];
+    let carry = total * total.sqrt();
+    let carried = Ic {
+        m: x.m.map(|v| v / total),
+        r: x.r,
+        p: x.p.map(|v| v.map(|c| c / carry)),
+    };
+    Ok((carried, total))
 }
 
-/// `m` divided by its sum.
-fn proportions(m: [f64; 3]) -> [f64; 3] {
-    let total = m[0] + m[1] + m[2];
-    m.map(|v| v / total)
+/// The masses of a Burrau triangle `(a, b, c)` as entered, its sides (`principia_chart_reference.md` §4.1): their sum.
+fn perimeter(t: &Triple) -> f64 {
+    [t.a, t.b, t.c].iter().map(|&s| s as f64).sum()
 }
 
 /// The Burrau system `s` at rest.
@@ -376,9 +387,9 @@ where
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
-    let (x, raw) = match *entry {
+    let (x, raw, mass) = match *entry {
         Exact::Pythagorean { m, n } => match euclid(m, n) {
-            Some(t) => (at_rest(t.burrau()), None),
+            Some(t) => (at_rest(t.burrau()), None, perimeter(&t)),
             None => return Err(refuse(Layer::Entry, Failed::NotPrimitive)),
         },
         Exact::Triple([a, b, c]) => {
@@ -386,7 +397,8 @@ where
             if a == 0 || b == 0 || sq(a).checked_add(sq(b)) != Some(sq(c)) {
                 return Err(refuse(Layer::Entry, Failed::NotATriple));
             }
-            (at_rest(Triple { a, b, c }.burrau()), None)
+            let t = Triple { a, b, c };
+            (at_rest(t.burrau()), None, perimeter(&t))
         }
         Exact::Raw(z) => {
             if !z.iter().all(|v| v.is_finite()) {
@@ -395,11 +407,15 @@ where
             (
                 decode::decode::<S, f64>(&decode::Latent::new(z)).ic,
                 Some(z),
+                1.0,
             )
         }
-        Exact::Physical(x) => (entered(&x)?, None),
+        Exact::Physical(x) => {
+            let (x, mass) = entered(&x)?;
+            (x, None, mass)
+        }
     };
-    ladder::<S, C, N>(chart, &x, raw, norm, tol)
+    ladder::<S, C, N>(chart, &x, raw, mass, norm, tol)
 }
 
 /// A partial entry on `chart` under `S` (the module's note): the blocks not given filled, Burrau's at `locked_nu` or
@@ -429,31 +445,36 @@ where
     let m = match partial.masses {
         Some(m) => m,
         None if C::BURRAU => burrau.m,
-        None => [1.0; 3],
+        None => [1.0 / 3.0; 3],
     };
+    let p = partial.momenta.unwrap_or([[0.0; 2]; 3]);
     let r = match partial.positions {
         Some(r) => r,
         None if C::BURRAU => burrau.r,
-        None => config::decode::<S, f64>([0.0; 2], &mass::from_masses(proportions(m))).r,
+        None => [[0.0; 2]; 3],
     };
-    let p = partial.momenta.unwrap_or([[0.0; 2]; 3]);
-    let x = entered(&Ic { m, r, p })?;
+    // The carry keeps the positions, so the latent default configuration is decoded once the masses are carried.
+    let (mut x, total) = entered(&Ic { m, r, p })?;
+    if partial.positions.is_none() && !C::BURRAU {
+        x.r = config::decode::<S, f64>([0.0; 2], &mass::from_masses(x.m)).r;
+    }
     let free = BlockTouch {
         config: partial.positions.is_none(),
         momentum: partial.momenta.is_none(),
         mass: partial.masses.is_none(),
     };
-    let mut locked = ladder::<S, C, N>(chart, &x, None, norm, tol)?;
+    let mut locked = ladder::<S, C, N>(chart, &x, None, total, norm, tol)?;
     locked.slice = slice(locked.z, free);
     Ok(locked)
 }
 
 /// The ladder on the entered state `x` (the module's note); `raw` the entered `z`, whose unclamped controls the lock
-/// keeps.
+/// keeps; `mass` the entry's `M`.
 fn ladder<S, C, N>(
     chart: &C,
     x: &Ic<f64>,
     raw: Option<[f64; 8]>,
+    mass: f64,
     norm: N,
     tol: &Tolerances,
 ) -> Result<Locked, Rejected>
@@ -537,6 +558,7 @@ where
             clamped,
             mirrored: e.report.mirrored,
             lambda: e.report.lambda,
+            mass,
             past_fold: ce.curve.is_some_and(|c| c.closed.past_fold),
         },
     })
