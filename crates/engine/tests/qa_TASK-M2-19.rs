@@ -5,18 +5,22 @@
 //! validation", "Layer 1's space and bounds", "Layer 3's tolerance", "A qualitatively different IC"), exactly
 //! coincident bodies clamped and never rejected (REQ-ENC-019; R-13, R-113), and the decode-sanity tolerance's claim
 //! that decode's residuals sit under it at f64 and f32 over fuzzed `z` (REQ-ENC-027). Every quantity asserted is
-//! computed here from the contract's own formulas (masses as proportions, Burrau's sides, `ν = sec θ − tan θ`,
-//! `q = (p_ρ, p_λ)`, `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control (R-176).
+//! computed here from the contract's own formulas (the masses carried to `M = 1` with the momenta by `M^{3/2}`,
+//! Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`, `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative
+//! control (R-176). The mass unit (Part 6, "The physical form's masses", physics review 5630998530 of PR #284, P1) and
+//! layer 1's zero class (§ "The zero class in floating point", REQ-ENC-036, and its band `k`, REQ-ENC-037) are tested
+//! at the end.
 
 use engine::lookup::{
-    lookup, lookup_partial, residuals, sanity, Class, Exact, Failed, Layer, Locked, Partial,
-    Rejected, Tolerances,
+    changed, lookup, lookup_partial, residuals, sanity, Class, Classes, Exact, Failed, Layer,
+    Locked, Partial, Rejected, Tolerances,
 };
 use kernel::chart::{Burrau, Constraint, Latent};
 use kernel::decode::{self, Ic};
 use kernel::encode::by_kind::Landing;
+use kernel::encode::encode;
 use kernel::generated::links::Defaults;
-use ledger::constants::{DECODE_SANITY, EPS_PHYS};
+use ledger::constants::{DECODE_SANITY, EPS_PHYS, ZERO_CLASS};
 use validation::negative_control;
 use validation::roundtrip::{charts, phys};
 
@@ -322,13 +326,15 @@ negative_control!(
 );
 
 /// `g·x` under a translation, a boost, a rotation, a rescale and the full-state mirror (inverse_encode_contract
-/// Part 1's gauge group).
+/// Part 1's gauge group), in the mass unit `1/mass`: the masses times `mass` and, with `G = 1` and the length unit
+/// kept, the velocities times `√mass`, so the momenta times `mass^{3/2}` (Part 6, "The physical form's masses", the
+/// similarity T3 preserves the physics under), so every image is the same system.
 fn gauge(
     x: &Ic<f64>,
     shift: [f64; 2],
     boost: [f64; 2],
     angle: f64,
-    scale: f64,
+    (scale, mass): (f64, f64),
     mirror: bool,
 ) -> Ic<f64> {
     let (s, c) = angle.sin_cos();
@@ -340,8 +346,9 @@ fn gauge(
             w
         }
     };
+    let carry = mass * mass.sqrt();
     Ic {
-        m: x.m.map(|m| 3.0 * m),
+        m: x.m.map(|m| mass * m),
         r: x.r.map(|v| {
             let w = f(v);
             [scale * w[0] + shift[0], scale * w[1] + shift[1]]
@@ -349,16 +356,17 @@ fn gauge(
         p: std::array::from_fn(|i| {
             let w = f(x.p[i]);
             [
-                w[0] / scale.sqrt() + x.m[i] * boost[0],
-                w[1] / scale.sqrt() + x.m[i] * boost[1],
+                carry * w[0] / scale.sqrt() + mass * x.m[i] * boost[0],
+                carry * w[1] / scale.sqrt() + mass * x.m[i] * boost[1],
             ]
         }),
     }
 }
 
-/// A physical entry locks `C(x)`'s `z`: every member of `x`'s gauge orbit locks the same state (T1), its masses the
-/// entry's proportions, its CoM at the origin and `Σpᵢ = 0` though the entry's were not, `I = 1`, and `E` and `L_z` the
-/// entry's carried by Part 2's rescale; the full-state mirror raises `lookup_mirrored` on one side only.
+/// A physical entry locks `C(x)`'s `z`: every member of `x`'s gauge orbit, in any mass unit, locks the same state
+/// (T1, T3), its masses the entry's proportions, its CoM at the origin and `Σpᵢ = 0` though the entry's were not,
+/// `I = 1`, `M = Σmᵢ` recorded, and `E` and `L_z` the entry's carried to `M = 1` (`E/M²`, `L_z/M^{3/2}`; Part 6) and
+/// then by Part 2's rescale; the full-state mirror raises `lookup_mirrored` on one side only.
 fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
     let chart = latent();
     let base = exact(&chart, Exact::Physical(*x)).expect("a physical entry is refused");
@@ -396,22 +404,33 @@ fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
             *mirrored,
             "lookup_mirrored does not follow the mirror"
         );
-        // Part 2: E and L_z carried by the rescale, `E·√I_in` and `L_z/I_in^{1/4}`, in the entry's own CoM frame.
+        // M = Σmᵢ is recorded with the lock (Part 6).
         let gm: f64 = g.m.iter().sum();
+        assert!(
+            (lock.notices.mass - gm).abs() <= 4.0 * f64::EPSILON * gm,
+            "the lock records M = {}, not the entry's {gm}",
+            lock.notices.mass
+        );
+        // E and L_z of the entry in its own units and its own CoM frame, carried to M = 1 (Part 6: `E/M²`,
+        // `L_z/M^{3/2}`, the positions kept, so `I_in` is read with the masses `mᵢ/M`), then by Part 2's rescale,
+        // `E·√I_in` and `L_z/I_in^{1/4}`.
         let prop = g.m.map(|m| m / gm);
         let com: [f64; 2] = std::array::from_fn(|k| (0..3).map(|i| prop[i] * g.r[i][k]).sum());
         let ptot: [f64; 2] = std::array::from_fn(|k| (0..3).map(|i| g.p[i][k]).sum());
         let frame = Ic {
-            m: prop,
+            m: g.m,
             r: g.r.map(|v| [v[0] - com[0], v[1] - com[1]]),
             p: std::array::from_fn(|i| {
                 [g.p[i][0] - prop[i] * ptot[0], g.p[i][1] - prop[i] * ptot[1]]
             }),
         };
         let i_in: f64 = (0..3)
-            .map(|i| frame.m[i] * (frame.r[i][0].powi(2) + frame.r[i][1].powi(2)))
+            .map(|i| prop[i] * (frame.r[i][0].powi(2) + frame.r[i][1].powi(2)))
             .sum();
-        let (e_want, lz_want) = (energy(&frame) * i_in.sqrt(), lz(&frame) / i_in.powf(0.25));
+        let (e_want, lz_want) = (
+            energy(&frame) / (gm * gm) * i_in.sqrt(),
+            lz(&frame) / (gm * gm.sqrt()) / i_in.powf(0.25),
+        );
         // Each to ε_phys relative to the magnitude of its terms, the scale of its rounding.
         assert!(
             (energy(&xg) - e_want).abs() <= eps_phys() * magnitude(&xg).0,
@@ -432,14 +451,46 @@ fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
 
 fn orbit(x: &Ic<f64>) -> Vec<(Ic<f64>, bool)> {
     vec![
-        (gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, 1.0, false), false),
-        (gauge(x, [3.5, -1.25], [0.0, 0.0], 0.0, 1.0, false), false),
-        (gauge(x, [0.0, 0.0], [0.7, -0.4], 0.0, 1.0, false), false),
-        (gauge(x, [0.0, 0.0], [0.0, 0.0], 2.1, 1.0, false), false),
-        (gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, 4.0, false), false),
-        (gauge(x, [-2.0, 0.5], [0.3, 0.9], -0.8, 0.25, false), false),
-        (gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, 1.0, true), true),
-        (gauge(x, [1.0, 2.0], [-0.2, 0.1], 0.4, 2.5, true), true),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 1.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 3.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 0.01), false),
+            false,
+        ),
+        (
+            gauge(x, [3.5, -1.25], [0.0, 0.0], 0.0, (1.0, 3.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.7, -0.4], 0.0, (1.0, 3.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 2.1, (1.0, 3.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, (4.0, 3.0), false),
+            false,
+        ),
+        (
+            gauge(x, [-2.0, 0.5], [0.3, 0.9], -0.8, (0.25, 12.0), false),
+            false,
+        ),
+        (
+            gauge(x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 3.0), true),
+            true,
+        ),
+        (
+            gauge(x, [1.0, 2.0], [-0.2, 0.1], 0.4, (2.5, 1000.0), true),
+            true,
+        ),
     ]
 }
 
@@ -455,11 +506,27 @@ negative_control!(
     expected = "a gauge image locks a different state",
     {
         let x = some_state();
-        let mut bad = gauge(&x, [0.0, 0.0], [0.0, 0.0], 0.0, 1.0, true);
+        let mut bad = gauge(&x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 3.0), true);
         bad.p = x.p;
         check_physical(&x, &[(bad, true)])
     }
 );
+
+mod momenta_kept {
+    use super::*;
+    negative_control!(
+        lookup_forms_qa_physical_locks_the_canonical_state,
+        "the masses times 3 with the momenta kept, the stale reading, is another system (velocities times 3), so its \
+         lock must differ",
+        expected = "a gauge image locks a different state",
+        {
+            let x = some_state();
+            let mut bad = gauge(&x, [0.0, 0.0], [0.0, 0.0], 0.0, (1.0, 3.0), false);
+            bad.p = x.p;
+            check_physical(&x, &[(bad, false)])
+        }
+    );
+}
 
 // ── REQ-ENC-012, REQ-ENC-031: the partial form and its slice ──────────────────────────────────────────────────────
 
@@ -925,3 +992,518 @@ negative_control!(
     expected = "above decode_sanity's",
     check_decode_residuals(1e-6)
 );
+
+// ── REQ-ENC-012: the mass unit (Part 6, "The physical form's masses"; physics review 5630998530 of PR #284, P1) ────
+
+/// `K/|U|` of `x` (`G = 1`), each from its own definition.
+fn virial(x: &Ic<f64>) -> f64 {
+    let k: f64 = (0..3)
+        .map(|i| (x.p[i][0].powi(2) + x.p[i][1].powi(2)) / (2.0 * x.m[i]))
+        .sum();
+    k / (k - energy(x))
+}
+
+/// Lagrange's equilateral relative equilibrium with the masses `m` (any masses, `G = 1`), side `a`, turning rigidly
+/// about its CoM at `ω² = M/a³`, `M = Σmᵢ`: a circular central-configuration orbit, so `K/|U| = ½` and `E < 0`.
+fn lagrange(m: [f64; 3], a: f64) -> Ic<f64> {
+    let total: f64 = m.iter().sum();
+    let w = (total / a.powi(3)).sqrt();
+    let h = a * 3.0_f64.sqrt() / 2.0;
+    let corners = [[0.0, 0.0], [a, 0.0], [a / 2.0, h]];
+    let com: [f64; 2] =
+        std::array::from_fn(|k| (0..3).map(|i| m[i] * corners[i][k]).sum::<f64>() / total);
+    let r = corners.map(|v| [v[0] - com[0], v[1] - com[1]]);
+    Ic {
+        m,
+        r,
+        p: std::array::from_fn(|i| [-w * r[i][1] * m[i], w * r[i][0] * m[i]]),
+    }
+}
+
+/// An entry of mass `M ≠ 1` with momenta locks the same motion (Part 6: `mᵢ ← mᵢ/M`, `pᵢ ← pᵢ/M^{3/2}`, which keeps
+/// `K/|U|` and the signs of `E` and `L_z`): its lock's `K/|U|` is the entry's, its `E < 0`, its `L_z` the entry's sign
+/// (the mirror undone), `E·L_z²` the entry's over `M⁵` (`E/M²`, `L_z/M^{3/2}`, and Part 2's rescale keeps `E·L_z²`),
+/// and `M` is recorded.
+fn check_mass_unit(entry: &Ic<f64>, want_ratio: f64) {
+    let total: f64 = entry.m.iter().sum();
+    let lock = exact(&latent(), Exact::Physical(*entry)).expect("the entry is refused");
+    assert!(
+        !lock.notices.lookup_clamped(),
+        "fixture: the entry is clamped"
+    );
+    let x = decoded(&latent(), &lock);
+    assert!(
+        (virial(&x) - want_ratio).abs() <= 1e-12,
+        "the lock's K/|U| = {} is not the entry's {want_ratio}",
+        virial(&x)
+    );
+    assert!(
+        energy(&x) < 0.0,
+        "the lock's E = {} is not bound",
+        energy(&x)
+    );
+    let sign = if lock.notices.mirrored { -1.0 } else { 1.0 };
+    assert_eq!(
+        (sign * lz(&x)).signum(),
+        lz(entry).signum(),
+        "the lock's sense of rotation is not the entry's"
+    );
+    let invariant = |x: &Ic<f64>| energy(x) * lz(x).powi(2);
+    let want = invariant(entry) / total.powi(5);
+    assert!(
+        (invariant(&x) - want).abs() <= 1e-12 * want.abs(),
+        "the lock's E·L_z² = {} is not the entry's over M⁵, {want}",
+        invariant(&x)
+    );
+    assert!(
+        (lock.notices.mass - total).abs() <= 4.0 * f64::EPSILON * total,
+        "the lock records M = {}, not {total}",
+        lock.notices.mass
+    );
+}
+
+#[test]
+fn lookup_forms_qa_mass_unit_keeps_the_motion() {
+    for (m, a) in [
+        ([1.0, 2.0, 3.0], 1.5),
+        ([1.0, 1.0, 1.0], 1.0),
+        ([0.002, 0.003, 0.004], 0.7),
+        ([400.0, 250.0, 350.0], 2.0),
+    ] {
+        let x = lagrange(m, a);
+        assert!(
+            (virial(&x) - 0.5).abs() <= 1e-13 && energy(&x) < 0.0,
+            "fixture: K/|U| = {}, E = {}",
+            virial(&x),
+            energy(&x)
+        );
+        check_mass_unit(&x, 0.5);
+    }
+}
+
+negative_control!(
+    lookup_forms_qa_mass_unit_keeps_the_motion,
+    "the stale reading's lock is the masses as proportions with the M = 3/2 momenta kept, velocities times 3/2: \
+     K/|U| = ½·(3/2)³, so the check must fail",
+    expected = "is not the entry's",
+    {
+        let mut x = lagrange([0.25, 0.5, 0.75], 1.5);
+        x.m = x.m.map(|m| m / 1.5);
+        check_mass_unit(&x, 0.5)
+    }
+);
+
+/// `M` is recorded with the lock (Part 6): the pair and triple forms' masses are the sides, so `M` is the perimeter;
+/// a raw `z` decodes at `M = 1`.
+fn check_mass_recorded(entries: &[(Exact, f64)]) {
+    for &(entry, want) in entries {
+        let lock = exact(&burrau(), entry).expect("the entry is refused");
+        assert_eq!(
+            lock.notices.mass, want,
+            "{entry:?} records M = {}",
+            lock.notices.mass
+        );
+    }
+}
+
+#[test]
+fn lookup_forms_qa_mass_recorded() {
+    check_mass_recorded(&[
+        (Exact::Pythagorean { m: 3, n: 2 }, 30.0),
+        (Exact::Pythagorean { m: 4, n: 1 }, 40.0),
+        (Exact::Triple([10, 24, 26]), 60.0),
+        (Exact::Triple([8, 15, 17]), 40.0),
+        (Exact::Raw([0.3, -0.2, 0.1, 0.4, -0.5, 0.2, 0.6, -0.1]), 1.0),
+    ]);
+}
+
+negative_control!(
+    lookup_forms_qa_mass_recorded,
+    "(3, 2)'s triangle is (5, 12, 13), perimeter 30; a check expecting the unit mass must fail",
+    expected = "records M =",
+    check_mass_recorded(&[(Exact::Pythagorean { m: 3, n: 2 }, 1.0)])
+);
+
+/// The partial form's default masses are `⅓` each, so a momentum block given without masses is read in `M = 1` units,
+/// and masses given carry the momenta given with them (Part 6): on the latent chart, the configuration and momenta of
+/// `some_state` with no masses lock as the exact entry with `default` masses, and with masses `(1, 2, 3)` as the exact
+/// entry `(1, 2, 3)` and as its carried form `(⅙, ⅓, ½)` with the momenta over `6^{3/2}`; `M` is 1 and 6.
+fn check_partial_mass_unit(default: [f64; 3]) {
+    let chart = latent();
+    let x = some_state();
+    let given = [1.0, 2.0, 3.0];
+    let carry = 6.0 * 6.0_f64.sqrt();
+    let cases = [
+        (None, Ic { m: default, ..x }, 1.0),
+        (Some(given), Ic { m: given, ..x }, 6.0),
+        (
+            Some(given),
+            Ic {
+                m: given.map(|m| m / 6.0),
+                r: x.r,
+                p: x.p.map(|v| [v[0] / carry, v[1] / carry]),
+            },
+            6.0,
+        ),
+    ];
+    for (masses, reference, total) in cases {
+        let p = Partial {
+            masses,
+            positions: Some(x.r),
+            momenta: Some(x.p),
+        };
+        let lock = partial(&chart, p, None).expect("a partial entry is refused");
+        let want = exact(&chart, Exact::Physical(reference)).expect("the exact entry is refused");
+        let (xl, xw) = (decoded(&chart, &lock), decoded(&chart, &want));
+        assert!(
+            phys(&xl, &xw) <= eps_phys(),
+            "{p:?} does not lock as the exact {:?}: ‖Δ‖_phys = {:e}",
+            reference.m,
+            phys(&xl, &xw)
+        );
+        assert!(
+            (lock.notices.mass - total).abs() <= 4.0 * f64::EPSILON * total,
+            "{p:?} records M = {}, not {total}",
+            lock.notices.mass
+        );
+    }
+}
+
+#[test]
+fn lookup_forms_qa_partial_mass_unit() {
+    check_partial_mass_unit([1.0 / 3.0; 3]);
+}
+
+negative_control!(
+    lookup_forms_qa_partial_mass_unit,
+    "default masses (1, 1, 1) are M = 3, whose momenta are carried by 3^{3/2}: another system, so the check must fail",
+    expected = "does not lock as the exact",
+    check_partial_mass_unit([1.0; 3])
+);
+
+// ── REQ-ENC-036: the zero class in floating point ─────────────────────────────────────────────────────────────────
+
+/// `L_z`'s and `E`'s scales as the contract defines them (§ "The zero class in floating point"): `Σ‖rᵢ‖‖pᵢ‖` and
+/// `K + |U|`.
+fn scales(x: &Ic<f64>) -> (f64, f64) {
+    let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+    let l: f64 = (0..3).map(|i| norm(x.r[i]) * norm(x.p[i])).sum();
+    let k: f64 = (0..3)
+        .map(|i| (x.p[i][0].powi(2) + x.p[i][1].powi(2)) / (2.0 * x.m[i]))
+        .sum();
+    let u = k - energy(x);
+    (l, k + u.abs())
+}
+
+/// `Classes::of` gives `L_z`, `E` and the contract's two scales, each checked against `scale_lz`, the expected `L_z`
+/// scale's formula, at 64 fuzzed states.
+fn check_class_scales(scale_lz: &dyn Fn(&Ic<f64>) -> f64) {
+    let mut rng = Rng(0x2E80_0036);
+    for _ in 0..64 {
+        let x = Ic {
+            m: {
+                let m: [f64; 3] = std::array::from_fn(|_| rng.uniform(0.05, 1.0));
+                let t: f64 = m.iter().sum();
+                m.map(|v| v / t)
+            },
+            r: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+            p: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+        };
+        let c = Classes::of(&x);
+        let close = |a: f64, b: f64| (a - b).abs() <= 1e-13 * b.abs().max(1.0);
+        assert!(close(c.lz, lz(&x)), "L_z = {}, not {}", c.lz, lz(&x));
+        assert!(close(c.e, energy(&x)), "E = {}, not {}", c.e, energy(&x));
+        assert!(
+            close(c.lz_scale, scale_lz(&x)),
+            "L_z's scale is {}, not {}",
+            c.lz_scale,
+            scale_lz(&x)
+        );
+        assert!(
+            close(c.e_scale, scales(&x).1),
+            "E's scale is {}, not K + |U| = {}",
+            c.e_scale,
+            scales(&x).1
+        );
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_qa_scales() {
+    check_class_scales(&|x| scales(x).0);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_qa_scales,
+    "Σ|rᵢ × pᵢ| is not Σ‖rᵢ‖‖pᵢ‖ where rᵢ and pᵢ are not perpendicular, so the scale check must fail",
+    expected = "L_z's scale is",
+    check_class_scales(&|x| (0..3)
+        .map(|i| (x.r[i][0] * x.p[i][1] - x.r[i][1] * x.p[i][0]).abs())
+        .sum())
+);
+
+/// Class 0 is `|v| ≤ band·scale`, the edge included; outside it the class is `v`'s sign; a value whose scale is not
+/// finite has no class to change (§ "The zero class in floating point"). `edge` is the value placed where the band
+/// ends, at a scale and band whose product is exact.
+fn check_zero_band(edge: f64) {
+    let band = 2.0_f64.powi(-28);
+    let scale = 3.0;
+    let at = |lz: f64, e: f64| Classes {
+        lz,
+        lz_scale: scale,
+        e,
+        e_scale: scale,
+    };
+    let bound = -1.0;
+    for sign in [1.0, -1.0] {
+        // L_z at the band's edge and L_z = 0 are one class, so a clamp between them changes nothing.
+        assert_eq!(
+            changed(&at(sign * edge, bound), &at(0.0, bound), band),
+            None,
+            "L_z = {:e} at the band's edge is not class 0",
+            sign * edge
+        );
+        assert_eq!(
+            changed(&at(0.0, bound), &at(-sign * edge, bound), band),
+            None,
+            "L_z = {:e} at the band's edge is not class 0",
+            -sign * edge
+        );
+        // E likewise.
+        assert_eq!(
+            changed(&at(1.0, sign * edge), &at(1.0, 0.0), band),
+            None,
+            "E = {:e} at the band's edge is not class 0",
+            sign * edge
+        );
+        // One ulp past the edge is the sign's class: a clamp to 0 changes it.
+        let past = (band * scale).next_up();
+        assert_eq!(
+            changed(&at(sign * past, bound), &at(0.0, bound), band),
+            Some(Class::Rotation),
+            "L_z one ulp past the band is class 0"
+        );
+        assert_eq!(
+            changed(&at(1.0, sign * past), &at(1.0, 0.0), band),
+            Some(Class::Energy),
+            "E one ulp past the band is class 0"
+        );
+        // Opposite signs outside the band are two classes.
+        assert_eq!(
+            changed(&at(sign * past, bound), &at(-sign * past, bound), band),
+            Some(Class::Rotation),
+            "L_z's sign flipped outside the band is no change"
+        );
+    }
+    // Relative: the same L_z is class 0 at a large scale and its sign's at a small one.
+    let small = Classes {
+        lz_scale: 1e-3,
+        ..at(1e-9, bound)
+    };
+    assert_eq!(
+        changed(&small, &Classes { lz: 0.0, ..small }, band),
+        Some(Class::Rotation),
+        "L_z = 1e-9 at scale 1e-3 is class 0"
+    );
+    let large = Classes {
+        lz_scale: 1e3,
+        ..at(1e-9, bound)
+    };
+    assert_eq!(
+        changed(&large, &Classes { lz: 0.0, ..large }, band),
+        None,
+        "L_z = 1e-9 at scale 1e3 is not class 0"
+    );
+    // A scale not finite: the entered value has no class, so its clamp changes none.
+    let unscaled = Classes {
+        lz_scale: f64::INFINITY,
+        ..at(1.0, bound)
+    };
+    assert_eq!(
+        changed(&unscaled, &at(-1.0, bound), band),
+        None,
+        "an L_z whose scale is not finite has a class"
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_qa_edge() {
+    check_zero_band(2.0_f64.powi(-28) * 3.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_qa_edge,
+    "one ulp past the band's edge is outside class 0, so the check that the edge is class 0 must fail",
+    expected = "at the band's edge is not class 0",
+    check_zero_band((2.0_f64.powi(-28) * 3.0).next_up())
+);
+
+/// A collinear state, unequal masses, moving along its line (`L_z = 0` in exact arithmetic, in every frame boosted
+/// along it), entered at 64 orientations, each with its own offset, boost along the line, scale and mass unit: one
+/// physical state, so one verdict (REQ-ENC-036). `β`'s clamp at the line moves `L_z` off 0 by about `ε_z` relative, a
+/// change of the sense of rotation, so that verdict is a layer-1 rejection naming `L_z`'s class.
+fn check_one_verdict(band: f64) {
+    let t = Tolerances {
+        zero_class: band,
+        ..tol()
+    };
+    let x = Ic {
+        m: [0.5, 0.3, 0.2],
+        r: [[-0.9, 0.0], [0.4, 0.0], [1.7, 0.0]],
+        p: [[0.25, 0.0], [-0.6, 0.0], [0.35, 0.0]],
+    };
+    let mut verdicts = Vec::new();
+    for k in 0..64 {
+        let angle = std::f64::consts::TAU * f64::from(k) / 64.0;
+        let scale = [0.015625, 1.0, 64.0][k as usize % 3];
+        let mass = [1.0, 5.0][k as usize % 2];
+        let (s, c) = angle.sin_cos();
+        let along = 0.3 * f64::from(k % 5) - 0.6;
+        let g = gauge(
+            &x,
+            [2.5 - 0.1 * f64::from(k), -1.3],
+            [along * c, along * s],
+            angle,
+            (scale, mass),
+            false,
+        );
+        let got = lookup::<Defaults, _, _>(&latent(), &Exact::Physical(g), phys, &t);
+        verdicts.push(got.map(|l| l.notices.moved.controls));
+    }
+    let first = verdicts[0];
+    for (k, v) in verdicts.iter().enumerate() {
+        assert_eq!(
+            *v, first,
+            "orientation {k} of 64 has its own verdict: {v:?}, not {first:?}"
+        );
+    }
+    assert!(
+        matches!(
+            first,
+            Err(Rejected {
+                layer: Layer::Hypercube,
+                failed: Failed::Clamp {
+                    class: Class::Rotation,
+                    ..
+                }
+            })
+        ),
+        "the collinear state's verdict is {first:?}, not a layer-1 rejection naming L_z's class"
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_qa_one_verdict() {
+    check_one_verdict(tol().zero_class);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_qa_one_verdict,
+    "compared against exactly 0, a rounded L_z = 0 takes its rounding's sign, so the verdict follows the gauge",
+    expected = "has its own verdict",
+    check_one_verdict(0.0)
+);
+
+// ── REQ-ENC-037: the band's k against C's rounding and the clamp's change ────────────────────────────────────────
+
+/// `n` states drawn here (masses on the simplex's interior, positions and momenta on `[−1, 1]²`, so neither from
+/// decode nor from the implementer's fixture), each against a gauge image (rotation, offset and boost on `[−8, 8)²`,
+/// scale `2^[−12, 12]`, either parity): the worst difference, in f64's ε relative to the larger scale, of `L_z` and of
+/// `E` between `C(x)` and `C(g·x)` and between `C(x)` and the decode of its unclamped `z`; and, for `n` collinear states
+/// moving along their line under a random gauge, the true `L_z` is 0: the worst `|L_z|` of `C` relative to its scale,
+/// and the least after encode's clamp, which every such state takes (`β` at the line).
+fn measure_band(n: usize) -> (f64, f64) {
+    let eps = f64::EPSILON;
+    let mut rng = Rng(0x2E80_0037);
+    let simplex = |rng: &mut Rng| {
+        let m: [f64; 3] = std::array::from_fn(|_| rng.uniform(0.05, 1.0));
+        let t: f64 = m.iter().sum();
+        m.map(|v| v / t)
+    };
+    let image = |rng: &mut Rng, x: &Ic<f64>| {
+        gauge(
+            x,
+            [rng.uniform(-8.0, 8.0), rng.uniform(-8.0, 8.0)],
+            [rng.uniform(-8.0, 8.0), rng.uniform(-8.0, 8.0)],
+            rng.uniform(0.0, std::f64::consts::TAU),
+            (2.0_f64.powf(rng.uniform(-12.0, 12.0)), 1.0),
+            rng.next() & 1 == 1,
+        )
+    };
+    let diff = |a: &Classes, b: &Classes| {
+        ((a.lz - b.lz).abs() / a.lz_scale.max(b.lz_scale) / eps)
+            .max((a.e - b.e).abs() / a.e_scale.max(b.e_scale) / eps)
+    };
+    let mut worst = 0.0_f64;
+    for _ in 0..n {
+        let x = Ic {
+            m: simplex(&mut rng),
+            r: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+            p: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+        };
+        let g = image(&mut rng, &x);
+        let (ex, eg) = (encode::<Defaults, f64>(&x), encode::<Defaults, f64>(&g));
+        let cx = Classes::of(&ex.canonical.ic);
+        worst = worst.max(diff(&cx, &Classes::of(&eg.canonical.ic)));
+        if ex.report.clamped_controls == 0 && !ex.report.coincident {
+            worst = worst.max(diff(&cx, &Classes::of(&d(ex.z.z))));
+        }
+    }
+    let mut least = f64::INFINITY;
+    for _ in 0..n {
+        let line = |rng: &mut Rng| [rng.uniform(-1.0, 1.0), 0.0];
+        let x = Ic {
+            m: simplex(&mut rng),
+            r: std::array::from_fn(|_| line(&mut rng)),
+            p: std::array::from_fn(|_| line(&mut rng)),
+        };
+        let g = image(&mut rng, &x);
+        let e = encode::<Defaults, f64>(&g);
+        let c = Classes::of(&e.canonical.ic);
+        worst = worst.max(c.lz.abs() / c.lz_scale / eps);
+        assert!(
+            e.report.clamped_controls != 0,
+            "fixture: a collinear state is not clamped"
+        );
+        let after = Classes::of(&d(e.z.z));
+        least = least.min(after.lz.abs() / after.lz_scale / eps);
+    }
+    (worst, least)
+}
+
+/// `k` is at least 4× above the measured rounding and at least 4× below the least class change a clamp makes
+/// (§ "The zero class in floating point"; REQ-ENC-037's verify).
+fn check_band_k(k: f64) {
+    let (worst, least) = measure_band(1 << 14);
+    println!("zero_class: C's and decode's rounding {worst:.3e} ε; least clamp change {least:.3e} ε; k = {k:e}");
+    assert!(
+        4.0 * worst <= k,
+        "the rounding, {worst:.3e} ε, is not within k = {k:e} by 4×"
+    );
+    assert!(
+        4.0 * k <= least,
+        "k = {k:e} is not below the least clamp change, {least:.3e} ε, by 4×"
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_measure_qa() {
+    check_band_k(ZERO_CLASS.number());
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_measure_qa,
+    "a band of 2⁴⁰ ε (2.4e-4 relative) swallows β's clamp of about ε_z = 10⁻⁶ relative",
+    expected = "is not below the least clamp change",
+    check_band_k(2.0_f64.powi(40))
+);
+
+mod band_too_narrow {
+    use super::*;
+    negative_control!(
+        lookup_validation_ladder_zero_band_measure_qa,
+        "a band of 4 ε does not cover C's rounding of a rounded zero",
+        expected = "is not within k",
+        check_band_k(4.0)
+    );
+}

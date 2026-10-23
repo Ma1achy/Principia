@@ -273,10 +273,13 @@ enum Stand {
 /// the round trip's `eps_phys`, `k` in `ε_phys = k·ε_R`, proposed by TASK-M2-16 and provisional until the M2 gate,
 /// citing REQ-ENC-024 (inverse-encode contract Part 4); and lookup's layer-3 tolerance `decode_sanity`, `k` in `k·ε_R`
 /// on the CoM and `Σpᵢ` residuals, proposed by TASK-M2-19 and provisional until the M2 gate, citing REQ-ENC-027
-/// (inverse-encode contract § "Chart-aware validation"); and dd_integrator §5 test 3's rounding-level criterion
-/// `step_reversal_tol` and its domain's three edges, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
-/// `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate, citing REQ-VAL-191.
-const TABLE: [(&str, Stand); 29] = [
+/// (inverse-encode contract § "Chart-aware validation"); and lookup's layer-1 zero-class band `zero_class`, `k` in
+/// `k·ε_R` relative to `L_z`'s and `E`'s scales, proposed by TASK-M2-19 and provisional until the M2 gate, citing
+/// REQ-ENC-037 (§ "Chart-aware validation", "The zero class in floating point"); and dd_integrator §5 test 3's
+/// rounding-level criterion `step_reversal_tol` and its domain's three edges, `step_reversal_edge_f64`,
+/// `step_reversal_edge_f32` and `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate,
+/// citing REQ-VAL-191.
+const TABLE: [(&str, Stand); 30] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -297,6 +300,7 @@ const TABLE: [(&str, Stand); 29] = [
     ("shape_roundtrip_bound", Stand::Until("M2", "REQ-CHART-053")),
     ("eps_phys", Stand::Until("M2", "REQ-ENC-024")),
     ("decode_sanity", Stand::Until("M2", "REQ-ENC-027")),
+    ("zero_class", Stand::Until("M2", "REQ-ENC-037")),
     ("burrau_nu_half_tol", Stand::Until("M2", "REQ-VAL-118")),
     ("burrau_theta_min", Stand::Until("M2", "REQ-CHART-045")),
     ("burrau_theta_max", Stand::Until("M2", "REQ-CHART-045")),
