@@ -1866,6 +1866,47 @@ negative_control!(
     check_bounds(|_: &Ic<f64>, _: f64| Extents::default())
 );
 
+/// Body 2 at the inner pair's centre of mass, `λ = 0`, so `α = 0` and `b = 0` exactly, and `α` clamps.
+fn at_pole() -> Ic<f64> {
+    Ic {
+        m: [0.25, 0.25, 0.5],
+        r: [[-1.0, 0.0], [1.0, 0.0], [0.0, 0.0]],
+        p: [[0.0, -0.5], [0.0, 0.5], [0.0, 0.0]],
+    }
+}
+
+/// Checks that [`moves`] bounds every move at [`at_pole`] with a finite scale, the entry's extents read through
+/// `extents`: `β`'s rounding has no `R/b` term at `b = 0`, the frame's direction being `ρ`'s alone.
+fn check_pole(extents: impl Fn(&Ic<f64>, f64) -> Extents) {
+    let x = at_pole();
+    let en = e(&x);
+    assert_eq!(en.blocks.clamped & 1, 1, "α clamps");
+    let m = moves::<Defaults>(&en, &en.z.z, &extents(&x, en.canonical.lambda));
+    for (what, v) in [
+        ("ΔL_z", m.lz_scale),
+        ("ΔE", m.e_scale),
+        ("L_z after", m.lz_after_scale),
+        ("E after", m.e_after_scale),
+    ] {
+        assert!(v.is_finite(), "{what}'s scale is not finite: {v}");
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_moves_at_pole() {
+    check_pole(Extents::entered);
+}
+
+negative_control!(
+    lookup_validation_ladder_moves_at_pole,
+    "an entry rounded without bound has no finite bound on its moves",
+    expected = "not finite",
+    check_pole(|_: &Ic<f64>, _: f64| Extents {
+        r: f64::INFINITY,
+        p: 0.0,
+    })
+);
+
 /// Checks R-13 for the pair `(i, j)` made to coincide in `generic()`: the lookup locks it, clamped, never refused.
 fn check_coincident(pairs: &[(usize, usize)]) {
     for &(i, j) in pairs {
