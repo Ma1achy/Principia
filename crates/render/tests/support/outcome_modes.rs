@@ -5,8 +5,10 @@
 //! **The rank (R-448):** the outcome class's nine classes, bounded / nothing yet first, the darkest, then collision
 //! 1–2, 1–3 and 2–3, triple collision, escape body 1, 2 and 3 and triple ejection (the names as shown, R-449): `K = 9`,
 //! `B = (r + ½)/K` in greyscale mode and `t = r/K` in hue mode. `running`, every failure and a reserved `state` code are
-//! the bounded / nothing yet class, rank 0 (R-446). A sample in a forbidden chart region (`ctx.validity.forbidden`,
-//! REQ-COL-102) has no rank and keeps the hatch in every mode, decided from the chart, never from the payload.
+//! the bounded / nothing yet class, rank 0 (R-446). A sample the chart classifies as not a system
+//! (`ctx.validity.forbidden`, REQ-COL-102) has no rank and draws the canvas background in every mode, decided from the
+//! chart, never from the payload (R-467; REQ-COL-108); a `decode_failed` sample has none either and draws it too
+//! (R-511). Each mode is a presentation view and draws no hatch.
 
 use render::assemble::{Kind, Node, Occupant, Stain};
 use render::registry::ZERO_SOURCE;
@@ -15,9 +17,10 @@ use render::registry::ZERO_SOURCE;
 pub const K: u32 = 9;
 
 /// The outcome field's rank, WGSL, which each mode's occupants share (colour_composition §4.1; R-448): `-1` for a
-/// sample in a forbidden chart region, which the hatch draws.
+/// sample the chart classifies as not a system or a `decode_failed` sample, which the canvas background draws (R-467,
+/// R-511).
 pub const RANK: &str = "fn outcome_rank(ctx: Ctx) -> i32 {
-    if (ctx.validity.forbidden) { return -1; }
+    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return -1; }
     let s = ctx.sample.state;
     let d = ctx.sample.detail;
     if (s == STATE_COLLISION) {
@@ -39,24 +42,24 @@ pub fn grey_brightness() -> String {
     )
 }
 
-/// Greyscale mode's post: a forbidden sample in the hatch, every other colour passed on.
+/// Greyscale mode's closing post: a sample with no rank in the canvas background, every other colour passed on.
 pub fn grey_post() -> String {
     format!(
         "{RANK}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{
-    if (outcome_rank(ctx) == -1) {{ return debug_invalid(ctx.frag_xy); }}
+    if (outcome_rank(ctx) == -1) {{ return canvas_background(); }}
     return rgb;
 }}
 "
     )
 }
 
-/// Hue mode's colour, the class of rank `r` at `t = r/turns` on the hue wheel, a forbidden sample in the hatch:
-/// `turns` is `K` in hue mode, `K − 1` in the merging control.
+/// Hue mode's colour, the class of rank `r` at `t = r/turns` on the hue wheel, a sample with no rank in the canvas
+/// background: `turns` is `K` in hue mode, `K − 1` in the merging control.
 pub fn hue_colour(turns: u32) -> String {
     format!(
         "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{
     let r = outcome_rank(ctx);
-    if (r == -1) {{ return debug_invalid(ctx.frag_xy); }}
+    if (r == -1) {{ return canvas_background(); }}
     return hue_wheel(f32(r) / {turns}.0);
 }}
 "
@@ -83,7 +86,7 @@ pub fn event() -> Mode {
     }
 }
 
-/// Greyscale mode: the colour None, the rank's lightness in the brightness slot, the hatch drawn by a post.
+/// Greyscale mode: the colour None, the rank's lightness in the brightness slot, the background drawn by a post.
 pub fn greyscale() -> Mode {
     Mode {
         name: "greyscale",

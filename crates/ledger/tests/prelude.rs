@@ -281,6 +281,37 @@ negative_control!(
     check_uniform_words(|e| [u32::from(e > 1), 0, 0, 0])
 );
 
+/// The uniform words `words(E, background)` (R-467 D2; REQ-COL-108): `has_ensemble` 1 exactly when E ≥ 1, then the
+/// canvas background's red, green and blue as f32 bits, in that order; and `uniform_words(E)` the same with the
+/// background unset, `(0, 0, 0)`.
+fn check_background_words(words: fn(u32, [f32; 3]) -> [u32; 4]) {
+    let bg = [0.25, 0.5, 0.75];
+    for (e, on) in [(0, 0), (1, 1), (7, 1)] {
+        assert_eq!(
+            words(e, bg),
+            [on, 0.25f32.to_bits(), 0.5f32.to_bits(), 0.75f32.to_bits()],
+            "the prelude's uniform words at E = {e} with a background"
+        );
+        assert_eq!(
+            prelude::uniform_words(e),
+            words(e, [0.0; 3]),
+            "uniform_words at E = {e} is the unset background's"
+        );
+    }
+}
+
+#[test]
+fn prelude_has_consts_background_words_follow_the_background() {
+    check_background_words(prelude::uniform_words_with);
+}
+
+negative_control!(
+    prelude_has_consts_background_words_follow_the_background,
+    "words with the background's channels swapped must fail",
+    expected = "with a background",
+    check_background_words(|e, [r, g, b]| prelude::uniform_words_with(e, [b, g, r]))
+);
+
 // ── the checked-in prelude and its tables ─────────────────────────────────────────────────────────────────────────
 
 /// `on_disk` is the emitters' prelude, at `prelude::PATH`, the full tier's.

@@ -4,7 +4,10 @@
 //! - REQ-COL-053 / REQ-COL-064 (R-433, R-434): an unset `d_min`, rendered, draws `#4E4E4E` with a 2 × 2 px dot of
 //!   `#909090` in each 4 × 4 physical-pixel cell, where bit 1 of `x` and of `y` are both 0, and no other colour
 //!   (`r434_qa_stipple_*`). Amended by qa for TASK-M2-32, as R-446 forces: a running sample in the outcome palette
-//!   leaves the style's scope and draws bounded / nothing yet's `#141418`.
+//!   leaves the style's scope and draws bounded / nothing yet's `#141418`. Amended by qa for TASK-M2-34, as R-399
+//!   ("the hatch stays NaN's and `sim_failed`'s"), R-467 and R-511 Z3 force: in `d_min`'s field ramp, a presentation
+//!   view, the forced failures holding +∞ are `sim_failed` and draw `#141418` whatever their payload; the view keeps
+//!   the stipple on every sample.
 //! - REQ-COL-064 (R-434, the bar): no flat colour comes within τ = 0.101, the OKLab distance from `#FF00FF` to
 //!   `#E034C6` (R-429), of every pixel of a 4 × 4 block. Every block holds both colours, so a flat colour within τ of
 //!   all its pixels is within τ of the grey and of the dot, and by the triangle inequality the two would be at most
@@ -159,12 +162,21 @@ fn near(a: Rgb, b: Rgb) -> bool {
 }
 
 /// Every pixel of `img`, `what`, is `dot` where bit 1 of `x` and of `y` are both 0, and `grey` elsewhere.
+#[cfg(feature = "controls")]
 fn check_stipple(img: &Image, what: &str, grey: u32, dot: u32) {
+    check_stipple_in(img, what, grey, dot, &[]);
+}
+
+/// [`check_stipple`], but a pixel `failed` marks, a forced failure's in a presentation view, is bounded / nothing
+/// yet's `#141418` (R-399, R-467, R-511 Z3; amended by qa for TASK-M2-34).
+fn check_stipple_in(img: &Image, what: &str, grey: u32, dot: u32, failed: &[bool]) {
     assert!(img.w >= 4 && img.h >= 4, "{what}: smaller than one cell");
     for y in 0..img.h {
         for x in 0..img.w {
             let got = img.px[(y * img.w + x) as usize];
-            let (want, name) = if (x | y) & 2 == 0 {
+            let (want, name) = if failed.get((y * img.w + x) as usize) == Some(&true) {
+                (0x141418, "forced failure's")
+            } else if (x | y) & 2 == 0 {
                 (dot, "dot")
             } else {
                 (grey, "grey")
@@ -177,14 +189,35 @@ fn check_stipple(img: &Image, what: &str, grey: u32, dot: u32) {
     }
 }
 
-/// The renders that draw the style: an unset `d_min` in its view and its ramp. The outcome palette's running samples
-/// left the style's scope (R-446).
-fn renders(h: &GpuHarness) -> [(Image, &'static str); 2] {
+/// Which pixels of [`unset_d_min`]'s row are its forced failures', `sim_failed` (added by qa for TASK-M2-34).
+fn failed_pixels() -> Vec<bool> {
+    let s = unset_d_min(Colouring::View("d_min"));
+    let (w, h) = s.size();
+    let mut out = vec![false; (w * h) as usize];
+    for i in 0..s.context.grid.sample_count() {
+        if s.read(i).state == STATE_SIM_FAILED {
+            for (x, y) in s.pixels(i) {
+                out[(y * w + x) as usize] = true;
+            }
+        }
+    }
+    assert!(
+        out.iter().any(|f| *f) && out.iter().any(|f| !*f),
+        "the row holds no forced failure or no unstepped sample"
+    );
+    out
+}
+
+/// The renders that draw the style: an unset `d_min` in its view and its ramp, with the pixels that draw `#141418`
+/// instead, the ramp's forced failures (R-399, R-467, R-511 Z3; amended by qa for TASK-M2-34). The outcome palette's
+/// running samples left the style's scope (R-446).
+fn renders(h: &GpuHarness) -> [(Image, &'static str, Vec<bool>); 2] {
     let ramp = FieldRamp::d_min().unwrap_or_else(|e| panic!("{e}"));
     [
         (
             render(h, &unset_d_min(Colouring::View("d_min"))),
             "the d_min view, d_min unset",
+            Vec::new(),
         ),
         (
             render(
@@ -195,6 +228,7 @@ fn renders(h: &GpuHarness) -> [(Image, &'static str); 2] {
                 }),
             ),
             "the d_min ramp, d_min unset",
+            failed_pixels(),
         ),
     ]
 }
@@ -202,8 +236,8 @@ fn renders(h: &GpuHarness) -> [(Image, &'static str); 2] {
 #[test]
 fn r434_qa_stipple_is_909090_dots_on_4e4e4e() {
     let h = gpu();
-    for (img, what) in renders(&h) {
-        check_stipple(&img, what, GREY, DOT);
+    for (img, what, failed) in renders(&h) {
+        check_stipple_in(&img, what, GREY, DOT, &failed);
     }
 }
 
@@ -213,8 +247,8 @@ negative_control!(
     expected = "not the dot #808080",
     {
         let h = gpu();
-        for (img, what) in renders(&h) {
-            check_stipple(&img, what, GREY, PROPOSED_DOT);
+        for (img, what, failed) in renders(&h) {
+            check_stipple_in(&img, what, GREY, PROPOSED_DOT, &failed);
         }
     }
 );
@@ -239,6 +273,23 @@ mod r434_qa_stipple_outcome_out_of_scope {
     );
 }
 
+/// R-399, R-467 and R-511 Z3's leg can fail: the ramp's forced failures read as the stipple, as if their +∞ were read,
+/// fail (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod r434_qa_stipple_ramp_failures_stippled {
+    use super::*;
+    negative_control!(
+        r434_qa_stipple_is_909090_dots_on_4e4e4e,
+        "the d_min ramp's forced failures read as the stipple are caught",
+        expected = "the d_min ramp, d_min unset: pixel (0, 0)",
+        {
+            let h = gpu();
+            let [_, (img, what, _)] = renders(&h);
+            check_stipple(&img, what, GREY, DOT);
+        }
+    );
+}
+
 #[cfg(feature = "controls")]
 mod r434_qa_stipple_phase {
     use super::*;
@@ -248,8 +299,8 @@ mod r434_qa_stipple_phase {
         expected = "not the dot #4E4E4E",
         {
             let h = gpu();
-            for (img, what) in renders(&h) {
-                check_stipple(&img, what, DOT, GREY);
+            for (img, what, failed) in renders(&h) {
+                check_stipple_in(&img, what, DOT, GREY, &failed);
             }
         }
     );
