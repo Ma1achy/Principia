@@ -1,0 +1,6 @@
+{
+  "description": "N_max 257, above the table's maximum length: the host generator refuses it.",
+  "config": { "r_sub": 0.05, "gamma_sub": 1.5, "n_max": 257 },
+  "fuzz": { "seed": 8, "random": 4096, "pairs": 4096 },
+  "expected": "refused"
+}

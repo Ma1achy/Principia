@@ -2049,6 +2049,7 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "ledger",
+ "libm",
  "num-bigint",
  "num-rational",
  "proptest",
@@ -2090,6 +2091,7 @@ dependencies = [
 name = "ledger"
 version = "0.1.0"
 dependencies = [
+ "libm",
  "naga",
  "proptest",
  "validation",
