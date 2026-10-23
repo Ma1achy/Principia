@@ -152,12 +152,21 @@ runs run from the clicked trajectory's own IC, under the trajectory's own sim ke
 the current view's).
 - **An atlas pixel of the current view**: the f32 run is the survey kernel's one-pixel dispatch through the atlas's
   decode path, bitwise what coloured the pixel, and the trust line takes REQ-GUI-370's three forms at the current atlas
-  playhead `t_p`. A **kept orbit** counts as an atlas pixel only while the view it was kept from is unchanged.
+  playhead `t_p`. A **kept orbit** counts as an atlas pixel only while the view it was kept from is unchanged: the same
+  sim key and the same chart view (`z₀`, the basis and the zoom level), bitwise. A stain or playhead edit leaves it
+  unchanged; a pan, zoom, slice, chart or sim-key edit changes it.
 - **Any other IC** (one edited in the Inspector, one built in Create & locate, possibly off the slice, or a kept orbit
   once its view has moved): there is no decode path, so the f32 run is the same survey kernel's one-pixel dispatch
   from the IC rounded to f32 (Cartesian), the nudge following the rounding and the starting gap being the f32
-  rounding. The trust line makes no atlas claim: it is prefixed "Not an atlas pixel:" and states the runs' own
-  parting, never "The atlas colour here …".
+  rounding. The trust line makes no atlas claim, never "The atlas colour here …"; its forms mirror the atlas forms one
+  for one, "these runs" in place of "the atlas colour here" (gui review 5627280803 of PR #283, N1; applied per
+  R-369):
+  - before `t_part(f32)`: "Not an atlas pixel: these runs are within f32's trustworthy time for this point."
+  - after it: "Not an atlas pixel: these runs are past f32's trustworthy time (parted at `t = …`). The f32 run shows a
+    possible outcome, not this point's."
+  - after `t_part(f64)` too: "Not an atlas pixel: these runs are past f64's as well: neither run can be trusted here."
+  - read at the same time as the atlas forms, the current atlas playhead `t_p`, against the same marks; beside it the
+    same "estimate from FTLE" and, when the self-check fails, the same "unreliable".
 
 *Was:* "**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the
 clicked trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit

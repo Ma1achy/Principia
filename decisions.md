@@ -23766,6 +23766,11 @@ The design's "Decided" section, verbatim:
   result… in File; Compare (a labelled toggle), Make the f32 twin and the difference map with its counts and
   distribution in the Result window's Compare section (REQ-GUI-368).
 
+*Fix round 3 of PR #283 (gui review 5627280803, N2; applied per R-369):* the result view's display zoom and pan live in
+the view source, `ViewSource = Live | Result { id, display_zoom, display_pan }`, changed by a result-display request
+that enters no history; the engine draws from it and the snapshot carries it, so the GUI keeps no copy of the payload
+(`principia_gui_state_contract.md` §2, `principia_results.md` §3.4, REQ-GUI-367).
+
 R-572 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
@@ -23889,7 +23894,7 @@ The design's "Decided" section, its first three items, verbatim:
   the runs and the trust line are of the clicked trajectory's own IC, the line reading the current atlas playhead (G7;
   REQ-GUI-370).
 - **The trust line's tests** state the faithful mark below 10 and add an "unreliable" check; §G8 points at
-  REQ-GUI-370's three forms, the human's example being his illustration (G9).
+  REQ-GUI-370's three forms, the human's example being the human's illustration (G9).
 
 *Fix round 2 of PR #283 (physics review 5627216712, F5, F6; applied per R-369):*
 - **An IC that is not an atlas pixel of the current view** (an Inspector edit, a Create & locate IC, possibly off the
@@ -23902,6 +23907,17 @@ The design's "Decided" section, its first three items, verbatim:
 - **RQ-558's Waits** reads "nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197", the
   queue's form; option (a) stays applied meanwhile (F6).
 - **Wording:** the human's example is "the human's illustration" in honesty §3.3 and §G8.
+
+*Fix round 3 of PR #283 (gui review 5627280803, N1, N4, N5; applied per R-369):*
+- **The non-atlas trust line** is written out in three forms, one for one with the atlas forms, "Not an atlas pixel:"
+  and "these runs" in place of "the atlas colour here", read at the atlas playhead against the same marks, with the
+  same "estimate from FTLE" and "unreliable" (honesty §3.4, §G8, REQ-GUI-370). "The view it was kept from is
+  unchanged" is the same sim key and the same chart view (`z₀`, basis, zoom level), bitwise; a stain or playhead edit
+  keeps a kept orbit an atlas pixel (N1).
+- **The f32 run is bitwise what coloured the pixel only for an atlas pixel of the current view**; the runs use the
+  trajectory's own sim key; only an atlas pixel's IC is decoded; a non-atlas line carries no atlas claim
+  (TASK-M8-76's goal, §G8's bullet; N4).
+- §G8's quote of this PR's own fix-round-1 wording is dropped; it never reached `main` (N5).
 
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -23940,10 +23956,15 @@ value at or below 0 refused with its reason. Nothing waits. The merged mock Run 
 `crates/gui/src/windows/run.rs`) is TASK-M8-24's to change, with the field.
 
 *Fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369):* above 200 the field **clamps** to 200, as
-before R-575 (only RQ-555 can move the cap); only a value at or below 0 is refused. The arrows and a drag stop at one
-keyboard step above 0, never at 0. The mock's clamp (`crates/gui/src/windows/run.rs:315`, `T_RANGE.0`) and its test
+before R-575 (only RQ-555 can move the cap); only a value at or below 0 is refused. A press of ↓ (with or without Shift
+or Alt) or a drag that would take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T
+unchanged; ↓ never raises T (fix round 3, below). The mock's clamp (`crates/gui/src/windows/run.rs:315`, `T_RANGE.0`) and its test
 `mock_windows_open_run_t_horizon_steps_in_its_range` ("At the bottom of the range ↓ stays") are TASK-M8-24's to change.
 REQ-GUI-102's verify and TASK-M8-24's `run_fields` follow (*was:* "refuses 0 and 201 with the reason").
+
+*Fix round 3 of PR #283 (gui review 5627280803, N3; applied per R-369):* the floor is exact, replacing fix round 1's
+"stop at one keyboard step above 0": Shift+↓ at `T = 10` gives 0.2, not 20 or a refusal; ↓ at `T = 0.2` leaves 0.2;
+the mock's clamp to `lo = 0` reaching 0 fails (render_gui_spec §G5, RQ-555, REQ-GUI-102, TASK-M8-24).
 
 R-575 is in the "values" group of `plan/rule_groups.yaml`.
 

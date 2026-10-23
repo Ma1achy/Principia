@@ -99,11 +99,14 @@ no such badge.
 
 **Zoom and pan in a result view** (gui review 5627122883 of PR #283, G1; applied per R-369) are display magnification
 of the stored result pixels, each cell a square: they are not chart construction (render_gui_spec §G1), edit no
-`SimConfig` field and no sim key, and enter no undo history. *Explore from here* builds a live view from the result's own
+`SimConfig` field and no sim key, and enter no undo history. They live in the view source, `Result { id, display_zoom,
+display_pan }`, changed by a result-display request; the engine draws from it and the snapshot carries it, so the GUI
+keeps no copy of the payload (gui review 5627280803 of PR #283, N2; applied per R-369). *Explore from here* builds a live view from the result's own
 `SimConfig`, bitwise.
 
 **The view source** (G2; applied per R-369): which source the figure draws from is engine state, a view-source field
-`Live | Result(id)` (`principia_gui_state_contract.md` §2). File › Open result… sets it to `Result(id)` and *Explore from
+`Live | Result { id, display_zoom, display_pan }` (`principia_gui_state_contract.md` §2). File › Open result… sets it to
+`Result { id, .. }` and *Explore from
 here* or closing the result sets it to `Live`; opening a result is not an edit and enters no undo history. The snapshot
 carries the view source, and the badge and the disabled sim-key controls read it.
 

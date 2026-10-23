@@ -1037,7 +1037,10 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 
 **`T_horizon`'s ends (R-575; gui review 5627122883 of PR #283, G8, applied per R-369).** A typed value in `(0, 200]` is
 taken; a value at or below 0 is refused with its reason; a value above 200 is clamped to 200, as before R-575, since
-only RQ-555 can move the cap. The arrows and a drag stop at one keyboard step above 0, never at 0, and at 200.
+only RQ-555 can move the cap. **The floor** (gui review 5627280803 of PR #283, N3; applied per R-369): a press of ↓,
+with or without Shift or Alt (§G3), or a drag, that would take `T` to 0 or below sets `T` to the Alt step, 0.2, if `T`
+is above 0.2, and otherwise leaves `T` unchanged; ↓ never raises `T`. So Shift+↓ at `T = 10` gives 0.2, and ↓ at
+`T = 0.2` leaves 0.2. ↑ and a drag stop at 200.
 
 The surfaces with no artboard (the Custom quality fields, the utilisation ceiling, the Profiler's Arbiter tab, the
 passive-logging switch and indicator, the compute fast-math control and the Profiler's fast-math line, R-297) are checked by presence only, not layout, until the M8 dev GUI (R-129).
@@ -1352,22 +1355,22 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 is in the Trajectory panel and `Listen…` only (R-556, RQ-466 (a)). *Was:* "**listen** is here too. (Against R-541 G1's
 one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
 holds no sound control. Gui review 5595359543 of PR #267, G1.)"
-- **Where its precision runs out (R-574).** On by default: four runs of the IC (f32 on the GPU as the atlas ran it,
-  f64, and each nudged by one ulp), the f32 run dashed over the f64 in panes 2 and 3, a separation plot of their
-  shape-sphere chords with the two marks, "faithful until" (10⁻³) and "parted at" (0.1), shown and editable, the
-  fates side by side, and **the trust line** about the atlas pixel at the atlas playhead, in REQ-GUI-370's three forms
-  (`docs/design/principia_honesty_precision.md` §3.3; the human's "the atlas shows t = 30; this point's f32 run parted
-  at t = 18" is the human's illustration, not a form; gui review G9 of PR #283). Nothing in the atlas changes with it.
-  The runs are of the clicked trajectory's own IC under its own sim key, whatever its source. An atlas pixel of the
-  current view, or a kept orbit while its view is unchanged, gets the three forms; any other IC (edited in pane 1,
-  built in Create & locate, or a kept orbit after its view has moved) runs f32 from the IC rounded to f32, and its
-  line is prefixed "Not an atlas pixel:", with no atlas claim (`principia_honesty_precision.md` §3.4; G7, physics
-  review 5627216712 F5; applied per R-369). *Was (fix round 1):* "at t = 18" is his illustration, not a form; gui
-  review G9 of PR #283). Nothing in the atlas changes with it. The runs are of the clicked trajectory's own IC,
-  whatever its source: an atlas pixel, an IC edited in pane 1, one built in Create & locate, or a kept orbit after the
-  view has moved (G7; applied per R-369)." *Was:* "the trust line about the
-  atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this point's f32 run parted at t = 18"
-  (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes with it."
+- **Where its precision runs out (R-574).** On by default: four runs of the clicked trajectory's IC under its own sim
+  key (f32 on the GPU, f64, and each nudged by one ulp; for an atlas pixel of the current view the f32 run is bitwise
+  what coloured the pixel, and only an atlas pixel's IC is decoded), the f32 run dashed over the f64 in panes 2 and 3, a
+  separation plot of their shape-sphere chords with the two marks, "faithful until" (10⁻³) and "parted at" (0.1), shown
+  and editable, the fates side by side, and **the trust line** at the atlas playhead: for an IC that is an atlas pixel,
+  about the atlas pixel, in REQ-GUI-370's three forms (`docs/design/principia_honesty_precision.md` §3.3; the human's
+  "the atlas shows t = 30; this point's f32 run parted at t = 18" is the human's illustration, not a form; gui review
+  G9 of PR #283). Nothing in the atlas changes with it. An atlas pixel of the current view, or a kept orbit while its
+  view is unchanged (the same sim key and chart view, `z₀`, basis and zoom level, bitwise), gets the three forms; any
+  other IC (edited in pane 1, built in Create & locate, or a kept orbit after its view has moved) runs f32 from the IC
+  rounded to f32, and its line takes REQ-GUI-370's three "Not an atlas pixel:" forms, with no atlas claim
+  (`principia_honesty_precision.md` §3.4; G7, physics review 5627216712 F5, gui review 5627280803 N1, N4; applied per
+  R-369). *Was:* "the trust line about the atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this
+  point's f32 run parted at t = 18" (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes
+  with it." and the bullet's opening "On by default: four runs of the IC (f32 on the GPU as the atlas ran it, f64, and
+  each nudged by one ulp),".
 - **Make a result…** (R-572) opens the Result window prefilled from the view the Inspector was opened over (§G5 §
   "Result…"; gui review G5 of PR #283, applied per R-369).
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane

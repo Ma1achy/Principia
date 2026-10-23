@@ -666,8 +666,9 @@ lowered", and gave no lowest value. For the human: yes, it sets what the Run win
   stays; (ii) it is raised (the u16 rule holds at any `T`, so the cap is not needed for exactness).
 - **Applied meanwhile:** (a) and (i): `T_horizon ∈ (0, 200]`, default 50, a value at or below 0 refused with its reason.
   Nothing waits.
-  Above 200 the field clamps to 200, as before R-575; the arrows and a drag stop at one keyboard step above 0, never at
-  0 (fix round 1 of PR #283, gui review 5627122883, G8, applied per R-369).
+  Above 200 the field clamps to 200, as before R-575. A press of ↓ (with or without Shift or Alt) or a drag that would
+  take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T unchanged; ↓ never raises
+  T (fix rounds 1 and 3 of PR #283, gui reviews 5627122883 G8 and 5627280803 N3, applied per R-369).
 
 ## RQ-556: What the header strip states about the horizon, against REQ-SYS-061's "The interactive atlas must state its predictability horizon" *(found by R-574's port; R-574 against REQ-SYS-061 and philosophy §4.1; context: TASK-M8-41)*
 
