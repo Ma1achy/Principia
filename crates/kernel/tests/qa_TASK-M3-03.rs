@@ -19,6 +19,13 @@
 //!   take the same `d²`, bit for bit, so the same `N_sub` (0 forks); domain: identical inputs per macro-step
 //!   (pitfalls §10), not a trajectory. Control: the default table under a changed `r_sub` or `γ_sub` fails the
 //!   specification.
+//! - REQ-INT-028 at positions under the square's floor (`qa_nsub_bucket_floor_pairs_*`): the specification is on the
+//!   closest approach of the f32 positions, so a pair one of whose axis offsets the quantised `d²`'s floor sets to 0
+//!   (an axis square below `2⁻⁸⁰`; dd_integrator §3.3, R-547) still takes the specification's `N_sub`, judged in exact
+//!   arithmetic, at `2⁻¹⁹` either side of every deciding threshold of every sim key the generator accepts, across
+//!   `r_sub`, `γ_sub` down to 1/4 and `N_max` up to `L_max`. A sim key it refuses is refused with the typed error naming a
+//!   deciding threshold, never a truncated table (R-502). Control: a sim key's correctly rounded table whose deciding
+//!   thresholds fall far below the floor's reach fails the specification at such a pair.
 //! - REQ-INT-094 (`qa_nsub_table_max_bounds`): the refusal bound is the table's length, the table takes `4·L_max` bytes
 //!   in 16-byte rows, and `horizon_steps × N_max ≤ 2³² − 1` holds at `L_max`.
 //! - REQ-INT-027 (`qa_nsub_live_readout`), REQ-TOOL-033 (`qa_saturated_sticky`), REQ-TOOL-034
@@ -27,7 +34,9 @@
 use num_bigint::BigInt;
 use num_rational::BigRational;
 
-use kernel::driver::nsub_table::{threshold_bits, thresholds, NsubConfig, NsubTableError};
+use kernel::driver::nsub_table::{
+    pack, threshold_bits, threshold_f64, thresholds, NsubConfig, NsubTableError,
+};
 use kernel::driver::substep::{d2_quantised, n_sub, NsubThresholds, SubstepState};
 use kernel::generated::nsub_thresholds::{
     DEFAULT_THRESHOLD_BITS, GAMMA_SUB_DEFAULT, NSUB_TABLE_MAX, NSUB_TABLE_ROWS, N_MAX_DEFAULT,
@@ -173,7 +182,12 @@ impl Law {
         if d2.is_infinite() {
             return 1;
         }
-        let ya = powr(&(&self.r2 / exact32(d2)), self.a);
+        self.spec_at(&exact32(d2), n_max)
+    }
+
+    /// The specification at the exact `d2 > 0`.
+    fn spec_at(&self, d2: &BigRational, n_max: u32) -> u32 {
+        let ya = powr(&(&self.r2 / d2), self.a);
         let above = |n: u32| ya > powr(&int(u64::from(n)), 2 * self.b);
         // The largest k in 0 … n_max − 1 with y > k (k = 0 always holds), by bisection.
         let (mut lo, mut hi) = (0u32, n_max - 1);
@@ -339,7 +353,7 @@ fn check_drawn(generate: fn(&NsubConfig) -> Result<[u32; L], NsubTableError>) {
         let gamma_sub = gammas[k % gammas.len()];
         let c = cfg(r_sub, gamma_sub, 64);
         let Ok(bits) = generate(&c) else {
-            // A sim key whose thresholds below N_max leave the normal f32 range may be refused; none drawn here does.
+            // A sim key whose deciding thresholds the square's floor could reach may be refused; none drawn here is.
             panic!("the drawn sim key r_sub {r_sub} γ_sub {gamma_sub} is refused");
         };
         // Any entry off the correct rounding must be at a tie; admit it as listed and let the band decide.
@@ -656,6 +670,159 @@ negative_control!(
         for r in straddling_triples(&DEFAULT_THRESHOLD_BITS) {
             check_legs(unquantised, &r, &table, 64);
         }
+    }
+);
+
+// ── REQ-INT-028: pairs under the square's floor ─────────────────────────────────────────────────────────────────
+
+/// The relative band about an exact edge within which a pair's `N_sub` is not judged: twice the roundings a correct
+/// tree may carry against the exact comparison, `u = 2⁻²⁴` f32's unit roundoff: `THR[n]`'s rounding (`u`), the
+/// quantised `d²`'s (the subtractions from a body at the origin exact; each split-product square `3u`, R-547, and the
+/// add `u`: `7u` at most), `8u` in all, doubled.
+const FLOOR_BAND: f64 = 1.0 / (1u64 << 20) as f64;
+
+/// Each pair's exact `d²` sits this far (relative) either side of the deciding threshold it straddles: outside
+/// [`FLOOR_BAND`] of the exact edge, which is within `u` of the f32 threshold.
+const FLOOR_OFFSET: f64 = 1.0 / (1u64 << 19) as f64;
+
+/// Axis offsets whose square is below `2⁻⁸⁰`, which the quantised `d²` sets to 0 (dd_integrator §3.3, R-547): the f32
+/// just under `2⁻⁴⁰` and `2⁻⁴¹`.
+const FLOOR_DXS: [f32; 2] = [f32::from_bits(0x2B7F_FFFF), f32::from_bits(0x2B00_0000)];
+
+/// The position triples, as f32, whose closest pair is a floor offset along one axis and, along the other, the rest of
+/// `THR[n]·(1 ± FLOOR_OFFSET)`, for every deciding threshold `n < N_max`, with the pair cycled among the three bodies
+/// and the axes swapped; the third body is 10 away. One body of the pair is at the origin, so each subtraction is exact.
+fn floor_triples(bits: &[u32; L], n_max: u32) -> Vec<(u32, [[f32; 2]; 3])> {
+    let mut out = Vec::new();
+    for n in 1..n_max {
+        let thr = f64::from(f32::from_bits(bits[n as usize - 1]));
+        for side in [-1.0, 1.0] {
+            let target = thr * (1.0 + side * FLOOR_OFFSET);
+            for (k, &dx) in FLOOR_DXS.iter().enumerate() {
+                let dy = (target - f64::from(dx).powi(2)).sqrt() as f32;
+                for swap in [false, true] {
+                    let o = [0.0f32, 0.0];
+                    let p = if swap { [dy, dx] } else { [dx, dy] };
+                    let far = [10.0f32, 10.0];
+                    let r = match (n as usize + k + usize::from(swap)) % 3 {
+                        0 => [o, p, far],
+                        1 => [far, o, p],
+                        _ => [p, far, o],
+                    };
+                    out.push((n, r));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// At every floor triple of `bits`, the tree over `table` under `key` takes the exact specification's `N_sub` at the
+/// closest pair's exact `d²`, and the f64 leg the f32 leg's `d²`, bit for bit.
+fn check_floor(key: &NsubConfig, table: &NsubThresholds, bits: &[u32; L]) {
+    let law = Law::new(key.r_sub, key.gamma_sub);
+    let band = exact64(FLOOR_BAND);
+    let one = int(1);
+    for (n, r) in floor_triples(bits, key.n_max) {
+        let d2 = d2_quantised::<f32>(&r);
+        let d2_64 = d2_quantised::<f64>(&r.map(|p| p.map(f64::from)));
+        assert_eq!(d2.to_bits(), d2_64.to_bits(), "fork: d² at {r:?}");
+        let q = r.map(|p| p.map(exact32));
+        let pair = |i: usize, j: usize| {
+            let dx = &q[i][0] - &q[j][0];
+            let dy = &q[i][1] - &q[j][1];
+            &dx * &dx + &dy * &dy
+        };
+        let exact = [pair(0, 1), pair(1, 2), pair(2, 0)]
+            .into_iter()
+            .min()
+            .expect("three pairs");
+        // The pair is outside the band of every exact edge near the threshold it straddles (the edges are far apart).
+        let lo = powr(&(&exact * (&one - &band)), law.a);
+        let hi = powr(&(&exact * (&one + &band)), law.a);
+        for m in n.saturating_sub(1).max(1)..=(n + 1).min(key.n_max) {
+            let e = law.edge_pow(m);
+            assert!(
+                !(lo <= e && e <= hi),
+                "the floor pair at THR[{n}] is within the band of edge {m}: {r:?}"
+            );
+        }
+        let got = n_sub(d2, table, key.n_max);
+        let want = law.spec_at(&exact, key.n_max);
+        assert_eq!(
+            got, want,
+            "r_sub {} γ_sub {} N_max {}: the floor pair at THR[{n}] {r:?} takes N_sub {got}, the specification {want}",
+            key.r_sub, key.gamma_sub, key.n_max
+        );
+    }
+}
+
+/// Sim keys from the default's neighbourhood down to deciding thresholds near the floor's reach: `r_sub` over three
+/// decades, `γ_sub` from 1/4 to the default, `N_max` from 7 to `L_max`.
+fn floor_keys() -> Vec<NsubConfig> {
+    let mut out = Vec::new();
+    for r_sub in [0.001, 0.05, 0.3] {
+        for gamma_sub in [0.25, 0.5, 1.0, 1.5] {
+            for n_max in [7, 56, 64, L as u32] {
+                out.push(cfg(r_sub, gamma_sub, n_max));
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn qa_nsub_bucket_floor_pairs_match_the_specification() {
+    let (mut taken, mut refused) = (0, 0);
+    let mut least = f32::INFINITY;
+    for key in floor_keys() {
+        match threshold_bits(&key) {
+            Ok(bits) => {
+                check_floor(&key, &pack(&bits), &bits);
+                taken += 1;
+                if key.n_max >= 2 {
+                    least = least.min(f32::from_bits(bits[key.n_max as usize - 2]));
+                }
+            }
+            Err(NsubTableError::OutOfRange { n, bits }) => {
+                // Refused, never truncated: the error names a deciding threshold and its generated bits.
+                assert!(
+                    (1..key.n_max).contains(&n),
+                    "{key:?} is refused at THR[{n}], which does not decide N_sub"
+                );
+                let thr = threshold_f64(key.r_sub, key.gamma_sub, n) as f32;
+                assert_eq!(
+                    bits,
+                    thr.to_bits(),
+                    "{key:?}: the refusal's bits are not THR[{n}]'s"
+                );
+                refused += 1;
+            }
+            Err(e) => panic!("{key:?} is refused with {e:?}"),
+        }
+    }
+    // The sweep reaches both sides: keys taken with a deciding threshold within 2⁸ of the floor's 2⁻⁸⁰ reach … 2⁻⁵⁰,
+    // and keys refused.
+    assert!(taken > 0 && refused > 0, "taken {taken}, refused {refused}");
+    assert!(
+        least < 2f32.powi(-50),
+        "no taken sim key decides near the floor: least deciding threshold {least:e}"
+    );
+}
+
+negative_control!(
+    qa_nsub_bucket_floor_pairs_match_the_specification,
+    "r_sub 0.05 γ_sub 1/4 at N_max L_max, its correctly rounded table taken unchecked: thresholds near 2⁻⁷² let the \
+     floor alone decide N_sub, against the specification",
+    expected = "the specification",
+    {
+        let key = cfg(0.05, 0.25, L as u32);
+        let law = Law::new(key.r_sub, key.gamma_sub);
+        let mut bits = [0u32; L];
+        for (i, b) in bits.iter_mut().enumerate() {
+            *b = law.correct_bits(i as u32 + 1);
+        }
+        check_floor(&key, &pack(&bits), &bits);
     }
 );
 
