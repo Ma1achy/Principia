@@ -1615,6 +1615,38 @@
   - R-547
   milestone: M2
   note: "R-547 (RQ-295 (c)). Proposed by TASK-M2-47, TASK-M2-07 having merged (applied per R-369)."
+- id: REQ-ENC-036
+  area: ENC
+  kind: definition
+  statement: "The zero class of L_z and of E in lookup's layer-1 class test, in floating point, must be defined in inverse_encode_contract § \"Chart-aware validation\" by the task that needs it and reviewed by the physics reviewer before merge: a band relative to each value's scale, so that one physical state gets one verdict under every gauge."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the contract defines class 0 as a band on |L_z| and |E| relative to their scales, with sign classes outside it; physics reviewer approved; `cargo test -p engine lookup_validation_ladder_zero_band` gives the collinear L_z = 0 state one verdict at 64 orientations"
+  rulings:
+  - R-72
+  milestone: M2
+  note: "Physics review 5630998530 of PR #284, P2 (applied per R-369). Closed by TASK-M2-19."
+- id: REQ-ENC-037
+  area: ENC
+  kind: calibration
+  statement: "The zero-class band's k in lookup's layer-1 class test must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "`cargo test -p engine lookup_validation_ladder_zero_band_measure` measures C's rounding of L_z and E over gauge images and the decode's over unclamped z, and checks k at least 4× above it and 4× below the smallest class change a clamp makes; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Physics review 5630998530 of PR #284, P2 (applied per R-369). Proposed by TASK-M2-19 as the register's zero_class, provisional until M2."
 - id: REQ-CHART-001
   area: CHART
   statement: "Each chart must lower to a monomorphised Rust variant (the chart a type parameter the compiler specialises); there must never be a runtime axis-kind interpreter or runtime chart-type switch on the compute side, and adding a chart must mean a lowering rule plus a kernel type."
