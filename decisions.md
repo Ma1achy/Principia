@@ -24725,9 +24725,15 @@ v<version>", from quality_device_note §9's signature.
 *Fix round 21 of PR #286 (perf review 5635062315, P1; applied per R-369, the orchestrator's decision; no ruling
 changed):* the proof strip's "live work first" is tested deterministically, the strip's job held on a test barrier
 while GUI frames keep completing and no strip or exporter work runs on the GUI thread; the GUI's frame times while a
-strip runs are a benchmark on the human's Mac through `prin profile` (R-186), REQ-PERF-112, reporting p50, p95, p99
-and max against the 16.7 ms goal and `frac_frames_over_41.7ms` (`principia_dd_telemetry_and_tiers.md` §3). §3 sets
-no pass rule for these, so the benchmark reports and gates nothing.
+strip runs are a benchmark on the human's Mac (R-186), REQ-PERF-112, in REQ-PERF-106's and REQ-PERF-107's form (fix
+round 24 of PR #286, perf review 5635367539, P1; applied per R-369): `cargo xtask bench proof-strip-frame` runs the
+fixed suite's pan-nearfield scenario (`principia_benchmark.md` §3) once with no strip and once with a strip kept in
+flight, and passes if frame time p50, p95, p99 and max and `frac_frames_over_41.7ms` equal the no-strip baseline within
+noise (REQ-SYS-060's form; no new number), the 16.7 ms goal (`principia_dd_telemetry_and_tiers.md` §3) reported beside
+them; it fails if no strip is in flight when the window ends. *Was:* "the GUI's frame times while a strip runs are a
+benchmark on the human's Mac through `prin profile` (R-186), REQ-PERF-112, reporting p50, p95, p99 and max against the
+16.7 ms goal and `frac_frames_over_41.7ms` (`principia_dd_telemetry_and_tiers.md` §3). §3 sets no pass rule for these,
+so the benchmark reports and gates nothing."
 
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -24736,7 +24742,8 @@ Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timelin
 RQ-559`), REQ-GUI-379 (Play preview), REQ-GUI-380 (the proof strip), REQ-GUI-381 (the planner and the export job),
 REQ-PERF-110 (the estimate's basis) and REQ-TOOL-200 (the spec beside every export), in fix round 2, REQ-GUI-387
 (Explore while a preview plays), in fix round 12, REQ-GUI-388 (calibration: the proof frame's size), and in fix
-round 21, REQ-PERF-112 (benchmark: the GUI's frame times while a proof strip runs).
+round 21, REQ-PERF-112 (benchmark: the live frame loop holds the no-strip baseline while a proof strip runs, fix
+round 24).
 
 ## R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*
 *21 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` (new),
