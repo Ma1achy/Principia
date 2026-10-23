@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 116 |
 | COL | 158 |
-| GUI | 340 |
-| TOOL | 193 |
-| VAL | 194 |
-| PERF | 105 |
-| SYS | 86 |
-| **total** | **1802** |
+| GUI | 346 |
+| TOOL | 194 |
+| VAL | 198 |
+| PERF | 109 |
+| SYS | 90 |
+| **total** | **1821** |
 
-Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,21 +38,21 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 257 |
-| M8 | 376 |
+| M8 | 395 |
 
 ## Sections
 
-1433 sections in 52 files: 1173 yield at least one requirement; 260 yield none and are listed below with the reason.
+1465 sections in 54 files: 1198 yield at least one requirement; 267 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 172 |
+| informative only | 178 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 45 |
-| planned (the plan PR) | 23 |
-| rationale | 11 |
+| parent heading (obligations are in its subsections) | 46 |
+| planned (the plan PR) | 22 |
+| rationale | 12 |
 | superseded (kept for the record) | 4 |
 
 
@@ -182,6 +182,7 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 | R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best effort" *(closes RQ-394)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
+| R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -266,7 +267,6 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 | Principia: the benchmark | informative only | title and adoption note |
 | 1. What exists, and what this adds | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 2. A scenario is data | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 3. The suite | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 4. The sweep, and the three run modes | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 5. Running it | parent heading (obligations are in its subsections) | its subsections |
 | 5.1 From the GUI | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
@@ -409,6 +409,16 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
 
+### `docs/design/principia_honesty_precision.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: honesty as a measurement — f32 against f64 in the trajectory viewer | informative only | preface and the port's status note (R-574, R-575); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-574; no obligation |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 3.7 The README line | informative only | records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation |
+| 4. Fit with rulings | informative only | how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks |
+
 ### `docs/design/principia_lines.md`
 
 | section | reason | note |
@@ -442,6 +452,15 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 |---|---|---|
 | Principia — quality presets & device characterisation | informative only | preamble; obligations in subsections |
 | Auto is a continuous controller — the adaptive control architecture | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_results.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Result — from a view to a full-precision batch run, and back | informative only | preface and the port's status note (R-572, R-573); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-572; no obligation |
+| 2. The gap | rationale | why the Result exists; its obligations are in §3 |
+| 3.6 Philosophy §2 | informative only | records the sentence R-572 wrote into philosophy § "The prebake — a measuring instrument" and its table; applied there, no build obligation |
 
 ### `docs/design/principia_scratchpad_pointer_channels.md`
 
@@ -527,8 +546,6 @@ Of these: 154 calibration, 156 definition, 1492 obligation. Retired (kept for th
 | 2. The two paths, and why the split is the whole design | parent heading (obligations are in its subsections) |  |
 | 4. Six commitments, each earned by a measured failure | parent heading (obligations are in its subsections) |  |
 | 5. What the instrument is actually looking for | informative only | scientific goals; no build obligation stated |
-| 7.2 Tiled prebake | informative only | parked post-1.0 (§7); out of scope for the build |
-| 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
 | 7.6a The truncated-Fourier block — a possible future feature (R-420) | out of v1 (R-420) | parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path |
