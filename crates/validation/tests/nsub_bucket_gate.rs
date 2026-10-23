@@ -9,7 +9,7 @@ use kernel::driver::nsub_table::{pack, threshold_bits, threshold_f64, NsubConfig
 use kernel::driver::substep::square;
 use kernel::generated::nsub_thresholds::NSUB_TABLE_MAX;
 use validation::decode_f32_eps::SplitMix;
-use validation::gate::{self, GateConfig, RegionCount, Verdict};
+use validation::gate::{self, GateConfig, Minimum, RegionCount, Verdict};
 use validation::negative_control;
 use validation::nsub_bucket::{
     away_from_edges, count, edge, edge_samples, exact_d2, floor_pairs, floor_triple, legs, measure,
@@ -592,6 +592,24 @@ fn nsub_bucket_gate_floor() {
             "N_max {n_max} at gamma_sub 0.25 is refused"
         );
     }
+    let c = config();
+    assert_eq!(
+        c.min_regions,
+        Minimum::Declared {
+            value: NSUB_TABLE_MAX as u32,
+            requirement: "REQ-INT-094".to_owned()
+        },
+        "the region minimum is L_max (REQ-INT-094)"
+    );
+    let report = NsubBucketGate::judge(&c, "test.json", &input(FLOOR, None)).expect("judges");
+    assert!(report
+        .regions
+        .as_ref()
+        .is_some_and(|r| r.flags().is_empty()));
+    assert!(report
+        .negative_results
+        .iter()
+        .any(|l| l.contains("the count suffices, provisionally")));
 }
 
 negative_control!(

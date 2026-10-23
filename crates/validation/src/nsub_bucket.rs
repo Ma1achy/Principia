@@ -409,6 +409,11 @@ impl NsubBucketGate {
             "CPU-f64 and CPU-f32 only: the native-GPU leg is REQ-VAL-059's, the browser's REQ-VAL-144's (R-113)"
                 .to_owned(),
             format!(
+                "the region minimum is L_max = {NSUB_TABLE_MAX}, REQ-INT-094's proposed value, provisional until the M3 \
+                 gate (R-71): every one of the table's {NSUB_TABLE_MAX} edges is checked, so the count suffices, \
+                 provisionally"
+            ),
+            format!(
                 "{} samples within 2⁻²⁰ of an edge are not judged against the specification: there the f32 roundings of \
                  THR[n] and of d² and the square's floor decide (their sum, about 8·2⁻²⁴, is half the band)",
                 m.near_edge
