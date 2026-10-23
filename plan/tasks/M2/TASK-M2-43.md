@@ -99,20 +99,29 @@ the four, and the tests that asserted the 2-to-1 cover:
   equal at `(θ, φ)` and `(θ, π − φ)`; every other chart's decode is bit-identical to before; controls: R-141's gauge
   left in (C's mirror step run), a held momentum mirrored below the equator, and a decode skipping `C`, each fail
   (REQ-CHART-081).
-- `cargo test -p kernel shape_sphere_mirror_test` — REQ-CHART-082's verify: released from rest and with a held
-  momentum whose `y`-components are zero, the test reports mirror-equivariant; `Π·x`, `Π` applied to a decoded state,
-  has every `rᵢ` and `pᵢ` of `x` reflected through the x-axis, bit for bit, so its `L_z` is `−L_z(x)` and its
-  `shape_vec` is `x`'s with `w` negated, bitwise; each pixel pair's shapes are mirror images,
-  `shape_vec(Π·decode(θ, φ))` against `shape_vec(decode(θ, π − φ))` within REQ-CHART-053's bound, at every pixel; its
-  decoded states within `ε_phys` (REQ-ENC-024; physics review 5603529679 of PR #273, P6) on the pixels whose `n̂` lies
-  farther than a `δ` stated in the test from each of the three binary-collision landmarks (placed from chart_reference
-  §3.1, as §3.4 places them), with `ulp/δ ≤ ε_phys` as `δ`'s reason, since near a landmark `λ̃`'s direction is
-  conditioned as `ulp/‖ρ̃‖` (§3.2) (physics review 5603638748, P9); with a held `p_λ,y ≠ 0` it reports "does not
-  apply" and asserts nothing; controls: the gauge left in (each pair's shapes equal, not mirror images), a momentum
-  rule that turns `p_x` below the equator (the pair's states not mirror images), a test asserting the symmetry in the
-  "does not apply" case, and a state comparison that includes BC₀₁'s pixel `(s, t) = (0.5, 0.5)` of an odd grid, each
-  fail (REQ-CHART-082). The run arms (the run from `Π·x`, and fates, `L_z` and the frame's winding across pixel pairs
-  on a named non-chaotic fixture) are TASK-M3-38's acceptance (REQ-CHART-085).
+- `cargo test -p kernel shape_sphere_mirror_test` — REQ-CHART-082's verify: released from rest, and with a held
+  momentum with zero y-components, the test reports mirror-equivariant; Π·x, Π applied to a decoded state, has every
+  rᵢ and pᵢ of x reflected through the x-axis, bit for bit, compared on their bit patterns (to_bits), signed zero
+  included, so its L_z is −L_z(x) and its shape_vec is x's with w negated, bitwise where nonzero (an exactly zero sum
+  takes the sign the rounding gives, so a zero compares by value); each pixel pair's shapes are mirror images,
+  shape_vec(Π·decode(θ, φ)) against shape_vec(decode(θ, π − φ)) within REQ-CHART-053's bound, at every pixel; its
+  decoded states agree within ε_phys (REQ-ENC-024's physical-units norm) on the pixels whose n̂ lies farther than a δ
+  stated in the test from each of the three binary-collision landmarks (placed from chart_reference §3.1, as §3.4
+  places them), the test giving ulp/δ ≤ ε_phys as δ's reason, since near a landmark λ̃'s direction is conditioned as
+  ulp/‖ρ̃‖ (§3.2) and a rounding-level difference in n̂ turns the state by O(1); with a held p_λ,y ≠ 0 it reports
+  "does not apply" and asserts nothing; controls: R-141's gauge left in (each pair's shapes equal, not mirror images),
+  a momentum rule that turns p_x below the equator (the pair's states not mirror images), a test asserting the
+  symmetry in the "does not apply" case (it fails on the pairs), a state comparison that includes BC₀₁'s pixel (s, t)
+  = (0.5, 0.5) of an odd grid, and a configuration-only Π (positions reflected, momenta kept) applied to a state with
+  p_y ≠ 0, the "does not apply" case's decoded state, on which Π's reflection, a property of Π alone, is checked
+  though no symmetry is asserted (not every pᵢ reflected), each fail (REQ-CHART-082). *Was:* "bit for bit, so its
+  `L_z` is `−L_z(x)` and its `shape_vec` is `x`'s with `w` negated, bitwise;" and "and a state comparison that
+  includes BC₀₁'s pixel `(s, t) = (0.5, 0.5)` of an odd grid, each fail": on the mirror-equivariant states `p_y` is 0,
+  so a configuration-only `Π` differed from `Π` only by `−0` against `+0`, which an f64 `==` accepts (qa review
+  5635487490 of PR #276, Q4; applied per R-369, within what R-579 keeps at M2). The line is regenerated from the
+  verify, word for word (applied per R-369); the paraphrase it replaces cited physics reviews 5603529679 (P6) and
+  5603638748 (P9) of PR #273, which REQ-CHART-082's note keeps. The run arms (the run from `Π·x`, and fates, `L_z` and
+  the frame's winding across pixel pairs on a named non-chaotic fixture) are TASK-M3-38's acceptance (REQ-CHART-085).
 - `cargo test -p kernel encode_shape_sphere_signed` — REQ-ENC-034's verify: a state and its mirror land at `(θ, φ)`
   and `(θ, π − φ)`; decode then lookup returns the pixel on both hemispheres; T1 holds bitwise as before for `z` and
   every other chart; landing: a lower-hemisphere `x` with `p_y ≠ 0` whose unmirrored Jacobi momenta and masses are
