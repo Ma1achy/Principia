@@ -19,6 +19,7 @@ File › Make a result…, Measure's kept region and the Inspector open the Resu
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*"
 - `decisions.md` § "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+- `docs/contracts/principia_caching_contract.md` § "Part 6 — The responsiveness invariant: the main thread never waits"
 
 ## Deliverables
 - `crates/gui/src/windows/result.rs` — the Result window, its three launch points, the pilot and the predictability warning, progress, Cancel, Resume and Copy command.

@@ -22,6 +22,10 @@ The click inspector runs the clicked point four ways (R-574): all under the clic
 - `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
 - `decisions.md` § "R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/design/principia_trajectory_viewing.md` § "1. The single mechanism"
+- `docs/design/principia_dd_telemetry_and_tiers.md` § "3. Percentiles, not means — and the specific thresholds"
+- `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
+- `docs/design/principia_benchmark.md` § "3. The suite"
 
 ## Deliverables
 - `crates/engine/src/inspector/precision.rs` — the four runs (the nudge, the GPU dispatches of TASK-M4-16's trace for f32 and nudged f32, `computeIC` for f64 and nudged f64), the chord series at the sync boundaries, the marks and the self-check.
