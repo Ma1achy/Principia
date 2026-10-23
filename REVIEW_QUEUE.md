@@ -565,6 +565,17 @@ Nothing is ruled.*
   - (c) Each ruled separately.
 - **Applied meanwhile:** (a). `principia_lines.md` §8 and render_gui_spec §G6 say so, citing this entry; REQ-GUI-354's
   control and REQ-GUI-356's statement carry it, each with `rq: RQ-533`, and REQ-GUI-332's key line.
+- **A fourth place (added by PR #278's fix round 6, gui re-check 5624466118 G2, applied per R-369; the three above
+  unchanged):**
+  - **A hover into a repeat of the shown trace** (ruling 1): "a hover or click that integrates a different IC sets the
+    playhead to 0". A pixel in a repeat integrates the canonical system, the shown trace's IC bitwise (R-537, R-538
+    TM7; REQ-GUI-275), so by the words moving the hover into it does not restart. In the demos every `pointermove`
+    while unpinned schedules `compute` (`trace_markers.html:838`, `:851`; `trace_sound.html:903`), and `compute` calls
+    `restartOnNewRun` for any pixel that is a system, the same IC or not (`trace_markers.html:837`;
+    `trace_sound.html:887`), so they restart there.
+  - **Options seen:** (a) the words: no restart, the IC being the same; (b) the demos: every hover onto a system pixel
+    while playing restarts.
+  - **Applied meanwhile:** (a), the words. REQ-GUI-354's repeat arm carries it (`rq: RQ-533`).
 
 ## RQ-534: R-569's restart sets "the playhead" to 0, and the trace's playhead is the Time panel's, which is the figure's one global playhead, so every hover onto a new pixel while playing restarts the whole field's live march *(conflict: the ruling against the canonical spec and the export and animation contract; R-569, R-538 TF3, R-476; REQ-GUI-354; context: TASK-M8-58)*
 

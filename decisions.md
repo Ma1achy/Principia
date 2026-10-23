@@ -23602,7 +23602,11 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   chart's repeats, which redraw the same run (the demo's `viewChanged` re-analyses the run and never restarts). The
   restart is the Time panel's playhead, the one "With the playhead" uses (§8): that it is also the figure's global
   playhead is **RQ-534**, (a) applied meanwhile. Pinning by a click on the pixel the hover already shows integrates the
-  same IC, so by the words it does not restart; the demo restarts there: **RQ-533**, the words applied meanwhile.
+  same IC, so by the words it does not restart; the demo restarts there: **RQ-533**, the words applied meanwhile. So
+  does moving the hover into a repeat of the shown trace, a different pixel with the same IC (REQ-GUI-275): by the
+  words no restart, and the demos restart on every hover onto a system pixel (`trace_markers.html:837`, `:851`), the
+  fourth place RQ-533 records, (a) applied meanwhile (PR #278's fix round 6, gui re-check 5624466118 G2, applied per
+  R-369).
 - **PB7. "Exactly 0" (PB2).** The playhead's `t` equal to 0.0, as a restart or a step back to the start sets it; the
   demo's test is `playT <= 1e-9`, and its playhead is set to exactly 0 by every path that reaches it. A step while
   paused is neither playing nor scrubbing (R-538 J11), so a step back to 0 draws the trace dotted; a held scrubber at 0
@@ -23655,15 +23659,17 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
 - **PB13. Larger than the view (PB3).** The words: "centred on that axis and not clamped"; `withIcon` leaves such an
   icon at its point, unclamped and not centred. **RQ-533**, the words applied meanwhile: centred in the view on that
   axis.
-- **PB14. The tests.** `trace_restart_on_new_point` is REQ-GUI-354's verify, `trace_dotted_at_zero` REQ-GUI-355's and
-  `icons_wholly_on_screen` REQ-GUI-356's, each with the controls the instruction gives. "Opaque" is the measurement's
-  alpha above 8 of 255 (the demo's check). "Every icon set" is the four, "every event, start and path icon" PB10's,
-  "six rotations" the check's (0, 0.7, 1.6, 2.5, 3.14 and −1.2 rad), and the anchors the four corners and four edge
-  midpoints. The instruction's 1728 is the demo's 4 sets × 6 rotations × 8 anchors × 9 icons; the engine's count
-  follows from its own icons, and the control must touch the border in every case, or the test has no subject. The
-  three run when TASK-M8-58 builds them; this port builds no code. `trace_dotted_at_zero` runs in the gui crate, where
-  the transport state is, and checks the style and extent the GUI hands the line pass (REQ-GUI-281); its dot pattern is
-  `trace_dotted_pattern`'s, in the render crate (PR #278's fix round 5, qa review 5624411825 Q1, applied per R-369).
+- **PB14. The tests.** `trace_restart_on_new_point` is REQ-GUI-354's verify, `trace_dotted_at_zero` and
+  `trace_dotted_pattern` REQ-GUI-355's and `icons_wholly_on_screen` REQ-GUI-356's, each with the controls the
+  instruction gives. "Opaque" is the measurement's alpha above 8 of 255 (the demo's check). "Every icon set" is the
+  four, "every event, start and path icon" PB10's, "six rotations" the check's (0, 0.7, 1.6, 2.5, 3.14 and −1.2 rad),
+  and the anchors the four corners and four edge midpoints. The instruction's 1728 is the demo's 4 sets × 6 rotations ×
+  8 anchors × 9 icons; the engine's count follows from its own icons, and the control must touch the border in every
+  case, or the test has no subject. The four run when TASK-M8-58 builds them; this port builds no code.
+  `trace_dotted_at_zero` runs in the gui crate, where the transport state is, and checks the style and extent the GUI
+  hands the line pass (REQ-GUI-281); its dot pattern is `trace_dotted_pattern`'s, in the render crate (PR #278's fix
+  round 5, qa review 5624411825 Q1, applied per R-369). *Was (before PR #278's fix round 6, gui re-check 5624466118 G3,
+  applied per R-369):* "`trace_dotted_at_zero` REQ-GUI-355's and" and "The three run when TASK-M8-58 builds them;".
 - **PB15. The tasks.** TASK-M8-58 closes REQ-GUI-354 to REQ-GUI-356 (the trace's playback and icons are its own),
   reviewed by its reviewers; gui reviews the three. TASK-M8-63 builds REQ-GUI-332's key line, and TASK-M8-62 the full
   key's line (REQ-GUI-328; PR #278's fix round 1). REQ-GUI-274's statement and verify take PB3's placement,
@@ -23700,6 +23706,8 @@ REQ-GUI-328 (verify, note), with TASK-M8-58's and TASK-M8-62's acceptance and no
 heading block, PB15 and this paragraph, and adds R-569 and `principia_lines.md` §8 to TASK-M8-63's References and
 render_gui_spec §G6 to TASK-M8-62's. PR #278's fix round 5 (qa review 5624411825, applied per R-369) changes
 REQ-GUI-354, REQ-GUI-355 and REQ-GUI-356 (verify, note), PB14 here, and TASK-M8-58's deliverables, acceptance and notes.
+PR #278's fix round 6 (gui re-check 5624466118, applied per R-369) changes REQ-GUI-354 (note) and REQ-GUI-356 (verify,
+note), RQ-533 (a fourth place added), and PB6 and PB14 here.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
