@@ -3132,7 +3132,7 @@
   depends_on: [TASK-M8-78, TASK-M5-26]
   needs: [REQ-RENDER-045]
   requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b))
-  reviewers: [code, qa, gui, perf]
+  reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0
