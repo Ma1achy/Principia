@@ -178,6 +178,9 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
     preview runs, the user's view's baseline cover is held as a **third pinned identity** beside caching Part 5's two
     (current and backdrop), so the preview's identities never evict it. Returning shows that cover at once, never
     blank, and costs no recompute of it; only quads the user's view had not yet completed continue as they would have.
+    It costs one more viewport-bounded baseline cover of memory, under the hard cap like the other pins (caching Part 4,
+    Part 5 and Part 7), so pinned bytes are at most three baseline covers; when the cap binds the preview's own
+    non-pinned work is evicted first, never the user's cover (fix round 13 of PR #286, perf review 5634346116, P3').
   - **Esc in the Sequence while a preview plays** stops the preview and does nothing else: the focus and the keyboard's
     mode stay where they were. The next Esc acts as §G3 has it (§3.1) (fix round 2 of PR #286, gui review 5631227164, G4; applied per R-369).
   - **A user edit while it plays** (a `SetField` that enters the history: a pan, a slider, Home, a stain edit) or an
@@ -216,10 +219,26 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
   marches (the export's pixels times its copies, `E + 1`) times the steps each is marched (the physical time of the
   march over `dt`). The planner prices it with **the one throughput model the app keeps**,
   `principia_quality_device_note.md` § "2. Model-based, not reactive" ("device throughput (cost-per-dt-per-sample)"),
-  read under its provenance signature (§ "9. Persist the model, not just the rung"): the estimate is cost × that
-  scalar, one value, shown with its provenance key, since the model gives one value, not a range. No second estimator
+  read under its provenance signature (§ "9. Persist the model, not just the rung"): the estimate prices the cost
+  with that scalar, as defined below, one value, shown with its provenance key, since the model gives one value, not a range. No second estimator
   is built from frame records. With no model under a matching provenance it reads "no measurement on this machine
-  yet", never a number. *Was:* "**An estimate carries its basis.** A segment's cost is the samples it marches times the
+  yet", never a number.
+  **The estimate's unit, defined** (fix round 13 of PR #286, perf review 5634346116, P1', P2'; R-72 form; applied per
+  R-369). The model's "sample" is one IC sample run at the probe's real trajectory count, `2(E_probe + 1)`
+  trajectories, shadows and ensemble
+  (`principia_quality_device_note.md`, the device-characterisation section's step 2, "PROBE"; REQ-PERF-051), so:
+  - the cost per trajectory-step is `c_traj = c_model / (2(E_probe + 1))`, `c_model` the model's
+    cost-per-dt-per-sample and `E_probe` the `E` it was measured at;
+  - the export's trajectory-steps are `S_export × 2(E_export + 1) × steps`, where `S_export` is the export tier's
+    samples per quad times the quads its refinement puts over the frame (Part 4: the export tier's extra samples per
+    quad and depth are "priced into the estimate"), `E_export` the export's full `E` (no motion gating in export,
+    scheduler Part 9), and `steps` the march's physical time over `dt` (Part 2's class: (a) one march to the
+    segment's end, (b) `0 → t_frame` per frame, (c) none);
+  - the sustained derating: the estimate divides by the same thermal headroom the solve applies to the probe (step 4,
+    "apply thermal headroom ... of raw cold measurement"; its value is REQ-PERF-088's calibration, no new number), since
+    a multi-minute export is the sustained load that headroom is for;
+  - **estimate = `S_export × 2(E_export + 1) × steps × c_traj / headroom`**, one value, with the model's provenance key.
+  *Was:* "**An estimate carries its basis.** A segment's cost is the samples it marches times the
   physical time each is marched (the export's pixels times its copies, `E + 1`, times the march's length); the
   throughput is the same quantity per wall second, measured from this machine's frame records
   (`principia_dd_telemetry_and_tiers.md` §5). The estimate is shown as a range, the cost over the fastest and over the

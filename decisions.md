@@ -24706,6 +24706,14 @@ preview runs the user's baseline cover is a third pinned identity (caching Part 
 proof strip runs as a lower-priority, cancellable background job; the proof frame's size is a calibration requirement
 (REQ-GUI-388). The human's words above are unchanged.
 
+*Fix round 13 of PR #286 (23 Oct 2026; perf review 5634346116, P1', P2', P3'; applied per R-369, the orchestrator's
+decision; no ruling changed):* the estimate's unit is defined: the model's sample carries the probe's `2(E_probe + 1)`
+trajectories (quality_device_note step 2), so the cost per trajectory-step is the model over `2(E_probe + 1)`, and the
+estimate is the export's samples (the export tier's samples per quad over the quads at its refinement) ×
+`2(E_export + 1)` × steps × that cost, divided by the solve's thermal headroom (step 4; its value is REQ-PERF-088's).
+The preview's third pinned identity is in caching Part 4's and Part 7's pinned lists, costed as one more baseline
+cover under the hard cap, the preview's own work evicted first when the cap binds.
+
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375

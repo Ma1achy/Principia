@@ -1508,8 +1508,9 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   tier, as a lower-priority, cancellable background job with progress; the frame's size is REQ-GUI-388's calibration.
   While a preview runs the user's baseline cover stays pinned, so returning is never blank (fix round 12 of PR #286, perf review 5632950982, P3, P6).
 - **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
-  estimate the cost over the device throughput model of `principia_quality_device_note.md` §2, one value with its
-  provenance key, or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
+  estimate the cost over the device throughput model of `principia_quality_device_note.md` §2, per trajectory-step
+  (the model over `2(E_probe + 1)`), the export's samples × `2(E_export + 1)` × steps, derated by the solve's thermal
+  headroom, one value with its provenance key (`principia_sequence.md` §3.7; fix round 13 of PR #286, perf review 5634346116), or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
   machine's measured throughput"; fix round 12 of PR #286, perf review 5632950982, P1, P2),
   then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start runs it in the
   background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
