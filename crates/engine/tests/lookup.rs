@@ -1588,6 +1588,284 @@ negative_control!(
 
 // ── REQ-ENC-019: coincident bodies ─────────────────────────────────────────────────────────────────────────────────
 
+/// Entries whose controls clamp: latent `z` on `[−3, 3]⁸` with one control, or both mass controls, pushed to `±20`,
+/// each entered under a gauge element with an offset, a boost, a rotation and a scale.
+fn clamped_entries(n: usize) -> Vec<Ic<f64>> {
+    use validation::decode_f32_eps::SplitMix;
+    use validation::gauge::{uniform, Gauge};
+    let mut rng = SplitMix::new(38);
+    (0..n)
+        .map(|k| {
+            let mut z: [f64; 8] = std::array::from_fn(|_| uniform(&mut rng, -3.0, 3.0));
+            let push = if k % 2 == 0 { -20.0 } else { 20.0 };
+            match (k / 2) % 9 {
+                8 => {
+                    z[6] = push;
+                    z[7] = -push;
+                }
+                c => z[c] = push,
+            }
+            Gauge {
+                a: [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)],
+                u: [uniform(&mut rng, -2.0, 2.0), uniform(&mut rng, -2.0, 2.0)],
+                theta: uniform(&mut rng, 0.0, 6.0),
+                s: uniform(&mut rng, 0.5, 2.0),
+                mirror: false,
+            }
+            .act(&d(z))
+        })
+        .collect()
+}
+
+/// Checks [`moves`] against the decode: on each clamped entry, `ΔL_z` and `ΔE` are the decoded clamped state's
+/// `L_z` and `E` less the canonical state's, and the values after are the decoded clamped state's, each within the
+/// rounding of the two states (64 `ε` of their scales) and `sign` times the move. `sign` is 1; the control's is −1.
+fn check_moves(sign: f64) {
+    let mut seen = 0_u32;
+    for x in clamped_entries(720) {
+        let en = e(&x);
+        if en.blocks.clamped == 0 {
+            continue;
+        }
+        seen |= en.blocks.clamped;
+        let ext = Extents::entered(&x, en.canonical.lambda);
+        let m = moves::<Defaults>(&en, &en.z.z, &ext);
+        let before = Classes::within(&en.canonical.ic, &ext);
+        let after = Classes::of(&d(en.z.z));
+        let near = |got: f64, want: f64, scales: f64| {
+            (got - want).abs() <= 64.0 * f64::EPSILON * scales + 1e-6 * want.abs()
+        };
+        let (lz, e_) = (after.lz - before.lz, after.e - before.e);
+        let (sl, se) = (
+            before.lz_scale + after.lz_scale,
+            before.e_scale + after.e_scale,
+        );
+        assert!(
+            near(m.lz, sign * lz, sl),
+            "ΔL_z: {} against {lz}, {x:?}",
+            m.lz
+        );
+        assert!(near(m.e, sign * e_, se), "ΔE: {} against {e_}, {x:?}", m.e);
+        assert!(
+            near(m.lz_after, after.lz, sl),
+            "L_z after: {} against {}, {x:?}",
+            m.lz_after,
+            after.lz
+        );
+        assert!(
+            near(m.e_after, after.e, se),
+            "E after: {} against {}, {x:?}",
+            m.e_after,
+            after.e
+        );
+    }
+    assert_eq!(
+        seen & 0b1111_1111,
+        0b1111_1111,
+        "every control clamps somewhere"
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_moves() {
+    check_moves(1.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_moves,
+    "a move of the wrong sign is not the decode's",
+    expected = "ΔL_z",
+    check_moves(-1.0)
+);
+
+/// The rounding bounds of the first 18 [`clamped_entries`], each control clamped at either end and the masses
+/// together: `ΔL_z`'s, `ΔE`'s, `L_z`'s after and `E`'s after ([`Moves`]), and `L_z`'s and `E`'s on the canonical state
+/// ([`Classes::within`]), the contract's first-order bounds (§ "The zero class in floating point", § "The class a
+/// clamp moves") as computed when TASK-M2-19 set `zero_class`, pinned so that a change to a bound is a change to the
+/// band's calibration (REQ-ENC-037).
+const BOUNDS: [[f64; 6]; 18] = [
+    [
+        45133.859988981676,
+        22.14838392164068,
+        55233.93953832394,
+        2538859.8782234127,
+        13377.459799806566,
+        1080389.806280146,
+    ],
+    [
+        91928.23277674144,
+        914353093860704.3,
+        1117483197420.071,
+        42907220080395.805,
+        6858.1797058026805,
+        1500023597524619.0,
+    ],
+    [
+        11.775488371263185,
+        0.5251475005146352,
+        226.27081322071083,
+        4996.939382737815,
+        129.58769598469473,
+        1507.0702794465408,
+    ],
+    [
+        156.0851124383438,
+        0.003985999381107991,
+        647.1088099432584,
+        22559.341490835683,
+        439.0643845103764,
+        6586.748906401859,
+    ],
+    [
+        0.0,
+        9285.364131131922,
+        147.7074337012907,
+        8912.34571119876,
+        72.27221258352817,
+        3935.8338592048926,
+    ],
+    [
+        0.0,
+        4147.844290234301,
+        492.282155450898,
+        10986.951586815188,
+        334.5977375695253,
+        5244.089051112061,
+    ],
+    [
+        16.00366407805,
+        1222.5664404766721,
+        153.0979026980791,
+        3409.5600682002487,
+        102.21956067283885,
+        963.2561682337347,
+    ],
+    [
+        82.6018909107174,
+        5138.1920408146025,
+        574.1302792714795,
+        8342.116675514775,
+        202.59135040041338,
+        3126.1110881949153,
+    ],
+    [
+        3.925273546195286,
+        266.21972178080523,
+        229.42332672430692,
+        2697.956572841254,
+        155.69070848032393,
+        796.1093803747073,
+    ],
+    [
+        8.855433070375414,
+        271.4888307792701,
+        623.3275595310087,
+        16036.647917649665,
+        393.12172830801404,
+        4418.02012303223,
+    ],
+    [
+        40.002035223106155,
+        288.42304919343337,
+        652.6356139296912,
+        18949.70127593701,
+        453.5318867388006,
+        4908.053553972432,
+    ],
+    [
+        94.31972643107042,
+        7265.9837031422185,
+        694.9185934733408,
+        27754.978874718785,
+        546.5151310169628,
+        11513.665597794414,
+    ],
+    [
+        144.7135629655821,
+        17271.074859266668,
+        32214.824518577992,
+        4447498.643385858,
+        15114.444523359925,
+        814876.0951443075,
+    ],
+    [
+        205.50249766669484,
+        66504.32502689802,
+        30006.367323391576,
+        7783898.130750687,
+        21578.52762671724,
+        3103629.6402398665,
+    ],
+    [
+        124.52377545417485,
+        69331.52062929337,
+        47437.325653591346,
+        11534869.384504447,
+        27755.190508705113,
+        4031929.0416882425,
+    ],
+    [
+        189.98123345968702,
+        52899.28597191468,
+        12362.223666466542,
+        3131323.9751618346,
+        15200.416091579671,
+        1401659.7878806363,
+    ],
+    [
+        110.09476867839335,
+        149802.03305292362,
+        7284.274075413174,
+        6493589.5466938615,
+        7324.809396533455,
+        2560067.204025321,
+    ],
+    [
+        122.56592254175374,
+        123583.20802163698,
+        27551.249602257987,
+        14334221.040206969,
+        23897.343663465475,
+        6024854.151180288,
+    ],
+];
+
+/// Checks the bounds against [`BOUNDS`] to 1e-9 relative, the entries' extents read through `extents`.
+fn check_bounds(extents: impl Fn(&Ic<f64>, f64) -> Extents) {
+    for (k, (x, want)) in clamped_entries(18).iter().zip(BOUNDS).enumerate() {
+        let en = e(x);
+        let ext = extents(x, en.canonical.lambda);
+        let m = moves::<Defaults>(&en, &en.z.z, &ext);
+        let c = Classes::within(&en.canonical.ic, &ext);
+        let got = [
+            m.lz_scale,
+            m.e_scale,
+            m.lz_after_scale,
+            m.e_after_scale,
+            c.lz_scale,
+            c.e_scale,
+        ];
+        for (n, (g, w)) in got.iter().zip(want).enumerate() {
+            assert!(
+                (g - w).abs() <= 1e-9 * w.abs(),
+                "entry {k}, bound {n}: the scale {g:e} is not the pinned {w:e}"
+            );
+        }
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_bounds() {
+    check_bounds(Extents::entered);
+}
+
+negative_control!(
+    lookup_validation_ladder_bounds,
+    "bounds that leave out the entered extents are not the contract's",
+    expected = "the scale",
+    check_bounds(|_: &Ic<f64>, _: f64| Extents::default())
+);
+
 /// Checks R-13 for the pair `(i, j)` made to coincide in `generic()`: the lookup locks it, clamped, never refused.
 fn check_coincident(pairs: &[(usize, usize)]) {
     for &(i, j) in pairs {
