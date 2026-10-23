@@ -133,6 +133,12 @@ This sidesteps the floor question at design time — you don't need to *know* wh
 
 There is a second floor the decode guard doesn't catch — adjacent ICs *distinct* in physical coordinates, but f32 integration error exceeds their difference, so outcomes differ by rounding noise rather than real structure (Trani's numerical chaos, at pixel scale), and/or trajectories saturate the substep cap at close encounters. This floor is a **confidence gradient, not a terminal wall** (integrator contract Part 6, regularisation and the integration floor): saturated/suspect trajectories still reach real dynamical outcomes — they're *flagged* (the `saturated` descriptor bit; a high `suspect_fraction`), not terminated — so the structure is *computed with low confidence*, not cut off. The `saturated` bit and the derived suspect predicates exist in the payload (§2), so nothing is foreclosed; the scheduler uses saturation + high `suspect_fraction` as the **integration floor refinement-stop** (stop subdividing what the integrator can't resolve), not a sample-terminal. The sliding `MAX_REL_DEPTH` and the screen-space floor bound the work regardless of where this floor sits. Not a section — a reserved concern.
 
+**The floor follows the occupant (R-563).** The substep saturation above is the floor with regularisation off,
+unchanged. A regularised occupant (the default, Heggie × RK4, R-560) has no substep cap: its bound is a step budget, a
+rate of steps per unit physical time per copy, and a copy that runs out of it is **undetermined, never discarded**;
+the separation floor firing and steps held at the entry cap are its counted, non-terminal signals, the under-resolved
+markers there (integrator contract Part 6). How the scheduler's floor stop reads them is RQ-526.
+
 ---
 
 *Global precision on the CPU, relative arithmetic on the GPU. The linear decode is chart-agnostic, shares the integrity Jacobian, and isolates divergence to the integrator. Depth is bounded by budget, not by knowing the floor.*

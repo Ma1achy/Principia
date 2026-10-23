@@ -5,8 +5,9 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 
 ## Rules that hold everywhere
 
-- **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, not the final UI, but it has the same
-  structure and every feature. With the layer hidden the figure fills the window by Extend, the default, more of the
+- **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, and the native app's and v1 web's UI, with
+  every feature; a separate final UI, if there ever is one, is v2 web's *(conformed to R-571; was: "not the final UI, but it has
+  the same structure and every feature")*. With the layer hidden the figure fills the window by Extend, the default, more of the
   field at the same scale, or Fit, the view's square scaled to the window's shorter side, chosen in View › "F3 fills
   by" *(conformed to R-468)*. Pan and zoom reach past the chart's square with the layer shown too, with no gaps, every
   interaction working there *(conformed to R-537)*.

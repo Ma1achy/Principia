@@ -27,6 +27,9 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
 - **21 Oct 2026:** RQ-341 is ruled (R-550), so R-510's parking has ended and the entry is with the human again. The
   human's batch of 21 Oct leaves it open (R-545); (a) stays applied and nothing waits.
+- **21 Oct 2026 (evening):** RQ-341 is ruled (R-550), and the human parked RQ-378 again, with no target (R-568): "yeah
+  ok we can park that for now then". The entry stays open, (a) stays applied, nothing waits, and it returns when he
+  raises it. *Was:* "RQ-341 is ruled (the 21 Oct batch, PR #274)", before R-550 was on main.
 
 ## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
 
@@ -307,3 +310,334 @@ trajectories fade, and how fast).*
     plane's image, under RQ-346's metric.
 - **Applied meanwhile:** none; nothing changes: on a chart with no proxy the trace does not fade and its settings say
   so (REQ-GUI-249, R-509). What waits: REQ-GUI-266 (`rq`), TASK-M8-54, a leaf.
+
+## RQ-524: R-565 makes the regularised occupants' sync grid a fixed quantum independent of the horizon, where the unregularised occupants' macro-step grid, `dt_macro = max(1e-3, T/65535)`, depends on the horizon above `T = 65.535` *(silence: the ruling names the sync grid only; R-565, R-132, R-86; REQ-INT-081, REQ-INT-100; context: TASK-M3-06, TASK-M3-40)*
+
+*Found by R-565's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md` (`docs/incoming/2026-10-21_gap_sweep_integrator/`), § "PR 1": "**The sync grid is a
+    fixed quantum of physical time**, the same for every run and independent of the horizon and of frame timing.
+    Steps are sized from it, the march stops only on it, and the playhead reads boundary states."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)", `dt_macro`'s
+    row: "`max(1e-3, T/65535)` (**fixed** for a given `T`, §5; R-132) — so `⌈T/dt_macro⌉ ≤ 65535` and the u16 step
+    indices stay exact (R-86)"; § "Part 5": "With `dt_macro` fixed for a given `T`, this length is identical CPU/GPU".
+  - `decisions.md` § R-132: "REQ-INT-081: `dt_macro = max(1e-3, T/65535)`. T keeps [50, 200], with a default of 50".
+- **The silence:** a "sync boundary" belongs to the regularised occupants (Part 2b); the unregularised ones step on
+  the macro-step grid, which at the default `T = 50` is the fixed `1e-3` but above `T = 65.535` is `T/65535`, a
+  different discretisation per horizon, the trap R-565 rules out for the sync grid. The ruling does not say whether
+  it applies to the macro-step grid, and the u16 step index (R-86) is what ties `dt_macro` to `T`.
+- **Options seen:**
+  - (a) R-565 is the sync grid only; the macro-step grid stays R-132's, unchanged.
+  - (b) The macro-step grid is fixed too, `dt_macro = 1e-3` for every `T`, and a horizon above 65.535 marches in
+    epochs (Part 5's "march epochs") so the u16 index stays exact.
+  - (c) The macro-step grid is fixed at a value that keeps `⌈200/dt_macro⌉ ≤ 65535` for every `T` in `[50, 200]`.
+- **Applied meanwhile:** (a): the contracts' `dt_macro` is unchanged; integrator contract Part 2a names this entry.
+- **Waits:** nothing built waits; the answer changes REQ-INT-081 if it is not (a).
+
+## RQ-525: R-561's warning "in the Problems panel": the corpus's only Problems pane is the stain editor's, for compile errors and colour-graph warnings *(silence: which panel; R-561, R-542; REQ-GUI-352; context: TASK-M8-24)*
+
+*Found by R-561's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "A pair measured not to work carries a warning beside the selector, in the
+    Problems panel and in each export's settings."
+  - `docs/gui/principia_render_gui_spec.md` Part II (the stain editor), § "1. Layout — four surfaces": "the assembled
+    code and a **Problems** pane (compile"; its "Problems for the state map (R-542; state map SM15)": "A warning where
+    a brightness node replaces L".
+    No other Problems panel is defined; the Run window (§G5) and the Profiler are the integrator's surfaces.
+- **The silence:** an integrator pair's warning is not a stain problem, and no app-wide Problems panel exists.
+- **Options seen:**
+  - (a) The stain editor's Problems pane gains a row for the active occupant's warning.
+  - (b) A Problems panel for the whole app (a window or a status-line count opening a list), holding the stain
+    editor's problems and the integrator's warnings; the stain editor's pane shows its own subset.
+  - (c) The warning shows in the status line and the Run window only, "the Problems panel" read as those.
+- **Applied meanwhile:** none: the selector's warning (REQ-GUI-351) and the export settings' (REQ-GUI-353) are built
+  without it.
+- **Waits:** REQ-GUI-352 (TASK-M8-24; the rest of the task does not wait), `rq: RQ-525`.
+
+## RQ-526: How a regularised copy's budget exhaustion and its two counted signals are stored, whether an undetermined-by-budget footprint splits, and which signal stops a quad at the integration floor *(silence: R-563, R-310's descriptor bits, payload §2, refinement policy §1 and §6, scheduler Part 4; REQ-INT-101, REQ-SCHED-063; context: TASK-M3-41, TASK-M6-10)*
+
+*Found by R-563's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "Regularised: running out of the step budget makes the result
+    undetermined, never discarded. The separation floor and the entry-cap hits are counted, non-terminal signals.
+    Re-point REQ-SCHED-063 and -077."
+  - The source design (`designs/integrator_findings.md` §2, not ruled text): "The `saturated` bit's meaning is
+    restated in those terms".
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7", the terminal states: "`escape`/`bounded`/`collision`
+    are the physical outcomes; `sim_failed` … and `decode_failed` … are lifecycle states"; the sticky `saturated`
+    bit is "descriptor bit 5"; RQ-310 holds descriptor bits 10–15 contested.
+  - `docs/design/principia_dd_refinement_policy.md` § "1. The split rule": "unresolved(f) ⟺ … ∨ the footprint is
+    undetermined (non-finite spread, or an unusable copy)"; § "6. Decision variants, and the second budget line":
+    "**`Undetermined` means FINER `eta`, NOT FINER CELLS.**"
+  - `docs/contracts/principia_scheduler_contract.md` § "Part 4", the integration floor: "a quad whose `suspect_fraction`
+    stays high and whose samples are **substep-saturated** … **stop refining**".
+- **The silence:** (1) a budget-exhausted copy has no `state` value (it is not `sim_failed`, which is NaN or Inf, and
+  not `running` once it stops) and no bit; (2) the two counts have no payload field; (3) §1 splits an undetermined
+  footprint, which the design measured as manufactured work, while §6 says undetermined calls for finer `eta`, not
+  finer cells; (4) scheduler Part 4's floor reads substep saturation, which a regularised occupant has none of.
+- **Options seen:**
+  - (a) A sticky descriptor bit `budget_exhausted` beside `saturated`, the copy's `state` latched as it stood and its
+    footprint undetermined at read; the `saturated` bit set when either counted signal fires, the two counts kept in a
+    payload word (a schema change); an undetermined-by-budget footprint takes §6's `Undetermined` decision, never a
+    split; the floor stop reads `saturated` and `suspect_fraction` for every occupant.
+  - (b) As (a), but the budget's outcome a new `state` value, `undetermined`, a lifecycle state like `sim_failed`.
+  - (c) As (a) or (b), but an undetermined-by-budget footprint splits as §1 says, the budget sized so that it does not
+    bind (R-564's calibration).
+- **Applied meanwhile:** none in the payload; the contracts say "undetermined, never discarded" and "counted,
+  non-terminal" and name this entry.
+- **Waits:** REQ-INT-101 (TASK-M3-41) and the regularised arm of REQ-SCHED-063 (TASK-M6-10; its regularisation-off arm
+  does not wait), each `rq: RQ-526`.
+
+## RQ-527: How R-564's rate is accounted along a run: against the elapsed grid time, per sync interval, or with an allowance *(silence: R-564; REQ-INT-102, REQ-INT-103; context: TASK-M3-41)*
+
+*Found by R-564's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "**The step budget is a rate**, steps per unit physical time. The
+    calibration value starts at about 4e4 per unit time per copy."
+  - The source design §2: "The budget is a **rate**, steps per unit physical time, so it is defined for a live playhead
+    with no fixed end." Its measurement is a whole-run mean, total steps over `t_max`.
+- **The silence:** a rate becomes a bound only through a rule for when it is exceeded, and the rules give different
+  outcomes on the same run: a close encounter at `t = 0.5` that needs `3·10⁴` steps exceeds a cumulative bound
+  `rate × t` (2·10⁴ there) but not a whole-run mean.
+- **Options seen:**
+  - (a) Cumulative: a copy is exhausted when its steps exceed `rate × t` at a sync boundary, `t` its grid time.
+  - (b) Per interval: each `Δ_sync` interval gets `rate × Δ_sync` steps, unspent steps lost.
+  - (c) Cumulative with an allowance: steps exceed `rate × max(t, t_min)`, `t_min` a calibration, so an early
+    encounter is not cut.
+  - (d) Cumulative, unspent steps carried forward, checked at every step rather than at boundaries.
+- **Applied meanwhile:** none; Part 3's `step_budget_rate` row names this entry.
+- **Waits:** REQ-INT-102 and REQ-INT-103 (TASK-M3-41), `rq: RQ-527`.
+
+## RQ-528: Where the regularised energy's drift is stored, and how a drift view draws a run that stopped at an event, under R-566 *(silence: R-566, payload §5, integrator contract Part 1; REQ-VAL-195, REQ-INT-085, REQ-INT-106; context: TASK-M3-41, TASK-M3-05)*
+
+*Found by R-566's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "The two-body collision gate (REQ-VAL-045) and any per-step suspect flag
+    under a regularised occupant read the regularised energy. The Cartesian energy is for diagnostics, read only from
+    runs that did not stop at an event."
+  - `docs/design/principia_dd_integrator.md` § "3.5": "accumulate: ΔE_final, max|ΔE|, ΔL_z final, max|ΔL_z|"; "suspect
+    predicates (READ-TIME, over the stored drift latches — no stored suspect bits, payload §5)".
+- **The silence:** the payload has one energy drift, the Cartesian one; a suspect flag derived at read from it cannot
+  read the regularised energy, so a second drift latch, or a different one per occupant, is needed and has no place.
+  And every pixel's drift is drawn today, including those of runs that stopped at a collision or an escape.
+- **Options seen:**
+  - (a) Under a regularised occupant the stored drift latches are the regularised energy's, and the Cartesian drift
+    is computed only in the harness and the inspector (the diagnostic runs, termination off).
+  - (b) Both drifts stored, the regularised one in new payload fields (a schema change), the suspect predicate reading
+    it under a regularised occupant.
+  - (c) For the display: a drift view draws an event-stopped run as "no data" (the not-yet style) under a regularised
+    occupant; or it draws it with a badge; or it draws it as today.
+  - (d) *Added after physics review 5605806092 of PR #277, F6:* the energy-suspect threshold (REQ-INT-085) is one
+    value for every occupant, and its calibration measured only the occupants with regularisation `none`, asking that
+    Euler light SUSPECT_ENERGY on dd test 2's long orbit and the symplectic occupants not. The default occupant is now
+    Heggie × RK4 (R-560), not symplectic, its regularised energy drifting secularly (REQ-VAL-031), and SUSPECT_ENERGY
+    reads it (R-566). If it lights on test 2's orbit it lights across the field. Either (d1) the threshold must leave
+    Heggie × RK4 unlit on test 2's orbit at the default step, as it does the symplectic occupants; or (d2) Heggie ×
+    RK4 is measured and recorded with no requirement, as RK4 is, and a lit default reads as integrator drift
+    (integrator contract Part 2, "the suspect flag … means different things per occupant"); or (d3) the threshold is
+    per occupant (a change to the one-threshold rule).
+- **Applied meanwhile:** none in the payload; the contracts state the rule and name this entry. For (d): (d2),
+  REQ-INT-106 measures and records Heggie × RK4's regularised drift on tests 2 and 7 and which predicates it lights
+  under REQ-INT-085's proposed thresholds. REQ-INT-106 waits with TASK-M3-41, which builds nothing before RQ-526 to
+  RQ-528 are ruled (applied per R-369, physics review 5606990734 of PR #277).
+- **Waits:** REQ-VAL-195 and REQ-INT-106 (TASK-M3-41), `rq: RQ-528`. *Was:* "REQ-VAL-195 (TASK-M3-41), `rq: RQ-528`.
+  Nothing waits on (d): the M3 gate reads REQ-INT-106's record."
+
+## RQ-529: R-560's default occupant, Heggie × RK4, against integrator contract Part 2's tier column, which binds KDK at Potato–Low, Yoshida-4 at Medium–High and Yoshida-6 at Ultra–Extreme *(conflict: R-560 against R-4 and the tier table; REQ-INT-014, REQ-INT-006; context: TASK-M3-02, TASK-M3-08)*
+
+*Found by R-560's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "**Default occupant: Heggie × RK4.**"; `DECISIONS_2026-10-21.md`: "Yep
+    Heggie x RK4 as default".
+  - `docs/contracts/principia_integrator_contract.md` § "Part 2", the table: "the last column gives the *default*
+    binding; the user overrides": KDK "Potato–Low (fast, motion)", Yoshida-6 "Ultra–Extreme (accuracy)", RK4
+    "Validation cross-check".
+  - `decisions.md` § R-4: "spec-keyed defaults" means the markdown's tier tables.
+- **The conflict:** the ruling sets one default with no tier; the table binds a stepper per tier, and with Heggie the
+  table's KDK and Yoshida rows compose into R-561's measured-bad pair (KDK) or unmeasured pairs (Yoshida).
+- **Options seen:**
+  - (a) Heggie × RK4 at every tier; the tier column is the per-stepper binding with regularisation `none` only.
+  - (b) Heggie × RK4 at Medium and above; the low tiers keep a cheaper default (`none` × KDK at Potato–Low).
+  - (c) The tier column is redrawn for Heggie once R-561's table measures Heggie's other pairs.
+- **Applied meanwhile:** (a), the ruling's words: Part 2 says so and names this entry. TASK-M3-02's per-stepper
+  binding is unchanged under any option.
+- **Waits:** nothing built; the default config of TASK-M3-08 follows (a) until ruled.
+
+## RQ-530: With R-562's "v2" text removed, whether Kustaanheimo–Stiefel regularisation, the one method that text named, has a place *(silence: R-562; dd_decoder §6; context: none)*
+
+*Found by R-562's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "**Regularisation is v1, not v2.** Remove the "v2" text (integrator
+    contract Part 6) and REQ-INT-033."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 6", as it stood: "Kustaanheimo–Stiefel (KS)
+    regularisation is **v2**. … it changes the state representation and ripples through
+    decoder/canonicaliser/observables, so it is not a drop-in occupant".
+  - `docs/design/principia_dd_decoder.md` § "6. Deferred / flagged": "**KS-regularised state representation (v2)** —
+    changes the decoder's output type; explicitly out of scope until then."
+- **The silence:** the v2 text was about KS, which is not among Part 2b's regularisation occupants; R-562 makes
+  regularisation v1 but does not say whether KS joins them, stays a later method, or is dropped.
+- **Options seen:**
+  - (a) KS is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling;
+    dd_decoder §6's item is reworded to say so, with no version.
+  - (b) KS stays a later version's method, dd_decoder §6 unchanged.
+  - (c) KS joins v1 as a fifth regularisation occupant.
+- **Applied meanwhile:** the v2 text is removed from integrator contract Part 6 and dd_integrator §6, each naming this
+  entry; dd_decoder §6 is unchanged.
+- **Waits:** nothing.
+
+## RQ-531: REQ-EVT-013's re-bind test counts "+1, +2, +3, +4 and +8 sync boundaries" past firing, a count whose physical time R-565's fixed quantum changes *(silence: R-565 against a count of boundaries; R-31, R-103; REQ-EVT-013; context: TASK-M3-33)*
+
+*Found by R-565's port. Nothing is ruled.*
+
+- **File, section:**
+  - The human's `INSTRUCTION.md`, § "PR 1": "Time windows such as the closure window are stated in physical time."
+  - `plan/requirements.yaml`, REQ-EVT-013's test: "integrate +1, +2, +3, +4 and +8 sync boundaries (2–3x the firing
+    time) past firing with the original discretisation"; `docs/contracts/principia_integrator_contract.md` § "Part
+    7": "0 of 895 escapes were still unbound eight sync boundaries later".
+- **The silence:** the 0-of-895 measurement's boundaries were prin-rs's `t_max / n_sync`; on a fixed `Δ_sync` the same
+  counts are a different, and if `Δ_sync` is small a much shorter, time past firing, and "(2–3x the firing time)" no
+  longer follows from them.
+- **Options seen:**
+  - (a) The offsets are stated in physical time, the times the original boundaries stood at (to be read from the
+    prin-rs measurement's grid), marched on `Δ_sync`.
+  - (b) The offsets are 1, 2, 3, 4 and 8 closure windows (0.4 time units each).
+  - (c) The offsets are 1×, 2× and 3× the firing time, as the parenthesis says.
+- **Applied meanwhile:** none; REQ-EVT-013 is unchanged.
+- **Waits:** REQ-EVT-013's test (TASK-M3-33), `rq: RQ-531`.
+
+## RQ-532: R-567 says Heggie × the generalised leapfrog "stays allowed, with the warning, like every other pair", but the generalised leapfrog is not one of the contract's steppers, and the port of R-561 recorded the two implicit steppers as not occupants *(conflict: R-567 against R-561's port and integrator contract Part 2; REQ-INT-017, REQ-INT-098; context: TASK-M3-39)*
+
+*Found by R-567's port. Nothing is ruled. For the human: yes, it changes what is built (one or two implicit steppers).*
+
+- **File, section:**
+  - The human's follow-up of 21 Oct 2026 (evening), item 1: "In the warning table of REQ-INT-006/-017, the pair Heggie
+    × generalised leapfrog is **measured bad**, with that reason in one line … It stays allowed, with the warning, like
+    every other pair."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 2", the occupants' table: Euler, KDK leapfrog,
+    Yoshida-4, Yoshida-6, RK4; § "Every stepper × regularisation pair runs; …": "Two implicit steppers were measured
+    under Heggie on the same fixture and are not occupants"; "A symplectic regularised occupant, if one is wanted, is
+    an implicit stepper and gets its own row in the table below."
+  - The gap sweep's design §1 (the bundle's record): "A symplectic regularised occupant, if ever wanted, is an
+    implicit stepper and gets its own entry in the table."
+- **The conflict:** "stays allowed … like every other pair" reads as a selectable pair, so a selectable stepper; the
+  contract has no generalised-leapfrog stepper (nor implicit midpoint), and "not occupants" was the port's reading,
+  applied per R-369, not the human's words.
+- **Options seen:**
+  - (a) Neither implicit stepper is selectable; the table records Heggie × the generalised leapfrog as measured bad
+    for the record (note 4), and "stays allowed" means no pair of the built steppers is blocked.
+  - (b) The generalised (Störmer–Verlet) leapfrog becomes a stepper (implicit, fixed-point iteration, its profile and
+    its pairs), selectable with its warning under Heggie; implicit midpoint stays out.
+  - (c) Both implicit steppers become steppers, the implicit midpoint rule being the symplectic regularised occupant
+    the contract and the design name.
+- **Applied meanwhile:** (a): the pair is in Part 2b's table as note 4, measured bad with its warning; neither
+  implicit stepper is built.
+- **Waits:** nothing built; TASK-M3-39 builds the pair table with note 4 under (a).
+
+## RQ-550: The membrane rule's "exactly three crossings" (REQ-SYS-059) against v1 web, the whole native app in the browser, which needs more *(conflict: R-571 against REQ-SYS-059, systems_architecture §3 and canonical_spec §1 item 5; REQ-SYS-059, REQ-SYS-051, REQ-SYS-086; context: TASK-M8-38, TASK-M8-41)*
+
+*Queued by R-571, which names it: "The membrane rule is the one place I expect a real conflict. … Do not redesign it.
+Measure what v1 web actually needs to cross, write that down beside the rule, and **queue** it with options for me."
+Nothing is ruled. For the human: yes, it changes what v1 web builds or offers.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-SYS-059: "The wasm↔JS membrane must have exactly three crossings: set_field(path,
+    value) as the GUI's only write, a GUI-sized (never engine-sized) state snapshot throttled to about 10 Hz, and the
+    OffscreenCanvas handle transferred once at startup"; its verify, "the wasm exports are set_field, snapshot and the
+    one-time canvas init".
+  - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not
+    diminished)", the wasm↔JS table (Field edit, State snapshot, Canvas transfer): "It is thin and enumerable in the
+    same way"; `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)", item 5:
+    "**wasm↔JS** (`set_field` edits in, GUI-sized snapshots out, canvas transferred once)".
+  - R-571: "REQ-SYS-059's "exactly three crossings" cannot hold for the whole native app in a browser: downloads, file
+    drops, the clipboard and audio all cross."
+- **The conflict:** the rule was drawn for a thin TS GUI across the membrane. v1 web is the whole native app, whose
+  specified features need the browser for files, the clipboard, sound, storage and more. Even the design as written
+  crossed more than three: the input deltas (SharedArrayBuffer or postMessage, caching_contract Part 6a), the resize
+  message, the inspector worker's messages, and `wgpu`'s own calls into the browser's WebGPU; REQ-SYS-059's verify
+  counts only the wasm exports.
+- **Measured** (systems_architecture §3, "v1 web, and what it crosses", fourteen rows, each with the doc and section
+  of the native feature): (1) input, text entry and the cursor; (2) resize; (3) the inspector worker's messages;
+  (4) GPU commands to WebGPU; (5) downloads: images with pxpack, snapshots, sweep frames and GIFs, the benchmark's
+  file, profiler captures; (6) video frames to WebCodecs; (7) file drops and picks: Import picture, load snapshot,
+  custom colour occupants; (8) the clipboard: copy snapshot, share link, Copy summary, the console's Copy; (9) the
+  page's URL, for share links; (10) audio, Listen; (11) persistent storage: presets, Your stains, warning
+  suppressions, saved views, "save as default", the quality model, the benchmark's first launch; (12) device and page
+  facts: adapter info and limits, the browser, a phone's viewport, visibility, clocks; (13) a wake lock; (14) the live
+  profiler query (REQ-TOOL-128, its browser transport undefined). None carries the payload, the quad tree or the
+  reductions.
+- **Options seen:**
+  - (a) **Two lists.** The three stay the engine↔GUI membrane's (state in, state out, the canvas once), its law
+    unchanged; v1 web's platform crossings are a second, enumerated list (the measured rows), each plain data, none
+    engine state, none engine-sized; review checks the wasm module's exports and imports against both lists.
+  - (b) **One allow-list.** "Exactly three" becomes "exactly these": the three plus the measured rows, enforced in CI
+    against the wasm module's imports and exports, as TASK-M5-30 enforces the GPU↔CPU membrane's five.
+  - (c) **The law, not the count.** The count was the TS GUI's, so v2 web's; v1 web keeps the law alone (big data
+    never crosses, data boundaries not object boundaries, the GUI holds no engine handles), with no count.
+  - (d) **The rule as written.** Every native feature that needs another crossing is disabled in v1 web and says so in
+    the app (R-571's own fallback): by the table, downloads, imports, the clipboard, Listen, the saved stores and the
+    rest.
+- **Its ruling must also settle the gaps with no native control to disable** (REQ-SYS-086 covers only gaps that have
+  one; gui review 5608379011 of PR #282, applied per R-369): (i) runtime-authored colour occupants, the fragment
+  registry being "the scanned filesystem" (row 7), where the browser has no folder to scan; (ii) persistence across
+  reloads, the stores and the quality model (row 11); (iii) `prin profile query --live` (row 14). For each: crossed,
+  replaced, or absent, and if absent, what v1 web shows.
+- **Applied meanwhile:** the rule stands as written and nothing is built (M8); the measured list sits beside it, a
+  record, not a rule. REQ-SYS-059 and REQ-SYS-051 carry `rq: RQ-550`, and REQ-SYS-086's list of what v1 web says it
+  cannot do waits on it.
+- **Waits:** TASK-M8-38 (REQ-SYS-051, REQ-SYS-059) and TASK-M8-41 (REQ-SYS-086).
+
+## RQ-551: Where the GUI runs in v1 web, and what the main thread holds, now that v1 web's GUI is the native app's egui and not a TS DOM shell *(conflict: R-571 against caching_contract Part 6a, systems_architecture §3, §5 seam 12 and §6 invariant 5, canonical_spec §1 and §6; REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049, REQ-SYS-050, REQ-SYS-056; context: TASK-M8-37, TASK-M8-38)*
+
+*Found by R-571's port, and queued as R-571 says: "Queue anything else that conflicts rather than resolving it."
+Nothing is ruled. For the human: yes, it changes how v1 web is built.*
+
+- **File, section:**
+  - `docs/contracts/principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker
+    (and that worker is the wasm engine)": "The main thread is a thin TS shell: an input pump and a DOM-GUI host, a
+    *different binary*, and it owns no simulation state."; and Part 6, item 3: "Time-budgeting this on the main thread
+    was tried and **failed under real load — the scheduler hitched the gesture and the DOM GUI froze.**"
+  - `plan/requirements.yaml`, REQ-SYS-049: "with the main thread only a TS input pump and DOM-GUI host, and a second
+    wasm context as the f64 inspector worker"; REQ-SYS-047: "the GUI must be a thin TypeScript shell owning only DOM
+    and view-scratch state" (its GUI clause now R-571's).
+  - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule": the egui binding is "compiled
+    into the same wasm binary", and "Under the egui binding there is nothing to transfer: egui-wgpu shares the
+    engine's `wgpu` context and paints the debug overlay onto the same surface in-process."
+  - The native split, caching Part 6a (R-113): "the thread that takes input and draws the GUI never runs the
+    scheduler, the cache or the GPU work."
+- **The conflict:** R-571 makes the browser's GUI the native app's egui GUI. The corpus's browser layout puts a DOM GUI
+  on the main thread, in a separate TS binary, with the engine in a worker; egui cannot live in that TS binary, so
+  either it moves into a wasm context of its own on the main thread, or into the worker, or the worker goes.
+- **Options seen:**
+  - (a) **egui in the engine's worker**, painting onto the transferred OffscreenCanvas through the engine's `wgpu`
+    context (gui_state_contract §1's egui binding as written); the main thread a small loader and input pump, no GUI
+    and no state. Cost: in the browser the GUI shares the frame loop's thread, so R-113's split (the thread that
+    draws the GUI never runs the scheduler, the cache or the GPU work) would not hold for GUI drawing in the browser;
+    a long frame delays the GUI's redraw, and the mitigation, the scheduler time-budgeted per frame on that thread, is
+    the one Part 6, item 3, quoted above, records as having "failed under real load — the scheduler hitched the
+    gesture and the DOM GUI froze". The other way, egui's layout, tessellation and paint take from the worker's frame
+    budget, and the frame record's `stage_ms` has only its fixed stages (integrate, reduce, colour, upload, present,
+    and `post` for the Print graph; `principia_dd_telemetry_and_tiers.md` §2, R-56, R-488), so that time would show
+    in none of them. Text entry and the clipboard need the main thread's help (RQ-550's rows 1 and 8).
+  - (b) **egui on the main thread, in a wasm context of its own**: the gui crate against the engine surface, with
+    `set_field` and the snapshot posted between the two contexts as serialised data; the engine and the frame loop stay
+    in the worker. R-113's split holds as natively; REQ-SYS-059's three become messages between two wasm contexts.
+    Cost: two surfaces (the figure on the worker's OffscreenCanvas, the GUI on a main-thread canvas above it) or a
+    compositing step; the main-thread bundle holds the GUI but no engine state.
+  - (c) **No worker**: the whole app on the main thread, as egui's own web target runs, the frame loop time-budgeted.
+    Against Part 6, item 3, quoted above. With no worker at all, the inspector worker goes too, and in the browser
+    REQ-SYS-039, -040, -041, -044, -045, -049 and -050 would go, as would the browser form of REQ-SYS-031 (the main
+    thread never waits on scheduler work; here it runs it), REQ-SYS-060 (trajectory integration and sonification in
+    the inspector worker) and REQ-PERF-072 (the hover integration in an inspector worker); those three are closed by
+    native tasks and carry no `rq`.
+- **Applied meanwhile:** none; the layout stands as written in the corpus and nothing is built (M8). The requirements
+  above carry `rq: RQ-551`; REQ-SYS-047's GUI clause is changed by R-571 itself (the GUI is the native app's; a TS GUI
+  shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
+  (a) and (b).
+- **Waits:** TASK-M8-37 and TASK-M8-38.

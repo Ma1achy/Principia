@@ -1,9 +1,13 @@
 # Principia — Dev GUI (egui / F3)
 
 *Status: canonical. Rewritten in step 6 (24 Sep 2026). This is the single source of truth for the **developer GUI**: the
-egui debug layer over the wgpu render, toggled with F3. It is not the final UI, but it has the same structure and every
-feature. The production (TS) GUI is out of scope; it re-skins the same operations through the same contract
-(`principia_gui_state_contract.md` §1, §7).*
+egui debug layer over the wgpu render, toggled with F3. It is the native app's UI and v1 web's, with every feature; a
+separate final UI, if there ever is one, is v2 web's (R-571; was: "It is not the final UI, but it has the same structure
+and every feature."). It is the interface of the native app **and of v1 web**, the whole native app compiled to run in the
+browser, with the same interface, features and stains (R-571). A production TS GUI, if there ever is one, is v2
+web's, a separate product designed later; it would re-skin the same operations through the same contract
+(`principia_gui_state_contract.md` §1, §7). Was: "The production (TS) GUI is out of scope; it re-skins the same
+operations through the same contract".*
 
 *Sources, in order of authority: `decisions.md` rulings, then `gui/design/GUI_DESIGN_NOTES.md` (the reviewer's design
 notes), then the twelve artboards in `gui/design/`. The notes win over the pictures, and a ruling wins over both. Where the
@@ -44,6 +48,11 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
+- **v1 web is this GUI (R-571).** In the browser the app is the same: the same windows, controls, features and stains,
+  with no separate interface design. Where the browser cannot do something the native app does, the app says so where
+  the native app has the feature: the control is shown disabled, with a note that the browser cannot do it, as the
+  Run window's fast-math control is (R-303); it is never removed, moved or redesigned (REQ-SYS-086; applied per R-369:
+  "says so in the app" is read as R-303's pattern). Which features those are waits on what v1 web may cross, RQ-550. A gap with no native control to disable (runtime-authored colour occupants from the scanned filesystem, persistence across reloads, `prin profile query --live`) is RQ-550's to settle (applied per R-369, gui review 5608379011 of PR #282).
 - **With the layer hidden, the figure fills the window (R-406), by one of two modes (R-468).** **Extend**, the
   default and R-406's fill: F3 hiding egui makes the figure fill the whole window, showing more of the field at the
   same scale in every direction, never the shown view stretched: each point of the field keeps the screen position it
@@ -927,6 +936,8 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
   That record is the export's sidecar: with `SimConfig` it carries the tilt map (`tilt_map=sheet|lean`, R-474), a
   curved chart's tilt (R-473), each energy-type axis's mapping (R-471) and a saved chart's definition (R-475), and
   beside it F3's fill mode (`f3_fill=extend|fit`, R-472) and the lines (`Lines`, R-476).
+  With `SimConfig` it carries the occupant, its regularisation and stepper, and, for a pair measured not to work, its
+  warning, the measured text (R-561).
   With `SimConfig` it carries the links, each block's id and parameter values, written in full even at the defaults
   (R-483, X1, X2), and beside it the build hash and the schema version, so a receiver refuses a decoder it lacks
   rather than substituting one (R-483, X4). Importing any of these is the identity on `SimConfig` and `RenderState`
@@ -989,8 +1000,13 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
-  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
-  default, Aarseth–Zare is kept for benchmarks; Part 2b).
+  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
+  Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
+  selectors, and every pair can be chosen (the Euler pairs in the debug selection only, Euler never being a production
+  option, REQ-INT-015; applied per R-369, qa review 5607548278 of PR #277, Q6); a pair measured not to work shows its warning beside the selectors, the
+  integrator contract's measured text, and stays selectable (R-561; Part 2b's pair table). The warning is also in the
+  Problems panel (which panel is RQ-525) and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
+  leapfrog is the general default".
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
   is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates. In
   the browser build the control is shown disabled, with a note that the browser chooses the mode (R-303).
@@ -1479,7 +1495,7 @@ corpus, the spec follows the authority:
 
 ## G14. Settled by the notes (record)
 
-1. The dev GUI is a debug layer (F3) with the final UI's structure and every feature.
+1. The dev GUI is a debug layer (F3), and the native app's and v1 web's UI, with every feature; a separate final UI, if there ever is one, is v2 web's (R-571; *was:* "with the final UI's structure and every feature").
 2. Explore and Stain are the two modes; everything else is a window or a tool.
 3. "Manifold view" is one group: chart, navigation, centre, slice and tilt, rotation.
 4. Run settings live in a window, not on the page.

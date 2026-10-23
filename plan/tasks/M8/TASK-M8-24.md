@@ -1,9 +1,9 @@
 # TASK-M8-24 — Run window: integration, escape and refinement settings under their contract names (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047
-- **Depends on:** TASK-M8-05, TASK-M6-28
-- **Needs (earlier milestones):** REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002
+- **Closes:** REQ-GUI-094, REQ-GUI-102, REQ-GUI-103, REQ-GUI-104, REQ-GUI-142, REQ-GUI-047, REQ-GUI-351, REQ-GUI-352
+- **Depends on:** TASK-M8-05, TASK-M6-28, TASK-M3-39
+- **Needs (earlier milestones):** REQ-INT-026, REQ-INT-014, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-COL-002, REQ-INT-098
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-2.2
 - **Size:** ~450 lines
@@ -24,6 +24,9 @@ Run settings are off the Explore page and in the Run window, every field a SimCo
 - `docs/design/principia_quality_device_note.md` § "The auto → custom "show your work" flow"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
 
+- `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
+- `decisions.md` § "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
+- `decisions.md` § "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
 ## Deliverables
 - `crates/gui/src/windows/run.rs` — the field list generated from the SimConfig schema paths.
 - `crates/gui/src/windows/quality.rs` — the show-your-work flow.
@@ -31,11 +34,13 @@ Run settings are off the Explore page and in the Run window, every field a SimCo
 
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 04_windows` (Run window) — screenshot against 01_main.png shows none of these fields; all are in the Run window (04_windows.png) (REQ-GUI-094).
-- `cargo test -p gui run_fields` — the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×KDK; T_horizon is clamped to [50, 200] with default 50 (R-132); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138) (REQ-GUI-102).
+- `cargo test -p gui run_fields` — the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails; *was:* "occupant = Heggie×KDK"); T_horizon is clamped to [50, 200] with default 50 (R-132); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138) (REQ-GUI-102).
 - `cargo xtask screenshot 04_windows` (escape section) — screenshot against 04_windows.png's Run window shows tau and window, no 'persistence' field (REQ-GUI-103).
 - `cargo xtask screenshot 04_windows` and `cargo test -p gui recompute_cancel` — screenshot against 04_windows.png; Cancel during a recompute stops it and the progress resets (REQ-GUI-104).
 - `cargo xtask screenshot 04_windows` (contract names; N_max reads 64; palette hex equals colour_composition §1.4) — Run window screenshot lists contract parameter names; substep cap default reads 64; palette colours equal corpus hex codes (REQ-GUI-142).
 - `cargo xtask screenshot 04_windows` (High tier; edit E → Custom) — select High: fields show 16² samples, depth 6, E = 3, FTLE on greyed; edit E → mode shows Custom with the other values kept (REQ-GUI-047).
+- `cargo test -p gui occupant_pair_warning` — selecting Heggie × KDK shows the integrator contract's Part 2b warning text beside the selectors and the run proceeds; selecting Heggie × RK4 shows none; every pair of the production steppers is reachable, and the Euler pairs only in the debug selection (REQ-INT-015); controls: a selector that disables a measured-bad pair fails, a warning shown for a not-measured pair fails, and a production selector offering an Euler pair fails (REQ-GUI-351; R-561; qa review 5607548278 of PR #277, Q6, applied per R-369).
+- `cargo test -p gui problems_pair_warning` — with Heggie × KDK bound the Problems panel RQ-525 names lists the pair's warning, and with Heggie × RK4 it lists none; control: a binding change that leaves the old warning listed fails (REQ-GUI-352; R-561; waits on RQ-525, the rest of the task does not).
 
 ## Notes
 - R-138: dt_macro is derived, not editable; the Run window shows it read-only with its rule max(1e-3, T/65535).

@@ -111,6 +111,12 @@ k₁ = f(y);  k₂ = f(y + dt/2·k₁);  k₃ = f(y + dt/2·k₂);  k₄ = f(y +
 y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 ```
 
+These are the steppers with regularisation `none`, where the Hamiltonian is separable. Every stepper also runs under
+every regularisation (R-561); on a non-separable one (Aarseth–Zare, Heggie) KDK and the Yoshida steps are the explicit
+composition integrator contract Part 2b defines (the sub-steps in this section's drift order, their adjacent half-kicks
+not merged: the merged kick sequence above holds on a separable Hamiltonian only), and the pairs measured not to work
+carry a warning (its table). The default occupant is Heggie × RK4 (R-560).
+
 ### 3.3 Substep law — and the determinism pin, made concrete
 
 ```
@@ -173,6 +179,10 @@ accumulate:  ΔE_final, max|ΔE|, ΔL_z final, max|ΔL_z|
 suspect predicates (READ-TIME, over the stored drift latches — no stored suspect bits, payload §5): energy-suspect on relative δE ; L_z-suspect on **absolute** ΔL_z
 ```
 
+Under a regularised occupant the energy-suspect predicate reads the **regularised** energy, and `E` above, the
+Cartesian energy, is a diagnostic read only from runs that did not stop at an event (R-566; integrator contract Part 1,
+"Under a regularised occupant, two energies, named (R-566)"; where the regularised drift is stored is RQ-528).
+
 Final *and* max are both stored because the *shape* of drift is the diagnostic: bounded oscillation ≈ fine; secular ≈ concerning; a spike that recovers = close-encounter stress (the Drift-shape cross-check view).
 
 ### 3.6 Detectors (per `STEP`, on the projected state)
@@ -193,7 +203,8 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
 - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
-  unregularised occupants and at sync boundaries for regularised ones (R-95).
+  unregularised occupants and at sync boundaries for regularised ones (R-95), on the fixed grid `Δ_sync`, the window
+  stated in physical time and never as a count of boundaries (R-565).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
@@ -365,7 +376,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — *settled by R-501:* the coefficients carry their citation (Yoshida 1990, Table 1, solution A; §3.2) and test 1a's convergence-order check; the paper is not added. Was: verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
-- **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
+- **Reversibility replay** — bounded and deferred per the integrator contract Part 6; nothing here forecloses it. Regularisation is v1 (R-562); whether Kustaanheimo–Stiefel has a place is RQ-530. *Was:* "**Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either."
 <!-- /retired-terms -->
 
 ---

@@ -108,6 +108,8 @@ keyframe's `SimConfig` and `RenderState` (R-484), so receiving it re-renders wha
 
 Retained, rationale unchanged: a pre-encoded video of curated spotlights covers cold-start (the one moment nothing can be live-rendered — the snapshot backdrop's degenerate case, caching Part 5) and serves as the gallery's ambient mode. Now *produced by* the Part 4 blocking exporter from a curated list of spec objects; each reel segment displays its spec's provenance (subtitle cycling) and clicking through **loads the spec live** — the reel is a menu of shareable objects, not just a film.
 
+**R-571:** the reel's machinery (this Part; REQ-TOOL-084) is built and tested natively, in the native app and so in v1 web; its presentation, the spotlight reel that passes for Explore (`designs/reel_click.md`, in the gap sweep's bundle), is v2 web's.
+
 ---
 
 *Time is a march, not a store. Play is the mechanism; pause freezes the clock, not the machine; restart is free because nothing is kept. The hero movie costs one integration; view-flights cost their frames; recolours cost nothing. Export is the same loop with a hard barrier and a file for an audience. The spec is the object — the video is its shadow — and the same spec renders the same movie, anywhere, again.*
