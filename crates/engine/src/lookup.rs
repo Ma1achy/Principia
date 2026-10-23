@@ -250,15 +250,9 @@ fn refuse(layer: Layer, failed: Failed) -> Rejected {
     Rejected { layer, failed }
 }
 
-/// `sign(x)` as a class, `−1`, `0` or `1`; `None` where `x` is not finite.
-fn class(x: f64) -> Option<i8> {
-    x.is_finite().then_some(if x > 0.0 {
-        1
-    } else if x < 0.0 {
-        -1
-    } else {
-        0
-    })
+/// `sign(x)` as a class, `x` against 0 (`−0` is 0); `None` where `x` is not finite.
+fn class(x: f64) -> Option<std::cmp::Ordering> {
+    x.is_finite().then(|| x.partial_cmp(&0.0)).flatten()
 }
 
 /// The class a clamp from `before` to `after` changes, `L_z`'s first; none where `before`'s is not finite.

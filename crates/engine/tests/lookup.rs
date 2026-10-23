@@ -880,6 +880,7 @@ fn check_changed(tiny: f64) {
     );
     assert_eq!(changed(&inv(1.0, -1.0), &inv(3.0, -2.0)), None);
     assert_eq!(changed(&inv(0.0, 0.0), &inv(0.0, 0.0)), None);
+    assert_eq!(changed(&inv(0.0, -1.0), &inv(-0.0, -1.0)), None, "−0 is not 0's class");
     assert_eq!(
         changed(&inv(1.0, f64::NEG_INFINITY), &inv(1.0, 5.0)),
         None,
