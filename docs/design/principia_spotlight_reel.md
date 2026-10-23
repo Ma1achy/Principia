@@ -177,7 +177,8 @@ fix round 9 of PR #286, gui review 5631987230, G1).
   baseline cover complete; the view is never blank meanwhile. From the interaction to then, every displayed frame is
   the film backdrop or a live render over it, never the canvas background on a pixel the chart classifies as a system
   (a pixel that is not a system draws it, R-467; caching Part 4), as REQ-GUI-384 says (fix round 16 of PR #286, gui
-  review 5634604753, G7; applied per R-369). *Was:* "From the interaction to then, every displayed frame is the film
+  review 5634604753, G7; applied per R-369), a `decode_failed` sample excepted: R-511 draws it blank, as a pixel that
+  is not a system draws it (fix round 23 of PR #286, gui review 5635273226, G1; applied per R-369). *Was:* "From the interaction to then, every displayed frame is the film
   backdrop or a live render over it, never the canvas background."
 - **Nothing is lost.** The takeover, with the live motion that follows it until the player stops, is one undoable
   history entry: one undo returns the view to what it was before the reel played. (At cold start there is no previous view; cold start is v2 web's, §3.5.)
