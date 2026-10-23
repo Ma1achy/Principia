@@ -23943,6 +23943,14 @@ REQ-GUI-370, TASK-M8-76).
   under the result's `SimConfig`; `non_atlas_f32_start` gains the result-view cases (F8).
 - honesty §6 lists `non_atlas_f32_start` and `trust_line` (the review's observation).
 
+*Fix round 7 of PR #283 (physics review 5627584997, F9, F10; applied per R-369):*
+- **A valid `ftle` ≤ 0** (`ftle` is signed) also shows no estimate and no self-check verdict, only the measured marks,
+  alongside the tier off and `ftle_valid` false; never a negative or infinite estimate, nor "unreliable" from the sign
+  (F9).
+- **"bitwise the atlas's"** in fix round 6's line above reads "bitwise the atlas pixel's nominal copy's `ftle`": under
+  SSAA or an ensemble the atlas pixel's `ftle` is resolved over its samples, and the one-pixel dispatch is the nominal
+  copy (F10). Both in honesty §3.3, §3.4, §6, render_gui_spec §G8, REQ-GUI-370 and TASK-M8-76.
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,

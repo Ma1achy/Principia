@@ -1371,8 +1371,9 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   runs f32 from the IC rounded to f32, and its line takes REQ-GUI-370's three "Not an atlas pixel:" forms, with no
   atlas claim (`principia_honesty_precision.md` §3.4; G7, physics review 5627216712 F5, gui review 5627280803 N1, N4;
   applied per R-369). The "estimate from FTLE" and the self-check take `λ` from the `ftle` the IC's own f32 one-pixel
-  dispatch writes, bitwise the atlas's for an atlas pixel; with the FTLE tier off or `ftle_valid` false the line shows
-  neither, only the measured marks (physics review 5627518149, F7; applied per R-369). *Was:* "the trust line about
+  dispatch writes, bitwise the atlas pixel's nominal copy's for an atlas pixel; with the FTLE tier off, `ftle_valid`
+  false or a valid `ftle` ≤ 0 the line shows neither, only the measured marks (physics review 5627518149, F7; physics
+  review 5627584997, F9, F10; applied per R-369). *Was:* "the trust line about
   the atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this point's f32 run parted at t = 18"
   (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes with it." and the bullet's opening
   "On by default: four runs of the IC (f32 on the GPU as the atlas ran it, f64, and each nudged by one ulp),".

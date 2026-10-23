@@ -126,12 +126,14 @@ reading is in the noise floor or saturation, and the panel says "unreliable". Ho
   - after `t_part(f64)` too: "Past f64's as well: neither run can be trusted here."
   - beside it the estimate `ln(1/eps₃₂)/ftle`, "estimate from FTLE", against the measured parting: a point check of the
     field REQ-SYS-061 states. Its `ftle`, and the self-check's `λ` (§3.2), is the one the IC's own f32 one-pixel
-    dispatch writes under its sim key's FTLE tier (render contract `SimState`; lowering contract Part 3,
-    `sample.ftle`): for an atlas pixel of the current view bitwise the atlas's own, because the run is; for any other
-    IC (§3.4) that IC's own, never the atlas pixel it was edited from or the pixel now under it. When the sim key's
-    FTLE tier is off or `ftle_valid` is false (R-254), the line shows no estimate and no self-check verdict, never a
-    NaN or a neighbour's value, and states only the measured marks (physics review 5627518149 of PR #283, F7; applied
-    per R-369).
+    dispatch writes under its sim key's FTLE tier (render contract `SimState`; lowering contract Part 3, `sample.ftle`):
+    for an atlas pixel of the current view bitwise the atlas pixel's nominal copy's `ftle`, because the run is that copy
+    (under SSAA or an ensemble the atlas pixel's own `ftle` is resolved over its samples, so it can differ); for any
+    other IC (§3.4) that IC's own, never the atlas pixel it was edited from or the pixel now under it. When the sim
+    key's FTLE tier is off, `ftle_valid` is false (R-254), or a valid `ftle` is ≤ 0 (`ftle` is signed, generation_root §
+    "derived fields"), the line shows no estimate and no self-check verdict, never a NaN, a negative or infinite
+    estimate, or a neighbour's value, and states only the measured marks (physics review 5627518149 of PR #283, F7;
+    physics review 5627584997, F9, F10; applied per R-369).
   - "unreliable" when the self-check fails (§3.2).
 
 **The wording that ships** is the three forms above (REQ-GUI-370); the human's "the atlas shows t = 30; this point's f32
@@ -182,7 +184,8 @@ the current view's).
   - after `t_part(f64)` too: "Not an atlas pixel: these runs are past f64's as well: neither run can be trusted here."
   - read at the same time as the atlas forms, the current atlas playhead `t_p`, against the same marks; beside it the
     same "estimate from FTLE" and, when the self-check fails, the same "unreliable", both from the `ftle` this IC's own
-    f32 dispatch writes, and neither when its FTLE tier is off or `ftle_valid` is false (§3.3; F7).
+    f32 dispatch writes, and neither when its FTLE tier is off, `ftle_valid` is false or its `ftle` is ≤ 0 (§3.3; F7,
+    F9).
 
 *Was:* "**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the
 clicked trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit
@@ -273,8 +276,9 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   view's sim key.
 - **trust_line** (REQ-GUI-370; the same observation): an atlas pixel reads the three atlas forms and any other IC
   (§3.4) the three "Not an atlas pixel:" forms, compared as whole strings, with the estimate from its own dispatch's
-  `ftle` and none when `ftle_valid` is false. *Fails if* the atlas wording shows for a non-atlas IC, a line is the
-  bare prefix, or the estimate is read from the atlas pixel an IC was edited from.
+  `ftle` and none when `ftle_valid` is false or `ftle` ≤ 0. *Fails if* the atlas wording shows for a non-atlas IC, a
+  line is the bare prefix, the estimate is read from the atlas pixel an IC was edited from, or a negative or infinite
+  estimate, or "unreliable" from the sign, shows.
 - **marks_follow_edits**: editing a mark to 10⁻² moves "parted at" to the first boundary above 10⁻² on a recorded
   chord series. *Fails if* the mark is a constant.
 - **ensemble_ratio**: over ≥ 256 chaotic ICs, the median `t_part(f32)/t_part(f64)` near `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
