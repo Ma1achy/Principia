@@ -23661,7 +23661,9 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   "six rotations" the check's (0, 0.7, 1.6, 2.5, 3.14 and −1.2 rad), and the anchors the four corners and four edge
   midpoints. The instruction's 1728 is the demo's 4 sets × 6 rotations × 8 anchors × 9 icons; the engine's count
   follows from its own icons, and the control must touch the border in every case, or the test has no subject. The
-  three run when TASK-M8-58 builds them; this port builds no code.
+  three run when TASK-M8-58 builds them; this port builds no code. `trace_dotted_at_zero` runs in the gui crate, where
+  the transport state is, and checks the style and extent the GUI hands the line pass (REQ-GUI-281); its dot pattern is
+  `trace_dotted_pattern`'s, in the render crate (PR #278's fix round 5, qa review 5624411825 Q1, applied per R-369).
 - **PB15. The tasks.** TASK-M8-58 closes REQ-GUI-354 to REQ-GUI-356 (the trace's playback and icons are its own),
   reviewed by its reviewers; gui reviews the three. TASK-M8-63 builds REQ-GUI-332's key line, and TASK-M8-62 the full
   key's line (REQ-GUI-328; PR #278's fix round 1). REQ-GUI-274's statement and verify take PB3's placement,
@@ -23696,7 +23698,8 @@ the primary copy of every shown trace, kept traces included, as R-538's "only th
 REQ-GUI-328 (verify, note), with TASK-M8-58's and TASK-M8-62's acceptance and notes. PR #278's fix round 3 (code review
 5624320665, applied per R-369) changes REQ-GUI-272 (note: its icons are REQ-GUI-356's set, not the seam ticks), this
 heading block, PB15 and this paragraph, and adds R-569 and `principia_lines.md` §8 to TASK-M8-63's References and
-render_gui_spec §G6 to TASK-M8-62's.
+render_gui_spec §G6 to TASK-M8-62's. PR #278's fix round 5 (qa review 5624411825, applied per R-369) changes
+REQ-GUI-354, REQ-GUI-355 and REQ-GUI-356 (verify, note), PB14 here, and TASK-M8-58's deliverables, acceptance and notes.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
