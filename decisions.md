@@ -23719,6 +23719,11 @@ first level at which the viewport lies within at most 2 × 2 ancestor squares, w
 level whose square side is at least the viewport's extent, depending on where the view sits; arm (3)'s far-pan view is
 the origin-line view at 10⁶ × moved by exactly `2^40` roots along x, so the equality with that view at home is exact.*
 
+*23 Oct 2026, fix round 10 of PR #279 (perf review 5625109012, P9), applied per R-369: arm (3)'s geometry is pinned on
+both axes: the origin-line view is the home view centred at `(0, 0)`, the zoomed view that view scaled about the origin
+by `2^20` ("10⁶ ×" meaning `2^20` there), and the far-pan view that zoomed view moved by exactly `2^40` roots along both
+x and y, superseding the fix-round-9 line's "along x".*
+
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
