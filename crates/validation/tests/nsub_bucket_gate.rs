@@ -270,12 +270,14 @@ fn check_draws(
     );
 }
 
-fn draws() -> (
-    Vec<(String, f32)>,
-    Vec<f32>,
-    Vec<f64>,
-    Vec<(u32, [[f64; 2]; 3])>,
-) {
+/// A named edge sample, as `edge_samples` gives it.
+type EdgeSample = (String, f32);
+
+/// A triple at a threshold, as `pair_triple` gives it.
+type Triple = (u32, [[f64; 2]; 3]);
+
+/// The edge samples, random `d²`, unit draws and triples from one seed.
+fn draws() -> (Vec<EdgeSample>, Vec<f32>, Vec<f64>, Vec<Triple>) {
     let bits = default_bits();
     let mut rng = SplitMix::new(3);
     let units = (0..256).map(|_| unit(&mut rng)).collect();
