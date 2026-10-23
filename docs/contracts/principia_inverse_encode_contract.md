@@ -175,11 +175,23 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   the current locked $\nu$, or $\nu = 1/2$; momentum → rest start; latent coordinates → 0. Then set the slice
   basis to span the unspecified degrees of freedom.
 
-**The physical form's masses** (R-72, applied per R-369; TASK-M2-19). The section's unit of mass is `M = Σmᵢ = 1`
-(`G = M = I = 1`), so an entry's masses are read as proportions, each divided by their sum, and its positions and
-momenta in those units. Every entered mass is positive and every entered value finite, or the entry is refused
-before the validation layers, naming which; `(m, n)` must be a primitive pair (`principia_chart_reference.md` §4.1)
-and a triple must satisfy `a² + b² = c²` with every side positive, each the Burrau system of its triangle at rest.
+**The physical form's masses** (R-72, applied per R-369; TASK-M2-19; physics review 5630998530 of PR #284, P1,
+applied per R-369). The section's unit of mass is `M = Σmᵢ = 1` (`G = M = I = 1`). An entry whose masses sum to
+`M ≠ 1` is carried to it by the change of the unit of mass with `G = 1` and the unit of length kept, the similarity
+Part 1's T3 preserves the physics under: `mᵢ ← mᵢ/M`, `rᵢ` kept, `vᵢ ← vᵢ/√M`, so `pᵢ ← pᵢ/M^{3/2}`, and then
+`E ← E/M²`, `L_z ← L_z/M^{3/2}` and `t ← t·√M`, which keeps every ratio of the motion (`K/|U|`, the signs of `E` and
+`L_z`). Keeping `pᵢ` instead would multiply every velocity by `M`. `M` is recorded with the lock beside `λ`, since
+encode reports what it discards (REQ-ENC-014) and the multiply-back of a literature IC needs it (REQ-VAL-019,
+REQ-VAL-174). The pair and triple forms are Burrau systems, each mass its opposite side
+(`principia_chart_reference.md` §4.1), so their `M` is the perimeter `a + b + c` (12 for `(2, 1)`); a raw `z` decodes
+at `M = 1`. In the partial form the default masses are `⅓` each, or the Burrau system's on a Burrau chart, each set
+summing to 1, so a momentum block given without masses is read in `M = 1` units; masses given carry the momenta given
+with them as above. Every entered mass is positive and every entered value finite, or the entry is refused before the
+validation layers, naming which; `(m, n)` must be a primitive pair (`principia_chart_reference.md` §4.1) and a triple
+must satisfy `a² + b² = c²` with every side positive, each the Burrau system of its triangle at rest. *Was:* "The
+section's unit of mass is `M = Σmᵢ = 1` (`G = M = I = 1`), so an entry's masses are read as proportions, each divided
+by their sum, and its positions and momenta in those units." (stale reading, replaced per R-369 by physics review
+5630998530 of PR #284, P1: the momenta kept unchanged made the entry a different system).
 
 **The partial specification's blocks and slice basis** (R-72; REQ-ENC-031; TASK-M2-19). A partial entry gives any of
 the three blocks: the masses, the configuration (the positions) and the momenta. A block not given takes the
