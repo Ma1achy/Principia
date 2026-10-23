@@ -314,8 +314,14 @@ Each with what makes it fail.
   shows a number, a hover is sent or its sample drawn, or the Manifold view shows the preview frame's values.
 - **proof_equals_export**: a proof frame is bitwise the exported frame at the same time, size and tier. *Fails if* it
   came from the live loop.
-- **planner_no_guess**: with no frame records the estimate reads "no measurement on this machine yet" and shows no
-  number. *Fails if* a number appears. Control: with records, the range's ends are the cost over the fastest and the
-  slowest measured throughput.
+- **planner_no_guess** (fix round 18 of PR #286, code review 5634759344, C1; applied per R-369; restated from
+  REQ-PERF-110's verify): with no persisted throughput model under the current provenance signature the estimate reads
+  "no measurement on this machine yet" and contains no digit; with one it shows one value, the provenance key "measured
+  on <adapter name> · probe v<version>" shown once under the planner's rows; a model saved under another provenance
+  gives "no measurement on this machine yet"; frame records of any throughput, proof frames included, leave the
+  estimate unchanged (§3.7). *Fails if* a number appears with no model, or the estimate comes from frame records, is a
+  range, or is shown without its key. *Was:* "**planner_no_guess**: with no frame records the estimate reads "no
+  measurement on this machine yet" and shows no number. *Fails if* a number appears. Control: with records, the
+  range's ends are the cost over the fastest and the slowest measured throughput."
 - **export_writes_seq**: every export, PNG frames and GIF, has its `.principia-seq.json` beside it, equal to the saved
   spec bitwise. *Fails if* one is missing.
