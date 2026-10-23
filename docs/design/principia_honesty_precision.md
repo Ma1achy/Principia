@@ -128,12 +128,14 @@ reading is in the noise floor or saturation, and the panel says "unreliable". Ho
     field REQ-SYS-061 states. Its `ftle`, and the self-check's `λ` (§3.2), is the one the IC's own f32 one-pixel
     dispatch writes under its sim key's FTLE tier (render contract `SimState`; lowering contract Part 3, `sample.ftle`):
     for an atlas pixel of the current view bitwise the atlas pixel's nominal copy's `ftle`, because the run is that copy
-    (under SSAA or an ensemble the atlas pixel's own `ftle` is resolved over its samples, so it can differ); for any
-    other IC (§3.4) that IC's own, never the atlas pixel it was edited from or the pixel now under it. When the sim
-    key's FTLE tier is off, `ftle_valid` is false (R-254), or a valid `ftle` is ≤ 0 (`ftle` is signed, generation_root §
-    "derived fields"), the line shows no estimate and no self-check verdict, never a NaN, a negative or infinite
-    estimate, or a neighbour's value, and states only the measured marks (physics review 5627518149 of PR #283, F7;
-    physics review 5627584997, F9, F10; applied per R-369).
+    (under SSAA or an ensemble each copy computes its own `ftle`, `principia_dd_generation_root.md` § "derived fields",
+    the `ftle` row, and the pixel's colour is resolved over the copies' colours, never their data:
+    `principia_render_contract.md` § "Averaging (SSAA colour resolve)"; so another copy's `ftle`, or a mean over the
+    copies', is not this run's; physics review 5627640864 of PR #283, F11); for any other IC (§3.4) that IC's own, never
+    the atlas pixel it was edited from or the pixel now under it. When the sim key's FTLE tier is off, `ftle_valid` is
+    false (R-254), or a valid `ftle` is ≤ 0 (`ftle` is signed, the same `ftle` row), the line shows no estimate and no
+    self-check verdict, never a NaN, a negative or infinite estimate, or a neighbour's value, and states only the
+    measured marks (physics review 5627518149 of PR #283, F7; physics review 5627584997, F9, F10; applied per R-369).
   - "unreliable" when the self-check fails (§3.2).
 
 **The wording that ships** is the three forms above (REQ-GUI-370); the human's "the atlas shows t = 30; this point's f32

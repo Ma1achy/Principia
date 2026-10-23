@@ -23951,6 +23951,13 @@ REQ-GUI-370, TASK-M8-76).
   SSAA or an ensemble the atlas pixel's `ftle` is resolved over its samples, and the one-pixel dispatch is the nominal
   copy (F10). Both in honesty §3.3, §3.4, §6, render_gui_spec §G8, REQ-GUI-370 and TASK-M8-76.
 
+*Fix round 8 of PR #283 (physics review 5627640864, F11; applied per R-369):* fix round 7's reason for F10 ("under SSAA
+or an ensemble the atlas pixel's `ftle` is resolved over its samples") is wrong and reads instead: each copy computes
+its own `ftle` (`principia_dd_generation_root.md` § "derived fields", the `ftle` row), and the pixel's colour is
+resolved over the copies' colours, display-only and never read back as data (`principia_render_contract.md` § "Averaging
+(SSAA colour resolve)"); the one-pixel dispatch is the nominal copy, so the estimate uses the nominal copy's `ftle`,
+never another copy's or a mean over the copies'. The conclusion of F10 stands (honesty §3.3, REQ-GUI-370, TASK-M8-76).
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
