@@ -23926,6 +23926,12 @@ refinement-off grid are not the atlas's decode path). "The view it was kept from
 source `Live`; a result opened over a kept orbit, even with a bitwise-equal `SimConfig`, changes it (honesty §3.4,
 render_gui_spec §G8, `principia_results.md` §3.4, REQ-GUI-370, TASK-M8-76).
 
+*Fix round 5 of PR #283 (gui review 5627439632, R2; applied per R-369, as the review proposes):* a kept orbit counts as
+an atlas pixel only if it was kept from an atlas pixel of a live view, the view source is `Live` now, and the view it
+was kept from is unchanged (sim key, `z₀`, basis and zoom level, bitwise). An orbit kept in a result view stays
+non-atlas even after *Explore from here* loads the result's `SimConfig` bitwise (honesty §3.4, render_gui_spec §G8,
+REQ-GUI-370, TASK-M8-76).
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
