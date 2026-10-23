@@ -25,6 +25,7 @@ A keyframe animation serialises as {keyframes: [(t_wall, ViewState, RenderState,
 - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*"
 - `decisions.md` § "R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*"
 - `docs/design/principia_sequence.md` § "3.4 Segments: easing per segment, and transitions"
+- `docs/design/principia_sequence.md` § "3.2 Keyframes"
 
 ## Deliverables
 - `crates/engine/src/contract/animation.rs` — the spec object, its segments each with its easing curve and transition (R-576), and its URL encoding.

@@ -32,6 +32,7 @@ Windows › Sequence… docks the Sequence window along the bottom of Explore, b
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/design/principia_results.md` § "3.4 Reopening: the result view"
 - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*"
+- `docs/design/principia_sequence.md` § "3.7 The planner and export"
 
 ## Deliverables
 - `crates/gui/src/windows/sequence.rs` — the docked Sequence window: header bar, timeline with lanes and segment classes, the keyframe and segment inspector, its keys.

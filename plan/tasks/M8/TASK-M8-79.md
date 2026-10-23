@@ -32,6 +32,7 @@
 - `docs/design/principia_results.md` § "3.4 Reopening: the result view"
 - `decisions.md` § "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*"
 - `docs/contracts/principia_caching_contract.md` § "Part 6 — The responsiveness invariant: the main thread never waits"
+- `docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute tier, not a priority weight"
 
 ## Deliverables
 - `xtask/src/reel.rs` — `cargo xtask reel` builds the film (GIF, the `gif` crate) and `manifest.json` from `reel/specs/`, refusing a spec whose link entry hashes do not match, every frame self-contained and each segment's start offset in the manifest; moved here from TASK-M8-31 (R-578).
