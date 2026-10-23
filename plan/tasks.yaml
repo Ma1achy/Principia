@@ -3137,7 +3137,7 @@
 - id: TASK-M8-77
   milestone: M8
   title: "The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)"
-  depends_on: [TASK-M8-31, TASK-M8-05, TASK-M6-43]
+  depends_on: [TASK-M8-31, TASK-M8-05, TASK-M6-43, TASK-M8-75]  # TASK-M8-75: the result view and its view source (fix round 9 of PR #286, gui G1; applied per R-369)
   needs: [REQ-GUI-213]
   requirements: [REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378]  # REQ-GUI-378 waits on RQ-559
   reviewers: [code, qa, gui, physics]  # physics for the lane table, an R-72 definition (REQ-GUI-375)
