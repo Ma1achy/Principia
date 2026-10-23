@@ -741,4 +741,5 @@ where the choice changes what passes: for the human.*
   occupant, (b) with regularisation off.
 - **Applied meanwhile:** (a). REQ-VAL-196 and REQ-VAL-197 carry `rq: RQ-558`, so a ruling for (b) or (c) traces to
   them (fix round 1 of PR #283, physics review 5627073272, F2). *Was:* "(a). Nothing waits."
-- **Waits:** TASK-M8-76 (REQ-VAL-196, REQ-VAL-197).
+- **Waits:** nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197 (TASK-M8-76) (physics
+  review 5627216712 of PR #283, F6). *Was:* "**Waits:** TASK-M8-76 (REQ-VAL-196, REQ-VAL-197)."

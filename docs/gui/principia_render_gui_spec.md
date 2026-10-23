@@ -1357,9 +1357,15 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   shape-sphere chords with the two marks, "faithful until" (10⁻³) and "parted at" (0.1), shown and editable, the
   fates side by side, and **the trust line** about the atlas pixel at the atlas playhead, in REQ-GUI-370's three forms
   (`docs/design/principia_honesty_precision.md` §3.3; the human's "the atlas shows t = 30; this point's f32 run parted
-  at t = 18" is his illustration, not a form; gui review G9 of PR #283). Nothing in the atlas changes with it. The runs
-  are of the clicked trajectory's own IC, whatever its source: an atlas pixel, an IC edited in pane 1, one built in
-  Create & locate, or a kept orbit after the view has moved (G7; applied per R-369). *Was:* "the trust line about the
+  at t = 18" is the human's illustration, not a form; gui review G9 of PR #283). Nothing in the atlas changes with it.
+  The runs are of the clicked trajectory's own IC under its own sim key, whatever its source. An atlas pixel of the
+  current view, or a kept orbit while its view is unchanged, gets the three forms; any other IC (edited in pane 1,
+  built in Create & locate, or a kept orbit after its view has moved) runs f32 from the IC rounded to f32, and its
+  line is prefixed "Not an atlas pixel:", with no atlas claim (`principia_honesty_precision.md` §3.4; G7, physics
+  review 5627216712 F5; applied per R-369). *Was (fix round 1):* "at t = 18" is his illustration, not a form; gui
+  review G9 of PR #283). Nothing in the atlas changes with it. The runs are of the clicked trajectory's own IC,
+  whatever its source: an atlas pixel, an IC edited in pane 1, one built in Create & locate, or a kept orbit after the
+  view has moved (G7; applied per R-369)." *Was:* "the trust line about the
   atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this point's f32 run parted at t = 18"
   (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes with it."
 - **Make a result…** (R-572) opens the Result window prefilled from the view the Inspector was opened over (§G5 §

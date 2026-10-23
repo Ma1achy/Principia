@@ -128,7 +128,7 @@ and the panel says "unreliable". How far is "far off" is a calibration (R-71, RE
   - "unreliable" when the self-check fails (§3.2).
 
 **The wording that ships** is the three forms above (REQ-GUI-370); the human's "the atlas shows t = 30; this point's f32
-run parted at t = 18" is his illustration of them, not a fourth form (gui review G9).
+run parted at t = 18" is the human's illustration of them, not a fourth form (gui review G9).
 
 *Applied per R-369 (the port):* the trust line and the fates' wording key on the "parted at" mark, as the draft's
 single threshold did and the human's example does; "faithful until" is drawn and reported beside them ("faithful
@@ -147,11 +147,24 @@ section, after Numbers in R-541 G4's panel order (render_gui_spec §G2). Collaps
 it holds the marks, editable, the separation plot, the starting gap and the fates side by side; the f32 run is dashed
 over the f64 in the panel's previews. The four runs and every readout are the same as the Inspector's.
 
-**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the clicked
-trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit after the
-view has moved. The f32 run is the survey kernel's one-pixel dispatch of that IC through the same decode path, so for
-an atlas pixel of the current view it is bitwise what coloured the pixel; the trust line reads the current atlas
-playhead `t_p`.
+**Whatever the IC's source** (gui review G7; physics review 5627216712 of PR #283, F5; applied per R-369): the four
+runs run from the clicked trajectory's own IC, under the trajectory's own sim key (its occupant and coefficients, never
+the current view's).
+- **An atlas pixel of the current view**: the f32 run is the survey kernel's one-pixel dispatch through the atlas's
+  decode path, bitwise what coloured the pixel, and the trust line takes REQ-GUI-370's three forms at the current atlas
+  playhead `t_p`. A **kept orbit** counts as an atlas pixel only while the view it was kept from is unchanged.
+- **Any other IC** (one edited in the Inspector, one built in Create & locate, possibly off the slice, or a kept orbit
+  once its view has moved): there is no decode path, so the f32 run is the same survey kernel's one-pixel dispatch
+  from the IC rounded to f32 (Cartesian), the nudge following the rounding and the starting gap being the f32
+  rounding. The trust line makes no atlas claim: it is prefixed "Not an atlas pixel:" and states the runs' own
+  parting, never "The atlas colour here …".
+
+*Was:* "**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the
+clicked trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit
+after the view has moved. The f32 run is the survey kernel's one-pixel dispatch of that IC through the same decode
+path, so for an atlas pixel of the current view it is bitwise what coloured the pixel; the trust line reads the current
+atlas playhead `t_p`." (F5: the decode path does not exist for an IC with no pixel, and the atlas wording would be false
+for it.)
 
 ### 3.5 Nothing changes in the atlas
 

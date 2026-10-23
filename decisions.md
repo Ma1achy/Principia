@@ -23891,6 +23891,18 @@ The design's "Decided" section, its first three items, verbatim:
 - **The trust line's tests** state the faithful mark below 10 and add an "unreliable" check; §G8 points at
   REQ-GUI-370's three forms, the human's example being his illustration (G9).
 
+*Fix round 2 of PR #283 (physics review 5627216712, F5, F6; applied per R-369):*
+- **An IC that is not an atlas pixel of the current view** (an Inspector edit, a Create & locate IC, possibly off the
+  slice, or a kept orbit once its view has moved) has no decode path: its f32 run is the survey kernel's one-pixel
+  dispatch from the IC rounded to f32, under the trajectory's own sim key, and its trust line is prefixed "Not an atlas
+  pixel:", with no "The atlas colour here …". A kept orbit is an atlas pixel only while the view it was kept from is
+  unchanged. The four runs always use the trajectory's own sim key, never the current view's (`principia_honesty_precision.md`
+  §3.4, REQ-VAL-196, REQ-GUI-370, TASK-M8-76, render_gui_spec §G8). The fix-round-1 line above that says "Whatever the
+  IC's source … the line reading the current atlas playhead" holds for an atlas pixel only.
+- **RQ-558's Waits** reads "nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197", the
+  queue's form; option (a) stays applied meanwhile (F6).
+- **Wording:** the human's example is "the human's illustration" in honesty §3.3 and §G8.
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
