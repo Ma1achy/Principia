@@ -453,6 +453,12 @@ fn check_partial(expect: [(usize, usize); 5]) {
             );
         }
     }
+    // A chart not of the Burrau family reads no ν, so even one that is not finite leaves its defaults alone.
+    let lock = partial(&latent_chart(), cases[0], Some(f64::NAN)).expect("a latent chart reads ν");
+    assert_eq!(
+        lock.z,
+        partial(&latent_chart(), cases[0], None).expect("refused").z
+    );
     // The masses default to equal: z_μ = 0 under the defaults links; given [2, 1, 1], to its proportions.
     let lock = partial(&latent_chart(), cases[0], None).expect("refused");
     assert!(
