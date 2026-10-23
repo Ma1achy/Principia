@@ -13,10 +13,12 @@ R-544 item 5 makes the mirror on the shape sphere chart a test, not an identific
 static half (REQ-CHART-082): the classification of the held coordinates as mirror-equivariant or not, the "does not
 apply" case, the pixel pairs' shape and state checks and the bitwise `Π·x` check. The arms that need real integrator
 runs could not be built there, since the stepper (TASK-M3-02), the wrapper (TASK-M3-04) and the outcome classifier
-(TASK-M3-12) are not on main; they are drafted as this task's (REQ-CHART-085). Taking them from the M2 gate to M3 is
-a deferral that waits on the human's ruling, RQ-523 (code review 5605370280 of PR #276, F1); REQ-CHART-085 holds on it
-(`rq: RQ-523`), and this task's run arms wait on it. *Was:* "This is not a deferral: the arms move to the task that can
-build them."
+(TASK-M3-12) are not on main; they are this task's (REQ-CHART-085). Taking them from the M2 gate to M3 is a deferral,
+ruled by the human: R-579 (23 Oct 2026, RQ-523 (a)), which moves them here, after TASK-M3-04 and TASK-M3-12. *Was:*
+"they are drafted as this task's (REQ-CHART-085). Taking them from the M2 gate to M3 is a deferral that waits on the
+human's ruling, RQ-523 (code review 5605370280 of PR #276, F1); REQ-CHART-085 holds on it (`rq: RQ-523`), and this
+task's run arms wait on it." and, before that, "This is not a deferral: the arms move to the task that can build
+them."
 
 - **The exactly mirrored run.** Where REQ-CHART-082's classification reports mirror-equivariant, the run from `Π·x`,
   `Π` applied to a decoded state, is the run from `x` mirrored, bitwise (R-544 §4, "bitwise where the integration is
@@ -42,6 +44,7 @@ build them."
 - `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"
+- `decisions.md` § "R-579 — The mirror test's run arms move to M3: REQ-CHART-082's runs become REQ-CHART-085, closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12; REQ-CHART-082 keeps at M2 the classification, the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` check *(closes RQ-523; a deferral by ruling, from the M2 gate to M3; settles the split R-544's dated line drafted)*"
 
 ## Deliverables
 - Test `shape_sphere_mirror_runs` (`crates/kernel`), using TASK-M2-43's classification and decode, the wrapper's
@@ -69,13 +72,21 @@ build them."
 ## Notes
 - **⚑ Physics review is required** (R-544 is in the physics group); it does not merge on the code reviewer's word
   alone.
-- **A draft that waits on RQ-523 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).** REQ-CHART-082's run
+- **The split, ruled by R-579 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).** REQ-CHART-082's run
   arms split into REQ-CHART-085, this task's, since TASK-M2-43 (after TASK-M2-08, TASK-M2-14 and TASK-M2-17) cannot reach a
   stepper, a wrapper or an outcome classifier; REQ-CHART-086 (R-72) added for the winding, which chart_reference
   §3.3's whole-sphere paragraph uses ("the signed ones (`L_z`, the winding)") with no definition; REQ-CHART-086 does
   not wait. *Was:* "**Applied per R-369 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's dated line).**"
-- **RQ-537** (open): dd_integrator §5 test 8's "`retrograde` matches the L_z sign" against the mirror, which leaves
+  **Ruled by R-579 (23 Oct 2026, RQ-523 (a)):** the split stands and is no longer a draft. Depends on keeps TASK-M2-43
+  beside the two R-579 names, TASK-M3-04 and TASK-M3-12, since this task's test uses TASK-M2-43's classification and
+  decode (applied per R-369). *Was:* "**A draft that waits on RQ-523 (TASK-M2-43's pre-flight, 21 Oct 2026; R-544's
+  dated line).**"
+- **RQ-537** (ruled, R-580): dd_integrator §5 test 8's "`retrograde` matches the L_z sign" against the mirror, which leaves
   `θ̃` unchanged and negates `L_z`; the frame's winding defined here must not lean on test 8's reading.
+  **Ruled by R-580 (23 Oct 2026):** the clause is dropped from test 8, which gains the mirror pair in its place (the run
+  from `Π·x` has `θ̃(t)` and `retrograde` bitwise identical and `L_z` opposite; REQ-INT-082, TASK-M3-11). So `θ̃` is
+  mirror-invariant by ruling as well, and the frame's winding, signed under `Π`, is not `θ̃`. *Was:* "**RQ-537**
+  (open)".
 - The precision follows R-544's "The mirror test's precision" (physics review 5603309678 of PR #273, P2): bitwise only
   for the exactly mirrored state; across pixel pairs, a named non-chaotic fixture, since a rounding-level difference in
   the IC changes a chaotic fate (physics.md §7, R-84).

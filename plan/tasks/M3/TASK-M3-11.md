@@ -34,6 +34,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
 - `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
 - `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+- `decisions.md` § "R-580 — dd_integrator §5 test 8 drops "`retrograde` matches the L_z sign": the mirror leaves `θ̃` and `retrograde` unchanged and negates `L_z`; the test keeps `θ̃` continuous and `orbit_count` against a hand count, and gains the mirror pair, `θ̃(t)` and `retrograde` bitwise identical and `L_z` opposite *(closes RQ-537; changes dd_integrator §5 test 8 and REQ-INT-082)*"
 
 ## Deliverables
 - `crates/kernel/src/driver/shape.rs` — `shape(r, masses)` (no momenta), per-macro-step readout.
@@ -44,7 +45,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 
 ## Acceptance tests
 - `cargo test -p kernel shape_identities` — dd test 9: ‖n‖ = 1; equilateral → n_w = ±1; collinear → n_w = 0; n agrees with the IC Inspector's shapePoint on 5,000 random ICs to f64 round-off after the mirror fold (REQ-INT-042).
-- `cargo test -p kernel theta_unwrap_real_orbit` — dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps, orbit_count matches a hand count and retrograde matches the L_z sign (REQ-INT-082).
+- `cargo test -p kernel theta_unwrap_real_orbit` — dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps and orbit_count matches a hand count; the run from Π·x, Π (y → −y) applied to every position and momentum of the orbit's initial state, has θ̃(t) and retrograde bitwise identical to the run from x at every sampled step, and L_z opposite (REQ-INT-082, R-580). *Was:* "orbit_count matches a hand count and retrograde matches the L_z sign".
 - `cargo test -p kernel closure_registers` — on a fixture trajectory closure_min matches an offline minimum over the stored shape path and closure_step equals the argmin step (REQ-PAY-043).
 - Review (physics): the shape helper's signature takes r (and masses), not p (REQ-PAY-055).
 - `cargo test -p kernel closure_departure` — a periodic orbit's closure_min ≈ 0 at closure_step ≈ period/dt_macro; closure before departure is ignored (REQ-PAY-056).
@@ -79,6 +80,10 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
     `crates/kernel/tests/qa_TASK-M0-11.rs:239-337` (`qa_payload_sizes_descriptor_bits_10_to_15_never_written` and its
     controls, one reading "a packer that spends bit 15 must fail"), an `M` line under R-290, its commits all qa's.
 - R-113 (RQ-94): REQ-INT-001's dd test 8 on a real orbit is split off as REQ-INT-082 and closed here; the synthetic-path half stays in TASK-M1-11.
+- R-580 (RQ-537, 23 Oct 2026): dd test 8's "retrograde matches the L_z sign" is dropped; the mirror leaves θ̃ and
+  retrograde unchanged and negates L_z, so it cannot hold for both members of a mirror pair. The mirror-pair arm takes
+  its place, bitwise where the integration is mirror-exact (R-544 §4); if the stepper the march runs is not
+  mirror-exact, stop and queue rather than loosen "bitwise" to a tolerance (applied per R-369, as TASK-M3-38).
 - δ_dep must be relative or gap-set (pitfalls §3, 'A threshold on a quantity spanning decades must be relative'). The value is recorded with its measurement; R-37 says the value is set by measurement.
 - R-397 (RQ-226), applied per R-369: TASK-M3-11 owns the storage of θ̃'s pole hold as well as θ̃ in the march, since it already edits the ledger with a schema-version change (REQ-VAL-055, REQ-PAY-059); no separate ledger task. The member keeps its name `_reserved` (R-343 and R-351 name its WGSL home `closure_step_reserved`), has no field entry, and gets no read-side accessor or catalogue view. The bring-up pattern keeps `_reserved = 0` (colour_composition Appendix A).
 - R-397's quantisation applies wherever the march stores the reference: the hold's helper in `crates/kernel/src/shape.rs` (TASK-M1-11) may be kept, with the march quantising on entry, or changed. If the march quantises on entry and keeps the helper, TASK-M1-11's qa tests stay untouched. If this task makes the helper quantise, `crates/kernel/tests/qa_TASK-M1-11.rs` (the unquantised hold rule at :84–94) and `crates/kernel/tests/qa_TASK-M1-11_config.rs` (`expected` at :55–69, the f64 tolerance from :155, `edge_check!(edge64, f64, 1e-12)` at :504) break, since they compare `theta_step` and `theta_step_config` with the unquantised hold at tolerances far below π/65535; those are qa-file changes the PR lists and justifies (R-290), conditional on that design choice, not forced by the ruling.

@@ -1128,7 +1128,7 @@
 - id: TASK-M3-38
   milestone: M3
   title: "The shape sphere's mirror test, its runs: the run from Π·x the run mirrored, bitwise, fates equal and L_z and the frame's winding opposite across pixel pairs on a named non-chaotic fixture, and the frame's winding defined (R-544) ⚑"
-  depends_on: [TASK-M3-04, TASK-M3-12, TASK-M2-43]  # R-544: REQ-CHART-082's run arms, split in TASK-M2-43's pre-flight (applied per R-369)
+  depends_on: [TASK-M3-04, TASK-M3-12, TASK-M2-43]  # R-579 (RQ-523 (a)): REQ-CHART-082's run arms, split in TASK-M2-43's pre-flight; TASK-M2-43 kept for its classification and decode (applied per R-369). Was: "R-544: … (applied per R-369)"
   needs: [REQ-CHART-082]
   requirements: [REQ-CHART-085, REQ-CHART-086]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone

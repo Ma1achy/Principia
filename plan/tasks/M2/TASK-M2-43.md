@@ -34,9 +34,12 @@ the four, and the tests that asserted the 2-to-1 cover:
   apply" and asserts nothing. The runs (the run from `Π·x` the run mirrored, bitwise; outcome, `t_end`, `L_z` and the
   frame's winding across pixel pairs) need the stepper, the wrapper and the outcome classifier (TASK-M3-02,
   TASK-M3-04, TASK-M3-12), which this task cannot reach. They are TASK-M3-38's (REQ-CHART-085), with the frame's
-  winding defined there (REQ-CHART-086, R-72). Taking them from the M2 gate is a deferral that waits on the human's
-  ruling, RQ-523; this split is a draft meanwhile, and REQ-CHART-082 holds on it (`rq: RQ-523`). *Was:* "This is not a
-  deferral: the arms move to the task that can build them."
+  winding defined there (REQ-CHART-086, R-72). Taking them from the M2 gate is a deferral, ruled by the human: R-579
+  (23 Oct 2026, RQ-523 (a)). REQ-CHART-082 keeps at M2 exactly the classification, the "does not apply" case, the
+  shape and state pair checks and the bitwise `Π·x` check, and no longer holds on RQ-523. *Was:* "Taking them from the
+  M2 gate is a deferral that waits on the human's ruling, RQ-523; this split is a draft meanwhile, and REQ-CHART-082
+  holds on it (`rq: RQ-523`)." and, before that, "This is not a deferral: the arms move to the task that can build
+  them."
 - **T2 and the `encode-eps-phys` gate on the shape sphere.** A lower-hemisphere pixel now decodes off `C`'s section,
   so `D(E(x)) = C(x)`, `Π·x` to rounding, and the T2 residual against `x` is of order 1. On the shape sphere chart, T2
   and the gate's rows compare `D(E(x))` against `C(x)`, as T3 does (inverse_encode_contract Part 1's T2; REQ-ENC-004,
@@ -59,6 +62,7 @@ the four, and the tests that asserted the 2-to-1 cover:
 - `decisions.md` § "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
 - `decisions.md` § "R-290 — qa may change test files that only qa has committed to *(closes RQ-172, amends R-237)*"
 - `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"
+- `decisions.md` § "R-579 — The mirror test's run arms move to M3: REQ-CHART-082's runs become REQ-CHART-085, closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12; REQ-CHART-082 keeps at M2 the classification, the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` check *(closes RQ-523; a deferral by ruling, from the M2 gate to M3; settles the split R-544's dated line drafted)*"
 
 ## Deliverables
 - `crates/kernel/src/canon.rs`: the shared `C` gains a way to run with step 3 not taken (a parameter or a second entry
@@ -185,6 +189,7 @@ the four, and the tests that asserted the 2-to-1 cover:
   defining the frame's winding (R-72; chart_reference §3.3's "the signed ones (`L_z`, the winding)"), as a draft that
   waits on RQ-523, the deferral being the human's to rule (code review 5605370280 of PR #276, F1). *Was:* "(applied
   per R-369, 21 Oct 2026; R-544's dated line)" and "Not a deferral: the arms move to the task that can build them."
+  RQ-523 is ruled (a) by R-579 (23 Oct 2026): the split stands as drafted and is no longer a draft.
   (B) T2 and the `encode-eps-phys` gate compare against `C(x)` on the
   shape sphere chart, a mechanical consequence of R-544 (inverse_encode_contract Part 1's T2 premise amended;
   REQ-ENC-004 and REQ-ENC-024 amended). (C) `shape_sphere.rs`'s shared-decoder check, `well_posedness.rs`'s inverted
