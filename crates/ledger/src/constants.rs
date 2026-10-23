@@ -881,7 +881,8 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
 /// validation", layer 3; REQ-ENC-027): 16, so 16·2⁻⁵² ≈ 3.55e-15 at f64 and 16·2⁻²³ ≈ 1.91e-6 at f32. TASK-M2-19's
 /// proposal (R-71): the `decode-sanity` gate's `fuzz.json`, 65 536 points on each registered chart and 2²⁰ latent `z`
 /// on `[−16, 16]⁸`, past every control's saturation, the defaults links, at f64 and f32, measures a worst of 1.54
-/// `ε_R` (`Σpᵢ`, the 8-D latent, f64), so 16 covers it by 10×; no decoded mass is not positive.
+/// `ε_R` (`Σpᵢ`, the `latent` chart's row, f64; the 8-D latent `z`'s worst is 1.47), so 16 covers it by 10×; no
+/// decoded mass is not positive.
 pub const DECODE_SANITY: ConstantBuilder = proposed(
     "decode_sanity",
     16.0,
