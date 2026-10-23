@@ -580,3 +580,105 @@ pitch) and the paper's tooth look whenever `render_scale ≠ 1`, so it is a desi
     "true pixels of the buffer the Print graph writes"; a screen medium coarsens while Auto lowers `render_scale`.
 - **Applied meanwhile:** none. REQ-RENDER-110 (`rq`) and its leaf task TASK-M7-69 wait; every other Print graph task
   proceeds, testing `device_px` nodes and the anchored sheet at `render_scale = 1`, where the three options agree.
+
+## RQ-550: The membrane rule's "exactly three crossings" (REQ-SYS-059) against v1 web, the whole native app in the browser, which needs more *(conflict: R-571 against REQ-SYS-059, systems_architecture §3 and canonical_spec §1 item 5; REQ-SYS-059, REQ-SYS-051, REQ-SYS-086; context: TASK-M8-38, TASK-M8-41)*
+
+*Queued by R-571, which names it: "The membrane rule is the one place I expect a real conflict. … Do not redesign it.
+Measure what v1 web actually needs to cross, write that down beside the rule, and **queue** it with options for me."
+Nothing is ruled. For the human: yes, it changes what v1 web builds or offers.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-SYS-059: "The wasm↔JS membrane must have exactly three crossings: set_field(path,
+    value) as the GUI's only write, a GUI-sized (never engine-sized) state snapshot throttled to about 10 Hz, and the
+    OffscreenCanvas handle transferred once at startup"; its verify, "the wasm exports are set_field, snapshot and the
+    one-time canvas init".
+  - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not
+    diminished)", the wasm↔JS table (Field edit, State snapshot, Canvas transfer): "It is thin and enumerable in the
+    same way"; `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)", item 5:
+    "**wasm↔JS** (`set_field` edits in, GUI-sized snapshots out, canvas transferred once)".
+  - R-571: "REQ-SYS-059's "exactly three crossings" cannot hold for the whole native app in a browser: downloads, file
+    drops, the clipboard and audio all cross."
+- **The conflict:** the rule was drawn for a thin TS GUI across the membrane. v1 web is the whole native app, whose
+  specified features need the browser for files, the clipboard, sound, storage and more. Even the design as written
+  crossed more than three: the input deltas (SharedArrayBuffer or postMessage, caching_contract Part 6a), the resize
+  message, the inspector worker's messages, and `wgpu`'s own calls into the browser's WebGPU; REQ-SYS-059's verify
+  counts only the wasm exports.
+- **Measured** (systems_architecture §3, "v1 web, and what it crosses", fourteen rows, each with the doc and section
+  of the native feature): (1) input, text entry and the cursor; (2) resize; (3) the inspector worker's messages;
+  (4) GPU commands to WebGPU; (5) downloads: images with pxpack, snapshots, sweep frames and GIFs, the benchmark's
+  file, profiler captures; (6) video frames to WebCodecs; (7) file drops and picks: Import picture, load snapshot,
+  custom colour occupants; (8) the clipboard: copy snapshot, share link, Copy summary, the console's Copy; (9) the
+  page's URL, for share links; (10) audio, Listen; (11) persistent storage: presets, Your stains, warning
+  suppressions, saved views, "save as default", the quality model, the benchmark's first launch; (12) device and page
+  facts: adapter info and limits, the browser, a phone's viewport, visibility, clocks; (13) a wake lock; (14) the live
+  profiler query (REQ-TOOL-128, its browser transport undefined). None carries the payload, the quad tree or the
+  reductions.
+- **Options seen:**
+  - (a) **Two lists.** The three stay the engine↔GUI membrane's (state in, state out, the canvas once), its law
+    unchanged; v1 web's platform crossings are a second, enumerated list (the measured rows), each plain data, none
+    engine state, none engine-sized; review checks the wasm module's exports and imports against both lists.
+  - (b) **One allow-list.** "Exactly three" becomes "exactly these": the three plus the measured rows, enforced in CI
+    against the wasm module's imports and exports, as TASK-M5-30 enforces the GPU↔CPU membrane's five.
+  - (c) **The law, not the count.** The count was the TS GUI's, so v2 web's; v1 web keeps the law alone (big data
+    never crosses, data boundaries not object boundaries, the GUI holds no engine handles), with no count.
+  - (d) **The rule as written.** Every native feature that needs another crossing is disabled in v1 web and says so in
+    the app (R-571's own fallback): by the table, downloads, imports, the clipboard, Listen, the saved stores and the
+    rest.
+- **Its ruling must also settle the gaps with no native control to disable** (REQ-SYS-086 covers only gaps that have
+  one; gui review 5608379011 of PR #282, applied per R-369): (i) runtime-authored colour occupants, the fragment
+  registry being "the scanned filesystem" (row 7), where the browser has no folder to scan; (ii) persistence across
+  reloads, the stores and the quality model (row 11); (iii) `prin profile query --live` (row 14). For each: crossed,
+  replaced, or absent, and if absent, what v1 web shows.
+- **Applied meanwhile:** the rule stands as written and nothing is built (M8); the measured list sits beside it, a
+  record, not a rule. REQ-SYS-059 and REQ-SYS-051 carry `rq: RQ-550`, and REQ-SYS-086's list of what v1 web says it
+  cannot do waits on it.
+- **Waits:** TASK-M8-38 (REQ-SYS-051, REQ-SYS-059) and TASK-M8-41 (REQ-SYS-086).
+
+## RQ-551: Where the GUI runs in v1 web, and what the main thread holds, now that v1 web's GUI is the native app's egui and not a TS DOM shell *(conflict: R-571 against caching_contract Part 6a, systems_architecture §3, §5 seam 12 and §6 invariant 5, canonical_spec §1 and §6; REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049, REQ-SYS-050, REQ-SYS-056; context: TASK-M8-37, TASK-M8-38)*
+
+*Found by R-571's port, and queued as R-571 says: "Queue anything else that conflicts rather than resolving it."
+Nothing is ruled. For the human: yes, it changes how v1 web is built.*
+
+- **File, section:**
+  - `docs/contracts/principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker
+    (and that worker is the wasm engine)": "The main thread is a thin TS shell: an input pump and a DOM-GUI host, a
+    *different binary*, and it owns no simulation state."; and Part 6, item 3: "Time-budgeting this on the main thread
+    was tried and **failed under real load — the scheduler hitched the gesture and the DOM GUI froze.**"
+  - `plan/requirements.yaml`, REQ-SYS-049: "with the main thread only a TS input pump and DOM-GUI host, and a second
+    wasm context as the f64 inspector worker"; REQ-SYS-047: "the GUI must be a thin TypeScript shell owning only DOM
+    and view-scratch state" (its GUI clause now R-571's).
+  - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule": the egui binding is "compiled
+    into the same wasm binary", and "Under the egui binding there is nothing to transfer: egui-wgpu shares the
+    engine's `wgpu` context and paints the debug overlay onto the same surface in-process."
+  - The native split, caching Part 6a (R-113): "the thread that takes input and draws the GUI never runs the
+    scheduler, the cache or the GPU work."
+- **The conflict:** R-571 makes the browser's GUI the native app's egui GUI. The corpus's browser layout puts a DOM GUI
+  on the main thread, in a separate TS binary, with the engine in a worker; egui cannot live in that TS binary, so
+  either it moves into a wasm context of its own on the main thread, or into the worker, or the worker goes.
+- **Options seen:**
+  - (a) **egui in the engine's worker**, painting onto the transferred OffscreenCanvas through the engine's `wgpu`
+    context (gui_state_contract §1's egui binding as written); the main thread a small loader and input pump, no GUI
+    and no state. Cost: in the browser the GUI shares the frame loop's thread, so R-113's split (the thread that
+    draws the GUI never runs the scheduler, the cache or the GPU work) would not hold for GUI drawing in the browser;
+    a long frame delays the GUI's redraw, and the mitigation, the scheduler time-budgeted per frame on that thread, is
+    the one Part 6, item 3, quoted above, records as having "failed under real load — the scheduler hitched the
+    gesture and the DOM GUI froze". The other way, egui's layout, tessellation and paint take from the worker's frame
+    budget, and the frame record's `stage_ms` has only its fixed stages (integrate, reduce, colour, upload, present,
+    and `post` for the Print graph; `principia_dd_telemetry_and_tiers.md` §2, R-56, R-488), so that time would show
+    in none of them. Text entry and the clipboard need the main thread's help (RQ-550's rows 1 and 8).
+  - (b) **egui on the main thread, in a wasm context of its own**: the gui crate against the engine surface, with
+    `set_field` and the snapshot posted between the two contexts as serialised data; the engine and the frame loop stay
+    in the worker. R-113's split holds as natively; REQ-SYS-059's three become messages between two wasm contexts.
+    Cost: two surfaces (the figure on the worker's OffscreenCanvas, the GUI on a main-thread canvas above it) or a
+    compositing step; the main-thread bundle holds the GUI but no engine state.
+  - (c) **No worker**: the whole app on the main thread, as egui's own web target runs, the frame loop time-budgeted.
+    Against Part 6, item 3, quoted above. With no worker at all, the inspector worker goes too, and in the browser
+    REQ-SYS-039, -040, -041, -044, -045, -049 and -050 would go, as would the browser form of REQ-SYS-031 (the main
+    thread never waits on scheduler work; here it runs it), REQ-SYS-060 (trajectory integration and sonification in
+    the inspector worker) and REQ-PERF-072 (the hover integration in an inspector worker); those three are closed by
+    native tasks and carry no `rq`.
+- **Applied meanwhile:** none; the layout stands as written in the corpus and nothing is built (M8). The requirements
+  above carry `rq: RQ-551`; REQ-SYS-047's GUI clause is changed by R-571 itself (the GUI is the native app's; a TS GUI
+  shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
+  (a) and (b).
+- **Waits:** TASK-M8-37 and TASK-M8-38.

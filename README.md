@@ -25,7 +25,7 @@ Principia is the instrument that makes these pictures, and measures what they sh
 </p>
 
 <table>
-<tr><td><b>Atlas</b></td><td><i>Browse the space of beginnings on the GPU, natively or in the browser. Pan, zoom without end, and rotate or tilt the slice in any direction.</i></td></tr>
+<tr><td><b>Atlas</b></td><td><i>Browse the space of beginnings on the GPU, natively, or in the browser as the same app. Pan, zoom without end, and rotate or tilt the slice in any direction.</i></td></tr>
 <tr><td><b>Charts</b></td><td><i>Flat slices, the shape sphere, Burrau's problem, or a chart built from any axes you choose.</i></td></tr>
 <tr><td><b>Fate</b></td><td><i>Every point integrated forward, regularised through close encounters, until a body escapes, two collide, or time runs out.</i></td></tr>
 <tr><td><b>Refinement</b></td><td><i>Samples go where fates change, and stay coarse where they don't.</i></td></tr>

@@ -2816,7 +2816,7 @@
   pitfalls: []
 - id: TASK-M8-37
   milestone: M8
-  title: "Browser build: the wasm engine in a Web Worker on an OffscreenCanvas, the TS shell, coi-serviceworker"
+  title: "Browser build (v1 web): the wasm engine in a Web Worker on an OffscreenCanvas, the main-thread shell, coi-serviceworker"
   depends_on: [TASK-M8-02, TASK-M8-04, TASK-M7-16]
   needs: [REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058]
   requirements: [REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143]
@@ -2824,7 +2824,7 @@
   pitfalls: []
 - id: TASK-M8-38
   milestone: M8
-  title: "Browser membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker"
+  title: "v1 web's membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker"
   depends_on: [TASK-M8-37, TASK-M8-09]
   needs: [REQ-SYS-036, REQ-GUI-010, REQ-SYS-033]
   requirements: [REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-050, REQ-SYS-051, REQ-SYS-055, REQ-SYS-059, REQ-SYS-044]
@@ -2848,11 +2848,11 @@
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M8-41
   milestone: M8
-  title: "Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, GitHub Pages"
-  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13]
+  title: "Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages"
+  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42]
   needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064]
-  requirements: [REQ-VAL-099, REQ-VAL-105, REQ-SYS-061, REQ-SYS-046]
-  reviewers: [code, qa, physics]
+  requirements: [REQ-VAL-099, REQ-VAL-105, REQ-SYS-061, REQ-SYS-046, REQ-SYS-086]
+  reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M8-42
   milestone: M8

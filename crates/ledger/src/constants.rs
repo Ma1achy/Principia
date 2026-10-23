@@ -876,6 +876,53 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "M2",
 );
 
+// ── The curve projection's search (dd_encode §3.4; REQ-ENC-020; TASK-M2-18) ──────────────────────────────────────
+//
+// The minimiser `kernel::encode::curve::nearest` reads, as dd_encode §3.4's "As built" defines it (R-72, applied per
+// R-369): a grid over the chart's `ν` span, then a fixed count of golden-section steps. None decides what the payload
+// stores, so none is hashed (`crate::version::STORED_BITS`). The kernel reads each from its generated
+// `generated/constants.rs` (`crate::gen::links`).
+
+/// The section that defines the curve projection's minimiser.
+const CURVE_PROJECTION_SECTION: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_encode.md",
+    section: "3.4 Curve projection (off-curve input) — metric pinned",
+};
+
+/// `log₂` of the search's grid, 6: `2⁶ = 64` cells, 65 points, the span's edges included (dd_encode §3.4, "The
+/// minimiser"). Admissible as expressed in canonical units, the span's own: the spacing is the span times `2⁻⁶`, a
+/// power of two, so it and every grid fraction `k·2⁻⁶` are exact at both widths and no division is formed (dd_encode
+/// §3.4, "The branch inputs").
+pub const CURVE_GRID_LOG2: ConstantBuilder = ConstantBuilder {
+    name: "curve_grid_log2",
+    value: Some(Value::Exact(6.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(CURVE_PROJECTION_SECTION),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// The golden-section steps inside the best grid point's two cells, 80, a fixed count (dd_encode §3.4, "The
+/// minimiser"). Admissible as bounded by its own achievable maximum: each step shrinks the bracket by `1/φ`, so 80
+/// take its width, `2/64` of the span, to `(2/64)·φ⁻⁸⁰ < 10⁻¹⁷`, past f64's resolution on `(0, 1)`; a further step
+/// resolves nothing.
+pub const CURVE_GOLDEN_STEPS: ConstantBuilder =
+    maximum("curve_golden_steps", 80.0, CURVE_PROJECTION_SECTION);
+
+/// `1/φ = (√5 − 1)/2`, the golden section's ratio (dd_encode §3.4, "The branch inputs": a constant, correctly rounded
+/// at each width, never a runtime `sqrt`): 0.6180339887498949, the f64 nearest, bits `0x3FE3_C6EF_372F_E950`. Its
+/// rounding to f32, `0x3F1E_377A`, is the f32 nearest to `1/φ` as well, so the one value serves both widths with no
+/// double-rounding error (the kernel's `encode_curve_primitives` holds both). Admissible as expressed in canonical
+/// units: a pure number.
+pub const INV_PHI: ConstantBuilder = ConstantBuilder {
+    name: "inv_phi",
+    value: Some(Value::Exact(0.6180339887498949)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(CURVE_PROJECTION_SECTION),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -910,7 +957,8 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 /// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
 /// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
 /// (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances
-/// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion`
+/// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), the curve projection's search (TASK-M2-18; REQ-ENC-020), and the
+/// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion`
 /// sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
@@ -957,6 +1005,9 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
+    CURVE_GRID_LOG2,
+    CURVE_GOLDEN_STEPS,
+    INV_PHI,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
 ];
