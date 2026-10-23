@@ -14,10 +14,11 @@
 //! - **The tree at the edges.** At every threshold `THR[n]`, `n = 1 … L_max`, its f32 value and its two f32
 //!   neighbours (±1 ulp), the tree's `N_sub` against the table's own count, `min(1 + #{m : d² < THR[m]}, N_max)`.
 //! - **The specification away from the edges.** At those `d²`, at `fuzz.random` `d²` drawn log-uniformly from a quarter
-//!   of the least threshold to four times the greatest, and at the pairs' exact `d²` (their f32 positions' differences
+//!   of the least threshold to four times the greatest, and at the pairs' `d²` in f64 (their f32 positions' differences
 //!   squared in f64), `N_sub` against `clamp(⌈(r_sub/√d²)^{γ_sub}⌉, 1, N_max)` evaluated in f64, clamped before the cast,
-//!   wherever `d²` is more than `2⁻²⁰` (relative) from every exact edge `(r_sub·n^{−1/γ_sub})²`; within it the f32
-//!   rounding of `THR[n]`, half an ulp (`2⁻²⁴`) away, legitimately decides, and the sample is counted, not judged.
+//!   wherever `d²` is more than `2⁻²⁰` (relative) from every exact edge `(r_sub·n^{−1/γ_sub})²`; within it rounding
+//!   legitimately decides, and the sample is counted, not judged. The band bounds the sum of the roundings between the
+//!   specification's comparison and the tree's, with a margin over 2 ([`EDGE_BAND`]).
 //!
 //! **Domain** (pitfalls §10): identical inputs per step. A fork count of 0 says the two CPU legs decide alike given the
 //! same quantised positions and sim key, one macro-step at a time; it says nothing about a trajectory, whose inputs
@@ -37,6 +38,18 @@ use crate::gate::{Gate, GateConfig};
 pub const NAME: &str = "nsub-bucket";
 
 /// The relative distance from an exact edge within which a sample is not judged against the specification.
+///
+/// It bounds, with a margin over 2, the sum of the relative roundings between the specification's comparison (the
+/// pair's `d²` in f64 against the exact edge) and the tree's (`d2_quantised`'s f32 `d²` against `THR[n]`), to first
+/// order, `u = 2⁻²⁴` being f32's unit roundoff:
+/// - `THR[n]`'s rounding to f32: `u`;
+/// - `d2_quantised`'s own f32 rounding: each axis's subtraction `u` relative, so `2u` on its square; the split product's
+///   partial products exact and its three adds, `hh + ((hl + lh) + ll)`, each `u` relative to a partial sum of like-
+///   signed terms no greater than the whole, so `3u`; the pair's one add `u`, on a sum of two non-negative squares:
+///   `6u` in all;
+/// - [`exact_d2`]'s f64 rounding: under `2⁻⁵⁰`, negligible.
+///
+/// The sum, about `7u = 7·2⁻²⁴`, is under `2⁻²¹`; the band, `2⁻²⁰ = 16u`, is over twice it.
 pub const EDGE_BAND: f64 = 1.0 / (1u64 << 20) as f64;
 
 /// A sim key's substep law as an input writes it.
@@ -141,7 +154,8 @@ pub fn legs(r: &[[f64; 2]; 3], table: &NsubThresholds, n_max: u32) -> (u32, u32)
     )
 }
 
-/// The exact `d²` of the closest pair of `r`'s f32 casts, in f64.
+/// The `d²` of the closest pair of `r`'s f32 casts, in f64: the differences exact, each square and the sum rounded
+/// to f64 (relative error under `2⁻⁵⁰`).
 pub fn exact_d2(r: &[[f64; 2]; 3]) -> f64 {
     let q = r.map(|p| p.map(|x| f64::from(x as f32)));
     let d = |a: [f64; 2], b: [f64; 2]| (b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2);
