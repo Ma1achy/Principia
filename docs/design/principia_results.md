@@ -55,6 +55,11 @@ prefilled from the view it was opened over. The window lists every field that di
 estimate sees the region and not one corner; the size estimate is computed from the payload's layout (§3.3) and needs
 no run.
 
+**The pilot runs off the main thread** (perf review 5627960807 of PR #283, P5; applied per R-369): it is background
+work, as the job is (§3.2), since at f64 it is 64 `computeIC`-class runs, up to seconds
+(`principia_caching_contract.md` Part 6, "the main thread never waits"). The window keeps drawing while it runs, and
+a field edit cancels it and restarts it with the new fields.
+
 ### 3.2 Where it runs: the job
 
 One `job.json`: `SimConfig` and `RenderState` in their canonical serialisation (R-309), a `run` block (precision,
@@ -66,6 +71,18 @@ priority than the frame loop (REQ-SCHED-043, `principia_dd_telemetry_and_tiers.m
 `SimState` is a pure function of `(IC, sim key, t)` (philosophy §7.2), and **every row takes its cell width from the
 global grid**, never its own extent, so a resumed run is bitwise the uninterrupted one. This borrows §7.2's argument
 for resumability without its VRAM tiling, which stays parked.
+
+**What the job costs the live view** (perf review 5627960807 of PR #283, P4; applied per R-369):
+- **The frame loop keeps its budget** while a job runs, at f64 (the CPU pool) and at f32 (the GPU), measured on the Mac
+  (R-186) as frame percentiles against a no-job baseline (`principia_dd_telemetry_and_tiers.md` § "CPU", "Drop
+  priority on background work", and § "GPU"; REQ-SCHED-043).
+- **The f64 pool leaves at least one core free**, configurable (telemetry § "CPU", "Leave cores"; REQ-PERF-003).
+- **The f32 path's dispatches are bounded.** A row of `nx` pixels marched to `T` in one dispatch is the long dispatch
+  telemetry §6.3 forbids, so each row is split in time as well, carrying state between chunks (REQ-PERF-010's
+  mechanism); its live states are sized from `(E+1) × sizeof` (philosophy §7.2, "Tiled prebake").
+- **payload.prin is streamed.** It is written row by row as rows finish, so peak process memory does not depend on
+  `nx·ny`, and the job's memory is budgeted before it is allocated (telemetry §6.2a, "Budget before allocating"); a
+  job that does not fit is refused with its reason before it starts.
 
 **Determinism.** At f64 on CPU threads, the payload is bitwise the same however the rows are scheduled: each pixel's
 arithmetic is its own, and no reduction across pixels depends on thread order. The app's job and `prin batch` write
@@ -105,8 +122,9 @@ no such badge.
 of the stored result pixels, each cell a square: they are not chart construction (render_gui_spec §G1), edit no
 `SimConfig` field and no sim key, and enter no undo history. They live in the view source, `Result { id, display_zoom,
 display_pan }`, changed by a result-display request; the engine draws from it and the snapshot carries it, so the GUI
-keeps no copy of the payload (gui review 5627280803 of PR #283, N2; applied per R-369). *Explore from here* builds a live view from the result's own
-`SimConfig`, bitwise.
+keeps no copy of the payload (gui review 5627280803 of PR #283, N2; applied per R-369). A zoom or a pan runs no
+integration and dispatches no march (perf review 5627960807, P5). *Explore from here* builds a live view from the
+result's own `SimConfig`, bitwise.
 
 **The view source** (G2; applied per R-369): which source the figure draws from is engine state, a view-source field
 `Live | Result { id, display_zoom, display_pan }` (`principia_gui_state_contract.md` §2). File › Open result… sets it to
@@ -170,7 +188,8 @@ nominal copy, with all `E + 1` copies as an option; (4) "payload summary", **(a)
 
 ## 6. Tests
 
-Each test with what makes it fail (the draft's table, kept; the port adds the last three rows).
+Each test with what makes it fail (the draft's table, kept; the port adds the three rows from "The payload holds
+exactly …", and perf review 5627960807 of PR #283 the last five).
 
 | Test | Fails when |
 |---|---|
@@ -183,3 +202,8 @@ Each test with what makes it fail (the draft's table, kept; the port adds the la
 | The payload holds exactly the horizon and each chosen playhead, and with all copies `(E + 1)·nx·ny` records per time | a stored time is dropped or added, or the option is ignored |
 | The pilot's estimate changes when the pilot's measured time does (a slowed pilot doubles it) | the estimate is a constant |
 | A result's image imports as the identity, its `run` block in tier 1, never dropped | the `run` block is outside the tier table or below tier 1 |
+| The pilot runs off the main thread, and a field edit cancels and restarts it (P5) | the pilot runs on the GUI thread |
+| A zoom or pan in a result view runs 0 integrations and dispatches nothing (P5) | a display zoom re-dispatches |
+| The frame loop holds the no-job baseline while an f64 or f32 job runs, on the Mac (P4) | the job takes frame time |
+| The f64 pool leaves a core free; an f32 row runs as several bounded dispatches, bitwise the same at two chunk sizes (P4) | the pool takes every core, or a row is one dispatch to `T` |
+| Peak memory is the same at 256² and 1024², and an oversized job is refused before allocating (P4) | the payload is held whole, or allocation is attempted first |

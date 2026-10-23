@@ -23986,6 +23986,15 @@ the view source, `ViewSource = Live | Result { id, display_zoom, display_pan }`,
 that enters no history; the engine draws from it and the snapshot carries it, so the GUI keeps no copy of the payload
 (`principia_gui_state_contract.md` §2, `principia_results.md` §3.4, REQ-GUI-367).
 
+*Fix round 9 of PR #283 (perf review 5627960807, P4, P5; applied per R-369, as the review proposes):*
+- **The job's cost** (P4): the live frame loop keeps its budget while a job runs at f64 or f32, a Mac benchmark against
+  a no-job baseline (REQ-SCHED-043 applied to this job); the f64 pool leaves at least one core free, configurable
+  (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that carry state (REQ-PERF-010), its
+  live states sized from `(E+1) × sizeof` (philosophy §7.2); payload.prin is written row by row, peak memory
+  independent of `nx·ny`, budgeted before allocating (telemetry §6.2a) (`principia_results.md` §3.2, §6; TASK-M8-74).
+- **The pilot** runs off the main thread, and a field edit cancels and restarts it; a zoom or pan in a result view runs
+  no integration and dispatches no march (P5; `principia_results.md` §3.1, §3.4; REQ-GUI-366, REQ-GUI-367).
+
 R-572 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
@@ -24172,6 +24181,18 @@ its own `ftle` (`principia_dd_generation_root.md` § "derived fields", the `ftle
 resolved over the copies' colours, display-only and never read back as data (`principia_render_contract.md` § "Averaging
 (SSAA colour resolve)"); the one-pixel dispatch is the nominal copy, so the estimate uses the nominal copy's `ftle`,
 never another copy's or a mean over the copies'. The conclusion of F10 stands (honesty §3.3, REQ-GUI-370, TASK-M8-76).
+
+*Fix round 9 of PR #283 (perf review 5627960807, P1 to P3; applied per R-369, as the review proposes):*
+- **The f32 trace's dispatch is bounded** (P1): it runs in chunks that return and carry state, interleaved with
+  frames, never one dispatch to `T` (telemetry §6.3, § "GPU"; REQ-PERF-010's mechanism). REQ-TOOL-127's definition
+  gains the bound and a test; TASK-M4-16, which defines the dispatch, names perf and depends on TASK-M4-09
+  (honesty §3.1).
+- **The four runs' cost is measured** (P2): a Mac benchmark (R-186) in REQ-SYS-060's form, with no new number — frame
+  p50/p95/p99/max and `frac_frames_over_41.7ms` with a pin's four runs in flight equal the no-pin baseline within
+  noise, at `T = 50` and `T = 200`, the f64 runs on the inspector worker; and `precision_view` counts the dispatches
+  (honesty §3.1, §6; TASK-M8-76).
+- **TASK-M8-17's goal** says the shape-divergence comparison is on by default in the Inspector, as its acceptance,
+  REQ-VAL-106 and this ruling do (P3).
 
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 

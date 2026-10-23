@@ -62,6 +62,23 @@ point.
 | **f64** | CPU, `computeIC`: the shared kernel at f64 under the f32 run's sim key | the same integrator occupant, coefficients and step rule as the f32 run, never the Inspector's adaptive RK45 |
 | **f64 nudged** | CPU, the same | the f64 run from its IC moved one ulp per component |
 
+**What the four runs cost** (perf review 5627960807 of PR #283, P1, P2; applied per R-369). The runs are on by default
+(§3.4), so their dispatch is bounded and their cost measured:
+- **The f32 traces are chunked.** Each f32 run, and its nudged twin, dispatches in bounded chunks that return and
+  carry state between them, interleaved with frames, never one dispatch to the horizon
+  (`principia_dd_telemetry_and_tiers.md` §6.3 and § "GPU": "Bound the dispatch, not just the total work"; REQ-PERF-010's
+  mechanism, REQ-TOOL-127). At `T = 200` a single dispatch would march up to 65535 macro steps on the queue the frame
+  loop's march uses.
+- **The f64 runs run on the inspector worker** (`principia_trajectory_viewing.md` §1; render contract Part 7), never
+  the main thread or the render-loop worker.
+- **Runs start only when needed.** A pin, or showing a kept orbit, starts exactly two f32 traces and two `computeIC`
+  runs. A playhead move, a mark edit (the marks read the recorded chord series), expanding or collapsing Precision, or
+  showing the same trajectory again starts none. A new pin or an unpin cancels the runs in flight by generation
+  counter (trajectory_viewing §1, "cancel-on-move by generation counter").
+- **Measured on the Mac** (R-186), in REQ-SYS-060's form: while a pin's four runs are in flight, frame p50, p95, p99,
+  max and `frac_frames_over_41.7ms` (telemetry §3) equal the no-pin baseline within noise, at `T = 50` and `T = 200` on
+  a chaotic IC.
+
 **One integrator for all four runs** (physics review 5627073272 of PR #283, F3; applied per R-369). Both f64 runs, and
 both nudged runs, take the f32 run's sim key: the same occupant (stepper × regularisation), coefficients and step rule,
 so the chords measure precision and nothing else. An f64 run under another integrator would mix truncation error into
@@ -149,7 +166,7 @@ until `t = …`").
 
 **The trust line shows in the trajectory inspector panel when a trajectory is clicked** (the human's words, §5): the
 click inspector's panels, hosted in the Inspector window (§G8) and Explore's Trajectory panel (§G2) (R-65). The four
-runs and their readouts are on by default in the Inspector; in the Trajectory panel, on for a pinned or kept
+runs and their readouts are on by default in the Inspector, chunked and measured as §3.1 says; in the Trajectory panel, on for a pinned or kept
 trajectory (a click pins one, R-453), off while the panel follows the cursor. The toggle and the two marks are
 `ViewUI`. An exported Inspector figure carries all four runs' settings.
 
@@ -293,5 +310,14 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   self-check is absent, or keyed the wrong way round on λ. *Was:* "a chord series whose two marks are one boundary
   apart at a large FTLE reads "unreliable". *Fails if* the self-check is absent." (backwards: at a large FTLE that gap
   is the expected one; physics review 5627073272 of PR #283, F1).
+- **precision_view's dispatch count** (REQ-GUI-369; perf review 5627960807 of PR #283, P2; applied per R-369): a pin
+  starts exactly two f32 traces and two `computeIC` runs; a playhead move, a mark edit, expand or collapse, and
+  re-showing start none; a new pin or an unpin cancels by generation counter. *Fails if* the panel re-runs per frame
+  or on a mark edit.
+- **precision-runs-frame** (Mac benchmark, R-186; P2): frame p50/p95/p99/max and `frac_frames_over_41.7ms` with a
+  pin's four runs in flight equal the no-pin baseline within noise, at `T = 50` and `T = 200`. *Fails if* the runs
+  take frame time, or the f64 runs leave the inspector worker.
+- **trace_chunked** (REQ-TOOL-127; P1): at `T = 200` the f32 trace runs as several bounded dispatches, its series
+  bitwise the same at two chunk sizes. *Fails if* it is one dispatch to `T`.
 - **atlas_unchanged**: the atlas frame is bitwise the same with the viewer's runs on and off. *Fails if* the viewer
   writes to the atlas's colours or stains.
