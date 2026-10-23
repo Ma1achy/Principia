@@ -6,11 +6,12 @@ use std::path::{Path, PathBuf};
 
 use kernel::driver::nsub_table::{pack, threshold_bits, NsubConfig};
 use kernel::generated::nsub_thresholds::NSUB_TABLE_MAX;
+use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, GateConfig, RegionCount, Verdict};
 use validation::negative_control;
 use validation::nsub_bucket::{
-    away_from_edges, count, edge, exact_d2, legs, measure, spec, Fuzz, Input, Law, NsubBucketGate,
-    EDGE_BAND, NAME,
+    away_from_edges, count, edge, edge_samples, exact_d2, legs, measure, pair_triple, random_d2,
+    spec, triple, unit, Fuzz, Input, Law, Measurement, NsubBucketGate, EDGE_BAND, NAME,
 };
 
 /// This workspace's root.
@@ -87,6 +88,20 @@ fn nsub_bucket_gate_spec() {
         "past the band"
     );
     assert!(away_from_edges(&DEFAULT, 10.0), "far out");
+    // Exactly at the band: at r_sub = 1/2, THR[1]'s edge is 1/4 and `d²/edge − 1` is 2⁻²⁰ with no rounding; "more than"
+    // the band is strict.
+    let half = Law {
+        r_sub: 0.5,
+        ..DEFAULT
+    };
+    assert!(
+        !away_from_edges(&half, 0.25 * (1.0 + EDGE_BAND)),
+        "exactly at the band"
+    );
+    assert!(
+        away_from_edges(&half, 0.25 * (1.0 + 2.0 * EDGE_BAND)),
+        "past the band at r_sub 1/2"
+    );
 }
 
 negative_control!(
@@ -153,6 +168,199 @@ negative_control!(
     "a wrong expected decision",
     expected = "the legs at",
     check_legs(&[[1.0, 1.0], [5.0, 1.0], [1.0, 1.5]], (2, 2), 0.25)
+);
+
+// ── The draws ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+fn default_bits() -> [u32; NSUB_TABLE_MAX] {
+    threshold_bits(&NsubConfig::DEFAULT).expect("generates")
+}
+
+/// The draws cover their ranges and nothing past them: `unit` on `[0, 1)` with both halves hit; the edge samples the
+/// three f32s at each threshold; the random `d²` within a quarter of the least threshold and four times the greatest,
+/// past both ends of the table; the triples' `n` across `1 … L_max`, their pair `√THR[n]` apart within `2⁻¹⁶`, body 0 on
+/// `[−1, 1]²` with both signs, body 2 at `(10, 10)` from it, and the pair's direction in every quadrant.
+fn check_draws(
+    edges: &[(String, f32)],
+    random: &[f32],
+    units: &[f64],
+    triples: &[(u32, [[f64; 2]; 3])],
+) {
+    let bits = default_bits();
+    assert!(
+        units.iter().all(|u| (0.0..1.0).contains(u)),
+        "a unit draw outside [0, 1)"
+    );
+    assert!(
+        units.iter().any(|&u| u < 0.1) && units.iter().any(|&u| u > 0.9),
+        "the unit draws do not cover [0, 1)"
+    );
+    assert_eq!(
+        edges.len(),
+        3 * NSUB_TABLE_MAX,
+        "three samples per threshold"
+    );
+    for (i, &b) in bits.iter().enumerate() {
+        let got: Vec<u32> = edges[3 * i..3 * i + 3]
+            .iter()
+            .map(|e| e.1.to_bits())
+            .collect();
+        assert_eq!(got, [b - 1, b, b + 1], "the samples at THR[{}]", i + 1);
+        assert_eq!(edges[3 * i + 1].0, format!("THR[{}] exact", i + 1));
+    }
+    let (least, greatest) = (
+        f32::from_bits(bits[NSUB_TABLE_MAX - 1]),
+        f32::from_bits(bits[0]),
+    );
+    assert!(
+        random
+            .iter()
+            .all(|&d| d >= least / 4.0 * 0.999 && d <= greatest * 4.0 * 1.001),
+        "a random d² outside [THR[L_max]/4, 4·THR[1]]"
+    );
+    assert!(
+        random.iter().any(|&d| d < least) && random.iter().any(|&d| d > greatest),
+        "the random d² do not pass both ends of the table"
+    );
+    let mid = random
+        .iter()
+        .filter(|&&d| d >= least && d <= greatest)
+        .count();
+    assert!(
+        mid > random.len() / 2,
+        "the random d² do not fall mostly within the table (log-uniform: about 73%)"
+    );
+    let n: Vec<u32> = triples.iter().map(|t| t.0).collect();
+    assert!(
+        n.iter().all(|&k| (1..=NSUB_TABLE_MAX as u32).contains(&k)),
+        "an n outside 1 … L_max"
+    );
+    assert!(
+        n.iter().any(|&k| k < 32) && n.iter().any(|&k| k > 224),
+        "the triples' n do not cover the table"
+    );
+    for &(k, r) in triples {
+        let thr = f64::from(f32::from_bits(bits[k as usize - 1]));
+        let d2 = (r[1][0] - r[0][0]).powi(2) + (r[1][1] - r[0][1]).powi(2);
+        assert!(
+            (d2 / thr - 1.0).abs() < 2.1 / 65536.0,
+            "a pair not at THR[{k}]: {d2} against {thr}"
+        );
+        assert!(
+            r[0].iter().all(|x| (-1.0..1.0).contains(x)),
+            "body 0 outside [−1, 1]²"
+        );
+        assert_eq!(r[2], [r[0][0] + 10.0, r[0][1] + 10.0], "body 2");
+    }
+    let quadrant = |sx: bool, sy: bool| {
+        triples
+            .iter()
+            .any(|(_, r)| (r[1][0] > r[0][0]) == sx && (r[1][1] > r[0][1]) == sy)
+    };
+    assert!(
+        quadrant(true, true)
+            && quadrant(true, false)
+            && quadrant(false, true)
+            && quadrant(false, false),
+        "the pairs' directions do not cover every quadrant"
+    );
+    assert!(
+        triples.iter().any(|(_, r)| r[0][0] < 0.0) && triples.iter().any(|(_, r)| r[0][1] > 0.0),
+        "body 0 does not take both signs"
+    );
+}
+
+fn draws() -> (
+    Vec<(String, f32)>,
+    Vec<f32>,
+    Vec<f64>,
+    Vec<(u32, [[f64; 2]; 3])>,
+) {
+    let bits = default_bits();
+    let mut rng = SplitMix::new(3);
+    let units = (0..256).map(|_| unit(&mut rng)).collect();
+    let random = random_d2(&bits, &mut rng, 512);
+    let triples = (0..512).map(|_| pair_triple(&bits, &mut rng)).collect();
+    (edge_samples(&bits), random, units, triples)
+}
+
+#[test]
+fn nsub_bucket_gate_draws() {
+    let (e, r, u, t) = draws();
+    check_draws(&e, &r, &u, &t);
+    let r3 = triple([1.0, 2.0], 0.25, std::f64::consts::FRAC_PI_2);
+    assert!(
+        (r3[1][0] - 1.0).abs() < 1e-15 && (r3[1][1] - 2.5).abs() < 1e-15,
+        "triple's pair: {r3:?}"
+    );
+}
+
+negative_control!(
+    nsub_bucket_gate_draws,
+    "random d² drawn from a range ending at the table's ends",
+    expected = "the random d² do not pass both ends of the table",
+    {
+        let (e, _, u, t) = draws();
+        let bits = default_bits();
+        let r: Vec<f32> = (0..64).map(|i| f32::from_bits(bits[i * 4])).collect();
+        check_draws(&e, &r, &u, &t);
+    }
+);
+
+/// A measurement's records: a decision on each leg, a fork, an edge sample and its difference, a judgement.
+fn check_records(m: &Measurement) {
+    assert_eq!(m.decisions, 3, "decisions");
+    assert_eq!(m.forks, 1, "forks");
+    assert_eq!(
+        m.first_fork.as_deref(),
+        Some("c: f64 leg 3, f32 leg 4"),
+        "the first fork"
+    );
+    assert_eq!(m.n_sub_range, (3, 64), "the range of N_sub");
+    assert_eq!(m.saturated, 1, "decisions at N_max");
+    assert_eq!((m.edge_samples, m.edge_mismatches), (2, 1), "edge samples");
+    assert!(m
+        .first_edge_mismatch
+        .as_deref()
+        .is_some_and(|s| s.starts_with("f: d² ")));
+    assert_eq!(
+        (m.judged, m.mismatches, m.near_edge),
+        (2, 1, 1),
+        "judgements"
+    );
+    assert!(m
+        .first_mismatch
+        .as_deref()
+        .is_some_and(|s| s.contains("N_sub 5, the specification 1")));
+}
+
+fn records() -> Measurement {
+    let mut m = Measurement::default();
+    m.decide("a", (5, 5), 64);
+    m.decide("b", (64, 64), 64);
+    m.decide("c", (3, 4), 64);
+    m.edge("e", 1.0, 2, 2);
+    m.edge("f", 1.0, 2, 3);
+    m.judge("g", &DEFAULT, 1.0, 1);
+    m.judge("h", &DEFAULT, 1.0, 5);
+    m.judge("i", &DEFAULT, edge(&DEFAULT, 9), 9);
+    m
+}
+
+#[test]
+fn nsub_bucket_gate_records() {
+    check_records(&records());
+}
+
+negative_control!(
+    nsub_bucket_gate_records,
+    "a measurement with one fewer fork",
+    expected = "forks",
+    {
+        let mut m = records();
+        m.forks = 0;
+        check_records(&m);
+    }
 );
 
 // ── The measurement, the verdict and the report ─────────────────────────────────────────────────────────────────

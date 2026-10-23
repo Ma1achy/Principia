@@ -70,31 +70,30 @@ fn body(out: &mut String, lo: u32, hi: u32, indent: usize) {
     if lo == hi {
         let _ = writeln!(out, "{:indent$}{}", "", lo + 1);
     } else {
-        chain(out, lo, hi, indent);
+        chain(out, lo, hi, indent, "if");
     }
 }
 
-/// The `if` chain for `k ∈ [lo, hi]`, `lo < hi`: at each step the middle `m = ⌈(lo + hi)/2⌉`, `d² < THR[m]` taking
-/// `[m, hi]`, else `[lo, m − 1]`, which is the chain's next `else if` until it is the one leaf `lo`.
-fn chain(out: &mut String, lo: u32, hi: u32, indent: usize) {
-    let mut top = hi;
-    let mut head = "if";
-    while lo < top {
-        let m = (lo + top).div_ceil(2);
-        let _ = writeln!(out, "{:indent$}{head} d2 < {} {{", "", read(m));
-        body(out, m, top, indent + 4);
-        top = m - 1;
-        head = "} else if";
+/// The `if` chain for `k ∈ [lo, hi]`, `lo < hi`, opened by `head` (`if`, or `} else if` within a chain): the middle
+/// `m = ⌈(lo + hi)/2⌉`, `d² < THR[m]` taking `[m, hi]`, else `[lo, m − 1]`, which is the chain's next `else if`, or its
+/// closing `else` where it is the one leaf `lo`. Recursive, so the chain's length is the stack's, never a loop's.
+fn chain(out: &mut String, lo: u32, hi: u32, indent: usize, head: &str) {
+    let m = (lo + hi).div_ceil(2);
+    let _ = writeln!(out, "{:indent$}{head} d2 < {} {{", "", read(m));
+    body(out, m, hi, indent + 4);
+    if lo + 1 == m {
+        let _ = writeln!(out, "{:indent$}}} else {{", "");
+        let _ = writeln!(out, "{:indent$}    {}", "", lo + 1);
+        let _ = writeln!(out, "{:indent$}}}", "");
+    } else {
+        chain(out, lo, m - 1, indent, "} else if");
     }
-    let _ = writeln!(out, "{:indent$}}} else {{", "");
-    let _ = writeln!(out, "{:indent$}    {}", "", lo + 1);
-    let _ = writeln!(out, "{:indent$}}}", "");
 }
 
 /// The tree's function body, the `if` chain over `k ∈ [0, L_max]` at four spaces.
 pub fn tree() -> String {
     let mut out = String::new();
-    chain(&mut out, 0, table_max(), 4);
+    chain(&mut out, 0, table_max(), 4, "if");
     out
 }
 

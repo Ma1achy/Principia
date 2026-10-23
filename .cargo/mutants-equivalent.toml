@@ -238,3 +238,7 @@ justification = "they differ only on a draw whose squared norm equals radius² e
 [[equivalent]]
 mutant = "crates/kernel/src/canon.rs:212:23: replace > with >= in rotation"
 justification = "at ex == ey both arms of the select are the same exponent, so > and >= pick the same e"
+
+[[equivalent]]
+mutant = "crates/kernel/src/driver/substep.rs:116:10: replace < with <= in least"
+justification = "where b == a both arms return floats with equal bits: a pair's d² is a sum of squares each +0 or positive (square never returns -0), and a NaN compares false under both"

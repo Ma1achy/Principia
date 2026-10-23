@@ -505,6 +505,12 @@ fn nsub_d2_quantised() {
         2.0,
         "pair 1"
     );
+    // Off the axes, so each subtraction's operands matter: pair 0 is (0, 2) apart, pair 1 (−3, −2), pair 2 (3, 0).
+    assert_eq!(
+        d2_quantised(&[[0.0_f32, 1.0], [3.0, 1.0], [3.0, 3.0]]),
+        4.0,
+        "pair 0 off the axes"
+    );
     // The f64 kernel's d² is the f32 kernel's on the f32 casts: positions with detail below f32's resolution.
     let r: [[f64; 2]; 3] = [
         [0.1, -0.2 + 1e-12],

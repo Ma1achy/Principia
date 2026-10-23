@@ -149,7 +149,7 @@ pub fn exact_d2(r: &[[f64; 2]; 3]) -> f64 {
 }
 
 /// A position triple whose pair (0, 1) is `d2`'s square root apart, along `angle`, from `at`, the third body 10 away.
-fn triple(at: [f64; 2], d2: f64, angle: f64) -> [[f64; 2]; 3] {
+pub fn triple(at: [f64; 2], d2: f64, angle: f64) -> [[f64; 2]; 3] {
     let s = d2.sqrt();
     [
         at,
@@ -159,8 +159,8 @@ fn triple(at: [f64; 2], d2: f64, angle: f64) -> [[f64; 2]; 3] {
 }
 
 impl Measurement {
-    /// Records one decision on both legs.
-    fn decide(&mut self, what: &str, (a, b): (u32, u32), n_max: u32) {
+    /// Records one decision on both legs, `(a, b)` the f64 and the f32 leg's `N_sub`.
+    pub fn decide(&mut self, what: &str, (a, b): (u32, u32), n_max: u32) {
         self.decisions += 1;
         if a != b {
             self.forks += 1;
@@ -178,8 +178,19 @@ impl Measurement {
         }
     }
 
+    /// Records one edge sample: the tree's `got` against the table's count `want`.
+    pub fn edge(&mut self, what: &str, d2: f32, got: u32, want: u32) {
+        self.edge_samples += 1;
+        if got != want {
+            self.edge_mismatches += 1;
+            self.first_edge_mismatch.get_or_insert_with(|| {
+                format!("{what}: d² {d2:e}, the tree {got}, the table's count {want}")
+            });
+        }
+    }
+
     /// Judges `got` against the specification at the exact `d2`, or counts it near an edge.
-    fn judge(&mut self, what: &str, law: &Law, d2: f64, got: u32) {
+    pub fn judge(&mut self, what: &str, law: &Law, d2: f64, got: u32) {
         if !away_from_edges(law, d2) {
             self.near_edge += 1;
             return;
@@ -195,6 +206,47 @@ impl Measurement {
     }
 }
 
+/// A draw on `[0, 1)` from `rng`: its top 53 bits over `2⁵³`.
+pub fn unit(rng: &mut SplitMix) -> f64 {
+    (rng.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+}
+
+/// The edge samples of the table `bits`: at each `THR[n]`, the f32 below it, it, and the f32 above it, named.
+pub fn edge_samples(bits: &[u32; NSUB_TABLE_MAX]) -> Vec<(String, f32)> {
+    let mut out = Vec::new();
+    for (i, &b) in bits.iter().enumerate() {
+        for (side, d2) in [
+            ("−1 ulp", b.saturating_sub(1)),
+            ("exact", b),
+            ("+1 ulp", b + 1),
+        ] {
+            out.push((format!("THR[{}] {side}", i + 1), f32::from_bits(d2)));
+        }
+    }
+    out
+}
+
+/// `count` `d²` drawn log-uniformly from a quarter of the table's least threshold to four times its greatest.
+pub fn random_d2(bits: &[u32; NSUB_TABLE_MAX], rng: &mut SplitMix, count: u32) -> Vec<f32> {
+    let (lo, hi) = (
+        (f64::from(f32::from_bits(bits[NSUB_TABLE_MAX - 1])) / 4.0).log2(),
+        (f64::from(f32::from_bits(bits[0])) * 4.0).log2(),
+    );
+    (0..count)
+        .map(|_| (lo + (hi - lo) * unit(rng)).exp2() as f32)
+        .collect()
+}
+
+/// A position triple at a threshold of `bits`: `n` uniform on `1 … L_max`, the pair (0, 1) `√THR[n]` apart scaled by a
+/// factor within `2⁻¹⁶` of 1, at a uniform angle, body 0 uniform on `[−1, 1]²`, body 2 10 away ([`triple`]).
+pub fn pair_triple(bits: &[u32; NSUB_TABLE_MAX], rng: &mut SplitMix) -> (u32, [[f64; 2]; 3]) {
+    let n = 1 + (unit(rng) * NSUB_TABLE_MAX as f64) as u32 % NSUB_TABLE_MAX as u32;
+    let scale = 1.0 + (2.0 * unit(rng) - 1.0) / f64::from(1u32 << 16);
+    let d2 = f64::from(f32::from_bits(bits[n as usize - 1])) * scale * scale;
+    let at = [2.0 * unit(rng) - 1.0, 2.0 * unit(rng) - 1.0];
+    (n, triple(at, d2, std::f64::consts::TAU * unit(rng)))
+}
+
 /// Runs `input`'s draws (the module's note); `Err` where the host generator refuses a sim key.
 pub fn measure(input: &Input) -> Result<Measurement, String> {
     let law = input.config;
@@ -205,36 +257,22 @@ pub fn measure(input: &Input) -> Result<Measurement, String> {
     let n_max = law.n_max;
     let mut m = Measurement::default();
     let mut rng = SplitMix::new(input.fuzz.seed);
-    let mut unit = move || (rng.next_u64() >> 11) as f64 / (1u64 << 53) as f64;
-    let mut d2_samples = Vec::new();
-    for (i, &b) in bits.iter().enumerate() {
-        for (side, d2) in [
-            ("−1 ulp", b.saturating_sub(1)),
-            ("exact", b),
-            ("+1 ulp", b + 1),
-        ] {
-            let d2 = f32::from_bits(d2);
-            let what = format!("THR[{}] {side}", i + 1);
-            m.edge_samples += 1;
-            let got = n_sub(d2, &table, n_max);
-            let want = count(&bits, d2, n_max);
-            if got != want {
-                m.edge_mismatches += 1;
-                m.first_edge_mismatch.get_or_insert_with(|| {
-                    format!("{what}: d² {d2:e}, the tree {got}, the table's count {want}")
-                });
-            }
-            d2_samples.push((what, d2));
-        }
+    let mut d2_samples = edge_samples(&bits);
+    for (what, d2) in &d2_samples {
+        m.edge(
+            what,
+            *d2,
+            n_sub(*d2, &table, n_max),
+            count(&bits, *d2, n_max),
+        );
     }
-    let (lo, hi) = (
-        (f64::from(f32::from_bits(bits[NSUB_TABLE_MAX - 1])) / 4.0).log2(),
-        (f64::from(f32::from_bits(bits[0])) * 4.0).log2(),
+    let random = random_d2(&bits, &mut rng, input.fuzz.random);
+    d2_samples.extend(
+        random
+            .into_iter()
+            .enumerate()
+            .map(|(i, d2)| (format!("random d² #{i}"), d2)),
     );
-    for i in 0..input.fuzz.random {
-        let d2 = (lo + (hi - lo) * unit()).exp2() as f32;
-        d2_samples.push((format!("random d² #{i}"), d2));
-    }
     for (what, d2) in &d2_samples {
         // As a position triple at the origin, along x: the f32 cast of `√d²` squared, the legs' common input.
         let r = triple([0.0, 0.0], f64::from(*d2), 0.0);
@@ -242,11 +280,7 @@ pub fn measure(input: &Input) -> Result<Measurement, String> {
         m.judge(what, &law, f64::from(*d2), n_sub(*d2, &table, n_max));
     }
     for i in 0..input.fuzz.pairs {
-        let n = 1 + (unit() * NSUB_TABLE_MAX as f64) as u32 % NSUB_TABLE_MAX as u32;
-        let scale = 1.0 + (2.0 * unit() - 1.0) / f64::from(1u32 << 16);
-        let d2 = f64::from(f32::from_bits(bits[n as usize - 1])) * scale * scale;
-        let at = [2.0 * unit() - 1.0, 2.0 * unit() - 1.0];
-        let r = triple(at, d2, std::f64::consts::TAU * unit());
+        let (n, r) = pair_triple(&bits, &mut rng);
         let what = format!("pair #{i} at THR[{n}]");
         let (a, b) = legs(&r, &table, n_max);
         m.decide(&what, (a, b), n_max);
