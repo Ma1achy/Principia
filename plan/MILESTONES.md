@@ -343,7 +343,8 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - Presets as serialised graphs, and render-key hashing of a graph.
 - The colour maths, including the OKLab transcription check.
 - Palettes beyond M1's baseline.
-- The display chain: stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-67).
+- The display chain: stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-67), the Print
+  graph standing where style was (R-485).
 - Image embedding.
 - **Before the M7 gate (R-385):** the hybrid embedding (`k = 25`) re-measured on real rendered figures, and
   §5's ~8 % reconciled with the 37.6 % raw low-bit error measured on random canvases (REQ-TOOL-151, TASK-M7-34).
@@ -356,20 +357,27 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   The one-body views (R-443; TASK-M7-41, with `chazy_escaper` and `chazy_qk` in TASK-M7-36): their palettes and the
   mass tie tolerance are confirmed at this gate too; the escaping body is `chazy_escaper` (R-548, RQ-321) and the grey
   `#8A8A90` stays, near-neutral (R-548, RQ-322).
+- **The Print graph (R-485 to R-492, R-524 to R-536, R-557; `principia_print_graph.md`):** its data model, registry and
+  executor in style's place (TASK-M7-54, TASK-M7-26, TASK-M7-55); the lab's 78 node types ported one category at a
+  time against the lab's renders, each lab preset in the port task of the last category its nodes need (TASK-M7-56 to
+  TASK-M7-64); R-130's eight styles as the Poster family (TASK-M7-65); the field inputs, under physics review
+  (TASK-M7-66); `through_medium` in the line renderer (TASK-M7-67); and the cost classes measured (TASK-M7-68). Its
+  calibrations (the port and scale tolerances, the data-driven presets' windows, the cost-class thresholds) are
+  confirmed at this gate. RQ-538 holds REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled.
 
 <!-- gate:M7 -->
-**Exit gate — 222 requirements** (and every earlier gate still green):
+**Exit gate — 257 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
 - GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
-- RENDER (28): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096
-- COL (107): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…141
+- RENDER (43): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115
+- COL (125): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…159
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
-- PERF (2): REQ-PERF-068…069
+- PERF (4): REQ-PERF-068…069, REQ-PERF-096…097
 <!-- /gate:M7 -->
 
 ## M8 — The dev GUI, tooling, v1 web and the release gates
@@ -391,9 +399,13 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 - The Chazy legends (R-442; TASK-M8-45), on the generated legend.
   With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
+- **The Print graph in the GUI (R-485 to R-492, R-557):** the Print panel and the line sets' "Through the medium",
+  the graph editor, the badge and Styled / Plain export, provenance and round trip, degrade while moving and the print
+  stage's budget (TASK-M8-68 to TASK-M8-73). `settle_ms`, the print share and the thumbnail budget are confirmed at
+  this gate.
 
 <!-- gate:M8 -->
-**Exit gate — 350 requirements** (and every earlier gate still green):
+**Exit gate — 376 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
@@ -401,11 +413,11 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - GEN (1): REQ-GEN-023
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
 - REF (1): REQ-REF-054
-- RENDER (5): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100
+- RENDER (6): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116
 - COL (5): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135
-- GUI (209): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…353, REQ-GUI-357
-- TOOL (53): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185
+- GUI (220): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…365
+- TOOL (59): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…195
 - VAL (18): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194
-- PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092
+- PERF (20): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…105
 - SYS (25): REQ-SYS-039…062, REQ-SYS-086
 <!-- /gate:M8 -->
