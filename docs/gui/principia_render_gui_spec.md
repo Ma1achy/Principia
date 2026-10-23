@@ -1505,9 +1505,12 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   R-369). *Was:* "its frames entering no undo (R-101)." (fix round 1 of PR #286, gui review 5631060675, F2;
   applied per R-369).
   **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
-  tier.
+  tier, as a lower-priority, cancellable background job with progress; the frame's size is REQ-GUI-388's calibration.
+  While a preview runs the user's baseline cover stays pinned, so returning is never blank (fix round 12 of PR #286, perf review 5632950982, P3, P6).
 - **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
-  estimate a range from this machine's measured throughput, or "no measurement on this machine yet", never a number),
+  estimate the cost over the device throughput model of `principia_quality_device_note.md` §2, one value with its
+  provenance key, or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
+  machine's measured throughput"; fix round 12 of PR #286, perf review 5632950982, P1, P2),
   then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start runs it in the
   background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
   every export.

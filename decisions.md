@@ -24657,6 +24657,7 @@ these texts don't address, queue it rather than resolving it"):*
 - **The estimate's basis**: a segment's cost is the samples it marches (the export's pixels times its copies, `E + 1`)
   times the physical time each is marched; the throughput is the same quantity per wall second from this machine's
   frame records (telemetry §5); the range is the cost over the fastest and over the slowest measured throughput.
+  *Port note, 23 Oct 2026 (fix round 12 of PR #286, perf review 5632950982, P1, P2; applied per R-369):* replaced, below.
 - **"Proof frame equals export"** holds at the same time, size and tier.
 - **The video carrier's slot**: how a GIF, MP4 or WebM carries the spec in itself is `video_carrier_test.md`'s, which
   the human has ruled and which gap sweep PR 2c ports; this design adds only the file beside every export, and does not
@@ -24695,6 +24696,15 @@ request, never an implicit switch, and opening a result ends a preview first. Ad
 already holds is refused with the reason; a drag stops one frame short of a neighbour's frame; an fps that merges two
 keyframes is refused inline in the planner, naming both; advance's rate starts at the Transport's speed and is
 editable (REQ-GUI-373, REQ-GUI-379).
+
+*Fix round 12 of PR #286 (23 Oct 2026; perf review 5632950982, P1, P2, P3, P6; applied per R-369, the orchestrator's
+decision; no ruling changed):* the estimate's basis is not a second estimator built from frame records, whose live
+frames are budget-bound, at reduced `E` and often with no playhead advance: the planner prices a segment's samples ×
+steps with `principia_quality_device_note.md` §2's one throughput model, read under its §9 provenance signature, and
+shows one value with its provenance key (the model gives no range), or "no measurement on this machine yet". While a
+preview runs the user's baseline cover is a third pinned identity (caching Part 5), so returning is never blank. The
+proof strip runs as a lower-priority, cancellable background job; the proof frame's size is a calibration requirement
+(REQ-GUI-388). The human's words above are unchanged.
 
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -24850,6 +24860,13 @@ reviewer, as TASK-M8-31 has it for R-520.
 *Fix round 9 of PR #286 (gui review 5631987230, G1; applied per R-369, the orchestrator's decision; no ruling
 changed):* in a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result
 while the film plays stops it first, as Stop does, so no takeover happens there (REQ-GUI-383).
+
+*Fix round 12 of PR #286 (23 Oct 2026; perf review 5632950982, P4, P5; applied per R-369, the orchestrator's decision;
+no ruling changed):* the film is decoded as it plays, off the main thread, into a bounded ring of decoded frames whose
+size is a calibration requirement (REQ-PERF-111); the builder writes self-contained frames and the manifest records
+each segment's start offset, so Play reel from a later segment seeks. The backdrop stays until the identity being
+shown has its baseline cover complete; under a moving (b) segment, until playback holds or ends and that identity's
+cover completes.
 
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 

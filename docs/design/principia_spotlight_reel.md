@@ -47,6 +47,9 @@ almost fake being the explore view." **Any interaction takes over live at that e
   the blend weight, and which of the two live playback shows at that frame (the outgoing state before the segment's
   second keyframe's frame, the incoming from it, R-520 F3's cut) (fix round 6 of PR #286, physics review 5631678451,
   P4 (a); applied per R-369).
+- **Self-contained frames and seek offsets** (fix round 12 of PR #286, perf review 5632950982, P4; applied per R-369). The builder writes every film frame
+  self-contained, with no disposal dependency on an earlier frame, and the manifest records each segment's first
+  frame's byte offset in the film, so playing from a later segment seeks there and never decodes from frame 0.
 - **The build refuses** a spec whose link entry hashes do not match the build's (R-521; "never substitute",
   `principia_dd_image_embedding.md` §6): `cargo xtask reel` stops before rendering anything, exits non-zero, and names
   the spec and the link. The reel is built per release, so the live view can always recreate what the film showed.
@@ -59,6 +62,12 @@ almost fake being the explore view." **Any interaction takes over live at that e
   its own delays, looping until it is stopped or taken over. While it plays the live view beneath is paused and hidden,
   and nothing is integrated or dispatched for the film: no `SetField` is sent, so stopping it leaves the view exactly as
   it was.
+- **Decoding is streamed, bounded and off the main thread** (fix round 12 of PR #286, perf review 5632950982, P4; applied per R-369). The film is decoded
+  as it plays, off the main thread (caching Part 6, "the main thread never waits", and Part 6a), into a **bounded ring
+  of decoded frames** a few frames ahead of the displayed one; the film is never decoded whole, so its memory is the
+  ring's, whatever its length. The ring's size is a calibration requirement (R-71, REQ-PERF-111), provisional until
+  M8: frame size and fps give its bytes per frame but not how many frames the decode must run ahead, so no value is
+  proposed here. Play reel from a segment seeks to that segment's offset (§3.1).
 - **The rest of Explore while the film plays** (fix round 1 of PR #286, gui review 5631060675, F4 (b); applied per
   R-369). The hover is held off: the GUI sends no `RenderField::Hover` while the film plays, and the hover trace and
   label are not drawn. The decoder badge is not shown, the header strip holding only the preview badge and the
@@ -146,8 +155,11 @@ fix round 9 of PR #286, gui review 5631987230, G1).
   disagreement."
 - **No blank, no jump.** The film frame stays as the backdrop, the snapshot of caching Part 5 (blurred, under its
   coherence discipline), until the live identity's baseline cover is complete (caching Part 4); then it and the
-  preview badge go. From the interaction to then, every displayed frame is the film backdrop or a live render over it,
-  never the canvas background.
+  preview badge go. **"Complete" is the cover of the identity being shown** (fix round 12 of PR #286, perf review 5632950982, P5; applied per R-369):
+  while the live player changes identity every frame (a (b) segment), no identity's cover completes, so the backdrop
+  stays until playback holds or ends (the player stops, or reaches a hold) and the identity then shown has its
+  baseline cover complete; the view is never blank meanwhile. From the interaction to then, every displayed frame is
+  the film backdrop or a live render over it, never the canvas background.
 - **Nothing is lost.** The takeover, with the live motion that follows it until the player stops, is one undoable
   history entry: one undo returns the view to what it was before the reel played. (At cold start there is no previous view; cold start is v2 web's, §3.5.)
 

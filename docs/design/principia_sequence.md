@@ -174,6 +174,10 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
   - **When it stops or ends** (Stop, Play preview again, Esc in the Sequence, or the spec's end), the preview goes and
     the view is the user's view from before it, bitwise, since it was never changed. To keep a preview's frame the user
     moves the cursor there and uses a keyframe's Go to, or Update.
+  - **The user's cover stays pinned** (fix round 12 of PR #286, perf review 5632950982, P3; applied per R-369). While a
+    preview runs, the user's view's baseline cover is held as a **third pinned identity** beside caching Part 5's two
+    (current and backdrop), so the preview's identities never evict it. Returning shows that cover at once, never
+    blank, and costs no recompute of it; only quads the user's view had not yet completed continue as they would have.
   - **Esc in the Sequence while a preview plays** stops the preview and does nothing else: the focus and the keyboard's
     mode stay where they were. The next Esc acts as §G3 has it (§3.1) (fix round 2 of PR #286, gui review 5631227164, G4; applied per R-369).
   - **A user edit while it plays** (a `SetField` that enters the history: a pan, a slider, Home, a stain edit) or an
@@ -197,7 +201,10 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
 - **Proof strip** renders one small frame per keyframe and one per segment midpoint through the blocking exporter
   (Part 4) at its lowest export quality tier, so the user sees exact frames before paying for all of them. A proof
   frame is an exported frame, not the live loop's (Part 1, R-66): at the same time, size and tier it is the exported
-  frame bitwise.
+  frame bitwise. It runs as a **lower-priority background job off the GUI thread** (`principia_dd_telemetry_and_tiers.md`
+  § "CPU": background work runs at lower priority and yields; caching Part 6), with progress and **Cancel**, live work
+  first. The proof frame's size ("small") is a calibration requirement (R-71, REQ-GUI-388), provisional until M8;
+  no corpus value gives it (fix round 12 of PR #286, perf review 5632950982, P6; applied per R-369).
 
 ### 3.7 The planner and export
 
@@ -205,12 +212,19 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
 its frames, its integration cost ((a) one march to the segment's end; (b) `0 → t_frame` per frame; (c) none, Part 2),
 its flags (link parameters interpolated, R-520; a dissolve is two renders) and its estimated time.
 
-- **An estimate carries its basis.** A segment's cost is the samples it marches times the physical time each is marched
-  (the export's pixels times its copies, `E + 1`, times the march's length); the throughput is the same quantity per
-  wall second, measured from this machine's frame records (`principia_dd_telemetry_and_tiers.md` §5). The estimate is
-  shown as a range, the cost over the fastest and over the slowest throughput measured. With no measurement it reads
-  "no measurement on this machine yet", never a number. The proof strip's frames are timed and enter the measurement,
-  so they calibrate it.
+- **An estimate carries its basis** (fix round 12 of PR #286, perf review 5632950982, P1, P2; applied per R-369). A segment's cost is the samples it
+  marches (the export's pixels times its copies, `E + 1`) times the steps each is marched (the physical time of the
+  march over `dt`). The planner prices it with **the one throughput model the app keeps**,
+  `principia_quality_device_note.md` § "2. Model-based, not reactive" ("device throughput (cost-per-dt-per-sample)"),
+  read under its provenance signature (§ "9. Persist the model, not just the rung"): the estimate is cost × that
+  scalar, one value, shown with its provenance key, since the model gives one value, not a range. No second estimator
+  is built from frame records. With no model under a matching provenance it reads "no measurement on this machine
+  yet", never a number. *Was:* "**An estimate carries its basis.** A segment's cost is the samples it marches times the
+  physical time each is marched (the export's pixels times its copies, `E + 1`, times the march's length); the
+  throughput is the same quantity per wall second, measured from this machine's frame records
+  (`principia_dd_telemetry_and_tiers.md` §5). The estimate is shown as a range, the cost over the fastest and over the
+  slowest throughput measured. With no measurement it reads "no measurement on this machine yet", never a number. The
+  proof strip's frames are timed and enter the measurement, so they calibrate it."
 - Then Part 4's parameters: size, fps, quality tier, format, and Plain or styled (R-489). An fps that would give two
   keyframes one frame (export contract Part 3) is refused inline beside the fps field, naming both keyframes ("at 12
   fps keyframes 2 and 3 share frame 7"), never over the figure (§G1), and the spec keeps its fps (fix round 9 of PR
