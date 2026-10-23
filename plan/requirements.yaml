@@ -17451,7 +17451,7 @@
     section: "R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*"
   verify:
     method: unit test
-    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon defaults to 50, takes 10 and 200, and refuses 0 and 201 with the reason (R-575; control: the clamp to [50, 200] before R-575 turns 10 into 50 and fails); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
+    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon defaults to 50, takes 10 and 200, clamps 201 to 200 and refuses 0 with the reason, and ↓ and a drag stop at one keyboard step above 0, never 0 (R-575; control: the clamp to [50, 200] before R-575 turns 10 into 50 and fails); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
   rulings:
   - R-68
   - R-107
@@ -17460,7 +17460,7 @@
   - R-560
   - R-575
   milestone: M8
-  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081). R-560 (21 Oct 2026): the default occupant is Heggie × RK4; was \"Heggie with KDK leapfrog by default\" and \"occupant = Heggie×KDK\". The pair warning beside the selectors is REQ-GUI-351. R-575 (21 Oct 2026): T_horizon raised or lowered, (0, 200] meanwhile (RQ-555); was \"T_horizon (∈ [50, 200])\" and \"T_horizon is clamped to [50, 200]\". The merged mock's `T_RANGE` (TASK-M6-28) changes with it."
+  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081). R-560 (21 Oct 2026): the default occupant is Heggie × RK4; was \"Heggie with KDK leapfrog by default\" and \"occupant = Heggie×KDK\". The pair warning beside the selectors is REQ-GUI-351. R-575 (21 Oct 2026): T_horizon raised or lowered, (0, 200] meanwhile (RQ-555); was \"T_horizon (∈ [50, 200])\" and \"T_horizon is clamped to [50, 200]\". The merged mock's `T_RANGE` (TASK-M6-28) changes with it. fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369): above 200 the field clamps as before R-575, only RQ-555 moving the cap; the arrows stop one step above 0. Was: verify \"the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon defaults to 50, takes 10 and 200, and refuses 0 and 201 with the reason (R-575; control: the clamp to [50, 200] before R-575 turns 10 into 50 and fails); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)\"."
 - id: REQ-GUI-103
   area: GUI
   statement: "The Run window's escape settings must be tau and the escape window (0.4 time units, provisional), with no persistence count."
@@ -21760,13 +21760,14 @@
     section: Result… — the full-precision batch run (R-572)
   verify:
     method: unit test
-    detail: "result_window: opened from each of the three places, it lists only the fields that differ from the view; the pilot's estimate doubles when the pilot's measured time is doubled by a test clock (control: a constant estimate fails); the predictability warning shows at T = 30 at f32 and not at T = 20 (control: a warning keyed on T = 50 fails); Copy command's text names the job file the app runs"
+    detail: "result_window: opened from each of the three places it lists the design's fields (region, nx × ny, precision, T, E, r_coll, stored times, copies), each prefilled with the view's value (control: a window missing a field, or listing one the job does not use, fails); the pilot's estimate doubles when the pilot's measured time is doubled by a test clock (control: a constant estimate fails); the predictability warning shows at T = 30 at f32, not at T = 20 at f32 and not at T = 30 at f64 (controls: a warning keyed on T = 50, and one that ignores the precision, fail); Copy command's text names the job file the app runs"
   rulings:
   - R-572
   milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G3; applied per R-369): the human's list includes T, E and r_coll, prefilled from the view, so the window lists them all; the warning is checked at both precisions. Was: verify \"result_window: opened from each of the three places, it lists only the fields that differ from the view; the pilot's estimate doubles when the pilot's measured time is doubled by a test clock (control: a constant estimate fails); the predictability warning shows at T = 30 at f32 and not at T = 20 (control: a warning keyed on T = 50 fails); Copy command's text names the job file the app runs\"."
 - id: REQ-GUI-367
   area: GUI
-  statement: "File › Open result… must open a result view: the badge \"Result · <precision> · <nx>² · T <T>\" in the figure's header strip and a distinct frame; it draws from the payload and integrates nothing; stain edits stay live and undoable, sim-key edits are disabled with the reason, Explore from here leaves for a live view with the same SimConfig, zoom shows one square per grid cell, and the scrubber snaps to the stored times; a live view shows no such badge."
+  statement: "File › Open result… must open a result view: the view source (engine state, Live | Result(id), set by the open-result request, not an edit and entering no undo history, carried by the snapshot) reads Result; the badge \"Result · <precision> · <nx>² · T <T>\" sits in the figure's header strip, never over the plot, with a distinct frame; it draws from the payload and integrates nothing; zoom and pan are display magnification of the stored pixels, one square per grid cell, editing no SimConfig field or sim key; stain edits stay live and undoable, sim-key edits are disabled with the reason, Explore from here sets the source to Live with a SimConfig bitwise the result's, and the scrubber snaps to the stored times; a live view shows no such badge."
   source:
   - file: docs/design/principia_results.md
     section: "3.4 Reopening: the result view"
@@ -21774,26 +21775,28 @@
     section: Result… — the full-precision batch run (R-572)
   verify:
     method: unit test
-    detail: "result_view: a stain edit in a result view runs 0 integrations and is undoable; a horizon edit is refused with the reason; Explore from here gives a live view whose SimConfig equals the result's bitwise; the scrubber set to t = 22 snaps to the nearest stored time; a live view has no badge (control: a badge drawn on every view fails, and a result view that re-integrates on a stain edit fails)"
+    detail: "result_view: opening a result sets view_source = Result(id) in the snapshot and adds nothing to the undo history (control: an open sent as a SetField enters history and fails); the result view draws the badge with its job's text (\"Result · f64 · 1024² · T 50\" for that job) in the header strip, its rect outside the plot's, and the frame (controls: a view that never draws the badge, or draws it over the plot, fails); a zoom by 4 shows each grid cell as a 4 × 4 square and leaves SimConfig bitwise unchanged (control: a zoom that edits z₀ fails); a stain edit runs 0 integrations and is undoable; a horizon edit is refused with the reason; Explore from here gives view_source = Live and a SimConfig equal to the result's bitwise; the scrubber set to t = 22 snaps to the nearest stored time; a live view has no badge (controls: a badge drawn on every view, and a result view that re-integrates on a stain edit, fail)"
   rulings:
   - R-523
   - R-572
   milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G1, G2, G4; applied per R-369): zoom and pan are display magnification, not chart construction; the view source and its request are defined in gui_state_contract §2; the badge, frame and per-cell zoom are tested. Was: statement \"File › Open result… must open a result view: the badge \"Result · <precision> · <nx>² · T <T>\" in the figure's header strip and a distinct frame; it draws from the payload and integrates nothing; stain edits stay live and undoable, sim-key edits are disabled with the reason, Explore from here leaves for a live view with the same SimConfig, zoom shows one square per grid cell, and the scrubber snaps to the stored times; a live view shows no such badge.\"; verify \"result_view: a stain edit in a result view runs 0 integrations and is undoable; a horizon edit is refused with the reason; Explore from here gives a live view whose SimConfig equals the result's bitwise; the scrubber set to t = 22 snaps to the nearest stored time; a live view has no badge (control: a badge drawn on every view fails, and a result view that re-integrates on a stain edit fails)\"."
 - id: REQ-GUI-368
   area: GUI
-  statement: "A result view must offer Compare, a flip against the live view labelled \"visual only: different sampling\", and Make the f32 twin, the same job at f32 followed by a per-pixel difference map with its counts and distribution."
+  statement: "While a result view is open, the Result window's Compare section must offer Compare with live, a toggle that flips the figure between the result and the live view, labelled \"visual only: different sampling\", and Make the f32 twin, the same job at f32, whose per-pixel difference map shows in the same section as an image at the grid's size with its counts and the distribution of the differences beside it."
   source:
   - file: docs/design/principia_results.md
     section: 3.5 Compare
   verify:
     method: unit test
-    detail: "result_compare: the flip carries its label; the f32 twin of a job is the same job.json but for its precision, and its difference map against a payload that differs from it in exactly one pixel counts 1 (control: a map against itself counts 0, and a map that compares only the nominal copy's outcome misses a field difference and fails)"
+    detail: "result_compare: the Compare section appears in the Result window while a result view is open and not otherwise; the toggle carries its label and flips the figure's source; the f32 twin is the same job.json but for its precision, and its difference map against a payload that differs in exactly one pixel counts 1 and shows that pixel (control: a map against itself counts 0, and a map comparing only the nominal copy's outcome misses a field difference and fails)"
   rulings:
   - R-572
   milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G5; applied per R-369): Compare, the twin and the map placed in the Result window, the header strip holding badges only (R-523) and nothing sitting on the figure. Was: statement \"A result view must offer Compare, a flip against the live view labelled \"visual only: different sampling\", and Make the f32 twin, the same job at f32 followed by a per-pixel difference map with its counts and distribution.\"; verify \"result_compare: the flip carries its label; the f32 twin of a job is the same job.json but for its precision, and its difference map against a payload that differs from it in exactly one pixel counts 1 (control: a map against itself counts 0, and a map that compares only the nominal copy's outcome misses a field difference and fails)\"."
 - id: REQ-GUI-369
   area: GUI
-  statement: "The viewer must show the f64 run solid and the f32 run dashed in real space and on the shape sphere, a log-scale separation plot of the three chords and the real-space separation over the hyperradius, each pair's two marks on the plot, both views and the playhead, the starting gap |Δr|, |Δv| at t = 0, and the fates side by side with one of \"settled before the runs parted\", \"agree, but after parting: not evidence\" or \"not determined at f32 here\"; on by default in the Inspector and, in the Trajectory panel, for a pinned or kept trajectory and not while it follows the cursor; an exported Inspector figure carries all four runs' settings."
+  statement: "The viewer must show the f64 run solid and the f32 run dashed in real space and on the shape sphere, a log-scale separation plot of the three chords and the real-space separation over the hyperradius, each pair's two marks on the plot, both views and the playhead, the starting gap |Δr|, |Δv| at t = 0, and the fates side by side with one of \"settled before the runs parted\", \"agree, but after parting: not evidence\" or \"not determined at f32 here\"; on by default in the Inspector and, in the Trajectory panel, for a pinned or kept trajectory and not while it follows the cursor, as a collapsible Precision section after Numbers (collapsed, the trust line; expanded, the marks, the separation plot, the starting gap and the fates); an exported Inspector figure carries all four runs' settings."
   source:
   - file: docs/design/principia_honesty_precision.md
     section: 3.3 What the user sees
@@ -21801,13 +21804,14 @@
     section: 3.4 Where it lives
   verify:
     method: unit test
-    detail: "agreement_wording: the same fate latched after parting reads \"not evidence\" (mutation: the before/after check dropped reads \"settled\" and fails); a run that ran out of budget is shown as such with its end time; the separation plot holds three chord series; the Trajectory panel runs the four runs for a pin and not for the cursor; an exported Inspector figure's settings name all four runs"
+    detail: "agreement_wording: the same fate latched after parting reads \"not evidence\" (mutation: the before/after check dropped reads \"settled\" and fails); a run that ran out of budget is shown as such with its end time; the separation plot holds three chord series; the Trajectory panel's Precision section comes after Numbers, collapsed shows the trust line and expanded the marks, plot, starting gap and fates (control: a section missing the plot when expanded fails); the four runs run for a pin and not for the cursor; an exported Inspector figure's settings name all four runs"
   rulings:
   - R-574
   milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G6; applied per R-369): the Trajectory panel's Precision section and its place in R-541 G4's order. Was: statement \"The viewer must show the f64 run solid and the f32 run dashed in real space and on the shape sphere, a log-scale separation plot of the three chords and the real-space separation over the hyperradius, each pair's two marks on the plot, both views and the playhead, the starting gap |Δr|, |Δv| at t = 0, and the fates side by side with one of \"settled before the runs parted\", \"agree, but after parting: not evidence\" or \"not determined at f32 here\"; on by default in the Inspector and, in the Trajectory panel, for a pinned or kept trajectory and not while it follows the cursor; an exported Inspector figure carries all four runs' settings.\"; verify \"agreement_wording: the same fate latched after parting reads \"not evidence\" (mutation: the before/after check dropped reads \"settled\" and fails); a run that ran out of budget is shown as such with its end time; the separation plot holds three chord series; the Trajectory panel runs the four runs for a pin and not for the cursor; an exported Inspector figure's settings name all four runs\"."
 - id: REQ-GUI-370
   area: GUI
-  statement: "When a trajectory is clicked, the trajectory inspector panel must show the trust line about the atlas pixel at the atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\"; beside it the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails."
+  statement: "When a trajectory is clicked, the trajectory inspector panel must show the trust line, from the four runs of the clicked trajectory's own IC whatever its source (an atlas pixel, an Inspector edit, Create & locate, a kept orbit after the view has moved), at the current atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\"; beside it the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails."
   source:
   - file: docs/design/principia_honesty_precision.md
     section: 3.3 What the user sees
@@ -21815,10 +21819,11 @@
     section: "5. Decided (Malachy, 21 Oct 2026), superseding §3 of the draft where they differ"
   verify:
     method: unit test
-    detail: "trust_line: on a recorded fixture with t_part(f32) = 18.4 and t_part(f64) = 41, the line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; no line while the panel follows the cursor"
+    detail: "trust_line: on a recorded fixture with faithful until t = 6, t_part(f32) = 18.4 and t_part(f64) = 41, the line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; on a fixture whose self-check fails (marks one boundary apart at λ = 0.7) the line shows \"unreliable\" (control: a line that omits it fails); an IC edited in the Inspector, one built in Create & locate and a kept orbit after a pan each get the line from their own IC (control: a line drawn only for a current atlas pixel fails); no line while the panel follows the cursor"
   rulings:
   - R-574
   milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G7, G9; applied per R-369): the IC's source defined; the fixture's faithful mark stated below 10; a GUI check of \"unreliable\". Was: statement \"When a trajectory is clicked, the trajectory inspector panel must show the trust line about the atlas pixel at the atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\"; beside it the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails.\"; verify \"trust_line: on a recorded fixture with t_part(f32) = 18.4 and t_part(f64) = 41, the line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; no line while the panel follows the cursor\"."
 - id: REQ-GUI-371
   area: GUI
   statement: "The atlas must not change with the viewer: it stays f32 on the GPU, coloured as now, with no stain preset or atlas colour for precision."
@@ -28381,7 +28386,7 @@
   note: "R-566 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-528: where the regularised drift is stored and how an event-stopped run is drawn. Physics review 5605806092 of PR #277, F2 (applied per R-369): the control is structural, since a post-passage Cartesian drift of 1e-12 to 1e-11 need not light the threshold."
 - id: REQ-VAL-196
   area: VAL
-  statement: "The click inspector must run the clicked point four ways: f32, the survey kernel's one-pixel GPU dispatch with the atlas's decode path, integrator occupant and nominal copy; f64 by computeIC; and each of those from its decoded Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile)."
+  statement: "The click inspector must run the clicked trajectory's own IC four ways, all under the f32 run's sim key (the same integrator occupant, coefficients and step rule, never the Inspector's adaptive RK45): f32, the survey kernel's one-pixel GPU dispatch through the atlas's decode path with the nominal copy; f64 by computeIC, the shared kernel at f64; and each of those from its decoded Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile)."
   source:
   - file: docs/design/principia_honesty_precision.md
     section: 3.1 Four runs of one IC
@@ -28389,10 +28394,13 @@
     section: "R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks \"faithful until\" at a shape-sphere chord of 10⁻³ and \"parted at\" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded"
   verify:
     method: unit test
-    detail: "f32_run_is_the_atlas: the f32 run's outcome and t_end equal the atlas pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: each of the twelve components of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two)"
+    detail: "f32_run_is_the_atlas: for an atlas pixel of the current view the f32 run's outcome and t_end equal the pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: each of the twelve components of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two); same_integrator: the four runs report one occupant and step rule, the f32 run's (control: an f64 run under RK45 reports another and fails)"
   rulings:
   - R-574
   milestone: M8
+  rq:
+  - RQ-558
+  note: "fix round 1 of PR #283 (physics review 5627073272, F3; gui review 5627122883, G7; applied per R-369): one integrator for all four runs (integrator contract Part 6), and the runs are of the clicked trajectory's own IC whatever its source; rq: RQ-558 added (F2). Was: statement \"The click inspector must run the clicked point four ways: f32, the survey kernel's one-pixel GPU dispatch with the atlas's decode path, integrator occupant and nominal copy; f64 by computeIC; and each of those from its decoded Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile).\"; verify \"f32_run_is_the_atlas: the f32 run's outcome and t_end equal the atlas pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: each of the twelve components of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two)\"."
 - id: REQ-VAL-197
   area: VAL
   statement: "The viewer must read the shape-sphere chord |n_a − n_b| between the runs' signed unit vectors (0 to 2, a non-finite value reading 2) at the sync boundaries for f32–f64, f64–f64′ and f32–f32′, and mark for each pair \"faithful until\" at the first boundary where it exceeds 10⁻³ and \"parted at\" at the first where it exceeds 0.1, both the human's values, shown and editable, a pair whose chord never exceeds a mark reading \"did not part by T\"."
@@ -28408,7 +28416,9 @@
   - R-565
   - R-574
   milestone: M8
-  note: "R-574 (21 Oct 2026): 10⁻³ and 0.1 are the human's values, measured (prin-rs PR #34, parting_probe) and from the literature, not R-71 calibrations."
+  rq:
+  - RQ-558
+  note: "R-574 (21 Oct 2026): 10⁻³ and 0.1 are the human's values, measured (prin-rs PR #34, parting_probe) and from the literature, not R-71 calibrations. fix round 1 of PR #283 (physics review 5627073272, F2): rq: RQ-558 added, its option (a) built in."
 - id: REQ-VAL-198
   area: VAL
   kind: calibration
@@ -28420,11 +28430,12 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: a chord series whose two marks are one boundary apart at a large FTLE reads \"unreliable\" (control: the check removed, it reads a time and fails); recorded in decisions.md"
+    detail: "cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: with Δ = 0.1, two marks one boundary apart (a gap of 0.1) at λ = 0.7, where ln(100)/λ ≈ 6.6 is expected, read \"unreliable\" (control: the same gap at λ = 46, where ≈ 0.1 is expected, reads its times; a check removed or keyed the wrong way round on λ fails); recorded in decisions.md"
   rulings:
   - R-71
   - R-574
   milestone: M8
+  note: "fix round 1 of PR #283 (physics review 5627073272, F1; applied per R-369): the control was backwards, since at a large FTLE one boundary is the expected gap. Was: verify \"cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: a chord series whose two marks are one boundary apart at a large FTLE reads \"unreliable\" (control: the check removed, it reads a time and fails); recorded in decisions.md\"."
 - id: REQ-VAL-199
   area: VAL
   kind: calibration
@@ -28441,7 +28452,9 @@
   - R-71
   - R-574
   milestone: M8
-  note: "Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree."
+  rq:
+  - RQ-557
+  note: "Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
