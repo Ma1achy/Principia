@@ -821,7 +821,8 @@ level returns the focus to the Figure, and Windows › Sequence… on an open Se
 header bar in navigation mode (fix round 1 of PR #286, gui review 5631060675, F3; applied per R-369).
 
 **Spotlights (R-578, §G9a).** A window too, with two sections in this order: the header bar (Play reel, Stop, Open the
-sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select a segment). The order does not depend on
+sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select a segment; the first segment is selected when
+it opens with a reel, and with no reel nothing is, fix round 5 of PR #286, K1). The order does not depend on
 state: Stop stays in it, disabled when nothing plays, and with no reel the list is still there. Esc from its top level
 returns the focus to the top bar's Windows menu and leaves it open; Windows › Spotlights… on an open Spotlights gives
 it the focus on Stop while the film plays, on its header bar otherwise (fix round 4 of PR #286, gui review 5631472413,
@@ -1446,7 +1447,9 @@ is `docs/design/principia_spotlight_reel.md`.
   provenance (chart, horizon, integrator, build, date); **Play reel**, **Stop**, **Open the sequence** (into Sequence).
   With no reel in the build: "No reel in this build", Play reel disabled. Its sections, in §G3's order: the header bar
   (Play reel, Stop, Open the sequence, ×) and the segment list, where Enter starts interaction and ↑ ↓, Home and End
-  select a segment; the order is the same in every state, no reel, the film playing or not, Stop staying in it,
+  select a segment, the first segment selected when the window opens with a reel and none with no reel, Play reel and
+  Open the sequence then disabled (fix round 5 of PR #286, gui review 5631560484, K1; applied per R-369); the order is
+  the same in every state, no reel, the film playing or not, Stop staying in it,
   disabled when nothing plays. × closes it; closed while the film plays, it stops the film first, as Stop does. Esc
   from its top level returns the focus to the top bar's Windows menu, the window staying open, and Windows ›
   Spotlights… on an open Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise, the

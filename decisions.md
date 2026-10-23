@@ -24405,6 +24405,12 @@ are the header bar (Play reel, Stop, Open the sequence, ×) and the segment list
 a segment), the same in every state, Stop staying in it, disabled when nothing plays. × while the film plays stops the
 film first, as Stop does. Round 3's paragraph stands but for its "as the console's does", which this narrows.
 
+*Fix round 5 of PR #286 (gui review 5631560484, K1; applied per R-369, the orchestrator's decision):* nothing said
+which segment is selected before any key or click. When Spotlights opens with a reel the first segment is selected, so
+a segment is always selected while there is a reel; ↑ and ↓ move the selection, Home and End go to the first and the
+last; with no reel there is no selection, and Play reel and Open the sequence are disabled. §3.4's "or the first
+segment's" is dropped as moot.
+
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199

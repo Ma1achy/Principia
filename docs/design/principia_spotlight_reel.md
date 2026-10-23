@@ -136,10 +136,14 @@ almost fake being the explore view." **Any interaction takes over live at that e
 
 A plain window, no polish. **Spotlights** opens from Windows › Spotlights…, a window under §G5's rules (R-461). It lists
 the reel's segments in order, each with its provenance (chart, horizon, integrator, build, date), and offers **Play
-reel** (from the selected segment's first frame, or the first segment's; the focus then on Stop, §3.3), **Stop**, and
+reel** (from the selected segment's first frame; the focus then on Stop, §3.3), **Stop**, and
 **Open the sequence**, which
 loads the selected segment's whole spec into the Sequence window (`principia_sequence.md`). With no reel in the build
-it reads "No reel in this build" and Play reel is disabled.
+it reads "No reel in this build" and Play reel is disabled. **The selection** (fix round 5 of PR #286, gui review
+5631560484, K1; applied per R-369): when the window opens with a reel, the first segment is selected, so a segment is
+always selected while there is a reel; ↑ and ↓ move the selection one segment and Home and End go to the first and the
+last (below); with no reel there is no selection, and Play reel and Open the sequence are disabled. *Was:* "**Play
+reel** (from the selected segment's first frame, or the first segment's; the focus then on Stop, §3.3)".
 
 **Its keyboard order (§G3; fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369).** Spotlights has
 two sections, top to bottom, as the console has (R-450): the **header bar** (Play reel, Stop, Open the sequence and the
@@ -201,11 +205,13 @@ Each with what makes it fail.
   returns to the view before the reel. *Fails on* an
   off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
 - **spotlights_window**: the window's two sections are in the order of §3.4 in every state (no reel, a reel, the film
-  playing or not), Stop in the order, disabled when nothing plays; ↓ in the segment list selects segment 2; Play reel
+  playing or not), Stop in the order, disabled when nothing plays; the window opens with segment 1 selected, and Tab to the segment
+  list, Enter, ↓ selects segment 2; Play reel
   then puts the focus on Stop; Esc twice puts it on the top bar's Windows menu with Spotlights still open; Windows ›
   Spotlights… puts it back on Stop; × while the film plays stops it as Stop does. *Fails if* the order changes with the
-  state, Stop leaves the order, Esc closes the window, the way back lands elsewhere, or closing leaves the film
-  playing (fix round 4 of PR #286, gui review 5631472413, J1, J2).
+  state, Stop leaves the order, Esc closes the window, the way back lands elsewhere, closing leaves the film
+  playing, or the window opens with no segment selected (fix round 4 of PR #286, gui review 5631472413, J1, J2; fix
+  round 5, gui review 5631560484, K1).
 - **film_holds_explore**: while the film plays, moving the cursor over the figure sends no hover, the Legend shows no
   keys, the decoder badge is absent, `t` reads "—", the Profiler opens and Stop is pressed by keyboard without taking
   over (Stop reached again by Windows › Spotlights…, which lands on it while the film plays), the top bar's undo does
