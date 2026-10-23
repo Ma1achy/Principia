@@ -1362,18 +1362,20 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   and editable, the fates side by side, and **the trust line** at the atlas playhead: for an IC that is an atlas pixel,
   about the atlas pixel, in REQ-GUI-370's three forms (`docs/design/principia_honesty_precision.md` §3.3; the human's
   "the atlas shows t = 30; this point's f32 run parted at t = 18" is the human's illustration, not a form; gui review
-  G9 of PR #283). Nothing in the atlas changes with it. An atlas pixel of the current view, or a kept orbit kept from an atlas
-  pixel of a live view while its view is unchanged (the view source `Live`, the same sim key and chart view, `z₀`, basis and zoom level, bitwise),
-  gets the three forms; while the view source is `Result` no pixel is an atlas pixel (gui review 5627389542, R1), and an orbit kept in a
-  result view stays non-atlas even after *Explore from here* (gui review 5627439632, R2). Any
-  other IC (edited in pane 1, built in Create & locate, a kept orbit after its view has moved or once a result is
-  opened, or a pixel clicked in a result view, run under the result's own `SimConfig`) runs f32 from the IC
-  rounded to f32, and its line takes REQ-GUI-370's three "Not an atlas pixel:" forms, with no atlas claim
-  (`principia_honesty_precision.md` §3.4; G7, physics review 5627216712 F5, gui review 5627280803 N1, N4; applied per
-  R-369). *Was:* "the trust line about the atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this
-  point's f32 run parted at t = 18" (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes
-  with it." and the bullet's opening "On by default: four runs of the IC (f32 on the GPU as the atlas ran it, f64, and
-  each nudged by one ulp),".
+  G9 of PR #283). Nothing in the atlas changes with it. An atlas pixel of the current view, or a kept orbit kept from
+  an atlas pixel of a live view while its view is unchanged (the view source `Live`, the same sim key and chart view,
+  `z₀`, basis and zoom level, bitwise), gets the three forms; while the view source is `Result` no pixel is an atlas
+  pixel (gui review 5627389542, R1), and an orbit kept in a result view stays non-atlas even after *Explore from here*
+  (gui review 5627439632, R2). Any other IC (edited in pane 1, built in Create & locate, a kept orbit after its view
+  has moved or once a result is opened, or a pixel clicked in a result view, run under the result's own `SimConfig`)
+  runs f32 from the IC rounded to f32, and its line takes REQ-GUI-370's three "Not an atlas pixel:" forms, with no
+  atlas claim (`principia_honesty_precision.md` §3.4; G7, physics review 5627216712 F5, gui review 5627280803 N1, N4;
+  applied per R-369). The "estimate from FTLE" and the self-check take `λ` from the `ftle` the IC's own f32 one-pixel
+  dispatch writes, bitwise the atlas's for an atlas pixel; with the FTLE tier off or `ftle_valid` false the line shows
+  neither, only the measured marks (physics review 5627518149, F7; applied per R-369). *Was:* "the trust line about
+  the atlas pixel at the atlas playhead, e.g. "the atlas shows t = 30; this point's f32 run parted at t = 18"
+  (`docs/design/principia_honesty_precision.md` §3). Nothing in the atlas changes with it." and the bullet's opening
+  "On by default: four runs of the IC (f32 on the GPU as the atlas ran it, f64, and each nudged by one ulp),".
 - **Make a result…** (R-572) opens the Result window prefilled from the view the Inspector was opened over (§G5 §
   "Result…"; gui review G5 of PR #283, applied per R-369).
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane

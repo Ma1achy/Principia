@@ -104,8 +104,9 @@ A pair whose chord never exceeds a mark reads "did not part by `T`" for it. `t_p
 "parted at", and `t_part(f64)` the f64–f64′ pair's.
 
 **Self-check.** In a chaotic region the gap between the two marks is about `ln(100)/λ` (generally `ln(θ_part /
-θ_faithful)/λ`, with `λ` this point's FTLE). A gap far off that says the reading is in the noise floor or saturation,
-and the panel says "unreliable". How far is "far off" is a calibration (R-71, REQ-VAL-198).
+θ_faithful)/λ`, with `λ` this point's FTLE, the `ftle` its own f32 run writes, §3.3). A gap far off that says the
+reading is in the noise floor or saturation, and the panel says "unreliable". How far is "far off" is a calibration
+(R-71, REQ-VAL-198).
 
 ### 3.3 What the user sees
 
@@ -123,8 +124,14 @@ and the panel says "unreliable". How far is "far off" is a calibration (R-71, RE
   - after: "The atlas colour here is past f32's trustworthy time (parted at `t = 18.4`). It shows a possible outcome,
     not this point's." — the human's example: "the atlas shows t = 30; this point's f32 run parted at t = 18".
   - after `t_part(f64)` too: "Past f64's as well: neither run can be trusted here."
-  - beside it the atlas's own estimate `ln(1/eps₃₂)/ftle`, "estimate from FTLE", against the measured parting: a point
-    check of the field REQ-SYS-061 states.
+  - beside it the estimate `ln(1/eps₃₂)/ftle`, "estimate from FTLE", against the measured parting: a point check of the
+    field REQ-SYS-061 states. Its `ftle`, and the self-check's `λ` (§3.2), is the one the IC's own f32 one-pixel
+    dispatch writes under its sim key's FTLE tier (render contract `SimState`; lowering contract Part 3,
+    `sample.ftle`): for an atlas pixel of the current view bitwise the atlas's own, because the run is; for any other
+    IC (§3.4) that IC's own, never the atlas pixel it was edited from or the pixel now under it. When the sim key's
+    FTLE tier is off or `ftle_valid` is false (R-254), the line shows no estimate and no self-check verdict, never a
+    NaN or a neighbour's value, and states only the measured marks (physics review 5627518149 of PR #283, F7; applied
+    per R-369).
   - "unreliable" when the self-check fails (§3.2).
 
 **The wording that ships** is the three forms above (REQ-GUI-370); the human's "the atlas shows t = 30; this point's f32
@@ -174,7 +181,8 @@ the current view's).
     possible outcome, not this point's."
   - after `t_part(f64)` too: "Not an atlas pixel: these runs are past f64's as well: neither run can be trusted here."
   - read at the same time as the atlas forms, the current atlas playhead `t_p`, against the same marks; beside it the
-    same "estimate from FTLE" and, when the self-check fails, the same "unreliable".
+    same "estimate from FTLE" and, when the self-check fails, the same "unreliable", both from the `ftle` this IC's own
+    f32 dispatch writes, and neither when its FTLE tier is off or `ftle_valid` is false (§3.3; F7).
 
 *Was:* "**Whatever the IC's source** (gui review G7; applied per R-369): the four runs and the trust line run from the
 clicked trajectory's own IC, whether it came from an atlas pixel, an Inspector edit, Create & locate, or a kept orbit
@@ -258,6 +266,15 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   two).
 - **f32_run_is_the_atlas**: the f32 run's outcome and `t_end` equal the atlas pixel's nominal copy bitwise. Control: a
   CPU f32 run differs on a chaotic fixture, so emulation would fail it.
+- **non_atlas_f32_start** (REQ-VAL-196; physics review 5627518149 of PR #283, observation; applied per R-369): for an
+  IC edited in the Inspector, a pixel clicked in a result view and an orbit kept in a result view, the f32 run starts
+  from the IC rounded to f32 (a result-view pixel's from its grid cell's IC, under the result's `SimConfig`), its
+  starting gap the rounding. *Fails if* the run re-decodes a pixel through the atlas's decode path or takes the current
+  view's sim key.
+- **trust_line** (REQ-GUI-370; the same observation): an atlas pixel reads the three atlas forms and any other IC
+  (§3.4) the three "Not an atlas pixel:" forms, compared as whole strings, with the estimate from its own dispatch's
+  `ftle` and none when `ftle_valid` is false. *Fails if* the atlas wording shows for a non-atlas IC, a line is the
+  bare prefix, or the estimate is read from the atlas pixel an IC was edited from.
 - **marks_follow_edits**: editing a mark to 10⁻² moves "parted at" to the first boundary above 10⁻² on a recorded
   chord series. *Fails if* the mark is a constant.
 - **ensemble_ratio**: over ≥ 256 chaotic ICs, the median `t_part(f32)/t_part(f64)` near `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.

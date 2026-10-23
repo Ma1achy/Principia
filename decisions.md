@@ -23932,6 +23932,17 @@ was kept from is unchanged (sim key, `z₀`, basis and zoom level, bitwise). An 
 non-atlas even after *Explore from here* loads the result's `SimConfig` bitwise (honesty §3.4, render_gui_spec §G8,
 REQ-GUI-370, TASK-M8-76).
 
+*Fix round 6 of PR #283 (physics review 5627518149, F7, F8; applied per R-369):*
+- **The FTLE estimate and the self-check's `λ`** come from the `ftle` the IC's own f32 one-pixel dispatch writes,
+  bitwise the atlas's for an atlas pixel and that IC's own for any other, never the atlas pixel it was edited from.
+  When the sim key's FTLE tier is off or `ftle_valid` is false (R-254), the line shows no estimate and no self-check
+  verdict and states only the measured marks (F7; honesty §3.2, §3.3, §3.4, render_gui_spec §G8, REQ-GUI-370).
+- **Which f32 run is taken** follows fix rounds 4 and 5 in REQ-VAL-196 and TASK-M8-76: a kept orbit is an atlas pixel
+  only if kept from an atlas pixel of a live view, the view source is `Live` now and its view is bitwise unchanged;
+  while the view source is `Result` no pixel is an atlas pixel, and a result-view pixel runs from its grid cell's IC
+  under the result's `SimConfig`; `non_atlas_f32_start` gains the result-view cases (F8).
+- honesty §6 lists `non_atlas_f32_start` and `trust_line` (the review's observation).
+
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
