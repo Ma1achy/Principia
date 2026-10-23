@@ -856,6 +856,109 @@ collapse is saturation along one axis keeps refining, which changes what is draw
 - **Waits:** REQ-SCHED-062's behaviour on band quads (TASK-M6-08), `rq: RQ-554`. Its other arms, and the rest of
   TASK-M6-08, do not wait.
 
+## RQ-555: The horizon's range now that it can be lowered: the lowest `T_horizon`, and whether 200 still caps it *(found by R-575's port; R-575 against R-132 and RQ-524; REQ-INT-081, REQ-INT-026, REQ-GUI-102; context: TASK-M3-06, TASK-M8-24)*
+
+*Found by R-575's port. The human ruled that the horizon "shouldn't be capped to 50 should be able to raised or
+lowered", and gave no lowest value. For the human: yes, it sets what the Run window accepts.*
+
+- **File, section:**
+  - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*":
+    "REQ-INT-081: `dt_macro = max(1e-3, T/65535)`. T keeps [50, 200], with a default of 50; u16 indices stay exact
+    (R-86)."
+  - The human, 21 Oct 2026 (`designs/honesty_precision.md`, "Decided"): "**Horizon**: default stays 50, and it can be
+    **raised or lowered**, not floored at 50 ("Keep horizon to 50. (Also horizon shouldn't be capped to 50 should be
+    able to raised or lowered)"). Amends the Run window's `T_horizon ∈ [50, 200]` (render_gui_spec §G5) and R-132."
+  - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar"; `docs/contracts/principia_integrator_contract.md`
+    § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units and the horizon (inherited scale gauge)".
+- **The question:** the floor at 50 goes; nothing says what replaces it. Below 50 nothing breaks arithmetically
+  (`dt_macro = max(1e-3, T/65535)` gives `⌈T/dt_macro⌉ ≤ 65535` at any `T > 0`), but a short horizon leaves most
+  pixels without an outcome, and the escape test needs its window (0.4 time units, R-29) and the sync grid its quantum
+  (R-565). "Raised" is already possible up to 200; whether the ruling means past 200 is not said. RQ-524 (the
+  unregularised `dt_macro` depending on `T` above 65.535) is unaffected by lowering.
+- **Options seen:** the floor: (a) any `T > 0`; (b) a floor that lets every detector act, the escape window or one
+  sync quantum `Δ_sync`, whichever is larger; (c) a calibrated floor (R-71), proposed with evidence. The cap: (i) 200
+  stays; (ii) it is raised (the u16 rule holds at any `T`, so the cap is not needed for exactness).
+- **Applied meanwhile:** (a) and (i): `T_horizon ∈ (0, 200]`, default 50, a value at or below 0 refused with its reason.
+  Nothing waits.
+  Above 200 the field clamps to 200, as before R-575. A press of ↓ (with or without Shift or Alt) or a drag that would
+  take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T unchanged; ↓ never raises
+  T (fix rounds 1 and 3 of PR #283, gui reviews 5627122883 G8 and 5627280803 N3, applied per R-369).
+
+## RQ-556: What the header strip states about the horizon, against REQ-SYS-061's "The interactive atlas must state its predictability horizon" *(found by R-574's port; R-574 against REQ-SYS-061 and philosophy §4.1; context: TASK-M8-41)*
+
+*Found by R-574's port, and queued as the bundle's instruction says: "Where anything here conflicts with a ruling or a
+queue entry these texts don't address, queue it rather than resolving it." For the human: yes, it changes what the
+atlas's chrome says.*
+
+- **File, section:**
+  - The human, 21 Oct 2026 (`designs/honesty_precision.md`, "Decided"): "A single global "f32 trustworthy to ~23" is
+    right pooled and wrong for any given point, which is why the readout is per point."; "**Nothing changes in the
+    atlas**: it stays f32 on the GPU, coloured as now"; "The header states the horizon; the viewer states each point's
+    parting."
+  - The draft's §3, "The atlas statement": "The header strip reads: "Horizon `T = 50` · f32 trustworthy to about
+    `t ≈ 23` (derived, not yet measured on this GPU)", changing to "measured" once REQ-VAL-071 runs. A stain preset,
+    **How far f32 sees**, draws `ln(1/eps)/ftle`."
+  - `plan/requirements.yaml`, REQ-SYS-061: "The interactive atlas must state its predictability horizon, and nothing
+    downstream may treat an atlas pixel past the horizon as a result."; `docs/read_first/principia_00_philosophy.md`
+    § "4.1 The instrument must say where it stops knowing".
+- **The question:** "the horizon" the header states may be `T` (the run's horizon) or the predictability horizon
+  REQ-SYS-061 asks the atlas to state; the human's reason for the per-point readout argues against a global "≈ 23",
+  which is how the draft's header met REQ-SYS-061. The stain preset is not made either way (R-574: nothing changes in
+  the atlas).
+- **Options seen:** (a) the header strip states `T` only ("Horizon T = 50"), and REQ-SYS-061's predictability horizon
+  is stated per point, by the viewer's trust line and its FTLE estimate; REQ-SYS-061 restated so. (b) The header
+  states `T` and the draft's derived f32 horizon ("f32 trustworthy to about t ≈ 23 (derived …)", "measured" once
+  REQ-VAL-071 runs); REQ-SYS-061 unchanged. (c) Nothing is added to the header; REQ-SYS-061 is met as its verify
+  reads, by labelling exports and statistics built from atlas data as exploratory.
+- **Applied meanwhile:** none; nothing is built before TASK-M8-41. REQ-SYS-061 carries `rq: RQ-556`.
+- **Waits:** TASK-M8-41 (REQ-SYS-061).
+
+## RQ-557: The ensemble ratio's expected value: `ln eps₃₂ / ln eps₆₄ ≈ 0.44`, against the probe's readings *(found by R-574's port; physics; REQ-VAL-199; context: TASK-M8-76)*
+
+*Found by R-574's port. The draft's test is the human's; the measurement since does not settle its value. Physics,
+where the choice changes what passes: for the human.*
+
+- **File, section:**
+  - `docs/design/principia_honesty_precision.md` § "6. Tests (each with what makes it fail)", the draft's
+    **ensemble_ratio**: "over ≥ 256 chaotic ICs, median `t_part(f32)/t_part(f64)` near `ln eps₃₂/ln eps₆₄ ≈ 0.44`.
+    Never read off one trajectory."
+  - `docs/incoming/2026-10-21_gap_sweep_results_honesty/evidence/parting_probe_output.txt`, "deep interior", at
+    `θ = 0.1`: f32 vs f64 median 12.1, 95 % parted by 50; f64 vs f64′ median 39.4, **19 %** parted by 50.
+- **The question:** exponential growth from a starting gap `δ₀` predicts `t_part ≈ ln(θ/δ₀)/λ`, so the ratio is
+  `ln(θ/δ₃₂)/ln(θ/δ₆₄)`, not `ln eps₃₂ / ln eps₆₄`, unless `θ` is ignored: at `θ = 0.1` with the probe's deep-interior starting
+  chords (about 2e-7 and 1.6e-16 at `t = 0.1`) it is about 0.38; the draft's value is 0.44. The probe's medians give
+  12.1 / 39.4 ≈ 0.31, but only over the 19 % whose f64 runs parted by 50, the earliest, so biased low. At `T = 50` most
+  f64 runs do not part, so the gate needs a longer horizon (up to 200) or a conditioning rule.
+- **Options seen:** (a) the draft's value, 0.44, the tolerance calibrated (R-71); (b) the predicted ratio from each
+  IC's measured starting chords and the mark, `ln(θ/δ₃₂)/ln(θ/δ₆₄)`, the tolerance calibrated; (c) no pass/fail: the
+  ratio measured and recorded, with the predicted value beside it. Under any: the ICs from the chaotic regions, at
+  `T = 200`, over the ICs where both pairs part, the count reported.
+- **Applied meanwhile:** none. REQ-VAL-199 carries `rq: RQ-557`.
+- **Waits:** REQ-VAL-199 (TASK-M8-76's gate).
+
+## RQ-558: Whether the viewer's four runs carry on past their first terminal event, as the marks were measured, or stop there as the atlas does *(found by R-574's port; physics; REQ-VAL-196, REQ-VAL-197; context: TASK-M8-76)*
+
+*Found by R-574's port. Physics the texts do not settle: for the human.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_results_honesty/evidence/parting_probe.rs`, its header: "four Heggie runs to
+    the horizon (termination off, so every run reaches it)"; `stop_on_event: false`, each run's fate its first event.
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer": a terminal
+    event latches, and the copy's march ends there.
+  - `docs/design/principia_honesty_precision.md` § "3.1 Four runs of one IC", "Past a terminal event".
+- **The question:** the marks (10⁻³, 0.1) and the agreement figures were measured on runs that carry on past their
+  first event. The atlas stops at it, so does `f32_run_is_the_atlas`'s comparison of `t_end`. After a collision under
+  regularisation off, carrying on integrates through a singularity the substep machinery is capped against.
+- **Options seen:** (a) as measured: each run's fate and `t_end` are its first event, latched as the atlas latches it,
+  and the run carries on to the horizon for the chord; a run that fails or runs out of its budget ends there, its chords
+  read "ended at `t = …`" after it; (b) each run stops at its first event as the atlas does; the chord ends at the
+  earlier end, and a pair that ends before parting reads "settled before the runs parted"; (c) (a) under a regularised
+  occupant, (b) with regularisation off.
+- **Applied meanwhile:** (a). REQ-VAL-196 and REQ-VAL-197 carry `rq: RQ-558`, so a ruling for (b) or (c) traces to
+  them (fix round 1 of PR #283, physics review 5627073272, F2). *Was:* "(a). Nothing waits."
+- **Waits:** nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197 (TASK-M8-76) (physics
+  review 5627216712 of PR #283, F6). *Was:* "**Waits:** TASK-M8-76 (REQ-VAL-196, REQ-VAL-197)."
+
 ## RQ-559: The Sequence window's undo: its own history, as the draft gives it, against R-52's one history kept by the contract *(found by R-577's port; R-577 against R-52 and gui_state_contract §2; REQ-GUI-378; context: TASK-M8-77)*
 
 *Found by R-577's port, and queued as the bundle's instruction says: "Where anything here conflicts with a ruling or a

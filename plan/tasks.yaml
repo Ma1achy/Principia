@@ -1272,10 +1272,10 @@
 - id: TASK-M4-16
   milestone: M4
   title: "The pixel inspector's engine side: f64 trace, f32 GPU trace and the divergence overlay"
-  depends_on: [TASK-M4-04, TASK-M4-06, TASK-M3-27, TASK-M3-36]
+  depends_on: [TASK-M4-04, TASK-M4-06, TASK-M3-27, TASK-M3-36, TASK-M4-09]
   needs: [REQ-GUI-008, REQ-INT-055, REQ-SYS-017, REQ-VAL-036, REQ-VAL-035, REQ-INT-005, REQ-VAL-034]
   requirements: [REQ-TOOL-040, REQ-TOOL-041, REQ-TOOL-042, REQ-VAL-070, REQ-VAL-071, REQ-SYS-028, REQ-TOOL-127]
-  reviewers: [code, qa, physics]
+  reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-3, PIT-10]
 - id: TASK-M4-17
   milestone: M4
@@ -3110,6 +3110,30 @@
   requirements: [REQ-PERF-101, REQ-PERF-102, REQ-PERF-103, REQ-PERF-104, REQ-PERF-105]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
+- id: TASK-M8-74
+  milestone: M8
+  title: "Result, the job: one job.json run in the app or by `prin batch`, f32 or f64, the result folder and its payload, cancel and resume (R-572)"
+  depends_on: [TASK-M8-02, TASK-M4-17, TASK-M7-44, TASK-M5-24]
+  needs: [REQ-SYS-027, REQ-TOOL-181, REQ-PERF-003, REQ-PERF-010, REQ-SCHED-043]
+  requirements: [REQ-SYS-087, REQ-SYS-088, REQ-SYS-089, REQ-SYS-090, REQ-TOOL-196, REQ-PERF-107, REQ-PERF-108, REQ-PERF-109]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-3]
+- id: TASK-M8-75
+  milestone: M8
+  title: "Result, the GUI: the Result window, the result view and Compare (R-572)"
+  depends_on: [TASK-M8-74, TASK-M8-17, TASK-M8-34]
+  needs: []
+  requirements: [REQ-GUI-366, REQ-GUI-367, REQ-GUI-368]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-76
+  milestone: M8
+  title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
+  depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75]
+  needs: [REQ-TOOL-127, REQ-TOOL-040]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106]
+  reviewers: [code, qa, physics, gui, perf]
+  pitfalls: [PIT-10]
 - id: TASK-M8-77
   milestone: M8
   title: "The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)"

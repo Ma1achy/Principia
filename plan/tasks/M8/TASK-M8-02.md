@@ -12,12 +12,13 @@
 The engine can be driven with no GUI attached: a SimConfig + RenderState JSON file is loaded, frames run, and an image is written. The same path runs the survey headless natively, from the same kernel as the browser build, writing the outputs Paper 2's numbers come from. This is the "brutal and concrete" test of gui_state_contract §1.
 
 ## References
+- `decisions.md` § "R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it"
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
 - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)"
 
 ## Deliverables
 - `crates/prin/src/cmd/run.rs` — `prin run --state state.json --frames N --out out/` loading the provenance object from TASK-M8-01 and driving the engine's frame loop headless.
-- `crates/prin/src/cmd/survey.rs` — `prin survey --state … --out …`: the native headless survey writing its outputs (payload summary, image, frame records).
+- `crates/prin/src/cmd/survey.rs` — `prin survey --state … --out …`: the native headless survey writing its outputs (image, frame records). *Was:* "(payload summary, image, frame records)"; "payload summary" is deleted (R-573): it was defined nowhere and used nowhere. The full-precision payload is the Result's, `prin batch` (TASK-M8-74, R-572).
 - `crates/prin/Cargo.toml` — no dependency on `crates/gui` or egui.
 - Tests: `headless_json_drive`, `headless_survey`.
 

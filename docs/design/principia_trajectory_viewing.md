@@ -92,7 +92,7 @@ Opens on click; shows the **same trajectory three ways at once**, linked by one 
 |---|---|---|---|
 | **3D shape sphere** (rotatable) | `n(t)` polyline on S², landmarks (3 BC equatorial, Lagrange poles) | `computeIC` trajectory → shape | **yes** (§5) |
 | **2D UV unwrap** | same `n(t)`, equirect (θ, φ): θ azimuth horizontal, φ polar vertical (R-14) | same | **yes** (§5) |
-| **Real space** | the three bodies in the plane, `r_i(t)` | `computeIC` trajectory | **no** — CPU-f64 sugar |
+| **Real space** | the three bodies in the plane, `r_i(t)` | `computeIC` trajectory, and the f32 dispatch's `r_i(t)` (R-574) | **yes** (§5, R-574) |
 | **Scalar readout** | `t_end_step`, `state`, escaper, `d_min`, drifts @ cursor | `SimState` + `computeIC` | classification-level (§5) |
 
 **Where each panel lives (R-65).** The click inspector's panels are hosted in the **Inspector window**
@@ -113,7 +113,7 @@ show stay a view of the bodies and never fold the path. In the Inspector window 
 constructor's (render_gui_spec §G8): every point of both halves reachable, the mirror twin a faint marker at `(θ, π − φ)`.
 The sphere turns slowly, with visible axes, and can be stopped ("turn").
 
-- **Real space is CPU-f64 intuition sugar** — "see what this IC looks like", no comparison claimed. There is no GPU real-space trajectory to compare against (the survey never produced one), and that's fine — visualisation, not parity.
+- **Real space shows the f32 run beside the f64 (R-574).** The one-pixel f32 dispatch writes `r_i(t)` as well as `n(t)`, so real space draws the f64 run solid and the f32 run dashed, and the separation plot reads their real-space separation over the hyperradius (`principia_honesty_precision.md` §3.3). *Was (before R-574):* "**Real space is CPU-f64 intuition sugar** — "see what this IC looks like", no comparison claimed. There is no GPU real-space trajectory to compare against (the survey never produced one), and that's fine — visualisation, not parity." The table's Real space row reads the same way; its *was:* "**no** — CPU-f64 sugar".
 - **Config-space frame (both sphere panels).** Both feed `sph_uv` in the config-space frame (two-rotations rule). The 3D orbit control rotates the **camera, not the data** — so the 3D view and the 2D unwrap always agree. Landmarks fixed in the same frame.
 - **Linked brushing.** One `ViewUI.t_cursor` shared across panels: scrub in one → all highlight the same instant; hover a sphere point → real space jumps to that configuration. Pure `ViewUI` state, no engine involvement. This is what makes three panels one instrument. The inspector's cursor is independent of the survey's global playhead (it examines one frozen IC).
 
@@ -123,6 +123,7 @@ The sphere turns slowly, with visible axes, and can be stopped ("turn").
 
 The one comparison worth drawing — and the reason it's honest — is on the shape sphere, because it's the only place the GPU and CPU both produced the same quantity.
 
+- **Four runs, two marks and the trust line (R-574).** The comparison is no longer an optional overlay: it is `principia_honesty_precision.md`, on by default in the Inspector and, in the Trajectory panel, on for a pinned or kept trajectory and off while following the cursor. Four runs of the clicked IC (f32 on the GPU as below, f64 by `computeIC`, and each nudged by one ulp per component); the shape-sphere chord between them, read at the sync boundaries, with two marks, "faithful until" at 10⁻³ and "parted at" at 0.1, both shown and editable; the fates side by side; and the trust line about the atlas pixel. The dispatch below is its f32 run, and writes `r_i(t)` as well as `n(t)`. Where the paragraph below differs, R-574 governs. *Was (before R-574):* the paragraph below's lead, "(optional; off by default, on for the curious and paper figures)", and "the peel-off time reads the local Lyapunov time" as its only reading.
 - **Shape divergence overlay (optional; off by default, on for the curious and paper figures).** On opening the overlay, dispatch an **on-demand single-IC f32 GPU trace**: a one-pixel compute job re-running the clicked IC through the *survey kernel* (the same Rust-sourced compute kernel at f32 — in the browser it reaches WebGPU as WGSL exactly as the survey does, via `rust-gpu → SPIR-V → naga`) and writing a dense `n(t)` series — one trajectory's history is trivial memory, so the no-history discipline is not violated (it is a sanctioned pull, sized like the hover pull). Draw it over the CPU f64 curve, sampled at shared times. Coincident → agreement; peeling apart → divergence, and the peel-off time reads the local Lyapunov time. The shape sphere is **bounded**, so this is cleaner than a real-space comparison would be: escaping real-space paths both shoot to infinity and swamp the signal, whereas on S² the shape trajectories stay compact and genuinely separate. *(Replaces the old checkpoint-skeleton overlay — checkpoints no longer exist; this is a fair f32-vs-f64 comparison of the same kernel, on demand.)*
 - **Classification agreement.** Both report outcome class / escaper / `t_end`. In regular regions, agreement certifies the pipeline (disagreement = a real bug). Near a boundary, outcome disagreement is the honest signal that *that pixel's fate is genuinely uncertain* (the two-floor "numerically suspect" story).
 
@@ -141,4 +142,4 @@ The one comparison worth drawing — and the reason it's honest — is on the sh
 
 ---
 
-*One integration, two lenses. Hover projects it onto the plane you're looking through — tilt deforms it, slice repositions it. Click projects it onto absolute shape and real space, three panels, one cursor. Real space is sugar; the shape divergence is the honest comparison. Always CPU, no tiers — a single trajectory was never worth optimising.*
+*One integration, two lenses. Hover projects it onto the plane you're looking through — tilt deforms it, slice repositions it. Click projects it onto absolute shape and real space, three panels, one cursor. Four runs of the clicked point say where its precision runs out, on the sphere and in real space (R-574). Always CPU, no tiers — a single trajectory was never worth optimising.* *(Was, before R-574: "Real space is sugar; the shape divergence is the honest comparison.")*

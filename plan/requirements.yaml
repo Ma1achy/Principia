@@ -3783,7 +3783,7 @@
   milestone: M3
 - id: REQ-INT-026
   area: INT
-  statement: "Wrapper loop parameters must be bound once per frame/tier as `SimUniforms` and take the Part 3 table's defaults and owners (`T_horizon` ∈ [50, 200] with default 50, `dt_macro` = max(10⁻³, T/65535), `N_max` default 64 user-adjustable, `r_sub` = 0.05, `gamma_sub` = 1.5, `r_coll` user-exposed, `tau` and the 0.4 escape window, `r_close` = 0.01, `eps_E` = `eps_L` = 10⁻⁶, `G` = `M_total` = 1)."
+  statement: "Wrapper loop parameters must be bound once per frame/tier as `SimUniforms` and take the Part 3 table's defaults and owners (`T_horizon` default 50, raised or lowered, in (0, 200] meanwhile (R-575, RQ-555), `dt_macro` = max(10⁻³, T/65535), `N_max` default 64 user-adjustable, `r_sub` = 0.05, `gamma_sub` = 1.5, `r_coll` user-exposed, `tau` and the 0.4 escape window, `r_close` = 0.01, `eps_E` = `eps_L` = 10⁻⁶, `G` = `M_total` = 1)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
@@ -3795,6 +3795,8 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*"
   verify:
     method: unit test
     detail: "default SimUniforms match the table (T_horizon = 50, dt_macro = 10⁻³); dt_macro = T/65535 for T above 65.535"
@@ -3802,8 +3804,9 @@
   - R-29
   - R-113
   - R-132
+  - R-575
   milestone: M3
-  note: "`tau` has no default in the corpus; it is set by measurement (R-29: re-measure the gap), tracked in open-questions.md, change 11 (i). R-113 (RQ-98): the sim-key clause is REQ-SCHED-007's (M4). R-132: T default 50, dt_macro = max(10⁻³, T/65535) (REQ-INT-081)."
+  note: "`tau` has no default in the corpus; it is set by measurement (R-29: re-measure the gap), tracked in open-questions.md, change 11 (i). R-113 (RQ-98): the sim-key clause is REQ-SCHED-007's (M4). R-132: T default 50, dt_macro = max(10⁻³, T/65535) (REQ-INT-081). R-575 (21 Oct 2026): T raised or lowered; was \"`T_horizon` ∈ [50, 200] with default 50\"."
 - id: REQ-INT-027
   area: INT
   statement: "The substepper must expose the live current `N_sub` per macro-step for the animated effort view."
@@ -4788,7 +4791,7 @@
   note: "R-565 (21 Oct 2026): was \"the number of sync boundaries n_sync over the horizon\"; the grid is a fixed quantum of physical time, never t_max / n_sync."
 - id: REQ-INT-081
   area: INT
-  statement: "The horizon T_horizon must default to 50 within integrator_contract's [50, 200], and dt_macro must be max(10⁻³, T/65535), so the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 holds over the whole range and the u16 step indices stay exact (R-86)."
+  statement: "The horizon T_horizon must default to 50 and be raisable and lowerable within integrator_contract's range, (0, 200] meanwhile (R-575; the range RQ-555), and dt_macro must be max(10⁻³, T/65535), so the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 holds over the whole range and the u16 step indices stay exact (R-86)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
@@ -4802,15 +4805,20 @@
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
   - file: decisions.md
     section: "R-156 — The plan-pass readings are accepted *(closes RQ-126)*"
+  - file: decisions.md
+    section: "R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*"
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.6 The horizon
   verify:
     method: unit test
-    detail: "default T_horizon = 50 with dt_macro = 10⁻³; at T = 200, dt_macro = 200/65535 and ⌈T/dt_macro⌉ = 65535; no T in [50, 200] is refused at dispatch"
+    detail: "default T_horizon = 50 with dt_macro = 10⁻³; at T = 200, dt_macro = 200/65535 and ⌈T/dt_macro⌉ = 65535; at T = 10 and T = 0.5, dt_macro = 10⁻³ and the dispatch accepts it (R-575; control: a floor at 50, the range before R-575, refuses T = 10 and fails); no T in (0, 200] is refused at dispatch, and T ≤ 0 is refused with its reason"
   rulings:
   - R-71
   - R-132
   - R-156
+  - R-575
   milestone: M3
-  note: "R-132 rules the values the R-71 calibration asked for; nothing here stays calibrated."
+  note: "R-132 rules the values the R-71 calibration asked for; nothing here stays calibrated. R-575 (21 Oct 2026): the horizon is no longer floored at 50; (0, 200] is RQ-555's option (a) and (i), applied meanwhile, nothing waiting. Was: \"must default to 50 within integrator_contract's [50, 200]\" and, in the verify, \"no T in [50, 200] is refused at dispatch\"."
 - id: REQ-INT-082
   area: INT
   statement: "The unwrapped phase θ̃ accumulated over a real march must have no 2π jumps, with the derived orbit_count and retrograde matching the orbit."
@@ -18336,7 +18344,7 @@
   note: "R-476 L2, M3 (20 Oct 2026). *Was:* \"The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair.\" R-509 Y5. *Was:* \"The Display window must offer the overlays class edges and cursor crosshair; the grid and the t_end contours are Lines ▾ presets (REQ-GUI-247).\""
 - id: REQ-GUI-102
   area: GUI
-  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, two selectors, Heggie × RK4 by default (R-560), Aarseth–Zare available), with no 'tolerance' field."
+  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (default 50, raised or lowered, in (0, 200] meanwhile, R-575, RQ-555), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, two selectors, Heggie × RK4 by default (R-560), Aarseth–Zare available), with no 'tolerance' field."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Run — from the top bar
@@ -18354,17 +18362,20 @@
     section: "R-138 — `dt_macro` is derived, shown read-only *(closes RQ-116)*"
   - file: decisions.md
     section: "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
+  - file: decisions.md
+    section: "R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*"
   verify:
     method: unit test
-    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon is clamped to [50, 200]; no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
+    detail: "the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon defaults to 50, takes 10 and 200, clamps 201 to 200 and refuses 0 with the reason, and a press of ↓ (with or without Shift or Alt) or a drag that would take T to 0 or below sets T to the Alt step, 0.2, if T is above it and otherwise leaves T unchanged: Shift+↓ at T = 10 gives 0.2 (control: 20, or a refusal, fails), ↓ at T = 0.2 leaves 0.2 (control: a press that raises T fails), and no press reaches 0 (control: the mock's clamp to lo = 0, which reaches 0, fails) (R-575; control: the clamp to [50, 200] before R-575 turns 10 into 50 and fails); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)"
   rulings:
   - R-68
   - R-107
   - R-132
   - R-138
   - R-560
+  - R-575
   milestone: M8
-  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081). R-560 (21 Oct 2026): the default occupant is Heggie × RK4; was \"Heggie with KDK leapfrog by default\" and \"occupant = Heggie×KDK\". The pair warning beside the selectors is REQ-GUI-351."
+  note: "Overrides the artboard's integrator 'tolerance' field (R-68); GUI_DESIGN_NOTES is conformed (R-107). R-132: dt_macro = max(10⁻³, T/65535) and T_horizon defaults to 50 (REQ-INT-081). R-560 (21 Oct 2026): the default occupant is Heggie × RK4; was \"Heggie with KDK leapfrog by default\" and \"occupant = Heggie×KDK\". The pair warning beside the selectors is REQ-GUI-351. R-575 (21 Oct 2026): T_horizon raised or lowered, (0, 200] meanwhile (RQ-555); was \"T_horizon (∈ [50, 200])\" and \"T_horizon is clamped to [50, 200]\". The merged mock's `T_RANGE` (TASK-M6-28) changes with it. fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369): above 200 the field clamps as before R-575, only RQ-555 moving the cap; the arrows stop one step above 0. Was: verify \"the Run window's field list equals the contract parameter names; defaults N_max = 64 and occupant = Heggie×RK4 (R-560; control: a default of Heggie×KDK, the default before R-560, fails); T_horizon defaults to 50, takes 10 and 200, and refuses 0 and 201 with the reason (R-575; control: the clamp to [50, 200] before R-575 turns 10 into 50 and fails); no field named tolerance; dt_macro is read-only, shows its rule and tracks T (R-138)\". Fix round 3 of PR #283 (gui review 5627280803, N3; applied per R-369): the floor is exact, replacing \"the arrows stop one step above 0\"."
 - id: REQ-GUI-103
   area: GUI
   statement: "The Run window's escape settings must be tau and the escape window (0.4 time units, provisional), with no persistence count."
@@ -22927,6 +22938,96 @@
   - R-489
   milestone: M8
   note: The engine's half is REQ-RENDER-106. Closed by TASK-M8-70.
+- id: REQ-GUI-366
+  area: GUI
+  statement: "File › Make a result…, Measure's kept region and the Inspector must open the Result window prefilled from the view, listing every field that differs from it (the region, nx × ny, precision f64 by default or f32, the horizon, E and r_coll, the stored times with playheads to add, the copies option), with a cost and size estimate from a timed 64-pixel pilot, never a constant, a warning when T passes the precision's predictability horizon (about 23 at f32, 52 at f64, the measured f32 value once REQ-VAL-071 has run), progress (rows done, failures, time left), Cancel, Resume and Copy command giving `prin batch --job job.json`."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.1 Launch: the Result window"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Result… — the full-precision batch run (R-572)
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 6 — The responsiveness invariant: the main thread never waits"
+  verify:
+    method: unit test
+    detail: "result_window: opened from each of the three places it lists the design's fields (region, nx × ny, precision, T, E, r_coll, stored times, copies), each prefilled with the view's value (control: a window missing a field, or listing one the job does not use, fails); the pilot's estimate doubles when the pilot's measured time is doubled by a test clock (control: a constant estimate fails); the pilot runs as background work off the GUI thread and the window keeps drawing while it runs, and a field edit cancels it and restarts it with the new fields (controls: a pilot run on the GUI thread, and one that finishes with the old fields after an edit, fail); the predictability warning shows at T = 30 at f32 and at T = 100 at f64, not at T = 20 at f32 and not at T = 30 at f64 (controls: a warning keyed on T = 50, one that ignores the precision, and one that never shows at f64, fail); on a running job driven by a test clock the window shows rows done, failures and time left read from the job's state, each updating as the job advances, Cancel stops the job and the window reads \"cancelled at <share> %\", and Resume continues it from the rows finished (controls: a progress line that does not track the job, and a Cancel or Resume that does not reach the job, fail); Copy command's text names the job file the app runs"
+  rulings:
+  - R-572
+  milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G3; applied per R-369): the human's list includes T, E and r_coll, prefilled from the view, so the window lists them all; the warning is checked at both precisions. Was: verify \"result_window: opened from each of the three places, it lists only the fields that differ from the view; the pilot's estimate doubles when the pilot's measured time is doubled by a test clock (control: a constant estimate fails); the predictability warning shows at T = 30 at f32 and not at T = 20 (control: a warning keyed on T = 50 fails); Copy command's text names the job file the app runs\". Fix round 9 of PR #283 (perf review 5627960807, P5; applied per R-369): the pilot runs off the main thread; a field edit cancels and restarts it. Fix round 12 of PR #283 (qa review 5628365538, Q6; applied per R-369): the progress display, Cancel and Resume, and the f64 warning at T = 100 are tested."
+- id: REQ-GUI-367
+  area: GUI
+  statement: "File › Open result… must open a result view: the view source (engine state, Live | Result { id, display_zoom, display_pan }, set by the open-result request, not an edit and entering no undo history, carried by the snapshot) reads Result; the badge \"Result · <precision> · <nx>² · T <T>\" sits in the figure's header strip, never over the plot, with a distinct frame; it draws from the payload and integrates nothing; zoom and pan are display magnification of the stored pixels, one square per grid cell, changing the view source's display_zoom and display_pan by a result-display request that enters no history, editing no SimConfig field or sim key, the engine drawing from the view source and the GUI keeping no copy of the payload; stain edits stay live and undoable, sim-key edits are disabled with the reason, Explore from here sets the source to Live with a SimConfig bitwise the result's, and the scrubber snaps to the stored times; a live view shows no such badge."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.4 Reopening: the result view"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Result… — the full-precision batch run (R-572)
+  verify:
+    method: unit test
+    detail: "result_view: opening a result sets view_source = Result { id, .. } in the snapshot and adds nothing to the undo history (control: an open sent as a SetField enters history and fails); the result view draws the badge with its job's text (\"Result · f64 · 1024² · T 50\" for that job) in the header strip, its rect outside the plot's, and the frame (controls: a view that never draws the badge, or draws it over the plot, fails); a zoom by 4 shows each grid cell as a 4 × 4 square, sets the snapshot's view_source display_zoom to 4, leaves SimConfig and the sim key bitwise unchanged and the undo depth unchanged (controls: a zoom that edits z₀ fails; a GUI-side magnification of a payload copy, which leaves the snapshot's view source unchanged, fails); a zoom and a pan each run 0 integrations and dispatch no march (control: a display zoom that triggers a re-dispatch fails); a stain edit runs 0 integrations and is undoable; a horizon edit is refused with the reason; Explore from here gives view_source = Live and a SimConfig equal to the result's bitwise; the scrubber set to t = 22 snaps to the nearest stored time; a live view has no badge (controls: a badge drawn on every view, and a result view that re-integrates on a stain edit, fail)"
+  rulings:
+  - R-523
+  - R-572
+  milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G1, G2, G4; applied per R-369): zoom and pan are display magnification, not chart construction; the view source and its request are defined in gui_state_contract §2; the badge, frame and per-cell zoom are tested. Was: statement \"File › Open result… must open a result view: the badge \"Result · <precision> · <nx>² · T <T>\" in the figure's header strip and a distinct frame; it draws from the payload and integrates nothing; stain edits stay live and undoable, sim-key edits are disabled with the reason, Explore from here leaves for a live view with the same SimConfig, zoom shows one square per grid cell, and the scrubber snaps to the stored times; a live view shows no such badge.\"; verify \"result_view: a stain edit in a result view runs 0 integrations and is undoable; a horizon edit is refused with the reason; Explore from here gives a live view whose SimConfig equals the result's bitwise; the scrubber set to t = 22 snaps to the nearest stored time; a live view has no badge (control: a badge drawn on every view fails, and a result view that re-integrates on a stain edit fails)\". Fix round 3 of PR #283 (gui review 5627280803, N2; applied per R-369): the display zoom and pan live in the view source, Result { id, display_zoom, display_pan }, by a no-history request; the engine draws from it. Fix round 9 of PR #283 (perf review 5627960807, P5; applied per R-369): a zoom or pan runs 0 integrations and dispatches nothing."
+- id: REQ-GUI-368
+  area: GUI
+  statement: "While a result view is open, the Result window's Compare section must offer Compare with live, a toggle that flips the figure between the result and the live view, labelled \"visual only: different sampling\", and Make the f32 twin, the same job at f32, whose per-pixel difference map shows in the same section as an image at the grid's size with its counts and the distribution of the differences beside it."
+  source:
+  - file: docs/design/principia_results.md
+    section: 3.5 Compare
+  verify:
+    method: unit test
+    detail: "result_compare: the Compare section appears in the Result window while a result view is open and not otherwise; the toggle carries its label and flips the figure's source; the f32 twin is the same job.json but for its precision, and its difference map against a payload that differs in exactly one pixel counts 1 and shows that pixel (control: a map against itself counts 0, and a map comparing only the nominal copy's outcome misses a field difference and fails)"
+  rulings:
+  - R-572
+  milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G5; applied per R-369): Compare, the twin and the map placed in the Result window, the header strip holding badges only (R-523) and nothing sitting on the figure. Was: statement \"A result view must offer Compare, a flip against the live view labelled \"visual only: different sampling\", and Make the f32 twin, the same job at f32 followed by a per-pixel difference map with its counts and distribution.\"; verify \"result_compare: the flip carries its label; the f32 twin of a job is the same job.json but for its precision, and its difference map against a payload that differs from it in exactly one pixel counts 1 (control: a map against itself counts 0, and a map that compares only the nominal copy's outcome misses a field difference and fails)\"."
+- id: REQ-GUI-369
+  area: GUI
+  statement: "The viewer must show the f64 run solid and the f32 run dashed in real space and on the shape sphere, a log-scale separation plot of the three chords and the real-space separation over the hyperradius, each pair's two marks on the plot, both views and the playhead, the starting gap |Δr|, |Δv| at t = 0, and the fates side by side with one of \"settled before the runs parted\", \"agree, but after parting: not evidence\" or \"not determined at f32 here\"; on by default in the Inspector and, in the Trajectory panel, for a pinned or kept trajectory and not while it follows the cursor, as a collapsible Precision section after Numbers (collapsed, the trust line; expanded, the marks, the separation plot, the starting gap and the fates); an exported Inspector figure carries all four runs' settings."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.3 What the user sees
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.4 Where it lives
+  - file: docs/design/principia_trajectory_viewing.md
+    section: 1. The single mechanism
+  verify:
+    method: unit test
+    detail: "agreement_wording: the same fate latched after parting reads \"not evidence\" (mutation: the before/after check dropped reads \"settled\" and fails); a run that ran out of budget is shown as such with its end time; the separation plot holds three chord series; the Trajectory panel's Precision section comes after Numbers, collapsed shows the trust line and expanded the marks, plot, starting gap and fates (control: a section missing the plot when expanded fails); the four runs run for a pin and not for the cursor; a pin, or showing a kept orbit, starts exactly two f32 traces and two computeIC runs, and a playhead move, a mark edit, expanding or collapsing Precision and showing the same trajectory again start none (control: a panel that re-runs per frame or on a mark edit fails); a new pin or an unpin cancels the runs in flight by generation counter (control: a superseded run whose result is drawn fails); an exported Inspector figure's settings name all four runs"
+  rulings:
+  - R-574
+  milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G6; applied per R-369): the Trajectory panel's Precision section and its place in R-541 G4's order. Was: statement \"The viewer must show the f64 run solid and the f32 run dashed in real space and on the shape sphere, a log-scale separation plot of the three chords and the real-space separation over the hyperradius, each pair's two marks on the plot, both views and the playhead, the starting gap |Δr|, |Δv| at t = 0, and the fates side by side with one of \"settled before the runs parted\", \"agree, but after parting: not evidence\" or \"not determined at f32 here\"; on by default in the Inspector and, in the Trajectory panel, for a pinned or kept trajectory and not while it follows the cursor; an exported Inspector figure carries all four runs' settings.\"; verify \"agreement_wording: the same fate latched after parting reads \"not evidence\" (mutation: the before/after check dropped reads \"settled\" and fails); a run that ran out of budget is shown as such with its end time; the separation plot holds three chord series; the Trajectory panel runs the four runs for a pin and not for the cursor; an exported Inspector figure's settings name all four runs\". Fix round 9 of PR #283 (perf review 5627960807, P2; applied per R-369): precision_view counts the dispatches and checks cancel by generation counter."
+- id: REQ-GUI-370
+  area: GUI
+  statement: "When a trajectory is clicked, the trajectory inspector panel must show the trust line from the four runs of the clicked trajectory's own IC. For an atlas pixel of the current view (or a kept orbit while the view it was kept from is unchanged), at the current atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\" While the view source is Result no pixel is an atlas pixel. A kept orbit counts as an atlas pixel only if it was kept from an atlas pixel of a live view (the view source Live when it was kept) and its view is unchanged: the view source is Live now and its sim key and chart view (z₀, the basis and the zoom level) are bitwise those it was kept from; a result opened over it, even with a bitwise-equal SimConfig, changes it, and a stain or playhead edit leaves it unchanged; an orbit kept in a result view stays non-atlas even after Explore from here loads the result's SimConfig bitwise. For any other IC (an Inspector edit, a Create & locate IC, a kept orbit once its view has moved, a pixel clicked in a result view, whose runs are from its grid cell's IC under the result's own SimConfig), at the same t_p against the same marks: before t_part(f32) \"Not an atlas pixel: these runs are within f32's trustworthy time for this point.\"; after it \"Not an atlas pixel: these runs are past f32's trustworthy time (parted at t = …). The f32 run shows a possible outcome, not this point's.\"; after t_part(f64) too \"Not an atlas pixel: these runs are past f64's as well: neither run can be trusted here.\"; never \"The atlas colour here …\". Beside either line the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails, both taking ftle (the self-check's λ) from the sample the IC's own f32 one-pixel dispatch writes, bitwise the atlas pixel's nominal copy's ftle for an atlas pixel (under SSAA or an ensemble each copy computes its own ftle and the pixel's colour is resolved over the copies' colours, never their data, render contract § \"Averaging (SSAA colour resolve)\"; the one-pixel dispatch is the nominal copy) and never the atlas pixel the IC was edited from; when the sim key's FTLE tier is off, ftle_valid is false, or a valid ftle is ≤ 0 (ftle is signed), the line shows no estimate and no self-check verdict, never a NaN, a negative or infinite estimate, or a neighbour's value, and states only the measured marks."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.3 What the user sees
+  - file: docs/design/principia_honesty_precision.md
+    section: "5. Decided (Malachy, 21 Oct 2026), superseding §3 of the draft where they differ"
+  verify:
+    method: unit test
+    detail: "trust_line: on a recorded fixture with faithful until t = 6, t_part(f32) = 18.4 and t_part(f64) = 41, an atlas pixel's line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; on a fixture whose self-check fails (marks one boundary apart at λ = 0.7) the line shows \"unreliable\" (control: a line that omits it fails); an IC edited in the Inspector, one built in Create & locate and a kept orbit after a pan each read, on the same fixture, exactly \"Not an atlas pixel: these runs are within f32's trustworthy time for this point.\" at t_p = 10, \"Not an atlas pixel: these runs are past f32's trustworthy time (parted at t = 18.4). The f32 run shows a possible outcome, not this point's.\" at t_p = 30 and \"Not an atlas pixel: these runs are past f64's as well: neither run can be trusted here.\" at t_p = 45, compared as whole strings (controls: the atlas wording shown for an edited IC fails; a line that is the bare prefix \"Not an atlas pixel:\" fails), with \"unreliable\" on the failing self-check fixture as for an atlas pixel; a kept orbit whose view is unchanged, including after a stain edit and after a playhead edit, gets the atlas forms (control: a kept orbit that turns non-atlas on a stain edit fails), and one after a zoom, a basis change or a sim-key edit gets the non-atlas forms; a pixel clicked in an f64 result view and one in an f32 result view each read the non-atlas forms, their runs under the result's SimConfig (control: the atlas wording shown for a result-view pixel fails); an orbit kept in a live view reads the non-atlas forms once a result whose SimConfig is bitwise the same is opened (control: a kept orbit still counted as an atlas pixel after the result opens fails); an orbit kept in a result view, after Explore from here (bitwise the same SimConfig), reads the non-atlas forms (control: a kept orbit counted as an atlas pixel after Explore from here fails); for an IC edited in the Inspector the estimate equals ln(1/eps₃₂)/ftle of its own dispatch's ftle (control: an estimate read from the atlas pixel it was edited from fails); on a fixture whose dispatch writes ftle_valid = false the line shows no estimate, no \"unreliable\" and no NaN, only the measured marks (control: a line showing a NaN estimate or a neighbour's fails); on fixtures whose dispatch writes a valid ftle = −0.3 and a valid ftle = 0 the line shows no estimate and no \"unreliable\", only the measured marks (control: a line showing a negative or infinite estimate, or \"unreliable\" from the sign, fails); for an atlas pixel under SSAA the estimate equals ln(1/eps₃₂)/ftle of the pixel's nominal copy (control: an estimate from another copy's ftle, or from a mean over the copies' ftle, fails); no line while the panel follows the cursor"
+  rulings:
+  - R-574
+  milestone: M8
+  note: "fix round 1 of PR #283 (gui review 5627122883, G7, G9; applied per R-369): the IC's source defined; the fixture's faithful mark stated below 10; a GUI check of \"unreliable\". Was: statement \"When a trajectory is clicked, the trajectory inspector panel must show the trust line about the atlas pixel at the atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\"; beside it the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails.\"; verify \"trust_line: on a recorded fixture with t_part(f32) = 18.4 and t_part(f64) = 41, the line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; no line while the panel follows the cursor\". Fix round 2 of PR #283 (physics review 5627216712, F5; applied per R-369): a non-atlas IC's line carries no atlas claim. Was: statement \"When a trajectory is clicked, the trajectory inspector panel must show the trust line, from the four runs of the clicked trajectory's own IC whatever its source (an atlas pixel, an Inspector edit, Create & locate, a kept orbit after the view has moved), at the current atlas playhead t_p: before t_part(f32) \"The atlas colour here is within f32's trustworthy time for this point.\"; after it \"The atlas colour here is past f32's trustworthy time (parted at t = …). It shows a possible outcome, not this point's.\"; after t_part(f64) too \"Past f64's as well: neither run can be trusted here.\"; beside it the estimate ln(1/eps₃₂)/ftle labelled \"estimate from FTLE\", and \"unreliable\" when the self-check fails.\"; verify \"trust_line: on a recorded fixture with faithful until t = 6, t_part(f32) = 18.4 and t_part(f64) = 41, the line reads the first form at t_p = 10, the second (naming t = 18.4) at t_p = 30 and the third at t_p = 45 (control: a line keyed on the faithful mark reads the second form at t_p = 10 and fails); the FTLE estimate sits beside it; on a fixture whose self-check fails (marks one boundary apart at λ = 0.7) the line shows \"unreliable\" (control: a line that omits it fails); an IC edited in the Inspector, one built in Create & locate and a kept orbit after a pan each get the line from their own IC (control: a line drawn only for a current atlas pixel fails); no line while the panel follows the cursor\". Fix round 3 of PR #283 (gui review 5627280803, N1; applied per R-369): the non-atlas line's three forms written out, one for one with the atlas forms, tested as whole strings; \"the view it was kept from is unchanged\" defined bitwise, a stain or playhead edit keeping it. Fix round 4 of PR #283 (gui review 5627389542, R1; applied per R-369): while the view source is Result a clicked pixel is not an atlas pixel, its runs under the result's SimConfig; the kept orbit's unchanged view needs the view source Live. Fix round 5 of PR #283 (gui review 5627439632, R2; applied per R-369): a kept orbit counts as an atlas pixel only if kept from an atlas pixel of a live view; one kept in a result view stays non-atlas after Explore from here. Fix round 6 of PR #283 (physics review 5627518149, F7; applied per R-369): the estimate's and the self-check's ftle defined as the IC's own dispatch's; none when the FTLE tier is off or ftle_valid is false. Fix round 7 of PR #283 (physics review 5627584997, F9, F10; applied per R-369): a valid ftle ≤ 0 shows no estimate and no self-check verdict; an atlas pixel's ftle is its nominal copy's, bitwise. Fix round 8 of PR #283 (physics review 5627640864, F11; applied per R-369): fix round 7's SSAA reason corrected (each copy computes its own ftle; the resolve averages colours only); the SSAA control is another copy's ftle or a mean over the copies'."
+- id: REQ-GUI-371
+  area: GUI
+  statement: "The atlas must not change with the viewer: it stays f32 on the GPU, coloured as now, with no stain preset or atlas colour for precision."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.5 Nothing changes in the atlas
+  verify:
+    method: unit test
+    detail: "atlas_unchanged: the atlas frame is bitwise the same with the viewer's four runs on and off, before and after a mark edit (control: a viewer that writes its parting into the atlas's colour inputs fails)"
+  rulings:
+  - R-574
+  milestone: M8
 - id: REQ-GUI-372
   area: GUI
   statement: "The Sequence window must open from Windows › Sequence… docked along the bottom of Explore, below the bottom row (Compass, Time, Legend) and above the footer, its top edge a splitter (R-462) whose position is remembered with the layout, the console docking over it as over the bottom row; its keyboard model must be §G3's for a window, with the sections header bar, timeline and inspector in that order, K adding a keyframe and Delete removing the selected one with the focus in its scope, the Figure's K staying the lock, Esc from its top level returning the focus to the Figure with the window left open, and Windows › Sequence… on an open Sequence giving it the focus on its header bar in navigation mode, §G3's Tab order of big scopes unchanged."
@@ -25191,7 +25292,7 @@
 - id: REQ-TOOL-127
   area: TOOL
   kind: definition
-  statement: "The on-demand single-IC f32 GPU trace — how the survey kernel writes the dense n(t) series (a baked trace variant or a per-step readback), the buffer's layout and sampling cadence, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces — must be defined in trajectory_viewing §5 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The on-demand single-IC f32 GPU trace — how the survey kernel writes the dense n(t) and r_i(t) series (a baked trace variant or a per-step readback), the buffer's layout and sampling cadence, the shared times at which it is compared with the CPU f64 run (the sync boundaries, R-565), and how the dispatch takes R-574's one-ulp nudge after its own decode, a zero component where the GPU flushes subnormals included, and how the dispatch is bounded (in chunks that return and carry state between them, interleaved with frames, never one dispatch to the horizon: telemetry §6.3 and § \"GPU\", REQ-PERF-010's mechanism) — must be defined in trajectory_viewing §5 by the task that needs it and reviewed by the physics reviewer before merge; the divergence criterion is R-574's two marks on the shape-sphere chord (principia_honesty_precision.md §3.2)."
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 5. What is honestly comparable (click inspector)
@@ -25201,12 +25302,20 @@
     section: "7. Precision & validation model *(authoritative: `parity_contract`, `validation_ground_truth_note`, `core_design`)*"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.1 Four runs of one IC
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.3 Device loss, timeouts, driver resets
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: GPU
   verify:
     method: review checklist
-    detail: "§5 gives the trace's dispatch form, buffer layout, sampling and the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it; physics reviewer approved"
+    detail: "§5 gives the trace's dispatch form, buffer layout (n(t) and r_i(t)), sampling at the sync boundaries and the nudge's form under the GPU's subnormal handling, and its chunking, and cites R-574's marks as the criterion; trace_chunked: at T = 200 every dispatch's macro steps are at or under the per-dispatch bound that TASK-M4-09's chunk planner gives (REQ-PERF-081's calibration; the test sets a bound under T/2) and the dispatch count is ⌈steps / bound⌉, both taken from the shared planner, and the trace's n(t) and r_i(t) series are bitwise the same at two bounds (controls: a trace issued as one dispatch to T, and one split in a fixed two ways, fail); REQ-TOOL-040, REQ-VAL-106 and REQ-VAL-196 use it; physics reviewer approved"
   rulings:
   - R-72
+  - R-574
   milestone: M4
+  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails."
 - id: REQ-TOOL-128
   area: TOOL
   kind: definition
@@ -26506,6 +26615,21 @@
   - R-558
   milestone: M8
   note: "Fix round 2 of PR #281 (gui review 5608411706, F1): render_gui_spec § \"Profiler\", \"the profiler shows it beside the five\" and names it \"print stage\" (the human's ruling on RQ-497, R-558). Closed by TASK-M8-72."
+- id: REQ-TOOL-196
+  area: TOOL
+  statement: "A Result's image must carry its run block (precision, nx × ny, the stored times, the copies option) in tier 1 of the embedding, assigned in tiers.rs like every other field, so it is never dropped, and a result's image and result.json must import as the identity on SimConfig and RenderState (R-484)."
+  source:
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_results.md
+    section: 4. Fit with rulings
+  verify:
+    method: unit test
+    detail: "result_image_run_block: a result's image squeezed to tier 1 only still carries its run block and imports as the identity on SimConfig and RenderState (control: a run block assigned to tier 2 is dropped at that size and fails); the tier table stays exhaustive with the run block in it"
+  rulings:
+  - R-484
+  - R-572
+  milestone: M8
 - id: REQ-TOOL-197
   area: TOOL
   kind: definition
@@ -28371,15 +28495,21 @@
   milestone: M8
 - id: REQ-VAL-106
   area: VAL
-  statement: "The inspector must offer an optional shape-divergence overlay, off by default, that dispatches an on-demand one-pixel f32 GPU trace of the clicked IC through the survey kernel, writing a dense n(t) drawn over the CPU f64 curve at shared times."
+  statement: "The inspector's f32 run must be an on-demand one-pixel f32 GPU dispatch of the clicked IC through the survey kernel, writing a dense n(t) and r_i(t), drawn dashed over the CPU f64 run at shared times; the comparison is on by default in the Inspector and, in the Trajectory panel, on for a pinned or kept trajectory and off while the panel follows the cursor (R-574)."
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 5. What is honestly comparable (click inspector)
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.4 Where it lives
+  - file: decisions.md
+    section: "R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks \"faithful until\" at a shape-sphere chord of 10⁻³ and \"parted at\" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded"
   verify:
     method: unit test
-    detail: "overlay off by default; enabling it dispatches one job; for a periodic IC the two curves coincide to f32 tolerance"
-  rulings: []
+    detail: "on by default in the Inspector, opening it dispatches one f32 job (and one for the nudged f32 run, R-574); in the Trajectory panel the comparison runs for a pinned trajectory and not while following the cursor (control: a panel that runs it on hover fails); for a periodic IC the two curves coincide to f32 tolerance on the sphere and in real space"
+  rulings:
+  - R-574
   milestone: M8
+  note: "R-574 (21 Oct 2026): the comparison is no longer an optional overlay. Was: \"The inspector must offer an optional shape-divergence overlay, off by default, that dispatches an on-demand one-pixel f32 GPU trace of the clicked IC through the survey kernel, writing a dense n(t) drawn over the CPU f64 curve at shared times.\" and the verify \"overlay off by default; enabling it dispatches one job; for a periodic IC the two curves coincide to f32 tolerance\". The four runs, the marks and the trust line are REQ-VAL-196, REQ-VAL-197 and REQ-GUI-370 (TASK-M8-76)."
 - id: REQ-VAL-107
   area: VAL
   statement: "The inspector must report the CPU and GPU outcome class, escaper and t_end side by side, and disagreement in a regular region must be treated as a pipeline bug."
@@ -29978,6 +30108,77 @@
   rq:
   - RQ-528
   note: "R-566 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-528: where the regularised drift is stored and how an event-stopped run is drawn. Physics review 5605806092 of PR #277, F2 (applied per R-369): the control is structural, since a post-passage Cartesian drift of 1e-12 to 1e-11 need not light the threshold."
+- id: REQ-VAL-196
+  area: VAL
+  statement: "The click inspector must run the clicked trajectory's own IC four ways, all under the trajectory's own sim key (its integrator occupant, coefficients and step rule, never the current view's, never the Inspector's adaptive RK45): f32, the survey kernel's one-pixel GPU dispatch — for an atlas pixel of the current view through the atlas's decode path with the nominal copy, for any other IC from the IC rounded to f32 (Cartesian); while the view source is Result no pixel is an atlas pixel; a kept orbit is an atlas pixel only if it was kept from an atlas pixel of a live view, the view source is Live now, and its view (sim key, z₀, basis, zoom level) is bitwise unchanged; the other ICs are an Inspector edit, a Create & locate IC, a kept orbit that fails that test (its view moved, a result opened over it, or kept in a result view, even after Explore from here), and a pixel clicked in a result view, which runs from its grid cell's IC under the result's SimConfig; f64 by computeIC, the shared kernel at f64; and each of those from its starting Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile)."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.1 Four runs of one IC
+  - file: decisions.md
+    section: "R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks \"faithful until\" at a shape-sphere chord of 10⁻³ and \"parted at\" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded"
+  verify:
+    method: unit test
+    detail: "f32_run_is_the_atlas: for an atlas pixel of the current view the f32 run's outcome and t_end equal the pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: on the Burrau fixture, whose six velocity components are exactly 0, each nonzero component of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two); on the f64 (CPU) runs each zero component becomes next_up(0.0), f64's smallest subnormal 2⁻¹⁰⁷⁴ (control: a nudge by ε·|x|, which leaves 0 unmoved, fails); on the f32 (GPU) runs each zero component takes the form REQ-TOOL-127's definition gives for a zero where the GPU flushes subnormals (trajectory_viewing §5, written by TASK-M4-16; honesty §3.1: \"what a zero component becomes where the GPU flushes subnormals, is part of the f32 trace's definition\") (control: a GPU nudge whose zero component differs from that form, for example a zero left unmoved where the definition moves it, fails); same_integrator: the four runs report one occupant and step rule, the f32 run's (control: an f64 run under RK45 reports another and fails); non_atlas_f32_start: for an IC edited in the Inspector the f32 run starts from the IC rounded to f32, its starting gap the rounding, and runs under the trajectory's own sim key after the view's occupant is changed (control: a run that re-decodes a pixel, or takes the current view's sim key, fails); a pixel clicked in a result view starts from its grid cell's IC rounded to f32 under the result's SimConfig, and an orbit kept in a result view, after Explore from here, from its IC rounded to f32 (control: a result-view pixel or an orbit kept in a result view run through the atlas decode path fails); runs_carry_on: a run whose first event comes before T (an escape on a fixture) keeps that event as its fate and t_end and still has chord samples at every sync boundary to T (control: a run stopped at its first event leaves the chord series short and fails); ended_chords: a run that exhausts its step budget ends there, shown with its end time, and its chords read \"ended at t = …\" at every boundary after it (control: a chord carried past the end as a number fails)"
+  rulings:
+  - R-574
+  milestone: M8
+  rq:
+  - RQ-558
+  note: "fix round 1 of PR #283 (physics review 5627073272, F3; gui review 5627122883, G7; applied per R-369): one integrator for all four runs (integrator contract Part 6), and the runs are of the clicked trajectory's own IC whatever its source; rq: RQ-558 added (F2). Was: statement \"The click inspector must run the clicked point four ways: f32, the survey kernel's one-pixel GPU dispatch with the atlas's decode path, integrator occupant and nominal copy; f64 by computeIC; and each of those from its decoded Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile).\"; verify \"f32_run_is_the_atlas: the f32 run's outcome and t_end equal the atlas pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: each of the twelve components of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two)\". Fix round 2 of PR #283 (physics review 5627216712, F5; applied per R-369): for an IC that is not an atlas pixel of the current view there is no decode path, so its f32 run starts from the IC rounded to f32; the runs use the trajectory's own sim key. Was: statement \"The click inspector must run the clicked trajectory's own IC four ways, all under the f32 run's sim key (the same integrator occupant, coefficients and step rule, never the Inspector's adaptive RK45): f32, the survey kernel's one-pixel GPU dispatch through the atlas's decode path with the nominal copy; f64 by computeIC, the shared kernel at f64; and each of those from its decoded Cartesian IC with each of its twelve components (the bodies' positions and velocities) moved one ulp toward +∞ at its own precision; each run's fate and t_end are its first event, latched as the atlas latches it, the run carrying on to the horizon for the chord (RQ-558's option (a), applied meanwhile).\"; verify \"f32_run_is_the_atlas: for an atlas pixel of the current view the f32 run's outcome and t_end equal the pixel's nominal copy bitwise (control: a CPU f32 run of the same IC differs on a chaotic fixture, so emulation fails); nudge_is_one_ulp: each of the twelve components of each nudged IC is next_up of its run's own (control: a nudge by ε·|x| fails on a component just below a power of two); same_integrator: the four runs report one occupant and step rule, the f32 run's (control: an f64 run under RK45 reports another and fails)\". Fix round 6 of PR #283 (physics review 5627518149, F8; applied per R-369): honesty §3.4's atlas-pixel conditions of fix rounds 4 and 5 carried in (view source Result, kept from a live atlas pixel); non_atlas_f32_start gains the result-view cases. Fix round 12 of PR #283 (qa review 5628365538, Q4, Q5; applied per R-369): the latch and carry-on of RQ-558's option (a) and the ended chords are tested; nudge_is_one_ulp has zero components, asserting next_up(0.0) on the CPU and REQ-TOOL-127's defined form on the GPU (the corpus gives the zero's form to that definition, honesty §3.1, so no new RQ)."
+- id: REQ-VAL-197
+  area: VAL
+  statement: "The viewer must read the shape-sphere chord |n_a − n_b| between the runs' signed unit vectors (0 to 2, a non-finite value reading 2) at the sync boundaries for f32–f64, f64–f64′ and f32–f32′, and mark for each pair \"faithful until\" at the first boundary where it exceeds 10⁻³ and \"parted at\" at the first where it exceeds 0.1, both the human's values, shown and editable, a pair whose chord never exceeds a mark reading \"did not part by T\"."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.2 The chord and the two marks
+  - file: docs/design/principia_honesty_precision.md
+    section: 2. The gap, and the measurement that closes it
+  verify:
+    method: unit test
+    detail: "same_run_never_parts: f64 against itself, the chord is exactly 0 throughout (control: a harness adding a difference fails); regular_orbit_does_not_part: the figure-eight reads \"did not part by T\" for every pair at 0.1; chaotic_orbit_parts: Burrau gives t_part(f32) and t_part(f64), f32's earlier; marks_follow_edits: editing the parted mark to 10⁻² moves it to the first boundary above 10⁻² on a recorded chord series (control: a constant mark fails); default_marks: on a recorded chord series at the defaults, \"faithful until\" is the first boundary above 10⁻³ and \"parted at\" the first above 0.1, for each of the three pairs (control: a faithful default of 10⁻² moves the mark and fails); nonfinite_chord: a chord with a non-finite component reads 2 and that pair's \"parted at\" is that boundary (control: a chord compared without the mapping, a plain > 0.1 on NaN, reads \"did not part by T\" and fails)"
+  rulings:
+  - R-565
+  - R-574
+  milestone: M8
+  rq:
+  - RQ-558
+  note: "R-574 (21 Oct 2026): 10⁻³ and 0.1 are the human's values, measured (prin-rs PR #34, parting_probe) and from the literature, not R-71 calibrations. fix round 1 of PR #283 (physics review 5627073272, F2): rq: RQ-558 added, its option (a) built in. Fix round 12 of PR #283 (qa review 5628365538, Q2, Q3; applied per R-369): the default marks and the non-finite chord are tested."
+- id: REQ-VAL-198
+  area: VAL
+  kind: calibration
+  statement: "The viewer's self-check band — how far the measured gap between a pair's two marks may sit from ln(θ_part/θ_faithful)/λ, λ this point's FTLE, before the panel says \"unreliable\", and where it applies (a chaotic region) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.2 The chord and the two marks
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: with Δ = 0.1, two marks one boundary apart (a gap of 0.1) at λ = 0.7, where ln(100)/λ ≈ 6.6 is expected, read \"unreliable\" (control: the same gap at λ = 46, where ≈ 0.1 is expected, reads its times; a check removed or keyed the wrong way round on λ fails); recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-574
+  milestone: M8
+  note: "fix round 1 of PR #283 (physics review 5627073272, F1; applied per R-369): the control was backwards, since at a large FTLE one boundary is the expected gap. Was: verify \"cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: a chord series whose two marks are one boundary apart at a large FTLE reads \"unreliable\" (control: the check removed, it reads a time and fails); recorded in decisions.md\"."
+- id: REQ-VAL-199
+  area: VAL
+  kind: calibration
+  statement: "The ensemble ratio gate — over at least 256 chaotic ICs, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory — must have its expected value and tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 6. Tests (each with what makes it fail)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-574
+  milestone: M8
+  rq:
+  - RQ-557
+  note: "Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -31641,6 +31842,90 @@
   - R-557
   milestone: M8
   note: "Fix round 3 of PR #281 (perf review 5608473498, F3, applied per R-369): print_graph §8.3 and the quality device note §1 and §2 do not contradict each other here; they are silent, so a definition, not an RQ. Closed by TASK-M8-73."
+- id: REQ-PERF-106
+  area: PERF
+  statement: "While a pinned or kept trajectory's four precision runs (R-574) are in flight, the frame loop must hold the no-pin baseline: the two f64 runs on the inspector worker, the two f32 traces in bounded dispatches (REQ-TOOL-127), never blocking the GPU survey, the frame loop or the main thread (REQ-SYS-060's rule, applied to these runs)."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.1 Four runs of one IC
+  - file: docs/design/principia_trajectory_viewing.md
+    section: 1. The single mechanism
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 3. Percentiles, not means — and the specific thresholds
+  - file: docs/design/principia_benchmark.md
+    section: 3. The suite
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 1.1 The fixed suite — comparability across devices
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench precision-runs-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no pin and once with a pin on a chaotic near-field IC whose four runs are re-issued each time they finish, so that four runs are in flight throughout the window, at T = 50 and at T = 200; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-pin baseline within noise (REQ-SYS-060's form; no new number); the f64 runs run on the inspector worker; the bench fails if no runs were in flight at the window's end"
+  rulings:
+  - R-186
+  - R-574
+  milestone: M8
+  note: "Perf review 5627960807 of PR #283, P2 (applied per R-369). Closed by TASK-M8-76. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield with a re-issued pin; \"form and thresholds\" reads \"form\" (REQ-SYS-060 states no threshold)."
+- id: REQ-PERF-107
+  area: PERF
+  statement: "While a Result job (R-572) runs, at f64 on the CPU pool or at f32 on the GPU, the live frame loop must keep its budget (REQ-SCHED-043 applied to this job: lower priority than the frame loop, pre-emptible, yielding)."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.2 Where it runs: the job"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: CPU
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: GPU
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 3. Percentiles, not means — and the specific thresholds
+  - file: docs/design/principia_benchmark.md
+    section: 3. The suite
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 1.1 The fixed suite — comparability across devices
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench result-job-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no job and once each while a Result job runs at f64 and at f32, the job being that scenario's view at T = 200, E and r_coll as the view has them, one copy per pixel, on a square grid whose side the bench doubles from 256 until the job's pilot estimate (results §3.1) exceeds the window; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-job baseline within noise (REQ-SYS-060's form; no new number); the bench fails if the job is not still running when the window ends"
+  rulings:
+  - R-186
+  - R-572
+  milestone: M8
+  note: "Perf review 5627960807 of PR #283, P4 (a); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield and a named job sized from its pilot to outlast the window, still running at its end."
+- id: REQ-PERF-108
+  area: PERF
+  statement: "A Result job must bound its resources: the f64 pool leaves at least one core free and is configurable (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that return and carry state (REQ-PERF-010's mechanism), never one dispatch per row to T, its live states sized from (E+1) × sizeof (philosophy §7.2); and it budgets its memory before allocating it, refusing a job that does not fit with its reason before it starts (telemetry §6.2a)."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.2 Where it runs: the job"
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: CPU
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.3 Device loss, timeouts, driver resets
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.2 Tiled prebake
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.2a Budgeting before allocating
+  verify:
+    method: unit test
+    detail: "result_job_resources: the f64 pool's size is the available cores less the configured reserve, at least one by default (control: a pool of every core fails); at T = 200, for an f32 row, every dispatch's macro steps are at or under the per-dispatch bound that TASK-M4-09's chunk planner gives (REQ-PERF-081's calibration; the test sets a bound under T/2) and the dispatch count is ⌈steps / bound⌉, both taken from the shared planner, and the payload is bitwise the same at two bounds (controls: one dispatch per row to T, and a fixed two-way split, fail); the f32 live-state buffer's size is the rows in flight × nx × (E+1) × sizeof(SimState) (control: a buffer sized for nx·ny fails); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (control: a job that allocates before budgeting fails)"
+  rulings:
+  - R-572
+  milestone: M8
+  note: "Perf review 5627960807 of PR #283, P4 (b), (c); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q1, Q2; applied per R-369): the f32-row check asserts the planner's bound and ⌈steps / bound⌉, a fixed two-way split failing; the refusal before allocating moves here from REQ-PERF-109, a unit test (my call: REQ-PERF-109 is a benchmark, run as its own process, and cannot carry a unit test)."
+- id: REQ-PERF-109
+  area: PERF
+  statement: "A Result job must stream payload.prin row by row as rows finish, so its peak memory does not depend on nx·ny (the budget before allocating is REQ-PERF-108's)."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.2 Where it runs: the job"
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.2 Tiled prebake
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 6.2a Budgeting before allocating
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench result-job-memory, on the human's Mac (R-186), its own process, with its output in the PR (REQ-TOOL-078's export-memory form): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny) (control: a writer that holds the payload until the end grows with nx·ny and fails)"
+  rulings:
+  - R-572
+  milestone: M8
+  note: "Perf review 5627960807 of PR #283, P4 (d); applied per R-369. Closed by TASK-M8-74. Fix round 10 of PR #283 (perf review 5628071919, Q1; applied per R-369): the flat-memory check is a benchmark in its own process, since a reading inside cargo test shares the process with parallel tests; its refusal half moves to REQ-PERF-108. Was: statement \"A Result job must stream payload.prin row by row as rows finish, so its peak memory does not depend on nx·ny, and must budget its memory before allocating it, refusing a job that does not fit with its reason before it starts.\"; verify \"result_job_memory (in the form of REQ-TOOL-078): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (controls: a writer that holds the payload until the end grows with nx·ny and fails; a job that allocates before budgeting fails)\"."
 - id: REQ-PERF-110
   area: PERF
   statement: "The Sequence planner's estimate must carry its basis: a segment's cost the samples it marches (the export's pixels times its copies, E + 1) times the physical time each is marched, over this machine's throughput of that quantity per wall second measured from its frame records, shown as a range from the cost over the fastest to the cost over the slowest throughput measured; with no measurement it must read \"no measurement on this machine yet\" and show no number; proof frames must be timed and enter the measurement."
@@ -31778,7 +32063,7 @@
   milestone: M0
 - id: REQ-SYS-007
   area: SYS
-  statement: "A parked §7 item must not be built or half-started before 1.0, other than decisions that cost nothing now and prevent a fork later (currently only §7.1's payload genericity) and R-33's independent arbitrary-precision reference integrator (TASK-M3-25, R-265)."
+  statement: "A parked §7 item must not be built or half-started before 1.0, other than decisions that cost nothing now and prevent a fork later (currently only §7.1's payload genericity), R-33's independent arbitrary-precision reference integrator (TASK-M3-25, R-265), and the Result's payload (R-572): §7.3's reduced per-pixel tier, and its per-copy tier as the Result's copies option."
   source:
   - file: docs/read_first/principia_00_philosophy.md
     section: 7.7 The rule for this section
@@ -31786,13 +32071,19 @@
     section: 7. Parked — deliberate post-1.0
   - file: decisions.md
     section: "R-265 — The shared kernel is f32 and f64 only; double-double is parked *(closes RQ-161, amends R-33)*"
+  - file: decisions.md
+    section: "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*"
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.3 Dump tiers — and the default is not an image
   verify:
     method: review checklist
-    detail: "Build plan contains no work items for extended precision, tiled prebake, dump tiers, headless datasets, the regularisation matrix or the GPU-port lever beyond the Real-generic payload and R-33's reference integrator (TASK-M3-25); the shared kernel is instantiated at f32 and f64 only (R-265)."
+    detail: "Build plan contains no work items for extended precision, tiled prebake (§7.2's VRAM tiling), the trajectory dump tiers, headless datasets, the regularisation matrix or the GPU-port lever beyond the Real-generic payload, R-33's reference integrator (TASK-M3-25) and the Result's payload (§7.3's reduced tier and its per-copy option, TASK-M8-74, R-572); the shared kernel is instantiated at f32 and f64 only (R-265)."
   rulings:
   - R-33
   - R-265
+  - R-572
   milestone: M0
+  note: "R-572 (21 Oct 2026): §7.3's reduced tier is unparked as the Result's payload and its per-copy tier as the copies option; the rest of §7 stays parked. Was: \"…other than decisions that cost nothing now and prevent a fork later (currently only §7.1's payload genericity) and R-33's independent arbitrary-precision reference integrator (TASK-M3-25, R-265).\" and, in the verify, \"tiled prebake, dump tiers, headless datasets, …\"."
 - id: REQ-SYS-008
   area: SYS
   statement: "Files marked archived (principia_ARCHIVE_* and the Archived table) must not be implemented from and must never be cited; their standing parts (the structure-criterion brief's §4–4.6 slippy map, the kernel-build brief's §5 gates) are superseded by the consolidated docs (deep_zoom §3, scheduler, parity), and any standing obligation missing from those docs must be ported into them."
@@ -32657,8 +32948,12 @@
   verify:
     method: review checklist
     detail: "Atlas outputs carry the horizon (field) with them; any export or statistic built from atlas data is labelled as exploratory."
-  rulings: []
+  rulings:
+  - R-574
   milestone: M8
+  rq:
+  - RQ-556
+  note: "R-574 (21 Oct 2026): the viewer states each point's parting; what the header strip states against this requirement is RQ-556, and nothing is added to the atlas meanwhile."
 - id: REQ-SYS-062
   area: SYS
   statement: "Every GUI control must read the state Snapshot and emit a typed SetField, and no GUI element may touch simulation internals, hold a &mut into engine state, hold sim logic, cache sim data or compute anything the engine needs."
@@ -33126,3 +33421,75 @@
   rq:
   - RQ-550
   note: "R-571 (21 Oct 2026): \"Where the browser cannot do something the native app does, v1 web says so in the app; it does not get a different design.\" Read as R-303's pattern, applied per R-369. Closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550. Gui review 5608379011 of PR #282, applied per R-369: this covers gaps that have a native control; the gaps with none, runtime-authored colour occupants in the scanned filesystem (systems_architecture §3, v1 web's row 7), persistence across reloads (row 11) and `prin profile query --live` (row 14), are left explicitly to RQ-550, whose ruling must settle what v1 web does for each. *Was (statement):* \"In v1 web, wherever the browser cannot do something the native app does, the app must say so where the native app has the feature: the control shown in its place, disabled, with a note that the browser cannot do it, as the Run window's fast-math control is (R-303), never removed, moved or given a different design (R-571).\" *Was (verify):* \"the gui reviewer lists each native feature v1 web lacks (at least the compute fast-math control, R-303, and each feature RQ-550's ruling leaves out of the browser) and finds each, in the GitHub Pages build, where the native app has it, disabled, with a note that the browser cannot do it; none is missing, moved or redesigned; control: a native control absent from the browser build fails the check\""
+- id: REQ-SYS-087
+  area: SYS
+  statement: "A Result must run a view's region end to end as one batch job, at f64 (the shared kernel on CPU threads, the default) or f32 (the survey kernel on the GPU) and no other precision, on a uniform nx × ny grid with refinement off and the view's integrator occupant: one job.json (SimConfig and RenderState in their canonical serialisation, a run block, the build hash) that the app runs in the background and `prin batch --job job.json` runs with the same code, the f64 payload bitwise the same however its rows are scheduled."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.2 Where it runs: the job"
+  - file: docs/design/principia_results.md
+    section: 3. The design
+  - file: decisions.md
+    section: "R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*"
+  - file: docs/design/principia_results.md
+    section: 6. Tests
+  verify:
+    method: unit test
+    detail: "result_f64_bitwise: the same f64 job on 1 and on 4 threads, rows in shuffled order, gives a bitwise-equal payload.prin (control: a reduction accumulated in row-completion order differs under the shuffle and fails); result_app_and_cli: the in-app job and `prin batch --job job.json` give byte-identical payload.prin files (control: a second code path that rounds a field differently fails); a precision other than f32 or f64 in job.json is refused"
+  rulings:
+  - R-265
+  - R-572
+  milestone: M8
+  note: "R-572 (21 Oct 2026). `prin survey` stays the headless live path (TASK-M8-02); TASK-M4-17's prebake path is the uniform grid."
+- id: REQ-SYS-088
+  area: SYS
+  statement: "Cancelling a Result must keep every finished row, labelled with the share done (\"cancelled at 37 %\"), and Resume must continue it, each row taking its cell width from the global grid and never its own extent, so a cancelled and resumed job is bitwise the uninterrupted one."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.2 Where it runs: the job"
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.2 Tiled prebake
+  verify:
+    method: unit test
+    detail: "result_resume: a job cancelled after a third of its rows, then resumed, gives a payload bitwise equal to the uninterrupted run, and the cancelled folder's result.json reads its share done (control: a row taking its cell width from its own extent offsets its sample positions by a half cell and fails)"
+  rulings:
+  - R-572
+  milestone: M8
+- id: REQ-SYS-089
+  area: SYS
+  statement: "A Result must write a folder `<name>__<build8>.principia-result/` holding result.json (the job record, the schema version, each link's entry hash, the host and timings, and a summary computed from the payload with failed and undetermined pixels counted, never dropped), payload.prin (every pixel's record at each stored time, the horizon by default plus each playhead the user added and no other, f64 wide with the same fields at f32 and at f64, the nominal copy with the per-pixel reductions by default or all E + 1 copies when that option is chosen), image.png and log.txt."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.3 Output: the result folder"
+  - file: docs/design/principia_results.md
+    section: 5. Decided (Malachy, 21 Oct 2026)
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.3 Dump tiers — and the default is not an image
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 4.3 Failure is a measurement, not missing data
+  verify:
+    method: unit test
+    detail: "result_payload_complete: a 16 × 16 job with one pixel injected to run out of its step budget holds 256 records at each stored time, that pixel's present with its reason, and result.json counts it (control: a writer that filters failed pixels holds 255 and fails); result_payload_widths: an f32 and an f64 job write the same field list at the same widths (control: a width following the precision fails); result_stored_times: with playheads 10 and 30 added at T = 50 the payload holds exactly t = 10, 30, 50, and with all copies (E + 1)·nx·ny records per time (control: a writer storing the horizon only fails); result_folder_layout: a job named \"burrau\" writes the folder burrau__<build8>.principia-result/, <build8> being the first eight characters of the build hash job.json records (results §3.2; the reading of \"build8\" applied per R-369), holding result.json, payload.prin, image.png and log.txt; result.json carries its schema version, each link's entry hash, the host and the timings, and its summary equals one recomputed from payload.prin (controls: a folder missing log.txt or image.png, a folder under another name, and a summary not recomputable from the payload, fail)"
+  rulings:
+  - R-563
+  - R-572
+  milestone: M8
+  note: "Fix round 12 of PR #283 (qa review 5628365538, Q7; applied per R-369): the folder's name, its four files and result.json's fields are tested."
+- id: REQ-SYS-090
+  area: SYS
+  kind: definition
+  statement: "The Result payload's field list and file layout (payload.prin) — philosophy §7.3's reduced tier, \"a CONTRACT, not a convenience\": the nominal copy's SimState fields, the per-pixel reductions across the E + 1 copies including fields no current shader reads, each failed or undetermined pixel's reason, the per-copy records under the copies option, all f64 wide — must be defined in principia_results.md §3.3 by the task that builds the payload and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_results.md
+    section: "3.3 Output: the result folder"
+  - file: docs/read_first/principia_00_philosophy.md
+    section: 7.3 Dump tiers — and the default is not an image
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§3.3 lists every payload field with its type and source (the SimState payload, the reduction fields of R-135) and the file's layout and schema version; the stain library's payload inputs are all present; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-572
+  milestone: M8
