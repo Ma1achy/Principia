@@ -284,6 +284,14 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
   is "f64 · 7 digits left · linearise decode".
+  A saturation collapse raises no warning (RQ-553, decided per R-369; `principia_deep_zoom.md` §4): at a quad that has
+  at least one collapsed adjacent pair, every one of which lies along an in-plane direction whose f64 `J_D` column is 0,
+  the pair's f64 sample points being distinct, neither event raises it, the bands along the axes included; the genuine
+  floor and a switchover at `ℓ_switch` with no collapsed pair still do (REQ-GUI-012). *Was (fix round 3):* "at a quad
+  every collapsed adjacent pair of which lies along an in-plane direction whose f64 `J_D` column is 0, the pair's f64
+  sample points being distinct, neither event raises it, the bands along the axes included; the genuine floor still
+  does (REQ-GUI-012)." *Was:* "at a quad where f64 `J_D`'s columns along the view's plane are 0 while its f64 sample points
+  are distinct, neither event raises it; the genuine floor still does (REQ-GUI-012)."
 - **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
@@ -379,6 +387,22 @@ they are the same systems (R-552, RQ-407 (a)). Traces repeat in every image
 in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view state records the centre as it is, on a
 periodic axis unwrapped, keys and addresses taking the canonical value (R-552, RQ-406 (a)), so an export, its JSON and its embedded payload reproduce the same window, repeats
 included.
+
+**Latent and flat charts: no limit on pan or zoom-out (R-570).** On the latent chart and the flat and body-plane
+slices, tilted or rotated, a pan may take the centre anywhere and a zoom may go out as far as asked
+(`principia_chart_decoder_contract.md` Part 4): the stop above never fires there for a pan, and the only limits on
+zoom-out are the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent. **No
+control caps either.** The drag, the wheel, the arrows and + / −, the centre `(u, v)` and `z₀` fields, the Slice
+centre sliders and Navigate's zoom row all send the value asked for, and the view state records it unclamped; a
+slider's span is the range its handle covers, never a clamp, so a zoom past the zoom row's span is kept and shown, the
+handle at the end of the rail (REQ-GUI-357). Every pixel is a system at any pan or zoom: no hatch, no blank, no "not a
+system" (at the decoder's default links, η_E off (`None`); RQ-536, RQ-552). Far out the field goes flat, because the decoder saturates every
+coordinate; that is correct, nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the
+decoded system as for any pixel. Precision is never a navigation limit: the deep-zoom ladder handles it
+(`principia_deep_zoom.md` §4). **The reference demos' caps are never ported:** the trace demo, the Listen demo and the
+state map prototype (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
+`docs/gui/reference/state_map/state_flow.html`) cap zoom-out at 3× on the sphere and clamp the view to their maps in
+`clampView` only because their maps are precomputed images; the app has neither.
 
 **Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,
 its Screen preset the dev default; this line is its Ends only preset, offered.)* A **Home** button, a house icon 24 × 24

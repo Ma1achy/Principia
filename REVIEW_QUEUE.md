@@ -606,6 +606,41 @@ Nothing is ruled.*
   - (c) (a), but only for a click that pins a trace; a hover draws the new trace without restarting.
 - **Applied meanwhile:** (a), the words. REQ-GUI-354 carries it with `rq: RQ-534`.
 
+## RQ-536: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against the decoder's `DEGENERATE(M01_TINY)` fence, which the far field of a latent chart reaches under the edge-reaching simplex link, or under `softmax_tanh` with a large enough `μ_max`, and which R-511 draws blank *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-481, dd_decoder §3.1, REQ-GEN-026; REQ-CHART-087; context: TASK-M8-57)*
+
+*Found by R-570's port. Nothing is ruled. For the human: yes (physics: what a far-field pixel is under a non-default
+link).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 1:
+    "every latent `z` decodes to a valid system"; item 3: "**Every pixel is a system, everywhere.** No hatch, no blank,
+    and no "not a system" on these charts at any pan or zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass": "`M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)`",
+    with `ε_M01 = 10⁻⁵` (REQ-DEC-039) and "the edge-reaching simplex link's corner `m₂ → 1` piles up at
+    `ε_μ − ε_μ²/4`, below it".
+  - `docs/design/principia_dd_generation_root.md` § 3, the edge-reaching simplex link (REQ-GEN-026): "Near the corner
+    `m₂ → 1`, `m₀ + m₁` falls to about `ε_μ`, where dd_decoder's `DEGENERATE(M01_TINY)` fence (`M₀₁ < ε`) can fire."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** at the default links (`softmax_tanh` at `μ_max = 5`) the far field's `M₀₁` stays at or above
+  `(1 + e^−5)/(1 + e^−5 + e^5) ≈ 6.7×10⁻³`, far above `ε_M01`, so no pixel is tagged and R-570 holds. Under the
+  edge-reaching simplex link, which the Decoder window may select for the masses (R-478), the latent far field saturates toward the corner
+  `m₂ → 1`, where the fence fires, so those pixels are `decode_failed` and draw blank (R-511); under `softmax_tanh` the
+  floor falls below `ε_M01` once `μ_max` is above about 11.5, and `μ_max`'s allowed range is an open calibration
+  (REQ-GEN-038). Either way a latent chart has "not a system" pixels far out, which item 3 rules out.
+- **Options seen:**
+  - (a) R-570's item 3 holds at the default links; under a link or a parameter whose saturation reaches the fence, the
+    tag stands and those far-field pixels are not a system, blank, as the decoder defines them.
+  - (b) The links' ranges are bounded so that saturation never reaches the fence: `μ_max`'s range capped below the
+    value where `softmax_tanh`'s floor meets `ε_M01`, and the edge-reaching link's `ε_μ` set above `ε_M01`.
+  - (c) R-570 governs on latent and flat charts: a far-field `M01_TINY` there is a labelled system, drawn and
+    integrated as any other, the fence becoming a label rather than "not a system" on these charts.
+- **Applied meanwhile:** nothing changes in the decoder; R-570's tests run at the default links, where no pixel is
+  tagged.
+- **Waits:** REQ-CHART-087's arm under a non-default mass link or `μ_max` (TASK-M8-57), `rq: RQ-536`. The default-link
+  arms do not wait.
+
 ## RQ-538: A Print graph length in `device_px` is "true screen pixels" and the sheet is "anchored to the screen", but the Print graph runs before the display scale, where every stage runs at render resolution, and under Auto `render_scale` changes while the camera moves *(silence: the design doc against the render contract; R-490, R-487, R-531, R-557; REQ-RENDER-110; context: TASK-M7-69)*
 
 *Found writing the Print graph plan (the human's request of 21 Oct 2026 to add the bundles' tasks). Nothing is
@@ -748,3 +783,75 @@ Nothing is ruled. For the human: yes, it changes how v1 web is built.*
   shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
   (a) and (b).
 - **Waits:** TASK-M8-37 and TASK-M8-38.
+
+## RQ-552: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against energy normalisation η_E, which dd_decoder §3.7 allows on the latent chart and whose tags R-511 draws blank, at the default links, near the origin as well as far out *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-25, dd_decoder §3.7; REQ-CHART-087, REQ-GUI-357; context: TASK-M8-55, TASK-M8-57)*
+
+*Found by physics review 5624655553 of PR #279, P1. Nothing is ruled. For the human: yes (physics: what a pixel whose
+energy target cannot be met is on a latent chart).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 3:
+    "**Every pixel is a system, everywhere.** No hatch, no blank, and no "not a system" on these charts at any pan or
+    zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.7 Energy normalisation (optional; keep-or-drop is decision B9)",
+    "Where it is allowed": "Only on charts that decode arbitrary momenta without enforcing an energy: the
+    free-Jacobi-momentum chart and the latent chart."; its cases: "**$E^* < U$:** $\eta_E$ is not real, since the
+    kinetic energy would be negative. The decode is tagged `DEGENERATE(ENERGY_INFEASIBLE)`." and "At $E^* > U$ the
+    decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`; the golden IC, `z = 0` at rest, is so tagged under any
+    $E^* > U$."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** with η_E off (`None`, R-25) no latent pixel carries an η_E tag. With `Some(E*)`, which §3.7 allows on
+  the latent chart, a pixel whose potential is above a bound target is `ENERGY_INFEASIBLE` and a rest start under
+  `E* > U` is `ENERGY_UNSCALABLE`; each is `decode_failed`, drawn blank as not a system (R-511), near the origin as
+  well as far out and at the default links. Item 3 rules that out, and the port's qualifier "at the decoder's default
+  links" does not cover it, η_E not being a link.
+- **Options seen:**
+  - (a) R-570's item 3 holds with η_E off; under `Some(E*)` the tags stand and those pixels are not a system, blank, as
+    the decoder defines them.
+  - (b) η_E is forbidden on the latent chart and the flat and body-plane slices (`forbids_energy_normalisation`
+    true), so item 3 holds on them always; the free-Jacobi-momentum chart keeps it.
+  - (c) R-570 governs: on these charts an η_E-tagged pixel is a labelled system, drawn and integrated as decoded,
+    without the normalisation, the tag a label rather than "not a system".
+- **Applied meanwhile:** the port's statements and tests read "at the decoder's default links, η_E off (`None`)":
+  far_field_saturates and latent_unbounded_navigation pin `E* = None`. Nothing changes in the decoder.
+- **Waits:** REQ-CHART-087's arm under `Some(E*)` (TASK-M8-57), `rq: RQ-552`. The η_E-off arms do not wait, and
+  neither does REQ-GUI-357, which states the η_E-off case.
+- **Also (physics review 5624721489 of PR #279, an observation):** dd_decoder §3.7 tags the collision pole too:
+  "**The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
+  $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`." It does not change the conflict or the
+  options.
+
+## RQ-554: A band quad on a latent or flat chart, saturated along one in-plane axis only, collapses, switches, collapses again on the linear path and stops terminally at `AT_F32_FLOOR` above the screen floor, so the strip that "stays structured" stops refining, against R-108's at-rest target *(physics, conflict: the ladder's terminal stop against R-108 and R-570's port; R-570, R-108, R-88, R-90; REQ-SCHED-062, REQ-DEC-033; context: TASK-M6-08, TASK-M8-57)*
+
+*Found by perf review 5624936602 of PR #279, P2. Nothing is ruled. For the human: yes (physics: whether a quad whose
+collapse is saturation along one axis keeps refining, which changes what is drawn).*
+
+- **File, section:**
+  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound": "(iv) the **decode floor proper**
+    (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a
+    deep-zoom backstop"; and R-570's port, as it stood: "Stopping refinement there is harmless, the field being flat."
+  - `plan/requirements.yaml` REQ-SCHED-062: "sample collapse on the linearised decoder must fire AT_F32_FLOOR, a
+    terminal stop cached as a quad fact".
+  - `decisions.md` § "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*": "During a gesture
+    the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest."
+  - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)":
+    "a view goes flat only where every coordinate its plane varies is saturated, so along each in-plane axis a strip a
+    few units of `z` wide stays structured out to any distance".
+- **The conflict:** at `z₀ = 10⁴·ê_k` a quad's full-decoder pairs along `ê_k` collapse, so `quad.collapsed` is set and
+  it switches (REQ-DEC-033); its linear samples along `ê_k` collapse again, `J_D`'s `ê_k` column being 0, so
+  `AT_F32_FLOOR` fires, a terminal stop never re-queued (REQ-SCHED-062). The quad stops near depth 0 while its other
+  in-plane axis has structure above the screen floor, which at rest stays at the terminal quad's `N × N` resolution,
+  against R-108's "completeness resumes at rest" and the strip's "stays structured". "Harmless" holds only where
+  every in-plane `J_D` column is 0.
+- **Options seen:**
+  - (a) A quad every collapsed pair of which is a saturation collapse (RQ-553's per-direction test) is not terminal:
+    it keeps refining along its unsaturated direction to the screen floor, its cost still screen-bounded
+    (REQ-SCHED-104's at-rest bound).
+  - (b) The stop is accepted: the band stays at the terminal quad's resolution, and the readout says so.
+  - (c) Other: for example, the switchover's collapse test reads only the directions whose `J_D` column is non-zero.
+- **Applied meanwhile:** the terminal stop stands as REQ-SCHED-062 defines it; deep_zoom §4's "harmless" is limited
+  to quads whose in-plane `J_D` columns are all 0, and the band quad's case points here.
+- **Waits:** REQ-SCHED-062's behaviour on band quads (TASK-M6-08), `rq: RQ-554`. Its other arms, and the rest of
+  TASK-M6-08, do not wait.
