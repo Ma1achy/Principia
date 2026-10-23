@@ -7,6 +7,7 @@ pub mod burrau;
 pub mod canon;
 pub mod chart;
 pub mod decode;
+pub mod driver;
 pub mod encode;
 pub mod generated;
 pub mod payload;

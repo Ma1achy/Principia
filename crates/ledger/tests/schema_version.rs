@@ -559,6 +559,12 @@ const BURRAU: [&str; 10] = [
 /// crossing list the kernel's word path takes. It sizes a kernel-local list, never a stored bit, so it is not hashed.
 const MARCH: [&str; 1] = ["max_crossings_per_substep"];
 
+/// The substep law's entries (TASK-M3-03; dd_integrator §3.3, R-502): `r_sub`, `gamma_sub` and `N_max`'s defaults and
+/// the threshold table's maximum length (REQ-INT-094, provisional until M3). They decide how many substeps a
+/// macro-step takes and so the values stored, never what a stored bit means (`total_substeps` is an exact u32 whatever
+/// they are), so they are not hashed; the sim key carries the three values (integrator_contract Part 3).
+const SUBSTEP: [&str; 4] = ["r_sub", "gamma_sub", "n_max", "nsub_table_max"];
+
 /// The curve projection's search (TASK-M2-18; dd_encode §3.4): its grid's `log₂`, its golden-section step count and
 /// the golden ratio `1/φ`, the encode's minimiser's own constants. They decide which `ν*` a search finds, never what a
 /// stored bit means, so they are not hashed.
@@ -577,7 +583,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
-    // capacity (TASK-M3-15), or the curve projection's search (TASK-M2-18).
+    // capacity (TASK-M3-15), or the curve projection's search (TASK-M2-18), or the substep law's (TASK-M3-03).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -588,7 +594,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || WARP.contains(&k.name)
                 || BURRAU.contains(&k.name)
                 || MARCH.contains(&k.name)
-                || CURVE_SEARCH.contains(&k.name),
+                || CURVE_SEARCH.contains(&k.name)
+                || SUBSTEP.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -627,6 +634,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the curve search's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SUBSTEP {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the substep law's entry `{name}` is not an unhashed register entry"
         );
     }
 }

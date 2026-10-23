@@ -1,0 +1,6 @@
+{
+  "description": "N_max at the table's maximum length, 256, so every bucket is reachable.",
+  "config": { "r_sub": 0.05, "gamma_sub": 1.5, "n_max": 256 },
+  "fuzz": { "seed": 5, "random": 4096, "pairs": 4096 },
+  "expected": "pass"
+}

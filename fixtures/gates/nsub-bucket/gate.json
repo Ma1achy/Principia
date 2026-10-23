@@ -1,0 +1,6 @@
+{
+  "gate": "nsub-bucket",
+  "inputs": ["default.json", "r_sub.json", "gamma_sub.json", "n_max.json", "n_max_table.json", "control_r_sub.json", "control_gamma_sub.json", "n_max_above.json"],
+  "threshold": { "value": 0, "requirement": "REQ-INT-028", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-INT-094" }
+}
