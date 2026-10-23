@@ -676,3 +676,70 @@ Nothing is ruled. For the human: yes, it changes how v1 web is built.*
   shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
   (a) and (b).
 - **Waits:** TASK-M8-37 and TASK-M8-38.
+
+## RQ-552: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against energy normalisation η_E, which dd_decoder §3.7 allows on the latent chart and whose tags R-511 draws blank, at the default links, near the origin as well as far out *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-25, dd_decoder §3.7; REQ-CHART-087, REQ-GUI-357; context: TASK-M8-55, TASK-M8-57)*
+
+*Found by physics review 5624655553 of PR #279, P1. Nothing is ruled. For the human: yes (physics: what a pixel whose
+energy target cannot be met is on a latent chart).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 3:
+    "**Every pixel is a system, everywhere.** No hatch, no blank, and no "not a system" on these charts at any pan or
+    zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.7 Energy normalisation (optional; keep-or-drop is decision B9)",
+    "Where it is allowed": "Only on charts that decode arbitrary momenta without enforcing an energy: the
+    free-Jacobi-momentum chart and the latent chart."; its cases: "**$E^* < U$:** $\eta_E$ is not real, since the
+    kinetic energy would be negative. The decode is tagged `DEGENERATE(ENERGY_INFEASIBLE)`." and "At $E^* > U$ the
+    decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`; the golden IC, `z = 0` at rest, is so tagged under any
+    $E^* > U$."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** with η_E off (`None`, R-25) no latent pixel carries an η_E tag. With `Some(E*)`, which §3.7 allows on
+  the latent chart, a pixel whose potential is above a bound target is `ENERGY_INFEASIBLE` and a rest start under
+  `E* > U` is `ENERGY_UNSCALABLE`; each is `decode_failed`, drawn blank as not a system (R-511), near the origin as
+  well as far out and at the default links. Item 3 rules that out, and the port's qualifier "at the decoder's default
+  links" does not cover it, η_E not being a link.
+- **Options seen:**
+  - (a) R-570's item 3 holds with η_E off; under `Some(E*)` the tags stand and those pixels are not a system, blank, as
+    the decoder defines them.
+  - (b) η_E is forbidden on the latent chart and the flat and body-plane slices (`forbids_energy_normalisation`
+    true), so item 3 holds on them always; the free-Jacobi-momentum chart keeps it.
+  - (c) R-570 governs: on these charts an η_E-tagged pixel is a labelled system, drawn and integrated as decoded,
+    without the normalisation, the tag a label rather than "not a system".
+- **Applied meanwhile:** the port's statements and tests read "at the decoder's default links, η_E off (`None`)":
+  far_field_saturates and latent_unbounded_navigation pin `E* = None`. Nothing changes in the decoder.
+- **Waits:** REQ-CHART-087's arm under `Some(E*)` (TASK-M8-57), `rq: RQ-552`. The η_E-off arms do not wait, and
+  neither does REQ-GUI-357, which states the η_E-off case.
+
+## RQ-553: In a latent chart's saturated far field the decode collapses in f64 as in f32, so `AT_F32_FLOOR` fires at home zoom and the precision warning tells the user that f32 has run out where the cause is saturation, against R-570 item 5 and W13 *(conflict: the human's ruling and an invariant against the warning's trigger; R-570, R-54, R-90, W13; REQ-CHART-087; context: TASK-M8-57)*
+
+*Found by physics review 5624655553 of PR #279, P3. Nothing is ruled.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 5:
+    "**Precision is not a navigation limit.** At large chart coordinates the f32 deep-zoom floor arrives sooner, because
+    the floor depends on where you zoom. That is handled by the existing precision ladder and the collapsed-decode
+    guard, not by stopping the pan or zoom."
+  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound": "(iv) the **decode floor proper**
+    (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a
+    deep-zoom backstop".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "The warning is
+    **raised by events** (R-54): `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`."
+  - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison
+    checklist)", 13: "**Never blank, never lies, never freezes**".
+- **The conflict:** in the saturated far field the f64 decode is flat as well: `σ` rounds to 1 in f64 past about 37 and
+  `sech²` underflows, so `J_D` has zero columns, the linearised samples collapse too and `AT_F32_FLOOR` fires, at home
+  zoom. Stopping refinement there does no harm, the field being genuinely flat; but the warning it raises says that f32
+  has run out, where the cause is saturation, not precision, against item 5 and W13's "never lies".
+- **Options seen:**
+  - (a) A collapse whose f64 decodes are also identical is a saturation collapse: refinement stops as at the floor,
+    and no precision warning is raised (the readout may say the field is saturated).
+  - (b) The warning is raised, its text naming a collapsed decode rather than f32 running out.
+  - (c) The warning stands as R-54 defines it.
+- **For the human:** the warning's trigger is design, which R-369 lets the orchestrator and the reviewers decide with
+  physics review; queued because R-570's "What to check" says to queue a conflict rather than resolve it.
+- **Applied meanwhile:** nothing; deep_zoom §4 records the conflict and settles nothing, and the ladder and the warning
+  stand as written.
+- **Waits:** nothing; no requirement tests the warning in the far field. TASK-M8-57 builds the ladder as written,
+  and a decision here changes only the warning's trigger.

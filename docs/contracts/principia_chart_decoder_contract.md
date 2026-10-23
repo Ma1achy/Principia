@@ -341,7 +341,7 @@ number of chart squares; the only limits are the frame budget and the baseline c
 Part 4), and a frame's cost is set by the screen, not by the view's extent: where the viewport spans many level-0
 roots the cover is taken at a level `L < 0`, coarser than the root (`principia_scheduler_contract.md` Part 3,
 "Infinite zoom-out: levels coarser than the root"; RQ-535, decided per R-369). **Every pixel is a system** at any pan or zoom: no hatch, no blank, no
-"not a system" (at the decoder's default links; RQ-536). **Far out the field goes flat, and that is correct:** the
+"not a system" (at the decoder's default links, η_E off (`None`); RQ-536, RQ-552). **Far out the field goes flat, and that is correct:** the
 decoder saturates every coordinate (`principia_chart_reference.md` §0: the configuration through a sigmoid, the momenta
 to `±q_max`, the masses through `μ_max·tanh`), so far from the origin neighbouring pixels decode to nearly the same
 system; nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the decoded system as for

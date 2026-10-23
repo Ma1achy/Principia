@@ -896,10 +896,13 @@ past `θ`'s edges; … the fallback hatches the zero- or negative-mass area".
 **`Latent`, the flat slices and `BodyPlane` at any pan or zoom (R-570).** The table's first row holds wherever the view
 goes: these charts have no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4, "Latent and flat
 charts: no limit on pan or zoom-out"). Their `validate` accepts every `z`, so every pixel is a system at any pan or zoom
-(at the decoder's default links; RQ-536), and the row's "what fails validation" is empty for them. Far from the origin
+(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552), and the row's "what fails validation" is empty for them. Far from the origin
 §0's links saturate (`σ` onto α and β, `q_max·(2σ − 1)` onto the momenta, `μ_max·tanh` onto the mass logits), so
 neighbouring pixels decode to nearly the same system and the field goes flat. That is correct, not a bug: nothing
-clamps, rescales, wraps or fades it, and each pixel is the system it decodes to (REQ-CHART-087).
+clamps, rescales, wraps or fades it, and each pixel is the system it decodes to (REQ-CHART-087). The saturation is per
+coordinate, a consequence of §0 and not a new decision: a view goes flat only where every coordinate its plane varies is
+saturated, so along each in-plane axis a strip a few units of `z` wide stays structured out to any distance, and a far
+zoom-out shows thin structured bands along the axes between flat quadrants; that too is correct.
 
 **The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
 type per axis of every Burrau-family chart (§4.5), with the reasoning:

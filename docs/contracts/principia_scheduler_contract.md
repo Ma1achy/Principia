@@ -61,6 +61,9 @@ required on the addressing, as for EX7; perf reviews the cost.*
   `L ≥ 0`, with negative indices allowed (EX7(a)). Its address keeps
   R-97's frame, the slice plane's own, relative to the plane anchor: a zoom-out changes which addresses are requested,
   never the addresses themselves. Levels `L ≥ 0`, the roots, and EX7(b)'s canonical maps are unchanged.
+- **Scope.** "An affine chart" above is a chart whose axes are all affine (R-570's latent and flat charts); a chart
+  with a bounded, periodic or pole-crossing axis gains no level `L < 0`, a coarse quad straddling its period or edge
+  being undefined (physics review 5624655553 of PR #279, an observation; applied per R-369).
 - **The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the
   smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent:
   at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104).

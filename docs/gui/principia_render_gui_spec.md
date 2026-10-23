@@ -371,7 +371,7 @@ control caps either.** The drag, the wheel, the arrows and + / −, the centre `
 centre sliders and Navigate's zoom row all send the value asked for, and the view state records it unclamped; a
 slider's span is the range its handle covers, never a clamp, so a zoom past the zoom row's span is kept and shown, the
 handle at the end of the rail (REQ-GUI-357). Every pixel is a system at any pan or zoom: no hatch, no blank, no "not a
-system" (at the decoder's default links; RQ-536). Far out the field goes flat, because the decoder saturates every
+system" (at the decoder's default links, η_E off (`None`); RQ-536, RQ-552). Far out the field goes flat, because the decoder saturates every
 coordinate; that is correct, nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the
 decoded system as for any pixel. Precision is never a navigation limit: the deep-zoom ladder handles it
 (`principia_deep_zoom.md` §4). **The reference demos' caps are never ported:** the trace demo, the Listen demo and the

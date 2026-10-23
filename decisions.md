@@ -23549,7 +23549,7 @@ is the human's text, the applied text of this ruling:
 > 6. **Unchanged:**
 >    - Charts with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`,
 >      the Invariant warp), keep their forbidden region past the square as now.
->    - Periodic and pole-crossing charts keep RQ-409 (a). [Porter's note: RQ-409 (a) is ruled by R-552.]
+>    - Periodic and pole-crossing charts keep RQ-409 (a).
 >    - The trace's "leaves / re-enters the chart" on a latent chart stays: that is a trajectory state projected back onto
 >      the axes, not a navigation limit.
 >
@@ -23655,6 +23655,15 @@ cover taken at the level whose quads are the smallest still at least its on-scre
 screen. Applied in `principia_scheduler_contract.md` Part 3, `principia_deep_zoom.md` and chart_decoder_contract Part 4
 (⚑ physics review of the addressing); REQ-SCHED-104 no longer waits. RQ-535 moved to
 `docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 1 of PR #279 (gui review 5624653641, physics review 5624655553), applied per R-369:
+REQ-GUI-357's verify drives each control its statement names, each with a clamp control, checks the far pixel's
+readout, and steps the zoom row by Enter then ↑ (render_gui_spec §G3, R-409), not + / −; RQ-552 queues η_E against
+item 3 (dd_decoder §3.7 allows it on the latent chart, R-511 draws its tags blank), and the qualifier reads "at the
+decoder's default links, η_E off (`None`)", both tests pinning `E* = None`; REQ-CHART-087's flatness is per coordinate,
+judged only where every coordinate the view varies is saturated (chart_reference §5.4), REQ-CHART-088 measured on those
+views; RQ-553 queues the precision warning in the flat far field against item 5 and W13, deep_zoom §4 recording it
+unsettled. The quoted instruction above is unchanged.*
 
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
