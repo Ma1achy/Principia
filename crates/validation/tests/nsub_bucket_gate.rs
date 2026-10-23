@@ -1,17 +1,20 @@
 //! The `nsub-bucket` gate (TASK-M3-03; REQ-INT-028): its specification, edges and counts, the two legs, the verdict
 //! at and past the threshold, the report's sections, and the runner on `fixtures/gates/nsub-bucket/`, where the
-//! default table under a changed `r_sub` or `gamma_sub` fails and an `N_max` above the table is refused.
+//! default table under a changed `r_sub` or `gamma_sub` fails and an `N_max` above the table is refused; the floor
+//! pairs, and the sim key whose deciding thresholds fall below `2⁻⁵⁵` refused.
 
 use std::path::{Path, PathBuf};
 
-use kernel::driver::nsub_table::{pack, threshold_bits, NsubConfig};
+use kernel::driver::nsub_table::{pack, threshold_bits, threshold_f64, NsubConfig};
+use kernel::driver::substep::square;
 use kernel::generated::nsub_thresholds::NSUB_TABLE_MAX;
 use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, GateConfig, RegionCount, Verdict};
 use validation::negative_control;
 use validation::nsub_bucket::{
-    away_from_edges, count, edge, edge_samples, exact_d2, legs, measure, pair_triple, random_d2,
-    spec, triple, unit, Fuzz, Input, Law, Measurement, NsubBucketGate, EDGE_BAND, NAME,
+    away_from_edges, count, edge, edge_samples, exact_d2, floor_pairs, floor_triple, legs, measure,
+    pair_triple, random_d2, spec, triple, unit, Fuzz, Input, Law, Measurement, NsubBucketGate,
+    EDGE_BAND, FLOOR_DX, NAME,
 };
 
 /// This workspace's root.
@@ -439,8 +442,8 @@ fn nsub_bucket_gate_measure() {
     assert_eq!(m.edge_mismatches, 0);
     assert_eq!(
         m.decisions,
-        m.edge_samples + 256 + 256,
-        "every sample decided on both legs"
+        m.edge_samples + 256 + 256 + 2 * 63,
+        "every sample decided on both legs, two floor pairs per deciding threshold"
     );
     assert_eq!(m.forks, 0);
     assert_eq!(m.mismatches, 0);
@@ -512,6 +515,97 @@ negative_control!(
             control.mismatches, 0,
             "the default table under r_sub 0.08 is clean"
         );
+    }
+);
+
+// ── The floor pairs and the least deciding threshold ───────────────────────────────────────────────────────────
+
+/// The sim key just inside the least deciding threshold: at γ_sub 0.25, THR[55] ≥ 2⁻⁵⁵ > THR[56].
+const FLOOR: Law = Law {
+    r_sub: 0.05,
+    gamma_sub: 0.25,
+    n_max: 56,
+};
+
+/// The floor pairs of `law` over `bits`, measured alone.
+fn floor_measure(law: &Law, bits: &[u32; NSUB_TABLE_MAX]) -> Measurement {
+    let mut m = Measurement::default();
+    floor_pairs(&mut m, law, bits, &pack(bits));
+    m
+}
+
+/// `law`'s thresholds rounded once to f32, without the host generator's refusals.
+fn unchecked_bits(law: &Law) -> [u32; NSUB_TABLE_MAX] {
+    let mut bits = [0; NSUB_TABLE_MAX];
+    for (i, b) in bits.iter_mut().enumerate() {
+        *b = (threshold_f64(law.r_sub, law.gamma_sub, i as u32 + 1) as f32).to_bits();
+    }
+    bits
+}
+
+#[test]
+fn nsub_bucket_gate_floor() {
+    assert_eq!(FLOOR_DX.to_bits(), 0x2B7F_FFFF);
+    assert_eq!(square(FLOOR_DX), 0.0, "FLOOR_DX is floored");
+    assert_ne!(square(f32::from_bits(0x2C00_0000)), 0.0, "2⁻⁴⁰ is not");
+    let bits = threshold_bits(&FLOOR.config()).expect("the sim key is taken");
+    assert_eq!(
+        bits,
+        unchecked_bits(&FLOOR),
+        "an accepted table is the one rounding"
+    );
+    let r = floor_triple(&bits, 3, -1.0);
+    assert_eq!(r[0], [0.0, 0.0]);
+    assert_eq!(r[1][0], f64::from(FLOOR_DX));
+    let thr = f64::from(f32::from_bits(bits[2]));
+    assert_eq!(r[1][1], (thr * (1.0 - 1.0 / 32768.0)).sqrt());
+    assert_eq!(r[2], [10.0, 10.0]);
+    assert_eq!(
+        floor_triple(&bits, 3, 1.0)[1][1],
+        (thr * (1.0 + 1.0 / 32768.0)).sqrt()
+    );
+    for law in [FLOOR, DEFAULT] {
+        let bits = threshold_bits(&law.config()).expect("the sim key is taken");
+        let m = floor_measure(&law, &bits);
+        assert_eq!(
+            m.decisions,
+            2 * (law.n_max - 1),
+            "two pairs per deciding threshold"
+        );
+        assert_eq!(
+            m.judged, m.decisions,
+            "every floor pair is judged, none near an edge"
+        );
+        assert_eq!(
+            (m.forks, m.mismatches),
+            (0, 0),
+            "{law:?}: {:?}",
+            m.first_mismatch
+        );
+    }
+    let whole = measure(&input(FLOOR, None)).expect("measures");
+    assert_eq!(whole.failures(), 0, "{:?}", whole.first_mismatch);
+    for n_max in [57, 256] {
+        assert!(
+            measure(&input(Law { n_max, ..FLOOR }, None))
+                .is_err_and(|e| e.contains("THR[56]") && e.contains("below 2^-55")),
+            "N_max {n_max} at gamma_sub 0.25 is refused"
+        );
+    }
+}
+
+negative_control!(
+    nsub_bucket_gate_floor,
+    "the physics review's sim key, r_sub 0.05, γ_sub 0.25, N_max 256, its table made without the refusal: the floor \
+     pairs differ from the specification",
+    expected = "the floor decides nothing",
+    {
+        let law = Law {
+            n_max: 256,
+            ..FLOOR
+        };
+        let m = floor_measure(&law, &unchecked_bits(&law));
+        assert_eq!(m.mismatches, 0, "the floor decides nothing");
     }
 );
 

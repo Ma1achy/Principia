@@ -19,7 +19,7 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use crate::constants::{GAMMA_SUB, NSUB_TABLE_MAX, N_MAX, R_SUB};
+use crate::constants::{GAMMA_SUB, NSUB_TABLE_MAX, NSUB_THRESHOLD_LEAST, N_MAX, R_SUB};
 use crate::gen::Generated;
 use crate::schema::{Entry, Word};
 
@@ -140,6 +140,13 @@ pub fn nsub_file() -> String {
         "/// `N_max`'s default (the register's `n_max`; integrator_contract Part 3, R-68).\n\
          pub const N_MAX_DEFAULT: u32 = {};\n",
         N_MAX.number() as u32
+    );
+    let _ = writeln!(
+        s,
+        "/// The least threshold the host generator accepts where it decides `N_sub`, `2⁻⁵⁵` (the register's\n\
+         /// `nsub_threshold_least`; R-502): below it the square's floor could decide `N_sub`.\n\
+         pub const NSUB_THRESHOLD_LEAST: f32 = {:?};\n",
+        NSUB_THRESHOLD_LEAST.number() as f32
     );
     s.push_str(
         "/// The default sim key's thresholds, `THR[1] … THR[L_max]` at `r_sub`, `gamma_sub` and `N_max`'s defaults, as\n\

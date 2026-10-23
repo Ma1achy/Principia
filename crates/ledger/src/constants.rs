@@ -1128,6 +1128,25 @@ pub const NSUB_TABLE_MAX: ConstantBuilder = proposed(
     "M3",
 );
 
+/// The least threshold the host generator accepts where it decides `N_sub` (`THR[n]`, `n < N_max`), `2⁻⁵⁵`, a `d²`.
+/// Derived from the bucket's `d²` form (dd_integrator §3.3, the determinism pin; R-547): the square's floor sets an
+/// axis square below `2⁻⁸⁰` to 0, lowering `d²` by less than `2⁻⁷⁹`, so at a threshold of at least `2⁻⁵⁵` it moves a
+/// decision only within `2⁻²⁴` relative of the edge, one f32 unit roundoff beside the threshold's and `d²`'s own
+/// roundings (`kernel::driver::nsub_table`). Below it the floor alone could decide `N_sub` against the specification
+/// (REQ-INT-028), so the generator refuses such a sim key (R-502); `2⁻⁵⁵` is a closest approach of about `5·10⁻⁹`
+/// canonical lengths. A settled consequence of the floor, not a calibration.
+pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
+    name: "nsub_threshold_least",
+    value: Some(Value::Exact(2.775_557_561_562_891_4e-17)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_dd_integrator.md",
+        section: "3.3 Substep law — and the determinism pin, made concrete",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1201,4 +1220,5 @@ pub const REGISTER: &[ConstantBuilder] = &[
     GAMMA_SUB,
     N_MAX,
     NSUB_TABLE_MAX,
+    NSUB_THRESHOLD_LEAST,
 ];

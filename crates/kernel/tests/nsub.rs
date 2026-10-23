@@ -20,8 +20,8 @@ use kernel::driver::substep::{
     d2_quantised, n_sub, square, NsubThresholds, Quantise, SubstepState,
 };
 use kernel::generated::nsub_thresholds::{
-    DEFAULT_THRESHOLD_BITS, GAMMA_SUB_DEFAULT, NSUB_TABLE_MAX, NSUB_TABLE_ROWS, N_MAX_DEFAULT,
-    R_SUB_DEFAULT,
+    DEFAULT_THRESHOLD_BITS, GAMMA_SUB_DEFAULT, NSUB_TABLE_MAX, NSUB_TABLE_ROWS,
+    NSUB_THRESHOLD_LEAST, N_MAX_DEFAULT, R_SUB_DEFAULT,
 };
 use kernel::payload::{sd_saturated, total_substeps_log2};
 use validation::negative_control;
@@ -255,9 +255,25 @@ fn nsub_table_host_refusals() {
     );
     check_refused(
         config(1e-25, 1.5, 2),
-        NsubTableError::NotNormal { n: 1, bits: 0 },
-        "THR[1] (bits 0x00000000) decides N_sub and is not a normal f32",
+        NsubTableError::OutOfRange { n: 1, bits: 0 },
+        "THR[1] 0e0 (bits 0x00000000) decides N_sub and is infinite or below 2^-55",
     );
+    // At r_sub 0.05, γ_sub 0.25, THR[55] ≈ 2.99e-17 is the last at or above 2⁻⁵⁵ ≈ 2.78e-17 and THR[56] ≈ 2.58e-17 is
+    // below it, normal though it is: N_max 56 is taken, 57 and L_max refused at THR[56], where the square's floor could
+    // decide N_sub (the physics review's sim key, THR[200] ≈ 9.8e-22, among them).
+    assert!(
+        threshold_bits(&config(0.05, 0.25, 56)).is_ok(),
+        "N_max 56 at gamma_sub 0.25 is refused"
+    );
+    let thr56 = (threshold_f64(0.05, 0.25, 56) as f32).to_bits();
+    assert_eq!(thr56, 0x23EE_691C, "THR[56] at gamma_sub 0.25");
+    for n_max in [57, l] {
+        check_refused(
+            config(0.05, 0.25, n_max),
+            NsubTableError::OutOfRange { n: 56, bits: thr56 },
+            "THR[56] 2.5848527e-17 (bits 0x23EE691C) decides N_sub and is infinite or below 2^-55",
+        );
+    }
     // A large gamma_sub gives equal neighbours, which do not rise.
     assert!(
         threshold_bits(&config(0.05, 1e12, l)).is_ok(),
@@ -285,29 +301,36 @@ fn table_of(head: &[u32]) -> [u32; L] {
 
 #[test]
 fn nsub_table_host_check_table() {
-    let least = 0x0080_0000; // 2⁻¹²⁶, the least normal
+    let least = NSUB_THRESHOLD_LEAST.to_bits(); // 2⁻⁵⁵, the least deciding threshold
+    assert_eq!(least, 0x2400_0000);
+    let normal = 0x0080_0000; // 2⁻¹²⁶, the least normal, below it
     let max = 0x7F7F_FFFF;
     let inf = 0x7F80_0000;
     assert_eq!(check_table(&table_of(&[least + 1, least]), 3), Ok(()));
     assert_eq!(
         check_table(&table_of(&[least + 1, least]), 4),
-        Err(NsubTableError::NotNormal { n: 3, bits: 0 })
+        Err(NsubTableError::OutOfRange { n: 3, bits: 0 })
     );
     assert_eq!(
         check_table(&table_of(&[least, least - 1]), 3),
-        Err(NsubTableError::NotNormal {
+        Err(NsubTableError::OutOfRange {
             n: 2,
             bits: least - 1
         })
     );
+    assert_eq!(
+        check_table(&table_of(&[least, normal]), 3),
+        Err(NsubTableError::OutOfRange { n: 2, bits: normal })
+    );
+    assert_eq!(check_table(&table_of(&[least, normal]), 2), Ok(()));
     assert_eq!(check_table(&table_of(&[max, max]), 3), Ok(()));
     assert_eq!(
         check_table(&table_of(&[inf, max]), 2),
-        Err(NsubTableError::NotNormal { n: 1, bits: inf })
+        Err(NsubTableError::OutOfRange { n: 1, bits: inf })
     );
     assert_eq!(
         check_table(&table_of(&[least]), L as u32),
-        Err(NsubTableError::NotNormal { n: 2, bits: 0 })
+        Err(NsubTableError::OutOfRange { n: 2, bits: 0 })
     );
     assert_eq!(
         check_table(&table_of(&[least, least + 1]), 1),
@@ -330,6 +353,77 @@ negative_control!(
     "a rising table checked as accepted",
     expected = "assertion",
     assert_eq!(check_table(&table_of(&[1, 2]), 1), Ok(()))
+);
+
+/// `clamp(⌈(r_sub/√d²)^{γ_sub}⌉, 1, N_max)` in f64, clamped before the cast.
+fn specification(c: &NsubConfig, d2: f64) -> u32 {
+    (c.r_sub / d2.sqrt())
+        .powf(c.gamma_sub)
+        .ceil()
+        .clamp(1.0, f64::from(c.n_max)) as u32
+}
+
+/// For every deciding threshold `THR[n]` of the sim key `c` (`n < N_max`), a pair whose y offset squares to
+/// `THR[n]·(1 ∓ 2⁻¹⁵)` and whose x offset is the greatest the square's floor sets to 0 (just under `2⁻⁴⁰`): the tree's
+/// `N_sub` over `bits` equals the specification at the pair's `d²` (exact from its f32 positions, in f64) wherever
+/// that is more than `2⁻²⁰` from every exact edge. Returns the number of pairs within it, not judged.
+fn check_floor(c: &NsubConfig, bits: &[u32; L]) -> u32 {
+    let table = pack(bits);
+    let dx = f32::from_bits((127 - 41) << 23 | 0x007F_FFFF); // 2⁻⁴⁰(1 − 2⁻²⁴), below the floor
+    assert_eq!(square(dx), 0.0, "dx is floored");
+    let mut near = 0;
+    for n in 1..c.n_max {
+        let thr = threshold_f64(c.r_sub, c.gamma_sub, n);
+        for side in [-1.0, 1.0] {
+            let dy = (thr * (1.0 + side / 32768.0)).sqrt() as f32;
+            let r = [[0.0f32, 0.0], [dx, dy], [10.0, 10.0]];
+            let d2 = f64::from(dx).powi(2) + f64::from(dy).powi(2);
+            if (1..=L as u32).any(|m| {
+                let edge = threshold_f64(c.r_sub, c.gamma_sub, m);
+                (d2 - edge).abs() <= edge / (1u64 << 20) as f64
+            }) {
+                near += 1;
+                continue;
+            }
+            assert_eq!(
+                n_sub(d2_quantised::<f32>(&r), &table, c.n_max),
+                specification(c, d2),
+                "{c:?}: at THR[{n}] ({side}), d² {d2:e}: the tree differs from the specification"
+            );
+        }
+    }
+    near
+}
+
+#[test]
+fn nsub_table_host_floor_bound() {
+    // Just inside the bound (THR[55] ≥ 2⁻⁵⁵ at γ_sub 0.25), the default, and N_max = L_max.
+    for c in [
+        config(0.05, 0.25, 56),
+        NsubConfig::DEFAULT,
+        config(0.05, 1.5, L as u32),
+    ] {
+        assert_eq!(
+            check_floor(&c, &threshold_bits(&c).expect("an accepted sim key")),
+            0,
+            "{c:?}: a pair is within 2⁻²⁰ of an edge"
+        );
+    }
+}
+
+negative_control!(
+    nsub_table_host_floor_bound,
+    "the physics review's sim key, r_sub 0.05, γ_sub 0.25, N_max 256, its table made without the refusal: the floor \
+     decides N_sub away from every edge",
+    expected = "the tree differs from the specification",
+    {
+        let c = config(0.05, 0.25, L as u32);
+        let mut bits = [0u32; L];
+        for (i, b) in bits.iter_mut().enumerate() {
+            *b = (threshold_f64(c.r_sub, c.gamma_sub, i as u32 + 1) as f32).to_bits();
+        }
+        check_floor(&c, &bits);
+    }
 );
 
 /// `t` holds `bits` at `SimUniforms`' layout: `THR[n]` at row `(n − 1)/4`, lane `(n − 1) mod 4`.

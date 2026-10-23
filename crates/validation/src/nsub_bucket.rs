@@ -10,15 +10,19 @@
 //!   threshold, scaled by a random factor within `2⁻¹⁶` of 1, at a random angle, the third body 10 away: the f64 leg
 //!   passes the f64 positions to `d2_quantised::<f64>`, the f32 leg their f32 casts to `d2_quantised::<f32>`, and both
 //!   take `n_sub` against the one table. Every `d²` sample below is decided on both legs too, as an f64 position and its
-//!   f32 cast.
+//!   f32 cast, and so is each floor pair: at every deciding threshold `THR[n]`, `n < N_max`, a pair whose x offset is
+//!   the greatest the square's floor sets to 0 (just under `2⁻⁴⁰`) and whose y offset squares to `THR[n]·(1 ∓ 2⁻¹⁵)`,
+//!   the case the host generator's least deciding threshold, `2⁻⁵⁵`, keeps from deciding `N_sub`
+//!   (`kernel::driver::nsub_table`).
 //! - **The tree at the edges.** At every threshold `THR[n]`, `n = 1 … L_max`, its f32 value and its two f32
 //!   neighbours (±1 ulp), the tree's `N_sub` against the table's own count, `min(1 + #{m : d² < THR[m]}, N_max)`.
 //! - **The specification away from the edges.** At those `d²`, at `fuzz.random` `d²` drawn log-uniformly from a quarter
 //!   of the least threshold to four times the greatest, and at the pairs' `d²` in f64 (their f32 positions' differences
-//!   squared in f64), `N_sub` against `clamp(⌈(r_sub/√d²)^{γ_sub}⌉, 1, N_max)` evaluated in f64, clamped before the cast,
-//!   wherever `d²` is more than `2⁻²⁰` (relative) from every exact edge `(r_sub·n^{−1/γ_sub})²`; within it rounding
-//!   legitimately decides, and the sample is counted, not judged. The band bounds the sum of the roundings between the
-//!   specification's comparison and the tree's, with a margin over 2 ([`EDGE_BAND`]).
+//!   squared in f64) and the floor pairs' `d²`, `N_sub` against `clamp(⌈(r_sub/√d²)^{γ_sub}⌉, 1, N_max)` evaluated in
+//!   f64, clamped before the cast, wherever `d²` is more than `2⁻²⁰` (relative) from every exact edge
+//!   `(r_sub·n^{−1/γ_sub})²`; within it rounding and the square's floor legitimately decide, and the sample is counted,
+//!   not judged. The band bounds the sum of the roundings and the floor between the specification's comparison and the
+//!   tree's, with a margin of 2 ([`EDGE_BAND`]).
 //!
 //! **Domain** (pitfalls §10): identical inputs per step. A fork count of 0 says the two CPU legs decide alike given the
 //! same quantised positions and sim key, one macro-step at a time; it says nothing about a trajectory, whose inputs
@@ -39,7 +43,7 @@ pub const NAME: &str = "nsub-bucket";
 
 /// The relative distance from an exact edge within which a sample is not judged against the specification.
 ///
-/// It bounds, with a margin over 2, the sum of the relative roundings between the specification's comparison (the
+/// It bounds, with a margin of 2, the sum of the relative roundings between the specification's comparison (the
 /// pair's `d²` in f64 against the exact edge) and the tree's (`d2_quantised`'s f32 `d²` against `THR[n]`), to first
 /// order, `u = 2⁻²⁴` being f32's unit roundoff:
 /// - `THR[n]`'s rounding to f32: `u`;
@@ -47,9 +51,11 @@ pub const NAME: &str = "nsub-bucket";
 ///   partial products exact and its three adds, `hh + ((hl + lh) + ll)`, each `u` relative to a partial sum of like-
 ///   signed terms no greater than the whole, so `3u`; the pair's one add `u`, on a sum of two non-negative squares:
 ///   `6u` in all;
+/// - the square's floor, which lowers `d²` by less than `2⁻⁷⁹`: at most `u` relative at a threshold of at least `2⁻⁵⁵`,
+///   the least deciding threshold the host generator accepts (`kernel::driver::nsub_table`);
 /// - [`exact_d2`]'s f64 rounding: under `2⁻⁵⁰`, negligible.
 ///
-/// The sum, about `7u = 7·2⁻²⁴`, is under `2⁻²¹`; the band, `2⁻²⁰ = 16u`, is over twice it.
+/// The sum, about `8u = 2⁻²¹`, is half the band, `2⁻²⁰ = 16u`.
 pub const EDGE_BAND: f64 = 1.0 / (1u64 << 20) as f64;
 
 /// A sim key's substep law as an input writes it.
@@ -266,6 +272,35 @@ pub fn pair_triple(bits: &[u32; NSUB_TABLE_MAX], rng: &mut SplitMix) -> (u32, [[
     (n, triple(at, d2, std::f64::consts::TAU * unit(rng)))
 }
 
+/// The greatest x offset the square's floor sets to 0: `2⁻⁴⁰(1 − 2⁻²⁴)`, the f32 just under `2⁻⁴⁰`.
+pub const FLOOR_DX: f32 = f32::from_bits(0x2B7F_FFFF);
+
+/// The floor pair at `THR[n]` of `bits`, `side` −1 or 1: body 0 at the origin, body 1 [`FLOOR_DX`] along x and
+/// `√(THR[n]·(1 + side·2⁻¹⁵))` along y, body 2 10 away.
+pub fn floor_triple(bits: &[u32; NSUB_TABLE_MAX], n: u32, side: f64) -> [[f64; 2]; 3] {
+    let thr = f64::from(f32::from_bits(bits[n as usize - 1]));
+    let dy = (thr * (1.0 + side / f64::from(1u32 << 15))).sqrt();
+    [[0.0, 0.0], [f64::from(FLOOR_DX), dy], [10.0, 10.0]]
+}
+
+/// Decides and judges the floor pairs at every deciding threshold of `bits`, `n < N_max` (the module's note).
+pub fn floor_pairs(
+    m: &mut Measurement,
+    law: &Law,
+    bits: &[u32; NSUB_TABLE_MAX],
+    table: &NsubThresholds,
+) {
+    for n in 1..law.n_max {
+        for side in [-1.0, 1.0] {
+            let what = format!("floor pair at THR[{n}] ({side:+})");
+            let r = floor_triple(bits, n, side);
+            let (a, b) = legs(&r, table, law.n_max);
+            m.decide(&what, (a, b), law.n_max);
+            m.judge(&what, law, exact_d2(&r), a);
+        }
+    }
+}
+
 /// Runs `input`'s draws (the module's note); `Err` where the host generator refuses a sim key.
 pub fn measure(input: &Input) -> Result<Measurement, String> {
     let law = input.config;
@@ -305,6 +340,7 @@ pub fn measure(input: &Input) -> Result<Measurement, String> {
         m.decide(&what, (a, b), n_max);
         m.judge(&what, &law, exact_d2(&r), a);
     }
+    floor_pairs(&mut m, &law, &bits, &table);
     Ok(m)
 }
 
@@ -374,7 +410,7 @@ impl NsubBucketGate {
                 .to_owned(),
             format!(
                 "{} samples within 2⁻²⁰ of an edge are not judged against the specification: there the f32 roundings of \
-                 THR[n] and of d² decide (their sum, about 7·2⁻²⁴, is under half the band)",
+                 THR[n] and of d² and the square's floor decide (their sum, about 8·2⁻²⁴, is half the band)",
                 m.near_edge
             ),
         ];

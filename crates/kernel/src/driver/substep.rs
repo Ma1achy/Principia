@@ -94,7 +94,8 @@ impl Quantise for f64 {
 /// normal, and the partial products, all of `x`'s sign squared, sum to no less than the largest. A subnormal `x` (two
 /// positions closer than `2⁻¹²⁶`, which a flushing backend reads as 0) is under the floor on every backend, so it is 0
 /// on every one. The test is on `x`'s exponent field, read from its bits. The floor moves a `d²` by less than `2⁻⁷⁹`,
-/// half an ulp of `2⁻⁵⁵`.
+/// half an ulp of `2⁻⁵⁵`; the host generator refuses a threshold that decides `N_sub` below `2⁻⁵⁵`
+/// (`super::nsub_table`), so the floor moves a decision only within `2⁻²⁴` relative of an edge.
 #[inline]
 pub fn square(x: f32) -> f32 {
     if x.exponent() < -40 {

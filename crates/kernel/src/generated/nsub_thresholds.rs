@@ -25,6 +25,10 @@ pub const GAMMA_SUB_DEFAULT: f64 = 1.5;
 /// `N_max`'s default (the register's `n_max`; integrator_contract Part 3, R-68).
 pub const N_MAX_DEFAULT: u32 = 64;
 
+/// The least threshold the host generator accepts where it decides `N_sub`, `2⁻⁵⁵` (the register's
+/// `nsub_threshold_least`; R-502): below it the square's floor could decide `N_sub`.
+pub const NSUB_THRESHOLD_LEAST: f32 = 2.7755576e-17;
+
 /// The default sim key's thresholds, `THR[1] … THR[L_max]` at `r_sub`, `gamma_sub` and `N_max`'s defaults, as
 /// f32 bit patterns: the build-time table (R-502).
 pub const DEFAULT_THRESHOLD_BITS: [u32; NSUB_TABLE_MAX] = [
