@@ -66,6 +66,21 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
   evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
   pixels are those that are not a system.
 - **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned. Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **Where the chain stops past the root (R-570).** With levels `L < 0` coarser than the root
+  (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root") a quad's parent chain
+  has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
+  squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
+  (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
+- **The 2 × 2 rule is the only stop (perf review 5625031178 of PR #279, P7; applied per R-369).** The line above's
+  "the cover's smallest common ancestor where one exists" is superseded: the chain stops at the first level at which
+  the viewport lies within at most 2 × 2 ancestor squares, about `⌈log2(cover quads per axis)⌉` levels above the cover,
+  wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
+  ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
+  Part 3).
+- **One definition of the stop (perf review 5625066551 of PR #279, P8; applied per R-369).** The level is the first at
+  which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first level whose
+  square side is at least the viewport's extent, depending on where the view sits; it is not defined as that second
+  level (`principia_scheduler_contract.md` Part 3).
 
 ---
 

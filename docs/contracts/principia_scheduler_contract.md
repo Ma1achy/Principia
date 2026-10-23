@@ -49,6 +49,52 @@ This is the scheduler-side member of the same family as the link-measure honesty
 | How deep you *can* zoom | decode floor + integration floor | physics/precision, emergent |
 | Whether to split *this* quad | `Policy::Tolerance` (`principia_dd_refinement_policy.md`, R-15) | scientific — the adaptive part |
 
+### Infinite zoom-out: levels coarser than the root
+
+*Decided per R-369 by the orchestrator (22 Oct 2026; RQ-535, option (a)), not a human ruling, so that R-570's "cost
+per frame is set by the screen, not by the view's extent" holds on R-537 EX7(a)'s root lattice. ⚑ Physics review is
+required on the addressing, as for EX7; perf reviews the cost.*
+
+- **Levels below 0.** The quadtree that covers the extended parameter plane (R-537 EX7(a)) has levels `L < 0` on an
+  affine chart, with no lower bound. A level-`L` quad with `L < 0` spans `2^(−L) × 2^(−L)` level-0 roots: the quad
+  `(L, i, j)` holds the four quads `(L + 1, 2i + a, 2j + b)`, `a, b ∈ {0, 1}`, the same indexing as at every level
+  `L ≥ 0`, with negative indices allowed (EX7(a)). Its address keeps
+  R-97's frame, the slice plane's own, relative to the plane anchor: a zoom-out changes which addresses are requested,
+  never the addresses themselves. Levels `L ≥ 0`, the roots, and EX7(b)'s canonical maps are unchanged.
+- **Scope.** "An affine chart" above is a chart whose axes are all affine (R-570's latent and flat charts); a chart
+  with a bounded, periodic or pole-crossing axis gains no level `L < 0`, a coarse quad straddling its period or edge
+  being undefined (physics review 5624655553 of PR #279, an observation; applied per R-369).
+- **The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the
+  smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the
+  number of quads in it is set by the screen, not by the view's extent: at every zoom and pan at most
+  `⌈extent / quad size⌉ + 1` per axis. Where the view is aligned so that two covers tile the viewport identically, the
+  cover at 10⁶ × the home view counts the same quads as at home zoom (REQ-SCHED-104).
+- **Which frames it bounds.** The frame that lands a zoom-out, the in-motion `PREVIEW_MODE` cover dispatch, computes no
+  more quads than the cover. At rest, refinement resumes to the screen floor (R-108; `principia_caching_contract.md`
+  Part 5), and the quads computed and resident in view stay within the bound that holds at home zoom, the leaves at the
+  screen floor plus their ancestors (`principia_memory_tiers.md` §3 and §4), never an enumeration of the level-0 roots
+  under the view (REQ-SCHED-104; perf review 5624936602 of PR #279, P1 and P4; applied per R-369). *Was (the cover
+  bullet):* "**The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent: at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104)."
+- **Overflow.** `L` has no lower bound, and past about `2^1023` level-0 roots the f64 per-quad centre and half-width
+  (`principia_deep_zoom.md` §1) overflow. What the addressing does there is a definition requirement (R-72), written by
+  the task that builds `L < 0`: no `inf` or `NaN` reaches a quad's centre, half-width or key (REQ-SCHED-105).
+- **Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4)
+  stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level
+  below the first level whose square side is at least the viewport's extent, depending on where the view sits, about
+  `⌈log2(cover quads per axis)⌉` levels above the cover. That is
+  the only stop, wherever the view sits: it is not the cover's smallest common ancestor, which for a viewport
+  straddling a dyadic line such as `x = 2^m` roots sits about `m` levels higher, and which a viewport straddling a line
+  through the lattice origin never has. Nothing above that level is pinned or walked, so the pinned set and the at-rest
+  count of ancestors are set by the screen, independent of the zoom and the pan (REQ-SCHED-104; perf reviews
+  5624992732, P6, and 5625031178, P7, of PR #279; perf review 5625066551, P8; applied per R-369). *Was (fix round 8):*
+  "stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, the first level whose
+  square side is at least the viewport's extent". *Was:* "**Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4) stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares: the cover's smallest common ancestor, whose square contains the whole viewport, where one exists. Where the viewport straddles a line through the lattice origin (index 0), which every level shares, no single ancestor contains it, and the chain stops at the 2 × 2 block of ancestors there. Nothing above that level is pinned or walked, so the pinned set and the at-rest count of ancestors are finite and grow with the logarithm of the zoom-out (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369)."
+- **Coarser quads are ordinary.** They are scheduled, cached and refined like any other, refinement running down
+  through `L = 0` as the user zooms in; a coarse quad's samples are systems of the plane at its own sample positions,
+  computed as any quad's are. `MAX_REL_DEPTH` and the screen floor stay view-relative.
+- **Rejected:** re-basing the plane's frame on a far zoom-out (against R-97), and a cover outside the quadtree (a second
+  scheduler).
+
 ### `MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)
 
 A **view-relative performance/quality window**: refine at most N levels below the current camera depth. It *follows the camera down*, so infinite zoom works — descend, the window slides with you, always a bounded amount of work below the view. Sensible relative budget is small (≈ 4–8 below the view; the earlier defaults of 8 / 10 / 12–14 were written as *absolute* and conflated "how deep total" with "how much detail below the view").

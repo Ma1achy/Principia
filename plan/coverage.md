@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 49 |
 | ENC | 35 |
-| CHART | 83 |
+| CHART | 85 |
 | INT | 105 |
 | EVT | 31 |
 | PAY | 107 |
 | GEN | 43 |
-| SCHED | 101 |
+| SCHED | 103 |
 | REF | 52 |
 | RENDER | 116 |
 | COL | 158 |
-| GUI | 345 |
+| GUI | 346 |
 | TOOL | 194 |
 | VAL | 198 |
 | PERF | 109 |
 | SYS | 90 |
-| **total** | **1816** |
+| **total** | **1821** |
 
-Of these: 155 calibration, 156 definition, 1505 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,11 +38,11 @@ Of these: 155 calibration, 156 definition, 1505 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 257 |
-| M8 | 390 |
+| M8 | 395 |
 
 ## Sections
 
-1463 sections in 54 files: 1196 yield at least one requirement; 267 yield none and are listed below with the reason.
+1465 sections in 54 files: 1198 yield at least one requirement; 267 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |

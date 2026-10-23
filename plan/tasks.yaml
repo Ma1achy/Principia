@@ -1731,7 +1731,7 @@
   depends_on: [TASK-M6-08, TASK-M6-26]
   needs: [REQ-GUI-001, REQ-SYS-033]
   requirements: [REQ-GUI-010, REQ-GUI-012]
-  reviewers: [code, qa, gui]
+  reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M6-22
   milestone: M6
@@ -2963,7 +2963,7 @@
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
   depends_on: [TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
   needs: []
-  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348]
+  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348, REQ-GUI-357]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-56
@@ -2971,7 +2971,7 @@
   title: "The quadtree past the square: roots tiling the plane, canonical addresses, neighbours across seams, poles and folds, scheduling by the union of images, the statistics unchanged (R-537 EX7) ⚑"
   depends_on: [TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11, TASK-M2-36]
   needs: []
-  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080]
+  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080, REQ-SCHED-104, REQ-SCHED-105]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; perf for the frame quota (R-537 U2)
   pitfalls: []
 - id: TASK-M8-57
@@ -2979,7 +2979,7 @@
   title: "Deep zoom in repeats and far from the root, and seams between images with a shared edge (R-537 EX8) ⚑"
   depends_on: [TASK-M8-56, TASK-M6-08]
   needs: []
-  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183]
+  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183, REQ-CHART-087, REQ-CHART-088]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-58
