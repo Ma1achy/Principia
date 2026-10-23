@@ -819,6 +819,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `shape_vec_js_tol` | 2⁻⁴⁸ ≈ 3.55e-15, the agreement of the shape map's `n` with the IC Inspector's on random ICs, the largest component difference (chart_reference §3.1; TASK-M2-08) | canonical-units | M2 | REQ-CHART-049 |
 | `shape_roundtrip_bound` | 10⁻¹³, the shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (chart_reference §3.2; R-178, R-181; TASK-M2-08) | canonical-units | M2 | REQ-CHART-053 |
 | `eps_phys` | 64, `k` in `ε_phys = k·ε_R`, the round trip's tolerance in `‖·‖_phys`, `ε_R` the precision's machine epsilon (inverse-encode contract Part 4; TASK-M2-16) | canonical-units | M2 | REQ-ENC-024 |
+| `decode_sanity` | 16, `k` in `k·ε_R`, lookup's layer-3 tolerance on the CoM and `Σpᵢ` residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x` of the decoded lock (inverse-encode contract § "Chart-aware validation", "Layer 3's tolerance"; TASK-M2-19) | canonical-units | M2 | REQ-ENC-027 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the

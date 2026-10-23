@@ -175,6 +175,27 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   the current locked $\nu$, or $\nu = 1/2$; momentum → rest start; latent coordinates → 0. Then set the slice
   basis to span the unspecified degrees of freedom.
 
+**The physical form's masses** (R-72, applied per R-369; TASK-M2-19). The section's unit of mass is `M = Σmᵢ = 1`
+(`G = M = I = 1`), so an entry's masses are read as proportions, each divided by their sum, and its positions and
+momenta in those units. Every entered mass is positive and every entered value finite, or the entry is refused
+before the validation layers, naming which; `(m, n)` must be a primitive pair (`principia_chart_reference.md` §4.1)
+and a triple must satisfy `a² + b² = c²` with every side positive, each the Burrau system of its triangle at rest.
+
+**The partial specification's blocks and slice basis** (R-72; REQ-ENC-031; TASK-M2-19). A partial entry gives any of
+the three blocks: the masses, the configuration (the positions) and the momenta. A block not given takes the
+default above, and its latent controls are the unspecified degrees of freedom: the configuration's `z_α, z_β` (on a
+chart not of the Burrau family its default is these controls at 0, the "latent coordinates → 0"), the masses'
+`z_μ1, z_μ2` and the momenta's `z_q0 … z_q3`. So a partial entry leaves 2, 4, 6 or 8 controls unspecified, never
+one; one with all three blocks is the exact form, and leaves the slice alone. The slice is centred on the lock,
+`z₀ = z`, and spans two of the unspecified controls, `q₁ = ê_i` and `q₂ = ê_j`, `i` and `j` the first two unspecified
+in the order `z_α, z_β` (the shape), then `z_μ1, z_μ2` (the masses), then `z_q0, z_q1, z_q2, z_q3` (the momenta, the
+inner pair's `p_ρ` first). Where more than two are unspecified, the rest keep their defaults in `z₀`, frozen, as
+every chart's slice pins the six degrees of freedom it does not sweep (`principia_chart_decoder_contract.md` Part 5).
+The order follows the defaults: the momenta default to the rest start, and a rest start's family, the free-fall
+problem, is spanned by its shape and its mass ratios, so the slice sweeps those before it leaves the rest start;
+among them the shape first, since the masses default to a named point (equal, or Burrau's) and the shape on a
+non-Burrau chart to no point of physical meaning.
+
 **Three inverse cases.**
 
 1. **Exact inverse available**: latent chart, mass simplex, Burrau geometry, free Jacobi momenta. Part 3's closed forms apply.
@@ -244,6 +265,28 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    **There is no coincident-bodies rejection (R-13).** A looked-up IC takes the same path as any pixel: bodies
    within $r_{\mathrm{coll}}$ give a $t = 0$ collision outcome, which is a real outcome. Exactly coincident bodies
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
+
+**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). The controls `z ∈ ℝ⁸` are unbounded: each is a
+logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it
+into before its affine scale, Part 3's clamp space: `s_α = 2α/π`, `s_β = β/π` and `s_qk = ½(q_k/q_max + 1)`, each
+`σ(z_k)` under the default links, and for the masses `μ_k/μ_max = tanh(z_μk)`. The bounds are the clamps', not the
+ends of `[0, 1]`: `s ∈ [ε_z, 1 − ε_z]` for `α` and `β`, `s ∈ [ε_q, 1 − ε_q]` for the momenta and
+`|μ_k/μ_max| ≤ 1 − ε_μ` for the masses, or under another registered link its inverse's own clamp interval (Part 3,
+the registry's inverse), since `σ` and `tanh` reach the ends only at `z = ±∞` and a value between a clamp and an end
+is one the inverse cannot give back unclamped. So layer 1 is the block inverses' clamp test: a control fails it iff
+its `lookup_clamped` bit is set (Part 3), and the coincident inner pair, `ρ̃ = 0`, fails it too (R-13). An entered
+raw `z` is tested on its decode, each control whose decoded value the clamp test fails replaced by the inverse's
+clamped value and every other kept bit for bit. The remedy is the clamp, the moved controls named; a clamp that
+changes the class of `L_z` or `E` (below, "A qualitatively different IC") is rejected, naming the controls. An entered
+state whose `L_z` or `E` is not finite, the coincident pair's `U = −∞` among them, has no class there to change, so
+its clamp stands: there is no coincident-bodies rejection.
+
+**Layer 3's tolerance** (R-71; REQ-ENC-027; TASK-M2-19). "Within tolerance" is `‖Σmᵢrᵢ‖/R_x ≤ k·ε_R` for the CoM and
+`‖Σpᵢ‖/P_x ≤ k·ε_R` for the total momentum, on the lock decoded as a pixel decodes it (the chart's decode at a chart
+landing, else the free decode of `z`), `R_x` and `P_x` Part 4's extents floored at 1 and `ε_R` the precision's machine
+epsilon. `k` is the constants register's `decode_sanity`, proposed by the `decode-sanity` gate over the decode of
+every registered chart and of fuzzed `z` at f64 and f32, and provisional until the M2 gate. Neither a projection nor a
+clamp is defined for layer 3, so a failure is rejected, naming the constraint.
 
 **On failure**, in order of preference:
 
