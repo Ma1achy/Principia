@@ -7,12 +7,15 @@
 //! and the `detail` union alone (payload §2): a collision takes its pair's class and an escape its body's (0-based
 //! inside, R-22), `detail = 3` the triple collision's or the triple ejection's. `t_end_step` plays no part: a collision
 //! at `t_end_step == 0` draws its pair's or the triple collision's colour, and there is no "collision @ t=0" class
-//! (R-445). **Black means nothing has happened yet (R-446):** `bounded`, `running`, `sim_failed` and `decode_failed` of
-//! every `detail`, and a reserved `state` code (6, 7; applied per R-369), all take the bounded / nothing yet class,
-//! `#141418`, never the "not yet" stipple or the hatch, which stay the debug views' and every other field's; there is no
-//! "degenerate" class. **A sample in a forbidden chart region keeps the hatch** `debug_invalid(frag_xy)`, decided from
-//! the chart's classification, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity lane), never from the payload's
-//! `decode_failed` detail (R-446): it is the occupant's first test.
+//! (R-445). **Black means nothing has happened yet (R-446):** `bounded`, `running`, `sim_failed` of every `detail`, and
+//! a reserved `state` code (6, 7; applied per R-369), all take the bounded / nothing yet class, `#141418`, never the
+//! "not yet" stipple or the hatch, which stay the debug views' and every other field's; there is no "degenerate" class.
+//! **The outcome view is a presentation view and draws no hatch (R-467; REQ-COL-108).** A sample the chart classifies
+//! as not a system, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity lane), draws the canvas
+//! background, the uniform its caller sets to the colour its window is cleared to, blank and never a palette colour
+//! (R-470), decided from the chart, never from the payload's `decode_failed` detail (R-446): it is the occupant's first
+//! test. A `decode_failed` sample of every `detail` and tag draws the background too, as a pixel that is not a system
+//! (R-511), with no class: it is in no legend key or share.
 //!
 //! **The swatches** are the occupant's node params, so editing one changes only its class (REQ-COL-002): linear RGB,
 //! the colour slot's space, as a field ramp's `INVALID_COLOUR` is, each default the f32 nearest the sRGB decode of its
@@ -45,7 +48,7 @@ use crate::present::{self, Rgb};
 
 /// One swatch of the outcome palette: the occupant's param; its class's legend label, R-449's display name from
 /// `ledger::display::class_name`; the `state` and `detail` codes of a sample of its class (colour_composition §1.4's
-/// payload column; `bounded`'s for the black class, which `running` and the failures share); its 8-bit sRGB colour;
+/// payload column; `bounded`'s for the black class, which `running`, `sim_failed` and the reserved codes share); its 8-bit sRGB colour;
 /// and whether the value is still a proposal awaiting the human's confirmation (R-71). None is: the colours are the
 /// human's (R-444, R-445, R-447).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -122,8 +125,12 @@ pub const ID: &str = "outcome_state";
 pub enum Shown {
     /// The class at this index of the set shown, in [`SWATCHES`]' order.
     Swatch(usize),
-    /// The hatch, `debug_invalid(frag_xy)`: a sample in a forbidden chart region (R-446; REQ-COL-102).
+    /// The canvas background, `canvas_background()`: a sample the chart classifies as not a system (R-467; REQ-COL-102,
+    /// REQ-COL-108).
     Forbidden,
+    /// The canvas background: a `decode_failed` sample the chart does not classify, drawn as a pixel that is not a
+    /// system (R-511; REQ-COL-108).
+    DecodeFailed,
 }
 
 /// The `state` code of the state named `name`, its index in the ledger's table (payload §2), or 8, no code, for a name
@@ -157,15 +164,20 @@ pub fn class(state: u32, detail: u32) -> usize {
 }
 
 /// What the occupant shows for a sample with `state` and `detail` whose chart classification is `forbidden`
-/// (`ctx.validity.forbidden`): its CPU twin. The forbidden test comes first, so a forbidden sample is hatched whatever its
-/// payload.
+/// (`ctx.validity.forbidden`): its CPU twin. The forbidden test comes first, so a forbidden sample draws the canvas
+/// background whatever its payload (R-467); then a `decode_failed` sample, of every `detail`, draws it too (R-511).
 pub fn shown(state: u32, detail: u32, forbidden: bool) -> Shown {
     if forbidden {
         Shown::Forbidden
+    } else if state == STATE_DECODE_FAILED {
+        Shown::DecodeFailed
     } else {
         Shown::Swatch(class(state, detail))
     }
 }
+
+/// The `state` code of `decode_failed` (payload §2), the ledger's.
+const STATE_DECODE_FAILED: u32 = State::DecodeFailed.code();
 
 /// The default swatches' 8-bit sRGB colours, in [`SWATCHES`]' order.
 pub fn defaults() -> Vec<[u8; 3]> {
@@ -173,10 +185,14 @@ pub fn defaults() -> Vec<[u8; 3]> {
 }
 
 /// The outcome legend's segment for the state `state`, keyed by it (dd_colouring §3.7; render_gui_spec G6): the
-/// classes its samples may take, by index into [`SWATCHES`], over every `detail` code, in order of first appearance.
-/// Every state has one: `bounded`, `running`, the failures and the reserved codes the bounded / nothing yet class.
+/// classes its samples may take, by index into [`SWATCHES`], over every `detail` code, in order of first appearance:
+/// `bounded`, `running`, `sim_failed` and the reserved codes the bounded / nothing yet class; `decode_failed` none, its
+/// samples drawn blank, in no key or share (R-511 Z1).
 pub fn segment(state: u32) -> Vec<usize> {
     let mut out = Vec::new();
+    if state == STATE_DECODE_FAILED {
+        return out;
+    }
     for detail in 0..4 {
         let k = class(state, detail);
         if !out.contains(&k) {

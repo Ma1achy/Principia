@@ -5,6 +5,9 @@
 //!   word binding give (lowering Part 3a); and `has_ensemble()`, read from a uniform, never baked, so toggling E never
 //!   re-bakes (R-145). The uniform is bound in group 0, the assembler's per-frame uniforms (R-343), at the numbers of
 //!   [`uniforms_binding`], written as `PRELUDE_UNIFORMS_GROUP` and `PRELUDE_UNIFORMS_BINDING`;
+//! - `canvas_background()`, the canvas background a presentation view draws a pixel that is not a system in (R-467 D2,
+//!   R-470, R-511; REQ-COL-108): linear RGB, read from the same uniform block, whose caller sets it to the colour its
+//!   window is cleared to ([`uniform_words_with`]);
 //! - `is_absent_nan(x)`, the absence test by bits against the canonical quiet NaN ([`crate::payload::canonical_qnan_bits`];
 //!   lowering Part 3a), never `isnan` (R-114, R-297);
 //! - `range_norm` (render_gui_spec §10.1), its `auto` argument named `auto_range`, `auto` being a WGSL reserved word;
@@ -128,12 +131,20 @@ pub const fn uniforms_binding() -> UniformsBinding {
     }
 }
 
-/// The words of the prelude's uniform block for an ensemble of `e` copies: `has_ensemble`, 1 when `e ≥ 1` and 0 at
-/// E = 0, then three words of padding to the uniform block's 16 bytes (R-145: a computed spread is a real value only
-/// when E ≥ 1, lowering Part 3a). The host writes it each frame; the fragment variant does not change with `e`. The
-/// padding's zeros are interface data, the block's layout; not register constants (REQ-SYS-082).
+/// The words of the prelude's uniform block for an ensemble of `e` copies, its canvas background unset, `(0, 0, 0)`:
+/// [`uniform_words_with`] for a caller that draws no presentation view's background.
 pub fn uniform_words(e: u32) -> [u32; 4] {
-    [u32::from(e >= 1), 0, 0, 0]
+    uniform_words_with(e, [0.0; 3])
+}
+
+/// The words of the prelude's uniform block for an ensemble of `e` copies and the canvas background `background`:
+/// `has_ensemble`, 1 when `e ≥ 1` and 0 at E = 0 (R-145: a computed spread is a real value only when E ≥ 1, lowering
+/// Part 3a), then the background's three linear-RGB channels as f32 bits, filling the block's 16 bytes (R-467 D2: a
+/// render uniform the GUI sets to the colour its window is cleared to; REQ-COL-108). The host writes it each frame;
+/// the fragment variant changes with neither. The layout is interface data; not register constants (REQ-SYS-082).
+pub fn uniform_words_with(e: u32, background: [f32; 3]) -> [u32; 4] {
+    let [r, g, b] = background.map(f32::to_bits);
+    [u32::from(e >= 1), r, g, b]
 }
 
 /// The invalid hatch (REQ-COL-055; R-132, R-136): diagonal stripes, each `half_period` pixels wide across `x + y`,
@@ -198,20 +209,28 @@ const has_ftle: bool = {has_ftle};
 const has_word: bool = {has_word};
 
 // The prelude's per-frame uniforms, in group 0, the assembler's (R-343). `has_ensemble` is 1 when E ≥ 1 and 0 at
-// E = 0: a uniform, not a bake, so toggling E never re-bakes the variant (R-145).
+// E = 0: a uniform, not a bake, so toggling E never re-bakes the variant (R-145). `background_r`, `_g` and `_b` are the
+// canvas background, linear RGB, the colour the caller's window is cleared to (R-467 D2; REQ-COL-108).
 const PRELUDE_UNIFORMS_GROUP: u32 = {group}u;
 const PRELUDE_UNIFORMS_BINDING: u32 = {binding}u;
 struct PreludeUniforms {{
     has_ensemble: u32,
-    _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
+    background_r: f32,
+    background_g: f32,
+    background_b: f32,
 }}
 @group({group}) @binding({binding}) var<uniform> prelude_uniforms: PreludeUniforms;
 
 // Whether the ensemble is on (E ≥ 1), read from the uniform (R-145). At E = 0 the read side's `ensemble_spread` is the
 // canonical quiet NaN (lowering Part 3a).
 fn has_ensemble() -> bool {{ return prelude_uniforms.has_ensemble != 0u; }}
+
+// The canvas background (R-467 D2, R-470, R-511; REQ-COL-108): what a presentation view draws for a pixel that is not
+// a system and for a `decode_failed` sample, blank, no palette colour, read from the uniform its caller sets to the
+// colour its window is cleared to. Linear RGB, returned unchanged, so it renders the same bits on every backend.
+fn canvas_background() -> vec3<f32> {{
+    return vec3<f32>(prelude_uniforms.background_r, prelude_uniforms.background_g, prelude_uniforms.background_b);
+}}
 
 // Whether `x` is the absence sentinel, the canonical quiet NaN: an exact bit comparison, reliable where `isnan` is
 // not under fast-math (lowering Part 3a; R-114, R-297).

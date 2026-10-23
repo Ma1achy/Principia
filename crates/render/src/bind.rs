@@ -709,7 +709,8 @@ fn entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
     }
 }
 
-/// Uploads `payload` and the uniforms, the prelude's for `context`'s ensemble and `context`'s own, and binds them: group
+/// Uploads `payload` and the uniforms, the prelude's for `context`'s ensemble and the default canvas background
+/// (`crate::present::canvas_background`, R-467 D2) and `context`'s own, and binds them: group
 /// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block, the per-quad
 /// frames ([`FRAME_BINDING`]) and the samples' chart classification ([`CHART_BINDING`]).
 pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -> Bound {
@@ -737,7 +738,10 @@ pub fn upload_with(
     let words = |w: &[u32]| -> Vec<u8> { w.iter().flat_map(|x| x.to_le_bytes()).collect() };
     let prelude_block = buffer(
         "prelude uniforms",
-        &words(&prelude::uniform_words(context.grid.e)),
+        &words(&prelude::uniform_words_with(
+            context.grid.e,
+            crate::present::canvas_background(),
+        )),
         uniform,
     );
     let context_block = buffer("context uniforms", &words(&context.words()), uniform);

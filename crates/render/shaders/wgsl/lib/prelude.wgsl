@@ -9,20 +9,28 @@ const has_ftle: bool = true;
 const has_word: bool = true;
 
 // The prelude's per-frame uniforms, in group 0, the assembler's (R-343). `has_ensemble` is 1 when E ≥ 1 and 0 at
-// E = 0: a uniform, not a bake, so toggling E never re-bakes the variant (R-145).
+// E = 0: a uniform, not a bake, so toggling E never re-bakes the variant (R-145). `background_r`, `_g` and `_b` are the
+// canvas background, linear RGB, the colour the caller's window is cleared to (R-467 D2; REQ-COL-108).
 const PRELUDE_UNIFORMS_GROUP: u32 = 0u;
 const PRELUDE_UNIFORMS_BINDING: u32 = 0u;
 struct PreludeUniforms {
     has_ensemble: u32,
-    _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
+    background_r: f32,
+    background_g: f32,
+    background_b: f32,
 }
 @group(0) @binding(0) var<uniform> prelude_uniforms: PreludeUniforms;
 
 // Whether the ensemble is on (E ≥ 1), read from the uniform (R-145). At E = 0 the read side's `ensemble_spread` is the
 // canonical quiet NaN (lowering Part 3a).
 fn has_ensemble() -> bool { return prelude_uniforms.has_ensemble != 0u; }
+
+// The canvas background (R-467 D2, R-470, R-511; REQ-COL-108): what a presentation view draws for a pixel that is not
+// a system and for a `decode_failed` sample, blank, no palette colour, read from the uniform its caller sets to the
+// colour its window is cleared to. Linear RGB, returned unchanged, so it renders the same bits on every backend.
+fn canvas_background() -> vec3<f32> {
+    return vec3<f32>(prelude_uniforms.background_r, prelude_uniforms.background_g, prelude_uniforms.background_b);
+}
 
 // Whether `x` is the absence sentinel, the canonical quiet NaN: an exact bit comparison, reliable where `isnan` is
 // not under fast-math (lowering Part 3a; R-114, R-297).

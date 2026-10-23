@@ -4,14 +4,16 @@
 //!
 //! - REQ-COL-101 (`qa_m2_32_outcome_view_*`): on the GPU, a scene of QA's own, 40 samples in one row with the
 //!   descriptor's other bits contaminated (PIT-9): every class draws its swatch exactly, collisions and a triple
-//!   collision at `t_end_step == 0` included (R-445); running, `sim_failed` and `decode_failed` of every `detail`, the
-//!   reserved codes 6 and 7 and bounded draw `#141418` exactly; a sample REQ-COL-102's field marks forbidden draws the
-//!   hatch, pixel-identical to a render of `debug_invalid` alone and within 1e-5 of its CPU mirror, whatever its
-//!   payload (a valid escape, `decode_failed` of every `detail`, running, bounded, `sim_failed`, a collision at t = 0);
-//!   a `decode_failed` sample beside it with the same payload, not forbidden, draws `#141418`. The forbidden samples
-//!   straddle the lane's word boundary (samples 31 and 32). Controls: running in the stipple, `sim_failed` in the
-//!   hatch, `decode_failed` white, a reserved code hatched, the hatch decided from `decode_failed`'s detail, the field
-//!   ignored, and a collision at t = 0 drawn orange each fail. The CPU twin (`outcome::shown`) and the rank greyscale and
+//!   collision at `t_end_step == 0` included (R-445); running, `sim_failed` of every `detail`, the reserved codes 6 and
+//!   7 and bounded draw `#141418` exactly; a sample REQ-COL-102's field marks forbidden draws the canvas background,
+//!   the harness's recorded uniform (`golden_scene::BACKGROUND`), never the hatch (R-467 D14, REQ-COL-108; amended by
+//!   qa for TASK-M2-34), pixel-identical to a render of `canvas_background()` alone and the f32 of its typed-in sRGB
+//!   decode, whatever its payload (a valid escape, `decode_failed` of every `detail`, running, bounded, `sim_failed`, a
+//!   collision at t = 0); a `decode_failed` sample of every `detail`, not forbidden, draws the background too (R-511;
+//!   amended by qa for TASK-M2-34). The forbidden samples straddle the lane's word boundary (samples 31 and 32).
+//!   Controls: running in the stipple, `sim_failed` in the hatch, `sim_failed` blank, `decode_failed` white,
+//!   `decode_failed` `#141418` (as before R-511), a reserved code hatched, the forbidden lane hatched or `#141418`, the
+//!   field ignored, and a collision at t = 0 drawn orange each fail. The CPU twin (`outcome::shown`) and the rank greyscale and
 //!   hue mode take (`outcome::class`, R-448, `K = 9`) are checked over every `state`, `detail` and field value.
 //! - REQ-COL-102 (`qa_m2_32_chart_class_*`): `engine::chart_class::forbidden` is `Some(true)` exactly where the chart's
 //!   `validate` returns anything but `Valid` (layers 2 and 3: `Project`, `Clamp`, `Reject`) or `Φ`, `Chart::map`, gives
@@ -33,8 +35,9 @@
 //!   the dot, 0.196 from the hatch, 0.132 from the tint and 0.320 from the grey; C = 0.123 in gamut at L = 0.72 at each
 //!   listed hue, and the largest chroma in gamut at every hue 0.1224, near 199.8°.
 //! - REQ-COL-002 (`qa_m2_32_goldens_*`): the re-rendered goldens decoded and read tile by tile against the typed-in
-//!   table: `m1-outcome/outcome` holds every row REQ-COL-002's verify names, each in its colour, the forbidden one in the
-//!   hatch, and no white, orange-at-t = 0, stipple or navy; `outcome_edited` differs from it only in escape body 2's
+//!   table: `m1-outcome/outcome` holds every row REQ-COL-002's verify names, each in its colour, the forbidden one and
+//!   the `decode_failed` ones in the canvas background (R-467, R-504, R-511 Z5; amended by qa for TASK-M2-34), and no
+//!   white, orange-at-t = 0, stipple, navy or hatch; `outcome_edited` differs from it only in escape body 2's
 //!   tiles; `m1-synthetic/known_escaper` draws the triple ejection purple and the running sample `#141418`.
 //!
 //! Each test registers its negative control (R-176).
@@ -226,8 +229,9 @@ fn tau() -> f64 {
 // ── REQ-COL-101: the CPU twin and the rank ──────────────────────────────────────────────────────────────────────
 
 /// Checks a twin `shown` and a rank `class` over every `state` code 0–7, `detail` 0–3 and field value against R-444
-/// to R-448: forbidden first, the hatch whatever the payload; else the class of [`rank`], whose swatch is the typed-in
-/// table's.
+/// to R-448, R-467 and R-511: forbidden first, the canvas background whatever the payload; then `decode_failed` of
+/// every `detail`, the background as a pixel that is not a system, `Shown::DecodeFailed` (R-511; amended by qa for
+/// TASK-M2-34); else the class of [`rank`], whose swatch is the typed-in table's.
 fn check_twin(shown: &dyn Fn(u32, u32, bool) -> Shown, class: &dyn Fn(u32, u32) -> usize) {
     assert_eq!(outcome::K, 9, "K is not R-448's 9");
     for state in 0..8 {
@@ -241,8 +245,16 @@ fn check_twin(shown: &dyn Fn(u32, u32, bool) -> Shown, class: &dyn Fn(u32, u32) 
             assert_eq!(
                 shown(state, detail, true),
                 Shown::Forbidden,
-                "state {state}, detail {detail}, forbidden: not the hatch"
+                "state {state}, detail {detail}, forbidden: not the background"
             );
+            if state == DECODE_FAILED {
+                assert_eq!(
+                    shown(state, detail, false),
+                    Shown::DecodeFailed,
+                    "state {state}, detail {detail}, not forbidden: not decode_failed's background (R-511)"
+                );
+                continue;
+            }
             match shown(state, detail, false) {
                 Shown::Swatch(k) => assert_eq!(
                     outcome::SWATCHES[k].srgb8,
@@ -274,6 +286,26 @@ negative_control!(
         &outcome::class
     )
 );
+
+/// R-511's control: a twin that draws `decode_failed` in bounded / nothing yet's swatch, as before R-511, fails (added
+/// by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_m2_32_outcome_view_twin_decode_failed_black {
+    use super::*;
+    negative_control!(
+        qa_m2_32_outcome_view_twin_and_rank,
+        "a twin that draws decode_failed in bounded's swatch fails (R-511)",
+        expected = "state 5, detail 0, not forbidden: not decode_failed's background",
+        check_twin(
+            &|s, d, f| if !f && s == DECODE_FAILED {
+                Shown::Swatch(0)
+            } else {
+                outcome::shown(s, d, f)
+            },
+            &outcome::class
+        )
+    );
+}
 
 #[cfg(feature = "controls")]
 mod qa_m2_32_outcome_view_twin_and_rank_eleven {
@@ -327,11 +359,12 @@ negative_control!(
 
 // ── REQ-COL-101 / REQ-COL-103: the GPU scene ────────────────────────────────────────────────────────────────────
 
-/// What a row must draw: the class of this rank, flat, or the hatch.
+/// What a row must draw: the class of this rank, flat, or the canvas background (R-467, R-511; amended by qa for
+/// TASK-M2-34).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Want {
     Class(usize),
-    Hatch,
+    Background,
 }
 
 /// QA's rows: `(state, detail, t_end_step, forbidden)`; 40 samples, the forbidden ones at 30–38, across the lane's
@@ -369,7 +402,7 @@ const ROWS: [(u32, u32, u32, bool); 40] = [
     (RUNNING, 1, 3, false),
     (ESCAPE, 1, 500, false),
     (COLLISION, 0, 9, false),
-    // REQ-COL-102's field set: the hatch, whatever the payload.
+    // REQ-COL-102's field set: the canvas background, whatever the payload (R-467).
     (ESCAPE, 1, 120, true),
     (DECODE_FAILED, 0, 0, true),
     (DECODE_FAILED, 1, 0, true),
@@ -379,14 +412,14 @@ const ROWS: [(u32, u32, u32, bool); 40] = [
     (COLLISION, 3, 0, true),
     (BOUNDED, 1, 1000, true),
     (SIM_FAILED, 1, 40, true),
-    // The twin of row 32, not forbidden: black, so only the field tells them apart.
+    // The twin of row 32, not forbidden: the background as well (R-511), the field playing no part for it.
     (DECODE_FAILED, 1, 0, false),
 ];
 
 fn want(row: (u32, u32, u32, bool)) -> Want {
     let (state, detail, _, forbidden) = row;
-    if forbidden {
-        Want::Hatch
+    if forbidden || state == DECODE_FAILED {
+        Want::Background
     } else {
         Want::Class(rank(state, detail))
     }
@@ -499,15 +532,31 @@ fn no_params(_: &str) -> Option<Vec<f64>> {
     None
 }
 
-/// The hatch alone, the GPU's `debug_invalid`: the forbidden rows' reference.
-fn hatch_probe(h: &GpuHarness) -> Vec<[f32; 4]> {
+/// The canvas background alone, the GPU's `canvas_background()`: the forbidden and `decode_failed` rows' reference
+/// (amended by qa for TASK-M2-34; it was the hatch's).
+fn background_probe(h: &GpuHarness) -> Vec<[f32; 4]> {
     render(
         h,
         Occupant::Custom(
-            "fn colour(ctx: Ctx) -> vec3<f32> { return debug_invalid(ctx.frag_xy); }\n".to_owned(),
+            "fn colour(ctx: Ctx) -> vec3<f32> { return canvas_background(); }\n".to_owned(),
         ),
         &no_params,
     )
+}
+
+/// The canvas background the harness records (`golden_scene::BACKGROUND`, R-467 D2, R-504), decoded here; it is no
+/// palette colour (R-470, R-477 C9) and not `#141418`, so the controls drawing it so can fail.
+fn background() -> u32 {
+    let [r, g, b] = validation::golden_scene::BACKGROUND;
+    let hex = u32::from(r) << 16 | u32::from(g) << 8 | u32::from(b);
+    for c in CLASSES {
+        assert!(
+            hex != c.2 && hex != c.3,
+            "the background {hex:06X} is the palette colour of {}",
+            c.1
+        );
+    }
+    hex
 }
 
 /// The outcome occupant with `to` inserted after its `detail` read: a control's altered occupant.
@@ -542,12 +591,12 @@ fn tile(image: &[[f32; 4]], x: u32) -> Vec<((u32, u32), [f32; 4])> {
 }
 
 /// Checks `image` against the rows: a class's swatch from `set` (the sRGB column or the variant's) bit-exact, as the
-/// f32 of its linear decode the fragment returns unchanged; the hatch bit-identical to `probe` and within 1e-5 of the
-/// CPU's `debug_invalid`; alpha 1.
+/// f32 of its linear decode the fragment returns unchanged; the background bit-identical to `probe` and to the f32 of
+/// the recorded background's linear decode, and never the hatch at that pixel; alpha 1.
 fn check_scene(what: &str, image: &[[f32; 4]], probe: &[[f32; 4]], variant: bool) {
     for (x, &row) in ROWS.iter().enumerate() {
         let w = want(row);
-        for (((px, py), got), (_, hatch)) in
+        for (((px, py), got), (_, bg)) in
             tile(image, x as u32).into_iter().zip(tile(probe, x as u32))
         {
             let ok = got[3] == 1.0
@@ -558,12 +607,15 @@ fn check_scene(what: &str, image: &[[f32; 4]], probe: &[[f32; 4]], variant: bool
                         (0..3).all(|c| got[c] == lin[c] as f32)
                             && [got[0], got[1], got[2]].map(|c| encode8(f64::from(c))) == rgb8(hex)
                     }
-                    Want::Hatch => {
-                        let cpu = render::present::debug_invalid([
+                    Want::Background => {
+                        let lin = linear(background());
+                        let hatch = render::present::debug_invalid([
                             f64::from(px) + 0.5,
                             f64::from(py) + 0.5,
                         ]);
-                        got == hatch && (0..3).all(|c| (f64::from(got[c]) - cpu[c]).abs() <= 1e-5)
+                        got == bg
+                            && (0..3).all(|c| got[c] == lin[c] as f32)
+                            && !(0..3).all(|c| (f64::from(got[c]) - hatch[c]).abs() <= 1e-5)
                     }
                 };
             let (s, d, t, f) = row;
@@ -581,7 +633,7 @@ fn qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched() {
     check_scene(
         "event",
         &render(&h, built_in(), &no_params),
-        &hatch_probe(&h),
+        &background_probe(&h),
         false,
     );
 }
@@ -593,7 +645,7 @@ fn control(colour: Occupant) {
     check_scene(
         "event",
         &render(&h, colour, &no_params),
-        &hatch_probe(&h),
+        &background_probe(&h),
         false,
     );
 }
@@ -627,8 +679,11 @@ mod qa_m2_32_failures_decode_failed_white {
         qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
         "decode_failed drawn in the old degenerate white fails (R-446)",
         expected = "row 19 (state 5, detail 0",
-        control(inserted(
-            "if (s == STATE_DECODE_FAILED) { return vec3<f32>(0.838799, 0.838799, 0.8713671); }"
+        // Amended by qa for TASK-M2-34: `decode_failed` is now tested beside the lane, ahead of the `detail` read
+        // (R-511), so the white goes there.
+        control(replaced(
+            FORBIDDEN_TEST,
+            "if (ctx.sample.state == STATE_DECODE_FAILED) { return vec3<f32>(0.838799, 0.838799, 0.8713671); }\n    if (ctx.validity.forbidden) {"
         ))
     );
 }
@@ -646,17 +701,22 @@ mod qa_m2_32_failures_reserved_hatched {
     );
 }
 
+/// The occupant's forbidden test, the chart's lane, ahead of everything (R-467), with `decode_failed` beside it
+/// (R-511): the controls replace it. Amended by qa for TASK-M2-34 (it read the forbidden test alone).
+#[cfg(feature = "controls")]
+const FORBIDDEN_TEST: &str =
+    "if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {";
+
+/// R-511's control: `decode_failed` drawn bounded's `#141418`, as before R-511, fails (amended by qa for TASK-M2-34;
+/// it was R-446's "the hatch decided from decode_failed's detail", which R-511 leaves no pixel to show).
 #[cfg(feature = "controls")]
 mod qa_m2_32_failures_hatch_from_detail {
     use super::*;
     negative_control!(
         qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
-        "the hatch decided from decode_failed's detail, not the chart, fails (R-446)",
-        expected = "row 20 (state 5, detail 1",
-        control(replaced(
-            "if (ctx.validity.forbidden) {",
-            "if (ctx.validity.forbidden || (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u)) {"
-        ))
+        "decode_failed drawn #141418, as before R-511, fails",
+        expected = "row 19 (state 5, detail 0",
+        control(replaced(FORBIDDEN_TEST, "if (ctx.validity.forbidden) {"))
     );
 }
 
@@ -667,7 +727,53 @@ mod qa_m2_32_failures_field_ignored {
         qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
         "an occupant that ignores REQ-COL-102's field draws a forbidden escape in its swatch",
         expected = "row 30 (state 0, detail 1, t 120, forbidden true)",
-        control(replaced("if (ctx.validity.forbidden) {", "if (false) {"))
+        control(replaced(
+            FORBIDDEN_TEST,
+            "if (ctx.sample.state == STATE_DECODE_FAILED) {"
+        ))
+    );
+}
+
+/// R-467 D14's and REQ-COL-108's controls: the forbidden lane drawn in the hatch, or `#141418` instead of the
+/// background, and `sim_failed` drawn blank, each fail (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_m2_32_failures_forbidden_hatched {
+    use super::*;
+    negative_control!(
+        qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
+        "the forbidden lane drawn in the hatch, as before R-467, fails",
+        expected = "row 30 (state 0, detail 1, t 120, forbidden true)",
+        control(replaced(
+            FORBIDDEN_TEST,
+            "if (ctx.validity.forbidden) { return debug_invalid(ctx.frag_xy); }\n    if (ctx.sample.state == STATE_DECODE_FAILED) {"
+        ))
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_failures_forbidden_black {
+    use super::*;
+    negative_control!(
+        qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
+        "the forbidden lane drawn #141418 instead of the background fails",
+        expected = "row 30 (state 0, detail 1, t 120, forbidden true)",
+        control(replaced(
+            FORBIDDEN_TEST,
+            "if (ctx.validity.forbidden) { return vec3<f32>(0.00699541, 0.00699541, 0.009134059); }\n    if (ctx.sample.state == STATE_DECODE_FAILED) {"
+        ))
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_failures_sim_failed_blank {
+    use super::*;
+    negative_control!(
+        qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
+        "sim_failed drawn blank, as decode_failed is, fails (R-511)",
+        expected = "row 15 (state 4, detail 0",
+        control(inserted(
+            "if (s == STATE_SIM_FAILED) { return canvas_background(); }"
+        ))
     );
 }
 
@@ -705,7 +811,7 @@ fn variant_params(
 #[test]
 fn qa_m2_32_oklab_variant_renders_its_swatches() {
     let h = gpu();
-    let probe = hatch_probe(&h);
+    let probe = background_probe(&h);
     let default = render(&h, built_in(), &no_params);
     check_scene("default", &default, &probe, false);
     let zero = render(&h, built_in(), &variant_params(Some(0), None));
@@ -725,7 +831,7 @@ negative_control!(
             "let v = uniforms.swatch_set == 2u;",
         );
         let one = render(&h, altered, &variant_params(Some(1), None));
-        check_scene("swatch_set 1", &one, &hatch_probe(&h), true);
+        check_scene("swatch_set 1", &one, &background_probe(&h), true);
     }
 );
 
@@ -1333,11 +1439,12 @@ fn store(c: Rgb) -> [u8; 3] {
     c.map(|x| (x.clamp(0.0, 1.0) * 255.0).round() as u8)
 }
 
-/// What a golden tile must show.
+/// What a golden tile must show: a flat colour, or the canvas background (R-467, R-511; amended by qa for TASK-M2-34,
+/// it was the hatch).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Tile {
     Flat(u32),
-    Hatch,
+    Background,
 }
 
 /// Checks a golden's tiles, 8 px square in one row, against `want`, and that no tile shows a colour R-444 to R-446
@@ -1353,20 +1460,23 @@ fn check_golden(case: &str, width: u32, px: &[[u8; 4]], want: &[Tile]) {
                 let ok = p[3] == 255
                     && match *w {
                         Tile::Flat(h) => got == store(linear(h)),
-                        Tile::Hatch => {
-                            got == store(render::present::debug_invalid([
-                                f64::from(x) + 0.5,
-                                f64::from(y) + 0.5,
-                            ]))
-                        }
+                        Tile::Background => got == store(linear(background())),
                     };
                 assert!(
                     ok,
                     "{case}: tile {k} pixel ({x}, {y}) is {p:02X?}, not {w:?}"
                 );
                 assert!(
-                    *w == Tile::Hatch || !removed.contains(&got),
+                    !removed.contains(&got),
                     "{case}: tile {k} shows a colour R-444 to R-446 removed"
+                );
+                // No presentation pixel is the hatch's (R-467; REQ-COL-108).
+                assert!(
+                    got != store(render::present::debug_invalid([
+                        f64::from(x) + 0.5,
+                        f64::from(y) + 0.5,
+                    ])),
+                    "{case}: tile {k} pixel ({x}, {y}) is the hatch's"
                 );
             }
         }
@@ -1421,8 +1531,8 @@ fn outcome_tiles(samples: &[(&str, u32, u32)], forbidden: usize) -> Vec<Tile> {
     rows.iter()
         .enumerate()
         .map(|(k, &(s, d, _))| {
-            if k == forbidden {
-                Tile::Hatch
+            if k == forbidden || s == DECODE_FAILED {
+                Tile::Background
             } else {
                 Tile::Flat(CLASSES[rank(s, d)].2)
             }
@@ -1452,6 +1562,59 @@ fn qa_m2_32_goldens_outcome() {
     check_golden("m1-outcome/outcome_edited", we, &edited, &edited_tiles);
 }
 
+/// R-511 Z5's and R-467's controls: the reference read with `decode_failed` in `#141418` (before R-511), or with the
+/// forbidden tile in the hatch (before R-467), fails (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_m2_32_goldens_outcome_before_r511 {
+    use super::*;
+    negative_control!(
+        qa_m2_32_goldens_outcome,
+        "the reference read with decode_failed in #141418, as before R-511, fails",
+        expected = "m1-outcome/outcome: tile 16",
+        {
+            use validation::golden_scene::{OUTCOME_FORBIDDEN, OUTCOME_SAMPLES};
+            let tiles: Vec<Tile> = outcome_tiles(&OUTCOME_SAMPLES, OUTCOME_FORBIDDEN as usize)
+                .into_iter()
+                .enumerate()
+                .map(|(k, t)| {
+                    if OUTCOME_SAMPLES[k].0 == "decode_failed" && k != OUTCOME_FORBIDDEN as usize {
+                        Tile::Flat(CLASSES[0].2)
+                    } else {
+                        t
+                    }
+                })
+                .collect();
+            let (w, base) = golden("m1-outcome/outcome");
+            check_golden("m1-outcome/outcome", w, &base, &tiles);
+        }
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_goldens_outcome_hatch_wanted {
+    use super::*;
+    negative_control!(
+        qa_m2_32_goldens_outcome,
+        "a reference whose forbidden tile is hatched, as before R-467, fails",
+        expected = "m1-outcome/outcome: tile 22 pixel (176, 0)",
+        {
+            use validation::golden_scene::{OUTCOME_FORBIDDEN, OUTCOME_SAMPLES};
+            let tiles = outcome_tiles(&OUTCOME_SAMPLES, OUTCOME_FORBIDDEN as usize);
+            let (w, mut base) = golden("m1-outcome/outcome");
+            for y in 0..8u32 {
+                for x in 176..184u32 {
+                    let c = store(render::present::debug_invalid([
+                        f64::from(x) + 0.5,
+                        f64::from(y) + 0.5,
+                    ]));
+                    base[(y * w + x) as usize] = [c[0], c[1], c[2], 255];
+                }
+            }
+            check_golden("m1-outcome/outcome", w, &base, &tiles);
+        }
+    );
+}
+
 negative_control!(
     qa_m2_32_goldens_outcome,
     "the reference read as the M1 table, decode_failed in the white, fails",
@@ -1462,7 +1625,7 @@ negative_control!(
             .into_iter()
             .zip(OUTCOME_SAMPLES)
             .map(|(t, s)| {
-                if s.0 == "decode_failed" && t != Tile::Hatch {
+                if s.0 == "decode_failed" {
                     Tile::Flat(WHITE)
                 } else {
                     t
@@ -1597,9 +1760,16 @@ mod qa_m2_32_forbidden_read_from_chart {
         expected = "reads a chart-lane identifier",
         {
             let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
-            let src = outcome::WGSL.replace(
-                "if (ctx.validity.forbidden) {",
-                "if (ctx.validity.forbidden || ctx.chart.chart_id == 7u) {",
+            // Amended by qa for TASK-M2-34: the occupant's first test now holds `decode_failed` beside the lane (R-511).
+            let src = outcome::WGSL.replacen(
+                "ctx.validity.forbidden",
+                "ctx.validity.forbidden || ctx.chart.chart_id == 7u",
+                1,
+            );
+            assert_ne!(
+                src,
+                outcome::WGSL,
+                "the occupant reads no ctx.validity.forbidden"
             );
             check_forbidden_lane(&lanes, &src)
         }

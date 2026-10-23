@@ -30,17 +30,24 @@
 //! the ledger's and the register's constants (declared ends, `ε`, `x₀`, the period) are literals. **Polarity** ([`Polarity`]) is
 //! per field: `low` reverses the compacted value, `1 − b`, so the field's low end is bright (colour_composition §1.2).
 //!
-//! **The order of the tests** (render_gui_spec §10.1's, R-436): first the unset value's own bit test (`d_min`'s `+∞`,
-//! "not yet"), then the invalid lane: the field's validity, a stored sentinel's own test among it, then the non-finite
-//! guard, both in [`ScalarField`]'s predicate, then the compaction's styled values (`log`'s `x < 0`); then the
-//! compaction and the ramp. So no compaction and no comparison ever takes a non-finite value.
+//! **The order of the tests** (render_gui_spec §10.1's, R-436): first the sample itself, a pixel that is not a system
+//! (`ctx.validity.forbidden`, REQ-COL-102) or a `decode_failed` sample, which draws the canvas background (R-467, R-511),
+//! and a `sim_failed` sample or a reserved state (6, 7), which takes the invalid treatment whatever its payload holds
+//! (R-467, R-511); then the unset value's own bit test (`d_min`'s `+∞`, "not yet"), then the invalid lane: the field's validity, a
+//! stored sentinel's own test among it, then the non-finite guard, both in [`ScalarField`]'s predicate, then the
+//! compaction's styled values (`log`'s `x < 0`); then the compaction and the ramp. So no compaction and no comparison
+//! ever takes a non-finite value.
 //!
-//! **The invalid lane.** A field ramp is not a debug view, so it masks (render_gui_spec §13, validity first): an
-//! invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
-//! invalid treatment, by default the hatched invalid pattern (`debug_invalid(frag_xy)`, REQ-COL-055; R-132),
-//! overridable per node: the node's `INVALID_OVERRIDE` param, 1 to draw its `INVALID_COLOUR` instead, both declared in
-//! the occupant's header (gui_state_contract §3), so an override is a uniform edit that recompiles nothing (lowering
-//! Part 3). `INVALID_COLOUR` defaults to R-16's plain magenta, `#FF00FF`, as linear RGB.
+//! **A field ramp is a presentation view and draws no hatch (R-467; REQ-COL-108).** It masks (render_gui_spec §13,
+//! validity first): a pixel that is not a system and a `decode_failed` sample draw the canvas background,
+//! `canvas_background()`, the uniform its caller sets to the colour its window is cleared to (R-467 D2, R-511); a
+//! `sim_failed` sample, a reserved state, an invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
+//! invalid treatment, by default the presentation views' invalid colour, bounded / nothing yet's `#141418`
+//! (`PRESENT_INVALID`, R-467 D4), overridable per node: the node's `INVALID_OVERRIDE` param, 1 to draw its
+//! `INVALID_COLOUR` instead, both declared in the occupant's header (gui_state_contract §3), so an override is a uniform
+//! edit that recompiles nothing (lowering Part 3). `INVALID_COLOUR` defaults to R-16's plain magenta, `#FF00FF`, as
+//! linear RGB. A non-finite value is also noted, `note_non_finite()`, the assembler's hook, which only the debug view's
+//! variant reads (REQ-COL-109): it draws that sample in the NaN / Inf style.
 //!
 //! **Either slot** (colour_composition §4.1; gui_state_contract §4: the only constraint is the output signature). Its
 //! WGSL ([`FieldRamp::wgsl`]) is a colour occupant, `fn colour(ctx: Ctx) -> vec3<f32>`, for a [`Map::Ramp`], and a
@@ -53,6 +60,7 @@
 
 use std::fmt::Write as _;
 
+use ledger::display::State;
 use ledger::gen::numeric::{float, half_width, half_width_wgsl, non_finite, End, NON_FINITE};
 use ledger::gen::{self as generate, catalogue};
 use ledger::schema::{Entry, FieldType};
@@ -86,6 +94,10 @@ pub struct ScalarField {
     sentinel: Option<f64>,
     /// The unset value's f32 bits: the CPU twin's.
     unset_bits: Option<u32>,
+    /// Whether the value `v` is non-finite where the lane's predicate holds, a WGSL `bool` over `ctx` and `v`: an `f32`
+    /// field's NaN or `±∞` (R-436), which the debug view draws in the NaN / Inf style (REQ-COL-109); `None` for a field
+    /// with no non-finite values.
+    pub non_finite: Option<String>,
     /// The field is an `f32`, so a non-finite value, the absence NaN or a stored `±∞`, is one of its invalid values
     /// (R-436).
     float: bool,
@@ -138,13 +150,20 @@ impl ScalarField {
         // tier gate's guard (`has_ftle && ctx.sample.ftle_valid`, REQ-RENDER-015, R-255), which the canonical-NaN test
         // it replaces did not need (the absence test reads nothing, lowering Part 3a; R-436).
         let mut valid = Vec::new();
+        let mut non_finite = None;
         if lane_valid != "true" || !is_float {
-            valid.push(lane_valid);
+            valid.push(lane_valid.clone());
         }
         if is_float {
             valid.push(format!(
                 "(bitcast<u32>(v) & {NON_FINITE:#010x}u) != {NON_FINITE:#010x}u"
             ));
+            let bits = format!("(bitcast<u32>(v) & {NON_FINITE:#010x}u) == {NON_FINITE:#010x}u");
+            non_finite = Some(if lane_valid == "true" {
+                bits
+            } else {
+                format!("({lane_valid}) && {bits}")
+            });
         }
         // The CPU twin's stored sentinel (R-136), the one the lane's predicate tests (the word's truncation is its
         // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" style ahead of the validity (R-280,
@@ -172,6 +191,7 @@ impl ScalarField {
             unset,
             sentinel,
             unset_bits,
+            non_finite,
             float: is_float,
         })
     }
@@ -187,6 +207,14 @@ impl ScalarField {
     /// Whether `x` is the field's unset value (R-271), by its bits.
     pub fn is_unset(&self, x: f32) -> bool {
         self.unset_bits == Some(x.to_bits())
+    }
+
+    /// Whether the stored value `x`, read with the read side's validity `gate`, is non-finite (R-436): the CPU twin of
+    /// [`ScalarField::non_finite`], `(lane_valid) && bits`, for an `f32` field. The lane's predicate holds only where
+    /// `gate` does and `x` is not the lane's unset value (`d_min`'s `+∞`, R-271), which the predicate excludes; a stored
+    /// sentinel is finite, so the bits exclude it.
+    pub fn is_non_finite(&self, x: f32, gate: bool) -> bool {
+        gate && self.float && non_finite(x) && !self.is_unset(x)
     }
 }
 
@@ -540,11 +568,12 @@ impl Map {
     }
 }
 
-/// A field ramp's invalid treatment as a node sets it: the default hatched pattern, or an override colour.
+/// A field ramp's invalid treatment as a node sets it: the presentation views' default, or an override colour.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Invalid {
-    /// `debug_invalid(frag_xy)`, the hatched invalid pattern (REQ-COL-055; R-132): the default.
-    Pattern,
+    /// `PRESENT_INVALID`, bounded / nothing yet's `#141418` (R-467 D4; REQ-COL-108): the default, in place of the hatch
+    /// a presentation view no longer draws.
+    Default,
     /// A flat colour, linear RGB: the per-node override.
     Colour([f64; 3]),
 }
@@ -567,6 +596,9 @@ pub struct FieldRamp {
 /// What a field ramp shows for one value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shown {
+    /// The canvas background, `canvas_background()`: a pixel that is not a system or a `decode_failed` sample (R-467,
+    /// R-511), whatever its value ([`FieldRamp::shown_in`]).
+    Blank,
     /// The invalid treatment: NaN, a stored `±∞` that is no unset value (R-436), a stored sentinel, or `log`'s styled
     /// negative value.
     Invalid,
@@ -646,20 +678,40 @@ impl FieldRamp {
         )
     }
 
-    /// The invalid treatment's `return`, the pattern unless `INVALID_OVERRIDE` is 1.
+    /// The invalid treatment's `return`, the presentation views' `#141418` unless `INVALID_OVERRIDE` is 1 (R-467 D4).
     const INVALID_RETURN: &'static str =
-        "return select(debug_invalid(ctx.frag_xy), uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);";
+        "return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);";
 
-    /// The body's first lines, `v` read, then the unset value's and the invalid lane's tests, each returning `unset`
-    /// and `invalid`.
-    fn guards(&self, unset: &str, invalid: &str) -> String {
+    /// The blank test's `return` in a colour occupant and a post: the canvas background (R-467, R-511).
+    const BLANK_RETURN: &'static str = "return canvas_background();";
+
+    /// The body's first lines: `v` read; then the sample's own tests, a pixel that is not a system or a `decode_failed`
+    /// sample, returning `blank` (R-467, R-511), and a `sim_failed` sample or a reserved state (6, 7), returning
+    /// `invalid` whatever its payload holds (R-467, R-511); the unset value's, returning `unset`; and the invalid
+    /// lane's, which notes a non-finite value for the debug view (`note_non_finite()`, REQ-COL-109) and returns
+    /// `invalid`.
+    fn guards(&self, blank: &str, unset: &str, invalid: &str) -> String {
         let mut out = format!("    let v = {};\n", self.field.value);
+        let _ = writeln!(
+            out,
+            "    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {{ {blank} }}"
+        );
+        let _ = writeln!(
+            out,
+            "    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {{ {invalid} }}"
+        );
         if let Some(u) = &self.field.unset {
             let _ = writeln!(out, "    if ({u}) {{ {unset} }}");
         }
+        let note = self
+            .field
+            .non_finite
+            .as_ref()
+            .map(|n| format!("if ({n}) {{ note_non_finite(); }}\n        "))
+            .unwrap_or_default();
         let _ = write!(
             out,
-            "    if ({}) {{\n        {invalid}\n    }}\n",
+            "    if ({}) {{\n        {note}{invalid}\n    }}\n",
             self.invalid_wgsl()
         );
         out
@@ -678,8 +730,9 @@ impl FieldRamp {
         match &self.map {
             Map::Ramp(ramp) => format!(
                 "// A field ramp of `{}` (colour_composition §1.2; render::colour::field_ramp): the `{}` compaction, \
-                 polarity {polarity},\n// then `{}`, with the invalid lane, the hatched pattern unless INVALID_OVERRIDE \
-                 is 1 (REQ-COL-001; R-132).\n{}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
+                 polarity {polarity},\n// then `{}`, with the invalid lane, #141418 unless INVALID_OVERRIDE is 1, and \
+                 the canvas background\n// for a pixel that is not a system (REQ-COL-001, REQ-COL-108; R-467, R-511).\n\
+                 {}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
                 ramp.name(),
@@ -687,6 +740,7 @@ impl FieldRamp {
                 self.compaction.uniforms(),
                 ramp.uniforms(),
                 self.guards(
+                    Self::BLANK_RETURN,
                     "return debug_not_yet(ctx.frag_xy);",
                     Self::INVALID_RETURN
                 ),
@@ -694,28 +748,31 @@ impl FieldRamp {
             ),
             Map::Lightness => format!(
                 "// A field ramp of `{}` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the \
-                 `{}`\n// compaction, polarity {polarity}. An unset or invalid sample returns 0: its style is drawn by \
-                 the ramp's post.\n{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
+                 `{}`\n// compaction, polarity {polarity}. A blank, unset or invalid sample returns 0: its style is \
+                 drawn by the ramp's post.\n{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
                 self.compaction.uniforms(),
-                self.guards("return 0.0;", "return 0.0;"),
+                self.guards("return 0.0;", "return 0.0;", "return 0.0;"),
             ),
         }
     }
 
     /// The post that draws the ramp's styles over the combiner's output (colour_composition §4.1, greyscale mode's
-    /// post): the "not yet" style at the field's unset value, the invalid treatment, the pattern unless
+    /// closing post): the canvas background for a pixel that is not a system and a `decode_failed` sample (R-467,
+    /// R-511), the "not yet" style at the field's unset value, the invalid treatment, `#141418` unless
     /// `INVALID_OVERRIDE` is 1, where the value is invalid, and every other sample's colour passed on unchanged. A
     /// brightness ramp needs it, since a lightness can draw neither style; a colour ramp draws its own.
     pub fn style_post(&self) -> String {
         format!(
-            "// The styles of the field ramp of `{}` (colour_composition §4.1; render::colour::field_ramp): \"not yet\" \
-             and the\n// invalid lane over the combiner's output, the hatched pattern unless INVALID_OVERRIDE is 1; \
-             every other colour as it is.\n{}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{\n{}    return rgb;\n}}\n",
+            "// The styles of the field ramp of `{}` (colour_composition §4.1; render::colour::field_ramp): the \
+             background, \"not yet\"\n// and the invalid lane over the combiner's output, #141418 unless \
+             INVALID_OVERRIDE is 1; every other colour as it is.\n{}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> \
+             {{\n{}    return rgb;\n}}\n",
             self.field.field,
             Self::invalid_uniforms(),
             self.guards(
+                Self::BLANK_RETURN,
                 "return debug_not_yet(ctx.frag_xy);",
                 Self::INVALID_RETURN
             )
@@ -725,6 +782,25 @@ impl FieldRamp {
     /// [`FieldRamp::shown_at`] at the header's [`Reads::HEADER`].
     pub fn shown(&self, x: f32, gate: bool) -> Shown {
         self.shown_at(x, gate, Reads::HEADER)
+    }
+
+    /// What the ramp shows for a sample whose chart classification is `forbidden` (`ctx.validity.forbidden`) and whose
+    /// `state` is `state`, its stored value `x` read with the read side's validity `gate`, at the run-time values
+    /// `reads`: the CPU twin of [`FieldRamp::wgsl`]'s whole order, the blank test first ([`Shown::Blank`], R-467,
+    /// R-511), then the failed test (a `sim_failed` sample or a reserved state, [`Shown::Invalid`]), then
+    /// [`FieldRamp::shown_at`].
+    pub fn shown_in(&self, x: f32, gate: bool, reads: Reads, forbidden: bool, state: u32) -> Shown {
+        if forbidden {
+            return Shown::Blank;
+        }
+        // The WGSL's `state > STATE_DECODE_FAILED`: the reserved codes, and any past the field's eight.
+        match State::from_code(state) {
+            Some(State::DecodeFailed) => Shown::Blank,
+            Some(State::SimFailed | State::Reserved6 | State::Reserved7) | None => Shown::Invalid,
+            Some(State::Escape | State::Bounded | State::Collision | State::Running) => {
+                self.shown_at(x, gate, reads)
+            }
+        }
     }
 
     /// What the ramp shows for the stored value `x` with the read side's validity `gate` and the run-time values
@@ -745,8 +821,8 @@ impl FieldRamp {
     }
 
     /// The colour the ramp draws at the pixel `frag_xy` for the stored value `x` with the read side's validity `gate`,
-    /// at the header's [`Reads::HEADER`], its invalid lane overridden with `invalid` (linear RGB; [`Invalid::Pattern`]
-    /// for the hatch): the CPU twin of a
+    /// at the header's [`Reads::HEADER`], its invalid lane overridden with `invalid` (linear RGB; [`Invalid::Default`]
+    /// for `#141418`): the CPU twin of a
     /// colour ramp's `colour`, and of a brightness ramp's post at a styled sample. `None` for a brightness ramp at a
     /// sample it places, whose colour is the combiner's.
     pub fn colour_at(
@@ -768,10 +844,24 @@ impl FieldRamp {
         invalid: Invalid,
         reads: Reads,
     ) -> Option<Rgb> {
-        match (self.shown_at(x, gate, reads), &self.map) {
+        self.colour_of(self.shown_at(x, gate, reads), frag_xy, invalid, [0.0; 3])
+    }
+
+    /// The colour the ramp draws at the pixel `frag_xy` for what it shows there, `shown`, its invalid lane overridden
+    /// with `invalid` and the canvas background `background` (linear RGB): `None` for a brightness ramp at a sample it
+    /// places, whose colour is the combiner's.
+    pub fn colour_of(
+        &self,
+        shown: Shown,
+        frag_xy: [f64; 2],
+        invalid: Invalid,
+        background: Rgb,
+    ) -> Option<Rgb> {
+        match (shown, &self.map) {
+            (Shown::Blank, _) => Some(background),
             (Shown::NotYet, _) => Some(present::debug_not_yet(frag_xy)),
             (Shown::Invalid, _) => Some(match invalid {
-                Invalid::Pattern => present::debug_invalid(frag_xy),
+                Invalid::Default => present::present_invalid(),
                 Invalid::Colour(c) => c,
             }),
             (Shown::Ramp(t), Map::Ramp(r)) => Some(r.colour(t)),

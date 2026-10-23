@@ -46,6 +46,30 @@ fn debug_not_yet(frag_xy: vec2<f32>) -> vec3<f32> {
     return select(DBG_NOT_YET, DBG_NOT_YET_DOT, ((p.x | p.y) & 2) == 0);
 }
 
+// The NaN / Inf style's two colours (REQ-COL-110; R-467 D6, R-505; proposed, R-71, by TASK-M2-34 for the M2 gate,
+// R-504): indigo #6000F4, OKLab L 0.486, and dark green #004000, L 0.322, as linear RGB, each channel the f32 nearest
+// sRGB's decode of its 8-bit code. Not magenta: each is farther than τ = 0.101 from #FF00FF, unsimulated and under each
+// colour-vision simulation (R-505). The CPU mirror is `crate::present::NAN_INF_SRGB8`.
+const DBG_NAN_INF_INDIGO: vec3<f32> = vec3<f32>(0.116970666, 0.0, 0.9046612);
+const DBG_NAN_INF_GREEN: vec3<f32> = vec3<f32>(0.0, 0.051269457, 0.0);
+
+// The debug view's style for a non-finite sample, NaN or ±∞ (R-467 clause 3, D6; REQ-COL-110, proposed): a
+// checkerboard of 4 × 4 px squares from the pixel `p = ⌊frag_xy⌋`, in framebuffer (physical) pixels, as the hatch's
+// and the stipple's are, indigo where bit 2 of `p.x` and of `p.y` agree, dark green where they differ. Squares, not
+// `debug_invalid`'s diagonal stripes nor `debug_not_yet`'s dots; never one flat colour. Drawn only by the debug view,
+// never by a presentation view (R-467). Linear RGB.
+fn debug_nan_inf(frag_xy: vec2<f32>) -> vec3<f32> {
+    let p = vec2<i32>(floor(frag_xy));
+    return select(DBG_NAN_INF_INDIGO, DBG_NAN_INF_GREEN, (((p.x ^ p.y) >> 2u) & 1) == 1);
+}
+
+// The presentation views' invalid colour (R-467 clause 2, D4; REQ-COL-108): bounded / nothing yet's black #141418
+// (colour_composition §1.4), as linear RGB, each channel the f32 nearest sRGB's decode of its 8-bit code, the outcome
+// palette's `bounded` swatch's value. A presentation view draws it for a `sim_failed` sample, a reserved `state` code,
+// a non-finite value and a ramp's or compaction's invalid value, in place of the hatch, unless the node overrides its
+// invalid colour (colour_composition §3). The CPU mirror is `crate::present::PRESENT_INVALID_SRGB8`.
+const PRESENT_INVALID: vec3<f32> = vec3<f32>(0.00699541, 0.00699541, 0.009134059);
+
 // Categorical: class `i` of `n`. With n ≤ 8, the Okabe–Ito palette, cycling (i mod 8); with n > 8, the golden angle
 // for every class, the prelude's `hue_wheel` at frac(i · φ_g) turns, so adjacent classes sit ≈ 137.5° apart
 // (dd_colouring §3.7). The wheel's OKLCH lightness and chroma (R-72) are the ledger's, in gamut at every hue.
