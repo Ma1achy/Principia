@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*39 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*42 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -157,5 +157,8 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-PERF-074 — record the measured thresholds with their method
 - [ ] REQ-PERF-078 — the proposal shows the total_substeps distribution (p1 to p99) of hover ICs and the per-frame cost of the chosen budget against the 60 fps frame
 - [ ] REQ-PERF-080 — the proposal shows visible-quad counts measured over the deep-zoom scenarios and the resulting buffer size with the defined per-quad record
+- [ ] REQ-PERF-106 — cargo xtask bench precision-runs-frame, on the human's Mac (R-186), with its prin profile output in the PR: frame time p50/p95/p99/max and frac_frames_over_41.7ms while a pin's four runs are in flight on a chaotic IC, at T = 50 and at T = 200, equal the no-pin baseline within noise (REQ-SYS-060's form and thresholds; no new number); the f64 runs run on the inspector worker
+- [ ] REQ-PERF-107 — cargo xtask bench result-job-frame, on the human's Mac (R-186), with its prin profile output in the PR: frame time p50/p95/p99/max and frac_frames_over_41.7ms during motion while an f64 job and, separately, an f32 job run equal the no-job baseline within noise (REQ-SYS-060's form; no new number)
+- [ ] REQ-PERF-109 — result_job_memory (in the form of REQ-TOOL-078): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (controls: a writer that holds the payload until the end grows with nx·ny and fails; a job that allocates before budgeting fails)
 - [ ] REQ-SYS-060 — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker
 <!-- /list:benchmarks -->

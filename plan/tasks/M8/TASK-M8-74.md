@@ -1,9 +1,9 @@
 # TASK-M8-74 — Result, the job: one job.json run in the app or by `prin batch`, f32 or f64, the result folder and its payload, cancel and resume (R-572)
 
 - **Milestone:** M8
-- **Closes:** REQ-SYS-087, REQ-SYS-088, REQ-SYS-089, REQ-SYS-090, REQ-TOOL-196
-- **Depends on:** TASK-M8-02, TASK-M4-17, TASK-M7-44
-- **Needs (earlier milestones):** REQ-SYS-027, REQ-TOOL-181
+- **Closes:** REQ-SYS-087, REQ-SYS-088, REQ-SYS-089, REQ-SYS-090, REQ-TOOL-196, REQ-PERF-107, REQ-PERF-108, REQ-PERF-109
+- **Depends on:** TASK-M8-02, TASK-M4-17, TASK-M7-44, TASK-M5-24
+- **Needs (earlier milestones):** REQ-SYS-027, REQ-TOOL-181, REQ-PERF-003, REQ-PERF-010, REQ-SCHED-043
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-3
 - **Size:** ~600 lines, the tests included
@@ -38,6 +38,11 @@ A Result runs a view's region at full precision, end to end, as one batch job (R
 - Review checklist (physics reviewer) — `principia_results.md` § 3.3 lists every payload field with its type and source (the SimState payload, R-135's reduction fields), the file's layout and schema version, and every payload input of the stain library is present (REQ-SYS-090).
 - `cargo test -p engine result_image_run_block` — a result's image squeezed to tier 1 only still carries its run block and imports as the identity on SimConfig and RenderState; control: a run block assigned to tier 2 is dropped at that size and fails; the tier table stays exhaustive (REQ-TOOL-196).
 
+- `cargo xtask bench result-job-frame` — frame time p50/p95/p99/max and frac_frames_over_41.7ms during motion while an f64 job and, separately, an f32 job run equal the no-job baseline within noise (REQ-SYS-060's form; no new number); run on the human's Mac (R-186), its `prin profile` output in the PR (REQ-PERF-107; perf review 5627960807 of PR #283, P4).
+- `cargo test -p engine result_job_resources` — the f64 pool's size is the available cores less the configured reserve, at least one by default (control: a pool of every core fails); at T = 200 an f32 row runs as more than one dispatch and the payload is bitwise the same at two chunk sizes (control: one dispatch per row to T fails the dispatch count); the f32 live-state buffer's size is the rows in flight × nx × (E+1) × sizeof(SimState) (control: a buffer sized for nx·ny fails) (REQ-PERF-108; P4).
+- `cargo test -p engine result_job_memory` — peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny); a job whose budget exceeds the available memory is refused with its reason and allocates nothing (controls: a writer that holds the payload until the end grows with nx·ny and fails; a job that allocates before budgeting fails) (REQ-PERF-109; P4).
+
 ## Notes
 - R-572 (21 Oct 2026). REQ-SYS-007 is amended by it: §7.3's reduced tier and its per-copy tier are unparked for this payload only; §7.2's VRAM tiling stays parked.
 - The pilot estimate and the window are TASK-M8-75's.
+- Fix round 9 of PR #283 (perf review 5627960807, P4; applied per R-369): the job's cost to the live view, its pool and dispatch bounds, and its streamed, budgeted memory are REQ-PERF-107 to REQ-PERF-109 (`principia_results.md` §3.2); it depends on TASK-M5-24, which closes REQ-SCHED-043. *Was:* "- **Depends on:** TASK-M8-02, TASK-M4-17, TASK-M7-44" and "- **Needs (earlier milestones):** REQ-SYS-027, REQ-TOOL-181" (this PR's own task).
