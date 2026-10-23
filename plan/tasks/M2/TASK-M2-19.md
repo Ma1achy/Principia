@@ -1,7 +1,7 @@
 # TASK-M2-19 — Lookup: the exact and partial forms and the three-layer validation ladder
 
 - **Milestone:** M2
-- **Closes:** REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031, REQ-ENC-036, REQ-ENC-037
+- **Closes:** REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031, REQ-ENC-036, REQ-ENC-037, REQ-ENC-038
 - **Depends on:** TASK-M2-17, TASK-M2-18
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -33,8 +33,9 @@ Lookup exists CPU-side: the exact-IC form ((m, n), a triple, a raw z, or physica
 - Doc review (physics): layer 1 names its space and bounds consistently with z ∈ ℝ⁸ passing through σ / tanh; physics reviewer approved (REQ-ENC-023).
 - `cargo xtask gate decode-sanity` — measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and proposes the layer-3 tolerance above them; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-027).
 - Definition: the slice-basis rule for more than two unspecified DOF written into inverse_encode_contract Part 6 and approved by the physics reviewer (REQ-ENC-031).
-- Definition: layer 1's zero class of `L_z` and `E` in floating point, a band relative to each value's scale, written into inverse_encode_contract § "Chart-aware validation" and approved by the physics reviewer; `cargo test -p engine lookup_validation_ladder_zero_band` gives one collinear `L_z = 0` state one verdict at 64 orientations (REQ-ENC-036).
-- `cargo test -p engine lookup_validation_ladder_zero_band_measure` — measures `C`'s rounding of `L_z` and `E` over gauge images and the decode's, and proposes the zero-class band's `k` at least 4× above it and 4× below the smallest class change a clamp makes; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-037).
+- Definition: layer 1's zero class of `L_z` and `E` in floating point, a band that absorbs rounding only, relative to the bound on each value's rounding on the entered state's extents, written into inverse_encode_contract § "Chart-aware validation" and approved by the physics reviewer; `cargo test -p engine lookup_validation_ladder_zero_band` gives one collinear `L_z = 0` state one verdict at 64 orientations (REQ-ENC-036).
+- `cargo test -p engine lookup_validation_ladder_zero_band_measure` — measures the rounding of `C`'s `L_z` and `E` over gauge images, and of the clamps' moves and the values after them over clamped `z`, against their bounds, and proposes the zero-class band's `k` at least 4× above both; reviewer-checked, confirmed by the human at the M2 gate, recorded in `decisions.md` (REQ-ENC-037).
+- Definition: the class a layer-1 clamp moves, each clamped control's `ΔL_z` and `ΔE` in closed form with its direction, written into inverse_encode_contract § "Chart-aware validation" and approved by the physics reviewer; `cargo test -p engine lookup_validation_ladder_clamp` rejects `β`'s clamp at a collinear start with `p_λ ≠ 0` and a `q₁` clamp at `L_z = 0`, and accepts `β`'s with `p_λ = 0`, `q₀`'s and the extreme-mass-ratio rest starts', boosted or not (REQ-ENC-038).
 
 ## Notes
 - Gap G16: the projection metric and the "qualitatively different IC" criterion.
@@ -42,3 +43,4 @@ Lookup exists CPU-side: the exact-IC form ((m, n), a triple, a raw z, or physica
 - RQ-95 ruled: R-113 — REQ-ENC-019 is split: this task asserts only that lookup has no rejection branch; the t = 0 collision label at dispatch is REQ-ENC-033, closed at M3 with REQ-EVT-002 (TASK-M3-09). This settles Gap G24.
 - Closes, for gaps the corpus leaves open: REQ-ENC-031 (R-72 definition) (classification accepted by R-132).
 - REQ-ENC-036 (R-72 definition) and REQ-ENC-037 (R-71 calibration) added by physics review 5630998530 of PR #284, P2 (applied per R-369).
+- REQ-ENC-038 (R-72 definition) added, and REQ-ENC-036 and REQ-ENC-037 restated, by qa's fix round 4 of PR #284 (option A, applied per R-369): the band absorbs rounding only and the clamped state is classed by the rule. The two acceptance lines' earlier text: *Was:* "a band relative to each value's scale" (REQ-ENC-036) and "measures `C`'s rounding of `L_z` and `E` over gauge images and the decode's, and proposes the zero-class band's `k` at least 4× above it and 4× below the smallest class change a clamp makes" (REQ-ENC-037).

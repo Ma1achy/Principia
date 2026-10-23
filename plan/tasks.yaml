@@ -602,7 +602,7 @@
   title: "Lookup: the exact and partial forms and the three-layer validation ladder"
   depends_on: [TASK-M2-17, TASK-M2-18]
   needs: []
-  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031, REQ-ENC-036, REQ-ENC-037]
+  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031, REQ-ENC-036, REQ-ENC-037, REQ-ENC-038]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-20
