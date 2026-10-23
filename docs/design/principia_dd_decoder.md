@@ -63,8 +63,8 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 
 | Decision | Branch input, and its form | Where |
 |---|---|---|
-| `M01_TINY` | `M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise is RQ-298's) | `kernel::decode::mass` |
-| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division (applied meanwhile under RQ-298, which holds the "explicit `fma`" form) | `kernel::decode::invariant::infeasible` |
+| `M01_TINY` | `M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011) | `kernel::decode::mass` |
+| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible` |
 | `L_max`'s four steps down (the warp's edge columns) | the same exact sign at each step | `kernel::chart::invariant::l_max` |
 | the seed, on a decoded configuration | `z_α ≤ 0`, read on the control's bits | `kernel::decode::invariant::decoded_seed` |
 | the seed, on the Burrau family | `3ν ≤ 1`, by a two-sum of `2ν + ν`, comparisons only | `kernel::chart::burrau::seed` |
@@ -118,6 +118,12 @@ decoration, is a check for the second-backend parity run, not settled here. So `
 link, at its onset crossings, is a branch input for the parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079).
 That test compares tags on identical emitted masses: a disagreement under `z` fuzz is a fork only where the two
 backends' masses are bit-identical; where the masses differ, it is precision (REQ-VAL-079).
+
+**The premise fails (R-547, closing RQ-298).** CI's lavapipe evaluates an explicit `fma` as a rounded product and an
+add, so the form above is not one every backend rounds alike. Under R-547 a branch input that must agree across
+backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal
+(gpu_determinism_note rules 2 and 6). `M₀₁`'s form is rewritten to that rule and re-proved by TASK-M2-48
+(REQ-DEC-011, REQ-VAL-017); the two paragraphs above stand as the record of the form built until then.
 
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 

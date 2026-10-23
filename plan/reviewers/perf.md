@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*38 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*42 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -145,6 +145,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-TOOL-174 — xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for the fixture tier2_typical_stain (R-522), which TASK-M7-44 adds: a built-in colour mode other than the default with every parameter off its default, a fixed ramp window, two overlays on, and the line system holding the Grid preset and one contour set of three levels; a record that does not fit reports not embedded and writes no partial tile
 - [ ] REQ-PERF-068 — count pipeline objects created at startup and measure startup time
 - [ ] REQ-PERF-069 — count display-res and render-res targets allocated by the built render graph and record k_d, k_r
+- [ ] REQ-PERF-096 — cargo xtask bench print_cost_classes on the human's Mac (R-186): every registered node timed at 1024² at its defaults and at its presets' heaviest settings (median of 60 timed runs after 10 warm-up runs, GPU timestamps), the class from the heavier, the table recorded in the PR and in the registry; controls: a node classed from its defaults where a preset's heavier setting crosses a threshold fails, and a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`
 
 **M8**
 - [ ] REQ-TOOL-078 — exporting 600 frames keeps peak memory flat (independent of frame count); the UI stays responsive; cancel stops the job
@@ -156,5 +157,8 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-PERF-074 — record the measured thresholds with their method
 - [ ] REQ-PERF-078 — the proposal shows the total_substeps distribution (p1 to p99) of hover ICs and the per-frame cost of the chosen budget against the 60 fps frame
 - [ ] REQ-PERF-080 — the proposal shows visible-quad counts measured over the deep-zoom scenarios and the resulting buffer size with the defined per-quad record
+- [ ] REQ-PERF-106 — cargo xtask bench precision-runs-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no pin and once with a pin on a chaotic near-field IC whose four runs are re-issued each time they finish, so that four runs are in flight throughout the window, at T = 50 and at T = 200; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-pin baseline within noise (REQ-SYS-060's form; no new number); the f64 runs run on the inspector worker; the bench fails if no runs were in flight at the window's end
+- [ ] REQ-PERF-107 — cargo xtask bench result-job-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no job and once each while a Result job runs at f64 and at f32, the job being that scenario's view at T = 200, E and r_coll as the view has them, one copy per pixel, on a square grid whose side the bench doubles from 256 until the job's pilot estimate (results §3.1) exceeds the window; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-job baseline within noise (REQ-SYS-060's form; no new number); the bench fails if the job is not still running when the window ends
+- [ ] REQ-PERF-109 — cargo xtask bench result-job-memory, on the human's Mac (R-186), its own process, with its output in the PR (REQ-TOOL-078's export-memory form): peak process memory of the same job at 256² and at 1024², with all copies stored, is flat (independent of nx·ny) (control: a writer that holds the payload until the end grows with nx·ny and fails)
 - [ ] REQ-SYS-060 — frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker
 <!-- /list:benchmarks -->

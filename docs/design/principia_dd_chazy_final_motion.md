@@ -101,14 +101,20 @@ separation:
   **transient**, never "bounded so far".
 - **E < 0 rules out H, HP and P.** Total dispersal needs non-negative energy.
 
-**Which half the rule enforces.** The E > 0 half is enforced by §3.2's order: transient (step 3) comes before
+**Both halves are enforced (R-548).** The E > 0 half by §3.2's order: transient (step 3) comes before B-stable,
+OS-candidate and B-so-far, and B-stable requires `E < 0` (RQ-318, option (c)), so an E > 0 state never reads them.
+The E < 0 half by a guard: H, HP, P and the two-stage H each require `E ≥ 0` (RQ-325, option (b)), so an E < 0 state
+that passes their geometric tests falls through to the later steps. prin-rs PR #32's `classify` enforced only the
+E > 0 half: under its default hierarchy gate the dispersal step (§3.2 step 1) and the two-stage H (step 2) never
+tested E, and its "0 wrong commits on E < 0" (§4.1) is a measurement. The review of this port constructed an E < 0
+state that `classify` reads H and then P (an equal-mass homothetic equilateral expansion with E = −0.1 U_0, at 2.9 and
+3.2–3.5 times its initial size, turning back at 10 times); under the guard it reads B-so-far, and it is a fixture
+(§12.2 item 11). For equal-mass free fall and for Burrau (3, 4, 5) the dispersal step cannot fire in any case. *Was:*
+"**Which half the rule enforces.** The E > 0 half is enforced by §3.2's order: transient (step 3) comes before
 B-stable, OS-candidate and B-so-far, so an E > 0 state never reads them. The E < 0 half is not enforced: under the
 default hierarchy gate, the dispersal step (§3.2 step 1) and the two-stage H (step 2) never test E. That no E < 0
-trajectory committed wrongly in prin-rs PR #32 (§4.1) is a measurement, not a guarantee. The review of this port
-constructed an E < 0 state that reads H and then P (an equal-mass homothetic equilateral expansion with E = −0.1 U_0,
-at 2.9 and 3.2–3.5 times its initial size, turning back at 10 times), and showed that for equal-mass free fall and for
-Burrau (3, 4, 5) the dispersal step cannot fire, while the two-stage H is not excluded. Whether the classifier should
-enforce the E < 0 half is RQ-325.
+trajectory committed wrongly in prin-rs PR #32 (§4.1) is a measurement, not a guarantee. … Whether the classifier
+should enforce the E < 0 half is RQ-325." (the elided words are kept above).
 
 ---
 
@@ -161,27 +167,34 @@ The labels, as the spec gives them (spec 01 §2), with `K` and `U` as in §3.1:
 
 A two-stage break-up (escaper gone and its former partners unbound to each other) is H.
 
-**The order `classify` evaluates them in** (prin-rs PR #32, `src/chazy.rs::classify`, transcribed; `settled` is §3.6's
-settling test, always true with settling off):
+**The order the classifier evaluates them in** (prin-rs PR #32, `src/chazy.rs::classify`, transcribed, with R-548's
+three changes marked: RQ-318 (c), RQ-324 (b), RQ-325 (b); `settled` is §3.6's settling test, always true with settling
+off):
 
-1. **Dispersal.** If every pair separation exceeds `h_far · R_0` and `settled` (under the tidal gate, §3.6: if
-   `E > 0`), and every pair recedes (`v_r > 0`), take each pair's band. If no pair is bound (no band `−1`), the label is
+1. **Dispersal.** If `E ≥ 0` (R-548, RQ-325), every pair separation exceeds `h_far · R_0` and `settled` (under the
+   tidal gate, §3.6: if `E > 0`), and every pair recedes (`v_r > 0`), take each pair's band. If no pair is bound (no band `−1`), the label is
    **H** when no pair is in the band, **HP** when one or two are, **P** when all three are. Otherwise go on.
 2. **Hierarchy.** Take the body `b` most separated from its pair `(i, j)`. The pair's binding is a **sign**: `−1` if
    `K_pair < U_pair`, else the pair's band (`0` or `+1`). The gate is `ρ_b > h_far` and `settled` (under the tidal gate,
    §3.6's tidal test). If the gate passes and the outer body recedes:
    - pair bound and outer band `+1`: **HE**;
    - pair bound and outer band `0`: **PE**;
-   - pair bound and outer band `−1`: **excursion**;
-   - pair not bound (band `0` or `+1`) and outer band `0` or `+1`: **H**, the two-stage break-up;
+   - pair bound and outer band `−1`: **B-stable** if step 4's test holds (B-stable before excursion, R-548, RQ-324),
+     otherwise **excursion**;
+   - pair not bound (band `0` or `+1`), outer band `0` or `+1`, and `E ≥ 0` (R-548, RQ-325): **H**, the two-stage
+     break-up;
    - otherwise (pair not bound, outer bound) go on.
 3. **Transient.** If `E > 0`: **transient**.
-4. **B-stable.** If Mardling–Aarseth is on, the pair is bound, the outer body is bound to it (`K_out < U_out`) and
-   `ma_stable(i, j, b)` holds (§3.5): **B-stable**.
+4. **B-stable.** If `E < 0` (R-548, RQ-318), Mardling–Aarseth is on, the pair is bound, the outer body is bound to it
+   (`K_out < U_out`) and `ma_stable(i, j, b)` holds (§3.5): **B-stable**.
 5. **OS-candidate.** If `I_max / I > os_ratio`: **OS-candidate**.
 6. Otherwise **B-so-far**.
 
-The spec's table and the code's order differ in two places:
+The spec's table and prin-rs's code differed in two places, and R-548 rules both, adding the `E ≥ 0` guard of steps
+1 and 2 (§2; RQ-325). Under the ruled order an E < 0 state that passes step 1's geometric tests goes on to step 2;
+whether it may read HE, PE or excursion there is RQ-521. *Was:* "The order `classify` evaluates them in
+(prin-rs PR #32, `src/chazy.rs::classify`, transcribed; …)", steps 1, 2 and 4 with no energy test and step 2's
+"pair bound and outer band `−1`: **excursion**", and "The spec's table and the code's order differ in two places:":
 
 - **B-stable against excursion.** The table lists B-stable before excursion; the code returns excursion inside the
   hierarchy step (step 2), before it reaches B-stable (step 4). A bound, Mardling–Aarseth-stable hierarchy whose outer
@@ -191,12 +204,16 @@ The spec's table and the code's order differ in two places:
   and B-stable on the incoming half, flickering on the status map (§10.6). Both fold to B in `chazy_final` (§5.3), so
   the final-motion maps do not change; `chazy_class` and `chazy_status` do. The fixture
   `a_mardling_aarseth_stable_hierarchy_is_b_stable…` (§12.1) passes under both because its outer `v_r` is exactly 0.
-  Which order holds is RQ-324.
+  **Ruled (R-548, RQ-324, option (b)): the table's order, B-stable before excursion.** A bound, Mardling–Aarseth-stable
+  hierarchy reads B-stable throughout its outer orbit; excursion means "far out, bound, and not certified stable".
+  A fixture with a receding outer body past `h_far` (`v_r ≠ 0`) lets the ordering test fail (§12.2 item 10). *Was:*
+  "Which order holds is RQ-324."
 - **B-stable against transient.** The table lists B-stable before transient; the code tests transient first. They
   differ only for a Mardling–Aarseth-stable hierarchy with `E > 0`, and no such state has been shown to exist: the
   review bounded the outer potential's departure from its monopole at about 0.11 `|E_pair|` at quadrupole order, and
   the largest `E / |E_pair|` found over 400,000 random states and a hill-climb under the B-stable conditions was
-  −0.9986. Which order holds is RQ-318.
+  −0.9986. **Ruled (R-548, RQ-318, option (c)): the code's order, transient before B-stable, with B-stable requiring
+  `E < 0` in the rule** (step 4). *Was:* "Which order holds is RQ-318."
 
 **When `I_max` is read.** `classify` documents its latch as read before the current playhead updates it, and
 `examples/chazy_map.rs` calls it so; `examples/chazy_probe.rs`, the validation, updates `I_max` first. The two give
@@ -284,7 +301,8 @@ labels are H, HP, P, HE, PE and B-stable (`Motion::committed`).
 ## 4. Validation
 
 All numbers in this section are prin-rs PR #32's (`results/chazy/README.md` §3–§5, `probe_n600_seed1000.txt`,
-`probe_n600_seed50000.txt`, `map_*_n48.txt`).
+`probe_n600_seed50000.txt`, `map_*_n48.txt`). They were taken under `classify`'s order, which R-548 changes in three
+places (§3.2), so the excursion and B-stable shares here and in §10.6 are the code's; they are kept as the record.
 
 ### 4.1 The probe
 
@@ -339,7 +357,9 @@ run only with settling on, where settling binds and it equals `h_far = 5` (`resu
 | excursion | 8.07% | 18.49% | 13.02% | 4.86% |
 
 No H and no transient appear: free fall has E < 0. No transient is enforced by the rule's order (transient needs
-E > 0); no H, HP or P is what was observed on every sample, which the rule does not guarantee (§2, RQ-325).
+E > 0); no H, HP or P was what `classify` gave on every sample, and the ruled rule guarantees it by its `E ≥ 0` guard
+(§2; R-548, RQ-325). *Was:* "no H, HP or P is what was observed on every sample, which the rule does not guarantee
+(§2, RQ-325)."
 `latent_shape`: 81.25% H and 18.75% HE from t = 50; 2.99% transient at t = 10, resolved by t = 50.
 
 ---
@@ -452,7 +472,9 @@ The spec's 02 addition (the human's follow-up of 16 October 2026), transcribed:
   `chazy_q`'s hierarchy row (§5.5).
 - **Which body the event names.** The event stain's escape detail names a body by Principia's own escape rule
   (payload §2; R-29). It and `chazy_escaper` can name different bodies on the same pixel at the same playhead, the same
-  gap as §9 item 3 (RQ-313). Which one the one-body views read is RQ-321.
+  gap as §9 item 3 (RQ-313, accepted by R-548). The one-body views read `chazy_escaper` always, and their legend
+  counts the pixels where it names a different body from the event's escape detail (R-548, RQ-321, option (c)).
+  *Was:* "Which one the one-body views read is RQ-321."
 
 ---
 
@@ -467,10 +489,13 @@ previous-shape latch.
   was taken at the snapshot cadence.
 - **Per copy.** Each ensemble copy carries its own `I_max`: the class is a point quantity, classified per copy and
   anti-aliased by the SSAA resolve (`principia_dd_colouring.md` §3.7).
-- **Storage (proposed, open).** A log-quantised value fits the reserved descriptor bits 10–14 (32 half-octave levels
-  up to 2¹⁶), leaving bit 15 for the open departure flag (R-37's per-sample "departed" bit, whose placement is open:
-  REQ-VAL-055). Payload §2 holds bits 10–15 "Reserved, decode as zero, never opportunistically reused", so spending
-  them is a versioned format change, as `last_symbol`'s bits 8–9 were, and needs a ruling: RQ-310.
+- **Storage (R-545, RQ-310).** `I_max` takes descriptor bits 10–14, log-quantised in half-octaves (32 levels to 2¹⁶),
+  a versioned assignment like `last_symbol`'s bits 8–9 (the version is the ledger hash, R-36); bit 15 is R-37's
+  per-sample departed bit (REQ-VAL-055). *Was:* "**Storage (proposed, open).** A log-quantised value fits the reserved
+  descriptor bits 10–14 (32 half-octave levels up to 2¹⁶), leaving bit 15 for the open departure flag (R-37's
+  per-sample "departed" bit, whose placement is open: REQ-VAL-055). Payload §2 holds bits 10–15 "Reserved, decode as
+  zero, never opportunistically reused", so spending them is a versioned format change, as `last_symbol`'s bits 8–9
+  were, and needs a ruling: RQ-310."
 
 ---
 
@@ -485,7 +510,9 @@ previous-shape latch.
   motion class, and draws in the collision colour (§10.1) in every stain: a pair collision, a triple collision and a
   collision at `t = 0` alike.
 - **Escape-terminated**: the production loop stops at escape fire, so the class freezes at the fire-time state. It can
-  then read excursion or B where the event stain reads escape (§9, RQ-313).
+  then read excursion or B where the event stain reads escape (§9). That is accepted: the two answer different
+  questions, and the legend help says the two can differ (R-548, RQ-313, option (a); §10.10). *Was:* "(§9,
+  RQ-313)."
 - **A pixel the chart hatches** (`principia_chart_decoder_contract.md` Part 3: the types, `validate`'s layers 2 and 3,
   a failed `Φ`) is not part of the chart: it draws the plain canvas background in every Chazy stain, with no key, decided
   from the chart alone, never from the payload's `decode_failed` detail (Part 3; R-446, R-467). Only the debug view
@@ -510,10 +537,16 @@ previous-shape latch.
 
 ## 8. Parity
 
-The class flips on the sign of a two-body energy and on band edges in `K/U`. The spec calls it **Tier N**
-(`principia_parity_contract.md` §2): CPU and GPU agree to tolerance, not bit for bit. A pixel within ulps of a sign
-change may differ between backends. **The parity test measures that disagreement rate rather than asserting zero.**
-How a categorical label fits the parity contract's tiers, and the f32 measurement, are RQ-314.
+The class flips on the sign of a two-body energy and on band edges in `K/U`. `chazy_class` is **a label on a real
+trajectory**, the parity contract's scope-table row (`principia_parity_contract.md` § "Tier B — integer-exact *given
+the same branch decisions* (integer & packed fields)"): CPU and GPU labels may differ, and the difference is reported,
+not asserted (R-548, RQ-314, option (a)). A pixel within ulps of a sign change may differ between backends. **The
+parity test measures that disagreement rate rather than asserting zero:** the measured rate and its band check
+(every differing pixel within the band of a sign change) are the gate, with no threshold on the rate. A pixel near a
+band edge in `K/U` reads as the marginal label; that holds for the parabolic band only, not for a pair's binding, which
+is a sign (§3.4). *Was:* "The spec calls it **Tier N** (`principia_parity_contract.md` §2): CPU and GPU agree to
+tolerance, not bit for bit." and "How a categorical label fits the parity contract's tiers, and the f32 measurement,
+are RQ-314."
 
 ---
 
@@ -523,11 +556,13 @@ The prototype is CPU f64 and differs from Principia in four ways. None changes t
 
 1. **Collisions.** The prototype regularised through binary collisions (`r_coll = 0`). Principia terminates at
    `r_coll`, so collision is a class here (§7) and was never exercised there.
-2. **f32.** The prototype was f64 only. The sign tests near `K = U` need a parity measurement at f32 (§8, RQ-314).
+2. **f32.** The prototype was f64 only. The sign tests near `K = U` need a parity measurement at f32 (§8; R-548, RQ-314).
 3. **The escape detector.** Principia's escape event uses its own rule (`principia_01_pitfalls.md` §2.2; R-29) and
    stops the run at fire. The classifier's HE gate (hierarchy ratio > 5, receding, outer `K/U > 1 + ε`) is not the same
-   test. A pixel can read "escape" in the event stain and excursion or B here at the same playhead. Whether that is
-   acceptable (they answer different questions) or one should gate the other is RQ-313.
+   test. A pixel can read "escape" in the event stain and excursion or B here at the same playhead. That is accepted:
+   they answer different questions; the class freezes at the fire-time state (§7) and the legend help says the two can
+   differ (R-548, RQ-313, option (a)). *Was:* "Whether that is acceptable (they answer different questions) or one
+   should gate the other is RQ-313."
 4. **Cadence.** The prototype classified every 0.4 time units. With settling off, cadence only matters for the
    `I_max` latch, which is updated at every step (§6).
 
@@ -546,9 +581,12 @@ another field, and a stain that uses lightness uses it for a named field (energy
 - **Collision is magenta `#DA85B6`.** A run that ended in a collision has no final motion. One colour for every
   collision, pair or triple: which pair collided is the event stain's job (R-442).
 - **B is black `#141418`**, the same swatch as the event palette's "bounded" (colour_composition §1.4), and B-stable
-  and B-so-far are one class in the final-motion maps (R-442). The spec has it with no hue (`a = b = 0` in OKLab), so
-  that under Replace-L it becomes neutral grey at the brightness field's lightness, still the one class with no hue.
-  `#141418` is not quite neutral (OKLab `a ≈ 0.002`, `b ≈ −0.008`, chroma ≈ 0.008): RQ-317.
+  and B-so-far are one class in the final-motion maps (R-442). It is near-neutral (chroma 0.008): OKLab `a ≈ 0.002`,
+  `b ≈ −0.008`, so that under Replace-L it becomes a near-neutral grey at the brightness field's lightness, still the
+  one class with no hue of its own; §12.2 item 5 holds it to OKLab chroma ≤ 0.009 (R-548, RQ-317, option (a)). *Was:*
+  "The spec has it with no hue (`a = b = 0` in OKLab), so that under Replace-L it becomes neutral grey at the
+  brightness field's lightness, still the one class with no hue. `#141418` is not quite neutral (OKLab `a ≈ 0.002`,
+  `b ≈ −0.008`, chroma ≈ 0.008): RQ-317."
 
 The not-yet stipple never appears (§7). `sim_failed` and NaN draw B's `#141418`, as in every
 presentation view (R-467; §7), and `decode_failed` draws blank (R-511; *was:* "`sim_failed`, NaN and `decode_failed` draw
@@ -609,8 +647,8 @@ legible; lowering it to near 0 makes bound regions black at the cost of their hu
 
 #### 10.5.1 Seven classes × energy
 
-The seven-class hue with energy as lightness: how deep inside its class each pixel sits. Because B has no hue, its
-lightness is the energy alone. **This recovers what the flat map folds into B**: a transient system (E > 0) renders
+The seven-class hue with energy as lightness: how deep inside its class each pixel sits. Because B is near-neutral
+(chroma 0.008, §10.1; R-548; *was:* "Because B has no hue"), its lightness is the energy alone. **This recovers what the flat map folds into B**: a transient system (E > 0) renders
 light grey and a genuinely bound one dark grey.
 
 #### 10.5.2 Structure × energy
@@ -637,14 +675,16 @@ a final-motion map: that one says what, this one says how sure.
 | committed | `#E2E3E8` | a final class the classifier has committed to (H, HP, P, HE, PE) |
 | B-stable | `#2F6DB5` | bound, and passes Mardling–Aarseth: predicted to stay bound |
 | B-so-far | `#160928` | bound, nothing has escaped, no stability guarantee |
-| excursion | `#E08A2E` | bound, one body far out but still bound to the pair |
+| excursion | `#E08A2E` | bound, one body far out but still bound to the pair, and not certified stable (R-548) |
 | transient | `#16A394` | E > 0 and still interacting: must disperse, not yet how |
 | OS-candidate | `#7BB76E` | has been far out and come back |
 | collision | `#DA85B6` | |
 
 On `preset_shape_h1` the pale grey grows from 13% at t = 10 to 91% at t = 800; B-so-far drains from 77% to 3%;
 excursions peak at 18.5% at t = 50. On `latent_shape` it is 97% committed at t = 10 (prin-rs PR #32,
-`results/chazy/map_*_n48.txt`).
+`results/chazy/map_*_n48.txt`). Those shares are `classify`'s, under its order (§4); under R-548's, B-stable comes
+before excursion (§3.2, RQ-324), so a Mardling–Aarseth-stable hierarchy reads B-stable throughout its outer orbit and
+does not flicker between the two.
 
 ### 10.7 Filter
 
@@ -664,14 +704,16 @@ darkest at t = 800, grey never). On `preset_shape_h1`: 280 pixels settled by t =
 800 and 214 never (the spec's preview run of prin-rs PR #32's `examples/chazy_map.rs`).
 
 **Live implementation:** a second forward-only latch, the time the current coarse class was first committed, reset
-whenever it changes. Same shape as `I_max`, and it needs its own storage bits (RQ-310). Without that latch this view
-is offline only.
+whenever it changes. Same shape as `I_max`, and it needs its own storage bits. Without that latch this view
+is offline only, and **in v1 it is offline only** (R-545, RQ-310): no second latch is stored.
 
 #### 10.8.2 What just changed
 
 White where the coarse class changed since the previous playhead, the rest dimmed. It needs the previous frame's
-class: a render-side comparison between frames, not a payload field. Where that comparison lives, given that a stain
-node reads the payload at the playhead (render contract Part 2), is RQ-320.
+class: a render-side comparison between frames, not a payload field. **A render-side previous-class texture is
+written each frame and bound to a post node** (R-548, RQ-320, option (a); render contract Part 2); the dimming is
+REQ-COL-106's calibration, proposed by TASK-M7-40. *Was:* "Where that comparison lives, given that a stain node reads
+the payload at the playhead (render contract Part 2), is RQ-320."
 
 ### 10.9 Greyscale and hue modes
 
@@ -686,11 +728,17 @@ greyscale and hue mode render a field (colour_composition §4.1), so the roles t
 
 Generated from the stain (`principia_render_gui_spec.md` §G6), with shares of the view. The title always carries the
 playhead: "Final motion (as of t = …)". The status stain's legend names the working states in full. OS-candidate and
-B-stable are labels, not predictions; whether the legend help says they are provisional is RQ-315. B's label, "bound,
+B-stable are labels, not predictions; both ship, and the status legend's help marks them provisional: OS-candidate
+is unvalidated (2–3 per seed later escaped as HE), and B-stable has never fired on random starts (R-548, RQ-315,
+option (a); *was:* "whether the legend help says they are provisional is RQ-315"). The final-motion and status
+legends' help says that the Chazy class and the event stain's escape can differ at a pixel, the two answering
+different questions (R-548, RQ-313). B's label, "bound,
 or nobody has left yet", holds in every final-motion legend (the seven classes, the four families' bound, Okabe–Ito).
 A stain with the energy channel (§10.5, §10.11.2) has §G6's separate key for what brightness encodes: a bar for `q`
 (or `q_k`) through `b = q/(1 + q)`, parabolic marked at ½, beside the hue swatches (applied per R-369, §G6's rule).
-Bodies are named 1, 2, 3 in every legend (§0).
+Bodies are named 1, 2, 3 in every legend (§0). Every one-body legend whose view reads `chazy_escaper` (§10.11.1,
+§10.11.2, §10.11.4, §10.11.5) counts the pixels where it names a different body from the event's escape detail, a
+triple ejection counting as different from every body (R-548, RQ-321, option (c); applied per R-369).
 
 **B's share counts the failures (R-467), `decode_failed` apart (R-511).** A `sim_failed` sample, a reserved `state`
 code and a NaN draw B's black in every Chazy stain and are no category of their own (§7), so B's share of the view
@@ -733,8 +781,9 @@ The two escaping colours are the seven-class palette's HE and PE (§10.2), so th
   an OS-candidate no body has left (applied per R-369, recorded, not an RQ).
 - **"Class"** is `chazy_class`'s label at the playhead (§3.8); the role table is exhaustive over its ten labels plus
   collision, so a new label breaks the build until it is mapped (§12.3 item 1).
-- **The escaping body is `chazy_escaper`** as the block gives it. Whether the views should read the event's escape
-  detail instead, where the run has an escape event, is RQ-321.
+- **The escaping body is `chazy_escaper`**, always (R-548, RQ-321, option (c)); the legend counts the pixels where it
+  names a different body from the event's escape detail (§10.10). *Was:* "as the block gives it. Whether the views
+  should read the event's escape detail instead, where the run has an escape event, is RQ-321."
 - **The bound row's legend label is "bound, or nobody has left yet"**, R-442's label for B, because the row folds in
   transient (E > 0, nobody has left) and OS-candidate as `chazy_final`'s B does. A plain "bound" would carry the
   misreading R-442's label avoids (applied per R-369; the same in the escaper map, §10.11.4).
@@ -743,11 +792,14 @@ The two escaping colours are the seven-class palette's HE and PE (§10.2), so th
 
 The §10.11.1 roles in the colour slot, `chazy_qk[k]` in the brightness slot under Replace-L, compacted
 `b = q/(1 + q)`, `L = 0.3 + 0.6 b` (dark bound, mid parabolic, light hyperbolic), the same mapping as §10.5 (REQ-COL-088,
-REQ-COL-089). Grey and black have no hue, so under Replace-L they become neutral greys at body k's energy: inside the
+REQ-COL-089). Grey and black are near-neutral (chroma ≤ 0.009), so under Replace-L they become near-neutral greys
+at body k's energy (R-548; *was:* "Grey and black have no hue, so under Replace-L they become neutral greys"): inside the
 bound regions this shows how close body k has come to leaving before anything commits.
 
 `#141418`'s chroma is ≈ 0.008 (RQ-317), and the grey `#8A8A90`'s is ≈ 0.009 (OKLab `a ≈ 0.002`, `b ≈ −0.009`, measured
-here with `principia_dd_colouring.md` §3.1's transforms), so neither is exactly neutral: RQ-322.
+here with `principia_dd_colouring.md` §3.1's transforms), so neither is exactly neutral; `#8A8A90` stays, and both
+are held to OKLab chroma ≤ 0.009 (R-548, RQ-317 and RQ-322, option (a); *was:* "so neither is exactly neutral:
+RQ-322").
 
 **"Flying apart" and "bound" draw alike at equal `q_k`.** Both roles lose their own lightness under Replace-L and keep
 almost no hue, so a grey-role sample and a black-role sample with the same `q_k` render the same colour. In practice
@@ -759,9 +811,11 @@ neutral roles are told apart by the flat lens beside it (applied per R-369; rend
 #### 10.11.3 All three bodies
 
 The §10.11.1 lens for k = 0, 1, 2 as three small panels side by side, at one playhead, titled body 1, 2, 3 (§0). A
-layout over §10.11.1, not a new stain. The GUI spec has no view of one figure as several panels in v1; its "side by
-side" is a v2 research tool (`principia_render_gui_spec.md` § "G11. Research — first pass (v2)", R-106). Where the
-panels live is RQ-323.
+layout over §10.11.1, not a new stain. **It is one figure (R-548, RQ-323, option (a)):** the view's canvas splits into
+three panels, each the body lens at its own `k`, all drawn from one payload at one playhead, a GUI layout with no new
+stain or node. It is not the v2 "side by side" research tool (`principia_render_gui_spec.md` § "G11. Research — first
+pass (v2)", R-106). *Was:* "The GUI spec has no view of one figure as several panels in v1; its "side by side" is a v2
+research tool (…). Where the panels live is RQ-323."
 
 #### 10.11.4 Escaper map
 
@@ -776,7 +830,7 @@ parabolic, chroma 0.12, hues 35°, 150°, 265°).
 The columns are `chazy_escaper` = 0, 1, 2, shown as body 1, 2, 3 (§0). H, HP, P draw grey `#8A8A90`; bound black
 `#141418`; collision magenta `#DA85B6`. "Bound" is §10.11.1's bound row, the B and OS folds, so OS-candidate is black
 here too, and its legend label is "bound, or nobody has left yet" (applied per R-369, the same reading as §10.11.1).
-The escaping body is `chazy_escaper` (RQ-321). Re-measured here, the six swatches sit at L 0.72 / 0.52 (±0.002),
+The escaping body is `chazy_escaper` (R-548, RQ-321). Re-measured here, the six swatches sit at L 0.72 / 0.52 (±0.002),
 chroma 0.12 (±0.001) and hues 35°, 150°, 265° (±0.3°), as stated.
 
 #### 10.11.5 By mass instead of by label
@@ -858,7 +912,7 @@ as stains; the lens body is a stain parameter; mass rank is offered alongside la
 | the palettes of §10 | as listed | measured, §11.2.1 |
 | energy lightness range | L 0.3 to 0.9 | chosen so dark regions keep their hue |
 | `q` compaction | `q/(1 + q)` | range-free; parabolic at ½ |
-| the time views (§10.8): "when decided" lightness by time, "what just changed" dimming | palest by t = 10 to darkest at t = 800, grey never; the dimming not given | the spec's preview run (§10.8.1); where the comparison lives is RQ-320 |
+| the time views (§10.8): "when decided" lightness by time, "what just changed" dimming | palest by t = 10 to darkest at t = 800, grey never; the dimming not given | the spec's preview run (§10.8.1); the comparison is a render-side previous-class texture (R-548, RQ-320) |
 | the body-lens palette (§10.11.1) | as listed | measured, §11.2.2 |
 | the escaper palette, by label and by rank (§10.11.4–§10.11.5) | as listed | measured, §11.2.2 |
 | the mass tie tolerance (§10.11.5) | relative 10⁻⁶ | not measured |
@@ -909,7 +963,9 @@ stipple to fail: every Chazy entry is at least 0.179 from its farthest pixel.
 **The seven-class palette is under τ by design.** H, HP and P are steps of one cool family, so H and HP sit 0.083
 apart, and under deuteranopia HP and P collapse to the same colour. That is the cost of the family logic. The
 Okabe–Ito variant (§10.4) is the colour-vision-safe alternative for the seven, at the cost of P against collision
-(0.041 in every simulation and unsimulated). Whether the default should change is a decision for the gate (RQ-311).
+(0.041 in every simulation and unsimulated). The seven-class palette stays the default, its shortfall asserted by
+REQ-COL-086, and Okabe–Ito is a preset one click away (R-548, RQ-311, option (a); *was:* "Whether the default should
+change is a decision for the gate (RQ-311).").
 τ is the corpus's collision criterion between the invalid style and a palette entry (REQ-COL-055, REQ-COL-061) and
 between the stipple and a flat colour (REQ-COL-064); no corpus rule holds a palette's own entries τ apart, so the
 default stands under R-442 with the shortfall recorded and measured (§12.2, item 7).
@@ -946,12 +1002,14 @@ What those numbers mean against the corpus's τ, as in §11.2.1:
   the stipple, and the block's claim that every entry clears the hatch and stipple holds; the 0.020 is recorded as the
   dot distance. Every other entry clears the hatch's two colours, the not-yet grey and the stipple dot by either
   method (the next closest dot distance is 0.137, coral against the stipple dot). The grey's chroma (§10.11.2) is
-  RQ-322.
+  held to ≤ 0.009 with `#141418`'s, the 0.020 dot distance is recorded, and by R-434's criterion (0.212) the grey
+  clears (R-548, RQ-322, option (a); *was:* "is RQ-322").
 
 ### 11.3 Open questions
 
-1. **Descriptor bits** (RQ-310). `I_max` in reserved bits 10–14 claims space next to the open departure flag (bit 15).
+1. **Descriptor bits** (RQ-310; ruled by R-545). `I_max` in reserved bits 10–14 claims space next to the open departure flag (bit 15).
    The "when decided" view (§10.8.1) needs a second latch and more bits. Is that budget available, and is it worth it?
+   *Ruled:* `I_max` takes bits 10–14, bit 15 is R-37's departed bit, and the "when decided" view is offline only in v1.
 2. **Escape detector alignment** (RQ-313). A pixel can read "escape" in the event stain while the Chazy class reads
    excursion or B at the same playhead (§9 item 3). Acceptable, or should one gate the other?
 3. **f32 parity** (RQ-314). Measure the disagreement rate at f32 near the `K = U` sign changes before setting a
@@ -970,6 +1028,14 @@ enforces the E < 0 certificate (RQ-325).
 And from the follow-up (R-443): the escaper definition, the block's own open question, whether the one-body views read
 the event's escape detail when the run has an escape event or `chazy_escaper` always (RQ-321, beside RQ-313); the
 grey `#8A8A90`'s chroma (RQ-322); and where §10.11.3's three panels live (RQ-323).
+
+**Ruled (21 Oct 2026).** The human ruled RQ-311 to RQ-318 and RQ-320 to RQ-325 in R-548 (RQ-319 was ruled by R-467,
+and RQ-310 by R-545): RQ-311 (a), the seven-class default stays, Okabe–Ito a preset; RQ-312 (a) and (b), the ban
+covers captions over the figure only; RQ-313 (a), accepted, the legend help saying so; RQ-314 (a), a label on a real
+trajectory, reported; RQ-315 (a), both shipped, marked provisional; RQ-316 (a), as applied; RQ-317 (a) and RQ-322 (a),
+`#141418` and `#8A8A90` near-neutral, held to chroma ≤ 0.009; RQ-318 (c), RQ-324 (b) and RQ-325 (b), §3.2's ruled
+order and guards, with RQ-521 left open; RQ-320 (a), a render-side previous-class texture; RQ-321 (c),
+`chazy_escaper` always, the differing pixels counted; RQ-323 (a), one figure split into three panels.
 
 ### 11.4 Not done, and natural next steps
 
@@ -1013,21 +1079,27 @@ says otherwise. Transcribed from the file:
 
 1. **Burrau smoke test.** The Burrau ICs to a horizon past their escape: the class ends HE, and E < 0 holds the
    certificate (no H, HP, P at any playhead). The production loop stops at escape fire (R-103) and the class freezes
-   there (§7), where it can read excursion or B (RQ-313), so the test runs in the validation harness's post-escape
+   there (§7), where it can read excursion or B (§9; R-548, RQ-313), so the test runs in the validation harness's post-escape
    march, where R-103 places the pitfalls §2.4 checks. Burrau is a close-encounter benchmark, so it runs at the pinned
    `r_coll` and records it (integrator contract Part 7; REQ-VAL-049); at a nonzero `r_coll` the run can end in
-   collision instead, which the test reports as a failure, not a pass (applied per R-369). Whether the E < 0 half is
-   enforced is RQ-325.
+   collision instead, which the test reports as a failure, not a pass (applied per R-369). The E < 0 half is enforced
+   by the rule's `E ≥ 0` guard (§2; R-548, RQ-325), so a step reading H, HP or P is a failure (*was:* "Whether the
+   E < 0 half is enforced is RQ-325.").
 2. **Collision.** A run terminated at `r_coll` reads `collision` in `chazy_final` and `chazy_status`, never a motion
    class.
 3. **The fold table** of §5.3: every classifier label maps to the stated final class and status. Transient → B in
    `chazy_final` and → transient in `chazy_status`. Exhaustive over the enum, so a new label breaks the build until it
    is mapped.
 4. **Energy certificates, per pixel** (per sample, §0). On a free-fall chart (E < 0 everywhere) no pixel reads H, HP,
-   P or transient at any playhead. On an E > 0 chart no pixel reads B-so-far, B-stable or OS-candidate. The E > 0 half
-   and "no transient" hold by the rule's order; "no H, HP or P" is empirical (§2, RQ-325).
-5. **B has no hue.** The B swatch has OKLab a = b = 0 to within quantisation, so Replace-L gives neutral grey.
-   Control: a chromatic swatch fails the same check. (`#141418`'s chroma: RQ-317.)
+   P or transient at any playhead. On an E > 0 chart no pixel reads B-so-far, B-stable or OS-candidate. Both hold by
+   the rule (§2): the E > 0 half and "no transient" by its order, "no H, HP or P" by its `E ≥ 0` guard (R-548,
+   RQ-325). *Was:* "The E > 0 half and "no transient" hold by the rule's order; "no H, HP or P" is empirical (§2,
+   RQ-325)."
+5. **B is near-neutral.** The B swatch `#141418` has OKLab chroma ≤ 0.009 (0.0080 measured), a bound that also
+   covers the one-body grey `#8A8A90` (0.0089), so Replace-L gives a near-neutral grey. Control: a chromatic swatch,
+   its chroma well above the bound, fails the same check (R-548, RQ-317, option (a)). *Was:* "**B has no hue.** The B
+   swatch has OKLab a = b = 0 to within quantisation, so Replace-L gives neutral grey. Control: a chromatic swatch
+   fails the same check. (`#141418`'s chroma: RQ-317.)"
 6. **Energy channel recovers transient.** Under §10.5.1, a transient pixel's lightness is above the parabolic
    mid-point and a bound pixel's below. Control: the flat map draws both identically.
 7. **Palette separation.** Measured the way REQ-COL-055 measures, against R-132's τ = 0.101. The status palette and
@@ -1039,6 +1111,15 @@ says otherwise. Transcribed from the file:
    the differing pixels checked to lie within the band of a sign change.
 9. **Live-playhead property.** The classifier reads nothing after t: classifying a run at playhead t, then continuing
    the run, never changes the label already given at t.
+10. **B-stable before excursion (R-548, RQ-324).** A bound, Mardling–Aarseth-stable hierarchy whose outer body is past
+    `h_far` and receding (`v_r ≠ 0`), so that the ordering test can fail: §12.1's B-stable hierarchy with a radial
+    velocity added to body 2 that keeps it bound to the pair and `ma_stable` true. It reads B-stable; control: the
+    code's order (excursion inside step 2) reads excursion on the same state. Its values are written by the task that
+    ports §12.1 (applied per R-369).
+11. **The E < 0 guard (R-548, RQ-325).** The review's homothetic counter-example: equal masses in an equilateral
+    configuration expanding homothetically with `E = −0.1 U₀`, classified at 2.9 times and at 3.2–3.5 times its
+    initial size, reads B-so-far; control: the rule without the `E ≥ 0` guard reads H, then P, on the same states. Its
+    construction is written by the task that ports §12.1 (applied per R-369).
 
 ### 12.3 One body at a time (R-443)
 

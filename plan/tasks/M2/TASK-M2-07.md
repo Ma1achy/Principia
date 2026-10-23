@@ -1,7 +1,7 @@
 # TASK-M2-07 — Canonicaliser C: the ordered procedure, the mirror tie and the scale gauge
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-002, REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-006, REQ-ENC-016
+- **Closes:** REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-016
 - **Depends on:** TASK-M2-06
 - **Needs (earlier milestones):** REQ-PAY-017
 - **Reviewers:** code, qa, physics

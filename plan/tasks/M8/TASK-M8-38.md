@@ -1,4 +1,4 @@
-# TASK-M8-38 — Browser membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker
+# TASK-M8-38 — v1 web's membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker
 
 - **Milestone:** M8
 - **Closes:** REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-050, REQ-SYS-051, REQ-SYS-055, REQ-SYS-059, REQ-SYS-044
@@ -20,6 +20,7 @@ The wasm ↔ JS membrane has exactly three crossings: `set_field(path, value)` o
 - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison checklist)"
 - `docs/design/principia_systems_architecture.md` § "6. Cross-cutting invariants (the load-bearing walls)"
 - `docs/contracts/principia_gui_state_contract.md` § "1. The one-way dependency rule"
+- `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
 
 ## Deliverables
 - `crates/engine/src/wasm/membrane.rs` — the three exports only, serialised in and out.
@@ -38,4 +39,4 @@ The wasm ↔ JS membrane has exactly three crossings: `set_field(path, value)` o
 - Review checklist (perf reviewer) — inspector runs in a separate worker; main thread never blocks (REQ-SYS-044).
 
 ## Notes
-- none
+- R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, which needs more crossings than the three (downloads, file drops, the clipboard, audio and more; measured in `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not diminished)", "v1 web, and what it crosses"). The rule is not redesigned: REQ-SYS-051 and REQ-SYS-059 carry `rq: RQ-550`, and REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044 and REQ-SYS-050 `rq: RQ-551` (where the GUI runs), so this task waits on both. *Was (title):* "Browser membranes".

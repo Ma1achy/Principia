@@ -25,6 +25,10 @@ validation = { path = "../validation" }
 proptest = "1.11"
 # The golden IC's hand-computed values, `fixtures/golden_ic/z0.json` (TASK-M2-03), are read as JSON.
 serde_json = "1"
+# The order-condition check (`tests/occupant.rs`, REQ-INT-090) evaluates Yoshida's order conditions exactly, in rational
+# arithmetic, on the shipped f64 coefficients; num-rational and num-bigint are already in the build, under `num`.
+num-bigint = "0.4"
+num-rational = "0.4"
 
 # Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
 [features]

@@ -25,13 +25,13 @@ Principia is the instrument that makes these pictures, and measures what they sh
 </p>
 
 <table>
-<tr><td><b>Atlas</b></td><td><i>Browse the space of beginnings on the GPU, natively or in the browser. Pan, zoom without end, and rotate or tilt the slice in any direction.</i></td></tr>
+<tr><td><b>Atlas</b></td><td><i>Browse the space of beginnings on the GPU, natively, or in the browser as the same app. Pan, zoom without end, and rotate or tilt the slice in any direction.</i></td></tr>
 <tr><td><b>Charts</b></td><td><i>Flat slices, the shape sphere, Burrau's problem, or a chart built from any axes you choose.</i></td></tr>
 <tr><td><b>Fate</b></td><td><i>Every point integrated forward, regularised through close encounters, until a body escapes, two collide, or time runs out.</i></td></tr>
 <tr><td><b>Refinement</b></td><td><i>Samples go where fates change, and stay coarse where they don't.</i></td></tr>
 <tr><td><b>Stain</b></td><td><i>A graph from what was measured to how it looks, printed in watercolour, pencil or ink. The data doesn't change, only the ink.</i></td></tr>
 <tr><td><b>Inspector</b></td><td><i>Follow one beginning closely, at double precision, and watch its orbit.</i></td></tr>
-<tr><td><b>Honesty</b></td><td><i>What it can't resolve is hatched, and it reports where its precision runs out.</i></td></tr>
+<tr><td><b>Honesty</b></td><td><i>It shows where its precision runs out: open any point to watch its single- and double-precision orbits part, and when. Failed runs are kept and counted, never painted over.</i></td></tr>
 <tr><td><b>Prints</b></td><td><i>Every image carries its own settings, so any view can be recreated from the picture alone.</i></td></tr>
 <tr><td><b>Results</b></td><td><i>Browsing buys hypotheses; the batch job, run at full precision, buys results.</i></td></tr>
 </table>

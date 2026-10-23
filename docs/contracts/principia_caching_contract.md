@@ -60,12 +60,27 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
 
 > **Never dispatch a refinement job while the current view's baseline cover is missing.** Baseline dispatch is a hard tier above the priority queue, not a large weight inside it.
 
-- **The baseline cover** = the coarsest quad(s) spanning the viewport at useful resolution near the camera depth. At deep zoom this is *not* the depth-0 domain root (uselessly coarse) — it's the viewport-covering quads a few levels above camera depth. Something low-resolution appears in one or two dispatches; refinement then proceeds beneath it. **Past the chart's
+- **The baseline cover** = the coarsest quad(s) spanning the viewport at useful resolution near the camera depth. At deep zoom this is *not* the depth-0 domain root (uselessly coarse) — it's the viewport-covering quads a few levels above camera depth. Something low-resolution appears in one or two dispatches; refinement then proceeds beneath it. Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no snapshot) the canvas background is drawn; R-537 EX4's no-gaps check applies from then on (R-552, RQ-419 (a)). **Past the chart's
   `[0,1]²` (R-537, EX4)** it is the coarsest cover of the whole viewport, extension included: every cell the view
   touches has a root of the root lattice (EX7), so every visible point has an ancestor, and the cover's ancestor chain is
   evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
   pixels are those that are not a system.
 - **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned. Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **Where the chain stops past the root (R-570).** With levels `L < 0` coarser than the root
+  (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root") a quad's parent chain
+  has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
+  squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
+  (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
+- **The 2 × 2 rule is the only stop (perf review 5625031178 of PR #279, P7; applied per R-369).** The line above's
+  "the cover's smallest common ancestor where one exists" is superseded: the chain stops at the first level at which
+  the viewport lies within at most 2 × 2 ancestor squares, about `⌈log2(cover quads per axis)⌉` levels above the cover,
+  wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
+  ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
+  Part 3).
+- **One definition of the stop (perf review 5625066551 of PR #279, P8; applied per R-369).** The level is the first at
+  which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first level whose
+  square side is at least the viewport's extent, depending on where the view sits; it is not defined as that second
+  level (`principia_scheduler_contract.md` Part 3).
 
 ---
 
@@ -125,6 +140,8 @@ The structural point: the two regimes govern *what the GPU computes*; this invar
 
 Non-blocking-on-one-thread is not enough. Under real load the CPU scheduler still stalls the gesture, and — the sharper failure — **the DOM GUI freezes**, because it shares the main thread with the scheduler and gets starved when scheduling spikes. The fix is structural, and under the substrate decision (`principia_spike_brief.md`) it is *doubly* structural: **the entire frame loop — WebGPU device, scheduler, cache, quadtree, all compute and render — is the wasm engine, running in a Web Worker via `OffscreenCanvas`. The main thread is a thin TS shell: an input pump and a DOM-GUI host, a *different binary*, and it owns no simulation state.** This is the wasm↔JS membrane (systems-architecture §3); the firewall is now enforced by the linker, not merely by discipline.
 
+**v1 web (R-571).** The browser build is v1 web, the whole native app compiled to run in the browser: its GUI is the native app's egui GUI, not a DOM GUI, and a TS DOM GUI is v2 web's, if there is one. Where egui runs in v1 web (in this worker, or on the main thread in a wasm context of its own) and what the main thread then holds is queued, RQ-551, and what v1 web crosses between wasm and the browser, RQ-550 (systems-architecture §3). The split below stands as written until they are ruled.
+
 **The native build (R-113).** The worker is the browser's form of this split. In the native build the frame loop runs on a **dedicated render thread**, off the input/GUI thread; the invariant is the same — the thread that takes input and draws the GUI never runs the scheduler, the cache or the GPU work.
 
 ```
@@ -160,7 +177,7 @@ Why the wasm engine owns **everything** rather than offloading just the schedule
 What is cached under lockstep is **current state only — one timestep per quad, never trajectory, never a time-series.** The cache's job changes from "hold completed answers" to "hold resume points": a revisited quad resumes `t_cached → playhead` instead of re-booting `0 → playhead`.
 
 - **Hard budget cap, not a smoothness dial.** The cache has a fixed memory ceiling, **sized by the device-characterisation phase** (`principia_quality_device_note.md`): a fraction of a detected VRAM budget (from `adapter.limits` + the boot probe), never a fixed constant — so it scales down on weak devices along with the compute settings. One characterisation sets the compute knobs *and* this cap together. The temptation to "cache a bit of history for smoothness" is exactly the eager-in-time siren that produced the V2 memory problem — the invariant is *one state per entry, bounded entry count*, and any growth pressure is answered by eviction, never by relaxing either.
-- **Eviction stays cost-weighted LRU** and stays *safe* (fixed-`dt` purity: re-booting reproduces the state exactly) — but the cost model now includes `t_cached` (a deep-`t` resume point saves more recompute than a shallow one, so it resists eviction more).
+- **Eviction stays cost-weighted LRU** and stays *safe* (fixed-`dt` purity: re-booting reproduces the state exactly; for a regularised occupant, the fixed sync grid, its march stopping only on a boundary, R-565) — but the cost model now includes `t_cached` (a deep-`t` resume point saves more recompute than a shallow one, so it resists eviction more).
 - **The pinned classes survive unchanged**: baseline cover + visible ancestor chain + backdrop identity's leaf cover (Part 4/5) — pinned as *frozen states*, which is all the backdrop needs.
 - **Refinement latches never pin memory.** The per-footprint latch (scheduler Part 8) lives with the resident quad: when the cache evicts or merges the quad, the latch goes too (R-99). It adds nothing to the pinned classes above.
 
