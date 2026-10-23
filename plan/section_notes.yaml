@@ -1258,3 +1258,43 @@
   section: 0. My words
   reason: rationale
   note: the human's words, quoted verbatim in R-542; the obligations they settle are in SM1 to SM15 and R-542
+- file: decisions.md
+  section: "R-573 — \"Payload summary\" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it"
+  reason: informative only
+  note: "the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): \"payload summary\" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none"
+- file: docs/design/principia_results.md
+  section: "Principia: Result — from a view to a full-precision batch run, and back"
+  reason: informative only
+  note: preface and the port's status note (R-572, R-573); obligations in §3
+- file: docs/design/principia_results.md
+  section: 1. What exists
+  reason: informative only
+  note: the state of the corpus and of prin-rs before R-572; no obligation
+- file: docs/design/principia_results.md
+  section: 2. The gap
+  reason: rationale
+  note: why the Result exists; its obligations are in §3
+- file: docs/design/principia_results.md
+  section: 3.6 Philosophy §2
+  reason: informative only
+  note: "records the sentence R-572 wrote into philosophy § \"The prebake — a measuring instrument\" and its table; applied there, no build obligation"
+- file: docs/design/principia_honesty_precision.md
+  section: "Principia: honesty as a measurement — f32 against f64 in the trajectory viewer"
+  reason: informative only
+  note: preface and the port's status note (R-574, R-575); obligations in §3
+- file: docs/design/principia_honesty_precision.md
+  section: 1. What exists
+  reason: informative only
+  note: the state of the corpus and of prin-rs before R-574; no obligation
+- file: docs/design/principia_honesty_precision.md
+  section: 3. The design
+  reason: parent heading (obligations are in its subsections)
+  note: §3.1 to §3.7
+- file: docs/design/principia_honesty_precision.md
+  section: 3.7 The README line
+  reason: informative only
+  note: "records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation"
+- file: docs/design/principia_honesty_precision.md
+  section: 4. Fit with rulings
+  reason: informative only
+  note: "how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks"

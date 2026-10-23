@@ -2934,6 +2934,30 @@
   requirements: [REQ-GUI-343, REQ-GUI-344]
   reviewers: [code, qa, gui, physics]  # physics: the decode of the dragged n̂ and the twin (gui review 5603356729 of PR #273, G6)
   pitfalls: [PIT-9]
+- id: TASK-M8-74
+  milestone: M8
+  title: "Result, the job: one job.json run in the app or by `prin batch`, f32 or f64, the result folder and its payload, cancel and resume (R-572)"
+  depends_on: [TASK-M8-02, TASK-M4-17, TASK-M7-44]
+  needs: [REQ-SYS-027, REQ-TOOL-181]
+  requirements: [REQ-SYS-087, REQ-SYS-088, REQ-SYS-089, REQ-SYS-090, REQ-TOOL-196]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-3]
+- id: TASK-M8-75
+  milestone: M8
+  title: "Result, the GUI: the Result window, the result view and Compare (R-572)"
+  depends_on: [TASK-M8-74, TASK-M8-17, TASK-M8-34]
+  needs: []
+  requirements: [REQ-GUI-366, REQ-GUI-367, REQ-GUI-368]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-76
+  milestone: M8
+  title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
+  depends_on: [TASK-M8-17, TASK-M4-16]
+  needs: [REQ-TOOL-127, REQ-TOOL-040]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371]
+  reviewers: [code, qa, physics, gui, perf]
+  pitfalls: [PIT-10]
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"

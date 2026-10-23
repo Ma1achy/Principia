@@ -12,6 +12,7 @@
 Divergence is the observable. Click a pixel → its trajectories in shape and real space: the shared kernel on the CPU at f64 or higher with adaptive stepping, the on-demand single-IC f32 GPU trace of the same kernel, and an overlay/diff exposing divergence time and separation growth without reconciling them. A match-integrator mode binds the active GPU occupant, coefficients and step size on the f64 build; adaptive RK45 is reserved for near-collision chasing. The CPU↔GPU continuous cross-check runs only for t < t_max(f32) and says "not applicable" beyond; t_max(f32) is measured against the GPU kernel directly. The atlas, the inspector and the prebake run one kernel and one chart set.
 
 ## References
+- `docs/design/principia_honesty_precision.md` § "3.1 Four runs of one IC"
 - `docs/contracts/principia_canonical_spec.md` § "7. Precision & validation model *(authoritative: `parity_contract`, `validation_ground_truth_note`, `core_design`)*"
 - `docs/design/principia_core_design.md` § "Principle: divergence is the observable"
 - `docs/design/principia_core_design.md` § "4. Integrate and colour are separate passes — and now separate *mechanisms*"
@@ -46,7 +47,7 @@ Divergence is the observable. Click a pixel → its trajectories in shape and re
 - `cargo test -p validation crosscheck_horizon_gate` — the gate reads REQ-VAL-071's recorded GPU measurement of t_max(f32) (R-119); the inspector/cross-check past it reports "not applicable" rather than a divergence (REQ-VAL-070).
 - `cargo xtask gate f32-horizon` — the measured f32 horizon, recorded from GPU-kernel runs (REQ-VAL-071).
 - `cargo test -p validation atlas_vs_inspector` plus code review — one shared kernel crate serves atlas, inspector and prebake; one IC through the atlas path (f32) and the inspector path (f64) agrees inside the f32 horizon, within the REQ-VAL-064 Tier N tolerances (REQ-SYS-028).
-- Definition: the single-IC f32 GPU trace (dispatch form, n(t) buffer layout and sampling, shared times) and the divergence-time criterion written into trajectory_viewing §5 and approved by the physics reviewer (REQ-TOOL-127).
+- Definition: the single-IC f32 GPU trace (dispatch form, n(t) and r_i(t) buffer layout, sampling at the sync boundaries, shared times, and how the dispatch takes R-574's one-ulp nudge after its own decode, a zero component under flushed subnormals included) written into trajectory_viewing §5, citing R-574's two marks as the divergence criterion, and approved by the physics reviewer (REQ-TOOL-127). *Was:* "(dispatch form, n(t) buffer layout and sampling, shared times) and the divergence-time criterion written into trajectory_viewing §5" (R-574).
 
 ## Notes
 - The GUI window hosting the inspector is M8; this task delivers the engine surface and its tests.

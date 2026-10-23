@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 100 |
 | COL | 140 |
-| GUI | 328 |
-| TOOL | 187 |
-| VAL | 194 |
+| GUI | 334 |
+| TOOL | 188 |
+| VAL | 198 |
 | PERF | 95 |
-| SYS | 86 |
-| **total** | **1736** |
+| SYS | 90 |
+| **total** | **1751** |
 
-Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 148 calibration, 146 definition, 1457 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,21 +38,21 @@ Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 222 |
-| M8 | 345 |
+| M8 | 360 |
 
 ## Sections
 
-1430 sections in 52 files: 1133 yield at least one requirement; 297 yield none and are listed below with the reason.
+1462 sections in 54 files: 1157 yield at least one requirement; 305 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 172 |
+| informative only | 178 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 45 |
+| parent heading (obligations are in its subsections) | 46 |
 | planned (the plan PR) | 60 |
-| rationale | 11 |
+| rationale | 12 |
 | superseded (kept for the record) | 4 |
 
 
@@ -199,6 +199,7 @@ Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for th
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | planned (the plan PR) | R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement |
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
+| R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -426,6 +427,16 @@ Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for th
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
 
+### `docs/design/principia_honesty_precision.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: honesty as a measurement — f32 against f64 in the trajectory viewer | informative only | preface and the port's status note (R-574, R-575); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-574; no obligation |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 3.7 The README line | informative only | records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation |
+| 4. Fit with rulings | informative only | how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks |
+
 ### `docs/design/principia_lines.md`
 
 | section | reason | note |
@@ -479,6 +490,15 @@ Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for th
 |---|---|---|
 | Principia — quality presets & device characterisation | informative only | preamble; obligations in subsections |
 | Auto is a continuous controller — the adaptive control architecture | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_results.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Result — from a view to a full-precision batch run, and back | informative only | preface and the port's status note (R-572, R-573); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-572; no obligation |
+| 2. The gap | rationale | why the Result exists; its obligations are in §3 |
+| 3.6 Philosophy §2 | informative only | records the sentence R-572 wrote into philosophy § "The prebake — a measuring instrument" and its table; applied there, no build obligation |
 
 ### `docs/design/principia_scratchpad_pointer_channels.md`
 
@@ -564,8 +584,6 @@ Of these: 146 calibration, 145 definition, 1445 obligation. Retired (kept for th
 | 2. The two paths, and why the split is the whole design | parent heading (obligations are in its subsections) |  |
 | 4. Six commitments, each earned by a measured failure | parent heading (obligations are in its subsections) |  |
 | 5. What the instrument is actually looking for | informative only | scientific goals; no build obligation stated |
-| 7.2 Tiled prebake | informative only | parked post-1.0 (§7); out of scope for the build |
-| 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
 | 7.6a The truncated-Fourier block — a possible future feature (R-420) | out of v1 (R-420) | parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path |

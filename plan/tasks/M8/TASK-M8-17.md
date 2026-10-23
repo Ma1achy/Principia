@@ -12,6 +12,7 @@
 The Create & locate tab builds an IC, shows where it lands in z and its distance from the slice, and offers lock the view on it, centre a slice through it, mark it in the figure, and keep it. Past a calibrated conditioning threshold the Inspector switches from chart-encode to direct-physical-inject and flags it; for non-degenerate configs it runs both paths and reports their difference. The optional shape-divergence overlay (off by default) dispatches a one-pixel f32 GPU trace of the clicked IC through the survey kernel and draws its dense n(t) over the CPU curve; CPU and GPU outcome class, escaper and t_end are shown side by side, and disagreement in a regular region is a pipeline bug. The footnote uses trajectory_viewing §5's honest wording.
 
 ## References
+- `docs/design/principia_honesty_precision.md` § "3.4 Where it lives"
 - `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "05 Inspector — one IC, its trajectory, one timeline"
 - `docs/notes/ic_inspector_scratchpad.md` § "Bridges to the main view"
@@ -30,7 +31,7 @@ The Create & locate tab builds an IC, shows where it lands in z and its distance
 - `cargo test -p gui create_locate_actions` — build an IC: 'mark' draws a crosshair at z's projection on the current slice; 'lock' sets the lock fields to that z; 'centre' sets z₀; 'keep' adds a kept orbit (REQ-GUI-120).
 - `cargo test -p engine degeneracy_routing` (threshold and tolerance: REQ-ENC-028, calibrated) — a near-degenerate IC flips to direct inject with a flag; random non-degenerate ICs show agreeing paths (REQ-ENC-021).
 - `cargo xtask gate inspector-routing` — the proposal measures κ and the chart-encode vs direct-inject difference over near-degenerate and random ICs and states both values; recorded in decisions.md; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-ENC-028).
-- `cargo test -p engine shape_divergence_overlay` — overlay off by default; enabling it dispatches one job; for a periodic IC the two curves coincide to f32 tolerance (REQ-VAL-106).
+- `cargo test -p engine shape_divergence_overlay` — on by default in the Inspector, opening it dispatches one f32 job (and one for the nudged f32 run, R-574); in the Trajectory panel the comparison runs for a pinned trajectory and not while following the cursor (control: a panel that runs it on hover fails); for a periodic IC the two curves coincide to f32 tolerance on the sphere and in real space (REQ-VAL-106). *Was:* "overlay off by default; enabling it dispatches one job; for a periodic IC the two curves coincide to f32 tolerance" (R-574).
 - `cargo xtask gate inspector-classification-regular` — on a regular-region fixture of ICs, CPU and GPU classification agree for every IC (REQ-VAL-107).
 - Review checklist (physics reviewer) — the shipped footnote text matches trajectory_viewing §5's wording (REQ-TOOL-097).
 

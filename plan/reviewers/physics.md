@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*114 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*116 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -146,6 +146,8 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-114 — the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits in each pair: θ(t)'s anchors, 0.076 (figure-eight) against 0.177 (chaotic, REQ-VAL-102), and Listen's readout anchors, the figure-eight against Burrau 3:4:5 (REQ-VAL-194)
 - [ ] REQ-VAL-116 — the browser build runs the Tier-N suite on Chrome stable and on Safari; every quantity falls within the native-wgpu tolerance; out-of-tolerance quantities are recorded
 - [ ] REQ-VAL-194 — cargo xtask gate listen-entropy: the figure-eight's and Burrau 3:4:5's readout entropies, measured with prin-rs's computeIC at the defaults, are recorded with the proposal and the figure-eight's is below Burrau's; once confirmed, each lies within REQ-VAL-114's tolerance of its anchor; the demo's 0.309 and 0.352 are evidence, not the anchors
+- [ ] REQ-VAL-198 — cargo xtask gate parting-self-check --propose: the gap against ln(100)/λ over the parting probe's four regions, the band proposed to clear the chaotic regions' p10–p90 and to flag the noise floor and saturation; self_check_unreliable: a chord series whose two marks are one boundary apart at a large FTLE reads "unreliable" (control: the check removed, it reads a time and fails); recorded in decisions.md
+- [ ] REQ-VAL-199 — cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md
 <!-- /list:numerical-gates -->
 
 ## 2. The load-bearing invariants (canonical_spec §9 — the walls)

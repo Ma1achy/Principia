@@ -373,6 +373,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-558** — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*
 - **R-568** — RQ-378 is parked again, a deferral by ruling with no target: the entry stays open, its option (a) stays applied, nothing waits, and it returns when the human raises it *(amends R-510)*
 - **R-571** — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
+- **R-572** — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*
+- **R-574** — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
 
 ## Values
 
@@ -406,6 +408,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-440** — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)*
 - **R-551** — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*
 - **R-564** — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
+- **R-575** — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
 
 ## Process
 
@@ -534,7 +537,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-107** — Apply the RQ-67 follow-ups; GUI_DESIGN_NOTES may be conformed *(closes RQ-67)*
 - **R-113** — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*. Still in force: every fix and split in RQ-93 to RQ-100 as written, with these choices; of RQ-95's, the M2 goldens and the projection selector in the Manifold view's Chart section, shown when the chart is the shape sphere; the hemisphere toggle is removed (R-544). Amended by R-544 (the hemisphere toggle is removed).
 - **R-124** — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*
-- **R-132** — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+- **R-132** — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*. Still in force: all three changes, except that T is no longer floored at 50: its default stays 50 and it can be raised or lowered (R-575), its lowest value RQ-555; `dt_macro = max(1e-3, T/65535)` stands. Amended by R-575 (the horizon: default 50, raised or lowered, not floored at 50).
 - **R-133** — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*. Still in force: all seven interpretations, except that "f32 noise" in REQ-COL-006 is read as REQ-DEC-043's calibrated f32 decode factor only until TASK-M2-29 calibrates the agreement presets' tolerance under fragment fast-math, which the agreement gate then uses (REQ-COL-060, R-297). The rest of that interpretation stands: "Tier-N tolerance" in REQ-TOOL-029 is read as REQ-DEC-043's factor until REQ-VAL-064 sets Tier N, and the agreement preset compares against the decode stage's E₀ = K₀ + V₀ (R-86), not SimState.E_0. Amended by R-297.
 - **R-140** — The four readings are accepted *(closes RQ-118)*
 - **R-147** — The R-97 to R-109 follow-ups are applied *(closes RQ-77)*
@@ -588,3 +591,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-431** — No veto on #209's alias test, the constants lint's skip of test code, `constants::MILESTONES`'s names or the narrowed local mutants runs
 - **R-432** — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts
 - **R-559** — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it
+- **R-573** — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it
