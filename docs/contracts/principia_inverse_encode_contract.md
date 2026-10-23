@@ -293,6 +293,18 @@ changes the class of `L_z` or `E` (below, "A qualitatively different IC") is rej
 state whose `L_z` or `E` is not finite, the coincident pair's `U = −∞` among them, has no class there to change, so
 its clamp stands: there is no coincident-bodies rejection.
 
+**The zero class in floating point** (R-72; REQ-ENC-036; TASK-M2-19; physics review 5630998530 of PR #284, P2,
+applied per R-369). `L_z` and `E` are computed in rounded arithmetic, so a value zero in exact arithmetic comes out as
+rounding whose sign, and whether it is exactly 0, follows the entry's gauge (its orientation, scale, offset and
+boost). Layer 1's class test (above; "A qualitatively different IC") therefore reads class 0 as a band relative to
+each value's own scale, on the state it classifies, the entered state's `C(x)` before the clamp and the decode of the
+clamped `z` after it: `L_z` is in class 0 iff `|L_z| ≤ k·ε_R·Σ‖rᵢ‖‖pᵢ‖`, and `E` iff `|E| ≤ k·ε_R·(K + |U|)`, the
+band's edge included; outside the band the class is the value's sign. A value or a scale that is not finite has no
+class. `k` is the constants register's `zero_class` (R-71; REQ-ENC-037), proposed from a measurement of `C`'s rounding
+of `L_z` and `E` over gauge images of states across the controls' range and of the decode's over unclamped `z`, set at
+least 4× above it and at least 4× below the smallest class change a clamp makes (about `ε_z` relative, `β`'s clamp at
+a collinear configuration), and provisional until the M2 gate.
+
 **Layer 3's tolerance** (R-71; REQ-ENC-027; TASK-M2-19). "Within tolerance" is `‖Σmᵢrᵢ‖/R_x ≤ k·ε_R` for the CoM and
 `‖Σpᵢ‖/P_x ≤ k·ε_R` for the total momentum, on the lock decoded as a pixel decodes it (the chart's decode at a chart
 landing, else the free decode of `z`), `R_x` and `P_x` Part 4's extents floored at 1 and `ε_R` the precision's machine
