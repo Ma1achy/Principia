@@ -540,7 +540,7 @@ trajectories fade, and how fast).*
   implicit stepper is built.
 - **Waits:** nothing built; TASK-M3-39 builds the pair table with note 4 under (a).
 
-## RQ-533: R-569's words and its demos differ in three places: an icon larger than the view, a click that pins the trace the hover already shows, and the legend's key line *(conflict: the ruling against its transcription source; R-569, R-538; REQ-GUI-354, REQ-GUI-356, REQ-GUI-332; context: TASK-M8-58, TASK-M8-63)*
+## RQ-533: R-569's words and its demos differ in four places: an icon larger than the view, a click that pins the trace the hover already shows, the legend's key line, and a hover into a repeat of the shown trace *(conflict: the ruling against its transcription source; R-569, R-538; REQ-GUI-354, REQ-GUI-356, REQ-GUI-332; context: TASK-M8-58, TASK-M8-63)*
 
 *Found by R-569's port, reading `docs/incoming/2026-10-21_trace_playback/demo/trace_markers.html` (version 29) and
 `trace_sound.html` (version 10) as text; neither was run. The two demos agree with each other in all three places.
@@ -570,12 +570,15 @@ Nothing is ruled.*
   - **A hover into a repeat of the shown trace** (ruling 1): "a hover or click that integrates a different IC sets the
     playhead to 0". A pixel in a repeat integrates the canonical system, the shown trace's IC bitwise (R-537, R-538
     TM7; REQ-GUI-275), so by the words moving the hover into it does not restart. In the demos every `pointermove`
-    while unpinned schedules `compute` (`trace_markers.html:838`, `:851`; `trace_sound.html:903`), and `compute` calls
+    while unpinned schedules `compute` (`trace_markers.html:838`, `:853`; `trace_sound.html:903`), and `compute` calls
     `restartOnNewRun` for any pixel that is a system, the same IC or not (`trace_markers.html:837`;
     `trace_sound.html:887`), so they restart there.
   - **Options seen:** (a) the words: no restart, the IC being the same; (b) the demos: every hover onto a system pixel
     while playing restarts.
   - **Applied meanwhile:** (a), the words. REQ-GUI-354's repeat arm carries it (`rq: RQ-533`).
+  - *Was (before PR #278's fix round 8, qa re-check 5624560597 Q5, applied per R-369):* the citation "(`trace_markers.html:838`, `:851`;
+    `trace_sound.html:903`)", `:851` being the pan; and the heading "R-569's words and its demos differ in three places:
+    an icon larger than the view, a click that pins the trace the hover already shows, and the legend's key line".
 
 ## RQ-534: R-569's restart sets "the playhead" to 0, and the trace's playhead is the Time panel's, which is the figure's one global playhead, so every hover onto a new pixel while playing restarts the whole field's live march *(conflict: the ruling against the canonical spec and the export and animation contract; R-569, R-538 TF3, R-476; REQ-GUI-354; context: TASK-M8-58)*
 

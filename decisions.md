@@ -23603,10 +23603,11 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   restart is the Time panel's playhead, the one "With the playhead" uses (§8): that it is also the figure's global
   playhead is **RQ-534**, (a) applied meanwhile. Pinning by a click on the pixel the hover already shows integrates the
   same IC, so by the words it does not restart; the demo restarts there: **RQ-533**, the words applied meanwhile. So
-  does moving the hover into a repeat of the shown trace, a different pixel with the same IC (REQ-GUI-275): by the
-  words no restart, and the demos restart on every hover onto a system pixel (`trace_markers.html:837`, `:851`), the
-  fourth place RQ-533 records, (a) applied meanwhile (PR #278's fix round 6, gui re-check 5624466118 G2, applied per
-  R-369).
+  does moving the hover into a repeat of the shown trace, a different pixel with the same IC (REQ-GUI-275): by the words
+  no restart, and the demos restart on every hover onto a system pixel (`trace_markers.html:837`, `:853`), the fourth
+  place RQ-533 records, (a) applied meanwhile (PR #278's fix round 6, gui re-check 5624466118 G2, applied per R-369).
+  *Was (before PR #278's fix round 8, qa re-check 5624560597 Q5, applied per R-369):* "(`trace_markers.html:837`,
+  `:851`)", `:851` being the pan.
 - **PB7. "Exactly 0" (PB2).** The playhead's `t` equal to 0.0, as a restart or a step back to the start sets it; the
   demo's test is `playT <= 1e-9`, and its playhead is set to exactly 0 by every path that reaches it. A step while
   paused is neither playing nor scrubbing (R-538 J11), so a step back to 0 draws the trace dotted; a held scrubber at 0
@@ -23707,7 +23708,10 @@ heading block, PB15 and this paragraph, and adds R-569 and `principia_lines.md` 
 render_gui_spec §G6 to TASK-M8-62's. PR #278's fix round 5 (qa review 5624411825, applied per R-369) changes
 REQ-GUI-354, REQ-GUI-355 and REQ-GUI-356 (verify, note), PB14 here, and TASK-M8-58's deliverables, acceptance and notes.
 PR #278's fix round 6 (gui re-check 5624466118, applied per R-369) changes REQ-GUI-354 (note) and REQ-GUI-356 (verify,
-note), RQ-533 (a fourth place added), and PB6 and PB14 here.
+note), RQ-533 (a fourth place added), and PB6 and PB14 here. PR #278's fix round 8 (qa re-check 5624560597, applied per
+R-369) corrects two demo line citations (the hover's `schedule` call, `trace_markers.html:853`; `clampPx`, `:611-612`)
+in RQ-533, PB6 and the notes of REQ-GUI-354 and REQ-GUI-274, each with a *Was*, and makes RQ-533's heading count four
+places.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
