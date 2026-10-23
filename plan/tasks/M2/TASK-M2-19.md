@@ -24,7 +24,7 @@ Lookup exists CPU-side: the exact-IC form ((m, n), a triple, a raw z, or physica
 ## Deliverables
 - `crates/engine/src/lookup.rs` (the forms, the ladder, the outcome with its notices and moved coordinates).
 - The inverse_encode_contract chart-aware-validation doc change naming layer 1's space and bounds, with a "Removed lines" note.
-- Tests `crates/engine/tests/lookup.rs`; gate `cargo xtask gate decode-sanity` (fixture `fixtures/gates/decode_sanity/`).
+- Tests `crates/engine/tests/lookup.rs`; gate `cargo xtask gate decode-sanity` (fixture `fixtures/gates/decode-sanity/`).
 
 ## Acceptance tests
 - `cargo test -p engine lookup_forms` — each exact form and a partial specification entered; the resulting lock and slice basis asserted (REQ-ENC-012).
