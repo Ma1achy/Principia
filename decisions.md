@@ -24003,6 +24003,12 @@ f32-row check asserts every dispatch is within TASK-M4-09's chunk planner's boun
 job over that view at `T = 200` sized from its pilot to outlast the window, still running at its end (Q3)
 (`principia_results.md` §3.2, §6; REQ-PERF-107 to REQ-PERF-109; TASK-M8-74).
 
+*Fix round 12 of PR #283 (qa review 5628365538, Q6 to Q8; applied per R-369):* `result_window` tests the progress
+display, Cancel and Resume, and the f64 warning at `T = 100` (REQ-GUI-366); `result_folder_layout` tests the folder's
+name, its four files and result.json's fields, reading `<build8>` as the first eight characters of the build hash
+job.json records (REQ-SYS-089); TASK-M0-02's REQ-SYS-007 line follows this ruling's exception for the Result's payload,
+with a *Was:*.
+
 R-572 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
@@ -24207,6 +24213,13 @@ asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-08
 fixed two-way split failing (Q2); `precision-runs-frame` holds the fixed suite's `pan-nearfield` with the pin
 re-issued so four runs are in flight throughout, and reads "REQ-SYS-060's form", that requirement stating no
 thresholds (Q3) (honesty §3.1, §6; REQ-TOOL-127, REQ-PERF-106; TASK-M4-16, TASK-M8-76).
+
+*Fix round 12 of PR #283 (qa review 5628365538, Q1 to Q5; applied per R-369):* TASK-M8-76 depends on TASK-M8-75, which
+builds the result view its result-view cases need (Q1); REQ-VAL-197's tests add the default marks (10⁻³, 0.1) and a
+non-finite chord reading 2 (Q2, Q3); REQ-VAL-196's add RQ-558's option (a), each run's first event latched while it
+carries on to `T`, and the "ended at `t = …`" chords (Q4); `nudge_is_one_ulp` has zero components, `next_up(0.0)` on
+the CPU and, on the GPU, the form REQ-TOOL-127's definition gives, since honesty §3.1 already assigns a zero's form
+under flushed subnormals to that definition (a definition requirement, R-72), so no new RQ (Q5).
 
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 
