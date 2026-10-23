@@ -30,8 +30,9 @@ Time, Legend) and above the footer, its top edge a splitter (R-462), its height 
 a double-click or View › reset layout. The console, docked over the bottom row (R-463), docks over the Sequence too
 when both are open. It has a × to close it. Like every window it is `ViewUI`'s, never read by the engine
 (`principia_gui_state_contract.md` §2). The sequence being edited is the GUI's own document, beside `ViewUI`: the engine
-reads it only as the spec a preview, proof or export request carries (applied per R-369; whether its edits enter the
-contract's history is RQ-559).
+reads it only as the spec a preview, proof or export request carries (applied per R-369; whether its edits enter any
+history is RQ-559). Outside the preview, the only `SetField`s the Sequence sends are Go to's (§3.2) and, after a reel
+takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3).
 
 Its keyboard model is §G3's for a window, with three sections in order: the **header bar** (Add keyframe, Play preview,
 Proof strip, Export…, Open…, Save…, ×), the **timeline** and the **inspector** (the selected keyframe's or segment's
@@ -39,6 +40,12 @@ controls). In the timeline, ← and → move between keyframes and the segments 
 selects. Its scope's shortcuts (R-409): **K** adds a keyframe and **Delete** removes the selected one. The Figure's K
 stays the lock (§G4, R-556); a scope's letter acts only with the focus in that scope, so the two never meet. Esc from
 the window's top level returns the focus to the Figure and leaves the window open.
+
+**Getting back in by keyboard.** The Sequence is a window, not a big scope: §G3's Tab order of big scopes (1 top bar …
+8 footer, R-405) is unchanged. **Windows › Sequence…** on an open Sequence gives it the focus, landing on its header
+bar in navigation mode, as opening it does; the top bar's menus are reached by keyboard as big scope 1 (§G3), so the
+way back is Tab to the top bar, Enter into Windows, Sequence…. A click anywhere in the Sequence gives it the focus as a
+click does (R-456). (Fix round 1 of PR #286, gui review 5631060675, F3; applied per R-369.)
 
 ### 3.2 Keyframes
 
@@ -71,7 +78,7 @@ sees why a segment costs what it does:
 | Run | every other `SimConfig` field: the occupant, the horizon, `E`, the thresholds |
 
 Every field of `SimConfig` and `RenderState` is in exactly one lane. The table assigning each field is a definition
-(R-72, REQ-GUI-378), written here by the task that builds the lanes and kept exhaustive at compile time, as the tier
+(R-72, REQ-GUI-375), written here by the task that builds the lanes and kept exhaustive at compile time, as the tier
 table is (R-484). The draft's "Camera" lane is **Navigate** here, since no control is named after a camera
 (`principia_render_gui_spec.md` §G1); "Run" is added so that every field has a lane (both applied per R-369).
 
@@ -106,17 +113,35 @@ A selected segment offers:
 and on every segment, bitwise (R-484). A file naming a link the build lacks, or whose entry hash differs, opens as
 "state present, cannot recreate", naming the link, and is never recreated under another link (Part 6, R-521).
 
-**Undo.** Every edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing or
-transition) is undoable and redoable, one entry per edit, a drag one entry. The draft gives the window its own
-history; the contract keeps one history and a GUI none of its own (R-52), so which history is RQ-559. Go to is the
-contract's own entry either way.
+**Undo.** Whether an edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing
+or transition) is undoable, and in which history, is RQ-559: the draft gives the window its own history, the contract
+keeps one history and a GUI none of its own (R-52), and RQ-559 also offers no undo. Nothing is applied meanwhile: if
+RQ-559 rules a history, each edit is one entry in it, a drag one entry; if it rules none, no sequence edit enters the
+contract's history. Go to is the contract's own entry either way. *Was:* "Every edit to the sequence (add, delete,
+Update, a drag in time, a playhead policy, a segment's easing or transition) is undoable and redoable, one entry per
+edit, a drag one entry. The draft gives the window its own history; the contract keeps one history and a GUI none of
+its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review 5631060675, F5).
 
 ### 3.6 Preview and the proof strip
 
 - **Play preview** runs the sequence through the live frame loop from the timeline cursor, with link-parameter changes
   and dissolves shown as cuts (R-520 F3), under a banner in the Sequence's header bar: "Preview: not converged; cuts
-  where the export interpolates". It is playback, and playback never enters undo (R-101): each frame's state is sent
-  with "no history", and stopping it leaves the undo depth as it was. While it plays the timeline cursor follows it.
+  where the export interpolates". While it plays the timeline cursor follows it.
+  - **A transient view, not an edit.** The GUI sends one **preview request** carrying the spec and the cursor's wall
+    time; the engine plays the spec from there through its live frame loop and draws the preview's frames in place of
+    the view. No `SetField` is sent and the contract's `SimConfig` and `RenderState` are never changed, so nothing
+    enters the undo history and R-69 is not engaged; the GUI clock's playhead advance (R-101) is held while it plays,
+    the preview owning its playhead by each keyframe's policy. The snapshot carries the preview's state (on or off, its
+    wall time), which the banner and the cursor read (`principia_gui_state_contract.md` §2).
+  - **When it stops or ends** (Stop, Play preview again, Esc in the Sequence, or the spec's end), the preview goes and
+    the view is the user's view from before it, bitwise, since it was never changed. To keep a preview's frame the user
+    moves the cursor there and uses a keyframe's Go to, or Update.
+  - **A user edit while it plays** (any `SetField` the GUI would send: a pan, a slider, Home, a stain edit, undo or redo)
+    first stops the preview, and then applies to the user's view, an ordinary entry; the preview never overwrites it.
+  - *Was:* "It is playback, and playback never enters undo (R-101): each frame's state is sent with "no history", and
+    stopping it leaves the undo depth as it was." (fix round 1 of PR #286, gui review 5631060675, F2; applied per
+    R-369: R-101 covers only the clock's playhead, and R-69 makes every `SimConfig` and `RenderState` edit undoable, so
+    the preview edits nothing.)
 - **Proof strip** renders one small frame per keyframe and one per segment midpoint through the blocking exporter
   (Part 4) at its lowest export quality tier, so the user sees exact frames before paying for all of them. A proof
   frame is an exported frame, not the live loop's (Part 1, R-66): at the same time, size and tier it is the exported
@@ -149,6 +174,7 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
 - Proof frames are exported frames, not scrub over stored data (Part 1, R-66).
 - Undo: R-52 holds the contract's one history; the draft's own history for the window is RQ-559.
 - R-520 F3 holds: live playback, the preview included, cuts link parameters and dissolves; the export eases them.
+- R-69 and R-101 hold: the preview edits no `SimConfig` or `RenderState` field and sends no `SetField` (§3.6).
 
 ## 5. Decided
 
@@ -176,7 +202,9 @@ Each with what makes it fail.
 - **seq_file_roundtrip**: save then open is the identity, bitwise. Control: a file with one changed link entry hash
   opens as "cannot recreate", naming the link, and a reader that substitutes the build's link fails.
 - **preview_cuts_links**: a segment interpolating a link parameter previews as a cut at its second keyframe and is
-  flagged in the planner; the preview leaves the undo depth unchanged. *Fails* otherwise.
+  flagged in the planner; the preview sends no `SetField`, and when it stops or ends the state is bitwise the state
+  before it and the undo depth unchanged; a pan during the preview stops it and pans the user's view. *Fails* if a
+  frame is sent as an edit, if the view stays at the preview's frame, or if the pan lands on the preview's state.
 - **proof_equals_export**: a proof frame is bitwise the exported frame at the same time, size and tier. *Fails if* it
   came from the live loop.
 - **planner_no_guess**: with no frame records the estimate reads "no measurement on this machine yet" and shows no

@@ -816,6 +816,10 @@ a click does, as a click on a console control does (R-450 A3), landing in naviga
 click on the Figure that pins a sample (R-453) ends typing and leaves the focus where it was (R-456, amending R-450 A3
 and R-409 G4 for text fields; its scope applied per R-369). The footer and the console follow the same two modes (R-405, R-409).
 
+**The docked Sequence (R-577, §G9a).** It is a window, not a big scope: the order above is unchanged. Esc from its top
+level returns the focus to the Figure, and Windows › Sequence… on an open Sequence gives it the focus again, on its
+header bar in navigation mode (fix round 1 of PR #286, gui review 5631060675, F3; applied per R-369).
+
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
 console (§G12), as a click does, with the focus inside it. The console is a window with exactly two scopes, top to
@@ -1395,7 +1399,9 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   as over the bottom row (R-463). × closes it. Its sections, in §G3's order: the header bar (Add keyframe, Play
   preview, Proof strip, Export…, Open…, Save…, ×), the timeline, the inspector. In its scope **K** adds a keyframe and
   **Delete** removes the selected one; the Figure's K stays the lock (§G4). Esc from its top level returns the focus to
-  the Figure, the window staying open.
+  the Figure, the window staying open. It is a window, not a big scope, so §G3's Tab order is unchanged; Windows ›
+  Sequence… on an open Sequence gives it the focus on its header bar, the keyboard's way back (fix round 1 of PR #286,
+  gui review 5631060675, F3; applied per R-369).
 - **Keyframes:** Add keyframe captures the whole `SimConfig` and `RenderState` at the timeline cursor. A keyframe shows
   its values, **Go to** (one undoable entry), **Update** from the view, a drag in time (clamped between its neighbours)
   and its playhead policy (hold, advance with wall time, set to a value).
@@ -1406,7 +1412,11 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   link-parameter change R-520's rule, shown ("link parameters interpolated: every frame a different decoder"; whether a
   cut is offered there is RQ-560); REQ-TOOL-075's fixed rules shown, not offered.
 - **Play preview** runs the sequence in the live frame loop, link parameters and dissolves as cuts (R-520 F3), under
-  the banner "Preview: not converged; cuts where the export interpolates", its frames entering no undo (R-101).
+  the banner "Preview: not converged; cuts where the export interpolates". It is a transient view the engine plays from
+  a preview request carrying the spec: no `SetField` is sent, nothing enters the history, and when it stops or ends
+  the view is the user's view from before it, bitwise; a user edit while it plays stops it first and applies to the
+  user's view. *Was:* "its frames entering no undo (R-101)." (fix round 1 of PR #286, gui review 5631060675, F2;
+  applied per R-369).
   **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
   tier.
 - **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
@@ -1415,8 +1425,8 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
   every export.
 - **Open… / Save…** a `.principia-seq.json`, the spec in its canonical serialisation (R-309) with the build hash, the
-  schema version and the link entry hashes (R-521); opening is the identity (R-484). Undoing an edit to the sequence
-  is RQ-559's.
+  schema version and the link entry hashes (R-521); opening is the identity (R-484). Whether an edit to the sequence
+  is undoable, and in which history, is RQ-559's; nothing is applied meanwhile.
 
 ### Spotlights — the reel, natively (R-578)
 
@@ -1426,11 +1436,16 @@ is `docs/design/principia_spotlight_reel.md`.
   provenance (chart, horizon, integrator, build, date); **Play reel**, **Stop**, **Open the sequence** (into Sequence).
   With no reel in the build: "No reel in this build", Play reel disabled.
 - **Playing:** the film plays in the Explore canvas, the live view paused and hidden beneath, nothing computed; the
-  header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot. Stop leaves the
-  view as it was.
-- **The takeover:** a press, drag or scroll on the figure, or a key in the Figure scope, takes over at the displayed
-  frame: its spec's state loaded live, bitwise the exporter's, as one undoable entry, and it keeps playing, live. The
-  film frame stays as the backdrop until the live baseline cover is complete; then the badge goes.
+  header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot, and no decoder
+  badge. Play reel gives the focus to the Figure scope. While it plays the hover is held off (no `Hover` sent), the
+  Legend shows only "Film: the legend returns when live", `t` reads "—", and undo and redo are disabled. Stop leaves
+  the view as it was.
+- **The takeover:** a press, drag or scroll on the figure, a key in the Figure scope (a modifier alone excepted), or a
+  touch on any control that would send a `SetField` takes over at the displayed frame, consumed: its spec's state
+  loaded live, bitwise the exporter's, and it keeps playing, live, the player's frames coalesced into the takeover's one
+  undoable entry until the spec ends or a user edit stops it. The film frame stays as the backdrop until the live
+  baseline cover is complete; then the badge goes. (Fix round 1 of PR #286, gui review 5631060675, F2 and F4; applied
+  per R-369.)
 
 ## G10. Measure — a tool on the figure (`10_measure.png`)
 

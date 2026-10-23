@@ -24227,9 +24227,11 @@ these texts don't address, queue it rather than resolving it"):*
 - **A keyframe dragged in time** is clamped strictly between its neighbours, so keyframes never reorder.
 - **The sequence being edited is the GUI's own document**, beside `ViewUI`, which the engine reads only as the spec a
   preview, proof or export request carries (state contract §2; its undo is RQ-559).
-- **The preview is playback**, and playback never enters undo (R-101): each frame's state goes with "no history", as
-  the clock's playhead advance does, and stopping the preview leaves the undo depth as it was. This is R-101's reading,
-  not an exception to R-69.
+- **The preview is a transient view, not an edit** (fix round 1 below): one preview request carries the spec, the
+  engine plays it, no `SetField` is sent, and when it stops or ends the view is the user's from before it, bitwise.
+  *Was:* "**The preview is playback**, and playback never enters undo (R-101): each frame's state goes with "no
+  history", as the clock's playhead advance does, and stopping the preview leaves the undo depth as it was. This is
+  R-101's reading, not an exception to R-69."
 - **A dissolve in live playback** is a cut at the second keyframe, as every chart switch is live.
 - **The estimate's basis**: a segment's cost is the samples it marches (the export's pixels times its copies, `E + 1`)
   times the physical time each is marched; the throughput is the same quantity per wall second from this machine's
@@ -24240,6 +24242,20 @@ these texts don't address, queue it rather than resolving it"):*
   port the draft's interim dialog text ("a GIF/MP4/WebM alone does not carry it").
 - **Two tasks, M8:** TASK-M8-77 (the window, keyframes, timeline, lanes, segments, the file) and TASK-M8-78 (preview,
   proof strip, planner and export), after TASK-M8-31.
+
+*Fix round 1 of PR #286 (gui review 5631060675, F1, F2, F3, F5; applied per R-369):*
+- **F1:** `principia_sequence.md` §3.3 cites REQ-GUI-375 for the lane table (*was:* REQ-GUI-378).
+- **F2, the preview:** R-101 covers only the GUI clock's playhead, and R-69 makes every `SimConfig` and `RenderState`
+  edit undoable, so the preview edits neither. It is engine state set by a preview request carrying the spec, as undo
+  is a request (`principia_gui_state_contract.md` §2): the engine draws the spec's frames through the live loop in place
+  of the view, owning the playhead, and sends nothing back as edits. When it stops or ends, the view is the user's view
+  from before it, bitwise; a user edit while it plays ends it first and applies to the user's view. This makes "the
+  engine reads the sequence only as the spec a request carries" true of the preview. REQ-GUI-379 is restated.
+- **F3, the keyboard's way back:** the Sequence is a window, not a big scope, so §G3's Tab order is unchanged; Windows ›
+  Sequence… on an open Sequence gives it the focus on its header bar (§G3, §G9a). REQ-GUI-372's verify tests it and the
+  Delete key.
+- **F5, undo:** §3.5 and REQ-GUI-378 no longer say every sequence edit is undoable; RQ-559, which also offers no undo,
+  decides, nothing applied meanwhile, and REQ-GUI-378 waits on it.
 
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -24334,8 +24350,23 @@ reported as a disagreement. Nothing waits.
 - **One task, M8:** TASK-M8-79, after TASK-M8-78 (whose live sequence player the takeover continues in) and TASK-M5-26
   (the compositor's backdrop).
 
+*Fix round 1 of PR #286 (gui review 5631060675, F2 and F4; applied per R-369):*
+- **F2, the motion after a takeover:** it is the user's own view, so the player's frames are `SetField`s coalesced into
+  the takeover's one history entry, as a drag's edits are sent under one key (R-96; R-466 K10), every edit in the
+  history (R-69) and one undo still returning to the view before the reel; the GUI clock's advance (R-101) is held
+  while the player owns the playhead. The player stops at the spec's end, at the first user edit (which closes the
+  takeover's entry at the frame shown and then applies as its own entry, never overwritten) or at undo. *Was:* "That
+  playback is playback: its frames enter no undo (R-101)."
+- **F4 (a), by keyboard:** Play reel gives the focus to the Figure scope, so the next key takes over.
+- **F4 (b), the rest of Explore while the film plays:** the hover is held off, so no `Hover` `SetField` is sent and
+  REQ-TOOL-199's "0 SetFields" holds; the decoder badge is not shown, the Legend shows only "Film: the legend returns
+  when live", `t` reads "—", undo and redo are disabled, and a touch on any control that would send a `SetField` takes
+  over at the displayed frame, consumed. REQ-GUI-386 (new) holds it.
+- **F4 (c):** REQ-GUI-383's verify tests a click, a drag, a scroll and a key, and a modifier pressed alone that does
+  not take over.
+
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199
 (the film computes nothing), REQ-GUI-382 (the Spotlights window), REQ-GUI-383 (the takeover), REQ-GUI-384 (no blank
-handover) and REQ-GUI-385 (the preview badge).
+handover), REQ-GUI-385 (the preview badge) and, in fix round 1, REQ-GUI-386 (Explore while the film plays).
