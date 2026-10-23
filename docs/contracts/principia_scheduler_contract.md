@@ -79,13 +79,16 @@ required on the addressing, as for EX7; perf reviews the cost.*
   (`principia_deep_zoom.md` §1) overflow. What the addressing does there is a definition requirement (R-72), written by
   the task that builds `L < 0`: no `inf` or `NaN` reaches a quad's centre, half-width or key (REQ-SCHED-105).
 - **Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4)
-  stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, the first level whose
-  square side is at least the viewport's extent, about `⌈log2(cover quads per axis)⌉` levels above the cover. That is
+  stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level
+  below the first level whose square side is at least the viewport's extent, depending on where the view sits, about
+  `⌈log2(cover quads per axis)⌉` levels above the cover. That is
   the only stop, wherever the view sits: it is not the cover's smallest common ancestor, which for a viewport
   straddling a dyadic line such as `x = 2^m` roots sits about `m` levels higher, and which a viewport straddling a line
   through the lattice origin never has. Nothing above that level is pinned or walked, so the pinned set and the at-rest
   count of ancestors are set by the screen, independent of the zoom and the pan (REQ-SCHED-104; perf reviews
-  5624992732, P6, and 5625031178, P7, of PR #279; applied per R-369). *Was:* "**Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4) stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares: the cover's smallest common ancestor, whose square contains the whole viewport, where one exists. Where the viewport straddles a line through the lattice origin (index 0), which every level shares, no single ancestor contains it, and the chain stops at the 2 × 2 block of ancestors there. Nothing above that level is pinned or walked, so the pinned set and the at-rest count of ancestors are finite and grow with the logarithm of the zoom-out (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369)."
+  5624992732, P6, and 5625031178, P7, of PR #279; perf review 5625066551, P8; applied per R-369). *Was (fix round 8):*
+  "stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, the first level whose
+  square side is at least the viewport's extent". *Was:* "**Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4) stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares: the cover's smallest common ancestor, whose square contains the whole viewport, where one exists. Where the viewport straddles a line through the lattice origin (index 0), which every level shares, no single ancestor contains it, and the chain stops at the 2 × 2 block of ancestors there. Nothing above that level is pinned or walked, so the pinned set and the at-rest count of ancestors are finite and grow with the logarithm of the zoom-out (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369)."
 - **Coarser quads are ordinary.** They are scheduled, cached and refined like any other, refinement running down
   through `L = 0` as the user zooms in; a coarse quad's samples are systems of the plane at its own sample positions,
   computed as any quad's are. `MAX_REL_DEPTH` and the screen floor stay view-relative.

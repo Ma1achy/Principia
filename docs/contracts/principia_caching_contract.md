@@ -77,6 +77,10 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
   wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
   ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
   Part 3).
+- **One definition of the stop (perf review 5625066551 of PR #279, P8; applied per R-369).** The level is the first at
+  which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first level whose
+  square side is at least the viewport's extent, depending on where the view sits; it is not defined as that second
+  level (`principia_scheduler_contract.md` Part 3).
 
 ---
 

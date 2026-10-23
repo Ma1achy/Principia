@@ -23714,6 +23714,11 @@ cover's smallest common ancestor where one exists" is superseded, a smallest com
 higher for a view straddling `x = 2^m` roots, which would tie the chain's length to the pan. REQ-SCHED-104's arm (3)
 gains a far-pan case.*
 
+*23 Oct 2026, fix round 9 of PR #279 (perf review 5625066551, P8), applied per R-369: the stop has one definition, the
+first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first
+level whose square side is at least the viewport's extent, depending on where the view sits; arm (3)'s far-pan view is
+the origin-line view at 10⁶ × moved by exactly `2^40` roots along x, so the equality with that view at home is exact.*
+
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
