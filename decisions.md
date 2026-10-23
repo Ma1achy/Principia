@@ -23995,6 +23995,14 @@ that enters no history; the engine draws from it and the snapshot carries it, so
 - **The pilot** runs off the main thread, and a field edit cancels and restarts it; a zoom or pan in a result view runs
   no integration and dispatches no march (P5; `principia_results.md` §3.1, §3.4; REQ-GUI-366, REQ-GUI-367).
 
+*Fix round 10 of PR #283 (perf review 5628071919, Q1 to Q3; applied per R-369, as the review proposes):* the
+flat-memory check is the benchmark `cargo xtask bench result-job-memory` in its own process (REQ-PERF-109), and the
+refusal before allocating moves to REQ-PERF-108's unit test, since a benchmark requirement cannot carry it (Q1); the
+f32-row check asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is
+⌈steps / bound⌉, a fixed two-way split failing (Q2); `result-job-frame` holds the fixed suite's `pan-nearfield` and a
+job over that view at `T = 200` sized from its pilot to outlast the window, still running at its end (Q3)
+(`principia_results.md` §3.2, §6; REQ-PERF-107 to REQ-PERF-109; TASK-M8-74).
+
 R-572 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
@@ -24193,6 +24201,12 @@ never another copy's or a mean over the copies'. The conclusion of F10 stands (h
   (honesty §3.1, §6; TASK-M8-76).
 - **TASK-M8-17's goal** says the shape-divergence comparison is on by default in the Inspector, as its acceptance,
   REQ-VAL-106 and this ruling do (P3).
+
+*Fix round 10 of PR #283 (perf review 5628071919, Q2, Q3; applied per R-369, as the review proposes):* `trace_chunked`
+asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is ⌈steps / bound⌉, a
+fixed two-way split failing (Q2); `precision-runs-frame` holds the fixed suite's `pan-nearfield` with the pin
+re-issued so four runs are in flight throughout, and reads "REQ-SYS-060's form", that requirement stating no
+thresholds (Q3) (honesty §3.1, §6; REQ-TOOL-127, REQ-PERF-106; TASK-M4-16, TASK-M8-76).
 
 R-574 is in the "design" group of `plan/rule_groups.yaml`.
 

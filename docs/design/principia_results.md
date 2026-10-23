@@ -75,11 +75,14 @@ for resumability without its VRAM tiling, which stays parked.
 **What the job costs the live view** (perf review 5627960807 of PR #283, P4; applied per R-369):
 - **The frame loop keeps its budget** while a job runs, at f64 (the CPU pool) and at f32 (the GPU), measured on the Mac
   (R-186) as frame percentiles against a no-job baseline (`principia_dd_telemetry_and_tiers.md` § "CPU", "Drop
-  priority on background work", and § "GPU"; REQ-SCHED-043).
+  priority on background work", and § "GPU"; REQ-SCHED-043). The work held constant (telemetry §1.1) is the fixed
+  suite's `pan-nearfield` (`principia_benchmark.md` §3) and a job over that view at `T = 200`, one copy per pixel, on a
+  square grid doubled from 256 until its pilot estimate (§3.1) outlasts the window; the job must still be running when
+  the window ends (perf review 5628071919 of PR #283, Q3; applied per R-369).
 - **The f64 pool leaves at least one core free**, configurable (telemetry § "CPU", "Leave cores"; REQ-PERF-003).
 - **The f32 path's dispatches are bounded.** A row of `nx` pixels marched to `T` in one dispatch is the long dispatch
   telemetry §6.3 forbids, so each row is split in time as well, carrying state between chunks (REQ-PERF-010's
-  mechanism); its live states are sized from `(E+1) × sizeof` (philosophy §7.2, "Tiled prebake").
+  mechanism), every chunk at or under TASK-M4-09's chunk planner's bound and ⌈steps / bound⌉ of them (Q2); its live states are sized from `(E+1) × sizeof` (philosophy §7.2, "Tiled prebake").
 - **payload.prin is streamed.** It is written row by row as rows finish, so peak process memory does not depend on
   `nx·ny`, and the job's memory is budgeted before it is allocated (telemetry §6.2a, "Budget before allocating"); a
   job that does not fit is refused with its reason before it starts.
@@ -204,6 +207,6 @@ exactly …", and perf review 5627960807 of PR #283 the last five).
 | A result's image imports as the identity, its `run` block in tier 1, never dropped | the `run` block is outside the tier table or below tier 1 |
 | The pilot runs off the main thread, and a field edit cancels and restarts it (P5) | the pilot runs on the GUI thread |
 | A zoom or pan in a result view runs 0 integrations and dispatches nothing (P5) | a display zoom re-dispatches |
-| The frame loop holds the no-job baseline while an f64 or f32 job runs, on the Mac (P4) | the job takes frame time |
-| The f64 pool leaves a core free; an f32 row runs as several bounded dispatches, bitwise the same at two chunk sizes (P4) | the pool takes every core, or a row is one dispatch to `T` |
-| Peak memory is the same at 256² and 1024², and an oversized job is refused before allocating (P4) | the payload is held whole, or allocation is attempted first |
+| The frame loop holds the no-job baseline over `pan-nearfield` while an f64 or f32 job runs, the job still running at the window's end, on the Mac (P4, Q3) | the job takes frame time, or it finished early |
+| The f64 pool leaves a core free; every f32 dispatch is within the chunk planner's bound, ⌈steps / bound⌉ of them, bitwise the same at two bounds; an oversized job is refused before allocating (P4, Q1, Q2) | the pool takes every core, a row is one dispatch to `T` or a fixed two-way split, or allocation is attempted first |
+| Peak memory is the same at 256² and 1024², measured by `cargo xtask bench result-job-memory` in its own process (P4, Q1) | the payload is held whole |

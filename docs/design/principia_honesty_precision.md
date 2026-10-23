@@ -77,7 +77,12 @@ point.
   counter (trajectory_viewing §1, "cancel-on-move by generation counter").
 - **Measured on the Mac** (R-186), in REQ-SYS-060's form: while a pin's four runs are in flight, frame p50, p95, p99,
   max and `frac_frames_over_41.7ms` (telemetry §3) equal the no-pin baseline within noise, at `T = 50` and `T = 200` on
-  a chaotic IC.
+  a chaotic IC. The work held constant (telemetry §1.1) is the fixed suite's `pan-nearfield` (`principia_benchmark.md`
+  §3), its frames during motion, with the pin re-issued each time its runs finish so that four runs are in flight
+  throughout (perf review 5628071919 of PR #283, Q3; applied per R-369).
+- **Each chunk is within the planner's bound.** The trace's chunks come from TASK-M4-09's chunk planner: every
+  dispatch's macro steps are at or under its per-dispatch bound (REQ-PERF-081's calibration), and the count is
+  ⌈steps / bound⌉; a split that is merely "more than one dispatch" does not satisfy it (Q2).
 
 **One integrator for all four runs** (physics review 5627073272 of PR #283, F3; applied per R-369). Both f64 runs, and
 both nudged runs, take the f32 run's sim key: the same occupant (stepper × regularisation), coefficients and step rule,
@@ -314,10 +319,12 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   starts exactly two f32 traces and two `computeIC` runs; a playhead move, a mark edit, expand or collapse, and
   re-showing start none; a new pin or an unpin cancels by generation counter. *Fails if* the panel re-runs per frame
   or on a mark edit.
-- **precision-runs-frame** (Mac benchmark, R-186; P2): frame p50/p95/p99/max and `frac_frames_over_41.7ms` with a
-  pin's four runs in flight equal the no-pin baseline within noise, at `T = 50` and `T = 200`. *Fails if* the runs
-  take frame time, or the f64 runs leave the inspector worker.
-- **trace_chunked** (REQ-TOOL-127; P1): at `T = 200` the f32 trace runs as several bounded dispatches, its series
-  bitwise the same at two chunk sizes. *Fails if* it is one dispatch to `T`.
+- **precision-runs-frame** (Mac benchmark, R-186; P2, Q3): over the fixed suite's `pan-nearfield`, with a pin
+  re-issued so four runs are in flight throughout, frame p50/p95/p99/max and `frac_frames_over_41.7ms` equal the
+  no-pin baseline within noise, at `T = 50` and `T = 200`. *Fails if* the runs take frame time, the f64 runs leave the
+  inspector worker, or no runs are in flight at the window's end.
+- **trace_chunked** (REQ-TOOL-127; P1, Q2): at `T = 200` every dispatch is at or under the chunk planner's bound (a
+  bound under `T/2` in the test) and the count is ⌈steps / bound⌉, the series bitwise the same at two bounds. *Fails
+  if* it is one dispatch to `T`, or a fixed two-way split.
 - **atlas_unchanged**: the atlas frame is bitwise the same with the viewer's runs on and off. *Fails if* the viewer
   writes to the atlas's colours or stains.
