@@ -345,11 +345,16 @@ it:
   view's edge, by default; "Off-screen icons: pin to the edge (faint). Untick to hide them." Window
   chevrons (off) mark where the line crosses the view's edge. Pins are events, chevrons the line.
   *Was (R-538 TM6, before R-569):* "pinned to the nearest point just inside the view's edge".
-- **Every icon wholly on screen (R-569).** Every event, start and path icon of the primary trace (the end icons and
-  "?", the start star or Pictures' triangle, the reach rings, the syzygy markers, the window chevrons and seam ticks) is
-  placed so that its **whole drawn extent**, halo included and at its actual rotation and size, lies inside the view:
-  the icon moves inward from its point just far enough, on each axis, and no further. This holds for an icon whose
-  point is on screen near the edge as much as for a pinned one, and with the off-screen option on or off.
+- **Every icon wholly on screen (R-569).** Every event, start and path icon of the primary copy of every shown trace
+  (the hover or pinned trace and each kept trace; the end icons and "?", the start star or Pictures' triangle, the reach
+  rings, the syzygy markers and the window chevrons) is placed so that its **whole drawn extent**, halo included and at
+  its actual rotation and size, lies inside the view: the icon moves inward from its point just far enough, on each
+  axis, and no further. This holds for an icon whose point is on screen near the edge as much as for a pinned one, and
+  with the off-screen option on or off. The seam ticks and the direction arrows are line marks, drawn at their points as
+  before (the demos draw both raw, outside `withIcon`), as are the head marker and the time-tick labels. *Was (R-569's
+  port, before PR #278's fix round 1, gui review 5624167760 G2, G3):* "Every event, start and path icon of the primary
+  trace (the end icons and "?", the start star or Pictures' triangle, the reach rings, the syzygy markers, the window
+  chevrons and seam ticks)".
   - **The extent is measured, never tabled.** It is the box of what the icon draws, measured from its own drawing, not
     a hand-written radius per icon, so a new icon or icon set needs no entry. The demo's `iconBox` measures it once per
     icon shape and 1/64 turn of rotation, on an offscreen canvas at 2× (a pixel counts where its alpha is above 8 of
@@ -414,18 +419,20 @@ it:
       integrated (`docs/incoming/2026-10-21_trace_playback/demo/`). The playhead is the Time panel's (above), so the
       restart is that playhead's (RQ-534 (a), applied meanwhile). The own clock already restarts per trace and is
       unchanged.
-    - **Paused at `t = 0`, the line is drawn dotted (R-569).** With the transport paused, the scrubber not held, and
-      the playhead at exactly 0, the trace is drawn to its extent as above (TF3: the default length to its end; a
-      `Window` or `LastDt` length as chosen, RQ-427 (a)), but its line is **dotted**: round dots in the trace's own
-      colour (the ramp's, where the ramp is chosen), each over its halo, the dark outline pass dotted with it, the gap
-      scaled with the line width. That marks it as not yet played. The demo's `preview` in `drawTrace`: a dash of
-      length ~0 with round caps, its gap `max(4, 2.4·w)` px at the view's scale, for both passes. Its markers and icons
-      draw as usual. The dots take the whole line, the stretches otherwise dashed (leaving the reach, an incomplete
-      run's last stretch) included, their rings and "?" still marking them (the demo's). It is a different mark from
-      those dashed "unreliable" stretches and from the join-jumps line (thin, white, between breaks; "Breaks" above).
-      Anywhere else (playing, scrubbing, or paused at `t > 0`) nothing changes: TF3 and RQ-427 (a) stand. A step back
-      to 0 while paused draws it dotted (a step is neither playing nor scrubbing, R-538 J11). The legend's trace block
-      gains the key line "Dotted: paused at t = 0, not yet played" (render_gui_spec §G6).
+    - **Paused at `t = 0`, the line is drawn dotted (R-569).** With the transport paused, the scrubber not held, and the
+      playhead at exactly 0, the trace is drawn to its extent as above (TF3: the default length to its end; a `Window`
+      or `LastDt` length as chosen, RQ-427 (a)), but its line is **dotted**: round dots in the trace's own colour (the
+      ramp's, where the ramp is chosen), each over its halo, the dark outline pass dotted with it, the gap scaled with
+      the line width. That marks it as not yet played. The demo's `preview` in `drawTrace`: a dash of length ~0 with
+      round caps, its gap `max(4, 2.4·w)` px at the view's scale, for both passes. Its markers and icons draw as usual.
+      Every trace drawn under "With the playhead" is dotted so: the hover or pinned trace, each kept trace, and their
+      repeats at half strength (the demo's `preview` is one test for the whole figure). The dots take the whole line,
+      the stretches otherwise dashed (leaving the reach, an incomplete run's last stretch) included, their rings and "?"
+      still marking them (the demo's). It is a different mark from those dashed "unreliable" stretches and from the
+      join-jumps line (thin, white, between breaks; "Breaks" above). Anywhere else (playing, scrubbing, or paused at
+      `t > 0`) nothing changes: TF3 and RQ-427 (a) stand. A step back to 0 while paused draws it dotted (a step is
+      neither playing nor scrubbing, R-538 J11). The legend's trace block gains the key line "Dotted: paused at t = 0,
+      not yet played" (render_gui_spec §G6).
   - Own clock: the trace plays over its own window at its own speed while the figure stays put: once, looped, or back
     and forth. It is always animated (R-538 TF3); static draws the whole trace, as above.
   - Both animated modes take a tail (a bright stretch of Δt behind the head), an option to show the rest of the path

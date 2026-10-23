@@ -23611,19 +23611,31 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   (flagged: "the trace is drawn to its end …, but its line is dotted"). The extent is TF3's as RQ-427 (a) has it: the
   default length to its end, a `Window` or `LastDt` length as chosen, dotted the same way (flagged: the words say "drawn
   to its end (TF3 as now)", and TF3 as now keeps those two lengths). No head marker is drawn (TF3: the trace is not
-  drawn to the head).
+  drawn to the head). Every trace drawn under "With the playhead" is dotted so: the hover or pinned trace, each kept
+  trace, and their repeats at half strength, as the demo's `preview`, one test for the whole figure, draws them
+  (`trace_markers.html:520`, `:775-778`), the words' "the trace" not narrowing it (PR #278's fix round 1, gui review
+  5624167760 G3, applied per R-369).
 - **PB9. The legend's key line (PB2).** "The legend gains one key line": R-541 G8's `on the trace` block keys what the
   figure draws for this run, so it gains the line while the trace is drawn dotted, its line drawn dotted as the figure
   draws it; the full key (`Trace… › key…`) carries it always, as the demos' key does. The text is the words', "Dotted:
   paused at t = 0, not yet played"; the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played"
   (RQ-533, the words applied meanwhile). It is REQ-GUI-332's, the block's requirement (TASK-M8-63, which reaches
   TASK-M8-58 through its dependencies). R-541 G8 is read with this, not amended: its block lists the figure's marks,
-  and this is one more.
-- **PB10. Which icons (PB3).** "Every event, start and path icon" is every icon the primary trace draws through the
-  demo's `withIcon`: the end icons and "?", the start star and Pictures' triangle, the leave and re-enter rings (and the
-  pictures set's chart rings, `circle`), the syzygy markers, the window chevrons and the seam ticks. The head marker and
-  the time-tick labels are not icons (labels win, R-509) and are unchanged. The ✕ at a not-a-system click is R-537's
-  mark, drawn where it was clicked, and is unchanged.
+  and this is one more. The full key's line is REQ-GUI-328's, the Trace… window's (TASK-M8-62), whose `key…` opens the
+  full key, since TASK-M8-63 does not reach TASK-M8-62 (PR #278's fix round 1, gui review 5624167760 G4, applied per
+  R-369).
+- **PB10. Which icons (PB3).** "Every event, start and path icon" is every icon the primary copy of each shown trace
+  (the hover or pinned trace and each kept trace) draws through the demo's `withIcon`, which clamps every call outside
+  its repeats' pass (`trace_markers.html:629`), kept traces' included (`:778`): the end icons and "?", the start star
+  and Pictures' triangle, the leave and re-enter rings (and the pictures set's chart rings, `circle`), the syzygy
+  markers and the window chevrons. The seam ticks and the direction arrows are line marks the demo draws raw at their
+  points, outside `withIcon` (`trace_markers.html:565`, the `m_seam` line, and `drawArrows`; `trace_sound.html:614`),
+  and the words name neither, so both are unchanged. The head marker and the time-tick labels are not icons (labels win,
+  R-509) and are unchanged. The ✕ at a not-a-system click is R-537's mark, drawn where it was clicked, and is unchanged.
+  *Was (before PR #278's fix round 1, gui review 5624167760 G2 and G3, applied per R-369):* ""Every event, start and
+  path icon" is every icon the primary trace draws through the demo's `withIcon`: the end icons and "?", the start star
+  and Pictures' triangle, the leave and re-enter rings (and the pictures set's chart rings, `circle`), the syzygy
+  markers, the window chevrons and the seam ticks."
 - **PB11. The measured extent (PB3), transcribed from `iconBox` and `withIcon`.** The box of what the icon draws,
   halo included: drawn once per icon shape (with its colours and, for Pictures' triangle and a syzygy style, its own
   variant) and per 1/64 turn of rotation, on an offscreen surface at 2×, a pixel counting where its alpha is above 8 of
@@ -23634,7 +23646,8 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   reviewer may change them for the engine's raster where the test below still passes.
 - **PB12. Faint (PB3).** "Faint only when the event point itself is off screen and pinned (§6)", as today (R-538 TM6):
   moving an on-screen icon inward does not make it faint; with "Off-screen icons" unticked an off-screen icon is hidden
-  as today, and an on-screen one near the edge is still moved inward.
+  as today, and an on-screen one near the edge is still moved inward. REQ-GUI-356's verify tests it, an on-screen icon
+  moved inward drawn at full strength (PR #278's fix round 1, gui review 5624167760 G4, applied per R-369).
 - **PB13. Larger than the view (PB3).** The words: "centred on that axis and not clamped"; `withIcon` leaves such an
   icon at its point, unclamped and not centred. **RQ-533**, the words applied meanwhile: centred in the view on that
   axis.
@@ -23668,7 +23681,10 @@ start icon included; TM7's repeats are never moved. Read with R-541 (G8, the leg
 R-553 as applied, PR #274 merged; RQ-427 (a)'s default length as R-556 reads it on RQ-465), R-539 and R-537.
 
 Adds REQ-GUI-354 to REQ-GUI-356; changes REQ-GUI-274, REQ-GUI-275 and REQ-GUI-332 (statement, verify, rulings, note)
-and REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (rulings, note).
+and REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (rulings, note). PR #278's fix round 1 (gui review
+5624167760, applied per R-369) changes REQ-GUI-328 (statement, verify, rulings, source, note; TASK-M8-62's acceptance
+and notes), REQ-GUI-355 and REQ-GUI-356 (statement, verify, note), PB8 to PB10 and PB12 here, `principia_lines.md` §8,
+render_gui_spec §G2 and §G6, and TASK-M8-58's and TASK-M8-63's notes and acceptance.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 

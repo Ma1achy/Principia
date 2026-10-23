@@ -231,13 +231,15 @@ from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
   a pan, zoom or re-projection of the same trace never restarts it (RQ-534 (a), applied meanwhile: the restart is the
   Time panel's playhead).
 - **Paused at `t = 0`, the trace is drawn dotted.** Paused, not scrubbed, the playhead at exactly 0: the trace is drawn
-  to its end as TF3 has it, but its line is dotted (round dots in its own colour over their halo, the gap scaled with
-  the width), marking it as not yet played; its markers and icons draw as usual; the legend's trace block keys it
-  (§G6). It is neither the dashed "unreliable" stretches nor the join-jumps line.
-- **Every icon is wholly on screen.** Every event, start and path icon is moved inward just far enough that its whole
-  drawn extent, measured from what it draws, halo included, at its rotation and size, lies inside the view; faint only
-  when its point is off screen and pinned; the start icon pinned like the others; a repeat's icons never moved or
-  pinned; an icon larger than the view on an axis centred on that axis (RQ-533 (a), applied meanwhile).
+  (every trace shown, kept traces and repeats included) to its end as TF3 has it, but its line is dotted (round dots in
+  its own colour over their halo, the gap scaled with the width), marking it as not yet played; its markers and icons
+  draw as usual; the legend's trace block keys it (§G6). It is neither the dashed "unreliable" stretches nor the
+  join-jumps line.
+- **Every icon is wholly on screen.** Every event, start and path icon of each shown trace (hover, pinned or kept) is
+  moved inward just far enough that its whole drawn extent, measured from what it draws, halo included, at its rotation
+  and size, lies inside the view; faint only when its point is off screen and pinned; the start icon pinned like the
+  others; a repeat's icons never moved or pinned; an icon larger than the view on an axis centred on that axis (RQ-533
+  (a), applied meanwhile); the seam ticks and direction arrows are line marks and unchanged.
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
@@ -1165,7 +1167,7 @@ stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 While the trace is drawn dotted, paused at `t = 0` (R-569; `principia_lines.md` §8, "Animation"), the block gains one
 key line, its line drawn dotted as the figure draws it: "Dotted: paused at t = 0, not yet played" (the human's words;
 the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played", RQ-533). The full key
-(`Trace… › key…`) carries the line always (applied per R-369).
+(`Trace… › key…`) carries the line always (applied per R-369; REQ-GUI-328).
 
 **The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
 base and layers, drawn with no brightness over the target chart in the chart's own aspect ratio (2 : 1 on the sphere,
