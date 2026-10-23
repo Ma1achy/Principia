@@ -24569,6 +24569,13 @@ hold, advance at a rate the spec stores (`advance { rate }`), or eased by `s` un
 `[0, T]`. REQ-TOOL-197 carries them with a test; REQ-TOOL-175's first arm names its linear curve (P2). The lane table
 splits `z₀, q₁, q₂` by R-92's decomposition, through the sim key's own function (P3; REQ-GUI-375).
 
+*Fix round 7 of PR #286 (physics review 5631849506, P5; applied per R-369, the orchestrator's decision; no ruling
+changed):* a field Part 3 does not list as interpolated (the occupant, horizon, `E` and thresholds, the chart and the
+link ids, and live playback's link parameters) takes keyframe `k`'s value at every frame `f_k ≤ f < f_{k+1}` and
+keyframe `k + 1`'s from its own frame, the corpus's cut at the second keyframe; the playhead's clamp inside a segment
+uses keyframe `k`'s `T`; a dissolve's outgoing state follows the same rule. None is eased, which would need an RQ.
+REQ-TOOL-197 carries it, with an arm in `segment_progress`.
+
 R-576 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds

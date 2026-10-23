@@ -80,8 +80,18 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
     moment and editable (the Transport's `speed` is `ViewUI`, which the engine never reads, so the spec carries its
     own). **Set to a value**: the playhead is eased, `p_k + s · (p_{k+1} − p_k)`, keyframe `k`'s playhead being the
     value set on it. Every frame's playhead is clamped into `[0, T]`, `T` that frame's horizon (`SimConfig`'s
-    `Horizon { t }`); an advance that reaches `T` stays there for the rest of the segment. After the last keyframe the
-    last keyframe's policy runs on, as REQ-GUI-383 has it.
+    `Horizon { t }`), which inside segment `k` is keyframe `k`'s, by the next bullet, and from keyframe `k + 1`'s own
+    frame keyframe `k + 1`'s; an advance that reaches `T` stays there for the rest of the segment. After the last
+    keyframe the last keyframe's policy runs on, as REQ-GUI-383 has it. (*Was:* "Every frame's playhead is clamped into
+    `[0, T]`, `T` that frame's horizon (`SimConfig`'s `Horizon { t }`); an advance that reaches `T` stays there for the
+    rest of the segment."; fix round 7 of PR #286, physics review 5631849506, P5.)
+  - *A field that does not interpolate* (fix round 7 of PR #286, physics review 5631849506, P5; applied per R-369, the
+    corpus's cut at the second keyframe): every field this Part does not list as interpolated, the Run lane's occupant,
+    horizon, `E` and thresholds (`principia_sequence.md` §3.3), the chart and the link ids, and, in live playback, the
+    link parameters (R-520 F3), takes keyframe `k`'s value at every frame `f_k ≤ f < f_{k+1}` and keyframe `k + 1`'s
+    from its own frame, as the decoder bullet's "a cut" and R-520 F3's "a cut at the second keyframe" have it. A
+    dissolve's outgoing state follows the same rule. No such field is eased: easing one would be a new family of ICs
+    of the kind RQ-384 needed a ruling for.
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
   link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
