@@ -23,7 +23,9 @@ them."
 - **The exactly mirrored run.** Where REQ-CHART-082's classification reports mirror-equivariant, the run from `Π·x`,
   `Π` applied to a decoded state, is the run from `x` mirrored, bitwise (R-544 §4, "bitwise where the integration is
   mirror-exact"): every sampled state reflected through the x-axis, the outcome and `t_end` equal, `L_z` and the
-  frame's winding the negations of `x`'s.
+  frame's winding the negations of `x`'s. Bits are compared where a value is nonzero and zeros by value, as in
+  REQ-CHART-082: a march computes an exact zero as `+0` in both runs, so the reflection's `−0` would fail correct code
+  (physics review 5635567722 P3, qa review 5635575287 Q6 of PR #276; applied per R-369).
 - **Across pixel pairs.** The two pixels `(θ, φ)` and `(θ, π − φ)` decode to mirror images only to the decode's
   rounding ("else to rounding"), so their fates are compared on a named fixture whose pair runs the test shows to stay
   close over its horizon: outcome and `t_end` equal, `L_z` and the frame's winding opposite.
@@ -33,7 +35,8 @@ them."
   collision, and its value at a per-step turn of exactly `±π`: dd_integrator §3.7 closes the wrap at `+π` (R-389), so
   a turn of `+π` mirrors to `−π`, which wraps back to `+π`, and the negation under `Π` breaks at that tie; the
   definition either sets the tie so the negation stays exact or the test excludes it explicitly (physics review
-  5635496144 of PR #276, P2; applied per R-369). *Was:* "and its value where that vector vanishes or at a
+  5635496144 of PR #276, P2; applied per R-369). Real runs never turn by exactly `±π`, so `frame_winding` tests the
+  tie on a synthetic `ρ` sequence, `(1, 0)` to `(−1, 0)` (qa review 5635575287 Q5; applied per R-369). *Was:* "and its value where that vector vanishes or at a
   collision." It is not `θ̃` (REQ-INT-001), the shape sphere's longitude, which the mirror leaves unchanged
   (`u` and `v` are mirror-invariant, only `w` turns). The port's model, `checks/r544_check.py`'s `run()`, accumulates
   the turn of `ρ = r₁ − r₀` by principal-value deltas per step, from 0; it is a model to check against, not the
@@ -62,26 +65,41 @@ them."
 - `cargo test -p kernel shape_sphere_mirror_runs` — REQ-CHART-085's verify: released from rest, and with a held
   momentum with zero y-components, the run from Π·x, Π applied to a decoded state, is the run from x mirrored,
   bitwise, at every sampled state (positions and momenta reflected), its outcome and t_end equal, its L_z and frame's
-  winding the negations of x's; on a named fixture (the masses, the pairs and a horizon stated in the test, which the
-  test shows non-chaotic there by the pair's state separation staying below a stated bound over the horizon) the
-  outcome and t_end are equal and L_z and the frame's winding opposite across each pixel pair; with a held p_λ,y ≠ 0
-  it reports "does not apply" and asserts nothing; controls: R-141's gauge left in (L_z and the winding equal, not
-  opposite), a momentum rule that turns p_x below the equator (outcome, t_end or winding broken), a configuration-only
-  mirror in the every-sampled-state comparison, applied where the run's momenta have y-components (the test asserting
-  that some sampled state has a p_y ≠ 0; sampled states not reflected), and a fixture whose pair separation passes its
-  bound over the horizon (the test refuses it as chaotic), each fail (REQ-CHART-085). *Was:* "a configuration-only
-  mirror for `Π` (`L_z` not opposite)": the test runs where the held momenta's `y`-components are zero, so at the
-  initial state that mirror is `Π` and cannot fail (qa review 5635487490 of PR #276, Q3; applied per R-369). The line
-  is regenerated from the verify, word for word (applied per R-369); the paraphrase it replaces said the same.
+  winding the negations of x's, each sampled state, L_z and winding compared on its bits where nonzero and by value
+  where zero (an exactly zero result, such as a difference of equal y's or a sum that cancels, takes the sign the
+  rounding gives, +0 in both runs, so the reflection's −0 would fail a correct run; as REQ-CHART-082); released from
+  rest L_z ≡ 0, so the L_z negation is vacuous on that arm, and the gauge control fails through the held-momentum
+  arm's L_z or the winding; on a named fixture (the masses, the pairs and a horizon stated in the test, which the test
+  shows non-chaotic there by the pair's state separation staying below a stated bound over the horizon) the outcome
+  and t_end are equal and L_z and the frame's winding opposite across each pixel pair; with a held p_λ,y ≠ 0 it
+  reports "does not apply" and asserts nothing; controls: R-141's gauge left in (L_z on the held-momentum arm, and the
+  winding, equal, not opposite), a momentum rule that turns p_x below the equator (outcome, t_end or winding broken),
+  a configuration-only mirror in the every-sampled-state comparison, applied where the run's momenta have y-components
+  (the test asserting that some sampled state has a p_y ≠ 0; sampled states not reflected, by value, at that p_y ≠ 0),
+  and a fixture whose pair separation passes its bound over the horizon (the test refuses it as chaotic), each fail
+  (REQ-CHART-085). *Was:* "a configuration-only mirror for `Π` (`L_z` not opposite)": the test runs where the held
+  momenta's `y`-components are zero, so at the initial state that mirror is `Π` and cannot fail (qa review 5635487490
+  of PR #276, Q3; applied per R-369). The line is regenerated from the verify, word for word (applied per R-369); the
+  paraphrase it replaces said the same. Fix round 2 (physics review 5635567722 P3, qa review 5635575287 Q6; applied
+  per R-369): *Was:* "its `L_z` and frame's winding the negations of `x`'s;", "R-141's gauge left in (`L_z` and the
+  winding equal, not opposite)" and "sampled states not reflected)".
 - `cargo test -p kernel frame_winding` and review — REQ-CHART-086's verify: chart_reference §3.3 states the frame's
   winding: the vector whose turn it accumulates, the cadence, its start at t = 0, its value where the vector vanishes
   or at a collision, and its value at a per-step turn of exactly ±π (set so the negation under Π stays exact, or
   excluded from the test explicitly); cargo test -p kernel frame_winding: a rigid rotation through 2πk winds k turns,
-  the run from Π·x winds the negation of x's, bitwise (if the definition excludes the ±π tie, on runs the test shows
-  free of a per-step turn of exactly ±π); control: θ̃ in its place is not opposite under Π, and fails; physics
-  reviewer approved (REQ-CHART-086). *Was:* "the value where the vector vanishes or at a collision);" and "winds the
-  negation of `x`'s, bitwise;" (physics review 5635496144 of PR #276, P2; applied per R-369). The line is regenerated
-  from the verify, word for word (applied per R-369); the paraphrase it replaces said the same.
+  the run from Π·x winds the negation of x's, bitwise where nonzero and by value where zero (a winding whose deltas
+  sum to exactly zero, such as ρ held on the x-axis, is +0 in both runs), and, if the definition excludes the ±π tie,
+  on runs the test shows free of a per-step turn of exactly ±π; a synthetic ρ sequence with a per-step turn of exactly
+  ±π, ρ from (1, 0) to (−1, 0): if the definition sets the tie, its mirror winds the negation of its winding, bitwise,
+  and if it excludes the tie, the test shows that sequence excluded; controls: θ̃ in its place is not opposite under
+  Π, and, where the definition sets the tie, R-389's wrap closed at +π used for the winding (the synthetic sequence
+  and its mirror both wind +π, not opposite), each fail; physics reviewer approved (REQ-CHART-086). *Was:* "the value
+  where the vector vanishes or at a collision);" and "winds the negation of `x`'s, bitwise;" (physics review
+  5635496144 of PR #276, P2; applied per R-369). The line is regenerated from the verify, word for word (applied per
+  R-369); the paraphrase it replaces said the same. Fix round 2 (physics review 5635567722 P3, qa review 5635575287
+  Q5; applied per R-369): *Was:* "the run from `Π·x` winds the negation of `x`'s, bitwise (if the definition excludes
+  the `±π` tie, on runs the test shows free of a per-step turn of exactly `±π`); control: `θ̃` in its place is not
+  opposite under `Π`, and fails;".
 
 ## Notes
 - **⚑ Physics review is required** (R-544 is in the physics group); it does not merge on the code reviewer's word
