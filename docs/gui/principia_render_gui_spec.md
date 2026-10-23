@@ -224,6 +224,23 @@ and G2: only a click draws the ✕; RQ-427 (a); applied per R-369). *Was (R-538 
 in Lines ▾ holds its settings, in this order," and "each control is in the keyboard tree as Lines ▾'s others are
 (R-476 M13)".
 
+**Trace playback and icon placement (R-569).** Three rules, each in `principia_lines.md` §8 with its transcription
+from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
+- **A new trace while playing restarts at `t = 0`.** Under "With the playhead", while the Time panel plays, a hover or
+  click that integrates a different IC sets the playhead to 0 and keeps playing; paused, the playhead does not move;
+  a pan, zoom or re-projection of the same trace never restarts it (RQ-534 (a), applied meanwhile: the restart is the
+  Time panel's playhead).
+- **Paused at `t = 0`, the trace is drawn dotted.** Paused, not scrubbed, the playhead at exactly 0: the trace is drawn
+  (every trace shown, kept traces and repeats included) to its end as TF3 has it, but its line is dotted (round dots in
+  its own colour over their halo, the gap scaled with the width), marking it as not yet played; its markers and icons
+  draw as usual; the legend's trace block keys it (§G6). It is neither the dashed "unreliable" stretches nor the
+  join-jumps line.
+- **Every icon is wholly on screen.** Every event, start and path icon of each shown trace (hover, pinned or kept) is
+  moved inward just far enough that its whole drawn extent, measured from what it draws, halo included, at its rotation
+  and size, lies inside the view; faint only when its point is off screen and pinned; the start icon pinned like the
+  others; a repeat's icons never moved or pinned; an icon larger than the view on an axis centred on that axis (RQ-533
+  (a), applied meanwhile); the seam ticks and direction arrows are line marks and unchanged.
+
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
 the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
@@ -1047,6 +1064,8 @@ Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the wh
 a failing colour alone replaced (R-556, RQ-447 (b); REQ-GUI-333). The table is R-541 G5's, the outline entry included
 (R-556, RQ-461; *was:* "its outline entry excepted"); the bold defaults are R-538's. *Was:* "the whole trace to the horizon is drawn (R-538 TF3).
 The kept traces' colours …" (merging main's PR #263, which applied RQ-427 (a); applied per R-369).
+Paused at `t = 0` the trace is drawn dotted, not yet played; a new trace while playing restarts at `t = 0`; every
+icon, the start's included, is kept wholly on screen (R-569; §G2's "Trace playback and icon placement").
 
 ### Listen… — every sound setting (R-541 G6)
 
@@ -1147,6 +1166,10 @@ keys, before the debug view's key: the line (and each kept trace's colour), the 
 run, each drawn as the figure draws it. With sound on it adds `♪ ◀ left ▶ right` in `principia_listen.md` §11's
 channel colours. The full key is `Trace… › key…`. The block is a key of figure marks (R-539), not a dimension of the
 stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
+While the trace is drawn dotted, paused at `t = 0` (R-569; `principia_lines.md` §8, "Animation"), the block gains one
+key line, its line drawn dotted as the figure draws it: "Dotted: paused at t = 0, not yet played" (the human's words;
+the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played", RQ-533). The full key
+(`Trace… › key…`) carries the line always (applied per R-369; REQ-GUI-328).
 
 **The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
 base and layers, drawn with no brightness over the target chart in the chart's own aspect ratio (2 : 1 on the sphere,

@@ -1,0 +1,4 @@
+markers PRE {"restartPlaying":6,"pausedUnchanged":6,"iconCases":1728,"touchingEdge":1728} no errors
+markers {"restartPlaying":0,"pausedUnchanged":6,"iconCases":1728,"touchingEdge":0} no errors
+sound PRE {"restartPlaying":6,"pausedUnchanged":6,"iconCases":1728,"touchingEdge":1728} no errors
+sound {"restartPlaying":0,"pausedUnchanged":6,"iconCases":1728,"touchingEdge":0} no errors

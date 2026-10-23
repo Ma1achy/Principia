@@ -1,0 +1,165 @@
+//! The steppers' emitter (dd_integrator §3.2; REQ-INT-037): writes the kernel's `generated/steppers.rs`, the trait
+//! `StepperCoefficients`, Yoshida-4's and Yoshida-6's weights and their kick coefficients at f32 and f64, from
+//! the constants register's free weights ([`crate::constants::YOSHIDA4_W1`], [`crate::constants::YOSHIDA6_W1`] to
+//! `W3`).
+//!
+//! Each derived number is evaluated here in f64 from the register's weights, as dd_integrator §3.2 writes it (R-515):
+//! Yoshida-4's `w₀ = 1 − 2w₁`; Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`, summed left to right; and the kick sequences
+//! `cᵢ = (d_{i−1} + dᵢ)/2` of the drift sequences `d = [w₁, w₀, w₁]` and `[w₃, w₂, w₁, w₀, w₁, w₂, w₃]`, with
+//! `d₀ = d_{n+1} = 0`, which give Yoshida-4's `[w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]`. The f32 constant is the f64 value
+//! rounded once to f32. Each constant is a scalar, one to a line, so the file is as rustfmt writes it.
+
+use std::fmt::Write as _;
+use std::path::PathBuf;
+
+use crate::constants::{YOSHIDA4_W1, YOSHIDA6_W1, YOSHIDA6_W2, YOSHIDA6_W3};
+use crate::gen::Generated;
+use crate::schema::{Entry, Word};
+
+/// Where the steppers' coefficients are written, relative to the workspace root.
+pub const STEPPERS_PATH: &str = "crates/kernel/src/generated/steppers.rs";
+
+/// The emitter [`crate::gen::EMITTERS`] runs: the one file.
+pub fn emit(_words: &[Word], _entries: &[Entry]) -> Vec<Generated> {
+    vec![Generated {
+        path: PathBuf::from(STEPPERS_PATH),
+        contents: steppers_file(&coefficients()),
+    }]
+}
+
+/// One emitted coefficient: its name, what it is, and its f64 value.
+pub struct Coefficient {
+    pub name: &'static str,
+    pub doc: &'static str,
+    pub value: f64,
+}
+
+/// The kick sequence of the drift sequence `d`: `cᵢ = (d_{i−1} + dᵢ)/2`, `d₀ = d_{n+1} = 0` (dd_integrator §3.2), in
+/// f64; its first and last are `d₁/2` and `dₙ/2`.
+pub fn kicks(d: &[f64]) -> Vec<f64> {
+    (0..=d.len())
+        .map(|i| match i {
+            0 => d[0] / 2.0,
+            i if i == d.len() => d[i - 1] / 2.0,
+            i => (d[i - 1] + d[i]) / 2.0,
+        })
+        .collect()
+}
+
+/// Yoshida-4's and Yoshida-6's weights and the first half of each one's kick sequence, from the register's free
+/// weights. Both sequences are symmetric (`cᵢ = c_{n+2−i}`, IEEE addition commuting), so the kernel reads its second
+/// half from the first.
+pub fn coefficients() -> Vec<Coefficient> {
+    let w1 = YOSHIDA4_W1.number();
+    let w0 = 1.0 - 2.0 * w1;
+    let c4 = kicks(&[w1, w0, w1]);
+    let (v1, v2, v3) = (
+        YOSHIDA6_W1.number(),
+        YOSHIDA6_W2.number(),
+        YOSHIDA6_W3.number(),
+    );
+    let v0 = 1.0 - 2.0 * (v1 + v2 + v3);
+    let c6 = kicks(&[v3, v2, v1, v0, v1, v2, v3]);
+    let k = |name, doc, value| Coefficient { name, doc, value };
+    vec![
+        k(
+            "YOSHIDA4_W1",
+            "Yoshida-4's `w₁ = 1 / (2 − 2^{1/3})`, correctly rounded to f64 (`yoshida4_w1`).",
+            w1,
+        ),
+        k(
+            "YOSHIDA4_W0",
+            "Yoshida-4's `w₀ = 1 − 2w₁`, computed in f64.",
+            w0,
+        ),
+        k(
+            "YOSHIDA4_KICK_1",
+            "Yoshida-4's kicks `c₁ = c₄ = w₁/2`.",
+            c4[0],
+        ),
+        k(
+            "YOSHIDA4_KICK_2",
+            "Yoshida-4's kicks `c₂ = c₃ = (w₀ + w₁)/2`.",
+            c4[1],
+        ),
+        k(
+            "YOSHIDA6_W1",
+            "Yoshida-6's `w₁`, Table 1, solution A (`yoshida6_w1`).",
+            v1,
+        ),
+        k(
+            "YOSHIDA6_W2",
+            "Yoshida-6's `w₂`, Table 1, solution A (`yoshida6_w2`).",
+            v2,
+        ),
+        k(
+            "YOSHIDA6_W3",
+            "Yoshida-6's `w₃`, Table 1, solution A (`yoshida6_w3`).",
+            v3,
+        ),
+        k(
+            "YOSHIDA6_W0",
+            "Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`, computed in f64.",
+            v0,
+        ),
+        k(
+            "YOSHIDA6_KICK_1",
+            "Yoshida-6's kicks `c₁ = c₈ = w₃/2`.",
+            c6[0],
+        ),
+        k(
+            "YOSHIDA6_KICK_2",
+            "Yoshida-6's kicks `c₂ = c₇ = (w₃ + w₂)/2`.",
+            c6[1],
+        ),
+        k(
+            "YOSHIDA6_KICK_3",
+            "Yoshida-6's kicks `c₃ = c₆ = (w₂ + w₁)/2`.",
+            c6[2],
+        ),
+        k(
+            "YOSHIDA6_KICK_4",
+            "Yoshida-6's kicks `c₄ = c₅ = (w₁ + w₀)/2`.",
+            c6[3],
+        ),
+    ]
+}
+
+/// `v` as a Rust literal of `ty`, `f32` or `f64`: the shortest decimal that parses to the value, at f32 the f64 value
+/// rounded once.
+fn literal(v: f64, ty: &str) -> String {
+    if ty == "f32" {
+        format!("{:?}", v as f32)
+    } else {
+        format!("{v:?}")
+    }
+}
+
+/// The steppers' file: the trait `StepperCoefficients`, one associated constant per coefficient, at f32 and f64.
+pub fn steppers_file(coefficients: &[Coefficient]) -> String {
+    let mut s = String::from(
+        "//! Generated by `cargo xtask codegen` from the constants register's stepper coefficients\n\
+         //! (`crates/ledger/src/constants.rs`; `crates/ledger/src/gen/steppers.rs`); do not edit.\n\n\
+         /// The steppers' coefficients at a float type (dd_integrator §3.2; REQ-INT-037): each derived in f64 from\n\
+         /// the register's weights, rounded once to the type. Yoshida, H. (1990), \"Construction of higher order\n\
+         /// symplectic integrators\", Phys. Lett. A 150, 262–268: Yoshida-4 its fourth-order closed form, Yoshida-6\n\
+         /// its Table 1, solution A (R-501).\n\
+         pub trait StepperCoefficients: Copy {\n",
+    );
+    for (i, k) in coefficients.iter().enumerate() {
+        if i > 0 {
+            s.push('\n');
+        }
+        let _ = writeln!(s, "    /// {}", k.doc);
+        let _ = writeln!(s, "    const {}: Self;", k.name);
+    }
+    s.push_str("}\n");
+    for ty in ["f32", "f64"] {
+        let _ = writeln!(s, "\nimpl StepperCoefficients for {ty} {{");
+        for k in coefficients {
+            let _ = writeln!(s, "    const {}: {ty} = {};", k.name, literal(k.value, ty));
+        }
+        s.push_str("}\n");
+    }
+    s
+}
