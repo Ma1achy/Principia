@@ -32942,7 +32942,7 @@
   - R-563
   - R-572
   milestone: M8
-  note: " Fix round 12 of PR #283 (qa review 5628365538, Q7; applied per R-369): the folder's name, its four files and result.json's fields are tested."
+  note: "Fix round 12 of PR #283 (qa review 5628365538, Q7; applied per R-369): the folder's name, its four files and result.json's fields are tested."
 - id: REQ-SYS-090
   area: SYS
   kind: definition
