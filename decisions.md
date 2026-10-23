@@ -24596,7 +24596,8 @@ REQ-TOOL-197 (definition).
 Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
 open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
 REQ-PERF-110 and REQ-TOOL-200 (new), REQ-GUI-387 (new, fix round 2 of PR #286), REQ-GUI-388 (new, calibration, fix
-round 12 of PR #286), TASK-M8-77 and TASK-M8-78 (new) and `plan/rule_groups.yaml`; the record is
+round 12 of PR #286), REQ-PERF-112 (new, benchmark, fix round 21 of PR #286), TASK-M8-77 and TASK-M8-78 (new) and
+`plan/rule_groups.yaml`; the record is
 `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-77 and TASK-M8-78*
 
 The lead of the bundle's `INSTRUCTION.md` § "PR 2 — New design documents", verbatim:
@@ -24721,13 +24722,21 @@ keeps the finished frames and leaves the rest as empty slots; the job renders th
 marks the strip stale. The planner's provenance key is shown once under its rows as "measured on <adapter name> · probe
 v<version>", from quality_device_note §9's signature.
 
+*Fix round 21 of PR #286 (perf review 5635062315, P1; applied per R-369, the orchestrator's decision; no ruling
+changed):* the proof strip's "live work first" is tested deterministically, the strip's job held on a test barrier
+while GUI frames keep completing and no strip or exporter work runs on the GUI thread; the GUI's frame times while a
+strip runs are a benchmark on the human's Mac through `prin profile` (R-186), REQ-PERF-112, reporting p50, p95, p99
+and max against the 16.7 ms goal and `frac_frames_over_41.7ms` (`principia_dd_telemetry_and_tiers.md` §3). §3 sets
+no pass rule for these, so the benchmark reports and gates nothing.
+
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375
 (definition: the lane table), REQ-GUI-376 (a segment's controls), REQ-GUI-377 (the file), REQ-GUI-378 (undo, `rq:
 RQ-559`), REQ-GUI-379 (Play preview), REQ-GUI-380 (the proof strip), REQ-GUI-381 (the planner and the export job),
 REQ-PERF-110 (the estimate's basis) and REQ-TOOL-200 (the spec beside every export), in fix round 2, REQ-GUI-387
-(Explore while a preview plays), and in fix round 12, REQ-GUI-388 (calibration: the proof frame's size).
+(Explore while a preview plays), in fix round 12, REQ-GUI-388 (calibration: the proof frame's size), and in fix
+round 21, REQ-PERF-112 (benchmark: the GUI's frame times while a proof strip runs).
 
 ## R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*
 *21 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` (new),
