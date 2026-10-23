@@ -178,6 +178,11 @@ impl Measurement {
         }
     }
 
+    /// What the gate's threshold bounds: the forks, the edge differences and the differences from the specification.
+    pub fn failures(&self) -> u32 {
+        self.forks + self.edge_mismatches + self.mismatches
+    }
+
     /// Records one edge sample: the tree's `got` against the table's count `want`.
     pub fn edge(&mut self, what: &str, d2: f32, got: u32, want: u32) {
         self.edge_samples += 1;
@@ -296,7 +301,7 @@ impl NsubBucketGate {
     /// The report on `input`, named `name`, against `config`.
     pub fn judge(config: &GateConfig, name: &str, input: &Input) -> Result<GateReport, String> {
         let m = measure(input)?;
-        let failures = f64::from(m.forks + m.edge_mismatches + m.mismatches);
+        let failures = f64::from(m.failures());
         let verdict = if failures <= config.threshold.value {
             Verdict::Pass
         } else {

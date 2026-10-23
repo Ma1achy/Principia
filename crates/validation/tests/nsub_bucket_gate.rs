@@ -286,10 +286,66 @@ fn draws() -> (Vec<EdgeSample>, Vec<f32>, Vec<f64>, Vec<Triple>) {
     (edge_samples(&bits), random, units, triples)
 }
 
+/// `pair_triple`'s draw from `seed`, restated: the five unit draws in its order, `n`, the scale, body 0 and the angle.
+fn restated_triple(seed: u64) -> (u32, [[f64; 2]; 3]) {
+    let bits = default_bits();
+    let mut rng = SplitMix::new(seed);
+    let u: Vec<f64> = (0..5).map(|_| unit(&mut rng)).collect();
+    let n = 1 + (u[0] * 256.0) as u32 % 256;
+    let scale = 1.0 + (2.0 * u[1] - 1.0) / 65536.0;
+    let s = (f64::from(f32::from_bits(bits[n as usize - 1])) * scale * scale).sqrt();
+    let at = [2.0 * u[2] - 1.0, 2.0 * u[3] - 1.0];
+    let angle = std::f64::consts::TAU * u[4];
+    (
+        n,
+        [
+            at,
+            [at[0] + s * angle.cos(), at[1] + s * angle.sin()],
+            [at[0] + 10.0, at[1] + 10.0],
+        ],
+    )
+}
+
+/// `pair_triple` from each of `seeds` is its restatement, bit for bit.
+fn check_restated(seeds: &[u64], draw: fn(u64) -> (u32, [[f64; 2]; 3])) {
+    for &seed in seeds {
+        assert_eq!(
+            draw(seed),
+            restated_triple(seed),
+            "pair_triple from seed {seed}"
+        );
+    }
+}
+
+fn drawn(seed: u64) -> (u32, [[f64; 2]; 3]) {
+    pair_triple(&default_bits(), &mut SplitMix::new(seed))
+}
+
+#[test]
+fn nsub_bucket_gate_pair_triple() {
+    check_restated(&[1, 2, 3, 4, 5], drawn);
+}
+
+negative_control!(
+    nsub_bucket_gate_pair_triple,
+    "a draw with body 1 moved by 10⁻⁹",
+    expected = "pair_triple from seed",
+    check_restated(&[1, 2, 3, 4, 5], |seed| {
+        let (n, mut r) = drawn(seed);
+        r[1][0] += 1e-9;
+        (n, r)
+    })
+);
+
 #[test]
 fn nsub_bucket_gate_draws() {
     let (e, r, u, t) = draws();
     check_draws(&e, &r, &u, &t);
+    assert_eq!(
+        triple([1.0, 2.0], 0.25, 0.0),
+        [[1.0, 2.0], [1.5, 2.0], [11.0, 12.0]],
+        "triple along x"
+    );
     let r3 = triple([1.0, 2.0], 0.25, std::f64::consts::FRAC_PI_2);
     assert!(
         (r3[1][0] - 1.0).abs() < 1e-15 && (r3[1][1] - 2.5).abs() < 1e-15,
@@ -334,6 +390,11 @@ fn check_records(m: &Measurement) {
         .first_mismatch
         .as_deref()
         .is_some_and(|s| s.contains("N_sub 5, the specification 1")));
+    assert_eq!(
+        m.failures(),
+        3,
+        "failures: one fork, one edge difference, one from the specification"
+    );
 }
 
 fn records() -> Measurement {
