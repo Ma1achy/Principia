@@ -13,7 +13,7 @@
 | EVT | 31 |
 | PAY | 107 |
 | GEN | 43 |
-| SCHED | 102 |
+| SCHED | 103 |
 | REF | 52 |
 | RENDER | 100 |
 | COL | 140 |
@@ -22,9 +22,9 @@
 | VAL | 194 |
 | PERF | 95 |
 | SYS | 86 |
-| **total** | **1740** |
+| **total** | **1741** |
 
-Of these: 147 calibration, 145 definition, 1448 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 147 calibration, 146 definition, 1448 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,7 +38,7 @@ Of these: 147 calibration, 145 definition, 1448 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 222 |
-| M8 | 349 |
+| M8 | 350 |
 
 ## Sections
 

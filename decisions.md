@@ -23693,6 +23693,14 @@ collapsed adjacent pair, every one of which is a saturation collapse; a switchov
 (R-90) still warns. This supersedes fix round 3's "suppressed only for a quad every collapsed pair of which is one",
 which held vacuously for a quad with none. REQ-GUI-012 gains arm (e).*
 
+*23 Oct 2026, fix round 6 of PR #279 (perf review 5624936602), applied per R-369: REQ-SCHED-104 bounds the frame that
+lands a zoom-out (the in-motion cover) and, at rest, the quads computed and resident in view by the bound at home zoom
+(R-108), the cover holding at most `⌈extent / quad size⌉ + 1` quads per axis at every zoom and pan and "the same count"
+only where the two covers tile the viewport identically (scheduler_contract Part 3); RQ-554 queues the band quads'
+terminal stop at `AT_F32_FLOOR` (REQ-SCHED-062, `rq: RQ-554`), deep_zoom §4's "harmless" limited to quads whose
+in-plane `J_D` columns are all 0; REQ-SCHED-105 (R-72) asks for the addressing's behaviour where the coarsest levels'
+f64 centres and half-widths overflow; TASK-M6-21 gains perf as a reviewer and states its collapse record is CPU-side.*
+
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*

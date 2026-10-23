@@ -125,7 +125,11 @@ the floor depends on where you zoom; (iii) and (iv), with R-537 EX8's root-cell 
 handle it there as at the root. Far from the origin the decoder saturates (`principia_chart_reference.md` §0), and the
 f64 decode is flat there too: `σ` rounds to 1 in f64 past about 37 and `tanh` to ±1 past about 19, so `J_D`'s central
 differences (§2 a) are 0, and the full and the linearised decoders' samples collapse because the field is flat, not
-because f32 has run out; (iii) and (iv) fire at home zoom. Stopping refinement there is harmless, the field being flat.
+because f32 has run out; (iii) and (iv) fire at home zoom. Stopping refinement there is harmless, the field being flat,
+at a quad whose f64 `J_D` columns along the view's plane are all 0. A band quad (`principia_chart_reference.md` §5.4),
+saturated along one in-plane axis only, also collapses and then stops terminally at (iv) (REQ-SCHED-062), above the
+screen floor, while its other axis stays structured; whether it keeps refining along that axis is RQ-554, open. *Was:*
+"Stopping refinement there is harmless, the field being flat."
 **A saturation collapse raises no precision warning** (RQ-553, decided per R-369 by the orchestrator, not a human
 ruling; recorded against R-54 and R-570 item 5). The test is per direction: a collapse between adjacent samples along
 an in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample

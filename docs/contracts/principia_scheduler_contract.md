@@ -65,8 +65,19 @@ required on the addressing, as for EX7; perf reviews the cost.*
   with a bounded, periodic or pole-crossing axis gains no level `L < 0`, a coarse quad straddling its period or edge
   being undefined (physics review 5624655553 of PR #279, an observation; applied per R-369).
 - **The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the
-  smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent:
-  at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104).
+  smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the
+  number of quads in it is set by the screen, not by the view's extent: at every zoom and pan at most
+  `⌈extent / quad size⌉ + 1` per axis. Where the view is aligned so that two covers tile the viewport identically, the
+  cover at 10⁶ × the home view counts the same quads as at home zoom (REQ-SCHED-104).
+- **Which frames it bounds.** The frame that lands a zoom-out, the in-motion `PREVIEW_MODE` cover dispatch, computes no
+  more quads than the cover. At rest, refinement resumes to the screen floor (R-108; `principia_caching_contract.md`
+  Part 5), and the quads computed and resident in view stay within the bound that holds at home zoom, the leaves at the
+  screen floor plus their ancestors (`principia_memory_tiers.md` §3 and §4), never an enumeration of the level-0 roots
+  under the view (REQ-SCHED-104; perf review 5624936602 of PR #279, P1 and P4; applied per R-369). *Was (the cover
+  bullet):* "**The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent: at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104)."
+- **Overflow.** `L` has no lower bound, and past about `2^1023` level-0 roots the f64 per-quad centre and half-width
+  (`principia_deep_zoom.md` §1) overflow. What the addressing does there is a definition requirement (R-72), written by
+  the task that builds `L < 0`: no `inf` or `NaN` reaches a quad's centre, half-width or key (REQ-SCHED-105).
 - **Coarser quads are ordinary.** They are scheduled, cached and refined like any other, refinement running down
   through `L = 0` as the user zooms in; a coarse quad's samples are systems of the plane at its own sample positions,
   computed as any quad's are. `MAX_REL_DEPTH` and the screen floor stay view-relative.

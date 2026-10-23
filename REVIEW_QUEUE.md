@@ -715,3 +715,36 @@ energy target cannot be met is on a latent chart).*
   "**The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
   $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`." It does not change the conflict or the
   options.
+
+## RQ-554: A band quad on a latent or flat chart, saturated along one in-plane axis only, collapses, switches, collapses again on the linear path and stops terminally at `AT_F32_FLOOR` above the screen floor, so the strip that "stays structured" stops refining, against R-108's at-rest target *(physics, conflict: the ladder's terminal stop against R-108 and R-570's port; R-570, R-108, R-88, R-90; REQ-SCHED-062, REQ-DEC-033; context: TASK-M6-08, TASK-M8-57)*
+
+*Found by perf review 5624936602 of PR #279, P2. Nothing is ruled. For the human: yes (physics: whether a quad whose
+collapse is saturation along one axis keeps refining, which changes what is drawn).*
+
+- **File, section:**
+  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound": "(iv) the **decode floor proper**
+    (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a
+    deep-zoom backstop"; and R-570's port, as it stood: "Stopping refinement there is harmless, the field being flat."
+  - `plan/requirements.yaml` REQ-SCHED-062: "sample collapse on the linearised decoder must fire AT_F32_FLOOR, a
+    terminal stop cached as a quad fact".
+  - `decisions.md` § "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*": "During a gesture
+    the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest."
+  - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)":
+    "a view goes flat only where every coordinate its plane varies is saturated, so along each in-plane axis a strip a
+    few units of `z` wide stays structured out to any distance".
+- **The conflict:** at `z₀ = 10⁴·ê_k` a quad's full-decoder pairs along `ê_k` collapse, so `quad.collapsed` is set and
+  it switches (REQ-DEC-033); its linear samples along `ê_k` collapse again, `J_D`'s `ê_k` column being 0, so
+  `AT_F32_FLOOR` fires, a terminal stop never re-queued (REQ-SCHED-062). The quad stops near depth 0 while its other
+  in-plane axis has structure above the screen floor, which at rest stays at the terminal quad's `N × N` resolution,
+  against R-108's "completeness resumes at rest" and the strip's "stays structured". "Harmless" holds only where
+  every in-plane `J_D` column is 0.
+- **Options seen:**
+  - (a) A quad every collapsed pair of which is a saturation collapse (RQ-553's per-direction test) is not terminal:
+    it keeps refining along its unsaturated direction to the screen floor, its cost still screen-bounded
+    (REQ-SCHED-104's at-rest bound).
+  - (b) The stop is accepted: the band stays at the terminal quad's resolution, and the readout says so.
+  - (c) Other: for example, the switchover's collapse test reads only the directions whose `J_D` column is non-zero.
+- **Applied meanwhile:** the terminal stop stands as REQ-SCHED-062 defines it; deep_zoom §4's "harmless" is limited
+  to quads whose in-plane `J_D` columns are all 0, and the band quad's case points here.
+- **Waits:** REQ-SCHED-062's behaviour on band quads (TASK-M6-08), `rq: RQ-554`. Its other arms, and the rest of
+  TASK-M6-08, do not wait.

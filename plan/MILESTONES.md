@@ -393,13 +393,13 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
 
 <!-- gate:M8 -->
-**Exit gate — 349 requirements** (and every earlier gate still green):
+**Exit gate — 350 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
 - INT (2): REQ-INT-093, REQ-INT-096
 - GEN (1): REQ-GEN-023
-- SCHED (4): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104
+- SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
 - REF (1): REQ-REF-054
 - RENDER (5): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100
 - COL (5): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135

@@ -9684,6 +9684,9 @@
   rulings:
   - R-90
   milestone: M6
+  rq:
+  - RQ-554
+  note: "RQ-554 (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads."
 - id: REQ-SCHED-063
   area: SCHED
   statement: "A quad at the integration floor must be stopped there: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated. The floor follows the occupant (R-563): with regularisation off, samples substep-saturated with suspect_fraction staying high, unchanged; under a regularised occupant, the floor read from its counted signals (the separation floor and the entry-cap hits) and its undetermined, budget-exhausted copies, as RQ-526 rules."
@@ -10421,7 +10424,7 @@
   note: R-565 (21 Oct 2026). Closed by TASK-M5-21.
 - id: REQ-SCHED-104
   area: SCHED
-  statement: "On a latent or flat chart a frame's cost must be set by the screen, not by the view's extent (R-570 item 2): the quadtree must have levels L < 0, coarser than the root, with no lower bound, a level-L quad spanning 2^(−L) × 2^(−L) level-0 roots, (L, i, j) holding (L + 1, 2i + a, 2j + b) for a, b ∈ {0, 1}, its address in R-97's frame (RQ-535 (a), decided per R-369); the baseline cover of a viewport must be taken at the level whose quads are the smallest still at least the cover's on-screen size, so that at any zoom-out the quads a frame computes number no more than that cover and the cover counts the same quads at 10⁶ × the home view as at home zoom; coarser quads must be scheduled, cached and refined like any other, refining down through L = 0 as the view zooms in; and zoom-out must never be refused or capped to bound the cost, the frame budget and the baseline cover being the only limits."
+  statement: "On a latent or flat chart a frame's cost must be set by the screen, not by the view's extent (R-570 item 2): the quadtree must have levels L < 0, coarser than the root, with no lower bound, a level-L quad spanning 2^(−L) × 2^(−L) level-0 roots, (L, i, j) holding (L + 1, 2i + a, 2j + b) for a, b ∈ {0, 1}, its address in R-97's frame (RQ-535 (a), decided per R-369); the baseline cover of a viewport must be taken at the level whose quads are the smallest still at least the cover's on-screen size, so that at every zoom and pan it holds at most ⌈extent / quad size⌉ + 1 quads per axis, a bound set by the screen; the frame that lands a zoom-out (the in-motion PREVIEW_MODE cover dispatch) must compute no more quads than that cover; at rest, once settled, the quads computed and resident in view must stay within the bound that holds at home zoom, refinement to the screen floor (R-108; caching_contract Part 5; memory_tiers §3 and §4, render_px / N² leaves plus their ancestors), never an enumeration of the level-0 roots under the view; coarser quads must be scheduled, cached and refined like any other, refining down through L = 0 as the view zooms in; and zoom-out must never be refused or capped to bound the cost, the frame budget and the baseline cover being the only limits."
   source:
   - file: decisions.md
     section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
@@ -10431,15 +10434,43 @@
     section: The operation table
   - file: docs/contracts/principia_scheduler_contract.md
     section: "Infinite zoom-out: levels coarser than the root"
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 5 — The stale backdrop: blur means loading"
+  - file: decisions.md
+    section: "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*"
+  - file: docs/design/principia_memory_tiers.md
+    section: 3. Memory model — payload + render targets
   verify:
     method: unit test
-    detail: "cargo test -p engine zoom_out_cost_bounded (R-570): on the latent chart, a frame at 10⁶ × the home view computes no more quads than the baseline cover of the viewport, counted by the scheduler's per-frame counter of computed quads, and that cover's quad count equals the count at home zoom, its quads at a level L < 0; zooming back in from there, the cover's quads refine down through L = 0 to the home view's cover, their addresses unchanged by the zoom (R-97); control: a cover held at L ≥ 0 counts quads that grow with the view's extent (about 4^k more at 2^k × the home view) and fails; review (physics, the addressing; perf, the cost)"
+    detail: "cargo test -p engine zoom_out_cost_bounded (R-570): on the latent chart, with the view aligned so that the home view's cover and the cover at 10⁶ × tile the viewport identically (the centre on a quad corner of both covers' levels, the window an integer number of cover quads on each axis), the geometry under which R-570's \"the same count\" holds: (1) landing: the frame that lands a zoom-out to 10⁶ × computes no more quads than the baseline cover of the viewport, counted by the scheduler's per-frame counter of computed quads, and that cover's quad count equals the count at home zoom, its quads at a level L < 0; (2) bound: at seeded zooms out to 10⁶ × and seeded pans, unaligned, the cover holds at most ⌈extent / quad size⌉ + 1 quads per axis; (3) at rest: settled at 10⁶ ×, the quads computed since landing and the resident tree in view stay within the bound measured at rest at home zoom (the leaves to the screen floor plus their ancestors); (4) zooming back in, the cover's quads refine down through L = 0 to the home view's cover, their addresses unchanged by the zoom (R-97); controls, each counted without dispatching, or run at 2^k × for k ≤ 4, so that it fails rather than hangs: a cover held at L ≥ 0 counts quads that grow with the view's extent (about 4^k more at 2^k ×) and fails (1) and (2); an at-rest pass that enumerates the level-0 roots under the view grows with the extent and fails (3); review (physics, the addressing; perf, the cost)"
   rulings:
   - R-97
+  - R-108
   - R-537
   - R-570
   milestone: M8
-  note: "R-570 item 2, its test zoom_out_cost_bounded. Closed by TASK-M8-56; physics reviews the addressing (⚑, as for R-537 EX7) and perf the cost. RQ-535 decided per R-369 by the orchestrator (22 Oct 2026, not a human ruling): option (a), levels L < 0 of the same quadtree; the requirement no longer waits. *Was:* \"Waits on RQ-535: R-537 EX7(a)'s root lattice has no quad coarser than a level-0 root, so on the corpus as written the cover of a far zoomed-out viewport grows with its extent.\""
+  note: "R-570 item 2, its test zoom_out_cost_bounded. Closed by TASK-M8-56; physics reviews the addressing (⚑, as for R-537 EX7) and perf the cost. RQ-535 decided per R-369 by the orchestrator (22 Oct 2026, not a human ruling): option (a), levels L < 0 of the same quadtree; the requirement no longer waits. *Was:* \"Waits on RQ-535: R-537 EX7(a)'s root lattice has no quad coarser than a level-0 root, so on the corpus as written the cover of a far zoomed-out viewport grows with its extent.\" Fix round 6 of PR #279 (perf review 5624936602, P1 and P4; applied per R-369): the landing frame bounded, an at-rest arm with its control, the per-axis bound at every zoom and pan, the aligned geometry for \"the same count\", controls that fail rather than hang. *Was (statement):* \"On a latent or flat chart a frame's cost must be set by the screen, not by the view's extent (R-570 item 2): the quadtree must have levels L < 0, coarser than the root, with no lower bound, a level-L quad spanning 2^(−L) × 2^(−L) level-0 roots, (L, i, j) holding (L + 1, 2i + a, 2j + b) for a, b ∈ {0, 1}, its address in R-97's frame (RQ-535 (a), decided per R-369); the baseline cover of a viewport must be taken at the level whose quads are the smallest still at least the cover's on-screen size, so that at any zoom-out the quads a frame computes number no more than that cover and the cover counts the same quads at 10⁶ × the home view as at home zoom; coarser quads must be scheduled, cached and refined like any other, refining down through L = 0 as the view zooms in; and zoom-out must never be refused or capped to bound the cost, the frame budget and the baseline cover being the only limits.\" *Was (verify):* \"cargo test -p engine zoom_out_cost_bounded (R-570): on the latent chart, a frame at 10⁶ × the home view computes no more quads than the baseline cover of the viewport, counted by the scheduler's per-frame counter of computed quads, and that cover's quad count equals the count at home zoom, its quads at a level L < 0; zooming back in from there, the cover's quads refine down through L = 0 to the home view's cover, their addresses unchanged by the zoom (R-97); control: a cover held at L ≥ 0 counts quads that grow with the view's extent (about 4^k more at 2^k × the home view) and fails; review (physics, the addressing; perf, the cost)\""
+- id: REQ-SCHED-105
+  area: SCHED
+  kind: definition
+  statement: "The quad addressing at levels L < 0 must define its behaviour where a level is so coarse that the f64 per-quad centre or half-width (deep_zoom §1) overflows, past about 2^1023 level-0 roots: no inf or NaN may reach a quad's centre, half-width or key, and what a further zoom-out does there must be stated; the definition is written by the task that builds L < 0 (R-72) and recorded in decisions.md, no behaviour being chosen here."
+  source:
+  - file: decisions.md
+    section: "R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s \"no zoom-out limit\" from periodic charts to every chart whose axes are affine)*"
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: "Infinite zoom-out: levels coarser than the root"
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the proposal defines the addressing's behaviour where the f64 centre or half-width of a level-L quad overflows, and a test at the coarsest representable level shows no inf or NaN in a quad's centre, half-width or key; physics and code reviewers approve; recorded in decisions.md"
+  rulings:
+  - R-72
+  - R-570
+  milestone: M8
+  note: "R-570's \"no lower bound\" on L (RQ-535 (a)); perf review 5624936602 of PR #279, an observation: the field is flat there, but the address arithmetic must say what happens (R-72). Closed by TASK-M8-56, which builds L < 0."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
