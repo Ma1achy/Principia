@@ -471,10 +471,13 @@ colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
 *24 Sep 2026 · recorded; applied in step 6*
-*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad every
-collapsed adjacent pair of which is a saturation collapse, f64 `J_D`'s column along the pair's in-plane direction 0 and
-the pair's f64 sample points distinct, raises no precision warning; every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR`
-raises it as here (deep_zoom §4; REQ-GUI-012). Was: "a saturation collapse, f64 `J_D`'s in-plane columns 0 at a quad
+*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad that has
+at least one collapsed adjacent pair, every one of which is a saturation collapse, f64 `J_D`'s column along the pair's
+in-plane direction 0 and the pair's f64 sample points distinct, raises no precision warning; every other
+`DECODE_SWITCHOVER`, an `ℓ_switch` switchover with no collapsed pair included, and every other `AT_F32_FLOOR` raises it
+as here (deep_zoom §4; REQ-GUI-012). Was (fix round 3): "a quad every collapsed adjacent pair of which is a saturation
+collapse, f64 `J_D`'s column along the pair's in-plane direction 0 and the pair's f64 sample points distinct, raises no
+precision warning; every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raises it as here". Was: "a saturation collapse, f64 `J_D`'s in-plane columns 0 at a quad
 whose f64 sample points are distinct, raises no precision warning".*
 
 Raised on `DECODE_SWITCHOVER` over visible quads and on `AT_F32_FLOOR`. Files: deep_zoom §2; scheduler_contract Part 4;
@@ -23684,6 +23687,11 @@ points are distinct, and the warning is suppressed only for a quad every collaps
 supersedes the 23 Oct line above's "a collapse at which f64 `J_D`'s columns along the view's plane are 0 while the
 quad's f64 sample points are distinct". REQ-GUI-012 gains the band arm and two genuine-floor cases whose controls can
 fail; TASK-M6-21 names where the classification is made.*
+
+*23 Oct 2026, fix round 4 of PR #279 (gui review 5624846336, G8), applied per R-369: the suppression needs at least one
+collapsed adjacent pair, every one of which is a saturation collapse; a switchover at `ℓ_switch` with no collapsed pair
+(R-90) still warns. This supersedes fix round 3's "suppressed only for a quad every collapsed pair of which is one",
+which held vacuously for a quad with none. REQ-GUI-012 gains arm (e).*
 
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 
