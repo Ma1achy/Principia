@@ -876,6 +876,20 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "M2",
 );
 
+/// Lookup's layer-3 tolerance, decode sanity: the CoM at the origin and `Σpᵢ = 0` within it, as `k` in `k·ε_R` on the
+/// residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, `R_x` and `P_x` Part 4's extents (inverse-encode § "Chart-aware
+/// validation", layer 3; REQ-ENC-027): 16, so 16·2⁻⁵² ≈ 3.55e-15 at f64 and 16·2⁻²³ ≈ 1.91e-6 at f32. TASK-M2-19's
+/// proposal (R-71): the `decode-sanity` gate's `fuzz.json`, 65 536 points on each registered chart and 2²⁰ latent `z`
+/// on `[−16, 16]⁸`, past every control's saturation, the defaults links, at f64 and f32, measures a worst of 1.54
+/// `ε_R` (`Σpᵢ`, the 8-D latent, f64), so 16 covers it by 10×; no decoded mass is not positive.
+pub const DECODE_SANITY: ConstantBuilder = proposed(
+    "decode_sanity",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-027",
+    "M2",
+);
+
 // ── The curve projection's search (dd_encode §3.4; REQ-ENC-020; TASK-M2-18) ──────────────────────────────────────
 //
 // The minimiser `kernel::encode::curve::nearest` reads, as dd_encode §3.4's "As built" defines it (R-72, applied per
@@ -1005,6 +1019,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
+    DECODE_SANITY,
     CURVE_GRID_LOG2,
     CURVE_GOLDEN_STEPS,
     INV_PHI,

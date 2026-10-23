@@ -524,14 +524,16 @@ const PRESENTATION: [&str; 13] = [
 /// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that
 /// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
 /// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances;
-/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance. None is
-/// among the entries §3.8 hashes ("The hash"), so none is hashed.
-const CALIBRATIONS: [&str; 5] = [
+/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance; and
+/// lookup's layer-3 `decode_sanity` (TASK-M2-19), a validation tolerance on lookup and lock. None is among the entries
+/// §3.8 hashes ("The hash"), so none is hashed.
+const CALIBRATIONS: [&str; 6] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
     "shape_roundtrip_bound",
     "eps_phys",
+    "decode_sanity",
 ];
 
 /// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
