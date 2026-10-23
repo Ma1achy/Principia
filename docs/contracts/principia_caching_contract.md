@@ -66,6 +66,11 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
   evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
   pixels are those that are not a system.
 - **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned. Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **Where the chain stops past the root (R-570).** With levels `L < 0` coarser than the root
+  (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root") a quad's parent chain
+  has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
+  squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
+  (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
 
 ---
 
