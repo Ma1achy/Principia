@@ -23657,3 +23657,167 @@ screen. Applied in `principia_scheduler_contract.md` Part 3, `principia_deep_zoo
 `docs/archive/review_queue/M0.md`.*
 
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
+
+## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
+*21 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, §1, §6, §9 and §11,
+`docs/design/principia_systems_architecture.md` §3 (v1 web's crossings, measured), §5 (seam 12) and §6,
+`docs/contracts/principia_gui_state_contract.md` §1, §2, §3 and §7, `docs/contracts/principia_caching_contract.md` Part
+6a, `docs/gui/principia_render_gui_spec.md` (its header, §G1 and §G14), `docs/gui/design/GUI_DESIGN_NOTES.md`,
+`docs/design/principia_temporal_architecture_note.md`, `docs/notes/ic_inspector_scratchpad.md`,
+`docs/contracts/principia_export_animation_contract.md` Part 7, `docs/read_first/principia_INDEX.md`, `README.md`,
+`REVIEW_QUEUE.md` (RQ-550, RQ-551), `plan/MILESTONES.md` (M8 and the build orders), `plan/WORKFLOW.md`,
+`plan/reviewers/code.md`, `plan/reviewers/gui.md`, the requirements below and TASK-M8-01, TASK-M8-19, TASK-M8-37,
+TASK-M8-38 and TASK-M8-41; the record is `docs/incoming/2026-10-21_browser/`*
+
+The human's covering message, 21 Oct 2026, verbatim:
+
+> Follow-up from me, Malachy, to the gap-sweep bundle I just sent. The attached INSTRUCTION_browser.md is my ruling on
+> the browser: native app first, then v1 web = the whole native app in the browser on GitHub Pages, then a separate v2
+> web product later. It replaces the browser backlog note in that bundle's INSTRUCTION_now.md. Quote my words
+> verbatim, record it from the next free R-number, reconcile every site that describes "the browser product" to it,
+> and queue the membrane-rule conflict rather than redesigning it. One PR, after the bundle's PR 1.
+
+His ruling, `INSTRUCTION_browser.md` (sha256 `3978ad8038551c494aa09620fa514c1671cbf9bf9f7d649251122c53dfac4e10`),
+verbatim:
+
+> # The browser: v1 web is the native app in the browser
+>
+> From me, Malachy, 21 Oct 2026. My words, quoted verbatim:
+>
+> > "If we were to do a first browser build literally have the entire naive app but in browser"
+>
+> ("naive" meaning native.)
+>
+> > "so have we said now that the first version of the website is just going to be the full native app running in the
+> > browser on a github webpage or whatever?" … "maybe give instructions also for it to reconcile this? to be that"
+>
+> ## The ruling
+>
+> There are three stages, in this order:
+>
+> 1. **The native app.** Built first. Everything is designed for it.
+> 2. **v1 web.** The **whole native app, compiled to run in the browser**, with the same interface, the same features
+>    and the same stains, hosted on the GitHub Pages site (TASK-M8-41). It is not a separate product and has no
+>    separate interface design. Where the browser cannot do something the native app does, v1 web says so in the app;
+>    it does not get a different design.
+> 3. **v2 web.** A purpose-built browser product, designed later as its own thing. The spotlight reel that passes for
+>    Explore (`designs/reel_click.md`) belongs here: its machinery is built and tested natively, but the presentation is
+>    a v2 concern.
+>
+> This replaces the backlog note on the browser in `INSTRUCTION_now.md`.
+>
+> ## Reconcile the corpus to it
+>
+> Find every site that describes the browser product, and make it say the above. Known sites:
+>
+> - `plan/MILESTONES.md` M8: "the browser product" → v1 web as defined here. M8 ships the native app and v1 web; v2
+>   web is not in any milestone yet.
+> - `docs/gui/principia_render_gui_spec.md` header: "The production (TS) GUI is out of scope" → the spec is the
+>   interface of the native app **and of v1 web**; a production TS GUI, if there ever is one, is v2.
+> - `docs/contracts/principia_gui_state_contract.md` §1: the TS binding "(later)" → v2.
+> - `docs/design/principia_systems_architecture.md` (§3 and the membrane tables) and `docs/contracts/principia_canonical_spec.md`
+>   §11 ("build the browser product on top").
+> - TASK-M8-37, TASK-M8-38, TASK-M8-41, and REQ-SYS-046, -049, -051, -059 and any other requirement about the
+>   browser build, the wasm worker, `OffscreenCanvas` or the membranes.
+> - The README, wherever it says "in the browser".
+>
+> **The membrane rule is the one place I expect a real conflict.** REQ-SYS-059's "exactly three crossings" cannot hold
+> for the whole native app in a browser: downloads, file drops, the clipboard and audio all cross. Do not redesign
+> it. Measure what v1 web actually needs to cross, write that down beside the rule, and **queue** it with options for
+> me.
+>
+> Queue anything else that conflicts rather than resolving it. One PR, `check_plan` output pasted in. The security rule
+> stands: never delete or modify anything outside the repo and build/scratch directories without asking.
+
+*What it decides:*
+- **Three stages, in this order.** (1) The native app, built first; everything is designed for it. (2) v1 web: the
+  whole native app compiled to run in the browser, with the same interface, the same features and the same stains,
+  hosted on the GitHub Pages site (TASK-M8-41); not a separate product, with no separate interface design. (3) v2 web:
+  a purpose-built browser product, designed later as its own thing.
+- **Where the browser cannot do something the native app does, v1 web says so in the app**; it does not get a
+  different design.
+- **M8 ships the native app and v1 web.** v2 web is in no milestone yet.
+- **The GUI spec is the interface of the native app and of v1 web.** A production TS GUI, if there ever is one, is v2
+  web's; so is the TS binding gui_state_contract §1 called "(later)".
+- **The spotlight reel that passes for Explore** (`designs/reel_click.md`, in the gap sweep's bundle, ported on another
+  branch) is v2 web's as presentation; its machinery is built and tested natively.
+- **The membrane rule is not redesigned.** What v1 web needs to cross is measured and written beside the rule
+  (systems_architecture §3, "v1 web, and what it crosses"), and queued with options, RQ-550.
+- **Anything else that conflicts is queued, not resolved**: where the GUI runs in the browser and what the main thread
+  holds, RQ-551.
+
+*How each site was reconciled* (each old text kept as a *Was:* where it was changed):
+- canonical_spec §0: "A browser-based **WebGPU research instrument**" becomes a WebGPU research instrument with the
+  three stages, and "the browser build" and "the browser product" in the corpus are defined as v1 web. §1's lead and
+  item 1: the GUI is the native app's, compiled with the engine to wasm for v1 web; "a thin TS shell owning only DOM +
+  view-scratch state" is v2 web's. Item 5: "the later **TS production GUI**" is v2 web's, if there is one; v1 web's
+  crossings point at RQ-550. Item 6, §6 (Threading) and §9 (wall 12) point at v1 web, RQ-550 and RQ-551. §11: "build
+  the browser product on top" becomes "build v1 web on top", v2 web in no milestone.
+- systems_architecture §3: a paragraph and a table after the wasm↔JS table, "v1 web, and what it crosses", the
+  measurement R-571 asks for; seam 12, invariants 5 and 10 point at RQ-550 and RQ-551. The tables themselves are
+  unchanged.
+- gui_state_contract §1: the egui binding is the native app's and v1 web's; the TS binding is v2 web's (*was:*
+  "(later)"); the canvas bullet points at RQ-551.
+- caching_contract Part 6a: a paragraph, v1 web's GUI is the native app's egui, not a DOM GUI; the split stands as
+  written until RQ-550 and RQ-551 are ruled.
+- render_gui_spec: the header (*was:* "The production (TS) GUI is out of scope; it re-skins the same operations through
+  the same contract"), and a §G1 rule, "v1 web is this GUI".
+- export_animation Part 7: the reel's machinery native, its presentation v2 web's.
+- README: "natively or in the browser" becomes "natively, or in the browser as the same app".
+- `plan/MILESTONES.md`: M8's title and its browser bullet are v1 web's (*was:* "the browser product"); the build-order
+  row quotes canonical_spec §11 as it now reads. `plan/WORKFLOW.md`: `web/` is v1 web's page and shell (*was:* "the
+  browser product"). `docs/read_first/principia_INDEX.md` lists the record.
+
+*Applied per R-369:*
+- **"Says so in the app" is read as R-303's pattern**: the control stays where the native app has it, shown disabled,
+  with a note that the browser cannot do it; it is never removed, moved or redesigned. A new requirement, REQ-SYS-086,
+  closed by TASK-M8-41, whose reviewers gain gui. Which features it lists waits on RQ-550 (`rq`).
+- **REQ-SYS-046 is restated** for the three stages: a WebGPU application built native-first, released on GitHub Pages
+  as v1 web, the whole native app with the same interface, features and stains; its verify gains the check that the
+  Pages build's GUI is the gui crate's, every window opens and the stain library is the native app's.
+  TASK-M8-41, which closes it, now depends on TASK-M8-42 (the screen sweep), so the build it checks is the whole app.
+- **REQ-SYS-047's GUI clause is R-571's**: the GUI is the native app's (egui), compiled with the engine to wasm, a thin
+  TS GUI shell being v2 web's; what the main thread then holds waits on RQ-551 (`rq`).
+- **The other browser-layout requirements are marked, not changed**: REQ-SYS-039, REQ-SYS-040, REQ-SYS-041,
+  REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and REQ-SYS-056, each of which one of RQ-551's
+  options changes, carry `rq: RQ-551`; REQ-SYS-051 and REQ-SYS-059 carry `rq: RQ-550`; REQ-SYS-055 gains a note
+  (its TS binding is v2 web's; its data-boundary rule holds in v1 web as written). TASK-M8-37 and TASK-M8-38 say so
+  in their notes, and their titles name v1 web (TASK-M8-37's goal too); `plan/reviewers/code.md`'s wasm↔JS line
+  points at RQ-550.
+- **The browser-build clauses elsewhere stand, as v1 web's**: R-85 and R-110 (real browsers against the native
+  tolerances), R-131 and R-155 (the browser's encoders), R-134 (the Playwright suite), R-303 (fast-math "unknown"),
+  R-502 (the wasm leg), R-528 and R-530 (the benchmark's prompt and phones), R-555 (Listen's browser audio), and the
+  corpus sites that say "the browser build"; §0's definition covers them, and none is reworded.
+- **The spike brief** (`docs/experiments/briefs/principia_spike_brief.md`, "Direction chosen: whole CPU engine in Rust
+  → wasm, thin TS GUI shell") is the plan of record (`principia_INDEX.md`) and is left as written.
+- **Gui review 5608379011 of PR #282 (fix round 1)**: the sites still promising a final, production or TS GUI point at
+  R-571 with a *Was:* (render_gui_spec's header, gui_state_contract §1 and §7, canonical_spec §1 item 5, and
+  `docs/gui/design/GUI_DESIGN_NOTES.md`, reconciled too rather than left); TASK-M8-37's goal and REQ-SYS-047
+  acceptance line drop the DOM GUI and the TS shell (none of RQ-551's options has a DOM GUI); REQ-GUI-033 gains R-571
+  and a note; REQ-SYS-086 covers gaps with a native control, and the control-less gaps (runtime-authored occupants,
+  persistence across reloads, `prin profile query --live`) are RQ-550's to settle.
+- **Gui re-checks 5608412017 and 5608439139 of PR #282 (fix rounds 2 and 3)**: the remaining "polished GUI", "final
+  UI" and "TS GUI" sites in the live corpus point at R-571 with a *Was:* (render_gui_spec §G14, gui_state_contract
+  §2 and §3, the IC inspector scratchpad, the temporal note's frame-loop paragraph), REQ-GEN-023 follows its source,
+  and `plan/reviewers/gui.md` follows the spec. Two crate doc comments repeat "a polished GUI"
+  (`crates/render/src/registry.rs`, `crates/engine/src/contract/view_ui.rs`); no code is changed here: each is a deliverable of the
+  unmerged task that touches its file, TASK-M8-19 (`registry.rs`, with the `debugVisible` filter) and TASK-M8-01
+  (`view_ui.rs`, with the ViewUI struct) (gui re-check 5608472158 of PR #282, fix round 4, applied per R-369; *was:*
+  "they are listed in PR #282 for a later task").
+- **The reel**: REQ-TOOL-084 (the reel produced by the blocking exporter, a segment loading its spec when clicked) is
+  machinery and stays in M8; a note says its presentation is v2 web's.
+
+*What it amends:* no ruling. No earlier ruling described the browser product as a separate TS product; the corpus did
+(canonical_spec §1, from the spike), and is reconciled above. It replaces the browser item of the backlog in the
+bundle's `INSTRUCTION_now.md` (the bundle's `INSTRUCTION.md`, § "PR 4 — Small things": "three items added to the
+backlog (the browser build as the whole native app in the browser, cross-build links, accessibility)"); that item is
+not ported when PR 4 is.
+
+R-571 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-046 (statement, verify, rulings, source, note), REQ-SYS-047 (statement, verify, rulings, source, rq,
+note),
+REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-049, REQ-SYS-050 and
+REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
+REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
+rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
