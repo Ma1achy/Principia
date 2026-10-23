@@ -3131,7 +3131,7 @@
   title: "The spotlight reel's machinery, natively: the reel builder and its manifest, the film played without compute, the takeover that keeps playing, the Spotlights window (R-578)"
   depends_on: [TASK-M8-78, TASK-M5-26]
   needs: [REQ-RENDER-045]
-  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385]
+  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b))
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M0-35
