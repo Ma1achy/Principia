@@ -70,9 +70,17 @@ almost fake being the explore view." **Any interaction takes over live at that e
   proposed here. Play reel from a segment seeks to that segment's offset (§3.1).
 - **When the ring runs dry** (fix round 15 of PR #286, gui review 5634549430, G4; applied per R-369). A film is a record, so no frame is ever dropped: the
   displayed frame is held, and every film frame is shown in order, so on a machine slower than the calibration the
-  film slows but never skips and is never blank; the takeover's "frame i" stays the displayed frame. Between Play reel
-  and the first decoded frame of the selected segment, the live view stays as it is, and the film, with its preview
-  badge, replaces it from that frame.
+  film slows but never skips and is never blank; the takeover's "frame i" stays the displayed frame.
+- **The gap before the first frame** (fix round 16 of PR #286, gui review 5634604753, G6; applied per R-369). From
+  Play reel the film counts as playing for the Spotlights window: Stop is enabled and has the focus (§3.3, §3.4), and
+  Stop, or Enter on it, cancels the pending film, the view and the undo depth as before. Until the selected segment's
+  first frame is decoded and shown, the canvas is the live view under its normal rules: no preview badge, and none of
+  the holds of "The rest of Explore while the film plays" below. Any interaction there that would take over a playing
+  film (§3.3), and an undo or redo, cancels the pending film, as Stop does, and then acts on the live view as usual;
+  there is no takeover, since no film frame has been displayed, and no film frame is displayed afterwards. The hover
+  is not such an interaction. Otherwise the film, with its preview badge, replaces the live view from its first
+  frame. *Was:* "Between Play reel and the first decoded frame of the selected segment, the live view stays as it is,
+  and the film, with its preview badge, replaces it from that frame."
 - **The rest of Explore while the film plays** (fix round 1 of PR #286, gui review 5631060675, F4 (b); applied per
   R-369). The hover is held off: the GUI sends no `RenderField::Hover` while the film plays, and the hover trace and
   label are not drawn. The decoder badge is not shown, the header strip holding only the preview badge and the
@@ -97,6 +105,9 @@ fix round 9 of PR #286, gui review 5631987230, G1).
 - **Any interaction takes over**: a pointer press, drag or scroll on the figure, any key with the focus in the Figure
   scope (a modifier pressed alone excepted), or a touch on any control that would send a `SetField` (§3.2). The
   interaction is consumed by the takeover; it does not also pan, zoom, lock or set the control (applied per R-369).
+  A takeover is always at a displayed film frame: before the film's first frame is shown, an interaction cancels the
+  pending film and acts on the live view instead (§3.2, "The gap before the first frame"; fix round 16 of PR #286,
+  gui review 5634604753, G6; applied per R-369).
 - **By keyboard** (fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369, keeping every drawn control reachable by §G3's keys, R-450 A7,
   REQ-GUI-190). Play reel leaves the focus in the Spotlights window, on **Stop** (the ring shown if Play reel was
   pressed from the keyboard, R-460), so Enter there stops the film and the window's other controls stay reachable by
@@ -164,7 +175,10 @@ fix round 9 of PR #286, gui review 5631987230, G1).
   while the live player changes identity every frame (a (b) segment), no identity's cover completes, so the backdrop
   stays until playback holds or ends (the player stops, or reaches a hold) and the identity then shown has its
   baseline cover complete; the view is never blank meanwhile. From the interaction to then, every displayed frame is
-  the film backdrop or a live render over it, never the canvas background.
+  the film backdrop or a live render over it, never the canvas background on a pixel the chart classifies as a system
+  (a pixel that is not a system draws it, R-467; caching Part 4), as REQ-GUI-384 says (fix round 16 of PR #286, gui
+  review 5634604753, G7; applied per R-369). *Was:* "From the interaction to then, every displayed frame is the film
+  backdrop or a live render over it, never the canvas background."
 - **Nothing is lost.** The takeover, with the live motion that follows it until the player stops, is one undoable
   history entry: one undo returns the view to what it was before the reel played. (At cold start there is no previous view; cold start is v2 web's, §3.5.)
 
@@ -196,7 +210,8 @@ Enter on a control acts as its click. Enter on the segment list starts interacti
 segment, Home and End to the first and the last, the selected row kept in view; Esc or Enter returns to navigation mode
 on the list. **The order never depends on state:** with no reel the list scope is still there, reading "No reel in this
 build", and its keys do nothing; Play reel and Open the sequence are disabled but stay in the order; Stop stays in the
-order whether or not the film plays, disabled when nothing plays; a disabled control is landed on and Enter on it does
+order whether or not the film plays, disabled when nothing plays (a film pending its first frame counts as playing,
+§3.2, fix round 16 of PR #286, G6); a disabled control is landed on and Enter on it does
 nothing. Play reel, pressed from the keyboard or the mouse, moves the focus to Stop, its right-hand neighbour. Esc from
 Stop goes up to the header bar scope, and Esc from a section scope returns the focus to the top bar's Windows menu,
 the window staying open (§3.3). × (Enter on it, or a click) closes Spotlights and returns the focus to the top bar's
@@ -247,7 +262,7 @@ Each with what makes it fail.
   returns to the view before the reel. *Fails on* an
   off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
 - **spotlights_window**: the window's two sections are in the order of §3.4 in every state (no reel, a reel, the film
-  playing or not), Stop in the order, disabled when nothing plays; the window opens with segment 1 selected, and Tab to the segment
+  playing or not), Stop in the order, disabled when nothing plays (a film pending its first frame plays, §3.2); the window opens with segment 1 selected, and Tab to the segment
   list, Enter, ↓ selects segment 2; Play reel
   then puts the focus on Stop; Esc twice puts it on the top bar's Windows menu with Spotlights still open; Windows ›
   Spotlights… puts it back on Stop; × while the film plays stops it as Stop does. *Fails if* the order changes with the

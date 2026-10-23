@@ -24888,6 +24888,13 @@ film slows but never skips and is never blank; until the selected segment's firs
 stays. The never-blank checks count only the pixels the chart classifies as a system, since a pixel that is not a
 system draws the canvas background (R-467, caching Part 4).
 
+*Fix round 16 of PR #286 (gui review 5634604753, G6, G7; applied per R-369, the orchestrator's decision; no ruling
+changed):* from Play reel the film counts as playing, so "disabled when nothing plays" leaves Stop enabled, with the
+focus, while the film waits for its first frame; until that frame is shown the canvas is the live view under its
+normal rules, and any interaction that would take over, or an undo or redo, cancels the pending film as Stop does and
+then acts on the live view, with no takeover. Reel §3.3's "never the canvas background" reads "on a pixel the chart
+classifies as a system", as REQ-GUI-384 says.
+
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199

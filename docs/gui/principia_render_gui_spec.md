@@ -838,7 +838,8 @@ header bar in navigation mode (fix round 1 of PR #286, gui review 5631060675, F3
 **Spotlights (R-578, §G9a).** A window too, with two sections in this order: the header bar (Play reel, Stop, Open the
 sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select a segment; the first segment is selected when
 it opens with a reel, and with no reel nothing is, fix round 5 of PR #286, K1). The order does not depend on
-state: Stop stays in it, disabled when nothing plays, and with no reel the list is still there. Esc from its top level
+state: Stop stays in it, disabled when nothing plays (a film pending its first frame counts as playing, §G9a,
+fix round 16 of PR #286, G6), and with no reel the list is still there. Esc from its top level
 returns the focus to the top bar's Windows menu and leaves it open; Windows › Spotlights… on an open Spotlights gives
 it the focus on Stop while the film plays, on its header bar otherwise (fix round 4 of PR #286, gui review 5631472413,
 J1, J2; applied per R-369; `principia_spotlight_reel.md` §3.4).
@@ -1533,7 +1534,7 @@ is `docs/design/principia_spotlight_reel.md`.
   select a segment, the first segment selected when the window opens with a reel and none with no reel, Play reel and
   Open the sequence then disabled (fix round 5 of PR #286, gui review 5631560484, K1; applied per R-369); the order is
   the same in every state, no reel, the film playing or not, Stop staying in it,
-  disabled when nothing plays. × closes it; closed while the film plays, it stops the film first, as Stop does. Esc
+  disabled when nothing plays (a film pending its first frame counts as playing, below). × closes it; closed while the film plays, it stops the film first, as Stop does. Esc
   from its top level returns the focus to the top bar's Windows menu, the window staying open, and Windows ›
   Spotlights… on an open Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise, the
   keyboard's way back (fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369;
@@ -1548,6 +1549,13 @@ is `docs/design/principia_spotlight_reel.md`.
   In a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result while
   the film plays stops it first, as Stop does, so no takeover happens there (fix round 9 of PR #286, gui review
   5631987230, G1; applied per R-369).
+  When the decode ring runs dry the displayed frame is held and every film frame is shown in order, never skipped and
+  never blank (fix round 15 of PR #286, gui review 5634549430, G4). **Before the first frame:** from Play reel the film
+  counts as playing, Stop enabled with the focus on it; until the selected segment's first frame is shown the canvas
+  is the live view under its normal rules, no badge and none of the holds above, and any interaction that would take
+  over, or an undo or redo, cancels the pending film as Stop does and then acts on the live view as usual, with no
+  takeover (fix round 16 of PR #286, gui review 5634604753, G6; applied per R-369; `principia_spotlight_reel.md`
+  §3.2).
 - **The takeover:** a press, drag or scroll on the figure, any key in the Figure scope (Tab, Esc and Ctrl+Z included; a
   modifier alone excepted), or a
   touch on any control that would send a `SetField` takes over at the displayed frame, consumed: its spec's state
