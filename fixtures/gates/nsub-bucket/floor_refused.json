@@ -1,0 +1,6 @@
+{
+  "description": "gamma_sub 0.25 at N_max 256: THR[56], about 2.58e-17, decides N_sub below 2^-55, where the square's floor could decide it; the host generator refuses it.",
+  "config": { "r_sub": 0.05, "gamma_sub": 0.25, "n_max": 256 },
+  "fuzz": { "seed": 10, "random": 4096, "pairs": 4096 },
+  "expected": "refused"
+}
