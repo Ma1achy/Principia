@@ -23517,9 +23517,10 @@ sentences added) and § "Trace… — every trace setting (R-541 G5)" (the foote
 RQ-533 and RQ-534 (new), REQ-GUI-354 to REQ-GUI-356 (reqio, new), REQ-GUI-274 (reqio: statement, verify, source,
 rulings, note), REQ-GUI-275 (reqio: statement, source, rulings, note), REQ-GUI-328 (reqio: statement, verify, source,
 rulings, note) and REQ-GUI-332 (reqio: statement, verify, source, rulings, rq, note), each earlier text kept as its
-*Was*, REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (reqio: rulings, note), TASK-M8-58 (closes, deliverables,
-acceptance, notes), TASK-M8-62 and TASK-M8-63 (References, deliverables, acceptance, notes), `plan/tasks.yaml` and
-`plan/rule_groups.yaml`; built by TASK-M8-58, the legend's key line by TASK-M8-63 and the full key's line by TASK-M8-62*
+*Was*, REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (reqio: rulings, note), TASK-M8-58 (closes, References,
+deliverables, acceptance, notes), TASK-M8-62 and TASK-M8-63 (References, deliverables, acceptance, notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-58, the legend's key line by TASK-M8-63 and the full
+key's line by TASK-M8-62*
 
 The human's instruction, `docs/incoming/2026-10-21_trace_playback/INSTRUCTION_trace_playback_2026-10-21.md`, whole and
 verbatim; its quoted paragraph is his words, and its rulings, tests and reference are his text, byte for byte as he
