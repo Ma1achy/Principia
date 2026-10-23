@@ -24714,6 +24714,12 @@ estimate is the export's samples (the export tier's samples per quad over the qu
 The preview's third pinned identity is in caching Part 4's and Part 7's pinned lists, costed as one more baseline
 cover under the hard cap, the preview's own work evicted first when the cap binds.
 
+*Fix round 15 of PR #286 (gui review 5634549430, G1, G3; applied per R-369, the orchestrator's decision; no ruling
+changed):* while a proof strip runs its button becomes Cancel in place, its progress "proof 3 / 5" beside it; Cancel
+keeps the finished frames and leaves the rest as empty slots; the job renders the spec it started from, and an edit
+marks the strip stale. The planner's provenance key is shown once under its rows as "measured on <adapter name> · probe
+v<version>", from quality_device_note §9's signature.
+
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375
@@ -24875,6 +24881,12 @@ size is a calibration requirement (REQ-PERF-111); the builder writes self-contai
 each segment's start offset, so Play reel from a later segment seeks. The backdrop stays until the identity being
 shown has its baseline cover complete; under a moving (b) segment, until playback holds or ends and that identity's
 cover completes.
+
+*Fix round 15 of PR #286 (gui review 5634549430, G4, G5; applied per R-369, the orchestrator's decision; no ruling
+changed):* when the decode ring runs dry the displayed frame is held and every film frame is shown in order, so the
+film slows but never skips and is never blank; until the selected segment's first frame is decoded the live view
+stays. The never-blank checks count only the pixels the chart classifies as a system, since a pixel that is not a
+system draws the canvas background (R-467, caching Part 4).
 
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 

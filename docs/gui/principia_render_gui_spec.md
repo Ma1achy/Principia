@@ -1476,7 +1476,8 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
 - **Where:** Windows › Sequence…; docked along the bottom of Explore, below the bottom row (Compass, Time, Legend) and
   above the footer, its top edge a splitter (R-462), its height remembered with the layout; the console docks over it
   as over the bottom row (R-463). × closes it. Its sections, in §G3's order: the header bar (Add keyframe, Play
-  preview, Proof strip, Export…, Open…, Save…, ×), the timeline, the inspector. In its scope **K** adds a keyframe and
+  preview, Proof strip, Export…, Open…, Save…, ×; while a proof strip runs, Proof strip becomes Cancel in the same
+  place, its progress "proof 3 / 5" beside it), the timeline, the inspector. In its scope **K** adds a keyframe and
   **Delete** removes the selected one; the Figure's K stays the lock (§G4). Esc from its top level returns the focus to
   the Figure, the window staying open. It is a window, not a big scope, so §G3's Tab order is unchanged; Windows ›
   Sequence… on an open Sequence gives it the focus on its header bar, the keyboard's way back (fix round 1 of PR #286,
@@ -1506,11 +1507,13 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   applied per R-369).
   **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
   tier, as a lower-priority, cancellable background job with progress; the frame's size is REQ-GUI-388's calibration.
+  While it runs the button reads Cancel in place, "proof 3 / 5" beside it; Cancel keeps the finished frames and leaves
+  the rest as empty slots; the job renders the spec it started from, and an edit marks the strip stale (fix round 15 of PR #286, gui review 5634549430, G1).
   While a preview runs the user's baseline cover stays pinned, so returning is never blank (fix round 12 of PR #286, perf review 5632950982, P3, P6).
 - **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
   estimate the cost over the device throughput model of `principia_quality_device_note.md` §2, per trajectory-step
   (the model over `2(E_probe + 1)`), the export's samples × `2(E_export + 1)` × steps, derated by the solve's thermal
-  headroom, one value with its provenance key (`principia_sequence.md` §3.7; fix round 13 of PR #286, perf review 5634346116), or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
+  headroom, one value with its provenance key, shown once under the rows as "measured on <adapter name> · probe v<version>" (`principia_sequence.md` §3.7; fix round 13 of PR #286, perf review 5634346116; fix round 15 of PR #286, gui review 5634549430, G3), or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
   machine's measured throughput"; fix round 12 of PR #286, perf review 5632950982, P1, P2),
   then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start runs it in the
   background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside

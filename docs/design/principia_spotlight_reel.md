@@ -68,6 +68,11 @@ almost fake being the explore view." **Any interaction takes over live at that e
   ring's, whatever its length. The ring's size is a calibration requirement (R-71, REQ-PERF-111), provisional until
   M8: frame size and fps give its bytes per frame but not how many frames the decode must run ahead, so no value is
   proposed here. Play reel from a segment seeks to that segment's offset (§3.1).
+- **When the ring runs dry** (fix round 15 of PR #286, gui review 5634549430, G4; applied per R-369). A film is a record, so no frame is ever dropped: the
+  displayed frame is held, and every film frame is shown in order, so on a machine slower than the calibration the
+  film slows but never skips and is never blank; the takeover's "frame i" stays the displayed frame. Between Play reel
+  and the first decoded frame of the selected segment, the live view stays as it is, and the film, with its preview
+  badge, replaces it from that frame.
 - **The rest of Explore while the film plays** (fix round 1 of PR #286, gui review 5631060675, F4 (b); applied per
   R-369). The hover is held off: the GUI sends no `RenderField::Hover` while the film plays, and the hover trace and
   label are not drawn. The decoder badge is not shown, the header strip holding only the preview badge and the

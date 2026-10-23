@@ -35,7 +35,8 @@ history is RQ-559). Outside the preview, the only `SetField`s the Sequence sends
 takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3).
 
 Its keyboard model is §G3's for a window, with three sections in order: the **header bar** (Add keyframe, Play preview,
-Proof strip, Export…, Open…, Save…, ×), the **timeline** and the **inspector** (the selected keyframe's or segment's
+Proof strip, Export…, Open…, Save…, ×; while a proof strip runs, Proof strip becomes **Cancel** in the same place, with
+its progress, read-only, beside it, so the order never changes and the focus stays on it, §3.6; fix round 15 of PR #286, gui review 5634549430, G1), the **timeline** and the **inspector** (the selected keyframe's or segment's
 controls). In the timeline, ← and → move between keyframes and the segments between them, in time order, and Enter
 selects. Its scope's shortcuts (R-409): **K** adds a keyframe and **Delete** removes the selected one. The Figure's K
 stays the lock (§G4, R-556); a scope's letter acts only with the focus in that scope, so the two never meet. Esc from
@@ -206,7 +207,12 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
   frame is an exported frame, not the live loop's (Part 1, R-66): at the same time, size and tier it is the exported
   frame bitwise. It runs as a **lower-priority background job off the GUI thread** (`principia_dd_telemetry_and_tiers.md`
   § "CPU": background work runs at lower priority and yields; caching Part 6), with progress and **Cancel**, live work
-  first. The proof frame's size ("small") is a calibration requirement (R-71, REQ-GUI-388), provisional until M8;
+  first. **In the window** (fix round 15 of PR #286, gui review 5634549430, G1; applied per R-369): while the strip runs, the Proof strip button becomes
+  **Cancel** at the same place in the header bar, so the section order never changes and the focus stays on it, and
+  its progress reads "proof 3 / 5" beside it, read-only, reaching "proof 5 / 5" when the strip is done. Cancel keeps
+  the frames already finished and leaves the rest as empty slots. The job renders the spec it was started from, as a
+  preview request carries its spec; an edit to the sequence while it runs, or after, marks the strip **stale**, shown
+  on the strip, until it is run again. The proof frame's size ("small") is a calibration requirement (R-71, REQ-GUI-388), provisional until M8;
   no corpus value gives it (fix round 12 of PR #286, perf review 5632950982, P6; applied per R-369).
 
 ### 3.7 The planner and export
@@ -239,6 +245,9 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
     "apply thermal headroom ... of raw cold measurement"; its value is REQ-PERF-088's calibration, no new number), since
     a multi-minute export is the sustained load that headroom is for;
   - **estimate = `S_export × 2(E_export + 1) × steps × c_traj / headroom`**, one value, with the model's provenance key.
+  - **The provenance key, as the user reads it** (fix round 15 of PR #286, gui review 5634549430, G3; R-72 form; applied per R-369): shown once, under the
+    planner's rows, not on each row, reading "measured on <adapter name> · probe v<version>", the adapter's name and the probe's version taken from
+    `principia_quality_device_note.md` §9's provenance signature.
   *Was:* "**An estimate carries its basis.** A segment's cost is the samples it marches times the
   physical time each is marched (the export's pixels times its copies, `E + 1`, times the march's length); the
   throughput is the same quantity per wall second, measured from this machine's frame records
