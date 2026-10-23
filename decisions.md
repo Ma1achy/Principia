@@ -23650,9 +23650,10 @@ read the words. The three rulings are numbered PB1 to PB3 here, after the instru
   verify take PB3's placement, REQ-GUI-275's a repeat's icons never moved; REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and
   REQ-GUI-281 take notes pointing at the new requirements.
 
-*Checked against `main` (da6a66cb) and the open rulings branches, `rulings/batch-2026-10-21` (PR #274,
-whose ruling on the trace's queued questions rules RQ-412 to RQ-415 and RQ-427 as applied meanwhile, all of which
-R-569 keeps) and `rulings/gap-integrator` (PR #277, nothing on the trace):* TF3 and RQ-427 (a) stand, as the words say;
+*Checked against `main` (da6a66cb) and the rulings branches then open, `rulings/batch-2026-10-21` (PR #274,
+whose R-553 rules the trace's queued questions RQ-412 to RQ-415 and RQ-427 as applied meanwhile, all of which R-569
+keeps) and `rulings/gap-integrator` (PR #277, nothing on the trace); both have since merged, and `main` (4f1c40c2) is
+merged into this branch:* TF3 and RQ-427 (a) stand, as the words say;
 R-538 TM6's pin and its option stand, the pin's place taken from the measured extent; TM7's repeats are never pinned,
 and now never moved; RQ-415's "pins are events, chevrons are the line" is unchanged (both are kept whole on screen);
 R-539's figure marks and R-541 G8's legend block take the new mark and its key line. Two conflicts are queued, not
@@ -23663,8 +23664,8 @@ restarts with the trace; that is no conflict.
 
 *What it amends:* **R-538**: J11's playback (TF3) gains the restart while playing and the dotted line paused at
 `t = 0`; TM6's pin ("§6 'Off-screen icons, jumps and the window'") is placed by the icon's whole measured extent, the
-start icon included; TM7's repeats are never moved. Read with R-541 (G8, the legend's block), RQ-415 and RQ-427 (ruled on
-PR #274's branch as applied), R-539 and R-537.
+start icon included; TM7's repeats are never moved. Read with R-541 (G8, the legend's block), RQ-415 and RQ-427 (ruled by
+R-553 as applied, PR #274 merged; RQ-427 (a)'s default length as R-556 reads it on RQ-465), R-539 and R-537.
 
 Adds REQ-GUI-354 to REQ-GUI-356; changes REQ-GUI-274, REQ-GUI-275 and REQ-GUI-332 (statement, verify, rulings, note)
 and REQ-GUI-271 to REQ-GUI-273, REQ-GUI-276 and REQ-GUI-281 (rulings, note).
