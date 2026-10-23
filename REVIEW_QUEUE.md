@@ -711,35 +711,7 @@ energy target cannot be met is on a latent chart).*
   far_field_saturates and latent_unbounded_navigation pin `E* = None`. Nothing changes in the decoder.
 - **Waits:** REQ-CHART-087's arm under `Some(E*)` (TASK-M8-57), `rq: RQ-552`. The η_E-off arms do not wait, and
   neither does REQ-GUI-357, which states the η_E-off case.
-
-## RQ-553: In a latent chart's saturated far field the decode collapses in f64 as in f32, so `AT_F32_FLOOR` fires at home zoom and the precision warning tells the user that f32 has run out where the cause is saturation, against R-570 item 5 and W13 *(conflict: the human's ruling and an invariant against the warning's trigger; R-570, R-54, R-90, W13; REQ-CHART-087; context: TASK-M8-57)*
-
-*Found by physics review 5624655553 of PR #279, P3. Nothing is ruled.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 5:
-    "**Precision is not a navigation limit.** At large chart coordinates the f32 deep-zoom floor arrives sooner, because
-    the floor depends on where you zoom. That is handled by the existing precision ladder and the collapsed-decode
-    guard, not by stopping the pan or zoom."
-  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound": "(iv) the **decode floor proper**
-    (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a
-    deep-zoom backstop".
-  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "The warning is
-    **raised by events** (R-54): `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`."
-  - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison
-    checklist)", 13: "**Never blank, never lies, never freezes**".
-- **The conflict:** in the saturated far field the f64 decode is flat as well: `σ` rounds to 1 in f64 past about 37 and
-  `sech²` underflows, so `J_D` has zero columns, the linearised samples collapse too and `AT_F32_FLOOR` fires, at home
-  zoom. Stopping refinement there does no harm, the field being genuinely flat; but the warning it raises says that f32
-  has run out, where the cause is saturation, not precision, against item 5 and W13's "never lies".
-- **Options seen:**
-  - (a) A collapse whose f64 decodes are also identical is a saturation collapse: refinement stops as at the floor,
-    and no precision warning is raised (the readout may say the field is saturated).
-  - (b) The warning is raised, its text naming a collapsed decode rather than f32 running out.
-  - (c) The warning stands as R-54 defines it.
-- **For the human:** the warning's trigger is design, which R-369 lets the orchestrator and the reviewers decide with
-  physics review; queued because R-570's "What to check" says to queue a conflict rather than resolve it.
-- **Applied meanwhile:** nothing; deep_zoom §4 records the conflict and settles nothing, and the ladder and the warning
-  stand as written.
-- **Waits:** nothing; no requirement tests the warning in the far field. TASK-M8-57 builds the ladder as written,
-  and a decision here changes only the warning's trigger.
+- **Also (physics review 5624721489 of PR #279, an observation):** dd_decoder §3.7 tags the collision pole too:
+  "**The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
+  $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`." It does not change the conflict or the
+  options.

@@ -471,6 +471,9 @@ colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
 *24 Sep 2026 · recorded; applied in step 6*
+*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a saturation
+collapse, f64 `J_D`'s in-plane columns 0 at a quad whose f64 sample points are distinct, raises no precision warning;
+every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raises it as here (deep_zoom §4; REQ-GUI-012).*
 
 Raised on `DECODE_SWITCHOVER` over visible quads and on `AT_F32_FLOOR`. Files: deep_zoom §2; scheduler_contract Part 4;
 the step-6 GUI docs; gui_state_contract §2.
@@ -23664,6 +23667,13 @@ decoder's default links, η_E off (`None`)", both tests pinning `E* = None`; REQ
 judged only where every coordinate the view varies is saturated (chart_reference §5.4), REQ-CHART-088 measured on those
 views; RQ-553 queues the precision warning in the flat far field against item 5 and W13, deep_zoom §4 recording it
 unsettled. The quoted instruction above is unchanged.*
+
+*23 Oct 2026, fix round 2 of PR #279 (physics review 5624721489, P4): RQ-553 decided per R-369 by the orchestrator, not
+a human ruling, recorded against item 5 and R-54: option (a), its test corrected to the derivative, a collapse at which
+f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample points are distinct being a saturation
+collapse, which raises no precision warning; the genuine floor, `J_D ≠ 0`, still warns. Option (c) is out by W13 and
+item 5. Applied in deep_zoom §4, render_gui_spec §G2 and REQ-GUI-012 (TASK-M6-21); RQ-553 moved to
+`docs/archive/review_queue/M0.md`.*
 
 R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
 

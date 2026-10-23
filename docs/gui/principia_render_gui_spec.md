@@ -267,6 +267,9 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
   is "f64 · 7 digits left · linearise decode".
+  A saturation collapse raises no warning (RQ-553, decided per R-369; `principia_deep_zoom.md` §4): at a quad where f64
+  `J_D`'s columns along the view's plane are 0 while its f64 sample points are distinct, neither event raises it; the
+  genuine floor still does (REQ-GUI-012).
 - **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
