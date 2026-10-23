@@ -1483,7 +1483,12 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   gui review 5631060675, F3; applied per R-369).
 - **Keyframes:** Add keyframe captures the whole `SimConfig` and `RenderState` at the timeline cursor. A keyframe shows
   its values, **Go to** (one undoable entry), **Update** from the view, a drag in time (clamped between its neighbours)
-  and its playhead policy (hold, advance with wall time, set to a value).
+  and its playhead policy (hold, advance with wall time, set to a value). Add keyframe at a frame a keyframe already
+  holds is refused with the reason in the header bar; a drag stops one frame short of a neighbour's frame; advance's
+  rate starts at the Transport's speed and is editable; an fps that merges two keyframes is refused inline in the
+  planner, naming both. **In a result view** (`principia_results.md` §3.4) Go to, Add keyframe, Update and Play preview are disabled, each with the reason "result view — switch to Live" shown in the Sequence beside it, never over the figure (§G1); the
+  way back is the existing view-source request, never an implicit switch, and opening a result ends a preview first
+  (fix round 9 of PR #286, gui review 5631987230, G1, G2; applied per R-369).
 - **The timeline:** wall time across, keyframes as diamonds; read-only lanes Navigate, Plane, Chart, Links, Playhead,
   Stain, Print, Lines and Run light where a field in the lane differs between a segment's two keyframes; segments
   coloured by class (a), (b) or (c) with their frame counts; a chart or link-id change shows a cut mark.
@@ -1533,6 +1538,9 @@ is `docs/design/principia_spotlight_reel.md`.
   the focus to the Figure scope."; fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369). While it plays the hover is held off (no `Hover` sent), the
   Legend shows only "Film: the legend returns when live", `t` reads "—", and the top bar's undo and redo do nothing.
   Stop leaves the view as it was. *Was:* "and undo and redo are disabled." (fix round 2 of PR #286, gui review 5631227164, G3).
+  In a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result while
+  the film plays stops it first, as Stop does, so no takeover happens there (fix round 9 of PR #286, gui review
+  5631987230, G1; applied per R-369).
 - **The takeover:** a press, drag or scroll on the figure, any key in the Figure scope (Tab, Esc and Ctrl+Z included; a
   modifier alone excepted), or a
   touch on any control that would send a `SetField` takes over at the displayed frame, consumed: its spec's state

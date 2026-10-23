@@ -24582,6 +24582,10 @@ frame. After a reel takeover inside the segment, the live player instead holds t
 RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383), which the rule does not decide. Round 7's paragraph
 stands with this exception.
 
+*Fix round 9 of PR #286 (gui review 5631987230, G3; applied per R-369):* the exception's other side reads "Live
+playback other than after a reel takeover (the preview included, wherever it starts) is as above", and the Sequence
+tells the user that a preview started mid-segment differs there from the takeover's interim hold.
+
 R-576 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds
@@ -24683,6 +24687,14 @@ these texts don't address, queue it rather than resolving it"):*
   when it stops"), `t` "—", the hover held off; the Manifold view and the other controls show the user's view, which
   they edit, a touch ending the preview. REQ-GUI-387 (new) holds it.
 - **G4, Esc:** Esc in the Sequence during a preview stops it and does nothing else; the next Esc acts as §G3 has it.
+
+*Fix round 9 of PR #286 (gui review 5631987230, G1, G2; applied per R-369, the orchestrator's decision; no ruling
+changed):* in a result view (R-572, `principia_results.md` §3.4) the Sequence's Go to, Add keyframe, Update and Play
+preview are disabled with the reason "result view — switch to Live", the way back being the existing view-source
+request, never an implicit switch, and opening a result ends a preview first. Add keyframe at a frame a keyframe
+already holds is refused with the reason; a drag stops one frame short of a neighbour's frame; an fps that merges two
+keyframes is refused inline in the planner, naming both; advance's rate starts at the Transport's speed and is
+editable (REQ-GUI-373, REQ-GUI-379).
 
 R-577 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -24834,6 +24846,10 @@ and which state live shows at that frame, and a takeover there loads that state.
 link-parameter ease, the live player holds the takeover's value until the segment's second keyframe and then cuts, as
 RQ-561's interim only; which value live holds is added to RQ-561 as its second question. TASK-M8-79 gains the physics
 reviewer, as TASK-M8-31 has it for R-520.
+
+*Fix round 9 of PR #286 (gui review 5631987230, G1; applied per R-369, the orchestrator's decision; no ruling
+changed):* in a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result
+while the film plays stops it first, as Stop does, so no takeover happens there (REQ-GUI-383).
 
 R-578 is in the "design" group of `plan/rule_groups.yaml`.
 

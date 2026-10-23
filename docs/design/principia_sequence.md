@@ -43,6 +43,16 @@ the window's top level returns the focus to the Figure and leaves the window ope
 
 While a preview plays, Esc in the Sequence stops it and nothing else (§3.6).
 
+**In a result view** (fix round 9 of PR #286, gui review 5631987230, G1; applied per R-369, as `principia_results.md`
+§3.4 disables sim-key edits there "with the reason"). While the view source is `Result` (`principia_gui_state_contract.md`
+§2), the figure draws a stored payload and not the snapshot's state, so every Sequence control that writes or captures
+the sim key is disabled: Go to, Add keyframe, Update and Play preview are disabled, each with the reason "result view — switch to Live" shown
+in the Sequence beside it, never over the figure (§G1). The way back is the existing view-source request (*Explore from here*,
+or closing the result, which sets `Live`); nothing switches the source implicitly. Opening a result while a preview
+plays ends the preview first, as a user edit does. The document edits that send nothing (selecting, dragging in time,
+Delete, a segment's easing and transition, Open…, Save…, the Proof strip and Export…, which run through the blocking
+exporter from the spec) stay enabled.
+
 **Getting back in by keyboard.** The Sequence is a window, not a big scope: §G3's Tab order of big scopes (1 top bar …
 8 footer, R-405) is unchanged. **Windows › Sequence…** on an open Sequence gives it the focus, landing on its header
 bar in navigation mode, as opening it does; the top bar's menus are reached by keyboard as big scope 1 (§G3), so the
@@ -52,14 +62,18 @@ click does (R-456). (Fix round 1 of PR #286, gui review 5631060675, F3; applied 
 ### 3.2 Keyframes
 
 - **Add keyframe** captures the whole `SimConfig` and the whole `RenderState` at the timeline cursor. A keyframe is
-  always whole (Part 3: a keyframe's state is its `SimConfig`, links included, R-483 X7).
+  always whole (Part 3: a keyframe's state is its `SimConfig`, links included, R-483 X7). **At an occupied frame**,
+  where the cursor's own frame `⌊t_wall · fps + ½⌋` is an existing keyframe's, Add keyframe is refused with the reason
+  ("frame n already holds a keyframe"), shown in the Sequence's header bar beside the button, and nothing is added, so
+  keyframes' frames stay distinct and the window never builds a spec the exporter refuses (export contract Part 3; fix
+  round 9 of PR #286, gui review 5631987230, G2 (a); applied per R-369).
 - A selected keyframe shows its values (each field that differs from its neighbours first), and offers:
   - **Go to**: the view takes the keyframe's `SimConfig` and `RenderState`, bitwise, as one undoable history entry
     (as Home is one, R-466);
   - **Update**: the keyframe takes the view's state, whole;
   - **drag in time**, its `t_wall` clamped strictly between its neighbours', so keyframes never reorder, and so that
     its own frame stays strictly between theirs (export contract Part 3's frame grid; fix round 6 of PR #286, physics
-    review 5631678451, P1);
+    review 5631678451, P1): at the spec's fps a drag stops one frame short of a neighbour's frame;
   - **playhead policy**: **hold**, **advance with wall time** (with its rate, in `t` per wall second, set from the
     Transport's speed when chosen and editable) or **set to a value** (Part 3's "playhead policy"; its semantics are
     export contract Part 3's, fix round 6 of PR #286, P1, the rest REQ-TOOL-197's definition).
@@ -144,7 +158,11 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
 
 - **Play preview** runs the sequence through the live frame loop from the timeline cursor, with link-parameter changes
   and dissolves shown as cuts (R-520 F3), under a banner in the Sequence's header bar: "Preview: not converged; cuts
-  where the export interpolates". While it plays the timeline cursor follows it.
+  where the export interpolates". While it plays the timeline cursor follows it. A preview started mid-way through a
+  link-parameter ease shows the first keyframe's value up to the second keyframe (say `μ_max` 5 between 5 and 4),
+  wherever it starts: it is ordinary live playback (export contract Part 3). A reel takeover at the same frame would
+  instead hold the frame's eased value (4.6), RQ-561's interim (`principia_spotlight_reel.md` §3.3); the two differ
+  until RQ-561 is ruled (fix round 9 of PR #286, gui review 5631987230, G3).
   - **A transient view, not an edit.** The GUI sends one **preview request** carrying the spec and the cursor's wall
     time; the engine plays the spec from there through its live frame loop and draws the preview's frames in place of
     the view. No `SetField` is sent and the contract's `SimConfig` and `RenderState` are never changed, so nothing
@@ -191,7 +209,10 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
   shown as a range, the cost over the fastest and over the slowest throughput measured. With no measurement it reads
   "no measurement on this machine yet", never a number. The proof strip's frames are timed and enter the measurement,
   so they calibrate it.
-- Then Part 4's parameters: size, fps, quality tier, format, and Plain or styled (R-489). **Start** runs the export as
+- Then Part 4's parameters: size, fps, quality tier, format, and Plain or styled (R-489). An fps that would give two
+  keyframes one frame (export contract Part 3) is refused inline beside the fps field, naming both keyframes ("at 12
+  fps keyframes 2 and 3 share frame 7"), never over the figure (§G1), and the spec keeps its fps (fix round 9 of PR
+  #286, gui review 5631987230, G2 (b); applied per R-369). **Start** runs the export as
   Part 4's background job, with progress, ETA, the last frame's thumbnail and Cancel.
 - **What travels.** Each PNG frame carries its own record, that frame's `SimConfig` with its link values (R-520 F5),
   and the `.principia-seq.json` (§3.5) is written beside every export, whatever its format. How a GIF, MP4 or WebM

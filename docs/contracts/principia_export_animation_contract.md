@@ -93,7 +93,10 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
     exception, which this bullet does not decide** (fix round 8 of PR #286, physics review 5631902011, P6; applied per
     R-369): after a reel takeover inside the segment, the live player instead holds the takeover's link-parameter value
     until `f_{k+1}`, RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383); which value it holds there is
-    RQ-561's second question. Ordinary live playback, entering the segment at a keyframe's frame, is as above. A
+    RQ-561's second question. Live playback other than after a reel takeover (the preview included, wherever it
+    starts) is as above, so a preview started mid-segment shows keyframe `k`'s value where a takeover at that frame
+    would hold the eased one (`principia_sequence.md` §3.6) (*was:* "Ordinary live playback, entering the segment at a
+    keyframe's frame, is as above."; fix round 9 of PR #286, gui review 5631987230, G3). A
     dissolve's outgoing state follows the same rule. No such field is eased: easing one would be a new family of ICs
     of the kind RQ-384 needed a ruling for.
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical

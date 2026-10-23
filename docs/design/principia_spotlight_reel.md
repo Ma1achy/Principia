@@ -77,6 +77,9 @@ almost fake being the explore view." **Any interaction takes over live at that e
 
 ### 3.3 The takeover
 
+There is no takeover in a result view: Play reel is disabled there, and opening a result stops the film first (§3.4;
+fix round 9 of PR #286, gui review 5631987230, G1).
+
 - **Any interaction takes over**: a pointer press, drag or scroll on the figure, any key with the focus in the Figure
   scope (a modifier pressed alone excepted), or a touch on any control that would send a `SetField` (§3.2). The
   interaction is consumed by the takeover; it does not also pan, zoom, lock or set the control (applied per R-369).
@@ -160,6 +163,12 @@ it reads "No reel in this build" and Play reel is disabled. **The selection** (f
 always selected while there is a reel; ↑ and ↓ move the selection one segment and Home and End go to the first and the
 last (below); with no reel there is no selection, and Play reel and Open the sequence are disabled. *Was:* "**Play
 reel** (from the selected segment's first frame, or the first segment's; the focus then on Stop, §3.3)".
+**In a result view** (fix round 9 of PR #286, gui review 5631987230, G1; applied per R-369, as `principia_results.md`
+§3.4 disables sim-key edits there "with the reason"): while the view source is `Result`, Play reel is disabled, with the
+reason "result view — switch to Live" shown in the window beside it; the way back is the existing view-source request
+(*Explore from here*, or closing the result), never an implicit switch. Opening a result while the film plays stops the
+film first, exactly as Stop does, so no takeover happens in a result view. Open the sequence, which sends nothing,
+stays enabled.
 
 **Its keyboard order (§G3; fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369).** Spotlights has
 two sections, top to bottom, as the console has (R-450): the **header bar** (Play reel, Stop, Open the sequence and the
