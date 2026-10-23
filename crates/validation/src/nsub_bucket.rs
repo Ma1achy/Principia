@@ -373,8 +373,8 @@ impl NsubBucketGate {
             "CPU-f64 and CPU-f32 only: the native-GPU leg is REQ-VAL-059's, the browser's REQ-VAL-144's (R-113)"
                 .to_owned(),
             format!(
-                "{} samples within 2⁻²⁰ of an edge are not judged against the specification: there the f32 rounding of \
-                 THR[n] decides",
+                "{} samples within 2⁻²⁰ of an edge are not judged against the specification: there the f32 roundings of \
+                 THR[n] and of d² decide (their sum, about 7·2⁻²⁴, is under half the band)",
                 m.near_edge
             ),
         ];
