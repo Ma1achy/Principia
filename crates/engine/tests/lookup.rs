@@ -177,15 +177,23 @@ fn check_raw(big: f64) {
     assert_eq!(lock.z, z, "an interior raw z is not kept bit for bit");
     assert!(!lock.notices.lookup_clamped());
     z[0] = big;
+    z[3] = -big;
     let lock = exact(&latent_chart(), Exact::Raw(z)).expect("a saturated raw z is refused");
-    assert_eq!(lock.z[1..], z[1..], "the unclamped controls are not kept");
+    for k in [1, 2, 4, 5, 6, 7] {
+        assert_eq!(lock.z[k], z[k], "the unclamped z[{k}] is not kept");
+    }
     let image = (1.0f64 - 1e-6).ln() - (1e-6f64).ln();
-    assert!(
-        (lock.z[0] - image).abs() < 1e-6,
-        "z_α {} is not at its clamp's image {image}",
-        lock.z[0]
+    for (k, want) in [(0, image), (3, -image)] {
+        assert!(
+            (lock.z[k] - want).abs() < 1e-6,
+            "z[{k}] {} is not at its clamp's image {want}",
+            lock.z[k]
+        );
+    }
+    assert_eq!(
+        lock.notices.moved.controls, 0b1001,
+        "z_α and z_q1 are not named as moved"
     );
-    assert_eq!(lock.notices.moved.controls, 1, "z_α is not named as moved");
     assert!(lock.notices.lookup_clamped());
 }
 
@@ -880,7 +888,11 @@ fn check_changed(tiny: f64) {
     );
     assert_eq!(changed(&inv(1.0, -1.0), &inv(3.0, -2.0)), None);
     assert_eq!(changed(&inv(0.0, 0.0), &inv(0.0, 0.0)), None);
-    assert_eq!(changed(&inv(0.0, -1.0), &inv(-0.0, -1.0)), None, "−0 is not 0's class");
+    assert_eq!(
+        changed(&inv(0.0, -1.0), &inv(-0.0, -1.0)),
+        None,
+        "−0 is not 0's class"
+    );
     assert_eq!(
         changed(&inv(1.0, f64::NEG_INFINITY), &inv(1.0, 5.0)),
         None,
