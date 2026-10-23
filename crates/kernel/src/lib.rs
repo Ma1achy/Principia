@@ -10,6 +10,7 @@ pub mod decode;
 pub mod driver;
 pub mod encode;
 pub mod generated;
+pub mod occupant;
 pub mod payload;
 pub mod physics;
 pub mod real;

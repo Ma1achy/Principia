@@ -7,8 +7,9 @@
 //! its number reads at compile time like any other; one whose value is `calibration`, one that names no gate and one
 //! citing a corpus section each fail generation naming the constant; the list by gate gives what the M1 gate left
 //! marked (R-428, R-433): none for M1, the two floors, `eps_m01`, `tanh_sat` and the shape sphere's two tolerances
-//! (TASK-M2-08) for M2, `r_pole` and `nsub_table_max` (TASK-M3-03) for M3
-//! (REQ-SYS-082), and the hatch is read from its entries; the diverging fields' `x₀` are listed for M7 (REQ-COL-066).
+//! (TASK-M2-08) for M2, `r_pole` and `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
+//! `step_reversal_edge_max` (TASK-M3-02) and `nsub_table_max` (TASK-M3-03) for M3 (REQ-SYS-082), and the hatch is read
+//! from its entries; the diverging fields' `x₀` are listed for M7 (REQ-COL-066).
 //! The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
 
 use ledger::constants::{
@@ -590,7 +591,8 @@ const R433: &str = "R-433 — ";
 /// `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046),
 /// [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
 /// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), and the round trip's `eps_phys`
-/// (REQ-ENC-024), for M2; `r_pole`, citing REQ-INT-086, and `nsub_table_max`, citing REQ-INT-094 (TASK-M3-03), for
+/// (REQ-ENC-024), for M2; `r_pole`, citing REQ-INT-086, and `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and
+/// `step_reversal_edge_max`, citing REQ-VAL-191 (TASK-M3-02), and `nsub_table_max`, citing REQ-INT-094 (TASK-M3-03), for
 /// M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
 /// names the six floors' entries.
@@ -625,7 +627,14 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
     );
     assert_eq!(
         provisional_until(register, "M3"),
-        ["r_pole", "nsub_table_max"],
+        [
+            "r_pole",
+            "step_reversal_tol",
+            "step_reversal_edge_f64",
+            "step_reversal_edge_f32",
+            "step_reversal_edge_max",
+            "nsub_table_max"
+        ],
         "the entries provisional until M3"
     );
     let l_max = register.iter().find(|k| k.name == "nsub_table_max");
@@ -640,6 +649,19 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
         Some(Citation::Calibration("REQ-INT-086")),
         "`r_pole`'s citation"
     );
+    for name in [
+        "step_reversal_tol",
+        "step_reversal_edge_f64",
+        "step_reversal_edge_f32",
+        "step_reversal_edge_max",
+    ] {
+        let entry = register.iter().find(|k| k.name == name);
+        assert_eq!(
+            entry.and_then(|k| k.citation),
+            Some(Citation::Calibration("REQ-VAL-191")),
+            "`{name}`'s citation"
+        );
+    }
     let tol = register.iter().find(|k| k.name == "n_norm_tol");
     assert!(
         tol.is_some_and(|k| k.provisional.is_none()

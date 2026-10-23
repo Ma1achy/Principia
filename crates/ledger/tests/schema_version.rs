@@ -524,14 +524,19 @@ const PRESENTATION: [&str; 13] = [
 /// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that
 /// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
 /// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances;
-/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance. None is
-/// among the entries §3.8 hashes ("The hash"), so none is hashed.
-const CALIBRATIONS: [&str; 5] = [
+/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance; and
+/// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
+/// dd_integrator §5 test 3's criterion and its domain's edges. None is among the entries §3.8 hashes ("The hash"), so none is hashed.
+const CALIBRATIONS: [&str; 9] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
     "shape_roundtrip_bound",
     "eps_phys",
+    "step_reversal_tol",
+    "step_reversal_edge_f64",
+    "step_reversal_edge_f32",
+    "step_reversal_edge_max",
 ];
 
 /// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
@@ -559,6 +564,11 @@ const BURRAU: [&str; 10] = [
 /// crossing list the kernel's word path takes. It sizes a kernel-local list, never a stored bit, so it is not hashed.
 const MARCH: [&str; 1] = ["max_crossings_per_substep"];
 
+/// The steppers' coefficients (TASK-M3-02; dd_integrator §3.2): Yoshida's free weights, which the kernel's steps read
+/// through the generated `StepperCoefficients`. They set the integration, never what a stored bit means, so they are
+/// not hashed; the occupant is in the sim key (integrator_contract Part 3), which caching reads.
+const STEPPERS: [&str; 4] = ["yoshida4_w1", "yoshida6_w1", "yoshida6_w2", "yoshida6_w3"];
+
 /// The substep law's entries (TASK-M3-03; dd_integrator §3.3, R-502): `r_sub`, `gamma_sub` and `N_max`'s defaults and
 /// the threshold table's maximum length (REQ-INT-094, provisional until M3). They decide how many substeps a
 /// macro-step takes and so the values stored, never what a stored bit means (`total_substeps` is an exact u32 whatever
@@ -583,7 +593,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
-    // capacity (TASK-M3-15), or the curve projection's search (TASK-M2-18), or the substep law's (TASK-M3-03).
+    // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
+    // (TASK-M2-18), or the substep law's (TASK-M3-03).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -594,6 +605,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || WARP.contains(&k.name)
                 || BURRAU.contains(&k.name)
                 || MARCH.contains(&k.name)
+                || STEPPERS.contains(&k.name)
                 || CURVE_SEARCH.contains(&k.name)
                 || SUBSTEP.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
@@ -628,6 +640,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the march's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in STEPPERS {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the stepper coefficient `{name}` is not an unhashed register entry"
         );
     }
     for name in CURVE_SEARCH {

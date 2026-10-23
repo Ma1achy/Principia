@@ -45,6 +45,12 @@ pub use ledger::constants::{GAMMA_K, K_MAX};
 /// The shape-sphere chart's two tolerances' register entries (REQ-CHART-049, REQ-CHART-053; R-427), for the kernel
 /// crate's tests and the `shape-roundtrip` gate, as `r_pole`'s is.
 pub use ledger::constants::{SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
+/// dd_integrator §5 test 3's rounding-level criterion's register entries (REQ-VAL-191, proposed; TASK-M3-02), the
+/// criterion, its domain's lower edges at f64 and f32 and its upper edge, for the kernel crate's tests, as `r_pole`'s
+/// is.
+pub use ledger::constants::{
+    STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX, STEP_REVERSAL_TOL,
+};
 
 /// The Burrau `ν = 1/2` tolerance (REQ-VAL-118, proposed) and the Euclid plane's defaults (chart_reference §4.5;
 /// TASK-M2-10), for the kernel crate's tests, as `r_pole` is.

@@ -8,8 +8,9 @@
 //! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); the
 //! debug catalogue, its views and their tests ([`catalogue`]); the kernel's link functions and chart constants from
 //! the link registry ([`links`]; dd_generation_root §3.9); `QuadReduction`'s Rust and WGSL struct, from its own
-//! ledger ([`crate::reduction::emit`]); and the `N_sub` bucket's comparison tree and default threshold table, from the
-//! constants register ([`nsub`]; dd_integrator §3.3, R-502). One source generates all four payload artefacts (seam 13).
+//! ledger ([`crate::reduction::emit`]); the steppers' coefficients, from the constants register ([`steppers`];
+//! dd_integrator §3.2); and the `N_sub` bucket's comparison tree and default threshold table, from the constants
+//! register ([`nsub`]; dd_integrator §3.3, R-502). One source generates all four payload artefacts (seam 13).
 
 pub mod catalogue;
 pub mod export;
@@ -19,6 +20,7 @@ pub mod numeric;
 pub mod prelude;
 pub mod read;
 pub mod rust;
+pub mod steppers;
 pub mod wgsl;
 
 use std::fmt;
@@ -45,6 +47,7 @@ pub const EMITTERS: &[Emitter] = &[
     catalogue::emit,
     links::emit,
     crate::reduction::emit,
+    steppers::emit,
     nsub::emit,
 ];
 
