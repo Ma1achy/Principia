@@ -121,7 +121,7 @@ fn least(a: f32, b: f32) -> f32 {
 }
 
 /// The position-quantised `d²` of the closest pair of the positions `r`, the one float the bucket reads (the module's
-/// note): each position cast to f32 ([`Quantise`]), then each R-22 pair's ([`pair_d2`]; pair `k` the side opposite
+/// note): each position cast to f32 ([`Quantise`]), then each R-22 pair's (`pair_d2`; pair `k` the side opposite
 /// body `k`), the least of the three. The f64 and the f32 kernels give the same value for positions whose f32 casts
 /// agree.
 #[inline]
