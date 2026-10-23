@@ -162,7 +162,9 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
   link-parameter ease shows the first keyframe's value up to the second keyframe (say `μ_max` 5 between 5 and 4),
   wherever it starts: it is ordinary live playback (export contract Part 3). A reel takeover at the same frame would
   instead hold the frame's eased value (4.6), RQ-561's interim (`principia_spotlight_reel.md` §3.3); the two differ
-  until RQ-561 is ruled (fix round 9 of PR #286, gui review 5631987230, G3).
+  under RQ-561's interim; whether they differ once it is ruled is RQ-561's second question (fix round 9 of PR #286,
+  gui review 5631987230, G3; fix round 11, physics review 5632129472, P7; *was:* "the two differ until RQ-561 is
+  ruled").
   - **A transient view, not an edit.** The GUI sends one **preview request** carrying the spec and the cursor's wall
     time; the engine plays the spec from there through its live frame loop and draws the preview's frames in place of
     the view. No `SetField` is sent and the contract's `SimConfig` and `RenderState` are never changed, so nothing
