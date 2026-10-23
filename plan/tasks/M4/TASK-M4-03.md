@@ -42,7 +42,7 @@ The determinism pin, held and tested. Every branch input of the kernel is enumer
 
 ## Deliverables
 - `crates/kernel/src/branch_inputs.rs`: the enumerated list of branch inputs (name, formula, the explicit-`fma` written form, the decisions it feeds, the descriptor fields downstream of it), referenced from each use site.
-- Kernel edits: `d²` as f32 positions → lone subtract → lone multiply → `fma(dy, dy, dx*dx)`; collision as `d² < r_coll²`; `|Δn̂|` and `E_rel` in their fixed `fma` forms; no runtime `pow`/`sqrt`/`div` feeding a decision (the spike control `ceil((r_sub/√d²)^1.5)` absent from the kernel).
+- Kernel edits: `d²` as f32 positions → one subtraction per axis → each square by the `IeeeBits::product` split form with its floor → one addition (R-547); collision as `d² < r_coll²`; `|Δn̂|` and `E_rel` in their fixed `fma` forms; no runtime `pow`/`sqrt`/`div` feeding a decision (the spike control `ceil((r_sub/√d²)^1.5)` absent from the kernel). *Was:* "`d²` as f32 positions → lone subtract → lone multiply → `fma(dy, dy, dx*dx)`", the form R-547 retired.
 - `crates/validation/tests/tier_l.rs`: property tests over fuzzed and synthetic boundary states; the boundary-state fixture set (`fixtures/gates/tier_l_boundary_states`); a control kernel variant built only in the test with the runtime-transcendental `N_sub`, which must fork.
 - `crates/validation/tests/descriptor_inputs.rs`: for each descriptor field, fork-tests at its branch inputs (per the enumerated list), plus a packing-level control that must read 0 forks where the input-level test finds them (pitfalls §9's 0 vs 83).
 
