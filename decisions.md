@@ -17060,6 +17060,8 @@ R-519 is in the "physics" group of `plan/rule_groups.yaml`, with R-481.
 Changes REQ-GEN-014 (rulings, source, note).
 
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
+*Amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).*
+*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576).*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
 REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
@@ -24104,3 +24106,236 @@ REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, RE
 REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
 REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
 rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
+
+## R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*
+*21 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
+(retained)" (the spec object's bullet and R-520's bullet, each with its earlier words kept),
+`docs/design/principia_sequence.md` (new, §3.4), `docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights
+(no artboard; R-576 to R-578)" (new), R-520's forward line, REQ-TOOL-076 and REQ-TOOL-175 (reqio: statement, verify,
+rulings, note), REQ-TOOL-197 (new), TASK-M8-31 and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-31 and TASK-M8-77*
+
+R-576 to R-578 are the gap sweep's PR 2b, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/keyframes_reel.md` and `designs/reel_click.md`. The orchestrator split the bundle's PR 2 into three and told
+the human: 2a `results.md` and `honesty_precision.md` (PR #283), 2b these two, 2c `export_details.md`,
+`video_carrier_test.md`, `uploaded_picture.md` and `ic_save.md`. The bundle's `INSTRUCTION.md` header and the human's
+covering message are quoted in R-560; the lead of its PR 2 section in R-577.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `keyframes_reel.md` and `reel_click.md` item, verbatim:
+
+> - `keyframes_reel.md` and `reel_click.md`: keyframed animations, with easing per segment between keyframes (amends
+>   REQ-TOOL-076). The spotlight reel is a **v2 browser product** feature: build its machinery and test it natively, and
+>   keep the native presentation rough. The reel plays inside the Explore view, looking like Explore running; any
+>   interaction takes over live at that exact frame and keeps playing.
+
+`DECISIONS_2026-10-21.md` § "Keyframes", verbatim:
+
+> Keyframes
+> - Easing is set per segment, between keyframes. "The easing functions is set between key frames of the animation"
+> - What clicking a showreel clip opens: NOT decided, needs designing. "We need to deisgn"
+
+`keyframes_reel.md`'s "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> - **Easing is set per segment, between keyframes** ("The easing functions is set between key frames of the
+>   animation"). Amends REQ-TOOL-076. Open question 1 is closed.
+> - **What clicking a reel clip opens is not decided** ("We need to deisgn"): designed separately, `reel_click.md`.
+
+*What it decides:*
+- **Easing is per segment.** The spec object is `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)],
+  segments: [(easing, transition)], fps, duration}`: one segment between each pair of neighbouring keyframes, each with
+  its own easing curve, which gives that segment's progress `s ∈ [0, 1]` at each frame for every eased field (export
+  contract Part 3). The draft's open question 1, (i). *Was:* `{keyframes: [(t_wall, ViewState, RenderState, playhead
+  policy)], easing, fps, duration}`, one curve for the whole animation.
+- **R-520's eased link parameters take the segment's curve.** R-520 F2's "`s ∈ [0, 1]` is the segment's progress as the
+  spec's `easing` curve gives it" now reads the segment's own curve; the clamp, the keyframe frames bit for bit and
+  everything else of R-520 stand. REQ-TOOL-175's statement follows.
+- **REQ-TOOL-076 is amended** as the human says: its spec carries the segments, and its verify gains a two-segment
+  check with a control that applies one curve to both.
+
+*Applied per R-369:*
+- **A segment also carries its transition** at a chart change, a cut or a dissolve with its length (export contract
+  Part 3's "cuts or dissolves"; the draft's per-segment "cut or dissolve (with length) at a chart change"), so that the
+  spec holds every per-segment choice the Sequence offers in one place.
+- **The curves offered, the default curve and the playhead policies' semantics** (hold, advance with wall time, set to
+  a value, the policies the draft names) are a definition (R-72): the corpus names `easing` and "playhead policy" and
+  defines neither. REQ-TOOL-197 (new), written into export contract Part 3 by TASK-M8-31 and reviewed by the physics
+  reviewer; each curve maps `[0, 1]` onto `[0, 1]`, monotone, `s(0) = 0` and `s(1) = 1`, so a keyframe's own frame is the
+  keyframe (R-520 F2).
+- **TASK-M8-31 builds it** (the spec object is its deliverable); the Sequence window's segment controls are TASK-M8-77's.
+
+R-576 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds
+REQ-TOOL-197 (definition).
+
+## R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*
+*21 Oct 2026 · applied in `docs/design/principia_sequence.md` (new), `docs/gui/principia_render_gui_spec.md` § "G9a.
+Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
+open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
+REQ-PERF-110 and REQ-TOOL-200 (new), TASK-M8-77 and TASK-M8-78 (new) and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-77 and TASK-M8-78*
+
+The lead of the bundle's `INSTRUCTION.md` § "PR 2 — New design documents", verbatim:
+
+> Each file in `designs/` has six parts: what exists, the gap, the proposal, the rulings it touches, the decisions
+> (already made, in a "Decided" section), and tests. Write each as a design doc and add its requirements and tests.
+
+His item for these two designs, his decisions and `keyframes_reel.md`'s "Decided" section are quoted in R-576.
+
+*What it decides:* `keyframes_reel.md`'s proposal is the design, written as `docs/design/principia_sequence.md`, its
+"Decided" section closing its open question 1 (R-576) and passing question 2 to `reel_click.md` (R-578):
+- **The Sequence window**, docked along the bottom of Explore (a splitter, R-462). **Add keyframe** captures the whole
+  `SimConfig` and `RenderState` at the timeline cursor; a keyframe shows its values, **Go to** (one undo entry),
+  **Update** from the view, a drag in time and its playhead policy (hold, advance with wall time, set to a value).
+- **The timeline**: wall time across, keyframes as diamonds, read-only lanes lit where fields differ between
+  neighbours, segments coloured by class (a), (b) or (c) with their frame counts, a cut mark at a chart or link-id
+  change.
+- **A segment**: its easing (R-576), cut or dissolve with its length at a chart change, R-520's link rule shown, and
+  REQ-TOOL-075's fixed rules shown, not offered.
+- **Play preview** through the live frame loop, link parameters and dissolves as cuts, under the banner "Preview: not
+  converged; cuts where the export interpolates"; **Proof strip**, one small frame per keyframe and per segment
+  midpoint through the blocking exporter at its lowest tier, exact frames before paying for all.
+- **Export…** opens the planner first, one row per segment (class, frames, integration cost, flags, estimated time);
+  **an estimate carries its basis**, a range from this machine's measured throughput, and with no measurement reads "no
+  measurement on this machine yet", never a number; proof frames calibrate it. Then Part 4's parameters, and Start in
+  the background with progress, ETA, the last frame's thumbnail and Cancel.
+- **What travels**: each PNG frame its own record (R-520 F5); the `.principia-seq.json`, the spec in the canonical
+  serialisation (R-309) with the build hash, the schema version and the link entry hashes (R-521), written beside every
+  export.
+
+*Queued, not resolved, as the bundle's instruction says ("Where anything here conflicts with a ruling or a queue entry
+these texts don't address, queue it rather than resolving it"):*
+- **RQ-559, the Sequence's undo.** The draft: "**Undo** is the window's own (Q4)", its open question 4 recommending
+  "(i) own history", which the human did not rule. R-52 and the state contract: the contract keeps one history "shared
+  by every GUI: … and keeps no history of its own". REQ-GUI-378 (`rq: RQ-559`) waits; nothing else does.
+- **RQ-560, a cut offered at a link-parameter change.** The draft offers "at a link-parameter change, **cut** or
+  **interpolate (export only)**". R-520: a blocking export "eases each differing parameter", with no cut. Meanwhile the
+  segment shows R-520's rule and offers no choice; nothing waits.
+
+*Applied per R-369:*
+- **The draft's "Camera" lane is named Navigate**, the Manifold view's name for pan and zoom, since no control is named
+  after a camera (render_gui_spec §G1); a ninth lane, **Run**, holds every field none of the draft's eight names (the
+  occupant, the horizon, `E`, the thresholds), so that every field has exactly one lane. Which lane each field is in is
+  a definition (R-72), REQ-GUI-375, exhaustive at compile time as the tier table is (R-484), reviewed by the physics
+  reviewer.
+- **Where it docks**: below the bottom row (Compass, Time, Legend) and above the footer; the console docks over it as
+  over the bottom row (R-463). **Its keyboard**: §G3's window model, three sections (header bar, timeline, inspector);
+  **K** in its scope adds a keyframe and **Delete** removes the selected one; the Figure's K stays the lock (R-556),
+  scope shortcuts never meeting; Esc from its top level returns the focus to the Figure and leaves it open.
+- **A keyframe dragged in time** is clamped strictly between its neighbours, so keyframes never reorder.
+- **The sequence being edited is the GUI's own document**, beside `ViewUI`, which the engine reads only as the spec a
+  preview, proof or export request carries (state contract §2; its undo is RQ-559).
+- **The preview is playback**, and playback never enters undo (R-101): each frame's state goes with "no history", as
+  the clock's playhead advance does, and stopping the preview leaves the undo depth as it was. This is R-101's reading,
+  not an exception to R-69.
+- **A dissolve in live playback** is a cut at the second keyframe, as every chart switch is live.
+- **The estimate's basis**: a segment's cost is the samples it marches (the export's pixels times its copies, `E + 1`)
+  times the physical time each is marched; the throughput is the same quantity per wall second from this machine's
+  frame records (telemetry §5); the range is the cost over the fastest and over the slowest measured throughput.
+- **"Proof frame equals export"** holds at the same time, size and tier.
+- **The video carrier's slot**: how a GIF, MP4 or WebM carries the spec in itself is `video_carrier_test.md`'s, which
+  the human has ruled and which gap sweep PR 2c ports; this design adds only the file beside every export, and does not
+  port the draft's interim dialog text ("a GIF/MP4/WebM alone does not carry it").
+- **Two tasks, M8:** TASK-M8-77 (the window, keyframes, timeline, lanes, segments, the file) and TASK-M8-78 (preview,
+  proof strip, planner and export), after TASK-M8-31.
+
+R-577 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375
+(definition: the lane table), REQ-GUI-376 (a segment's controls), REQ-GUI-377 (the file), REQ-GUI-378 (undo, `rq:
+RQ-559`), REQ-GUI-379 (Play preview), REQ-GUI-380 (the proof strip), REQ-GUI-381 (the planner and the export job),
+REQ-PERF-110 (the estimate's basis) and REQ-TOOL-200 (the spec beside every export).
+
+## R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*
+*21 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` (new),
+`docs/contracts/principia_export_animation_contract.md` § "Part 7 — The spotlight reel (attract mode)" (a paragraph),
+`docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)" (new),
+`docs/contracts/principia_gui_state_contract.md` §2 (the open windows), `docs/read_first/principia_INDEX.md`,
+`REVIEW_QUEUE.md` (RQ-561), REQ-TOOL-084 (reqio: statement, verify, rulings, source, note), REQ-TOOL-198, REQ-TOOL-199
+and REQ-GUI-382 to REQ-GUI-385 (new), TASK-M8-31 and TASK-M8-79 (new), `plan/WORKFLOW.md` (the `reel/` directory) and
+`plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-79*
+
+The human's item for these two designs is quoted in R-576. `DECISIONS_2026-10-21.md` § "Later the same evening", its
+two reel entries, verbatim:
+
+> - Showreel: "I feel like the showreel should almost fake being the explore view? But also the showreel btw is leaning
+>   more into the final browser product design like not even the simple native app port, I'm talking like v2 browser
+>   version so. We could build all the machinery for it and test it natively but yeah it can be kinda rough around the
+>   edges ig design wise"
+> - After takeover the reel keeps playing: "Yeah keep playing."
+
+`reel_click.md`'s scope note, verbatim:
+
+> **Scope (Malachy, 21 Oct).** This is a feature of the **v2 browser product**, not of the native app or its first
+> browser port. "We could build all the machinery for it and test it natively but yeah it can be kinda rough around the
+> edges ig design wise." So: build and test the machinery natively; keep the native presentation rough.
+
+Its "Decided" section, verbatim:
+
+> ## Decided
+>
+> - **After takeover it keeps playing** whatever the clip was doing, now live ("Yeah keep playing").
+> - **The film is not computed in the app.** It is rendered once per release, offline, by the blocking exporter, and
+>   shipped as a video file. The app only plays it; the engine starts computing at the takeover.
+
+*What it decides:* `reel_click.md`'s proposal and `keyframes_reel.md`'s reel section are the design, written as
+`docs/design/principia_spotlight_reel.md`; `reel_click.md` answers the question `keyframes_reel.md` left open ("What
+clicking a reel clip opens is not decided … designed separately, `reel_click.md`"), so the earlier draft's "loads it
+live, paused at that playhead" gives way to "keeps playing":
+- **The reel plays inside the Explore view and looks like Explore running.** **Any interaction** (a click, a drag, a
+  scroll or a key) **takes over at that exact frame**: the frame's spec is loaded live, its chart, view, stain,
+  playhead and any keyframed motion it was in the middle of, and the live engine continues from there. The film frame
+  stays as the backdrop until the live render has resolved over it, so the handover has no blank or jump. A small,
+  quiet marker reads "preview" until the handover. The takeover is one undoable step.
+- **The film is not computed in the app**: rendered once per release, offline, by the blocking exporter, shipped as a
+  video file, only played by the app. The reel builder writes the film and a manifest from a curated spec list; the
+  build refuses any spec whose link hashes do not match, so the live view always recreates what the film showed. Live
+  and film disagreeing is a bug, reported.
+- **After takeover it keeps playing.**
+- **Natively**: the reel builder, the takeover, and a plain native window that plays the reel and takes over on click,
+  with no polish. The presentation is v2 web's, as R-571 has it.
+- **REQ-TOOL-084 is amended**: the reel is produced by the blocking exporter with its manifest; the click becomes the
+  takeover, new requirements.
+
+*Queued, not resolved:* **RQ-561, a takeover inside a segment the film interpolates and live playback cuts.**
+`reel_click.md`: "the live view always recreates what the film showed. Live and film disagreeing is a bug, reported",
+and "keeps playing … any keyframed motion it was in the middle of". R-520 F3: live playback never interpolates link
+parameters, and a dissolve is two renders that live playback does not composite. Meanwhile its option (a): the
+takeover frame is exact, live playback continues under R-520 F3, and the difference after the takeover frame is not
+reported as a disagreement. Nothing waits.
+
+*Applied per R-369:*
+- **The film's format natively is GIF**, encoded and decoded with the one `gif` crate (R-155, R-131): the draft's open
+  question 3, its recommendation (i); "shipped as a video file" holds, as GIF is among the native video encoders. v2
+  web's format is v2 web's.
+- **The manifest has an entry for every film frame**: its segment, its frame within the spec, its wall time within the
+  spec and the hash of the `SimConfig` and `RenderState` the exporter rendered it from, in their canonical
+  serialisation (R-309); a takeover maps the displayed frame by its index, never by a time read back from the film.
+  "Reported" is that hash compared at each takeover: a mismatch is logged as an error (source `app`) naming the segment
+  and the frame, and the takeover goes ahead with the recomputed state.
+- **What counts as an interaction**: a pointer press, drag or scroll on the figure, or any key with the focus in the
+  Figure scope, a modifier pressed alone excepted; the interaction is consumed by the takeover and does not also act.
+- **The backdrop** is caching Part 5's snapshot fallback, which already names "the spotlight-reel handoff", under its
+  rules (blurred, its coherence discipline), until the live identity's baseline cover is complete (caching Part 4).
+- **The preview marker is a badge** in the figure's header strip (R-523: every badge that says what the figure is sits
+  there, never over the plot), with the segment's provenance (chart, horizon, integrator, build, date) beside it.
+- **At the spec's end** after a takeover, the live sequence player stops at the last keyframe; the transport plays on
+  to the horizon if that keyframe's playhead policy is advance, and is paused otherwise.
+- **Natively the reel plays only from the Spotlights window** (Windows › Spotlights…: the segments with their
+  provenance, Play reel, Stop, Open the sequence), in the Explore canvas; playing at cold start, the gallery of poster
+  tiles and the film wearing the live view's header, legend and overlays are v2 web's presentation (R-571, and the
+  human's "not of the native app or its first browser port"). While the film plays the live view is paused and hidden
+  and nothing is integrated; Stop leaves the view as it was.
+- **The reel's specs** are checked in under `reel/specs/`; the film and manifest are release outputs, not checked in;
+  `plan/WORKFLOW.md` lists the directory. The reel builder (`xtask/src/reel.rs`, `cargo xtask reel`) moves from
+  TASK-M8-31 to TASK-M8-79 with REQ-TOOL-084.
+- **One task, M8:** TASK-M8-79, after TASK-M8-78 (whose live sequence player the takeover continues in) and TASK-M5-26
+  (the compositor's backdrop).
+
+R-578 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199
+(the film computes nothing), REQ-GUI-382 (the Spotlights window), REQ-GUI-383 (the takeover), REQ-GUI-384 (no blank
+handover) and REQ-GUI-385 (the preview badge).

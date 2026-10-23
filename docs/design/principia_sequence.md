@@ -1,0 +1,186 @@
+# Principia: Sequence — keyframed view animations in the native GUI
+
+*Adopted by R-576 and R-577 (gap sweep PR 2b, 21 Oct 2026), from the human's design `keyframes_reel.md`
+(`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/`), its "Decided" section his words. The reel half of that
+draft, and what a reel click opens, is `principia_spotlight_reel.md` (R-578). The engine side (the spec object,
+interpolation, the planner's classes, the blocking export) is `principia_export_animation_contract.md` Parts 2 to 6,
+built by TASK-M8-30 and TASK-M8-31; this document is the screen that makes a spec, and what it adds to the export.
+Queued from it: RQ-559 (the Sequence's undo) and RQ-560 (a cut offered at a link-parameter change).*
+
+## 1. What exists
+
+The export contract defines the three segment kinds and their costs (Part 2), the keyframe spec and its per-field
+interpolation (Part 3), link parameters eased in a blocking export only, flagged (R-520, Part 3), the blocking export
+job (Part 4), determinism and the round trip (Part 5, R-484), sharing (Part 6) and the reel (Part 7).
+REQ-TOOL-074 to REQ-TOOL-076 require them, and TASK-M8-31 builds the engine side. The GUI has only Record a time sweep
+(`principia_render_gui_spec.md` §G9), and the open windows (`principia_gui_state_contract.md` §2) have no animation
+window.
+
+## 2. The gap
+
+There is no screen to make keyframes, see a timeline, choose interpolation, price or preview a sequence, or export it.
+The spec object had one `easing` for the whole animation; the human set easing per segment (R-576).
+
+## 3. The design
+
+### 3.1 The Sequence window
+
+**Sequence** opens from Windows › Sequence… and is docked along the bottom of Explore: below the bottom row (Compass,
+Time, Legend) and above the footer, its top edge a splitter (R-462), its height remembered with the layout and reset by
+a double-click or View › reset layout. The console, docked over the bottom row (R-463), docks over the Sequence too
+when both are open. It has a × to close it. Like every window it is `ViewUI`'s, never read by the engine
+(`principia_gui_state_contract.md` §2). The sequence being edited is the GUI's own document, beside `ViewUI`: the engine
+reads it only as the spec a preview, proof or export request carries (applied per R-369; whether its edits enter the
+contract's history is RQ-559).
+
+Its keyboard model is §G3's for a window, with three sections in order: the **header bar** (Add keyframe, Play preview,
+Proof strip, Export…, Open…, Save…, ×), the **timeline** and the **inspector** (the selected keyframe's or segment's
+controls). In the timeline, ← and → move between keyframes and the segments between them, in time order, and Enter
+selects. Its scope's shortcuts (R-409): **K** adds a keyframe and **Delete** removes the selected one. The Figure's K
+stays the lock (§G4, R-556); a scope's letter acts only with the focus in that scope, so the two never meet. Esc from
+the window's top level returns the focus to the Figure and leaves the window open.
+
+### 3.2 Keyframes
+
+- **Add keyframe** captures the whole `SimConfig` and the whole `RenderState` at the timeline cursor. A keyframe is
+  always whole (Part 3: a keyframe's state is its `SimConfig`, links included, R-483 X7).
+- A selected keyframe shows its values (each field that differs from its neighbours first), and offers:
+  - **Go to**: the view takes the keyframe's `SimConfig` and `RenderState`, bitwise, as one undoable history entry
+    (as Home is one, R-466);
+  - **Update**: the keyframe takes the view's state, whole;
+  - **drag in time**, its `t_wall` clamped strictly between its neighbours', so keyframes never reorder;
+  - **playhead policy**: **hold**, **advance with wall time** or **set to a value** (Part 3's "playhead policy"; its
+    exact semantics are REQ-TOOL-197's definition).
+
+### 3.3 The timeline and its lanes
+
+Wall time runs across; keyframes are diamonds on it and the timeline cursor a vertical line. Beneath, read-only
+**lanes** light over a segment where a field in that lane differs between the segment's two keyframes, so the user
+sees why a segment costs what it does:
+
+| lane | what it holds |
+|---|---|
+| Navigate | pan and zoom within the plane (they only re-address, R-92) |
+| Plane | the slice and the basis: the slice centre off the plane, the tilt, the slice frame |
+| Chart | the chart and its construction |
+| Links | the decoder's links and their parameters (R-483) |
+| Playhead | the playhead and the keyframe's playhead policy |
+| Stain | the stain graph and its uniforms |
+| Print | the Print graph (R-485) |
+| Lines | the line system (R-476) |
+| Run | every other `SimConfig` field: the occupant, the horizon, `E`, the thresholds |
+
+Every field of `SimConfig` and `RenderState` is in exactly one lane. The table assigning each field is a definition
+(R-72, REQ-GUI-378), written here by the task that builds the lanes and kept exhaustive at compile time, as the tier
+table is (R-484). The draft's "Camera" lane is **Navigate** here, since no control is named after a camera
+(`principia_render_gui_spec.md` §G1); "Run" is added so that every field has a lane (both applied per R-369).
+
+**Segments are coloured by their class**, (a) time playback, (b) view animation or (c) recolour only, as TASK-M8-31's
+planner classifies them (Part 2, REQ-TOOL-074), each labelled with its frame count at the spec's fps. A segment whose
+chart or any link id changes shows a **cut mark** at its second keyframe.
+
+### 3.4 Segments: easing per segment, and transitions
+
+**Easing is set per segment, between keyframes (R-576).** The spec object carries one segment between each pair of
+neighbouring keyframes, each with its own easing curve, which gives the segment's progress `s ∈ [0, 1]` at each frame
+for every eased field (Part 3), the link parameters of R-520 included. The curves offered and the default are a
+definition (R-72, REQ-TOOL-197), written into export contract Part 3 by TASK-M8-31.
+
+A selected segment offers:
+
+- **its easing**, from REQ-TOOL-197's curves;
+- **at a chart change, cut or dissolve**, a dissolve with its length (two renders composited, Part 3); live playback
+  shows a dissolve as a cut at the second keyframe, as it shows every chart switch;
+- **at a link-parameter change**, R-520 as written: interpolated in a blocking export, every frame a different decoder,
+  and a cut in live playback, shown with R-520's words "link parameters interpolated: every frame a different decoder".
+  The draft offers the user a choice here, cut or interpolate (export only); a cut in a blocking export is not R-520's,
+  so the choice is RQ-560, and meanwhile the segment shows R-520's rule, not a choice;
+- **the fixed rules**, shown, not offered: zoom log-lerped, the basis along the Grassmannian geodesic, `z₀` eased
+  componentwise (REQ-TOOL-075).
+
+### 3.5 Saving: the `.principia-seq.json` file
+
+**Save…** writes the spec object, its keyframes and segments, fps and duration, in the one canonical serialisation
+(R-309), with the build hash, the schema version and each link's registry-entry hash (R-521), to a file named
+`<name>.principia-seq.json`. **Open…** reads one back: the identity on every keyframe's `SimConfig` and `RenderState`
+and on every segment, bitwise (R-484). A file naming a link the build lacks, or whose entry hash differs, opens as
+"state present, cannot recreate", naming the link, and is never recreated under another link (Part 6, R-521).
+
+**Undo.** Every edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing or
+transition) is undoable and redoable, one entry per edit, a drag one entry. The draft gives the window its own
+history; the contract keeps one history and a GUI none of its own (R-52), so which history is RQ-559. Go to is the
+contract's own entry either way.
+
+### 3.6 Preview and the proof strip
+
+- **Play preview** runs the sequence through the live frame loop from the timeline cursor, with link-parameter changes
+  and dissolves shown as cuts (R-520 F3), under a banner in the Sequence's header bar: "Preview: not converged; cuts
+  where the export interpolates". It is playback, and playback never enters undo (R-101): each frame's state is sent
+  with "no history", and stopping it leaves the undo depth as it was. While it plays the timeline cursor follows it.
+- **Proof strip** renders one small frame per keyframe and one per segment midpoint through the blocking exporter
+  (Part 4) at its lowest export quality tier, so the user sees exact frames before paying for all of them. A proof
+  frame is an exported frame, not the live loop's (Part 1, R-66): at the same time, size and tier it is the exported
+  frame bitwise.
+
+### 3.7 The planner and export
+
+**Export…** in the Sequence's header bar opens the **planner** before anything runs. One row per segment: its class,
+its frames, its integration cost ((a) one march to the segment's end; (b) `0 → t_frame` per frame; (c) none, Part 2),
+its flags (link parameters interpolated, R-520; a dissolve is two renders) and its estimated time.
+
+- **An estimate carries its basis.** A segment's cost is the samples it marches times the physical time each is marched
+  (the export's pixels times its copies, `E + 1`, times the march's length); the throughput is the same quantity per
+  wall second, measured from this machine's frame records (`principia_dd_telemetry_and_tiers.md` §5). The estimate is
+  shown as a range, the cost over the fastest and over the slowest throughput measured. With no measurement it reads
+  "no measurement on this machine yet", never a number. The proof strip's frames are timed and enter the measurement,
+  so they calibrate it.
+- Then Part 4's parameters: size, fps, quality tier, format, and Plain or styled (R-489). **Start** runs the export as
+  Part 4's background job, with progress, ETA, the last frame's thumbnail and Cancel.
+- **What travels.** Each PNG frame carries its own record, that frame's `SimConfig` with its link values (R-520 F5),
+  and the `.principia-seq.json` (§3.5) is written beside every export, whatever its format. How a GIF, MP4 or WebM
+  carries the spec in itself is the video carrier's design (`video_carrier_test.md`, gap sweep PR 2c, ported
+  separately); this design adds only the file beside it.
+
+## 4. Fit with rulings
+
+- Implements export contract Parts 2, 3, 4 and 6 and REQ-TOOL-074 to REQ-TOOL-076 as written, with REQ-TOOL-076
+  amended by R-576 (easing per segment). R-520 appears as the segment's link rule (§3.4).
+- Amends `principia_gui_state_contract.md` §2's window names (adds Sequence) and the GUI spec (§G9a).
+- Proof frames are exported frames, not scrub over stored data (Part 1, R-66).
+- Undo: R-52 holds the contract's one history; the draft's own history for the window is RQ-559.
+- R-520 F3 holds: live playback, the preview included, cuts link parameters and dissolves; the export eases them.
+
+## 5. Decided
+
+The human, 21 Oct 2026 (`keyframes_reel.md`, "Decided", verbatim):
+
+> - **Easing is set per segment, between keyframes** ("The easing functions is set between key frames of the
+>   animation"). Amends REQ-TOOL-076. Open question 1 is closed.
+> - **What clicking a reel clip opens is not decided** ("We need to deisgn"): designed separately, `reel_click.md`.
+
+The draft's open questions 3 (the reel's storage) and 4 (keyframe undo) were not ruled: 3 is decided per R-369 in
+`principia_spotlight_reel.md` §3.1, and 4 is RQ-559.
+
+## 6. Tests
+
+Each with what makes it fail.
+
+- **keyframe_is_whole**: capture, edit every field of `SimConfig` and `RenderState`, Go to: the state equals the
+  captured one bitwise, and Go to adds exactly one history entry. *Fails on* any field missed.
+- **lanes_light_on_change**: keyframes differing only in a stain uniform light only Stain, and the segment is (c).
+  *Fails if* Plane lights. Control: a tilt lights Plane and makes the segment (b); a chart change shows a cut mark.
+- **lane_table_exhaustive**: every field of `SimConfig` and `RenderState` has exactly one lane. *Fails* to compile when a
+  field is added without one.
+- **segment_easing**: two segments with different curves: each segment's frames follow its own curve. *Fails if* one
+  curve is applied to both.
+- **seq_file_roundtrip**: save then open is the identity, bitwise. Control: a file with one changed link entry hash
+  opens as "cannot recreate", naming the link, and a reader that substitutes the build's link fails.
+- **preview_cuts_links**: a segment interpolating a link parameter previews as a cut at its second keyframe and is
+  flagged in the planner; the preview leaves the undo depth unchanged. *Fails* otherwise.
+- **proof_equals_export**: a proof frame is bitwise the exported frame at the same time, size and tier. *Fails if* it
+  came from the live loop.
+- **planner_no_guess**: with no frame records the estimate reads "no measurement on this machine yet" and shows no
+  number. *Fails if* a number appears. Control: with records, the range's ends are the cost over the fastest and the
+  slowest measured throughput.
+- **export_writes_seq**: every export, PNG frames and GIF, has its `.principia-seq.json` beside it, equal to the saved
+  spec bitwise. *Fails if* one is missing.

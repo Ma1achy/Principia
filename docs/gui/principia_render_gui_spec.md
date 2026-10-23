@@ -1384,6 +1384,54 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
   captured frame).
 
+## G9a. Sequence · Spotlights (no artboard; R-576 to R-578)
+
+### Sequence — keyframed view animations (R-576, R-577)
+
+The screen that makes a keyframe spec (`principia_export_animation_contract.md` Part 3); the design is
+`docs/design/principia_sequence.md`.
+- **Where:** Windows › Sequence…; docked along the bottom of Explore, below the bottom row (Compass, Time, Legend) and
+  above the footer, its top edge a splitter (R-462), its height remembered with the layout; the console docks over it
+  as over the bottom row (R-463). × closes it. Its sections, in §G3's order: the header bar (Add keyframe, Play
+  preview, Proof strip, Export…, Open…, Save…, ×), the timeline, the inspector. In its scope **K** adds a keyframe and
+  **Delete** removes the selected one; the Figure's K stays the lock (§G4). Esc from its top level returns the focus to
+  the Figure, the window staying open.
+- **Keyframes:** Add keyframe captures the whole `SimConfig` and `RenderState` at the timeline cursor. A keyframe shows
+  its values, **Go to** (one undoable entry), **Update** from the view, a drag in time (clamped between its neighbours)
+  and its playhead policy (hold, advance with wall time, set to a value).
+- **The timeline:** wall time across, keyframes as diamonds; read-only lanes Navigate, Plane, Chart, Links, Playhead,
+  Stain, Print, Lines and Run light where a field in the lane differs between a segment's two keyframes; segments
+  coloured by class (a), (b) or (c) with their frame counts; a chart or link-id change shows a cut mark.
+- **A segment:** its easing, set per segment (R-576); cut or dissolve, with its length, at a chart change; at a
+  link-parameter change R-520's rule, shown ("link parameters interpolated: every frame a different decoder"; whether a
+  cut is offered there is RQ-560); REQ-TOOL-075's fixed rules shown, not offered.
+- **Play preview** runs the sequence in the live frame loop, link parameters and dissolves as cuts (R-520 F3), under
+  the banner "Preview: not converged; cuts where the export interpolates", its frames entering no undo (R-101).
+  **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
+  tier.
+- **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
+  estimate a range from this machine's measured throughput, or "no measurement on this machine yet", never a number),
+  then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start runs it in the
+  background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
+  every export.
+- **Open… / Save…** a `.principia-seq.json`, the spec in its canonical serialisation (R-309) with the build hash, the
+  schema version and the link entry hashes (R-521); opening is the identity (R-484). Undoing an edit to the sequence
+  is RQ-559's.
+
+### Spotlights — the reel, natively (R-578)
+
+The reel's machinery, natively, with a rough presentation; its polished presentation is v2 web's (R-571). The design
+is `docs/design/principia_spotlight_reel.md`.
+- **Where:** Windows › Spotlights…, a window under §G5's rules (R-461): the reel's segments in order, each with its
+  provenance (chart, horizon, integrator, build, date); **Play reel**, **Stop**, **Open the sequence** (into Sequence).
+  With no reel in the build: "No reel in this build", Play reel disabled.
+- **Playing:** the film plays in the Explore canvas, the live view paused and hidden beneath, nothing computed; the
+  header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot. Stop leaves the
+  view as it was.
+- **The takeover:** a press, drag or scroll on the figure, or a key in the Figure scope, takes over at the displayed
+  frame: its spec's state loaded live, bitwise the exporter's, as one undoable entry, and it keeps playing, live. The
+  film frame stays as the backdrop until the live baseline cover is complete; then the badge goes.
+
 ## G10. Measure — a tool on the figure (`10_measure.png`)
 
 Drag a square region on the plot itself; the sampled pairs show on it, with the pairs that disagree marked. Esc leaves the

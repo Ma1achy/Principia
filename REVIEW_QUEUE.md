@@ -855,3 +855,76 @@ collapse is saturation along one axis keeps refining, which changes what is draw
   to quads whose in-plane `J_D` columns are all 0, and the band quad's case points here.
 - **Waits:** REQ-SCHED-062's behaviour on band quads (TASK-M6-08), `rq: RQ-554`. Its other arms, and the rest of
   TASK-M6-08, do not wait.
+
+## RQ-559: The Sequence window's undo: its own history, as the draft gives it, against R-52's one history kept by the contract *(found by R-577's port; R-577 against R-52 and gui_state_contract §2; REQ-GUI-378; context: TASK-M8-77)*
+
+*Found by R-577's port, and queued as the bundle's instruction says: "Where anything here conflicts with a ruling or a
+queue entry these texts don't address, queue it rather than resolving it." For the human: yes, it sets what Ctrl+Z
+does in the Sequence window.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/keyframes_reel.md` § "The Sequence window": "**Undo** is
+    the window's own (Q4)."; § "5. Open questions", 4: "**Keyframe undo**: (i) own history; (ii) the contract's; (iii)
+    none. *Recommend (i).*" The human's "Decided" section rules questions 1 and 2 only.
+  - `decisions.md` § "R-52 — Undo lives in the state contract *(GU-1 (a))*": "Undo/redo is a history of typed
+    `setField` edits, shared by every GUI."
+  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface": "The
+    contract keeps one undo/redo history of the typed `setField` edits it has applied, shared by every GUI: a GUI
+    shows the depth … and sends undo / redo as requests, and keeps no history of its own."
+- **The question:** the sequence being edited is not `SimConfig` or `RenderState`, so its edits (add, delete, Update, a
+  drag in time, a playhead policy, a segment's easing or transition) are not the contract's `SetField`s. The draft
+  gives the window its own history; R-52 lets a GUI keep none.
+- **Options seen:** (i) the window's own history, Ctrl+Z in its scope undoing a sequence edit, the contract's history
+  untouched (the draft's recommendation; an exception to R-52 for a document that is not contract state); (ii) the
+  sequence becomes contract state, its edits typed `SetField`s in the one history, Go to and sequence edits
+  interleaved; (iii) no undo for sequence edits.
+- **Applied meanwhile:** none of them. Go to is one entry in the contract's history under every option.
+- **Waits:** REQ-GUI-378, `rq: RQ-559` (TASK-M8-77). The rest of TASK-M8-77 does not wait.
+
+## RQ-560: A cut offered at a link-parameter change in a blocking export, as the draft's segment control gives it, against R-520's export that always eases *(found by R-577's port; R-577 against R-520; REQ-GUI-376; context: TASK-M8-77)*
+
+*Found by R-577's port, and queued as the bundle's instruction says. For the human: yes, it sets what an export of a
+link-parameter change can be.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/keyframes_reel.md` § "The Sequence window": "**A
+    segment**: easing; cut or dissolve (with length) at a chart change; at a link-parameter change, **cut** or
+    **interpolate (export only)**, showing R-520's "every frame a different decoder"."; § "4. Fit with existing
+    rulings": "R-520 appears as the segment's link choice."
+  - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly
+    with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a
+    cut everywhere *(closes RQ-384; amends R-483)*": "In a blocking export, link parameters interpolate across
+    keyframes, each frame re-integrated at its own values".
+  - `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system (retained)": "a blocking
+    export (Part 4) eases each differing parameter linearly in its value".
+- **The question:** R-520 makes the blocking export always ease a differing link parameter; the draft lets the user
+  choose a cut instead, per segment.
+- **Options seen:** (a) no choice: R-520 as written, the segment showing its rule; (b) a per-segment choice, cut or
+  interpolate (export only), interpolate the default, the spec's segment recording it and the planner's flag naming
+  only interpolating segments; (c) a choice, cut the default.
+- **Applied meanwhile:** (a). Nothing waits: REQ-GUI-376 shows R-520's rule and offers no choice until this is ruled.
+
+## RQ-561: A takeover inside a segment the film interpolates and live playback cuts (link parameters, dissolves): "Live and film disagreeing is a bug" against R-520 F3 *(found by R-578's port; R-578 against R-520; REQ-GUI-383; context: TASK-M8-79)*
+
+*Found by R-578's port, and queued as the bundle's instruction says. For the human: yes, it sets what the live view
+does after a takeover in such a segment, and which specs the reel may hold.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/reel_click.md` § "Proposal", 2: "the frame's spec is
+    loaded live (chart, view, stain, playhead, and any keyframed motion it was in the middle of), and the live engine
+    continues from there"; 5: "the build refuses any spec whose link hashes don't match, so the live view always
+    recreates what the film showed. Live and film disagreeing is a bug, reported."; "Decided": "**After takeover it
+    keeps playing** whatever the clip was doing, now live".
+  - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly
+    with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a
+    cut everywhere *(closes RQ-384; amends R-483)*", F3: "live playback shows the change and never interpolates it."
+  - `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system (retained)": chart switches
+    are "cuts or dissolves (two renders composited)"; live playback composites no dissolve.
+- **The question:** the film is a blocking export, so in a segment that eases link parameters or dissolves between
+  charts it shows what live playback cannot. A takeover there is exact at its frame, but the live view then continues
+  differently from the film.
+- **Options seen:** (a) the takeover frame exact, live continuing under R-520 F3 (cut at the segment's second
+  keyframe), the difference after that frame expected and not reported; (b) the reel build refuses a spec with such a
+  segment, so live always continues what the film shows; (c) live playback after a takeover interpolates link
+  parameters and composites dissolves as the export does (amending R-520 F3 for this case).
+- **Applied meanwhile:** (a). Nothing waits.

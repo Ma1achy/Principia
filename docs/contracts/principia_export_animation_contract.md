@@ -43,15 +43,22 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
 
 - **What interpolates:** `z₀` eased componentwise; zoom **log-lerped**; basis pairs by **Grassmannian interpolation** (geodesic between planes, re-orthonormalised per frame — never naive vector lerp, which leaves the manifold of frames); slice values eased; render uniforms lerped per their scale metadata; chart *switches* are cuts or dissolves (two renders composited), never parameter interpolation across chart types.
 - **What each frame costs:** classified per Part 2 — segments that hold the sim key still are type (a) or (c); segments that move it are type (b).
-- **The spec object is the artefact.** A keyframe animation serialises as `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}` — provenance-complete, URL-encodable, re-renderable. The video is its shadow (Part 6).
+- **The spec object is the artefact.** A keyframe animation serialises as `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)], segments: [(easing, transition)], fps, duration}` — provenance-complete, URL-encodable, re-renderable. The video is its shadow (Part 6).
+  **Easing is set per segment, between keyframes (R-576).** There is one segment between each pair of neighbouring
+  keyframes, each with its own easing curve, which gives that segment's progress `s ∈ [0, 1]` at each frame for every
+  eased field, and its transition at a chart change, a cut or a dissolve with its length. The playhead policy is one of
+  hold, advance with wall time, or set to a value. The curves offered, the default curve and the playhead policies'
+  semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. The screen that makes a spec is
+  `principia_sequence.md` (R-577). *Was:* "A keyframe animation serialises as `{keyframes: [(t_wall, ViewState,
+  RenderState, playhead policy)], easing, fps, duration}`" (stale value, replaced by R-576).
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
   link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
   playback and wherever a link id changes.
 - **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
   the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
-  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. The spec's `easing` curve gives the
-  segment's progress `s ∈ [0, 1]` at each frame, as for every other eased field; the value is `a + s·(b − a)`, clamped
+  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. The segment's own `easing` curve (R-576)
+  gives the segment's progress `s ∈ [0, 1]` at each frame, as for every other eased field; the value is `a + s·(b − a)`, clamped
   into `[min(a, b), max(a, b)]` so that rounding never puts a frame past an end or outside the parameter's allowed
   range, and each keyframe's own frame takes that keyframe's value bit for bit, so its sim key is the keyframe's
   (applied per R-369, physics review P1 of PR #265). It is a type (b) segment, each frame a different family of ICs (Part 2),
@@ -61,7 +68,8 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   listing the segments and the parameters, and each frame's own record holds that frame's values in its `SimConfig`.
   *Was:* "a cut, as a chart switch is, never an interpolation. Whether link parameters may be interpolated across
   keyframes in a blocking export, re-integrating every frame, is queued (RQ-384); meanwhile they are cut." (stale
-  value, replaced by R-520).
+  value, replaced by R-520). *Was* (before R-576): "The spec's `easing` curve gives the segment's progress" (stale
+  value, replaced by R-576).
 
 ---
 
@@ -109,6 +117,15 @@ keyframe's `SimConfig` and `RenderState` (R-484), so receiving it re-renders wha
 Retained, rationale unchanged: a pre-encoded video of curated spotlights covers cold-start (the one moment nothing can be live-rendered — the snapshot backdrop's degenerate case, caching Part 5) and serves as the gallery's ambient mode. Now *produced by* the Part 4 blocking exporter from a curated list of spec objects; each reel segment displays its spec's provenance (subtitle cycling) and clicking through **loads the spec live** — the reel is a menu of shareable objects, not just a film.
 
 **R-571:** the reel's machinery (this Part; REQ-TOOL-084) is built and tested natively, in the native app and so in v1 web; its presentation, the spotlight reel that passes for Explore (`designs/reel_click.md`, in the gap sweep's bundle), is v2 web's.
+
+**R-578: what the reel is, and what touching it does** (`principia_spotlight_reel.md`). The film is rendered once per
+release, offline, by the Part 4 exporter (`cargo xtask reel`), and shipped as a video file with a manifest mapping
+every film frame to its segment, spec, frame within the spec and the hash of the state it was rendered from; the app
+only plays it, and the engine starts computing at the takeover. The reel plays inside the Explore view, looking like
+Explore running; **any interaction**, not only a click, **takes over live at that exact frame** (the frame's spec,
+state and playhead, the identity, R-484) **and keeps playing**, the film frame the snapshot backdrop until the live
+render has resolved over it (`principia_caching_contract.md` Part 5). "Clicking through loads the spec live" above
+stands, read so. The build refuses a spec whose link entry hashes do not match the build (R-521).
 
 ---
 
