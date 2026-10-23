@@ -1,0 +1,28 @@
+{
+ "name": "Offset press, photographed on colour negative",
+ "doc": "offset_press → film_negative",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "s0": {
+   "op": "preset:offset_press",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "s1": {
+   "op": "preset:film_negative",
+   "in": {
+    "src": "s0"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "s1"
+}

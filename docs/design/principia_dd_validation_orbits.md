@@ -153,7 +153,7 @@ the more useful object.
 | gate | test | passes when |
 |---|---|---|
 | equations of motion | finite-difference the Hamiltonian and compare against the analytic derivatives | they agree, within a finite-difference step and tolerance that are a calibration (R-71). An energy drift that does not fall as the step shrinks is the wrong-equation signature |
-| two-body radial collision | equal masses from rest, third body far away | passes through `d_min < 1e-10` with `\|dE/E\| < 1e-12` |
+| two-body radial collision | equal masses from rest, third body far away | passes through `d_min < 1e-10` with `\|dE/E\| < 1e-12`, `E` the regularised energy under a regularised occupant (R-566; the Cartesian read-out is 280× to 7100× worse after the passage, integrator contract Part 1) |
 | gauge invariance under rescaling | rescale the ICs by `alpha ∈ {0.25, 1, 4}` and `t` by `alpha^{3/2}` | the `shape_vec` spread (`spread_shape`) is identical to ~10 decimals |
 | energy control | `error_ratio` at `t = 13`, `near-field` | `1.0000` |
 | Burrau constants | the Burrau rest start | `M = 12`, `R = 2.2361`, `E = −12.8167` |
@@ -175,7 +175,7 @@ does not care where the code came from.
 | **closure, free-fall** | 2–3 from Hristov et al. 2023 | same, on brake orbits: returns to rest in the same configuration |
 | **analytic, all `t`** | Lagrange circular | stays equilateral at every sampled `t`, not just at `T` |
 | **chart landmark** | Lagrange at `z = 0`, Euler at `beta → 0, pi` | the decoder puts them where the geometry says |
-| **reversibility (`xi`)** | free-fall brake orbits | time-symmetric by construction — **the natural test bed, and blocked on a reversible occupant** *(R-162: a reversible occupant exists: logH's TTL time mode)* |
+| **reversibility (`xi`)** | free-fall brake orbits | time-symmetric by construction — **the natural test bed, and blocked on a reversible occupant** *(R-162: a reversible occupant exists: logH's TTL time mode, the one `run_reversible` occupant, R-500)* |
 | **word calculus** | Šuvakov–Dmitrašinović families | the encoder reproduces the published braid class |
 
 **Report the convergence order, not just the error.** A pass/fail at one `eta` would have missed §0

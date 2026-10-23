@@ -44,6 +44,24 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
 - **What interpolates:** `z₀` eased componentwise; zoom **log-lerped**; basis pairs by **Grassmannian interpolation** (geodesic between planes, re-orthonormalised per frame — never naive vector lerp, which leaves the manifold of frames); slice values eased; render uniforms lerped per their scale metadata; chart *switches* are cuts or dissolves (two renders composited), never parameter interpolation across chart types.
 - **What each frame costs:** classified per Part 2 — segments that hold the sim key still are type (a) or (c); segments that move it are type (b).
 - **The spec object is the artefact.** A keyframe animation serialises as `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)], easing, fps, duration}` — provenance-complete, URL-encodable, re-renderable. The video is its shadow (Part 6).
+- **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical
+  serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
+  link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
+  playback and wherever a link id changes.
+- **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
+  the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
+  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. The spec's `easing` curve gives the
+  segment's progress `s ∈ [0, 1]` at each frame, as for every other eased field; the value is `a + s·(b − a)`, clamped
+  into `[min(a, b), max(a, b)]` so that rounding never puts a frame past an end or outside the parameter's allowed
+  range, and each keyframe's own frame takes that keyframe's value bit for bit, so its sim key is the keyframe's
+  (applied per R-369, physics review P1 of PR #265). It is a type (b) segment, each frame a different family of ICs (Part 2),
+  priced before the job runs. Live playback never interpolates them: there the change stays a cut at the second
+  keyframe. The export is flagged: the planner names each such segment before the job runs ("link parameters
+  interpolated: every frame a different decoder"), the exported artefact carries the flag beside its embedded spec,
+  listing the segments and the parameters, and each frame's own record holds that frame's values in its `SimConfig`.
+  *Was:* "a cut, as a chart switch is, never an interpolation. Whether link parameters may be interpolated across
+  keyframes in a blocking export, re-integrating every frame, is queued (RQ-384); meanwhile they are cut." (stale
+  value, replaced by R-520).
 
 ---
 
@@ -62,9 +80,14 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 
 ## Part 5 — Determinism & reproducibility
 
-Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against frozen f32 constants, not runtime-computed) ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions are identical on identical inputs, per step; terminal labels and outcome classes on chaotic trajectories may differ across precisions — `principia_parity_contract.md` governs, R-84). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
+Fixed `dt`, deterministic schedule, and **branch decisions pinned by the comparison-only rule** (integrator contract — bucket lookups against the sim key's f32 thresholds, generated on the host and shipped bit-exact, R-502, not runtime-computed on the device; *was:* "against frozen f32 constants") ⇒ **the same spec object re-renders the same video** on the same backend, and matches across backends up to the parity contract's cross-backend f32 tolerances (values may differ at tolerance; branch decisions are identical on identical inputs, per step; terminal labels and outcome classes on chaotic trajectories may differ across precisions — `principia_parity_contract.md` governs, R-84). The exported artefact carries its full provenance (Part 6), so any figure or animation can be re-run and interrogated.
 
 Frame-loop speed settings do not affect exported content — export ignores wall-clock pacing entirely and steps `dt` exactly per the spec object.
+
+**The round trip (R-484).** "The same spec re-renders the same video" holds only if the spec read back is the spec
+written: importing a spec object is the identity on each keyframe's `SimConfig` and `RenderState`, field for field and
+bitwise in the canonical serialisation, the links and their parameters included (R-483). The spec is not a lossy path;
+only an image's low-bit embedding degrades (`principia_dd_image_embedding.md` §6, "Tiers").
 
 ---
 
@@ -72,11 +95,20 @@ Frame-loop speed settings do not affect exported content — export ignores wall
 
 Unchanged in principle, sharpened by lockstep: since there is no stored temporal data at all, **the only complete description of an animation is its spec** — `ViewState + sim key + render state + transport/keyframe spec`. Sharing ships that object (URL-encodable), its `SimConfig` and `RenderState` in their one canonical serialisation (`principia_gui_state_contract.md` §2, R-309); receiving it re-renders bit-comparable playback (Part 5). Exported videos embed (or link) the spec so provenance travels with the pixels.
 
+**Receiving a spec (R-483, X4; R-484, RT1).** The spec carries, beside its state, the build hash and the schema version.
+A spec naming a link the receiving build lacks, or one whose definition changed, is "state present, cannot recreate",
+naming the link, and is never re-rendered under a default link (`principia_dd_image_embedding.md` §6, "The decoder's
+identity"); one written before R-483, with `"links":{}`, re-renders under the receiver's defaults only if its build hash
+is the receiver's, or on the user's explicit acceptance, labelled as assumed. Import is the identity on every
+keyframe's `SimConfig` and `RenderState` (R-484), so receiving it re-renders what was sent.
+
 ---
 
 ## Part 7 — The spotlight reel (attract mode)
 
 Retained, rationale unchanged: a pre-encoded video of curated spotlights covers cold-start (the one moment nothing can be live-rendered — the snapshot backdrop's degenerate case, caching Part 5) and serves as the gallery's ambient mode. Now *produced by* the Part 4 blocking exporter from a curated list of spec objects; each reel segment displays its spec's provenance (subtitle cycling) and clicking through **loads the spec live** — the reel is a menu of shareable objects, not just a film.
+
+**R-571:** the reel's machinery (this Part; REQ-TOOL-084) is built and tested natively, in the native app and so in v1 web; its presentation, the spotlight reel that passes for Explore (`designs/reel_click.md`, in the gap sweep's bundle), is v2 web's.
 
 ---
 

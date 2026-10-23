@@ -27,6 +27,7 @@
 //! and the wheel zooms, and a double-click restores a pane's default; the window's own [`trajectory::Views`].
 
 use eframe::egui::{self, vec2, Button, Pos2, Rect, RichText, Sense, Slider, Stroke, Ui};
+use engine::contract::display;
 use engine::contract::sample::Sample;
 use engine::contract::set_field::SetField;
 use engine::contract::view_ui::KeptOrbits;
@@ -310,7 +311,8 @@ pub fn adjust(adjust: &Adjust, state: &mut State) {
 }
 
 /// Pane 1: the IC, its three bodies at `t = 0` under the gauge transform, joined, each with its velocity arrow and a
-/// ghost marker at the playhead's index `i`.
+/// ghost marker at the playhead's index `i`, each labelled with its number as shown, 1, 2 or 3, from the one conversion
+/// module (R-449; render_gui_spec §G8, pane 1).
 pub(crate) fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64), i: usize) {
     let painter = ui.painter_at(rect);
     let to = ic_to(rect, sample, gauge);
@@ -335,7 +337,7 @@ pub(crate) fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f6
         painter.text(
             a,
             egui::Align2::CENTER_CENTER,
-            body.to_string(),
+            display::body_numbers()[body],
             egui::FontId::monospace(9.0),
             egui::Color32::BLACK,
         );

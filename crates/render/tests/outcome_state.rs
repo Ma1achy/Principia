@@ -13,6 +13,10 @@
 //!   (`state_view_six_colours`).
 //! - REQ-TOOL-022: escapes of different bodies render different colours, in the outcome palette and the `detail` view:
 //!   `detail` is read, not dropped (`three_colours_regression`).
+//! - REQ-GUI-188: each swatch's label is the one conversion module's class name of its `state` and `detail`, and of
+//!   every sample its class takes; no swatch label and no key of the outcome legend's segments shows an internal id,
+//!   "body 0" or "pair " and a digit (`display_names_swatch_labels_*`, the render half of `ledger`'s `display_names`,
+//!   which the ledger, the build DAG's root, cannot reach).
 //! - REQ-RENDER-017: a synthetic RUNNING sample renders its palette colour, bounded / nothing yet's `#141418` (R-446),
 //!   not discarded and not blank (`running_is_coloured`).
 //!
@@ -23,6 +27,7 @@
 //! Each GPU check takes a render, so its control runs it on the render of an altered occupant and shows it fails
 //! (pitfalls §9). Each test registers its negative control (R-176).
 
+use ledger::display;
 use ledger::gen::catalogue;
 use render::assemble::Declaration;
 use render::colour::outcome::{self, SWATCHES};
@@ -435,34 +440,34 @@ negative_control!(
 
 // ── REQ-COL-004: the detail legend switches per state ────────────────────────────────────────────────────────────
 
-/// The `detail` legend payload §2 gives each state code 0–7: escape a body id, collision a pair id (pair `k` the side
-/// opposite body `k`, R-22), `3` all three, the failure states their categories; none for bounded, running and the
-/// reserved codes.
+/// The `detail` legend payload §2 gives each state code 0–7, as a person reads it (R-449): escape a body, shown 1-based,
+/// collision a pair by its two bodies, smaller first, never its pair id (pair `k` the side opposite body `k`, R-22),
+/// `3` all three, the failure states their categories; none for bounded, running and the reserved codes.
 fn section_2_legend(state: u32) -> Option<Vec<&'static str>> {
     match state {
         0 => Some(vec![
-            "body 0",
-            "body 1",
-            "body 2",
-            "all three: triple ejection",
+            "escape body 1",
+            "escape body 2",
+            "escape body 3",
+            "triple ejection",
         ]),
         2 => Some(vec![
-            "pair 0: bodies 1–2",
-            "pair 1: bodies 0–2",
-            "pair 2: bodies 0–1",
-            "all three: triple collision",
+            "collision 2–3",
+            "collision 1–3",
+            "collision 1–2",
+            "triple collision",
         ]),
         4 => Some(vec![
-            "NaN in state",
-            "Inf/overflow in state",
-            "non-finite derived quantity",
-            "reserved",
+            "sim_failed: NaN in state",
+            "sim_failed: Inf/overflow in state",
+            "sim_failed: non-finite derived quantity",
+            "sim_failed: reserved",
         ]),
         5 => Some(vec![
-            "non-finite decode output",
-            "degenerate configuration",
-            "invalid mass construction",
-            "other/reserved",
+            "decode_failed: non-finite decode output",
+            "decode_failed: degenerate configuration",
+            "decode_failed: invalid mass construction",
+            "decode_failed: other/reserved",
         ]),
         _ => None,
     }
@@ -602,5 +607,65 @@ negative_control!(
             "dbg_cat(ctx.sample.state / 2u, 6u)",
         );
         check_state_view(&s, &image);
+    }
+);
+
+// ── REQ-GUI-188: the swatch labels are the display module's names ────────────────────────────────────────────────
+
+/// Checks that each swatch of `sets` is labelled with the class name of its `state` and `detail`, that its class is
+/// its own index, that every `(state, detail)` takes a class labelled with its class name, and that no label, nor any
+/// key of a state's outcome legend segment, shows an internal id.
+fn check_swatch_labels(sets: &[&[outcome::Swatch]]) {
+    for set in sets {
+        for (k, s) in set.iter().enumerate() {
+            assert_eq!(
+                Some(s.label),
+                display::class_name_of(s.state, s.detail),
+                "`{}`'s label",
+                s.param
+            );
+            assert_eq!(
+                outcome::class(s.state, s.detail),
+                k,
+                "`{}`'s class",
+                s.param
+            );
+            assert!(
+                !display::shows_an_internal_id(s.label),
+                "`{}`'s label `{}` shows an internal id",
+                s.param,
+                s.label
+            );
+        }
+        for state in 0..8 {
+            for detail in 0..4 {
+                assert_eq!(
+                    Some(set[outcome::class(state, detail)].label),
+                    display::class_name_of(state, detail),
+                    "the class of state {state}, detail {detail}"
+                );
+            }
+            for k in outcome::segment(state) {
+                assert!(!display::shows_an_internal_id(set[k].label));
+            }
+        }
+    }
+}
+
+#[test]
+fn display_names_swatch_labels_are_the_modules() {
+    check_swatch_labels(&[&SWATCHES, &outcome::OKLAB_UNIFORM]);
+    assert_eq!(SWATCHES[0].label, "bounded / nothing yet");
+    assert_eq!(SWATCHES[5].label, "escape body 1");
+}
+
+negative_control!(
+    display_names_swatch_labels_are_the_modules,
+    "a swatch labelled 0-based fails",
+    expected = "`escape_body_0`'s label",
+    {
+        let mut set = SWATCHES;
+        set[5].label = "escape body 0";
+        check_swatch_labels(&[&set]);
     }
 );

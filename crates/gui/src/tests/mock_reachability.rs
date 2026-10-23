@@ -150,7 +150,8 @@ fn console_states() -> Vec<(&'static str, Opened, App<MockSide>)> {
             // Enter on Clear, by the keys: into the header bar, → to Clear.
             let ctx = h.ctx.clone();
             app.open_window(&ctx, Window::Console, None);
-            presses(h, app, Key::Enter, 1);
+            // Opened with no key, the ring hidden (R-460 H2): the first Enter only shows it (R-464 M2).
+            presses(h, app, Key::Enter, 2);
             presses(h, app, Key::ArrowRight, 6);
             presses(h, app, Key::Enter, 1);
             assert!(app.console().is_empty(), "cleared");

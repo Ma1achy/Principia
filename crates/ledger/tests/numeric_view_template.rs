@@ -1220,7 +1220,8 @@ fn check_keys(keys: &[&str]) {
 }
 
 /// The ledger gains no member (REQ-RENDER-084): its required keys are §3.8's, and an entry is exactly §3.8's members,
-/// `declaration` being the state half of §3.8's `range` key (R-426), which the destructuring below names, each, so a
+/// `declaration` being the state half of §3.8's `range` key (R-426) and `index_base` the key §3.8 leaves R-449's task
+/// to choose for a body- or pair-indexed field's base (REQ-GEN-036), which the destructuring below names, each, so a
 /// new one fails to compile.
 #[test]
 fn numeric_view_template_ledger_gains_no_member() {
@@ -1239,6 +1240,7 @@ fn numeric_view_template_ledger_gains_no_member() {
             provenance: _,
             consumers: _,
             declaration: _,
+            index_base: _,
         } = e;
     }
 }

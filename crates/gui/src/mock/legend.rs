@@ -7,8 +7,11 @@
 //! The outcome key is render_gui_spec §G6's (R-444, R-446): the nine classes, physical outcomes only, each a flat swatch
 //! from `SWATCHES` in colour_composition §1.4's order, the black one "bounded / nothing yet", then the "forbidden
 //! region" key in the hatch style; no "degenerate", "collision @ t=0", `running` or `sim_failed` key and no "not yet"
-//! swatch. The "not yet" style stays a class a key of another field may show (R-399).
+//! swatch. The "not yet" style stays a class a key of another field may show (R-399). Every key's label is the one
+//! conversion module's name (R-449; REQ-GUI-188): a swatch's its class name, 1-based, through `SWATCHES`, and the
+//! running class's the display name of `running`.
 
+use engine::contract::display;
 use engine::contract::legend::{Legend, LegendEntry, LegendKey, SwatchStyle, SWATCHES};
 
 /// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, the running samples'
@@ -122,7 +125,11 @@ pub fn evaluate(stain: &FakeStain) -> Legend {
                                     .unwrap_or_else(|| panic!("no swatch `{param}`"));
                                 (s.label.to_owned(), SwatchStyle::Flat(s.srgb8))
                             }
-                            Class::Running => ("running".to_owned(), SwatchStyle::NotYet),
+                            Class::Running => (
+                                display::name(display::State::Running, display::Detail::D0)
+                                    .to_owned(),
+                                SwatchStyle::NotYet,
+                            ),
                             Class::Forbidden => (FORBIDDEN.to_owned(), SwatchStyle::Hatch),
                         };
                         let share = if total > 0.0 { 100.0 * w / total } else { 0.0 };

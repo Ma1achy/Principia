@@ -5,17 +5,36 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 
 ## Rules that hold everywhere
 
-- **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, not the final UI, but it has the same
-  structure and every feature.
+- **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, and the native app's and v1 web's UI, with
+  every feature; a separate final UI, if there ever is one, is v2 web's *(conformed to R-571; was: "not the final UI, but it has
+  the same structure and every feature")*. With the layer hidden the figure fills the window by Extend, the default, more of the
+  field at the same scale, or Fit, the view's square scaled to the window's shorter side, chosen in View › "F3 fills
+  by" *(conformed to R-468)*. Pan and zoom reach past the chart's square with the layer shown too, with no gaps, every
+  interaction working there *(conformed to R-537)*.
+- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, a
+  `sim_failed` sample or a non-finite value black `#141418`, and a `decode_failed` sample blank; View › Debug view shows
+  them, each with a key and a count *(conformed to R-467 and R-511; was: "and a failure or a non-finite value black
+  `#141418`")*.
+- **Not a system is blank, never a colour.** A pixel that is not a system draws the background in every view; the hatch
+  is only the optional Overlays › Chart › forbidden region, over those pixels alone. A chart never leaves the manifold:
+  a pan, slice, zoom, tilt or lock stops at the last value whose centre validates, and the readout says which check
+  stopped it *(conformed to R-469, R-470)*.
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way (UI → SetField → core → snapshot → UI). Undo and redo live in the contract (GU-1).
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit z₀ and the basis
   (chart_decoder_contract rule 6).
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console. The one
-  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*.
+  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. The rule is
+  about panels and chrome: figure marks, the trace and its icons, contour lines and icons for points of interest, may
+  cover the figure *(conformed to R-539)*.
+  Badges go in the chrome or the status line, never over the figure: the decoder badge, naming the chart and any link
+  off its default, sits in the figure's header strip above the plot, a badge being chrome and not a figure mark *(conformed to R-479, R-523
+  and R-539; was: "A decoder
+  badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
+  whether it may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
-- **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
+- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain panel is the plain node-graph editor. *(conformed to R-548; RQ-312 (a))*
 
 ## 01 Explore — the everyday view
 
@@ -42,6 +61,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **The hover label names a fate only once it's decided.** Before that: "undecided · still interacting at t of t_max".
 - **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs). Real space and the shape sphere side by
   side; F₂ word, substeps, min separation, |ΔE/E|; playhead; **listen** (sonification, can follow the cursor); kept orbits below.
+  Everything about one trajectory lives here: its previews, its trace and its sound. Each kept trajectory is a tab;
+  under the previews are three collapsible sections, Trace, **Listen** (the trajectory heard as sound) and Numbers, each
+  opening its window, `Trace…` or `Listen…`, for the full set *(conformed to R-540, R-541; was: "**listen**
+  (sonification, can follow the cursor); kept orbits below")*.
   - **The shape sphere turns slowly, with visible x, y, z axes,** and switches to an unwrapped (equirectangular) view.
 - **Bottom:**
   - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
@@ -55,6 +78,18 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     R-465)*. The cube's H, V and D labels are buttons that pick the slice's dimensions; in Tilt mode the third axis
     names what the gesture tilts into, with a "4D: see Plücker" badge when the two targets differ and both angles are
     set *(conformed to R-459)*.
+  - **Tilt maps and every chart:** the Tilt section's "map: Tip as sheet / Lean each axis", Tip as sheet (the cube's
+    axis-angle map, ±180°) the default; the compass draws the active map; the readout gives each screen axis's
+    components. Every chart tilts and slices, curved ones included *(conformed to R-473, R-474)*.
+  - **Save view as chart** (after Chart builder…, and on View ›) saves the view as a named chart in the picker's Saved
+    group, to tilt and save again *(conformed to R-475)*.
+  - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
+    figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
+    R-509)*. The traces' controls are not in it: they are Overlays ▾'s Trace group, the Trajectory panel and `Trace…`
+    *(conformed to R-541; R-556, RQ-448 (a))*.
+  - **Listen in the band:** with sound on, the Time column gains an event lane and a mini spectrogram, the band's
+    height unchanged; expanded, the band grows upward, the spectrogram sharing the scrubber's time axis and the
+    Legend's column showing the spectrum at the head *(conformed to R-541)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
@@ -79,6 +114,8 @@ inspector holds every setting the old dev GUI had.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Lock then replays Φ and the decoder on the CPU.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, and "forbidden in view: N%". Each chart supplies its domain function (CD-6). **Both previews are square.**
+- **The links are shown, not edited, here:** read-only beside the Domain preview, with a link to the Decoder window; the
+  axis warps get the Decoder's preview widget *(conformed to R-478, R-480)*.
 
 ## 04 Windows
 
@@ -92,12 +129,21 @@ position and size across sessions *(conformed to R-461)*.
   - **For agents, the same data structured:** `prin profile --scenario … --json`, `prin profile diff base new --threshold`,
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
+- **Decoder:** one row per block (masses, α, β, momenta), each a compatible-only link dropdown, its parameters, a live
+  preview and "reset to default"; a footer with Reset all, Apply / Revert and "Changing a link re-integrates every
+  pixel" *(conformed to R-478, R-479, R-480)*.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
-- **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
-  simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the
-  figure only; scientific checks run with plain. The styles are the poster's (`workbench/principia_poster_both_sides.html`
-  and its press module): plain, watercolour & pencil (its painted treatment), and the seven print presets — Default,
-  Drops, Newspaper, Vintage, Poster78, Riso, Duotone (:2875) *(conformed to R-130)*.
+- **Display:** fixed order — SimState *(conformed to R-111)* → stain → [the lines drawn through] → Print graph → display
+  scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen; the simulation sees the final
+  in-gamut colours *(conformed to R-67, R-487 and R-531)*. The Print graph replaces Style: a node graph of its own after
+  the stain, Plain (the identity) by default, figure only; measurement never reads it and scientific checks run under
+  Plain. Its presets are the lab's 103 and R-130's eight, watercolour & pencil and the seven print presets, in a family
+  of their own, "Poster" *(conformed to R-485, R-486, R-489 and R-532; was: "→ stain → style → display scale → gamut
+  clamp → colour-vision simulation → screen; the simulation sees the final in-gamut colours (conformed to R-67). Style
+  is optional and applies to the figure only; scientific checks run with plain. The styles are the poster's
+  (`workbench/principia_poster_both_sides.html` and its press module): plain, watercolour & pencil (its painted
+  treatment), and the seven print presets — Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone (:2875)
+  (conformed to R-130).")*.
 - **Run:** as listed under Explore; the Custom quality fields under "quality: Custom", and the target-utilisation ceiling
   *(conformed to R-129)*.
 
@@ -114,7 +160,9 @@ where it lands in z and its distance from the slice, then lock the view on it, c
 Walk back from OUT; sample each colour and brightness node over its declared input domain (GU-2); push through the real
 combiner. **Each dimension gets its own key:** categorical swatches (with shares), then a separate bar for what brightness
 (or any second channel) encodes. Number ramps get ticks placed through the curve; direction fields a sphere key; coordinate maps
-their colour square; post operations line samples. It's called "Legend", never "Fate".
+their colour square; post operations line samples. It's called "Legend", never "Fate". A presentation legend has no
+"forbidden region" key; View › Debug view adds its own "Debug" key, forbidden, decode or sim failure and NaN / Inf, each
+with a count *(conformed to R-467)*.
 
 ## 07 Keyboard — design note, not a screen
 

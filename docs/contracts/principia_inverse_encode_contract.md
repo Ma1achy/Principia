@@ -20,7 +20,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 
 **The three theorems (the contract):**
 
-- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13).
+- **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13). T1 holds for every `g` off the mirror band. On `|λ̃_y| ≤ δ_λ`, collinear states included, it holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`, the mirror's two sides both kept; R-82 is unchanged (R-547, RQ-360).
 - **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
@@ -47,7 +47,7 @@ L_z,canon =  λ^{1/2} L_z,in =  L_z,in / I_in^{1/4}
 t_canon   =  λ^{3/2} t_in   =  t_in / I_in^{3/4}
 ```
 
-so `t_end` and all timing outputs are in canonical units; to express them in the user's original units, multiply by `I_in^{3/4}`. Encode surfaces a **`lookup_rescaled`** notice carrying `λ`, in the same family as `lookup_clamped`. (The simpler alternative — reject unless `I ≈ 1` — is admissible but strictly weaker; the rescale is the mathematically complete behaviour and matches the project's clamp-and-notify pattern.)
+so `t_end` and all timing outputs are in canonical units; to express them in the user's original units, multiply by `I_in^{3/4}`. Encode surfaces a **`lookup_rescaled`** notice carrying `λ`, in the same family as `lookup_clamped`, exactly when the rescale ran: it is skipped (`λ = 1`, the state unchanged) where `|I_in − 1| ≤ τ_I`, a calibration (R-71) in eps of the precision, so a canonical input raises none (R-547, RQ-295). (The simpler alternative — reject unless `I ≈ 1` — is admissible but strictly weaker; the rescale is the mathematically complete behaviour and matches the project's clamp-and-notify pattern.)
 
 ---
 
@@ -89,7 +89,7 @@ zero's sign only as far as `atan2`'s operand: WGSL may ignore the sign of a zero
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
 $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
-(R-21). `μ_max = 5` and `q_max = 2` are settled (R-10).
+(R-21). `μ_max = 5` and `q_max = 2` are settled (R-10), as the defaults of two tunable link parameters since R-481; the inverses and the clamps read the active value.
 `s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
 
 **Free momentum** (forward: `q_k = q_max·(2σ(z)−1)`): invert Jacobi, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`, then
@@ -109,13 +109,38 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 - **Therefore every round-trip tolerance is asserted in *physical* space**, where the composed map is well-conditioned: `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys`. A z-space residual near saturation is meaningless and must not be a test criterion.
 - The clamp flags are the honest boundary: inside the clamps, T2 holds tightly; at the clamps, the inverse is by construction lossy and *says so*.
 
+**The norm `‖·‖_phys`** (defined per R-72, REQ-ENC-029; TASK-M2-16). Between a reference state `x` and a state `x′`, both
+on the canonical section (`G = M = I = 1`), over the masses, the positions and the momenta of all three bodies:
+
+```
+‖x′ − x‖_phys  =  maxᵢ max( |m′ᵢ − mᵢ|,  ‖r′ᵢ − rᵢ‖ / R_x,  ‖p′ᵢ − pᵢ‖ / P_x )
+R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
+```
+
+- **Unweighted by mass, each block against the state's own extent.** A position or momentum difference is absolute
+  where the reference state's extent in that block is at most 1, and relative to that extent above it; the masses are
+  absolute (`Σmᵢ = 1`). On the section a light body sits far out (`‖rᵢ‖` up to `1/√mᵢ`), and the decode builds the
+  bodies from the Jacobi vectors (`r₁ = r₀ + ρ`), so a near body's position carries the far body's rounding: measured
+  against its own size it would show a conditioning the map does not have. A mass-weighted norm (`√mᵢ‖Δrᵢ‖`,
+  `‖Δpᵢ‖/√mᵢ`) is not used: it divides a light body's momentum rounding by `√mᵢ`.
+- **One norm for every round trip.** T2 measures `D(E(D(z)))` against `D(z)`, T3 `D(E(x))` against `C(x)`; the
+  ground-truth ingestion residual and the `ROUNDTRIP` preset (Part 8) use it unchanged.
+- **`ε_phys = k·ε_R`**, `ε_R` the precision's machine epsilon (2⁻⁵² at f64, 2⁻²³ at f32), one `k` for both precisions:
+  the interior residual is rounding, the same count of `ε_R` at f64 and f32. `k` is REQ-ENC-024's calibration (R-71),
+  the constants register's `eps_phys`, proposed at 64 by the `encode-eps-phys` gate and provisional until the M2 gate.
+- **Interior and clamp-adjacent** (applied per R-369, TASK-M2-16). Each control is read off the state by Part 3's own
+  formulas. A sample is interior when every control is clear of its clamp by a factor of two: `s_α`, `s_β` and `s_q`
+  in `[2ε, 1 − 2ε]` (their clamp `[ε, 1 − ε]`) and `|μₖ| ≤ (1 − 2ε_μ)·μ_max` (its clamp `(1 − ε_μ)·μ_max`); T2 holds
+  it to `ε_phys`. A control past its clamp by the same factor, `s` within `ε/2` of 0 or 1 or `|μₖ| ≥ (1 − ε_μ/2)·μ_max`,
+  is clamp-adjacent and must set its `lookup_clamped` bit; a control clear of its clamp must leave its bit unset.
+
 ---
 
 ## Part 5 — Inverse by axis kind (completing the four kinds)
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions. **The shape sphere chart's point is the state's signed `n̂`** (R-544): its lookup reads the shape from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems. T1 stands for `z` and for every other chart; only the shape sphere's chart point keeps the mirror's sign.
 
 **Kind 3 — invariant.** Two directions, sharply different:
 
@@ -131,7 +156,9 @@ s_k = ½(q_k/q_max + 1),   z_qk = logit(clamp(s_k, ε_q, 1−ε_q))
 **Kind 4 — coupled curve.** Two directions:
 
 - *(a) on-curve encode:* exact closed form — recover the acute angle from the canonical config, then `ν(θ) = sec θ − tan θ`; verify the Burrau mass coupling via `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
-- *(b) is x on the curve at all?* Generic input isn't. Project: `ν* = argmin_ν dist(C(x), γ(ν))` (1D minimisation over a smooth curve — cheap and robust), report distance-to-curve. If the distance exceeds tolerance, the curve chart *cannot represent the point*: fall back to latent z (case 3 of Part 6), which is always available.
+- *(b) is x on the curve at all?* Generic input isn't. Project: `ν* = argmin_ν d²(ν)`, `d²(ν) = ‖n(α,β) − n(α_γ(ν), β_γ(ν))‖² + ‖m − m_γ(ν)‖²`, the shape sphere's chordal distance ⊕ the mass simplex's Euclidean one at unit weights (R-24; `principia_dd_encode.md` §3.4) (1D minimisation over a smooth curve — cheap and robust), report distance-to-curve `d(ν*)`. If the distance exceeds tolerance (REQ-ENC-026), the curve chart *cannot represent the point*: fall back to latent z (case 3 of Part 6), which is always available.
+- *On the curve and past its span* (defined per R-72, applied per R-369; TASK-M2-18). `x` is on the curve where the closed form's `ν` lies in the chart's `ν` span and `d` there is within the tolerance; then (b) is bypassed. The search runs over the chart's own `ν` span: the curve axis (`ν`, or `θ` on the acute-angle charts) of every Burrau chart is bounded (`principia_chart_reference.md` §5.4), so a `ν` past it is no chart point. An input at `θ > π/4` on a folded chart is not relabelled; it falls back to latent z, flagged (`principia_dd_encode.md` §3.1, REQ-ENC-022).
+- *Into the chart: kind 4, then Part 6 step 4* (defined per R-72, applied per R-369; TASK-M2-18; `principia_dd_encode.md` §3.1, "The composition"). Kind 4 supplies the curve axis's coordinate of `c(x)`: the closed form's on the curve (a), `ν*`'s where `d(ν*) ≤ tol` (b), and none where `d(ν*) > tol`, which falls back to latent z (b). The chart's other axis is read by its own kind, and Part 6 step 4's `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys` then decides chart against latent, as for every chart. A chart landing needs both.
 
 **Annotation axes.** Nothing to invert — no IC content by definition.
 
@@ -164,7 +191,7 @@ normative (R-23): **1a → 0 → 1b → 2 → 3**, then 4–6. CoM subtraction p
 CoM-frame-defined.
 
 - **1a. Subtract the CoM** — positions to the CoM frame, so `I_in` is defined.
-- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`.
+- **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`. Skipped where `|I_in − 1| ≤ τ_I` (`λ = 1`, `r` and `p` unchanged, no notice); elsewhere in two steps, first by a power of two (exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies apart; `I_in = 0`, the bodies coinciding, keeps the select: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0` (R-547, RQ-295, RQ-296).
 - **1b. Subtract the boost** — the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
 - **2. Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
 - **3. Mirror iff `λ̃_y < −δ_λ`** (`λ̃ = √μ_λ·λ`, `δ_λ = 10⁻¹²`) — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| ≤ δ_λ` → no mirror, deterministic (R-82); T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
@@ -172,10 +199,33 @@ CoM-frame-defined.
 - **5. Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
 - **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
 
+**Where possible, at step 4** (R-72, applied per R-369; REQ-ENC-008). The active chart represents `x` when the
+chart point `c(x)`, read off `C(x)` axis by axis (Part 5), decodes back to it: `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`,
+Part 4's norm and tolerance (REQ-ENC-029, REQ-ENC-024), both states on the canonical section. A chart sweeps two DOF
+and its slice and conventions pin the other six (chart_decoder_contract Part 5), so a generic state is not on it: its
+frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
+construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
+coordinate, and nothing is compared for it.
+On a curve chart (Part 5, kind 4) `c(x)`'s curve coordinate is kind 4's at REQ-ENC-026's curve tolerance
+(`principia_dd_encode.md` §3.1, "The composition"; code review 5606284432 of PR #275, C4, applied per R-369), and that
+tolerance is the lookup's to pass, as `‖·‖_phys` and `ε_phys` are. At a tolerance of 0 such a chart places essentially
+no state, rounding alone putting `d > 0` on its own curve, so every state would land in latent `z`.
+
+**On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
+with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
+against `C(x)` with step 3's mirror undone on the **full state**, every `r_i` and every `p_i` (`Π·C(x)` where
+`lookup_mirrored` is set, `C(x)` otherwise), and `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x`
+whose masses and unmirrored body-frame momenta are the slice's lands on the chart at its signed point and decodes back
+to itself, `L_z`'s sign kept; its mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and
+otherwise goes to latent `z`. Comparing against the mirrored `C(x)` would send every lower-hemisphere state to latent
+`z`. Every other chart compares against `C(x)` as above.
+
 ### Chart-aware validation
 
 Not every point of the latent hypercube $[0,1]^8$ is valid in every chart, and not every entered IC lands inside
-the hypercube. Lookup and lock validate against the **active chart's** constraints before committing.
+the hypercube. Lookup and lock validate against the **active chart's** constraints before committing. A trace does
+not: it never clamps, projects or rejects a sample's whole state by these layers, but encodes the chart's shown
+coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines.md` §8).
 
 **Layers, in order.**
 
@@ -202,6 +252,33 @@ the hypercube. Lookup and lock validate against the **active chart's** constrain
 - **Reject**: refuse with an error naming the failed constraint. Only when projecting or clamping would give a
   qualitatively different IC from the one intended.
 
+**The nearest valid point** (R-72; REQ-ENC-030). On the invariant charts, a projection keeps the energy and moves
+`L_z` alone. At the frozen configuration and masses, the kinetic energy is `K* = E − U` on $(L_z, E)$ and `K* = K` on
+$(L_z, K)$, and the points feasible at that energy are the segment $|L_z| \le \sqrt{2I K^*}$. The nearest valid point is
+the one at the same `K*`, and so at the same `E`, on the parabola, on the side of the entered `L_z`:
+$L_z \leftarrow \operatorname{sign}(L_z)\sqrt{2I K^*}$. Distance is $|\Delta L_z|$ at fixed energy. Each chart's vertical
+coordinate is its energy, so the projection moves only the horizontal coordinate, as the charts' own domain function
+does. The root is held so that $L_z^2 \le 2I K^*$ exactly, so the projected pair passes the feasibility test it failed.
+Where `K* < 0` (`E < U`; on $(L_z, K)$, `K < 0`), no `L_z` is feasible at that energy. The nearest feasible point is
+then the parabola's apex, `L_z = 0` at `K* = 0`, `E = U`: the rest start. The lock re-centres to the nearest feasible
+point in the same metric. The other charts' layer-2 failures are clamps in the chart's own coordinates, each
+out-of-range coordinate snapped to its boundary, which needs no metric.
+
+**A qualitatively different IC** (R-72; REQ-ENC-030). A projection or clamp gives a qualitatively different IC, and
+lookup rejects instead, when it changes the class of either constant of motion that classifies the motion:
+
+- **The sense of rotation**, `sign(L_z)` ∈ {−, 0, +}. `L_z = 0` is a class of its own: a triple collision needs zero
+  angular momentum (Sundman), so only that class can reach one.
+- **The energy class**, `sign(E)` ∈ {−, 0, +}. With `E ≥ 0`, the Lagrange–Jacobi identity
+  $\ddot I = 4E - 2U > 0$ ($U < 0$) makes `I` grow without bound, so only `E < 0` admits motion that stays bounded.
+
+Under the metric above, a projection at `K* > 0` keeps `E` and the sign of `L_z`, so it is taken. At `K* = 0` with
+`L_z ≠ 0` the parabola's only point is `L_z = 0`, so the pair is rejected (`L_z`'s class would change). At `K* < 0` the
+apex keeps `L_z`'s class only where `L_z = 0`. It keeps `E`'s, since `E < U < 0`. So that pair is projected to the
+rest start, and every other pair there is rejected. A non-finite entry is rejected, naming its constraint, never
+carried on as a NaN. A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has
+no real value there. So projecting it to `t = 0` changes no class, and the projection stands.
+
 **Lock validation.** A clicked pixel is valid by construction, but a tilt can carry the lock's neighbourhood
 into an infeasible region. Detect it, then re-centre to the nearest feasible point or switch to a chart where
 the lock is valid.
@@ -215,7 +292,7 @@ region (for example above the parabola in $(L_z, E)$).
 | flag | meaning |
 |---|---|
 | `forbids_energy_normalisation` | the chart fixes energy itself; any $E^*$ override — every `Some(E*)`, including `Some(0)` (R-25) — is refused at validation (`principia_dd_decoder.md` §3.7). True for $(L_z, E)$ and $(L_z, K)$. |
-| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart (the shape sphere: 2-to-1 over the φ hemispheres, R-141) or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. |
+| `system_image` | how the address map folds onto distinct systems — bijective, n-to-1, `DoubleCover` or ray-degenerate (`principia_chart_decoder_contract.md` Part 5; R-59 D5, R-141, R-157). For an n-to-1 chart or a `DoubleCover` chart (the full-range Burrau chart, R-157), show the canonical half, or label the redundant one. The shape sphere is bijective, the whole sphere, nothing hidden or labelled redundant (R-544; *was:* "the shape sphere: 2-to-1 over the φ hemispheres, R-141"). |
 | `requires_per_pixel_mass` | mass varies per pixel, so the integrator must not use `SimUniforms.m[3]`. True for the ternary mass plot, the Burrau family, and mixed-axis charts with a mass axis. |
 
 ## Part 7 — Ground-truth ingestion (the validation programme's demand)

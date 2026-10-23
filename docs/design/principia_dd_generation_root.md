@@ -18,7 +18,7 @@ From the **chart contract (Part 2.5)**: every link is constraint-preserving, inv
 
 From the **lowering contract** (Part 2, the substrate split): the generated artefacts split by target — link functions and the kernel's pack/unpack are **generated Rust** (compute side, monomorphised, no assembler); the fragment unpack accessors and debug catalogue are **generated WGSL** flowing through the fragment assembler alongside authored colour code; link selection is baked per block.
 
-From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger, not a hand-bumped integer (R-36).**
+From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout or kernel change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger's columns that decide the payload's layout or the kernel's output, not a hand-bumped integer (R-36, R-545):** `scale`, and any render-only column a ruling names, leaves the hash, so a ledger scale change re-styles the view with zero recompute (dd_colouring seam 5; RQ-297). *Was:* "a layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger, not a hand-bumped integer (R-36).**"
 
 From the **inverse-encode contract**: link inverses are the encode path's block inverses; tolerances asserted in physical units; ε clamps are part of the registry entries.
 
@@ -36,7 +36,7 @@ From the **inverse-encode contract**: link inverses are the encode path's block 
 |---|---|---|---|
 | `state` | 0–2 | 3 | **enum(6), mutually-exclusive**: 0 escape · 1 bounded · 2 collision · 3 running · 4 sim_failed (NaN/Inf *during integration*) · 5 decode_failed (**decoder could not produce a valid physical IC** — NOT a t=0 dynamical terminal; a valid IC already inside r_coll is `collision` at step 0; there is no step-0 `escape`, since the window rule needs history, so an IC already escaping is classified when its window completes — R-60). **`bounded` is FINITE-HORIZON** (neither escape nor collision within `T`, which is in the sim key) — permanent boundedness is not decidable for the 3-body problem and is not claimed; term stays `bounded` (literature-standard), not renamed. Replaces the old `class`(2) + `running`/`sim_failed`/`decode_failed` flags — all six are exclusive, so one enum. `detail` is a 4-state union (payload §2): escape → body id; collision → pair id; **sim_failed / decode_failed → failure category** (the failure states carry a diagnostic detail, not an outcome); undefined for `running`. **Substep-cap saturation is NOT a state value** — it is the separate `saturated` bit (a non-terminal confidence flag); every `state` is dynamical, annotated by trustworthiness not replaced by a numerical-limit label |
 | `detail` | 3–4 | 2 | **union keyed by `state`** (payload §2): escape → body id (0-based); collision → pair id (pair `k` is the side opposite body `k`, R-22); sim_failed/decode_failed → failure category; undefined for running |
-| `saturated` | 5 | 1 | sticky flag — set iff `N_sub == N_max` occurred at some macro-step (the integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag — payload §2, R-86). `N_max` is a raised tunable (integrator contract), not hardcoded |
+| `saturated` | 5 | 1 | sticky flag — set iff `N_sub == N_max` occurred at some macro-step (the integrator hit its per-step subdivision cap; the trajectory continued, advance-and-flag — payload §2, R-86). `N_max` is a raised tunable (integrator contract), not hardcoded, up to the substep table's maximum length and refused above it (R-502) |
 | `dmin_pair` | 6–7 | 2 | categorical(3) — which pair achieved `d_min` (a latched fact, NOT derivable from the word); pair ids as `detail` (R-22) |
 | `last_symbol` | 8–9 | 2 | final symbol of the free-group word, a redundant cache of the sidecar word for O(1) fragment read (frozen codes `a=0, A=1, b=2, B=3`); meaningful iff the word's `length ≥ 1 && length ≠ 127`. A deliberate, versioned assignment (payload §2, R-86) |
 | *reserved* | 10–15 | 6 | headroom — reserved means reserved (flag §6). **`total_substeps_log2` is NOT here** — the log proxy (⌊log₂⌋, 0 for a total ≤ 1 — payload §6, R-86) is *derived at read* (`countLeadingZeros`) from the exact `total_substeps` u32 (a log accumulator is not resumable; payload §2). Most likely future tenant is a widened word-length field if the word ever grows |
@@ -490,7 +490,7 @@ time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does n
 **The §3.8 entries.** Every member is `provenance: reduction` and `consumers: [scheduler, debug]`; an f16 range lies
 within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
 are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
-at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are. The ranges and
+at most N² (R-315); each member's range is the one its row in the table below declares, citing §3.7's table: a declaration, not a default for a member given no range (R-545, RQ-278). *Was:* "an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are." `running_mean_divergence` and `coherence` are one-signed: each gets a formula and a declared range that does not span zero, with its citation (R-72, REQ-PAY-109), so both stay `lin` on viridis; until then their rows keep the `(−∞, ∞)` the ledger was built with (PR #208), marked as waiting on it. `alpha_energy`'s range and its placement, centred on its analytic 1.0, are settled with REQ-PAY-093 at the M5 gate. The ranges and
 `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
 `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed, R-71 (REQ-PAY-093; R-418 adds the
 last three), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate. The sentinels of
@@ -524,12 +524,21 @@ its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 | `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
 | `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
 
+*The three rows as built (R-545, RQ-278).* The `alpha_energy`, `running_mean_divergence` and `coherence` rows above are
+the ledger as built, which `crates/ledger/tests/quad_reduction.rs` parses against this table; they change together with
+the ledger in TASK-M5-32, the task that implements RQ-278's ruling. Under R-545: `running_mean_divergence` and
+`coherence` are one-signed, each declared a range that does not span zero, with its formula and citation (REQ-PAY-109),
+so both stay `lin` on viridis; `alpha_energy` keeps `lin`, centred on its analytic 1.0, its range and that placement
+proposed with REQ-PAY-093 and confirmed at the M5 gate. Until TASK-M5-32 lands, the `(−∞, ∞)` here is the built value,
+not a declaration R-545 makes. *Was (fix round 1 of PR #274):* the three cells read "lin, centred on 1.0 / proposed
+(REQ-PAY-093; M5 gate)" and "one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208)".
+
 **Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
 `categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,
 `roundtrip_error` and `worst_energy_drift` are `log`: each is a magnitude ≥ 0 whose values span decades (`error_ratio`
 reads 1.0 under exact dynamics and 204.8 at 2.9% drift; drift's finite tail spans ten orders of magnitude, above).
 `alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
-range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero.
+range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero; its range and that placement are confirmed with REQ-PAY-093 at the M5 gate (R-545, RQ-278 (c)).
 
 #### Open
 
@@ -809,6 +818,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `diverging_x0_Lz_0` | 1, `Lz_0`'s `x₀`, an angular momentum, as `E_0`'s (dd_colouring §3.6, REQ-COL-065; TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
 | `shape_vec_js_tol` | 2⁻⁴⁸ ≈ 3.55e-15, the agreement of the shape map's `n` with the IC Inspector's on random ICs, the largest component difference (chart_reference §3.1; TASK-M2-08) | canonical-units | M2 | REQ-CHART-049 |
 | `shape_roundtrip_bound` | 10⁻¹³, the shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (chart_reference §3.2; R-178, R-181; TASK-M2-08) | canonical-units | M2 | REQ-CHART-053 |
+| `eps_phys` | 64, `k` in `ε_phys = k·ε_R`, the round trip's tolerance in `‖·‖_phys`, `ε_R` the precision's machine epsilon (inverse-encode contract Part 4; TASK-M2-16) | canonical-units | M2 | REQ-ENC-024 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
@@ -862,6 +872,11 @@ type and class and not its citation (§3.8, R-251). An entry's hashed members ar
 - its forward, inverse and log-det, each in a canonical form with no formatting-dependent bytes (the form is a
   definition TASK-M0-46 writes here, R-72, REQ-GEN-032);
 - its ε clamps, and each parameter its forward, inverse or log-det reads (`μ_max`, `q_max`, `α_min`), by value.
+- *(R-481)* the declarations of its tunable parameters (below, "Tunable parameters"): the entry's name, the parameter's
+  name, its default and its allowed range's two ends by value, not its citation, as a block of their own after the
+  chart constants, so the bytes above are unchanged. A view's active values are never hashed: they are the view's
+  state (`SimConfig`'s `Links`, `principia_gui_state_contract.md` §2), not the ledger's, so a changed default or range
+  changes the schema version and a view at `μ_max = 4` does not.
 
 Its sampling note is not hashed: it is prose for the robustness-sweep picker, and no decode or encode reads it.
 Changing a hashed member of any entry, or adding or removing an entry, changes the schema version; a sampling-note-only
@@ -870,6 +885,36 @@ constants are hashed too, each by value, whether or not a link reads it: those t
 mirror tie-break), `ε_w` (its seed-selection floor) and `ε_M01` (the mass block's M01_TINY threshold, dd_decoder §3.1;
 added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189). `tanh_sat`, the
 `tanh` operator's argument bound (added by TASK-M2-06), is read by the operator, not by a tree, and is hashed likewise.
+
+**Each entry's own hash (R-521).** Beside the schema version, each entry has an entry hash: the 64-bit hash of that
+entry's canonical bytes alone, its hashed members above and the declarations of its tunable parameters, computed by
+the same hash as the schema version and generated with the registry. It also covers, by value, the registry constants
+outside the entries that the entry's decode reaches: `tanh_sat` for an entry whose trees hold a `tanh` node, `ε_M01`
+for an entry onto the masses, and `δ_λ` and `ε_w` in every entry (applied per R-369, physics review P2 of PR #265).
+Not every decode reads those two: `δ_λ` is read only by dd_decoder §3.3's canonicalise and `ε_w` only by §3.4's
+invariant construction; neither depends on the link, so hashing both into every entry is a deliberate, conservative
+choice, a needless refusal being safe where a stale recreation is not (applied per R-369, physics review P6 of PR #265;
+*was:* "`δ_λ` and `ε_w`, which every decode reads, in every entry", reworded, kept here). A change to any of them
+changes the hashes of the links it reaches and is refused naming them, never recreated. The refusal names the
+constants as well as the link: the record carries hashes, not the writer's constants, so it names each mismatched link
+with the constants its hash covers ("its entry, or `tanh_sat`, `δ_λ` or `ε_w`, changed"), and when every block
+mismatches it leads with the constants all four mismatched hashes cover, computed from the record's links: `δ_λ` and `ε_w` always, and `tanh_sat` as well when every recorded link is tanh-bearing (softmax_tanh or stick_breaking on the masses, a tanh_* link on α, β and q), saying that one of them may be what changed, so a user is not told their
+links changed when none did (applied per R-369, physics review P6 of PR #265; the lead per physics review P8 of PR
+#265, applied per R-369; *was:* "and when every block mismatches it says first that `δ_λ` or `ε_w`, the constants all
+four share, may be what changed", stale value, replaced by physics review P8 of PR #265). Every record and export carries, per block, the
+entry hash of the link it records, a u64 written as a decimal string (R-322), beside the build hash and the schema
+version, outside `SimConfig` since it derives from the build's registry and the link ids, not from the view
+(`principia_dd_image_embedding.md` §6; `principia_gui_state_contract.md` §2). A reader compares each block's against
+its own registry's entry of that id: a mismatch names exactly that link, and a match recreates across a schema change
+that left the record's links and what they reach alone, such as a payload-ledger entry no decode reads. Changing an
+entry, or a constant it reaches, changes its entry hash and the schema version; changing another entry, or the payload
+ledger, changes the schema version only. The entry hashes are not the whole decoder's identity: three things no entry
+hash or constant sees stay with the build-hash component (`principia_dd_image_embedding.md` §6's `build hash` line,
+REQ-TOOL-112), which refuses a change to them: dd_decoder §3.2–3.5's own construction (the reconstruction, the seeded
+fallback family and its order, the scale gauge); how the closed operators are evaluated (the canonical form hashes an
+operator's spelling, not its evaluation); and the emitter's rules, which leave the hashed bytes unchanged (the f32
+images of π/2 and π rounded toward zero, each tunable's f32 value rounded to nearest) (applied per R-369, physics
+review P5 of PR #265).
 
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:
@@ -915,9 +960,34 @@ log-det are written as expression trees, never as text:
 **The chart constants** *(REQ-DEC-009)*. The registry's parameters are the chart constants. Each is a
 constants-register entry in canonical units, with an exact value. The link trees read them by name (`param(name)`), and
 the generator emits them into the kernel as `crates/kernel/src/generated/constants.rs`, so that no decode or encode
-formula writes one as a literal. They are `mu_max` = 5 and `q_max` = 2 (R-10), `alpha_min` = 0 (R-21), `eps_mu` =
+formula writes one as a literal. They are `mu_max` = 5 and `q_max` = 2 (R-10; the defaults of two tunable parameters, R-481), `alpha_min` = 0 (R-21), `eps_mu` =
 `eps_z` = `eps_q` = 10⁻⁶ (chart_decoder_contract § "Three hard requirements on any registered link"), `delta_lambda` =
 10⁻¹² (R-82) and `eps_w` = 10⁻¹⁰ (chart_reference §2.2).
+
+**Tunable parameters** *(R-481 ⚑; the declaration's form applied per R-369, its ranges R-71 calibrations,
+REQ-GEN-038)*. A parameter an entry's trees read may be declared tunable, in a table beside the entries, one row per
+tunable parameter: the entry's name, the parameter's name (a chart constant the entry declares and reads), its default
+(that constant's register value), its allowed range `[lo, hi]`, closed, and its citation. Today the rows are
+`softmax_tanh`'s `mu_max` and `sigmoid_q`'s, `tanh_q`'s and `softsign_q`'s `q_max`; `alpha_min` is declared by the α
+entries and stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)", a
+stale value, replaced by R-518). The declaration adds no member to an entry, so the entries' canonical bytes
+above stand.
+- **The check.** Generation refuses a range under which the entry breaks any of the chart decoder contract's three hard
+  requirements (§ "Three hard requirements on any registered link"), tested at both ends and at a seeded sample of at
+  least 16 interior values, uniform over the range, each under a seeded fuzz of the control that includes saturating
+  controls: the output in the codomain (the simplex within its rounding); the inverse, with its ε clamps, returning the
+  control within the encode's tolerance where the forward is not saturated, at f32 and f64; and C¹, the derivative from
+  the log-det finite and agreeing with a central difference of the forward. A refusal names the entry, the parameter,
+  the value and the requirement. An entry whose forward leaves the codomain it claims is refused at every value, and a
+  slot given an entry of another codomain is refused (REQ-GEN-013).
+- **The active value.** Everything that reads a tunable parameter by name reads the active value: the trees'
+  `param(name)`, the codomain's bounds, and, outside the trees, the encode's clamps and its layer-1 range check. The
+  generated code takes the tunable parameters as an argument, one field per tunable of the registry at the float type,
+  in place of the constant; the functions without it stay, evaluated at the defaults. On the GPU the values are a
+  uniform, beside the chart params, each f32 value the f64 value rounded to nearest as a literal is (R-481, G7: a
+  uniform, not a rebuild per value). At the defaults the results are bitwise those of the constants. The link ids stay
+  type parameters, so a link change is another monomorphised variant (REQ-GEN-015) and a parameter change is not.
+- **The log-det** is evaluated at the active values, so a quantitative pass reweights with them, never the default.
 
 **The registry's entries** *(TASK-M2-01; the two rows marked R-72 are definitions, REQ-GEN-026)*. Each row of the table
 above is registered once for each block codomain it serves. The codomains are:
@@ -993,6 +1063,11 @@ in `z₂`).
   is C¹ but not C².
 - **Temperature-softmax** is not registered. The corpus gives no formula or parameter for it, and the two definitions
   above already give each block a second link with a different sampling note (REQ-GEN-014).
+- **No new entry until a study needs one (R-519).** None is added now: not a temperature-softmax, a bounded map
+  heavier-tailed than softsign, or a simplex map uniform over the simplex. A study that needs a link the registry
+  lacks, to stress its claim (chart_decoder_contract § "Integrity: the link is part of the experiment"), adds it by its
+  own task, as a definition (R-72) with its sampling note and its parameters' declarations, under physics review and
+  the check above.
 
 ---
 
@@ -1003,7 +1078,7 @@ in `z₂`).
 | **13** one-source generation | pack, unpack, export decoder, catalogue emitted from §3 only | mutate one ledger entry → all four artefacts change together; a hand-edit to any generated file is detected (generated-file guard) |
 | **5 / Memory** | the payload's physical truth is this ledger | the sub-field debug views (visual bit-layout unit test) show live, sane values per field |
 | **2 / 8** links | decode consumes registry link functions (generated Rust); encode consumes registry inverses | link swap ⇒ recompile + re-integrate; T2 round-trips through registry inverses only |
-| **sim key** | schema version (the ledger's content hash, R-36) ∈ payload compatibility signature | any ledger change invalidates every cached payload (cache serves nothing stale-schema'd) |
+| **sim key** | schema version (the ledger's content hash over its layout and kernel columns, R-36, R-545) ∈ payload compatibility signature | a layout or kernel change invalidates every cached payload (cache serves nothing stale-schema'd); a `scale` edit does not (RQ-297). *Was:* "any ledger change invalidates every cached payload" |
 | **Observation ring** | catalogue exhaustive by construction | new field appears in the picker automatically or generation fails |
 
 ---

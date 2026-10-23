@@ -294,6 +294,8 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
         Compass::default(),
         Compass {
             mode: Touch::Tilt,
+            view: crate::explore::compass::views::CompassView::Cube,
+            cursor: None,
             drag: None,
             shown: None,
             moving: false,
@@ -633,7 +635,8 @@ fn at(app: &App<MockSide>) -> (Vec<&str>, KeyMode) {
     (focus(app), app.view.focus.mode)
 }
 
-/// Walks the Compass scope on `tree`: Enter onto its first element, then → → → ← ←; the focused id at each.
+/// Walks the Compass scope on `tree`: Enter onto its first element, then → → → ← ←; the focused id at each (re-checked
+/// by TASK-M6-34: the view buttons follow Slice).
 fn sibling_walk(tree: &ScopeTree) -> Vec<String> {
     let mut f = Focus {
         path: vec![COMPASS.to_owned()],
@@ -661,11 +664,11 @@ fn check_sibling_walk(seen: &[String]) {
             COMPASS_VIEW,
             COMPASS_TILT,
             COMPASS_SLICE,
+            crate::explore::COMPASS_CUBE,
             COMPASS_SLICE,
-            COMPASS_TILT,
-            COMPASS_VIEW
+            COMPASS_TILT
         ],
-        "compass, Tilt, Slice, stopping at Slice, and back"
+        "compass, Tilt, Slice, then the view buttons from Cube (R-452), and back"
     );
 }
 

@@ -10,7 +10,7 @@
 use eframe::egui::{self, Event, Key, Modifiers};
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
-use super::support::{focus, frame_texts, headless, mock_app, press, rejects, shapes};
+use super::support::{focus, frame_texts, headless, mock_app, press, rejects, shapes, UNBOUND};
 use crate::app::App;
 use crate::explore::breadcrumb::{self, NAVIGATION, RING_WIDTH};
 use crate::explore::manifold_view::{CENTRE_Z0, SLIDERS};
@@ -671,7 +671,9 @@ fn mock_keyboard_modes_a_text_field_types_after_enter_and_keeps_esc_enter_and_ta
     rejects("a text field that types on landing", || {
         assert_eq!(landed, Some("field"))
     });
-    // Enter starts typing: interaction mode, egui's focus on the field.
+    // Enter starts typing: interaction mode, egui's focus on the field, once a key has turned keyboard navigation on
+    // (R-464 M2).
+    let _ = step(&ctx, &mut keyboard, &mut f, vec![key(UNBOUND, NONE)]);
     let left = step(&ctx, &mut keyboard, &mut f, vec![key(Key::Enter, NONE)]);
     assert!(left.is_empty(), "the layer took the Enter");
     assert_eq!(f, focus_at(&["field"], INTERACT));

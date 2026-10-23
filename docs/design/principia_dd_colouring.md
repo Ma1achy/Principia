@@ -81,6 +81,12 @@ Six poles at `{±x̂, ±ŷ, ±ẑ}`, opposing poles complementary. Hue tables: *
 
 **Seamless LUT sphere**: `N_e = 16` colours sampled uniformly from the LUT placed as equatorial poles `p̂ᵢ = (cos 2πi/N_e, sin 2πi/N_e, 0)`, LUT endpoints at the N/S poles; the identical blend evaluated in RGB. Cyclic LUTs (Twilight) close exactly by construction.
 
+**Not one-to-one (R-542; RQ-483).** At a fixed L no continuous colouring of the sphere is one-to-one (invariance of
+domain): this blend gives the antipodal shapes `±(1,1,1)/√3` one colour at κ = 1, 3 and 6 (`principia_state_map.md`
+SM6). It stays the hue carrier it is, and nothing in it changes; the state map's one-to-one sphere map is Chart
+position's 3D gradient, a separate node. Colour composition §4.1 states this, and the alternative is not offered
+(R-558, RQ-483 (a)). *Was:* "Whether colour composition §4.1 states this, or offers the alternative, is RQ-483."
+
 ### 3.3 Sphere sampling conventions
 
 Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(θ, φ)** ∈ [0, 2π]×[0, π] (R-14): θ the azimuth in the (u, v) plane on the horizontal axis, φ the polar angle from +w on the vertical axis, L⁺ (w = +1) at the top. `sph_uv` input is always the **config-space** normal (two-rotations rule).
@@ -108,7 +114,7 @@ Stability×Hue:  L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)
 
 ### 3.5 Combiners
 
-**Replace-L (Principia default)**: base RGB → OKLab; `L ← L_min + (L_max − L_min)·b`, with defaults `L_min = 0`, `L_max = 1` — so the default is `L = b`, as `principia_colour_composition.md` §4.1's truth table has it; the range form is the general case (R-77); `(a, b_ab)` untouched; → RGB. Preserves hue and chroma exactly. **Multiply**: `rgb·b` in linear space — preserves the base's own L structure (the escape hatch for monotone-L LUTs).
+**Replace-L (Principia default)**: base RGB → OKLab; `L ← L_min + (L_max − L_min)·b`, with defaults `L_min = 0`, `L_max = 1` — so the default is `L = b`, as `principia_colour_composition.md` §4.1's truth table has it; the range form is the general case (R-77); `(a, b_ab)` untouched; → RGB. Preserves hue and chroma exactly. Its option **keep in gamut** (R-558, RQ-496; `principia_state_map.md` SM15), off by default, also scales `(a, b_ab)` by `min(1, L/0.75, (1 − L)/0.35)` with the replaced L; at the default nothing here changes. **Multiply**: `rgb·b` in linear space — preserves the base's own L structure (the escape hatch for monotone-L LUTs).
 
 ### 3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)
 
@@ -263,7 +269,7 @@ Part 6 lets read them.
 3. **vMF properties:** opposing-pole midpoints → `a = b = 0` (grey); `κ → large` → nearest-pole colour; **rotation equivariance** — `blend(Rn̂, R·poles) = blend(n̂, poles)`.
 4. **LUT sphere:** an equator longitude sweep reproduces the 1-D LUT within blend tolerance; Twilight closes exactly at the wrap.
 5. **Physics overlay:** blob maxima exactly at `b̂/ê/l̂`; strength `s = 0` is the identity.
-6. **Combiner:** Replace-L leaves `(a, b_ab)` bit-stable; Multiply preserves channel ratios; the monotone-L-LUT × Replace-L pairing raises the UI conflict flag (a wiring test, not a colour test).
+6. **Combiner:** Replace-L leaves `(a, b_ab)` bit-stable at its default, keep in gamut off (R-558); Multiply preserves channel ratios; the monotone-L-LUT × Replace-L pairing raises the UI conflict flag (a wiring test, not a colour test).
 7. **Compaction:** each form monotone on its domain; log handles the −1.0 sentinel via styling, never via the ramp; symlog symmetric (`b(x) + b(−x) = 1`) with `b(0) = ½` exactly.
 8. **Categorical discipline:** a synthetic mixed quad renders the **per-sample colour-then-SSAA-resolve blend** per §3.7 (e.g. 75% escape / 25% bounded → 75/25 blended sRGB) — **never an RGB average of class *indices*, and never the vetoed majority+desaturation**; the `detail` legend switches per `state` (the regression test the three-colours bug earns).
 9. **Golden-angle adjacency:** consecutive palette indices exceed a minimum OKLab hue separation for n up to the Fibonacci-lattice counts.

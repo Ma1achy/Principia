@@ -6,7 +6,8 @@
 //!   `#141418`, not the "not yet" style or the invalid pattern (R-446); the triple outcomes are `#F29620` and `#611597`
 //!   (R-445); editing any one swatch changes only its class (`qa_col002_*`).
 //! - REQ-COL-004: the `detail` legend and palette segment switch on `state` (dd_colouring §2, §5 test 8's legend half;
-//!   R-22's pair ids) (`qa_col004_*`).
+//!   R-22's pair ids, named as a person reads them since R-449: "escape body 1/2/3", "collision 2–3/1–3/1–2", never
+//!   "body 0" or a pair by its id) (`qa_col004_*`).
 //! - REQ-TOOL-021: `state` round-trips 0–5 through the pack and the fragment's unpack, whatever the other descriptor
 //!   bits hold, and the raw `state` view shows six distinct colours, one per state (R-115) (`qa_tool021_*`).
 //! - REQ-TOOL-022: `detail` decodes per state and is read, not dropped: escapes of different bodies render different
@@ -590,16 +591,33 @@ fn check_legend(segments: &[ledger::gen::catalogue::DetailSegment]) {
             assert_eq!(c.detail, d as u32);
         }
     }
-    // Escape → body id; 3 = all three (payload §2).
+    // Escape → body id; 3 = all three (payload §2). Shown 1-based since R-449: body k reads "body k + 1".
     for d in 0..3 {
-        has(&segments[0], d, &["body", &d.to_string()]);
+        has(&segments[0], d, &[&format!("escape body {}", d + 1)]);
     }
     has(&segments[0], 3, &["triple", "ejection"]);
-    // Collision → pair id, pair k the side opposite body k (R-22).
-    for (d, bodies) in ["1–2", "0–2", "0–1"].into_iter().enumerate() {
-        has(&segments[1], d, &[&format!("pair {d}"), bodies]);
+    // Collision → pair id, pair k the side opposite body k (R-22), named by its two bodies 1-based, smaller first,
+    // never by its id (R-449): pair 0 = bodies 1, 2 "collision 2–3", pair 1 = bodies 2, 0 "collision 1–3", pair 2 =
+    // bodies 0, 1 "collision 1–2".
+    for (d, bodies) in ["2–3", "1–3", "1–2"].into_iter().enumerate() {
+        has(&segments[1], d, &[&format!("collision {bodies}")]);
     }
     has(&segments[1], 3, &["triple", "collision"]);
+    // No key shows an internal id: neither "body 0" nor "pair " and a digit (R-449; REQ-GUI-188's negative arm).
+    for s in segments {
+        for c in &s.classes {
+            let l = c.label.to_lowercase();
+            let pair_id = l
+                .match_indices("pair ")
+                .any(|(i, _)| l[i + 5..].starts_with(|ch: char| ch.is_ascii_digit()));
+            assert!(
+                !l.contains("body 0") && !pair_id,
+                "state {}'s detail {} label `{l}` shows an internal id",
+                s.state,
+                c.detail
+            );
+        }
+    }
     // sim_failed and decode_failed → their failure categories (payload §2).
     has(&segments[2], 0, &["nan"]);
     has(&segments[2], 1, &["inf"]);
@@ -638,7 +656,41 @@ negative_control!(
     expected = "state collision's detail 0 label",
     {
         let mut segments = ledger::gen::catalogue::detail_segments();
-        segments[1].classes[0].label = "pair 0: bodies 0–1".to_owned();
+        segments[1].classes[0].label = "collision 1–2".to_owned();
+        check_legend(&segments);
+    }
+);
+
+/// The same check, on the 0-based labels R-449 forbids.
+#[test]
+fn qa_col004_detail_legend_is_1_based() {
+    check_legend(&ledger::gen::catalogue::detail_segments());
+}
+
+negative_control!(
+    qa_col004_detail_legend_is_1_based,
+    "an escape legend that names body 0 fails, though it also names the shown body",
+    expected = "state escape's detail 0 label `escape body 1 (body 0)` shows an internal id",
+    {
+        let mut segments = ledger::gen::catalogue::detail_segments();
+        segments[0].classes[0].label = "escape body 1 (body 0)".to_owned();
+        check_legend(&segments);
+    }
+);
+
+/// A pair named by its id fails too.
+#[test]
+fn qa_col004_detail_legend_names_no_pair_id() {
+    check_legend(&ledger::gen::catalogue::detail_segments());
+}
+
+negative_control!(
+    qa_col004_detail_legend_names_no_pair_id,
+    "a collision legend that also gives the pair id fails",
+    expected = "state collision's detail 2 label `collision 1–2 (pair 2)` shows an internal id",
+    {
+        let mut segments = ledger::gen::catalogue::detail_segments();
+        segments[1].classes[2].label = "collision 1–2 (pair 2)".to_owned();
         check_legend(&segments);
     }
 );

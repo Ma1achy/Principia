@@ -35,7 +35,7 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical (default 50), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, step_reversible, run_reversible}` read by all consumers (R-500; *was:* `{…, reversible}`); occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical (default 50), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
 
 From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical on identical inputs, per step (comparison-only rule, §3.3; labels on chaotic trajectories may differ across precisions — `principia_parity_contract.md` Tier L, R-84); match-integrator mode for honest inspector comparison.
 
@@ -71,12 +71,22 @@ v½ = v + (dt/2)·a(r) ;   r' = r + dt·v½ ;   v' = v½ + (dt/2)·a(r')
 
 **Yoshida-4** (order 4, 3 force evals, symplectic) — composition of three KDK steps with weights
 ```
-w₁ = 1 / (2 − 2^{1/3}) = 1.3512071919596578
-w₀ = −2^{1/3} · w₁     = −1.7024143839193157        (w₀ + 2w₁ = 1)
+w₁ = 1 / (2 − 2^{1/3}) = 1.3512071919596575         (correctly rounded to f64)
+w₀ = 1 − 2w₁           = −1.702414383919315          (computed in f64; w₀ + 2w₁ = 1 exactly)
 drift coefficients d = [w₁, w₀, w₁]
 kick  coefficients c = [w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]
 ```
-i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6).
+i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real, and the composition is still reversible at a fixed step: it is symmetric, so `step_reversible` holds whatever the sign of `w₀` (test 3, §5). What breaks naive time-reversal of a run is the wrapper's adaptive substepping and COM projection (integrator contract Part 6; R-500, closing RQ-369). *Was:* "The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6)."
+*Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
+262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there, `w₁ = 1 / (2 −
+2^{1/3})` and `w₀ = −2^{1/3} · w₁`. *The digits (R-515, closing RQ-405):* `w₁` is the closed form's correctly rounded f64
+value (exact `1.351207191959657634…`, relative difference `6.2·10⁻¹⁷`); `w₀` is `1 − 2w₁` as computed in f64, a
+subtraction that is exact, so that `w₀ + 2w₁ = 1` holds exactly in f64, as Yoshida-6's `w₀` is computed from its
+consistency condition. It differs from the closed form's `w₀ = −1.702414383919315268…` by `9.9·10⁻¹⁷` relative, and the
+cubic order condition's residual `|2w₁³ + w₀³| / Σ|w|³` is `5.5·10⁻¹⁷` (§5, test 1a). Each printed value is the shortest
+decimal that parses to the shipped f64. *Was (RQ-405's (a), applied meanwhile):* `w₁ = … = 1.3512071919596578`,
+`w₀ = −2^{1/3} · w₁ = −1.7024143839193157 (w₀ + 2w₁ = 1)`, digits that were neither the closed form's correctly rounded
+f64 values nor gave `w₀ + 2w₁ = 1` in f64 (`0.9999999999999998`; physics review 5587467237 of PR #258, P2).
 
 **Yoshida-6** (order 6, 7 force evals, symplectic) — Yoshida (1990), **solution A**:
 ```
@@ -87,7 +97,13 @@ w₀ =  1 − 2(w₁ + w₂ + w₃) = 1.31518632068391
 drift sequence d = [w₃, w₂, w₁, w₀, w₁, w₂, w₃]
 kick sequence  cᵢ = (d_{i−1} + dᵢ)/2  with  d₀ = d₈ = 0
 ```
-*(Transcription check: verify the three w's against Yoshida 1990 Table 1 solution A — the paper is in the lit-review set — before they enter the shared physics source.)*
+*Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
+262–268, Table 1, solution A (`w₁`, `w₂`, `w₃` as printed above; `w₀` from the consistency condition). The paper is not
+added to the corpus: the citation stands with the digits, and the transcription is checked by a convergence-order test
+(§5, test 1a), which fails on a transcription error. Like Yoshida-4's, the composition is symmetric, so it is
+reversible at a fixed step despite its negative weight `w₁` (test 3; R-500). *Was:* "(Transcription check: verify the
+three w's against Yoshida 1990 Table 1 solution A — the paper is in the lit-review set — before they enter the shared
+physics source.)" (R-57; R-501 replaces the check against the paper with the citation and the test.)
 
 **RK4** (order 4, 4 force evals, **not** symplectic — Validation cross-check occupant; the inspector's *adaptive* high-precision reference is the separate RK45, integrator contract §6): the standard tableau on the full state `y = (r, p)`, `ẏ = (p/m, F(r))`:
 ```
@@ -95,27 +111,45 @@ k₁ = f(y);  k₂ = f(y + dt/2·k₁);  k₃ = f(y + dt/2·k₂);  k₄ = f(y +
 y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 ```
 
+These are the steppers with regularisation `none`, where the Hamiltonian is separable. Every stepper also runs under
+every regularisation (R-561); on a non-separable one (Aarseth–Zare, Heggie) KDK and the Yoshida steps are the explicit
+composition integrator contract Part 2b defines (the sub-steps in this section's drift order, their adjacent half-kicks
+not merged: the merged kick sequence above holds on a separable Hamiltonian only), and the pairs measured not to work
+carry a warning (its table). The default occupant is Heggie × RK4 (R-560).
+
 ### 3.3 Substep law — and the determinism pin, made concrete
 
 ```
-N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [r_sub = 0.05, γ_sub = 1.5, N_max = 64]
+N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [defaults r_sub = 0.05, γ_sub = 1.5, N_max = 64; each on the sim key]
 ```
 
 <!-- retired-terms -->
 This formula *specifies* `N_sub`; it does **not** compute it at runtime. `N_sub` is a **branch decision**, and the determinism rule for branch decisions is stronger and different from what an earlier draft assumed (which had `N_sub` computed as the f32 evaluation with `Math.fround`-per-stage on the CPU to match the GPU). **The spike (`principia_spike_brief.md` findings, 2026-07) measured that rule forking** — 5/272 boundary states — and a **controlled test overturned the cause**: it is **not** fast-math and **not** FMA contraction, but *inherent cross-implementation transcendental latitude*. A GPU's `pow` and libm's `powf` legitimately disagree by 1–3 ulp (e.g. `pow(4.000000477, 1.5)` → exactly `8.0` on Metal vs `8.000001907` in libm), **in both fast and safe math modes** — so *any* runtime transcendental feeding a `ceil` at an integer boundary can fork, and no amount of matched rounding fixes it because the two libraries are each entitled to their own result.
 <!-- /retired-terms -->
 
-**The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants** and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
+**The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants, or against values every backend receives bit-identically** (the sim key's threshold table, R-502; *was:* "against compile-time constants") and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
 
 ```
-N_sub  =  bucket( d² )  via a generated comparison tree over 64 constants
-          THR[n] = round_f32( ( r_sub / n^{2/3} )² )   for n = 1 … N_max     (frozen at build time)
+N_sub  =  min( bucket( d² ), N_max )  via a generated comparison tree over the sim key's table
+          THR[n] = round_f32( ( r_sub · n^{−1/γ_sub} )² )   for n = 1 … L_max     (generated per sim key on the host; L_max the maximum length)
+          — at γ_sub = 1.5, THR[n] = round_f32( ( r_sub / n^{2/3} )² );
           — smaller d² ⇒ smaller r_min ⇒ larger N_sub;  no runtime sqrt / div / pow / loop / dynamic index
 ```
 
-The transcendental (`pow`) still exists — it moves from *runtime, every substep, every backend* (where it forks) to *once, at table-generation time, into a constant* (where it cannot). The generator may use f64 libm freely; only the frozen f32 output ships, and every backend then compares against the identical bit-pattern.
+The transcendental (`pow`) still exists — it moves from *runtime, every substep, every backend* (where it forks) to *once per sim key, on the host, into a table* (where it cannot). *Was:* "to *once, at table-generation time, into a constant* … The generator may use f64 libm freely; only the frozen f32 output ships", with the code block's "(frozen at build time)" and "over 64 constants".
 
-**The one value feeding the comparison must itself be built identically.** `d²` is a scrap of arithmetic (`dx² + dy²`), and if one backend contracts it to an `fma` and another does not it can differ by a ulp — re-forking at a bucket edge. So `d²` is **position-quantised**: cast positions to f32, then lone-subtract, lone-multiply, and an **explicitly written** `fma(dy, dy, dx*dx)` (explicit, so every backend is forced onto the identical fused op rather than choosing). Then the sole float feeding the sole branch is bit-identical everywhere, and the branch cannot fork.
+**The table is generated per sim key (R-502, closing RQ-370).** `r_sub`, `gamma_sub` and `N_max` are user-adjustable
+sim-key values (integrator contract Part 3), so the thresholds are generated on the host for the sim key's values,
+`THR[1..=L_max]` by the one formula (monotone, so the tree is; `min(·, N_max)` caps the result), and shipped in `SimUniforms` as exact f32 bit patterns; the comparison tree reads them by constant
+index, its shape generated once over the table's maximum length. The branch still compares the one quantised float,
+`d²`, against values both pipelines receive bit-identically, so the determinism pin holds; a change of `r_sub`,
+`gamma_sub` or `N_max` is a sim-key change and re-integrates, as before. The host computes each threshold in f64 with a
+**pinned pure-software libm** (no platform libm, no compiler intrinsic), rounding once to f32, so the native host and
+the wasm host give identical bits. The table's **maximum length** is a calibration value (R-71): an `N_max` above it is
+refused, never truncated. A test asserts that the default configuration (`r_sub = 0.05`, `γ_sub = 1.5`, `N_max = 64`)
+reproduces the build-time table, generated by `cargo xtask codegen` and checked in, bit for bit.
+
+**The one value feeding the comparison must itself be built identically.** `d²` is a scrap of arithmetic (`dx² + dy²`), and if one backend contracts it to an `fma` and another does not it can differ by a ulp — re-forking at a bucket edge. So `d²` is **position-quantised**: cast positions to f32, then lone-subtract, and form the squares and their sum only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547; gpu_determinism_note rules 2 and 6), in a form TASK-M4-03 writes and proves (REQ-INT-066). *Was:* "then lone-subtract, lone-multiply, and an **explicitly written** `fma(dy, dy, dx*dx)` (explicit, so every backend is forced onto the identical fused op rather than choosing)". Then the sole float feeding the sole branch is bit-identical everywhere, and the branch cannot fork.
 
 Two further branch-path rules the spike earned by real failure:
 - **Clamp in f32 *before* the float→int cast.** Out-of-range `OpConvertFToU` is UB on the GPU (Rust's `as` saturates instead) — a fork source independent of rounding. Clamp `d²`/the bucket index into range in f32 first.
@@ -145,6 +179,10 @@ accumulate:  ΔE_final, max|ΔE|, ΔL_z final, max|ΔL_z|
 suspect predicates (READ-TIME, over the stored drift latches — no stored suspect bits, payload §5): energy-suspect on relative δE ; L_z-suspect on **absolute** ΔL_z
 ```
 
+Under a regularised occupant the energy-suspect predicate reads the **regularised** energy, and `E` above, the
+Cartesian energy, is a diagnostic read only from runs that did not stop at an event (R-566; integrator contract Part 1,
+"Under a regularised occupant, two energies, named (R-566)"; where the regularised drift is stored is RQ-528).
+
 Final *and* max are both stored because the *shape* of drift is the diagnostic: bounded oscillation ≈ fine; secular ≈ concerning; a spike that recovers = close-encounter stress (the Drift-shape cross-check view).
 
 ### 3.6 Detectors (per `STEP`, on the projected state)
@@ -165,7 +203,8 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
 - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
-  unregularised occupants and at sync boundaries for regularised ones (R-95).
+  unregularised occupants and at sync boundaries for regularised ones (R-95), on the fixed grid `Δ_sync`, the window
+  stated in physical time and never as a count of boundaries (R-565).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
@@ -210,7 +249,7 @@ SIM_FAILED (non-finite state)  >  COLLISION  >  ESCAPE  >  BOUNDED (t ≥ T — 
 ```
 Shape map (Montgomery), from mass-weighted Jacobi (ρ̃, λ̃), I = ‖ρ̃‖² + ‖λ̃‖²:
    u = ‖ρ̃‖² − ‖λ̃‖²          v = 2 (ρ̃ · λ̃)          w = 2 (ρ̃ ∧ λ̃)   (signed area)
-   n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles
+   n = (u, v, w)/I ∈ S²      — w = ±1 at the Lagrange (equilateral) poles at equal masses (R-549)
 ```
 
 **The physics-overlay convention** (Montgomery's shape sphere, equal masses). Three classes of special
@@ -219,7 +258,7 @@ configuration sit at fixed points:
 | symbol | configuration | location | count |
 |---|---|---|---|
 | $BC_{01}, BC_{12}, BC_{20}$ | binary collisions | equator, 120° apart | 3 |
-| $E_0, E_1, E_2$ | Euler collinear | equator, between the collisions | 3 |
+| $E_0, E_1, E_2$ | Euler collinear, $E_j$ with body $j$ in the middle | equator, between the collisions | 3 |
 | $L^+, L^-$ | Lagrange equilateral | north and south poles | 2 |
 
 **The landmarks are computed from the shape map above, not hard-coded (R-14).** A binary collision's $\hat{\mathbf b}$ is
@@ -238,8 +277,11 @@ The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
 fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
 These labels are internal. Shown on the overlay, they name the bodies 1-based (R-449): `BC₀₁`, `BC₁₂` and `BC₂₀` read
-`BC₁₂`, `BC₂₃` and `BC₁₃`, a pair's bodies smaller first. The table's `E₀, E₁, E₂` index is not defined beyond
-`ê_j = −b̂_j`; how they are shown is RQ-334.
+`BC₁₂`, `BC₂₃` and `BC₁₃`, a pair's bodies smaller first. `E_j` is the collinear configuration with body `j` in the
+middle, and it is shown as `E_{j+1}` through R-449's one conversion function, so `E₀, E₁, E₂` read `E₁, E₂, E₃`;
+its antipodality to the other two bodies' binary collision (`ê_j = −b̂_j`, `b̂_j` the collision of pair `j`, the side
+opposite body `j`) is stated for equal masses only (R-549, RQ-334). *Was:* "The table's `E₀, E₁, E₂` index is not
+defined beyond `ê_j = −b̂_j`; how they are shown is RQ-334."
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
 
@@ -285,8 +327,33 @@ Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprin
 Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **Burrau IC** (via encode from the (3,4,5) construction).
 
 1. **Order scaling (Kepler-embedded):** set `m₂ → ε` so bodies 0–1 form a near-Kepler pair; energy error over one orbit scales `∝ dt²` (KDK), `∝ dt⁴` (Yoshida-4, RK4), `∝ dt⁶` (Yoshida-6) across a dt ladder.
+   1a. **Convergence order of the transcribed coefficients (R-501):** on the same fixture, the fitted quantity is the
+   maximum relative energy error over one orbit, `max_t |E(t) − E₀| / |E₀|`, fitted against `dt` on a log–log ladder;
+   Yoshida-4's fitted order rounds to 4 and Yoshida-6's to 6. *Controls:* each free coefficient (Yoshida-4's `w₁`;
+   Yoshida-6's `w₁`, `w₂`, `w₃`) with its **4th significant digit** changed, `w₀` recomputed from the consistency
+   condition so that only the higher order conditions break, must give a fitted order that rounds lower. A relative
+   change `δ` adds an error term of about `δ·dt²`, which the ladder resolves only above a **detection floor**, estimated at
+   about `3·10⁻⁷` relative for Yoshida-4 (`δ² ≳ 10⁻¹³`) and about `10⁻⁹` for Yoshida-6 (`δ^{3/2} ≳ 10⁻¹³`) at f64, so
+   about the 7th and the 10th significant digits; the test measures the floor (the smallest relative change it
+   detects) and prints it. **The later digits** are covered by REQ-INT-037's equality to the printed digits and by an
+   **algebraic check** on the shipped f64 constants, evaluated exactly (in rational or 50-digit decimal arithmetic) on
+   their f64 values, of the order conditions of a symmetric composition of a symmetric second-order step,
+   `S(h) = exp(hA₁ + h³A₃ + h⁵A₅ + …)`: `|Σw − 1|` and `|Σw³| / Σ|w|³` for both, and for Yoshida-6 the two fifth-order
+   conditions, `|Σw⁵| / Σ|w|⁵` and the nested one, the coefficient of `[A₁,[A₁,A₃]]` in the composition's
+   Baker–Campbell–Hausdorff logarithm at `h⁵` (taken exactly in the free algebra truncated at degree 5), divided by the
+   same coefficient computed with `|w|`. With the nested condition the set is complete to order 6 (the degree-5 Lie
+   elements are `A₅` and `[A₁,[A₁,A₃]]`), which physics confirms; *as first ported:* `Σw⁵` alone, a necessary subset
+   (qa review 5587775086 B). The residuals are at most `3·10⁻¹⁵` (Yoshida-4, f64 rounding) and `5·10⁻¹⁴` (Yoshida-6,
+   Table 1's 15-digit truncation). Measured on the printed digits: Yoshida-4 `|Σw − 1| = 0` and `5.5·10⁻¹⁷` (R-515; *was* `2.9·10⁻¹⁶`, on RQ-405's interim digits), Yoshida-6 `5.1·10⁻¹⁵` (`Σw⁵`;
+   the nested condition `4.0·10⁻¹⁶`). Its controls: each coefficient (Yoshida-6's `w₀` recomputed) changed by one unit of its 15th significant digit (Yoshida-4) or its 13th
+   (Yoshida-6), in each direction, must exceed the bound (measured: at least `9.9·10⁻¹⁵` and `2.8·10⁻¹³`; R-515, *was* `9.8·10⁻¹⁵` on RQ-405's interim digits). Past those
+   positions a change can lower a residual (Table 1's own truncation sets Yoshida-6's, f64 rounding Yoshida-4's), and a
+   last-digit change of Yoshida-4 can parse to the same f64, so the last printed digits are REQ-INT-037's alone. It
+   stands in for checking the digits against the paper, which is cited, not held (§3.2). *As first ported:* "the
+   control is each coefficient with one printed digit changed, … which … must fail the test" (code review 5587492719
+   C5, physics review 5587467237 P1, qa review 5587466555 item 1 of PR #258: unmeetable for the late digits).
 2. **Symplectic vs not:** long bounded orbit — KDK/Yoshida energy error *oscillates* about E₀ with no secular trend; RK4 and Euler drift secularly; **Euler's violent drift lighting up `SUSPECT_ENERGY` is the pass condition** (the debug-occupant test).
-3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks.
+3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks. It is what the profile's `step_reversible` means (integrator contract Part 2, R-500): asserted at rounding level for KDK, Yoshida-4 and Yoshida-6, negative weights included; for the regularised occupants it is a measurement, not an assertion: the residual of each built one (Aarseth–Zare + RK4, Heggie, logH in each time mode) is recorded, and its profile's `step_reversible` is the measured verdict. On a regularised occupant's extended state, "momentum-negate" is that occupant's time-reversal map (which regularised momenta are negated, how its time variable and conjugate, and TTL's auxiliary `W`, are mapped), a definition TASK-M3-08 writes (REQ-INT-095, R-72); the residual and its norm are taken on that full extended state. "Rounding level" is a calibrated criterion (REQ-VAL-191, R-71), proposed by TASK-M3-02 and used by both; the measurement's control is a known-asymmetric stepper at the same `dt` (RK4, and REQ-VAL-032's asymmetric Yoshida-4), which must read not reversible.
 <!-- retired-terms -->
 4. **Substep determinism:** over fuzzed states straddling **bucket edges** (§3.3 threshold table), **all backends** — CPU-f64, CPU-f32, native-GPU, browser-GPU-via-WGSL — produce the identical `N_sub` integer, always (0 forks; the CPU-fround approach this replaced forked 5/272).
 <!-- /retired-terms -->
@@ -294,7 +361,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 6. **Detector — collision & priority:** head-on pair crosses `r_coll` → `COLLISION(pair)` with the correct pair id; two pairs below `r_coll` in the same step → `COLLISION` with `detail = 3`, never a binary label (change 7); a contrived same-step collision+escape resolves per §3.6 priority, identically on both precisions (R-30's order by time, a same-time tie going to collision; REQ-EVT-020, R-339).
 7. **Drift shape:** a close-encounter IC shows `max|ΔE| ≫ |ΔE_final|` (spike that recovered) — validates storing both and the cross-check view's premise.
 8. **Winding & terminal latch:** on a circulating bounded orbit, `θ̃` is continuous (no 2π jumps), `orbit_count` matches a hand-counted winding, `retrograde` matches the L_z sign; post-event slots are frozen at the terminal state (finalisation).
-9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
+9. **Shape-map identities:** `‖n‖ = 1` always; equilateral configs → `n_w = ±1` (poles) at equal masses, and `n_w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)` for every mass set (R-549, RQ-355); collinear (Euler) configs → `n_w = 0` (equator); binary-collision limits approach the b̂ points. **Numeric landmarks (R-14):** `BC₀₁ → (−1, 0, 0)` for any masses; `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)` at equal masses; all three binary collisions at `w = 0` for random masses; equal masses put the collisions 120° apart (azimuths 180°, 60°, 300°). **Cross-check:** `n` against the IC Inspector's JS (`shapePoint` after its canonicalise, `docs/gui/reference/ic_inspector.html`) on random ICs, agreeing to f64 round-off once the mirror fold is applied (the Inspector canonicalises to `w ≥ 0`, so compare against `|w|`). Checked at step 3: 5,000 random ICs, max difference 1.2e−15.
 10. **Benettin invariance:** halving `δ₀` and doubling `n_renorm` (within the linear regime) leaves λ_T unchanged within tolerance; λ_T ≈ 0 on the quasi-regular Kepler-embedded orbit, large on Burrau.
 11. **Ensemble sanity:** deep basin-interior pixel → `H = 0`, tiny σ²; a straddling boundary pixel → `H > 0`; and each sample's **Benettin shadow is excluded from the colour/spread pool** (asserting the shadow-is-not-a-sample separation structurally).
 12. **Burrau smoke (literature-anchored):** the classical rest start resolves to binary + escaper within the default horizon, qualitatively matching Szebehely & Peters (1967); asserted as outcome-class + coarse `t_end` window, not trajectories.
@@ -308,8 +375,8 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 - ~~**Priority-order pin (§3.6)**~~ — **settled by R-30** (by time; REQ-EVT-020): the pin above is superseded and kept in §3.6 for the record (R-339). Was: introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
-- **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
-- **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
+- **Yoshida-6 coefficients** — *settled by R-501:* the coefficients carry their citation (Yoshida 1990, Table 1, solution A; §3.2) and test 1a's convergence-order check; the paper is not added. Was: verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
+- **Reversibility replay** — bounded and deferred per the integrator contract Part 6; nothing here forecloses it. Regularisation is v1 (R-562); whether Kustaanheimo–Stiefel has a place is RQ-530. *Was:* "**Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either."
 <!-- /retired-terms -->
 
 ---

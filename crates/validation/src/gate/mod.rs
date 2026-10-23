@@ -27,6 +27,8 @@ pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
 use crate::convergence::ConvergenceGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
+use crate::eps_phys::EpsPhysGate;
+use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
 use crate::oklab::OklabRoundtripGate;
 use crate::shape_roundtrip::ShapeRoundtripGate;
@@ -53,6 +55,9 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &DecodeF32EpsGate,
     &ShapeRoundtripGate,
     &InvariantGradientGate,
+    &EpsPhysGate,
+    &InspectorHandlesGate,
+    &InspectorRoundtripGate,
 ];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.

@@ -148,8 +148,9 @@ TASK-M2-31.
   `qa_TASK-M1-18_r434.rs`) are ruling-forced changes (R-444 to R-448): qa makes them, and the PR lists each `M` line with
   the assertion it changes (R-290, R-369).
 - The values are the human's (R-444, R-445, R-447); the separation figures are proposals of evidence for the gate, not
-  of values. Two departures from the human's words are open: RQ-331 (the closest pair) and RQ-332 (C and three
-  swatches); the task builds the ruled swatches meanwhile.
+  of values. Two departures from the human's words were queued, RQ-331 (the closest pair) and RQ-332 (C and three
+  swatches); the task built the ruled swatches, and R-546 (21 Oct 2026) keeps them: 0.175 is the closest pair, and C =
+  0.123 is in gamut at every listed hue.
 - PR #225 (TASK-M2-09) tags an infeasible invariant-chart pixel `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed`/3;
   this view draws it the hatch where the chart hatches it (past `[0,1]²`, the warp's bounded axes) and black anywhere
   else. Inside `[0,1]²` the warp maps every pixel feasible in exact arithmetic (chart_reference §2.1), so there the tag
@@ -164,7 +165,8 @@ TASK-M2-31.
 - **R-455 (17 Oct 2026; closes RQ-366).** The `outcome_oklab_variant` line's "its hue within 0.5° of R-447's" is each
   class's own OKLab hue, which every swatch meets; escape body 3's `#09B9CD` is recorded at 0.54° from its row and
   stays. RQ-366 is archived on `main` with its ruling, so this task's `REVIEW_QUEUE.md` no longer carries it.
-- Which debug view shows the η_E tags is RQ-333; this task does not wait on it.
+- Which debug view shows the η_E tags was RQ-333; R-546 rules it the existing `state` and `detail` views, R-467's View ›
+  Debug view, nothing new built; this task did not wait on it.
 - Review fixes on PR #226, applied per R-369: the acceptance commands run as cargo takes them (code review 5547986569,
   F1); the GUI mock's legend, samples and `mock_legend_keys` follow the nine classes, with a legend acceptance line
   and screenshot (gui review 5548034323, G1); REQ-COL-102's field is Part 3's hatching, not the area statistics'
@@ -172,3 +174,6 @@ TASK-M2-31.
   details, not a stored NaN (P3).
 - The outcome × `t_end` bivariate preset (R-445) is TASK-M7-17's; the preset library's entry for the OKLab-uniform set
   is TASK-M7-17's too.
+- **R-511 (20 Oct 2026; merged task, a note):** a presentation `decode_failed` sample now draws blank, not `#141418`;
+  `sim_failed` keeps `#141418`. TASK-M2-34 changes what this task built (REQ-COL-108), re-checked at the M2 gate; the
+  text above is kept as built (gui review 5587650119 of PR #255, G11).

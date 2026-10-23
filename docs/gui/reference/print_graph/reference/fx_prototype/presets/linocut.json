@@ -1,0 +1,73 @@
+{
+ "name": "Linocut",
+ "doc": "White gouges along the forms, more and wider where light; solid lands in the dark; burnished mottle.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "g1": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 1.1,
+    "density": 0.006,
+    "length": 24,
+    "seed": "$seed",
+    "amp_var": 0.3
+   }
+  },
+  "g2": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 0.8,
+    "density": 0.01,
+    "length": 14,
+    "seed": "$seed+1",
+    "amp_var": 0.3
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 14,
+    "octaves": 3,
+    "seed": "$seed"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "g1": "g1",
+    "g2": "g2",
+    "n0": "n0"
+   },
+   "p": {
+    "f": "L = stretch(blur(lum(I), 1.0))\ngouge = maximum(g1, 0.9*g2)\ncut = (gouge*(0.4+1.6*L) > 0.55-0.2*L) | (L > 0.86)\ninked = ndi.binary_opening(~cut, iterations=1)\nmottle = clip(0.93+0.07*n0, 0.75, 1.0)\ncov = gaussian(inked.astype(float), 0.5)*mottle\nout = array([0.95, 0.93, 0.87])*(1-cov[..., None]) + array([0.09, 0.08, 0.08])*cov[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

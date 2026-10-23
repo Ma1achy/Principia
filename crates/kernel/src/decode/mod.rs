@@ -21,13 +21,14 @@
 //! momentum block reads no configuration; the configuration is passed to it so that an invariant-momentum block
 //! (dd_decoder §3.4) reads the already-decoded masses and configuration through the same entry. The derived
 //! invariants read only the joined `(m, r, p)`. The output is the canonical `(m, r, p)` ([`Ic`], seam 3), the block
-//! outputs, the descriptor and the `DEGENERATE` tag: a tagged decode is kept, never dropped.
+//! outputs, the descriptor and the `DEGENERATE` tag: a tagged decode is kept, never dropped. The tag is the mass
+//! block's, else the momentum stage's ([`Blocks::tag`]): an earlier block's tag is kept (dd_decoder §3.7).
 //!
 //! **No guard** (REQ-DEC-028; validation ground-truth note, "Degenerate configs"): the decoder accepts any finite `z`
 //! (R-407), and nothing in it clamps, lands on or excludes an endpoint. In exact arithmetic degenerate configurations
 //! are approached as limits; in floating point the range is closed (R-417, dd_decoder §3.2), the lower poles reached
 //! only by the links' own rounding where their output underflows. The only tag is the narrow, enumerated
-//! `DEGENERATE` cause.
+//! `DEGENERATE` cause ([`degenerate`]'s closed set).
 
 pub mod config;
 pub mod degenerate;
@@ -73,6 +74,12 @@ pub trait Blocks<R: PayloadReal> {
     fn momentum(&mut self, z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R>;
     /// The derived invariants, the `ICDescriptor`, from the joined `(m, r, p)`.
     fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R>;
+    /// The `DEGENERATE` reason the momentum stage raised, read once it has run: none for the free momentum block; the
+    /// invariant-momentum construction's `INVARIANT_INFEASIBLE` or `NO_QUALIFYING_SEED` ([`invariant::Outcome::tag`]).
+    #[inline]
+    fn tag(&self) -> Option<Degenerate> {
+        None
+    }
 }
 
 /// The free-momentum decoder under the selection `S`: the blocks of [`mass`], [`config`] and [`momentum`], and
@@ -151,7 +158,7 @@ pub fn decode_with<R: PayloadReal, B: Blocks<R>>(blocks: &mut B, z: &Latent<R>) 
         config,
         momentum,
         descriptor,
-        degenerate: masses.degenerate,
+        degenerate: masses.degenerate.or(blocks.tag()),
     }
 }
 

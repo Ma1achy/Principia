@@ -26,13 +26,63 @@ From the **render contract**: the decode stage writes `ICDescriptor` (what the I
 
 From **totality** (scheduler/render): invalid decodes are **tagged, never dropped** — `DEGENERATE(reason)` is a decode-time terminal label with a narrow, enumerated cause set.
 
+**The `DEGENERATE` cause set** *(definition, R-72; REQ-DEC-038, written by TASK-M2-24)*. The set is closed: five
+reasons, each raised by one block, and none other. Each is recorded in payload §2's `sample_descriptor` as
+`state = decode_failed` (5) with the `detail` code below (`principia_dd_simstate_payload.md` §2, "`detail` failure
+enum"):
+
+| Reason | Raised by, and when | `decode_failed` `detail` |
+|---|---|---|
+| `M01_TINY` | the mass block: `M₀₁ < ε_M01` (§3.1), on the emitted masses of every chart, a chart that sets its masses directly included | 2, invalid mass construction |
+| `NO_QUALIFYING_SEED` | the invariant-momentum construction: feasible targets, but no seed has `‖w⁽²⁾‖²_m > ε_w` (§3.4, R-82) | 1, degenerate configuration |
+| `INVARIANT_INFEASIBLE` | the invariant-momentum construction: `K* < L_z²/(2I)` (`principia_chart_reference.md` §2.2) | 3, other |
+| `ENERGY_INFEASIBLE` | `η_E`: `E* < U` (§3.7) | 3, other |
+| `ENERGY_UNSCALABLE` | `η_E`: the rest start at `E* > U`, or the collision pole `U = −∞` (§3.7) | 3, other |
+
+- **Why these codes.** `M01_TINY` is the mass simplex's boundary, a mass → 0, which is code 2's own example.
+  `NO_QUALIFYING_SEED` fires only where every seed's projected norm is at most `ε_w`; at `I = 1` the largest is at
+  least ½ (`principia_chart_reference.md` §2.2), so it is reached only on a configuration collapsed toward a point,
+  which is code 1's degenerate configuration. The other three are a target the decoded configuration cannot meet, not
+  a defect of the configuration or the masses: `INVARIANT_INFEASIBLE` is code 3 by `principia_chart_reference.md`
+  §2.2, and the two `η_E` reasons are the same kind of failure, so code 3 too. `ENERGY_UNSCALABLE` at the collision pole
+  is code 3, not 1: the pole without a target is no decode failure at all, but a valid IC already collided
+  (payload §2, "A valid t=0 terminal is a real outcome"), so what fails there is the target.
+- **Code 0 has no reason.** A non-finite decode output is not a `DEGENERATE` reason: the decode of a finite input
+  inside the chart's domain is finite, and that is asserted, not tagged (`crates/kernel/tests/decode_totality.rs`).
+  Code 0 is what the payload records for a decode whose output is non-finite all the same.
+- **Precedence.** One decode carries at most one reason, the first block's: the mass block's, then the momentum
+  stage's (`INVARIANT_INFEASIBLE` over `NO_QUALIFYING_SEED`, `principia_chart_reference.md` §2.2), then `η_E`'s, which
+  runs after the momentum block (§3.7), and which no chart with a momentum construction allows.
+- **Every pixel carries a label.** A decode is either tagged with one reason or untagged and goes on to integration,
+  so no pixel is dropped and none is unlabelled (`principia_chart_reference.md` §0.7). A tagged decode keeps its
+  outputs: its `(m, r, p)` finite, its descriptor never NaN, and infinite only at R-436's poles, `rho_ratio`'s `+∞`
+  and `V_0`'s `−∞` (the collision pole).
+
+**The decoder's branch inputs** *(enumerated per R-34; REQ-VAL-017, written by TASK-M2-24)*. Every decision the
+decode makes that test 12 compares bit for bit across backends, with the value it reads and how that value is formed:
+
+| Decision | Branch input, and its form | Where |
+|---|---|---|
+| `M01_TINY` | `M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011) | `kernel::decode::mass` |
+| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible` |
+| `L_max`'s four steps down (the warp's edge columns) | the same exact sign at each step | `kernel::chart::invariant::l_max` |
+| the seed, on a decoded configuration | `z_α ≤ 0`, read on the control's bits | `kernel::decode::invariant::decoded_seed` |
+| the seed, on the Burrau family | `3ν ≤ 1`, by a two-sum of `2ν + ν`, comparisons only | `kernel::chart::burrau::seed` |
+| `NO_QUALIFYING_SEED` | each seed's computed `‖w⁽²⁾‖²_m` against `ε_w`, strict comparisons in seed order; reached only through the rule on computed norms, on a configuration not from the canonical decode, whose choice near a tie is not claimed branch-identical (§3.4) | `kernel::decode::invariant::choose` |
+| `η_E`'s outcome | `r_min_pair_0 = 0`, `E* < V₀`, `E* = V₀` and `s = 0`, comparisons of emitted values with no arithmetic at the decision (§3.7) | `kernel::decode::energy_norm::normalise` |
+| `η_E`'s switch | the energy target's `Option`: on the GPU a uniform flag beside `E*` (R-25), the same for the whole dispatch | `kernel::stage::decode::target` |
+| the mirror in `C` (the shape sphere's decode) | `λ̃_y < −δ_λ`, decided in exact mantissa-exponent arithmetic from the state's pair differences (§3.3; R-82). It writes no tag: its branch is compared bit for bit across backends by TASK-M2-07's `canon_gpu` (`canonicaliser_seam_sweep` at the seam states, `canonicaliser_mirror_tie` at the tie), and test 12 compares the shape sphere's decode it feeds | `kernel::canon::mirror_decision` |
+
+The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
+comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
+
 ---
 
 ## 3. The maths
 
 Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
 
-**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols.
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols. Since R-481 the two are the defaults of tunable link parameters, each within an allowed range, and every formula reads the active value (`principia_dd_generation_root.md` §3.9, "Tunable parameters").
 `α_min = 0` (R-21): full-sphere coverage.
 
 ### 3.1 Mass
@@ -68,6 +118,12 @@ decoration, is a check for the second-backend parity run, not settled here. So `
 link, at its onset crossings, is a branch input for the parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079).
 That test compares tags on identical emitted masses: a disagreement under `z` fuzz is a fork only where the two
 backends' masses are bit-identical; where the masses differ, it is precision (REQ-VAL-079).
+
+**The premise fails (R-547, closing RQ-298).** CI's lavapipe evaluates an explicit `fma` as a rounded product and an
+add, so the form above is not one every backend rounds alike. Under R-547 a branch input that must agree across
+backends is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal
+(gpu_determinism_note rules 2 and 6). `M₀₁`'s form is rewritten to that rule and re-proved by TASK-M2-48
+(REQ-DEC-011, REQ-VAL-017); the two paragraphs above stand as the record of the form built until then.
 
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 

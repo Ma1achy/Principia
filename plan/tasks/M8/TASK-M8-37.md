@@ -1,4 +1,4 @@
-# TASK-M8-37 — Browser build: the wasm engine in a Web Worker on an OffscreenCanvas, the TS shell, coi-serviceworker
+# TASK-M8-37 — Browser build (v1 web): the wasm engine in a Web Worker on an OffscreenCanvas, the main-thread shell, coi-serviceworker
 
 - **Milestone:** M8
 - **Closes:** REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143
@@ -9,7 +9,7 @@
 - **Size:** ~530 lines
 
 ## Goal
-The browser product exists: the whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render, playhead and barrier) runs in the wasm engine inside a Web Worker on an OffscreenCanvas transferred once at startup; the main thread is a separate TS binary — an input pump and DOM-GUI host that owns no simulation state. Resize is observed on the main thread and sent as one message that reconfigures the swapchain in the worker. Cross-origin isolation on GitHub Pages comes from a self-hosted `coi-serviceworker` beside `index.html`. The equirect bake is debounced (120 ms) via `copyExternalImageToTexture` and never lands inside the frame callback.
+v1 web's build exists (R-571: the whole native app, compiled to run in the browser, its GUI the native app's): the whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render, playhead and barrier) runs in the wasm engine inside a Web Worker on an OffscreenCanvas transferred once at startup; the main thread is a separate binary that owns no simulation state and hosts no DOM GUI, the GUI being the native app's egui (where egui runs, and so what else the main thread holds, is RQ-551). Resize is observed on the main thread and sent as one message that reconfigures the swapchain in the worker. Cross-origin isolation on GitHub Pages comes from a self-hosted `coi-serviceworker` beside `index.html`. The equirect bake is debounced (120 ms) via `copyExternalImageToTexture` and never lands inside the frame callback.
 
 ## References
 - `docs/contracts/principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
@@ -24,6 +24,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-303 — In the browser build, each stage's compiled fast-math mode is "unknown" *(closes RQ-177; amends R-297)*"
+- `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
 
 ## Deliverables
@@ -35,7 +36,7 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 
 ## Acceptance tests
 - Review checklist (code reviewer) — build produces two binaries; main-thread bundle contains no engine state (REQ-SYS-039).
-- Review checklist (code reviewer) — the engine crate builds to wasm and contains all CPU-side state; the TS shell holds no scheduler/cache/physics state (code review of the TS package) (REQ-SYS-047).
+- Review checklist (code reviewer) — the engine crate builds to wasm and contains all CPU-side state; the browser build's GUI is the gui crate's, and web/ holds no GUI and no scheduler/cache/physics state (code review of the web package) (REQ-SYS-047).
 - Review checklist (code reviewer) — the main-thread bundle contains no engine state; two worker wasm instances exist (engine, inspector) (REQ-SYS-049).
 - Review checklist (code reviewer) — review the TS startup path: one transferControlToOffscreen / postMessage transfer, no later canvas messages carrying state (REQ-SYS-056).
 - `npm --prefix web test -- resize_one_message` — resize event yields one message and one reconfigure (REQ-SYS-045).
@@ -49,3 +50,4 @@ The browser product exists: the whole frame loop (WebGPU device, scheduler, cach
 - R-146: `web/` unit tests run under Vitest (`npm --prefix web test` runs `vitest run`); the browser suites run under Playwright.
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
 - RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.
+- R-571 (21 Oct 2026): the browser build is v1 web, the whole native app compiled to run in the browser, with the same interface, features and stains; its GUI is the native app's egui (REQ-SYS-047 restated), and a TS DOM GUI is v2 web's. Where egui runs in the browser and what the main thread holds is RQ-551: REQ-SYS-039, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049 and REQ-SYS-056 carry `rq: RQ-551`, so this task waits on it. *Was (title):* "the TS shell"; *was (goal):* "The browser product exists" and "the main thread is a separate TS binary — an input pump and DOM-GUI host that owns no simulation state" (gui review 5608379011 of PR #282, applied per R-571: none of RQ-551's options has a DOM GUI); *was (acceptance, REQ-SYS-047):* "the TS shell holds no scheduler/cache/physics state (code review of the TS package)".

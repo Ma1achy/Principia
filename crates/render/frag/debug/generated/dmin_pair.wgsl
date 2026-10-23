@@ -3,7 +3,8 @@
 // categorical(3), range [0, 2]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field
 // through `SimState.dmin_pair`; its test, `catalogue_view_dmin_pair` in
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
-// (`ledger::gen::catalogue`).
+// (`ledger::gen::catalogue`). Its legend names each pair id by the pair's two bodies, 1-based, smaller first, never by
+// the id (R-449; `ledger::display`): 0 = 2–3, 1 = 1–3, 2 = 1–2.
 fn colour(ctx: Ctx) -> vec3<f32> {
     return select(dbg_cat(ctx.sample.dmin_pair, 3u), dbg_sentinel(f32(ctx.sample.dmin_pair), ctx.frag_xy), ctx.sample.dmin_pair == 3u);
 }

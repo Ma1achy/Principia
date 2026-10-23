@@ -62,7 +62,11 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
   - bits 0–1, the variant the writer used (§5): `0` tiled, `1` redundant, `2` hybrid; `3` is reserved;
   - bit 2, `source`: the payload carries the source of at least one ejected WGSL node (§6), so a reader knows before
     it inflates the payload that the image carries code that overrides a built-in colouring;
-  - bits 3–7 are reserved and written `0`.
+  - bit 3, `colour` (from version 4, R-484): the payload carries tier 2, `RenderState` (§6, "Tiers"); any record
+    carries tier 1, and bit 2 marks tier 3. `source` set with `colour` clear is not a defined combination;
+  - bits 4–7 are reserved and written `0`.
+
+  *Was (version 3):* "bits 3–7 are reserved and written `0`." Version 4 defines bit 3 (R-484, J5).
 
   A record whose variant is `3` or whose reserved bits are not all `0` is discarded whole: a later layout that needs a
   new flag bumps `version` instead.
@@ -135,6 +139,11 @@ header = magic(4) ‖ version(1) ‖ flags(1) ‖ payload_len(4) ‖ n_records(2
   every byte. The proposed version byte is **3**, the prototype's highest plus one: R-81's bump for the contract-name
   layout (§6). Both are R-71 proposals (REQ-TOOL-109), used provisionally until the human confirms them at the M7 gate;
   the prototype's version, 2, is the orchestrator's reading of the human's ruling, flagged in R-380 for that gate.
+
+**Version 4 (R-483, R-484; proposed, R-71, REQ-TOOL-109, confirmed with the magic at the M7 gate).** The layout's
+version is bumped to **4**: the payload's `SimConfig` carries `Links` filled (§6), which a version-3 reader's
+`deny_unknown_fields` cannot read, and the flags define bit 3, `colour`. A version-3 record is read as before, an
+intact record of another layout reported as such, and its `"links":{}` read as "links unrecorded" (§6, "Old records").
 
 **Read = collect every intact record, majority-vote per byte.** With 9+ records at the smallest
 resolution, repetition *is* the error correction and Reed–Solomon buys less than a dependency
@@ -218,7 +227,8 @@ build hash          REFUSE to recreate silently across a version where the decod
                     A slice config is only meaningful relative to a decoder, and this project
                     has changed its decoder more than once.
 slice               chart id + params, z₀ (the 8-D latent), q₁, q₂ (the basis; zoom is their
-                    common scale, R-83), slice values, lock flag, z_locked, δ
+                    common scale, R-83), slice values, lock flag, z_locked, δ,
+                    links (per-block id and parameters, R-483)
 sim                 T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close,
                     eps_E, eps_L, tau and the escape window,
                     the integrator occupant (stepper × REGULARISATION),
@@ -237,6 +247,67 @@ embedding `version`; the byte value is set with the rest of the header (R-71).
 **The record's `SimConfig` and `RenderState` are in their canonical serialisation (R-309)**, the one snapshot JSON,
 share links and the profiler header's `config` carry (`principia_gui_state_contract.md` §2).
 
+**What R-483 adds (X3).** Beside the `slice` line's links, the record carries, in `SimConfig`: the slice frame's tilt
+map (`tilt_map`, sheet or lean, R-474) and its tilt angles and targets, so the GUI's tilt controls restore and not only
+`q₁` and `q₂` (R-459, R-473); each energy axis's mapping, warped or linear, as chart params (R-471); and a **saved
+chart's full definition**, its parent chart, centre, rotation, targets and map (R-475). A saved chart travels **by
+value, never by name**: a share or an embed does not depend on the receiver having the same entry in their own
+saved-chart library.
+
+**The decoder's identity is the build plus the config (R-483, X4).** The `build hash` line's rule read the build hash
+alone. With swappable links, the decoder a record used is the build's link registry plus the record's `links`. On
+read, before anything renders:
+- **An unknown link id**, one the reading build does not have, is "state present, cannot recreate" (§9), naming the
+  missing link and its block.
+- **A changed definition**, a link id whose registry entry's content differs from the writer's, is refused the same
+  way. **Each recorded link carries its own entry hash (R-521):** the record holds, beside the build hash and the
+  schema version, one entry hash per block, the hash of that link's registry entry by its semantic content and of the
+  registry constants its decode reaches (`tanh_sat`, `ε_M01`, `δ_λ`, `ε_w`; `principia_dd_generation_root.md` §3.9,
+  "Each entry's own hash"), a u64 written as a string (R-322), four in all
+  (about 100 B of JSON). The reader compares each against its own registry's entry of that id: a mismatch is "state
+  present, cannot recreate", naming exactly that link and the registry constants its hash covers (generation_root
+  §3.9; physics review P6 of PR #265, applied per R-369), and, when all four blocks mismatch, leading with the
+  constants all four hashes cover, computed from the record's links (`δ_λ` and `ε_w`, and `tanh_sat` when every
+  recorded link is tanh-bearing; physics review P8 of PR #265, applied per R-369); when all four match, a schema version other than the reader's
+  refuses nothing on the links' account, and the schema version stays the whole-ledger check of what the stored
+  payload's bits mean, so a stored payload is not reused across it and the view re-integrates. A record with no entry
+  hashes is read as before R-521: a schema version other than the reader's is refused, naming its links as possibly
+  changed. *Was:* "meanwhile a record whose schema version differs from the reader's is refused, naming its links as
+  possibly changed. Whether each recorded link carries its own entry hash, so that the refusal names exactly the
+  changed link, is RQ-385." (stale value, replaced by R-521).
+- **Never substitute.** No default link stands in for one the record names, and no default value for a parameter it
+  records. A fallback must be visible (below).
+
+**Old records (R-483, X5).** A record or export written before R-483 carries `"links":{}`. Under the **same build
+hash** it means "this build's defaults at the time", and recreates, labelled so. Under a **different build hash** it is
+"state present, links unrecorded": it recreates only if the user explicitly accepts the current defaults, and the
+result is labelled as assumed. The record's `version` is bumped (§2, "Version 4").
+
+**Tiers (R-484).** The record is the one channel whose capacity the image sets, so it degrades by tier, and only it
+does. When the record does not fit, the writer drops whole tiers from the bottom:
+
+| Tier | Contents | Dropped |
+|---|---|---|
+| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
+| **2. Colour** | `RenderState` as built-ins: the colour mode's enum and every parameter, the ramp window, the overlays, the line system, the playhead, the hover and the debug view; and the sidecar's `f3_fill` (R-472). | Only after tier 3. |
+| **3. Custom source** | Each ejected WGSL node's source (custom frag shaders and nodes); the `source` flag (§2, bit 2). | First. |
+
+The writer serialises tier 1, tiers 1 and 2, and all three, and embeds the largest whose record gives at least one RGB
+tile at the image's size (§2's tile rule); the header's flags say which tiers the record holds (§2, bits 2 and 3). A
+tier is never cut. Every field's tier is assigned in one table, read by the writer and the tests
+(`principia_gui_state_contract.md` §2, `crates/engine/src/contract/tiers.rs`). The `tEXt` chunk has no capacity limit,
+so it always carries all three tiers. A view recreated without tier 2 renders the default stain; without tier 3, each
+custom node with its slot's default built-in occupant; either is badged as a fallback (§9).
+
+**The Print graph travels in `RenderState` (R-491; `principia_print_graph.md` §9).** `RenderState.print` is part of the
+record, **by value**: a preset is the graph it expanded to, with its preset id as a label, so a later build's change to
+a built-in preset never changes what an old record reproduces. The graph, its built-in nodes, their parameters,
+settings and wires are **tier 2** (colour); a custom WGSL node's source is **tier 3** (custom source), dropped first.
+A record without tier 3 recreates the Print graph with each custom node shown as missing and the figure rendered
+without it, badged; a record without tier 2 renders Plain, badged as a fallback (§9). Whether tier 2 splits further is
+RQ-386, and a Print graph is part of what tier 2 holds there. The figure export's default is Plain (R-489), the record
+carrying the graph either way.
+
 **The ramp window is not optional.** An auto-ranged ramp manufactures or hides the difference it
 is meant to show — measured, not hypothesised — so a recreated image without it is a different
 image.
@@ -252,6 +323,20 @@ image it came from is exactly the class of silent wrongness this project exists 
 ---
 
 ## 7. Measured capacity and behaviour
+
+**To be re-measured (R-483, X6; TASK-M7-44).** The table below was measured at 596 B of JSON, 382 B deflated, before
+the record carried the links, the tilt fields and a saved chart's definition (§6). It is re-measured at the new
+payload, a saved tilted chart and a non-default link included, for tier 1 alone, tiers 1 and 2, and all three
+(§6, "Tiers"), at 64² to 1024², and rewritten here with the measurement. The bound it is read against: a tile of side
+`s` holds a record of `3·s²` bits, so at 64² one RGB tile holds a record of at most 1,536 B, a payload of at most
+1,516 B deflated. If 64² no longer holds one tile of tier 1, or of tiers 1 and 2, this section says so. **The writer
+never truncates** to fit: a record whose tier 1 does not fit is reported as not embedded, and the `tEXt` chunk still
+carries it whole.
+
+**Whether tier 2 splits waits for this re-measure (R-522).** RQ-386 asks whether tier 2 should split, its built-ins
+and the ramp window above the overlays and lines, if tier 2 often does not fit at small sizes. The human rules it after
+the re-measure: TASK-M7-44 reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default
+stain and for the fixture `tier2_typical_stain` (REQ-TOOL-174 names its contents), and RQ-386 returns to the human with those numbers. Meanwhile tier 2 is whole.
 
 **Config-only payload 596 B JSON → 382 B deflated. Full `frag.glsl` 11,367 B → 2,969 B.**
 
@@ -325,5 +410,17 @@ scale both survive, which LSB cannot touch at any redundancy. It was still rejec
 - **Three distinguishable outcomes**, never two: *no embedded state* / *state present, corrupt* /
   *recovered, and here is how*. Silent wrongness is the failure mode this project exists to
   eliminate.
+- **Recreating a recovered record has outcomes of its own (R-483, R-484).** The record layer's three stand; a
+  recovered record is then recreated, or not: *state present, cannot recreate*, naming why (an unknown link, a changed
+  definition, §6's identity); *state present, links unrecorded*, recreated only on the user's acceptance (§6, "Old
+  records"); or *recovered*, saying which tiers it recovered and which the original had but the record did not
+  embed, for example "recovered: physics and colour; custom shader source not embedded (it was in the original),
+  rendering with the built-in fallback". The recreated view is badged as a fallback wherever it differs (§6: "A
+  fallback must be visible"). The writer reports at export time which tiers fit at that resolution, so the user knows
+  before sharing.
 - **Golden-image test**: embed → PNG round-trip → extract → assert bitwise-equal config, at every
   supported resolution.
+- **The same golden test with a non-default link and a saved tilted chart** (R-483, C10): bitwise-equal config at
+  every supported resolution; the control, the image with its low bits zeroed, reads as *no embedded state*. With the
+  tiers (R-484, T3): the recovered tiers are exactly those the writer reported, tier 1 bitwise whenever anything is
+  embedded, and at a size too small for tier 1 the result is *not embedded*, never a partial record.

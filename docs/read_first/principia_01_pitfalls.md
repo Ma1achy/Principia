@@ -146,7 +146,8 @@ ESCAPE  <=>  |Δn̂| over a window < tau    AND    E_rel > 0
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
 - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
-  unregularised occupants and at sync boundaries for regularised ones (R-95).
+  unregularised occupants and at sync boundaries for regularised ones (R-95), on the fixed grid `Δ_sync`, the window
+  stated in physical time (R-565).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
@@ -232,7 +233,9 @@ step at the finest stride**. That is the wrong shape for a resolved quantity, an
 **A DIAGNOSTIC MUST REUSE THE ORIGINAL DISCRETISATION.** A persistence check re-ran trajectories with
 `n_sync` rescaled per window, making every window a different discretisation. It produced
 0.162, 0.219, 0.011, 0.083, 0.335 and read exactly like a flickering condition. **The project's own
-`n_sync`/`t_max` trap, inside a diagnostic written to catch traps.**
+`n_sync`/`t_max` trap, inside a diagnostic written to catch traps.** *Since R-565 the regularised occupants' sync
+grid is one fixed quantum of physical time, `Δ_sync`, never `t_max / n_sync`, so this trap cannot be built: there is
+one grid (integrator contract Part 2a). The rule stands for every other step parameter.*
 
 **A DISCRIMINATOR CAN BE POISONED BY ITS OWN SUBJECT.** `d_min` was used to test whether new escapes
 were spurious mid-encounter firings, on the grounds that the re-labelled population had *larger*

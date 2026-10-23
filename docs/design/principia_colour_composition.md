@@ -106,8 +106,10 @@ FieldRamp {
 band, base colour elsewhere — this is `grid`, `contours`, and the lattice classifiers `checker`,
 `lat/lon-stripes`, `truchet` on (θ,φ)). **Compaction** (scalar → lightness, for the `brightness`
 slot or before a ramp): `lin`, `log`, `symlog` (signed, through the midpoint), `cyclic` (phase),
-`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default the hatched invalid
-pattern (§3, §6; R-132).
+`flag`. Every ramp/compaction carries an explicit **invalid-pixel treatment/value** — by default `#141418` in a
+presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (§3, §6; R-132,
+R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (§3, §6; R-132)" (stale value, replaced
+by R-467).
 
 **Default ramps by field role.** Signed fields (energy, L_z, drifts) default to
 diverging-through-neutral so the zero-crossing is a legible contour; positive fields to sequential;
@@ -171,7 +173,7 @@ only (R-444):**
 
 | class | payload | colour | sRGB |
 |-------|---------|--------|------|
-| bounded / nothing yet | `bounded`, `running` and every failure (R-446) | black | `#141418` |
+| bounded / nothing yet | `bounded`, `running`, `sim_failed` and a reserved `state` code (R-446); a `decode_failed` sample draws blank (R-511; *was:* "`bounded`, `running` and every failure") | black | `#141418` |
 | collision 1–2 | collision, `detail` = pair 2 (bodies 0, 1) | red | `#DE2D2D` |
 | collision 1–3 | collision, `detail` = pair 1 (bodies 2, 0) | green | `#2EBC4E` |
 | collision 2–3 | collision, `detail` = pair 0 (bodies 1, 2) | blue | `#3462E0` |
@@ -198,33 +200,51 @@ assignment lands on `detail`, not on a second field). **How the table reads the 
 `state` and `detail` alone. `t_end_step` plays no part: a collision at `t_end_step == 0` is an ordinary pair or triple
 collision and draws in that colour (R-445); timing is carried by lightness when a stain wants it, the outcome ×
 `t_end` bivariate preset (§4.1), white = early. **Black means "nothing has happened yet, up to the playhead"
-(R-446):** `bounded`, `running` and every failure draw `#141418` in the outcome view: `sim_failed` of each detail
-(NaN in state, Inf or overflow in state, a non-finite derived quantity, payload §2: the human's "NaN, infinity"),
-`decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's
-`M01_TINY`, a non-finite decode), and a reserved `state` code (applied per R-369). The outcome view reads only `state`
+(R-446):** `bounded`, `running`, `sim_failed` of each detail (NaN in state, Inf or overflow in state, a non-finite
+derived quantity, payload §2: the human's "NaN, infinity") and a reserved `state` code (applied per R-369) draw
+`#141418` in the outcome view; a `decode_failed` sample, whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and
+`ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), draws blank, as a pixel that is not a system,
+with no key or share (R-511, ruling RQ-379; below). *Was (R-446):* "`bounded`, `running` and every failure draw
+`#141418` in the outcome view: `sim_failed` of each detail (…), `decode_failed` whatever its `detail` or tag (η_E's
+`ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), and a reserved `state`
+code". The outcome view reads only `state`
 and `detail`, integer fields, so it never receives a NaN itself; storage holds none (R-79). **`#141418` is the outcome
 palette's explicit invalid treatment**, which §3 ("Overridable per node") and render_gui_spec §13 ("every colouring
 has an explicit invalid-pixel treatment") allow, so R-79's rule that NaN or a sentinel reads as "no data", and
 R-436's, are met in the outcome view by black, not by the hatch. A view starts black and fills
 in as events fire. Failures are shown by the debug views, which keep the invalid hatch and their own palettes (the
-`state` and `detail` views, `principia_debug_tooling_plan.md` §B). **Forbidden chart regions keep the chart contract's
-forbidden-region treatment** in the outcome view, the hatch `debug_invalid(frag_xy)` (`principia_chart_decoder_contract.md`
-Part 3), decided from the chart alone, never from the payload's `decode_failed` detail, which cannot tell the two
-hatches apart (R-446). **A pixel keeps the hatch where chart_decoder_contract Part 3 hatches it**, on every pixel,
-inside `[0,1]²` and past it: after the axes' extension types act, a bounded axis past its edge, a state `validate`
-rejects (layer 2, or layer 3 on a finite decoded state), or a `Φ` that fails to evaluate (non-finite, or outside its
-domain). Both hatches keep it, the domain's end and the universal fallback (applied per R-369). **`Φ` here is the
+`state` and `detail` views, `principia_debug_tooling_plan.md` §B), and by View › Debug view, which shows them over
+the stain with a key and a count each (§6; R-467). **A forbidden chart region is not part of the chart (R-467,
+amending R-446):** the outcome view draws it as the plain canvas background, the colour the window is cleared to, with
+no hatch, legend key or share; only the debug views hatch it, `debug_invalid(frag_xy)`
+(`principia_chart_decoder_contract.md` Part 3). It is decided from the chart alone, never from the payload's
+`decode_failed` detail, which cannot tell the two hatches apart (R-446). **A pixel draws the background where
+chart_decoder_contract Part 3 hatches it**, on every pixel, inside `[0,1]²` and past it: after the axes' extension
+types act, a bounded axis past its edge, a state `validate` rejects (layer 2, or layer 3 on a finite decoded state), or
+a `Φ` that fails to evaluate (non-finite, or outside its domain). Both of Part 3's hatches draw it, the domain's end and
+the universal fallback (applied per R-369). *Was (R-446):* "Forbidden chart regions keep the chart contract's
+forbidden-region treatment in the outcome view, the hatch `debug_invalid(frag_xy)`"; "A pixel keeps the hatch where
+chart_decoder_contract Part 3 hatches it"; "Both hatches keep it". **`Φ` here is the
 chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared decoder after it: the decoder's own
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
-non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
-R-446's list of failures says (applied per R-369). **The axes' primary ranges hatch nothing:** R-446's words list them
+non-finite decode, never mark a pixel forbidden; such a pixel draws blank in a presentation view, as a pixel that is
+not a system does (R-511, ruling RQ-379), the lane still unset, as R-446's list of failures says (applied per R-369).
+*Was:* "such a pixel draws black unless the types or `validate` hatch it". **The axes' primary ranges hatch nothing:** R-446's words list them
 among the chart's inputs ("types, primary ranges, validate, Φ"), quoting word for word chart_decoder_contract Part 3's
 sentence on what the area statistic reads ("The statistic reads the chart (the types, the primary ranges, `validate`,
 `Φ`)"), but under Part 3, whose treatment the ruling keeps,
 they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
 outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
-and draws its outcome, and one whose state fails `validate` there is hatched. Every other `decode_failed` sample draws
-black. How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+and draws its outcome, and one whose state fails `validate` there draws the background (R-467). Every other
+`decode_failed` sample draws blank (R-511; *was:* "draws black"). **Blank is not a colour (R-470).** The canvas background a not-a-system pixel draws
+is blank, in every view, the outcome view included: no palette, ramp, compaction or legend holds it, it is never
+counted in a legend's shares, and the only thing drawn over it outside the debug views is the optional Overlays › Chart
+› forbidden region hatch (render_gui_spec §G2). NaN, `±∞` and `sim_failed` keep their presentation
+treatment above (`#141418`), a `decode_failed` sample the chart does not classify draws blank, with the
+forbidden-region hatch over it (R-511, ruling RQ-379), and all of them show as themselves only in the debug views
+(§6). *Was:* "NaN, `±∞`, `sim_failed` and `decode_failed` keep their presentation treatment above (`#141418`) and show
+as themselves only in the debug views (§6); whether a `decode_failed` sample the chart does not classify should draw
+blank instead is RQ-379." *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
 by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
 "degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
 orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
@@ -258,10 +278,13 @@ collision 2–3's hue (264° against 265°) and becomes indistinguishable from i
 transforms): purple is 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 2–3 and from the hatch's violet,
 0.272 from escape body 2, 0.277 from bounded, 0.316 from the stipple's `#909090` dot and 0.580 from the hatch's cyan
 `#48FFFF`, so it clears every entry and the hatch and stipple colours by at least 0.19, as R-445 says; the orange is
-0.188 from the dot. The human's figure for the palette's closest pair is 0.185, collision 1–3 against escape body 3, "with
-the t = 0 class gone"; measured, the closest pair is 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, the
-pair that was collision @ t=0's, since the orange stays as triple collision (0.185 is the closest pair with the orange
-left out). Transcribed as ruled, the measured value beside it: RQ-331.
+0.188 from the dot. **The palette's closest pair is 0.175** (R-546, RQ-331): triple collision `#F29620` against escape body 1 `#F0DE32`,
+with the swatches as ruled. With the t = 0 class gone it stays 0.175 (the same two colours as the old t = 0 pair);
+0.185 holds only with the orange left out. *Was:* "The human's figure for the palette's closest pair is 0.185,
+collision 1–3 against escape body 3, "with the t = 0 class gone"; measured, the closest pair is 0.175, triple collision
+`#F29620` against escape body 1 `#F0DE32`, the pair that was collision @ t=0's, since the orange stays as triple
+collision (0.185 is the closest pair with the orange left out). Transcribed as ruled, the measured value beside it:
+RQ-331."
 
 **The OKLab-uniform variant (R-447; REQ-COL-103, REQ-COL-105).** A second preset of the outcome palette: each chromatic
 class keeps its own OKLab hue at L = 0.72 and C = 0.123, so only hue varies and any brightness-slot field reads
@@ -278,12 +301,15 @@ cleanly; bounded stays `#141418`. **The sRGB palette above stays the default.**
 | escape body 3 | 208° | `#09B9CD` |
 | triple ejection | 305° | `#B790E2` |
 
-The hues are the sRGB classes' own, rounded to a degree. R-447 gives C = 0.123 as "the largest chroma in gamut at every
-hue at that L"; measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the
-largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°. The swatches as ruled measure L 0.719 to
+The hues are the sRGB classes' own, rounded to a degree. C = 0.123 is in gamut at every listed hue (the narrowest,
+208°, admits 0.1238) (R-546, RQ-332); the largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°,
+recorded, not adopted. *Was:* "R-447 gives C = 0.123 as "the largest chroma in gamut at every hue at that L";
+measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the largest chroma in
+gamut at every hue at L = 0.72 is 0.1224, near 199.8°." The swatches as ruled measure L 0.719 to
 0.721, C 0.122 to 0.124 and each hue within 0.5° of its row; `#6EB976`, `#D99349` and `#09B9CD` differ by one or two
-8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Transcribed as
-ruled: RQ-332. Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
+8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Those three
+roundings are recorded, not adopted: the ruled hex values stand (R-546, RQ-332 (a)). *Was:* "Transcribed as ruled:
+RQ-332." Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
 swatch is within 0.5°; escape body 3's `#09B9CD` measures 208.54°, 0.54° from its row's 208° and 0.04° from its class's
 208.5°, and stays: R-455 (RQ-366) reads the 0.5° against the class's own hue, a tolerance below hex quantisation at this
 chroma (one green or blue step moves the hue about 0.7°). **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
@@ -310,6 +336,33 @@ R-443 adds `chazy_escaper`, the escaping body's index, and the one-body views th
 its energy form, the escaper map and its mass-rank forms), with their palettes, in the drill-down's §10.11. The "no
 separate `escaper` field" above concerns the event outcome, whose escaping body is `detail`; `chazy_escaper` belongs to
 the separate Chazy system (R-443) and does not change it, and the escaper map is a Chazy stain, not this map filtered.
+
+### 1.5 A point on a chart: Chart position's colour slot (R-542)
+
+*Added by R-542 (`principia_state_map.md` SM11, SM14). Shape n̂'s nodes above are unchanged.*
+
+Beside n̂, a colour occupant may read **a point on a chart's quotient**: Chart position's `point⟨q⟩`, q ∈ sphere ·
+plane · cylinder · simplex (render GUI spec Part II §3), the place the sample's system has reached on a target chart,
+with its status (state map SM1, SM5). Its colour slot is a **base** and an ordered list of **layers**, the composition
+of §1.1 to §1.3:
+
+- **Gradient**: Family B over the point. The 2D and 3D gradients are one-to-one on the quotient (state map SM6); the 1D
+  gradients run one three-stop OKLab ramp; round θ is the hue circle.
+  The Torus gradient (R-543), on the plane and the cylinder, is periodic in chart units and one-to-one within a period
+  (state map SM6).
+- **Site blend**: Family A. On the sphere it is the §2 static sets, one code path with Shape n̂'s Site blend; on a flat
+  point, §2's lattice sites, with flat distance `−|x − p|²`, the same kernels and the same blend spaces.
+- **Palette**: categorical by tile. Each tile of a tiling (square, hexagons, triangles, brick, stripes; on the sphere
+  latitude × longitude cells, Fibonacci cells, meridian wedges, latitude bands) takes one swatch, by index or by golden
+  angle.
+- **Picture**: an image pulled back through the flow (§3's image input; state map SM8).
+  Past its square it follows its wrap mode (Repeat, Mirror or Clamp) and a separate dim setting, Mirror and dimmed by
+  default (R-543).
+- **Layers**: `bandmask` with band patterns (grid lines, checkerboard, tile edges, stripes, rings; on the sphere its
+  own), and `site_overlay` for site dots, in order, each with its spacing, colour and opacity.
+
+The definitions, values and tests are state map SM6, SM8, SM11 and SM12. The tiling defaults are starting calibrations
+(R-71): the prototype's values, confirmed at the M7 gate (RQ-487 (a), R-558).
 
 ---
 
@@ -341,6 +394,11 @@ are constant across the slice; the codegen detects this and hoists physics sites
 pixel's masses. The preview must **state which mass point it is showing**, because physics landmarks
 (and any physics-dependent colouring) are only meaningful relative to it.
 
+**Flat lattice sites (R-542).** For a flat point (§1.5) the sites are a square or hexagonal lattice in the chart's tile
+coordinates, `n` across, a whole number of them round θ on a cylinder. They are static and uniform-hoistable, compared
+by flat distance `−|x − p|²` (state map SM11), and feed only Chart position's Site blend and its site-dot layer. The
+sphere's sets above are unchanged.
+
 ---
 
 ## 3. The `ctx` contract
@@ -369,8 +427,10 @@ change only which quads are drawn. It is not a screen or view position: screen-r
 lane's fields, `ctx.screen.uv` and `ctx.screen.pixel`. Formed in f32 it is an absolute coordinate, which R-395 keeps
 free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it a fragment works in the quad's local
 coordinates, `ctx.quad.centre` and the offset `δ = ctx.quad.half_width · (2 · ctx.quad.uv − 1)` from it.
-Where the figure fills the window past the chart's depth-0 root (F3 off or present mode, R-406, R-407),
-`ctx.chart.slice_uv` lies outside [0, 1]² there; the formula is unchanged, and inside [0, 1]² nothing changes.
+Where the view reaches past the chart's depth-0 root, by navigation with the controls shown or with the figure
+filling the window (F3 off or present mode, R-406, R-407, R-537), `ctx.chart.slice_uv` lies outside [0, 1]² there; the
+formula is unchanged, and inside [0, 1]² nothing changes. *Was:* "Where the figure fills the window past the chart's
+depth-0 root (F3 off or present mode, R-406, R-407),"
 
 **The validity lane's `ctx.validity.forbidden`, the sample's chart classification (R-72; REQ-COL-102; R-446).** How a
 sample's chart classification reaches the outcome view, so that it draws a forbidden chart region with the hatch from
@@ -383,8 +443,8 @@ domain), `Φ` being `principia_chart_reference.md` §5.1's `Chart::map`, the cha
 is every other sample. **What plays no part:** the axes' primary ranges, which decide only what R-408's area statistics
 count, so a pixel outside a primary range that passes is a system and draws its outcome; the shared decoder's own
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any added later) and a
-non-finite decoder output, which never set it, so such a sample is `decode_failed` and draws black unless the types or
-`validate` hatch it, a non-finite decode staying `decode_failed`/0; and the payload, whose `decode_failed` detail cannot
+non-finite decoder output, which never set it, so such a sample is `decode_failed` and draws blank (R-511; *was:*
+"draws black unless the types or `validate` hatch it"), a non-finite decode staying `decode_failed`/0; and the payload, whose `decode_failed` detail cannot
 tell the two hatches apart (R-446). **Who fills it, and from what:** the CPU, from the chart (R-26), per sample at its
 chart point, never the kernel and never the payload. Inside `[0,1]²` it is filled from the chart's `validate` and
 `Chart::map` (the `Chart` trait, chart_reference §5.1): forbidden where `validate` returns anything but `Valid` or
@@ -415,12 +475,26 @@ mode do (debug_tooling_plan §F).
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
 pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). Invalid pixels
 render in a **hatched pattern** that collides with no palette entry; its exact pattern is a calibration (REQ-COL-055,
-R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node.
+R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node. **The hatch is the debug views'
+(R-467):** a presentation view, every stain that is not a debug view (§6), draws no hatch, so there a ramp's or
+compaction's invalid value, a NaN and a non-finite input draw bounded / nothing yet's `#141418` unless the node
+overrides its invalid colour, and a pixel the chart classifies as not a system draws the canvas background (§1.4). The
+invalid treatment stays explicit; only its presentation default is black. The background there is blank, never a
+palette colour (R-470).
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
 (z))` residual). This is what dissolves most of the §A kernel modes (§6) and enables **agreement
 presets** (fragment-decode vs kernel-payload) as live checks of that translation.
+
+**Chart position's reads (R-542; `principia_state_map.md` SM2).** Chart position computes its point at read, from the
+payload lane's live state at the playhead and its masses, through the encode `ROUNDTRIP` already runs; it adds no
+field to any lane's buffer. A Picture base reads one image, a texture bound in a render-side bind group, never a sim
+struct. The uploaded picture is a `RenderState` field, assigned its tier in R-484's table by the task that builds it
+(applied per R-369). Chart position also reads the target chart and its inverse, which seam 6 and render contract
+Part 4 keep from a colour occupant; it is a named exception to seam 6, as ROUNDTRIP and DECODE are, listed in render
+contract Part 4 and in the lint, the target's inverse generated to WGSL from the one Rust source (R-116; R-558,
+RQ-489 (a)). *Was:* "that is RQ-489, and the source waits on it."
 
 ---
 
@@ -517,17 +591,43 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   and greyscale mode is its reading.
 - **What every mode keeps (R-399; §3).** A sample the field holds no value for keeps its own style in every mode,
   never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, the "not
-  yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN the invalid
-  pattern, `debug_invalid(frag_xy)`, as the debug views draw them. **The outcome class is the exception (R-446):** it
-  holds a value for every sample, `running` and every failure being its bounded / nothing yet class, so in every mode
-  they take that class's place, rank 0, as the outcome palette draws them black (§1.4); only a forbidden chart region
-  keeps the hatch, in every mode, decided from the chart's validity, not from the payload (§1.4; applied per R-369). A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
+  yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN `#141418` in a
+  presentation view (R-467) and the invalid pattern, `debug_invalid(frag_xy)`, in the debug views, as they draw them.
+  **The outcome class is the exception (R-446):** it holds a value for every sample but a `decode_failed` one,
+  `running`, `sim_failed` and a reserved code being its bounded / nothing yet class, so in every mode they take that
+  class's place, rank 0, as the outcome palette draws them black (§1.4), and a `decode_failed` sample draws blank in
+  every mode (R-511; *was:* "it holds a value for every sample, `running` and every failure being its bounded / nothing
+  yet class"); a forbidden chart region draws the canvas background in every mode, decided from the chart's
+  validity, not from the payload (§1.4; R-467). *Was (R-446, R-399):* "a `sim_failed` sample, a reserved `state` code or
+  a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the debug views draw them"; "only a forbidden chart region
+  keeps the hatch, in every mode". A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
   every mode, so a progressive render shows the field as it fills. Hue mode's colour occupant draws the styles
   itself, as the palette does. Greyscale mode's brightness slot carries a lightness and can draw neither pattern, so
   the mode ends in one post (§4.2) that draws each style at those samples over the combiner's output and passes every
   other sample's colour on unchanged.
   The Chazy fields hold a value for a `running` sample, so they never draw the "not yet" style
   (`principia_dd_chazy_final_motion.md` §7, R-442).
+
+**Chart position as a colour occupant (R-542; state map SM2, SM6, SM11).** Its 2D and 3D gradients carry position in
+all three OKLab axes, lightness included, which is what makes them one-to-one on the quotient. A brightness node after
+an L-spending base (a 1D gradient, the sphere's 3D gradient or the cylinder's 2D gradient), or under lightness layers,
+raises a Problems warning (render GUI spec Part II §1). The plane's 2D gradient, the sphere's longitude gradient, Site
+blend and the index Palette hold L fixed, so a brightness node can take it. SM2's "the brightness slot is None" means that a
+base spending L on position takes a brightness node only with that Problems warning, Multiply keeping its L, and
+SM15's Replace-L chroma scaling is an option of the Replace-L combiner, "keep in gamut", off by default and set on by
+the Displacement and Mixing presets, so the truth table above stands for every stain at the default (R-558, RQ-496
+(a)). *Was:* "SM2's "the brightness slot is None" meets the combiner choice of render contract Part 4 and SM11, and
+SM15's Replace-L chroma scaling meets the truth table above (RQ-496); meanwhile the truth table stands for every
+stain, Replace-L unscaled." Its statuses keep their own style
+in every mode, as above: a left or past-the-end sample under "none" its grey, `sim_failed` `#141418`, `decode_failed`
+and not a system blank (R-511, R-470); with a brightness node the stain ends in the one post that draws each style over
+the combiner's output, as greyscale mode does (applied per R-369).
+
+**The vMF shape colouring is not one-to-one (R-558, RQ-483 (a)).** It stays the hue carrier it is, and nothing in it
+changes: at a fixed L no continuous colouring of the sphere is one-to-one, and the vMF blend gives the antipodal
+shapes `±(1,1,1)/√3` one grey bin at κ = 1, 3 and 6 (`principia_state_map.md` SM6; `principia_dd_colouring.md`
+§3.2). The one-to-one sphere map is Chart position's 3D gradient, a separate node; it is not offered as a shape
+colouring.
 
 ### 4.2 Post chain
 
@@ -545,11 +645,36 @@ A **fixed terminal stage** applied to the finished output, **as settings, not no
 never sees them and they are not part of any occupant or preset:
 
 ```
-style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
+[lines through]  →  print graph  →  render→display scale  →  gamut_clamp  →  [lines over]  →  cvd_sim(mode)  →  screen
 ```
 
-**Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **Style** is optional and applies to
-the figure only; scientific checks run with plain. *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
+*(Was, before R-531: `[lines through]  →  print graph  →  [lines over: RQ-395]  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+*(Was, before R-485 and R-487: `style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
+
+**The Print graph (R-485 to R-492; `principia_print_graph.md`)** stands where style was. It is a node graph of its own,
+after the stain and separate from it: its registry, its codegen and its WGSL are its own, the stain's codegen never sees
+it, and it is no stain occupant or preset; its settings are `RenderState.print` (R-491). Its default, **Plain**, is the
+bitwise identity. It reads the stain's finished colours and, as read-only maps, payload fields normalised by the stain's
+own window rule (`principia_print_graph.md` §4.4); nothing reads its output but the stages after it, so measurement,
+the legend, the readout and every scientific check read the stain (R-489). Debug views bypass it (R-487 K1: View › Debug
+view and every `debug/` occupant), and are never styled.
+
+**The two line passes (R-487).** One line renderer is called twice with complementary filters on `LineStyle.through_medium`
+(`principia_lines.md` §3): the line sets marked through are composited onto the stain's output **before** the Print
+graph, so the medium draws them; the rest are drawn **after** it, crisp on any medium, in R-476 M2's place, the next
+paragraph's: after the gamut clamp and before the colour-vision simulation (R-531, ruling RQ-395, the design doc §2's
+diagram corrected to match). Smart ink for a line drawn over reads the figure to the clamp, the Print graph's output
+included; for a line drawn through, the stain's output (`principia_lines.md` §6). A pixel that is not a system takes the
+Print graph's sheet, never its marks (R-533). *Was:* "Where the pass drawn over sits is RQ-395: the design doc §2 puts
+it before the display scale, R-476 M2 after the gamut clamp; until RQ-395 is ruled it keeps R-476 M2's place, the next
+paragraph's."
+
+**Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system (R-476)** draws its lines after the gamut clamp and
+before the colour-vision simulation, which sees them as it sees the rest of the figure (`principia_lines.md` §2;
+applied per R-369). **Style** is optional and applies to
+the figure only; scientific checks run with plain. *(R-485: style is the Print graph, above; its default is Plain,
+and goldens and scientific checks run under Plain, R-489.)* *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
 
 **CVD is here, not in the pipeline, and this is a category correction, not a convenience.** CVD
 simulation asks "what does this *finished encoding* look like to a deuteranope/protanope/…?" — it
@@ -645,6 +770,20 @@ against `state`), and NaN still goes to the invalid pattern. So does a stored `�
 the CPU and the GPU alike, tested on its bits, never by arithmetic on it (R-436, extending R-79); a declared sentinel
 or unset value keeps its own style (`d_min`'s unset `+∞`, R-280, R-399).
 
+**The debug view, View › Debug view (R-467).** One switchable view over whatever stain is active, a render-side
+toggle (`RenderState`'s `debug_view`, gui_state_contract §2), not a preset: every system pixel is drawn as the stain
+draws it; a pixel the chart classifies as not a system (§1.4) draws the hatch, `debug_invalid(frag_xy)`; a non-finite
+sample (a `sim_failed` with a non-finite detail, a `decode_failed` of detail 0, a non-finite value the stain reads)
+draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71), proposed by the task
+that needs it and not magenta: R-16's flat magenta `#FF00FF` sits at τ (0.101, R-429) from escape body 2's `#E034C6`,
+so each of the style's colours lies farther than τ from `#FF00FF` (R-505); any other `sim_failed` or
+`decode_failed` sample, a reserved `state` code included, draws `debug_invalid`. The chart is read first, then
+non-finiteness, then the failure. Its legend adds one key after the stain's, "Debug": "forbidden (chart)", "decode or
+sim failure" and "NaN / Inf", each in its style, with the number of the figure's pixels drawn in it and their share,
+each drawn always (render_gui_spec §G6). It is the one view that shows all three; the presentation views show none of
+them (§3). *R-470:* it is one of the debug views, built as a baked pipeline variant selected by `debug_view` (R-41's
+baked variants): the presentation variant has no debug arm, and `debug_view` is never a flag bit read per pixel.
+
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table
 (§7); only Appendix A remains kernel-side.
@@ -669,7 +808,7 @@ rows (schematic — full table lives with the preset library):
 | Custom N-pole | `SiteBlend{ ring(N,tilt,rot), vmf(κ), swatches }` |
 | Direction cosines | `FieldRamp` per channel `½(1+n)` |
 | Checker / stripes / truchet | `bandmask(base, lattice-classifier(θ,φ), band, tileCol)` |
-| Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` |
+| Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` (a colouring that bands pixels; the stroked grid and contours over the figure are the line system's, R-476, `principia_lines.md`) |
 | Gradient magnitude | `FieldRamp{ gradient_magnitude(vmf-map), lerp }` |
 | Perlin / harmonics / Turing | `FieldRamp{ noise / Yℓm / wave-triple, lerp or diverging }` |
 | Physics overlay | post step `site_overlay(base, SiteBlend{ physics(m), vmf(κ=11 BC / 9 EL), per-site colours }, s)` |
@@ -683,6 +822,13 @@ preset ships with a **golden-image test** against the corresponding reference ou
 independent-integrator convergence reference): the composition engine and the reference artefact are
 two implementations of the same maps, and agreement to tolerance certifies the port. A preset is not
 "done" until its golden image matches.
+
+**The Print graph's goldens (R-489, R-492).** Every stain golden and every scientific check renders with the Print graph
+set to **Plain** explicitly, never the user's. The Print graph's own nodes and presets have a golden obligation of their
+own, against the lab rather than the two HTML files: each node at its defaults and each preset on the bundled source
+image, matched to `docs/gui/reference/print_graph/images/nodes/` and `images/presets/` within the ΔE (OKLab, median
+and p99) tolerance the first port task sets, each deviation the design requires listed in its registry entry, never
+tuned (`principia_print_graph.md` §10, §11 test 9).
 
 **Pinned to §7.1 (R-16).** The golden-image suite is complete when every entry of §7.1 has a preset and a passing
 golden test. §7.1 is the checklist; the two reference HTML files are the oracle for each entry (R-122).
@@ -756,9 +902,11 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 ## 9. The stain editor's composition resolutions (R-72; REQ-COL-054)
 
 Render GUI spec §16 lists eight "standing composition-spec gaps" whose resolutions the stain editor assumes. Each is
-written here from the passages that already carry it. The open parts are raised in `REVIEW_QUEUE.md`, not written in:
-RQ-280 (the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four
-the passages settle) and RQ-282 (a ramp of custom stops).
+written here from the passages that already carry it. The parts the passages left open were ruled by R-546 and are written in: RQ-280 (the addressing convention's third
+channels and its indexes, §9.7), RQ-281 (the debug groups' membership, §9.6) and RQ-282 (gradient magnitude, §9.4; a
+ramp of custom stops is defined apart). *Was:* "The open parts are raised in `REVIEW_QUEUE.md`, not written in: RQ-280
+(the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four the
+passages settle) and RQ-282 (a ramp of custom stops)."
 
 **9.1 Colour source as an axis.** Where a value comes from is one axis, independent of the slot it fills and of the
 mapping that colours it. In the graph a source is a `source` node with one parameter, the ctx field it reads; picking
@@ -791,8 +939,11 @@ sequential clamped mix (§1.3, R-122). It is evaluated per fragment, never baked
 difference of another colour node from three evaluations at ±ε on the sphere, and the ramp is an ordinary §1.2 ramp,
 so it is a field through a ramp, not a mode of its own. The gradient magnitude of the rendered *map* is a different
 thing: a post occupant, a screen-space finite difference over the colour buffer, distinct from the |∇c| evaluated on
-the sphere (render contract Part 4). Whether the item also means that the GUI's gradient editor, "built-in LUT or
-custom stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282.
+the sphere (render contract Part 4). §16's item is this reading alone (R-546, RQ-282 (a)). Render GUI spec §9's
+custom-stop ramp, the gradient editor's "built-in LUT or custom stops, cyclic", is defined separately, here, by
+TASK-M7-11 when its graph model needs it (R-72, REQ-COL-140): its stops, their positions, its interpolation space and
+how `cyclic` applies. *Was:* "Whether the item also means that the GUI's gradient editor, "built-in LUT or custom
+stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282."
 
 **9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
 footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no
@@ -804,17 +955,24 @@ per quad, as `ctx.quad.impurity` is.
 
 **9.6 The debug taxonomy.** The library's debug section is the six groups of render GUI spec §11: addressing,
 quad-structure, decoded-IC, validity, diagnostic and profiling. Every entry is a locked debug preset over the one
-colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four:
+colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four, and
+R-546 (RQ-281) the other two and the cross-checks:
 - **addressing**: the presets that colour a position, `ctx.screen.uv → RG` (fragment addressing) and `ctx.quad.uv →
   RG` (structural addressing) (§6), in the channel convention of §9.7;
 - **quad-structure**: §6's `ctx.quad` presets, `s_depth`, `s_impurity` and `s_state`;
 - **decoded-IC**: the decoded-IC payload quantities (§1.2), the `ICDescriptor` views of debug tooling plan §E (its
   masses, scalar and `E₀` rows), which "certify the **decoder**, independent of any integration" (debug tooling plan
-  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6);
-- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2).
+  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6); and ROUNDTRIP and the agreement
+  presets, because they certify the decoder (R-546, RQ-281);
+- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2);
+- **diagnostic**: the §B–§D payload field views (`f_edrift`, `f_wordhash`, `f_state`) and §E's live-shape and
+  accumulator views (R-546, RQ-281);
+- **profiling**: views of per-sample cost (`total_substeps`, the substep-log proxy) and of quad cache age (R-546,
+  RQ-281). These colour measurements that are always taken, so telemetry §5.5 stands: profiling's measurement is
+  first-class, and only its views are filed here.
 
-Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the §B–§D
-payload field views and §E's live-shape and accumulator views, is RQ-281.
+*Was:* "Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the
+§B–§D payload field views and §E's live-shape and accumulator views, is RQ-281."
 
 **9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
 spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
@@ -822,12 +980,14 @@ spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v`
   draws "`u`'s in red and `v`'s in green, blue 0", and "in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
   so the two agree unless the δ path is wrong" (debug tooling plan §F), which holds only with the RG view's blue 0
   too; §6's UV view is one preset over either source, so `ctx.screen.uv → RG` takes the same;
-- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B;
-- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G;
-- **index = grey**: an index written as one value on all three channels.
+- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B, G = 0 (R-546, RQ-280);
+- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G, R = 0 (R-546, RQ-280);
+- **index = grey**: an index written as one value on all three channels, one grey preset per index: `ctx.quad.index`,
+  `ctx.tile.tile_index` and `ctx.tile.sample_index` (R-546, RQ-280). Each maps its index to grey in [0, 1] by a
+  stated rule, written here by TASK-M7-17 (R-72, REQ-COL-139).
 
-The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
-`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
+*Was:* "The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
+`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280."
 
 **9.8 Boundaries are an overlay.** Quad and tile boundaries are Tier-1 overlays (render GUI spec §12.1): a function of
 the position within the cell, drawn by an ordinary post node from `ctx.quad.uv` or `ctx.tile.uv`, with no data

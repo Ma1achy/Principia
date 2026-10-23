@@ -13,7 +13,7 @@ use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Horizon, Plane};
 use engine::contract::view_ui::{KeyMode, Mode};
 
-use super::support::{click, frame_texts, headless, mock_app, press, rejects, shapes};
+use super::support::{click, frame_texts, headless, keys_on, mock_app, press, rejects, shapes};
 use crate::app::App;
 use crate::capture::PIXELS_PER_POINT;
 use crate::explore::hover_label;
@@ -247,6 +247,8 @@ fn mock_trajectory_pin_another_click_moves_it_and_unpin_follows_the_cursor() {
     click_at(&mut h, &mut app, a);
     assert!(app.trajectory.pin.is_some());
     app.view.focus.path = vec![TRAJECTORY.to_owned(), UNPIN.to_owned()];
+    // The click hid the ring (R-464): a key shows it, and Enter then acts.
+    keys_on(&mut h, &mut app);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert!(app.trajectory.pin.is_none(), "Enter on unpin");
     assert_eq!(app.snapshot().history.undo_depth, 0);

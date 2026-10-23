@@ -8,6 +8,9 @@
 //! [`encode`] runs `C` (`crate::canon`: 1a CoM → 0 scale → 1b boost → 2 rotate → 3 mirror, R-23), then the block
 //! inverses ([`blocks`]: config, momentum and mass, each through the selection's registry link inverse), and reports
 //! what it discarded ([`report`]).
+//! [`by_kind`] then encodes into the active chart, axis by axis by kind, and lands in latent `z` where the chart does
+//! not represent the state (Parts 5 and 6, step 4); [`curve`] is kind 4's, the Burrau family's closed form, its
+//! off-curve projection and the fold.
 //!
 //! **T1, constant on gauge orbits** (Part 1; dd_encode §3.3): translation and boost are removed by `C`'s 1a and 1b,
 //! rotation by step 2, scale by step 0, and the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no
@@ -25,6 +28,8 @@
 //! `lookup_clamped`: `s_α` is 0 or 1, and the `α` link's inverse clamps it; at `ρ = 0` `C` raises it too (R-13).
 
 pub mod blocks;
+pub mod by_kind;
+pub mod curve;
 pub mod report;
 
 pub use blocks::{Inverted, Jacobi, SimplexClamp};

@@ -4,6 +4,7 @@
 //! from it. Placeholder content: the fall-off is a stand-in, not REQ-GUI-156's definition, and the real hover
 //! integration is TASK-M8-10's.
 
+use engine::contract::display;
 use engine::contract::legend::SWATCHES;
 use engine::contract::sample::Sample;
 use engine::contract::sim_config::{Latent, Plane};
@@ -76,11 +77,13 @@ pub fn integrate(ic: Latent, at: [f64; 2], t: f64, t_max: f64) -> Sample {
         _ => t_max * (0.1 + 0.8 * ic_hash(&ic, 1.0)),
     };
     let decided = t >= end;
+    // The fate a person reads: the display name of the class's `state` and `detail` (R-449), "bounded" for bounded.
     let label = SWATCHES
         .iter()
         .find(|s| s.param == class)
-        .map(|s| s.label.to_owned())
-        .unwrap_or_default();
+        .and_then(|s| display::name_of(s.state, s.detail))
+        .unwrap_or_default()
+        .to_owned();
     let path_t = end.max(t_max * 0.1);
     let escaping = match class {
         "escape_body_0" => Some(0),

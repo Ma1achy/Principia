@@ -1,9 +1,13 @@
 # Principia — Dev GUI (egui / F3)
 
 *Status: canonical. Rewritten in step 6 (24 Sep 2026). This is the single source of truth for the **developer GUI**: the
-egui debug layer over the wgpu render, toggled with F3. It is not the final UI, but it has the same structure and every
-feature. The production (TS) GUI is out of scope; it re-skins the same operations through the same contract
-(`principia_gui_state_contract.md` §1, §7).*
+egui debug layer over the wgpu render, toggled with F3. It is the native app's UI and v1 web's, with every feature; a
+separate final UI, if there ever is one, is v2 web's (R-571; was: "It is not the final UI, but it has the same structure
+and every feature."). It is the interface of the native app **and of v1 web**, the whole native app compiled to run in the
+browser, with the same interface, features and stains (R-571). A production TS GUI, if there ever is one, is v2
+web's, a separate product designed later; it would re-skin the same operations through the same contract
+(`principia_gui_state_contract.md` §1, §7). Was: "The production (TS) GUI is out of scope; it re-skins the same
+operations through the same contract".*
 
 *Sources, in order of authority: `decisions.md` rulings, then `gui/design/GUI_DESIGN_NOTES.md` (the reviewer's design
 notes), then the twelve artboards in `gui/design/`. The notes win over the pictures, and a ruling wins over both. Where the
@@ -44,16 +48,53 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
-- **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
-  window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
-  of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
-  and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
-  extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
-  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3). The
+- **v1 web is this GUI (R-571).** In the browser the app is the same: the same windows, controls, features and stains,
+  with no separate interface design. Where the browser cannot do something the native app does, the app says so where
+  the native app has the feature: the control is shown disabled, with a note that the browser cannot do it, as the
+  Run window's fast-math control is (R-303); it is never removed, moved or redesigned (REQ-SYS-086; applied per R-369:
+  "says so in the app" is read as R-303's pattern). Which features those are waits on what v1 web may cross, RQ-550. A gap with no native control to disable (runtime-authored colour occupants from the scanned filesystem, persistence across reloads, `prin profile query --live`) is RQ-550's to settle (applied per R-369, gui review 5608379011 of PR #282).
+- **With the layer hidden, the figure fills the window (R-406), by one of two modes (R-468).** **Extend**, the
+  default and R-406's fill: F3 hiding egui makes the figure fill the whole window, showing more of the field at the
+  same scale in every direction, never the shown view stretched: each point of the field keeps the screen position it
+  has in the shown layout, so the figure's rect there is unchanged, and nothing already computed is invalidated.
+  **Fit**: the view's square, `UV ∈ [0,1]²` at the current `(z₀, q₁, q₂)`, is scaled uniformly to the window's shorter
+  side and centred, never stretched, its extent ratio kept, and the rest of the window is the canvas background; the
+  larger screen scale asks for finer quads (the screen floor, REQ-REF-011). Either way it is a view change, not an
+  edit: hiding and showing send no `SetField` and add no undo entry; showing the layer returns the normal layout, in
+  either mode, with nothing moved. The mode is chosen in View › **F3 fills by: Extend / Fit** (§G2's top bar) and kept
+  for the session, each launch starting at Extend; present mode follows it, and an image export, a snapshot and a
+  share link name it in their sidecar, `f3_fill=extend|fit` (R-472). Past the chart's `[0,1]²` each axis extends by its declared type
+  (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or whose state fails
+  validation is classified forbidden (R-407, `principia_chart_decoder_contract.md` Part 3), drawn as the canvas
+  background in a presentation view and with the hatch in the debug view (R-467; next bullet). Extension is free for
+  every affine chart, the latent chart and the flat and body-plane slices, tilted or rotated, planes onto which the
+  square is only the current window; the types and the fallback matter for the charts whose square is their whole
+  domain (the warp, the mass simplex, the Burrau family) and for custom physical-quantity axes (R-468, clause 4). The
   screen lane is the one exception to "nothing moves": `ctx.screen.uv` and `ctx.screen.pixel` are taken over the
-  figure area as shown, the full window with the layer hidden, so a stain that reads them (the UV-view debug preset
-  among them) draws differently over the shown rect when F3 toggles; the figure is identical over the shown rect for a
-  stain that reads no screen-lane field (R-407, A4; `principia_coordinate_conventions_note.md`).
+  figure area as shown, the full window with the layer hidden in Extend and the scaled square in Fit, so a stain that
+  reads them (the UV-view debug preset among them) draws differently over the shown rect when F3 toggles; in Extend the
+  figure is identical over the shown rect for a stain that reads no screen-lane field (R-407, A4;
+  `principia_coordinate_conventions_note.md`). *Was (R-406, R-407):* "a pixel whose `Φ` fails or whose state fails
+  validation is hatched as forbidden"; "the full window with the layer hidden"; "the figure is identical over the shown
+  rect"; one mode. **Past the square with the controls shown (R-537):** the extension is a property of the chart, not
+  of F3: pan and zoom reach it with the layer shown, Extend only adding window area, and wherever the view lands it
+  renders with no gaps (§G2, "Past the square with the controls shown").
+- **Presentation views draw no hatch (R-467).** The outcome view, the Chazy stains, every other stain that is not a
+  debug view, the figure filling the window with F3 and present mode are presentation views. In them a pixel that is
+  not part of the chart (past `[0,1]²` a state that fails validity or an axis beyond its bounded edge; inside the
+  square a validity failure, a decoder bug, §G12) draws the plain canvas background, the colour the window is cleared
+  to, with no hatch, legend key or share, as the area outside a map is blank; and NaN, `±∞`, `sim_failed` and
+  `decode_failed` are never a category: NaN, `±∞` and `sim_failed` draw R-446's black `#141418`, and `decode_failed`
+  draws blank (R-511; *was:* "they draw R-446's black `#141418`"). The debug views show them, View › Debug view
+  all three at once (§G2), and the Chart builder's Domain preview keeps its hatch and its "forbidden in view: N%", a
+  diagnostic for building charts (§G7). **R-470:** such a pixel is blank, the view's background, in every view, never a
+  palette colour, the outcome view included; the hatch outside the debug views is only the optional Overlays › Chart ›
+  forbidden region, over those pixels alone; NaN, `±∞`, `sim_failed`, `decode_failed` and the classification behind
+  the hatch show only in the debug views; a `decode_failed` sample the chart does not classify draws blank too, and
+  `sim_failed` keeps `#141418` (R-511). *Was:* "(whether a `decode_failed` sample the chart does not classify is blank
+  instead of `#141418` is RQ-379)".
+- **A chart never leaves the manifold (R-469).** Every pixel is a valid three-body system or explicitly not one, and no
+  chart, tilt, slice or extension integrates a state that is not a system. Navigation stops at the edge (§G2).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -65,36 +106,160 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
   label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
-  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
+  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7). **R-539:** the rule is about
+  the generic GUI panels and chrome (windows, panels, toasts, notifications and the GUI's own labels); figure-level
+  marks may cover the figure: the trace and its icons, contour lines and the line system's other lines, icons for
+  points of interest, the icons pinned to the view's edge (R-538) and the red ✕ pick marker (R-537), as the hover
+  label and the lock reticle are the figure's own marks.
+  **Badges go in the chrome or the status line, never over the figure (R-523; a badge is GUI chrome, not a figure mark, R-539).** The decoder badge, and every badge
+  that says what the figure is or how it was recreated, sits in the figure's header strip, the chrome at the top of the figure region
+  above the plot and outside it (§G2's Figure). *Was:* "The decoder badge in
+  the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it may be is RQ-387."
+  (stale value, replaced by R-523).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
-- **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
+- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
 - **Sim key or not.** Each control knows whether its field re-integrates (sim key) or is live (render key), and warns per
   field from the caching blast-radius table (gui_state_contract §2).
 
 ## G2. Explore — the everyday view (`01_main.png`)
 
-**Top bar.** Menus (File, View, Windows, Help; View holds **Home**, its first entry, R-466, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
-many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
+**Top bar.** Menus (File, View, Windows, Help; View holds, in order, **Home**, its first entry, R-466, a separator,
+**F3 hide**, **F3 fills by: Extend / Fit**, one row of two radio options, R-468, **Debug view**, a check entry, R-467,
+**Save view as chart**, R-475, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
+many are on; **Lines ▾** beside it, with a count, `Alt+L` showing or hiding all lines (R-476); **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
 `budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
 
 **Overlays ▾** holds the toggles, grouped, each with an Alt+digit shortcut, plus **all off** and **save as default**:
 - Quadtree: tile bounds, depth colouring, priority heatmap, `refine_flagged`, split / merge activity.
 - Integration: substep density, substep-cap hits, NaN / invalid pixels, energy drift.
-- Chart: forbidden region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples).
-- Stain: class edges, `t_end` contours.
+- Chart: forbidden region (the chart's domain function, R-26), Burrau lattice (primitive triples), outline the
+  chart's primary square (R-552, RQ-408 (a)): one toggle with one state, on by default and drawn whatever its state
+  while a debug view is the figure, as RQ-461's reconciliation rules it (R-556), outlining `[0,1]²` of the chart's own
+  parameters as a figure mark (R-539) where its edge is in view.
+- Trace (R-541 G2): trace under cursor (`T`), kept traces (`⇧T`), syzygies (`Y`), end event icon, off-screen icons
+  pinned to the edge, repeat in wrapped copies, outline the chart's square, and a **Trace…** button, which opens
+  `Trace…` (§G5). A trace is an overlay, so it lives with the overlays. Each item is the trace's own setting in
+  `Lines`' state (R-538 I1), the same field as `Trace…`'s and the Trajectory panel's marker chips, one undoable
+  `SetField` from any of the three, re-integrating nothing: every setting is set in at most two places, Overlays ▾ ›
+  Trace holding view toggles of the same fields (R-556, RQ-460 (a)). The outline's entry reaches Overlays › Chart's one
+  outline toggle, one state, on by default and on in the debug view (R-556, RQ-461; RQ-408, R-552). *Was:* "(RQ-460,
+  its option (a) applied meanwhile, R-541 P4). The outline's entry is built only once RQ-408 is ruled, and as it rules
+  (RQ-461)." The group comes after Chart: the Stain
+  group it follows in the file has gone (R-509, above).
+
+*Was (before R-476):* "- Chart: forbidden region (the chart's domain function, R-26), grid, Burrau lattice (primitive
+triples)." and "- Stain: class edges, `t_end` contours." The grid and the `t_end` contours are presets of the line
+system now, under Lines ▾ (R-476, L2). *Was (before R-509):* "- Stain: class edges." Class edges are the line
+system's preset too (R-509), so Overlays ▾ has no Stain group.
 
 Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived from the address), a sim shader (Tier 2,
 already resident) or a tile debug shader (Tier 3, a scheduler verdict). The Overlays menu and the Display window (§G5)
-replace the corpus's global display bar (R-67).
+replace the corpus's global display bar (R-67). The Chart group's "forbidden region" and the Integration group's
+"NaN / invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view (R-467, applied per
+R-369); whether they stay beside it, go, or show only while it is on was RQ-374, ruled by R-470: **forbidden region**
+stays, off by default, and draws the hatch over exactly the pixels the chart classifies as not a system (blank pixels)
+and the `decode_failed` samples, blank too (R-511), and nothing else, in any view; **NaN / invalid pixels** draws only while a debug view is the figure (View › Debug view
+on, or a debug-catalogue stain), dimmed with a tooltip saying so otherwise (RQ-374's option (c), applied per R-369).
+
+**The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
+that shows what the presentation views leave out: every system pixel as the stain draws it; a pixel the chart
+classifies as not a system with the hatch, `debug_invalid`; a decode or sim failure with `debug_invalid`; NaN and `±∞`
+with a style of their own (REQ-COL-110; not magenta, which sits at τ from escape body 2, R-505). The legend gains a
+"Debug" key, its three entries "forbidden (chart)", "decode or sim failure" and "NaN / Inf", each with its count of the
+figure's pixels and their share, drawn always (§G6; colour_composition §6). It is a render-side toggle sent as a
+`SetField`, undoable as an Overlays ▾ toggle is (R-69), re-integrating nothing (gui_state_contract §2; applied per
+R-369). *Was (R-467 D5 as first ported):* "marked 'no history': a view, not an edit, adding no undo entry". It is off at
+launch, keeps its state through F3, present mode and both fill modes, and has no key of its own; the View menu reaches
+it from the keyboard (§G3). On the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`,
+R-467 D8).
+
+**Lines ▾ (R-476).** The line system of `docs/design/principia_lines.md`, a separate system, not a node of the stain
+graph, drawn over the finished figure: contours of any expression over chart, latent and payload quantities, the hover,
+pinned and kept traces, the axes (frame, ticks, labels, titles), grids and style presets. The menu lists the contour
+sets and axes with their visibility (the traces are in Overlays ▾ › Trace, the Trajectory panel and `Trace…`, R-541;
+R-556, RQ-448 (a), Lines ▾ keeping the rest), opens the contour-set editor and the style library, and holds the presets,
+among them **Grid** (contours of the chart's own axes), **t_end** (`t_end` at the playhead) and **Class edges**
+(contours of the stain's categorical field, the edges between pixels of different class, R-509), which were Overlays
+toggles. Lines belong to the figure: they stay with F3 and present mode and are in exports; wherever the view
+reaches past the square, the controls shown or hidden (R-537), they continue wherever the field exists and never pass
+through a pixel that is not a system. *Was:* "under F3's Extend they continue wherever the field exists".
+Editing a line is one undoable
+`SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are ruled (R-509,
+ruling RQ-377): a contour expression is typed in the stain's expression syntax; the playhead reads any payload field
+the generation root's ledger declares; a trace fades off the plane by the proxy where the chart defines one, and
+elsewhere does not fade and its settings say so (the general distance waits on RQ-522, its metric on `z`,
+which RQ-341's ruling, R-550, leaves open; *was:* "waits on RQ-341"); a trace's tick labels win
+over contour labels; class edges are a Lines preset; a new contour set takes Screen contour, smart ink opt-in.
+*Was:* "Its six open questions are RQ-377." In the keyboard tree Lines ▾ follows Overlays ▾ in the top bar's scope
+and opens as it does; the contour-set editor and the style library are windows (§G5), their sections reached with
+Tab (R-476, M13). `Alt+L` is a global key (§G3). On the mock (R-390), which has no line system, Lines ▾ is shown
+dimmed, its count 0, its tooltip saying the line system draws on the real engine, and `Alt+L` does nothing (R-476,
+M6). *Was (before R-541):* "The menu lists the contour sets, traces and axes with their visibility".
+
+**Trace settings (R-538).** The **`Trace…`** window (§G5) holds every trace setting, the Trajectory panel's Trace
+section the everyday ones and Overlays ▾ › Trace the view's toggles (R-541 G1, G2, G4), in this order, with their defaults
+(`principia_lines.md` §8): **Icon set** (Principia; Arrows, Pictures, Orbits; "Compare icon sets" draws the table),
+icon size (1.4×), syzygy markers (off) and their style (from the icon set: o–o–o in Principia; Three in a row, Line
+and bead, Numeral tag, Crossing tick, Eclipse), fade stutters (on), leaving / re-entering the chart's reach (on), end
+event icon (on), "Off-screen icons: pin to the edge (faint). Untick to hide them." (on), leaving / entering the window
+(edge chevrons, off), seams (θ wrap, off), join jumps with a dotted line (off), length (to the head, everything from
+`t = 0`, while played or scrubbed; to its end otherwise, R-538 TF3), tail only (off; tail Δt 3 when on), show the rest faintly (off), head marker labelled with its time (on), time
+ticks (every 2, labelled), direction arrows (filled triangle, 8 px, every Δt 1.0), width (2.2 px) and colour (the hover
+and pinned trace fixed `#FFF27A`; kept traces the trace palette in turn, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
+#9EF0D2`; or **Ramp along time**, R-538 TF4: the ramp's preset, Sunset by default, Viridis, Magma, Ice, Ember, Aurora,
+Mono or Custom… with three colour stops, a Reverse toggle and a preview bar). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
+the keyboard tree as a window's or a panel's others are (§G3; R-541). The icons are figure marks (R-539). A click on a pixel
+that is not a system starts no trace and draws the red ✕; hover there shows the readout and no trace, and draws no ✕
+(R-537 EX5, R-538 TM8). A trace of the default length (to the head) not being played or scrubbed is drawn whole, to
+its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
+TF3); a `Window` or `LastDt` length is kept as chosen, paused or not (RQ-427 (a), R-553). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5; RQ-425 (a), R-553), and its count of
+samples that are not a system reads "not a system: N samples", "in forbidden: N samples" only while a debug view is the
+figure (RQ-417 (b), R-553 K1). *Was:* "length (to the head,
+everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
+turn, …)", with no ramp control. *Was:* "A click or hover on a pixel that is not a system starts no trace and
+draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole," (gui review 5594407176 of PR #263, G1
+and G2: only a click draws the ✕; RQ-427 (a); applied per R-369). *Was (R-538 I2, before R-541):* "Each trace's entry
+in Lines ▾ holds its settings, in this order," and "each control is in the keyboard tree as Lines ▾'s others are
+(R-476 M13)".
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
-view the manifold.
+view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
+the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
   an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
-  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
-  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
-  hemisphere drawn, φ's span runs from the pole to the equator (R-412).
+  the section also shows the **projection selector** (equirectangular, or an equal-area alternative) —
+  `principia_chart_reference.md` §3.3 (R-113). There is no hemisphere toggle: the shape sphere chart is the whole sphere,
+  always (R-544). *Was (R-113, R-412, the toggle removed by R-544):* "and the **hemisphere toggle** (one hemisphere, or
+  both with the redundancy flagged) …; with one hemisphere drawn, φ's span runs from the pole to the equator (R-412)".
+  **Save view as chart** (R-475), a button after Chart builder… (and on View ›), commits the current view as a named
+  custom chart: a latent view as the oblique chart `(z₀, q₁, q₂)`, a curved one as its parent chart, slice centre and
+  tilt (map, angles, targets). It is one undo entry, makes the saved chart active (reproducing the view bitwise at zero
+  tilt) and adds it to the preset selector's **Saved** group, named "Saved <n>", renamed inline, its provenance (parent
+  chart, map, angles, targets, and a latent view's `q₁`, `q₂`) shown beside it; it is then tilted, sliced and saved like
+  any chart, so tilts compose. Saved charts are the GUI's own settings, kept across sessions, deleted as a preset is
+  (§G7), at once and not undoable; deleting the active one leaves the view as it is, the picker naming it "unsaved
+  chart" with its provenance until another chart is picked or it is saved again (R-475 L3). A latent view saved at a
+  tilt offers as its targets the named dimensions other than its first parent's axes, each projected off the saved
+  plane and normalised (listed as "<name> ⊥ (projected)" where the projection changed it; *was* "listed "⊥ (projected)""), the vanishing ones dropped, and both
+  maps act in the orthonormal frame of the stored pair and the target, carrying the stored pair (R-514); a saved
+  curved chart's target dropdowns offer its saved target too, a new tilt into it composing the rotations (R-513).
+  *Was:* "A latent view saved at a tilt keeps its Tilt section dimmed meanwhile, its tilt waiting on RQ-404; a saved
+  curved chart's target dropdowns do not offer its saved target, which waits on RQ-403 (R-475 L4, L5)."
+  With an energy-type axis (`E`, `L_z`, `K`, `KE`)
+  or, on a Chart-builder chart, any physical-quantity axis (R-506), the section offers each such axis's **mapping**,
+  warped (the default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit
+  that re-integrates (R-471): one row per axis after Save view as chart, each two radio options, in that keyboard
+  order (R-471 H10). *Was:* "With an energy-type axis (`E`, `L_z`, `K`)".
+  **Links (R-478):** one compact row, `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)`, the masses, the
+  configuration and the momenta, each by its link's display name with its tunable parameters' active values (the
+  configuration one item while α and β use one link family, `α tanh / β sigmoid` when they differ), and a
+  **Decoder…** button that opens the Decoder window (§G7a). The row is tinted amber whenever any block is off its
+  default, its tooltip naming the blocks, so a non-default decoder is never invisible. The links are the decoder's,
+  not the chart's: no chart edit changes them (R-478, W1), but for one: loading a chart preset or a saved chart that
+  pins links applies its pinned links with it, with a notice (§G7's presets; R-516). *Was:* "no chart edit changes
+  them (R-478, W1)." (stale value, replaced by R-516).
 - **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
   two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
   the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
@@ -106,7 +271,12 @@ view the manifold.
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
   (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
-  base point, the six coordinates off the preset's axes, tilted or not (R-466, K2).
+  base point, the six coordinates off the preset's axes, tilted or not (R-466, K2). On every chart (R-473, T6) the
+  sliders of the coordinates its axes do not set are its hidden coordinates and move the slice centre along them, each
+  through its latent control (a mass through its logit), the physical value at the centre read out beside it (the
+  masses on the shape-sphere chart, applied per R-369); the stop (below) holds. The sliders of the coordinates a curved
+  chart's axes set (on the shape sphere `z_α`, `z_β`) stay in the section and the keyboard order, read-only and
+  dimmed, each showing the centre's value, with the tooltip "set by the chart's axes: pan to move it" (R-473, J11).
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
   number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
   horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
@@ -116,6 +286,19 @@ view the manifold.
   the new dimension, one undoable edit. There is no step slider: it set `z₀`'s component on the slice axis, which the
   Slice centre slider for that dimension sets (R-457). Its **reset**, beside its heading, sets `τ₁`, `τ₂` and `γ` to 0;
   it changes neither tilt target nor the H, V and D choice (R-466).
+  **The map (R-474):** "map: Tip as sheet / Lean each axis", two radio options after `γ`, Tip as sheet the default.
+  With one target (`X = Y`) and both angles set, Tip as sheet turns the plane rigidly by `m = √(τ₁² + τ₂²)` about the
+  in-plane axis perpendicular to `(τ₁, τ₂)`, orthonormal, and Lean each axis is the formula above; otherwise the two are
+  the same. Under Tip as sheet each angle runs over ±180°, not clamped at 90°; under Lean each axis over ±90°, and choosing
+  Lean each axis clamps an angle stored past ±90° to ±90°, its sign kept, in the same undo entry as the map change
+  (R-474 K15). In the keyboard order the two radio options follow `γ` and precede the Tilt reset (R-474 K7). The map is
+  `SimConfig`'s `tilt_map`, one undoable edit, and neither the Tilt reset nor Home changes it. **Every chart (R-473):**
+  the section tilts every chart, curved ones included, the targets offering the chart's hidden coordinates, the
+  rotation acting on the chart's own parameters (`principia_chart_decoder_contract.md` Part 4), in units that do not
+  depend on zoom: each screen axis in its full range at zoom 1, the hidden coordinate in its slider span (R-507). The
+  shape sphere's targets also offer the physical `p_λ` components `p_λ,x` and `p_λ,y`, the one exception to R-473 J2's
+  hidden coordinates, once REQ-CHART-084 defines them and not before, the readout naming the physical target (R-554
+  L5, RQ-474 (a); REQ-GUI-350).
 
 **Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
 `z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
@@ -135,7 +318,9 @@ the dimming and the checks compare the section's values, not the row's figures. 
 one command: the button in the figure's top-right corner (below), the Home key in both keyboard modes (§G3) and
 **View › Home**. It leaves alone the chart preset and its axes (Chart's `q₁` and `q₂` axes, the cube's H and V), the H,
 V and D choice and the tilt targets, the time playhead, the stain, and the panel and window layout, and also the lock,
-the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Each reset, and
+the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Home and the
+section resets leave the links and their parameters alone too, staged or applied: they are the decoder's, and Home
+is navigation (R-479, D3). Each reset, and
 Home, is **one undoable command**: its edits are sent in one frame under one history key, so one Ctrl+Z restores all it
 set, and a command with nothing to change sends nothing. A section's reset is **dimmed** (egui's disabled style, no
 click) while the section is already at its home values, within 10⁻¹², and Home, its button and its menu entry while all
@@ -145,11 +330,50 @@ and its anchor stay (R-466 K5): a locked Tilt reset, or a locked Navigate reset'
 move `z₀`, so the checks that a reset leaves the other two sections untouched run unlocked. The commands are named
 "Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home" (tooltips, the menu and the `?` overlay).
 
-**Figure.** Axis labels carry the short axis name and the range at each end. A **Home** button, a house icon 24 × 24
-points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7): a click on it is
+**Navigation stops at the edge (R-469).** A pan, slice, zoom, tilt or lock that would take the chart's centre out of
+`validate`'s layers 2 and 3 stops at the last valid value: a dragged slider's handle stops there and goes no further,
+the drag staying live up to it, the compass shows the clamped plane, and the compass's readout adds "stopped at the
+edge: <check> (validate layer <n>)" until the next edit. Undo and the contract hold the clamped value.
+
+**Past the square with the controls shown (R-537).** The view is a window onto the chart's extended parameter plane:
+with the controls shown or hidden, pan moves the window and zoom scales it past `[0,1]²` in any direction, and F3's
+Extend only adds window area; Fit scales the view's own square, wherever it sits, and draws whatever that square holds,
+R-472 X2's "with no extension" meaning no window area beyond that square (R-468 E2; R-552, RQ-416 (a)). What is drawn past
+the square is the axes' types (`principia_chart_decoder_contract.md` Part 3): an affine chart continues, a periodic axis
+repeats, a pole-crossing one continues over the pole with θ shifted by half its period (the shape sphere has no fold at the
+equator, R-544; *was:* "the hemisphere's fold shows the mirror hemisphere"), and past a bounded edge or a validity failure a pixel is not a system, blank, the hatch only through
+Overlays › Chart › forbidden region. The only navigation limit is the stop above, judged on the centre after the types
+fold it: a pan across a seam or a pole never stops. Periodic charts have no zoom-out limit beyond the frame budget
+and the baseline cover; the demo's 3× cap applies only to its fixed maps (R-552, RQ-409 (a)). **Never any gaps:** every visible point is drawn at whatever
+resolution is available, a quad not yet computed showing its nearest computed ancestor; the only blank pixels are not
+systems. Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no
+snapshot) the canvas background is drawn, and the rule holds from then on (R-552, RQ-419 (a)). **Every interaction works at every visible pixel:** hover, click and pin (R-453), lock, the inspector, the
+trace, keep and the readouts. Comments on the figure and the console's pick are not yet specified: the human will
+define what a comment on the figure is (where it is stored, how it is placed, whether it exports) and what the console's
+pick is, and the rule applies to each once it is defined, a comment pinned in a repeat attaching to the canonical point
+and appearing in every image (R-552, RQ-420 (b), RQ-411 (a)). A pixel in a repeat resolves to its canonical chart point, the same system: the readout
+shows the canonical coordinates and labels the pixel a repeat, and the trajectory, outcome and inspector are the
+canonical system's. A click on a pixel that is not a system integrates nothing and draws a red ✕ where it was clicked, a
+transient pick marker and a figure mark (R-539), kept until the next click, edit or the pointer leaving the figure; it
+pins nothing and leaves a pin as it is, and a lock there is refused (R-469). Its readout says "not a system" and names
+the check that failed (e.g. "a mass ≤ 0"); the label `decode_failed` and its detail show there only while a debug view
+is the figure, as is the word "forbidden" (RQ-417 (b), R-553; R-470). Hover over such a pixel shows the same readout and no trace. Repeats of the field are drawn at full strength, because
+they are the same systems (R-552, RQ-407 (a)). Traces repeat in every image
+in view, fainter, with every marker (R-538, `principia_lines.md` §8). The view state records the centre as it is, on a
+periodic axis unwrapped, keys and addresses taking the canonical value (R-552, RQ-406 (a)), so an export, its JSON and its embedded payload reproduce the same window, repeats
+included.
+
+**Figure.** Axis labels carry the short axis name and the range at each end. *(R-476: the axes are the line system's,
+its Screen preset the dev default; this line is its Ends only preset, offered.)* A **Home** button, a house icon 24 × 24
+points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of
+the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
-and it hides with the layer (F3, present mode). The orbit's path is drawn from the cursor's IC:
-- **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. This is
+and it hides with the layer (F3, present mode). **At launch and after Home** (applied per R-369, gui review
+5595357065's note on PR #265; accepted by R-559), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
+one scale in both directions, and the extended field is drawn around it (R-537); a resize then keeps that scale and
+shows more or less of the field (Layout, below). The orbit's path is drawn from the cursor's IC:
+- **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. It is drawn by
+  the line system (R-476, `principia_lines.md` §8), as the pinned and kept orbits are. This is
   `principia_trajectory_viewing.md` §3's hover trace (the full CPU state, `computeIC`, projected onto the chart's actual
   basis). It is **solid near the slice and faint where it leaves the plane.** The notes add that it is exact in the
   shape-sphere `(θ, φ)` chart, where the chart's coordinates are the shape itself.
@@ -157,6 +381,26 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   `t_max`". A decided fate is a terminal `state` (escape, collision) or `bounded` at the horizon (payload §2); its labels
   name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
   (R-449; payload §2, "What a person reads").
+
+**The decoder badge (R-479, D4; its place R-523).** A badge in the figure's header strip, a one-line strip of chrome at the
+top of the figure region above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
+off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
+· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only. **Where it sits (applied per
+R-369, gui review G1 of PR #265; accepted by R-559):** the strip takes its height, one line of the body font with its padding, from the
+top of the figure region (the rect `01_main`'s proportions give the figure). **The shown rect (applied per R-369, gui
+review G3 of PR #265; accepted by R-559)**, the rect R-406, R-468 and REQ-GUI-229 read, is the whole of the figure region below the strip,
+at that region's own aspect, with the field drawn at one scale in both directions across it, as Layout below says
+("the canvas showing more or less of the field at the same scale", R-462) and as R-537's window onto the extended
+plane has it (never any gaps): there is no centred square, no margin and no gap, and nothing of the strip draws over
+it. A window resize or a splitter drag changes how much of the field shows, never its scale. The axis labels' strips
+(Figure, above; *was:* "(Figure, below)", reworded, kept here) and the Home button hang from the shown rect, so Home sits in its top-right corner, below the strip.
+*Was* (round 1, gui review G1 of PR #265): "the plot is fitted into the rest at its aspect, square for the slice,
+centred, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229 read, so nothing of the strip draws over
+the plot and the plot is never stretched" (stale value, replaced by gui review G3 of PR #265, applied per R-369 under
+R-523). It hides with the layer (F3, present mode),
+as the Home button does, and the figure then fills the window as R-406 and R-468 say. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
+says so in the same badge (R-483, X5; R-484, RT3). *Was:* "**The decoder badge (R-479, D4; applied meanwhile,
+RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value, replaced by R-523).
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample
@@ -176,10 +420,43 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   own `ViewUI` state; it is not the compass's, which has none (R-409);
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
 - a playhead for this orbit;
-- **listen**: sonification (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can follow the
-  cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative (R-68);
+- **listen**: **Listen** (R-540, `docs/design/principia_listen.md`), the trajectory heard as sound, the panel's Listen
+  section (below) and `Listen…` (§G5). It follows the cursor, or the pinned or kept trajectory of the tab shown. Its
+  signal is R-540's (RQ-451), within `principia_scratchpad_pointer_channels.md` §4's constraints (normative with §3 —
+  R-109, R-144) as R-540 reads them (RQ-450, RQ-452; the three ruled by R-555, (a)). *Was (before R-540):* "sonification
+  (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can
+  follow the cursor. The mapping is the corpus's; the artboard's selector ("separations → pitch") is illustrative
+  (R-68);" (the selector's row is stale, RQ-443, its option (a) applied);
 - **Open full viewer…** and **IC Inspector…** (both open §G8);
-- **Kept orbits** below, each with its fate and time, removable.
+- **Kept orbits** are the header's tabs, each with its fate and time, removable, each with its own previews, trace and
+  sound; their list is in `Trace…` too (R-541 G4). *Was (before R-541):* "**Kept orbits** below, each with its fate and
+  time, removable."
+
+**The panel from the top (R-541 G4).** The bullets above give each item's behaviour; this is their order.
+1. **Header**: `Trajectory`, then the tabs `under cursor` (`pinned` while a pin is held), `#1`, `#2`, …, `+ keep`.
+   Switching tabs switches the trace, the previews and the sound together.
+2. **Status line**: running or pinned, the end event with its time, `|ΔE/E|`, and the summary's FTLE and `E₀` (R-556,
+   RQ-462 (a)).
+3. **Previews**: real space (bodies 1 yellow, 2 magenta, 3 cyan, R-538 I3's body colours) and the shape sphere, side by
+   side, with `sphere / unwrapped` and `turn`. **While Listen is on, the stretch of the shape-sphere path inside the
+   analysis window** (`windowAt(t)`, `principia_listen.md` §4) **is drawn brighter**, `#5ab4ff`, width 2.4, so what is
+   being heard is visible.
+4. **Three collapsible sections**, each a single row when collapsed:
+   - **Trace** (collapsed by default). Collapsed: a switch, the line's colour swatch, a summary (`to the head · ticks 2
+     · left 0×`) and `⋯`, which opens `Trace…`. The switch sets, on the under-cursor tab, Overlays ▾ › Trace's
+     trace-under-cursor field (`T`'s), and on a kept tab that kept trace's own visibility, its line's visible field in
+     `Lines`' state, `⇧T` showing or hiding all kept traces (gui review 5595359543 of PR #267, G5; applied per R-369, a
+     mechanical reading of G2 and G4). Expanded: show (up to the head / tail only, `Δt`), colour and swatch,
+     ramp, width, time ticks and labels, arrows, then the **marker chips**, then the icon set. The marker chips are
+     toggle buttons that show the icon they draw: end event, syzygies, leaving the chart, off-screen pins, wrapped
+     copies, head marker.
+   - **Listen** (collapsed until first used, then remembered per user, in the GUI's own settings as a window's place
+     is, never the contract; R-556, RQ-445 (a)). Collapsed: `♪` on / off, the instrument and `⋯`, which
+     opens `Listen…`. Expanded: instrument, volume, listen mode, loudness, the event and effect chips (toggle buttons
+     with short glyphs), a small spectrum at the head, the two strongest lines as notes with their sides, the interval
+     and the entropy.
+   - **Numbers** (collapsed). Expanded: the F₂ word, substeps, minimum separation.
+5. The panel's playhead, then **Open full viewer…** and **IC Inspector…** (R-556, RQ-462 (a)).
 
 **Bottom.**
 - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
@@ -203,7 +480,23 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
   stored frames; the export contract's "no scrub" applies to exported animations only (R-66). While the scrubber is
   dragged the display time follows the drag every frame, the whole drag one undo entry (R-458).
-- **Legend, generated from the stain** (§G6).
+- **Listen in the band (R-541 G7).** The band is **Compass · Time · Legend**, 196 px high by default, the Compass at
+  the left panel's width and the Legend 360 px by default (R-462's splitters, each height remembered; R-556, RQ-463 (a)). Listen
+  adds to the Time column and nothing else:
+  - **Sound off**: as above.
+  - **Sound on**: the band's height unchanged; an **event lane** and a **mini spectrogram** (≈54 px) fill the Time
+    column's spare height, with `♪ strip ⏶`; the Legend gains the trace block (§G6).
+  - **Strip expanded (⏶)**: the band grows upward to its second height, 420 px by default, its own remembered splitter
+    position, and the view gives up the height. The Time column shows the full spectrogram on the scrubber's own time
+    axis, with the window, signal and channels shown, and `Listen…`. The Compass draws its cube only, in its current
+    view and mode, its buttons hidden and out of the keyboard tree until `⏷`, a drag on it working as before (R-556,
+    RQ-463 (a)). The Legend's column shows **the spectrum at the head** until `⏷`, the band staying at its expanded
+    height, never growing to ≈ 520 px to stack it (R-556, RQ-446 (a)).
+
+  The spectrogram and the scrubber **share one time axis**, so the playhead is one line through both. The spectrogram
+  is blank past the run's end, which is labelled. F3 still hides the whole band. The spectrogram, the event lane and the
+  spectrum are `principia_listen.md` §11's.
+- **Legend, generated from the stain** (§G6), with the trace block while a trace is shown (§G6, R-541 G8).
 
 **Footer.** Warning and error counts, the latest message, memory (GPU, heap), "? keys", and the passive-logging
 indicator while logging is on (R-129). Clicking it opens the console
@@ -256,7 +549,8 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   axes share one scale, so the drawn tilt is the latent angle; the cube is [−1, 1] on each axis in units of the
   half-range, absolute, free or locked (free, the sliders' range; locked, the sliders span the anchor ± the
   half-range), and the chart window's extent is not drawn. The drawing follows the decoder's tilt mapping, not the
-  reference's axis-angle map; RQ-340 holds the difference (R-451).
+  reference's axis-angle map; RQ-340 holds the difference (R-451). *R-474 (ruling RQ-340):* it draws the active map,
+  `View::basis` under `tilt_map`, Tip as sheet (the reference's axis-angle map) by default.
   All of this holds where the compass draws the plane, tested by `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²)`, `q₁`, `q₂` in
   the cube's frame, `s ≥ 10⁻³` (under the decoder's map `s = √(1 − sin²τ₁ sin²τ₂)` for every `γ` and `σ`). The cut
   is the compass's own, numerical, set by the 1e-12 normal check (the normal's error is about `ε/s`): only at the
@@ -264,6 +558,8 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   about 0.057° of them a plane exists that the compass does not draw. Where `s < 10⁻³` no slice is drawn (no polygon,
   fill, grid or outline), only the cube's edges, labels and corner numbers, and, locked, the gold pin at the anchor
   (R-451 B7); the readout says so and a slice-mode drag sends no edit (R-451 B11; RQ-340).
+  *R-474:* B11 holds under Lean each axis only. Under Tip as sheet `q̂₁`, `q̂₂` are orthonormal at every tilt, so
+  `s = 1` and the plane is always drawn, at the corners `τ₁ = ±τ₂ = ±90°` (`m = 127.3°`) too.
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
@@ -274,7 +570,12 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   and their angles in degrees, one decimal. Both tilt targets are always named, each with its angle ("τ₁ → z_q3
   +12.0°", "τ₂ → z_μ1 0.0°"), whichever the third axis shows (R-457, R-459).
   Where `s < 10⁻³` (above), either mode adds the line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>°
-  (RQ-340)", the angles signed, one decimal (R-451 B11).
+  (RQ-340)", the angles signed, one decimal (R-451 B11). *R-474:* that line, under Lean each axis only, ends
+  "(Lean each axis)". **The readout's lines under R-474**, in either mode: each screen axis's components, "H = 0.72 e_a −
+  0.28 e_b + 0.63 e_X" and "V = …", the unit axes after `γ`, two decimals, terms below 0.005 left out (R9); past `m =
+  90°` under Tip as sheet, "same plane as (τ₁′, τ₂′), mirrored", `τ′ = τ·(m − 180)/m` (R4); under Lean each axis,
+  "dead zone: |τ₁| = 90°, τ₂ does not move the plane" (or with the indices swapped) while an angle reads ±90.0°, and
+  "axes at <θ>°", `cos θ = sin τ₁ sin τ₂`, whenever it does not read 90.0° (R8); and R-469's "stopped at the edge" line.
 - **Drag:** slice mode, the drag moves the slice along the drawn plane's normal, the decoder's (R-409 A3's), by its
   2-D displacement projected onto that normal's direction on the screen (`ŝ`, along `P(n̂) − P(0)`), so the drawn
   plane moves with the pointer at every tilt, the component across `ŝ` doing nothing, a drag of the cube's full width
@@ -284,7 +585,8 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   its vertical component instead, up moving the plane toward the viewer, at the same rate, the whole range per `2√3·S`
   of vertical travel (R-465 N3). Tilt mode, unchanged by R-465: a
   horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
-  or height 180°, each clamped to ±90°. One undo entry per drag (R-96), the edit applied every frame of the drag so the
+  or height 180°, each clamped to ±90° (under Lean each axis; under Tip as sheet to ±180°, nothing clamping the tip at
+  90°, R-474). One undo entry per drag (R-96), the edit applied every frame of the drag so the
   sliders, the readout and the figure follow it (R-458). The displayed values ease toward their targets,
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
   (R-451 B3, B4), so during a drag only the cube's drawing trails the pointer (R-465 N1). Slice mode and tilt mode
@@ -334,19 +636,37 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   and `Σ p²`: "strongest: z_a × z_b +0.993 · Σ p² 1.000". It shows heading, not position.
 - **Position readout,** under the Plücker view: `z₀` as one signed bar per latent coordinate, the slice axis
   highlighted (`principia_compass_charts.html`, "position gauge"). A readout, not a view.
-- **Jacobi and Shape (the decoded heading).** The plane pushed through the decoder's Jacobian at `z₀`, or at the
-  hovered pixel while the pointer is over the figure: `u₁ = J q₁`, `u₂ = J q₂`, orthonormalised, drawn as the same
-  grid over eight physical coordinates; the readout gives the dominant pair and the area stretch
-  `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder
-  writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and which Jacobian (the corpus's `J_D` is
-  `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and wait on RQ-341 to RQ-343, RQ-345 and
-  RQ-346; the
-  reference's Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the
-  slice moves, because the Jacobian depends on `z₀`, while the Plücker view does not.
+- **Jacobi and Shape (the decoded heading; R-550).** The plane pushed through the decoder's Jacobian at `z₀`, or at
+  the hovered pixel while the pointer is over the figure (on an affine chart; on a nonlinear chart `z₀`, the help text
+  saying so). `J` is the latent Jacobian, the eight-column, f64, central-difference `∂x/∂z` of the decoder's output in
+  the view's coordinates, after canonicalisation, the scale gauge and `η_E`, the state the integrator starts from
+  (`principia_deep_zoom.md` §2; RQ-341 (a), RQ-345 (b)), never `J_D`. `u₁ = J q̂₁`, `u₂ = J q̂₂`, with `q̂₁`, `q̂₂` the
+  slice plane's pair orthonormalised, drawn as the same grid over eight physical coordinates, each divided by its fixed
+  reference range: angles by the length of their domain, masses by 1, momenta by the decoder's momentum saturation bound
+  `q_max`, and Shape's rates and `L_z` by the fixed ranges this section states (RQ-346 (c)); the help text names that
+  metric. The readout gives the dominant pair and the area stretch `√(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²)` on the
+  orthonormalised pair, so it does not move with the zoom σ or the tilts' shear; where `J q̂₁ ∧ J q̂₂` vanishes the view
+  says so rather than draw. Jacobi's eight are `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M`, each named as the decoder
+  writes it (RQ-342 (b)); Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M`, `θ` and `φ` in R-14's convention (`φ` the polar
+  angle from `+w`), the rates `d/dt` at `t = 0` of the decoded state's mass-weighted `ρ̃`, `λ̃`, and the sphere's poles
+  named as the chart's singularities (RQ-343 (b)). Both sets have full rank on the decoder's image; with `E*` set
+  every physical Jacobian has rank 7, the direction normal to the energy shell out of reach (RQ-345). The reference's
+  Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the slice moves,
+  because the Jacobian depends on `z₀`, while the Plücker view does not. *Was (before R-550):* "`u₁ = J q₁`,
+  `u₂ = J q₂`, orthonormalised, … the area stretch `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ,
+  λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and
+  which Jacobian (the corpus's `J_D` is `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and
+  wait on RQ-341 to RQ-343, RQ-345 and RQ-346".
 - **Click to steer.** A click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` reset to 0,
-  the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁺ e_i`,
-  `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and is refused, with the reason logged to the console, where the
-  preimage is no 2-plane; the construction waits on RQ-344 to RQ-346. Every steer is one `SetField` on the basis through the
+  the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁻¹ e_i`,
+  `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised: both sets have full rank, so `J⁺ = J⁻¹` and no metric on `z` enters
+  (RQ-344 (a)). It is refused, with the reason logged to the console, where the smaller singular value of
+  `[P e_i, P e_j]`, `P = J J⁺`, is below a calibrated tolerance (RQ-344's (a2) test, R-71): at a chart singularity (the
+  Shape view's poles, a saturated link) and, on an `E*`-normalised chart, where the plane needs the direction normal to
+  the energy shell, logged "normal to the energy shell" (RQ-345 (b)). The Manifold view's sliders follow as after the
+  Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
+  is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
+  to RQ-346." Every steer is one `SetField` on the basis through the
   contract: undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
 - **Keys:** the Compass scope's siblings are the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape (§G3).
 
@@ -368,6 +688,7 @@ button over the figure is not an element; the Home key does its work.
 | letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
+| Alt+L | show or hide all lines (Lines ▾, R-476), wherever the focus is, in either mode; it is not the Figure's L and never starts listening; while a text field is being typed in it types what the platform types (on macOS "¬"), as every key does there; on the mock it does nothing (R-476, M6 and M9) |
 | ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
 | Home | Home: Slice centre, Tilt and Navigate reset to the chart preset's values, one undoable command, wherever the focus is, in either mode, except on the console's log in interaction mode (its first entry, R-450) and while a text field is being typed in (the caret to the line's start); Shift and Alt change nothing, Ctrl and Cmd make it no Home; it does not repeat (R-466) |
 
@@ -375,13 +696,25 @@ In scope: a scope's arrow actions need Enter, acting in interaction mode only, a
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
 text field is being typed in (R-409).
 Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4), P pins the sample under the pointer
-in the Trajectory panel (R-453). Trajectory — Enter reaches the
-playhead, listen, kept orbits, unpin and its two views; on the real-space view in interaction mode the arrows pan by
+in the Trajectory panel (R-453). T shows or hides the trace under the cursor, ⇧T the kept traces and Y the syzygies,
+Overlays ▾ › Trace's toggles, and L turns the sound on or off (R-541 G2); R-541 G2's "`K` keep the current trajectory"
+is Space here, K staying the lock: R-541's G2 now reads "Space keep the current trajectory" (R-556, RQ-449 (a)). T, ⇧T,
+Y and L are Figure-scope shortcuts, as L already was, and with Space and K are on
+the shortcuts sheet (`?`). *Was:* "All five are on the shortcuts sheet (`?`)." (gui review 5595359543 of PR #267, G6;
+applied per R-369).
+Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs and `+ keep`, the two views with
+`sphere / unwrapped` and `turn` (gui review 5595467390 of PR #267, H4; applied per R-369), the Trace, Listen and
+Numbers sections (each its row, then, expanded, its controls in the section's order), the playhead, unpin, Open full
+viewer… and IC Inspector… (*was:* "Enter reaches the tabs, the Trace, Listen and Numbers sections (R-541 G4), the
+playhead, listen, kept orbits, unpin and its two views", listen and kept orbits being the Listen section and the tabs;
+gui review 5595359543 of PR #267, G2; applied per R-369); on the real-space view in interaction mode the arrows pan by
 R-404's `Pan` step and + / − zoom by its `ZoomLog2` step, and on the sphere the arrows orbit by its `Angle` step (1°)
 and + / − zoom; the unwrapped view, while shown in the sphere's place, is that element and takes the real-space view's
 keys (R-453, D6). Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
 plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
-step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
+step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1); with sound on, Enter
+reaches the `♪ strip ⏶` (`⏷` while expanded) and, expanded, its `Listen…` after the scrubber (R-541 G7; gui review
+5595359543 of PR #267, G2; applied per R-369). Legend is
 read-only.
 
 What the user sees, while keyboard navigation is on (R-460): a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
@@ -488,7 +821,10 @@ to a minimum size that keeps its title bar and controls usable. Each stays at le
 change of the GUI's size never leaves less than its title bar's height of it, and 64 points of its title bar's width,
 inside the GUI. Each window's position and size are remembered across sessions, in the GUI's own settings, never the
 contract; with none remembered a window opens where the artboards put it. The console is docked along the bottom
-instead, its height dragged (§G12).
+instead, its height dragged (§G12). `Trace…` and `Listen…` (R-541, below) are windows too, under the same rules,
+opened like `Profiler…` and `Export…`.
+The Decoder window (§G7a, R-478) is one of these windows, opened from Windows › Decoder… or the Chart section's
+**Decoder…** button; with no place remembered it opens beside the Manifold view, never over the figure.
 
 ### Profiler
 
@@ -497,7 +833,8 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 **passive logging** switch (telemetry §1.2), with its indicator in the footer (R-129). It shows:
 - the frame-time trace, with frame ms, p50, p95, p99 and the worst frame;
 - where the frame goes (a donut), stacked per-frame bars for the last 60 frames;
-- a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence);
+- a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence), drawn
+  from the frame record's `substep_histogram` (telemetry §2; R-545, RQ-286);
 - a flame chart of nested scopes on the main thread; GPU timestamps per pass;
 - memory (heap, GPU, tile cache) over time; live allocations by type, with their change over 60 s;
 - a **leak detector** that flags steady growth while idle;
@@ -506,8 +843,20 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 
 **Schema v1 (R-56):** telemetry §2's frame record and its **five stages** (integrate / reduce / colour / upload / present)
 at the top level; nested scopes, GPU passes, allocations and events beneath them. JSON. Leak flags and hot-path summaries
-are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain + style,
-IC decode, readback, egui) are scopes nested under the five stages.
+are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain, IC
+decode, readback, egui) are scopes nested under the five stages, the stain under `colour`; under schema v2 the stages
+are six, `post` among them, and the Print graph's own scopes nest under `post` (telemetry §5, R-534). *Was:*
+"(quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five stages" (stale value, replaced
+by R-485 and R-534; telemetry §5's "stain + style" is "stain").
+
+**The print stage (R-488, R-497).** The Print graph is a stage of its own in the frame record, `stage_ms.post`, with the
+degrade level that ran, `post_level` (`full`, `reduced` or `plain`), per frame; the profiler shows it beside the five.
+Its time never enters the Auto arbiter's rung solve, and the post level is the arbiter's motion-regime lever, under
+Auto only; `post_level` is recorded under every tier (R-557, rulings RQ-479 and RQ-495).
+It bumps the schema to v2, `principia-profile-v2`, and every reader accepts v1, a file written before it read as
+telemetry §5 says (R-534; R-497, K3). *Was:* "It bumps the schema, whose version is RQ-399's; a file written before it
+is read as telemetry §5 says (R-497, K3)." The profiler names the stage "print stage" (the human's ruling on RQ-497, 21 Oct 2026), its key `post`
+(applied per R-369). *Was:* "The post stage".
 
 **For agents, the same data structured:**
 ```
@@ -518,15 +867,39 @@ prin profile query "top 10 scopes by p95" --live                        # query 
 Scenarios are deterministic. Buttons: Export trace (JSON; it also writes the Chrome Trace Event format for Perfetto
 and `chrome://tracing`, R-207), Open in Tracy, Headless render….
 
+**Run benchmark… (R-493 to R-499; `principia_benchmark.md` §5.1).** A button of the Profiler window, beside Export trace.
+- **The dialog:** the mode, Quick, Full or Soak, each with its estimated time (the design doc §4's, until the first Full
+  run on the reference machine measures them, R-495); a plain statement of what is recorded, "device, OS, driver,
+  build, the scenarios' settings and the timings", then "Nothing about you or your files. You can read the file before
+  sending it."; **Plug in**, for Soak and, on battery, recommended for Full, the power source and low-power mode
+  recorded; Cancel and Run.
+- **During the run:** the chrome is hidden and the scenarios draw into a fixed-size offscreen surface in Fit, the same
+  on every device, which the window shows scaled to fit and letterboxed, so the window's size never changes the work
+  (R-535; *was:* "the figure fills the window (the window's size and the work, RQ-400)"); on a phone the run records
+  the visual-viewport size, requests a wake lock and is marked "mobile, best effort" (R-530); a thin progress strip shows the scenario's name, `n of N` and the time remaining; **Esc aborts**, the file still
+  written, marked `"complete": false`, every finished scenario intact; every other input is ignored (R-496).
+- **The results sheet:** per scenario p50, p95 and p99 frame time during motion, frac over 41.7 ms, time to settle and
+  which axis bound; the suggested tier, "the highest `eps` and budget that held 16.7 ms"; **Save file…**, **Copy
+  summary** and **Apply suggested tier**, applying it one undo entry and never automatic. The file is one plain-text
+  JSON Lines file with no score (R-497). The look is `docs/gui/reference/print_graph/boards/bench.png` (layout only; no
+  value in it is a measurement; its IBM Plex is not copied, the dev GUI being Ubuntu and Ubuntu Mono, §G1 and §G13).
+- **First launch:** an opt-in prompt offers the Quick suite once; nothing runs unless the user accepts, and declining
+  leaves the default tier (R-528).
+- **Collecting results:** by hand, the saved file or the copied summary; there is no upload (R-529).
+- **From the command line** the same runner (R-493): `prin bench run [--mode quick|full|soak] [--scenario ID...]
+  [--out FILE]`, `prin bench show FILE [--pretty]`, `prin bench report FILE [FILE...] [--format md|json]` (R-498) and
+  `prin bench compare A B [--threshold ...]`.
+
 **What `prin profile diff` compares (REQ-TOOL-119, R-72).** Each scope's p95 in NEW against its p95 in BASE. A scope
 regresses when NEW's p95 is more than P% above BASE's, `(p95_NEW − p95_BASE) / p95_BASE × 100 > P`, or, where BASE's
 p95 is 0, when NEW's is above 0. The diff exits 1 when any scope regresses, 0 when none does, and 2 when it cannot read
-either file as schema v1.
+either file as schema v1 or v2 (R-534; *was:* "as schema v1").
 - **The statistic.** A scope's p95 is the nearest-rank 95th percentile of its per-frame ms over the file's frames: the
   samples sorted ascending, the ⌈0.95 n⌉-th, counted from 1 (telemetry §3: percentiles, not means). `prin` and the
   interactive path share the percentile code (telemetry §5.5).
-- **The scope set.** The frame (its `frame_ms`); each of the five stages (its `stage_ms`, in the frames where it is not
-  `null`); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
+- **The scope set.** The frame (its `frame_ms`); each of the file's schema's stages, five in v1 and six in v2, `post`
+  compared wherever both files have it (its `stage_ms`, in the frames where it is not `null`; R-534, applied per R-369,
+  perf review 5596612647 of PR #268, F3; *was:* "each of the five stages"); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
   GPU pass, by its stage and name. A scope that occurs more than once in a frame gives that frame the sum of its ms; a
   frame where it does not occur gives it no sample.
 - **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
@@ -553,19 +926,59 @@ either file as schema v1.
 
 - **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
   picture carries its own settings, so opening it recreates the view exactly (§G9).
+  **Styled / Plain (R-489):** with a Print graph active the dialog offers the figure styled or plain, and figure export
+  defaults to **Plain**, a scientific figure being the renderer's pixels (`principia_dd_image_embedding.md` §9); the
+  Print graph travels in the record either way (`RenderState.print`, R-491).
 - **State:** copy snapshot (JSON), save snapshot, load; a share link (`principia://view?…`). The spec is the object and the
   picture is its shadow (`principia_export_animation_contract.md` Part 6).
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
   serialisation (`principia_gui_state_contract.md` §2, R-309).
+  That record is the export's sidecar: with `SimConfig` it carries the tilt map (`tilt_map=sheet|lean`, R-474), a
+  curved chart's tilt (R-473), each energy-type axis's mapping (R-471) and a saved chart's definition (R-475), and
+  beside it F3's fill mode (`f3_fill=extend|fit`, R-472) and the lines (`Lines`, R-476).
+  With `SimConfig` it carries the occupant, its regularisation and stepper, and, for a pair measured not to work, its
+  warning, the measured text (R-561).
+  With `SimConfig` it carries the links, each block's id and parameter values, written in full even at the defaults
+  (R-483, X1, X2), and beside it the build hash and the schema version, so a receiver refuses a decoder it lacks
+  rather than substituting one (R-483, X4). Importing any of these is the identity on `SimConfig` and `RenderState`
+  (R-484, RT1).
+- **What the image embeds (R-484, RT2, RT3).** When the view's record does not fit the image's low bits, the embedding
+  drops whole tiers from the bottom, the custom shader source first, then the colour, never the physics; before the
+  share the window shows which tiers fit at the chosen size, for example "embedded at 64²: physics; colour and custom
+  shader in the PNG text only", and if the physics does not fit, "not embedded". The PNG's `tEXt` chunk always carries
+  everything. The record is never cut to fit (R-483, X6).
 - **Present:** hide all chrome; Esc returns.
-  With the chrome hidden the figure fills the window, as with F3 (R-406).
+  With the chrome hidden the figure fills the window, as with F3 (R-406), in the mode View › F3 fills by sets (R-468;
+  applied per R-369).
 
 ### Display — the last stages
 
-**Order is fixed (R-67):** SimState → stain → style → display scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it,
+**Order is fixed (R-67, R-487, R-531):** SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (R-111): the lines drawn over keep the line system's place after the gamut clamp (R-476 M2; R-531, ruling RQ-395). *Was:* "SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → colour-vision simulation → screen (R-111), the lines drawn over coming after the Print graph (R-487; where exactly is RQ-395, and until it is ruled they keep the line system's place after the gamut clamp, R-476 M2)." The stain colours the data, the Print graph prints it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
-simulation sees the final in-gamut colours.
-- **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
+simulation sees the final in-gamut colours. *Was (R-67, before R-485 and R-487):* "SimState → stain → style → display
+scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it".
+- **Print** (R-485 to R-492; `principia_print_graph.md` §7.1) replaces Style: the **Print panel**, Display › Print.
+  - A **Plain / Print** toggle at the top. Plain is the default and the identity.
+  - **Slots**, top to bottom: Palette, Medium (the preset families as groups), Ground, On the ground, Unfinished, Age,
+    Viewing (design doc §5), each a dropdown with a small live thumbnail of the current view in that choice, and the
+    slot graph's **settings** beneath it, not its node parameters; and **Boil** (off, per frame, every N frames; off
+    by default, R-490). Palette acts on the finished colour (R-524). While the Medium is a screen medium, Viewing is
+    off by default and the panel shows why, "Viewing assumes a sheet: off by default for a screen medium" (R-525).
+  - A **preset gallery**: the 111 presets as live thumbnails of the current view, grouped in 12 families, the lab's 103
+    in its 11 and R-130's eight in a twelfth, labelled "Poster", its "Default" always shown as "Poster › Default", never
+    a bare "Default" (R-532; *was:* "the 103 presets … grouped by the lab's 11 families");
+    picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
+  - **Edit graph…** opens the graph editor, the Stain's node editor reused (same wiring, typed ports, undo and keyboard
+    scopes) on the same graph the slots show (design doc §7.2).
+  - **Reset to Plain**, one undo entry.
+  - While any Print graph but Plain is active, a badge names it ("Print: Linocut", R-489) in the figure's header strip,
+    above the plot, never over the figure (R-523, ruling RQ-397; *was:* "its place on the canvas is RQ-397"). Measurement never reads the print, and goldens and scientific checks run under Plain (R-489). The look is
+    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485), with three departures (§G13): its canvas
+    corner badge is the header strip's (R-523), its "103 in 11 families" is 111 in 12 (R-532), and its IBM Plex is not
+    copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1).
+- *Was (before R-485, which with R-486 supersedes R-130; R-130's eight styles are ported as additional Print graph
+  presets, R-532, ruling RQ-396, where this note read "R-130's styles are kept as RQ-396 decides"):*
+  **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
   (`workbench/principia_poster_both_sides.html` and its press module; ✱ R-130). **Watercolour & pencil** is its painted
   treatment (`window.stainPaint`, :2375–2388: a slight blur and desaturation, a soft graphite line where the colour
   changes, and the paper grain when Paper is on). **Print** is paper.design's CMYK halftone shader (Paper Shaders,
@@ -574,7 +987,9 @@ simulation sees the final in-gamut colours.
   v1 offers plain, watercolour & pencil, and the seven print presets, named as the file names them (:2875): Default,
   Drops, Newspaper, Vintage, Poster78, Riso, Duotone.
 - **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
-- **Overlays:** grid, class edges, `t_end` contours, cursor crosshair.
+- **Overlays:** cursor crosshair. *Was (before R-509):* "class edges, cursor crosshair"; class edges are a Lines ▾
+  preset (§G2; R-509). *Was (before R-476):* "grid, class edges, `t_end` contours, cursor
+  crosshair"; the grid and the `t_end` contours are Lines ▾ presets (§G2; R-476, L2).
 
 The display stage stays global and outside the pipeline (Part II §12). This window and the Overlays menu (§G2) replace the
 corpus's top display bar (R-67).
@@ -584,9 +999,14 @@ corpus's top display bar (R-67).
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, `∈ [50, 200]`, default 50, Part 5; R-132),
-  `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` (a user-exposed sim key, Part 7), `r_close`,
-  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie with KDK leapfrog is the general
-  default, Aarseth–Zare is kept for benchmarks; Part 2b).
+  `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
+  `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
+  Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
+  selectors, and every pair can be chosen (the Euler pairs in the debug selection only, Euler never being a production
+  option, REQ-INT-015; applied per R-369, qa review 5607548278 of PR #277, Q6); a pair measured not to work shows its warning beside the selectors, the
+  integrator contract's measured text, and stays selectable (R-561; Part 2b's pair table). The warning is also in the
+  Problems panel (which panel is RQ-525) and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
+  leapfrog is the general default".
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
   is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates. In
   the browser build the control is shown disabled, with a note that the browser chooses the mode (R-303).
@@ -601,12 +1021,63 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 The surfaces with no artboard (the Custom quality fields, the utilisation ceiling, the Profiler's Arbiter tab, the
 passive-logging switch and indicator, the compute fast-math control and the Profiler's fast-math line, R-297) are checked by presence only, not layout, until the M8 dev GUI (R-129).
 
+### Trace… — every trace setting (R-541 G5)
+
+Opened from Overlays ▾ › Trace's button and the Trajectory panel's Trace `⋯`. It holds **every trace setting** in the
+trace demo (`docs/gui/reference/trace/trace_markers.html`) and the Listen demo (`trace_sound.html`), with their defaults
+(`principia_lines.md` §8, R-538), under a preview strip drawn with the current settings. It applies to `all traces` or
+to the current tab only: the current tab's own settings, kept with its trajectory, its edits one `SetField` as the
+others (applied per R-369, R-541 P7).
+
+| Group | Controls (default **bold**) |
+|---|---|
+| Line | colour **Fixed** `#fff27a` / Ramp along time; ramp **Sunset** · Viridis · Magma · Ice · Ember · Aurora · Mono · Custom… (three stops), `rev`; width **2.2**; **fade off the slice** (momentum proxy, R-509, floor 0.18); time ticks Off · Every 1 · **Every 2** · Every 5, **labels** |
+| Direction arrows | shape Off · **Filled triangle** · Open chevron · Half barb · Notched · Dot; size **8 px**; every N px of path · **Δt of time** · N per trace; value (**Δt 1.0**) |
+| Animation | mode Static · **With the playhead** · Own clock; repeat Once · **Loop** · Back and forth; speed **3 t/s**; tail only (off); tail Δt **3.0**; show the rest faintly (off); **head marker, labelled with its time** |
+| Markers | **end event icon**; syzygies, coloured by the middle body (**off**) with style From the icon set · o–o–o · Three in a row · Line and bead · Numeral tag · Crossing tick · Eclipse, and **fade stutters**; **leaving / re-entering the chart**; leaving / entering the window (off); seams (off); join jumps dotted (off) |
+| At the edges | **off-screen icons pinned (faint)**; **repeat in wrapped copies**; **outline the chart's square**, Overlays › Chart's one toggle (R-556, RQ-461; *was:* "(built once RQ-408 is ruled, as it rules; RQ-461)"); forbidden hatch (off, R-470) |
+| Icons | icon set **Principia** · Arrows · Pictures · Orbits, `key…` opens the icon key; icon size **1.4×** |
+| Kept traces | one row each with its swatch, end and `×`; `clear kept` |
+
+Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
+(R-538 TF3), for a trace of the default length; a `Window` or `LastDt` length is kept as chosen (RQ-427 (a); R-556, RQ-465
+(a)). The kept traces' colours are R-538's trace palette, each checked against the body colours and the stain classes,
+a failing colour alone replaced (R-556, RQ-447 (b); REQ-GUI-333). The table is R-541 G5's, the outline entry included
+(R-556, RQ-461; *was:* "its outline entry excepted"); the bold defaults are R-538's. *Was:* "the whole trace to the horizon is drawn (R-538 TF3).
+The kept traces' colours …" (merging main's PR #263, which applied RQ-427 (a); applied per R-369).
+
+### Listen… — every sound setting (R-541 G6)
+
+Opened from the Trajectory panel's Listen `⋯` and the expanded strip (§G2). It holds **every sound setting** in
+`docs/design/principia_listen.md`, in two columns, left Sound, Loudness and Listen, right Pitch & analysis, Events and
+Effects, with a readout row under both (`principia_listen.md` §11's readout).
+
+| Group | Controls (default **bold**) |
+|---|---|
+| Sound | ♪ sound on (**off** at launch), `sweep a row` + speed (**10 s**), known orbit (**—** · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Sine (pure)**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
+| Loudness | **follows the shape's movement** / normalised; min level **15%**; max **100%**; volume **60%** |
+| Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
+| Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
+| Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
+| Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, **Doppler ← expansion (×1.50)**, bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
+
+The defaults are R-555's (RQ-454 with the human's Listen effects follow-up): the demo's code, sound off at launch and
+Sine (pure), but for reverb, Doppler and width, on by default, which the code has unchecked (`principia_listen.md`
+§9). *Was:* "The defaults are the demo's code (`principia_listen.md`), where R-541 G6 has sound on, Warm sine, reverb
+on and width on (RQ-454, the code applied meanwhile)." and the Effects row "reverb ← spread (off, ×1.40), Doppler ←
+expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), width ← angular momentum (off, ×1.50)". **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and
+blown (7), voices (4), synths (8), textures (2), one instrument per row; which instrument is in which family is
+written by TASK-M8-65, which builds the menu, meeting the counts, reviewed by gui (R-556, RQ-459 (a); R-72). The art board compresses rows to fit. Each control is a field
+of Listen's state, the GUI's own, never the sim key: none re-integrates but the horizon, which integrates the shown
+trajectory on (`principia_listen.md` §10).
+
 ## G6. Legend — generated by evaluating the stain (`06_legend.png`)
 
 Walk back from OUT; sample each colour and brightness node over its **declared input domain** (R-53: the node interface
 declares it, inheriting the manifest's per-field domain by default); push the samples through the real combiner. **Each
 dimension gets its own key:**
-- categorical: swatches, with their shares of the view;
+- categorical: swatches, with their shares of the view (a share is undefined, drawn "—", never 0%, where every area
+  weight is 0, as at Lean each axis's one-target corner `|τ₁| = |τ₂| = 90°`, `ray-degenerate`; R-554, ruling RQ-471);
 - then a separate bar for what brightness (or any second channel) encodes;
 - number ramps: ticks placed through the curve (a log curve gets log-spaced ticks);
 - direction fields: a sphere key (the node's own sphere colouring, sampled);
@@ -616,41 +1087,74 @@ dimension gets its own key:**
 It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and
 its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
 2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
-function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes,
-physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running` and
-every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
+function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Under a Burrau chart preset each
+key that names a body shows its mass beside its number, e.g. "escape body 1 (m = 5/12)" (R-549, RQ-335). Its keys are the nine classes,
+physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running`,
+`sim_failed` and a reserved code share in the outcome view (R-446), a `decode_failed` sample drawing blank, with no key
+or share (R-511; *was:* "which `running` and every failure share"); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
 key. **Each key's name is the outcome class's name from the same display module** (applied per R-369): the black
 class's is "bounded / nothing yet", the other eight's the function's names for their `state` and `detail`.
-**The forbidden-region key (R-446; applied per R-369).** A forbidden chart region keeps the hatch, and the outcome
-legend keys it with one more key after the nine, labelled "forbidden region", drawn in the hatch style
-(`debug_invalid`) and compared as the style, not as one colour (R-136); it is drawn always, its share 0 where the view
-holds no forbidden pixel. It covers every pixel REQ-COL-102's lane marks forbidden, both of the chart contract's
-hatches (the domain's end and the universal fallback; colour_composition §1.4). **Its share and the nine classes'
-shares are area statistics over the view, so they count as R-408 counts** (chart_decoder_contract Part 3; §G7): a
-visible pixel counts only if every axis is inside its primary range; a pixel hatched because the domain ends there (a
-bounded axis past its edge, or a failed `Φ`) is drawn with the key's hatch but leaves every share and the total; the
-forbidden key's share is that of the states that fail the validity check, §G7's "forbidden in view". Inside `[0,1]²`
-the shares are unchanged.
+**No forbidden-region key (R-467, amending R-446).** A presentation legend has no "forbidden region" key and no
+share for it: a pixel REQ-COL-102's lane marks forbidden, either of the chart contract's hatches (the domain's end and
+the universal fallback; colour_composition §1.4), is not part of the chart and draws the canvas background, unkeyed.
+**The nine classes' shares are area statistics over the chart's own pixels** (chart_decoder_contract Part 3; §G7): a
+visible pixel counts only if every axis is inside its primary range, and a pixel that is not a system, a domain's end
+or a state that fails the validity check, leaves every share and the total, so the shares sum to 100 % of the
+counted systems (applied per R-369). Inside `[0,1]²` the shares are unchanged. **The debug view's key** (§G2, View ›
+Debug view) comes after the stain's own keys: "Debug", three entries, "forbidden (chart)" in the hatch style, "decode
+or sim failure" in `debug_invalid`'s style and "NaN / Inf" in its own style (REQ-COL-110), each compared as the style,
+not as one colour (R-136), each drawn always with its count, the number of the figure's pixels drawn in it, and its
+share of the figure's pixels, raw pixel counts, not R-408's statistic. *Was (R-446, applied per R-369):* "A forbidden
+chart region keeps the hatch, and the outcome legend keys it with one more key after the nine, labelled "forbidden
+region", drawn in the hatch style (`debug_invalid`) …; it is drawn always, its share 0 where the view holds no
+forbidden pixel"; "Its share and the nine classes' shares are area statistics over the view …; a pixel hatched because
+the domain ends there … is drawn with the key's hatch but leaves every share and the total; the forbidden key's share
+is that of the states that fail the validity check, §G7's "forbidden in view".".
 
-**A free-fall slice under `η_E` is almost all `decode_failed`, drawn black, and that is expected (R-441, reworded by
-R-446; dd_decoder §3.7).** Energy
+**A free-fall slice under `η_E` is almost all `decode_failed`, drawn blank, and that is expected (R-441, reworded by
+R-446 and R-511; dd_decoder §3.7).** *Was:* "drawn black". Energy
 normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
 slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
-below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn black `#141418` in the outcome view, the
-bounded / nothing yet key of the outcome legend (colour_composition §1.4; R-446). A pixel the mass block has already
+below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn blank in the outcome view, as a pixel that is
+not a system, with no key or share (R-511, ruling RQ-379; colour_composition §1.4). *Was (R-446):* "drawn black
+`#141418` in the outcome view, the bounded / nothing yet key of the outcome legend". A pixel the mass block has already
 tagged, such as `DEGENERATE(M01_TINY)`, keeps that tag rather than an energy one, but it is `decode_failed` too and
-drawn the same black. The one exception to the colour is where `E* = V₀` exactly: the IC is already at the target, the
+drawn the same, blank (R-511; *was:* "drawn the same black"). The one exception to the colour is where `E* = V₀` exactly: the IC is already at the target, the
 decode is untouched and untagged, and the pixel integrates, drawn in its outcome's colour once its event fires.
 `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
 scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
-preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The Chazy stains
-draw the same samples with the render contract's hatch (`debug_invalid`), as they draw `sim_failed`, not black, which
-there is Chazy B (dd_chazy_final_motion §7; RQ-319, decided per R-369), so the same slice reads hatched there. The
-tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
-the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view
-the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
+preset, and the near-uniform blank (R-511; *was:* "black"), with that contour its only exception, is expected, not a bug.
+The Chazy stains draw the same samples blank too, as every presentation view draws a `decode_failed` sample (R-511,
+ruling RQ-379; dd_chazy_final_motion §7), so the same slice reads blank there; View › Debug view shows them as "decode
+or sim failure". In both systems these samples leave every share and its total (R-511 Z1), so the black key's share
+counts only the systems drawn; the debug view counts them (dd_chazy_final_motion §10.10). *Was (R-467, ruling RQ-319,
+applied per R-369):* "The Chazy stains draw the same samples black too, Chazy B's `#141418`, as every presentation
+view draws a failure …, so the same slice reads black there"; "In both systems the black key's share counts these
+samples, so there it reads near 100 % and is not a bound fraction; the debug view's counts separate them". *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
+(`debug_invalid`), as they draw `sim_failed`, not black, …, so the same slice reads hatched there." The
+tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: the
+`state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B), and together they
+are the η_E debug view, R-467's View › Debug view; nothing new is built (R-546, RQ-333 (a)). *Was:* "today the `state`
+view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view the ruling's
+"η_E debug view" is, is RQ-333." *Was (R-441):* drawn degenerate's white `#ECECF0`.
+
+**The trace block (R-541 G8).** While a trace is shown, the legend gains an `on the trace` block under the stain's own
+keys, before the debug view's key: the line (and each kept trace's colour), the start star and the end icon for this
+run, each drawn as the figure draws it. With sound on it adds `♪ ◀ left ▶ right` in `principia_listen.md` §11's
+channel colours. The full key is `Trace… › key…`. The block is a key of figure marks (R-539), not a dimension of the
+stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
+
+**The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
+base and layers, drawn with no brightness over the target chart in the chart's own aspect ratio (2 : 1 on the sphere,
+the triangle on the simplex, `rgb(18, 19, 21)` past it), with a 6 px ring (a 1.6 px stroke over a 3 px `#0b0b0e` outline,
+legible on light bases) at the hovered system where it is now: white
+inside the chart, grey `#a8a8a8` and pinned 5 px inside the edge when the system is past it, and not drawn under
+"none", the readout saying why (SM9's transcription of `smLegend`; board 6). It is the stain's own colour key, first;
+the brightness key follows where a brightness node is bound, then R-541 P13's trace block, then the debug view's key
+(applied per R-369). *Was:* "drawn over the target chart's square, with a ring at the hovered system where it is now,
+drawn on the edge when it has left (board 6)".
 
 ## G7. Chart builder (`03_chartbuilder.png`)
 
@@ -661,24 +1165,96 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
   the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
   REQ-GUI-224); a saved preset stores them with its axes.
+- **A preset may pin links (R-516).** Pinning is optional and off by default. **Pin the active links** is a toggle beside
+  each entry in the preset selector (the builder's presets and the Saved group, §G2's Chart section) and beside each
+  preset in this window's preset list (R-516 K2), reached from the keyboard as the entry's last control (§G3). A preset,
+  or a saved chart (§G2's Save view as chart), with **Pin the active links** on stores the whole `Links`, each block's id and parameter values, as
+  they are when it is pinned ("designed under stick-breaking"); turning it off clears the pin. The pin is the preset's,
+  the GUI's own settings, kept with the preset and never in `SimConfig`. Loading a pinned preset whose pin differs from
+  the active links applies the pin with the chart, one command and one undo entry (one Ctrl+Z restores the chart and
+  the links together), and posts a notice to the console, shown as the footer's latest message, naming each block it
+  changed, for example "Preset 'Burrau edge' pinned its links: masses stick-breaking (was softmax·tanh μ_max 5)"; the
+  Links row's amber and the decoder badge then show the change (§G2). A pin equal to the active links changes nothing
+  and posts nothing; an unpinned preset leaves the links as they are (R-478, W4). The picker marks a pinned entry
+  with a pin icon, its tooltip naming the pinned links. Toggling the pin is not undoable and is kept across a relaunch
+  (the GUI's own settings, K3); Save, Duplicate and Delete keep or drop the pin with the preset.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
-  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  mapped linearly onto its range is affine, what fails validation not a system and blank (R-470; *was:* "the fallback
+  hatching what fails validation", a stale value, replaced by R-470), and one behind a nonlinear
   warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
   non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
   would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau
   dimension takes the Burrau family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension
-  from its axes.
+  from its axes. **R-471:** an energy-type physical quantity (energy, `L_z`) is warped by default
+  (`principia_chart_reference.md` §2.1, per pixel), every pixel of `[0,1]²` feasible and the axis bounded past its edge;
+  its range mapped linearly is the option, B1's affine axis, whose infeasible pixels draw blank and log no decoder-bug
+  warning (§G12). **R-506:** every physical-quantity axis, the virial ratio and the mass ratio included, likewise:
+  warped to its feasible range by default (the mass ratio through the mass link), linear as an option, its pixels
+  that are not a system blank; a warp not yet written (the virial ratio's) is REQ-CHART-070's, written before the
+  builder offers the axis.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
   `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
   counts only if every axis is inside its type's primary range (periodic, one period; pole-crossing, pole to pole;
   affine, unbounded; bounded, its domain); a pixel hatched where the domain ends (a bounded axis past its edge, or a
   failed `Φ`) leaves both the count and the total; only states that fail the validity check count as forbidden. Inside
-  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3).
+  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3). The preview keeps its hatch and its
+  share under R-467: it is a diagnostic for building charts, not a presentation view (R-467, clause 6).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
+- **The links, read-only (R-478, W3):** beside the Domain preview, the active links as the Chart section's row names
+  them, with a link that opens the Decoder window (§G7a); the builder never edits them.
+- **The axis warps' preview (R-480, P3):** each warped axis (`K = K_max t^γ_K` and the like) has the Decoder window's
+  preview widget, chart coordinate `t ∈ [0, 1]` against the quantity, with its density and, off its default, the
+  default's ghost, so warps and links are inspected the same way. An energy-type axis's warp is evaluated per pixel
+  (R-471), so its curve is drawn at the slice centre's `U`, `I` and masses and labelled "at the centre".
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
+
+## G7a. Decoder (no artboard; R-478 to R-482)
+
+The **Decoder** window (Windows › Decoder…, or **Decoder…** in the Chart section) chooses and tunes the link functions,
+which belong to the decoder every chart passes through (R-478, W1;
+`principia_chart_decoder_contract.md` Part 2.5). It is a window under §G5's rule.
+
+- **One row per block** (R-479, D1): Masses; Configuration α; Configuration β; Momenta, the last setting the four
+  momentum controls together. Each row has:
+  - **a link dropdown** listing only the registry entries onto that block's codomain, so an incompatible link cannot be
+    chosen; the default first, marked "(default)";
+  - **the link's parameters** (R-481), numeric fields with sliders, each showing its allowed range and taking no
+    value outside it, greyed with "no parameters" when the link has none; switching link keeps a parameter of the same
+    name and sets the others to their defaults;
+  - **a preview** (below);
+  - **"reset to default"**, dimmed while the row is at its default link and parameters.
+- **The footer** (D2): **Reset all to defaults**; the text "Changing a link re-integrates every pixel"; **Apply /
+  Revert**, as in the Chart builder. Edits are staged, so dragging a parameter does not re-integrate on every frame;
+  Apply sends the whole `Links` in one `SetField`, one undo entry, and re-integrates; Revert drops what is staged. Both
+  are dimmed with nothing staged, and closing the window keeps the staged edits.
+- **Home and the section resets** do not touch links (D3, §G2).
+- **A non-default decoder** shows in the decoder badge, in the figure's header strip (§G2's Figure, R-523), and in
+  every sidecar and export (D4), since the links travel in `SimConfig` (R-483). *Was:* "shows in the canvas badge
+  (§G2's Figure, RQ-387)" (stale value, replaced by R-523).
+- **No robustness button (R-517).** Comparing the view under the default links and under the active ones is the v2
+  side-by-side view's **compare links** (§G11); until it is built the comparison is made by hand: Apply, look,
+  Revert.
+- **From the keyboard** it is reached as every window is (§G3): its rows in order, each its dropdown, its parameters and
+  its reset, then the footer.
+
+**The previews (R-480).** Each is about 160 × 110 px, drawn in the line system's style presets
+(`principia_lines.md` §3), and live: it updates while a parameter is dragged, before Apply, nothing re-integrating.
+- **A one-dimensional block** (α, β, the momenta): latent `z` across against the physical value up, the curve over a
+  span of the visible range widened by half its width each side and never narrower than `[−4, 4]`; dashed horizontal
+  lines at the codomain's bounds (±`q_max` at the active value, α's `[α_min, π/2 − α_min]`); the window's current range
+  of `z` on this block, shaded; a dot at the slice centre's value; the derivative `d(value)/dz`, `exp` of the log-det,
+  drawn faint under the curve and labelled "resolution", where the link spends pixels; and, off the default, the
+  default's curve faint behind. The Momenta row's tabs `q₁ … q₄` choose whose range and centre are drawn.
+- **The masses** (two latent dimensions onto the simplex): a small triangle, its corners labelled `m₁`, `m₂`, `m₃`
+  (1-based, R-449); the image of an even grid of `z` lines, so the bunching shows where the link concentrates
+  resolution; the current view's footprint in mass space, shaded; the slice centre, a dot; the equal-mass point
+  marked. `stick_breaking` visibly reaches the edges and `softmax_tanh` visibly does not.
+- **Exact, not sketched** (P4): every preview evaluates the generated link functions, the code the kernel runs, on the
+  CPU at f64, through the engine's link evaluator (`principia_gui_state_contract.md` §1); the GUI never reimplements a
+  formula.
 
 ## G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)
 
@@ -691,12 +1267,51 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
   editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
   transform" shows what the gauge buttons did.
+- **The initial-condition constructor's shape sphere (R-544).** Pane 2's sphere, beside the triangle and the bodies, is
+  the constructor's: it shows where the IC being built sits, and it is a different thing from the shape sphere chart.
+  Its point is the IC's **signed** `n̂`, and it reaches every point of both halves, with no limit and nothing blocked
+  off; dragging the point sets the IC's shape to it, as the shape sphere chart places a shape (its masses and its
+  momenta in the frame `ρ̃` on `+x` held; `principia_chart_reference.md` §3, the held values), so a drag across the
+  equator flips the triangle's orientation in the triangle view (pane 1), which is correct. The **mirror twin** is shown,
+  not enforced: a faint marker at `(θ, π − φ)`, never a snap, a limit or a shaded half, and the inspector notes it,
+  "mirror twin of the system at (θ, π − φ)": the IC reflected, positions and momenta, which ends the same way (R-544).
+  The bodies view may stay the canonical representative; the sphere's path is never folded.
+  Applied per R-369 (PR #273, gui review 5603356729, G1, G2, G5; physics reviews 5603309678, P5, and 5603529679, P8):
+  - **Which drag moves the point.** A press within 8 logical px of the point, on the 3D sphere or on the unwrap,
+    drags the point; any other drag orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it.
+  - **What a drag holds.** Only the shape changes: the IC keeps its own `√I`, the direction of `ρ`, its CoM position
+    and CoM velocity, and its Jacobi momenta in the frame `ρ̃` on `+x`. So pane 1's triangle changes shape, and flips
+    when the point crosses the equator, but does not jump in size or turn; the gauge buttons' Scale, Rotate and Boost
+    survive a drag.
+  - **The twin** is `Π·x`, positions and momenta reflected, `L_z` opposite, its shape at `(θ, π − φ)`. When the held
+    momenta have a `y`-component, dragging the point onto the marker reaches a different system, not the twin, and the
+    readout does not call it the twin.
+  - **A binary-collision landmark** on the equator is reachable like every other point. The constructor sets the IC
+    through the chart's decode, never through the lookup, with no NaN anywhere. At an exact `n̂ = (−1, 0, 0)` the
+    decode emits `ρ̃ = 0`, `r₀ = r₁` exactly, so the descriptor stores `V₀` and `E₀` as `−∞`, as computed
+    (`principia_dd_decoder.md` §3.6, R-436). A drag does not reach that `n̂` exactly: the unwrap's `(π, π/2)` decodes
+    to `‖ρ̃‖ ≈ 6.8e−17`, and a 3D pick gives a generic `n̂`, so at a dragged landmark `V₀` and `E₀` are `−∞` where
+    the emitted `r₀ = r₁` and finite otherwise. No snap is added (physics review 5603638748 of PR #273, P10, its
+    option (ii), applied per R-369). The readout draws a non-finite `V₀` or `E₀` as R-436 and R-467 draw a non-finite
+    value. Either way the run ends `collision` at `t = 0`, its bodies within `r_coll`, the one valid `t = 0` terminal
+    (R-60; `principia_integrator_contract.md` Part 5). The
+    constructor never looks that IC up; a lookup of it elsewhere reads `lookup_clamped` (R-13;
+    `principia_inverse_encode_contract.md` Part 6, step 2).
+  - **The frame at `ρ̃ = 0`** (a definition, R-72, applied per R-369; physics review 5603529679 of PR #273, P8). There
+    the direction of `ρ` is undefined, so the constructor keeps the frame angle, the direction of `ρ`, from the IC's
+    last point with `ρ̃ ≠ 0` and holds the Jacobi momenta in that frame; a drag off the landmark restores `ρ` along
+    it, with `√I` and the momenta continuous. An IC that has never had `ρ̃ ≠ 0` takes the decode's frame angle 0
+    (R-437).
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
-  f64 (trajectory_viewing §1); the engine is reached only through it (§6). **listen** is here too.
+  f64 (trajectory_viewing §1); the engine is reached only through it (§6). The Inspector holds no sound control: Listen
+is in the Trajectory panel and `Listen…` only (R-556, RQ-466 (a)). *Was:* "**listen** is here too. (Against R-541 G1's
+one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
+holds no sound control. Gui review 5595359543 of PR #267, G1.)"
 - **Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25, Boost →** demonstrate the gauge quotient: the canonical pane
   doesn't move.
-- **Readouts:** latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
+- **Readouts:** latent `z`, `α, β`, masses (each body's mass beside its number, e.g. "body 1 (m = 5/12)", R-549),
+  `E · L_z`, outcome, F₂ word, round-trip error, gauge error; plots of energy error
   and pair separations.
 - **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
   **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.
@@ -706,7 +1321,14 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 - **Import picture:** drop a Principia PNG (or File › Import picture…). It reads the pxpack, shows what's stored (chart,
   centre, zoom, tilt, stain, time, when it was made) and **what differs from now**, and offers **restore this view**, **only
   its stain**, or **open side by side**.
-- **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view".
+  What it reports (R-483, R-484): beside §9's record outcomes (`principia_dd_image_embedding.md` §9), "state present,
+  cannot recreate", naming the link the build lacks or the decoder that changed; "state present, links unrecorded",
+  with **Recreate with this build's default links**, the view then badged "links assumed"; and, recovered, which tiers
+  the image held, for example "custom shader source not embedded (it was in the original), rendering with the built-in
+  fallback". Restoring is the identity on `SimConfig` and `RenderState` for every tier recovered (R-484, RT1).
+- **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view". A saved view reopens under the
+  tilt map it was saved with, one saved before R-474 under Lean each axis (R-474). A saved view is a whole view; a
+  saved chart (§G2's Save view as chart, R-475) is a chart in the picker.
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
   GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
   encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
@@ -738,6 +1360,10 @@ tool. The side panel shows:
   physics-reviewed, confirmed at the gate.
 - **Side by side** with a linked cursor and navigation, and a difference view. The linked views are a separate
   `ViewUI` item, specified with these v2 research tools (R-106) — not the chart's link ids in `SimConfig`.
+- **Compare links (R-517).** The side-by-side view offers, in one click, the current view under the default links
+  (left) and under the active links (right), both integrated, linked as any two sides are, the estimate shown before it
+  runs; the robustness test of chart_decoder_contract Part 2.5, "same chart, different link". Each side's header strip
+  names its links (§G1's badges); the difference view reads the two.
 
 ## G12. Console (`12_console.png`)
 
@@ -763,6 +1389,20 @@ and the console's shortcut **M** (§G3's scope shortcuts, not while the search f
 between its height and the full height below the top bar, covering the panels and the figure until toggled back; the
 user chose it, so it is no notification over the figure (§G1). Opening and closing it each complete within one frame
 at 60 fps (16.7 ms), measured on the human's Mac before and after the fix, with where the time went.
+
+**A decoder bug inside `[0,1]²` is warned here (R-467, clause 4).** Inside the square every gallery chart is valid by
+construction, so a pixel the chart classifies as not a system there (a validity failure, or a `Chart::map` that fails)
+is a decoder bug: it draws the canvas background in a presentation view and the hatch in the debug view, and the
+console logs one warning per chart and view, severity warn, source `app`, "decoder bug: chart <name> fails validity
+inside [0,1]² at pixel (<x>, <y>), (s, t) = (<s>, <t>); <n> pixels in this view", the first such pixel in row order
+from the bottom-left, logged again only when the view or the chart changes (applied per R-369). The real engine should
+log none (REQ-CHART-058's sweep). A Chart-builder chart's in-square failure warns when its physical-quantity
+axes are all warped, valid by construction there, and not when any is linear (R-506, ruling RQ-372). *Was:* "Whether
+a Chart-builder chart's in-square failure warns is RQ-372." An energy-type
+axis under its linear option (R-471, E2) has infeasible pixels inside the square by design: they draw blank and warn
+nothing. So do the shape sphere's exponential-map pixels with `r > π` inside the square, and those exactly on `r = π`
+if REQ-CHART-078 makes them the domain's end: R-503's domain's end by design, blank, logging no warning, the same
+exception R-506 W1 makes for the energy axes' linear option (R-554, ruling RQ-470).
 
 ## G13. Where the artboards are overridden
 
@@ -794,9 +1434,21 @@ corpus, the spec follows the authority:
   on the figure and no View › Home; the GUI has all three. The Home button is the one control drawn over the figure,
   in its top-right corner, by the human's words; nothing else covers it (GUI_DESIGN_NOTES, "The figure is never
   covered").
+- **The View menu's fill modes and the debug view** (R-467, R-468). No artboard shows View › "F3 fills by: Extend /
+  Fit" or View › Debug view; the GUI has both. `06_legend.png` shows no forbidden-region key, and the presentation
+  legends have none (R-467); the debug view's "Debug" key is not drawn there.
+- **The Decoder window and the decoder badge** (R-478 to R-480). No artboard shows the Decoder window, the Chart
+  section's links row or the decoder badge; the GUI has all three (§G7a, §G2; the badge in the figure's header strip,
+  R-523). *Was:* "or the canvas's decoder badge; the GUI has all three (§G7a, §G2; the badge's place is RQ-387)"
+  (stale value, replaced by R-523).
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
-  the artboards'.
+  the artboards'. One departure from `01_main`: the figure region's top line is the figure's header strip (R-523, §G2),
+  and the shown rect is the rest of the region at its own aspect, the field at one scale across it, so the shown
+  figure is one line shorter than the artboard's and shows that much less of the field at the same scale, with the
+  axis labels' strips and Home hung from it (applied per R-369, gui review G3 of PR #265; accepted by R-559). *Was:* "and the plot is
+  fitted below it at its aspect, so the plot's rect is that much shorter than the artboard's figure (applied per
+  R-369, gui review G1 of PR #265)." (stale value, replaced by gui review G3 of PR #265, applied per R-369).
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
@@ -806,17 +1458,50 @@ corpus, the spec follows the authority:
   `principia_dev_gui.html` label the outcome classes "coll @ t=0" and "degenerate", and the render-mode catalogue's
   outcome row gives "t=0 orange, degenerate white"; the outcome view has neither class, and its classes and colours are
   colour_composition §1.4's.
+- **The trace and Listen art boards** (R-541; `docs/gui/reference/trace/artboards/` and the two demos in
+  `docs/gui/reference/trace/`). They are the layout reference for the Trajectory panel, Overlays ▾ › Trace, `Trace…`,
+  `Listen…`, the bottom band and the legend's trace block, and R-540 and R-541 are the rule where they differ. Where
+  they differ from other rulings, the rulings stand: the step under the slice (R-457); the compass's orbit (R-409);
+  labels drawn over the figure, such as "hover · trace to the playhead…" and "#2 start · off-screen", which are GUI
+  labels kept off the plot (§G1), the icons themselves being figure marks (R-539); the demos' mock menu bars with
+  `Lines ▾` and `Listen ▾` (R-541 G2; R-556, RQ-448 (a)); the boards' kept #2 in `#5ab4ff`, never a trace colour (R-556,
+  RQ-447 (b)); the boards' numbers (legend
+  shares, readouts), illustrative (the bundle's README).
+- **The state map's art boards** (R-542; `docs/gui/reference/state_map/boards/`). They are read for their new elements
+  only: the Chart position node, its inspectors, ports and presets, the legend's colour block and the Problems rows; the
+  shell follows `02_stain.png` and `01_main.png`, and the hover trace and its label stay as R-541 and §G2 give them
+  (RQ-501 (a), R-558). Their fonts (Ubuntu, Ubuntu Mono) conform, and they badge nothing over the figure. Where they depart, the
+  spec stands: board 1's top bar (a stain-name dropdown, "Compile", "Apply to view" and the Graph / Pipeline WGSL / Node
+  WGSL tabs), its library groups (Sources / Colour·Base / Colour·Layers) and its Problems pane spanning the window with a
+  WGSL tab; board 1's two nodes BASE and LAYERS (RQ-502 (a), R-558: one colour node, boards 1 and 4 redrawn
+  to match by TASK-M7-51); board 6's floating legend over the figure's edge, its
+  placeholder compass, its status box beside the figure, its top-bar "Stain [Chart position]" and "Edit graph…" (RQ-500 (a), R-558: Explore's stain
+  button reads "Edit stain…" when the shell builds it, the Print panel keeping "Edit graph…"; until then none is added),
+  and its ring with no hover trace (RQ-501 (a), R-558); board 4's "Shape n̂ already is one — point(sphere)" and its row "Shape n̂'s
+  nodes | point(sphere)" (RQ-497 (a): Shape n̂ stays `vector`), its "at: … fixed t" (struck, RQ-489 (a), R-558) and its last paragraph
+  (superseded by SM11, RQ-497 (a), R-558); board 3's header promising Position ↔ Gradient and Bands ↔ Palette (RQ-497 (a): Site blend ↔ Site blend
+  only). Board 1's Problems-row buttons ("Use Multiply", "Show as grey", "Use outcome colour") and board 4's "Set both to
+  this chart" are not in SM15's text and are board-only, not built (applied per R-369).
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
-  (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
+  (`N_max`, default 64), and the sound mapping (R-540's signal, `principia_listen.md` §1; *was (before R-540):*
+  "`θ(t), φ(t)` → spectrum"). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
+- **The Print graph and benchmark boards** (R-485, R-496; `docs/gui/reference/print_graph/boards/`). `panel.png`'s
+  footer, "Canvas corner badge while active", is overridden by R-523: the print badge sits in the figure's header strip,
+  never over the figure; its gallery header, "103 in 11 families", is 111 in 12 by R-532 (R-130's eight in a family of
+  their own, "Poster"). `panel.png` and `bench.png` are drawn in IBM Plex (`boards/source/boards.html`); their fonts
+  are not copied, the dev GUI's being Ubuntu and Ubuntu Mono (§G1). (gui review 5596618095 of PR #268, G4, applied per
+  R-369.)
 
 ## G14. Settled by the notes (record)
 
-1. The dev GUI is a debug layer (F3) with the final UI's structure and every feature.
+1. The dev GUI is a debug layer (F3), and the native app's and v1 web's UI, with every feature; a separate final UI, if there ever is one, is v2 web's (R-571; *was:* "with the final UI's structure and every feature").
 2. Explore and Stain are the two modes; everything else is a window or a tool.
 3. "Manifold view" is one group: chart, navigation, centre, slice and tilt, rotation.
 4. Run settings live in a window, not on the page.
-5. The figure is never covered; warnings go to the footer console.
+5. The figure is never covered by panels or chrome; warnings go to the footer console. Figure marks (the trace and its
+   icons, contour lines, icons for points of interest) may cover it (R-539). *Was:* "5. The figure is never covered;
+   warnings go to the footer console."
 6. Every slice preview keeps the viewport's aspect.
 7. The compass switches mode by itself, and by its Tilt and Slice buttons, with no orbit (R-409); lock re-bases the
    sliders and pins the compass.
@@ -879,10 +1564,15 @@ Overlays menu (R-67).*
   (§10).
 - **Node inspector** (right) — the editor for the selected node; morphs to the node/source type;
   Advanced-WGSL at the bottom (§9).
-- **Display window + Overlays menu** (R-67; was the global display bar, top) — style / render-scale / gamut / CVD; applied to `OUT`,
-  *outside* the pipeline (§12).
+- **Display window + Overlays menu** (R-67; was the global display bar, top) — the Print graph (R-485) / render-scale / gamut / CVD; applied to `OUT`,
+  *outside* the pipeline (§12). *(Was: "style / render-scale / gamut / CVD"; R-485 puts the Print graph where style was.)*
 
 A live **preview** (shape-sphere or illustrative slice, toggle) renders the current `OUT`.
+
+**Problems for the state map (R-542; state map SM15).** A warning where a brightness node replaces L that the base
+spends on position (Shape n̂'s position map and Bands where it has them; a 1D gradient; the sphere's 3D and the
+cylinder's 2D gradient); a warning where a brightness node replaces L under lightness layers; and, per compile, an
+info line counting left the chart (clamped), ended (held), past a bounded edge (RQ-498) and undetermined.
 
 ---
 
@@ -911,7 +1601,10 @@ composition.md` §5).
 - **Node** = `{ id, kind, inputs[], outputs[], params }`. Kinds: `source`, `colour`, `brightness`,
   `combiner`, `post`, `OUT`.
 - **Port** = a typed, directional (in/out) connection point. Wire-carried types:
-  - `field` — a ctx field, **tagged with a subtype**: `scalar` / `vector` / `categorical`.
+  - `field` — a ctx field, **tagged with a subtype**: `scalar` / `vector` / `categorical` / `point⟨q⟩` (R-542: a
+    position on the quotient q ∈ sphere · plane · cylinder · simplex with its four-result status, carried by the Chart
+    position source, `principia_state_map.md` SM15; Shape n̂ stays `vector`, RQ-497). *Was:* "`field` — a ctx field,
+    **tagged with a subtype**: `scalar` / `vector` / `categorical`." (stale value, replaced by R-542)
   - `vec3` — a colour.
   - `f32` — a lightness.
 - **Wire** = `out-port → in-port`, type-checked (§6).
@@ -926,6 +1619,16 @@ composition.md` §5).
 | `combiner`   | `colour: vec3?` + `brightness: f32?` | `vec3` | **fixed singleton**; Replace-L / Multiply |
 | `post`       | `vec3` (+ optional `field` ins) | `vec3` | one op (overlay / band-mask / tone); chained |
 | `OUT`        | `vec3`                          | —      | **fixed singleton**; cannot be deleted |
+
+**Chart position (R-542).** A `source` whose out-port is `point⟨q⟩`. Its params are the chart (default: the view's
+own), at (playhead · `t = 0`), when it leaves the chart (clamp · none) and after its run ends (hold · outcome colour)
+(state map SM15; "a fixed t" is struck, RQ-489 (a), R-558; *was:* "SM15's "a fixed t" waits on RQ-489"). The graph
+draws one colour node for the base and its layers (RQ-502 (a), R-558). Its layers are combinators inside the colour occupant (colour
+composition §1.3, §1.5), not `post` nodes. Chart position is a source with its own settings beside this table's one-param
+`source`, and its layers sit in the colour slot, as written here (R-558, RQ-497 (a)). Where the stain graph and the
+Print graph show together (a window, panel or menu listing both graphs' nodes or presets), the stain graph's Palette
+base reads "Palette base" and its Flow preset "Picture flow". *Was:* "That this table gives `source` one param, and
+that SM15 seats the layers in the colour slot, are in RQ-497; they apply meanwhile as written here."
 
 ---
 
@@ -957,6 +1660,9 @@ combiner's two inputs.
 - **Multi-source mappings expose multiple input ports** on the consuming node (e.g. a derived source
   taking two `field` ins for a `top1 − top2` margin, or a `gradient-magnitude` node). This is
   distinct from multi-wire-per-port (which is disallowed, §6).
+- **Chart position (R-542).** Shape n̂ and Chart position are two sources; on the shape sphere chart both are offered.
+  A brightness field that compares two times (Displacement, Left its starting tile) takes two Chart position sources,
+  one at the playhead and one at `t = 0` (state map SM15).
 
 ---
 
@@ -970,6 +1676,11 @@ combiner's two inputs.
 - **In-port arity: exactly one wire.** Dropping a new wire onto an occupied in-port **replaces** the
   old (last-write-wins).
 - **Out-port arity: unbounded** (fan-out, §5).
+- **`point⟨q⟩` (R-542).** Two `point⟨q⟩` inputs of different quotients on one node (Displacement) have no distance
+  between them: a Problems error, never a silent cast (state map SM15, test 3). SM15's "the library and the
+  drag-off-a-pin menu offer only what the wired source takes" applies to the library and that menu only, and the rule
+  above stands between subtypes (R-558, RQ-497 (a); *was:* "meets this section's morphing rule; that is RQ-497, and
+  meanwhile the rule above stands between subtypes").
 
 ---
 
@@ -1017,13 +1728,22 @@ Clicking a node fills the right inspector with **that node's editor**, chosen by
 | `colour` ← `vector` (n̂)          | **shape-sphere / SiteBlend editor** (sites × kernel × swatch-or-gradient × blend-space) |
 | `colour` ← `scalar`              | **gradient editor** (built-in LUT or custom stops, cyclic) |
 | `colour` ← `categorical`         | **palette-swatch editor** (e.g. event palette) |
+| `colour` ← `point⟨q⟩` (R-542)    | **base-and-layers editor**: a base (Gradient · Site blend · Palette · Picture) and a reorderable stack of layers, each with spacing, colour and opacity; what it offers follows q (state map SM11, SM15; board 3) |
 | `brightness` ← any               | **gradient / compaction editor** (greyscale + polarity) |
+| `brightness` ← two `point⟨q⟩` (R-542) | Displacement · Left its starting tile (state map SM11) |
 | `combiner`                       | Replace-L / Multiply |
 | `post`                           | that op's controls (grid freq, physics κ/masses, band, tone, …) |
 | `source`                         | field dropdown (which ctx field) |
+| `source` Chart position (R-542)  | chart · at · when it leaves · after its end (state map SM15) |
 
 The source-type-morph is **automatic**: the wire *is* the type, so there is no manual site-blend /
 field-ramp toggle (unlike the standalone explorer prototype — the toggle collapses into the wire).
+
+**Switching the source (R-542).** Swapping between Shape n̂ and Chart position puts each base's counterpart in its
+place (Site blend ↔ Site blend, the only swap while Shape n̂ stays `vector`, R-558, RQ-497 (a); *was:* "Site blend ↔
+Site blend; Position ↔ Gradient and Bands ↔ Palette where Shape n̂ has those nodes, RQ-497"), and
+changing Chart position's chart re-offers the bases and layers the new quotient has. Every setting stays on the graph,
+so switching back restores it exactly (state map SM15).
 
 **Advanced ▸ edit shader** sits at the bottom of every node's inspector: reveals the generated WGSL
 **for that node**, editable in place (per-node eject, `principia_colour_composition.md` §5). Editing
@@ -1221,17 +1941,31 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
 - **Bivariate presets** (`n̂ × FTLE`, `Outcome-class × diffusion`, …) load a graph with **both**
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
+- **State map presets (R-542; state map SM15, board 5).** Classic shape colour (Shape n̂ → Site blend, as today), and
+  on Chart position, on any chart: Where, Graph paper, Basins, Displacement, Flow and Mixing, the file's names (R-558,
+  RQ-499; "Where now" is the node's retired name), Flow reading "Picture flow" where the Print graph shows too
+  (RQ-497); Displacement and Mixing set Replace-L's keep in gamut on (RQ-496). Each inserts an ordinary editable graph;
+  the settings are in state map SM15. *Was (RQ-499 (a), applied meanwhile):* "Where now, Graph paper, Basin tiles,
+  Displacement, Picture flow and Mixing, the prototype's labels (RQ-499 (a); the file's names, Where, Basins and Flow,
+  are the queued alternative)." *Was:* "Where, Graph paper, Basins, Displacement, Flow and
+  Mixing … (the names differ: RQ-499)"
 
 ---
 
 ## 12. Display stage — global, outside the pipeline
 
-*Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.*
+*Order (R-67, R-487, R-531): stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.* *(Was: "Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display).")*
 
-Applied to `OUT` after the graph, as **settings, never nodes** (no OUT-downstream graph):
+Applied to `OUT` after the graph, as **settings, never nodes** of the stain graph (no OUT-downstream node in it):
 
-- **style** (optional, figure only), **render→display scale**, **gamut clamp**, **CVD simulation** (models the viewer,
-  not the visualisation) — in that order (R-67). *(Was: gamut clamp, CVD simulation, render→display scale.)*
+- **the Print graph** (R-485; `principia_print_graph.md`; Plain, the identity, by default; figure only), **render→display
+  scale**, **gamut clamp**, **CVD simulation** (models the viewer, not the visualisation) — in that order (R-67, R-487).
+  *(Was: gamut clamp, CVD simulation, render→display scale.)* *(Was, before R-485: "**style** (optional, figure only)".)*
+- **The Print graph is a node graph of its own** (R-485), as `principia_colour_composition.md` §4.3 has it: its registry,
+  codegen and WGSL are its own, the stain's codegen never sees it, and it is no stain occupant or preset, so the stain
+  graph still has nothing downstream of `OUT`; in the stain graph's terms the Print graph is a display setting,
+  `RenderState.print` (R-491). *(Was: "Applied to `OUT` after the graph, as **settings, never nodes** (no
+  OUT-downstream graph):"; R-485's node graph is a separate graph, so "never nodes" holds for the stain graph only.)*
 
 ### 12.1 Structural overlays and tile debug shaders
 
@@ -1320,8 +2054,9 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   **colour's own L** (pass-through); **both**-None → flat mid-grey. (Matches `principia_colour_
   composition.md` §4.1.)
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
-  invalid-pixel treatment, by default the hatched invalid pattern (R-132) — a NaN / sentinel must read as "no data", not as a value (composition spec
-  §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
+  invalid-pixel treatment, by default the hatched invalid pattern (R-132) in a debug view and `#141418` in a
+  presentation view, which draws no hatch (R-467) — a NaN / sentinel must read as "no data", not as a value (composition spec
+  §3, §6; R-79). *Was:* "by default the hatched invalid pattern (R-132)". Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
   invalid pattern (§10.1), as does a stored `±∞` that is no declared sentinel or unset value (R-436).
 
 ---
@@ -1352,8 +2087,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
    can't be reconstructed from dissolved code.
 10. **Presets are whole graphs**; catalogue default-composition = preset payload; debug locked →
     fork-on-edit.
-11. **Display stage (style / scale / gamut / CVD, in that order — R-67) is global**, outside the pipeline; its controls are
-    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)*
+11. **Display stage (Print graph / scale / gamut / CVD, in that order — R-67, R-485; the lines drawn over after the gamut clamp, R-531) is global**, outside the pipeline; its controls are
+    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)* *(Was, before R-485 and R-531: "style / scale / gamut / CVD, in that order — R-67".)*
 
 ---
 
@@ -1373,5 +2108,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   the debug taxonomy, the addressing channel convention (UV=RG / TL=RB / centre=BG / index=grey), and
   boundaries-as-overlay. This GUI spec assumes those resolutions.~~ **Closed (R-72; REQ-COL-054; TASK-M7-01):** each
   resolution is written in `principia_colour_composition.md` §9, "The stain editor's composition resolutions". Its open
-  parts are in `REVIEW_QUEUE.md`: RQ-280 (the addressing convention's unnamed channel and index), RQ-281 (the
-  diagnostic and profiling groups' membership) and RQ-282 (a ramp of custom stops).
+  parts were ruled by R-546 and are written there: RQ-280 (the addressing convention's third channels and indexes),
+  RQ-281 (the diagnostic and profiling groups' membership) and RQ-282 (gradient magnitude; the custom-stop ramp
+  defined apart by TASK-M7-11). *Was:* "Its open parts are in `REVIEW_QUEUE.md`: RQ-280 (the addressing convention's
+  unnamed channel and index), RQ-281 (the diagnostic and profiling groups' membership) and RQ-282 (a ramp of custom
+  stops)."

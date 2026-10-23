@@ -169,6 +169,18 @@ pub const STATE_SIM_FAILED: u32 = 4;
 /// The `state` code of decode_failed (payload §2).
 pub const STATE_DECODE_FAILED: u32 = 5;
 
+/// `decode_failed`'s `detail` code 0: non-finite decode output (payload §2).
+pub const DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT: u32 = 0;
+
+/// `decode_failed`'s `detail` code 1: degenerate configuration (payload §2).
+pub const DETAIL_DECODE_FAILED_DEGENERATE_CONFIGURATION: u32 = 1;
+
+/// `decode_failed`'s `detail` code 2: invalid mass construction (payload §2).
+pub const DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION: u32 = 2;
+
+/// `decode_failed`'s `detail` code 3: other/reserved (payload §2).
+pub const DETAIL_DECODE_FAILED_OTHER_RESERVED: u32 = 3;
+
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;
 
@@ -556,6 +568,10 @@ pub const FGW_CAPACITY: u32 = 76;
 
 /// `length`'s sentinel in the ledger: the word is truncated (payload §3; dd_generation_root §3.8).
 pub const FGW_LENGTH_SENTINEL: u32 = 127;
+
+/// The most branch-cut crossings one accepted substep holds, one per cut (payload §3; symbolic_dynamics_contract §1;
+/// the register's `max_crossings_per_substep`): the capacity of the march's per-substep crossing list.
+pub const MAX_CROSSINGS_PER_SUBSTEP: u32 = 2;
 
 /// `length_raw`: bits 25–31 of the word's `.w`, element 3 of its `vec4<u32>`; 0…76 valid, 127 truncated
 /// (payload §3). Never a crossing count: [`fgw_retained_prefix_length`] clamps the sentinel.

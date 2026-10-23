@@ -34,13 +34,15 @@ use spirv_std::num_traits::Float;
 
 use crate::chart::Chart;
 use crate::decode::degenerate::Degenerate;
-use crate::decode::descriptor::kinetic;
+use crate::decode::descriptor::{describe, kinetic};
 use crate::decode::{decode_with as decode_free_with, Blocks, Decoded, Free, Ic, Latent};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
-/// What `η_E` did to a decode (dd_decoder §3.7).
+/// What `η_E` did to a decode (dd_decoder §3.7). Its discriminant is a `u32`: the kernel's SPIR-V, where the decode
+/// stage applies `η_E`, has no 8-bit integers (no `OpCapability Int8`), as [`Degenerate`]'s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Outcome {
     /// The target is `None`, or the chart forbids the rescale: the momenta are untouched.
     Off,
@@ -148,15 +150,64 @@ pub fn apply<R: LinkReal + PayloadReal, B: Blocks<R>>(
         Some(e) if !forbids_energy_normalisation => e,
         _ => return (decoded, Outcome::Off),
     };
+    let (ic, n) = rescaled(&decoded, target);
+    let descriptor = blocks.invariants(&ic);
+    joined(decoded, ic, descriptor, n)
+}
+
+/// [`apply`] with the shared derived invariants, [`describe`], as every decoder's blocks write them: the decode stage's
+/// form (`crate::stage::decode::sample_with`). It takes no branch on a decode: the rescale is computed whatever the
+/// target, and the switch, a uniform's (`None`, or a chart that forbids it), selects between the rescaled momenta and
+/// the decoded ones, so the kernel's SPIR-V carries no decode as a value across a branch. With the switch off the
+/// momenta are the decode's, and the descriptor `describe` rewrites from them is the decode's, bit for bit, as every
+/// decoder writes its descriptor by `describe` of its `(m, r, p)`.
+#[inline]
+pub fn apply_shared<R: LinkReal + PayloadReal>(
+    decoded: Decoded<R>,
+    e_star: Option<R>,
+    forbids_energy_normalisation: bool,
+) -> (Decoded<R>, Outcome) {
+    let (on, target) = match e_star {
+        Some(e) => (!forbids_energy_normalisation, e),
+        None => (false, R::zero()),
+    };
+    let (ic, n) = rescaled(&decoded, target);
+    let ic = Ic {
+        p: select(on, ic.p, decoded.ic.p),
+        ..ic
+    };
+    let n = Normalised {
+        p: ic.p,
+        outcome: select(on, n.outcome, Outcome::Off),
+    };
+    let descriptor = describe(&ic);
+    joined(decoded, ic, descriptor, n)
+}
+
+/// [`normalise`] on `decoded` toward `target`, with the descriptor's `V₀` and `r_min_pair_0`, and the IC with its
+/// momenta replaced by the result.
+#[inline]
+fn rescaled<R: LinkReal + PayloadReal>(decoded: &Decoded<R>, target: R) -> (Ic<R>, Normalised<R>) {
     let d: &ICDescriptorOf<R> = &decoded.descriptor;
     let n = normalise(&decoded.ic, d.V_0, d.r_min_pair_0, target);
-    // The descriptor is rewritten from the result: unchanged momenta give it back bit for bit, as `describe` reads only
-    // the IC.
-    let ic = Ic {
-        p: n.p,
-        ..decoded.ic
-    };
-    let descriptor = blocks.invariants(&ic);
+    (
+        Ic {
+            p: n.p,
+            ..decoded.ic
+        },
+        n,
+    )
+}
+
+/// `decoded` with `ic` and its `descriptor`, rewritten from the result (unchanged momenta give it back bit for bit, as
+/// `describe` reads only the IC), and the outcome's tag added where the decode has none.
+#[inline]
+fn joined<R: LinkReal + PayloadReal>(
+    decoded: Decoded<R>,
+    ic: Ic<R>,
+    descriptor: ICDescriptorOf<R>,
+    n: Normalised<R>,
+) -> (Decoded<R>, Outcome) {
     (
         Decoded {
             ic,

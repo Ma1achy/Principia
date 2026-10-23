@@ -666,9 +666,17 @@ fn mock_windows_drawn_the_ic_pane() {
                     .any(|c| close(c.0, at(path[i])) && c.1 == 5.0 && c.3 == *colour),
                 "ghost {b}"
             );
+            // Its label, the body's number as shown, 1-based (R-449): body 0 reads 1.
             assert!(
-                texts(&shapes).iter().any(|(t, _)| *t == b.to_string()),
-                "label {b}"
+                texts(&shapes)
+                    .iter()
+                    .any(|(t, _)| *t == (b + 1).to_string()),
+                "label {}",
+                b + 1
+            );
+            assert!(
+                !texts(&shapes).iter().any(|(t, _)| *t == "0"),
+                "a body labelled 0"
             );
         }
     }

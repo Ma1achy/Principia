@@ -1,7 +1,7 @@
 # TASK-M3-17 — Terminal states, precedence and the terminal latch
 
 - **Milestone:** M3
-- **Closes:** REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-033, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058
+- **Closes:** REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058
 - **Depends on:** TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-14, TASK-M3-16
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-031
 - **Reviewers:** code, qa, physics
@@ -54,7 +54,6 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `cargo test -p kernel escape_latch` — escape-fired fixture: state reads escape, t_end_step is latched at the firing step and the production loop ends there (done set); a collision stops the march (the harness's §2.4 march leaving the payload byte-identical is asserted in TASK-M3-33) (REQ-EVT-010).
 - `cargo test -p kernel terminal_precedence` — escape before collision → escape; collision before escape → collision; same-step tie → collision; sim_failed with any other event → sim_failed; triple ejection reported as escape detail; identical at f32 and f64 (REQ-EVT-020).
 - `cargo test -p kernel nmax_cap_continues` — force a near-singular encounter: N_sub hits N_max, the march continues to a dynamical outcome, saturated set (REQ-INT-029).
-- Review (physics): no KS state representation in v1; saturated regions continue to their outcome (REQ-INT-033).
 - `cargo test -p kernel terminal_latch` — synthetic samples run to collision and to escape: the loop ends with done set at the terminating step; every SimState word is bit-identical on all subsequent dispatches; state == its terminal value (REQ-INT-034).
 - `cargo test -p kernel detail_union` — for each state, pack/unpack each detail code and assert the decoded meaning (REQ-PAY-046).
 - Review (code): no `timeout` or `survived_horizon` state exists; the horizon T is part of the sim key (REQ-PAY-049).
@@ -63,4 +62,5 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 
 ## Notes
 - R-103 governs: in production `done` is set when escape fires; the §2.4 checks run only in `crates/validation` on the harness's own state (TASK-M3-33).
+- R-562 (21 Oct 2026): regularisation is v1; REQ-INT-033 is retired and its acceptance line removed. *Was:* "- Review (physics): no KS state representation in v1; saturated regions continue to their outcome (REQ-INT-033)." Saturated regions continuing to their outcome stays tested by `nmax_cap_continues` (REQ-INT-029) and `totality_labels` (REQ-EVT-001). A regularised copy that runs out of its step budget is undetermined, not a label (R-563, TASK-M3-41).
 - RQ-97 ruled: R-113 — REQ-INT-029's "CPU and GPU take the same capped step" is dropped from M3; M4 covers it by REQ-VAL-059 and REQ-VAL-061.
