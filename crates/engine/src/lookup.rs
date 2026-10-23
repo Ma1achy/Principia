@@ -255,10 +255,14 @@ fn class(x: f64) -> Option<std::cmp::Ordering> {
     x.is_finite().then(|| x.partial_cmp(&0.0)).flatten()
 }
 
-/// The class a clamp from `before` to `after` changes, `L_z`'s first; none where `before`'s is not finite.
+/// The class a clamp from `before` to `after` changes, `L_z`'s first; none where `before`'s `L_z` or `E` is not finite
+/// (§ "Layer 1's space and bounds": such a state, the coincident pair's `U = −∞` among them, has no class there to
+/// change, so its clamp stands).
 pub fn changed(before: &Invariants<f64>, after: &Invariants<f64>) -> Option<Class> {
     let moved = |b: f64, a: f64| class(b).is_some_and(|c| class(a) != Some(c));
-    if moved(before.lz, after.lz) {
+    if !(before.lz.is_finite() && before.e.is_finite()) {
+        None
+    } else if moved(before.lz, after.lz) {
         Some(Class::Rotation)
     } else if moved(before.e, after.e) {
         Some(Class::Energy)

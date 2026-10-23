@@ -903,6 +903,16 @@ fn check_changed(tiny: f64) {
         None,
         "NaN has a class"
     );
+    assert_eq!(
+        changed(&inv(0.0, f64::NEG_INFINITY), &inv(tiny, 5.0)),
+        None,
+        "an entered E of −∞ leaves L_z no class to change"
+    );
+    assert_eq!(
+        changed(&inv(f64::INFINITY, -1.0), &inv(1.0, 1.0)),
+        None,
+        "an entered L_z of ∞ leaves E no class to change"
+    );
     let quiet = Notices {
         moved: Moved::default(),
         projected: None,
