@@ -169,6 +169,27 @@ negative_control!(
     check_entry(Exact::Triple([5, 12, 13]), Failed::NotATriple)
 );
 
+/// Checks a triple whose legs reach `u64::MAX`: `a² + b²` past `u128`'s range, and one just inside it, are refused
+/// before the ladder as not a triple, with no overflow.
+fn check_triple_wide(top: u64) {
+    check_entry(Exact::Triple([top, top, 1]), Failed::NotATriple);
+    check_entry(Exact::Triple([top, top, top]), Failed::NotATriple);
+    check_entry(Exact::Triple([top, 1, top]), Failed::NotATriple);
+    check_entry(Exact::Triple([1, top, top]), Failed::NotATriple);
+}
+
+#[test]
+fn lookup_forms_triple_wide() {
+    check_triple_wide(u64::MAX);
+}
+
+negative_control!(
+    lookup_forms_triple_wide,
+    "a valid triple's legs are not refused",
+    expected = "the entry is accepted",
+    check_entry(Exact::Triple([3, 4, 5]), Failed::NotATriple)
+);
+
 /// Checks a raw `z`: on the latent chart, every control the clamp leaves is kept bit for bit and `z[0] = big`, past
 /// its clamp, is snapped to the clamp's image and named as moved.
 fn check_raw(big: f64) {

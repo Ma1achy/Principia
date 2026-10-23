@@ -383,7 +383,7 @@ where
         },
         Exact::Triple([a, b, c]) => {
             let sq = |s: u64| u128::from(s) * u128::from(s);
-            if a == 0 || b == 0 || sq(a) + sq(b) != sq(c) {
+            if a == 0 || b == 0 || sq(a).checked_add(sq(b)) != Some(sq(c)) {
                 return Err(refuse(Layer::Entry, Failed::NotATriple));
             }
             (at_rest(Triple { a, b, c }.burrau()), None)
