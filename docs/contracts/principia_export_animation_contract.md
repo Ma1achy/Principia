@@ -89,7 +89,11 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
     corpus's cut at the second keyframe): every field this Part does not list as interpolated, the Run lane's occupant,
     horizon, `E` and thresholds (`principia_sequence.md` §3.3), the chart and the link ids, and, in live playback, the
     link parameters (R-520 F3), takes keyframe `k`'s value at every frame `f_k ≤ f < f_{k+1}` and keyframe `k + 1`'s
-    from its own frame, as the decoder bullet's "a cut" and R-520 F3's "a cut at the second keyframe" have it. A
+    from its own frame, as the decoder bullet's "a cut" and R-520 F3's "a cut at the second keyframe" have it. **One
+    exception, which this bullet does not decide** (fix round 8 of PR #286, physics review 5631902011, P6; applied per
+    R-369): after a reel takeover inside the segment, the live player instead holds the takeover's link-parameter value
+    until `f_{k+1}`, RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383); which value it holds there is
+    RQ-561's second question. Ordinary live playback, entering the segment at a keyframe's frame, is as above. A
     dissolve's outgoing state follows the same rule. No such field is eased: easing one would be a new family of ICs
     of the kind RQ-384 needed a ruling for.
 - **The decoder in a keyframe (R-483, X7).** A keyframe's `ViewState` is its `SimConfig`, in the one canonical

@@ -24576,6 +24576,12 @@ keyframe `k + 1`'s from its own frame, the corpus's cut at the second keyframe; 
 uses keyframe `k`'s `T`; a dissolve's outgoing state follows the same rule. None is eased, which would need an RQ.
 REQ-TOOL-197 carries it, with an arm in `segment_progress`.
 
+*Fix round 8 of PR #286 (physics review 5631902011, P6; applied per R-369, the orchestrator's decision; no ruling
+changed):* round 7's rule for live playback's link parameters applies to playback that enters a segment at a keyframe's
+frame. After a reel takeover inside the segment, the live player instead holds the takeover's value until `f_{k+1}`,
+RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383), which the rule does not decide. Round 7's paragraph
+stands with this exception.
+
 R-576 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds
