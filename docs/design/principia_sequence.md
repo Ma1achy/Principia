@@ -215,9 +215,10 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
 its frames, its integration cost ((a) one march to the segment's end; (b) `0 → t_frame` per frame; (c) none, Part 2),
 its flags (link parameters interpolated, R-520; a dissolve is two renders) and its estimated time.
 
-- **An estimate carries its basis** (fix round 12 of PR #286, perf review 5632950982, P1, P2; applied per R-369). A segment's cost is the samples it
-  marches (the export's pixels times its copies, `E + 1`) times the steps each is marched (the physical time of the
-  march over `dt`). The planner prices it with **the one throughput model the app keeps**,
+- **An estimate carries its basis** (fix round 12 of PR #286, perf review 5632950982, P1, P2; applied per R-369). A
+  segment's cost is its trajectory-steps, as "The estimate's unit, defined" below gives them (*was:* "A segment's cost
+  is the samples it marches (the export's pixels times its copies, `E + 1`) times the steps each is marched (the
+  physical time of the march over `dt`)."; fix round 14 of PR #286, perf review 5634410814, P8). The planner prices it with **the one throughput model the app keeps**,
   `principia_quality_device_note.md` § "2. Model-based, not reactive" ("device throughput (cost-per-dt-per-sample)"),
   read under its provenance signature (§ "9. Persist the model, not just the rung"): the estimate prices the cost
   with that scalar, as defined below, one value, shown with its provenance key, since the model gives one value, not a range. No second estimator
