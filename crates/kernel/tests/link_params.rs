@@ -3,7 +3,7 @@
 //! against the forward's finite-differenced volume factor (REQ-GEN-039, C5), and decode and encode at the active
 //! values (REQ-DEC-048).
 
-use kernel::decode::{decode, decode_at, Latent};
+use kernel::decode::{decode, decode_at, momentum, Latent};
 use kernel::encode::{encode, encode_at, SimplexClamp};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::*;
@@ -427,6 +427,12 @@ fn check_active(q15: &LinkParams<f64>) {
     );
 
     for z in sample(8) {
+        let z_mom = [z[2], z[3], z[4], z[5]];
+        assert_eq!(
+            momentum::controls::<Defaults, f64>(z_mom).map(f64::to_bits),
+            momentum::controls_at::<Defaults, f64>(z_mom, &d).map(f64::to_bits),
+            "the momentum controls at the defaults are not today's"
+        );
         let z = Latent::new(<[f64; 8]>::try_from(z).unwrap());
         assert_eq!(
             format!("{:?}", decode_at::<Defaults, f64>(&z, &d)),
