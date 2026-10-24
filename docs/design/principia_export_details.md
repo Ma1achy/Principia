@@ -153,8 +153,9 @@ has one `froze` for the whole file. Under `frozen` its `nodes` are the measured 
 under `prepass_union` the measured nodes the pre-pass's union froze; under `per_frame` `[]`; the Sequence's export lists
 both the nodes frozen at its Start and each node frozen at the first export frame that draws it (§3.1). Its
 `base_width` is the figure's logical width when Record or the Sequence's Start is pressed, written into every frame's
-`RenderState` and reported once, whatever the range policy, since `base_width` is not a window; a headless recording
-(the reel's builder) reports `null`, keeping the state's.
+`RenderState` and reported once, whatever the range policy, since `base_width` is not a window, and a resize of the
+figure while it records changes neither; a headless recording (the reel's builder) reports `null`, keeping the
+state's.
 
 `frozen_ranges` and `base_width` are `RenderState`'s, so they are in the identity and in tier 2 as the ramp window is.
 

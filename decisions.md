@@ -25557,6 +25557,10 @@ Changes REQ-RENDER-117 and REQ-RENDER-118 (rulings, source, note).
 The qa fix round (5638292369, Q1, Q2) also changes REQ-RENDER-117 (statement, verify, note), REQ-TOOL-202
 (statement, verify, rulings, source, note) and REQ-TOOL-218 (statement, verify, rulings, source, note).
 Its follow-up (5638318769, Q6) changes REQ-TOOL-201 (statement, verify, rulings, source, note).
+The next (5638334977, Q7, N1, N2, and an audit of every `froze` claim) changes REQ-TOOL-216 (statement, verify,
+rulings, source, note), REQ-TOOL-201, REQ-TOOL-202 and REQ-RENDER-117 (statement, verify, note) and REQ-TOOL-218
+(verify, note), so a pre-pass recording, a headless recording, a resize while recording, the order of `froze.nodes`
+and a `froze.base_width` in physical px each have a control.
 
 ## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
 *24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
