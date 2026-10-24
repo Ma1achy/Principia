@@ -387,6 +387,8 @@ impl Report {
 
     /// The remedies offered: none where every pixel is feasible; else the re-centre to each tagged pixel's nearest
     /// feasible point, in pixel order, then the switch to the latent chart. A `Degenerate` pixel is offered nothing.
+    /// The contract offers one re-centre, "to the nearest feasible point"; which one for a view of many tagged pixels
+    /// is RQ-572's, open, and this offer stands until it is ruled.
     pub fn offer(&self) -> Vec<Remedy> {
         if self.infeasible() == 0 {
             return Vec::new();
