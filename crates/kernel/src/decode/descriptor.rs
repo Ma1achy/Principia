@@ -130,9 +130,10 @@ fn select<R: Copy>(c: bool, t: R, f: R) -> R {
 
 /// `rho_angle` from `ρ × λ` and `ρ · λ` (dd_decoder §3.6), on `(−π̂, π̂]`: on the axis `ρ × λ = 0`, `π̂` where
 /// `ρ · λ < 0` and 0 otherwise, the pole included; elsewhere `atan2(cross, dot)` taken down to `π̂`, a value at or
-/// below `−π̂` read as `π̂`, a zero `dot` taken as `+0` by a select on it against 0: Metal, through naga, gives
-/// `atan2(cross, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Off the axis IEEE's `atan2(cross, ±0)` is
-/// one value, and on it the axis's select discards it, so the CPU's `rho_angle` is unchanged, bit for bit.
+/// below `−π̂` read as `π̂`, a zero `dot` taken as `+0` by a select on it against 0: Metal's `atan2` at its default
+/// math mode gives `atan2(cross, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Off the axis IEEE's
+/// `atan2(cross, ±0)` is one value, and on it the axis's select discards it, so the CPU's `rho_angle` is unchanged, bit
+/// for bit.
 #[inline]
 pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
     let zero = R::zero();

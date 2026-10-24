@@ -1325,7 +1325,8 @@ const GRID: u32 = 41;
 
 /// The state comparison's distance from each binary-collision landmark, chordal on the sphere. Near a landmark `λ̃`'s
 /// direction is conditioned as `ulp/‖ρ̃‖` (chart_reference §3.2), so a rounding-level difference in `n̂` turns the state
-/// by up to `ulp/δ`; at `δ = 1/16`, `ulp/δ = 16 ulp ≤ ε_phys = 64 ulp` (REQ-ENC-024), the reason for `δ`.
+/// by up to about `2·ulp/δ` (the 2 near `BC₀₁`; physics review 5640193616 of PR #288); at `δ = 1/16` that is
+/// `32 ulp ≤ ε_phys = 64 ulp` (REQ-ENC-024), the reason for `δ`.
 const DELTA: f64 = 1.0 / 16.0;
 
 /// The mirror test on `chart` (R-544 item 5; REQ-CHART-082), its decode `decode` and its `Π` `pi`, the state comparison

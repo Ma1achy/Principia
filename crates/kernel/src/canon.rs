@@ -197,9 +197,9 @@ pub fn coincident<R: LinkReal>(rho: [R; 2]) -> bool {
 }
 
 /// Step 2's angle `φ = atan2(ρ_y, ρ_x)`, and 0 at `ρ = 0` for every sign of the zeros, selected (R-437). A zero `ρ_x`
-/// is taken as `+0` before `atan2`, by a select on `ρ_x` against 0: Metal, through naga, gives `atan2(ρ_y, −0)` the
-/// opposite sign of `π/2` to IEEE's (pitfalls §11). Where `ρ_y ≠ 0` IEEE's `atan2(ρ_y, ±0)` is one value, and where
-/// `ρ_y = 0` the pole's select discards it, so the CPU's `φ` is unchanged, bit for bit.
+/// is taken as `+0` before `atan2`, by a select on `ρ_x` against 0: Metal's `atan2` at its default math mode gives
+/// `atan2(ρ_y, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Where `ρ_y ≠ 0` IEEE's `atan2(ρ_y, ±0)` is one
+/// value, and where `ρ_y = 0` the pole's select discards it, so the CPU's `φ` is unchanged, bit for bit.
 #[inline]
 pub fn rotation_angle<R: LinkReal>(rho: [R; 2]) -> R {
     let x = select(rho[0] == R::zero(), R::zero(), rho[0]);

@@ -54,12 +54,16 @@
 //! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's
 //! `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`.
 //!
-//! **`p = −0`** (applied per R-369, TASK-M2-43). On the spherical map's pole rows the point's `n₁ = sin φ·sin θ` is a
-//! signed zero, `−0` where `sin θ` rounds below 0 (`θ = 2π·½` at f32), and `atan2(q, −0)` with `q > 0` is `π/2` on the
-//! CPU but `−π/2` on a GPU we run (Metal, through naga), which puts `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at
-//! `L⁺`'s pixel. `C`'s mirror hid it while the decode folded (R-141); with step 3 not taken (R-544) it is the decode's
-//! output, so the zero's sign is cleared by a select on `p` against 0, as the encode's `spherical_inverse` clears
-//! `n₁`'s. `atan2(q, +0)` is the CPU's `atan2(q, −0)`, so the CPU's value is unchanged, bit for bit.
+//! **`p = −0`** (applied per R-369, TASK-M2-43; pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
+//! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where
+//! `sin θ < 0` at any precision, and at `s = ½`, where f32's `π` lies above π so `sin θ` rounds below 0; and at the
+//! `L⁻` pixel `(0, 0)` at f32, where `sin(π_f32) < 0` meets `sin 0 = +0`. Metal's `atan2` at its default math mode
+//! (naga passes the call through) gives `atan2(q, −0)` with `q ≠ 0` the opposite sign of `π/2` to IEEE's, which puts
+//! `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at `L⁺`'s pixel, and `L⁺`'s at `L⁻`'s. `C`'s mirror hid it while the
+//! decode folded (R-141); with step 3 not taken (R-544) it is the decode's output, so the zero's sign is cleared by a
+//! select on `p` against 0, as the encode's `spherical_inverse` clears `n₁`'s, and `decode_cross_backend_continuous`
+//! is its guard, since a fast-math compiler may fold the select. `atan2(q, +0)` is the CPU's `atan2(q, −0)`, so the
+//! CPU's value is unchanged, bit for bit.
 //!
 //! **Validation** (inverse_encode_contract § "Chart-aware validation"; R-26). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
 //! are the point's own azimuth and polar angle, which every point of S² has: past `[0,1]²` the spherical map's θ is
