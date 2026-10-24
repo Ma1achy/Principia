@@ -20762,6 +20762,25 @@ whole sphere), TASK-M8-06 (no toggle), TASK-M8-15 (no folded shading), TASK-M8-5
 changes. The qa-file exceptions R-544 forces are named in TASK-M2-43 (`qa_TASK-M2-14.rs:883`, the fold assertions of
 `qa_TASK-M2-08.rs`) and TASK-M2-28 (`qa_TASK-M2-14.rs:884`).
 
+*Applied per R-369 (21 Oct 2026, TASK-M2-43's pre-flight; the ruling's words above are unchanged):* REQ-CHART-082's
+run arms (the run from `Π·x` the run from `x` mirrored, bitwise; on the named non-chaotic fixture, outcome and `t_end`
+equal and `L_z` and the frame's winding opposite across each pixel pair; and the controls that need a run) need the
+stepper, the wrapper and the outcome classifier (TASK-M3-02, TASK-M3-04, TASK-M3-12), which TASK-M2-43 cannot reach;
+they are drafted as REQ-CHART-085, closed by TASK-M3-38 (after TASK-M3-04, TASK-M3-12 and TASK-M2-43), with
+REQ-CHART-086 defining the frame's winding (R-72), which chart_reference §3.3 uses and the corpus never defines. Taking
+them from the M2 gate to M3 is a deferral, which only the human rules: **RQ-523** (code review 5605370280 of PR #276,
+F1), and both requirements hold on it (`rq: RQ-523`); the draft is applied meanwhile, not under R-369. *Was:* "This is
+not a deferral: the arms move to the task that can build them". REQ-CHART-082 keeps in TASK-M2-43 the classification,
+the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` decode checks. On the shape sphere chart
+the per-chart T2 round trip and the `encode-eps-phys` gate compare `D(E(x))` against `C(x)`, as T3 does, since a
+lower-hemisphere decode is off `C`'s section (inverse_encode_contract Part 1, T2; REQ-ENC-004, REQ-ENC-024); the gate's
+measurements, made under R-141's fold, are kept with R-544 beside them, not re-measured (as "Results measured under one
+hemisphere" above).
+
+*23 Oct 2026:* RQ-523 is ruled, option (a), by **R-579**: the split above is no longer a draft. REQ-CHART-085 is an M3
+requirement closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12, and REQ-CHART-082 keeps at M2 the four things named
+above; neither holds on RQ-523 now.
+
 R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412.
 
 ## R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*
@@ -24920,3 +24939,114 @@ Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-1
 (the film computes nothing), REQ-GUI-382 (the Spotlights window), REQ-GUI-383 (the takeover), REQ-GUI-384 (no blank
 handover), REQ-GUI-385 (the preview badge), in fix round 1, REQ-GUI-386 (Explore while the film plays), and in fix
 round 12, REQ-PERF-111 (calibration: the decode ring's size).
+
+## R-579 — The mirror test's run arms move to M3: REQ-CHART-082's runs become REQ-CHART-085, closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12; REQ-CHART-082 keeps at M2 the classification, the "does not apply" case, the shape and state pair checks and the bitwise `Π·x` check *(closes RQ-523; a deferral by ruling, from the M2 gate to M3; settles the split R-544's dated line drafted)*
+*23 Oct 2026 · applied in R-544's dated line (a forward sentence), `docs/archive/review_queue/M0.md` (RQ-523, moved
+with its ruling), REQ-CHART-082 and REQ-CHART-085 (reqio: `rq` removed, R-579 added to their rulings, their notes),
+TASK-M2-43 and TASK-M3-38 (no longer drafts), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-43
+(the static half) and TASK-M3-38 (the runs)*
+
+The human's message, 23 Oct 2026, its first ruling, verbatim:
+
+> RQ-523 (TASK-M2-43 scope): (a).
+> Move REQ-CHART-082's run checks to M3 as REQ-CHART-085, closed by TASK-M3-38 after TASK-M3-04 and TASK-M3-12.
+> REQ-CHART-082 keeps at M2: the classification, the "does not apply" case, the shape and state pair checks, and the bitwise Π·x check.
+> Not (c): a toy stepper built only for the test proves the toy is mirror-exact, not the integrator that ships.
+> Not (b): it would hold up TASK-M2-28 (#271) for no gain.
+> Unblocks #276, then #271.
+
+*What it decides:* RQ-523's option (a), the split PR #276 drafted. REQ-CHART-082's run arms (the run from `Π·x` the
+run from `x` mirrored, bitwise; on a named non-chaotic fixture, outcome and `t_end` equal and `L_z` and the frame's
+winding opposite across each pixel pair; and the controls that need a run) leave the M2 gate and are REQ-CHART-085, an
+M3 requirement closed by TASK-M3-38, which runs after TASK-M3-04 (the wrapper) and TASK-M3-12 (the outcome
+classifier). REQ-CHART-082 stays at M2, in TASK-M2-43, with exactly four things: the classification of the held
+coordinates as mirror-equivariant or not, the "does not apply" case, the pixel pairs' shape and state checks, and the
+bitwise `Π·x` check. This is a deferral by the human's ruling (`plan/WORKFLOW.md` § "No deferral"), with a target:
+the M3 gate. Option (c) is refused because a stepper built only for the test proves only itself mirror-exact, not the
+integrator that ships; option (b) because it would hold TASK-M2-28 (PR #271) for no gain.
+
+*Applied per R-369:* TASK-M3-38 keeps TASK-M2-43 in its Depends on beside the two the ruling names: its test uses
+TASK-M2-43's classification and decode, and the ruling names what it runs after, not a complete list. REQ-CHART-086 (the
+frame's winding, an R-72 definition requirement), added with the draft, stays in TASK-M3-38; it never waited on
+RQ-523.
+
+*What it settles:* the split that **R-544's dated line** (21 Oct 2026, TASK-M2-43's pre-flight, a port's note, not
+the human's words) records as a draft waiting on RQ-523. R-544's ruling is unchanged; the dated line's words are kept,
+and a dated sentence after it points here.
+
+R-579 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-082 (rq, rulings, note) and REQ-CHART-085 (rq, rulings, note).
+
+## R-580 — dd_integrator §5 test 8 drops "`retrograde` matches the L_z sign": the mirror leaves `θ̃` and `retrograde` unchanged and negates `L_z`; the test keeps `θ̃` continuous and `orbit_count` against a hand count, and gains the mirror pair, `θ̃(t)` and `retrograde` bitwise identical and `L_z` opposite *(closes RQ-537; changes dd_integrator §5 test 8 and REQ-INT-082)*
+*23 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "5. Unit tests" (test 8, its earlier words kept),
+`docs/archive/review_queue/M0.md` (RQ-537, moved with its ruling), REQ-INT-082 (reqio: statement, verify, rulings,
+`rq` removed, note), TASK-M3-11 (its `theta_unwrap_real_orbit` acceptance line), TASK-M3-38 (a note) and
+`plan/rule_groups.yaml`; built by TASK-M3-11*
+
+The human's message, 23 Oct 2026, its second ruling, verbatim:
+
+> RQ-537 (dd_integrator §5 test 8, "retrograde matches the L_z sign"): drop that clause.
+> Reason: the mirror Π (y → −y) leaves u and v unchanged, negates w and negates L_z. So θ̃ = atan2(v, u), and with it retrograde, is unchanged while L_z flips. The clause cannot hold for both members of a mirror pair.
+> Retrograde is the direction of travel along the shape sphere's equator. L_z is rotation in the plane. They are different quantities.
+> Test 8 keeps: θ̃ continuous, with no 2π jumps, and orbit_count matching a hand count.
+> Add in its place: the run from Π·x has bitwise-identical θ̃(t) and retrograde, and opposite L_z, to the run from x.
+> REQ-INT-082's verify changes to match.
+
+*What it decides:* test 8's clause "`retrograde` matches the L_z sign" is dropped. Test 8 keeps, on a circulating
+bounded orbit, `θ̃` continuous with no 2π jumps and `orbit_count` matching a hand count, and the terminal latch (the
+post-event slots frozen at the terminal state), which the ruling does not touch. In the dropped clause's place: the
+run from `Π·x` has a `θ̃(t)` and a `retrograde` bitwise identical to the run from `x`'s, and an `L_z` opposite.
+`retrograde` (`θ̃ < 0`) is the direction of travel along the shape sphere's equator; `L_z` is the rotation in the
+plane; they are different quantities, and nothing ties one's sign to the other's.
+
+*Applied per R-369:* REQ-INT-082's statement, whose "retrograde matching the orbit" the dropped clause read, follows
+the verify (the human: "REQ-INT-082's verify changes to match"), each with a *Was*. "Bitwise" holds where the
+integration is mirror-exact (R-544 §4); TASK-M3-11 stops and queues, rather than loosening it to a tolerance, if the
+stepper it marches is not, as TASK-M3-38 does.
+
+R-580 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-544.
+
+Changes REQ-INT-082 (statement, verify, rulings, rq, note).
+
+## R-591 — At the `α = 0` pole, where the state does not define `β`, lookup reads a layer-1 clamp's move as its worst case over `β`: `|ΔL_z| ≤ b'·‖p_λ‖`, and likewise `ΔU`'s `β`-dependent part, so the clamp is rejected in every gauge unless `p_λ` is zero within its own bound; the clamp's image of `β` is not defined along `p_λ` *(closes RQ-565; the contract's interim pole rule becomes the ruled rule; changes inverse_encode_contract § "Chart-aware validation", "The class a clamp moves", and REQ-ENC-038; R-437 and R-438 untouched)*
+*24 Oct 2026 · applied in `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The class
+a clamp moves", "At the `α = 0` pole" (its interim wording kept as a *Was*), `docs/archive/review_queue/M0.md`
+(RQ-565, moved with its ruling), REQ-ENC-038 (reqio: statement, rulings, source, note), TASK-M2-19 (its acceptance
+line and a note), `crates/engine/src/lookup.rs` (a doc comment, no change in behaviour) and `plan/rule_groups.yaml`;
+built by TASK-M2-19 (PR #284, whose fix round 5 applied it as the interim)*
+
+The human's message, 24 Oct 2026, its ruling, verbatim:
+
+> RQ-565 (verdict at the α = 0 pole): (a).
+> Read the clamp's move as its worst case over β: |ΔL_z| ≤ b'·‖p_λ‖, and likewise ΔU's β-dependent part. The clamp is rejected in every gauge unless p_λ is zero within its own bound.
+> Reason: at the pole the state does not define β, and the clamp moves body 2 a finite distance b' in some direction. (b) picks the one direction, along p_λ, that makes r × p vanish. It hides the L_z change by choosing the most favourable answer for a quantity the state does not have.
+> R-437 and R-438 are untouched. The interim stands as the ruling.
+
+*What it decides:* RQ-565's option (a). Where body 2 sits at the inner pair's centre of mass (`α = 0`, `b = 0`), the
+state does not define `β`, and a clamp of `α` moves body 2 a finite distance `b'` in a direction the state does not
+give. Lookup's layer-1 verdict reads each constant's move there as its worst case over every direction: `L_z`'s
+`β`-dependent part `λ' × p_λ'` at its largest magnitude, `|ΔL_z| ≤ b'·‖p_λ‖` (attained along `±(q₃', −q₂')`), and
+`ΔE = ΔU`'s `β`-dependent part at its extremes over `cos β' ∈ [−1, 1]`. The clamp is therefore rejected in every gauge
+unless `p_λ` is zero within its own bound, and one physical state gets one verdict in every gauge (REQ-ENC-036).
+Option (b), defining the clamp's image of `β` along `p_λ` so that `r × p` vanishes and the clamp is accepted, is
+refused: it hides the `L_z` change by choosing the most favourable answer for a quantity the state does not have.
+Encode's `β` convention, R-437's defined `β = 0` at `λ̃ = 0` and R-438, is untouched. The contract's interim pole rule,
+applied per R-369 in fix round 5 of PR #284, stands as the ruling; the code and its test,
+`lookup_validation_ladder_pole`, do not change.
+
+*Also in the human's message, 24 Oct 2026, verbatim* (the human's acceptance of an R-369 decision of PR #284, recorded
+with this ruling, from the same message):
+
+> On zero_class going from 2^24 to 16: accepted. The band is now k times a first-order rounding bound (S_{L_z}, S_E), not k·ε_R times a raw scale, so the old and new k are not comparable numbers.
+
+This accepts the change qa's fix round 4 of PR #284 made under R-369: the constants register's `zero_class`
+(`docs/design/principia_dd_generation_root.md`) went from 2²⁴ to 16 when the zero-class band became `k·ε_R` times the
+first-order bound on each value's rounding, `S_{L_z}` and `S_E` (inverse_encode_contract § "Chart-aware validation",
+"The zero class in floating point"), in place of a raw scale. It is not the M2 gate's confirmation of the value:
+REQ-ENC-037 keeps `zero_class` provisional until the human confirms it at the M2 gate, and this acceptance is noted for
+that gate.
+
+R-591 is in the "physics" group of `plan/rule_groups.yaml`, with R-437, R-438 and R-580.
+
+Changes REQ-ENC-038 (statement, rulings, source, note).

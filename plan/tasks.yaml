@@ -602,7 +602,7 @@
   title: "Lookup: the exact and partial forms and the three-layer validation ladder"
   depends_on: [TASK-M2-17, TASK-M2-18]
   needs: []
-  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031]
+  requirements: [REQ-ENC-012, REQ-ENC-013, REQ-ENC-019, REQ-ENC-023, REQ-ENC-027, REQ-ENC-031, REQ-ENC-036, REQ-ENC-037, REQ-ENC-038]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-20
@@ -1125,6 +1125,14 @@
   requirements: [REQ-CHART-072]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M3-38
+  milestone: M3
+  title: "The shape sphere's mirror test, its runs: the run from Π·x the run mirrored, bitwise, fates equal and L_z and the frame's winding opposite across pixel pairs on a named non-chaotic fixture, and the frame's winding defined (R-544) ⚑"
+  depends_on: [TASK-M3-04, TASK-M3-12, TASK-M2-43]  # R-579 (RQ-523 (a)): REQ-CHART-082's run arms, split in TASK-M2-43's pre-flight; TASK-M2-43 kept for its classification and decode (applied per R-369). Was: "R-544: … (applied per R-369)"
+  needs: [REQ-CHART-082]
+  requirements: [REQ-CHART-085, REQ-CHART-086]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: [PIT-9]
 - id: TASK-M3-39
   milestone: M3
   title: "Every stepper × regularisation pair: its exact composition, the measured pair table and its warnings (R-561)"

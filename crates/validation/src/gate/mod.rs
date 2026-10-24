@@ -27,6 +27,7 @@ pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
 use crate::convergence::ConvergenceGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
+use crate::decode_sanity::DecodeSanityGate;
 use crate::eps_phys::EpsPhysGate;
 use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
@@ -59,6 +60,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &EpsPhysGate,
     &InspectorHandlesGate,
     &InspectorRoundtripGate,
+    &DecodeSanityGate,
     &NsubBucketGate,
 ];
 
