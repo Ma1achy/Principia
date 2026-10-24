@@ -402,8 +402,10 @@ pub fn curve_tangent<S: Selection>(curve: &CurveMeta, nu0: f64) -> Result<Latent
     let slope_beta = <S::BetaLink as Link<1, 1>>::log_det([z_beta]).exp();
     let dmu = [d.mu1, d.mu2];
     let size = dmu[0].hypot(dmu[1]);
-    let dz_mass = match size > 0.0 {
-        true => {
+    // A curve that moves no mass has a mass tangent of 0, with no step to take.
+    let dz_mass = match size == 0.0 {
+        true => [0.0; 2],
+        false => {
             let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / size;
             let at = |k: f64| {
                 <S::MassLink as Link<2, 3>>::inverse(masses([
@@ -414,7 +416,6 @@ pub fn curve_tangent<S: Selection>(curve: &CurveMeta, nu0: f64) -> Result<Latent
             let (hi, lo) = (at(h), at(-h));
             [(hi[0] - lo[0]) / (2.0 * h), (hi[1] - lo[1]) / (2.0 * h)]
         }
-        false => [0.0; 2],
     };
     let tangent = [
         d.alpha / slope_alpha,
