@@ -1,0 +1,50 @@
+# TASK-M8-82 — The uploaded picture: ingest in the app's own code, the SHA-256 `PictureRef` in tier 2, the content-addressed store, the `prPc` chunk, and a visible "Picture missing", never a substitute (R-585)
+
+- **Milestone:** M8
+- **Closes:** REQ-COL-160, REQ-COL-161, REQ-TOOL-208, REQ-TOOL-209, REQ-TOOL-210, REQ-GUI-391, REQ-GUI-392
+- **Depends on:** TASK-M8-33, TASK-M8-53, TASK-M8-74, TASK-M7-49, TASK-M7-51
+- **Needs (earlier milestones):** REQ-COL-130, REQ-GUI-340, REQ-TOOL-180
+- **Reviewers:** code, qa, gui
+- **Pitfalls:** none
+- **Size:** ~650 lines, the tests included
+
+## Goal
+"Your image…" ingests a PNG or JPEG in the app's own code (the profile to 8-bit sRGB, alpha over the canvas background, exact area averaging to 256², stretched), its texels canonical; `RenderState` holds a SHA-256 `PictureRef`, tier 2; a content-addressed store keeps the texels while anything refers to them; every exported PNG carries them in a private `prPc` chunk, checked on read; a picture found nowhere draws `#141418` with its layers and a "Picture missing" badge, and Locate picture… accepts only a file that hashes to it (R-585).
+
+## References
+- `docs/design/principia_uploaded_picture.md` § "3.1 Ingest"
+- `docs/design/principia_uploaded_picture.md` § "3.2 Identity"
+- `docs/design/principia_uploaded_picture.md` § "3.3 The store"
+- `docs/design/principia_uploaded_picture.md` § "3.4 How it travels"
+- `docs/design/principia_uploaded_picture.md` § "3.5 Missing"
+- `docs/design/principia_state_map.md` § "SM8. Image mode"
+- `docs/design/principia_colour_composition.md` § "3. The `ctx` contract"
+- `docs/design/principia_dd_image_embedding.md` § "6. What travels"
+- `docs/design/principia_dd_image_embedding.md` § "9. Obligations"
+- `docs/gui/principia_render_gui_spec.md` § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+- `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `decisions.md` § "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible "Picture missing" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+- `decisions.md` § "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+- `decisions.md` § "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+- `decisions.md` § "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+
+## Deliverables
+- The ingest (decode, profile conversion, alpha, the integer area average) in `crates/render/src/picture/`, its limits REQ-COL-160's proposed values.
+- `PictureRef` and its hash, its tier 2 entry in `tiers.rs`; the store in the app's data folder and its collection; the `prPc` writer and reader; `picture.png` in a result folder.
+- The "Your image…" dialog's preview; the missing base, the header-strip badge, the report line and Locate picture….
+- Tests: `picture_ingest`, `picture_ref_tier`, `picture_store`, `picture_chunk`, `picture_missing`, `picture_upload_dialog`; screenshot case `picture_upload`.
+
+## Acceptance tests
+- Calibration: the PR proposes the two limits with their evidence (the ingest's peak memory and time at each limit on the reference machine, and the decoders' own limits); a reviewer checks them; the human confirms them at the M8 gate (REQ-COL-160).
+- `cargo test -p render picture_ingest` — a fixture PNG, a JPEG and a PNG with alpha ingest to texels whose SHA-256 equals the checked-in hash on every CI platform; a 3 × 2 source with known values gives the texels the integer formula gives; a one-pixel change in the source changes the hash; a 600 × 300 source fills the whole square, stretched; a fixture with an embedded profile records its conversion; a file over each limit is refused with a reason naming it and nothing is stored (controls: the platform's or a floating-point resampler, a fit with bars, a silent downscale of an over-limit file, and a hash that skips the texels, each fail) (REQ-COL-161).
+- `cargo test -p engine picture_ref_tier` — the hash of a fixture's texels equals the checked-in digest computed from the stated bytes; PictureRef is assigned tier 2 in tiers.rs and the table stays exhaustive; an image squeezed to tier 1 reports the picture as dropped; two RenderStates differing only in the hash have different render keys (controls: the texels in RenderState, the reference in tier 1 or none, and a silent drop, each fail) (REQ-TOOL-208).
+- `cargo test -p gui picture_store` — an upload writes pictures/<hash>.png and then one SetField whose value holds only the reference, one undo entry; undo restores the previous reference and the stored file stays; a collection with the entry still in the history keeps it, and collects it once nothing refers to it; a stored file altered by one byte is not used and reads as missing (controls: texels in the history, a referenced entry collected, and an unverified read, each fail) (REQ-TOOL-209).
+- `cargo test -p render picture_chunk` — an exported PNG of a view with an uploaded picture, reopened with an empty store, renders the picture bitwise and writes it to the store; the chunk type is prPc, ancillary and private; a prPc with one texel byte changed reads state present, corrupt and draws as missing; a result folder of that view holds picture.png with the texels (controls: a PNG without the chunk, a reader that ignores it, and one that uses it unverified, each fail) (REQ-TOOL-210).
+- `cargo test -p gui picture_missing` — a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, and a Locate that accepts any file, each fail) (REQ-GUI-391).
+- `cargo xtask screenshot picture_upload` — the dialog shows a 600 × 300 fixture stretched to the square before it is applied, and Cancel leaves RenderState unchanged; cargo test -p gui picture_upload_dialog: an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, and an apply before the preview, fail) (REQ-GUI-392).
+
+## Notes
+- R-585 (21 Oct 2026, gap sweep PR 2c), from `uploaded_picture.md`, its open questions' recommendations accepted; the exact averaging, the hash's bytes, `prPc`'s layout and the store's place are applied per R-369.
+- TASK-M7-49 builds the Picture base and TASK-M7-51 its "Your image…" control, both depended on here; this task gives the upload its content, its tier and its carriers. REQ-COL-130 and REQ-GUI-340 are unchanged.
+- SHA-256 is a new dependency beside R-36's FNV-1a, for content only.

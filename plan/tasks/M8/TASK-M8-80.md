@@ -1,0 +1,53 @@
+# TASK-M8-80 — Export details: every measured colour window frozen at export and at Record, the clipped shares and the export block, the colour-vision simulation never in an export unless asked, `render_scale` 1, and the physical size (R-581 to R-583)
+
+- **Milestone:** M8
+- **Closes:** REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205
+- **Depends on:** TASK-M8-32, TASK-M8-33, TASK-M8-23, TASK-M8-78, TASK-M8-53, TASK-M7-70, TASK-M7-25
+- **Needs (earlier milestones):** REQ-RENDER-118
+- **Reviewers:** code, qa, gui
+- **Pitfalls:** none
+- **Size:** ~600 lines, the tests included
+
+## Goal
+An image export freezes every measured colour window at the window on screen when Export is pressed, into `RenderState.frozen_ranges`, and `range_norm` reads a frozen window as its third source; Record a time sweep freezes at Record, per frame an explicit labelled choice, and the Sequence's export at its Start; every export carries the export block (`range_policy`, the clipped shares, `cvd_simulated`, `render_scale`, the `device_px` nodes) as a sidecar outside the identity; an imported frozen node reads "frozen at export" until Re-measure. The colour-vision simulation is `ViewUI.cvd`, never in an export unless "As seen with" is picked; every export renders at `render_scale` 1; an optional physical size sets the width and writes `pHYs` (R-581 to R-583).
+
+## References
+- `docs/design/principia_export_details.md` § "3.1 The window is frozen at export (R-581)"
+- `docs/design/principia_export_details.md` § "3.2 The viewer's settings stay with the viewer (R-582)"
+- `docs/design/principia_export_details.md` § "3.3 One size rule: base px (R-583)"
+- `docs/design/principia_export_details.md` § "3.4 What every image records"
+- `docs/gui/principia_render_gui_spec.md` § "Export & share"
+- `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
+- `docs/gui/principia_render_gui_spec.md` § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+- `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library"
+- `docs/contracts/principia_export_animation_contract.md` § "Part 4 — Export: the frame loop in blocking mode"
+- `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+- `docs/design/principia_dd_image_embedding.md` § "6. What travels"
+- `docs/design/principia_sequence.md` § "3.7 The planner and export"
+- `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)"
+- `decisions.md` § "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads "frozen at export" until Re-measure *(queues RQ-562)*"
+- `decisions.md` § "R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless "As seen with" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured"
+- `decisions.md` § "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
+- `decisions.md` § "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+- `decisions.md` § "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+- `decisions.md` § "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+
+## Deliverables
+- `RenderState.frozen_ranges` and `RenderField::FrozenRanges` (tier 2 in `tiers.rs`); the prelude's `range_norm` reading a frozen entry; the exporters (image, Record a time sweep, the Sequence's export) writing it; the clipped-share reduction over system pixels.
+- The export block, written beside the record in tier 2 and the `tEXt` chunk; Re-measure and "frozen at export" in the node inspector and the Legend.
+- `ViewUI.cvd` as the GUI's own remembered setting, the uniform, Export & share's "As seen with" checkbox, the suffix and the badge; `render_scale` forced to 1 in the exporter; the physical size field and `pHYs`.
+- Tests: `frozen_range_roundtrip`, `recording_one_window`, `clipped_share_counts`, `frozen_at_export`, `cvd_not_in_export`, `render_scale_forced`, `cvd_viewer_setting`, `physical_size`.
+
+## Acceptance tests
+- `cargo test -p render frozen_range_roundtrip` — a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, and an export that measures its window over the 4× pixels, each fail) (REQ-RENDER-117).
+- `cargo test -p gui recording_one_window` — a 10-frame sweep of a view with a measured node records an equal u_range in every frame's record, equal to the window on screen when Record was pressed, and range_policy frozen (control: per frame gives at least two distinct windows and records per_frame); the dialog's per-frame option is off by default and carries its label; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks, freezes the first's node at Start and the second's at its first frame, both named in the planner and the record (control: a Sequence export that re-measures every frame fails) (REQ-TOOL-201).
+- `cargo test -p render clipped_share_counts` — a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either (controls: a share that reads 0, one that counts not-a-system pixels, and a block missing from tEXt, each fail) (REQ-TOOL-202).
+- `cargo test -p gui frozen_at_export` — after importing an export with two frozen nodes, a node's inspector and its Legend key read "frozen at export"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry (controls: a Re-measure that clears both nodes, and one that adds two undo entries, fail) (REQ-GUI-389).
+- `cargo test -p render cvd_not_in_export` — with ViewUI.cvd at deuteranopia an export's pixels equal, bitwise, the same export with it off, and its record carries cvd_simulated null; with As seen with picked the pixels differ from those and equal the simulation applied to them, the record carries deuteranopia and the file name ends __as_seen_deuteranopia; importing that file reports it and leaves ViewUI.cvd as it was (controls: an export that bakes the simulation without the choice, and one that picks it but records null, fail) (REQ-TOOL-203).
+- `cargo test -p render render_scale_forced` — an export made with the view at render_scale 0.5 equals, bitwise, the same export made at render_scale 1, and its export block records 1 (control: an exporter that inherits the view's render_scale fails) (REQ-TOOL-204).
+- `cargo test -p gui cvd_viewer_setting` — changing the simulation sends no SetField and adds no undo entry; the view's snapshot JSON and pxpack carry no cvd field; the setting is restored from the GUI's settings after a restart; the As seen with checkbox is absent with the simulation off and present and unticked with it on; Import picture's preview of an As-seen export shows the badge inside the header strip's rect and outside the plot's (controls: a change entering undo, a record carrying cvd, the checkbox ticked by default, and a badge drawn over the plot, each fail) (REQ-GUI-390).
+- `cargo test -p render physical_size` — an export of 100 mm at 300 DPI is 1181 px wide with pHYs 11811 pixels per metre, unit 1; a 2 base px stroke on a base_width of 1024 reads 0.554 pt to three places; an export with no physical size writes no pHYs (controls: a pHYs in pixels per inch, and a pt value stored on the style as a unit, fail) (REQ-TOOL-205).
+
+## Notes
+- R-581 to R-583 (21 Oct 2026, gap sweep PR 2c), from `export_details.md`, its open questions' recommendations accepted; the Sequence's freeze rule, the clipped share's pixels, the export block's place, the suffix and the badge's reading are applied per R-369 (R-581, R-582).
+- **RQ-562 is open** (the export's frozen windows and `base_width` in the recorded `RenderState` against R-484's identity): meanwhile its option (a), the identity on the record written, T1 on the headless paths; nothing waits. The export's report names the fields the export wrote.
