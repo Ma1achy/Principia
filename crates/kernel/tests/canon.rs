@@ -35,6 +35,10 @@
 //!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included, and nothing past the last state.
+//! - `gvn_reproducer`: RQ-299's standalone reproducer (`fixtures/gvn_repro`), built under cargo with the workspace's
+//!   host flags, `-Zmir-enable-passes=-GVN` among them, prints 0.5 at opt-level 1, 2 and 3; its control, built on the
+//!   pin with no flags, prints −0.5 (R-547, REQ-TOOL-188). With `stage_canon_native` at `--release`, the native build
+//!   without MIR GVN.
 //!
 //! **Tolerances** (applied per R-369: a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"),
 //! each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with headroom.
@@ -1572,4 +1576,69 @@ negative_control!(
             2.0,
         );
     }
+);
+
+// ── gvn_reproducer (REQ-TOOL-188) ───────────────────────────────────────────────────────────────────────────────
+
+/// `fixtures/gvn_repro`, RQ-299's standalone reproducer (R-547), built by the cargo that runs these tests from the
+/// fixture's own directory, so the workspace's `.cargo/config.toml` and `rust-toolchain.toml` apply, at `opt_level`,
+/// and run: what it printed. With `host_flags`, the build takes the workspace's host flags, the config's, any rustflags
+/// in the environment removed; without, none, an empty CARGO_ENCODED_RUSTFLAGS overriding every rustflags table in the
+/// config. Each opt-level and set of flags has a target directory of its own, so a concurrent build of another never
+/// replaces the binary run.
+fn gvn_repro(opt_level: u8, host_flags: bool) -> String {
+    use std::process::Command;
+    use validation::spawn::Spawn;
+
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/gvn_repro");
+    let tag = if host_flags { "host" } else { "none" };
+    let target =
+        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("gvn_repro/{tag}-o{opt_level}"));
+    let mut cargo = Command::new(env!("CARGO"));
+    cargo
+        .current_dir(&dir)
+        .args(["run", "--quiet", "--locked", "--release", "--config"])
+        .arg(format!("profile.release.opt-level={opt_level}"))
+        .arg("--target-dir")
+        .arg(&target)
+        .env_remove("RUSTFLAGS")
+        .env_remove("CARGO_ENCODED_RUSTFLAGS");
+    if !host_flags {
+        cargo.env("CARGO_ENCODED_RUSTFLAGS", "");
+    }
+    let output = cargo
+        .timed_output()
+        .expect("cargo runs RQ-299's reproducer");
+    assert!(
+        output.status.success(),
+        "building or running RQ-299's reproducer failed ({}):\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).trim().to_owned()
+}
+
+/// RQ-299's reproducer, built with the workspace's host flags or with none ([`gvn_repro`]), prints 0.5 at opt-level 1,
+/// 2 and 3, where the pin's MIR GVN miscompiles it to −0.5.
+fn check_gvn_repro(host_flags: bool) {
+    for opt_level in [1, 2, 3] {
+        let printed = gvn_repro(opt_level, host_flags);
+        eprintln!("gvn_reproducer: opt-level {opt_level}, host flags {host_flags}: {printed}");
+        assert_eq!(
+            printed, "0.5 (want 0.5)",
+            "RQ-299's reproducer miscompiled at opt-level {opt_level}"
+        );
+    }
+}
+
+#[test]
+fn gvn_reproducer() {
+    check_gvn_repro(true);
+}
+
+negative_control!(
+    gvn_reproducer,
+    "RQ-299's reproducer built on the pin without the workspace's -Zmir-enable-passes=-GVN must print −0.5",
+    expected = "RQ-299's reproducer miscompiled at opt-level 1",
+    check_gvn_repro(false)
 );
