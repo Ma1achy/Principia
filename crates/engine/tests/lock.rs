@@ -766,7 +766,9 @@ fn lock_setfields() {
         z: [0.1; 8],
     };
     check_setfields(&recentre(&nearest));
-    // Undoable (R-69): undoing the lock's two edits restores the free state.
+    // Undoable (R-69). The lock is one command, sent under one history key as one undo entry (gui_state_contract §2,
+    // R-466); this store has no history key yet (TASK-M6-39, TASK-M6-45), so it undoes the pair edit by edit, and
+    // under a key the second undo finds nothing left of the lock.
     st.undo();
     st.undo();
     assert_eq!(now(&mut st), free, "undo did not restore the free state");

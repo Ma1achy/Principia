@@ -9,8 +9,8 @@
 //!   replayed on the CPU at the pixel's chart point, lookup's ladder, the inverse-encode path, giving `z_locked` the
 //!   controls the chart's axes set and the pixel's own frozen controls the rest, bit for bit ([`FrozenControls`]), and
 //!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
-//!   recentring, §G4) and the lock group's, and the centre pixel, of the chart rebuilt on that `z₀`, decodes the
-//!   clicked pixel's state bit for bit.
+//!   recentring, §G4) and the lock group's, one command sent under one history key, one undo entry (gui_state_contract
+//!   §2, R-466), and the centre pixel, of the chart rebuilt on that `z₀`, decodes the clicked pixel's state bit for bit.
 //! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`) that turn about the pin
 //!   (render_gui_spec §G4; R-451; R-466 K5). At `δ = 0` the pin is the centre, so they keep `z₀` and the centre
 //!   `z(½,½) = z₀` ([`centre`]) is exactly constant through them; where `δ` has an in-plane part the pin is off-centre,
@@ -83,6 +83,8 @@ fn edit(field: SimField) -> SetField {
 }
 
 /// The lock's edits at `z_locked`: the recentring, a `SetField` on `z₀` (§G4), then the lock group, flag and anchor.
+/// The pair is one command: the binding sends it in one frame under one history key, so the history keeps one entry
+/// and one undo restores both (gui_state_contract §2, "A command of several edits is one history entry"; R-466).
 fn lock_edits(z_locked: Latent) -> [SetField; 2] {
     [
         edit(SimField::Z0(z_locked)),
@@ -114,7 +116,8 @@ pub fn centre(plane: &Plane) -> Latent {
 }
 
 /// Sets the lock at the affine chart's pixel `(s, t)` (Part 4, "Setting the lock"): `z_locked = z₀ + (2s−1)q₁ +
-/// (2t−1)q₂`, CPU arithmetic with no readback, as the recentring `SetField` on `z₀` and the lock group's.
+/// (2t−1)q₂`, CPU arithmetic with no readback, as the recentring `SetField` on `z₀` and the lock group's, one command
+/// under one history key ([`lock_edits`]).
 pub fn set(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 2], LockError> {
     finite(&[s, t])?;
     let z_locked = point(plane, s, t);
@@ -194,7 +197,8 @@ impl FrozenControls for InvariantLK<f64> {
 /// A lock set on a nonlinear chart.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChartLock {
-    /// The recentring `SetField` on `z₀ = z_locked` and the lock group's.
+    /// The recentring `SetField` on `z₀ = z_locked` and the lock group's, one command under one history key
+    /// ([`lock_edits`]).
     pub edits: [SetField; 2],
     /// The window re-centred on the clicked chart point, its half-widths kept. It is chart construction and belongs in
     /// `SimConfig`'s chart group (R-69), which TASK-M2-21 fills (REQ-SYS-011); until then it is returned here, and
@@ -210,7 +214,8 @@ pub struct ChartLock {
 /// contract's definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate`
 /// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z`
 /// gives `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit, so the
-/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point.
+/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point. The edits
+/// are one command under one history key ([`lock_edits`]).
 pub fn set_on_chart<S, C, N>(
     chart: &C,
     window: &Window,
@@ -440,7 +445,7 @@ where
 }
 
 /// The re-centre lock validation offers: the lock at the nearest feasible point, the `SetField` on `z₀` and the lock
-/// group's.
+/// group's, one command under one history key ([`lock_edits`]).
 pub fn recentre(nearest: &Nearest) -> [SetField; 2] {
     lock_edits(nearest.z)
 }
