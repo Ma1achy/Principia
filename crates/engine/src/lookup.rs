@@ -586,7 +586,7 @@ pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: 
 }
 
 /// [`moves`], the `α = 0` pole read at the zero-class band `pole` (§ "The class a clamp moves", "At the `α = 0`
-/// pole"; RQ-565, interim, applied per R-369): where `b` is 0 within `pole` of its bound, `β` is undefined, so each
+/// pole"; R-591, closing RQ-565): where `b` is 0 within `pole` of its bound, `β` is undefined, so each
 /// move is its worst case over every direction of `λ` after the clamp, the one of largest magnitude, and each value
 /// after it the one of the range nearest the other side of its value before: for `L_z` the directions along
 /// `±(q₃, −q₂)`, where `λ × p_λ = ±b·‖p_λ‖`, and for `E` those with `cos β = ±1` or `r₀₂ = r₁₂`, the extremes of `U`.

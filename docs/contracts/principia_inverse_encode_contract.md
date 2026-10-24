@@ -375,8 +375,8 @@ each operation adding its own rounding. A parameter no clamp moved has a move
 of exactly 0. The class after the clamp is then read through the band (above). `R/a` is not formed at `a = 0`, the
 coincident inner pair, whose `U = −∞` has no class (§ "Layer 1's space and bounds").
 
-**At the `α = 0` pole** (R-72; REQ-ENC-038; TASK-M2-19; physics review 5638054366 of PR #284, P1; interim, applied
-per R-369 until RQ-565 is ruled). Where body 2 sits at the inner pair's centre of mass, `b = 0`, `β` is undefined:
+**At the `α = 0` pole** (R-591, closing RQ-565; R-72; REQ-ENC-038; TASK-M2-19; physics review 5638054366 of PR #284,
+P1). Where body 2 sits at the inner pair's centre of mass, `b = 0`, `β` is undefined:
 `C` gives R-437's defined `β = 0` where `λ̃` lands on 0 exactly and a direction of rounding elsewhere, so `R/b` is
 infinite or as large as `R/ε`, and neither reading is the state's. There, `b` read as 0 when it is in class 0 at the
 band against its own bound, the clamp of `α` moves body 2 to `b' > 0` in a direction that is not defined, and each
@@ -386,8 +386,12 @@ larger magnitude, `+` where `ΔA = 0`, attained where `λ'` lies along `±(q₃'
 stationary point, `K` not depending on `β`. A constant in class 0 before takes the class of the largest move; any
 other, the class of the value after nearest the other side (a value before of exactly 0 is in class 0, and its
 value after, reported as the largest, is not read). So the clamp is rejected in every gauge unless `p_λ` is
-0 within its bound (and `E` keeps its class over every direction), and accepted in every gauge where it is: one
-physical state, one verdict. *Was:* nothing at the pole; `R/b` was written without an exception, and lookup took it
+0 within its own bound (and `E` keeps its class over every direction), and accepted in every gauge where it is: one
+physical state, one verdict. The clamp's image of `β` is not defined along `p_λ`, which would make `λ' × p_λ'` vanish
+and hide the `L_z` change by choosing the most favourable answer for a quantity the state does not have (R-591); R-437's
+`β = 0` at `λ̃ = 0` and R-438 are untouched. *Was* (fix round 5, as the interim): "(R-72; REQ-ENC-038; TASK-M2-19;
+physics review 5638054366 of PR #284, P1; interim, applied per R-369 until RQ-565 is ruled)" and "unless `p_λ` is 0
+within its bound". *Was:* nothing at the pole; `R/b` was written without an exception, and lookup took it
 as 0 at `b = 0`, a rule not stated, under which the same state was accepted in some gauges and rejected in others.
 
 **Layer 3's tolerance** (R-71; REQ-ENC-027; TASK-M2-19). "Within tolerance" is `‖Σmᵢrᵢ‖/R_x ≤ k·ε_R` for the CoM and
