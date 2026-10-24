@@ -364,11 +364,26 @@ Where several controls clamp together, the move is the difference of the forms a
 moved. Lookup evaluates the move from the parameters' changes, never as the difference of two rounded values (a
 trigonometric change as a product of half-angle sines, so `Δβ`'s term is `sin(Δβ/2)`, not `cos β' − cos β` rounded),
 and with it the first-order bound of its rounding: each parameter's own, in units of `ε_R`, `mᵢ` for each mass,
-`R·(√μ_ρ + √μ_λ) + |α|` for `α`, `R/b + R/a + |β|` for `β`, and `P + (R/a + R + 1)·maxₖ|qₖ|` for each `qₖ`, where
+`R·(√μ_ρ + √μ_λ) + |α|` for `α`, `R/b + R/a + |β|` for `β` off the `α = 0` pole (below), and `P + (R/a + R + 1)·maxₖ|qₖ|` for each `qₖ`, where
 `R/a` is the canonical frame's, its rotation being `ρ`'s direction, and `R` the rescale's; carried through each
 operation to first order, by `Δ(xy) = Δx·y' + x·Δy`, `Δ(x/y) = Δx/y' − x·Δy/(y·y')` and `Δ√x = Δx/(√x + √x')`,
 each operation adding its own rounding. A parameter no clamp moved has a move
-of exactly 0. The class after the clamp is then read through the band (above).
+of exactly 0. The class after the clamp is then read through the band (above). `R/a` is not formed at `a = 0`, the
+coincident inner pair, whose `U = −∞` has no class (§ "Layer 1's space and bounds").
+
+**At the `α = 0` pole** (R-72; REQ-ENC-038; TASK-M2-19; physics review 5638054366 of PR #284, P1; interim, applied
+per R-369 until RQ-565 is ruled). Where body 2 sits at the inner pair's centre of mass, `b = 0`, `β` is undefined:
+`C` gives R-437's defined `β = 0` where `λ̃` lands on 0 exactly and a direction of rounding elsewhere, so `R/b` is
+infinite or as large as `R/ε`, and neither reading is the state's. There, `b` read as 0 when it is in class 0 at the
+band against its own bound, the clamp of `α` moves body 2 to `b' > 0` in a direction that is not defined, and each
+constant's move is read as its worst case over every direction of `λ'`: `ΔL_z = ΔA ± b'·‖p_λ'‖`, the sign that of
+larger magnitude, attained where `λ'` lies along `±(q₃', −q₂')`; and `ΔE`'s extremes over `cos β' ∈ [−1, 1]`, at
+`cos β' = ±1` and, where it lies in that range, at `r₀₂' = r₁₂'`, `cos β' = (m₀ − m₁)·a'/(2M₀₁b')`, `U`'s one
+stationary point, `K` not depending on `β`. A constant in class 0 before takes the class of the largest move; any
+other, the class of the value after nearest the other side. So the clamp is rejected in every gauge unless `p_λ` is
+0 within its bound (and `E` keeps its class over every direction), and accepted in every gauge where it is: one
+physical state, one verdict. *Was:* nothing at the pole; `R/b` was written without an exception, and lookup took it
+as 0 at `b = 0`, a rule not stated, under which the same state was accepted in some gauges and rejected in others.
 
 **Layer 3's tolerance** (R-71; REQ-ENC-027; TASK-M2-19). "Within tolerance" is `‖Σmᵢrᵢ‖/R_x ≤ k·ε_R` for the CoM and
 `‖Σpᵢ‖/P_x ≤ k·ε_R` for the total momentum, on the lock decoded as a pixel decodes it (the chart's decode at a chart

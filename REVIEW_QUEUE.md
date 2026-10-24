@@ -1046,3 +1046,32 @@ does after a takeover in such a segment, and which specs the reel may hold.*
   state live shows at that frame; after a takeover in a link-parameter ease the live player holds the takeover's value
   until the second keyframe, then cuts (option (i) of the second question, as an interim only). Nothing waits.
   *Was:* "(a). Nothing waits." (fix round 6 of PR #286, physics review 5631678451, P4; applied per R-369).
+
+## RQ-565: Lookup's layer-1 verdict at the `α = 0` pole, where `β` is undefined: the clamp's move as its worst case over `β`, or the clamp's image of `β` defined along `p_λ` *(physics; found by physics review 5638054366 of PR #284, P1; REQ-ENC-036, REQ-ENC-038; context: TASK-M2-19)*
+
+*Found by the physics review of PR #284, P1. For the human: yes, the choice changes which entered states lookup
+accepts, and the docs don't settle it.*
+
+- **File, section:**
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The class a clamp moves": the
+    bound for `β` is "`R/b + R/a + |β|` for `β`", with no rule where `b = 0`, and "`β`: … `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)`"
+    assumes a defined `β`.
+  - `plan/requirements.yaml` REQ-ENC-036: "so that one physical state gets one verdict under every gauge".
+  - `docs/design/principia_dd_decoder.md` §3.2: "`α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β`
+    undefined *at the point*)", and R-437's defined `β = 0` at `λ̃ = 0`.
+- **The question:** at `α = 0` (body 2 at the inner pair's centre of mass) `α` clamps and moves body 2 to
+  `b' = sin(πε_z/2)/√μ_λ` in the direction `β`, which the state does not define, creating `|ΔL_z|` up to `b'·‖p_λ‖`.
+  Physics found one `L_z = 0` state accepted in some gauges and rejected in others (37 / 27 over 64 images for the
+  equal-mass Euler line with a perpendicular kick): where `λ̃` lands on 0 exactly, `β` is R-437's 0 and the move is
+  rejected; where it lands on rounding, `R/b` inflates the bound and the move is accepted.
+- **Options seen** (physics's):
+  (a) read the move as its worst case over `β`, `|ΔL_z| ≤ b'·‖p_λ‖` (and likewise `ΔU`'s `β`-dependent part), so the
+  clamp is rejected in every gauge unless `p_λ` is 0 within its own bound. It matches the canonical gauge's verdict,
+  keeps encode's `β` convention (R-437, R-438) untouched, and never accepts a state whose `L_z` class the clamp really
+  changed.
+  (b) define the clamp's image of `β` at the pole gauge-invariantly, e.g. along `p_λ`, so the move is 0 and the clamp
+  is accepted in every gauge.
+  Physics recommends (a).
+- **Applied meanwhile:** (a), as the contract's interim pole rule ("At the `α = 0` pole"), applied per R-369 in fix
+  round 5 of PR #284, with `lookup_validation_ladder_pole` giving each of the three states one verdict over 64 images.
+  Nothing waits.
