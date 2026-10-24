@@ -2771,7 +2771,7 @@
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
   depends_on: [TASK-M8-30, TASK-M7-31, TASK-M7-45]  # TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
-  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185]
+  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185, REQ-TOOL-197]  # R-576: REQ-TOOL-197 (easing curves, playhead policies); R-578: REQ-TOOL-084 moved to TASK-M8-79 with the reel builder (applied per R-369)
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-32
@@ -3134,6 +3134,30 @@
   requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106]
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-10]
+- id: TASK-M8-77
+  milestone: M8
+  title: "The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)"
+  depends_on: [TASK-M8-31, TASK-M8-05, TASK-M6-43, TASK-M8-75]  # TASK-M8-75: the result view and its view source (fix round 9 of PR #286, gui G1; applied per R-369)
+  needs: [REQ-GUI-213]
+  requirements: [REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378]  # REQ-GUI-378 waits on RQ-559
+  reviewers: [code, qa, gui, physics]  # physics for the lane table, an R-72 definition (REQ-GUI-375)
+  pitfalls: []
+- id: TASK-M8-78
+  milestone: M8
+  title: "Sequence: Play preview, the proof strip, the planner's estimate and its basis, and export with the spec beside it (R-577)"
+  depends_on: [TASK-M8-77, TASK-M8-30, TASK-M5-28, TASK-M8-32]
+  needs: [REQ-TOOL-050, REQ-TOOL-006]
+  requirements: [REQ-GUI-379, REQ-GUI-380, REQ-GUI-381, REQ-PERF-110, REQ-TOOL-200, REQ-GUI-387, REQ-GUI-388, REQ-PERF-112]  # REQ-GUI-387: fix round 2 of PR #286 (gui G2); REQ-GUI-388: fix round 12 (perf P6); REQ-PERF-112: fix round 21 (perf P1)
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-79
+  milestone: M8
+  title: "The spotlight reel's machinery, natively: the reel builder and its manifest, the film played without compute, the takeover that keeps playing, the Spotlights window (R-578)"
+  depends_on: [TASK-M8-78, TASK-M5-26]
+  needs: [REQ-RENDER-045]
+  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386, REQ-PERF-111]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b)); REQ-PERF-111: fix round 12 (perf P4)
+  reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
+  pitfalls: []
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"

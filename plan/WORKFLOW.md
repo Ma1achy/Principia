@@ -99,6 +99,8 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
   product"). Its unit tests run under Vitest (`npm --prefix web test -- <filter>`, the package's test
   script running `vitest run`), and its browser suites under Playwright (R-146).
 - `fixtures/golden/` and `fixtures/gates/`: the test fixtures.
+- `reel/specs/`: the spotlight reel's curated specs, `NN_name.principia-seq.json`, which `cargo xtask reel` renders at
+  release into the film and its manifest, build outputs that are not checked in (R-578, applied per R-369).
 
 **Each verify method has its runner:**
 

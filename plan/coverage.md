@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 116 |
 | COL | 158 |
-| GUI | 346 |
-| TOOL | 194 |
+| GUI | 363 |
+| TOOL | 198 |
 | VAL | 198 |
-| PERF | 109 |
+| PERF | 112 |
 | SYS | 90 |
-| **total** | **1821** |
+| **total** | **1845** |
 
-Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,21 +38,21 @@ Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 257 |
-| M8 | 395 |
+| M8 | 419 |
 
 ## Sections
 
-1465 sections in 54 files: 1198 yield at least one requirement; 267 yield none and are listed below with the reason.
+1497 sections in 56 files: 1215 yield at least one requirement; 282 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 178 |
+| informative only | 188 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 46 |
+| parent heading (obligations are in its subsections) | 49 |
 | planned (the plan PR) | 22 |
-| rationale | 12 |
+| rationale | 14 |
 | superseded (kept for the record) | 4 |
 
 
@@ -474,6 +474,30 @@ Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for th
 | 6. What this reuses rather than adds | informative only | working notes: only §4 is normative (R-109) |
 | 7. Open | informative only | working notes: only §4 is normative (R-109) |
 
+### `docs/design/principia_sequence.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Sequence — keyframed view animations in the native GUI | informative only | preface and the port's status note (R-576, R-577); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-576 and R-577; no obligation |
+| 2. The gap | rationale | why the Sequence window exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 4. Fit with rulings | informative only | how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-576; the obligations they settle are in §3.4 and REQ-TOOL-076 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-GUI-373 to REQ-GUI-381, REQ-TOOL-076, REQ-TOOL-200, REQ-PERF-110) |
+
+### `docs/design/principia_spotlight_reel.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the spotlight reel — a film that passes for Explore | informative only | preface, the port's status note and the human's scope (R-578, R-571); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-578; no obligation |
+| 2. The gap | rationale | why the reel needs a manifest and a takeover; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
+| 4. Fit with rulings | informative only | how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-578; the obligations they settle are in §3.1, §3.3 and REQ-TOOL-199, REQ-GUI-383 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382 to REQ-GUI-385) |
+
 ### `docs/design/principia_state_map.md`
 
 | section | reason | note |
@@ -508,6 +532,7 @@ Of these: 156 calibration, 157 definition, 1508 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Part I — The dev GUI | parent heading (obligations are in its subsections) |  |
+| G9a. Sequence · Spotlights (no artboard; R-576 to R-578) | parent heading (obligations are in its subsections) | its two subsections, Sequence and Spotlights |
 | 14. Prototype → GUI mapping | informative only | maps HTML prototypes to GUI roles; the prototypes are prior art |
 
 ### `docs/notes/ic_inspector_scratchpad.md`
