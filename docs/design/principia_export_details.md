@@ -67,7 +67,8 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
 - **The record is the identity (R-588, RQ-562 (a)).** "An export is a record of what was drawn" (the human): import
   gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, so the import
   reproduces the image that was drawn and never re-measures a live window; R-484's identity holds on that record. The
-  export reports the fields it froze. R-484's T1 runs on the headless paths, which freeze nothing.
+  export reports the fields it froze, in its export block's `froze` (§3.4). R-484's T1 runs on the headless paths,
+  which freeze nothing.
 - **An entry goes with its node** (applied per R-369, fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node with
   an entry (Delete node, render GUI spec Part II §7) or a preset replacing the whole graph (Part II §11) drops the
   entry of every node no longer in the graph in the same undoable command, one history key and one undo entry
@@ -132,10 +133,20 @@ export { range_policy: frozen | per_frame | prepass_union,
          clipped: { node_id → (lo, hi) }                 an image; a recording: one map per frame, in frame order
          cvd_simulated: null | <mode>,
          render_scale: 1,
-         device_px_nodes: [node_id] }
+         device_px_nodes: [node_id],
+         froze: { nodes: [node_id], base_width: null | u32 } }
 ```
 
 *Was:* `export { range_policy: frozen | per_frame,` (fix round 3 of PR #287, code review 5638122561, C1, adds `prepass_union`).
+*Was:* `         device_px_nodes: [node_id] }` (qa review 5638292369 of PR #287, Q1, adds `froze`, R-588).
+
+**`froze` is the export's report of the fields it froze (R-588)** (applied per R-369: where the report lives, fix round
+of PR #287's rulings port, qa review 5638292369, Q1): `nodes` lists, in `node_id` order, every node whose
+`frozen_ranges` entry this export wrote, a node the view had already frozen not among them, and `base_width` is the
+value the export wrote into `RenderState.base_width`; a headless export, which freezes nothing and keeps the state's
+`base_width`, reports `nodes: []` and `base_width: null`, and a recording under `per_frame` reports `nodes: []`. It is
+in the export block, outside the identity, so the `RenderState` an import gives back is the one the export wrote and
+`froze` says which of its fields the export set.
 
 `frozen_ranges` and `base_width` are `RenderState`'s, so they are in the identity and in tier 2 as the ramp window is.
 

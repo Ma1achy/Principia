@@ -25540,9 +25540,17 @@ froze. R-484's T1 (every field off its default, round-tripped through every path
 writer freezes nothing and keeps the state's `base_width`, so T1's identity is exact there. Options (b) (a sidecar
 outside the identity) and (c) (nothing frozen in `RenderState`) are not taken.
 
+*Applied per R-369* (qa review 5638292369 of PR #287, Q1, Q2): the report lives in the export block, as
+`froze: { nodes: [node_id], base_width: null | u32 }`, the nodes whose `frozen_ranges` entries the export wrote and the
+`base_width` it wrote, `[]` and `null` on a headless export (`principia_export_details.md` §3.4); REQ-RENDER-117 and
+REQ-TOOL-202 test it, and REQ-TOOL-218 tests that an import gives back the written `base_width`, never the live
+window's.
+
 R-588 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-RENDER-117 and REQ-RENDER-118 (rulings, source, note).
+The qa fix round (5638292369, Q1, Q2) also changes REQ-RENDER-117 (statement, verify, note), REQ-TOOL-202
+(statement, verify, rulings, source, note) and REQ-TOOL-218 (statement, verify, rulings, source, note).
 
 ## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
 *24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
