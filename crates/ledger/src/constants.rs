@@ -867,7 +867,10 @@ pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
 /// f64 and 64·2⁻²³ ≈ 7.63e-6 at f32. TASK-M2-16's proposal (R-71): the `encode-eps-phys` gate's `interior.json`, 65 536
 /// points on each registered chart and 2²⁰ latent `z` on `[−6, 6]⁸`, the defaults links, at f64 and f32, measures a
 /// worst interior residual of 21.90 `ε_R` (the ternary mass plot, f64); seeds 2 to 9 of the same draws, about 3.1·10⁷
-/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×.
+/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×. These
+/// measurements were made under R-141's fold, every shape sphere decode on the upper hemisphere; R-544 makes the shape
+/// sphere the whole sphere, its gate rows taken against `C(x)`, and they are kept, not re-measured (R-544, "Results
+/// measured under one hemisphere").
 pub const EPS_PHYS: ConstantBuilder = proposed(
     "eps_phys",
     64.0,

@@ -2,8 +2,10 @@
 //! dd_decoder §3.3, §3.4 and §5 test 7; TASK-M2-16), on the CPU at f64 and f32, the one source's two instantiations,
 //! every residual in physical units (`validation::roundtrip`):
 //! - `t2_per_chart`, generated for every chart of the registry (`validation::registered_charts!`): interior samples
-//!   `(u, v)` → the chart's `D` → `E` → `D`, `‖·‖_phys ≤ ε_phys`; a sample with a control past its clamp asserts its
-//!   `lookup_clamped` bit instead, and one inside asserts the bit clear (REQ-ENC-004). `t2_per_chart_registry_complete`:
+//!   `(u, v)` → the chart's `D` → `E` → `D`, `‖·‖_phys ≤ ε_phys`, against the decoded state `x`, and on the shape sphere
+//!   chart, whose lower-hemisphere decode is off `C`'s section, against `C(x)` (R-544; `validation::roundtrip::Against`);
+//!   a sample with a control past its clamp asserts its `lookup_clamped` bit instead, and one inside asserts the bit
+//!   clear (REQ-ENC-004). `t2_per_chart_registry_complete`:
 //!   every chart `engine::chart_authoring` and `kernel::chart` declare has a registry entry, so a T2 test.
 //! - `t2_qmax_boundary`: random `z` across the momentum clamps; decode applies no per-body cap, the decoded momenta
 //!   being the Jacobi map of `q` with `|qₖ| ≤ q_max` alone bounding them; the round trip holds on the interior, and the
@@ -49,8 +51,8 @@ use validation::eps_phys::Mismatched;
 use validation::gauge::{uniform, Gauge};
 use validation::negative_control;
 use validation::roundtrip::{
-    self, eps_phys, margins, phys, registry, trip, widen, DecodeAt, Precision, Registered, Sides,
-    Trip,
+    self, eps_phys, margins, phys, registry, trip, trip_against, widen, Against, DecodeAt,
+    Precision, Registered, Sides, Trip,
 };
 
 // ── Shared ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -84,11 +86,11 @@ enum Enc {
     Mismatched,
 }
 
-fn round<R: Precision>(enc: Enc, x: &Ic<R>) -> Trip<R> {
+fn round<R: Precision>(enc: Enc, x: &Ic<R>, against: Against) -> Trip<R> {
     match enc {
-        Enc::Defaults => trip::<Defaults, R>(x),
+        Enc::Defaults => trip_against::<Defaults, Defaults, R>(x, against),
         #[cfg(feature = "controls")]
-        Enc::Mismatched => roundtrip::trip_with::<Mismatched, Defaults, R>(x),
+        Enc::Mismatched => trip_against::<Mismatched, Defaults, R>(x, against),
     }
 }
 
@@ -148,12 +150,13 @@ fn t2_points() -> Vec<(f64, f64)> {
     out
 }
 
-/// T2 over `chart` at `R` under `enc`, every sample checked; the interior samples' count.
+/// T2 over `chart` at `R` under `enc`, every sample checked, against the chart's own reference
+/// ([`Registered::against`]: `C(x)` on the shape sphere, R-544); the interior samples' count.
 fn t2_chart<R: DecodeAt>(chart: &dyn Registered, enc: Enc) -> usize {
     let mut interior = 0;
     for (i, (u, v)) in t2_points().into_iter().enumerate() {
         let x = R::decode_at(chart, u, v).ic;
-        let t = round::<R>(enc, &x);
+        let t = round::<R>(enc, &x, chart.against());
         let what = || format!("{} f{} sample {i} at ({u}, {v})", chart.key(), bits::<R>());
         check_t2_sample(&what, &x, &t);
         interior += usize::from(Sides::of(margins(&widen(&x))).interior());
