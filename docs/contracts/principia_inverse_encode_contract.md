@@ -21,7 +21,7 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 **The three theorems (the contract):**
 
 - **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13). T1 holds for every `g` off the mirror band. On `|λ̃_y| ≤ δ_λ`, collinear states included, it holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`, the mirror's two sides both kept; R-82 is unchanged (R-547, RQ-360).
-- **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
+- **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics, except on the shape sphere chart (R-544): there a lower-hemisphere pixel decodes to its own system, off `C`'s section (`λ̃_y < −δ_λ`), so `D(E(x))` is `C(x)`, the mirror image `Π·x` to rounding, and T2 on that chart compares `D(E(x))` against `C(x)`, as T3 does (applied per R-369, a mechanical consequence of R-544; TASK-M2-43's pre-flight). *Was:* "Decoded states are already canonical, so this exercises only the block inverses and their numerics." Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
 **The classic bug, called out once, inherited everywhere:** every rigid operation in `C` acts on the **full phase-space state — positions *and* momenta**. The rotation taking `ρ̃` to +x rotates every `p_i` identically; the mirror reflects every `p_i` through the x-axis. Mirroring configuration only (the bug an agent will write) silently changes the physics: it flips the shape but not `L_z`, producing a state on the manifold that is *not* gauge-equivalent to the input. Under the correct full-state mirror, `L_z → −L_z` and prograde/retrograde flip — that is parity acting on the whole system, dynamically consistent (the trajectory is the mirror of the original). Encode surfaces a **`lookup_mirrored`** notice when it fires, because the user's entered `L_z` sign has changed frame.
@@ -123,11 +123,15 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   bodies from the Jacobi vectors (`r₁ = r₀ + ρ`), so a near body's position carries the far body's rounding: measured
   against its own size it would show a conditioning the map does not have. A mass-weighted norm (`√mᵢ‖Δrᵢ‖`,
   `‖Δpᵢ‖/√mᵢ`) is not used: it divides a light body's momentum rounding by `√mᵢ`.
-- **One norm for every round trip.** T2 measures `D(E(D(z)))` against `D(z)`, T3 `D(E(x))` against `C(x)`; the
-  ground-truth ingestion residual and the `ROUNDTRIP` preset (Part 8) use it unchanged.
+- **One norm for every round trip.** T2 measures `D(E(D(z)))` against `D(z)` (on the shape sphere chart against
+  `C(D(z))`, Part 1's T2, R-544), T3 `D(E(x))` against `C(x)`; the ground-truth ingestion residual and the
+  `ROUNDTRIP` preset (Part 8) use it unchanged.
 - **`ε_phys = k·ε_R`**, `ε_R` the precision's machine epsilon (2⁻⁵² at f64, 2⁻²³ at f32), one `k` for both precisions:
   the interior residual is rounding, the same count of `ε_R` at f64 and f32. `k` is REQ-ENC-024's calibration (R-71),
   the constants register's `eps_phys`, proposed at 64 by the `encode-eps-phys` gate and provisional until the M2 gate.
+  That proposal's measurements (TASK-M2-16) were made under R-141's fold, every shape sphere decode on the upper
+  hemisphere; they are kept with R-544 beside them, not re-measured (R-544, "Results measured under one hemisphere";
+  applied per R-369).
 - **Interior and clamp-adjacent** (applied per R-369, TASK-M2-16). Each control is read off the state by Part 3's own
   formulas. A sample is interior when every control is clear of its clamp by a factor of two: `s_α`, `s_β` and `s_q`
   in `[2ε, 1 − 2ε]` (their clamp `[ε, 1 − ε]`) and `|μₖ| ≤ (1 − 2ε_μ)·μ_max` (its clamp `(1 − ε_μ)·μ_max`); T2 holds
@@ -466,7 +470,7 @@ region (for example above the parabola in $(L_z, E)$).
 
 **Generated tests, per chart** (same discipline as the layout-table catalogue):
 
-- **T2 test:** sample z in the interior → `D` → `E` → assert **in physical space**: `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` (Part 4's rule). Clamp-adjacent samples are asserted with the clamp flag expected, not with a tight residual.
+- **T2 test:** sample z in the interior → `D` → `E` → assert **in physical space**: `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` (Part 4's rule; on the shape sphere chart against `C(D(z))`, Part 1's T2, R-544). Clamp-adjacent samples are asserted with the clamp flag expected, not with a tight residual.
 - **T3 test:** random physical x (random scale, orientation, offset, parity) → `E` → `D` → assert the result equals `C(x)`: shape angles match, `|L_z|` matches with sign consistent with the mirror flag, `E` matches after the recorded rescale, masses match. This is the test that catches a half-applied rigid transform — the Part 1 bug — because a config-only mirror preserves shape but breaks the `L_z` consistency check.
 - **T1 test:** `E(g·x) = E(x)` over random `g ∈ G` — the gauge-invariance sweep. Cheap, brutal, and the only test that exercises the tie-breaks.
 
