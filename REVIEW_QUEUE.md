@@ -1090,12 +1090,15 @@ lower-hemisphere IC is integrated as itself or as its mirror twin, which reflect
 - **The question:** the draft, written before R-544 was ported, integrates the folded canonical form; under R-544 the
   shape sphere chart's own decode keeps the hemisphere, and folding would integrate a lower-hemisphere IC as its twin.
   Which state does the constructor integrate?
-- **Options seen:** (a) `C(as_built)` with step 3, the mirror, not taken: the rotation and the centre of mass
-  canonicalised, the hemisphere kept, as the shape sphere chart's decode does; (b) the draft's `canonicalise(as_built)`
+- **Options seen:** (a) `C(as_built)` with steps 1a, 0, 1b and 2 taken (the centre of mass at the origin and at
+  rest, `I = 1`, the rotation) and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's decode does; (b) the draft's `canonicalise(as_built)`
   folded, the trajectory reflected and `L_z` reversed for a lower-hemisphere IC, said so; (c) `as_built` itself, not
   canonicalised, so not bitwise the survey's.
 - **Applied meanwhile:** (a) (R-586; `principia_ic_save.md` §3.4). `canonical.z`, `mirrored` and `hemisphere` are
   recorded as drafted. Nothing waits.
+- *Option (a) reworded by fix round 4 of PR #287, physics review 5638148080, P2 (a wording fix, the question unchanged). Was:* "(a)
+  `C(as_built)` with step 3, the mirror, not taken: the rotation and the centre of mass canonicalised, the hemisphere
+  kept,"
 
 ## RQ-564: An IC only kept, not marked: the draft's "kept-only ICs are absent" from exports against R-553's kept orbit's `Trace` in `Lines` *(found by R-586's port; R-586 against R-553 (RQ-428 (a)); REQ-GUI-395; context: TASK-M8-84)*
 

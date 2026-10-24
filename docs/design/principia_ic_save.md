@@ -41,8 +41,12 @@ The **primary** is `as_built` for a built IC, and `source.pixel` with `sim` for 
 re-derived on load and compared. The primary velocity variable is `v`, `p = m·v` derived (the draft's open question 2,
 (a): `p = m·v` is not bitwise invertible, so only one variable can be primary). **Bitwise at f64**: JCS's shortest
 decimals are exact for every finite f64 but −0, so one function normalises −0 to +0 as values are written (open
-question 4, (a)). A non-finite value is refused at entry, in the constructor and on load. `hemisphere` is the sign of
-`λ̃_y` past `δ_λ`, `+1`, `−1`, or `0` on the seam; `mirrored` is the lookup's `lookup_mirrored` (R-544).
+question 4, (a)). A non-finite value is refused at entry, in the constructor and on load. `mirrored` is the lookup's
+`lookup_mirrored` (R-544), and `hemisphere` comes from the same decision, R-82's one mirror test as the kernel makes it
+(exactly, on the input, never a second test on the rounded `λ̃_y`): `−1` iff `lookup_mirrored`; `+1` iff the same test
+on the reflected state; `0` otherwise, on the seam. So `mirrored ⇔ hemisphere = −1` holds by construction (applied
+per R-369, fix round 4 of PR #287, physics review 5638148080, P1). *Was:* "`hemisphere` is the sign of `λ̃_y` past `δ_λ`, `+1`, `−1`, or `0` on the seam;
+`mirrored` is the lookup's `lookup_mirrored` (R-544)."
 
 JSON has no literal for a non-finite number, so on load a number token that overflows f64 (for example `1e999`) is
 read as non-finite and refused, naming the field, and a bare `NaN` or `Infinity` does not parse. `made` is when the IC
@@ -67,9 +71,14 @@ was made: a re-save of an opened record keeps the record's `made`, so save, open
 
 **Corrupt or a residual** (applied per R-369, fix round 2 of PR #287, qa review 5638084688, Q6). A record is corrupt when its JSON does not parse, a field
 is missing, a value is non-finite, or a field re-derived exactly from the primary contradicts the stored one
-(`mirrored`, `hemisphere`, or `source`'s kind against the fields present). `canonical.z` is re-derived through the
-decoder, which is not bitwise, so the stored `z` against the recomputed is a residual: within its bound the record is
-recovered with the residual shown, beyond it corrupt. The bound is a calibration value (R-71, REQ-TOOL-215), proposed
+(`mirrored`, `hemisphere`, or `source`'s kind against the fields present). `canonical.z = E(as_built)` is a
+deterministic f64 function, so reopened on the build and platform that saved it the recomputed `z` is bitwise the
+stored one and the residual is exactly 0; a residual arises only from another platform's maths library (`atan2` in
+`C`'s step 2, the chart inverses) or another build. The stored `z` against the recomputed is that residual, measured
+as `‖Δz‖`, the norm REQ-VAL-022 gates `‖z − z′‖` by: within its bound the record is recovered with the residual
+shown, beyond it corrupt (fix round 4 of PR #287, physics review 5638148080, P4, applied per R-369). *Was:* "`canonical.z` is re-derived through the decoder,
+which is not bitwise, so the stored `z` against the recomputed is a residual: within its bound the record is
+recovered with the residual shown, beyond it corrupt." The bound is a calibration value (R-71, REQ-TOOL-215), proposed
 with its evidence by the task that builds the record and confirmed by the human at the M8 gate; a link that is
 unknown or whose entry hash differs is physics only, never corrupt (R-521).
 
@@ -97,6 +106,12 @@ tolerances, R-33), and the only other way into the engine the Inspector has. A p
 mirror "never identified", and `C(x)` taken there with its step 3, the mirror, not taken. Meanwhile the constructor
 integrates `C(as_built)` with step 3 not taken, so the state integrated stays in the hemisphere it was built in, as the
 shape sphere chart's own decode does; `canonical.z`, `mirrored` and `hemisphere` are recorded as above. Nothing waits.
+
+**What `C` does here** (applied per R-369, fix round 4 of PR #287, physics review 5638148080, P2): steps 1a, 0, 1b and 2 are taken and step 3 is not, so the
+integrated initial state is bitwise the shared `C`'s step-3-not-taken result on `as_built` (REQ-CHART-081,
+TASK-M2-43): the centre of mass at the origin and at rest, `I = 1` (the rescale `λ` recorded, `lookup_rescaled`),
+`ρ̃` on +x, `λ̃_y`'s sign kept. Skipping the rescale or the boost would integrate another system in the survey's
+units, whose horizon is in those units (`principia_integrator_contract.md` Part 5).
 
 ### 3.5 In views: marks
 
@@ -138,6 +153,13 @@ built IC round-trips; the kept-orbit tabs stay `ViewUI`; and the test's "kept-on
   not say, and a pair- or body-indexed column is named as R-449 and this section name the others.
 - **One row per step as taken**, with no resampling, which would invent values. An optional stride is labelled "every
   k-th step; close encounters not resolved" (`principia_00_philosophy.md` §7.3).
+- **Frame and units** (R-72, REQ-TOOL-213; applied per R-369, fix round 4 of PR #287, physics review 5638148080, P3): every row is in the frame §3.4
+  integrates, `C(as_built)` with step 3 not taken (the centre of mass at the origin and at rest, `I = 1`, `ρ̃` on +x at
+  `t = 0`), in the canonical units the integrator inherits, `G = M = I = 1` (`principia_integrator_contract.md`
+  Part 5): `t` in canonical time, the positions and velocities in canonical length and velocity, `E` and `Lz` in
+  canonical energy and angular momentum. The preamble states that frame and the rescale `C` applied, `λ` as
+  `lookup_rescaled` reports it (`principia_inverse_encode_contract.md` Part 6, step 0), so a row can be related to the
+  `as_built` the record holds; the columns after `Lz` carry their frame and unit in their definition.
 
 ## 4. Fit with rulings
 

@@ -25437,6 +25437,13 @@ integrated; (a) −0 normalised to +0.
   that overflows f64) and an exactly re-derived field (`mirrored`, `hemisphere`, `source`'s kind) that contradicts the
   stored one are corrupt; the stored `z` against the recomputed is a residual, recovered within its bound and corrupt
   beyond it, the bound a calibration value (R-71, REQ-TOOL-215, M8 gate); a re-save keeps the opened record's `made`.
+- **Physics** (fix round 4 of PR #287, physics review 5638148080, P1 to P4): `hemisphere` comes from R-82's one mirror test as the kernel makes it, `−1` iff
+  `lookup_mirrored`, `+1` iff the same test on the reflected state, `0` otherwise, never from the rounded `λ̃_y`;
+  the constructor's `C(as_built)` takes steps 1a, 0, 1b and 2 and not step 3, its result bitwise the shared `C`'s;
+  the trajectory CSV's rows are in that frame and the canonical units `G = M = I = 1`, the preamble stating the frame
+  and the rescale `λ` (`lookup_rescaled`); the `z` residual is `‖Δz‖` as REQ-VAL-022 measures it, exactly 0 on the
+  machine that saved the record, non-zero only across platforms or builds (`principia_ic_save.md` §3.1, §3.2, §3.4,
+  §3.6).
 - **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
   reopening, marks and the trajectory CSV, R-587).
 
