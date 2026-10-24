@@ -3444,6 +3444,21 @@
   - R-570
   milestone: M8
   note: "R-570's test names the tolerance and the corpus states none (R-71). Closed by TASK-M8-57, with REQ-CHART-087. Fix round 1 of PR #279 (physics review 5624655553, P2; applied per R-369): measured on the saturated views only. *Was (statement):* \"The saturation tolerance of R-570's far_field_saturates (\"the decoded states of adjacent pixels agree to within the saturation tolerance\"), the largest difference allowed between the states decoded at adjacent pixels at |z| = 10⁴, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"the proposal states the tolerance with the measured adjacent-pixel differences of each state component at |z| = 10⁴ and near the origin, at f32 and f64, on REQ-CHART-087's views; physics reviewer approves; recorded in decisions.md\""
+- id: REQ-CHART-089
+  area: CHART
+  kind: definition
+  statement: "The lock's construction must be defined in chart_decoder_contract § \"The lock (projective microscope)\" by the task that needs it and reviewed by the physics reviewer before merge: how the excursion δ is held beside the stored anchor, the window on a nonlinear chart and how setting the lock re-centres it through the inverse-encode path, what lock validation on an invariant chart tags and offers, and how a curve's tangent γ′(ν₀) is pulled back to the latent controls for the tangent tilt at a lock."
+  source:
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The lock (projective microscope)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the contract defines the excursion's storage, the nonlinear chart's window and its re-centring, lock validation's tags and offer and the tangent's pullback; physics reviewer approved; `cargo test -p engine lock_set`, `lock_infeasible_tilt` and `curve_tilt_requires_lock` exercise each"
+  rulings:
+  - R-72
+  milestone: M2
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

@@ -1,7 +1,7 @@
 # TASK-M2-23 — The lock: the anchor, the excursion δ, re-based sliders and SimConfig lock fields
 
 - **Milestone:** M2
-- **Closes:** REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-SYS-012, REQ-CHART-010, REQ-CHART-007
+- **Closes:** REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-SYS-012, REQ-CHART-010, REQ-CHART-007, REQ-CHART-089
 - **Depends on:** TASK-M2-06, TASK-M2-19, TASK-M2-22
 - **Needs (earlier milestones):** REQ-GUI-001
 - **Reviewers:** code, qa, physics, gui
@@ -45,6 +45,7 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 - Review (physics) + `cargo test -p engine lock_kernel_uniform_identical` — the kernel uniform struct has no lock field; locked and unlocked renders of the same (z₀, q₁, q₂) through the decode stage are bitwise identical (REQ-SYS-012).
 - `cargo test -p engine lock_infeasible_tilt` — tilt a locked (L_z, E) view past the parabola; infeasible pixels are tagged; lock validation reports and offers re-centre (REQ-CHART-010).
 - `cargo test -p engine curve_tilt_requires_lock` — tilting a curve axis without a lock is refused; with a lock the tilt uses γ'(ν₀) (REQ-CHART-007).
+- Definition: the lock's construction (the excursion's storage, the nonlinear chart's window and its re-centring, lock validation's tags and offer, the tangent's pullback) written into chart_decoder_contract § "The lock (projective microscope)" and approved by the physics reviewer (REQ-CHART-089).
 
 ## Notes
 - Gap G16 applies to "re-centred to the nearest feasible point".
