@@ -2009,6 +2009,161 @@ negative_control!(
     })
 );
 
+/// A state's Jacobi readings: `a = ‖ρ‖`, `b = ‖λ‖`, `A = ρ × p_ρ`, `‖p_λ‖`, the masses and `K`, with
+/// `p_ρ = w₀p₁ − w₁p₀` and `p_λ = p₂`.
+fn jacobi(x: &Ic<f64>) -> (f64, f64, f64, f64, [f64; 3], f64) {
+    let m01 = x.m[0] + x.m[1];
+    let (w0, w1) = (x.m[0] / m01, x.m[1] / m01);
+    let rho = [x.r[1][0] - x.r[0][0], x.r[1][1] - x.r[0][1]];
+    let lam: [f64; 2] = std::array::from_fn(|k| x.r[2][k] - w0 * x.r[0][k] - w1 * x.r[1][k]);
+    let p_rho: [f64; 2] = std::array::from_fn(|k| w0 * x.p[1][k] - w1 * x.p[0][k]);
+    let kinetic = (0..3)
+        .map(|i| (x.p[i][0].powi(2) + x.p[i][1].powi(2)) / (2.0 * x.m[i]))
+        .sum();
+    (
+        rho[0].hypot(rho[1]),
+        lam[0].hypot(lam[1]),
+        rho[0] * p_rho[1] - rho[1] * p_rho[0],
+        x.p[2][0].hypot(x.p[2][1]),
+        x.m,
+        kinetic,
+    )
+}
+
+/// Pole starts for the moves' values: body 2 at the inner pair's centre of mass, `q₁ = ±0.1` so `A` of either sign,
+/// a bound start and an unbound one, and one with `m₂ = 0.01`, inside the mass clamps, so that `b'/a'` is near 10⁻⁵
+/// and `E`'s range over `β'` resolves above rounding, its inner masses `(1 − m₂)(1 ± δ)/2` with `δ = 1.4·10⁻⁵`, which
+/// puts `r₀₂' = r₁₂'` at `cos β'` near 0.9.
+fn pole_moves() -> Vec<Ic<f64>> {
+    let at = |m: [f64; 3], p2: [f64; 2], k: f64| {
+        let (w0, w1) = (m[0] / (m[0] + m[1]), m[1] / (m[0] + m[1]));
+        Ic {
+            m,
+            r: [[-w1, 0.0], [w0, 0.0], [0.0, 0.0]],
+            p: [
+                [-w0 * p2[0], -w0 * p2[1] - k],
+                [-w1 * p2[0], -w1 * p2[1] + k],
+                p2,
+            ],
+        }
+    };
+    let (small, delta) = (0.01, 1.4e-5);
+    let inner = (1.0 - small) / 2.0;
+    vec![
+        at([0.25, 0.25, 0.5], [0.3, 0.5], 0.1),
+        at([0.25, 0.25, 0.5], [0.3, 0.5], -0.1),
+        at([0.25, 0.25, 0.5], [3.0, 5.0], 0.1),
+        at(
+            [inner * (1.0 + delta), inner * (1.0 - delta), small],
+            [3e-3, 5e-3],
+            0.1,
+        ),
+    ]
+}
+
+/// Checks [`moves`] at the pole against the worst case the contract gives (§ "The class a clamp moves", "At the
+/// `α = 0` pole"), read from the canonical state and the decoded clamped state, on [`pole_moves`] in 8 gauge images
+/// each (rotated, mirrored on odd images), `sign` times each value; and, where `ΔA = 0` exactly (the equal-mass start
+/// with `q₁ = 0`, ungauged), that the move is `+b'·‖p_λ'‖`. `sign` is 1; the control's is −1.
+fn check_pole_moves(sign: f64) {
+    let eps = 64.0 * f64::EPSILON;
+    for (n, x) in pole_moves().iter().enumerate() {
+        for k in 0..8 {
+            let g = validation::gauge::Gauge {
+                a: [0.0; 2],
+                u: [0.0; 2],
+                theta: 0.37 * k as f64,
+                s: 1.0,
+                mirror: k % 2 == 1,
+            }
+            .act(x);
+            let en = e(&g);
+            let ext = Extents::entered(&g, en.canonical.lambda);
+            let m = moves::<Defaults>(&en, &en.z.z, &ext);
+            let before = Classes::within(&en.canonical.ic, &ext);
+            let (_, _, a0, _, _, _) = jacobi(&en.canonical.ic);
+            let y = d(en.z.z);
+            let (a, b, a1, p, ms, kinetic) = jacobi(&y);
+            let what = format!("pole start {n}, image {k}");
+            let da = a1 - a0;
+            let lz = da + da.signum() * b * p;
+            let lz_after = a1 - before.lz.signum() * b * p;
+            let tl = eps * (m.lz_scale + before.lz_scale);
+            assert!(
+                (m.lz - sign * lz).abs() <= tl,
+                "{what}: ΔL_z at the pole {} against {lz}",
+                m.lz
+            );
+            assert!(
+                (m.lz_after - lz_after).abs() <= eps * (m.lz_after_scale + before.lz_scale),
+                "{what}: L_z after at the pole {} against {lz_after}",
+                m.lz_after
+            );
+            let m01 = ms[0] + ms[1];
+            let (w0, w1) = (ms[0] / m01, ms[1] / m01);
+            let energy = |c: f64| {
+                let r02 = (b * b + w1 * w1 * a * a + 2.0 * a * b * w1 * c).sqrt();
+                let r12 = (b * b + w0 * w0 * a * a - 2.0 * a * b * w0 * c).sqrt();
+                kinetic - (ms[0] * ms[1] / a + ms[0] * ms[2] / r02 + ms[1] * ms[2] / r12)
+            };
+            let even = (w0 - w1) * a / (2.0 * b);
+            let mut range = vec![energy(1.0), energy(-1.0)];
+            if even.abs() <= 1.0 {
+                range.push(energy(even));
+            }
+            if n == 3 {
+                assert!(range.len() == 3, "{what}: r₀₂' = r₁₂' at cos β' = {even}");
+            }
+            let e0 = before.e;
+            let de = range.iter().map(|v| v - e0).fold(0.0_f64, |acc, v| {
+                if v.abs() > acc.abs() {
+                    v
+                } else {
+                    acc
+                }
+            });
+            let e_after = if e0 > 0.0 {
+                range.iter().cloned().fold(f64::INFINITY, f64::min)
+            } else {
+                range.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+            };
+            let te = eps * (m.e_scale + before.e_scale);
+            assert!(
+                (m.e - sign * de).abs() <= te,
+                "{what}: ΔE at the pole {} against {de}",
+                m.e
+            );
+            assert!(
+                (m.e_after - e_after).abs() <= eps * (m.e_after_scale + before.e_scale),
+                "{what}: E after at the pole {} against {e_after}",
+                m.e_after
+            );
+        }
+    }
+    let x = poles()[0].1;
+    let en = e(&x);
+    let m = moves::<Defaults>(&en, &en.z.z, &Extents::entered(&x, en.canonical.lambda));
+    let (_, b, _, p, _, _) = jacobi(&d(en.z.z));
+    assert!(
+        (m.lz - sign * b * p).abs() <= 64.0 * f64::EPSILON * m.lz_scale,
+        "ΔL_z at the pole where ΔA = 0: {} against +{}",
+        m.lz,
+        b * p
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_pole_moves() {
+    check_pole_moves(1.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_pole_moves,
+    "a move of the wrong sign is not the worst case",
+    expected = "at the pole",
+    check_pole_moves(-1.0)
+);
+
 /// Checks R-13 for the pair `(i, j)` made to coincide in `generic()`: the lookup locks it, clamped, never refused.
 fn check_coincident(pairs: &[(usize, usize)]) {
     for &(i, j) in pairs {

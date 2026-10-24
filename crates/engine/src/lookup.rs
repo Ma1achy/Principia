@@ -684,8 +684,8 @@ pub fn moves_within<S: Selection>(
     }
 }
 
-/// A constant's worst case over a range of values after the clamps: the move of largest magnitude, and the value
-/// after nearest the other side of the value before.
+/// A constant's worst case over a range of values after the clamps: the move of largest magnitude, the first where
+/// two tie, and the value after nearest the other side of the value before.
 #[derive(Clone, Copy, Debug)]
 struct Worst {
     moved: Dual,
@@ -703,12 +703,11 @@ fn worst(range: &[Dual]) -> Worst {
         if x.d.abs() > out.moved.d.abs() {
             out.moved = x;
         }
+        // A value before in class 0 takes its move ([`after`]), so at 0 the value after is not read.
         let nearer = if before > 0.0 {
             x.w < out.after.w
-        } else if before < 0.0 {
-            x.w > out.after.w
         } else {
-            x.w.abs() > out.after.w.abs()
+            x.w > out.after.w
         };
         if nearer {
             out.after = x;
