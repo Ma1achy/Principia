@@ -310,6 +310,22 @@ fn check_c1(ld: f64) {
     };
     assert!(at_zero(r).is_ok(), "a gap of r, inside r + r/2");
     assert!(at_zero(1.6 * r).is_err(), "a gap of 1.6r, outside r + r/2");
+    // And `ε_phys·e^ld`: for `s·x` with `s·h` > 1 each step's rounding is `ε_phys·s`, so the tolerance is `3ε_phys·s`,
+    // a third of it the log-det's own term.
+    let s = 1e8;
+    let steep = |gap: f64| {
+        let l = link(
+            vec![op(Op::Mul, vec![num(s), X])],
+            vec![X],
+            op(Op::Log, vec![num(s * (1.0 + gap * 64.0 * f64::EPSILON))]),
+        );
+        c1::<f64>(&l, &[0.0], &at(&[]))
+    };
+    assert!(steep(2.5).is_ok(), "a gap of 2.5ε_phys·s, inside 3ε_phys·s");
+    assert!(
+        steep(3.5).is_err(),
+        "a gap of 3.5ε_phys·s, outside 3ε_phys·s"
+    );
     let flat = link(vec![num(1.0)], vec![X], num(f64::NEG_INFINITY));
     assert!(
         c1::<f64>(&flat, &[0.3], &at(&[])).is_ok(),
