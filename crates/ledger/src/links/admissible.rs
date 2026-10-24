@@ -3,7 +3,7 @@
 //! REQ-GEN-041). Each entry is evaluated at f32 and f64 by [`eval`], which evaluates a tree as the emitter's code does
 //! (`crate::gen::links`): the same operators in the same order, each `num` and parameter at the float type as the
 //! emitter writes it (π/2 and π rounded toward zero at f32, every other value rounded to nearest), and §3.9's `tanh`
-//! with its argument bound.
+//! as the host evaluates it, where its argument bound and select never act.
 //!
 //! Under a seeded fuzz of the control that includes saturating controls ([`controls`]):
 //! 1. **constraint-preserving**: the forward's output lies in the codomain's closed range at the float type, the
@@ -30,7 +30,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::sync::Mutex;
 
 use super::{Codomain, Expr, Link, Op, Param, Tunable};
-use crate::constants::{EPS_PHYS, TANH_SAT};
+use crate::constants::EPS_PHYS;
 
 /// A float type the check evaluates at, f32 or f64, with the operations the emitter's code calls.
 pub trait Fl:
@@ -195,18 +195,10 @@ pub fn eval<F: Fl>(e: &Expr, x: &[F], values: &Values) -> F {
                 Op::Neg => -arg(0),
                 Op::Exp => arg(0).exp(),
                 Op::Log => arg(0).ln(),
-                Op::Tanh => {
-                    let t = F::of(f64::from(TANH_SAT.number() as f32));
-                    let a = arg(0);
-                    let lo = if a < -t { -t } else { a };
-                    let y = (if lo > t { t } else { lo }).tanh();
-                    let hi = if y > one { one } else { y };
-                    if hi < -one {
-                        -one
-                    } else {
-                        hi
-                    }
-                }
+                // §3.9's `tanh` clamps its argument to `±tanh_sat` and selects ±1 past 1 in magnitude; on the host
+                // neither changes the result, the clamp acting only where `tanh` already rounds to ±1 at f32 and
+                // f64 and the select never (dd_generation_root §3.9), so the host's `tanh` is the operator's here.
+                Op::Tanh => arg(0).tanh(),
                 Op::Artanh => arg(0).atanh(),
                 Op::Sigmoid => one / (one + (-arg(0)).exp()),
                 Op::Logit => {
@@ -293,7 +285,7 @@ pub fn range_values(lo: f64, hi: f64) -> Vec<f64> {
 
 /// Requirement 1 at `F`: the forward's output at `x` in `codomain`'s closed range, its bounds at `F` as the emitter
 /// writes them; the simplex's masses each in `[0, 1]`, their sum within `ε_phys` of 1.
-fn constraint<F: Fl>(
+pub fn constraint<F: Fl>(
     link: &Link,
     codomain: Codomain,
     x: &[F],
@@ -325,7 +317,7 @@ fn constraint<F: Fl>(
 /// An interval codomain's closed bounds at `F`, as the emitter writes them: `α`'s and `β`'s upper ends are π/2 and π
 /// images, rounded toward zero at f32, the momenta's `±q_max` at the active value; a line's are infinite and the
 /// half-line's lower end 0.
-fn bounds<F: Fl>(codomain: Codomain, values: &Values) -> (f64, f64) {
+pub fn bounds<F: Fl>(codomain: Codomain, values: &Values) -> (f64, f64) {
     let at = |v: f64| F::lit(v).f64();
     match codomain {
         Codomain::Alpha => {
@@ -348,7 +340,7 @@ fn floats<F: Fl>(v: &[F]) -> Vec<f64> {
 
 /// Each control's clamp image `[lo_k, hi_k]`: the inverse of the forward of the most saturating control, `∓10³` in
 /// every component, which the inverse's ε clamp moves.
-fn clamp_images<F: Fl>(link: &Link, n: usize, values: &Values) -> Vec<(f64, f64)> {
+pub fn clamp_images<F: Fl>(link: &Link, n: usize, values: &Values) -> Vec<(f64, f64)> {
     let image = |s: f64| {
         let y = eval_all(link.forward, &vec![F::of(s); n], values);
         floats(&eval_all(link.inverse, &y, values))
@@ -359,7 +351,7 @@ fn clamp_images<F: Fl>(link: &Link, n: usize, values: &Values) -> Vec<(f64, f64)
 
 /// Requirement 2 at `F`: each control's clamp image finite and not empty, and where `x` lies strictly inside every
 /// one, the forward of the inverse of the forward within `ε_phys` of the forward, in the max norm.
-fn round_trip<F: Fl>(
+pub fn round_trip<F: Fl>(
     link: &Link,
     x: &[F],
     images: &[(f64, f64)],
@@ -434,7 +426,7 @@ fn column<F: Fl>(
 
 /// The differenced volume factor at the step `h` times `k_h`, `|f'|` for one control and `√det(JᵀJ)` for two, and its
 /// rounding: each forward value within `ε_phys·max(1, |f|)` (the module's note).
-fn volume<F: Fl>(link: &Link, x: &[F], k_h: f64, values: &Values) -> (f64, f64) {
+pub fn volume<F: Fl>(link: &Link, x: &[F], k_h: f64, values: &Values) -> (f64, f64) {
     let eps = EPS_PHYS.number() * F::EPS;
     let cols: Vec<(Vec<f64>, f64, f64)> = (0..x.len())
         .map(|k| column(link, x, k, k_h, values))
@@ -454,7 +446,7 @@ fn volume<F: Fl>(link: &Link, x: &[F], k_h: f64, values: &Values) -> (f64, f64) 
 
 /// Requirement 3 at `F`: `exp(log_det)` finite and within the central difference's own error of the differenced
 /// volume factor (the module's note).
-fn c1<F: Fl>(link: &Link, x: &[F], values: &Values) -> Result<(), String> {
+pub fn c1<F: Fl>(link: &Link, x: &[F], values: &Values) -> Result<(), String> {
     let ld = eval(&link.log_det, x, values).f64();
     let from_ld = ld.exp();
     if ld.is_nan() || !from_ld.is_finite() {

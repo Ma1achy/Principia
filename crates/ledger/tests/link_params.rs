@@ -7,8 +7,8 @@ use ledger::constants::{Citation, MU_MAX, Q_MAX};
 use ledger::gen;
 use ledger::layout;
 use ledger::links::{
-    builders, check, check_with, range_values, slots, tunables, Codomain, Expr, LinkBuilder, Op,
-    Param, Slot, Tunable,
+    builders, check, check_with, eval, range_values, slots, tunables, Codomain, Expr, LinkBuilder,
+    Op, Param, Slot, Tunable, Values,
 };
 use ledger::payload;
 use ledger::version::{canonical, fnv1a64, Hashed};
@@ -148,6 +148,8 @@ fn table_edits() -> Vec<(&'static str, Vec<Tunable>)> {
     reversed[0].lo = changed_default[0].hi + 1.0;
     let mut infinite = t.to_vec();
     infinite[0].hi = f64::INFINITY;
+    let mut below = t.to_vec();
+    below[0].lo = f64::NEG_INFINITY;
     vec![
         ("declared twice", with(mu)),
         (
@@ -176,6 +178,7 @@ fn table_edits() -> Vec<(&'static str, Vec<Tunable>)> {
         ("is not the chart constant's value", changed_default),
         ("is not finite with lo ≤ default", reversed),
         ("is not finite with lo ≤ default", infinite),
+        ("is not finite with lo ≤ default", below),
     ]
 }
 
@@ -183,6 +186,14 @@ fn table_edits() -> Vec<(&'static str, Vec<Tunable>)> {
 fn link_params_declared_table_refused() {
     for (naming, t) in table_edits() {
         check_refused(check_with(builders(), &slots(), &t), naming);
+    }
+    // A range closed onto its default, `[default, default]`, is a range: lo ≤ default ≤ hi holds at both ends.
+    let mut point = tunables().to_vec();
+    for r in &mut point {
+        (r.lo, r.hi) = (r.default, r.default);
+    }
+    if let Err(lines) = check_with(builders(), &slots(), &point) {
+        panic!("a range closed onto its default is refused: {lines:?}");
     }
 }
 
@@ -409,4 +420,176 @@ negative_control!(
         name: "mu_max",
         value: 1.5,
     }])
+);
+
+// ── The check's evaluator: each operator as the emitter's code evaluates it ─────────────────────────────────────
+
+fn leak(args: Vec<Expr>) -> &'static [Expr] {
+    Vec::leak(args)
+}
+
+fn op(o: Op, args: Vec<Expr>) -> Expr {
+    Expr::Op(o, leak(args))
+}
+
+const X: Expr = Expr::Input(0);
+const Y: Expr = Expr::Input(1);
+
+/// Each case: a tree over `(x, y)`, and its value by the host's own functions at f64 and at f32, as the emitter's code
+/// computes it (dd_generation_root §3.9's operators; the helpers' forms).
+fn cases(x: f64, y: f64) -> Vec<(Expr, f64, f32)> {
+    let (xf, yf) = (x as f32, y as f32);
+    vec![
+        (
+            op(Op::Add, vec![X, Y, Expr::Num(2.0)]),
+            x + y + 2.0,
+            xf + yf + 2.0,
+        ),
+        (
+            op(Op::Mul, vec![X, Y, Expr::Num(3.0)]),
+            x * y * 3.0,
+            xf * yf * 3.0,
+        ),
+        (op(Op::Sub, vec![X, Y]), x - y, xf - yf),
+        (op(Op::Div, vec![X, Y]), x / y, xf / yf),
+        (op(Op::Neg, vec![X]), -x, -xf),
+        (op(Op::Exp, vec![X]), x.exp(), xf.exp()),
+        (op(Op::Log, vec![Y]), y.ln(), yf.ln()),
+        (op(Op::Tanh, vec![X]), x.tanh(), xf.tanh()),
+        (
+            op(Op::Artanh, vec![Expr::Num(0.3)]),
+            0.3f64.atanh(),
+            0.3f32.atanh(),
+        ),
+        (
+            op(Op::Sigmoid, vec![X]),
+            1.0 / (1.0 + (-x).exp()),
+            1.0 / (1.0 + (-xf).exp()),
+        ),
+        (
+            op(Op::Logit, vec![Expr::Num(0.3)]),
+            (0.3f64 / 0.7).ln(),
+            (0.3f32 / (1.0 - 0.3f32)).ln(),
+        ),
+        (
+            op(Op::Softplus, vec![X]),
+            x.max(0.0) + (-x.abs()).exp().ln_1p(),
+            xf.max(0.0) + (-xf.abs()).exp().ln_1p(),
+        ),
+        (
+            op(Op::InvSoftplus, vec![Y]),
+            y + (-(-y).exp_m1()).ln(),
+            yf + (-(-yf).exp_m1()).ln(),
+        ),
+        (
+            op(Op::Sech2, vec![X]),
+            1.0 / (x.cosh() * x.cosh()),
+            1.0 / (xf.cosh() * xf.cosh()),
+        ),
+        (
+            op(Op::Clamp, vec![X, Y, Expr::Num(5.0)]),
+            x.max(y).min(5.0),
+            xf.max(yf).min(5.0),
+        ),
+        (
+            op(Op::Clamp, vec![X, Expr::Num(-5.0), Y]),
+            x.max(-5.0).min(y),
+            xf.max(-5.0).min(yf),
+        ),
+        (
+            Expr::Num(std::f64::consts::PI),
+            std::f64::consts::PI,
+            f32::from_bits(0x4049_0FDA),
+        ),
+        (
+            Expr::Num(std::f64::consts::FRAC_PI_2),
+            std::f64::consts::FRAC_PI_2,
+            f32::from_bits(0x3FC9_0FDA),
+        ),
+        (Expr::Num(0.1), 0.1, 0.1f32),
+    ]
+}
+
+/// Each case of `cases` at `(x, y)` is its value, bit for bit, at f64 and f32.
+fn check_eval(cases: &[(Expr, f64, f32)], x: f64, y: f64) {
+    let values = Values {
+        declared: &[],
+        active: &[],
+    };
+    for (i, (e, want64, want32)) in cases.iter().enumerate() {
+        let got64 = eval::<f64>(e, &[x, y], &values);
+        let got32 = eval::<f32>(e, &[x as f32, y as f32], &values);
+        assert_eq!(
+            got64.to_bits(),
+            want64.to_bits(),
+            "case {i} at f64: {got64} against {want64}"
+        );
+        assert_eq!(
+            got32.to_bits(),
+            want32.to_bits(),
+            "case {i} at f32: {got32} against {want32}"
+        );
+    }
+}
+
+/// A parameter reads its active value over its declared one, and NaN where neither holds it; an input past the
+/// argument, and an operator missing an argument, read NaN.
+fn check_eval_edges() {
+    let declared = [Param {
+        name: "a",
+        value: 2.0,
+    }];
+    let active = [Param {
+        name: "a",
+        value: 3.0,
+    }];
+    let at = |active: &[Param], e: &Expr| {
+        eval::<f64>(
+            e,
+            &[1.0],
+            &Values {
+                declared: &declared,
+                active,
+            },
+        )
+    };
+    assert_eq!(at(&active, &Expr::Param("a")), 3.0, "the active value");
+    assert_eq!(at(&[], &Expr::Param("a")), 2.0, "the declared value");
+    assert_eq!(
+        declared[0].value,
+        Values {
+            declared: &declared,
+            active: &[]
+        }
+        .get("a")
+    );
+    for e in [
+        Expr::Param("b"),
+        Expr::Input(1),
+        op(Op::Add, vec![]),
+        op(Op::Mul, vec![]),
+        op(Op::Sub, vec![X]),
+    ] {
+        assert!(at(&[], &e).is_nan(), "{e:?} is not NaN");
+    }
+    assert_eq!(at(&[], &op(Op::Add, vec![X])), 1.0, "a one-argument sum");
+}
+
+#[test]
+fn link_params_eval() {
+    for (x, y) in [(0.7, 1.3), (-0.7, 1.3), (6.5, 0.25), (-2.0, -1.0)] {
+        check_eval(&cases(x, y), x, y);
+    }
+    check_eval_edges();
+}
+
+negative_control!(
+    link_params_eval,
+    "a sum given another value is not the evaluator's",
+    expected = "case 0 at f64",
+    {
+        let mut c = cases(0.7, 1.3);
+        c[0].1 = 0.7 + 1.3;
+        check_eval(&c, 0.7, 1.3)
+    }
 );

@@ -23,7 +23,7 @@
 //! forward leaves its codomain at any value (R-482 C1). The entries' members are unchanged, so their hashed bytes stand;
 //! the declarations are hashed as a block of their own ([`crate::version`]).
 
-mod admissible;
+pub mod admissible;
 
 pub use admissible::{controls, eval, range_values, Fl, Values};
 
