@@ -4,7 +4,8 @@
 (`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/designs/`), its "Decided" section his words: "Accepted as
 proposed, with one change: **CSV body labels are 1-based**". Where the draft gave a choice with a recommendation (its
 §5), the recommendation is what was accepted, but for that change. Queued from it: RQ-563 (the frame the constructor
-integrates, against R-544) and RQ-564 (a kept orbit's `Trace`, against R-553).*
+integrates, against R-544) and RQ-564 (a kept orbit's `Trace`, against R-553), since ruled (24 Oct 2026): RQ-563 by
+R-589, `C(as_built)` with the mirror not taken, and RQ-564 by R-590, R-553 standing.*
 
 ## 1. What exists
 
@@ -98,7 +99,9 @@ twin opposite, and on the seam (`hemisphere = 0`) there is no twin.
 
 ### 3.4 Integration
 
-The constructor integrates `canonicalise(as_built)`, the survey's frame, and says so (the draft's open question 3, (a)).
+The constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken, the
+hemisphere kept, and says so (R-589, RQ-563 (a)). *Was:* "The constructor integrates `canonicalise(as_built)`, the
+survey's frame, and says so (the draft's open question 3, (a))."
 That needs a **state-in entry** beside `computeIC(chart, uv, simKey)`, since an off-slice IC has no `uv` and decoding
 `z` is not bitwise:
 
@@ -110,10 +113,16 @@ the same integration `computeIC` runs after its decode, from the state given, on
 tolerances, R-33), and the only other way into the engine the Inspector has. A picked IC still enters through
 `computeIC`.
 
-**Which frame `canonicalise` gives, under R-544, is RQ-563.** R-544 makes the shape sphere chart's decode signed, the
-mirror "never identified", and `C(x)` taken there with its step 3, the mirror, not taken. Meanwhile the constructor
-integrates `C(as_built)` with step 3 not taken, so the state integrated stays in the hemisphere it was built in, as the
-shape sphere chart's own decode does; `canonical.z`, `mirrored` and `hemisphere` are recorded as above. Nothing waits.
+**The frame integrated is RQ-563's, ruled by R-589 (24 Oct 2026), option (a).** R-544 makes the shape sphere chart's
+decode signed, the mirror "never identified", and `C(x)` taken there with its step 3, the mirror, not taken. The
+constructor integrates `C(as_built)` with step 3 not taken, so the state integrated stays in the hemisphere it was
+built in, as the shape sphere chart's own decode does, and a built IC and the same system picked on the chart integrate
+the same state. For `L_z ≠ 0` the twin `Π·x` is a different physical system, `L_z` reversed and the trajectory
+reflected, so folding would integrate something other than what was built (the human's reason). `canonical.z`,
+`mirrored` and `hemisphere` are recorded as above. *Was:* "**Which frame `canonicalise` gives, under R-544, is
+RQ-563.** … Meanwhile the constructor integrates `C(as_built)` with step 3 not taken, so the state integrated stays in
+the hemisphere it was built in, as the shape sphere chart's own decode does; `canonical.z`, `mirrored` and `hemisphere`
+are recorded as above. Nothing waits."
 
 **What `C` does here** (applied per R-369, fix round 4 of PR #287, physics review 5638148080, P2): steps 1a, 0, 1b and 2 are taken and step 3 is not, so the
 integrated initial state is bitwise the shared `C`'s step-3-not-taken result on `as_built` (REQ-CHART-081,
@@ -125,7 +134,8 @@ units, whose horizon is in those units (`principia_integrator_contract.md` Part 
 
 ### 3.5 In views: marks
 
-*Keep* stays scratch: the kept-orbit list and its tabs are `ViewUI`. **Mark** becomes the durable act: `Trace.ic` widens
+*Keep* stays scratch: the kept-orbit list and its tabs are `ViewUI` (a kept orbit's `Trace` is `Lines` state, R-553,
+R-590). **Mark** becomes the durable act: `Trace.ic` widens
 to
 
 ```
@@ -143,10 +153,13 @@ promotes the kept list to marks. One record is roughly 0.6 KB (an estimate, to b
 is one `SetField` and one undo entry, never n (R-69, R-52; applied per R-369, fix round 1 of PR #287, gui review
 5638052211, G1).
 
-**A kept orbit's `Trace` is RQ-564.** R-553 (RQ-428 (a)) made a kept orbit's `Trace`, its IC and style, `Lines` state
-that round-trips with `RenderState`; the draft's "Keep stays scratch" and its test "kept-only ICs are absent" were
-written before it. Meanwhile R-553 stands: a kept orbit's `Trace` stays in `Lines`, its `ic` an `IcRef` too, so a kept
-built IC round-trips; the kept-orbit tabs stay `ViewUI`; and the test's "kept-only ICs are absent" arm waits on RQ-564.
+**A kept orbit's `Trace` is RQ-564's, ruled by R-590 (24 Oct 2026), option (a).** R-553 (RQ-428 (a)) made a kept
+orbit's `Trace`, its IC and style, `Lines` state that round-trips with `RenderState`; the draft's "Keep stays scratch"
+and its test "kept-only ICs are absent" were written before it. R-553 stands: a kept orbit's `Trace` stays in `Lines`,
+its `ic` an `IcRef` too, so a kept built IC round-trips; the draft's "kept-only ICs are absent" arm is dropped, and in
+its place the Trajectory panel's kept-orbit tabs, `ViewUI`, do not travel. *Was:* "**A kept orbit's `Trace` is
+RQ-564.** … Meanwhile R-553 stands: … the kept-orbit tabs stay `ViewUI`; and the test's "kept-only ICs are absent" arm
+waits on RQ-564."
 
 ### 3.6 Trajectory export (R-587)
 
@@ -185,7 +198,9 @@ built IC round-trips; the kept-orbit tabs stay `ViewUI`; and the test's "kept-on
   stands, and R-586 records it.
 - **Amends** R-449 for the trajectory CSV's column labels only: they are 1-based, and the preamble says so. The record's
   own fields, the payload's `detail` and every other machine-readable export stay 0-based and say so (R-587).
-- R-544: the twin is shown (§3.3); the frame integrated is RQ-563. R-553: a kept orbit's `Trace` is RQ-564.
+- R-544: the twin is shown (§3.3); the frame integrated is `C(as_built)`, the hemisphere kept (R-589, closing RQ-563).
+  R-553: a kept orbit's `Trace` travels in `Lines` and the kept-orbit tabs do not (R-590, closing RQ-564). *Was:* "the
+  frame integrated is RQ-563. R-553: a kept orbit's `Trace` is RQ-564."
 - §G8 gains Copy, Save, Open and Export trajectory, and File gains *Save IC…* and *Open IC…*.
 
 ## 5. Decided
@@ -205,6 +220,6 @@ body1/body2/body3)."
 | Save, open and re-save give a byte-identical file; `as_built` is bitwise over 10⁴ random ICs, −0 included | a lossy number format, or −0 survives |
 | Built in the lower hemisphere, reopened: dot lower, twin upper; on the seam, no twin | `as_built` is replaced by the canonical form |
 | A changed link entry hash loads the physics and refuses to locate it, naming the link | a default link stands in |
-| A marked IC survives a snapshot, a saved view, `tEXt` and a share link bitwise; kept-only ICs are absent (this arm waits on RQ-564) | marks ride `ViewUI`, or `ViewUI` leaks |
+| A marked IC survives a snapshot, a saved view, `tEXt` and a share link bitwise; the Trajectory panel's kept-orbit tabs (`ViewUI`) do not travel (R-590; *was:* "kept-only ICs are absent (this arm waits on RQ-564)") | marks ride `ViewUI`, or `ViewUI` leaks |
 | The CSV's rows equal the Inspector's steps; a truncated run is marked incomplete | resampling, or a silent cut |
 | The CSV's `detail` is 0-based and the GUI label 1-based for one collision; the body columns are `body1_…` to `body3_…` | the conversion is skipped or doubled; a 0-based body label |

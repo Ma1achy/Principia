@@ -1464,8 +1464,10 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   in (§G3); **File › Save IC…** writes
   `<label>.principia-ic.json` and **File › Open IC…** (or a drop) opens one in Create & locate, in its as-built frame,
   recovered, physics only (naming the link) or corrupt, the stored `z` against the recomputed shown as a residual. A
-  reopened IC sits in the hemisphere it was built in, its twin opposite. **Mark** is the durable act: a marked IC is a
-  `Trace` in `Lines`, travelling with the view; **Mark all kept** promotes the kept list; each is one `SetField` on
+  reopened IC sits in the hemisphere it was built in, its twin opposite, and is integrated there, `C(as_built)` with
+  the mirror step not taken, never as its twin (R-589). **Mark** is the durable act: a marked IC is a
+  `Trace` in `Lines`, travelling with the view, as a kept orbit's `Trace` does while the kept-orbit tabs do not (R-553,
+  R-590); **Mark all kept** promotes the kept list; each is one `SetField` on
   `RenderField::Lines` and one undo entry (R-69). **Export trajectory…** writes
   `<label>.traj.csv`, one row per step as taken, its body columns labelled 1-based (`body1_x` …).
 

@@ -4,7 +4,7 @@
 (`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/designs/`), its "Decided" section his words: "All three accepted
 as proposed". Where the draft gave a choice with a recommendation (its §5), the recommendation is what was accepted.
 Queued from it: RQ-562 (the export's frozen window and `base_width`, written into the exported `RenderState`, against
-R-484's round trip).*
+R-484's round trip), since ruled by R-588 (24 Oct 2026): the identity holds on the record.*
 
 ## 1. What exists
 
@@ -64,6 +64,10 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
   the node's inspector removes its entry, one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry
   (R-69). A snapshot JSON or share link is not an image export: it carries `frozen_ranges` as the view has it and
   freezes nothing (applied per R-369).
+- **The record is the identity (R-588, RQ-562 (a)).** "An export is a record of what was drawn" (the human): import
+  gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, so the import
+  reproduces the image that was drawn and never re-measures a live window; R-484's identity holds on that record. The
+  export reports the fields it froze. R-484's T1 runs on the headless paths, which freeze nothing.
 - **An entry goes with its node** (applied per R-369, fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node with
   an entry (Delete node, render GUI spec Part II §7) or a preset replacing the whole graph (Part II §11) drops the
   entry of every node no longer in the graph in the same undoable command, one history key and one undo entry
@@ -142,8 +146,9 @@ export { range_policy: frozen | per_frame | prepass_union,
 - State contract §2 gains `ViewUI.cvd`, `RenderState.frozen_ranges` and `RenderState.base_width`.
 - **Amends** REQ-RENDER-088 (`PrintPt`), lines §3 and §5's units and R-476 as it adopted them, and print_graph §6.2 and
   R-490: `ref_px` becomes base px with 1024 the default base; R-490's export-size invariance still holds.
-- The export writes `frozen_ranges` and `base_width` into the `RenderState` it records, which R-484's "import of an
-  export is the identity" reads against the live view's state: RQ-562 (§3.1, §3.3).
+- The export writes `frozen_ranges` and `base_width` into the `RenderState` it records, and R-484's "import of an
+  export is the identity" holds on that record (R-588, closing RQ-562; §3.1, §3.3). *Was:* "which R-484's "import of
+  an export is the identity" reads against the live view's state: RQ-562 (§3.1, §3.3)."
 
 ## 5. Decided
 

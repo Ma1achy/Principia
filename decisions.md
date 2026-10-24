@@ -25082,6 +25082,10 @@ what an import reads back is, bitwise, the `RenderState` the export wrote; T1 ru
 freezes nothing a state has not already frozen and keeps its `base_width`; and a GUI export's `frozen_ranges` and
 `base_width` are named in the export's report as written by the export. Nothing waits.
 
+*24 Oct 2026:* RQ-562 is ruled, option (a), by **R-588**: the identity read on the record, as above, is no longer
+an interim. Import gives back, bitwise, the `RenderState` the export wrote, frozen windows and `base_width` included;
+the export reports the fields it froze; T1 runs on the headless paths. Nothing above holds on RQ-562 now.
+
 *Applied per R-369:*
 - **The clipped share** is the fraction of the export's pixels the chart classifies as a system (R-467) whose value
   fell below `lo` or above `hi`, a pixel that is not a system counting at neither end.
@@ -25209,6 +25213,9 @@ recommendations:
   of `base_width` move to TASK-M8-80 (REQ-TOOL-218, new), since their writers on the real engine are M8's (TASK-M8-32,
   TASK-M8-33); REQ-RENDER-118 is cut to the destinations M7 builds (the renderer, the headless writer, a record
   without `base_width`), as TASK-M7-45's F1 of PR #265; and TASK-M7-70 depends on TASK-M7-44 (the tier table).
+
+*24 Oct 2026:* RQ-562 is ruled, option (a), by **R-588**: the `base_width` a GUI save or export writes is in
+R-484's identity on the record written, and a headless writer keeps the state's. Nothing here holds on RQ-562 now.
 
 R-583 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -25432,6 +25439,11 @@ integrated; (a) −0 normalised to +0.
   included) is `Lines` state and round-trips with `RenderState`." Meanwhile R-553 stands: a kept orbit's `Trace` stays
   in `Lines`, its `ic` an `IcRef` too, and the test's "kept-only ICs are absent" arm waits (REQ-GUI-395, `rq: RQ-564`).
 
+*24 Oct 2026:* RQ-563 is ruled, option (a), by **R-589**: the constructor integrates `C(as_built)` with steps 1a,
+0, 1b and 2 taken and step 3 not taken, the hemisphere kept; the trajectory CSV stays in that frame. RQ-564 is
+ruled, option (a), by **R-590**: R-553 stands, and REQ-GUI-395's "kept-only ICs are absent" arm is dropped, its
+replacement that the Trajectory panel's kept-orbit tabs (`ViewUI`) do not travel. Neither holds on its RQ now.
+
 *Applied per R-369:*
 - **A mark is a `Trace` of a new kind, `Marked(id)`**, drawn as REQ-GUI-120's crosshair at its IC's projection on the
   current slice and, under the trace settings, its path: the kind that holds what the draft's "Mark" makes durable.
@@ -25504,3 +25516,83 @@ R-587 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-GEN-036 (statement, rulings, note). Adds REQ-TOOL-212 (the trajectory CSV) and REQ-TOOL-213 (definition:
 the columns after `Lz`).
+
+## R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*
+*24 Oct 2026 · applied in R-581's and R-583's dated lines (forward sentences), `docs/design/principia_export_details.md`
+(its heading note, §3.1 and §4, their earlier words kept), `docs/contracts/principia_gui_state_contract.md` §2 (the
+export details and the round-trip rule), `docs/archive/review_queue/M0.md` (RQ-562, moved with its ruling),
+REQ-RENDER-117 and REQ-RENDER-118 (reqio: rulings, source, note), TASK-M8-80 and TASK-M7-70 (their notes and
+references) and `plan/rule_groups.yaml`; built by TASK-M8-80 and TASK-M7-70*
+
+The human's message, 24 Oct 2026, its second ruling, verbatim:
+
+> RQ-562 (frozen windows and base_width in an export's RenderState): (a).
+> R-484's identity holds on the record. Import gives back, bitwise, the RenderState the export wrote, frozen windows and base_width included, and the export reports the fields it froze.
+> Reason: an export is a record of what was drawn. Importing it must reproduce that image, not re-measure a live window that would land differently.
+> T1 runs on the headless paths, which freeze nothing.
+
+*What it decides:* RQ-562's option (a), the interim R-581 and R-583 applied. R-484 RT1's "import of an export is the
+identity on `SimConfig` and `RenderState`" reads on the record the export wrote, not on the exporter's live view: a
+GUI image export writes each measured window it freezes into `RenderState.frozen_ranges` and the figure's width into
+`RenderState.base_width`, and importing it gives back that `RenderState` bitwise, frozen windows and `base_width`
+included, so the import reproduces the image that was drawn and never re-measures. The export reports the fields it
+froze. R-484's T1 (every field off its default, round-tripped through every path) runs on the headless paths, whose
+writer freezes nothing and keeps the state's `base_width`, so T1's identity is exact there. Options (b) (a sidecar
+outside the identity) and (c) (nothing frozen in `RenderState`) are not taken.
+
+R-588 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-RENDER-117 and REQ-RENDER-118 (rulings, source, note).
+
+## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
+*24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
+note, §3.4 and §4, their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its
+trajectory, one timeline (`05_inspectors.png`)" (a sentence), `docs/archive/review_queue/M0.md` (RQ-563, moved with its
+ruling), REQ-INT-107 (reqio: statement, rulings, source, note), TASK-M8-83 and TASK-M8-84 (their notes and references)
+and `plan/rule_groups.yaml`; built by TASK-M8-83 and TASK-M8-84*
+
+The human's message, 24 Oct 2026, its first ruling, verbatim:
+
+> RQ-563 (frame the IC constructor integrates): (a).
+> C(as_built) with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken. The hemisphere is kept.
+> Reason: for L_z ≠ 0 the mirror twin Π·x is a different physical system: L_z reversed, trajectory reflected. Folding would integrate something other than what was built. (a) matches the shape-sphere chart's own decode, so a built IC and the same system picked on the chart integrate the same state. R-544: "never identified".
+> The trajectory CSV stays in C(as_built)'s frame, as #287 already does.
+
+*What it decides:* RQ-563's option (a), the interim R-586 applied. The constructor integrates, through
+`computeICState`, `C(as_built)` with steps 1a, 0, 1b and 2 taken (the centre of mass at the origin and at rest,
+`I = 1`, the rotation) and step 3, the mirror, not taken, so a lower-hemisphere IC is integrated as itself, never as its
+twin `Π·x`, whose `L_z` is reversed and trajectory reflected. This is the shape sphere chart's own decode (R-544), so a
+built IC and the same system picked on the chart integrate the same state. The draft's "The constructor integrates
+`canonicalise(as_built)`, the survey's frame" (its open question 3, (a)) is not adopted. The trajectory CSV's rows stay
+in `C(as_built)`'s frame, as `principia_ic_save.md` §3.6 and REQ-TOOL-212 already have them. The record's
+`canonical.z`, `mirrored` and `hemisphere` are recorded as R-586 has them; the ruling does not touch them.
+
+R-589 is in the "physics" group of `plan/rule_groups.yaml`, with R-544.
+
+Changes REQ-INT-107 (statement, rulings, source, note).
+
+## R-590 — A kept orbit's `Trace` travels with an export: R-553 stands, the `Trace` round-tripping in `Lines`, its `ic` an `IcRef`; the draft's "kept-only ICs are absent" arm leaves REQ-GUI-395's test, replaced by the Trajectory panel's kept-orbit tabs (`ViewUI`) not travelling *(closes RQ-564; settles R-586's interim)*
+*24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
+note, §3.5, §4 and §6's table, their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one
+IC, its trajectory, one timeline (`05_inspectors.png`)" (a sentence), `docs/contracts/principia_gui_state_contract.md`
+§2 (the IC's marks), `docs/archive/review_queue/M0.md` (RQ-564, moved with its ruling), REQ-GUI-395 (reqio: statement,
+verify, rulings, `rq` removed, source, note), TASK-M8-84 (its acceptance line, notes and references) and
+`plan/rule_groups.yaml`; built by TASK-M8-84*
+
+The human's message, 24 Oct 2026, its third ruling, verbatim:
+
+> RQ-564 (an IC that is kept but not marked, in exports): (a).
+> R-553 stands: a kept orbit's Trace round-trips in Lines, its ic an IcRef. Drop the draft's "kept-only ICs are absent" arm from REQ-GUI-395's test.
+> Its replacement arm: the Trajectory panel's kept-orbit tabs (ViewUI) do not travel.
+
+*What it decides:* RQ-564's option (a). R-553 (RQ-428 (a)) stands: a kept orbit's `Trace`, its IC and style, is
+`Lines` state and round-trips with `RenderState` on every path, its `ic` an `IcRef` as a mark's is, so a kept built IC
+travels too. The draft's "kept-only ICs are absent" arm is dropped from REQ-GUI-395's test (`principia_ic_save.md` §6's
+table). Its replacement arm: the Trajectory panel's kept-orbit tabs, `ViewUI`, do not travel. The draft's "*Keep* stays
+scratch" reads, under R-553, as the kept-orbit list and its tabs being `ViewUI`; a kept orbit's `Trace` is not scratch.
+
+*Also in the same message:* "Decisions taken under R-369 in #284, #276, #286 and #287: no vetoes. All stand."
+
+R-590 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-395 (statement, verify, rulings, rq, source, note).
