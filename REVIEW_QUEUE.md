@@ -1046,3 +1046,45 @@ does after a takeover in such a segment, and which specs the reel may hold.*
   state live shows at that frame; after a takeover in a link-parameter ease the live player holds the takeover's value
   until the second keyframe, then cuts (option (i) of the second question, as an interim only). Nothing waits.
   *Was:* "(a). Nothing waits." (fix round 6 of PR #286, physics review 5631678451, P4; applied per R-369).
+
+## RQ-566: The Anosova region-D rest starts the literature import must match: no region D, no rest start and no paper's stated values in the corpus or the repo *(found by TASK-M2-20; REQ-VAL-019, REQ-VAL-120; context: TASK-M2-20)*
+
+*Found by TASK-M2-20 before any code was written. For the human: yes, it is a calibration value (R-71) that only the
+papers hold, and the task may not download them.*
+
+- **File, section:**
+  - `docs/design/principia_dd_encode.md` § "4. Seams (obligations → integration tests)", the validation import row:
+    "Anosova region-D and Burrau rest starts encode → decode → invariants match the papers' stated values after the
+    recorded rescale".
+  - `docs/design/principia_dd_encode.md` § "1. What it is": "**literature IC import** (how the validation programme's
+    Anosova/Lehto/Burrau starts get loaded)".
+  - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set", the
+    Anosova row: "physical (m,r,p) construction → **canonicalise entry** → standard pipeline | region D bounds". The
+    bounds are named, never given.
+  - `plan/tasks/M2/TASK-M2-20.md` § "Notes": "The papers' values are not in the corpus; they enter through
+    REQ-VAL-120's proposal, with citations."
+- **What is missing:** for Burrau the corpus holds the start and its values (chart_reference §4.2's historical
+  convention, masses `(3, 4, 5)` at rest; dd_validation_orbits §2, R-257: `M = 12`, `R = 2.2361`, `E = −12.8167`), so
+  that half proceeds. For Anosova the corpus holds nothing: not region D (which triangle, which masses, which length
+  unit), not which rest starts in it are imported, not the paper that states them, and not that paper's stated `E`
+  and `L_z`. They are outside the repo, the task may download nothing, and a value recalled without the paper in hand
+  is a guess (R-71: "No value is invented silently").
+- **Options seen:**
+  - (a) The human supplies the source: the paper (or its stated region D, rest starts and their `E`, `L_z`, with the
+    citation) placed in the repo, say under `docs/incoming/`, and ported into `dd_validation_orbits` with its citation;
+    TASK-M2-20 then proposes REQ-VAL-120's tolerance against them as written.
+  - (b) Port region D and its rest starts as a definition (R-72), the region's equal masses and corner bodies as the
+    literature gives them, cited; a rest start has `L_z = 0` and `E = U`, so the reference values are computed from
+    the stated configuration rather than read from a table, and the check is the import's round trip of a foreign
+    frame. This still needs the human to confirm the cited definition, since it cannot be checked here.
+  - (c) Move the Anosova half of REQ-VAL-019 and REQ-VAL-120 to the milestone that builds the Anosova chart (the
+    lowering contract's row), where region D's bounds must be defined anyway; TASK-M2-20 closes on Burrau, Lagrange and
+    the figure-eight. A deferral, so a ruling.
+- **Side note, not waiting:** the figure-eight's positions and momenta are not in the corpus either
+  (dd_validation_orbits §1.2 says "ICs and period above"; §0 gives only `E = −1.2871419918`, `L_z = 0`, `T`). The
+  initial condition the existing tests use (`crates/kernel/tests/derived.rs`, unit masses, `r₁ = −r₂ =
+  (0.97000436, −0.24308753)`, `r₃ = 0`, `p₃ = (−0.93240737, −0.86473146)`, `p₁ = p₂ = −p₃/2`) gives
+  `E = −1.287141991766`, §0's value to its ten places, and `L_z = 0`; TASK-M2-20 would ingest that one, citing §0's
+  values as the check.
+- **Applied meanwhile:** nothing. TASK-M2-20 waits as a whole: its REQ-VAL-019 and REQ-VAL-120 name the Anosova starts,
+  and building the rest alone would split the task, which needs a ruling (WORKFLOW § "No deferral").

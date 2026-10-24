@@ -27186,6 +27186,8 @@
   rulings:
   - R-71
   milestone: M2
+  rq:
+  - RQ-566
   note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration)."
 - id: REQ-VAL-020
   area: VAL
@@ -28938,6 +28940,8 @@
   rulings:
   - R-71
   milestone: M2
+  rq:
+  - RQ-566
 - id: REQ-VAL-121
   area: VAL
   kind: calibration
