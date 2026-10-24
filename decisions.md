@@ -25029,7 +25029,8 @@ The shared prelude library", `docs/contracts/principia_export_animation_contract
 in blocking mode", `docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_dd_image_embedding.md`
 §6 (tier 2's row), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-562, new), REQ-RENDER-117,
 REQ-TOOL-201, REQ-TOOL-202 and REQ-GUI-389 (new), TASK-M8-80 (new) and `plan/rule_groups.yaml`; the record is
-`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-80*
+`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-80; and, in fix round 3 of PR #287 (code review 5638122561, C1, applied per R-369),
+REQ-TOOL-216 and REQ-TOOL-217 (new; the latter a calibration), closed by TASK-M8-80*
 
 R-581 to R-587 are the gap sweep's PR 2c, the part of the bundle's "PR 2 — New design documents" that carries
 `designs/export_details.md`, `designs/video_carrier_test.md`, `designs/uploaded_picture.md` and `designs/ic_save.md`.
@@ -25113,6 +25114,8 @@ R-581 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-RENDER-117 (the frozen source), REQ-TOOL-201 (a recording's one window), REQ-TOOL-202 (the export block and
 the clipped shares) and REQ-GUI-389 (frozen at export and Re-measure).
+Fix round 3 of PR #287 adds REQ-TOOL-216 (the opt-in pre-pass) and REQ-TOOL-217 (calibration: the pre-pass's
+resolution) (code review 5638122561, C1, applied per R-369).
 
 ## R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless "As seen with" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured
 *21 Oct 2026 · applied in `docs/design/principia_export_details.md` (new, §3.2), `docs/gui/principia_render_gui_spec.md`
@@ -25161,7 +25164,9 @@ its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "Export & sh
 and R-490's heading blocks (a forward line each, their "Still in force" lines), REQ-RENDER-088 and REQ-RENDER-111
 (reqio), REQ-RENDER-118 and REQ-TOOL-205 (new), TASK-M7-70 and TASK-M8-80 (new), TASK-M7-42 and TASK-M7-55 and
 `plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M7-70,
-TASK-M7-42, TASK-M7-55 and TASK-M8-80*
+TASK-M7-42, TASK-M7-55 and TASK-M8-80; and, in fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369), REQ-RENDER-118
+(reqio, cut to the destinations M7 builds), REQ-TOOL-218 (new), TASK-M7-70 (a dependency on TASK-M7-44) and TASK-M8-80
+(closes REQ-TOOL-218)*
 
 The human's words for it are quoted in R-581: "One size rule ("base px") for lines, labels and marks; PrintPt is retired
 (amends REQ-RENDER-088 and print_graph §6.2)" (the instruction), "line and label sizes scale with the export" (the
@@ -25200,11 +25205,17 @@ recommendations:
   export's ratio is `k` on every display (`principia_export_details.md` §3.3).
 - **Two tasks:** TASK-M7-70 (M7) builds base px and `base_width` in the line engine and the Print graph, after
   TASK-M7-42 and TASK-M7-55, which keep REQ-RENDER-088 and REQ-RENDER-111 as amended; TASK-M8-80 the physical size.
+- **Fix round 3 of PR #287** (code review 5638122561, C3, applied per R-369): the GUI's save and Export & share writers
+  of `base_width` move to TASK-M8-80 (REQ-TOOL-218, new), since their writers on the real engine are M8's (TASK-M8-32,
+  TASK-M8-33); REQ-RENDER-118 is cut to the destinations M7 builds (the renderer, the headless writer, a record
+  without `base_width`), as TASK-M7-45's F1 of PR #265; and TASK-M7-70 depends on TASK-M7-44 (the tier table).
 
 R-583 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-RENDER-088 (statement, verify, rulings, source, note) and REQ-RENDER-111 (statement, rulings, source, note).
 Adds REQ-RENDER-118 (base px) and REQ-TOOL-205 (physical size).
+Fix round 3 of PR #287 adds REQ-TOOL-218 (the GUI's `base_width` writers) (code review 5638122561, C3, applied per
+R-369).
 
 ## R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's "off by default for figure export" stays for single figures
 *21 Oct 2026 · applied in `docs/design/principia_video_carrier.md` (new), `docs/gui/principia_render_gui_spec.md` §
@@ -25364,7 +25375,8 @@ kept, and a bullet), `docs/contracts/principia_parity_contract.md` § "1. The pr
 `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-563 and RQ-564, new), REQ-GUI-117 and REQ-GUI-120 (reqio),
 REQ-INT-107, REQ-RENDER-119, REQ-TOOL-211 and REQ-GUI-393 to REQ-GUI-395 (new), TASK-M8-83 and TASK-M8-84 (new),
 TASK-M8-16 and `plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built
-by TASK-M8-83 and TASK-M8-84*
+by TASK-M8-83 and TASK-M8-84; and, in fix round 3 of PR #287 (code review 5638122561, C2, applied per R-369), TASK-M8-83 (a dependency on TASK-M2-43, a need
+of REQ-CHART-081)*
 
 `INSTRUCTION.md` § "PR 2 — New design documents", its `ic_save.md` item, verbatim:
 
@@ -25450,6 +25462,8 @@ integrated; (a) −0 normalised to +0.
   and `pᵢ`; the trajectory CSV's preamble states the centre-of-mass offset and velocity and `θ` beside `λ`.
 - **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
   reopening, marks and the trajectory CSV, R-587).
+- **Fix round 3 of PR #287** (code review 5638122561, C2, applied per R-369): TASK-M8-83 depends on TASK-M2-43, whose
+  `canon.rs` gives the shared `C` its step-3-not-taken entry, and needs REQ-CHART-081.
 
 R-586 is in the "design" group of `plan/rule_groups.yaml`.
 
