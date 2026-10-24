@@ -59,7 +59,7 @@ use crate::decode::descriptor::pi_image;
 use crate::decode::mass::from_masses;
 use crate::decode::Ic;
 use crate::generated::links::{
-    Alpha, Beta, Link, LinkReal, Momentum, Selection, SoftmaxTanh, StickBreaking,
+    Alpha, Beta, Link, LinkParams, LinkReal, Momentum, Selection, SoftmaxTanh, StickBreaking,
 };
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
@@ -142,6 +142,12 @@ pub fn beta<R: LinkReal>(lambda_t: [R; 2]) -> R {
 pub trait Ends {
     /// `(a, b)`, the lower and the upper end.
     fn ends<R: LinkReal>() -> (R, R);
+
+    /// [`Ends::ends`] at the tunable parameters `p`: a codomain whose ends read none is its own.
+    #[inline]
+    fn ends_at<R: LinkReal>(_p: &LinkParams<R>) -> (R, R) {
+        Self::ends()
+    }
 }
 
 /// `α`'s `[α_min, π/2 − α_min]` (dd_decoder §3.2, R-21), read as `α_min` and the registry's literal `π/2`
@@ -161,11 +167,16 @@ impl Ends for Beta {
     }
 }
 
-/// The momenta's `[−q_max, q_max]` (R-10).
+/// The momenta's `[−q_max, q_max]`, at the active `q_max` (R-10's default; R-481 A2, G4).
 impl Ends for Momentum {
     #[inline]
     fn ends<R: LinkReal>() -> (R, R) {
-        (-R::Q_MAX, R::Q_MAX)
+        Self::ends_at(&LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn ends_at<R: LinkReal>(p: &LinkParams<R>) -> (R, R) {
+        (-p.q_max, p.q_max)
     }
 }
 
@@ -178,9 +189,22 @@ where
     L::Codomain: Ends,
     R: LinkReal,
 {
-    let (a, b) = <L::Codomain as Ends>::ends::<R>();
-    let [lo] = L::forward(L::inverse([a]));
-    let [hi] = L::forward(L::inverse([b]));
+    clamps_at::<L, R>(v, &LinkParams::DEFAULT)
+}
+
+/// [`clamps`] at the tunable parameters `p`: the ends, the forward and the inverse at the active values, so a momentum
+/// past the active `q_max` is clamped and flagged, encode's layer 1 (inverse-encode § "Chart-aware validation"; R-481
+/// G4).
+#[inline]
+pub fn clamps_at<L, R>(v: R, p: &LinkParams<R>) -> bool
+where
+    L: Link<1, 1>,
+    L::Codomain: Ends,
+    R: LinkReal,
+{
+    let (a, b) = <L::Codomain as Ends>::ends_at::<R>(p);
+    let [lo] = L::forward_at(L::inverse_at([a], p), p);
+    let [hi] = L::forward_at(L::inverse_at([b], p), p);
     !((v >= lo) & (v <= hi))
 }
 
@@ -195,13 +219,25 @@ fn outside<R: LinkReal>(c: R, cap: R) -> bool {
 pub trait SimplexClamp: Link<2, 3> {
     /// The two controls' clamp bits.
     fn clamps<R: LinkReal>(m: [R; 3]) -> u32;
+
+    /// [`SimplexClamp::clamps`] at the tunable parameters `p`: a link whose clamp reads none is its own.
+    #[inline]
+    fn clamps_at<R: LinkReal>(m: [R; 3], _p: &LinkParams<R>) -> u32 {
+        Self::clamps(m)
+    }
 }
 
-/// `μₖ = log(mₖ/m₀)` against `±(1 − ε_μ)·μ_max` (inverse-encode Part 3), as the registry's inverse forms both.
+/// `μₖ = log(mₖ/m₀)` against `±(1 − ε_μ)·μ_max` (inverse-encode Part 3), as the registry's inverse forms both, at the
+/// active `μ_max` (R-481 G4).
 impl SimplexClamp for SoftmaxTanh {
     #[inline]
     fn clamps<R: LinkReal>(m: [R; 3]) -> u32 {
-        let cap = (R::one() - R::EPS_MU) * R::MU_MAX;
+        Self::clamps_at(m, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn clamps_at<R: LinkReal>(m: [R; 3], p: &LinkParams<R>) -> u32 {
+        let cap = (R::one() - R::EPS_MU) * p.mu_max;
         let mu1 = Float::ln(m[1] / m[0]);
         let mu2 = Float::ln(m[2] / m[0]);
         select(outside(mu1, cap), 1, 0) | select(outside(mu2, cap), 2, 0)
@@ -259,26 +295,38 @@ where
     S::MassLink: SimplexClamp,
     R: LinkReal,
 {
+    invert_at::<S, R>(ic, &LinkParams::DEFAULT)
+}
+
+/// [`invert`] at the tunable parameters `p`: each inverse and each clamp test at the active `μ_max` and `q_max`
+/// (R-481 A2, G4; REQ-DEC-048).
+#[inline]
+pub fn invert_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Inverted<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal,
+{
     let j = jacobi(ic);
     let a = alpha(j.rho_t, j.lambda_t);
     let b = beta(j.lambda_t);
-    let [z_alpha] = <S::AlphaLink as Link<1, 1>>::inverse([a]);
-    let [z_beta] = <S::BetaLink as Link<1, 1>>::inverse([b]);
+    let [z_alpha] = <S::AlphaLink as Link<1, 1>>::inverse_at([a], p);
+    let [z_beta] = <S::BetaLink as Link<1, 1>>::inverse_at([b], p);
     let q = [j.p_rho[0], j.p_rho[1], j.p_lambda[0], j.p_lambda[1]];
-    let [z_q0] = <S::Q0Link as Link<1, 1>>::inverse([q[0]]);
-    let [z_q1] = <S::Q1Link as Link<1, 1>>::inverse([q[1]]);
-    let [z_q2] = <S::Q2Link as Link<1, 1>>::inverse([q[2]]);
-    let [z_q3] = <S::Q3Link as Link<1, 1>>::inverse([q[3]]);
+    let [z_q0] = <S::Q0Link as Link<1, 1>>::inverse_at([q[0]], p);
+    let [z_q1] = <S::Q1Link as Link<1, 1>>::inverse_at([q[1]], p);
+    let [z_q2] = <S::Q2Link as Link<1, 1>>::inverse_at([q[2]], p);
+    let [z_q3] = <S::Q3Link as Link<1, 1>>::inverse_at([q[3]], p);
     let m = guard(ic.m);
-    let [z_mu1, z_mu2] = <S::MassLink as Link<2, 3>>::inverse(m);
+    let [z_mu1, z_mu2] = <S::MassLink as Link<2, 3>>::inverse_at(m, p);
     let bit = |c: bool, k: u32| select(c, 1u32 << k, 0);
-    let clamped = bit(clamps::<S::AlphaLink, R>(a), 0)
-        | bit(clamps::<S::BetaLink, R>(b), 1)
-        | bit(clamps::<S::Q0Link, R>(q[0]), 2)
-        | bit(clamps::<S::Q1Link, R>(q[1]), 3)
-        | bit(clamps::<S::Q2Link, R>(q[2]), 4)
-        | bit(clamps::<S::Q3Link, R>(q[3]), 5)
-        | (<S::MassLink as SimplexClamp>::clamps(m) << 6);
+    let clamped = bit(clamps_at::<S::AlphaLink, R>(a, p), 0)
+        | bit(clamps_at::<S::BetaLink, R>(b, p), 1)
+        | bit(clamps_at::<S::Q0Link, R>(q[0], p), 2)
+        | bit(clamps_at::<S::Q1Link, R>(q[1], p), 3)
+        | bit(clamps_at::<S::Q2Link, R>(q[2], p), 4)
+        | bit(clamps_at::<S::Q3Link, R>(q[3], p), 5)
+        | (<S::MassLink as SimplexClamp>::clamps_at(m, p) << 6);
     Inverted {
         z: [z_alpha, z_beta, z_q0, z_q1, z_q2, z_q3, z_mu1, z_mu2],
         alpha: a,

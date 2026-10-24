@@ -6,7 +6,9 @@
 //! `QuadReduction` member list by name and type, and each constants-register entry that decides what the payload's
 //! stored bits mean ([`STORED_BITS`]), by its value, type and class, not its citation (dd_generation_root §3.8, "The
 //! hash"; R-251), and the link registry: each entry by its semantic content, not its sampling note, and each chart
-//! constant by value (§3.9, "The hash"; R-340, R-344).
+//! constant by value (§3.9, "The hash"; R-340, R-344), and after them, as a block of their own, the declarations of the
+//! tunable link parameters: each its entry, its parameter's name, its default and its range's ends by value, never its
+//! citation, and never an active value, which is a view's state (R-481 G5; REQ-GEN-042).
 //!
 //! [`canonical`] serialises it with no formatting-dependent bytes: each item is written field by field in a fixed
 //! order, each string length-prefixed, each number by its bits, big-endian, each enum by its §3.8 spelling. Words,
@@ -17,7 +19,7 @@
 //! constant's citation. [`fnv1a64`] hashes the bytes.
 
 use crate::constants::{Admissibility, ConstantBuilder, Value};
-use crate::links::{Expr, Link, Param};
+use crate::links::{Expr, Link, Param, Tunable};
 use crate::payload::ReductionMember;
 use crate::schema::{
     Bound, Consumer, Entry, FieldType, Location, Overflow, Provenance, Range, Scale, Storage,
@@ -66,6 +68,8 @@ pub struct Hashed<'a> {
     pub links: &'a [Link],
     /// The link registry's chart constants, each hashed by value (R-344).
     pub chart_constants: &'a [Param],
+    /// The tunable parameters' declarations (R-481 G5), hashed after the chart constants.
+    pub tunables: &'a [Tunable],
 }
 
 impl<'a> Hashed<'a> {
@@ -92,6 +96,7 @@ impl<'a> Hashed<'a> {
             register: crate::constants::REGISTER,
             links: crate::links::registry(),
             chart_constants: crate::links::CHART_CONSTANTS,
+            tunables: crate::links::tunables(),
         }
     }
 }
@@ -447,6 +452,15 @@ pub fn canonical(h: &Hashed) -> Result<Vec<u8>, String> {
     links.sort_by_key(|l| l.name);
     c.list(&links, |c, l| c.link(l));
     c.list(&sorted(h.chart_constants), |c, p| c.param(p));
+    let mut tunables: Vec<&Tunable> = h.tunables.iter().collect();
+    tunables.sort_by_key(|t| (t.entry, t.param));
+    c.list(&tunables, |c, t| {
+        c.str(t.entry);
+        c.str(t.param);
+        c.f64(t.default);
+        c.f64(t.lo);
+        c.f64(t.hi);
+    });
     Ok(c.0)
 }
 

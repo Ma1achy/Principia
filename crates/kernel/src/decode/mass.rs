@@ -37,7 +37,7 @@
 //! parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079), which compares tags on identical emitted masses.
 
 use crate::decode::degenerate::Degenerate;
-use crate::generated::links::{Link, LinkReal, Selection};
+use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 use spirv_std::num_traits::Float;
 
 /// The mass block's output: the simplex point, `M₀₁`, and the block's tag.
@@ -82,5 +82,11 @@ pub fn from_masses<R: LinkReal>(m: [R; 3]) -> Masses<R> {
 /// `D_mass`: the mass controls `z[6:8]` through the selection's mass link, then [`from_masses`].
 #[inline]
 pub fn decode<S: Selection, R: LinkReal>(z_mass: [R; 2]) -> Masses<R> {
-    from_masses(<S::MassLink as Link<2, 3>>::forward(z_mass))
+    decode_at::<S, R>(z_mass, &LinkParams::DEFAULT)
+}
+
+/// [`decode`] at the tunable parameters `p`: the mass link reads the active `μ_max` (R-481 A2, G4; REQ-DEC-048).
+#[inline]
+pub fn decode_at<S: Selection, R: LinkReal>(z_mass: [R; 2], p: &LinkParams<R>) -> Masses<R> {
+    from_masses(<S::MassLink as Link<2, 3>>::forward_at(z_mass, p))
 }

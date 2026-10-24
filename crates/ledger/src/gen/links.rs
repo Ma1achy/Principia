@@ -17,7 +17,7 @@ use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use crate::gen::Generated;
-use crate::links::{self, Codomain, Expr, LinkBuilder, Op, Param, Slot};
+use crate::links::{self, Codomain, Expr, LinkBuilder, Op, Param, Slot, Tunable};
 use crate::schema::{Entry, Word};
 
 /// Where the link functions are written, relative to the workspace root.
@@ -44,15 +44,21 @@ pub fn generate(builders: &[LinkBuilder]) -> Result<Vec<Generated>, Vec<String>>
     let registered = links::check(builders)?;
     let mut lits = Vec::new();
     let mut code = String::new();
+    let tunables = links::tunables();
     for (l, c) in &registered {
-        write_link(&mut code, l, *c, &mut lits);
+        let tunable: Vec<&str> = tunables
+            .iter()
+            .filter(|t| t.entry == l.name)
+            .map(|t| t.param)
+            .collect();
+        write_link(&mut code, l, *c, &tunable, &mut lits);
     }
     let names: Vec<&str> = registered.iter().map(|(l, _)| l.name).collect();
     let selection = selection(&links::slots(), &registered)?;
     Ok(vec![
         Generated {
             path: PathBuf::from(CONSTANTS_PATH),
-            contents: constants_file(links::CHART_CONSTANTS),
+            contents: constants_file(links::CHART_CONSTANTS, tunables),
         },
         Generated {
             path: PathBuf::from(LINKS_PATH),
@@ -80,13 +86,13 @@ fn camel(name: &str) -> String {
 /// above, so no bounded link's f32 image passes its upper bound (R-417; dd_generation_root §3.9, "The closed range
 /// and the f32 images of π/2 and π"). Either way no approximation of π is spelt out as a decimal.
 fn literal(v: f64, ty: &str) -> String {
-    let named = [
-        (PI, "PI", "0x4049_0FDA"),
-        (FRAC_PI_2, "FRAC_PI_2", "0x3FC9_0FDA"),
-    ];
-    if let Some((_, name, toward_zero)) = named.iter().find(|(k, ..)| k.to_bits() == v.to_bits()) {
+    if let Some((_, name, toward_zero)) = named_images()
+        .iter()
+        .find(|(k, ..)| k.to_bits() == v.to_bits())
+    {
         return if ty == "f32" {
-            format!("f32::from_bits({toward_zero})")
+            let (hi, lo) = (toward_zero >> 16, toward_zero & 0xFFFF);
+            format!("f32::from_bits(0x{hi:04X}_{lo:04X})")
         } else {
             format!("core::{ty}::consts::{name}")
         };
@@ -102,8 +108,26 @@ fn literal(v: f64, ty: &str) -> String {
     }
 }
 
+/// π and π/2, each with its `core` constant's name and its f32 image rounded toward zero, by bits (R-417). Interface
+/// data: the emitter's rounding rule ([`literal`]), not register constants (REQ-SYS-082).
+fn named_images() -> [(f64, &'static str, u32); 2] {
+    [
+        (PI, "PI", 0x4049_0FDA),
+        (FRAC_PI_2, "FRAC_PI_2", 0x3FC9_0FDA),
+    ]
+}
+
+/// `v` at f32 as the emitter writes a literal (R-417): π and π/2 rounded toward zero, every other value to nearest, as
+/// a tunable's f32 value is (R-481 G7).
+pub fn f32_image(v: f64) -> f32 {
+    named_images()
+        .iter()
+        .find(|(k, ..)| k.to_bits() == v.to_bits())
+        .map_or(v as f32, |(_, _, bits)| f32::from_bits(*bits))
+}
+
 /// The chart constants' file: the trait `ChartConstants`, one associated constant per chart constant, at f32 and f64.
-fn constants_file(chart: &[Param]) -> String {
+fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     let (bounds, members): (Vec<&Param>, Vec<&Param>) = chart
         .iter()
         .partition(|k| OPERATOR_BOUNDS.contains(&k.name));
@@ -136,6 +160,7 @@ fn constants_file(chart: &[Param]) -> String {
         }
         s.push_str("}\n");
     }
+    s.push_str(&link_params(tunables));
     for k in bounds {
         assert!(
             f64::from(k.value as f32).to_bits() == k.value.to_bits(),
@@ -158,6 +183,46 @@ fn constants_file(chart: &[Param]) -> String {
         );
     }
     s.push_str(&curve_search());
+    s
+}
+
+/// `LinkParams`, one field per tunable parameter of the registry `tunables` in their order, and its `DEFAULT`, each
+/// field its chart constant (R-481 G7; dd_generation_root §3.9, "Tunable parameters").
+fn link_params(tunables: &[Tunable]) -> String {
+    let mut params: Vec<&str> = Vec::new();
+    for t in tunables {
+        if !params.contains(&t.param) {
+            params.push(t.param);
+        }
+    }
+    let mut s = String::from(
+        "\n/// The tunable link parameters' values at a float type (R-481 G7; dd_generation_root §3.9, \"Tunable\n\
+         /// parameters\"): one field per tunable parameter of the registry, which the link functions' `_at` forms read in\n\
+         /// place of the chart constant of its name, so a parameter change is a value and not a compiled variant. On the\n\
+         /// GPU it is a uniform (TASK-M4-21).\n\
+         #[derive(Clone, Copy, Debug, PartialEq)]\npub struct LinkParams<R> {\n",
+    );
+    for p in &params {
+        let entries: Vec<String> = tunables
+            .iter()
+            .filter(|t| t.param == *p)
+            .map(|t| format!("`{}`", t.entry))
+            .collect();
+        let _ = writeln!(
+            s,
+            "    /// `{p}`, tunable on {}.\n    pub {p}: R,",
+            entries.join(", ")
+        );
+    }
+    s.push_str(
+        "}\n\nimpl<R: ChartConstants> LinkParams<R> {\n    \
+         /// The defaults, each field its chart constant (R-481 A2): the link functions at them are bitwise those that\n    \
+         /// read the constants.\n    pub const DEFAULT: Self = LinkParams {\n",
+    );
+    for p in &params {
+        let _ = writeln!(s, "        {p}: R::{},", p.to_uppercase());
+    }
+    s.push_str("    };\n}\n");
     s
 }
 
@@ -209,6 +274,9 @@ struct Body<'a> {
     lines: String,
     lits: &'a mut Vec<f64>,
     reads_input: bool,
+    /// The entry's tunable parameters, read from `p` in place of their chart constants (R-481 G7).
+    tunable: &'a [&'a str],
+    reads_params: bool,
 }
 
 impl Body<'_> {
@@ -218,6 +286,10 @@ impl Body<'_> {
             Expr::Input(i) => {
                 self.reads_input = true;
                 format!("v[{i}]")
+            }
+            Expr::Param(name) if self.tunable.contains(name) => {
+                self.reads_params = true;
+                format!("p.{name}")
             }
             Expr::Param(name) => format!("R::{}", name.to_uppercase()),
             Expr::Num(v) => lit(*v, self.lits),
@@ -250,14 +322,25 @@ impl Body<'_> {
     }
 }
 
-/// One trait method: `fn <name><R: LinkReal>(v: [R; arg]) -> <ret> { … }`, returning `trees`' values (an array of
-/// them, or the one value where `ret` is `R`).
-fn method(out: &mut String, name: &str, arg: u32, ret: &str, trees: &[Expr], lits: &mut Vec<f64>) {
+/// One trait method's two forms: `fn <name>_at<R: LinkReal>(v: [R; arg], p: &LinkParams<R>) -> <ret> { … }`,
+/// returning `trees`' values (an array of them, or the one value where `ret` is `R`), each of the entry's `tunable`
+/// parameters read from `p`; and `fn <name>`, it at `LinkParams::DEFAULT` (R-481 G7).
+fn method(
+    out: &mut String,
+    name: &str,
+    arg: u32,
+    ret: &str,
+    trees: &[Expr],
+    tunable: &[&str],
+    lits: &mut Vec<f64>,
+) {
     let mut body = Body {
         lets: Vec::new(),
         lines: String::new(),
         lits,
         reads_input: false,
+        tunable,
+        reads_params: false,
     };
     let values: Vec<String> = trees.iter().map(|t| body.value(t)).collect();
     let result = if ret != "R" {
@@ -276,9 +359,12 @@ fn method(out: &mut String, name: &str, arg: u32, ret: &str, trees: &[Expr], lit
         values[0].clone()
     };
     let v = if body.reads_input { "v" } else { "_v" };
+    let p = if body.reads_params { "p" } else { "_p" };
     let _ = write!(
         out,
-        "\n    #[inline]\n    fn {name}<R: LinkReal>({v}: [R; {arg}]) -> {ret} {{\n{}        {result}\n    }}\n",
+        "\n    #[inline]\n    fn {name}<R: LinkReal>(v: [R; {arg}]) -> {ret} {{\n        \
+         Self::{name}_at(v, &LinkParams::DEFAULT)\n    }}\n\n    #[inline]\n    \
+         fn {name}_at<R: LinkReal>({v}: [R; {arg}], {p}: &LinkParams<R>) -> {ret} {{\n{}        {result}\n    }}\n",
         body.lines
     );
 }
@@ -307,7 +393,13 @@ fn arity(c: Codomain) -> (u32, u32) {
 }
 
 /// Entry `l` onto `c`: its type, documented with its sampling note, and its `Link` impl.
-fn write_link(out: &mut String, l: &links::Link, c: Codomain, lits: &mut Vec<f64>) {
+fn write_link(
+    out: &mut String,
+    l: &links::Link,
+    c: Codomain,
+    tunable: &[&str],
+    lits: &mut Vec<f64>,
+) {
     let (controls, components) = arity(c);
     let ty = camel(l.name);
     let doc = format!(
@@ -331,6 +423,7 @@ fn write_link(out: &mut String, l: &links::Link, c: Codomain, lits: &mut Vec<f64
         controls,
         &format!("[R; {components}]"),
         l.forward,
+        tunable,
         lits,
     );
     method(
@@ -339,6 +432,7 @@ fn write_link(out: &mut String, l: &links::Link, c: Codomain, lits: &mut Vec<f64
         components,
         &format!("[R; {controls}]"),
         l.inverse,
+        tunable,
         lits,
     );
     method(
@@ -347,6 +441,7 @@ fn write_link(out: &mut String, l: &links::Link, c: Codomain, lits: &mut Vec<f64
         controls,
         "R",
         std::slice::from_ref(&l.log_det),
+        tunable,
         lits,
     );
     out.push_str("}\n");
@@ -511,7 +606,7 @@ fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> Stri
         "//! Generated by `cargo xtask codegen` from the link registry (`crates/ledger/src/links.rs`;\n\
          //! dd_generation_root §3.9); do not edit.\n\n\
          use core::marker::PhantomData;\n\nuse spirv_std::num_traits::Float;\n\n\
-         use super::constants::ChartConstants;\nuse crate::Real;\n\n\
+         use super::constants::ChartConstants;\npub use super::constants::LinkParams;\nuse crate::Real;\n\n\
          /// The literal numbers of the registry's trees at a float type, each its `num(v)`.\npub trait Literals: Copy {\n",
     );
     for (i, v) in lits.iter().enumerate() {
@@ -548,10 +643,19 @@ fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> Stri
     s.push_str(
         "\n/// A registry entry: `C` controls onto `P` physical components (dd_generation_root §3.9). The log-det is the log\n\
          /// of the forward's volume factor: `log |det J|`, or `log √det(JᵀJ)` where `J` is not square (R-368).\n\
+         ///\n/// Each function has an `_at` form taking the tunable parameters `p` (R-481 G7): a generated entry reads its\n\
+         /// tunable parameters from `p`, and its plain form is the `_at` form at `LinkParams::DEFAULT`; a link that reads\n\
+         /// none, as written outside the registry, ignores `p` by default.\n\
          pub trait Link<const C: usize, const P: usize> {\n    \
          /// The link id provenance records.\n    const NAME: &'static str;\n    type Codomain: Codomain;\n    \
          fn forward<R: LinkReal>(v: [R; C]) -> [R; P];\n    fn inverse<R: LinkReal>(v: [R; P]) -> [R; C];\n    \
-         fn log_det<R: LinkReal>(v: [R; C]) -> R;\n}\n",
+         fn log_det<R: LinkReal>(v: [R; C]) -> R;\n\n    \
+         /// The forward at the tunable parameters `p`.\n    #[inline]\n    \
+         fn forward_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> [R; P] {\n        Self::forward(v)\n    }\n\n    \
+         /// The inverse at the tunable parameters `p`.\n    #[inline]\n    \
+         fn inverse_at<R: LinkReal>(v: [R; P], _p: &LinkParams<R>) -> [R; C] {\n        Self::inverse(v)\n    }\n\n    \
+         /// The log-det at the tunable parameters `p`: a quantitative pass reweights at the active values (R-481 A4).\n    \
+         #[inline]\n    fn log_det_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> R {\n        Self::log_det(v)\n    }\n}\n",
     );
     s.push_str(&helpers(code));
     s.push_str(code);

@@ -255,9 +255,11 @@ fn check_accepted(builders: &[LinkBuilder]) {
     );
 }
 
-/// The simplex default with its log-det also reading `input(1)`, the last of its two controls.
+/// The edge-reaching simplex link with its log-det also reading `input(1)`, the last of its two controls. It declares
+/// no tunable parameter, so the check tests its forward's codomain alone, not the log-det against the forward (R-481
+/// G3), which the added term would break.
 fn reading_last(i: u32) -> Vec<LinkBuilder> {
-    edited("softmax_tanh", |b| {
+    edited("stick_breaking", |b| {
         let ld = b.log_det.expect("a log-det");
         b.log_det = Some(Expr::Op(Op::Add, Vec::leak(vec![ld, Expr::Input(i)])));
     })

@@ -45,7 +45,7 @@ use core::marker::PhantomData;
 pub use degenerate::Degenerate;
 pub use latent::Latent;
 
-use crate::generated::links::{LinkReal, Selection};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 use config::Config;
 use mass::Masses;
@@ -123,6 +123,47 @@ impl<S: Selection, R: LinkReal + PayloadReal> Blocks<R> for Free<S> {
     }
 }
 
+/// The free-momentum decoder under the selection `S` at the tunable parameters `params` (R-481 A2, G4;
+/// REQ-DEC-048): [`Free`]'s blocks, the mass and momentum links reading the active `μ_max` and `q_max`.
+pub struct FreeAt<S, R> {
+    /// The active values.
+    pub params: LinkParams<R>,
+    selection: PhantomData<S>,
+}
+
+impl<S, R> FreeAt<S, R> {
+    /// The decoder at `params`.
+    #[inline]
+    pub fn new(params: LinkParams<R>) -> Self {
+        FreeAt {
+            params,
+            selection: PhantomData,
+        }
+    }
+}
+
+impl<S: Selection, R: LinkReal + PayloadReal> Blocks<R> for FreeAt<S, R> {
+    #[inline]
+    fn mass(&mut self, z_mass: [R; 2]) -> Masses<R> {
+        mass::decode_at::<S, R>(z_mass, &self.params)
+    }
+
+    #[inline]
+    fn config(&mut self, z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
+        config::decode::<S, R>(z_cfg, masses)
+    }
+
+    #[inline]
+    fn momentum(&mut self, z_mom: [R; 4], masses: &Masses<R>, _config: &Config<R>) -> Momentum<R> {
+        momentum::decode_at::<S, R>(z_mom, masses, &self.params)
+    }
+
+    #[inline]
+    fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R> {
+        descriptor::describe(ic)
+    }
+}
+
 /// A decoded `z`: the canonical `(m, r, p)`, each block's output, the `ICDescriptor` and the `DEGENERATE` tag.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Decoded<R: PayloadReal> {
@@ -166,4 +207,13 @@ pub fn decode_with<R: PayloadReal, B: Blocks<R>>(blocks: &mut B, z: &Latent<R>) 
 #[inline]
 pub fn decode<S: Selection, R: LinkReal + PayloadReal>(z: &Latent<R>) -> Decoded<R> {
     decode_with(&mut Free::<S>::new(), z)
+}
+
+/// Decodes `z` under the selection `S` with free momentum at the tunable parameters `params` ([`FreeAt`]).
+#[inline]
+pub fn decode_at<S: Selection, R: LinkReal + PayloadReal>(
+    z: &Latent<R>,
+    params: &LinkParams<R>,
+) -> Decoded<R> {
+    decode_with(&mut FreeAt::<S, R>::new(*params), z)
 }
