@@ -60,6 +60,11 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
   draws it, measured over that frame at the export's size, and the planner and the record name each such node. Its
   planner offers `per_frame` as Record does (applied per R-369: the human's "frozen when Record is pressed" names the
   sweep's button; this is the same rule for the other recording).
+- **One window choice** (applied per R-369, gui review 5638421533 of PR #287, G8): the Record dialog and the Sequence's
+  planner offer the colour window as one exclusive choice of three, **Frozen at Record** (at Start, for the Sequence;
+  the default), **Pre-pass** and **Per frame**, recorded as `range_policy = frozen`, `prepass_union` or `per_frame`;
+  picking one unpicks the others, so no recording has two. "Off by default" above means not the choice picked by
+  default. From the keyboard the choice is one element (§G3 of the render GUI spec).
 - **On import** a frozen node reads "frozen at export" in its inspector and the Legend's key for it; **Re-measure** in
   the node's inspector removes its entry, one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry
   (R-69). A snapshot JSON or share link is not an image export: it carries `frozen_ranges` as the view has it and

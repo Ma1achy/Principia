@@ -25114,6 +25114,10 @@ the export reports the fields it froze; T1 runs on the headless paths. Nothing a
 - **One task, M8:** TASK-M8-80 builds R-581 and R-582 and R-583's export side; R-583's base px for every mark is
   TASK-M7-70's.
 
+*Applied per R-369* (gui review 5638421533 of PR #287, G8): the Record dialog's and the Sequence's planner's colour
+window is one exclusive choice of three, Frozen at Record (the default), Pre-pass and Per frame, so no recording has
+two `range_policy` values (`principia_export_details.md` §3.1, render GUI spec §G9; REQ-TOOL-201, REQ-TOOL-216).
+
 R-581 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-RENDER-117 (the frozen source), REQ-TOOL-201 (a recording's one window), REQ-TOOL-202 (the export block and
@@ -25614,6 +25618,14 @@ table). Its replacement arm: the Trajectory panel's kept-orbit tabs, `ViewUI`, d
 scratch" reads, under R-553, as the kept-orbit list and its tabs being `ViewUI`; a kept orbit's `Trace` is not scratch.
 
 *Also in the same message:* "Decisions taken under R-369 in #284, #276, #286 and #287: no vetoes. All stand."
+
+*Applied per R-369* (gui review 5638421533 of PR #287, G9): Mark, on a kept orbit, and Mark all kept convert its
+`Kept(id)` trace into a `Marked(id)` trace with the same `ic` and style, never adding one beside it, so no IC is drawn
+twice; the kept-orbit list and its tabs (`ViewUI`, never undoable) stay; one `SetField`, one undo entry, and undo
+restores the kept traces bitwise (`principia_ic_save.md` §3.5; REQ-RENDER-119, REQ-GUI-396). And (G10) every control
+the gap sweep added has its place in the keyboard tree, Locate picture… a button of the import report and the
+"Picture missing" badge not an element (render GUI spec §G3); REQ-GUI-389 to REQ-GUI-393, REQ-GUI-396, REQ-TOOL-201,
+REQ-TOOL-205 and REQ-TOOL-216 gain keyboard arms.
 
 R-590 is in the "design" group of `plan/rule_groups.yaml`.
 

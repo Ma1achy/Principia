@@ -774,6 +774,20 @@ reaches the `♪ strip ⏶` (`⏷` while expanded) and, expanded, its `Listen…
 5595359543 of PR #267, G2; applied per R-369). Legend is
 read-only.
 
+**The gap sweep's controls in the tree** (R-581 to R-586; applied per R-369, gui review 5638421533 of PR #287, G10).
+Each is an element of the scope it sits in, reached as every element is: Enter on a button or a checkbox acts as its
+click, and Enter on a choice opens it, ↑ ↓ choose, Enter picks and Esc closes it unchanged, as the cube's axis buttons
+do. **Re-measure** is the last element of a frozen node's inspector. Export & share's Image section ends with the
+**As seen with** checkbox (while it is offered) and then the **physical size** fields, width in mm then DPI, text
+fields under the rules below. The **Your image…** dialog is a window whose sections are the preview, then **Apply**
+(an element only once the preview is shown) and **Cancel**; Esc in navigation mode acts as Cancel. In the Import
+picture report **Locate picture…** is a button after each missing picture's line; the header strip's "Picture missing"
+badge is not an element, as the Home button is not, the report being the keyboard's way to it. In the Inspector's
+Create & locate, **Copy as text** and **Mark all kept** follow *keep it*, in that order, *mark it in the figure* being
+**Mark**; Ctrl+C and Ctrl+V act as the key table says. **File › Save IC…** and **File › Open IC…** are File menu
+entries, reached as every menu entry is. The colour window choice (§G9) is one element of the Record dialog and of the
+Sequence's planner.
+
 What the user sees, while keyboard navigation is on (R-460): a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
 and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
 
@@ -1467,7 +1481,8 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   reopened IC sits in the hemisphere it was built in, its twin opposite, and is integrated there, `C(as_built)` with
   the mirror step not taken, never as its twin (R-589). **Mark** is the durable act: a marked IC is a
   `Trace` in `Lines`, travelling with the view, as a kept orbit's `Trace` does while the kept-orbit tabs do not (R-553,
-  R-590); **Mark all kept** promotes the kept list; each is one `SetField` on
+  R-590); **Mark all kept** promotes the kept list, each `Kept(id)` trace becoming a `Marked(id)` one, so no IC is drawn
+  twice (`principia_ic_save.md` §3.5; applied per R-369, gui review 5638421533 of PR #287, G9); each is one `SetField` on
   `RenderField::Lines` and one undo entry (R-69). **Export trajectory…** writes
   `<label>.traj.csv`, one row per step as taken, its body columns labelled 1-based (`body1_x` …).
 
@@ -1494,7 +1509,7 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   saved chart (§G2's Save view as chart, R-475) is a chart in the picker.
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
   GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
-  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, and the colour window: frozen when Record is pressed, by default, or **per frame**, labelled
+  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, and the colour window, one exclusive choice of three (applied per R-369, gui review 5638421533 of PR #287, G8): frozen when Record is pressed, by default, or **per frame**, labelled
   "re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1), or, opt-in, from a
   **pre-pass**, a quick low-resolution pass over every frame whose windows' union is frozen (R-581, fix round 3 of PR #287, code review 5638122561, C1).
   *Was:* ""re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1)." The recording carries its

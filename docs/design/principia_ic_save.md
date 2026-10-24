@@ -146,7 +146,12 @@ inside `RenderState.Lines` (the draft's open question 1, (a): marks are drawn, s
 `Trace` of the new kind `Marked(id)` (applied per R-369: the kind that holds a mark), drawn as REQ-GUI-120's crosshair at
 its IC's projection on the current slice and, under the trace settings, its path. So a marked IC travels in snapshots,
 saved views, share links, the animation spec and the pxpack (tier 2), round-tripping under R-484. *Mark all kept*
-promotes the kept list to marks. One record is roughly 0.6 KB (an estimate, to be measured), so marks crowd 64²'s tier
+promotes the kept list to marks. **Promoting converts** (applied per R-369, gui review 5638421533 of PR #287, G9): Mark
+on a kept orbit, and Mark all kept on each kept orbit, turns its `Kept(id)` trace into a `Marked(id)` trace with the
+same `ic` and style, so no IC is ever drawn twice; the kept-orbit list and its tabs, `ViewUI`, stay as they are, since
+`ViewUI` is never undoable (R-69) and an undo could not restore them; the whole change is one `SetField` on
+`RenderField::Lines` and one undo entry, and undo turns the marks back into the kept traces, bitwise. Mark on an IC
+that is not kept adds a `Marked(id)` trace. One record is roughly 0.6 KB (an estimate, to be measured), so marks crowd 64²'s tier
 2 (1,516 B, embedding §7): tier 2 drops whole, and `tEXt` keeps everything.
 
 **Mark** sends one `SetField` on `RenderField::Lines` and makes one undo entry, and *Mark all kept* with n kept orbits
