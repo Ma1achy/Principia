@@ -11,8 +11,10 @@
 //!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
 //!   recentring, §G4) and the lock group's, and the centre pixel, of the chart rebuilt on that `z₀`, decodes the
 //!   clicked pixel's state bit for bit.
-//! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`): they never touch `z₀`,
-//!   so the centre `z(½,½) = z₀` ([`centre`]) is exactly constant through them.
+//! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`) that turn about the pin
+//!   (render_gui_spec §G4; R-451; R-466 K5). At `δ = 0` the pin is the centre, so they keep `z₀` and the centre
+//!   `z(½,½) = z₀` ([`centre`]) is exactly constant through them; where `δ` has an in-plane part the pin is off-centre,
+//!   and the edit's `SetField` on `z₀` moves `z₀`, and with it `δ`.
 //! - **The excursion** `δ = z₀ − z_locked` ([`Lock::excursion`]) is held by the stored pair (the contract's definition):
 //!   a slice step or a slider move ([`move_slider`]) edits `z₀` alone, so `δ` accumulates it; each slider is re-based,
 //!   not frozen ([`slider`]), showing `z₀`'s value with the anchor's marked; snap-back ([`snap_back`]) is
