@@ -52,7 +52,8 @@ xtask-cargo = { max-threads = 1 }
 # (`engine`'s `invariant_gpu`, TASK-M2-09), the invariant charts' gradient gate's (validation's
 # `invariant_gradient_gpu`, TASK-M2-12) and encode's (`engine`'s `encode_gpu` and `qa_TASK-M2-15_gpu`, TASK-M2-15) among
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
-# (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24); the xtask tests that run cargo on
+# (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24) and the lock's locked-against-free render
+# (`engine`'s `lock_gpu`, TASK-M2-23); the xtask tests that run cargo on
 # the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
@@ -76,6 +77,7 @@ default-filter = """
         | binary_id(=engine::per_pixel_mass_gpu)
         | binary_id(=engine::decode_cross_backend)
         | binary_id(=engine::qa_TASK-M2-24_gpu)
+        | binary_id(=engine::lock_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=xtask::build_kernel)
@@ -118,6 +120,7 @@ default-filter = """
     | binary_id(=engine::per_pixel_mass_gpu)
     | binary_id(=engine::decode_cross_backend)
     | binary_id(=engine::qa_TASK-M2-24_gpu)
+    | binary_id(=engine::lock_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=xtask::build_kernel)

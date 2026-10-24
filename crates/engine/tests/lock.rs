@@ -1,0 +1,1129 @@
+//! The lock (chart_decoder_contract Part 4, "The lock (projective microscope)" and "The lock's construction, defined";
+//! render_gui_spec §G4; R-69; TASK-M2-23): each gesture's typed `SetField` edits, applied through the real state store,
+//! and every pixel read through the kernel's own chart maps and decode.
+//!
+//! - `lock_set` (REQ-GUI-004): on the affine chart and on two nonlinear charts, the centre pixel's IC after the lock is
+//!   the clicked pixel's, bit for bit; a lock at a point `validate` refuses sets nothing.
+//! - `lock_anchor_invariance` (REQ-GUI-005): random tilts, zooms and chart switches leave the centre IC bitwise
+//!   constant; an excursion moves it, and snap-back restores the stored anchor bitwise.
+//! - `lock_sliders` (REQ-GUI-006): a slider moved while locked is an excursion along its control, re-based on the
+//!   anchor; unlock leaves the free state the last locked one.
+//! - `lock_setfields` (REQ-GUI-007): every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`.
+//! - `lock_kernel_uniform_identical` (REQ-SYS-012): the kernel's uniform has no lock field, and a locked and a free
+//!   view of one plane give it bitwise; the GPU half is `lock_gpu.rs`.
+//! - `lock_infeasible_tilt` (REQ-CHART-010): a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
+//!   carries out, and lock validation offers the re-centre and the latent chart.
+//! - `curve_tilt_requires_lock` (REQ-CHART-007): a curve axis's tangent tilt is refused free, and locked it reads
+//!   `γ′(ν₀)` pulled back to the latent controls.
+
+use engine::chart_authoring::charts::{nu_embed, NU_CURVE};
+use engine::chart_authoring::CurvePoint;
+use engine::contract::interface::EngineInterface;
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::set_field::{Edit, SetField, SimField};
+use engine::contract::sim_config::{
+    Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
+    SimConfig, Slice,
+};
+use engine::contract::store::StateStore;
+use engine::lock::{
+    centre, curve_tangent, curve_tilt, kernel_chart, move_slider, point, recentre, set,
+    set_on_chart, slider, snap_back, unlock, validate, LockError, Nearest, Pixel, Remedy, Report,
+    Tag, Window,
+};
+use engine::lookup::Tolerances;
+use engine::nav::directions::hidden;
+use engine::nav::{oblique, slice, zoom, ChartConstructor};
+use kernel::chart::invariant::Invariant;
+use kernel::chart::mixed::{Alpha, ZMu1};
+use kernel::chart::{
+    ChartDecode, Constraint, InvariantLE, Latent as LatentChart, Mixed, ValidationResult,
+};
+use kernel::decode::descriptor::potential;
+use kernel::decode::{decode, Ic};
+use kernel::encode::by_kind::{feasibility, invariants, Feasibility};
+use kernel::generated::links::{
+    Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
+    StickBreaking,
+};
+use kernel::stage::decode::DecodeUniforms;
+use validation::negative_control;
+use validation::roundtrip::phys;
+
+type Sticks =
+    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+
+fn sim(plane: Plane) -> SimConfig {
+    SimConfig {
+        chart: Chart {},
+        plane,
+        slice: Slice {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
+        links: Links {},
+        integrator: Integrator {},
+        kernel_variant: KernelVariant::Physics,
+        horizon: Horizon { t: 100.0 },
+        collision: Collision {},
+        quality: Quality {},
+    }
+}
+
+fn store(sim: SimConfig) -> StateStore {
+    StateStore::new(
+        sim,
+        RenderState {
+            stain_graph: StainGraph::new(),
+            overlays: Overlays::default(),
+            hover: Hover::default(),
+            palette: Palette {},
+            playhead: Playhead { t: 0.0 },
+        },
+    )
+}
+
+/// The `SimConfig` the store holds.
+fn now(s: &mut StateStore) -> SimConfig {
+    s.snapshot().sim
+}
+
+/// Applies `edits` through the store.
+fn apply(s: &mut StateStore, edits: impl IntoIterator<Item = SetField>) {
+    for e in edits {
+        s.set_field(e);
+    }
+}
+
+fn scale(a: &Latent, k: f64) -> Latent {
+    a.map(|x| k * x)
+}
+
+/// An oblique, zoomed plane through an off-origin centre.
+fn oblique_plane() -> Plane {
+    let a = [0.3, -1.1, 0.4, 0.2, -0.7, 0.9, 0.05, -0.3];
+    let b = [-0.6, 0.2, 1.3, -0.4, 0.1, 0.5, -0.8, 0.25];
+    let z0 = [0.4, -0.2, 0.1, -0.3, 0.2, 0.05, 0.6, -0.5];
+    let p = oblique(z0, &a, &b).expect("independent draws span a plane");
+    Plane {
+        z0: p.z0,
+        q1: scale(&p.q1, 0.3),
+        q2: scale(&p.q2, 0.3),
+    }
+}
+
+/// The free decode of the latent `z` under the default links.
+fn ic_of(z: &Latent) -> Ic<f64> {
+    decode::<Defaults, f64>(&kernel::decode::latent::Latent::new(*z)).ic
+}
+
+/// The bits of every value of `x`, so an IC compares bit for bit.
+fn bits(x: &Ic<f64>) -> Vec<u64> {
+    x.m.iter()
+        .chain(x.r.iter().flatten())
+        .chain(x.p.iter().flatten())
+        .map(|v| v.to_bits())
+        .collect()
+}
+
+fn same_bits(a: &Latent, b: &Latent) -> bool {
+    a.iter().zip(b).all(|(x, y)| x.to_bits() == y.to_bits())
+}
+
+/// The pixels the checks lock at, inside `[0,1]²` and past it.
+const PIXELS: [(f64, f64); 6] = [
+    (0.3, 0.8),
+    (0.0, 1.0),
+    (0.9, 0.15),
+    (0.5, 0.5),
+    (-0.4, 1.3),
+    (0.62, 0.07),
+];
+
+fn tol() -> Tolerances {
+    Tolerances::register(128.0 * f64::EPSILON)
+}
+
+// ---- lock_set (REQ-GUI-004) ----
+
+/// Locks the affine `plane` at `(s, t)` through the store with `lock`, and checks that the centre pixel's IC is the
+/// clicked pixel's, bit for bit, and the lock group's anchor is `z(s, t)`.
+fn check_affine_lock(plane: &Plane, s: f64, t: f64, lock: fn(&Plane, f64, f64) -> [SetField; 2]) {
+    let clicked = point(plane, s, t);
+    let mut st = store(sim(plane.clone()));
+    apply(&mut st, lock(plane, s, t));
+    let after = now(&mut st);
+    assert!(
+        bits(&ic_of(&centre(&after.plane))) == bits(&ic_of(&clicked)),
+        "the centre pixel's IC after the lock at ({s}, {t}) is not the clicked pixel's"
+    );
+    assert!(after.lock.locked, "the lock flag is not set");
+    assert!(
+        same_bits(&after.lock.z_locked, &clicked),
+        "the anchor {:?} is not z(s, t) = {clicked:?}",
+        after.lock.z_locked
+    );
+    assert_eq!(
+        (after.plane.q1, after.plane.q2),
+        (plane.q1, plane.q2),
+        "the lock edited the basis"
+    );
+}
+
+#[test]
+fn lock_set_affine_centre_is_the_clicked_pixel() {
+    let plane = oblique_plane();
+    for (s, t) in PIXELS {
+        check_affine_lock(&plane, s, t, |p, s, t| set(p, s, t).expect("a lock"));
+    }
+    for bad in [f64::NAN, f64::INFINITY] {
+        assert_eq!(set(&plane, bad, 0.5), Err(LockError::NonFinite));
+        assert_eq!(set(&plane, 0.5, bad), Err(LockError::NonFinite));
+    }
+    let huge = Plane {
+        q1: [f64::MAX; 8],
+        ..plane.clone()
+    };
+    assert_eq!(
+        set(&huge, 1.5, 0.5),
+        Err(LockError::NonFinite),
+        "a point past f64's range is not locked"
+    );
+}
+
+negative_control!(
+    lock_set_affine_centre_is_the_clicked_pixel,
+    "a lock at z₀ + s·q₁ + t·q₂, the unsigned offsets, is not the clicked pixel",
+    expected = "is not the clicked pixel's",
+    check_affine_lock(&oblique_plane(), 0.3, 0.8, |p, s, t| {
+        let z: Latent = std::array::from_fn(|i| p.z0[i] + s * p.q1[i] + t * p.q2[i]);
+        [
+            SetField {
+                edit: Edit::Sim(SimField::Z0(z)),
+                no_history: false,
+            },
+            SetField {
+                edit: Edit::Sim(SimField::Lock(Lock {
+                    locked: true,
+                    z_locked: z,
+                })),
+                no_history: false,
+            },
+        ]
+    })
+);
+
+/// A mixed chart, `(z_μ1, α)`: `α` a derived quantity, so `Φ` is nonlinear.
+fn mixed() -> Mixed<ZMu1, Alpha, f64> {
+    Mixed::new(
+        [0.4, -0.3, 0.2, -0.1, 0.3, 0.15, 0.0, -0.4],
+        [-1.0, 1.0],
+        [0.25, 1.3],
+    )
+}
+
+/// The `(L_z, E)` chart at a frozen configuration and masses.
+fn invariant_le() -> InvariantLE<f64> {
+    InvariantLE(Invariant {
+        z_cfg: [0.4, -0.3],
+        z_mass: [0.2, -0.35],
+        k_max: 1.5,
+        gamma_k: 2.0,
+    })
+}
+
+/// The window over the whole square.
+const SQUARE: Window = Window {
+    centre: [0.5, 0.5],
+    half: [0.5, 0.5],
+};
+
+/// Locks `chart` at the pixel `(s, t)` of `window`, and checks that the re-centred window's centre pixel decodes the
+/// clicked pixel's state bit for bit, that `z_locked` decodes to it within the encode's tolerance, and that the edits
+/// are the recentring on `z₀ = z_locked` and the lock group's. `centred` is the window the check reads the centre in.
+fn check_chart_lock<C>(
+    chart: &C,
+    window: &Window,
+    s: f64,
+    t: f64,
+    centred: fn(&Window, &Window) -> Window,
+) where
+    C: kernel::encode::by_kind::ByKind<Param = f64>,
+{
+    let [u, v] = window.at(s, t);
+    let clicked = chart.decode_at::<Defaults, f64>(u, v).ic;
+    let lock = set_on_chart::<Defaults, C, _>(chart, window, s, t, phys, &tol()).expect("a lock");
+    let w = centred(window, &lock.window);
+    let [cu, cv] = w.at(0.5, 0.5);
+    let centre_ic = chart.decode_at::<Defaults, f64>(cu, cv).ic;
+    assert!(
+        bits(&centre_ic) == bits(&clicked),
+        "the centre pixel's IC after the lock at ({s}, {t}) on {} is not the clicked pixel's",
+        chart.name()
+    );
+    assert!(
+        bits(&lock.ic) == bits(&clicked),
+        "the lock's state is not the clicked one"
+    );
+    assert_eq!(lock.window.half, window.half, "the lock changed the zoom");
+    let [z0, l] = &lock.edits;
+    let z_locked = match (&z0.edit, &l.edit) {
+        (Edit::Sim(SimField::Z0(z)), Edit::Sim(SimField::Lock(k))) => {
+            assert!(
+                k.locked && same_bits(&k.z_locked, z),
+                "the lock's anchor is not z₀"
+            );
+            *z
+        }
+        other => panic!("the lock's edits are {other:?}"),
+    };
+    let d = phys(&clicked, &ic_of(&z_locked));
+    assert!(
+        d <= 1e-12,
+        "z_locked decodes {d} from the clicked state on {}",
+        chart.name()
+    );
+}
+
+#[test]
+fn lock_set_nonlinear_centre_is_the_clicked_pixel() {
+    let zoomed = Window {
+        centre: [0.375, 0.625],
+        half: [0.125, 0.25],
+    };
+    for (s, t) in [(0.3, 0.8), (0.9, 0.15), (0.5, 0.5), (0.0, 1.0)] {
+        for window in [SQUARE, zoomed] {
+            check_chart_lock(&mixed(), &window, s, t, |_, re| *re);
+            check_chart_lock(&invariant_le(), &window, s, t, |_, re| *re);
+        }
+    }
+    // The window's placement, `c + ((2s−1)·h_u, (2t−1)·h_v)`, at its corners and centre.
+    assert_eq!(zoomed.at(0.0, 1.0), [0.25, 0.875]);
+    assert_eq!(zoomed.at(1.0, 0.0), [0.5, 0.375]);
+    assert_eq!(zoomed.at(0.75, 0.25), [0.4375, 0.5]);
+    assert_eq!(zoomed.at(0.5, 0.5), zoomed.centre);
+}
+
+negative_control!(
+    lock_set_nonlinear_centre_is_the_clicked_pixel,
+    "a window left where it was is not centred on the lock",
+    expected = "is not the clicked pixel's",
+    check_chart_lock(&mixed(), &SQUARE, 0.3, 0.8, |old, _| *old)
+);
+
+/// A lock at a chart point `validate` refuses sets nothing (R-469): the `(L_z, E)` chart's edge `s = 1` is a system,
+/// one float past it is not.
+#[test]
+fn lock_set_refuses_a_point_that_is_not_a_system() {
+    let chart = invariant_le();
+    let at = |u: f64| Window {
+        centre: [u, 0.5],
+        half: [0.5, 0.5],
+    };
+    let edge = set_on_chart::<Defaults, _, _>(&chart, &at(1.0), 0.5, 0.5, phys, &tol());
+    assert!(edge.is_ok(), "the parabola's edge is refused: {edge:?}");
+    let past =
+        set_on_chart::<Defaults, _, _>(&chart, &at(1.0f64.next_up()), 0.5, 0.5, phys, &tol());
+    assert!(
+        matches!(
+            past,
+            Err(LockError::NotASystem(ValidationResult::Project {
+                failed: Constraint::LzEParabola,
+                ..
+            }))
+        ),
+        "a point past the parabola is locked: {past:?}"
+    );
+    assert_eq!(
+        set_on_chart::<Defaults, _, _>(&chart, &SQUARE, f64::NAN, 0.5, phys, &tol()),
+        Err(LockError::NonFinite)
+    );
+    let wide = Window {
+        centre: [f64::MAX, 0.5],
+        half: [f64::MAX, 0.5],
+    };
+    assert_eq!(
+        set_on_chart::<Defaults, _, _>(&chart, &wide, 1.0, 0.5, phys, &tol()),
+        Err(LockError::NonFinite),
+        "a chart point past f64's range is not locked"
+    );
+    let strict = Tolerances {
+        sanity: -1.0,
+        ..tol()
+    };
+    assert!(
+        matches!(
+            set_on_chart::<Defaults, _, _>(&mixed(), &SQUARE, 0.3, 0.8, phys, &strict),
+            Err(LockError::Refused(_))
+        ),
+        "a state the ladder refuses is locked"
+    );
+}
+
+negative_control!(
+    lock_set_refuses_a_point_that_is_not_a_system,
+    "the parabola's edge itself is no refusal",
+    expected = "the edge is refused",
+    {
+        let at = Window {
+            centre: [1.0, 0.5],
+            half: [0.5, 0.5],
+        };
+        let r = set_on_chart::<Defaults, _, _>(&invariant_le(), &at, 0.5, 0.5, phys, &tol());
+        assert!(r.is_err(), "the edge is refused");
+    }
+);
+
+// ---- lock_anchor_invariance (REQ-GUI-005) ----
+
+/// A small deterministic generator: xorshift64*, uniform in `[0, 1)`.
+struct Draws(u64);
+
+impl Draws {
+    fn next(&mut self) -> f64 {
+        self.0 ^= self.0 >> 12;
+        self.0 ^= self.0 << 25;
+        self.0 ^= self.0 >> 27;
+        (self.0.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 11) as f64 / (1u64 << 53) as f64
+    }
+
+    fn within(&mut self, lo: f64, hi: f64) -> f64 {
+        lo + (hi - lo) * self.next()
+    }
+}
+
+/// `ê_k`.
+fn e(k: usize) -> Latent {
+    let mut v = [0.0; 8];
+    v[k] = 1.0;
+    v
+}
+
+/// One random anchor-preserving edit of `sim`'s basis: a tilt pair, a zoom or a chart switch to another axis pair.
+fn anchor_preserving(sim: &SimConfig, draws: &mut Draws) -> SetField {
+    let plane = &sim.plane;
+    match (draws.next() * 3.0) as u32 {
+        0 => {
+            let targets = hidden(plane).expect("a plane");
+            let pick = |d: &mut Draws| targets[(d.next() * 6.0) as usize].direction;
+            let (d1, d2) = (pick(draws), pick(draws));
+            let (t1, t2) = (draws.within(-89.0, 89.0), draws.within(-89.0, 89.0));
+            ChartConstructor::new(plane.clone())
+                .tilt_pair(plane, (t1, &d1), (t2, &d2))
+                .unwrap_or_else(|_| zoom(plane, 0.5).expect("a zoom"))
+        }
+        1 => zoom(plane, draws.within(-3.0, 3.0)).expect("a zoom"),
+        _ => {
+            let a = (draws.next() * 8.0) as usize;
+            let b = (a + 1 + (draws.next() * 7.0) as usize) % 8;
+            let k = draws.within(0.05, 2.0);
+            SetField {
+                edit: Edit::Sim(SimField::Basis {
+                    q1: scale(&e(a), k),
+                    q2: scale(&e(b), k),
+                }),
+                no_history: false,
+            }
+        }
+    }
+}
+
+/// Locks at a pixel, then applies `steps` random edits from `edit`, checking after each that `z₀` and the centre
+/// pixel's IC are the anchor's bit for bit; then an excursion, which moves them, and snap-back by `home`, which
+/// restores both bit for bit.
+fn check_anchor_invariance(
+    seed: u64,
+    steps: usize,
+    edit: fn(&SimConfig, &mut Draws) -> SetField,
+    home: fn(&SimConfig) -> SetField,
+) {
+    let mut draws = Draws(seed);
+    let plane = oblique_plane();
+    let mut st = store(sim(plane.clone()));
+    apply(&mut st, set(&plane, 0.71, 0.33).expect("a lock"));
+    let anchor = now(&mut st).lock.z_locked;
+    let anchor_ic = bits(&ic_of(&anchor));
+    for step in 0..steps {
+        let e = edit(&now(&mut st), &mut draws);
+        apply(&mut st, [e]);
+        let s = now(&mut st);
+        assert!(
+            same_bits(&s.plane.z0, &anchor) && bits(&ic_of(&centre(&s.plane))) == anchor_ic,
+            "step {step}: the centre IC moved"
+        );
+        assert!(
+            same_bits(&s.lock.z_locked, &anchor),
+            "step {step}: the anchor moved"
+        );
+    }
+    let s = now(&mut st);
+    let d = hidden(&s.plane).expect("a plane")[1].direction;
+    apply(&mut st, [slice(&s.plane, &d, 0.3).expect("a slice")]);
+    let moved = move_slider(&now(&mut st), 6, 0.123).expect("a slider");
+    apply(&mut st, [moved]);
+    let away = now(&mut st);
+    assert!(
+        !same_bits(&away.plane.z0, &anchor),
+        "the excursion did not move the centre"
+    );
+    let delta = away.lock.excursion(&away.plane.z0).expect("locked");
+    assert!(
+        delta.iter().any(|&x| x != 0.0),
+        "δ is 0 after the excursion"
+    );
+    apply(&mut st, [home(&away)]);
+    let back = now(&mut st);
+    assert!(
+        same_bits(&back.plane.z0, &anchor),
+        "snap-back did not restore the stored anchor bitwise"
+    );
+    assert!(
+        bits(&ic_of(&centre(&back.plane))) == anchor_ic,
+        "snap-back's centre IC is not the anchor's"
+    );
+    assert_eq!(
+        back.lock.excursion(&back.plane.z0),
+        Some([0.0; 8]),
+        "δ is not 0 after snap-back"
+    );
+}
+
+#[test]
+fn lock_anchor_invariance() {
+    for seed in [0x9E37_79B9_7F4A_7C15, 0xD1B5_4A32_D192_ED03, 7] {
+        check_anchor_invariance(seed, 300, anchor_preserving, |s| {
+            snap_back(s).expect("locked")
+        });
+    }
+    let free = sim(oblique_plane());
+    assert_eq!(snap_back(&free), Err(LockError::NotLocked));
+}
+
+negative_control!(
+    lock_anchor_invariance,
+    "a pan among the edits moves the centre",
+    expected = "the centre IC moved",
+    check_anchor_invariance(
+        3,
+        20,
+        |s, d| engine::nav::pan(&s.plane, d.within(0.01, 0.2), 0.0).expect("a pan"),
+        |s| snap_back(s).expect("locked")
+    )
+);
+
+negative_control!(
+    lock_anchor_invariance_snap_back,
+    "unlock in place of snap-back leaves the excursion",
+    expected = "snap-back did not restore",
+    check_anchor_invariance(7, 5, anchor_preserving, |s| unlock(s).expect("locked"))
+);
+
+// ---- lock_sliders (REQ-GUI-006) ----
+
+/// Locks, moves each slider in `moves` through `mover`, checking each is an excursion along its control from the
+/// anchor, re-based on it; then unlocks and checks the free state is the last locked one.
+fn check_sliders(moves: &[(usize, f64)], mover: fn(&SimConfig, usize, f64) -> SetField) {
+    let plane = oblique_plane();
+    let mut st = store(sim(plane.clone()));
+    apply(&mut st, set(&plane, 0.2, 0.9).expect("a lock"));
+    let anchor = now(&mut st).lock.z_locked;
+    for &(k, value) in moves {
+        let before = now(&mut st);
+        apply(&mut st, [mover(&before, k, value)]);
+        let after = now(&mut st);
+        for i in 0..8 {
+            let want = if i == k { value } else { before.plane.z0[i] };
+            assert!(
+                after.plane.z0[i].to_bits() == want.to_bits(),
+                "the slider {k} did not move along its control: z₀[{i}] = {} (want {want})",
+                after.plane.z0[i]
+            );
+        }
+        assert!(
+            same_bits(&after.lock.z_locked, &anchor),
+            "the slider moved the anchor"
+        );
+        let shown = slider(&after, k).expect("a control");
+        assert_eq!(
+            shown.value, value,
+            "the slider shows {} not z₀",
+            shown.value
+        );
+        assert_eq!(
+            shown.anchor,
+            Some(anchor[k]),
+            "the anchor is not ghost-marked"
+        );
+        assert_eq!(shown.offset, Some(value - anchor[k]), "the offset is not δ");
+    }
+    let last = now(&mut st);
+    apply(&mut st, [unlock(&last).expect("locked")]);
+    let free = now(&mut st);
+    assert!(!free.lock.locked, "unlock left the flag set");
+    assert_eq!(free.lock.z_locked, [0.0; 8], "unlock left the anchor");
+    assert_eq!(
+        free.plane, last.plane,
+        "unlock did not keep the last locked (z₀, q₁, q₂)"
+    );
+    let shown = slider(&free, 0).expect("a control");
+    assert_eq!(
+        (shown.anchor, shown.offset),
+        (None, None),
+        "a free slider is re-based"
+    );
+    assert_eq!(unlock(&free), Err(LockError::NotLocked));
+}
+
+#[test]
+fn lock_sliders() {
+    check_sliders(
+        &[(0, 0.75), (6, -1.2), (0, 0.5), (7, 2.5), (3, 0.0)],
+        |s, k, v| move_slider(s, k, v).expect("a slider"),
+    );
+    let s = sim(oblique_plane());
+    assert!(
+        move_slider(&s, 7, 1.0).is_ok(),
+        "the last control is refused"
+    );
+    assert_eq!(move_slider(&s, 8, 1.0), Err(LockError::NoSuchControl(8)));
+    assert_eq!(slider(&s, 8), Err(LockError::NoSuchControl(8)));
+    assert_eq!(move_slider(&s, 2, f64::NAN), Err(LockError::NonFinite));
+    assert_eq!(slider(&s, 7).expect("a control").value, s.plane.z0[7]);
+}
+
+negative_control!(
+    lock_sliders,
+    "a frozen slider, which ignores the move, is no excursion",
+    expected = "did not move along its control",
+    check_sliders(&[(0, 0.75)], |s, _, _| SetField {
+        edit: Edit::Sim(SimField::Z0(s.plane.z0)),
+        no_history: false,
+    })
+);
+
+// ---- lock_setfields (REQ-GUI-007) ----
+
+/// Each edit is an undoable `SimConfig` edit of `z₀` or the lock group, and the store records it.
+fn check_setfields(edits: &[SetField]) {
+    for e in edits {
+        assert!(
+            !e.no_history,
+            "the lock edit {e:?} is marked no history: not undoable"
+        );
+        assert!(
+            matches!(
+                e.edit,
+                Edit::Sim(SimField::Z0(_)) | Edit::Sim(SimField::Lock(_))
+            ),
+            "the lock edit {e:?} is not on z₀ or the lock group"
+        );
+    }
+}
+
+#[test]
+fn lock_setfields() {
+    let plane = oblique_plane();
+    let free = sim(plane.clone());
+    let mut st = store(free.clone());
+    let lock = set(&plane, 0.3, 0.6).expect("a lock");
+    check_setfields(&lock);
+    assert!(
+        matches!(lock[0].edit, Edit::Sim(SimField::Z0(_)))
+            && matches!(lock[1].edit, Edit::Sim(SimField::Lock(_))),
+        "the recentring is not a SetField on z₀ before the lock group's"
+    );
+    apply(&mut st, lock);
+    let locked = now(&mut st);
+    let more = [
+        move_slider(&locked, 1, 0.4).expect("a slider"),
+        snap_back(&locked).expect("locked"),
+        unlock(&locked).expect("locked"),
+    ];
+    check_setfields(&more);
+    let chart =
+        set_on_chart::<Defaults, _, _>(&mixed(), &SQUARE, 0.4, 0.3, phys, &tol()).expect("a lock");
+    check_setfields(&chart.edits);
+    let nearest = Nearest {
+        lz: 0.0,
+        k: 0.0,
+        z: [0.1; 8],
+    };
+    check_setfields(&recentre(&nearest));
+    // Undoable (R-69): undoing the lock's two edits restores the free state.
+    st.undo();
+    st.undo();
+    assert_eq!(now(&mut st), free, "undo did not restore the free state");
+    st.redo();
+    st.redo();
+    assert_eq!(now(&mut st), locked, "redo did not restore the lock");
+}
+
+negative_control!(
+    lock_setfields,
+    "a lock sent as a no-history edit is not undoable",
+    expected = "not undoable",
+    check_setfields(&[SetField {
+        edit: Edit::Sim(SimField::Lock(Lock {
+            locked: true,
+            z_locked: [0.0; 8],
+        })),
+        no_history: true,
+    }])
+);
+
+negative_control!(
+    lock_setfields_basis,
+    "a lock that edits the basis is not a lock edit",
+    expected = "is not on z₀ or the lock group",
+    check_setfields(&[SetField {
+        edit: Edit::Sim(SimField::Basis { q1: e(0), q2: e(1) }),
+        no_history: false,
+    }])
+);
+
+// ---- lock_kernel_uniform_identical (REQ-SYS-012) ----
+
+/// The decode uniform's words for `chart`.
+fn uniform_bits(chart: &LatentChart<f32>) -> Vec<u32> {
+    use kernel::stage::decode::UniformChart;
+    chart
+        .uniform()
+        .iter()
+        .flat_map(|r| r.to_array())
+        .map(f32::to_bits)
+        .collect()
+}
+
+/// The kernel's uniform for `a` and for `b`, the same plane, is one, bit for bit.
+fn check_uniform(a: &SimConfig, b: &SimConfig, kernel: fn(&SimConfig) -> LatentChart<f32>) {
+    assert!(
+        uniform_bits(&kernel(a)) == uniform_bits(&kernel(b)),
+        "the lock reached the kernel's uniform"
+    );
+}
+
+#[test]
+fn lock_kernel_uniform_identical() {
+    // The uniform's fields: the chart's rows, the flags word and the energy row; a field added fails to compile here.
+    let DecodeUniforms {
+        chart,
+        flags,
+        energy,
+    } = DecodeUniforms::default();
+    let _ = (chart, flags, energy);
+    assert_eq!(std::mem::size_of::<DecodeUniforms>(), 6 * 16 + 16 + 16);
+    let free = sim(oblique_plane());
+    let mut locked = free.clone();
+    locked.lock = Lock {
+        locked: true,
+        z_locked: [0.9, -0.1, 0.3, 0.2, -0.6, 0.4, 0.05, 0.7],
+    };
+    check_uniform(&free, &locked, kernel_chart);
+    let other = Lock {
+        z_locked: free.plane.z0,
+        ..locked.lock.clone()
+    };
+    check_uniform(
+        &locked,
+        &SimConfig {
+            lock: other,
+            ..locked.clone()
+        },
+        kernel_chart,
+    );
+    let c = kernel_chart(&free);
+    assert_eq!(
+        c.z0,
+        free.plane.z0.map(|x| x as f32),
+        "z₀ is not the kernel's"
+    );
+    assert_eq!(
+        c.q1,
+        free.plane.q1.map(|x| x as f32),
+        "q₁ is not the kernel's"
+    );
+    assert_eq!(
+        c.q2,
+        free.plane.q2.map(|x| x as f32),
+        "q₂ is not the kernel's"
+    );
+}
+
+negative_control!(
+    lock_kernel_uniform_identical,
+    "a kernel chart that carries the lock flag in z₀ differs locked and free",
+    expected = "the lock reached the kernel's uniform",
+    {
+        let free = sim(oblique_plane());
+        let mut locked = free.clone();
+        locked.lock.locked = true;
+        check_uniform(&free, &locked, |s| {
+            let mut c = kernel_chart(s);
+            c.z0[0] += f32::from(u8::from(s.lock.locked));
+            c
+        });
+    }
+);
+
+// ---- lock_infeasible_tilt (REQ-CHART-010) ----
+
+/// The `(L_z, E)` chart frozen at the hidden coordinate `z_α`, the rest of [`invariant_le`]'s.
+fn le_at(z_alpha: f64) -> InvariantLE<f64> {
+    let mut c = invariant_le();
+    c.0.z_cfg[0] = z_alpha;
+    c
+}
+
+/// The locked `(L_z, E)` view's pixels, its range mapped linearly: the anchor `(L₀, E₀)`, `n × n` pixels at window
+/// offsets `x, y ∈ [−1, 1]`, half-widths `(h_l, h_e)`, the horizontal axis tilted by `tau` degrees into the hidden
+/// `z_α`, `span` its units (R-473's single-angle rotation: `(a, d) = (cos τ·x, sin τ·x)`). `own` reads each pixel at its
+/// own `z_α`, as lock validation must; otherwise at the anchor's.
+fn tilted_view(tau: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
+    let anchor = invariant_le();
+    let x0 = anchor.decode_at::<Defaults, f64>(0.98, 0.45).ic;
+    let inv = invariants(&x0);
+    let (l0, e0) = (inv.lz, inv.e);
+    let (h_l, h_e, span, n) = (0.01 * l0.abs(), 0.01 * inv.k, 1.5, 9);
+    let (sin, cos) = tau.to_radians().sin_cos();
+    let mut pixels = Vec::new();
+    for j in 0..n {
+        for i in 0..n {
+            let x = -1.0 + 2.0 * i as f64 / (n - 1) as f64;
+            let y = -1.0 + 2.0 * j as f64 / (n - 1) as f64;
+            let z_alpha = anchor.0.z_cfg[0] + if own { sin * x * span } else { 0.0 };
+            pixels.push(Pixel {
+                chart: le_at(z_alpha),
+                lz: l0 + cos * x * h_l,
+                y: e0 + y * h_e,
+            });
+        }
+    }
+    (pixels, n * n / 2)
+}
+
+/// Checks lock validation of the tilted view: untilted every pixel feasible and nothing offered; tilted, pixels tagged
+/// past the parabola, none dropped, the centre kept, each tag's nearest point feasible, and the offer the re-centre to
+/// each, then the latent chart.
+fn check_infeasible_tilt(own: bool) {
+    let (flat, _) = tilted_view(0.0, own);
+    let untilted = validate::<Defaults, _>(&flat);
+    assert_eq!(untilted.infeasible(), 0, "the untilted view is infeasible");
+    assert!(
+        untilted.offer().is_empty(),
+        "a feasible view is offered a remedy"
+    );
+    let (pixels, centre_pixel) = tilted_view(60.0, own);
+    let report = validate::<Defaults, _>(&pixels);
+    assert_eq!(report.tags.len(), pixels.len(), "a pixel was dropped");
+    assert!(report.infeasible() > 0, "no pixel tagged past the parabola");
+    assert_eq!(
+        report.tags[centre_pixel],
+        Tag::Feasible,
+        "the tilt moved the lock off its fibre"
+    );
+    let offer = report.offer();
+    assert_eq!(
+        offer.last(),
+        Some(&Remedy::SwitchToLatent),
+        "the latent chart is not offered"
+    );
+    let mut recentres = 0;
+    for (i, tag) in report.tags.iter().enumerate() {
+        let Tag::Infeasible { failed, nearest } = tag else {
+            continue;
+        };
+        assert_eq!(
+            *failed,
+            Constraint::LzEParabola,
+            "pixel {i} failed {failed:?}"
+        );
+        let Some(n) = nearest else { continue };
+        recentres += 1;
+        assert!(
+            offer.contains(&Remedy::Recentre {
+                pixel: i,
+                nearest: *n
+            }),
+            "pixel {i}'s re-centre is not offered"
+        );
+        assert_eq!(
+            feasibility(n.lz, n.k, Constraint::LzEParabola, Constraint::LzEParabola),
+            Feasibility::Valid,
+            "pixel {i}'s nearest feasible point is not feasible"
+        );
+        assert_eq!(
+            n.lz.signum(),
+            pixels[i].lz.signum(),
+            "pixel {i}'s re-centre changed L_z's sign"
+        );
+        let [z0, _] = recentre(n);
+        assert!(matches!(z0.edit, Edit::Sim(SimField::Z0(z)) if same_bits(&z, &n.z)));
+    }
+    assert_eq!(
+        offer.len(),
+        recentres + 1,
+        "the offer is not each re-centre and the latent chart"
+    );
+}
+
+#[test]
+fn lock_infeasible_tilt() {
+    check_infeasible_tilt(true);
+}
+
+negative_control!(
+    lock_infeasible_tilt,
+    "pixels read at the anchor's configuration, not their own, are never carried past the parabola",
+    expected = "no pixel tagged past the parabola",
+    check_infeasible_tilt(false)
+);
+
+/// The tags' arms and the offer's count: a pair below the apex has no nearest point that keeps `L_z`'s class, and a
+/// view with exactly one tagged pixel offers its re-centre and the latent chart.
+#[test]
+fn lock_infeasible_tilt_tags() {
+    let chart = invariant_le();
+    let u = potential(&chart.decode_at::<Defaults, f64>(0.5, 0.0).ic);
+    let report = validate::<Defaults, _>(&[
+        Pixel {
+            chart,
+            lz: 0.0,
+            y: u + 0.5,
+        },
+        Pixel {
+            chart,
+            lz: 0.3,
+            y: u - 0.1,
+        },
+        Pixel {
+            chart,
+            lz: 2.0,
+            y: u + 0.5,
+        },
+        Pixel {
+            chart,
+            lz: f64::NAN,
+            y: u,
+        },
+    ]);
+    assert_eq!(report.tags[0], Tag::Feasible);
+    assert_eq!(
+        report.tags[1],
+        Tag::Infeasible {
+            failed: Constraint::LzEParabola,
+            nearest: None
+        },
+        "a pair below the apex with L_z ≠ 0 has a nearest point"
+    );
+    assert!(matches!(
+        report.tags[2],
+        Tag::Infeasible {
+            nearest: Some(_),
+            ..
+        }
+    ));
+    assert!(matches!(
+        report.tags[3],
+        Tag::Infeasible { nearest: None, .. }
+    ));
+    assert_eq!(report.infeasible(), 3);
+    let one = Report {
+        tags: vec![Tag::Feasible, report.tags[2], Tag::Degenerate],
+    };
+    assert_eq!(
+        one.infeasible(),
+        1,
+        "a degenerate pixel is counted infeasible"
+    );
+    assert!(matches!(
+        one.offer()[..],
+        [Remedy::Recentre { pixel: 1, .. }, Remedy::SwitchToLatent]
+    ));
+    let none = Report {
+        tags: vec![Tag::Feasible, Tag::Degenerate],
+    };
+    assert!(
+        none.offer().is_empty(),
+        "a degenerate pixel alone is offered a remedy"
+    );
+    let rejected_only = Report {
+        tags: vec![report.tags[1]],
+    };
+    assert_eq!(rejected_only.offer(), vec![Remedy::SwitchToLatent]);
+}
+
+negative_control!(
+    lock_infeasible_tilt_tags,
+    "a feasible pair is not tagged",
+    expected = "has a nearest point",
+    {
+        let chart = invariant_le();
+        let u = potential(&chart.decode_at::<Defaults, f64>(0.5, 0.0).ic);
+        let report = validate::<Defaults, _>(&[Pixel {
+            chart,
+            lz: 0.0,
+            y: u + 0.5,
+        }]);
+        assert_eq!(
+            report.tags[0],
+            Tag::Infeasible {
+                failed: Constraint::LzEParabola,
+                nearest: None
+            },
+            "a pair below the apex with L_z ≠ 0 has a nearest point"
+        );
+    }
+);
+
+// ---- curve_tilt_requires_lock (REQ-CHART-007) ----
+
+/// `softmax(0, μ₁, μ₂)`.
+fn softmax(mu1: f64, mu2: f64) -> [f64; 3] {
+    let e = [1.0, mu1.exp(), mu2.exp()];
+    let s = e[0] + e[1] + e[2];
+    e.map(|x| x / s)
+}
+
+/// The latent embed of the Burrau curve under `S`: each control its link's inverse at `γ(ν)`.
+fn latent_embed<S: Selection>(nu: f64) -> Latent {
+    let CurvePoint {
+        alpha,
+        beta,
+        mu1,
+        mu2,
+    } = nu_embed(nu);
+    let [za] = <S::AlphaLink as Link<1, 1>>::inverse([alpha]);
+    let [zb] = <S::BetaLink as Link<1, 1>>::inverse([beta]);
+    let [z6, z7] = <S::MassLink as Link<2, 3>>::inverse(softmax(mu1, mu2));
+    [za, zb, 0.0, 0.0, 0.0, 0.0, z6, z7]
+}
+
+fn unit(a: &Latent) -> Latent {
+    let n = a.iter().map(|x| x * x).sum::<f64>().sqrt();
+    a.map(|x| x / n)
+}
+
+/// Checks the tangent tilt at `nu0` under `S`: refused free; locked, `τ = 0` is the latent embed's tangent at `nu0`,
+/// by an independent central difference, and `τ = 90°` the target.
+fn check_curve_tilt<S: Selection>(nu0: f64, at: f64) {
+    let free = Lock {
+        locked: false,
+        z_locked: [0.0; 8],
+    };
+    let target = e(3);
+    assert_eq!(
+        curve_tilt::<S>(&free, &NU_CURVE, nu0, 1.0, 30.0, &target),
+        Err(LockError::NotLocked),
+        "a free curve-axis tilt is not refused"
+    );
+    let locked = Lock {
+        locked: true,
+        z_locked: latent_embed::<S>(nu0),
+    };
+    let h = 1e-6;
+    let want = unit(&std::array::from_fn(|i| {
+        latent_embed::<S>(at + h)[i] - latent_embed::<S>(at - h)[i]
+    }));
+    let got = curve_tilt::<S>(&locked, &NU_CURVE, nu0, 0.7, 0.0, &target).expect("a tilt");
+    let got = unit(&got);
+    let d: f64 = got
+        .iter()
+        .zip(&want)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max);
+    assert!(
+        d <= 1e-7,
+        "the tilt at τ = 0 is not γ′(ν₀) at ν₀ = {nu0}: {got:?} against {want:?}"
+    );
+    let raw = curve_tangent::<S>(&NU_CURVE, nu0).expect("a tangent");
+    assert!(
+        raw[2..6].iter().all(|&x| x == 0.0),
+        "a rest curve's tangent has momenta"
+    );
+    let full = curve_tilt::<S>(&locked, &NU_CURVE, nu0, 0.7, 90.0, &target).expect("a tilt");
+    let d: f64 = full
+        .iter()
+        .zip(&scale(&target, 0.7))
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max);
+    assert!(
+        d <= 1e-12,
+        "the tilt at τ = 90° is not the target: {full:?}"
+    );
+}
+
+#[test]
+fn curve_tilt_requires_lock() {
+    for nu0 in [0.2, 0.5, 0.83] {
+        check_curve_tilt::<Defaults>(nu0, nu0);
+        check_curve_tilt::<Sticks>(nu0, nu0);
+    }
+    assert_eq!(
+        curve_tangent::<Defaults>(&NU_CURVE, f64::NAN),
+        Err(LockError::NonFinite)
+    );
+    let locked = Lock {
+        locked: true,
+        z_locked: [0.0; 8],
+    };
+    assert!(
+        matches!(
+            curve_tilt::<Defaults>(&locked, &NU_CURVE, 0.5, 1.0, 120.0, &e(3)),
+            Err(LockError::Nav(_))
+        ),
+        "a tilt past 90° is not refused"
+    );
+    // A curve point that moves no mass: its mass tangent is 0, not a difference of nothing.
+    let still = engine::chart_authoring::CurveMeta {
+        parameter: "s",
+        embed: |s| CurvePoint {
+            alpha: 0.3 + 0.1 * s,
+            beta: 1.0,
+            mu1: 0.2,
+            mu2: -0.1,
+        },
+        tangent: |_| CurvePoint {
+            alpha: 0.1,
+            beta: 0.0,
+            mu1: 0.0,
+            mu2: 0.0,
+        },
+    };
+    let t = curve_tangent::<Defaults>(&still, 0.5).expect("a tangent");
+    assert_eq!(
+        &t[6..],
+        &[0.0, 0.0],
+        "a curve that moves no mass has a mass tangent"
+    );
+    assert!(t[0] > 0.0 && t[1] == 0.0);
+    check_mass_step();
+}
+
+/// The mass controls' tangent is the mass link's inverse differenced along `(dμ₁, dμ₂)` at the contract's step
+/// `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`, bit for bit.
+fn check_mass_step() {
+    let nu = 0.37;
+    let (p, d) = (nu_embed(nu), (NU_CURVE.tangent)(nu));
+    let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / d.mu1.hypot(d.mu2);
+    let at = |k: f64| {
+        let m = softmax(p.mu1 + k * d.mu1, p.mu2 + k * d.mu2);
+        <SoftmaxTanh as Link<2, 3>>::inverse(m)
+    };
+    let (hi, lo) = (at(h), at(-h));
+    let want = [(hi[0] - lo[0]) / (2.0 * h), (hi[1] - lo[1]) / (2.0 * h)];
+    let got = curve_tangent::<Defaults>(&NU_CURVE, nu).expect("a tangent");
+    let close = |a: f64, b: f64| (a - b).abs() <= 1e-13 * b.abs().max(1.0);
+    assert!(
+        close(got[6], want[0]) && close(got[7], want[1]),
+        "the mass tangent {:?} is not the step's {want:?}",
+        &got[6..]
+    );
+}
+
+negative_control!(
+    curve_tilt_requires_lock,
+    "the tangent at another point of the curve is not γ′(ν₀)",
+    expected = "is not γ′(ν₀)",
+    check_curve_tilt::<Defaults>(0.2, 0.6)
+);
