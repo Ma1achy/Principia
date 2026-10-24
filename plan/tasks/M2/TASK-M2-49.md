@@ -41,3 +41,22 @@ tests at the release profile; the fault is reported upstream; the pin moves to a
   physics.
 - The pin's move, R-547's "then (a)", is a toolchain change through `rust-toolchain.toml` in its own PR when a fixed
   nightly that `rustc_codegen_spirv` builds against exists (R-414); it drops the flag.
+- Reproducer (transcribed from RQ-299, R-547). Applied per R-369: RQ-299's reproducer and measurement table are
+  transcribed from `docs/archive/review_queue/M0.md` § RQ-299 into this task file as test data (the orchestrator read
+  the archive; this task file is the citation). The reproducer, verbatim:
+
+  ```rust
+  fn main() {
+      let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
+      let flip = |mut x: [[f32; 2]; 3]| { for v in x.iter_mut() { v[1] = -v[1]; } x };
+      let pair = |mut x: [[f32; 2]; 3]| { x[1] = x[0]; x };
+      let s = [flip(plain), pair(flip(plain))];
+      println!("{} (want 0.5)", s[1][0][1]);
+  }
+  ```
+
+  Measured (`rustc +<toolchain> -C opt-level=<n>`): nightly-2026-04-11 (the pin): opt-level 0 → 0.5, 1/2/3 → −0.5;
+  stable 1.99.0 → 0.5 at every level. On the pin, `-Zmir-opt-level=0` or `-Zmir-enable-passes=-GVN` at opt-level 1
+  gives 0.5, and opt-level 0 with `-Zmir-opt-level=2` gives −0.5 (the fault is MIR GVN, not LLVM). Close variants pass
+  (`#[inline(always)]` fns; without the first `flip(plain)`; `pair(plain)` in its place; a two-element i32 array), so
+  the trigger is uncharacterised.
