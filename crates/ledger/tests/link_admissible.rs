@@ -499,6 +499,24 @@ fn check_entries(factor: f64) {
                 .any(|l| l.contains("constraint-preserving fails at f32")),
         "the leaking link at f64 and f32: {lines:?}"
     );
+    // `3·tanh(x/20)` stays inside `[−2, 2]` over the drawn controls and leaves it only at the saturating ±20 and past,
+    // so the fuzz is run past its first controls when they pass.
+    let (b, _) = injected("late_leak_q", |b| {
+        b.forward = Some(leak(vec![op(
+            Op::Mul,
+            vec![
+                num(factor * 2.0),
+                op(Op::Tanh, vec![op(Op::Mul, vec![num(0.05), X])]),
+            ],
+        )]));
+    });
+    let lines = refused(&b, tunables(), "late_leak_q");
+    assert!(
+        lines
+            .iter()
+            .any(|l| l.contains("constraint-preserving fails at f64")),
+        "the link leaking only at saturating controls: {lines:?}"
+    );
     let (b, t) = injected("exact_q", |_| {});
     assert!(
         refused(&b, &t, "exact_q").is_empty(),
