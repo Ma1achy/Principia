@@ -171,7 +171,9 @@ built IC round-trips; the kept-orbit tabs stay `ViewUI`; and the test's "kept-on
   `lookup_rescaled` reports it (`principia_inverse_encode_contract.md` Part 6, step 0), so a row can be related to the
   `as_built` the record holds; the columns after `Lz` carry their frame and unit in their definition.
 - **Back to `as_built`** (applied per R-369, fix round 5 of PR #287, physics review 5638172877): a row's frame is `as_built`'s translated by its centre of
-  mass, boosted by its centre-of-mass velocity, rescaled by `λ` and rotated by `θ`, step 2's angle; the preamble states
+  mass, rescaled by `λ`, boosted by its centre-of-mass velocity and rotated by `θ`, step 2's angle, in `C`'s order
+  (`principia_inverse_encode_contract.md` Part 6: 1a, 0, 1b, 2; fix round 6 of PR #287, physics review 5638188152, N1,
+  applied per R-369; *Was:* "boosted by its centre-of-mass velocity, rescaled by `λ` and rotated by `θ`"); the preamble states
   the centre-of-mass offset and velocity and `θ` beside `λ`, each recomputable from the `as_built` it holds.
 
 ## 4. Fit with rulings
