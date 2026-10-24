@@ -129,6 +129,10 @@ pub mod chart_authoring;
 // links resolve there.
 pub mod nav;
 
+// Lookup, CPU-side: the exact and partial forms and the three-layer validation ladder (inverse_encode_contract Part 6;
+// TASK-M2-19): documented in the module itself, whose links resolve there.
+pub mod lookup;
+
 // The kernel's decode stage dispatched natively, and its CPU-f64 counterpart `decode_only` (TASK-M2-06): documented in
 // the module itself, whose links resolve there.
 pub mod decode_dispatch;

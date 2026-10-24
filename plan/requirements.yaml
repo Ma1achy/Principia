@@ -1622,6 +1622,63 @@
   - R-547
   milestone: M2
   note: "R-547 (RQ-295 (c)). Proposed by TASK-M2-47, TASK-M2-07 having merged (applied per R-369)."
+- id: REQ-ENC-036
+  area: ENC
+  kind: definition
+  statement: "The zero class of L_z and of E in lookup's layer-1 class test, in floating point, must be defined in inverse_encode_contract § \"Chart-aware validation\" by the task that needs it and reviewed by the physics reviewer before merge: a band that absorbs rounding only, relative to the first-order bound on each value's rounding read from the entered state's extents as well as the canonical state, so that one physical state gets one verdict under every gauge, the state after a clamp classed by the rule (REQ-ENC-038), not by its decoded value."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the contract defines class 0 as a band on |L_z| and |E| relative to the bounds on their rounding, on the entered extents, with sign classes outside it; physics reviewer approved; `cargo test -p engine lookup_validation_ladder_zero_band` gives the collinear L_z = 0 state one verdict at 64 orientations, and `cargo test -p engine lookup_validation_ladder_clamp_rule` gives the boosted rest and p_λ = 0 starts their verdicts"
+  rulings:
+  - R-72
+  milestone: M2
+  note: "Restated by qa's fix round 4 of PR #284 (option A, applied per R-369). *Was:* \"The zero class of L_z and of E in lookup's layer-1 class test, in floating point, must be defined in inverse_encode_contract § \"Chart-aware validation\" by the task that needs it and reviewed by the physics reviewer before merge: a band relative to each value's scale, so that one physical state gets one verdict under every gauge.\" Verify *Was:* \"the contract defines class 0 as a band on |L_z| and |E| relative to their scales, with sign classes outside it; physics reviewer approved; `cargo test -p engine lookup_validation_ladder_zero_band` gives the collinear L_z = 0 state one verdict at 64 orientations\"."
+- id: REQ-ENC-037
+  area: ENC
+  kind: calibration
+  statement: "The zero-class band's k in lookup's layer-1 class test, which absorbs rounding only, must be calibrated: proposed with its evidence by the task that needs it, at least 4× above the measured rounding against its bound, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "`cargo test -p engine lookup_validation_ladder_zero_band_measure` measures C's rounding of L_z and E against their bounds over gauge images, and the moves' and the after-values' rounding against theirs over clamped z, and checks k at least 4× above both; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Restated by qa's fix round 4 of PR #284 (option A, applied per R-369): the second inequality, 4× below the smallest class change a clamp makes, is dropped, since the clamp's class is read from its move (REQ-ENC-038). Statement *Was:* \"The zero-class band's k in lookup's layer-1 class test must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md.\" Verify *Was:* \"`cargo test -p engine lookup_validation_ladder_zero_band_measure` measures C's rounding of L_z and E over gauge images and the decode's over unclamped z, and checks k at least 4× above it and 4× below the smallest class change a clamp makes; recorded in decisions.md\"."
+- id: REQ-ENC-038
+  area: ENC
+  kind: definition
+  statement: "The class a layer-1 clamp moves must be defined in inverse_encode_contract § \"Chart-aware validation\" by the task that needs it and reviewed by the physics reviewer before merge: for each clamped control (α, β, each Jacobi momentum qₖ and the masses), the closed form of ΔL_z and ΔE in exact arithmetic from the decoder's forms (dd_decoder §3.1, §3.2, §3.4), whether and in which direction it moves each, and the bound on its rounding, so that lookup classifies the clamped state by that rule, not by its decoded value; and at the α = 0 pole, where β is undefined, a rule that gives one verdict in every gauge (R-591: each move's worst case over β, |ΔL_z| ≤ b'·‖p_λ‖ and likewise ΔU's β-dependent part, so the clamp is rejected in every gauge unless p_λ is zero within its own bound)."
+  source:
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.1 Mass
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.2 Configuration — hyperspherical mass-weighted Jacobi
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.4 Momentum
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-591 — At the `α = 0` pole, where the state does not define `β`, lookup reads a layer-1 clamp's move as its worst case over `β`: `|ΔL_z| ≤ b'·‖p_λ‖`, and likewise `ΔU`'s `β`-dependent part, so the clamp is rejected in every gauge unless `p_λ` is zero within its own bound; the clamp's image of `β` is not defined along `p_λ` *(closes RQ-565; the contract's interim pole rule becomes the ruled rule; changes inverse_encode_contract § \"Chart-aware validation\", \"The class a clamp moves\", and REQ-ENC-038; R-437 and R-438 untouched)*"
+  verify:
+    method: review checklist
+    detail: "the contract gives each clamped control's ΔL_z and ΔE in closed form with their direction, and the α = 0 pole's rule; physics reviewer approved; `cargo test -p engine lookup_validation_ladder_clamp` rejects β's clamp at a collinear start with p_λ ≠ 0 (t = 1e-4, 1e-6, 1e-8) and a q₁ clamp at L_z = 0, and accepts β's clamp with p_λ = 0, q₀'s, and the extreme-mass-ratio rest starts' mass clamps, boosted or not; `cargo test -p engine lookup_validation_ladder_pole` gives each L_z = 0 start at the α = 0 pole one verdict over 64 gauge images, boosted or not, mirrored or not, landing on λ̃ = 0 exactly and on rounding"
+  rulings:
+  - R-72
+  - R-591
+  milestone: M2
+  note: "Added by qa's fix round 4 of PR #284 (option A, applied per R-369). Restated by fix round 5 (physics review 5638054366, P1; the pole rule interim, applied per R-369 until RQ-565). Restated by R-591 (24 Oct 2026, closes RQ-565): the interim pole rule is the ruled rule. Statement *Was:* \"… so that lookup classifies the clamped state by that rule, not by its decoded value.\" Verify *Was:* \"the contract gives each clamped control's ΔL_z and ΔE in closed form with their direction; physics reviewer approved; `cargo test -p engine lookup_validation_ladder_clamp` rejects β's clamp at a collinear start with p_λ ≠ 0 (t = 1e-4, 1e-6, 1e-8) and a q₁ clamp at L_z = 0, and accepts β's clamp with p_λ = 0, q₀'s, and the extreme-mass-ratio rest starts' mass clamps, boosted or not\". Statement's ending *Was* (fix round 5): \"… (interim: each move's worst case over β, until RQ-565 is ruled).\""
 - id: REQ-CHART-001
   area: CHART
   statement: "Each chart must lower to a monomorphised Rust variant (the chart a type parameter the compiler specialises); there must never be a runtime axis-kind interpreter or runtime chart-type switch on the compute side, and adding a chart must mean a lowering rule plus a kernel type."

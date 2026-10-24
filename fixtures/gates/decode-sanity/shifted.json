@@ -1,0 +1,9 @@
+{
+  "description": "The measurement can fire: the same draws, fewer of them, with every decoded position moved by 0.1 along x, so the CoM sits 0.1 from the origin, at least 0.1/R_x and so above k·ε at both precisions on every row, and the gate must fail it.",
+  "seed": 19,
+  "per_chart": 4096,
+  "fuzz": 65536,
+  "span": 16.0,
+  "shift": 0.1,
+  "expected": "fail"
+}
