@@ -9,7 +9,7 @@
 - **Size:** ~200 lines, the tests included
 
 ## Goal
-The Precision ring gains `computeICState(state, simKey) → SimState`, the integration `computeIC` runs after its decode, from a full state given, on the CPU in f64 under R-33's RK45, so a built, off-slice IC can be integrated bitwise; the constructor integrates `C(as_built)` with `C`'s mirror step not taken (RQ-563's option (a)). A picked IC still enters through `computeIC` (R-586).
+The Precision ring gains `computeICState(state, simKey) → SimState`, the integration `computeIC` runs after its decode, from a full state given, on the CPU in f64 under R-33's RK45, so a built, off-slice IC can be integrated bitwise; the constructor integrates `C(as_built)` with `C`'s mirror step not taken, never the mirror twin (R-589). A picked IC still enters through `computeIC` (R-586).
 
 ## References
 - `docs/design/principia_ic_save.md` § "3.4 Integration"
@@ -30,6 +30,7 @@ The Precision ring gains `computeICState(state, simKey) → SimState`, the integ
 ## Notes
 - R-586 (21 Oct 2026, gap sweep PR 2c): the human accepted the draft's state-in entry, which amends `computeIC`'s contract (parity contract §1).
 - **RQ-563 is ruled** by R-589 (24 Oct 2026; physics), option (a): the constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and the mirror step not taken, the hemisphere kept, never the twin. *Was:* "**RQ-563 is open** (the frame integrated, against R-544; physics): meanwhile its option (a), `C(as_built)` with the mirror step not taken, the hemisphere kept; nothing waits. A ruling for (b) would fold the mirror here."
+- **R-589 (24 Oct 2026; code review 5638264898 of PR #287, C2, applied per R-369):** the goal cites the ruling. *Was (goal):* "the constructor integrates `C(as_built)` with `C`'s mirror step not taken (RQ-563's option (a))."
 - TASK-M8-16 depends on this task: its Inspector reaches the engine through `computeIC` and `computeICState` (REQ-GUI-117).
 - **Fix round 2 of PR #287 (qa review 5638084688, Q8, applied per R-369):** the acceptance lines follow the new verifies. *Was:* "`cargo test -p engine compute_ic_state` — for a picked IC, computeICState on computeIC's decoded state gives a SimState bitwise equal to computeIC's; for a built IC in the lower hemisphere the state integrated keeps its hemisphere (its λ̃_y sign) and its L_z sign, the rotation and centre of mass canonicalised; the entry runs RK45 in f64 (controls: an entry that folds the mirror, giving the twin's trajectory, and one that re-decodes z, which is not bitwise, each fail); review (physics) (REQ-INT-107)."
 - **Fix round 3 of PR #287 (code review 5638122561, C2, applied per R-369):** this task depends on TASK-M2-43, whose `canon.rs` gives the shared `C` its step-3-not-taken entry (REQ-CHART-081). *Was:* "- **Depends on:** TASK-M3-19"; "- **Needs (earlier milestones):** REQ-SYS-017, REQ-INT-055".
