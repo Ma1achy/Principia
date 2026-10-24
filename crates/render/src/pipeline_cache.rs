@@ -154,9 +154,16 @@ impl FrameInputs {
         ]
     }
 
-    /// The prelude's uniform block's words (R-145).
+    /// The prelude's uniform block's words (R-145), the canvas background the default
+    /// (`crate::present::canvas_background`, R-467 D2).
     pub fn prelude_words(&self) -> [u32; 4] {
-        prelude::uniform_words(self.ensemble)
+        self.prelude_words_on(crate::present::canvas_background())
+    }
+
+    /// The prelude's uniform block's words with the canvas background `background`, linear RGB, the colour the caller's
+    /// window is cleared to (R-467 D2; REQ-COL-108).
+    pub fn prelude_words_on(&self, background: [f32; 3]) -> [u32; 4] {
+        prelude::uniform_words_with(self.ensemble, background)
     }
 }
 

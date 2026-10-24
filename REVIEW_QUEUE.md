@@ -606,6 +606,82 @@ Nothing is ruled.*
   - (c) (a), but only for a click that pins a trace; a hover draws the new trace without restarting.
 - **Applied meanwhile:** (a), the words. REQ-GUI-354 carries it with `rq: RQ-534`.
 
+## RQ-536: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against the decoder's `DEGENERATE(M01_TINY)` fence, which the far field of a latent chart reaches under the edge-reaching simplex link, or under `softmax_tanh` with a large enough `μ_max`, and which R-511 draws blank *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-481, dd_decoder §3.1, REQ-GEN-026; REQ-CHART-087; context: TASK-M8-57)*
+
+*Found by R-570's port. Nothing is ruled. For the human: yes (physics: what a far-field pixel is under a non-default
+link).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 1:
+    "every latent `z` decodes to a valid system"; item 3: "**Every pixel is a system, everywhere.** No hatch, no blank,
+    and no "not a system" on these charts at any pan or zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass": "`M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)`",
+    with `ε_M01 = 10⁻⁵` (REQ-DEC-039) and "the edge-reaching simplex link's corner `m₂ → 1` piles up at
+    `ε_μ − ε_μ²/4`, below it".
+  - `docs/design/principia_dd_generation_root.md` § 3, the edge-reaching simplex link (REQ-GEN-026): "Near the corner
+    `m₂ → 1`, `m₀ + m₁` falls to about `ε_μ`, where dd_decoder's `DEGENERATE(M01_TINY)` fence (`M₀₁ < ε`) can fire."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** at the default links (`softmax_tanh` at `μ_max = 5`) the far field's `M₀₁` stays at or above
+  `(1 + e^−5)/(1 + e^−5 + e^5) ≈ 6.7×10⁻³`, far above `ε_M01`, so no pixel is tagged and R-570 holds. Under the
+  edge-reaching simplex link, which the Decoder window may select for the masses (R-478), the latent far field saturates toward the corner
+  `m₂ → 1`, where the fence fires, so those pixels are `decode_failed` and draw blank (R-511); under `softmax_tanh` the
+  floor falls below `ε_M01` once `μ_max` is above about 11.5, and `μ_max`'s allowed range is an open calibration
+  (REQ-GEN-038). Either way a latent chart has "not a system" pixels far out, which item 3 rules out.
+- **Options seen:**
+  - (a) R-570's item 3 holds at the default links; under a link or a parameter whose saturation reaches the fence, the
+    tag stands and those far-field pixels are not a system, blank, as the decoder defines them.
+  - (b) The links' ranges are bounded so that saturation never reaches the fence: `μ_max`'s range capped below the
+    value where `softmax_tanh`'s floor meets `ε_M01`, and the edge-reaching link's `ε_μ` set above `ε_M01`.
+  - (c) R-570 governs on latent and flat charts: a far-field `M01_TINY` there is a labelled system, drawn and
+    integrated as any other, the fence becoming a label rather than "not a system" on these charts.
+- **Applied meanwhile:** nothing changes in the decoder; R-570's tests run at the default links, where no pixel is
+  tagged.
+- **Waits:** REQ-CHART-087's arm under a non-default mass link or `μ_max` (TASK-M8-57), `rq: RQ-536`. The default-link
+  arms do not wait.
+
+## RQ-538: A Print graph length in `device_px` is "true screen pixels" and the sheet is "anchored to the screen", but the Print graph runs before the display scale, where every stage runs at render resolution, and under Auto `render_scale` changes while the camera moves *(silence: the design doc against the render contract; R-490, R-487, R-531, R-557; REQ-RENDER-110; context: TASK-M7-69)*
+
+*Found writing the Print graph plan (the human's request of 21 Oct 2026 to add the bundles' tasks). Nothing is
+chosen. For the human: no physics; it changes how a screen medium (a CRT's scanlines, an LCD's subpixels, an LED's
+pitch) and the paper's tooth look whenever `render_scale ≠ 1`, so it is a design question, not a routine one.*
+
+- **File, section:**
+  - `docs/design/principia_print_graph.md` § "6.2 Units: a medium must look the same at every export size":
+    "**`device_px`**: true screen pixels. Only for effects that model the display itself: CRT scanlines, LCD
+    subpixels, LED pitch." and "**`ref_px`** …: pixels on a 1024-wide figure, scaled by `output_width / 1024` at render
+    time."
+  - `docs/design/principia_print_graph.md` § "6.3 Anchoring and stability under motion and playback": "**The sheet is
+    anchored to the screen.** Paper tooth, canvas weave, grain and the ground stay fixed while the figure pans and
+    zooms beneath them." and "Noise-driven marks … are seeded from screen-anchored coordinates and the graph's seed".
+  - `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic rules", the composite order: "**display
+    scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the
+    display-sized swap chain; all prior stages run at render resolution)", and the Print graph stage: "SimState →
+    stain → [the line sets marked `through_medium`] → **Print graph** → display scale → gamut clamp → …" (R-487,
+    R-531).
+  - `docs/design/principia_quality_device_note.md` § "5. Timescale cascade (each layer absorbs what's too fast for the
+    one above)": the motion regime's levers, `render_scale` among them, beside the post level (R-557).
+- **The silence:** the Print graph writes a render-resolution buffer, which the display scale then resamples to the
+  screen. A `device_px` length measured in that buffer is a screen pixel only at `render_scale = 1`; at any other
+  scale a CRT's scanline pitch, drawn at one render pixel, is resampled to `1/render_scale` screen pixels, blurred
+  below native and averaged away above. The same holds for "screen-anchored" coordinates: a sheet seeded from render
+  pixels rescales on the screen when Auto moves `render_scale` during a pan, so the sheet the design keeps still would
+  change grain at every motion-regime step. Neither the design doc nor the render contract says which pixels
+  `device_px` and the screen anchoring are counted in, or what a `device_px` node does at export, where no screen
+  exists (§6.2 exempts `device_px` nodes from the scale-invariance test, but does not say what width they use).
+- **Options seen:**
+  - (a) `device_px` and the screen anchoring are counted in display pixels mapped back into the render buffer: a
+    length of `n` device pixels is `n · render_scale` render pixels, and the anchoring coordinate is the pixel's
+    screen position; the effect is still resampled by the display scale, so below native a one-pixel scanline is
+    approximated, never exact. At export, a display pixel is an export pixel.
+  - (b) As (a), and nodes flagged `device_px` (and the sheet) run after the display scale, at display resolution,
+    a second print pass, so a scanline is exactly one screen pixel at every `render_scale`; the chain gains a stage.
+  - (c) `device_px` is counted in render pixels as written, and the design doc §6.2's "true screen pixels" is read as
+    "true pixels of the buffer the Print graph writes"; a screen medium coarsens while Auto lowers `render_scale`.
+- **Applied meanwhile:** none. REQ-RENDER-110 (`rq`) and its leaf task TASK-M7-69 wait; every other Print graph task
+  proceeds, testing `device_px` nodes and the anchored sheet at `render_scale = 1`, where the three options agree.
+
 ## RQ-550: The membrane rule's "exactly three crossings" (REQ-SYS-059) against v1 web, the whole native app in the browser, which needs more *(conflict: R-571 against REQ-SYS-059, systems_architecture §3 and canonical_spec §1 item 5; REQ-SYS-059, REQ-SYS-051, REQ-SYS-086; context: TASK-M8-38, TASK-M8-41)*
 
 *Queued by R-571, which names it: "The membrane rule is the one place I expect a real conflict. … Do not redesign it.
@@ -707,3 +783,266 @@ Nothing is ruled. For the human: yes, it changes how v1 web is built.*
   shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
   (a) and (b).
 - **Waits:** TASK-M8-37 and TASK-M8-38.
+
+## RQ-552: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against energy normalisation η_E, which dd_decoder §3.7 allows on the latent chart and whose tags R-511 draws blank, at the default links, near the origin as well as far out *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-25, dd_decoder §3.7; REQ-CHART-087, REQ-GUI-357; context: TASK-M8-55, TASK-M8-57)*
+
+*Found by physics review 5624655553 of PR #279, P1. Nothing is ruled. For the human: yes (physics: what a pixel whose
+energy target cannot be met is on a latent chart).*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md` § "The behaviour", item 3:
+    "**Every pixel is a system, everywhere.** No hatch, no blank, and no "not a system" on these charts at any pan or
+    zoom."
+  - `docs/design/principia_dd_decoder.md` § "3.7 Energy normalisation (optional; keep-or-drop is decision B9)",
+    "Where it is allowed": "Only on charts that decode arbitrary momenta without enforcing an energy: the
+    free-Jacobi-momentum chart and the latent chart."; its cases: "**$E^* < U$:** $\eta_E$ is not real, since the
+    kinetic energy would be negative. The decode is tagged `DEGENERATE(ENERGY_INFEASIBLE)`." and "At $E^* > U$ the
+    decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`; the golden IC, `z = 0` at rest, is so tagged under any
+    $E^* > U$."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)", "Blank, never a colour (R-470)": "a `decode_failed` sample the chart does not classify (a non-finite
+    decode, η_E's tags, the mass block's `M01_TINY`) blank, as a pixel that is not a system (R-511)".
+- **The conflict:** with η_E off (`None`, R-25) no latent pixel carries an η_E tag. With `Some(E*)`, which §3.7 allows on
+  the latent chart, a pixel whose potential is above a bound target is `ENERGY_INFEASIBLE` and a rest start under
+  `E* > U` is `ENERGY_UNSCALABLE`; each is `decode_failed`, drawn blank as not a system (R-511), near the origin as
+  well as far out and at the default links. Item 3 rules that out, and the port's qualifier "at the decoder's default
+  links" does not cover it, η_E not being a link.
+- **Options seen:**
+  - (a) R-570's item 3 holds with η_E off; under `Some(E*)` the tags stand and those pixels are not a system, blank, as
+    the decoder defines them.
+  - (b) η_E is forbidden on the latent chart and the flat and body-plane slices (`forbids_energy_normalisation`
+    true), so item 3 holds on them always; the free-Jacobi-momentum chart keeps it.
+  - (c) R-570 governs: on these charts an η_E-tagged pixel is a labelled system, drawn and integrated as decoded,
+    without the normalisation, the tag a label rather than "not a system".
+- **Applied meanwhile:** the port's statements and tests read "at the decoder's default links, η_E off (`None`)":
+  far_field_saturates and latent_unbounded_navigation pin `E* = None`. Nothing changes in the decoder.
+- **Waits:** REQ-CHART-087's arm under `Some(E*)` (TASK-M8-57), `rq: RQ-552`. The η_E-off arms do not wait, and
+  neither does REQ-GUI-357, which states the η_E-off case.
+- **Also (physics review 5624721489 of PR #279, an observation):** dd_decoder §3.7 tags the collision pole too:
+  "**The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
+  $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`." It does not change the conflict or the
+  options.
+
+## RQ-554: A band quad on a latent or flat chart, saturated along one in-plane axis only, collapses, switches, collapses again on the linear path and stops terminally at `AT_F32_FLOOR` above the screen floor, so the strip that "stays structured" stops refining, against R-108's at-rest target *(physics, conflict: the ladder's terminal stop against R-108 and R-570's port; R-570, R-108, R-88, R-90; REQ-SCHED-062, REQ-DEC-033; context: TASK-M6-08, TASK-M8-57)*
+
+*Found by perf review 5624936602 of PR #279, P2. Nothing is ruled. For the human: yes (physics: whether a quad whose
+collapse is saturation along one axis keeps refining, which changes what is drawn).*
+
+- **File, section:**
+  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound": "(iv) the **decode floor proper**
+    (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a
+    deep-zoom backstop"; and R-570's port, as it stood: "Stopping refinement there is harmless, the field being flat."
+  - `plan/requirements.yaml` REQ-SCHED-062: "sample collapse on the linearised decoder must fire AT_F32_FLOOR, a
+    terminal stop cached as a quad fact".
+  - `decisions.md` § "R-108 — Must-split above the floor is the at-rest target *(closes RQ-68)*": "During a gesture
+    the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest."
+  - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)":
+    "a view goes flat only where every coordinate its plane varies is saturated, so along each in-plane axis a strip a
+    few units of `z` wide stays structured out to any distance".
+- **The conflict:** at `z₀ = 10⁴·ê_k` a quad's full-decoder pairs along `ê_k` collapse, so `quad.collapsed` is set and
+  it switches (REQ-DEC-033); its linear samples along `ê_k` collapse again, `J_D`'s `ê_k` column being 0, so
+  `AT_F32_FLOOR` fires, a terminal stop never re-queued (REQ-SCHED-062). The quad stops near depth 0 while its other
+  in-plane axis has structure above the screen floor, which at rest stays at the terminal quad's `N × N` resolution,
+  against R-108's "completeness resumes at rest" and the strip's "stays structured". "Harmless" holds only where
+  every in-plane `J_D` column is 0.
+- **Options seen:**
+  - (a) A quad every collapsed pair of which is a saturation collapse (RQ-553's per-direction test) is not terminal:
+    it keeps refining along its unsaturated direction to the screen floor, its cost still screen-bounded
+    (REQ-SCHED-104's at-rest bound).
+  - (b) The stop is accepted: the band stays at the terminal quad's resolution, and the readout says so.
+  - (c) Other: for example, the switchover's collapse test reads only the directions whose `J_D` column is non-zero.
+- **Applied meanwhile:** the terminal stop stands as REQ-SCHED-062 defines it; deep_zoom §4's "harmless" is limited
+  to quads whose in-plane `J_D` columns are all 0, and the band quad's case points here.
+- **Waits:** REQ-SCHED-062's behaviour on band quads (TASK-M6-08), `rq: RQ-554`. Its other arms, and the rest of
+  TASK-M6-08, do not wait.
+
+## RQ-555: The horizon's range now that it can be lowered: the lowest `T_horizon`, and whether 200 still caps it *(found by R-575's port; R-575 against R-132 and RQ-524; REQ-INT-081, REQ-INT-026, REQ-GUI-102; context: TASK-M3-06, TASK-M8-24)*
+
+*Found by R-575's port. The human ruled that the horizon "shouldn't be capped to 50 should be able to raised or
+lowered", and gave no lowest value. For the human: yes, it sets what the Run window accepts.*
+
+- **File, section:**
+  - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*":
+    "REQ-INT-081: `dt_macro = max(1e-3, T/65535)`. T keeps [50, 200], with a default of 50; u16 indices stay exact
+    (R-86)."
+  - The human, 21 Oct 2026 (`designs/honesty_precision.md`, "Decided"): "**Horizon**: default stays 50, and it can be
+    **raised or lowered**, not floored at 50 ("Keep horizon to 50. (Also horizon shouldn't be capped to 50 should be
+    able to raised or lowered)"). Amends the Run window's `T_horizon ∈ [50, 200]` (render_gui_spec §G5) and R-132."
+  - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar"; `docs/contracts/principia_integrator_contract.md`
+    § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units and the horizon (inherited scale gauge)".
+- **The question:** the floor at 50 goes; nothing says what replaces it. Below 50 nothing breaks arithmetically
+  (`dt_macro = max(1e-3, T/65535)` gives `⌈T/dt_macro⌉ ≤ 65535` at any `T > 0`), but a short horizon leaves most
+  pixels without an outcome, and the escape test needs its window (0.4 time units, R-29) and the sync grid its quantum
+  (R-565). "Raised" is already possible up to 200; whether the ruling means past 200 is not said. RQ-524 (the
+  unregularised `dt_macro` depending on `T` above 65.535) is unaffected by lowering.
+- **Options seen:** the floor: (a) any `T > 0`; (b) a floor that lets every detector act, the escape window or one
+  sync quantum `Δ_sync`, whichever is larger; (c) a calibrated floor (R-71), proposed with evidence. The cap: (i) 200
+  stays; (ii) it is raised (the u16 rule holds at any `T`, so the cap is not needed for exactness).
+- **Applied meanwhile:** (a) and (i): `T_horizon ∈ (0, 200]`, default 50, a value at or below 0 refused with its reason.
+  Nothing waits.
+  Above 200 the field clamps to 200, as before R-575. A press of ↓ (with or without Shift or Alt) or a drag that would
+  take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T unchanged; ↓ never raises
+  T (fix rounds 1 and 3 of PR #283, gui reviews 5627122883 G8 and 5627280803 N3, applied per R-369).
+
+## RQ-556: What the header strip states about the horizon, against REQ-SYS-061's "The interactive atlas must state its predictability horizon" *(found by R-574's port; R-574 against REQ-SYS-061 and philosophy §4.1; context: TASK-M8-41)*
+
+*Found by R-574's port, and queued as the bundle's instruction says: "Where anything here conflicts with a ruling or a
+queue entry these texts don't address, queue it rather than resolving it." For the human: yes, it changes what the
+atlas's chrome says.*
+
+- **File, section:**
+  - The human, 21 Oct 2026 (`designs/honesty_precision.md`, "Decided"): "A single global "f32 trustworthy to ~23" is
+    right pooled and wrong for any given point, which is why the readout is per point."; "**Nothing changes in the
+    atlas**: it stays f32 on the GPU, coloured as now"; "The header states the horizon; the viewer states each point's
+    parting."
+  - The draft's §3, "The atlas statement": "The header strip reads: "Horizon `T = 50` · f32 trustworthy to about
+    `t ≈ 23` (derived, not yet measured on this GPU)", changing to "measured" once REQ-VAL-071 runs. A stain preset,
+    **How far f32 sees**, draws `ln(1/eps)/ftle`."
+  - `plan/requirements.yaml`, REQ-SYS-061: "The interactive atlas must state its predictability horizon, and nothing
+    downstream may treat an atlas pixel past the horizon as a result."; `docs/read_first/principia_00_philosophy.md`
+    § "4.1 The instrument must say where it stops knowing".
+- **The question:** "the horizon" the header states may be `T` (the run's horizon) or the predictability horizon
+  REQ-SYS-061 asks the atlas to state; the human's reason for the per-point readout argues against a global "≈ 23",
+  which is how the draft's header met REQ-SYS-061. The stain preset is not made either way (R-574: nothing changes in
+  the atlas).
+- **Options seen:** (a) the header strip states `T` only ("Horizon T = 50"), and REQ-SYS-061's predictability horizon
+  is stated per point, by the viewer's trust line and its FTLE estimate; REQ-SYS-061 restated so. (b) The header
+  states `T` and the draft's derived f32 horizon ("f32 trustworthy to about t ≈ 23 (derived …)", "measured" once
+  REQ-VAL-071 runs); REQ-SYS-061 unchanged. (c) Nothing is added to the header; REQ-SYS-061 is met as its verify
+  reads, by labelling exports and statistics built from atlas data as exploratory.
+- **Applied meanwhile:** none; nothing is built before TASK-M8-41. REQ-SYS-061 carries `rq: RQ-556`.
+- **Waits:** TASK-M8-41 (REQ-SYS-061).
+
+## RQ-557: The ensemble ratio's expected value: `ln eps₃₂ / ln eps₆₄ ≈ 0.44`, against the probe's readings *(found by R-574's port; physics; REQ-VAL-199; context: TASK-M8-76)*
+
+*Found by R-574's port. The draft's test is the human's; the measurement since does not settle its value. Physics,
+where the choice changes what passes: for the human.*
+
+- **File, section:**
+  - `docs/design/principia_honesty_precision.md` § "6. Tests (each with what makes it fail)", the draft's
+    **ensemble_ratio**: "over ≥ 256 chaotic ICs, median `t_part(f32)/t_part(f64)` near `ln eps₃₂/ln eps₆₄ ≈ 0.44`.
+    Never read off one trajectory."
+  - `docs/incoming/2026-10-21_gap_sweep_results_honesty/evidence/parting_probe_output.txt`, "deep interior", at
+    `θ = 0.1`: f32 vs f64 median 12.1, 95 % parted by 50; f64 vs f64′ median 39.4, **19 %** parted by 50.
+- **The question:** exponential growth from a starting gap `δ₀` predicts `t_part ≈ ln(θ/δ₀)/λ`, so the ratio is
+  `ln(θ/δ₃₂)/ln(θ/δ₆₄)`, not `ln eps₃₂ / ln eps₆₄`, unless `θ` is ignored: at `θ = 0.1` with the probe's deep-interior starting
+  chords (about 2e-7 and 1.6e-16 at `t = 0.1`) it is about 0.38; the draft's value is 0.44. The probe's medians give
+  12.1 / 39.4 ≈ 0.31, but only over the 19 % whose f64 runs parted by 50, the earliest, so biased low. At `T = 50` most
+  f64 runs do not part, so the gate needs a longer horizon (up to 200) or a conditioning rule.
+- **Options seen:** (a) the draft's value, 0.44, the tolerance calibrated (R-71); (b) the predicted ratio from each
+  IC's measured starting chords and the mark, `ln(θ/δ₃₂)/ln(θ/δ₆₄)`, the tolerance calibrated; (c) no pass/fail: the
+  ratio measured and recorded, with the predicted value beside it. Under any: the ICs from the chaotic regions, at
+  `T = 200`, over the ICs where both pairs part, the count reported.
+- **Applied meanwhile:** none. REQ-VAL-199 carries `rq: RQ-557`.
+- **Waits:** REQ-VAL-199 (TASK-M8-76's gate).
+
+## RQ-558: Whether the viewer's four runs carry on past their first terminal event, as the marks were measured, or stop there as the atlas does *(found by R-574's port; physics; REQ-VAL-196, REQ-VAL-197; context: TASK-M8-76)*
+
+*Found by R-574's port. Physics the texts do not settle: for the human.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_results_honesty/evidence/parting_probe.rs`, its header: "four Heggie runs to
+    the horizon (termination off, so every run reaches it)"; `stop_on_event: false`, each run's fate its first event.
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer": a terminal
+    event latches, and the copy's march ends there.
+  - `docs/design/principia_honesty_precision.md` § "3.1 Four runs of one IC", "Past a terminal event".
+- **The question:** the marks (10⁻³, 0.1) and the agreement figures were measured on runs that carry on past their
+  first event. The atlas stops at it, so does `f32_run_is_the_atlas`'s comparison of `t_end`. After a collision under
+  regularisation off, carrying on integrates through a singularity the substep machinery is capped against.
+- **Options seen:** (a) as measured: each run's fate and `t_end` are its first event, latched as the atlas latches it,
+  and the run carries on to the horizon for the chord; a run that fails or runs out of its budget ends there, its chords
+  read "ended at `t = …`" after it; (b) each run stops at its first event as the atlas does; the chord ends at the
+  earlier end, and a pair that ends before parting reads "settled before the runs parted"; (c) (a) under a regularised
+  occupant, (b) with regularisation off.
+- **Applied meanwhile:** (a). REQ-VAL-196 and REQ-VAL-197 carry `rq: RQ-558`, so a ruling for (b) or (c) traces to
+  them (fix round 1 of PR #283, physics review 5627073272, F2). *Was:* "(a). Nothing waits."
+- **Waits:** nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197 (TASK-M8-76) (physics
+  review 5627216712 of PR #283, F6). *Was:* "**Waits:** TASK-M8-76 (REQ-VAL-196, REQ-VAL-197)."
+
+## RQ-559: The Sequence window's undo: its own history, as the draft gives it, against R-52's one history kept by the contract *(found by R-577's port; R-577 against R-52 and gui_state_contract §2; REQ-GUI-378; context: TASK-M8-77)*
+
+*Found by R-577's port, and queued as the bundle's instruction says: "Where anything here conflicts with a ruling or a
+queue entry these texts don't address, queue it rather than resolving it." For the human: yes, it sets what Ctrl+Z
+does in the Sequence window.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/keyframes_reel.md` § "The Sequence window": "**Undo** is
+    the window's own (Q4)."; § "5. Open questions", 4: "**Keyframe undo**: (i) own history; (ii) the contract's; (iii)
+    none. *Recommend (i).*" The human's "Decided" section rules questions 1 and 2 only.
+  - `decisions.md` § "R-52 — Undo lives in the state contract *(GU-1 (a))*": "Undo/redo is a history of typed
+    `setField` edits, shared by every GUI."
+  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface": "The
+    contract keeps one undo/redo history of the typed `setField` edits it has applied, shared by every GUI: a GUI
+    shows the depth … and sends undo / redo as requests, and keeps no history of its own."
+- **The question:** the sequence being edited is not `SimConfig` or `RenderState`, so its edits (add, delete, Update, a
+  drag in time, a playhead policy, a segment's easing or transition) are not the contract's `SetField`s. The draft
+  gives the window its own history; R-52 lets a GUI keep none.
+- **Options seen:** (i) the window's own history, Ctrl+Z in its scope undoing a sequence edit, the contract's history
+  untouched (the draft's recommendation; an exception to R-52 for a document that is not contract state); (ii) the
+  sequence becomes contract state, its edits typed `SetField`s in the one history, Go to and sequence edits
+  interleaved; (iii) no undo for sequence edits.
+- **Applied meanwhile:** none of them. Go to is one entry in the contract's history under every option.
+- **Waits:** REQ-GUI-378, `rq: RQ-559` (TASK-M8-77). The rest of TASK-M8-77 does not wait.
+
+## RQ-560: A cut offered at a link-parameter change in a blocking export, as the draft's segment control gives it, against R-520's export that always eases *(found by R-577's port; R-577 against R-520; REQ-GUI-376; context: TASK-M8-77)*
+
+*Found by R-577's port, and queued as the bundle's instruction says. For the human: yes, it sets what an export of a
+link-parameter change can be.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/keyframes_reel.md` § "The Sequence window": "**A
+    segment**: easing; cut or dissolve (with length) at a chart change; at a link-parameter change, **cut** or
+    **interpolate (export only)**, showing R-520's "every frame a different decoder"."; § "4. Fit with existing
+    rulings": "R-520 appears as the segment's link choice."
+  - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly
+    with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a
+    cut everywhere *(closes RQ-384; amends R-483)*": "In a blocking export, link parameters interpolate across
+    keyframes, each frame re-integrated at its own values".
+  - `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system (retained)": "a blocking
+    export (Part 4) eases each differing parameter linearly in its value".
+- **The question:** R-520 makes the blocking export always ease a differing link parameter; the draft lets the user
+  choose a cut instead, per segment.
+- **Options seen:** (a) no choice: R-520 as written, the segment showing its rule; (b) a per-segment choice, cut or
+  interpolate (export only), interpolate the default, the spec's segment recording it and the planner's flag naming
+  only interpolating segments; (c) a choice, cut the default.
+- **Applied meanwhile:** (a). Nothing waits: REQ-GUI-376 shows R-520's rule and offers no choice until this is ruled.
+
+## RQ-561: A takeover inside a segment the film interpolates and live playback cuts (link parameters, dissolves): "Live and film disagreeing is a bug" against R-520 F3 *(found by R-578's port; R-578 against R-520; REQ-GUI-383; context: TASK-M8-79)*
+
+*Found by R-578's port, and queued as the bundle's instruction says. For the human: yes, it sets what the live view
+does after a takeover in such a segment, and which specs the reel may hold.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/reel_click.md` § "Proposal", 2: "the frame's spec is
+    loaded live (chart, view, stain, playhead, and any keyframed motion it was in the middle of), and the live engine
+    continues from there"; 5: "the build refuses any spec whose link hashes don't match, so the live view always
+    recreates what the film showed. Live and film disagreeing is a bug, reported."; "Decided": "**After takeover it
+    keeps playing** whatever the clip was doing, now live".
+  - `decisions.md` § "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly
+    with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a
+    cut everywhere *(closes RQ-384; amends R-483)*", F3: "live playback shows the change and never interpolates it."
+  - `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system (retained)": chart switches
+    are "cuts or dissolves (two renders composited)"; live playback composites no dissolve.
+- **The question:** the film is a blocking export, so in a segment that eases link parameters or dissolves between
+  charts it shows what live playback cannot. A takeover there is exact at its frame, but the live view then continues
+  differently from the film.
+- **The second question (added by fix round 6 of PR #286, physics review 5631678451, P4 (b)):** after a takeover
+  mid-way through a link-parameter ease, what does the live player hold until the segment's second keyframe? R-520 F3:
+  "live playback shows the change and never interpolates it"; REQ-TOOL-175: "live playback of the same spec gives a cut
+  at the second keyframe, the frames before it at 5 and from it at 4, none between"; `principia_spotlight_reel.md` §3.3:
+  "the frame's spec is loaded live … and the live engine continues from there" and "It keeps playing … now live". The
+  takeover loads the eased value (say 4.6); R-520 F3 as written then puts the next frame at the first keyframe's value
+  (4.6 → 5, re-integrating, then 5 → 4 at the keyframe). Options seen: (i) hold the takeover's value until the second
+  keyframe, then cut; (ii) R-520 F3 as written, back to the first keyframe's value; (iii) whatever (c) above gives,
+  the export's ease continued live.
+- **A dissolve frame (P4 (a), applied per R-369, not a question):** a dissolve frame was rendered from two states and a
+  weight, so its manifest entry carries both hashes, the weight and which state live shows at that frame; the takeover
+  loads that state.
+- **Options seen:** (a) the takeover frame exact, live continuing under R-520 F3 (cut at the segment's second
+  keyframe), the difference after that frame expected and not reported; (b) the reel build refuses a spec with such a
+  segment, so live always continues what the film shows; (c) live playback after a takeover interpolates link
+  parameters and composites dissolves as the export does (amending R-520 F3 for this case).
+- **Applied meanwhile:** (a), made determinate without deciding either question: in a dissolve the takeover loads the
+  state live shows at that frame; after a takeover in a link-parameter ease the live player holds the takeover's value
+  until the second keyframe, then cuts (option (i) of the second question, as an interim only). Nothing waits.
+  *Was:* "(a). Nothing waits." (fix round 6 of PR #286, physics review 5631678451, P4; applied per R-369).

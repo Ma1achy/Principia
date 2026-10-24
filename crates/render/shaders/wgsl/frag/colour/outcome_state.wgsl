@@ -1,13 +1,16 @@
 // The outcome state's canonical default palette (colour_composition §1.4; R-77, R-444 to R-447; REQ-COL-002,
-// REQ-COL-101, REQ-COL-103), a built-in occupant of the `colour` slot. The outcome view shows physical outcomes only, in
-// nine classes (R-444), read from `state` and the `detail` union alone (payload §2): a collision's colour is its pair's,
-// an escape's its body's (0-based inside, R-22), `detail = 3` the triple collision's or the triple ejection's.
-// `t_end_step` is not read: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour (R-445).
-// Black, bounded / nothing yet, means nothing has happened yet (R-446): `bounded`, `running`, `sim_failed`,
-// `decode_failed` of every `detail` and a reserved `state` code all draw it, never the "not yet" stipple or the hatch,
-// which stay the debug views' and every other field's. The forbidden test comes first: a sample in a forbidden chart
-// region, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity lane), the chart's own classification and never the
-// payload's `decode_failed` detail, keeps the chart contract's hatch, `debug_invalid` (R-446).
+// REQ-COL-101, REQ-COL-103, REQ-COL-108), a built-in occupant of the `colour` slot. The outcome view shows physical
+// outcomes only, in nine classes (R-444), read from `state` and the `detail` union alone (payload §2): a collision's
+// colour is its pair's, an escape's its body's (0-based inside, R-22), `detail = 3` the triple collision's or the triple
+// ejection's. `t_end_step` is not read: a collision at `t_end_step == 0` draws its pair's or the triple collision's
+// colour (R-445). Black, bounded / nothing yet, means nothing has happened yet (R-446): `bounded`, `running`,
+// `sim_failed` of every `detail` and a reserved `state` code all draw it, never the "not yet" stipple or the hatch,
+// which stay the debug views' and every other field's. It is a presentation view and draws no hatch (R-467): its first
+// test is the sample's chart classification, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity
+// lane), the chart's own and never the payload's `decode_failed` detail; a sample the chart classifies as not a system
+// draws the canvas background, `canvas_background()`, the uniform its caller sets to the colour its window is cleared
+// to, blank, never a palette colour (R-467, R-470); and a `decode_failed` sample of every `detail` and tag draws it
+// too, as a pixel that is not a system (R-511).
 //
 // Each class's swatch is a node param, so editing one changes only its class and recompiles nothing (REQ-COL-002;
 // lowering Part 3): a linear RGB colour, the colour slot's space (render contract Part 2), as a field ramp's
@@ -60,8 +63,8 @@
 // @uniform oklab_triple_ejection: vec3<f32> = (0.47353148, 0.27889428, 0.7605245)
 
 fn colour(ctx: Ctx) -> vec3<f32> {
-    if (ctx.validity.forbidden) {
-        return debug_invalid(ctx.frag_xy);
+    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {
+        return canvas_background();
     }
     let v = uniforms.swatch_set == 1u;
     let s = ctx.sample.state;

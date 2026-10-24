@@ -288,7 +288,7 @@ does. When the record does not fit, the writer drops whole tiers from the bottom
 
 | Tier | Contents | Dropped |
 |---|---|---|
-| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
+| **1. Physics** | The build hash and schema version, each recorded link's entry hash (R-521), and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, quality, and the ensemble `E` and `N`. A Result's image (R-572, `principia_results.md` §3.3) adds its `run` block: precision, `nx × ny`, the stored times and the copies option, read as "result, f64, 1024²". | Never. If tier 1 does not fit once, the image is reported **not embedded**; it is never written partially. |
 | **2. Colour** | `RenderState` as built-ins: the colour mode's enum and every parameter, the ramp window, the overlays, the line system, the playhead, the hover and the debug view; and the sidecar's `f3_fill` (R-472). | Only after tier 3. |
 | **3. Custom source** | Each ejected WGSL node's source (custom frag shaders and nodes); the `source` flag (§2, bit 2). | First. |
 

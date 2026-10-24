@@ -541,9 +541,31 @@ fn same(a: Rgb, b: Rgb) -> bool {
 /// The values the sentinel scene stores: the −1.0 sentinel, another negative value, then 0 and values above the floor.
 const SENTINEL_VALUES: [f32; 6] = [-1.0, -0.5, 0.0, 1e-4, 1e-2, 1.0];
 
-/// `ramp` styles every negative value of `closure_min` as the invalid hatch, on the CPU and in its render, and ramps 0
-/// to the ramp's start and the rest to their R-411 placements.
+/// A presentation view's invalid colour, bounded / nothing yet's `#141418` (R-467 clause 2, D4, D14;
+/// colour_composition §1.4), decoded from its 8-bit sRGB code (amended by qa for TASK-M2-34).
+fn present_black() -> Rgb {
+    present::srgb8([0x14, 0x14, 0x18])
+}
+
+/// `occupant` with its WGSL edited by `edit` (`from`, `to`), which must occur in it: a control's wrong occupant.
+fn edited(occupant: Occupant, edit: Option<(&str, &str)>) -> Occupant {
+    match (occupant, edit) {
+        (Occupant::Custom(src), Some((from, to))) => {
+            assert!(src.contains(from), "the occupant has no `{from}`");
+            Occupant::Custom(src.replace(from, to))
+        }
+        (o, _) => o,
+    }
+}
+
+/// `ramp` styles every negative value of `closure_min` as invalid on the CPU and, in its render, a field ramp being a
+/// presentation view, draws it `#141418`, never the hatch (R-467 D14; amended by qa for TASK-M2-34), and ramps 0 to
+/// the ramp's start and the rest to their R-411 placements.
 fn check_sentinel(h: &GpuHarness, ramp: &FieldRamp) {
+    check_sentinel_edited(h, ramp, None);
+}
+
+fn check_sentinel_edited(h: &GpuHarness, ramp: &FieldRamp, edit: Option<(&str, &str)>) {
     let eps = closure_min_floor();
     assert_eq!(
         ramp.shown(-1.0, true),
@@ -563,13 +585,13 @@ fn check_sentinel(h: &GpuHarness, ramp: &FieldRamp) {
     let image = render(
         h,
         &s,
-        &stain(kind, occupant, None).unwrap_or_else(|e| panic!("{e}")),
+        &stain(kind, edited(occupant, edit), None).unwrap_or_else(|e| panic!("{e}")),
     )
     .unwrap_or_else(|e| panic!("{e}"));
     for (i, v) in SENTINEL_VALUES.into_iter().enumerate() {
-        let (got, frag) = pixel(&s, &image, i as u32);
+        let (got, _) = pixel(&s, &image, i as u32);
         let want = if v < 0.0 {
-            present::debug_invalid(frag)
+            present_black()
         } else {
             present::ramp_viridis(log_form(f64::from(v), eps))
         };
@@ -601,6 +623,25 @@ negative_control!(
     expected = "the CPU twin ramps the −1.0 sentinel",
     check_sentinel(&gpu(), &closure_min_ramp(Compaction::Flag))
 );
+
+/// R-467 D14 and REQ-COL-108's control: a field ramp that still draws the sentinel in the hatch, as before R-467, is
+/// caught (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_compaction_forms_log_sentinel_hatched {
+    use super::*;
+    negative_control!(
+        qa_compaction_forms_log_styles_the_sentinel,
+        "a field ramp drawing closure_min's −1.0 sentinel in the hatch is caught",
+        expected = "closure_min = -1 draws",
+        check_sentinel_edited(
+            &gpu(),
+            &closure_min_ramp(Compaction::Log {
+                eps: closure_min_floor(),
+            }),
+            Some(("PRESENT_INVALID", "debug_invalid(ctx.frag_xy)"))
+        )
+    );
+}
 
 // ── REQ-COL-016: the default ramp per field role ─────────────────────────────────────────────────────────────────
 
@@ -1049,8 +1090,13 @@ negative_control!(
 /// FTLE on the `ftle` scene, `lin` over `[0, 4]`, as a colour through viridis and as a brightness: each compiles and
 /// renders its field, the colour as `viridis(b)`, the brightness under Replace-L with the colour None as the greyscale
 /// of `b` (colour_composition §4.1's None-colour row), with `b` the requirement's `lin`; the invalid FTLE samples take
-/// the hatch in the colour role. `swap` binds each to the other's slot instead.
+/// `#141418` in the colour role, a field ramp being a presentation view that draws no hatch (R-467 D14; amended by qa
+/// for TASK-M2-34). `swap` binds each to the other's slot instead.
 fn check_either_role(h: &GpuHarness, swap: bool) {
+    check_either_role_edited(h, swap, None);
+}
+
+fn check_either_role_edited(h: &GpuHarness, swap: bool, edit: Option<(&str, &str)>) {
     let s = scene("ftle").unwrap_or_else(|e| panic!("{e}"));
     let field = ScalarField::payload("ftle").unwrap_or_else(|e| panic!("{e}"));
     let lin = Compaction::Lin { lo: 0.0, hi: 4.0 };
@@ -1064,17 +1110,17 @@ fn check_either_role(h: &GpuHarness, swap: bool) {
             (true, Kind::Colour) => Kind::Brightness,
             (true, _) => Kind::Colour,
         };
-        let image = stain(kind, occupant, None)
+        let image = stain(kind, edited(occupant, edit), None)
             .and_then(|st| render(h, &s, &st))
             .unwrap_or_else(|e| panic!("FTLE as {what} did not compile and render: {e}"));
         let mut placed = Vec::new();
         for i in 0..n {
             let (v, valid) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
-            let (got, frag) = pixel(&s, &image, i);
+            let (got, _) = pixel(&s, &image, i);
             let usable = valid && v.is_finite();
             let b = ((f64::from(v) - 0.0) / 4.0).clamp(0.0, 1.0);
             let want = match (what, usable) {
-                ("colour", false) => present::debug_invalid(frag),
+                ("colour", false) => present_black(),
                 ("colour", true) => present::ramp_viridis(b),
                 (_, true) => present::ramp_grey(b),
                 (_, false) => continue,
@@ -1105,6 +1151,23 @@ negative_control!(
     expected = "did not compile and render",
     check_either_role(&gpu(), true)
 );
+
+/// R-467 D14 and REQ-COL-108's control: FTLE's colour ramp drawing its invalid samples in the hatch, as before R-467,
+/// is caught (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_field_either_role_ftle_hatched {
+    use super::*;
+    negative_control!(
+        qa_field_either_role_ftle,
+        "FTLE's colour ramp drawing its invalid samples in the hatch is caught",
+        expected = "FTLE as colour: sample",
+        check_either_role_edited(
+            &gpu(),
+            false,
+            Some(("PRESENT_INVALID", "debug_invalid(ctx.frag_xy)"))
+        )
+    );
+}
 
 /// Any field fills either slot by its default (gui_state_contract §4): each named field's default compiles in the
 /// colour slot and in the brightness slot.

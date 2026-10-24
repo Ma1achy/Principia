@@ -1272,10 +1272,10 @@
 - id: TASK-M4-16
   milestone: M4
   title: "The pixel inspector's engine side: f64 trace, f32 GPU trace and the divergence overlay"
-  depends_on: [TASK-M4-04, TASK-M4-06, TASK-M3-27, TASK-M3-36]
+  depends_on: [TASK-M4-04, TASK-M4-06, TASK-M3-27, TASK-M3-36, TASK-M4-09]
   needs: [REQ-GUI-008, REQ-INT-055, REQ-SYS-017, REQ-VAL-036, REQ-VAL-035, REQ-INT-005, REQ-VAL-034]
   requirements: [REQ-TOOL-040, REQ-TOOL-041, REQ-TOOL-042, REQ-VAL-070, REQ-VAL-071, REQ-SYS-028, REQ-TOOL-127]
-  reviewers: [code, qa, physics]
+  reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-3, PIT-10]
 - id: TASK-M4-17
   milestone: M4
@@ -1731,7 +1731,7 @@
   depends_on: [TASK-M6-08, TASK-M6-26]
   needs: [REQ-GUI-001, REQ-SYS-033]
   requirements: [REQ-GUI-010, REQ-GUI-012]
-  reviewers: [code, qa, gui]
+  reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M6-22
   milestone: M6
@@ -2135,7 +2135,7 @@
   pitfalls: [PIT-3]
 - id: TASK-M7-21
   milestone: M7
-  title: "The display chain: style → display scale → gamut clamp → colour-vision simulation → screen"
+  title: "The display chain: Print graph → display scale → gamut clamp → colour-vision simulation → screen, the line passes either side (R-485, R-531)"
   depends_on: [TASK-M7-12, TASK-M7-20, TASK-M5-12, TASK-M5-23, TASK-M5-26]
   needs: [REQ-RENDER-042, REQ-RENDER-052, REQ-RENDER-038, REQ-RENDER-006, REQ-RENDER-047]
   requirements: [REQ-RENDER-063, REQ-RENDER-069, REQ-COL-043, REQ-RENDER-066, REQ-COL-059]
@@ -2175,11 +2175,11 @@
   pitfalls: []
 - id: TASK-M7-26
   milestone: M7
-  title: "The style stage: figure-only styles, plain for scientific checks"
-  depends_on: [TASK-M7-25]
+  title: "The print stage: the Print graph's executor in style's place, Plain the bitwise identity, measurement blind to it, debug views bypassing it, goldens under Plain (R-485, R-487, R-489; was the style stage)"
+  depends_on: [TASK-M7-25, TASK-M7-21, TASK-M7-54]
   needs: []
-  requirements: [REQ-COL-044, REQ-COL-027]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-RENDER-105, REQ-RENDER-106, REQ-RENDER-107, REQ-RENDER-108, REQ-COL-027]
+  reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M7-27
   milestone: M7
@@ -2397,6 +2397,134 @@
   needs: [REQ-GEN-008, REQ-GEN-017]
   requirements: [REQ-GEN-043]
   reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M7-54
+  milestone: M7
+  title: "The Print graph's data model and registry: `principia.print/1`, settings and `$` references, presets as nodes, typed ports, the registry checked at build time, and its own codegen (R-486, R-492)"
+  depends_on: [TASK-M7-03, TASK-M7-11]
+  needs: []
+  requirements: [REQ-RENDER-101, REQ-RENDER-102, REQ-RENDER-103, REQ-RENDER-104]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-55
+  milestone: M7
+  title: "Print graph determinism, units and stability: seeded streams, `ref_px` / `device_px` / `fraction`, the screen-anchored sheet and `boil`, with the §11 harnesses 3, 4 and 5 (R-490)"
+  depends_on: [TASK-M7-26]
+  needs: []
+  requirements: [REQ-RENDER-109, REQ-RENDER-111, REQ-RENDER-112, REQ-RENDER-113]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-56
+  milestone: M7
+  title: "Print graph port, Analyse and Generate: 5 node types, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-55]
+  needs: []
+  requirements: [REQ-COL-142, REQ-COL-143]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-57
+  milestone: M7
+  title: "Print graph port, Adjust & combine: 13 node types and one preset, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56]
+  needs: []
+  requirements: [REQ-COL-144]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-58
+  milestone: M7
+  title: "Print graph port, Paint: 15 node types and 26 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56, TASK-M7-57]
+  needs: []
+  requirements: [REQ-COL-145]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-59
+  milestone: M7
+  title: "Print graph port, Print: 9 node types and 11 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56, TASK-M7-57]
+  needs: []
+  requirements: [REQ-COL-146]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-60
+  milestone: M7
+  title: "Print graph port, Screen: 10 node types and 31 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56, TASK-M7-57]
+  needs: []
+  requirements: [REQ-COL-147]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-61
+  milestone: M7
+  title: "Print graph port, Craft: 11 node types and 16 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56, TASK-M7-57]
+  needs: []
+  requirements: [REQ-COL-148]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-62
+  milestone: M7
+  title: "Print graph port, Photographic: 5 node types and 9 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56, TASK-M7-57, TASK-M7-58]
+  needs: []
+  requirements: [REQ-COL-149]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-63
+  milestone: M7
+  title: "Print graph port, Machines: 2 node types and 5 presets, each with its lab golden (R-486, R-492)"
+  depends_on: [TASK-M7-56]
+  needs: []
+  requirements: [REQ-COL-150]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-64
+  milestone: M7
+  title: "Print graph port, Slots: the six slot nodes and the slot chain template; Palette on the finished colour; screen media and Viewing; the sheet, never the marks, on a pixel that is not a system (R-524, R-525, R-533)"
+  depends_on: [TASK-M7-56, TASK-M7-58, TASK-M7-60]
+  needs: []
+  requirements: [REQ-COL-151, REQ-COL-152, REQ-RENDER-115]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-65
+  milestone: M7
+  title: "R-130's eight styles as the Print graph's Poster family: their definitions in the design doc, any node they need, and their goldens (R-532)"
+  depends_on: [TASK-M7-58, TASK-M7-59]
+  needs: []
+  requirements: [REQ-COL-044, REQ-COL-153]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-66
+  milestone: M7
+  title: "Print graph field inputs: the `field` node, the stain's window, absent fields, and the four \"Driven by the data\" presets on their real fields (R-526, R-536, R-557) ⚑"
+  depends_on: [TASK-M7-56, TASK-M7-57, TASK-M7-58, TASK-M7-05]
+  needs: []
+  requirements: [REQ-COL-154, REQ-COL-155, REQ-COL-156, REQ-COL-157, REQ-COL-158, REQ-COL-159]
+  reviewers: [code, qa, gui, perf, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M7-67
+  milestone: M7
+  title: "`through_medium` in the line renderer: two passes with complementary filters, the sets drawn through before the Print graph, smart ink reading each pass's figure (R-487, R-531)"
+  depends_on: [TASK-M7-42, TASK-M7-26]
+  needs: []
+  requirements: [REQ-RENDER-114]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-68
+  milestone: M7
+  title: "Print graph cost classes measured: every node at 1024² on the reference machine, classed from the numbers, and each reduced node's factor (R-488)"
+  depends_on: [TASK-M7-56, TASK-M7-57, TASK-M7-58, TASK-M7-59, TASK-M7-60, TASK-M7-61, TASK-M7-62, TASK-M7-63, TASK-M7-64, TASK-M7-65, TASK-M7-66]
+  needs: []
+  requirements: [REQ-PERF-096, REQ-PERF-097]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M7-69
+  milestone: M7
+  title: "`device_px` and the screen-anchored sheet at render_scale ≠ 1 and at export, as RQ-538 rules (R-490)"
+  depends_on: [TASK-M7-55, TASK-M7-60]
+  needs: []
+  requirements: [REQ-RENDER-110]
+  reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-01
   milestone: M8
@@ -2643,7 +2771,7 @@
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
   depends_on: [TASK-M8-30, TASK-M7-31, TASK-M7-45]  # TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
-  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-TOOL-084, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185]
+  requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185, REQ-TOOL-197]  # R-576: REQ-TOOL-197 (easing curves, playhead policies); R-578: REQ-TOOL-084 moved to TASK-M8-79 with the reel builder (applied per R-369)
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-32
@@ -2835,7 +2963,7 @@
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
   depends_on: [TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
   needs: []
-  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348]
+  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348, REQ-GUI-357]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-56
@@ -2843,7 +2971,7 @@
   title: "The quadtree past the square: roots tiling the plane, canonical addresses, neighbours across seams, poles and folds, scheduling by the union of images, the statistics unchanged (R-537 EX7) ⚑"
   depends_on: [TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11, TASK-M2-36]
   needs: []
-  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080]
+  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080, REQ-SCHED-104, REQ-SCHED-105]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; perf for the frame quota (R-537 U2)
   pitfalls: []
 - id: TASK-M8-57
@@ -2851,7 +2979,7 @@
   title: "Deep zoom in repeats and far from the root, and seams between images with a shared edge (R-537 EX8) ⚑"
   depends_on: [TASK-M8-56, TASK-M6-08]
   needs: []
-  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183]
+  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183, REQ-CHART-087, REQ-CHART-088]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-58
@@ -2934,6 +3062,102 @@
   requirements: [REQ-GUI-343, REQ-GUI-344]
   reviewers: [code, qa, gui, physics]  # physics: the decode of the dragged n̂ and the twin (gui review 5603356729 of PR #273, G6)
   pitfalls: [PIT-9]
+- id: TASK-M8-68
+  milestone: M8
+  title: "Display › Print, the Print panel: Plain / Print, the slots with live thumbnails and their settings, Boil, the 111-preset gallery in 12 families, Edit graph…, Reset; and each line set's \"Through the medium\" (R-485, R-525, R-532)"
+  depends_on: [TASK-M8-23, TASK-M8-03, TASK-M8-50, TASK-M7-64, TASK-M7-65, TASK-M7-66, TASK-M7-67]
+  needs: []
+  requirements: [REQ-GUI-358, REQ-GUI-359, REQ-GUI-360]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-69
+  milestone: M8
+  title: "The Print graph editor: the Stain's node editor reused on the slots' graph, typed wire refusal, positions in `ViewUI`, unstable nodes marked, and custom WGSL nodes (R-486, R-491)"
+  depends_on: [TASK-M8-68, TASK-M8-20, TASK-M8-21]
+  needs: []
+  requirements: [REQ-GUI-361, REQ-GUI-362, REQ-RENDER-116]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-70
+  milestone: M8
+  title: "The instrument stays honest in the GUI: the \"Print: …\" badge in the header strip, Styled / Plain export defaulting to Plain, and every readout blind to the print (R-489, R-523)"
+  depends_on: [TASK-M8-68, TASK-M8-32, TASK-M8-22, TASK-M8-34, TASK-M8-14, TASK-M8-05]
+  needs: []
+  requirements: [REQ-GUI-363, REQ-GUI-364, REQ-GUI-365]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-71
+  milestone: M8
+  title: "Print graph provenance and round trip: `RenderState.print` by value in every destination, tiers 2 and 3, the custom node dropped and badged, and keyframes (R-484, R-491)"
+  depends_on: [TASK-M8-53, TASK-M8-31, TASK-M8-32, TASK-M8-69, TASK-M7-66]
+  needs: []
+  requirements: [REQ-TOOL-191, REQ-TOOL-192, REQ-TOOL-193, REQ-TOOL-194]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-72
+  milestone: M8
+  title: "Degrade while moving: per-node motion policies, settle, the playhead not motion, and the print stage in the frame record (`stage_ms.post`, `post_level`, schema v2) (R-488, R-534, R-557)"
+  depends_on: [TASK-M7-68, TASK-M5-28, TASK-M6-18, TASK-M8-68]
+  needs: []
+  requirements: [REQ-PERF-098, REQ-PERF-099, REQ-PERF-100, REQ-TOOL-190, REQ-TOOL-195]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-73
+  milestone: M8
+  title: "The print stage's budget: excluded from the Auto rung solve, the post level the arbiter's motion-regime lever under Auto only, the budget's definition and the print share (R-557)"
+  depends_on: [TASK-M8-72, TASK-M6-17, TASK-M6-18]
+  needs: []
+  requirements: [REQ-PERF-101, REQ-PERF-102, REQ-PERF-103, REQ-PERF-104, REQ-PERF-105]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-74
+  milestone: M8
+  title: "Result, the job: one job.json run in the app or by `prin batch`, f32 or f64, the result folder and its payload, cancel and resume (R-572)"
+  depends_on: [TASK-M8-02, TASK-M4-17, TASK-M7-44, TASK-M5-24]
+  needs: [REQ-SYS-027, REQ-TOOL-181, REQ-PERF-003, REQ-PERF-010, REQ-SCHED-043]
+  requirements: [REQ-SYS-087, REQ-SYS-088, REQ-SYS-089, REQ-SYS-090, REQ-TOOL-196, REQ-PERF-107, REQ-PERF-108, REQ-PERF-109]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-3]
+- id: TASK-M8-75
+  milestone: M8
+  title: "Result, the GUI: the Result window, the result view and Compare (R-572)"
+  depends_on: [TASK-M8-74, TASK-M8-17, TASK-M8-34]
+  needs: []
+  requirements: [REQ-GUI-366, REQ-GUI-367, REQ-GUI-368]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-76
+  milestone: M8
+  title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
+  depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75]
+  needs: [REQ-TOOL-127, REQ-TOOL-040]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106]
+  reviewers: [code, qa, physics, gui, perf]
+  pitfalls: [PIT-10]
+- id: TASK-M8-77
+  milestone: M8
+  title: "The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)"
+  depends_on: [TASK-M8-31, TASK-M8-05, TASK-M6-43, TASK-M8-75]  # TASK-M8-75: the result view and its view source (fix round 9 of PR #286, gui G1; applied per R-369)
+  needs: [REQ-GUI-213]
+  requirements: [REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378]  # REQ-GUI-378 waits on RQ-559
+  reviewers: [code, qa, gui, physics]  # physics for the lane table, an R-72 definition (REQ-GUI-375)
+  pitfalls: []
+- id: TASK-M8-78
+  milestone: M8
+  title: "Sequence: Play preview, the proof strip, the planner's estimate and its basis, and export with the spec beside it (R-577)"
+  depends_on: [TASK-M8-77, TASK-M8-30, TASK-M5-28, TASK-M8-32]
+  needs: [REQ-TOOL-050, REQ-TOOL-006]
+  requirements: [REQ-GUI-379, REQ-GUI-380, REQ-GUI-381, REQ-PERF-110, REQ-TOOL-200, REQ-GUI-387, REQ-GUI-388, REQ-PERF-112]  # REQ-GUI-387: fix round 2 of PR #286 (gui G2); REQ-GUI-388: fix round 12 (perf P6); REQ-PERF-112: fix round 21 (perf P1)
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-79
+  milestone: M8
+  title: "The spotlight reel's machinery, natively: the reel builder and its manifest, the film played without compute, the takeover that keeps playing, the Spotlights window (R-578)"
+  depends_on: [TASK-M8-78, TASK-M5-26]
+  needs: [REQ-RENDER-045]
+  requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386, REQ-PERF-111]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b)); REQ-PERF-111: fix round 12 (perf P4)
+  reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
+  pitfalls: []
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"

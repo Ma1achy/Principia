@@ -1097,6 +1097,88 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+// ── The substep law (dd_integrator §3.3; integrator_contract Part 3, Part 4; R-502) ───────────────────────────────
+//
+// `N_sub = min(bucket(d²), N_max)`, the bucket a comparison of the position-quantised `d²` against the sim key's
+// thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)`, `n = 1 … L_max`, generated on the host per sim key (R-502).
+// The three defaults are the sim key's, the integrator contract's Part 3 values, user-adjustable; `cargo xtask codegen`
+// evaluates the default table from them (`crate::gen::nsub`), which the host generator must reproduce bit for bit
+// (REQ-INT-092). The table's maximum length is a calibration (REQ-INT-094). Pure numbers or lengths in canonical units.
+
+/// The section that owns the substep law's parameters and their defaults.
+const SUBSTEP_PARAMETERS: Citation = Citation::Corpus {
+    file: "docs/contracts/principia_integrator_contract.md",
+    section: "Part 3 — Parameter ownership (who owns what)",
+};
+
+/// `r_sub`'s default, 0.05, a length: the separation below which a macro-step takes more than one substep, the scale
+/// of the substep law `N_sub = clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` (dd_integrator §3.3). A sim-key value.
+pub const R_SUB: ConstantBuilder = ConstantBuilder {
+    name: "r_sub",
+    value: Some(Value::Exact(0.05)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `gamma_sub`'s default, 1.5, the substep law's exponent (dd_integrator §3.3). A sim-key value.
+pub const GAMMA_SUB: ConstantBuilder = ConstantBuilder {
+    name: "gamma_sub",
+    value: Some(Value::Exact(1.5)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `N_max`'s default, 64, the substep cap per macro-step (R-68: the corpus's default wins). A sim-key value, at most
+/// [`NSUB_TABLE_MAX`]; the host generator refuses one above it or below 1 (R-502).
+pub const N_MAX: ConstantBuilder = ConstantBuilder {
+    name: "n_max",
+    value: Some(Value::Exact(64.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `L_max`, the `N_sub` threshold table's maximum length (R-502; REQ-INT-094): the number of thresholds `SimUniforms`
+/// holds, the leaves of the comparison tree less one, and the largest `N_max` the host generator accepts. 256,
+/// TASK-M3-03's proposal (R-71), provisional until the M3 gate. Its evidence: the table takes `4·L_max` = 1 KiB of
+/// `SimUniforms` on every backend, as 64 rows of four u32 (a uniform array's 16-byte stride, so no padding), within
+/// WebGPU's default 64 KiB uniform binding and Vulkan's guaranteed 16 KiB; the generated tree is 256 comparisons and
+/// 257 leaves, at most `⌈log₂ 257⌉` = 9 comparisons deep per lookup; and with `horizon_steps` at most 65535
+/// ([`HORIZON_STEPS_MAX`]) the exact `total_substeps` u32 holds `65535 × 256` = 16,776,960 ≤ 2³² − 1 with room, the bound
+/// allowing an `N_max` up to 65537. Four times the default `N_max`, so raising the cap to resolve close encounters
+/// before the integration floor (integrator_contract Part 3) has two doublings of room.
+pub const NSUB_TABLE_MAX: ConstantBuilder = proposed(
+    "nsub_table_max",
+    256.0,
+    Admissibility::CanonicalUnits,
+    "REQ-INT-094",
+    "M3",
+);
+
+/// The least threshold the host generator accepts where it decides `N_sub` (`THR[n]`, `n < N_max`), `2⁻⁵⁵`, a `d²`.
+/// Derived from the bucket's `d²` form (dd_integrator §3.3, the determinism pin; R-547): the square's floor sets an
+/// axis square below `2⁻⁸⁰` to 0, lowering `d²` by less than `2⁻⁷⁹`, so at a threshold of at least `2⁻⁵⁵` it moves a
+/// decision only within `2⁻²⁴` relative of the edge, one f32 unit roundoff beside the threshold's and `d²`'s own
+/// roundings (`kernel::driver::nsub_table`). Below it the floor alone could decide `N_sub` against the specification
+/// (REQ-INT-028), so the generator refuses such a sim key (R-502); `2⁻⁵⁵` is a closest approach of about `5·10⁻⁹`
+/// canonical lengths. A settled consequence of the floor, not a calibration.
+pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
+    name: "nsub_threshold_least",
+    value: Some(Value::Exact(2.775_557_561_562_891_4e-17)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_dd_integrator.md",
+        section: "3.3 Substep law — and the determinism pin, made concrete",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1106,7 +1188,8 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 /// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), the curve projection's search (TASK-M2-18; REQ-ENC-020), and the
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
-/// REQ-VAL-191).
+/// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
+/// REQ-INT-094).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1167,4 +1250,9 @@ pub const REGISTER: &[ConstantBuilder] = &[
     STEP_REVERSAL_EDGE_F64,
     STEP_REVERSAL_EDGE_F32,
     STEP_REVERSAL_EDGE_MAX,
+    R_SUB,
+    GAMMA_SUB,
+    N_MAX,
+    NSUB_TABLE_MAX,
+    NSUB_THRESHOLD_LEAST,
 ];

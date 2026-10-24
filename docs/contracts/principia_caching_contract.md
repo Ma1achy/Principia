@@ -65,7 +65,22 @@ The same IC is reachable from many charts, and by the firewall (scheduler Part 1
   touches has a root of the root lattice (EX7), so every visible point has an ancestor, and the cover's ancestor chain is
   evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
   pixels are those that are not a system.
-- **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned. Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned; **while a Sequence preview runs, so is the user's view's baseline cover**, a third pinned identity (Part 5; fix round 13 of PR #286, perf review 5634346116, P3'; applied per R-369). Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **Where the chain stops past the root (R-570).** With levels `L < 0` coarser than the root
+  (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root") a quad's parent chain
+  has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
+  squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
+  (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
+- **The 2 × 2 rule is the only stop (perf review 5625031178 of PR #279, P7; applied per R-369).** The line above's
+  "the cover's smallest common ancestor where one exists" is superseded: the chain stops at the first level at which
+  the viewport lies within at most 2 × 2 ancestor squares, about `⌈log2(cover quads per axis)⌉` levels above the cover,
+  wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
+  ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
+  Part 3).
+- **One definition of the stop (perf review 5625066551 of PR #279, P8; applied per R-369).** The level is the first at
+  which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first level whose
+  square side is at least the viewport's extent, depending on where the view sits; it is not defined as that second
+  level (`principia_scheduler_contract.md` Part 3).
 
 ---
 
@@ -81,7 +96,7 @@ When navigation changes identity (tilt, rotation, slicing out of the plane, char
 - **It re-colours.** Palette/mode changes mid-gesture apply to the backdrop too — colour stays *current data semantics* on slightly-old geometry. A snapshot would show a dead palette, colliding with colour-is-data.
 - **Blur is a compositor pass, not a quad effect.** Blur is a neighbourhood operation, so it cannot run inside a quad's own fragment shader: the stale layer renders to a texture through the ordinary stain pipeline, a **separable blur** (two cheap passes) runs on that texture, then composite. This pins the placement: **the compositor sits above the stain pipeline** and owns layers (backdrop, fresh cover, overlays); each layer is produced by the stain graph (a free, typed node graph, R-64). Blur is linear and quads composite opaquely, so per-layer processing commutes with composition — no correctness wrinkle. Colour-vision simulation is not a per-layer pass: it runs last, after the display scale and gamut clamp, on the final in-gamut colours (R-67).
 - **Coherence rule, sharpened:** the backdrop *reference* updates **only on an at-rest baseline (refined, non-preview)**. Mid-gesture coarse covers never become the backdrop — otherwise a long drag degrades the backdrop into a near-duplicate of the fresh coarse layer and the "blurred old detail → coarse live glimpses" staircase collapses. One stable backdrop identity per gesture; it swaps on gesture-end refinement.
-- **Pinning & cost:** the backdrop identity's leaf cover joins the Part 4 evict-exempt class — exactly two identities pinned (current + backdrop), swapping atomically on at-rest update. Cost is one extra leaf-cover's fragment work plus the blur passes — bounded, trivial next to sim compute.
+- **Pinning & cost:** the backdrop identity's leaf cover joins the Part 4 evict-exempt class — exactly two identities pinned (current + backdrop), swapping atomically on at-rest update. The backdrop's cost is one extra leaf-cover's fragment work plus the blur passes — bounded, trivial next to sim compute (*was:* "Cost is one extra leaf-cover's fragment work …"; fix round 14 of PR #286, perf review 5634410814, P9: the sentence now names the backdrop and precedes the preview's addition). **One addition, while a Sequence preview runs** (`principia_sequence.md` §3.6; fix round 12 of PR #286, perf review 5632950982, P3; applied per R-369): the user's view's baseline cover is a **third pinned identity**, evict-exempt beside the preview's current and backdrop, so returning from the preview shows it at once, never blank, with no recompute; it is released to the ordinary rules when the preview ends. **Its cost is memory, not fragment work** (fix round 13 of PR #286, perf review 5634346116, P3'; applied per R-369): one more viewport-bounded baseline cover, held under the hard cap (Part 7; `principia_memory_tiers.md` §3) like the other pins, which reserve it, so pinned bytes during a preview are at most three baseline covers; when the cap binds, the preview's own non-pinned work is evicted first, never the user's cover.
 
 *Fallback — the snapshot.* When there are **no payloads behind the picture** — the spotlight-reel handoff (a video frame has nothing to live-render) or a cold cache — the original screen-texture snapshot applies, blurred, under the same coherence discipline. The snapshot is the degenerate backdrop, not the primary one.
 
@@ -163,7 +178,7 @@ What is cached under lockstep is **current state only — one timestep per quad,
 
 - **Hard budget cap, not a smoothness dial.** The cache has a fixed memory ceiling, **sized by the device-characterisation phase** (`principia_quality_device_note.md`): a fraction of a detected VRAM budget (from `adapter.limits` + the boot probe), never a fixed constant — so it scales down on weak devices along with the compute settings. One characterisation sets the compute knobs *and* this cap together. The temptation to "cache a bit of history for smoothness" is exactly the eager-in-time siren that produced the V2 memory problem — the invariant is *one state per entry, bounded entry count*, and any growth pressure is answered by eviction, never by relaxing either.
 - **Eviction stays cost-weighted LRU** and stays *safe* (fixed-`dt` purity: re-booting reproduces the state exactly; for a regularised occupant, the fixed sync grid, its march stopping only on a boundary, R-565) — but the cost model now includes `t_cached` (a deep-`t` resume point saves more recompute than a shallow one, so it resists eviction more).
-- **The pinned classes survive unchanged**: baseline cover + visible ancestor chain + backdrop identity's leaf cover (Part 4/5) — pinned as *frozen states*, which is all the backdrop needs.
+- **The pinned classes survive unchanged**: baseline cover + visible ancestor chain + backdrop identity's leaf cover (Part 4/5), and, while a Sequence preview runs, the user's view's baseline cover (Part 5; fix round 13 of PR #286, perf review 5634346116, P3') — pinned as *frozen states*, which is all the backdrop needs.
 - **Refinement latches never pin memory.** The per-footprint latch (scheduler Part 8) lives with the resident quad: when the cache evicts or merges the quad, the latch goes too (R-99). It adds nothing to the pinned classes above.
 
 ## Part 8 — The composed guarantee

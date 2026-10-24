@@ -4,7 +4,10 @@
 //! - REQ-TOOL-162 / REQ-COL-064 (R-399): an unset `d_min` (forced failures and unstepped samples, f16 +∞) in its
 //!   debug view and in its `FieldRamp` are drawn in one style, the same colour at the same pixel in both. Amended by qa
 //!   for TASK-M2-32, as R-446 forces: running samples in the outcome palette leave the style's scope and draw bounded /
-//!   nothing yet's `#141418` on every pixel. Over every 4 × 4 pixel block the style takes at least two colours (never flat, so
+//!   nothing yet's `#141418` on every pixel. Amended by qa for TASK-M2-34, as R-399 ("the hatch stays NaN's and
+//!   `sim_failed`'s"), R-467 and R-511 Z3 force: in the `FieldRamp`, a presentation view, the forced failures holding
+//!   +∞ are `sim_failed` and draw `#141418` whatever their payload, so there the style is the unstepped samples' alone,
+//!   the debug view keeping it for both. Over every 4 × 4 pixel block the style takes at least two colours (never flat, so
 //!   no flat ramp colour, viridis, twilight, magma, grey or cool-warm, reproduces a block), its two colours differ in
 //!   luminance (visible without colour vision), it is dots, not stripes (no block is invariant along a row, a column,
 //!   a diagonal or an anti-diagonal, as `debug_invalid`'s and REQ-TOOL-124's pending hatch's stripes are), it differs
@@ -109,8 +112,17 @@ fn luminance(c: Rgb) -> f64 {
 
 /// Checks that every pixel of `img`, `what`, is drawn in the "not yet" style (R-399; REQ-TOOL-162, REQ-COL-064).
 fn check_style(img: &Image, what: &str) {
+    check_style_in(img, what, &|_, _| true);
+}
+
+/// [`check_style`] over the pixels `inside` holds, each 4 × 4 block wholly inside them (amended by qa for TASK-M2-34,
+/// so the `FieldRamp`'s style is read on its unstepped samples alone).
+fn check_style_in(img: &Image, what: &str, inside: &dyn Fn(u32, u32) -> bool) {
     for y in 0..img.h {
         for x in 0..img.w {
+            if !inside(x, y) {
+                continue;
+            }
             let c = img.at(x, y);
             let hatch = present::debug_invalid([f64::from(x) + 0.5, f64::from(y) + 0.5]);
             assert!(
@@ -124,11 +136,16 @@ fn check_style(img: &Image, what: &str) {
         }
     }
     let mut colours: Vec<Rgb> = Vec::new();
+    let mut blocks = 0;
     for y0 in 0..=img.h - 4 {
         for x0 in 0..=img.w - 4 {
             let block: Vec<(u32, u32)> = (y0..y0 + 4)
                 .flat_map(|y| (x0..x0 + 4).map(move |x| (x, y)))
                 .collect();
+            if !block.iter().all(|&(x, y)| inside(x, y)) {
+                continue;
+            }
+            blocks += 1;
             let mut distinct: Vec<Rgb> = Vec::new();
             for &(x, y) in &block {
                 let c = img.at(x, y);
@@ -165,6 +182,7 @@ fn check_style(img: &Image, what: &str) {
             }
         }
     }
+    assert!(blocks > 0, "{what}: no 4 × 4 block to read the style on");
     let ys: Vec<f64> = colours.iter().map(|c| luminance(*c)).collect();
     let (lo, hi) = ys
         .iter()
@@ -177,13 +195,40 @@ fn check_style(img: &Image, what: &str) {
     );
 }
 
-/// The three renders: the debug view and the ramp the same style at the same pixel (R-399), and the outcome palette's
-/// running samples bounded / nothing yet's `#141418` on every pixel, not the style (R-446).
+/// Which pixels of [`unset_d_min`]'s row are its forced failures', `sim_failed` (added by qa for TASK-M2-34).
+fn failed_pixels() -> Vec<bool> {
+    let s = unset_d_min(Colouring::View("d_min"));
+    let (w, h) = s.size();
+    let mut out = vec![false; (w * h) as usize];
+    for i in 0..s.context.grid.sample_count() {
+        if s.read(i).state == STATE_SIM_FAILED {
+            for (x, y) in s.pixels(i) {
+                out[(y * w + x) as usize] = true;
+            }
+        }
+    }
+    assert!(
+        out.iter().any(|f| *f) && out.iter().any(|f| !*f),
+        "the row holds no forced failure or no unstepped sample"
+    );
+    out
+}
+
+/// The three renders: the debug view in the style on every pixel; the ramp the same style at the same pixel on the
+/// unstepped samples (R-399), and on the forced failures, `sim_failed`, `#141418` whatever they hold (R-399, R-467,
+/// R-511 Z3; amended by qa for TASK-M2-34); and the outcome palette's running samples bounded / nothing yet's
+/// `#141418` on every pixel, not the style (R-446).
 fn check_three(view: &Image, ramp: &Image, outcome: &Image) {
+    let failed = failed_pixels();
+    let is_failed = |x: u32, y: u32| failed[(y * ramp.w + x) as usize];
     check_style(view, "d_min's debug view");
-    check_style(ramp, "d_min's FieldRamp");
+    check_style_in(ramp, "d_min's FieldRamp", &|x, y| !is_failed(x, y));
+    let black = present::srgb8([0x14, 0x14, 0x18]);
     for y in 0..view.h.min(ramp.h) {
         for x in 0..view.w.min(ramp.w) {
+            if is_failed(x, y) {
+                continue;
+            }
             assert!(
                 near(view.at(x, y), ramp.at(x, y)),
                 "pixel ({x}, {y}): d_min's FieldRamp is {:?}, d_min's view {:?}: not one style",
@@ -192,7 +237,17 @@ fn check_three(view: &Image, ramp: &Image, outcome: &Image) {
             );
         }
     }
-    let black = present::srgb8([0x14, 0x14, 0x18]);
+    for y in 0..ramp.h {
+        for x in 0..ramp.w {
+            if is_failed(x, y) {
+                assert!(
+                    near(ramp.at(x, y), black),
+                    "pixel ({x}, {y}): d_min's FieldRamp draws a forced failure as {:?}, not #141418",
+                    ramp.at(x, y)
+                );
+            }
+        }
+    }
     for y in 0..outcome.h {
         for x in 0..outcome.w {
             assert!(
@@ -312,6 +367,23 @@ mod qa_not_yet_style_two_styles {
                     .collect(),
             };
             check_three(&v, &shifted, &o)
+        }
+    );
+}
+
+/// R-399, R-467 and R-511 Z3's leg can fail: d_min's FieldRamp drawing its forced failures in the stipple, as if their
+/// +∞ were read, is caught (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_not_yet_style_failure_stippled {
+    use super::*;
+    negative_control!(
+        qa_not_yet_style_one_stipple_in_every_view,
+        "d_min's FieldRamp drawing its forced failures in the stipple is caught",
+        expected = "draws a forced failure as",
+        {
+            let h = gpu();
+            let (v, _, o) = three(&h);
+            check_three(&v, &v, &o)
         }
     );
 }

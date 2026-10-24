@@ -15,6 +15,7 @@ pub mod golden_scene;
 pub mod gpu;
 pub mod inspector;
 pub mod invariant_gradient;
+pub mod nsub_bucket;
 pub mod oklab;
 pub mod prop;
 pub mod reference;

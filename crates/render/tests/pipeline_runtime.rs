@@ -778,10 +778,17 @@ fn check_frame_words(width: u32) {
             0
         ]
     );
-    assert_eq!(INPUTS.prelude_words(), [0, 0, 0, 0]);
+    // The prelude's words: E's flag, then the canvas background, linear, by default the recorded one (REQ-COL-108).
+    let bg = render::present::canvas_background().map(f32::to_bits);
+    assert_eq!(INPUTS.prelude_words(), [0, bg[0], bg[1], bg[2]]);
     let mut e = INPUTS;
     e.ensemble = 2;
-    assert_eq!(e.prelude_words(), [1, 0, 0, 0]);
+    assert_eq!(e.prelude_words(), [1, bg[0], bg[1], bg[2]]);
+    assert_eq!(
+        e.prelude_words_on([0.5, 0.25, 0.125]),
+        [1, 0.5f32.to_bits(), 0.25f32.to_bits(), 0.125f32.to_bits()],
+        "the background a caller gives"
+    );
 }
 
 #[test]
@@ -794,6 +801,39 @@ negative_control!(
     "another width is another block",
     expected = "assertion `left == right` failed",
     check_frame_words(5)
+);
+
+/// The canvas background is the prelude's uniform (R-467 D2; REQ-COL-108): a colour drawing `canvas_background()`
+/// draws the default, `render::present::canvas_background`, and, once the loop's caller sets another, that one, with no
+/// compile. With `set` off, the background is left at the default.
+fn check_background(set: bool) {
+    let mut r = rig();
+    let g = graph("fn colour(ctx: Ctx) -> vec3<f32> { return canvas_background(); }");
+    r.request(&g);
+    let default = render::present::canvas_background().map(f64::from);
+    assert_all(&r.frame(), default, "the default background");
+    let compiles = r.rl.cache().compiles();
+    if set {
+        r.rl.set_background([0.75, 0.5, 0.25]);
+    }
+    assert_all(&r.frame(), [0.75, 0.5, 0.25], "the caller's background");
+    assert_eq!(
+        r.rl.cache().compiles(),
+        compiles,
+        "a background is no compile"
+    );
+}
+
+#[test]
+fn fragment_cache_background_uniform() {
+    check_background(true);
+}
+
+negative_control!(
+    fragment_cache_background_uniform,
+    "a loop whose background is never set draws the default",
+    expected = "the caller's background",
+    check_background(false)
 );
 
 /// A node's param is a uniform: an edit redraws without a compile, and the key does not move (lowering Part 3, Part 5).

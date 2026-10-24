@@ -471,6 +471,14 @@ colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
 *24 Sep 2026 · recorded; applied in step 6*
+*Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad that has
+at least one collapsed adjacent pair, every one of which is a saturation collapse, f64 `J_D`'s column along the pair's
+in-plane direction 0 and the pair's f64 sample points distinct, raises no precision warning; every other
+`DECODE_SWITCHOVER`, an `ℓ_switch` switchover with no collapsed pair included, and every other `AT_F32_FLOOR` raises it
+as here (deep_zoom §4; REQ-GUI-012). Was (fix round 3): "a quad every collapsed adjacent pair of which is a saturation
+collapse, f64 `J_D`'s column along the pair's in-plane direction 0 and the pair's f64 sample points distinct, raises no
+precision warning; every other `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raises it as here". Was: "a saturation collapse, f64 `J_D`'s in-plane columns 0 at a quad
+whose f64 sample points are distinct, raises no precision warning".*
 
 Raised on `DECODE_SWITCHOVER` over visible quads and on `AT_F32_FLOOR`. Files: deep_zoom §2; scheduler_contract Part 4;
 the step-6 GUI docs; gui_state_contract §2.
@@ -1078,6 +1086,9 @@ Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: 
 encoder, and MP4/WebM through WebCodecs where supported.
 
 ## R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+*Amended by R-575 (the horizon: default 50, raised or lowered, not floored at 50).*
+*Still in force: all three changes, except that T is no longer floored at 50: its default stays 50 and it can be
+raised or lowered (R-575), its lowest value RQ-555; `dt_macro = max(1e-3, T/65535)` stands.*
 *25 Sep 2026 · applied in step 7*
 
 - REQ-COL-055: the invalid colour must collide with no palette entry. Propose a hatched pattern, not a flat colour.
@@ -17052,6 +17063,8 @@ R-519 is in the "physics" group of `plan/rule_groups.yaml`, with R-481.
 Changes REQ-GEN-014 (rulings, source, note).
 
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
+*Amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).*
+*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576).*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
 REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
@@ -23715,6 +23728,224 @@ places.
 
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
+## R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s "no zoom-out limit" from periodic charts to every chart whose axes are affine)*
+*21 Oct 2026 · applied in `docs/incoming/2026-10-21_latent_unbounded/` (the instruction as delivered, and its README),
+`docs/contracts/principia_chart_decoder_contract.md` § "The operation table" (a paragraph added after "Pan and zoom
+past the square (R-537)"), `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type
+(R-407)" (a paragraph added), `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" (a paragraph added),
+`docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added),
+`docs/design/principia_state_map.md` § "SM3. Source side: the extension comes for free, because the colour is a property
+of the system" (a line added under its "Never a gap while navigating" bullet, marked R-570), `docs/read_first/principia_INDEX.md` § "GUI" (the trace demo's
+and the state map prototype's entries, a sentence each), `REVIEW_QUEUE.md` (RQ-535 and RQ-536, new), REQ-GUI-357,
+REQ-SCHED-104, REQ-CHART-087 and REQ-CHART-088 (reqio, new), REQ-GUI-267 (reqio, a note), TASK-M8-55, TASK-M8-56 and
+TASK-M8-57, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-55 (the GUI, REQ-GUI-357), TASK-M8-56 (the
+cost, REQ-SCHED-104, waiting on RQ-535) and TASK-M8-57 (the far field, REQ-CHART-087 and REQ-CHART-088)*
+
+The human's instruction of 21 Oct 2026, `docs/incoming/2026-10-21_latent_unbounded/INSTRUCTION_latent_unbounded_2026-10-21.md`,
+the human's own, delivered by the orchestrator and recorded verbatim (sha256
+`ef4c4762d581d78f749d05650d03f76a8887a4320598f2f15913186bccf5e82c`). Its first quotation is the human's words; the rest
+is the human's text, the applied text of this ruling:
+
+> # Latent and flat charts: no limit on pan or zoom-out, 21 Oct 2026
+>
+> From me, Malachy. Record this in decisions.md from the next free R-number and quote my words verbatim:
+>
+> > "There's no arbitrary restriction right on the chart like extension stuff when it's like latent, right? Like it can
+> > basically, we can basically go to infinity, right? And also because we extend it as well, it means we can also zoom
+> > out as far as we want. So again, there should be no limit on how far we can zoom out."
+>
+> This states what R-407, the extension-display ruling ("Latent and flat charts never produce a forbidden pixel
+> anywhere") and RQ-409 (a) already imply, so nothing reads it otherwise. It extends RQ-409's "no zoom-out limit"
+> from periodic charts to every chart whose axes are affine.
+>
+> ## The behaviour
+>
+> 1. **Pan is unbounded** on a latent or flat chart. Any view centre is allowed, because every latent `z` decodes to a
+>    valid system. The navigation stop (R-469) never fires on these charts for pan, since the centre always passes
+>    `validate`.
+> 2. **Zoom-out is unbounded.** There is no cap from a fixed view range, a multiple of the home view, or a number of chart
+>    squares. The only limits are the existing ones: the frame budget and the baseline cover, which already span the
+>    viewport whatever its size. Cost per frame is set by the screen, not by the view's extent.
+> 3. **Every pixel is a system, everywhere.** No hatch, no blank, and no "not a system" on these charts at any pan or zoom.
+> 4. **Far out the field goes flat. That is correct, not a bug.** The decoder saturates every coordinate: configuration
+>    through a sigmoid, momenta to `±q_max`, masses through `μ_max·tanh`. Far from the origin neighbouring pixels decode
+>    to nearly the same system. Do not clamp, rescale, wrap or fade to "hide" this. The readout states the decoded system
+>    as for any pixel.
+> 5. **Precision is not a navigation limit.** At large chart coordinates the f32 deep-zoom floor arrives sooner, because
+>    the floor depends on where you zoom. That is handled by the existing precision ladder and the collapsed-decode
+>    guard, not by stopping the pan or zoom.
+> 6. **Unchanged:**
+>    - Charts with a bounded axis, or an affine axis that runs off the physical domain (the mass simplex, Burrau `L_z`,
+>      the Invariant warp), keep their forbidden region past the square as now.
+>    - Periodic and pole-crossing charts keep RQ-409 (a).
+>    - The trace's "leaves / re-enters the chart" on a latent chart stays: that is a trajectory state projected back onto
+>      the axes, not a navigation limit.
+>
+> ## What to check
+>
+> - Find any site that caps pan or zoom-out on these charts (a view clamp, a max zoom constant, a "home × n" limit, a
+>   `[0,1]²`-relative bound) in code, specs, requirements or the GUI spec, and bring it to this ruling. The reference
+>   demos' 3× cap and `clampView` exist only because their maps are precomputed images. Say so where they are cited,
+>   and never port them.
+> - Queue anything that conflicts rather than resolving it.
+>
+> ## Tests
+>
+> - **latent_unbounded_navigation:** on a latent chart, zoom out to 10⁶ × the home view and pan the centre to `|z| = 10⁴`.
+>   Every pixel decodes to a valid system, none is classified not a system, and the view state records the values
+>   unclamped. **Control:** the same navigation on the mass simplex hatches past its edge, or the test cannot tell the
+>   two kinds of chart apart.
+> - **zoom_out_cost_bounded:** a frame at 10⁶ × the home view computes no more quads than the baseline cover of the
+>   viewport. **Control:** at home zoom the same count, so the cost does not grow with the view's extent.
+> - **far_field_saturates:** at `|z| = 10⁴`, the decoded states of adjacent pixels agree to within the saturation
+>   tolerance. **Control:** near the origin they differ, so the test sees structure where there is some.
+>
+> One PR, with the test output pasted in. The security rule stands.
+
+*What it decides:*
+- **Pan is unbounded on a latent or flat chart** (item 1). Any view centre is allowed, because every latent `z` decodes
+  to a valid system. R-469's stop, judged on the centre, never fires on these charts for a pan, as R-537 EX3 already
+  says ("affine latent axes: no stop at all") and REQ-CHART-060's test already checks ("on the latent chart … nothing
+  stops").
+- **Zoom-out is unbounded** (item 2). There is no cap from a fixed view range, a multiple of the home view or a number
+  of chart squares. The only limits are the existing ones, the frame budget and the baseline cover (caching contract
+  Part 4), and a frame's cost is set by the screen, not by the view's extent. That is RQ-409 (a) (R-537 U14, on periodic charts;
+  ruled (a) by R-552, PR #274 merged and the entry archived on main) carried to every chart whose axes are affine.
+- **Every pixel is a system, everywhere** (item 3): no hatch, no blank and no "not a system" on these charts at any pan
+  or zoom, as R-467's context already says ("Latent and flat charts never produce a forbidden pixel anywhere").
+- **Far out the field goes flat, and that is correct** (item 4). The decoder saturates every coordinate
+  (chart_reference §0: the configuration through a sigmoid, the momenta to `±q_max`, the masses through `μ_max·tanh`),
+  so far from the origin neighbouring pixels decode to nearly the same system. Nothing clamps, rescales, wraps or fades
+  the view to hide it, and the readout states the decoded system as for any pixel.
+- **Precision is not a navigation limit** (item 5). At large chart coordinates the f32 floor arrives sooner; the
+  existing ladder handles it (deep_zoom §2's switchover, R-90, and §4's `AT_F32_FLOOR`, with R-537 EX8's root-cell
+  anchor, TASK-M8-57), never a stop on the pan or the zoom.
+- **Unchanged** (item 6): the charts with a bounded axis, or an affine axis that runs off the physical domain (the mass
+  simplex, Burrau `L_z`, the Invariant warp), keep their not-a-system region past the square; periodic and
+  pole-crossing charts keep RQ-409 (a) (R-552); the trace's "leaves / re-enters the chart" on a latent chart stays, a
+  trajectory state projected back onto the axes, not a navigation limit (R-538).
+- **The reference demos' 3× cap and `clampView`** (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
+  `docs/gui/reference/state_map/state_flow.html`, and their copies under `docs/incoming/`) exist only because the
+  demos' maps are precomputed images. They are never ported. Where the corpus cites the demos or the prototype's
+  navigation limit, it now says so: the INDEX's two entries, the GUI spec's new paragraph and state map SM3's
+  added line, marked R-570. RQ-409's own quotation of the 3× cap is left as it stands: R-552 rules it (a) with the human's words
+  "The demo's 3× cap applies only to its fixed maps", and the entry is archived on main.
+
+*What the port found (the instruction's "What to check").* No spec, contract or requirement caps pan or zoom-out on a
+latent or flat chart: chart_decoder_contract Part 4 and render_gui_spec §G2 already give R-469's stop on the centre as
+the only limit, with no stop on an affine latent axis, and REQ-SCHED-057 forbids a depth cap. The code holds one cap
+and one placeholder limit:
+- `crates/gui/src/explore/manifold_view/mod.rs:56`, `ZOOM_RANGE: (f64, f64) = (-4.0, 48.0)` ("four octaves out"), read by
+  Navigate's zoom row at `crates/gui/src/explore/manifold_view/navigate.rs:88`, `Slider::new(&mut zoom,
+  ZOOM_RANGE.0..=ZOOM_RANGE.1)`, under egui 0.36's default `SliderClamping::Always`: a drag of the zoom slider cannot zoom
+  out past 2⁴ = 16 × the preset's window, and a drag from a zoom already past it jumps back into that range. The wheel
+  (`navigate.rs:207`, `zoom_by` at `navigate.rs:145`) and the keys (`mod.rs:642`) do not clamp, nor do the centre and
+  `z₀` fields or the Slice centre sliders (`centre.rs:54`, `SliderClamping::Never`). REQ-GUI-357 (new) brings it to this
+  ruling, closed by TASK-M8-55, which owns Navigate past the square on the real engine; the mock shares the code.
+- `crates/gui/src/mock/quads.rs:81`, `MAX_ROOT_COPIES: i32 = 4`: the mock's fake tile-bounds overlay lays copies of its
+  root out to four each way "so a far zoom out stays a bounded tree", and draws no tile bounds past them. It is
+  placeholder content (R-390), not a navigation cap, and the real quadtree's cover is REQ-SCHED-101's and REQ-SCHED-104's;
+  no requirement (applied per R-369).
+- Not chart navigation, so outside this ruling: `crates/gui/src/explore/trajectory.rs:143` and `:146`
+  (`PAN_ZOOM_RANGE`, `SPHERE_ZOOM_RANGE`, the Trajectory panel's own views, R-453) and
+  `crates/gui/src/stain/canvas.rs:44` and `:46` (`ZOOM_MIN`, `ZOOM_MAX`, the stain editor's canvas).
+
+*Conflicts, queued, not resolved:*
+- **RQ-535.** Item 2's "the baseline cover, which already span[s] the viewport whatever its size. Cost per frame is set
+  by the screen" against R-537 EX7(a): the root lattice's level-0 cells are the coarsest quads, each the size of the
+  root, so at 10⁶ × the home view the viewport touches about 10¹² roots and its baseline cover grows with the view's
+  extent. REQ-SCHED-104's test waits on it.
+- **RQ-536.** Item 3's "no 'not a system' on these charts at any pan or zoom" against the decoder's
+  `DEGENERATE(M01_TINY)` fence (dd_decoder §3.1; R-511 draws a `decode_failed` pixel blank): under the edge-reaching
+  simplex link (dd_generation_root §3, REQ-GEN-026) the far field reaches the corner `m₂ → 1`, where the fence fires,
+  and under `softmax_tanh` it can fire once `μ_max` (tunable, R-481) is set high enough. At the default links it never
+  fires. The tests run at the default links; the rest waits on it.
+
+*Requirements.* Added (reqio): REQ-GUI-357 (no control caps pan or zoom-out on a latent or flat chart, the zoom slider
+included; the test `latent_unbounded_navigation` with its control), REQ-SCHED-104 (`zoom_out_cost_bounded`, with its
+control; `rq: RQ-535`), REQ-CHART-087 (every pixel a system at any pan or zoom, and `far_field_saturates`, with its
+control; `rq: RQ-536`) and REQ-CHART-088 (the saturation tolerance, an R-71 calibration). Amended: REQ-GUI-267 (a note,
+and R-570 among its rulings).
+
+*Tasks.* TASK-M8-55 closes REQ-GUI-357; TASK-M8-56 closes REQ-SCHED-104 (its perf reviewer reviews the cost);
+TASK-M8-57 closes REQ-CHART-087 and REQ-CHART-088 (physics review, ⚑). No new task: each requirement sits with the task
+that owns its code.
+
+*Applied per R-369:* a slider's span is the range its handle covers and never a clamp, so a zoom past Navigate's zoom
+row is kept and shown with the handle at the end of the rail (render_gui_spec §G2; REQ-GUI-357), rather than a wider
+span; each requirement goes to the task that owns its code, with no new task; the mock's `MAX_ROOT_COPIES` gets no
+requirement; RQ-409's entry is not edited here, R-552 having ruled it (a) and archived it; the three tests run at the decoder's default
+links while RQ-536 is open.
+
+*22 Oct 2026, on the same PR: RQ-535 decided per R-369 by the orchestrator, not a human ruling: (a), coarser levels
+`L < 0` of the same quadtree, a level-`L` quad spanning `2^(−L) × 2^(−L)` level-0 roots in R-97's frame, the baseline
+cover taken at the level whose quads are the smallest still at least its on-screen size, so its count is set by the
+screen. Applied in `principia_scheduler_contract.md` Part 3, `principia_deep_zoom.md` and chart_decoder_contract Part 4
+(⚑ physics review of the addressing); REQ-SCHED-104 no longer waits. RQ-535 moved to
+`docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 1 of PR #279 (gui review 5624653641, physics review 5624655553), applied per R-369:
+REQ-GUI-357's verify drives each control its statement names, each with a clamp control, checks the far pixel's
+readout, and steps the zoom row by Enter then ↑ (render_gui_spec §G3, R-409), not + / −; RQ-552 queues η_E against
+item 3 (dd_decoder §3.7 allows it on the latent chart, R-511 draws its tags blank), and the qualifier reads "at the
+decoder's default links, η_E off (`None`)", both tests pinning `E* = None`; REQ-CHART-087's flatness is per coordinate,
+judged only where every coordinate the view varies is saturated (chart_reference §5.4), REQ-CHART-088 measured on those
+views; RQ-553 queues the precision warning in the flat far field against item 5 and W13, deep_zoom §4 recording it
+unsettled. The quoted instruction above is unchanged.*
+
+*23 Oct 2026, fix round 2 of PR #279 (physics review 5624721489, P4): RQ-553 decided per R-369 by the orchestrator, not
+a human ruling, recorded against item 5 and R-54: option (a), its test corrected to the derivative, a collapse at which
+f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample points are distinct being a saturation
+collapse, which raises no precision warning; the genuine floor, `J_D ≠ 0`, still warns. Option (c) is out by W13 and
+item 5. Applied in deep_zoom §4, render_gui_spec §G2 and REQ-GUI-012 (TASK-M6-21); RQ-553 moved to
+`docs/archive/review_queue/M0.md`.*
+
+*23 Oct 2026, fix round 3 of PR #279 (physics review 5624781454, P5; gui review 5624788928, G5 to G7), applied per
+R-369: RQ-553's test is per direction, so the bands along the axes are covered: a collapse between adjacent samples
+along in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
+points are distinct, and the warning is suppressed only for a quad every collapsed pair of which is one; this
+supersedes the 23 Oct line above's "a collapse at which f64 `J_D`'s columns along the view's plane are 0 while the
+quad's f64 sample points are distinct". REQ-GUI-012 gains the band arm and two genuine-floor cases whose controls can
+fail; TASK-M6-21 names where the classification is made.*
+
+*23 Oct 2026, fix round 4 of PR #279 (gui review 5624846336, G8), applied per R-369: the suppression needs at least one
+collapsed adjacent pair, every one of which is a saturation collapse; a switchover at `ℓ_switch` with no collapsed pair
+(R-90) still warns. This supersedes fix round 3's "suppressed only for a quad every collapsed pair of which is one",
+which held vacuously for a quad with none. REQ-GUI-012 gains arm (e).*
+
+*23 Oct 2026, fix round 6 of PR #279 (perf review 5624936602), applied per R-369: REQ-SCHED-104 bounds the frame that
+lands a zoom-out (the in-motion cover) and, at rest, the quads computed and resident in view by the bound at home zoom
+(R-108), the cover holding at most `⌈extent / quad size⌉ + 1` quads per axis at every zoom and pan and "the same count"
+only where the two covers tile the viewport identically (scheduler_contract Part 3); RQ-554 queues the band quads'
+terminal stop at `AT_F32_FLOOR` (REQ-SCHED-062, `rq: RQ-554`), deep_zoom §4's "harmless" limited to quads whose
+in-plane `J_D` columns are all 0; REQ-SCHED-105 (R-72) asks for the addressing's behaviour where the coarsest levels'
+f64 centres and half-widths overflow; TASK-M6-21 gains perf as a reviewer and states its collapse record is CPU-side.*
+
+*23 Oct 2026, fix round 7 of PR #279 (perf review 5624992732), applied per R-369: REQ-SCHED-104's controls are counted
+without dispatching at 10⁶ ×, each asserting its precondition; the pinned ancestor chain of the cover, which levels
+`L < 0` leave with no top, stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares,
+the cover's smallest common ancestor where one exists, a viewport straddling a line through the lattice origin having
+none (scheduler_contract Part 3; caching_contract Part 4, a line added).*
+
+*23 Oct 2026, fix round 8 of PR #279 (perf review 5625031178, P7), applied per R-369: the 2 × 2 rule is the only stop
+of the pinned ancestor chain, the first level at which the viewport lies within at most 2 × 2 ancestor squares, about
+`⌈log2(cover quads per axis)⌉` levels above the cover, independent of the zoom and the pan; the fix-round-7 line's "the
+cover's smallest common ancestor where one exists" is superseded, a smallest common ancestor sitting about `m` levels
+higher for a view straddling `x = 2^m` roots, which would tie the chain's length to the pan. REQ-SCHED-104's arm (3)
+gains a far-pan case.*
+
+*23 Oct 2026, fix round 9 of PR #279 (perf review 5625066551, P8), applied per R-369: the stop has one definition, the
+first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first
+level whose square side is at least the viewport's extent, depending on where the view sits; arm (3)'s far-pan view is
+the origin-line view at 10⁶ × moved by exactly `2^40` roots along x, so the equality with that view at home is exact.*
+
+*23 Oct 2026, fix round 10 of PR #279 (perf review 5625109012, P9), applied per R-369: arm (3)'s geometry is pinned on
+both axes: the origin-line view is the home view centred at `(0, 0)`, the zoomed view that view scaled about the origin
+by `2^20` ("10⁶ ×" meaning `2^20` there), and the far-pan view that zoomed view moved by exactly `2^40` roots along both
+x and y, superseding the fix-round-9 line's "along x".*
+
+R-570 is in the "physics" group of `plan/rule_groups.yaml`, with R-407 and R-469.
+
 ## R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*
 *21 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, §1, §6, §9 and §11,
 `docs/design/principia_systems_architecture.md` §3 (v1 web's crossings, measured), §5 (seam 12) and §6,
@@ -23878,3 +24109,814 @@ REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, RE
 REQ-SYS-056 (rulings, rq, note), REQ-SYS-051 and REQ-SYS-059 (rulings, rq, note),
 REQ-SYS-055 (rulings, note), REQ-TOOL-084 (rulings, note), REQ-GUI-033 (rulings, note), REQ-GEN-023 (statement,
 rulings, note; fix round 3) and adds REQ-SYS-086 (restated in fix round 1: statement, verify, note).
+
+## R-572 — Result: a view's region run at full precision, f32 or f64 only, on a uniform grid, as a batch job in the app or by `prin batch`, written to a result folder that reopens as a view drawn from what was stored; the user chooses the stored times, and one copy per pixel or all `E+1` copies is an option *(amends REQ-SYS-007 and philosophy §2; unparks philosophy §7.3's reduced and per-copy tiers as the Result's payload)*
+*21 Oct 2026 · applied in `docs/design/principia_results.md` (new), `docs/read_first/principia_00_philosophy.md` § "The
+prebake — a measuring instrument", the three-rungs table and § "7.3 Dump tiers — and the default is not an image",
+`docs/gui/principia_render_gui_spec.md` § "Result… — the full-precision batch run (R-572)" (new),
+`docs/contracts/principia_gui_state_contract.md` §2 (the open windows), `docs/design/principia_dd_image_embedding.md`
+§6 (tier 1's `run` block), `docs/read_first/principia_INDEX.md`, REQ-SYS-007 (reqio), REQ-SYS-087 to REQ-SYS-090,
+REQ-TOOL-196 and REQ-GUI-366 to REQ-GUI-368 (new), TASK-M8-74 and TASK-M8-75 (new) and `plan/rule_groups.yaml`; the
+record is `docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-74 and TASK-M8-75*
+
+R-572 to R-575 are the gap sweep's PR 2a, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/results.md` and `designs/honesty_precision.md`. The orchestrator split the bundle's PR 2 into three and told
+the human: 2a these two designs, 2b `keyframes_reel.md` and `reel_click.md`, 2c `export_details.md`,
+`video_carrier_test.md`, `uploaded_picture.md` and `ic_save.md`. The bundle's `INSTRUCTION.md` header and the human's
+covering message are quoted in R-560.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its lead, verbatim:
+
+> Each file in `designs/` has six parts: what exists, the gap, the proposal, the rulings it touches, the decisions
+> (already made, in a "Decided" section), and tests. Write each as a design doc and add its requirements and tests.
+
+Its `results.md` item, verbatim:
+
+> - `results.md`: "Result", the full-precision batch job, end to end (f32 or f64 only). Delete "payload summary" from
+>   TASK-M8-02, which defines nothing and is used nowhere. Philosophy §2's "arbitrary precision" text becomes the
+>   sentence the draft gives. REQ-SYS-007's parked dump tier needs amending; queue it if that is a larger change.
+
+`DECISIONS_2026-10-21.md` § "Results", verbatim:
+
+> Results
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+> - Called "Result". "Yeah call it result."
+> - Which times are saved: the user chooses. "let the user choose ig"
+> - One copy per pixel or all jittered copies: an option. "make that an option"
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> - Called **Result** ("Yeah call it result").
+> - **Which times are saved: the user chooses** ("let the user choose ig"): the horizon by default, plus any playheads
+>   the user adds. Open question 2 is closed.
+> - **One copy per pixel or all `E+1` copies: an option** ("make that an option"), one copy by default. Open question 3
+>   is closed.
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:*
+- **A Result** is the prebake (philosophy §2) made reachable from the app, end to end: the Result window, prefilled
+  from the view, from File › Make a result…, Measure's kept region or the Inspector; one `job.json` the app runs in the
+  background and `prin batch --job job.json` runs with the same code; a result folder
+  (`<name>__<build8>.principia-result/`: `result.json`, `payload.prin`, `image.png`, `log.txt`); the result view,
+  badged in the header strip (R-523), drawn from the payload with nothing integrated; and Compare, a labelled flip and
+  the f32 twin's difference map (`principia_results.md` §3).
+- **f32 or f64 only**: f64 by default, the shared kernel on CPU threads; f32 the survey kernel on the GPU (R-265).
+- **Its name** is "Result" in the GUI and "batch" for the job; `prin survey` stays the headless live path (open
+  question 1, (a)).
+- **The stored times**: the horizon by default, plus any playheads the user adds (open question 2, (a)).
+- **The copies**: one per pixel by default, the nominal copy with the per-pixel reductions; all `E + 1` copies an
+  option (open question 3, (c)).
+- **Philosophy §2** reads the draft's sentence: "… the shared kernel at f64 on the CPU, or f32 on the GPU for a fast
+  uniform pass. Arbitrary precision lives only in R-33's independent reference, which checks a result rather than
+  making one (R-265)."; the three-rungs table reads "f64 (f32, labelled)" for the prebake and "f64" for the Inspector.
+  *Was:* "CPU at arbitrary precision, or GPU at emulated double/double-double." and "arbitrary", "f64 and up" (kept as
+  *Was:* lines there). R-265 holds; it amended §7.1 and §7.7 only, which stay as they are.
+- **REQ-SYS-007 is amended, not queued.** The change is a reword: philosophy §7.3's reduced tier is unparked as the
+  Result's payload and its per-copy tier as the copies option; tiled prebake (§7.2's VRAM tiling), the trajectory
+  tiers, extended precision, headless datasets, the regularisation matrix and the GPU-port lever stay parked. §7.3
+  gains a note saying so. Nothing else of §7 or of R-265 moves, so it is not "a larger change".
+
+*Applied per R-369:*
+- **The payload's field list and layout are a definition** (R-72, REQ-SYS-090): §7.3 calls the reduced tier's field
+  list "a CONTRACT, not a convenience" and gives no list, so the task that builds the payload writes it into
+  `principia_results.md` §3.3, from the `SimState` payload and the reduction fields, and the physics reviewer approves
+  it.
+- **The pilot** is 64 pixels on an 8 × 8 lattice spread over the grid, timed; the estimate scales its measured time.
+- **The result view's source** (the live march or an opened result) is engine state, set through the contract by an
+  open-result request, because the engine never reads `ViewUI` (`principia_gui_state_contract.md` §2); `ViewUI` gains
+  the Result window. *The draft said* "`ViewUI` gains the Result window and a result mode".
+- **With one copy per pixel** the result view colours the nominal copy, one sample per pixel; with all copies stored
+  it colours each and averages, as the live view does (`principia_sampling_msaa_note.md`).
+- **The embedding's `run` block** is in tier 1 (`principia_dd_image_embedding.md` §6), assigned in `tiers.rs` like
+  every other field (REQ-TOOL-181), so a result's image never drops it (REQ-TOOL-196).
+- **Two tasks, M8:** TASK-M8-74 builds the job, `prin batch`, the folder and the payload (after TASK-M8-02, TASK-M4-17's
+  prebake path and TASK-M7-44's tier table); TASK-M8-75 the Result window, the result view and Compare.
+
+*Fix round 1 of PR #283 (gui review 5627122883, G1 to G5; applied per R-369):*
+- **Zoom and pan in a result view** are display magnification of the stored pixels, square per cell: no chart
+  construction, no `SimConfig` edit, no sim key, no history; *Explore from here* builds a live view from the result's
+  own `SimConfig`, bitwise (`principia_results.md` §3.4, render_gui_spec §G1, REQ-GUI-367).
+- **The view source** is engine state, `ViewSource = Live | Result(id)`, set by the open-result request (as undo and
+  redo are requests), not an edit, entering no undo history; the snapshot carries it, and the badge and the disabled
+  controls read it (`principia_gui_state_contract.md` §2, REQ-GUI-367).
+- **The Result window lists the design's fields**, prefilled from the view (the horizon, `E` and `r_coll` among them),
+  not only those that differ; the predictability warning is tested at both precisions (REQ-GUI-366).
+- **The badge is tested on a result view**: its text, its place in the header strip, the frame and per-cell zoom
+  (REQ-GUI-367).
+- **Where things sit:** Make a result… in File (after Import picture…), Measure's side panel and the Inspector; Open
+  result… in File; Compare (a labelled toggle), Make the f32 twin and the difference map with its counts and
+  distribution in the Result window's Compare section (REQ-GUI-368).
+
+*Fix round 3 of PR #283 (gui review 5627280803, N2; applied per R-369):* the result view's display zoom and pan live in
+the view source, `ViewSource = Live | Result { id, display_zoom, display_pan }`, changed by a result-display request
+that enters no history; the engine draws from it and the snapshot carries it, so the GUI keeps no copy of the payload
+(`principia_gui_state_contract.md` §2, `principia_results.md` §3.4, REQ-GUI-367).
+
+*Fix round 9 of PR #283 (perf review 5627960807, P4, P5; applied per R-369, as the review proposes):*
+- **The job's cost** (P4): the live frame loop keeps its budget while a job runs at f64 or f32, a Mac benchmark against
+  a no-job baseline (REQ-SCHED-043 applied to this job); the f64 pool leaves at least one core free, configurable
+  (REQ-PERF-003); the f32 path splits each row in time into bounded dispatches that carry state (REQ-PERF-010), its
+  live states sized from `(E+1) × sizeof` (philosophy §7.2); payload.prin is written row by row, peak memory
+  independent of `nx·ny`, budgeted before allocating (telemetry §6.2a) (`principia_results.md` §3.2, §6; TASK-M8-74).
+- **The pilot** runs off the main thread, and a field edit cancels and restarts it; a zoom or pan in a result view runs
+  no integration and dispatches no march (P5; `principia_results.md` §3.1, §3.4; REQ-GUI-366, REQ-GUI-367).
+
+*Fix round 10 of PR #283 (perf review 5628071919, Q1 to Q3; applied per R-369, as the review proposes):* the
+flat-memory check is the benchmark `cargo xtask bench result-job-memory` in its own process (REQ-PERF-109), and the
+refusal before allocating moves to REQ-PERF-108's unit test, since a benchmark requirement cannot carry it (Q1); the
+f32-row check asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is
+⌈steps / bound⌉, a fixed two-way split failing (Q2); `result-job-frame` holds the fixed suite's `pan-nearfield` and a
+job over that view at `T = 200` sized from its pilot to outlast the window, still running at its end (Q3)
+(`principia_results.md` §3.2, §6; REQ-PERF-107 to REQ-PERF-109; TASK-M8-74).
+
+*Fix round 12 of PR #283 (qa review 5628365538, Q6 to Q8; applied per R-369):* `result_window` tests the progress
+display, Cancel and Resume, and the f64 warning at `T = 100` (REQ-GUI-366); `result_folder_layout` tests the folder's
+name, its four files and result.json's fields, reading `<build8>` as the first eight characters of the build hash
+job.json records (REQ-SYS-089); TASK-M0-02's REQ-SYS-007 line follows this ruling's exception for the Result's payload,
+with a *Was:*.
+
+R-572 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-007 (statement, verify, rulings, source, note). Adds REQ-SYS-087 (the job), REQ-SYS-088 (cancel and
+resume), REQ-SYS-089 (the folder and payload), REQ-SYS-090 (the payload's fields, a definition), REQ-TOOL-196 (the
+`run` block in tier 1), REQ-GUI-366 (the Result window), REQ-GUI-367 (the result view) and REQ-GUI-368 (Compare).
+
+## R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it
+*21 Oct 2026 · applied in `plan/tasks/M8/TASK-M8-02.md` and `docs/design/principia_results.md` §4*
+
+`DECISIONS_2026-10-21.md` § "Results", its first item, verbatim:
+
+> - Delete "payload summary" from TASK-M8-02 (undefined, unused).
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **"Payload summary" is deleted from TASK-M8-02**: it is defined nowhere, used nowhere, and no test asks for it.
+
+*What it decides:* TASK-M8-02's `prin survey` deliverable lists its outputs as "image, frame records". *Was:* "(payload
+summary, image, frame records)". No requirement named it (REQ-SYS-048's statement is "the Paper-2 numbers"), so no
+requirement changes. The full-precision payload is the Result's (R-572), written by `prin batch`.
+
+R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
+*21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
+§4 (the real-space bullet and row) and §5 (a lead bullet) and its closing line, `docs/gui/principia_render_gui_spec.md`
+§G2 (the Trajectory panel) and §G8 (the Inspector), `README.md` (the Honesty line), `docs/read_first/principia_INDEX.md`,
+REQ-VAL-106, REQ-TOOL-127 and REQ-SYS-061 (reqio), REQ-VAL-196 to REQ-VAL-199 and REQ-GUI-369 to REQ-GUI-371 (new),
+TASK-M8-76 (new), TASK-M4-16 and TASK-M8-17, `REVIEW_QUEUE.md` (RQ-556, RQ-557 and RQ-558, new) and
+`plan/rule_groups.yaml`; the record, with the probe its marks were measured with, is
+`docs/incoming/2026-10-21_gap_sweep_results_honesty/`; built by TASK-M8-76*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `honesty_precision.md` item, verbatim:
+
+> - `honesty_precision.md`: in the trajectory viewer, four runs of the clicked point (f32, f64, and each nudged by one
+>   ulp), with two marks:
+>   - **"faithful until"** at shape-sphere chord 10⁻³;
+>   - **"parted at"** at chord 0.1.
+>
+>   Both are measured (`evidence/parting_probe_output.txt`) and from the literature, both visible and editable. The
+>   one-line trust text appears in the trajectory inspector panel when a trajectory is clicked. **Nothing changes in the
+>   atlas.** The horizon stays 50 by default and can be raised **or lowered**, so the Run window's `T_horizon ∈ [50, 200]`
+>   and R-132 are amended. The README's "Honesty" line is reworded as the draft gives.
+
+`DECISIONS_2026-10-21.md` § "Honesty", its first two items, verbatim (the third, the horizon, is R-575's):
+
+> - Run f32 nudged by the smallest amount as well as f64 nudged. "Do fp32 nudged the smallest amount also"
+> - The "parted" threshold: research and test. "research & test" -> done: two marks, 1e-3 (faithful until) and 0.1
+>   (parted at), shown in the trajectory inspector panel. "yes sure that trust thing text is fine if you show it in the
+>   trajectory inspector panel when you click on a trajectory"
+
+The design's "Decided" section, its first three items, verbatim:
+
+> - **Four runs, not three**: f32, f64, and **each nudged by one ulp** ("Do fp32 nudged the smallest amount also").
+>   f32 against nudged f32 gives f32's own sensitivity at this point.
+> - **Two marks, measured and from the literature**, both shown and editable:
+>   - **Faithful until**: f32 and f64 within a shape-sphere chord of **10⁻³**, the reliability threshold of Boekholt &
+>     Portegies Zwart (2015, 2020, 2023), stated as keeping the difference in the linear regime.
+>   - **Parted at**: chord **0.1**, the decorrelation threshold (separation at the system's own scale: Boekholt 2015,
+>     Hernandez et al. 2020); random shapes average 4/3.
+>   - Measured over 1000 ICs, four regions, Heggie to t = 50 (prin-rs PR #34, `parting_probe`): first-event fates agree
+>     **99.9%** before the 10⁻³ mark and **25%** after the 0.1 mark (n = 16, so thin). Median parting at 0.1: deep
+>     interior 12, preset_shape 26, near-field 43, config_stability 39 (14% parted), pooled 22. A single global "f32
+>     trustworthy to ~23" is right pooled and wrong for any given point, which is why the readout is per point.
+>   - Self-check: in a chaotic region the gap between the two marks is about ln(100)/λ. A gap far off that says the
+>     reading is in the noise floor or saturation, and the panel says "unreliable".
+> - **Where the trust line shows**: in the trajectory inspector panel when you click a trajectory, e.g. "the atlas shows
+>   t = 30; this point's f32 run parted at t = 18". **Nothing changes in the atlas**: it stays f32 on the GPU, coloured as
+>   now ("Why would we show different colours in the atlas for precision?").
+
+*What it decides:*
+- **Four runs of the clicked point**: f32 (the survey kernel's one-pixel GPU dispatch, what coloured the pixel), f64
+  (`computeIC`), and each nudged by one ulp per component of its decoded IC (`principia_honesty_precision.md` §3.1).
+- **The chord** `|n_a − n_b|` between signed shape-sphere unit vectors (0 to 2), read at the sync boundaries, for
+  f32–f64, f64–f64′ and f32–f32′; **two marks**, "faithful until" at **10⁻³** and "parted at" at **0.1**, the human's
+  values, measured and from the literature, both shown and editable (§3.2). They are not calibrations: the human gave
+  them.
+- **The self-check** ("unreliable" when the gap between the marks is far from `ln(100)/λ`); how far is a calibration
+  (R-71, REQ-VAL-198).
+- **What the user sees**: f64 solid and f32 dashed in real space and on the sphere, a separation plot, the marks, the
+  starting gap, the fates side by side, and the trust line about the atlas pixel (§3.3).
+- **Where the trust line shows**: the trajectory inspector panel when a trajectory is clicked, the click inspector's
+  panels in the Inspector window and Explore's Trajectory panel (R-65), on by default in the Inspector and for a pinned
+  or kept trajectory in the Trajectory panel, off while it follows the cursor (§3.4).
+- **Nothing changes in the atlas**: f32 on the GPU, coloured as now. The draft's stain preset "How far f32 sees" is not
+  made, and its header text for the atlas is not applied; what the header states is RQ-556 (§3.5).
+- **The README's Honesty line** reads the draft's: "*It shows where its precision runs out: open any point to watch its
+  single- and double-precision orbits part, and when. Failed runs are kept and counted, never painted over.*" *Was:*
+  "*What it can't resolve is hatched, and it reports where its precision runs out.*"
+- **Amends** trajectory viewing §4 (real space was "CPU-f64 intuition sugar … no comparison claimed") and §5 (the
+  overlay was "optional; off by default"), each kept as a *Was:*. REQ-VAL-106 follows (on by default, statement and
+  verify); REQ-TOOL-127's definition gains the `r_i(t)` series and the nudge, its divergence criterion now R-574's marks.
+
+*Applied per R-369:*
+- **The trust line and the fates' wording key on "parted at"**, as the draft's single threshold did and the human's
+  example does; "faithful until" is drawn and reported beside them.
+- **The nudged runs are not drawn on the two views**; they are in the separation plot.
+- **The runs are of the nominal copy** (the draft's open question 3; "copies on request" is not taken up by the human's
+  texts), as the f32 run must be to equal the atlas pixel's.
+- **The nudge**: each of the decoded Cartesian IC's twelve components moved by `next_up` at its run's precision, as the
+  probe does; how the GPU dispatch takes it after its own decode, and a zero component under flushed subnormals, are
+  REQ-TOOL-127's to define.
+- **Queued, not resolved:** the header's statement against REQ-SYS-061 (RQ-556); the ensemble-ratio gate's expected
+  value, which the probe's readings do not settle (RQ-557); whether the runs carry on past their first terminal event,
+  as measured, or stop as the atlas does (RQ-558, its option (a), as measured, applied meanwhile).
+- **One task, M8:** TASK-M8-76, after TASK-M8-17 (the Inspector's CPU/GPU comparison, which keeps REQ-VAL-106) and
+  TASK-M4-16 (the f32 GPU trace).
+
+*Fix round 1 of PR #283 (physics review 5627073272, F1 to F4; gui review 5627122883, G6, G7, G9; applied per R-369):*
+- **The self-check's control is the right way round**: "unreliable" belongs to a small λ, where `ln(100)/λ` is long;
+  two marks one boundary apart at a large FTLE is the expected gap (F1; REQ-VAL-198, TASK-M8-76).
+- **`rq` fields**: REQ-VAL-199 carries `rq: RQ-557`, REQ-VAL-196 and REQ-VAL-197 `rq: RQ-558` (F2).
+- **One integrator for all four runs**: both f64 runs and both nudged runs take the f32 run's sim key, occupant,
+  coefficients and step rule, never RK45 (integrator contract Part 6; F3; `principia_honesty_precision.md` §3.1,
+  REQ-VAL-196).
+- **The quote's count**: this entry quoted "its first three items … (the fourth …)" of `DECISIONS_2026-10-21.md` §
+  "Honesty", which has three; it now reads "its first two items … (the third …)" (F4).
+- **The Trajectory panel's Precision section**, after Numbers in R-541 G4's order, collapsed the trust line, expanded
+  the marks, the separation plot, the starting gap and the fates (G6; render_gui_spec §G2, REQ-GUI-369).
+- **Whatever the IC's source** (an atlas pixel, an Inspector edit, Create & locate, a kept orbit after the view moved),
+  the runs and the trust line are of the clicked trajectory's own IC, the line reading the current atlas playhead (G7;
+  REQ-GUI-370).
+- **The trust line's tests** state the faithful mark below 10 and add an "unreliable" check; §G8 points at
+  REQ-GUI-370's three forms, the human's example being the human's illustration (G9).
+
+*Fix round 2 of PR #283 (physics review 5627216712, F5, F6; applied per R-369):*
+- **An IC that is not an atlas pixel of the current view** (an Inspector edit, a Create & locate IC, possibly off the
+  slice, or a kept orbit once its view has moved) has no decode path: its f32 run is the survey kernel's one-pixel
+  dispatch from the IC rounded to f32, under the trajectory's own sim key, and its trust line is prefixed "Not an atlas
+  pixel:", with no "The atlas colour here …". A kept orbit is an atlas pixel only while the view it was kept from is
+  unchanged. The four runs always use the trajectory's own sim key, never the current view's (`principia_honesty_precision.md`
+  §3.4, REQ-VAL-196, REQ-GUI-370, TASK-M8-76, render_gui_spec §G8). The fix-round-1 line above that says "Whatever the
+  IC's source … the line reading the current atlas playhead" holds for an atlas pixel only.
+- **RQ-558's Waits** reads "nothing built waits; a ruling other than (a) changes REQ-VAL-196 and REQ-VAL-197", the
+  queue's form; option (a) stays applied meanwhile (F6).
+- **Wording:** the human's example is "the human's illustration" in honesty §3.3 and §G8.
+
+*Fix round 3 of PR #283 (gui review 5627280803, N1, N4, N5; applied per R-369):*
+- **The non-atlas trust line** is written out in three forms, one for one with the atlas forms, "Not an atlas pixel:"
+  and "these runs" in place of "the atlas colour here", read at the atlas playhead against the same marks, with the
+  same "estimate from FTLE" and "unreliable" (honesty §3.4, §G8, REQ-GUI-370). "The view it was kept from is
+  unchanged" is the same sim key and the same chart view (`z₀`, basis, zoom level), bitwise; a stain or playhead edit
+  keeps a kept orbit an atlas pixel (N1).
+- **The f32 run is bitwise what coloured the pixel only for an atlas pixel of the current view**; the runs use the
+  trajectory's own sim key; only an atlas pixel's IC is decoded; a non-atlas line carries no atlas claim
+  (TASK-M8-76's goal, §G8's bullet; N4).
+- §G8's quote of this PR's own fix-round-1 wording is dropped; it never reached `main` (N5).
+
+*Fix round 4 of PR #283 (gui review 5627389542, R1; applied per R-369, the review's first option):* while the view
+source is `Result` (R-572), a clicked pixel is not an atlas pixel: its trust line takes the "Not an atlas pixel:"
+forms, its runs from its grid cell's IC under the result's own `SimConfig` (an f64 result's colour and an f32 result's
+refinement-off grid are not the atlas's decode path). "The view it was kept from is unchanged" also needs the view
+source `Live`; a result opened over a kept orbit, even with a bitwise-equal `SimConfig`, changes it (honesty §3.4,
+render_gui_spec §G8, `principia_results.md` §3.4, REQ-GUI-370, TASK-M8-76).
+
+*Fix round 5 of PR #283 (gui review 5627439632, R2; applied per R-369, as the review proposes):* a kept orbit counts as
+an atlas pixel only if it was kept from an atlas pixel of a live view, the view source is `Live` now, and the view it
+was kept from is unchanged (sim key, `z₀`, basis and zoom level, bitwise). An orbit kept in a result view stays
+non-atlas even after *Explore from here* loads the result's `SimConfig` bitwise (honesty §3.4, render_gui_spec §G8,
+REQ-GUI-370, TASK-M8-76).
+
+*Fix round 6 of PR #283 (physics review 5627518149, F7, F8; applied per R-369):*
+- **The FTLE estimate and the self-check's `λ`** come from the `ftle` the IC's own f32 one-pixel dispatch writes,
+  bitwise the atlas's for an atlas pixel and that IC's own for any other, never the atlas pixel it was edited from.
+  When the sim key's FTLE tier is off or `ftle_valid` is false (R-254), the line shows no estimate and no self-check
+  verdict and states only the measured marks (F7; honesty §3.2, §3.3, §3.4, render_gui_spec §G8, REQ-GUI-370).
+- **Which f32 run is taken** follows fix rounds 4 and 5 in REQ-VAL-196 and TASK-M8-76: a kept orbit is an atlas pixel
+  only if kept from an atlas pixel of a live view, the view source is `Live` now and its view is bitwise unchanged;
+  while the view source is `Result` no pixel is an atlas pixel, and a result-view pixel runs from its grid cell's IC
+  under the result's `SimConfig`; `non_atlas_f32_start` gains the result-view cases (F8).
+- honesty §6 lists `non_atlas_f32_start` and `trust_line` (the review's observation).
+
+*Fix round 7 of PR #283 (physics review 5627584997, F9, F10; applied per R-369):*
+- **A valid `ftle` ≤ 0** (`ftle` is signed) also shows no estimate and no self-check verdict, only the measured marks,
+  alongside the tier off and `ftle_valid` false; never a negative or infinite estimate, nor "unreliable" from the sign
+  (F9).
+- **"bitwise the atlas's"** in fix round 6's line above reads "bitwise the atlas pixel's nominal copy's `ftle`": under
+  SSAA or an ensemble the atlas pixel's `ftle` is resolved over its samples, and the one-pixel dispatch is the nominal
+  copy (F10). Both in honesty §3.3, §3.4, §6, render_gui_spec §G8, REQ-GUI-370 and TASK-M8-76.
+
+*Fix round 8 of PR #283 (physics review 5627640864, F11; applied per R-369):* fix round 7's reason for F10 ("under SSAA
+or an ensemble the atlas pixel's `ftle` is resolved over its samples") is wrong and reads instead: each copy computes
+its own `ftle` (`principia_dd_generation_root.md` § "derived fields", the `ftle` row), and the pixel's colour is
+resolved over the copies' colours, display-only and never read back as data (`principia_render_contract.md` § "Averaging
+(SSAA colour resolve)"); the one-pixel dispatch is the nominal copy, so the estimate uses the nominal copy's `ftle`,
+never another copy's or a mean over the copies'. The conclusion of F10 stands (honesty §3.3, REQ-GUI-370, TASK-M8-76).
+
+*Fix round 9 of PR #283 (perf review 5627960807, P1 to P3; applied per R-369, as the review proposes):*
+- **The f32 trace's dispatch is bounded** (P1): it runs in chunks that return and carry state, interleaved with
+  frames, never one dispatch to `T` (telemetry §6.3, § "GPU"; REQ-PERF-010's mechanism). REQ-TOOL-127's definition
+  gains the bound and a test; TASK-M4-16, which defines the dispatch, names perf and depends on TASK-M4-09
+  (honesty §3.1).
+- **The four runs' cost is measured** (P2): a Mac benchmark (R-186) in REQ-SYS-060's form, with no new number — frame
+  p50/p95/p99/max and `frac_frames_over_41.7ms` with a pin's four runs in flight equal the no-pin baseline within
+  noise, at `T = 50` and `T = 200`, the f64 runs on the inspector worker; and `precision_view` counts the dispatches
+  (honesty §3.1, §6; TASK-M8-76).
+- **TASK-M8-17's goal** says the shape-divergence comparison is on by default in the Inspector, as its acceptance,
+  REQ-VAL-106 and this ruling do (P3).
+
+*Fix round 10 of PR #283 (perf review 5628071919, Q2, Q3; applied per R-369, as the review proposes):* `trace_chunked`
+asserts every dispatch is within TASK-M4-09's chunk planner's bound (REQ-PERF-081) and the count is ⌈steps / bound⌉, a
+fixed two-way split failing (Q2); `precision-runs-frame` holds the fixed suite's `pan-nearfield` with the pin
+re-issued so four runs are in flight throughout, and reads "REQ-SYS-060's form", that requirement stating no
+thresholds (Q3) (honesty §3.1, §6; REQ-TOOL-127, REQ-PERF-106; TASK-M4-16, TASK-M8-76).
+
+*Fix round 12 of PR #283 (qa review 5628365538, Q1 to Q5; applied per R-369):* TASK-M8-76 depends on TASK-M8-75, which
+builds the result view its result-view cases need (Q1); REQ-VAL-197's tests add the default marks (10⁻³, 0.1) and a
+non-finite chord reading 2 (Q2, Q3); REQ-VAL-196's add RQ-558's option (a), each run's first event latched while it
+carries on to `T`, and the "ended at `t = …`" chords (Q4); `nudge_is_one_ulp` has zero components, `next_up(0.0)` on
+the CPU and, on the GPU, the form REQ-TOOL-127's definition gives, since honesty §3.1 already assigns a zero's form
+under flushed subnormals to that definition (a definition requirement, R-72), so no new RQ (Q5).
+
+R-574 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-106 (statement, verify, rulings, source, note), REQ-TOOL-127 (statement, verify, rulings, source,
+note) and REQ-SYS-061 (rulings, rq, note). Adds REQ-VAL-196 (the four runs), REQ-VAL-197 (the chord and the marks),
+REQ-VAL-198 (the self-check's band, a calibration), REQ-VAL-199 (the ensemble ratio, a calibration, `rq: RQ-557`),
+REQ-GUI-369 (what the viewer shows), REQ-GUI-370 (the trust line) and REQ-GUI-371 (the atlas unchanged).
+
+## R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar",
+`docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units
+and the horizon (inherited scale gauge)", `docs/design/principia_dd_integrator.md` § "2. Consolidated contract",
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_honesty_precision.md` §3.6, REQ-INT-081,
+REQ-INT-026 and REQ-GUI-102 (reqio), TASK-M3-06, TASK-M8-24, `REVIEW_QUEUE.md` (RQ-555, new) and
+`plan/rule_groups.yaml`; built by TASK-M3-06 and TASK-M8-24*
+
+`DECISIONS_2026-10-21.md` § "Honesty", its last item, verbatim:
+
+> - Default horizon stays 50, and it must be raisable AND lowerable (not capped at 50). "Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"
+
+The design's "Decided" section, its last item, verbatim:
+
+> - **Horizon**: default stays 50, and it can be **raised or lowered**, not floored at 50 ("Keep horizon to 50. (Also
+>   horizon shouldn't be capped to 50 should be able to raised or lowered)"). Amends the Run window's `T_horizon ∈ [50,
+>   200]` (render_gui_spec §G5) and R-132. The header states the horizon; the viewer states each point's parting.
+
+*What it decides:* `T_horizon`'s default stays 50, and the Run window takes values below 50 as well as above. R-132's
+"T keeps [50, 200], with a default of 50" is amended as to the lower end; its `dt_macro = max(1e-3, T/65535)` stands,
+and keeps `⌈T/dt_macro⌉ ≤ 65535` at every `T`. The Run window's, the integrator contract's, dd_integrator's and the
+state contract's "`[50, 200]`" read so, each kept as a *Was:*.
+
+*Applied per R-369:* the human gave no lowest value, and "raised" is already possible to 200, so the range is queued,
+RQ-555, with its options (a) any `T > 0` and (i) 200 stays applied meanwhile: `T_horizon ∈ (0, 200]`, default 50, a
+value at or below 0 refused with its reason. Nothing waits. The merged mock Run window's `T_RANGE` (TASK-M6-28,
+`crates/gui/src/windows/run.rs`) is TASK-M8-24's to change, with the field.
+
+*Fix round 1 of PR #283 (gui review 5627122883, G8; applied per R-369):* above 200 the field **clamps** to 200, as
+before R-575 (only RQ-555 can move the cap); only a value at or below 0 is refused. A press of ↓ (with or without Shift
+or Alt) or a drag that would take T to 0 or below sets T to the Alt step, 0.2, if T is above it, and otherwise leaves T
+unchanged; ↓ never raises T (fix round 3, below). The mock's clamp (`crates/gui/src/windows/run.rs:315`, `T_RANGE.0`) and its test
+`mock_windows_open_run_t_horizon_steps_in_its_range` ("At the bottom of the range ↓ stays") are TASK-M8-24's to change.
+REQ-GUI-102's verify and TASK-M8-24's `run_fields` follow (*was:* "refuses 0 and 201 with the reason").
+
+*Fix round 3 of PR #283 (gui review 5627280803, N3; applied per R-369):* the floor is exact, replacing fix round 1's
+"stop at one keyboard step above 0": Shift+↓ at `T = 10` gives 0.2, not 20 or a refusal; ↓ at `T = 0.2` leaves 0.2;
+the mock's clamp to `lo = 0` reaching 0 fails (render_gui_spec §G5, RQ-555, REQ-GUI-102, TASK-M8-24).
+
+R-575 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (statement, rulings, source, note) and
+REQ-GUI-102 (statement, verify, rulings, source, note).
+
+## R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*
+*21 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
+(retained)" (the spec object's bullet and R-520's bullet, each with its earlier words kept),
+`docs/design/principia_sequence.md` (new, §3.4), `docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights
+(no artboard; R-576 to R-578)" (new), R-520's forward line, REQ-TOOL-076 and REQ-TOOL-175 (reqio: statement, verify,
+rulings, note), REQ-TOOL-197 (new), TASK-M8-31 and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-31 and TASK-M8-77*
+
+R-576 to R-578 are the gap sweep's PR 2b, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/keyframes_reel.md` and `designs/reel_click.md`. The orchestrator split the bundle's PR 2 into three and told
+the human: 2a `results.md` and `honesty_precision.md` (PR #283), 2b these two, 2c `export_details.md`,
+`video_carrier_test.md`, `uploaded_picture.md` and `ic_save.md`. The bundle's `INSTRUCTION.md` header and the human's
+covering message are quoted in R-560; the lead of its PR 2 section in R-577.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `keyframes_reel.md` and `reel_click.md` item, verbatim:
+
+> - `keyframes_reel.md` and `reel_click.md`: keyframed animations, with easing per segment between keyframes (amends
+>   REQ-TOOL-076). The spotlight reel is a **v2 browser product** feature: build its machinery and test it natively, and
+>   keep the native presentation rough. The reel plays inside the Explore view, looking like Explore running; any
+>   interaction takes over live at that exact frame and keeps playing.
+
+`DECISIONS_2026-10-21.md` § "Keyframes", verbatim:
+
+> Keyframes
+> - Easing is set per segment, between keyframes. "The easing functions is set between key frames of the animation"
+> - What clicking a showreel clip opens: NOT decided, needs designing. "We need to deisgn"
+
+`keyframes_reel.md`'s "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> - **Easing is set per segment, between keyframes** ("The easing functions is set between key frames of the
+>   animation"). Amends REQ-TOOL-076. Open question 1 is closed.
+> - **What clicking a reel clip opens is not decided** ("We need to deisgn"): designed separately, `reel_click.md`.
+
+*What it decides:*
+- **Easing is per segment.** The spec object is `{keyframes: [(t_wall, ViewState, RenderState, playhead policy)],
+  segments: [(easing, transition)], fps, duration}`: one segment between each pair of neighbouring keyframes, each with
+  its own easing curve, which gives that segment's progress `s ∈ [0, 1]` at each frame for every eased field (export
+  contract Part 3). The draft's open question 1, (i). *Was:* `{keyframes: [(t_wall, ViewState, RenderState, playhead
+  policy)], easing, fps, duration}`, one curve for the whole animation.
+- **R-520's eased link parameters take the segment's curve.** R-520 F2's "`s ∈ [0, 1]` is the segment's progress as the
+  spec's `easing` curve gives it" now reads the segment's own curve; the clamp, the keyframe frames bit for bit and
+  everything else of R-520 stand. REQ-TOOL-175's statement follows.
+- **REQ-TOOL-076 is amended** as the human says: its spec carries the segments, and its verify gains a two-segment
+  check with a control that applies one curve to both.
+
+*Applied per R-369:*
+- **A segment also carries its transition** at a chart change, a cut or a dissolve with its length (export contract
+  Part 3's "cuts or dissolves"; the draft's per-segment "cut or dissolve (with length) at a chart change"), so that the
+  spec holds every per-segment choice the Sequence offers in one place.
+- **The curves offered, the default curve and the playhead policies' semantics** (hold, advance with wall time, set to
+  a value, the policies the draft names) are a definition (R-72): the corpus names `easing` and "playhead policy" and
+  defines neither. REQ-TOOL-197 (new), written into export contract Part 3 by TASK-M8-31 and reviewed by the physics
+  reviewer; each curve maps `[0, 1]` onto `[0, 1]`, monotone, `s(0) = 0` and `s(1) = 1`, so a keyframe's own frame is the
+  keyframe (R-520 F2).
+- **TASK-M8-31 builds it** (the spec object is its deliverable); the Sequence window's segment controls are TASK-M8-77's.
+
+*Fix round 6 of PR #286 (physics review 5631678451, P1 to P3; applied per R-369, the orchestrator's decision; no
+ruling changed):* the definition said which curve gives `s` but not its argument. Export contract Part 3 now fixes the
+frame grid (a keyframe's own frame the nearest, `⌊t_wall·fps + ½⌋`, the frames strictly increasing, a spec where two
+share one refused), the segment-local fraction `u = (f − f_k)/(f_{k+1} − f_k)`, the shared frame belonging to the
+segment it starts; one `s` per frame for every interpolated field, the zoom's log-lerp and the basis's geodesic
+included, each keyframe's own frame bitwise its keyframe in every field; linear among the curves; and the playhead:
+hold, advance at a rate the spec stores (`advance { rate }`), or eased by `s` under "set to a value", clamped into
+`[0, T]`. REQ-TOOL-197 carries them with a test; REQ-TOOL-175's first arm names its linear curve (P2). The lane table
+splits `z₀, q₁, q₂` by R-92's decomposition, through the sim key's own function (P3; REQ-GUI-375).
+
+*Fix round 7 of PR #286 (physics review 5631849506, P5; applied per R-369, the orchestrator's decision; no ruling
+changed):* a field Part 3 does not list as interpolated (the occupant, horizon, `E` and thresholds, the chart and the
+link ids, and live playback's link parameters) takes keyframe `k`'s value at every frame `f_k ≤ f < f_{k+1}` and
+keyframe `k + 1`'s from its own frame, the corpus's cut at the second keyframe; the playhead's clamp inside a segment
+uses keyframe `k`'s `T`; a dissolve's outgoing state follows the same rule. None is eased, which would need an RQ.
+REQ-TOOL-197 carries it, with an arm in `segment_progress`.
+
+*Fix round 8 of PR #286 (physics review 5631902011, P6; applied per R-369, the orchestrator's decision; no ruling
+changed):* round 7's rule for live playback's link parameters applies to playback that enters a segment at a keyframe's
+frame. After a reel takeover inside the segment, the live player instead holds the takeover's value until `f_{k+1}`,
+RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383), which the rule does not decide. Round 7's paragraph
+stands with this exception.
+
+*Fix round 9 of PR #286 (gui review 5631987230, G3; applied per R-369):* the exception's other side reads "Live
+playback other than after a reel takeover (the preview included, wherever it starts) is as above", and the Sequence
+tells the user that a preview started mid-segment differs there from the takeover's interim hold.
+
+R-576 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175 (statement, rulings, note). Adds
+REQ-TOOL-197 (definition).
+
+## R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*
+*21 Oct 2026 · applied in `docs/design/principia_sequence.md` (new), `docs/gui/principia_render_gui_spec.md` § "G9a.
+Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
+open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
+REQ-PERF-110 and REQ-TOOL-200 (new), REQ-GUI-387 (new, fix round 2 of PR #286), REQ-GUI-388 (new, calibration, fix
+round 12 of PR #286), REQ-PERF-112 (new, benchmark, fix round 21 of PR #286), TASK-M8-77 and TASK-M8-78 (new) and
+`plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-77 and TASK-M8-78*
+
+The lead of the bundle's `INSTRUCTION.md` § "PR 2 — New design documents", verbatim:
+
+> Each file in `designs/` has six parts: what exists, the gap, the proposal, the rulings it touches, the decisions
+> (already made, in a "Decided" section), and tests. Write each as a design doc and add its requirements and tests.
+
+His item for these two designs, his decisions and `keyframes_reel.md`'s "Decided" section are quoted in R-576.
+
+*What it decides:* `keyframes_reel.md`'s proposal is the design, written as `docs/design/principia_sequence.md`, its
+"Decided" section closing its open question 1 (R-576) and passing question 2 to `reel_click.md` (R-578):
+- **The Sequence window**, docked along the bottom of Explore (a splitter, R-462). **Add keyframe** captures the whole
+  `SimConfig` and `RenderState` at the timeline cursor; a keyframe shows its values, **Go to** (one undo entry),
+  **Update** from the view, a drag in time and its playhead policy (hold, advance with wall time, set to a value).
+- **The timeline**: wall time across, keyframes as diamonds, read-only lanes lit where fields differ between
+  neighbours, segments coloured by class (a), (b) or (c) with their frame counts, a cut mark at a chart or link-id
+  change.
+- **A segment**: its easing (R-576), cut or dissolve with its length at a chart change, R-520's link rule shown, and
+  REQ-TOOL-075's fixed rules shown, not offered.
+- **Play preview** through the live frame loop, link parameters and dissolves as cuts, under the banner "Preview: not
+  converged; cuts where the export interpolates"; **Proof strip**, one small frame per keyframe and per segment
+  midpoint through the blocking exporter at its lowest tier, exact frames before paying for all.
+- **Export…** opens the planner first, one row per segment (class, frames, integration cost, flags, estimated time);
+  **an estimate carries its basis**, a range from this machine's measured throughput, and with no measurement reads "no
+  measurement on this machine yet", never a number; proof frames calibrate it. Then Part 4's parameters, and Start in
+  the background with progress, ETA, the last frame's thumbnail and Cancel.
+- **What travels**: each PNG frame its own record (R-520 F5); the `.principia-seq.json`, the spec in the canonical
+  serialisation (R-309) with the build hash, the schema version and the link entry hashes (R-521), written beside every
+  export.
+
+*Queued, not resolved, as the bundle's instruction says ("Where anything here conflicts with a ruling or a queue entry
+these texts don't address, queue it rather than resolving it"):*
+- **RQ-559, the Sequence's undo.** The draft: "**Undo** is the window's own (Q4)", its open question 4 recommending
+  "(i) own history", which the human did not rule. R-52 and the state contract: the contract keeps one history "shared
+  by every GUI: … and keeps no history of its own". REQ-GUI-378 (`rq: RQ-559`) waits; nothing else does.
+- **RQ-560, a cut offered at a link-parameter change.** The draft offers "at a link-parameter change, **cut** or
+  **interpolate (export only)**". R-520: a blocking export "eases each differing parameter", with no cut. Meanwhile the
+  segment shows R-520's rule and offers no choice; nothing waits.
+
+*Applied per R-369:*
+- **The draft's "Camera" lane is named Navigate**, the Manifold view's name for pan and zoom, since no control is named
+  after a camera (render_gui_spec §G1); a ninth lane, **Run**, holds every field none of the draft's eight names (the
+  occupant, the horizon, `E`, the thresholds), so that every field has exactly one lane. Which lane each field is in is
+  a definition (R-72), REQ-GUI-375, exhaustive at compile time as the tier table is (R-484), reviewed by the physics
+  reviewer.
+- **Where it docks**: below the bottom row (Compass, Time, Legend) and above the footer; the console docks over it as
+  over the bottom row (R-463). **Its keyboard**: §G3's window model, three sections (header bar, timeline, inspector);
+  **K** in its scope adds a keyframe and **Delete** removes the selected one; the Figure's K stays the lock (R-556),
+  scope shortcuts never meeting; Esc from its top level returns the focus to the Figure and leaves it open.
+- **A keyframe dragged in time** is clamped strictly between its neighbours, so keyframes never reorder.
+- **The sequence being edited is the GUI's own document**, beside `ViewUI`, which the engine reads only as the spec a
+  preview, proof or export request carries (state contract §2; its undo is RQ-559).
+- **The preview is a transient view, not an edit** (fix round 1 below): one preview request carries the spec, the
+  engine plays it, no `SetField` is sent, and when it stops or ends the view is the user's from before it, bitwise.
+  *Was:* "**The preview is playback**, and playback never enters undo (R-101): each frame's state goes with "no
+  history", as the clock's playhead advance does, and stopping the preview leaves the undo depth as it was. This is
+  R-101's reading, not an exception to R-69."
+- **A dissolve in live playback** is a cut at the second keyframe, as every chart switch is live.
+- **The estimate's basis**: a segment's cost is the samples it marches (the export's pixels times its copies, `E + 1`)
+  times the physical time each is marched; the throughput is the same quantity per wall second from this machine's
+  frame records (telemetry §5); the range is the cost over the fastest and over the slowest measured throughput.
+  *Port note, 23 Oct 2026 (fix round 12 of PR #286, perf review 5632950982, P1, P2; applied per R-369):* replaced, below.
+- **"Proof frame equals export"** holds at the same time, size and tier.
+- **The video carrier's slot**: how a GIF, MP4 or WebM carries the spec in itself is `video_carrier_test.md`'s, which
+  the human has ruled and which gap sweep PR 2c ports; this design adds only the file beside every export, and does not
+  port the draft's interim dialog text ("a GIF/MP4/WebM alone does not carry it").
+- **Two tasks, M8:** TASK-M8-77 (the window, keyframes, timeline, lanes, segments, the file) and TASK-M8-78 (preview,
+  proof strip, planner and export), after TASK-M8-31.
+
+*Fix round 1 of PR #286 (gui review 5631060675, F1, F2, F3, F5; applied per R-369):*
+- **F1:** `principia_sequence.md` §3.3 cites REQ-GUI-375 for the lane table (*was:* REQ-GUI-378).
+- **F2, the preview:** R-101 covers only the GUI clock's playhead, and R-69 makes every `SimConfig` and `RenderState`
+  edit undoable, so the preview edits neither. It is engine state set by a preview request carrying the spec, as undo
+  is a request (`principia_gui_state_contract.md` §2): the engine draws the spec's frames through the live loop in place
+  of the view, owning the playhead, and sends nothing back as edits. When it stops or ends, the view is the user's view
+  from before it, bitwise; a user edit while it plays ends it first and applies to the user's view. This makes "the
+  engine reads the sequence only as the spec a request carries" true of the preview. REQ-GUI-379 is restated.
+- **F3, the keyboard's way back:** the Sequence is a window, not a big scope, so §G3's Tab order is unchanged; Windows ›
+  Sequence… on an open Sequence gives it the focus on its header bar (§G3, §G9a). REQ-GUI-372's verify tests it and the
+  Delete key.
+- **F5, undo:** §3.5 and REQ-GUI-378 no longer say every sequence edit is undoable; RQ-559, which also offers no undo,
+  decides, nothing applied meanwhile, and REQ-GUI-378 waits on it.
+
+*Fix round 2 of PR #286 (gui review 5631227164, G1, G2, G4; applied per R-369):*
+- **G1, what ends a preview:** a `SetField` that enters the history, or an undo or redo request (requests, not
+  `SetField`s); a no-history `SetField` (the hover's, the clock's advance) does not. *Was* (fix round 1): "any
+  `SetField` ends it" and "(any `SetField` the GUI would send: a pan, a slider, Home, a stain edit, undo or redo)".
+- **G2, Explore during a preview:** the snapshot's state is the user's, so nothing reading it describes the figure: a
+  header-strip badge **preview** and no decoder badge (R-523), the Legend without keys ("Preview: the legend returns
+  when it stops"), `t` "—", the hover held off; the Manifold view and the other controls show the user's view, which
+  they edit, a touch ending the preview. REQ-GUI-387 (new) holds it.
+- **G4, Esc:** Esc in the Sequence during a preview stops it and does nothing else; the next Esc acts as §G3 has it.
+
+*Fix round 9 of PR #286 (gui review 5631987230, G1, G2; applied per R-369, the orchestrator's decision; no ruling
+changed):* in a result view (R-572, `principia_results.md` §3.4) the Sequence's Go to, Add keyframe, Update and Play
+preview are disabled with the reason "result view — switch to Live", the way back being the existing view-source
+request, never an implicit switch, and opening a result ends a preview first. Add keyframe at a frame a keyframe
+already holds is refused with the reason; a drag stops one frame short of a neighbour's frame; an fps that merges two
+keyframes is refused inline in the planner, naming both; advance's rate starts at the Transport's speed and is
+editable (REQ-GUI-373, REQ-GUI-379).
+
+*Fix round 12 of PR #286 (23 Oct 2026; perf review 5632950982, P1, P2, P3, P6; applied per R-369, the orchestrator's
+decision; no ruling changed):* the estimate's basis is not a second estimator built from frame records, whose live
+frames are budget-bound, at reduced `E` and often with no playhead advance: the planner prices a segment's samples ×
+steps with `principia_quality_device_note.md` §2's one throughput model, read under its §9 provenance signature, and
+shows one value with its provenance key (the model gives no range), or "no measurement on this machine yet". While a
+preview runs the user's baseline cover is a third pinned identity (caching Part 5), so returning is never blank. The
+proof strip runs as a lower-priority, cancellable background job; the proof frame's size is a calibration requirement
+(REQ-GUI-388). The human's words above are unchanged.
+
+*Fix round 13 of PR #286 (23 Oct 2026; perf review 5634346116, P1', P2', P3'; applied per R-369, the orchestrator's
+decision; no ruling changed):* the estimate's unit is defined: the model's sample carries the probe's `2(E_probe + 1)`
+trajectories (quality_device_note step 2), so the cost per trajectory-step is the model over `2(E_probe + 1)`, and the
+estimate is the export's samples (the export tier's samples per quad over the quads at its refinement) ×
+`2(E_export + 1)` × steps × that cost, divided by the solve's thermal headroom (step 4; its value is REQ-PERF-088's).
+The preview's third pinned identity is in caching Part 4's and Part 7's pinned lists, costed as one more baseline
+cover under the hard cap, the preview's own work evicted first when the cap binds.
+
+*Fix round 15 of PR #286 (gui review 5634549430, G1, G3; applied per R-369, the orchestrator's decision; no ruling
+changed):* while a proof strip runs its button becomes Cancel in place, its progress "proof 3 / 5" beside it; Cancel
+keeps the finished frames and leaves the rest as empty slots; the job renders the spec it started from, and an edit
+marks the strip stale. The planner's provenance key is shown once under its rows as "measured on <adapter name> · probe
+v<version>", from quality_device_note §9's signature.
+
+*Fix round 21 of PR #286 (perf review 5635062315, P1; applied per R-369, the orchestrator's decision; no ruling
+changed):* the proof strip's "live work first" is tested deterministically, the strip's job held on a test barrier
+while GUI frames keep completing and no strip or exporter work runs on the GUI thread; the GUI's frame times while a
+strip runs are a benchmark on the human's Mac (R-186), REQ-PERF-112, in REQ-PERF-106's and REQ-PERF-107's form (fix
+round 24 of PR #286, perf review 5635367539, P1; applied per R-369): `cargo xtask bench proof-strip-frame` runs the
+fixed suite's pan-nearfield scenario (`principia_benchmark.md` §3) once with no strip and once with a strip kept in
+flight, and passes if frame time p50, p95, p99 and max and `frac_frames_over_41.7ms` equal the no-strip baseline within
+noise (REQ-SYS-060's form; no new number), the 16.7 ms goal (`principia_dd_telemetry_and_tiers.md` §3) reported beside
+them; it fails if no strip is in flight when the window ends. *Was:* "the GUI's frame times while a strip runs are a
+benchmark on the human's Mac through `prin profile` (R-186), REQ-PERF-112, reporting p50, p95, p99 and max against the
+16.7 ms goal and `frac_frames_over_41.7ms` (`principia_dd_telemetry_and_tiers.md` §3). §3 sets no pass rule for these,
+so the benchmark reports and gates nothing."
+
+R-577 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-372 (the window), REQ-GUI-373 (keyframes), REQ-GUI-374 (the timeline and its lanes), REQ-GUI-375
+(definition: the lane table), REQ-GUI-376 (a segment's controls), REQ-GUI-377 (the file), REQ-GUI-378 (undo, `rq:
+RQ-559`), REQ-GUI-379 (Play preview), REQ-GUI-380 (the proof strip), REQ-GUI-381 (the planner and the export job),
+REQ-PERF-110 (the estimate's basis) and REQ-TOOL-200 (the spec beside every export), in fix round 2, REQ-GUI-387
+(Explore while a preview plays), in fix round 12, REQ-GUI-388 (calibration: the proof frame's size), and in fix
+round 21, REQ-PERF-112 (benchmark: the live frame loop holds the no-strip baseline while a proof strip runs, fix
+round 24).
+
+## R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*
+*21 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` (new),
+`docs/contracts/principia_export_animation_contract.md` § "Part 7 — The spotlight reel (attract mode)" (a paragraph),
+`docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)" (new),
+`docs/contracts/principia_gui_state_contract.md` §2 (the open windows), `docs/read_first/principia_INDEX.md`,
+`REVIEW_QUEUE.md` (RQ-561), REQ-TOOL-084 (reqio: statement, verify, rulings, source, note), REQ-TOOL-198, REQ-TOOL-199
+and REQ-GUI-382 to REQ-GUI-385 (new), REQ-GUI-386 (new, fix round 1 of PR #286), REQ-PERF-111 (new, calibration, fix
+round 12 of PR #286), TASK-M8-31 and TASK-M8-79 (new), `plan/WORKFLOW.md` (the `reel/` directory) and
+`plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_keyframes_reel/`; built by TASK-M8-79*
+
+The human's item for these two designs is quoted in R-576. `DECISIONS_2026-10-21.md` § "Later the same evening", its
+two reel entries, verbatim:
+
+> - Showreel: "I feel like the showreel should almost fake being the explore view? But also the showreel btw is leaning
+>   more into the final browser product design like not even the simple native app port, I'm talking like v2 browser
+>   version so. We could build all the machinery for it and test it natively but yeah it can be kinda rough around the
+>   edges ig design wise"
+> - After takeover the reel keeps playing: "Yeah keep playing."
+
+`reel_click.md`'s scope note, verbatim:
+
+> **Scope (Malachy, 21 Oct).** This is a feature of the **v2 browser product**, not of the native app or its first
+> browser port. "We could build all the machinery for it and test it natively but yeah it can be kinda rough around the
+> edges ig design wise." So: build and test the machinery natively; keep the native presentation rough.
+
+Its "Decided" section, verbatim:
+
+> ## Decided
+>
+> - **After takeover it keeps playing** whatever the clip was doing, now live ("Yeah keep playing").
+> - **The film is not computed in the app.** It is rendered once per release, offline, by the blocking exporter, and
+>   shipped as a video file. The app only plays it; the engine starts computing at the takeover.
+
+*What it decides:* `reel_click.md`'s proposal and `keyframes_reel.md`'s reel section are the design, written as
+`docs/design/principia_spotlight_reel.md`; `reel_click.md` answers the question `keyframes_reel.md` left open ("What
+clicking a reel clip opens is not decided … designed separately, `reel_click.md`"), so the earlier draft's "loads it
+live, paused at that playhead" gives way to "keeps playing":
+- **The reel plays inside the Explore view and looks like Explore running.** **Any interaction** (a click, a drag, a
+  scroll or a key) **takes over at that exact frame**: the frame's spec is loaded live, its chart, view, stain,
+  playhead and any keyframed motion it was in the middle of, and the live engine continues from there. The film frame
+  stays as the backdrop until the live render has resolved over it, so the handover has no blank or jump. A small,
+  quiet marker reads "preview" until the handover. The takeover is one undoable step.
+- **The film is not computed in the app**: rendered once per release, offline, by the blocking exporter, shipped as a
+  video file, only played by the app. The reel builder writes the film and a manifest from a curated spec list; the
+  build refuses any spec whose link hashes do not match, so the live view always recreates what the film showed. Live
+  and film disagreeing is a bug, reported.
+- **After takeover it keeps playing.**
+- **Natively**: the reel builder, the takeover, and a plain native window that plays the reel and takes over on click,
+  with no polish. The presentation is v2 web's, as R-571 has it.
+- **REQ-TOOL-084 is amended**: the reel is produced by the blocking exporter with its manifest; the click becomes the
+  takeover, new requirements.
+
+*Queued, not resolved:* **RQ-561, a takeover inside a segment the film interpolates and live playback cuts.**
+`reel_click.md`: "the live view always recreates what the film showed. Live and film disagreeing is a bug, reported",
+and "keeps playing … any keyframed motion it was in the middle of". R-520 F3: live playback never interpolates link
+parameters, and a dissolve is two renders that live playback does not composite. Meanwhile its option (a): the
+takeover frame is exact, live playback continues under R-520 F3, and the difference after the takeover frame is not
+reported as a disagreement. Nothing waits.
+
+*Applied per R-369:*
+- **The film's format natively is GIF**, encoded and decoded with the one `gif` crate (R-155, R-131): the draft's open
+  question 3, its recommendation (i); "shipped as a video file" holds, as GIF is among the native video encoders. v2
+  web's format is v2 web's.
+- **The manifest has an entry for every film frame**: its segment, its frame within the spec, its wall time within the
+  spec and the hash of the `SimConfig` and `RenderState` the exporter rendered it from, in their canonical
+  serialisation (R-309); a takeover maps the displayed frame by its index, never by a time read back from the film.
+  "Reported" is that hash compared at each takeover: a mismatch is logged as an error (source `app`) naming the segment
+  and the frame, and the takeover goes ahead with the recomputed state.
+- **What counts as an interaction**: a pointer press, drag or scroll on the figure, or any key with the focus in the
+  Figure scope, a modifier pressed alone excepted; the interaction is consumed by the takeover and does not also act.
+- **The backdrop** is caching Part 5's snapshot fallback, which already names "the spotlight-reel handoff", under its
+  rules (blurred, its coherence discipline), until the live identity's baseline cover is complete (caching Part 4).
+- **The preview marker is a badge** in the figure's header strip (R-523: every badge that says what the figure is sits
+  there, never over the plot), with the segment's provenance (chart, horizon, integrator, build, date) beside it.
+- **At the spec's end** after a takeover, the live sequence player stops at the last keyframe; the transport plays on
+  to the horizon if that keyframe's playhead policy is advance, and is paused otherwise.
+- **Natively the reel plays only from the Spotlights window** (Windows › Spotlights…: the segments with their
+  provenance, Play reel, Stop, Open the sequence), in the Explore canvas; playing at cold start, the gallery of poster
+  tiles and the film wearing the live view's header, legend and overlays are v2 web's presentation (R-571, and the
+  human's "not of the native app or its first browser port"). While the film plays the live view is paused and hidden
+  and nothing is integrated; Stop leaves the view as it was.
+- **The reel's specs** are checked in under `reel/specs/`; the film and manifest are release outputs, not checked in;
+  `plan/WORKFLOW.md` lists the directory. The reel builder (`xtask/src/reel.rs`, `cargo xtask reel`) moves from
+  TASK-M8-31 to TASK-M8-79 with REQ-TOOL-084.
+- **One task, M8:** TASK-M8-79, after TASK-M8-78 (whose live sequence player the takeover continues in) and TASK-M5-26
+  (the compositor's backdrop).
+
+*Fix round 1 of PR #286 (gui review 5631060675, F2 and F4; applied per R-369):*
+- **F2, the motion after a takeover:** it is the user's own view, so the player's frames are `SetField`s coalesced into
+  the takeover's one history entry, as a drag's edits are sent under one key (R-96; R-466 K10), every edit in the
+  history (R-69) and one undo still returning to the view before the reel; the GUI clock's advance (R-101) is held
+  while the player owns the playhead. The player stops at the spec's end, at the first user edit (which closes the
+  takeover's entry at the frame shown and then applies as its own entry, never overwritten) or at undo. *Was:* "That
+  playback is playback: its frames enter no undo (R-101)."
+- **F4 (a), by keyboard:** Play reel gives the focus to the Figure scope, so the next key takes over.
+- **F4 (b), the rest of Explore while the film plays:** the hover is held off, so no `Hover` `SetField` is sent and
+  REQ-TOOL-199's "0 SetFields" holds; the decoder badge is not shown, the Legend shows only "Film: the legend returns
+  when live", `t` reads "—", undo and redo are disabled, and a touch on any control that would send a `SetField` takes
+  over at the displayed frame, consumed. REQ-GUI-386 (new) holds it.
+- **F4 (c):** REQ-GUI-383's verify tests a click, a drag, a scroll and a key, and a modifier pressed alone that does
+  not take over.
+
+*Fix round 2 of PR #286 (gui review 5631227164, G1, G3, G5; applied per R-369):*
+- **G1:** the live player after a takeover stops at a `SetField` that enters the history, or at undo or redo; the
+  hover, a no-history `SetField`, does not stop it. *Was* (fix round 1): "the first user edit (any `SetField` the user's
+  input sends …)".
+- **G3, keys:** every key in the Figure scope takes over, Tab, Esc, `?` and Ctrl+Z included, as "a key" says; no key is
+  excepted. The keyboard's way out of the film is a key, which takes over, then one Ctrl+Z, which returns the view to the
+  one before the reel, as Stop does; Stop is the mouse's. The top bar's undo and Ctrl+Z with the focus in a window do
+  nothing while the film plays. *Was* (fix round 1): "undo and redo are disabled" and "Stop in the Spotlights window is
+  reached by mouse, or by Windows › Spotlights…".
+- **G5:** REQ-GUI-386's verify has a control for each property it checks.
+
+*Fix round 3 of PR #286 (gui review 5631344897, H1; applied per R-369, the orchestrator's decision):* the human's
+"Click, drag, scroll or a key" does not say where the focus lands, and the Figure landing was fix round 1's own choice,
+which left Stop, the Profiler, the console and the top bar unreachable by keyboard while the film plays (R-450 A7,
+REQ-GUI-190, §G12). Play reel now leaves the focus on Stop in the Spotlights window; Esc from its top level returns the
+focus to the top bar's Windows menu, which opened it, as the console's Esc returns it (§G12); from there every big
+scope is reached by Tab and Shift+Tab as usual, a landing never taking over; and with the focus in the Figure every key
+still takes over. A key then one Ctrl+Z is no longer called the keyboard's way out: it starts the engine and leaves a
+redo entry, which Stop does not. Fix round 2's G3 line stands but for its "Stop is the mouse's" and the way out, which
+this replaces. *Was* (fix round 1, F4 (a)): "Play reel gives the focus to the Figure scope, so the next key takes over."
+
+*Fix round 4 of PR #286 (gui review 5631472413, J1, J2; applied per R-369, the orchestrator's decision):* fix round 3
+left open whether Esc closes Spotlights and how the keyboard gets back to Stop, and gave no keyboard order (R-450 A7,
+REQ-GUI-190). Esc from Spotlights' top level returns the focus to the top bar's Windows menu and leaves the window open,
+as the docked Sequence stays open; only the return to the opener is the console's. Windows › Spotlights… on an open
+Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise. Its sections, in §G3's order,
+are the header bar (Play reel, Stop, Open the sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select
+a segment), the same in every state, Stop staying in it, disabled when nothing plays. × while the film plays stops the
+film first, as Stop does. Round 3's paragraph stands but for its "as the console's does", which this narrows.
+
+*Fix round 5 of PR #286 (gui review 5631560484, K1; applied per R-369, the orchestrator's decision):* nothing said
+which segment is selected before any key or click. When Spotlights opens with a reel the first segment is selected, so
+a segment is always selected while there is a reel; ↑ and ↓ move the selection, Home and End go to the first and the
+last; with no reel there is no selection, and Play reel and Open the sequence are disabled. §3.4's "or the first
+segment's" is dropped as moot.
+
+*Fix round 6 of PR #286 (physics review 5631678451, P4; applied per R-369, the orchestrator's decision; no ruling
+changed):* a dissolve frame is two renders composited, so its manifest entry carries both states' hashes, the weight
+and which state live shows at that frame, and a takeover there loads that state. After a takeover mid-way through a
+link-parameter ease, the live player holds the takeover's value until the segment's second keyframe and then cuts, as
+RQ-561's interim only; which value live holds is added to RQ-561 as its second question. TASK-M8-79 gains the physics
+reviewer, as TASK-M8-31 has it for R-520.
+
+*Fix round 9 of PR #286 (gui review 5631987230, G1; applied per R-369, the orchestrator's decision; no ruling
+changed):* in a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result
+while the film plays stops it first, as Stop does, so no takeover happens there (REQ-GUI-383).
+
+*Fix round 12 of PR #286 (23 Oct 2026; perf review 5632950982, P4, P5; applied per R-369, the orchestrator's decision;
+no ruling changed):* the film is decoded as it plays, off the main thread, into a bounded ring of decoded frames whose
+size is a calibration requirement (REQ-PERF-111); the builder writes self-contained frames and the manifest records
+each segment's start offset, so Play reel from a later segment seeks. The backdrop stays until the identity being
+shown has its baseline cover complete; under a moving (b) segment, until playback holds or ends and that identity's
+cover completes.
+
+*Fix round 15 of PR #286 (gui review 5634549430, G4, G5; applied per R-369, the orchestrator's decision; no ruling
+changed):* when the decode ring runs dry the displayed frame is held and every film frame is shown in order, so the
+film slows but never skips and is never blank; until the selected segment's first frame is decoded the live view
+stays. The never-blank checks count only the pixels the chart classifies as a system, since a pixel that is not a
+system draws the canvas background (R-467, caching Part 4).
+
+*Fix round 16 of PR #286 (gui review 5634604753, G6, G7; applied per R-369, the orchestrator's decision; no ruling
+changed):* from Play reel the film counts as playing, so "disabled when nothing plays" leaves Stop enabled, with the
+focus, while the film waits for its first frame; until that frame is shown the canvas is the live view under its
+normal rules, and any interaction that would take over, or an undo or redo, cancels the pending film as Stop does and
+then acts on the live view, with no takeover. Reel §3.3's "never the canvas background" reads "on a pixel the chart
+classifies as a system", as REQ-GUI-384 says.
+
+R-578 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-084 (statement, verify, rulings, source, note). Adds REQ-TOOL-198 (the build refuses), REQ-TOOL-199
+(the film computes nothing), REQ-GUI-382 (the Spotlights window), REQ-GUI-383 (the takeover), REQ-GUI-384 (no blank
+handover), REQ-GUI-385 (the preview badge), in fix round 1, REQ-GUI-386 (Explore while the film plays), and in fix
+round 12, REQ-PERF-111 (calibration: the decode ring's size).

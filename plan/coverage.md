@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 49 |
 | ENC | 38 |
-| CHART | 83 |
+| CHART | 85 |
 | INT | 105 |
 | EVT | 31 |
 | PAY | 107 |
 | GEN | 43 |
-| SCHED | 101 |
+| SCHED | 103 |
 | REF | 52 |
-| RENDER | 100 |
-| COL | 140 |
-| GUI | 331 |
-| TOOL | 187 |
-| VAL | 194 |
-| PERF | 95 |
-| SYS | 86 |
-| **total** | **1742** |
+| RENDER | 116 |
+| COL | 158 |
+| GUI | 363 |
+| TOOL | 198 |
+| VAL | 198 |
+| PERF | 112 |
+| SYS | 90 |
+| **total** | **1848** |
 
-Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 159 calibration, 161 definition, 1528 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -37,22 +37,22 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 179 |
 | M6 | 223 |
-| M7 | 222 |
-| M8 | 348 |
+| M7 | 257 |
+| M8 | 419 |
 
 ## Sections
 
-1431 sections in 52 files: 1134 yield at least one requirement; 297 yield none and are listed below with the reason.
+1497 sections in 56 files: 1215 yield at least one requirement; 282 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 172 |
+| informative only | 188 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 45 |
-| planned (the plan PR) | 60 |
-| rationale | 11 |
+| parent heading (obligations are in its subsections) | 49 |
+| planned (the plan PR) | 22 |
+| rationale | 14 |
 | superseded (kept for the record) | 4 |
 
 
@@ -168,14 +168,6 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
 | R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
 | R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement. Superseded in part by R-446 (16 Oct 2026): the line is reworded, the tagged pixels drawn black #141418 in the outcome view, not white |
-| R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's "Style", and R-130's v1 styles become presets of it, still available *(supersedes R-130)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-491 — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3 | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-493 — One scenario runner and one scenario registry serve `prin profile`, `cargo xtask bench` and the GUI's "Run benchmark"; they differ only in which scenarios they select | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-494 — A benchmark scenario is data: a file in `bench/scenarios/`, validated at load, with a full canonical start state, a frame-indexed timeline reusing the export keyframe spec, and a suite hash | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-495 — The suite is the design doc's §3 table, swept across the whole tier ladder with the quality arbiter off, plus one arbiter row per scenario; the run modes are Quick, Full and Soak | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
@@ -184,21 +176,13 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | R-498 — `prin bench report` turns one or more result files into the design doc's §7 fixed-structure Markdown report, for agents | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-499 — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied | gap (RQ-378) | a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note) |
-| R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built | gap (RQ-391) | a deferral by the human's ruling, with no target: RQ-391 stays open; nothing is built |
 | R-528 — On first launch an opt-in prompt offers the benchmark's Quick suite; nothing runs unless the user accepts *(closes RQ-392)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-529 — Benchmark results come back as files, by hand; there is no upload *(closes RQ-393)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best effort" *(closes RQ-394)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | planned (the plan PR) | R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement |
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
+| R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -283,7 +267,6 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | Principia: the benchmark | informative only | title and adoption note |
 | 1. What exists, and what this adds | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 2. A scenario is data | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 3. The suite | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 4. The sweep, and the three run modes | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 5. Running it | parent heading (obligations are in its subsections) | its subsections |
 | 5.1 From the GUI | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
@@ -426,6 +409,16 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
 
+### `docs/design/principia_honesty_precision.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: honesty as a measurement — f32 against f64 in the trajectory viewer | informative only | preface and the port's status note (R-574, R-575); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-574; no obligation |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 3.7 The README line | informative only | records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation |
+| 4. Fit with rulings | informative only | how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks |
+
 ### `docs/design/principia_lines.md`
 
 | section | reason | note |
@@ -447,31 +440,11 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Principia: the Print graph (post-processing) | informative only | title and adoption note |
-| 1. What it is | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 2. Where it sits | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 3. What never changes because of it | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 4. The data model | parent heading (obligations are in its subsections) | its subsections |
-| 4.1 A graph is data | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 4.2 Port types | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 4.3 Node types are a registry | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 4.4 Payload fields as inputs | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 5. The slot chain: palette and medium compose | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 6. Determinism, scale and time | parent heading (obligations are in its subsections) | its subsections |
-| 6.1 Determinism | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 6.2 Units: a medium must look the same at every export size | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 6.3 Anchoring and stability under motion and playback | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 7. The GUI | parent heading (obligations are in its subsections) | its subsections |
-| 7.1 The Print panel (replaces Display › Style) | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 7.2 The graph editor | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 7.3 Lines | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 8. Cost and motion | parent heading (obligations are in its subsections) | its subsections |
-| 8.1 Degrade while moving | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 8.2 The budget | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 8.3 Cost classes | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 9. Provenance | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 10. Porting from the lab | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 11. Tests (each with an arm that can fail) | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| 12. Open questions (for the review queue, not the agent to settle) | gap (RQ-391) | the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, planned (the plan PR); 4 deferred by the human's ruling (R-527), RQ-391 open |
+| 12. Open questions (for the review queue, not the agent to settle) | gap (RQ-391) | the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, built by TASK-M7-64 (R-524, R-525), TASK-M8-68 (R-525 V3) and TASK-M7-66 (R-526); 4 deferred by the human's ruling (R-527), RQ-391 open |
 
 ### `docs/design/principia_quality_device_note.md`
 
@@ -479,6 +452,15 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 |---|---|---|
 | Principia — quality presets & device characterisation | informative only | preamble; obligations in subsections |
 | Auto is a continuous controller — the adaptive control architecture | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_results.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Result — from a view to a full-precision batch run, and back | informative only | preface and the port's status note (R-572, R-573); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-572; no obligation |
+| 2. The gap | rationale | why the Result exists; its obligations are in §3 |
+| 3.6 Philosophy §2 | informative only | records the sentence R-572 wrote into philosophy § "The prebake — a measuring instrument" and its table; applied there, no build obligation |
 
 ### `docs/design/principia_scratchpad_pointer_channels.md`
 
@@ -491,6 +473,30 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | 5. The prediction worth testing early, because it is the demo | informative only | working notes: only §4 is normative (R-109) |
 | 6. What this reuses rather than adds | informative only | working notes: only §4 is normative (R-109) |
 | 7. Open | informative only | working notes: only §4 is normative (R-109) |
+
+### `docs/design/principia_sequence.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Sequence — keyframed view animations in the native GUI | informative only | preface and the port's status note (R-576, R-577); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-576 and R-577; no obligation |
+| 2. The gap | rationale | why the Sequence window exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 4. Fit with rulings | informative only | how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-576; the obligations they settle are in §3.4 and REQ-TOOL-076 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-GUI-373 to REQ-GUI-381, REQ-TOOL-076, REQ-TOOL-200, REQ-PERF-110) |
+
+### `docs/design/principia_spotlight_reel.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the spotlight reel — a film that passes for Explore | informative only | preface, the port's status note and the human's scope (R-578, R-571); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-578; no obligation |
+| 2. The gap | rationale | why the reel needs a manifest and a takeover; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
+| 4. Fit with rulings | informative only | how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-578; the obligations they settle are in §3.1, §3.3 and REQ-TOOL-199, REQ-GUI-383 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382 to REQ-GUI-385) |
 
 ### `docs/design/principia_state_map.md`
 
@@ -526,6 +532,7 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Part I — The dev GUI | parent heading (obligations are in its subsections) |  |
+| G9a. Sequence · Spotlights (no artboard; R-576 to R-578) | parent heading (obligations are in its subsections) | its two subsections, Sequence and Spotlights |
 | 14. Prototype → GUI mapping | informative only | maps HTML prototypes to GUI roles; the prototypes are prior art |
 
 ### `docs/notes/ic_inspector_scratchpad.md`
@@ -564,8 +571,6 @@ Of these: 147 calibration, 147 definition, 1448 obligation. Retired (kept for th
 | 2. The two paths, and why the split is the whole design | parent heading (obligations are in its subsections) |  |
 | 4. Six commitments, each earned by a measured failure | parent heading (obligations are in its subsections) |  |
 | 5. What the instrument is actually looking for | informative only | scientific goals; no build obligation stated |
-| 7.2 Tiled prebake | informative only | parked post-1.0 (§7); out of scope for the build |
-| 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
 | 7.6a The truncated-Fourier block — a possible future feature (R-420) | out of v1 (R-420) | parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path |

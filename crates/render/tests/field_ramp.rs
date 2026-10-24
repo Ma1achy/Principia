@@ -4,7 +4,8 @@
 //! `d_min`'s unset value its own case (`field_ramp_scalar_*`); the `lin` compaction clamps to its range
 //! (`field_ramp_compaction_*`); the ramp's WGSL declares its invalid lane's uniforms, the override off and R-16's
 //! magenta by default (`field_ramp_declares_*`), and its CPU twin orders the unset grey before the invalid lane
-//! (`field_ramp_shown_*`). The renders are `numeric_views.rs`'s.
+//! (`field_ramp_shown_*`); a float field's non-finite twin, which the debug view reads, is its NaN and `±∞` under its gate
+//! (`field_ramp_non_finite_*`; REQ-COL-109). The renders are `numeric_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -193,7 +194,7 @@ fn field_ramp_declares_its_invalid_lane() {
         check_declares(&wgsl, 0.0);
         assert!(
             wgsl.contains(
-                "return select(debug_invalid(ctx.frag_xy), uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);"
+                "return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);"
             ),
             "{wgsl}"
         );
@@ -202,7 +203,7 @@ fn field_ramp_declares_its_invalid_lane() {
 
 negative_control!(
     field_ramp_declares_its_invalid_lane,
-    "a ramp with the override on by default is not the pattern's",
+    "a ramp with the override on by default does not draw #141418 by default",
     expected = "the override's default",
     check_declares(
         &FieldRamp::length().unwrap_or_else(|e| panic!("{e}")).wgsl(),
@@ -313,4 +314,62 @@ negative_control!(
         f.valid = "true".to_owned();
         Ok(f)
     })
+);
+
+/// Checks `is_non_finite`, the twin of a field's non-finite test (`ScalarField::is_non_finite`; R-436, REQ-COL-109):
+/// `d_min`'s NaN and `−∞` are non-finite under its gate and nothing is with the gate closed; its finite values,
+/// `f32::MAX` among them, are not ([`check_unset_outside_lane`] has its `+∞`); `length`, a word count, has no
+/// non-finite value and no WGSL test for one.
+fn check_non_finite(is_non_finite: fn(&ScalarField, f32, bool) -> bool) {
+    let d = ScalarField::payload("d_min").unwrap_or_else(|e| panic!("{e}"));
+    assert!(d.non_finite.is_some(), "d_min has a non-finite test");
+    for x in [f32::NAN, f32::NEG_INFINITY] {
+        assert!(is_non_finite(&d, x, true), "{x} is non-finite");
+        assert!(!is_non_finite(&d, x, false), "{x}, the gate closed");
+    }
+    for x in [0.0, 0.6, -1.0, f32::MAX] {
+        assert!(!is_non_finite(&d, x, true), "{x} is finite");
+    }
+    let l = ScalarField::payload("length").unwrap_or_else(|e| panic!("{e}"));
+    assert!(l.non_finite.is_none(), "length has a non-finite test");
+    assert!(!is_non_finite(&l, 127.0, true), "length's 127 is finite");
+}
+
+#[test]
+fn field_ramp_non_finite_is_the_bits() {
+    check_non_finite(ScalarField::is_non_finite);
+}
+
+negative_control!(
+    field_ramp_non_finite_is_the_bits,
+    "a twin taking every value its gate admits as non-finite fails",
+    expected = "0 is finite",
+    check_non_finite(|_, _, gate| gate)
+);
+
+/// Checks that `is_non_finite` applies the lane's predicate, as the WGSL test does (`(lane_valid) && bits`,
+/// `ScalarField::non_finite`): `d_min`'s `+∞`, its unset value (R-271), which the lane excludes, is not non-finite,
+/// while `d_min`'s NaN and `−∞` are.
+fn check_unset_outside_lane(is_non_finite: fn(&ScalarField, f32, bool) -> bool) {
+    let d = ScalarField::payload("d_min").unwrap_or_else(|e| panic!("{e}"));
+    assert!(d.is_unset(f32::INFINITY), "d_min's +inf is its unset value");
+    for x in [f32::NAN, f32::NEG_INFINITY] {
+        assert!(is_non_finite(&d, x, true), "{x} is non-finite");
+    }
+    assert!(
+        !is_non_finite(&d, f32::INFINITY, true),
+        "d_min's unset +inf is outside its lane, not non-finite"
+    );
+}
+
+#[test]
+fn field_ramp_non_finite_excludes_the_unset() {
+    check_unset_outside_lane(ScalarField::is_non_finite);
+}
+
+negative_control!(
+    field_ramp_non_finite_excludes_the_unset,
+    "a twin that drops the lane's predicate, taking d_min's unset +inf as non-finite, fails",
+    expected = "d_min's unset +inf is outside its lane",
+    check_unset_outside_lane(|_, x, gate| gate && !x.is_finite())
 );

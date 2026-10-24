@@ -509,6 +509,8 @@ pub struct RenderLoop {
     bound: Option<Bound>,
     binds: u64,
     params: BTreeMap<(NodeKey, String), Vec<f64>>,
+    /// The canvas background, linear RGB, the prelude's uniform (R-467 D2; REQ-COL-108): its caller's clear colour.
+    background: [f32; 3],
 }
 
 impl RenderLoop {
@@ -538,7 +540,15 @@ impl RenderLoop {
             bound: None,
             binds: 0,
             params: BTreeMap::new(),
+            background: crate::present::canvas_background(),
         })
+    }
+
+    /// Sets the canvas background, linear RGB, to the colour the caller's window is cleared to (R-467 D2;
+    /// REQ-COL-108): a uniform, written with the next frame, so it recompiles nothing. The default is
+    /// `crate::present::canvas_background`.
+    pub fn set_background(&mut self, background: [f32; 3]) {
+        self.background = background;
     }
 
     /// The pipeline cache: requests go through it.
@@ -622,8 +632,11 @@ impl RenderLoop {
         self.cache.poll();
         let drawn = self.bind();
         let (width, _) = self.layers.size();
-        self.queue
-            .write_buffer(&self.prelude, 0, &bytes(&inputs.prelude_words()));
+        self.queue.write_buffer(
+            &self.prelude,
+            0,
+            &bytes(&inputs.prelude_words_on(self.background)),
+        );
         self.queue
             .write_buffer(&self.frame, 0, &bytes(&inputs.words(width)));
         let mut encoder = self.device.create_command_encoder(&Default::default());
