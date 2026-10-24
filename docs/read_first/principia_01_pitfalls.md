@@ -443,12 +443,24 @@ moves.** State the domain of a determinism result as loudly as the result.
 every CPU libm: both are `±π/2` on `y`'s side. So a `−0` second operand looked harmless, and only
 `atan2(0, 0)` was guarded (R-437).
 
-**Actual:** Metal, through naga, evaluates `atan2(y, x)` as `atan(y/x)`, turned by `π` toward `y`'s side
-where `x < 0`. A `−0` is not below 0, so no turn is made, and `y/−0` is `∓∞`. `atan2(y, −0)` therefore comes out
-as `∓π/2`, the opposite sign to IEEE's. On the shape sphere's pole rows the decode's `p = I·n₁/2` is a
-`−0`, because `sin θ` rounds below 0 at `θ = 2π·½` in f32. So `β` turned `λ̃` to the other side of `ρ̃`.
-While the decode folded, `C`'s mirror step undid the turn. That is why it showed only when the fold went:
-**a symmetry step downstream can hide a sign error upstream.**
+**Actual:** Metal's own `atan2`, compiled at Metal's default (fast) math mode, gives `atan2(y, −0)` with
+`y ≠ 0` the opposite sign of `π/2` to IEEE's. It was measured at the four sites below: `−π/2` for `y > 0` and
+`+π/2` for `y < 0`.
+- **Where it comes from.** naga passes the call through unchanged: naga 30.0.1, `src/back/msl/writer.rs`,
+  `Atan2 => "atan2"`. wgpu-hal 30.0.1 sets no math mode on the Metal library (`src/metal/device.rs`), so
+  the source is Metal's `atan2` at its default mode, not naga.
+- **A model, not the implementation.** The measured outputs are consistent with `atan(y/x)`, turned by `π`
+  only where `x < 0`: a `−0` is not below 0, and `y/−0` is `∓∞`. That model is inferred from the outputs, not
+  seen in Metal's implementation. The tests' negative controls use it.
+- **Where the `−0` arises on the shape sphere.** The decode's `p = I·n₁/2` is `−0` wherever one factor of
+  `n₁ = sin φ·sin θ` is a zero and the other is negative. At f32 that happens in two places:
+  - The whole `L⁺` row (`t = 1`, `φ = +0`) for `s ∈ [½, 1)`. For `s > ½`, `sin θ` really is negative,
+    at f64 as well. At `s = ½`, f32's `π` lies above π, so `sin θ` rounds below 0.
+  - The `L⁻` pixel `(s, t) = (0, 0)`, where `sin(π_f32) < 0` meets `sin 0 = +0`. There `q = −I/2`, and
+    Metal's `atan2(−I/2, −0)` gives `+π/2` where IEEE gives `−π/2`, putting `L⁺` at `L⁻`'s pixel.
+- **What it did.** Each time, `β` turned `λ̃` to the other side of `ρ̃`. While the decode folded, `C`'s mirror
+  step undid the turn. That is why it showed only when the fold went:
+  **a symmetry step downstream can hide a sign error upstream.**
 
 **Measurement:** each site was checked on Metal (Apple M3 Pro), on states built so the second operand is
 `−0` exactly and the first is not 0, against the CPU at f32 and f64. A test-side assertion confirms each
@@ -466,6 +478,11 @@ unchanged, bit for bit, because IEEE's `atan2` reads neither zero's sign when `y
 - **Every `atan2` a GPU stage reaches, whose second operand can be a zero while its first is not, takes that
   operand through a select that maps a zero to `+0`.**
   Where both operands can be 0, R-437's select comes first.
-- The select is on a comparison with 0, never `x + 0.0`, which a shader compiler may fold to `x`.
+- **No form of the clearing is safe by construction.** A compiler that assumes no signed zeros (fast math)
+  may fold `select(x == 0, 0, x)` to `x`, just as it may fold `x + 0.0`.
+- **What guards it is a cross-backend test of the `−0` case at each site.** Each of these failed on Metal
+  before the select: `canonicaliser_phi_signed_zero`, `encode_beta_signed_zero`,
+  `decode_stage_rho_angle_signed_zero` and `decode_cross_backend_continuous`. A form holds only while
+  its test passes, so a future compiler fold shows up as a red test.
 - **A sign error masked by a later symmetry step is still an error.** When a fold, mirror or gauge is
   removed, re-run every cross-backend check it sat downstream of.
