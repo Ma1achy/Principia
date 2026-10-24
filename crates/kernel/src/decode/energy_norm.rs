@@ -35,8 +35,8 @@ use spirv_std::num_traits::Float;
 use crate::chart::Chart;
 use crate::decode::degenerate::Degenerate;
 use crate::decode::descriptor::{describe, kinetic};
-use crate::decode::{decode_with as decode_free_with, Blocks, Decoded, Free, Ic, Latent};
-use crate::generated::links::{LinkReal, Selection};
+use crate::decode::{decode_with as decode_free_with, Blocks, Decoded, Free, FreeAt, Ic, Latent};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// What `η_E` did to a decode (dd_decoder §3.7). Its discriminant is a `u32`: the kernel's SPIR-V, where the decode
@@ -241,6 +241,16 @@ pub fn decode<S: Selection, R: LinkReal + PayloadReal>(
     decode_with(&mut Free::<S>::new(), z, e_star, false)
 }
 
+/// [`decode`] at the tunable parameters `p`: the free decode at the active `μ_max` and `q_max` ([`FreeAt`]; R-481 G4).
+#[inline]
+pub fn decode_at<S: Selection, R: LinkReal + PayloadReal>(
+    z: &Latent<R>,
+    e_star: Option<R>,
+    p: &LinkParams<R>,
+) -> (Decoded<R>, Outcome) {
+    decode_with(&mut FreeAt::<S, R>::new(*p), z, e_star, false)
+}
+
 /// `D ∘ Φ` at `(u, v)` under the selection `S` with `η_E` toward `e_star`, applied only where the chart allows it: its
 /// own [`Chart::forbids_energy_normalisation`] (chart_reference §0.6). The decode is the chart's own
 /// [`Chart::decode`], so a chart that sets its configuration explicitly (the shape sphere) is decoded as it does it,
@@ -253,9 +263,27 @@ where
     R: LinkReal + PayloadReal + From<C::Param>,
     C: Chart,
 {
+    decode_chart_params::<S, R, C>(chart, u, v, e_star, &LinkParams::DEFAULT)
+}
+
+/// [`decode_chart`] at the tunable parameters `p`: the chart's own [`Chart::decode_params`] (`crate::chart`'s note),
+/// then `η_E` as there.
+#[inline]
+pub fn decode_chart_params<S, R, C>(
+    chart: &C,
+    u: R,
+    v: R,
+    e_star: Option<R>,
+    p: &LinkParams<R>,
+) -> (Decoded<R>, Outcome)
+where
+    S: Selection,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: Chart,
+{
     apply(
         &mut Free::<S>::new(),
-        chart.decode::<S, R>(u, v),
+        chart.decode_params::<S, R>(u, v, p),
         e_star,
         chart.forbids_energy_normalisation(),
     )

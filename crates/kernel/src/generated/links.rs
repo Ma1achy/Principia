@@ -83,7 +83,9 @@ pub enum Constraint {
 pub trait Codomain {
     const NAME: &'static str;
     const CONSTRAINT: Constraint;
-    /// The closed bounds of each physical component, for host-side checks; infinite where unbounded.
+    /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;
+    /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active
+    /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).
     const LO: f64;
     const HI: f64;
 }

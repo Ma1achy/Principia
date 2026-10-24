@@ -67,7 +67,7 @@ use crate::decode::config::{self, Config};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
-use crate::generated::links::{LinkReal, Selection};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 
 /// Which chart map the shape sphere uses (chart_reference §3.3: "state which is used").
@@ -208,7 +208,19 @@ pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
     config: &Config<R>,
     inertia: R,
 ) -> Momentum<R> {
-    let fixed = momentum::decode::<S, R>(z_mom, masses);
+    held_momentum_at::<S, R>(z_mom, masses, config, inertia, &LinkParams::DEFAULT)
+}
+
+/// [`held_momentum`] at the tunable parameters `p`: `D_mom` at the active `q_max` (`crate::chart`'s note).
+#[inline]
+pub fn held_momentum_at<S: Selection, R: LinkReal + PayloadReal>(
+    z_mom: [R; 4],
+    masses: &Masses<R>,
+    config: &Config<R>,
+    inertia: R,
+    p: &LinkParams<R>,
+) -> Momentum<R> {
+    let fixed = momentum::decode_at::<S, R>(z_mom, masses, p);
     let r = config.r;
     let (c, s) = canon::rotation([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
     let flip = canon::mirror_decision(masses.m, r);
@@ -268,20 +280,30 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         }
     }
 
-    /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum`], then
-    /// `C` on the joined state and the descriptor of `C`'s output. The `ic` is canonical;
-    /// `config` and `momentum` are the blocks' outputs, in `Φ`'s gauge.
+    /// [`Chart::decode_params`] at the defaults.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
+        self.decode_params::<S, R>(u, v, &LinkParams::DEFAULT)
+    }
+
+    /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum_at`],
+    /// then `C` on the joined state and the descriptor of `C`'s output. The `ic` is canonical; `config` and `momentum`
+    /// are the blocks' outputs, in `Φ`'s gauge. The mass and momentum links read the tunable parameters `p`.
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode::<S, R>(widen2(self.z_mass));
+        let masses = mass::decode_at::<S, R>(widen2(self.z_mass), p);
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum::<S, R>(widen4(self.z_mom), &masses, &config, inertia);
+        let momentum = held_momentum_at::<S, R>(widen4(self.z_mom), &masses, &config, inertia, p);
         let ic = canon::canonicalise(&Ic {
             m: masses.m,
             r: config.r,

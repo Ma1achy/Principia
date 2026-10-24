@@ -43,6 +43,15 @@
 //! on the CPU. `map` is generic over any float type the parameters widen into (`From<Self::Param>`), so a chart held at
 //! f32 maps at f32 on the GPU and one held at f64 maps at f64 on the CPU; narrowing f64 parameters to f32 is the CPU's
 //! own step, never `map`'s.
+//!
+//! **The tunable link parameters** (chart_reference §0.1: `μ_max` and `q_max` are the defaults of tunable link
+//! parameters "and every chart reads the active value"; R-481 G4; REQ-DEC-048): [`Chart::decode_params`],
+//! [`Chart::validate_params`] and [`ChartDecode::decode_at_params`] take the active values, an argument, never a
+//! compiled variant (R-481 G7); the forms without them are these at `LinkParams::DEFAULT`, bitwise. A chart whose
+//! decode reads a tunable parameter (the latent, shape-sphere, invariant and mixed charts, through the mass and
+//! momentum links) overrides them; one that reads none (the Burrau family and the ternary mass plot, which set their
+//! masses and momenta directly) keeps the defaults, which ignore the parameters, as a [`crate::generated::links::Link`]
+//! written outside the registry does.
 
 pub mod burrau;
 pub mod burrau_acute;
@@ -67,7 +76,7 @@ pub use mixed::Mixed;
 pub use shape_sphere::{ShapeMap, ShapeSphere};
 
 use crate::decode::{self, Decoded};
-use crate::generated::links::{LinkReal, Selection};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 
@@ -183,8 +192,14 @@ pub trait Chart {
     }
 
     /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
-    /// layers 2 and 3 at `(u, v)`.
+    /// layers 2 and 3 at `(u, v)`, at the default parameters.
     fn validate(&self, u: f64, v: f64) -> ValidationResult;
+
+    /// [`Chart::validate`] at the tunable parameters `p`, the active values (the module's note): a chart whose check
+    /// reads one, a momentum axis's domain `[−q_max, q_max]`, overrides it; by default the check reads none.
+    fn validate_params(&self, u: f64, v: f64, _p: &LinkParams<f64>) -> ValidationResult {
+        self.validate(u, v)
+    }
 
     /// `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared decoder. By default the latent controls
     /// `map` hands over, decoded by the shared [`mod@crate::decode`]; a chart whose output those controls cannot carry,
@@ -197,6 +212,19 @@ pub trait Chart {
         R: LinkReal + PayloadReal + From<Self::Param>,
     {
         decode::decode::<S, R>(&self.map(u, v).z)
+    }
+
+    /// `D ∘ Φ` at `(u, v)` under `S` at the tunable parameters `p`, the active values (the module's note). A chart whose
+    /// decode reads one overrides it, its [`Chart::decode`] then this at `LinkParams::DEFAULT`; by default the decode
+    /// reads none, and this is [`Chart::decode`].
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, _p: &LinkParams<R>) -> Decoded<R>
+    where
+        Self: Sized,
+        S: Selection,
+        R: LinkReal + PayloadReal + From<Self::Param>,
+    {
+        self.decode::<S, R>(u, v)
     }
 }
 
@@ -220,6 +248,17 @@ pub trait ChartDecode: Chart {
     where
         S: Selection,
         R: LinkReal + PayloadReal + invariant::WarpReal + From<Self::Param>;
+
+    /// The chart's decode at `(u, v)` at the tunable parameters `p` (the module's note): a chart whose decode reads one
+    /// overrides it; by default it reads none, and this is [`ChartDecode::decode_at`].
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, _p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<Self::Param>,
+    {
+        self.decode_at::<S, R>(u, v)
+    }
 }
 
 impl<P: Copy> ChartDecode for Latent<P> {
@@ -231,6 +270,16 @@ impl<P: Copy> ChartDecode for Latent<P> {
         R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
     {
         decode::<S, R, Self>(self, u, v)
+    }
+
+    /// [`Chart::decode_params`]: the shared decoder on `Φ`'s `z` at `p`.
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        Chart::decode_params::<S, R>(self, u, v, p)
     }
 }
 
@@ -245,6 +294,16 @@ impl<P: Copy> ChartDecode for InvariantLE<P> {
     {
         invariant::decode::<S, R, Self>(self, u, v).0
     }
+
+    /// [`invariant::decode_params`] at `p`.
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        invariant::decode_params::<S, R, Self>(self, u, v, p).0
+    }
 }
 
 impl<P: Copy> ChartDecode for InvariantLK<P> {
@@ -257,6 +316,16 @@ impl<P: Copy> ChartDecode for InvariantLK<P> {
     {
         invariant::decode::<S, R, Self>(self, u, v).0
     }
+
+    /// [`invariant::decode_params`] at `p`.
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        invariant::decode_params::<S, R, Self>(self, u, v, p).0
+    }
 }
 
 impl<P: Copy + FloatConst> ChartDecode for ShapeSphere<P> {
@@ -268,6 +337,16 @@ impl<P: Copy + FloatConst> ChartDecode for ShapeSphere<P> {
         R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
     {
         Chart::decode::<S, R>(self, u, v)
+    }
+
+    /// The chart's own [`Chart::decode_params`] at `p`.
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        Chart::decode_params::<S, R>(self, u, v, p)
     }
 }
 

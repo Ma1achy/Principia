@@ -41,6 +41,13 @@
 //! **CPU-side only**: every branch here runs at f64 on the CPU and has no GPU counterpart, so R-547's discipline for a
 //! branch input that must agree across backends does not bind them. The kernel's encode it calls keeps its own.
 //!
+//! **The active values** (chart_reference §0.1, "every chart reads the active value"; chart_decoder_contract §
+//! "Tunable parameters": the encode's clamps and its layer-1 range check read it; R-481 G4; REQ-DEC-048): the ladder
+//! runs at the tunable parameters `p` ([`lookup_params`], [`lookup_partial_params`], [`moves_within_params`]), the
+//! raw form's decode, the encode, layer 1's clamps, layer 2's check and layer 3's decode all at the active `μ_max` and
+//! `q_max`, so a momentum past the active `q_max` is clamped and flagged `lookup_clamped`, never decoded silently at
+//! another. The forms without them are these at `LinkParams::DEFAULT`.
+//!
 //! **`lookup_rescaled`** carries `λ` ([`Notices::lambda`]); whether it is raised, `τ_I`'s skip, is TASK-M2-47's
 //! (REQ-ENC-014, R-547), so no raised flag is formed here, as `C` forms none.
 
@@ -54,9 +61,9 @@ use kernel::chart::{
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeSphere, ValidationResult,
 };
 use kernel::decode::{self, config, mass, momentum, Ic};
-use kernel::encode::by_kind::{encode_into_within, invariants, ByKind, Landing};
-use kernel::encode::{encode, SimplexClamp};
-use kernel::generated::links::Selection;
+use kernel::encode::by_kind::{encode_into_within_params, invariants, ByKind, Landing};
+use kernel::encode::{encode_at, SimplexClamp};
+use kernel::generated::links::{LinkParams, Selection};
 use ledger::constants::{DECODE_SANITY, EPS_PHYS, ZERO_CLASS};
 
 /// An exact entry (Part 6, "Exact IC (full lock)").
@@ -596,16 +603,28 @@ pub fn moves_within<S: Selection>(
     ext: &Extents,
     pole: f64,
 ) -> Moves {
+    moves_within_params::<S>(e, z, ext, pole, &LinkParams::DEFAULT)
+}
+
+/// [`moves_within`] at the tunable parameters `p`: each clamped control's value after the clamp, the link's at its
+/// clamped `z`, read at the active `μ_max` and `q_max` (the module's note).
+pub fn moves_within_params<S: Selection>(
+    e: &kernel::encode::Encoded<f64>,
+    z: &[f64; 8],
+    ext: &Extents,
+    pole: f64,
+    p: &LinkParams<f64>,
+) -> Moves {
     let bits = e.blocks.clamped;
     let on = |k: u32| bits & (1 << k) != 0;
     let (za, zb) = config::angles::<S, f64>([z[0], z[1]]);
     let (alpha, beta) = (e.blocks.alpha, e.blocks.beta);
     let j = &e.blocks.jacobi;
     let q = [j.p_rho[0], j.p_rho[1], j.p_lambda[0], j.p_lambda[1]];
-    let zq = momentum::controls::<S, f64>([z[2], z[3], z[4], z[5]]);
+    let zq = momentum::controls_at::<S, f64>([z[2], z[3], z[4], z[5]], p);
     let m = e.canonical.ic.m;
     let mass_moved = bits & 0b1100_0000 != 0;
-    let m2 = mass::decode::<S, f64>([z[6], z[7]]).m;
+    let m2 = mass::decode_at::<S, f64>([z[6], z[7]], p).m;
     let ms: [Dual; 3] = std::array::from_fn(|k| Dual::param(m[k], m2[k], mass_moved, m[k]));
     let m01 = ms[0].add(ms[1]);
     let mu_rho = ms[0].mul(ms[1]).div(m01);
@@ -809,12 +828,32 @@ fn at_rest(s: kernel::burrau::System<f64>) -> Ic<f64> {
     }
 }
 
-/// An exact entry, encoded into `chart` under `S`, validated and locked (the module's note).
+/// An exact entry, encoded into `chart` under `S`, validated and locked (the module's note); [`lookup_params`] at the
+/// defaults.
 pub fn lookup<S, C, N>(
     chart: &C,
     entry: &Exact,
     norm: N,
     tol: &Tolerances,
+) -> Result<Locked, Rejected>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: ByKind,
+    f64: From<C::Param>,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
+    lookup_params::<S, C, N>(chart, entry, norm, tol, &LinkParams::DEFAULT)
+}
+
+/// [`lookup`] at the tunable parameters `p`, the active values (the module's note): a raw `z` decoded at them, and the
+/// ladder at them.
+pub fn lookup_params<S, C, N>(
+    chart: &C,
+    entry: &Exact,
+    norm: N,
+    tol: &Tolerances,
+    p: &LinkParams<f64>,
 ) -> Result<Locked, Rejected>
 where
     S: Selection,
@@ -841,7 +880,7 @@ where
                 return Err(refuse(Layer::Entry, Failed::NonFinite));
             }
             (
-                decode::decode::<S, f64>(&decode::Latent::new(z)).ic,
+                decode::decode_at::<S, f64>(&decode::Latent::new(z), p).ic,
                 Some(z),
                 1.0,
             )
@@ -851,17 +890,37 @@ where
             (x, None, mass)
         }
     };
-    ladder::<S, C, N>(chart, &x, raw, mass, norm, tol)
+    ladder::<S, C, N>(chart, &x, raw, mass, norm, tol, p)
 }
 
 /// A partial entry on `chart` under `S` (the module's note): the blocks not given filled, Burrau's at `locked_nu` or
-/// `ν = ½` on a Burrau chart, then [`lookup`]'s ladder, and the slice over the unspecified controls.
+/// `ν = ½` on a Burrau chart, then [`lookup`]'s ladder, and the slice over the unspecified controls;
+/// [`lookup_partial_params`] at the defaults.
 pub fn lookup_partial<S, C, N>(
     chart: &C,
     partial: &Partial,
     locked_nu: Option<f64>,
     norm: N,
     tol: &Tolerances,
+) -> Result<Locked, Rejected>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: Fill,
+    f64: From<C::Param>,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
+    lookup_partial_params::<S, C, N>(chart, partial, locked_nu, norm, tol, &LinkParams::DEFAULT)
+}
+
+/// [`lookup_partial`] at the tunable parameters `params`: the ladder at the active values (the module's note).
+pub fn lookup_partial_params<S, C, N>(
+    chart: &C,
+    partial: &Partial,
+    locked_nu: Option<f64>,
+    norm: N,
+    tol: &Tolerances,
+    params: &LinkParams<f64>,
 ) -> Result<Locked, Rejected>
 where
     S: Selection,
@@ -899,13 +958,13 @@ where
         momentum: partial.momenta.is_none(),
         mass: partial.masses.is_none(),
     };
-    let mut locked = ladder::<S, C, N>(chart, &x, None, total, norm, tol)?;
+    let mut locked = ladder::<S, C, N>(chart, &x, None, total, norm, tol, params)?;
     locked.slice = slice(locked.z, free);
     Ok(locked)
 }
 
-/// The ladder on the entered state `x` (the module's note); `raw` the entered `z`, whose unclamped controls the lock
-/// keeps; `mass` the entry's `M`.
+/// The ladder on the entered state `x` at the tunable parameters `p` (the module's note); `raw` the entered `z`, whose
+/// unclamped controls the lock keeps; `mass` the entry's `M`.
 fn ladder<S, C, N>(
     chart: &C,
     x: &Ic<f64>,
@@ -913,6 +972,7 @@ fn ladder<S, C, N>(
     mass: f64,
     norm: N,
     tol: &Tolerances,
+    p: &LinkParams<f64>,
 ) -> Result<Locked, Rejected>
 where
     S: Selection,
@@ -921,7 +981,8 @@ where
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
-    let ce = encode_into_within::<S, f64, C, _>(chart, x, &norm, tol.eps_phys, tol.curve_tol);
+    let ce =
+        encode_into_within_params::<S, f64, C, _>(chart, x, &norm, tol.eps_phys, tol.curve_tol, p);
     let e = &ce.encoded;
     let mut moved = Moved {
         controls: e.report.clamped_controls,
@@ -942,7 +1003,7 @@ where
         let before = Classes::within(&e.canonical.ic, &ext);
         let after = after(
             &before,
-            &moves_within::<S>(e, &z, &ext, tol.zero_class),
+            &moves_within_params::<S>(e, &z, &ext, tol.zero_class, p),
             tol.zero_class,
         );
         if let Some(class) = changed(&before, &after, tol.zero_class) {
@@ -957,7 +1018,7 @@ where
     let mut landing = ce.landing;
     let (mut projected, mut clamped) = (None, None);
     if let Landing::Chart { u, v } = landing {
-        let to = match chart.validate(u, v) {
+        let to = match chart.validate_params(u, v, p) {
             ValidationResult::Valid => None,
             ValidationResult::Project { u, v, failed } => {
                 projected = Some(failed);
@@ -979,13 +1040,15 @@ where
         };
         if let Some((u, v)) = to {
             landing = Landing::Chart { u, v };
-            z = encode::<S, f64>(&chart.decode_at::<S, f64>(u, v).ic).z.z;
+            z = encode_at::<S, f64>(&chart.decode_at_params::<S, f64>(u, v, p).ic, p)
+                .z
+                .z;
         }
     }
     // Layer 3: the lock decoded as a pixel decodes it.
     let decoded = match landing {
-        Landing::Chart { u, v } => chart.decode_at::<S, f64>(u, v).ic,
-        Landing::Latent => decode::decode::<S, f64>(&decode::Latent::new(z)).ic,
+        Landing::Chart { u, v } => chart.decode_at_params::<S, f64>(u, v, p).ic,
+        Landing::Latent => decode::decode_at::<S, f64>(&decode::Latent::new(z), p).ic,
     };
     if let Some(failed) = sanity(&decoded, tol.sanity) {
         return Err(refuse(Layer::Sanity, Failed::Constraint(failed)));

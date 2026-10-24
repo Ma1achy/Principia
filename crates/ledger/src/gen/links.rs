@@ -636,7 +636,9 @@ fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> Stri
     s.push_str(
         "}\n\n/// What a link maps onto: a block control's constrained range, or a line no block uses.\npub trait Codomain {\n    \
          const NAME: &'static str;\n    const CONSTRAINT: Constraint;\n    \
-         /// The closed bounds of each physical component, for host-side checks; infinite where unbounded.\n    \
+         /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;\n    \
+         /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active\n    \
+         /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).\n    \
          const LO: f64;\n    const HI: f64;\n}\n",
     );
     s.push_str(&codomains());

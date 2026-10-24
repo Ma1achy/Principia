@@ -36,6 +36,13 @@
 //! shared decoder's construction, as on the latent chart: every control the check admits is finite or a link's
 //! saturated inverse at its domain's edge, which the link maps back onto the edge.
 //!
+//! **The active values** (chart_reference §0.1, "every chart reads the active value"; chart_decoder_contract § "Three
+//! hard requirements on any registered link", "Tunable parameters"; R-481 G4; REQ-DEC-048). A momentum axis's domain
+//! is `[−q_max, q_max]` at the active `q_max` ([`Quantity::domain_at`], the codomain's [`Ends::ends_at`]), its control
+//! the link's inverse at it ([`Quantity::control_at`]), and the decode reads the active `μ_max` and `q_max`
+//! ([`Chart::decode_params`], [`Chart::validate_params`]); so an axis labelled `x` decodes to `x` at every value of a
+//! declared range. The forms without the parameters are these at `LinkParams::DEFAULT`.
+//!
 //! **Per-pixel mass** (inverse_encode_contract's chart flags): a chart with a mass axis has masses that vary per pixel
 //! and declares `requires_per_pixel_mass`; one with none holds its masses at the frozen mass controls.
 
@@ -47,9 +54,10 @@ use spirv_std::num_traits::Float;
 use super::invariant::WarpReal;
 use super::{AxisMeta, BlockTouch, Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::{self, Decoded, Latent};
+use crate::encode::blocks::Ends;
 use crate::generated::links::{
-    Alpha as AlphaRange, Beta as BetaRange, Codomain, Link, LinkReal, Momentum as MomentumRange,
-    Selection,
+    Alpha as AlphaRange, Beta as BetaRange, Codomain, Link, LinkParams, LinkReal,
+    Momentum as MomentumRange, Selection,
 };
 use crate::payload::PayloadReal;
 
@@ -92,15 +100,30 @@ impl Coordinate {
 pub trait Quantity {
     /// The coordinate the axis sets.
     const COORDINATE: Coordinate;
-    /// The axis's domain, closed: its link's codomain for a derived quantity, the whole line for a latent coordinate.
+    /// The axis's domain, closed, at the default parameters: its link's codomain for a derived quantity, the whole
+    /// line for a latent coordinate ([`Quantity::domain_at`] at `LinkParams::DEFAULT`).
     const DOMAIN: [f64; 2];
     /// Whether the axis is a derived quantity, set through its link's inverse, or a latent coordinate, set directly.
     const DERIVED: bool;
     /// The axis's name, for the chart's label.
     const NAME: &'static str;
     /// The control `z_k` that gives the axis's value `x` under the selection `S`: `x` itself for a latent coordinate,
-    /// the link's inverse for a derived quantity.
+    /// the link's inverse for a derived quantity ([`Quantity::control_at`] at `LinkParams::DEFAULT`).
     fn control<S: Selection, R: LinkReal>(x: R) -> R;
+
+    /// [`Quantity::control`] at the tunable parameters `p`: a derived quantity's link inverse at the active values; a
+    /// latent coordinate reads none.
+    #[inline]
+    fn control_at<S: Selection, R: LinkReal>(x: R, _p: &LinkParams<R>) -> R {
+        Self::control::<S, R>(x)
+    }
+
+    /// The axis's domain at the tunable parameters `p` (host-side, f64): a momentum axis's `[−q_max, q_max]` at the
+    /// active `q_max`; an axis whose domain reads none is [`Quantity::DOMAIN`].
+    #[inline]
+    fn domain_at(_p: &LinkParams<f64>) -> [f64; 2] {
+        Self::DOMAIN
+    }
 }
 
 /// The latent coordinates' axes, kind 1: `z_k` itself, any finite value.
@@ -156,8 +179,20 @@ macro_rules! derived_axes {
             const NAME: &'static str = $name;
             #[inline]
             fn control<S: Selection, R: LinkReal>(x: R) -> R {
-                let [z] = <S::$link as Link<1, 1>>::inverse([x]);
+                Self::control_at::<S, R>(x, &LinkParams::DEFAULT)
+            }
+
+            #[inline]
+            fn control_at<S: Selection, R: LinkReal>(x: R, p: &LinkParams<R>) -> R {
+                let [z] = <S::$link as Link<1, 1>>::inverse_at([x], p);
                 z
+            }
+
+            /// The codomain's ends at the active values ([`Ends::ends_at`]): at the defaults, [`Quantity::DOMAIN`].
+            #[inline]
+            fn domain_at(p: &LinkParams<f64>) -> [f64; 2] {
+                let (lo, hi) = <$range as Ends>::ends_at::<f64>(p);
+                [lo, hi]
             }
         }
     )*};
@@ -302,15 +337,27 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
     }
 
     /// `z(u, v)` under the selection `S`: the frozen controls with each axis's coordinate set to the control that
-    /// gives its value (the module's note).
+    /// gives its value (the module's note), at the default parameters.
     #[inline]
     pub fn controls<S: Selection, R: LinkReal + From<P>>(&self, u: R, v: R) -> [R; 8] {
+        self.controls_at::<S, R>(u, v, &LinkParams::DEFAULT)
+    }
+
+    /// [`Mixed::controls`] at the tunable parameters `p`: each derived axis's control the link's inverse at the active
+    /// values ([`Quantity::control_at`]).
+    #[inline]
+    pub fn controls_at<S: Selection, R: LinkReal + From<P>>(
+        &self,
+        u: R,
+        v: R,
+        p: &LinkParams<R>,
+    ) -> [R; 8] {
         let z = place(
             self.frozen_at(),
             H::COORDINATE,
-            H::control::<S, R>(self.h(u)),
+            H::control_at::<S, R>(self.h(u), p),
         );
-        place(z, V::COORDINATE, V::control::<S, R>(self.v(v)))
+        place(z, V::COORDINATE, V::control_at::<S, R>(self.v(v), p))
     }
 
     /// The axes' metadata (chart_decoder_contract Part 5): each writes its coordinate's block; neither is annotation-only.
@@ -328,12 +375,11 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
     }
 }
 
-/// One axis's check at `t` on `range` (the module's note): `Ok(t)` inside the domain, `Ok(t′)` with `t′ ≠ t` where the
-/// axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that is not finite, a range of no
-/// width or of a width past f64's range, or an edge four inward steps of `t` do not reach.
-fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
+/// One axis's check at `t` on `range` against the domain `[lo, hi]` (the module's note): `Ok(t)` inside the domain,
+/// `Ok(t′)` with `t′ ≠ t` where the axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that
+/// is not finite, a range of no width or of a width past f64's range, or an edge four inward steps of `t` do not reach.
+fn axis_check([lo, hi]: [f64; 2], range: [f64; 2], t: f64) -> Result<f64, ()> {
     let x = lerp(range, t);
-    let [lo, hi] = Q::DOMAIN;
     if !x.is_finite() {
         return Err(());
     }
@@ -396,22 +442,39 @@ where
         H::COORDINATE.touches().mass | V::COORDINATE.touches().mass
     }
 
-    /// `D(z(u, v))`, the shared decoder on [`Mixed::controls`] under `S`.
+    /// [`Chart::decode_params`] at the defaults.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
-        decode::decode::<S, R>(&Latent::new(self.controls::<S, R>(u, v)))
+        self.decode_params::<S, R>(u, v, &LinkParams::DEFAULT)
     }
 
-    /// The conjunction of the two axes' checks (the module's note).
+    /// `D(z(u, v))`, the shared decoder on [`Mixed::controls_at`] under `S`, both at the tunable parameters `p` (the
+    /// module's note).
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode::decode_at::<S, R>(&Latent::new(self.controls_at::<S, R>(u, v, p)), p)
+    }
+
+    /// [`Chart::validate_params`] at the defaults.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.validate_params(u, v, &LinkParams::DEFAULT)
+    }
+
+    /// The conjunction of the two axes' checks, each against its domain at the tunable parameters `p` (the module's
+    /// note).
+    fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
         let wide = |r: [P; 2]| [f64::from(r[0]), f64::from(r[1])];
         let checked = (
-            axis_check::<H>(wide(self.h_range), u),
-            axis_check::<V>(wide(self.v_range), v),
+            axis_check(H::domain_at(p), wide(self.h_range), u),
+            axis_check(V::domain_at(p), wide(self.v_range), v),
         );
         let failed = Constraint::AxisDomain;
         match checked {
@@ -439,5 +502,15 @@ where
         R: LinkReal + PayloadReal + WarpReal + From<P>,
     {
         Chart::decode::<S, R>(self, u, v)
+    }
+
+    /// The chart's own [`Chart::decode_params`].
+    #[inline]
+    fn decode_at_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + WarpReal + From<P>,
+    {
+        Chart::decode_params::<S, R>(self, u, v, p)
     }
 }
