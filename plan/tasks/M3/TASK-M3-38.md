@@ -39,7 +39,9 @@ them."
   turn of exactly `±π`: dd_integrator §3.7 closes the wrap at `+π` (R-389), so
   a turn of `+π` mirrors to `−π`, which wraps back to `+π`, and the negation under `Π` breaks at that tie; the
   definition either sets the tie so the negation stays exact or the test excludes it explicitly (physics review
-  5635496144 of PR #276, P2; applied per R-369). Real runs never turn by exactly `±π`, so `frame_winding` tests the
+  5635496144 of PR #276, P2; applied per R-369). A tie it sets covers a cross product or `y`-component of either sign
+  of zero: under the cross-product form a step along the x-axis from `(−a, +0)` gives a cross product of `−0`, a tie of
+  `−π` in both runs (physics review 5635696210, N1; applied per R-369). Real runs never turn by exactly `±π`, so `frame_winding` tests the
   tie on a synthetic `ρ` sequence, an exactly antiparallel pair with nonzero components, `(1, 1)` to `(−1, −1)`, its
   mirror `(1, −1)` to `(−1, 1)` (qa review 5635575287 Q5, physics review 5635643767 P5; applied per R-369). *Was:*
   "`(1, 0)` to `(−1, 0)`", which lies on the x-axis, so its mirror rests on signed zeros. *Was:* "and its value where that vector vanishes or at a
@@ -96,28 +98,36 @@ them."
   winding: the vector whose turn it accumulates, the cadence, its start at t = 0, its value where the vector vanishes
   or at a collision, its angle or per-step change where the vector lies on the negative x-axis (or a per-step change
   odd there, such as atan2(ρ_prev × ρ, ρ_prev · ρ)), and its value at a per-step turn of exactly ±π (set so the
-  negation under Π stays exact, or excluded from the test explicitly); cargo test -p kernel frame_winding: a rigid
-  rotation through 2πk winds k turns, the run from Π·x winds the negation of x's, bitwise where nonzero and by value
-  where zero (a winding whose deltas sum to exactly zero, such as ρ held on the x-axis, is +0 in both runs), and, if
-  the definition excludes the ±π tie, on runs the test shows free of a per-step turn of exactly ±π; a synthetic ρ
-  sequence that starts on the negative x-axis (ρ_y = +0 in it and in its mirror): its mirror winds the negation of its
+  negation under Π stays exact, whichever sign of zero the cross product or y-component takes, or excluded from the
+  test explicitly); cargo test -p kernel frame_winding: a rigid rotation through 2πk winds k turns, the run from Π·x
+  winds the negation of x's, bitwise where nonzero and by value where zero (a winding whose deltas sum to exactly
+  zero, such as ρ held on the x-axis, is +0 in both runs), and, if the definition excludes the ±π tie, on runs the
+  test shows free of a per-step turn of exactly ±π; a synthetic ρ sequence that starts on the negative x-axis (ρ_y =
+  +0 in it and in its mirror), chosen where a principal-value difference of angles with no negative-x-axis rule is not
+  negated (for example (−1.688, +0) → (−0.269, 1.049) → (−1.992, −0.218)): its mirror winds the negation of its
   winding, bits where nonzero and by value where zero; a synthetic ρ sequence with a per-step turn of exactly ±π and
   nonzero components, ρ from (1, 1) to (−1, −1), its mirror (1, −1) to (−1, 1): if the definition sets the tie, its
   mirror winds the negation of its winding, bits where nonzero and by value where zero, and if it excludes the tie,
   the test shows that sequence excluded; controls: θ̃ in its place is not opposite under Π, and, where the definition
-  sets the tie, R-389's wrap closed at +π used for the winding (the tie sequence and its mirror both wind +π, not
-  opposite), and, where the definition takes a change odd on the negative x-axis, a principal-value difference of
-  angles in its place (on a negative-x-axis sequence the test chooses where it is not negated), each fail; physics
-  reviewer approved (REQ-CHART-086). *Was:* "the value where the vector vanishes or at a collision);" and "winds the
-  negation of `x`'s, bitwise;" (physics review 5635496144 of PR #276, P2; applied per R-369). The line is regenerated
-  from the verify, word for word (applied per R-369); the paraphrase it replaces said the same. Fix round 2 (physics
-  review 5635567722 P3, qa review 5635575287 Q5; applied per R-369): *Was:* "the run from `Π·x` winds the negation of
-  `x`'s, bitwise (if the definition excludes the `±π` tie, on runs the test shows free of a per-step turn of exactly
-  `±π`); control: `θ̃` in its place is not opposite under `Π`, and fails;". Fix round 3 (physics review 5635643767 P4
-  and P5; applied per R-369): *Was:* "its value where the vector vanishes or at a collision, and its value at a
-  per-step turn of exactly `±π`", "a synthetic `ρ` sequence with a per-step turn of exactly `±π`, `ρ` from `(1, 0)` to
-  `(−1, 0)`: if the definition sets the tie, its mirror winds the negation of its winding, bitwise," and "(the
-  synthetic sequence and its mirror both wind `+π`, not opposite), each fail;".
+  sets the tie, R-389's wrap closed at +π used for the winding (under the atan2(ρ_prev × ρ, ρ_prev · ρ) form, the tie
+  left at atan2(+0, dot < 0) = +π; the tie sequence and its mirror both wind +π, not opposite), and a principal-value
+  difference of angles with no negative-x-axis rule in the winding's place (on the negative-x-axis sequence, not
+  negated), each fail; physics reviewer approved (REQ-CHART-086). *Was:* "the value where the vector vanishes or at a
+  collision);" and "winds the negation of `x`'s, bitwise;" (physics review 5635496144 of PR #276, P2; applied per
+  R-369). The line is regenerated from the verify, word for word (applied per R-369); the paraphrase it replaces said
+  the same. Fix round 2 (physics review 5635567722 P3, qa review 5635575287 Q5; applied per R-369): *Was:* "the run
+  from `Π·x` winds the negation of `x`'s, bitwise (if the definition excludes the `±π` tie, on runs the test shows
+  free of a per-step turn of exactly `±π`); control: `θ̃` in its place is not opposite under `Π`, and fails;". Fix
+  round 3 (physics review 5635643767 P4 and P5; applied per R-369): *Was:* "its value where the vector vanishes or at
+  a collision, and its value at a per-step turn of exactly `±π`", "a synthetic `ρ` sequence with a per-step turn of
+  exactly `±π`, `ρ` from `(1, 0)` to `(−1, 0)`: if the definition sets the tie, its mirror winds the negation of its
+  winding, bitwise," and "(the synthetic sequence and its mirror both wind `+π`, not opposite), each fail;". Fix round
+  4 (qa review 5635694523 Q7 and N1, physics review 5635696210 N1; applied per R-369): *Was:* "(set so the negation
+  under `Π` stays exact, or excluded from the test explicitly)", "a synthetic `ρ` sequence that starts on the negative
+  x-axis (`ρ_y = +0` in it and in its mirror):" and "R-389's wrap closed at `+π` used for the winding (the tie
+  sequence and its mirror both wind `+π`, not opposite), and, where the definition takes a change odd on the negative
+  x-axis, a principal-value difference of angles in its place (on a negative-x-axis sequence the test chooses where it
+  is not negated), each fail;".
 
 ## Notes
 - **⚑ Physics review is required** (R-544 is in the physics group); it does not merge on the code reviewer's word
