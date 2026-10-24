@@ -47,6 +47,13 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
   **Per frame** is an explicit choice in the Record dialog, off by default, labelled "re-ranges every frame: frames not
   comparable", and recorded as `range_policy = per_frame`; the default is `range_policy = frozen`. Under `per_frame` no
   node is frozen and each frame measures its own window, as before.
+- **A pre-pass, opt-in** (the draft's open question 1, "(ii) a cheap low-resolution pre-pass over all frames, union of ranges" … "*Recommend (i)*, clipping reported; (ii) opt-in.", accepted as proposed; ported by fix round 3 of PR #287, code review 5638122561, C1): the Record
+  dialog offers **Pre-pass**, off by default, labelled "window from a quick pass over every frame". Picked, before the
+  recording starts every frame is rendered once at a reduced resolution and each measured node's window is measured
+  per frame; the union of those windows (the smallest `lo`, the largest `hi`) is frozen for the whole recording and
+  recorded as `range_policy = prepass_union`, and the clipped shares are still recorded per frame, at the recording's
+  own resolution. The pre-pass's resolution is a calibration value (R-71, REQ-TOOL-217). The Sequence's planner
+  offers it as Record does (applied per R-369, as for `per_frame`).
 - **The Sequence's export** (`principia_sequence.md` §3.7) is a recording too, made of keyframes that may show different
   views. It freezes, when its Start is pressed, the window on screen for every measured node the view on screen draws,
   for the whole export; a measured node no keyframe shares with that view is frozen at the first export frame that
@@ -117,12 +124,14 @@ outside the round-trip identity as `f3_fill` is (R-484 J3), in the low-bit recor
 `tEXt` chunk always (applied per R-369):
 
 ```
-export { range_policy: frozen | per_frame,
+export { range_policy: frozen | per_frame | prepass_union,
          clipped: { node_id → (lo, hi) }                 an image; a recording: one map per frame, in frame order
          cvd_simulated: null | <mode>,
          render_scale: 1,
          device_px_nodes: [node_id] }
 ```
+
+*Was:* `export { range_policy: frozen | per_frame,` (fix round 3 of PR #287, code review 5638122561, C1, adds `prepass_union`).
 
 `frozen_ranges` and `base_width` are `RenderState`'s, so they are in the identity and in tier 2 as the ramp window is.
 

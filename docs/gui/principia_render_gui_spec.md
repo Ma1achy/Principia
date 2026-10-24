@@ -1493,7 +1493,9 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
   GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
   encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, and the colour window: frozen when Record is pressed, by default, or **per frame**, labelled
-  "re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1). The recording carries its
+  "re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1), or, opt-in, from a
+  **pre-pass**, a quick low-resolution pass over every frame whose windows' union is frozen (R-581, fix round 3 of PR #287, code review 5638122561, C1).
+  *Was:* ""re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1)." The recording carries its
   record once per file in the format's own metadata, always: a GIF's comment and application extension, an MP4's
   comment, a WebM's tag; PNG frames keep the low-bit pxpack in every frame; and its settings file is written beside
   every recording, `<name>.principia-sweep.json` (R-584; `principia_video_carrier.md`). *Was:* "overlays on or off,

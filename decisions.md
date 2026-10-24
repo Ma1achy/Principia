@@ -25008,6 +25008,13 @@ freezes nothing a state has not already frozen and keeps its `base_width`; and a
   `SimConfig` and `RenderState` as a sidecar outside the identity, as `f3_fill` does (R-484 J3), in tier 2 of the low-bit
   record with `f3_fill` and always in the `tEXt` chunk; `frozen_ranges` is `RenderState`'s, in tier 2 with the ramp
   window.
+- **The pre-pass, opt-in** (fix round 3 of PR #287, code review 5638122561, C1: the port had dropped it): the draft's open question 1 reads "**Which window
+  does a recording freeze?** (i) the screen's at Record; (ii) a cheap low-resolution pre-pass over all frames, union of
+  ranges; (iii) the final frame's. *Recommend (i)*, clipping reported; (ii) opt-in.", and the human accepted it as
+  proposed. So the Record dialog, and the Sequence's planner, offer a pre-pass, off by default, that renders every
+  frame at a reduced resolution and freezes the union of the windows measured, `range_policy = prepass_union`, the
+  clipped shares still per frame; its resolution is a calibration value (R-71, REQ-TOOL-217)
+  (`principia_export_details.md` §3.1). REQ-TOOL-216; TASK-M8-80.
 - **An entry goes with its node** (fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node, or a preset
   replacing the graph, drops the entries of the nodes no longer present in the same undoable command, one undo entry,
   so a reused id never inherits a stale freeze (`principia_export_details.md` §3.1).
