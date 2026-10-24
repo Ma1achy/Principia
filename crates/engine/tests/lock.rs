@@ -1101,7 +1101,8 @@ fn curve_tilt_requires_lock() {
 }
 
 /// The mass controls' tangent is the mass link's inverse differenced along `(dμ₁, dμ₂)` at the contract's step
-/// `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`, bit for bit.
+/// `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`, to rounding; and at positive logits, where the softmax's shift acts, it is the
+/// derivative of the mass link's inverse.
 fn check_mass_step() {
     let nu = 0.37;
     let (p, d) = (nu_embed(nu), (NU_CURVE.tangent)(nu));
@@ -1119,6 +1120,32 @@ fn check_mass_step() {
         "the mass tangent {:?} is not the step's {want:?}",
         &got[6..]
     );
+    let heavy = engine::chart_authoring::CurveMeta {
+        parameter: "s",
+        embed: |s| CurvePoint {
+            alpha: 0.6,
+            beta: 1.2,
+            mu1: 1.3 + 0.5 * s,
+            mu2: 0.4 - 0.2 * s,
+        },
+        tangent: |_| CurvePoint {
+            alpha: 0.0,
+            beta: 0.0,
+            mu1: 0.5,
+            mu2: -0.2,
+        },
+    };
+    let z = |s: f64| <SoftmaxTanh as Link<2, 3>>::inverse(softmax(1.3 + 0.5 * s, 0.4 - 0.2 * s));
+    let (hi, lo) = (z(1e-5), z(-1e-5));
+    let got = curve_tangent::<Defaults>(&heavy, 0.0).expect("a tangent");
+    for k in 0..2 {
+        let want = (hi[k] - lo[k]) / 2e-5;
+        assert!(
+            (got[6 + k] - want).abs() <= 1e-8 * want.abs().max(1.0),
+            "the mass tangent {:?} at positive logits is not the inverse's derivative",
+            &got[6..]
+        );
+    }
 }
 
 negative_control!(
