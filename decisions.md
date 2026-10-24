@@ -25545,12 +25545,18 @@ outside the identity) and (c) (nothing frozen in `RenderState`) are not taken.
 `base_width` it wrote, `[]` and `null` on a headless export (`principia_export_details.md` §3.4); REQ-RENDER-117 and
 REQ-TOOL-202 test it, and REQ-TOOL-218 tests that an import gives back the written `base_width`, never the live
 window's.
+*Applied per R-369* (qa review 5638318769 of PR #287, Q6): a recording has one `froze` for the file: under `frozen`
+and `prepass_union` the nodes frozen, under `per_frame` none, for the Sequence's export the nodes frozen at Start and
+those frozen at their first export frame; its `base_width` is the figure's logical width when Record or Start is
+pressed, whatever the range policy, `null` from a headless recording (`principia_export_details.md` §3.4); REQ-TOOL-201
+tests it.
 
 R-588 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-RENDER-117 and REQ-RENDER-118 (rulings, source, note).
 The qa fix round (5638292369, Q1, Q2) also changes REQ-RENDER-117 (statement, verify, note), REQ-TOOL-202
 (statement, verify, rulings, source, note) and REQ-TOOL-218 (statement, verify, rulings, source, note).
+Its follow-up (5638318769, Q6) changes REQ-TOOL-201 (statement, verify, rulings, source, note).
 
 ## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
 *24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
