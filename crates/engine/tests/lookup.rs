@@ -2150,6 +2150,12 @@ fn check_pole_moves(sign: f64) {
         m.lz,
         b * p
     );
+    assert!(
+        (m.lz_after - b * p).abs() <= 64.0 * f64::EPSILON * m.lz_after_scale,
+        "L_z after at the pole from L_z = 0, the largest: {} against +{}",
+        m.lz_after,
+        b * p
+    );
 }
 
 #[test]

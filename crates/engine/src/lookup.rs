@@ -685,35 +685,32 @@ pub fn moves_within<S: Selection>(
 }
 
 /// A constant's worst case over a range of values after the clamps: the move of largest magnitude, the first where
-/// two tie, and the value after nearest the other side of the value before.
+/// two tie, and the value after nearest the other side of the value before, the largest where the value before is 0
+/// (in class 0, so it takes its move and its value after is not read).
 #[derive(Clone, Copy, Debug)]
 struct Worst {
     moved: Dual,
     after: Dual,
 }
 
-/// The worst case over `range`, which is not empty, all one constant's, so of one value before.
+/// The worst case over `range`, which is not empty, all one constant's, so of one value before. `min_by` returns the
+/// first of equal keys.
 fn worst(range: &[Dual]) -> Worst {
     let before = range[0].v;
-    let mut out = Worst {
-        moved: range[0],
-        after: range[0],
+    let first = |key: &dyn Fn(&Dual, &Dual) -> std::cmp::Ordering| {
+        *range
+            .iter()
+            .min_by(|x, y| key(x, y))
+            .expect("a range is not empty")
     };
-    for &x in &range[1..] {
-        if x.d.abs() > out.moved.d.abs() {
-            out.moved = x;
-        }
-        // A value before in class 0 takes its move ([`after`]), so at 0 the value after is not read.
-        let nearer = if before > 0.0 {
-            x.w < out.after.w
+    Worst {
+        moved: first(&|x, y| y.d.abs().total_cmp(&x.d.abs())),
+        after: if before > 0.0 {
+            first(&|x, y| x.w.total_cmp(&y.w))
         } else {
-            x.w > out.after.w
-        };
-        if nearer {
-            out.after = x;
-        }
+            first(&|x, y| y.w.total_cmp(&x.w))
+        },
     }
-    out
 }
 
 /// Layer 3's residuals of `x` (§ "Decode sanity"): `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, each sum in body order, `R_x` and
