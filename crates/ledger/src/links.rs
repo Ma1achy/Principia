@@ -946,7 +946,7 @@ pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<Stri
 }
 
 /// [`check`] of the registry `builders` with the block controls `slots` and the declarations `tunables`: besides the
-/// structural problems, a declaration [`tunable_problems`] refuses, an entry whose forward leaves its codomain at its
+/// structural problems, a declaration `tunable_problems` refuses, an entry whose forward leaves its codomain at its
 /// declared values, and a declared range under which an entry breaks any of Part 2.5's three requirements at its ends
 /// or seeded interior, at f32 or f64, each line naming the entry, the parameter, its value and the requirement
 /// (R-481 G3; R-482 C1, C4).
