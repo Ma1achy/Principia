@@ -995,6 +995,12 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
 
 - **Image:** size (multiples of the view), format; **embed the view (pxpack)**, and optionally **the stain's WGSL**. The
   picture carries its own settings, so opening it recreates the view exactly (§G9).
+  **What an image export fixes (R-581 to R-583; `principia_export_details.md`).** Every measured colour window is frozen
+  at the window on screen when Export is pressed, and the share of pixels each clamped is recorded; the colour-vision
+  simulation is never in the pixels unless **As seen with: <mode>** is picked (a checkbox, off by default, offered while
+  the simulation is on), which is recorded and suffixes the file name; `render_scale` is 1 in every export; every mark
+  length is in base px, scaled by `output_width / base_width`; and an optional **physical size** (mm and DPI) sets the
+  width and writes the PNG's `pHYs`. The export block beside the record says which.
   **Styled / Plain (R-489):** with a Print graph active the dialog offers the figure styled or plain, and figure export
   defaults to **Plain**, a scientific figure being the renderer's pixels (`principia_dd_image_embedding.md` §9); the
   Print graph travels in the record either way (`RenderState.print`, R-491).
@@ -1057,7 +1063,9 @@ scale → gamut clamp → colour-vision simulation → screen (R-111). The stain
   :2881–2888), the finest screen is a cell ceiling (`u_maxCells`, :2879, :2892), and the base dot is controllable (:2878).
   v1 offers plain, watercolour & pencil, and the seven print presets, named as the file names them (:2875): Default,
   Drops, Newspaper, Vintage, Poster78, Riso, Duotone.
-- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
+- **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123). It is the viewer's
+  setting, `ViewUI.cvd`: never undoable, never written to a record or restored from one, remembered across sessions,
+  and never in an export unless Export & share's "As seen with" is picked (R-582; `principia_export_details.md` §3.2).
 - **Overlays:** cursor crosshair. *Was (before R-509):* "class edges, cursor crosshair"; class edges are a Lines ▾
   preset (§G2; R-509). *Was (before R-476):* "grid, class edges, `t_end` contours, cursor
   crosshair"; the grid and the `t_end` contours are Lines ▾ presets (§G2; R-476, L2).
@@ -1413,7 +1421,9 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
     (R-437).
 - **Pane 3:** the trajectory in real space (CoM frame).
 - **One timeline scrubs all three; editing the IC re-integrates the orbit live.** Integration is `computeIC` on the CPU in
-  f64 (trajectory_viewing §1); the engine is reached only through it (§6). The Inspector holds no sound control: Listen
+  f64 (trajectory_viewing §1); the engine is reached only through it and, for an IC given as its state (a built IC),
+  through its state-in sibling `computeICState` (R-586; `principia_ic_save.md` §3.4) (§6). *Was:* "the engine is
+  reached only through it (§6)." The Inspector holds no sound control: Listen
 is in the Trajectory panel and `Listen…` only (R-556, RQ-466 (a)). *Was:* "**listen** is here too. (Against R-541 G1's
 one place this is RQ-466; its option (a) applied meanwhile: listen is the Trajectory panel's only, and the Inspector
 holds no sound control. Gui review 5595359543 of PR #267, G1.)"
@@ -1448,6 +1458,13 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   and pair separations.
 - **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
   **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.
+- **Copy, save, open, mark and export (R-586, R-587; `principia_ic_save.md`).** Ctrl+C copies the IC's record
+  (`principia.ic/1`), *Copy as text* a 1-based table, and Ctrl+V pastes one; **File › Save IC…** writes
+  `<label>.principia-ic.json` and **File › Open IC…** (or a drop) opens one in Create & locate, in its as-built frame,
+  recovered, physics only (naming the link) or corrupt, the stored `z` against the recomputed shown as a residual. A
+  reopened IC sits in the hemisphere it was built in, its twin opposite. **Mark** is the durable act: a marked IC is a
+  `Trace` in `Lines`, travelling with the view; **Mark all kept** promotes the kept list. **Export trajectory…** writes
+  `<label>.traj.csv`, one row per step as taken, its body columns labelled 1-based (`body1_x` …).
 
 ## G9. Import picture · saved views · record a sweep (`09_importrecord.png`)
 
@@ -1459,12 +1476,21 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   with **Recreate with this build's default links**, the view then badged "links assumed"; and, recovered, which tiers
   the image held, for example "custom shader source not embedded (it was in the original), rendering with the built-in
   fallback". Restoring is the identity on `SimConfig` and `RenderState` for every tier recovered (R-484, RT1).
+  A GIF, MP4 or WebM recording is read from the record its container carries (R-584). A picture the view refers to that
+  neither the store nor the PNG's `prPc` chunk holds is listed as missing, and the view draws "Picture missing" in its
+  header strip, never a substitute (R-585; `principia_uploaded_picture.md` §3.5). A frozen colour window reads "frozen
+  at export" on its node, and **Re-measure** clears it, one undo entry (R-581).
 - **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view". A saved view reopens under the
   tilt map it was saved with, one saved before R-474 under Lean each axis (R-474). A saved view is a whole view; a
   saved chart (§G2's Save view as chart, R-475) is a chart in the picker.
 - **Record a time sweep:** a time range, a frame count, the quality each frame is refined to, a size at the view's aspect,
   GIF / PNG frames / MP4 (MP4 through a system `ffmpeg` when present; in the browser, PNG frames zipped, GIF via a wasm
-  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
+  encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, and the colour window: frozen when Record is pressed, by default, or **per frame**, labelled
+  "re-ranges every frame: frames not comparable" (R-581; `principia_export_details.md` §3.1). The recording carries its
+  record once per file in the format's own metadata, always: a GIF's comment and application extension, an MP4's
+  comment, a WebM's tag; PNG frames keep the low-bit pxpack in every frame; and its settings file is written beside
+  every recording, `<name>.principia-sweep.json` (R-584; `principia_video_carrier.md`). *Was:* "overlays on or off,
+  pxpack in every frame." **Recording integrates each frame to its own `t`**, so
   it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
   captured frame).
 
@@ -2037,6 +2063,9 @@ shaders share them:
   know the range and **clamps out-of-range**; auto is **always full-contrast** with no prior knowledge
   but is **relative** (the mapping shifts with the data — absolute values are not readable, renders are
   not comparable). `range_norm` is a general helper, not debug-specific.
+  **A third source, frozen (R-581).** A node with an entry in `RenderState.frozen_ranges`, written at an image export or
+  when Record is pressed, reads that `(lo, hi)` as its `meas`, with `auto` set, and is not measured
+  (`principia_export_details.md` §3.1).
 - **`debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first
   invariant, §13): it draws the hatch from the pixel position (R-136), a pattern that collides with no palette entry, its
   exact pattern a calibration (REQ-COL-055, R-71; R-132), confirmed at the M1 gate as proposed (R-428). Only NaN, and
