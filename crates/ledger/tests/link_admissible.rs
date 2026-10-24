@@ -297,6 +297,19 @@ fn check_c1(ld: f64) {
         let e = slope(num(bad)).expect_err("a non-finite log-det is accepted");
         assert!(e.contains("not a finite derivative"), "{e}");
     }
+    // The tolerance's rounding terms: `2x` at z = 0 differences exactly to 2 at both steps, so the tolerance is the
+    // two steps' rounding, r + r/2 (r = 2ε_phys/2h), with ε_phys·e^ld beside it, far smaller.
+    let r = 2.0 * 64.0 * f64::EPSILON / (2.0 * f64::EPSILON.cbrt());
+    let at_zero = |gap: f64| {
+        let l = link(
+            vec![op(Op::Mul, vec![num(2.0), X])],
+            vec![X],
+            op(Op::Log, vec![num(2.0 + gap)]),
+        );
+        c1::<f64>(&l, &[0.0], &at(&[]))
+    };
+    assert!(at_zero(r).is_ok(), "a gap of r, inside r + r/2");
+    assert!(at_zero(1.6 * r).is_err(), "a gap of 1.6r, outside r + r/2");
     let flat = link(vec![num(1.0)], vec![X], num(f64::NEG_INFINITY));
     assert!(
         c1::<f64>(&flat, &[0.3], &at(&[])).is_ok(),
@@ -371,6 +384,21 @@ fn check_volume(want_area: f64) {
     let plane = link(vec![X, X1, num(0.0)], vec![X], num(0.0));
     let (a, r2) = volume::<f64>(&plane, &[0.0, 0.0], 1.0, &v);
     assert_eq!((a, r2), (1.0, r + r + r * r), "the plane's");
+    let diag = link(
+        vec![
+            op(Op::Mul, vec![num(2.0), X]),
+            op(Op::Mul, vec![num(3.0), X1]),
+            num(0.0),
+        ],
+        vec![X],
+        num(0.0),
+    );
+    let (_, r23) = volume::<f64>(&diag, &[0.0, 0.0], 1.0, &v);
+    let want = r * 3.0 + 2.0 * r + r * r;
+    assert!(
+        (r23 - want).abs() <= 1e-12 * want,
+        "diag(2, 3)'s rounding, r·|b| + |a|·r + r²: {r23}, not {want}"
+    );
     let cube = link(vec![op(Op::Mul, vec![X, X, X])], vec![X], num(0.0));
     let (d1, _) = volume::<f64>(&cube, &[1.0], 1.0, &v);
     let (d2, _) = volume::<f64>(&cube, &[1.0], 2.0, &v);
