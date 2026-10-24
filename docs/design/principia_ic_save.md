@@ -44,6 +44,11 @@ decimals are exact for every finite f64 but −0, so one function normalises −
 question 4, (a)). A non-finite value is refused at entry, in the constructor and on load. `hemisphere` is the sign of
 `λ̃_y` past `δ_λ`, `+1`, `−1`, or `0` on the seam; `mirrored` is the lookup's `lookup_mirrored` (R-544).
 
+JSON has no literal for a non-finite number, so on load a number token that overflows f64 (for example `1e999`) is
+read as non-finite and refused, naming the field, and a bare `NaN` or `Infinity` does not parse. `made` is when the IC
+was made: a re-save of an opened record keeps the record's `made`, so save, open and re-save give the same bytes
+(applied per R-369, fix round 2 of PR #287, qa review 5638084688, Q6).
+
 ### 3.2 Copy, save, open
 
 - **Copy**: Ctrl+C in the Inspector copies the record as its JSON text; *Copy as text* gives a 1-based table, read by a
@@ -59,6 +64,14 @@ question 4, (a)). A non-finite value is refused at entry, in the constructor and
   - **corrupt**, when the JSON does not parse, a field is missing or non-finite, or the re-derived values contradict
     the stored ones beyond what the residual reports.
   The stored `z` against the recomputed `z` is shown as a residual.
+
+**Corrupt or a residual** (applied per R-369, fix round 2 of PR #287, qa review 5638084688, Q6). A record is corrupt when its JSON does not parse, a field
+is missing, a value is non-finite, or a field re-derived exactly from the primary contradicts the stored one
+(`mirrored`, `hemisphere`, or `source`'s kind against the fields present). `canonical.z` is re-derived through the
+decoder, which is not bitwise, so the stored `z` against the recomputed is a residual: within its bound the record is
+recovered with the residual shown, beyond it corrupt. The bound is a calibration value (R-71, REQ-TOOL-215), proposed
+with its evidence by the task that builds the record and confirmed by the human at the M8 gate; a link that is
+unknown or whose entry hash differs is physics only, never corrupt (R-521).
 
 ### 3.3 The mirror twin
 

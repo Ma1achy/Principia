@@ -25173,6 +25173,10 @@ question:
 - **The spotlight reel's film** (R-578) is a release output with its manifest, not a user's recording; nothing here
   changes it.
 - **WebM is the browser's** (R-131); natively the formats are PNG frames, GIF and MP4.
+- **The tests' reach** (fix round 2 of PR #287, qa review 5638084688, Q1 to Q3, Q9): a GIF whose two blocks differ reads the application extension's record
+  and reports them as disagreeing; the GIF and `prPc` layouts are pinned by known-answer fixtures; the WebM tag's writer
+  is tested in the M8 Playwright browser suite (the native build writes no WebM, R-131) and the native reader on a
+  checked-in fixture, by TASK-M8-85; in CI the ffmpeg arms fail, never skip, when ffmpeg is absent.
 - **One task, M8:** TASK-M8-81 builds the carriers and the file beside; TASK-M8-33 keeps REQ-TOOL-106 and TASK-M8-31
   REQ-TOOL-083 as amended.
 
@@ -25334,6 +25338,10 @@ integrated; (a) −0 normalised to +0.
   (R-69, R-52), Mark all kept never one per orbit.
 - **Ctrl+C and Ctrl+V** (fix round 1 of PR #287, gui review 5638052211, G2) join §G3's key table, scoped to the Inspector; while a text field is
   being typed in they copy and paste its text, never the record (R-409).
+- **Corrupt or a residual** (fix round 2 of PR #287, qa review 5638084688, Q6): missing fields, non-finite values (on load a token such as `1e999`
+  that overflows f64) and an exactly re-derived field (`mirrored`, `hemisphere`, `source`'s kind) that contradicts the
+  stored one are corrupt; the stored `z` against the recomputed is a residual, recovered within its bound and corrupt
+  beyond it, the bound a calibration value (R-71, REQ-TOOL-215, M8 gate); a re-save keeps the opened record's `made`.
 - **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
   reopening, marks and the trajectory CSV, R-587).
 

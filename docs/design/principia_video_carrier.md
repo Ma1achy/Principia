@@ -130,3 +130,12 @@ That answers the draft's one open question ("Pick one default for recordings"): 
 - PNG frames each carry their own low-bit record with their own playhead.
 - Every recording writes its settings file beside it, in every format.
 - Embedding the settings cannot be turned off for a recording; a single figure's low bits stay off by default.
+- A reader given a GIF whose comment differs from its application extension reads the application extension's record,
+  recovered, and reports the two as disagreeing; a byte changed in an MP4's base64 reads *state present, corrupt*.
+- Known answers pin the layouts: the GIF's `PRINCPIA` / `REC` extension, its sub-blocks of at most 255 bytes and its
+  padded, single-line base64 are checked against checked-in expected bytes, so a writer and reader that agree on
+  another layout fail.
+- The WebM tag is written only by the browser build (R-131), so its writer is tested in the M8 Playwright browser suite
+  (Chromium), and the native reader on a checked-in WebM fixture carrying the tag.
+- In CI the ffmpeg remux and re-encode arms fail, never skip, when the system ffmpeg is absent.
+*(These four added by fix round 2 of PR #287, qa review 5638084688, Q1, Q2, Q3 and Q9, applied per R-369.)*
