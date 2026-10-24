@@ -3,7 +3,8 @@
 //! and every pixel read through the kernel's own chart maps and decode.
 //!
 //! - `lock_set` (REQ-GUI-004): on the affine chart and on two nonlinear charts, the centre pixel's IC after the lock is
-//!   the clicked pixel's, bit for bit; a lock at a point `validate` refuses sets nothing.
+//!   the clicked pixel's, bit for bit, the nonlinear chart rebuilt on the post-lock `z₀`; a lock at a point `validate`
+//!   refuses sets nothing.
 //! - `lock_anchor_invariance` (REQ-GUI-005): a property under `validation::prop` (`CASES` = 256, REQ-VAL-151): random
 //!   tilts, zooms and chart switches leave the centre IC bitwise constant; an excursion moves it, and snap-back
 //!   restores the stored anchor bitwise.
@@ -29,8 +30,8 @@ use engine::contract::sim_config::{
 use engine::contract::store::StateStore;
 use engine::lock::{
     centre, curve_tangent, curve_tilt, kernel_chart, move_slider, point, recentre, set,
-    set_on_chart, slider, snap_back, unlock, validate, LockError, Nearest, Pixel, Remedy, Report,
-    Tag, Window,
+    set_on_chart, slider, snap_back, unlock, validate, ChartLock, FrozenControls, LockError,
+    Nearest, Pixel, Remedy, Report, Tag, Window,
 };
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
@@ -38,7 +39,8 @@ use engine::nav::{oblique, slice, zoom, ChartConstructor};
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, ZMu1};
 use kernel::chart::{
-    ChartDecode, Constraint, InvariantLE, Latent as LatentChart, Mixed, ValidationResult,
+    ChartDecode, Constraint, InvariantLE, InvariantLK, Latent as LatentChart, Mixed,
+    ValidationResult,
 };
 use kernel::decode::descriptor::potential;
 use kernel::decode::{decode, Ic};
@@ -242,24 +244,57 @@ const SQUARE: Window = Window {
     half: [0.5, 0.5],
 };
 
-/// Locks `chart` at the pixel `(s, t)` of `window`, and checks that the re-centred window's centre pixel decodes the
-/// clicked pixel's state bit for bit, that `z_locked` decodes to it within the encode's tolerance, and that the edits
-/// are the recentring on `z₀ = z_locked` and the lock group's. `centred` is the window the check reads the centre in.
+/// A nonlinear chart rebuilt on `z₀`: its hidden coordinates are `z₀`'s (chart_reference §2.1), its other parameters
+/// kept.
+trait Rebuild: Sized {
+    fn on(&self, z0: &Latent) -> Self;
+}
+
+impl Rebuild for Mixed<ZMu1, Alpha, f64> {
+    fn on(&self, z0: &Latent) -> Self {
+        Mixed::new(*z0, self.h_range, self.v_range)
+    }
+}
+
+impl Rebuild for InvariantLE<f64> {
+    fn on(&self, z0: &Latent) -> Self {
+        InvariantLE(Invariant {
+            z_cfg: [z0[0], z0[1]],
+            z_mass: [z0[6], z0[7]],
+            ..self.0
+        })
+    }
+}
+
+/// The lock's own edits.
+fn own_edits(lock: &ChartLock) -> [SetField; 2] {
+    lock.edits.clone()
+}
+
+/// Locks `chart` at the pixel `(s, t)` of `window`, applies the edits `edits` gives through the store, and checks that
+/// the chart rebuilt on the post-lock `z₀` decodes the clicked pixel's state bit for bit at the re-centred window's
+/// centre, that `z_locked` keeps the chart's frozen controls bit for bit and decodes to the clicked state within the
+/// encode's tolerance, and that the edits are the recentring on `z₀ = z_locked` and the lock group's. `centred` is the
+/// window the check reads the centre in.
 fn check_chart_lock<C>(
     chart: &C,
     window: &Window,
     s: f64,
     t: f64,
     centred: fn(&Window, &Window) -> Window,
+    edits: fn(&ChartLock) -> [SetField; 2],
 ) where
-    C: kernel::encode::by_kind::ByKind<Param = f64>,
+    C: kernel::encode::by_kind::ByKind<Param = f64> + FrozenControls + Rebuild,
 {
     let [u, v] = window.at(s, t);
     let clicked = chart.decode_at::<Defaults, f64>(u, v).ic;
     let lock = set_on_chart::<Defaults, C, _>(chart, window, s, t, phys, &tol()).expect("a lock");
+    let mut st = store(sim(oblique_plane()));
+    apply(&mut st, edits(&lock));
+    let rebuilt = chart.on(&now(&mut st).plane.z0);
     let w = centred(window, &lock.window);
     let [cu, cv] = w.at(0.5, 0.5);
-    let centre_ic = chart.decode_at::<Defaults, f64>(cu, cv).ic;
+    let centre_ic = rebuilt.decode_at::<Defaults, f64>(cu, cv).ic;
     assert!(
         bits(&centre_ic) == bits(&clicked),
         "the centre pixel's IC after the lock at ({s}, {t}) on {} is not the clicked pixel's",
@@ -281,6 +316,15 @@ fn check_chart_lock<C>(
         }
         other => panic!("the lock's edits are {other:?}"),
     };
+    let (frozen, set_by) = (chart.frozen(), chart.set_by_axes());
+    for k in (0..8).filter(|&k| !set_by[k]) {
+        assert_eq!(
+            z_locked[k].to_bits(),
+            frozen[k].to_bits(),
+            "z_locked's hidden control {k} is not the chart's frozen one on {}",
+            chart.name()
+        );
+    }
     let d = phys(&clicked, &ic_of(&z_locked));
     assert!(
         d <= 1e-12,
@@ -297,10 +341,16 @@ fn lock_set_nonlinear_centre_is_the_clicked_pixel() {
     };
     for (s, t) in [(0.3, 0.8), (0.9, 0.15), (0.5, 0.5), (0.0, 1.0)] {
         for window in [SQUARE, zoomed] {
-            check_chart_lock(&mixed(), &window, s, t, |_, re| *re);
-            check_chart_lock(&invariant_le(), &window, s, t, |_, re| *re);
+            check_chart_lock(&mixed(), &window, s, t, |_, re| *re, own_edits);
+            check_chart_lock(&invariant_le(), &window, s, t, |_, re| *re, own_edits);
         }
     }
+    // The controls each chart's axes set: the mixed chart's `z_μ1` and `z_α`, the invariant chart's momenta.
+    let axes = |set: [bool; 8]| (0..8).filter(|&k| set[k]).collect::<Vec<_>>();
+    assert_eq!(axes(mixed().set_by_axes()), [0, 6]);
+    assert_eq!(axes(invariant_le().set_by_axes()), [2, 3, 4, 5]);
+    assert_eq!(axes(lk().set_by_axes()), [2, 3, 4, 5]);
+    assert_eq!(lk().frozen(), lk().0.frozen::<f64>().z);
     // The window's placement, `c + ((2s−1)·h_u, (2t−1)·h_v)`, at its corners and centre.
     assert_eq!(zoomed.at(0.0, 1.0), [0.25, 0.875]);
     assert_eq!(zoomed.at(1.0, 0.0), [0.5, 0.375]);
@@ -312,8 +362,47 @@ negative_control!(
     lock_set_nonlinear_centre_is_the_clicked_pixel,
     "a window left where it was is not centred on the lock",
     expected = "is not the clicked pixel's",
-    check_chart_lock(&mixed(), &SQUARE, 0.3, 0.8, |old, _| *old)
+    check_chart_lock(&mixed(), &SQUARE, 0.3, 0.8, |old, _| *old, own_edits)
 );
+
+negative_control!(
+    lock_set_nonlinear_frozen_controls,
+    "z_locked taken whole from the ladder's round trip does not keep the frozen controls, so the rebuilt chart moves",
+    expected = "is not the clicked pixel's",
+    check_chart_lock(&mixed(), &SQUARE, 0.3, 0.8, |_, re| *re, |lock| {
+        let z = engine::lookup::lookup::<Defaults, _, _>(
+            &mixed(),
+            &engine::lookup::Exact::Physical(lock.ic),
+            phys,
+            &tol(),
+        )
+        .expect("a lookup")
+        .z;
+        [
+            SetField {
+                edit: Edit::Sim(SimField::Z0(z)),
+                no_history: false,
+            },
+            SetField {
+                edit: Edit::Sim(SimField::Lock(Lock {
+                    locked: true,
+                    z_locked: z,
+                })),
+                no_history: false,
+            },
+        ]
+    })
+);
+
+/// The `(L_z, K)` chart, whose frozen controls the trait reads as `(L_z, E)`'s.
+fn lk() -> InvariantLK<f64> {
+    InvariantLK(Invariant {
+        z_cfg: [-0.2, 0.5],
+        z_mass: [0.1, 0.3],
+        k_max: 2.0,
+        gamma_k: 1.5,
+    })
+}
 
 /// A lock at a chart point `validate` refuses sets nothing (R-469): the `(L_z, E)` chart's edge `s = 1` is a system,
 /// one float past it is not.

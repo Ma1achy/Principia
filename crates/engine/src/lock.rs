@@ -6,9 +6,11 @@
 //!
 //! - **Setting the lock** on the affine chart ([`set`]): `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂`, the latent chart's own
 //!   `Φ` at the clicked pixel, CPU arithmetic with no readback; on a nonlinear chart ([`set_on_chart`]): `Φ` and `D`
-//!   replayed on the CPU at the pixel's chart point, `z_locked` from lookup's ladder, the inverse-encode path, and the
-//!   chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the recentring,
-//!   §G4) and the lock group's, and the centre pixel decodes the clicked pixel's state bit for bit.
+//!   replayed on the CPU at the pixel's chart point, lookup's ladder, the inverse-encode path, giving `z_locked` the
+//!   controls the chart's axes set and the pixel's own frozen controls the rest, bit for bit ([`FrozenControls`]), and
+//!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
+//!   recentring, §G4) and the lock group's, and the centre pixel, of the chart rebuilt on that `z₀`, decodes the
+//!   clicked pixel's state bit for bit.
 //! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`): they never touch `z₀`,
 //!   so the centre `z(½,½) = z₀` ([`centre`]) is exactly constant through them.
 //! - **The excursion** `δ = z₀ − z_locked` ([`Lock::excursion`]) is held by the stored pair (the contract's definition):
@@ -25,7 +27,10 @@
 //! **What the GPU knows: nothing** (Part 4). The kernel's chart is [`kernel_chart`]: `(z₀, q₁, q₂)` and nothing of the
 //! lock, so a locked and a free view of the same plane send the kernel the same uniform.
 
-use kernel::chart::{Chart, Constraint, Latent as LatentChart, ValidationResult};
+use kernel::chart::mixed::{Coordinate, Quantity};
+use kernel::chart::{
+    Chart, Constraint, InvariantLE, InvariantLK, Latent as LatentChart, Mixed, ValidationResult,
+};
 use kernel::decode::Ic;
 use kernel::encode::by_kind::{fibre, ByKind, InvariantAxis, Lookup};
 use kernel::encode::SimplexClamp;
@@ -131,12 +136,63 @@ impl Window {
     }
 }
 
+/// A nonlinear chart's hidden coordinates (the contract's definition; `principia_chart_reference.md` §2.1: "Untilted,
+/// they are `z₀`'s at every pixel"): the controls it holds frozen, and which of the eight its axes set, which it does
+/// not read from the frozen ones.
+pub trait FrozenControls {
+    /// The frozen controls, in the decoder's block layout; those the axes set are not read.
+    fn frozen(&self) -> Latent;
+    /// `true` for each control the axes set.
+    fn set_by_axes(&self) -> [bool; LATENT_DIM];
+}
+
+/// `true` at the coordinates the two axes set.
+fn at_axes(h: Coordinate, v: Coordinate) -> [bool; LATENT_DIM] {
+    std::array::from_fn(|k| k == h as usize || k == v as usize)
+}
+
+impl<H: Quantity, V: Quantity> FrozenControls for Mixed<H, V, f64> {
+    fn frozen(&self) -> Latent {
+        self.frozen
+    }
+
+    fn set_by_axes(&self) -> [bool; LATENT_DIM] {
+        at_axes(H::COORDINATE, V::COORDINATE)
+    }
+}
+
+/// The invariant charts' axes set the momenta, `z[2:6]`, through the construction; the configuration and the masses
+/// are frozen.
+const MOMENTA: [bool; LATENT_DIM] = [false, false, true, true, true, true, false, false];
+
+impl FrozenControls for InvariantLE<f64> {
+    fn frozen(&self) -> Latent {
+        self.0.frozen::<f64>().z
+    }
+
+    fn set_by_axes(&self) -> [bool; LATENT_DIM] {
+        MOMENTA
+    }
+}
+
+impl FrozenControls for InvariantLK<f64> {
+    fn frozen(&self) -> Latent {
+        self.0.frozen::<f64>().z
+    }
+
+    fn set_by_axes(&self) -> [bool; LATENT_DIM] {
+        MOMENTA
+    }
+}
+
 /// A lock set on a nonlinear chart.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChartLock {
     /// The recentring `SetField` on `z₀ = z_locked` and the lock group's.
     pub edits: [SetField; 2],
-    /// The window re-centred on the clicked chart point, its half-widths kept.
+    /// The window re-centred on the clicked chart point, its half-widths kept. It is chart construction and belongs in
+    /// `SimConfig`'s chart group (R-69), which TASK-M2-21 fills (REQ-SYS-011); until then it is returned here, and
+    /// undoing the lock does not restore it.
     pub window: Window,
     /// The clicked pixel's state, `D ∘ Φ` replayed on the CPU: the centre pixel's under the re-centred window.
     pub ic: Ic<f64>,
@@ -146,8 +202,9 @@ pub struct ChartLock {
 
 /// Sets the lock at the pixel `(s, t)` of `window` on the nonlinear `chart`, under the link selection `S` (the
 /// contract's definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate`
-/// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z` is
-/// `z_locked`; the window re-centred on the chart point.
+/// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z`
+/// gives `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit, so the
+/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point.
 pub fn set_on_chart<S, C, N>(
     chart: &C,
     window: &Window,
@@ -159,7 +216,7 @@ pub fn set_on_chart<S, C, N>(
 where
     S: Selection,
     S::MassLink: SimplexClamp,
-    C: ByKind,
+    C: ByKind + FrozenControls,
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
@@ -173,8 +230,13 @@ where
     let ic = chart.decode_at::<S, f64>(u, v).ic;
     let locked = lookup::lookup::<S, C, N>(chart, &Exact::Physical(ic), norm, tol)
         .map_err(LockError::Refused)?;
+    let (frozen, set) = (chart.frozen(), chart.set_by_axes());
+    let z_locked: Latent = std::array::from_fn(|k| match set[k] {
+        true => locked.z[k],
+        false => frozen[k],
+    });
     Ok(ChartLock {
-        edits: lock_edits(locked.z),
+        edits: lock_edits(z_locked),
         window: Window {
             centre: [u, v],
             half: window.half,
