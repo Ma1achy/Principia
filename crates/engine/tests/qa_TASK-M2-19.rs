@@ -12,8 +12,8 @@
 //! at the end.
 
 use engine::lookup::{
-    changed, lookup, lookup_partial, residuals, sanity, Class, Classes, Exact, Failed, Layer,
-    Locked, Partial, Rejected, Tolerances,
+    after, changed, lookup, lookup_partial, moves, residuals, sanity, Class, Classes, Exact,
+    Extents, Failed, Layer, Locked, Moves, Partial, Rejected, Tolerances,
 };
 use kernel::chart::{Burrau, Constraint, Latent};
 use kernel::decode::{self, Ic};
@@ -1183,63 +1183,122 @@ negative_control!(
 
 // ── REQ-ENC-036: the zero class in floating point ─────────────────────────────────────────────────────────────────
 
-/// `L_z`'s and `E`'s scales as the contract defines them (§ "The zero class in floating point"): `Σ‖rᵢ‖‖pᵢ‖` and
-/// `K + |U|`.
-fn scales(x: &Ic<f64>) -> (f64, f64) {
-    let norm = |v: [f64; 2]| v[0].hypot(v[1]);
-    let l: f64 = (0..3).map(|i| norm(x.r[i]) * norm(x.p[i])).sum();
-    let k: f64 = (0..3)
-        .map(|i| (x.p[i][0].powi(2) + x.p[i][1].powi(2)) / (2.0 * x.m[i]))
-        .sum();
-    let u = k - energy(x);
-    (l, k + u.abs())
+/// The entered state's extents as the contract defines them (§ "The zero class in floating point"):
+/// `R = λ·maxᵢ‖rᵢ‖` and `P = λ^{−1/2}·maxᵢ‖pᵢ‖` of the entry, before `C`'s translation, boost, rotation and rescale.
+fn contract_extents(entry: &Ic<f64>, lambda: f64) -> (f64, f64) {
+    let max = |v: &[[f64; 2]; 3]| v.iter().map(|w| w[0].hypot(w[1])).fold(0.0, f64::max);
+    (lambda * max(&entry.r), max(&entry.p) / lambda.sqrt())
 }
 
-/// `Classes::of` gives `L_z`, `E` and the contract's two scales, each checked against `scale_lz`, the expected `L_z`
-/// scale's formula, at 64 fuzzed states.
-fn check_class_scales(scale_lz: &dyn Fn(&Ic<f64>) -> f64) {
+/// The first-order bounds on `L_z`'s and `E`'s rounding on `C(x)` at the entry's extents `(R, P)`, as the contract
+/// writes them: `S_{L_z} = Σᵢ((1 + R)‖rᵢ‖‖pᵢ‖ + R‖pᵢ‖ + ‖rᵢ‖P)` and
+/// `S_E = Σᵢ((1 + R)‖pᵢ‖²/2 + ‖pᵢ‖P)/mᵢ + Σ_{i<j} mᵢmⱼ/rᵢⱼ·(1 + R + 2R/rᵢⱼ)`.
+fn contract_bounds(x: &Ic<f64>, (r, p): (f64, f64)) -> (f64, f64) {
+    let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+    let s_lz: f64 = (0..3)
+        .map(|i| {
+            let (ri, pi) = (norm(x.r[i]), norm(x.p[i]));
+            (1.0 + r) * ri * pi + r * pi + ri * p
+        })
+        .sum();
+    let kinetic: f64 = (0..3)
+        .map(|i| {
+            let pi = norm(x.p[i]);
+            ((1.0 + r) * pi * pi / 2.0 + pi * p) / x.m[i]
+        })
+        .sum();
+    let potential: f64 = [(0, 1), (0, 2), (1, 2)]
+        .iter()
+        .map(|&(i, j)| {
+            let d = dist(x.r[i], x.r[j]);
+            x.m[i] * x.m[j] / d * (1.0 + r + 2.0 * r / d)
+        })
+        .sum();
+    (s_lz, kinetic + potential)
+}
+
+/// A random state: masses on the simplex's interior, positions and momenta on `[−1, 1]²`.
+fn random_state(rng: &mut Rng) -> Ic<f64> {
+    let m: [f64; 3] = std::array::from_fn(|_| rng.uniform(0.05, 1.0));
+    let t: f64 = m.iter().sum();
+    Ic {
+        m: m.map(|v| v / t),
+        r: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+        p: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
+    }
+}
+
+/// A random gauge image of `x` in its own mass unit: offset and boost on `[−span, span)²`, any rotation, scale
+/// `2^[−octaves, octaves]`, either parity.
+fn random_image(rng: &mut Rng, x: &Ic<f64>, span: f64, octaves: f64) -> Ic<f64> {
+    let g = proper_image(rng, x, span, octaves);
+    if rng.next() & 1 == 1 {
+        gauge(&g, [0.0; 2], [0.0; 2], 0.0, (1.0, 1.0), true)
+    } else {
+        g
+    }
+}
+
+/// A random gauge image of `x` as [`random_image`]'s, its parity kept.
+fn proper_image(rng: &mut Rng, x: &Ic<f64>, span: f64, octaves: f64) -> Ic<f64> {
+    gauge(
+        x,
+        [rng.uniform(-span, span), rng.uniform(-span, span)],
+        [rng.uniform(-span, span), rng.uniform(-span, span)],
+        rng.uniform(0.0, std::f64::consts::TAU),
+        (2.0_f64.powf(rng.uniform(-octaves, octaves)), 1.0),
+        false,
+    )
+}
+
+/// `Extents::entered` gives the contract's `R` and `P`, and `Classes::within` gives `L_z`, `E` and the contract's
+/// bounds `S_{L_z}` and `S_E` on the entered extents (REQ-ENC-036), at 64 gauge images of fuzzed states, each with
+/// its own offset, boost and scale. `drop_p` leaves the boost's term `P` out of the expected bounds.
+fn check_class_bounds(drop_p: bool) {
     let mut rng = Rng(0x2E80_0036);
+    let close = |a: f64, b: f64| (a - b).abs() <= 1e-12 * b.abs().max(1e-300);
     for _ in 0..64 {
-        let x = Ic {
-            m: {
-                let m: [f64; 3] = std::array::from_fn(|_| rng.uniform(0.05, 1.0));
-                let t: f64 = m.iter().sum();
-                m.map(|v| v / t)
-            },
-            r: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
-            p: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
-        };
-        let c = Classes::of(&x);
-        let close = |a: f64, b: f64| (a - b).abs() <= 1e-13 * b.abs().max(1.0);
-        assert!(close(c.lz, lz(&x)), "L_z = {}, not {}", c.lz, lz(&x));
-        assert!(close(c.e, energy(&x)), "E = {}, not {}", c.e, energy(&x));
+        let x = random_state(&mut rng);
+        let g = random_image(&mut rng, &x, 8.0, 6.0);
+        let e = encode::<Defaults, f64>(&g);
+        let lambda = e.canonical.lambda;
+        let ext = Extents::entered(&g, lambda);
+        let (r, p) = contract_extents(&g, lambda);
+        assert!(close(ext.r, r), "R is {}, not λ·maxᵢ‖rᵢ‖ = {r}", ext.r);
         assert!(
-            close(c.lz_scale, scale_lz(&x)),
-            "L_z's scale is {}, not {}",
-            c.lz_scale,
-            scale_lz(&x)
+            close(ext.p, p),
+            "P is {}, not λ^(−1/2)·maxᵢ‖pᵢ‖ = {p}",
+            ext.p
+        );
+        let c = e.canonical.ic;
+        let got = Classes::within(&c, &ext);
+        let (s_lz, s_e) = contract_bounds(&c, (r, if drop_p { 0.0 } else { p }));
+        let near = |a: f64, b: f64| (a - b).abs() <= 1e-12 * b.abs().max(1.0);
+        assert!(near(got.lz, lz(&c)), "L_z = {}, not {}", got.lz, lz(&c));
+        assert!(near(got.e, energy(&c)), "E = {}, not {}", got.e, energy(&c));
+        assert!(
+            close(got.lz_scale, s_lz),
+            "L_z's bound is {}, not S_Lz = {s_lz}",
+            got.lz_scale
         );
         assert!(
-            close(c.e_scale, scales(&x).1),
-            "E's scale is {}, not K + |U| = {}",
-            c.e_scale,
-            scales(&x).1
+            close(got.e_scale, s_e),
+            "E's bound is {}, not S_E = {s_e}",
+            got.e_scale
         );
     }
 }
 
 #[test]
-fn lookup_validation_ladder_zero_band_qa_scales() {
-    check_class_scales(&|x| scales(x).0);
+fn lookup_validation_ladder_zero_band_qa_bounds() {
+    check_class_bounds(false);
 }
 
 negative_control!(
-    lookup_validation_ladder_zero_band_qa_scales,
-    "Σ|rᵢ × pᵢ| is not Σ‖rᵢ‖‖pᵢ‖ where rᵢ and pᵢ are not perpendicular, so the scale check must fail",
-    expected = "L_z's scale is",
-    check_class_scales(&|x| (0..3)
-        .map(|i| (x.r[i][0] * x.p[i][1] - x.r[i][1] * x.p[i][0]).abs())
-        .sum())
+    lookup_validation_ladder_zero_band_qa_bounds,
+    "without the boost's term P, the bound is the canonical state's alone, so the bound check must fail",
+    expected = "L_z's bound is",
+    check_class_bounds(true)
 );
 
 /// Class 0 is `|v| ≤ band·scale`, the edge included; outside it the class is `v`'s sign; a value whose scale is not
@@ -1404,106 +1463,646 @@ negative_control!(
     check_one_verdict(0.0)
 );
 
-// ── REQ-ENC-037: the band's k against C's rounding and the clamp's change ────────────────────────────────────────
+// ── REQ-ENC-038: the class a clamp moves ───────────────────────────────────────────────────────────────────────────
 
-/// `n` states drawn here (masses on the simplex's interior, positions and momenta on `[−1, 1]²`, so neither from
-/// decode nor from the implementer's fixture), each against a gauge image (rotation, offset and boost on `[−8, 8)²`,
-/// scale `2^[−12, 12]`, either parity): the worst difference, in f64's ε relative to the larger scale, of `L_z` and of
-/// `E` between `C(x)` and `C(g·x)` and between `C(x)` and the decode of its unclamped `z`; and, for `n` collinear states
-/// moving along their line under a random gauge, the true `L_z` is 0: the worst `|L_z|` of `C` relative to its scale,
-/// and the least after encode's clamp, which every such state takes (`β` at the line).
-fn measure_band(n: usize) -> (f64, f64) {
-    let eps = f64::EPSILON;
-    let mut rng = Rng(0x2E80_0037);
-    let simplex = |rng: &mut Rng| {
-        let m: [f64; 3] = std::array::from_fn(|_| rng.uniform(0.05, 1.0));
-        let t: f64 = m.iter().sum();
-        m.map(|v| v / t)
-    };
-    let image = |rng: &mut Rng, x: &Ic<f64>| {
-        gauge(
-            x,
-            [rng.uniform(-8.0, 8.0), rng.uniform(-8.0, 8.0)],
-            [rng.uniform(-8.0, 8.0), rng.uniform(-8.0, 8.0)],
-            rng.uniform(0.0, std::f64::consts::TAU),
-            (2.0_f64.powf(rng.uniform(-12.0, 12.0)), 1.0),
-            rng.next() & 1 == 1,
-        )
-    };
-    let diff = |a: &Classes, b: &Classes| {
-        ((a.lz - b.lz).abs() / a.lz_scale.max(b.lz_scale) / eps)
-            .max((a.e - b.e).abs() / a.e_scale.max(b.e_scale) / eps)
-    };
-    let mut worst = 0.0_f64;
-    for _ in 0..n {
-        let x = Ic {
-            m: simplex(&mut rng),
-            r: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
-            p: std::array::from_fn(|_| [rng.uniform(-1.0, 1.0), rng.uniform(-1.0, 1.0)]),
-        };
-        let g = image(&mut rng, &x);
-        let (ex, eg) = (encode::<Defaults, f64>(&x), encode::<Defaults, f64>(&g));
-        let cx = Classes::of(&ex.canonical.ic);
-        worst = worst.max(diff(&cx, &Classes::of(&eg.canonical.ic)));
-        if ex.report.clamped_controls == 0 && !ex.report.coincident {
-            worst = worst.max(diff(&cx, &Classes::of(&d(ex.z.z))));
-        }
-    }
-    let mut least = f64::INFINITY;
-    for _ in 0..n {
-        let line = |rng: &mut Rng| [rng.uniform(-1.0, 1.0), 0.0];
-        let x = Ic {
-            m: simplex(&mut rng),
-            r: std::array::from_fn(|_| line(&mut rng)),
-            p: std::array::from_fn(|_| line(&mut rng)),
-        };
-        let g = image(&mut rng, &x);
-        let e = encode::<Defaults, f64>(&g);
-        let c = Classes::of(&e.canonical.ic);
-        worst = worst.max(c.lz.abs() / c.lz_scale / eps);
-        assert!(
-            e.report.clamped_controls != 0,
-            "fixture: a collinear state is not clamped"
-        );
-        let after = Classes::of(&d(e.z.z));
-        least = least.min(after.lz.abs() / after.lz_scale / eps);
-    }
-    (worst, least)
+/// `σ`, the default links' logistic (inverse_encode_contract Part 3).
+fn sigma(z: f64) -> f64 {
+    1.0 / (1.0 + (-z).exp())
 }
 
-/// `k` is at least 4× above the measured rounding and at least 4× below the least class change a clamp makes
-/// (§ "The zero class in floating point"; REQ-ENC-037's verify).
-fn check_band_k(k: f64) {
-    let (worst, least) = measure_band(1 << 14);
-    println!("zero_class: C's and decode's rounding {worst:.3e} ε; least clamp change {least:.3e} ε; k = {k:e}");
-    assert!(
-        4.0 * worst <= k,
-        "the rounding, {worst:.3e} ε, is not within k = {k:e} by 4×"
+/// The canonical state of the decoder's parameters (dd_decoder §3.1, §3.2, §3.4; § "The class a clamp moves"): masses
+/// `m` (`Σmᵢ = 1`), `α`, `β` and the Jacobi momenta `q = (p_ρ, p_λ)`, with `a = cos α/√μ_ρ`, `b = sin α/√μ_λ`,
+/// `ρ = (a, 0)`, `λ = b·(cos β, sin β)`, the CoM at the origin and `Σpᵢ = 0`: `p₂ = p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`.
+fn canonical_state(m: [f64; 3], alpha: f64, beta: f64, q: [f64; 4]) -> Ic<f64> {
+    let t: f64 = m.iter().sum();
+    let m = m.map(|v| v / t);
+    let m01 = m[0] + m[1];
+    let (a, b) = (
+        alpha.cos() / (m[0] * m[1] / m01).sqrt(),
+        alpha.sin() / (m[2] * m01).sqrt(),
     );
+    let lam = [b * beta.cos(), b * beta.sin()];
+    let c = [-m[2] * lam[0], -m[2] * lam[1]];
+    let (w0, w1) = (m[0] / m01, m[1] / m01);
+    let p2 = [q[2], q[3]];
+    let p1 = [q[0] - w1 * q[2], q[1] - w1 * q[3]];
+    Ic {
+        m,
+        r: [
+            [c[0] - w1 * a, c[1]],
+            [c[0] + w0 * a, c[1]],
+            [c[0] + lam[0], c[1] + lam[1]],
+        ],
+        p: [[-p1[0] - p2[0], -p1[1] - p2[1]], p1, p2],
+    }
+}
+
+/// `a` and `b` of a canonical state's masses at `α`.
+fn ab(m: [f64; 3], alpha: f64) -> (f64, f64) {
+    let m01 = m[0] + m[1];
+    (
+        alpha.cos() / (m[0] * m[1] / m01).sqrt(),
+        alpha.sin() / (m[2] * m01).sqrt(),
+    )
+}
+
+/// 64 gauge images of `x`: offset, rotation, scale `2^[−4, 4]`, mass unit, parity, and on every odd image a boost on
+/// `[−4, 4)²`, so half are boosted and half not.
+fn images(x: &Ic<f64>, seed: u64) -> Vec<Ic<f64>> {
+    let mut rng = Rng(seed);
+    (0..64)
+        .map(|k| {
+            let shift = [rng.uniform(-4.0, 4.0), rng.uniform(-4.0, 4.0)];
+            let boost = [rng.uniform(-4.0, 4.0), rng.uniform(-4.0, 4.0)];
+            let angle = rng.uniform(0.0, std::f64::consts::TAU);
+            let scale = 2.0_f64.powf(rng.uniform(-4.0, 4.0));
+            let mass = [1.0, 5.0, 0.2][k % 3];
+            let boost = if k % 2 == 1 { boost } else { [0.0; 2] };
+            gauge(x, shift, boost, angle, (scale, mass), k % 4 == 3)
+        })
+        .collect()
+}
+
+/// Every image of `x` is accepted at layer 1 with exactly the controls `want` clamped.
+fn check_accepted(what: &str, x: &Ic<f64>, want: u32) {
+    for (k, g) in images(x, 0x2E80_0038).iter().enumerate() {
+        match exact(&latent(), Exact::Physical(*g)) {
+            Ok(l) => assert_eq!(
+                l.notices.moved.controls, want,
+                "{what}: image {k}'s moved controls are not {want:#b}"
+            ),
+            Err(e) => panic!("{what}: image {k} of 64 is refused: {e:?}"),
+        }
+    }
+}
+
+/// Every image of `x` is rejected at layer 1, naming the controls `want` and the sense of rotation.
+fn check_rejected(what: &str, x: &Ic<f64>, want: u32) {
+    for (k, g) in images(x, 0x2E80_0039).iter().enumerate() {
+        match exact(&latent(), Exact::Physical(*g)) {
+            Err(Rejected {
+                layer: Layer::Hypercube,
+                failed:
+                    Failed::Clamp {
+                        controls,
+                        class: Class::Rotation,
+                    },
+            }) => assert_eq!(controls, want, "{what}: image {k} names the wrong controls"),
+            other => {
+                panic!("{what}: image {k} of 64 is not rejected naming L_z's class: {other:?}")
+            }
+        }
+    }
+}
+
+const Z_BETA: u32 = 1 << 1;
+const Z_Q0: u32 = 1 << 2;
+const Z_Q1: u32 = 1 << 3;
+const Z_MASS: u32 = 0b1100_0000;
+
+/// A collinear start, every momentum along the line, so `L_z = 0`, with `p_λ = (t, 0)`: `β = 0` clamps, and its move
+/// `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)` is nonzero as `p_λ` is, however small, so the clamp changes the sense of rotation
+/// and is rejected, in every gauge (§ "The class a clamp moves", REQ-ENC-038's verify: `t = 10⁻⁴, 10⁻⁶, 10⁻⁸`).
+fn collinear(t: f64) -> Ic<f64> {
+    canonical_state([0.5, 0.3, 0.2], 0.8, 0.0, [0.4, 0.0, t, 0.0])
+}
+
+fn check_beta_rejected(ts: &[f64]) {
+    for &t in ts {
+        let x = collinear(t);
+        assert_eq!(lz(&x), 0.0, "fixture: L_z is not 0");
+        check_rejected(&format!("β's clamp at p_λ = {t:e}"), &x, Z_BETA);
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_qa_beta_rejected() {
+    check_beta_rejected(&[1e-4, 1e-6, 1e-8]);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_qa_beta_rejected,
+    "at p_λ = 0 β's move of L_z is 0, so the clamp stands and the check expecting a rejection must fail",
+    expected = "is not rejected naming L_z's class",
+    check_beta_rejected(&[0.0])
+);
+
+/// The same collinear start at `p_λ = 0`, `p_ρ` along the line, bound (`E < 0`) and unbound (`E > 0`): `β`'s clamp
+/// moves neither `L_z` (`p_λ·ê = 0`) nor `E`'s sign (`ΔE = ΔU`, of order `ε_z²`), so it stands in every gauge,
+/// boosted or not.
+fn check_beta_accepted(t: f64) {
+    for q0 in [0.05, 1.5] {
+        let x = canonical_state([0.5, 0.3, 0.2], 0.8, 0.0, [q0, 0.0, t, 0.0]);
+        assert_eq!(lz(&x), 0.0, "fixture: L_z is not 0");
+        check_accepted(
+            &format!("β's clamp at p_λ = {t:e}, E = {:.3}", energy(&x)),
+            &x,
+            Z_BETA,
+        );
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_qa_beta_accepted() {
     assert!(
-        4.0 * k <= least,
-        "k = {k:e} is not below the least clamp change, {least:.3e} ε, by 4×"
+        energy(&canonical_state(
+            [0.5, 0.3, 0.2],
+            0.8,
+            0.0,
+            [0.05, 0.0, 0.0, 0.0]
+        )) < 0.0
+            && energy(&canonical_state(
+                [0.5, 0.3, 0.2],
+                0.8,
+                0.0,
+                [1.5, 0.0, 0.0, 0.0]
+            )) > 0.0,
+        "fixture: the two starts are not one bound and one unbound"
+    );
+    check_beta_accepted(0.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_qa_beta_accepted,
+    "at p_λ = 10⁻⁶ β's clamp moves L_z off 0, so it is rejected and the check expecting it to stand must fail",
+    expected = "is refused",
+    check_beta_accepted(1e-6)
+);
+
+/// `L_z = 0` with `A = a·q₁ ≠ 0` cancelled by `B = −b·q₂` (`β = π/2`), `q₁ = 2.5` past `q_max`: `q₁`'s clamp moves
+/// `L_z` by `a·Δq ≠ 0`, so it is rejected in every gauge. `balanced` false sets `q₂ = 0`, `L_z = a·q₁ > 0`, which the
+/// clamp keeps positive.
+fn q1_start(balanced: bool) -> Ic<f64> {
+    let (m, alpha) = ([1.0 / 3.0; 3], 1.1);
+    let (a, b) = ab(m, alpha);
+    let q2 = if balanced { a * 2.5 / b } else { 0.0 };
+    canonical_state(m, alpha, std::f64::consts::FRAC_PI_2, [0.3, 2.5, q2, 0.2])
+}
+
+fn check_q1_rejected(balanced: bool) {
+    let x = q1_start(balanced);
+    let (m, alpha) = ([1.0 / 3.0; 3], 1.1);
+    let (a, b) = ab(m, alpha);
+    assert!(
+        a * 2.5 / b < Q_MAX * (1.0 - 2.0 * EPS_Q),
+        "fixture: q₂ is past q_max"
+    );
+    check_rejected(&format!("q₁'s clamp at L_z = {:.1e}", lz(&x)), &x, Z_Q1);
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_qa_q1_rejected() {
+    check_q1_rejected(true);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_qa_q1_rejected,
+    "with q₂ = 0, L_z = a·q₁ > 0 and the clamp keeps it positive, so the check expecting a rejection must fail",
+    expected = "is not rejected naming L_z's class",
+    check_q1_rejected(false)
+);
+
+/// `q₀` past `q_max`: its clamp never moves `L_z` and lowers `E` (`ΔE = Δq·(q₀ + q₀')/2μ_ρ < 0`), here keeping `E > 0`,
+/// at `L_z = 0` and at `L_z ≠ 0`, so it stands in every gauge. `with_q1` also puts `q₁ = 2.5` past `q_max`, balanced
+/// by `q₂` to `L_z = 0`, whose clamp is rejected.
+fn check_q0_accepted(with_q1: bool) {
+    let (m, alpha, beta) = ([1.0 / 3.0; 3], 1.1, std::f64::consts::FRAC_PI_2);
+    let (a, b) = ab(m, alpha);
+    let starts = if with_q1 {
+        vec![[3.0, 2.5, a * 2.5 / b, 0.0]]
+    } else {
+        vec![[3.0, 0.0, 0.0, 0.0], [3.0, 0.4, -0.5, 0.6]]
+    };
+    for q in starts {
+        let x = canonical_state(m, alpha, beta, q);
+        // After the clamp, q₀ = q_max: E stays above 0.
+        let after = canonical_state(m, alpha, beta, [Q_MAX, q[1].min(Q_MAX), q[2], q[3]]);
+        assert!(energy(&after) > 0.0, "fixture: the clamp makes E < 0");
+        check_accepted(&format!("q₀'s clamp at q = {q:?}"), &x, Z_Q0);
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_qa_q0_accepted() {
+    check_q0_accepted(false);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_qa_q0_accepted,
+    "with q₁ also past q_max at L_z = 0, q₁'s clamp moves L_z, so the check expecting the clamp to stand must fail",
+    expected = "is refused",
+    check_q0_accepted(true)
+);
+
+/// Extreme-mass-ratio rest starts, past `μ_max`: at rest `L_z = 0` and `E = U < 0`, and the mass clamp keeps both,
+/// so it stands in every gauge, boosted or not. `moving` gives the third start `L_z = 0` with `A = a·q₁ ≠ 0`
+/// cancelled by `B`, where the clamp changes `μ_ρ` and `μ_λ` by different ratios and so moves `L_z`
+/// (`ΔL_z = A(√(μ_ρ/μ_ρ') − √(μ_λ/μ_λ'))`), which is rejected.
+fn check_mass_accepted(moving: bool) {
+    let starts: [([f64; 3], f64); 3] = [
+        ([1.0, 1e-3, 1e-3], 0.8),
+        ([1e3, 1.0, 1.0], 0.8),
+        ([1.0, 1e-3, 0.5], 1.4),
+    ];
+    for (k, &(m, alpha)) in starts.iter().enumerate() {
+        let t: f64 = m.iter().sum();
+        let (a, b) = ab(m.map(|v| v / t), alpha);
+        let beta = std::f64::consts::FRAC_PI_2;
+        let q = if moving && k == 2 {
+            [0.0, 0.5, a * 0.5 / b, 0.0]
+        } else {
+            [0.0; 4]
+        };
+        let x = canonical_state(m, alpha, beta, q);
+        let e = encode::<Defaults, f64>(&x);
+        let bits = e.report.clamped_controls;
+        assert!(
+            bits & Z_MASS != 0 && bits & !Z_MASS == 0,
+            "fixture: masses {m:?} clamp {bits:#b}, not the masses alone"
+        );
+        check_accepted(&format!("the mass clamp at m = {m:?}, q = {q:?}"), &x, bits);
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_rule_qa_mass_accepted() {
+    check_mass_accepted(false);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_rule_qa_mass_accepted,
+    "a moving L_z = 0 start with A ≠ 0 has its L_z moved by the mass clamp, so the check expecting it to stand must fail",
+    expected = "is refused",
+    check_mass_accepted(true)
+);
+
+/// The rule itself (§ "The zero class in floating point", "The class a clamp moves"): a constant in class 0 before the
+/// clamp takes the class of its move at the move's bound, whatever its decoded value after; any other takes the class
+/// of its value after at that value's bound. `band` is the zero class's `k·ε`.
+fn check_rule(band: f64) {
+    let before = |lz: f64, e: f64| Classes {
+        lz,
+        lz_scale: 1.0,
+        e,
+        e_scale: 1.0,
+    };
+    let moves = |lz: f64, lz_after: f64, e: f64, e_after: f64| Moves {
+        lz,
+        lz_scale: 1e-13,
+        e,
+        e_scale: 1e-13,
+        lz_after,
+        lz_after_scale: 1.0,
+        e_after,
+        e_after_scale: 1.0,
+    };
+    let verdict = |b: Classes, m: Moves| changed(&b, &after(&b, &m, band), band);
+    // L_z in class 0: a move of 10⁻¹² against its bound of 10⁻¹³ is a sign, though the decoded value is in class 0.
+    assert_eq!(
+        verdict(before(1e-20, -1.0), moves(1e-12, 1e-20, 0.0, -1.0)),
+        Some(Class::Rotation),
+        "a move outside its own band is read as rounding"
+    );
+    // A move inside its own band is no change, though the decoded value is outside the band.
+    assert_eq!(
+        verdict(before(1e-20, -1.0), moves(1e-30, 0.5, 0.0, -1.0)),
+        None,
+        "the class after a clamp is read from the decoded value, not the move"
+    );
+    // L_z outside class 0: the value after decides, at its own bound.
+    assert_eq!(
+        verdict(before(0.3, -1.0), moves(-0.5, -0.2, 0.0, -1.0)),
+        Some(Class::Rotation),
+        "L_z's sign flipped by the clamp is no change"
+    );
+    assert_eq!(
+        verdict(before(0.3, -1.0), moves(-0.1, 0.2, 0.0, -1.0)),
+        None,
+        "L_z kept positive by the clamp is a change"
+    );
+    // E in class 0: its move's sign is its class after.
+    assert_eq!(
+        verdict(before(0.3, 1e-20), moves(0.0, 0.3, -1e-12, 1e-20)),
+        Some(Class::Energy),
+        "E's move outside its own band is read as rounding"
     );
 }
 
 #[test]
-fn lookup_validation_ladder_zero_band_measure_qa() {
-    check_band_k(ZERO_CLASS.number());
+fn lookup_validation_ladder_clamp_rule_qa_rule() {
+    check_rule(ZERO_CLASS.number() * f64::EPSILON);
 }
 
 negative_control!(
-    lookup_validation_ladder_zero_band_measure_qa,
-    "a band of 2⁴⁰ ε (2.4e-4 relative) swallows β's clamp of about ε_z = 10⁻⁶ relative",
-    expected = "is not below the least clamp change",
-    check_band_k(2.0_f64.powi(40))
+    lookup_validation_ladder_clamp_rule_qa_rule,
+    "a band of 10³, ten times the move over its bound, swallows the move, so the check that it is a sign must fail",
+    expected = "a move outside its own band is read as rounding",
+    check_rule(1e3)
 );
 
-mod band_too_narrow {
-    use super::*;
-    negative_control!(
-        lookup_validation_ladder_zero_band_measure_qa,
-        "a band of 4 ε does not cover C's rounding of a rounded zero",
-        expected = "is not within k",
-        check_band_k(4.0)
+/// Each clamped control's move against the contract's closed form, evaluated here from the encoded parameters and the
+/// clamp's image `σ(z)` (§ "The class a clamp moves"; dd_decoder §3.2, §3.4), within the zero class's band of the
+/// move's own bound, with its direction: `β` at a collinear start, `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)` and
+/// `ΔE = 2ab·(m₀m₁m₂/M₀₁)(cos β' − cos β)[1/(r₀₂r₀₂'(r₀₂ + r₀₂')) − 1/(r₁₂r₁₂'(r₁₂ + r₁₂'))]`; `q₁`, `ΔL_z = a·Δq`
+/// and `ΔE = Δq(q₁ + q₁')/2μ_ρ < 0`; `q₀`, `ΔL_z` in class 0 and `ΔE = Δq(q₀ + q₀')/2μ_ρ < 0`; a rest start's
+/// masses, `ΔL_z` in class 0 and `E` after equal to `U` at the clamped masses, below 0. `sign` multiplies the
+/// expected `β` move.
+fn check_closed_forms(sign: f64) {
+    let k = ZERO_CLASS.number() * f64::EPSILON;
+    let within = |got: f64, want: f64, bound: f64, what: &str| {
+        assert!(
+            (got - want).abs() <= k * bound,
+            "{what} is {got:e}, not the closed form's {want:e} within k·ε·{bound:e}"
+        );
+    };
+    let moved = |x: &Ic<f64>, want: u32| {
+        let e = encode::<Defaults, f64>(x);
+        assert_eq!(
+            e.report.clamped_controls, want,
+            "fixture: the clamped controls"
+        );
+        let ext = Extents::entered(x, e.canonical.lambda);
+        let mv = moves::<Defaults>(&e, &e.z.z, &ext);
+        (e, mv)
+    };
+    let mu_rho = |m: [f64; 3]| m[0] * m[1] / (m[0] + m[1]);
+    // β at a collinear start, p_λ = (0.3, 0).
+    {
+        let (e, mv) = moved(&collinear(0.3), Z_BETA);
+        let m = e.canonical.ic.m;
+        let (a, b) = ab(m, e.blocks.alpha);
+        let (beta, beta_c) = (e.blocks.beta, std::f64::consts::PI * sigma(e.z.z[1]));
+        let pl = e.blocks.jacobi.p_lambda;
+        let (db, mean) = (beta_c - beta, 0.5 * (beta + beta_c));
+        let along = pl[0] * mean.cos() + pl[1] * mean.sin();
+        let dl = -2.0 * b * (0.5 * db).sin() * along;
+        within(mv.lz, sign * dl, mv.lz_scale, "β's ΔL_z");
+        assert_eq!(
+            mv.lz.signum(),
+            -db.signum() * along.signum(),
+            "β's ΔL_z has the wrong direction"
+        );
+        let m01 = m[0] + m[1];
+        let (w0, w1) = (m[0] / m01, m[1] / m01);
+        let r = |w: f64, c: f64| (b * b + w * w * a * a + 2.0 * w * a * b * c).sqrt();
+        let (r02, r02c) = (r(w1, beta.cos()), r(w1, beta_c.cos()));
+        let (r12, r12c) = (r(-w0, beta.cos()), r(-w0, beta_c.cos()));
+        let dcos = -2.0 * mean.sin() * (0.5 * db).sin();
+        let de = 2.0
+            * a
+            * b
+            * (m[0] * m[1] * m[2] / m01)
+            * dcos
+            * (1.0 / (r02 * r02c * (r02 + r02c)) - 1.0 / (r12 * r12c * (r12 + r12c)));
+        within(mv.e, de, mv.e_scale, "β's ΔE");
+    }
+    // q₁ past q_max at L_z = 0.
+    {
+        let (e, mv) = moved(&q1_start(true), Z_Q1);
+        let m = e.canonical.ic.m;
+        let (a, _) = ab(m, e.blocks.alpha);
+        let q = e.blocks.jacobi.p_rho[1];
+        let qc = Q_MAX * (2.0 * sigma(e.z.z[3]) - 1.0);
+        within(mv.lz, a * (qc - q), mv.lz_scale, "q₁'s ΔL_z");
+        assert!(mv.lz < 0.0, "q₁'s ΔL_z is not −sign(q₁)·a");
+        within(
+            mv.e,
+            (qc - q) * (q + qc) / (2.0 * mu_rho(m)),
+            mv.e_scale,
+            "q₁'s ΔE",
+        );
+        assert!(mv.e < 0.0, "q₁'s ΔE is not below 0");
+    }
+    // q₀ past q_max.
+    {
+        let x = canonical_state([1.0 / 3.0; 3], 1.1, 1.2, [3.0, 0.4, -0.5, 0.6]);
+        let (e, mv) = moved(&x, Z_Q0);
+        let m = e.canonical.ic.m;
+        let q = e.blocks.jacobi.p_rho[0];
+        let qc = Q_MAX * (2.0 * sigma(e.z.z[2]) - 1.0);
+        within(mv.lz, 0.0, mv.lz_scale, "q₀'s ΔL_z");
+        within(
+            mv.e,
+            (qc - q) * (q + qc) / (2.0 * mu_rho(m)),
+            mv.e_scale,
+            "q₀'s ΔE",
+        );
+        assert!(mv.e < 0.0, "q₀'s ΔE is not below 0");
+    }
+    // A rest start's masses.
+    {
+        let x = canonical_state([1.0, 1e-3, 1e-3], 0.8, 1.3, [0.0; 4]);
+        let bits = encode::<Defaults, f64>(&x).report.clamped_controls;
+        let (e, mv) = moved(&x, bits);
+        within(mv.lz, 0.0, mv.lz_scale, "the masses' ΔL_z");
+        let mc = kernel::decode::mass::decode::<Defaults, f64>([e.z.z[6], e.z.z[7]]).m;
+        let (alpha, beta) = (e.blocks.alpha, e.blocks.beta);
+        let after = canonical_state(mc, alpha, beta, [0.0; 4]);
+        within(
+            mv.e_after,
+            energy(&after),
+            mv.e_after_scale,
+            "E after the mass clamp",
+        );
+        assert!(
+            mv.e_after < 0.0,
+            "E after a rest start's mass clamp is not below 0"
+        );
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_clamp_qa_closed_forms() {
+    check_closed_forms(1.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_clamp_qa_closed_forms,
+    "β's move with its sign flipped is not the contract's closed form, so the check must fail",
+    expected = "β's ΔL_z is",
+    check_closed_forms(-1.0)
+);
+
+// ── REQ-ENC-037: the band's k against the rounding, each measurement on its own ───────────────────────────────────
+
+/// `C`'s rounding of `L_z` and `E` against its bound, in units of `ε`, over gauge images of `n` fuzzed states (offset
+/// and boost on `[−8, 8)²`, any rotation, scale `2^[−12, 12]`, either parity): two images of one state are one
+/// physical state, so `|v₁ − v₂| ≤ ρ·ε·(S₁ + S₂)` where `ρ` bounds each one's rounding over its bound, and the worst
+/// `|v₁ − v₂|/(ε(S₁ + S₂))` is a measurement of `ρ`; and for `n` collinear states moving along their line, whose `L_z`
+/// is 0 exactly, `|L_z|/(ε·S_{L_z})` of one image. `canonical_only` reads the bounds at `R = P = 0`, the canonical
+/// state's alone.
+fn measure_gauge(n: usize, canonical_only: bool) -> f64 {
+    let eps = f64::EPSILON;
+    let mut rng = Rng(0x2E80_0037);
+    let bounds = |g: &Ic<f64>, c: &kernel::encode::Encoded<f64>| {
+        let ext = if canonical_only {
+            (0.0, 0.0)
+        } else {
+            contract_extents(g, c.canonical.lambda)
+        };
+        contract_bounds(&c.canonical.ic, ext)
+    };
+    let ratio = |d: f64, s: f64| if d == 0.0 { 0.0 } else { d / (eps * s) };
+    let mut worst = 0.0_f64;
+    for _ in 0..n {
+        let x = random_state(&mut rng);
+        let (g1, g2) = (
+            random_image(&mut rng, &x, 8.0, 12.0),
+            random_image(&mut rng, &x, 8.0, 12.0),
+        );
+        let (e1, e2) = (encode::<Defaults, f64>(&g1), encode::<Defaults, f64>(&g2));
+        let (c1, c2) = (Classes::of(&e1.canonical.ic), Classes::of(&e2.canonical.ic));
+        let (s1, s2) = (bounds(&g1, &e1), bounds(&g2, &e2));
+        worst = worst
+            .max(ratio((c1.lz - c2.lz).abs(), s1.0 + s2.0))
+            .max(ratio((c1.e - c2.e).abs(), s1.1 + s2.1));
+    }
+    for _ in 0..n {
+        let mut x = random_state(&mut rng);
+        x.r = x.r.map(|v| [v[0], 0.0]);
+        x.p = x.p.map(|v| [v[0], 0.0]);
+        let g = random_image(&mut rng, &x, 8.0, 12.0);
+        let e = encode::<Defaults, f64>(&g);
+        let c = Classes::of(&e.canonical.ic);
+        worst = worst.max(ratio(c.lz.abs(), bounds(&g, &e).0));
+    }
+    worst
+}
+
+/// `k` is at least 4× above `C`'s measured rounding against its bound (REQ-ENC-037's first measurement).
+fn check_gauge_k(k: f64, canonical_only: bool) {
+    let worst = measure_gauge(1 << 13, canonical_only);
+    println!("zero_class: C's rounding {worst:.3e} ε of its bound; k = {k:e}");
+    assert!(
+        4.0 * worst <= k,
+        "C's rounding, {worst:.3e} ε of its bound, is not within k = {k:e} by 4×"
     );
 }
+
+#[test]
+fn lookup_validation_ladder_zero_band_measure_qa_gauge() {
+    check_gauge_k(ZERO_CLASS.number(), false);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_measure_qa_gauge,
+    "the canonical state's bound alone misses the entry's translation and boost, so C's rounding exceeds it",
+    expected = "is not within k",
+    check_gauge_k(ZERO_CLASS.number(), true)
+);
+
+/// A `z` past its clamp: controls on `[−1.5, 1.5]`, one or two of them pushed past the clamp (`|z| ∈ [16, 22]` for
+/// `α`, `β` and the momenta, `[8, 12]` for the masses), decoded.
+fn clamped_state(rng: &mut Rng) -> Ic<f64> {
+    let mut z: [f64; 8] = std::array::from_fn(|_| rng.uniform(-1.5, 1.5));
+    for _ in 0..1 + (rng.next() & 1) {
+        let k = (rng.next() % 8) as usize;
+        let sign = if rng.next() & 1 == 1 { 1.0 } else { -1.0 };
+        z[k] = sign
+            * if k < 6 {
+                rng.uniform(16.0, 22.0)
+            } else {
+                rng.uniform(8.0, 12.0)
+            };
+    }
+    d(z)
+}
+
+/// The moves' and the values after them, their rounding against their bounds, in units of `ε`, over two gauge images
+/// each of `n` clamped states (offset and boost on `[−4, 4)²`, scale `2^[−4, 4]`, parity kept), the pair taken where
+/// both images clamp the same controls under the same mirror decision, so that they are one canonical state and one
+/// clamp (at the `α` poles `λ̃_y` is rounding, and `C` may mirror one image and not the other): `|v₁ − v₂|/(ε(s₁ + s₂))` for
+/// `ΔL_z`, `ΔE`, and `L_z` and `E` after; and for moves 0 in exact arithmetic (`β` at a collinear start with
+/// `p_λ = 0`, `q₀`'s `ΔL_z`), `|Δ|/(ε·s)` of one image. `by_difference` replaces each move by the difference of the two
+/// rounded values, after (the decode of the clamped `z`) less before (`C(x)`), the form the contract forbids.
+fn measure_moves(n: usize, by_difference: bool) -> (f64, usize) {
+    let eps = f64::EPSILON;
+    let mut rng = Rng(0x2E80_003A);
+    let ratio = |d: f64, s: f64| if d == 0.0 { 0.0 } else { d / (eps * s) };
+    let of = |g: &Ic<f64>| {
+        let e = encode::<Defaults, f64>(g);
+        let mut mv = moves::<Defaults>(&e, &e.z.z, &Extents::entered(g, e.canonical.lambda));
+        if by_difference {
+            let (b, a) = (Classes::of(&e.canonical.ic), Classes::of(&d(e.z.z)));
+            mv.lz = a.lz - b.lz;
+            mv.e = a.e - b.e;
+        }
+        ((e.report.clamped_controls, e.canonical.mirrored), mv)
+    };
+    let mut worst = 0.0_f64;
+    let mut pairs = 0;
+    for _ in 0..n {
+        let x = clamped_state(&mut rng);
+        let (g1, g2) = (
+            proper_image(&mut rng, &x, 4.0, 4.0),
+            proper_image(&mut rng, &x, 4.0, 4.0),
+        );
+        let ((b1, m1), (b2, m2)) = (of(&g1), of(&g2));
+        // Near the α poles β is undefined, and `C`'s mirror decision and the clamped controls follow the gauge: the
+        // two canonical states are then mirror images, each clamped toward the same `β` edge, so not one clamp.
+        if b1 != b2 || b1.0 == 0 {
+            continue;
+        }
+        pairs += 1;
+        worst = worst
+            .max(ratio((m1.lz - m2.lz).abs(), m1.lz_scale + m2.lz_scale))
+            .max(ratio((m1.e - m2.e).abs(), m1.e_scale + m2.e_scale))
+            .max(ratio(
+                (m1.lz_after - m2.lz_after).abs(),
+                m1.lz_after_scale + m2.lz_after_scale,
+            ))
+            .max(ratio(
+                (m1.e_after - m2.e_after).abs(),
+                m1.e_after_scale + m2.e_after_scale,
+            ));
+    }
+    for _ in 0..n / 4 {
+        let m = std::array::from_fn(|_| rng.uniform(0.1, 1.0));
+        let alpha = rng.uniform(0.3, 1.3);
+        let at_line = canonical_state(m, alpha, 0.0, [rng.uniform(-1.0, 1.0), 0.0, 0.0, 0.0]);
+        let q0 = canonical_state(
+            m,
+            alpha,
+            rng.uniform(0.3, 2.8),
+            [
+                3.0,
+                rng.uniform(-1.0, 1.0),
+                rng.uniform(-1.0, 1.0),
+                rng.uniform(-1.0, 1.0),
+            ],
+        );
+        for x in [at_line, q0] {
+            let (_, mv) = of(&random_image(&mut rng, &x, 4.0, 4.0));
+            worst = worst.max(ratio(mv.lz.abs(), mv.lz_scale));
+        }
+    }
+    (worst, pairs)
+}
+
+/// `k` is at least 4× above the moves' and after-values' measured rounding against their bounds (REQ-ENC-037's
+/// second measurement).
+fn check_moves_k(k: f64, by_difference: bool) {
+    let n = 1 << 12;
+    let (worst, pairs) = measure_moves(n, by_difference);
+    println!("zero_class: the moves' rounding {worst:.3e} ε of their bound over {pairs} pairs; k = {k:e}");
+    assert!(
+        pairs >= n / 2,
+        "fixture: only {pairs} of {n} pairs are one clamp"
+    );
+    assert!(
+        4.0 * worst <= k,
+        "the moves' rounding, {worst:.3e} ε of their bound, is not within k = {k:e} by 4×"
+    );
+}
+
+#[test]
+fn lookup_validation_ladder_zero_band_measure_qa_moves() {
+    check_moves_k(ZERO_CLASS.number(), false);
+}
+
+negative_control!(
+    lookup_validation_ladder_zero_band_measure_qa_moves,
+    "a move as the difference of two rounded values carries their rounding, far above the move's own bound",
+    expected = "is not within k",
+    check_moves_k(ZERO_CLASS.number(), true)
+);
