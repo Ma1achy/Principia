@@ -3203,8 +3203,16 @@
   title: "Saving an IC: the `principia.ic/1` record, copy, paste, Save IC… and Open IC…, the twin on reopening, marks in `Lines`, and the trajectory CSV with its bodies labelled 1-based (R-586, R-587)"
   depends_on: [TASK-M8-17, TASK-M8-83, TASK-M8-67, TASK-M8-58, TASK-M8-53]
   needs: [REQ-GUI-188]
-  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396]
+  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396, REQ-TOOL-215]
   reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-85
+  milestone: M8
+  title: "The WebM carrier in the browser build: the `PRINCIPIA_SPEC` tag on the file, tested by the Playwright suite (R-584)"
+  depends_on: [TASK-M8-81, TASK-M8-33, TASK-M8-40]
+  needs: []
+  requirements: [REQ-TOOL-214]
+  reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

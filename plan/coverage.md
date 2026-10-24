@@ -18,13 +18,13 @@
 | RENDER | 119 |
 | COL | 160 |
 | GUI | 371 |
-| TOOL | 211 |
+| TOOL | 213 |
 | VAL | 198 |
 | PERF | 112 |
 | SYS | 90 |
-| **total** | **1872** |
+| **total** | **1874** |
 
-Of these: 159 calibration, 160 definition, 1553 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 160 calibration, 160 definition, 1554 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -38,16 +38,16 @@ Of these: 159 calibration, 160 definition, 1553 obligation. Retired (kept for th
 | M5 | 179 |
 | M6 | 223 |
 | M7 | 258 |
-| M8 | 445 |
+| M8 | 447 |
 
 ## Sections
 
-1552 sections in 60 files: 1241 yield at least one requirement; 311 yield none and are listed below with the reason.
+1552 sections in 60 files: 1242 yield at least one requirement; 310 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 209 |
+| informative only | 208 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 53 |
@@ -574,7 +574,6 @@ Of these: 159 calibration, 160 definition, 1553 obligation. Retired (kept for th
 | 3.5 What does not change | informative only | the reel's film (R-578) and a single figure's embedding defaults (embedding §9) are unchanged; no new obligation |
 | 4. Fit with rulings | informative only | how R-584 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
 | 5. Decided | informative only | the human's words, quoted verbatim in R-584; the obligations they settle are in §3 |
-| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-TOOL-206, REQ-TOOL-207, REQ-TOOL-083, REQ-TOOL-106) |
 
 ### `docs/gui/principia_render_gui_spec.md`
 
