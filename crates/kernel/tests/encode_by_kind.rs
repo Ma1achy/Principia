@@ -50,7 +50,9 @@ use kernel::encode::by_kind::{
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal, Selection};
 use kernel::payload::PayloadReal;
-use kernel::shape::{shape, shape_vec};
+use kernel::shape::shape;
+#[cfg(feature = "controls")]
+use kernel::shape::shape_vec;
 use validation::decode_f32_eps::SplitMix;
 use validation::gauge::{uniform, Gauge};
 use validation::negative_control;
