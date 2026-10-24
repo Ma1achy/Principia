@@ -2106,3 +2106,113 @@ negative_control!(
     expected = "is not within k",
     check_moves_k(ZERO_CLASS.number(), true)
 );
+
+// ── REQ-ENC-038: the α = 0 pole (R-591) ─────────────────────────────────────────────────────────────────────────────
+
+/// Masses for the pole starts: unequal (so `U`'s gradient in `λ` at the pole is not 0) and equal.
+const POLE_MASSES: [[f64; 3]; 2] = [[0.5, 0.3, 0.2], [1.0 / 3.0; 3]];
+
+/// A start at the `α = 0` pole (`b = 0`, body 2 at the inner pair's centre of mass, `β` undefined; `canonical_state`
+/// is given `β = 0.7`, which `b = 0` erases), the inner pair breathing along `ρ` with `q₀` and `q₁ = 0`, so `A = 0`,
+/// `λ × p_λ = 0` and `L_z = 0`, and `p_λ = t·(cos φ, sin φ)`.
+fn pole_start(m: [f64; 3], q0: f64, t: f64, phi: f64) -> Ic<f64> {
+    canonical_state(m, 0.0, 0.7, [q0, 0.0, t * phi.cos(), t * phi.sin()])
+}
+
+/// The verdict on `x` and its 64 gauge images, plus `x` itself (on `λ̃ = 0` exactly): `Ok(())` where lookup locks it
+/// with `α` among the clamped controls, `Err` naming what it gave otherwise.
+fn pole_verdicts(x: &Ic<f64>) -> Vec<Result<(), String>> {
+    let mut all = vec![*x];
+    all.extend(images(x, 0x2E80_0591));
+    all.iter()
+        .map(|g| match exact(&latent(), Exact::Physical(*g)) {
+            Ok(l) if l.notices.moved.controls & 1 == 1 => Ok(()),
+            other => Err(format!("{other:?}")),
+        })
+        .collect()
+}
+
+/// R-591: at the pole a clamp of `α` with `p_λ ≠ 0` is rejected in every gauge, naming `L_z`'s class and `α` among the
+/// controls, whatever `p_λ`'s direction (along `ρ`, across it, between) and however small above rounding, bound or
+/// unbound, equal masses or not.
+fn check_pole_rejected(t: f64) {
+    for m in POLE_MASSES {
+        for q0 in [0.1, 1.5] {
+            for phi in [0.0, std::f64::consts::FRAC_PI_2, 2.3] {
+                let x = pole_start(m, q0, t, phi);
+                assert!(lz(&x).abs() <= 1e-15, "fixture: L_z is not 0");
+                let mut all = vec![x];
+                all.extend(images(&x, 0x2E80_0592));
+                for (k, g) in all.iter().enumerate() {
+                    match exact(&latent(), Exact::Physical(*g)) {
+                        Err(Rejected {
+                            layer: Layer::Hypercube,
+                            failed:
+                                Failed::Clamp {
+                                    controls,
+                                    class: Class::Rotation,
+                                },
+                        }) => assert_eq!(
+                            controls & 1,
+                            1,
+                            "pole, m = {m:?}, p_λ = {t:e}: image {k} does not name α"
+                        ),
+                        other => panic!(
+                            "pole, m = {m:?}, q₀ = {q0}, p_λ = {t:e} at φ = {phi}: image {k} is not rejected \
+                             naming L_z's class: {other:?}"
+                        ),
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_pole_qa_rejected() {
+    check_pole_rejected(1e-2);
+    check_pole_rejected(1e-9);
+}
+
+negative_control!(
+    lookup_validation_ladder_pole_qa_rejected,
+    "with p_λ = 0 the pole's clamp moves L_z by nothing, so it stands and the check expecting it rejected must fail",
+    expected = "is not rejected",
+    check_pole_rejected(0.0)
+);
+
+/// R-591: at the pole a clamp of `α` with `p_λ = 0` is accepted in every gauge, boosts included (where `p_λ` is 0
+/// only within its rounding), bound or unbound, the inner pair breathing either way; one physical state, one verdict.
+fn check_pole_accepted(t: f64) {
+    for m in POLE_MASSES {
+        for q0 in [0.1, -0.1, 1.5] {
+            let x = pole_start(m, q0, t, 0.4);
+            for (k, v) in pole_verdicts(&x).iter().enumerate() {
+                if let Err(e) = v {
+                    panic!("pole, m = {m:?}, q₀ = {q0}, p_λ = {t:e}: image {k} is refused: {e}");
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_pole_qa_accepted() {
+    let (bound, unbound) = (
+        pole_start(POLE_MASSES[0], 0.1, 0.0, 0.0),
+        pole_start(POLE_MASSES[0], 1.5, 0.0, 0.0),
+    );
+    assert!(
+        energy(&bound) < 0.0 && energy(&unbound) > 0.0,
+        "fixture: the starts are not one bound and one unbound"
+    );
+    check_pole_accepted(0.0);
+}
+
+negative_control!(
+    lookup_validation_ladder_pole_qa_accepted,
+    "at p_λ = 10⁻⁶ the worst case over β moves L_z off 0, so the clamp is rejected and the check expecting it to stand \
+     must fail",
+    expected = "is refused",
+    check_pole_accepted(1e-6)
+);
