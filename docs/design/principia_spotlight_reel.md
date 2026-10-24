@@ -1,0 +1,282 @@
+# Principia: the spotlight reel — a film that passes for Explore
+
+*Adopted by R-578 (gap sweep PR 2b, 21 Oct 2026), from the human's designs `reel_click.md` and the reel half of
+`keyframes_reel.md` (`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/`), their "Decided" sections his words.
+The specs it plays are made in the Sequence window (`principia_sequence.md`, R-577). Queued from it: RQ-561 (a takeover
+inside a segment the film interpolates and live playback cuts).*
+
+**Scope (the human, 21 Oct 2026).** The reel is a feature of the **v2 browser product**, not of the native app or its
+first browser port: "We could build all the machinery for it and test it natively but yeah it can be kinda rough around
+the edges ig design wise." So the machinery is built and tested natively, and the native presentation is rough
+(R-571: the reel's machinery native, its presentation v2 web's).
+
+## 1. What exists
+
+The reel is a pre-rendered film of curated views, made by the blocking exporter from a list of saved specs. It covers
+cold start, when nothing can be computed live yet, and is the gallery's ambient mode. "Clicking through loads the spec
+live — the reel is a menu of shareable objects, not just a film" (`principia_export_animation_contract.md` Part 7;
+REQ-TOOL-084). The caching contract names its handoff: a video frame has nothing behind it to live-render, so the
+snapshot backdrop applies (`principia_caching_contract.md` Part 5, "Fallback — the snapshot"). Nothing says what the
+reel looks like, how a frame maps back to its spec, or what a click loads.
+
+## 2. The gap
+
+No manifest from film time to spec, no rule for what a click loads or what happens after it, no handover from the film
+to the live render, and no native way to build or try any of it.
+
+## 3. The design
+
+**The reel plays inside the Explore view and looks like Explore running.** The human: "I feel like the showreel should
+almost fake being the explore view." **Any interaction takes over live at that exact frame and keeps playing.**
+
+### 3.1 The reel builder and its manifest
+
+- **The curated list** is `reel/specs/NN_name.principia-seq.json`, each a spec saved from the Sequence window
+  (`principia_sequence.md` §3.5), played in `NN` order.
+- **The film is not computed in the app.** `cargo xtask reel` renders it once per release, offline, through the
+  blocking exporter (Part 4), each spec at its own fps, at the size and quality tier given to the command and recorded
+  in the manifest. The app only plays it; the engine starts computing at the takeover.
+- **The film's format natively is GIF**, encoded and decoded by the one `gif` crate (R-155; R-131 lists GIF among the
+  native encoders), labelled as a preview. The draft's open question 3, (i), decided per R-369: it needs no new decoder,
+  and a click loads the exact view whatever the film's colours. Which format v2 web ships is v2 web's.
+- **The manifest** (`manifest.json`, beside the film) gives, for each segment, its spec's file name and hash and its
+  first and last film frame; and for **every film frame**, its segment, its frame within the spec, its wall time within
+  the spec, and the hash of the `SimConfig` and `RenderState` the exporter rendered it from, in their canonical
+  serialisation (R-309). The takeover maps a frame by its index, never by a time read back from the film's delays.
+  A **dissolve frame** is two renders composited (export contract Part 3), so its entry carries both states' hashes,
+  the blend weight, and which of the two live playback shows at that frame (the outgoing state before the segment's
+  second keyframe's frame, the incoming from it, R-520 F3's cut) (fix round 6 of PR #286, physics review 5631678451,
+  P4 (a); applied per R-369).
+- **Self-contained frames and seek offsets** (fix round 12 of PR #286, perf review 5632950982, P4; applied per R-369). The builder writes every film frame
+  self-contained, with no disposal dependency on an earlier frame, and the manifest records each segment's first
+  frame's byte offset in the film, so playing from a later segment seeks there and never decodes from frame 0.
+- **The build refuses** a spec whose link entry hashes do not match the build's (R-521; "never substitute",
+  `principia_dd_image_embedding.md` §6): `cargo xtask reel` stops before rendering anything, exits non-zero, and names
+  the spec and the link. The reel is built per release, so the live view can always recreate what the film showed.
+- The specs are checked in; the film and the manifest are build outputs, shipped with the release and not checked in
+  (applied per R-369). A build with no reel says so in the Spotlights window (§3.4).
+
+### 3.2 Playing the film
+
+- The film is drawn in the Explore canvas, through the compositor's snapshot layer (caching Part 5), frame by frame at
+  its own delays, looping until it is stopped or taken over. While it plays the live view beneath is paused and hidden,
+  and nothing is integrated or dispatched for the film: no `SetField` is sent, so stopping it leaves the view exactly as
+  it was.
+- **Decoding is streamed, bounded and off the main thread** (fix round 12 of PR #286, perf review 5632950982, P4; applied per R-369). The film is decoded
+  as it plays, off the main thread (caching Part 6, "the main thread never waits", and Part 6a), into a **bounded ring
+  of decoded frames** a few frames ahead of the displayed one; the film is never decoded whole, so its memory is the
+  ring's, whatever its length. The ring's size is a calibration requirement (R-71, REQ-PERF-111), provisional until
+  M8: frame size and fps give its bytes per frame but not how many frames the decode must run ahead, so no value is
+  proposed here. Play reel from a segment seeks to that segment's offset (§3.1).
+- **When the ring runs dry** (fix round 15 of PR #286, gui review 5634549430, G4; applied per R-369). A film is a record, so no frame is ever dropped: the
+  displayed frame is held, and every film frame is shown in order, so on a machine slower than the calibration the
+  film slows but never skips and is never blank; the takeover's "frame i" stays the displayed frame.
+- **The gap before the first frame** (fix round 16 of PR #286, gui review 5634604753, G6; applied per R-369). From
+  Play reel the film counts as playing for the Spotlights window: Stop is enabled and has the focus (§3.3, §3.4), and
+  Stop, or Enter on it, cancels the pending film, the view and the undo depth as before. Until the selected segment's
+  first frame is decoded and shown, the canvas is the live view under its normal rules: no preview badge, and none of
+  the holds of "The rest of Explore while the film plays" below. Any interaction there that would take over a playing
+  film (§3.3), and an undo or redo, cancels the pending film, as Stop does, and then acts on the live view as usual;
+  there is no takeover, since no film frame has been displayed, and no film frame is displayed afterwards. The hover
+  is not such an interaction. Otherwise the film, with its preview badge, replaces the live view from its first
+  frame. *Was:* "Between Play reel and the first decoded frame of the selected segment, the live view stays as it is,
+  and the film, with its preview badge, replaces it from that frame."
+- **The rest of Explore while the film plays** (fix round 1 of PR #286, gui review 5631060675, F4 (b); applied per
+  R-369). The hover is held off: the GUI sends no `RenderField::Hover` while the film plays, and the hover trace and
+  label are not drawn. The decoder badge is not shown, the header strip holding only the preview badge and the
+  provenance; the Legend shows no keys, only the line "Film: the legend returns when live"; the top bar's status and
+  Time's readout show "—" for `t`; the Inspector and Trajectory panel show nothing new. Undo and redo from outside the
+  Figure scope (the top bar's undo, Ctrl+Z with the focus in a window) do nothing; Ctrl+Z with the focus in the Figure
+  is a key, so it takes over (§3.3; *was:* "Undo and redo (Ctrl+Z, the top bar) are disabled.", fix round 2 of PR #286, gui review 5631227164, G3; applied per
+  R-369). Every control of the Manifold view, the Compass, Time (the scrubber and the transport), the
+  Trajectory panel and the top bar's Run… and Overlays ▾ / Lines ▾ that would send a `SetField` takes over at the
+  displayed frame when touched, and the touch is consumed (§3.3). Windows that send nothing (Profiler, the console,
+  Spotlights itself) work as usual.
+- **The one tell.** Until the handover a small, quiet badge reads **preview**, so a screenshot of the film is never
+  taken for a computed result. It sits in the figure's header strip, as every badge that says what the figure is does
+  (R-523), never over the plot. Beside it the header strip shows the segment's provenance, cycling with the segments:
+  chart, horizon, integrator, build and date.
+
+### 3.3 The takeover
+
+There is no takeover in a result view: Play reel is disabled there, and opening a result stops the film first (§3.4;
+fix round 9 of PR #286, gui review 5631987230, G1).
+
+- **Any interaction takes over**: a pointer press, drag or scroll on the figure, any key with the focus in the Figure
+  scope (a modifier pressed alone excepted), or a touch on any control that would send a `SetField` (§3.2). The
+  interaction is consumed by the takeover; it does not also pan, zoom, lock or set the control (applied per R-369).
+  A takeover is always at a displayed film frame: before the film's first frame is shown, an interaction cancels the
+  pending film and acts on the live view instead (§3.2, "The gap before the first frame"; fix round 16 of PR #286,
+  gui review 5634604753, G6; applied per R-369).
+- **By keyboard** (fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369, keeping every drawn control reachable by §G3's keys, R-450 A7,
+  REQ-GUI-190). Play reel leaves the focus in the Spotlights window, on **Stop** (the ring shown if Play reel was
+  pressed from the keyboard, R-460), so Enter there stops the film and the window's other controls stay reachable by
+  §G3's keys. Esc from the window's top level returns the focus to the top bar's Windows menu, which opened it, and **leaves
+  Spotlights open**, as Esc leaves the docked Sequence open (§G9a); only the focus's return to its opener is the
+  console's (§G12), not its closing. **Windows › Spotlights…** on an open Spotlights gives it the focus again, on **Stop**
+  while the film plays and on its header bar scope otherwise, the keyboard's way back (fix round 4 of PR #286, gui
+  review 5631472413, J1; applied per R-369; *was* (fix round 3): "Esc from the window's top level returns the focus to
+  what opened it, the top bar's Windows menu, as the console's does (§G12);"); from the top bar every big scope is reached by Tab and Shift+Tab as usual (Shift+Tab reaches the
+  footer and the console, and the top bar holds Profiler…), landing on a scope never taking over. With the focus in the
+  Figure scope, reached by Tab or a click, **every key takes over**, Tab, Esc, `?` and Ctrl+Z included, as the human's
+  "a key" says; touching a control that would send a `SetField` takes over (§3.2). A key there, then one Ctrl+Z, also
+  returns the view to the one before the reel, but it is not the keyboard's Stop: it starts the engine and leaves a redo
+  entry. *Was* (fix round 2): "Play reel gives the focus to the Figure scope, keyboard navigation shown as §G3 has it (on
+  if Play reel was pressed from the keyboard, off from the mouse, R-460), so the next key takes over. Every key there
+  takes over, Tab, Esc, `?` and Ctrl+Z included, as the human's "a key" says; no key is excepted. **The keyboard's way
+  out of the film is therefore a key, which takes over, then one Ctrl+Z, which undoes the takeover's entry and returns
+  the view to the one before the reel, as Stop does.** Stop itself is the mouse's." (fix round 2 of PR #286, gui review
+  5631227164, G3), itself replacing "Stop in the Spotlights window is reached by mouse, or by Windows › Spotlights…,
+  which gives the open window the focus" (fix round 1 of PR #286, gui review 5631060675, F4 (a)).
+- **At that exact frame.** The displayed frame's index gives, through the manifest, its segment, its spec and its frame
+  within the spec. The app recomputes that frame's state from the spec as the exporter did (Part 3's interpolation,
+  TASK-M8-31) and loads it live: chart, view, stain, links, playhead, every field of `SimConfig` and `RenderState`,
+  bitwise the exporter's. Import is the identity (R-484). If the recomputed state's hash is not the manifest's, live and
+  film disagree, which is a bug: it is logged as an error (source `app`) naming the segment and the frame, and the
+  takeover goes ahead with the recomputed state.
+- **It keeps playing** whatever the clip was doing, now live (the human: "Yeah keep playing"): the spec is loaded into
+  the live sequence player at that frame's wall time, so any keyframed motion it was in the middle of continues live.
+  Unlike the preview (`principia_sequence.md` §3.6), this is the user's own view: the player sends each frame's state as
+  `SetField`s **coalesced into the takeover's one history entry**, as a drag's edits are sent under one key (R-96,
+  R-466 K10), so every edit is in the history (R-69) and one undo still returns the view to what it was before the
+  reel. While the player runs it owns the playhead by each keyframe's policy and the GUI clock's advance (R-101) is
+  held. The entry closes when the player stops.
+- **The player stops** at the spec's end, at its last keyframe, after which the transport plays on to the horizon by
+  the clock (R-101) if that keyframe's playhead policy is advance, and is paused otherwise; or at the first user edit
+  (a `SetField` that enters the history: a pan, a slider, Home, a stain edit), which stops the player, closes the
+  takeover's entry at the frame then shown, and then applies as its own entry, never overwritten by the player; or at
+  undo, which stops it and undoes the takeover's entry, or redo. A no-history `SetField`, the hover's, does not stop it:
+  the hover works as in any live view. (*Was:* "(any `SetField` the user's input sends, a pan, a slider, Home, a stain
+  edit)", fix round 2 of PR #286, gui review 5631227164, G1; applied per R-369.) *Was:* "the transport plays, and the spec is loaded into the
+  live sequence player (`principia_sequence.md` §3.6) at that frame's wall time, so any keyframed motion it was in the
+  middle of continues live. That playback is playback: its frames enter no undo (R-101). At the spec's end the player
+  stops at its last keyframe, and the transport plays on to the horizon if that keyframe's playhead policy is advance,
+  and is paused otherwise (applied per R-369)." (fix round 1 of PR #286, gui review 5631060675, F2; applied per R-369:
+  R-101 covers only the clock's playhead.)
+- **Inside a segment the film interpolates and live playback cuts** (link parameters, R-520, and dissolves), live
+  cannot continue what the film showed. Which way that goes is RQ-561. Meanwhile, its option (a), made determinate (fix
+  round 6 of PR #286, physics review 5631678451, P4; applied per R-369, an interim that decides neither of RQ-561's
+  questions):
+  - **In a dissolve** the takeover loads the state live playback shows at that frame, the one the manifest entry names
+    (§3.1): the outgoing state before the segment's second keyframe's frame, the incoming from it. Its hash is compared
+    with that state's; the composite is not a state, and its difference from the film frame is not a disagreement.
+  - **In a link-parameter ease** the takeover loads the frame's eased value (say `μ_max` = 4.6 between 5 and 4), as
+    above. The live player then **holds that value** until the segment's second keyframe's frame and cuts there to the
+    keyframe's value: it never interpolates (R-520 F3) and never jumps back to the first keyframe's value, which would
+    re-integrate twice. Whether this hold, or R-520 F3's frames at the first keyframe's value, is what live does is
+    RQ-561's second question.
+  - The difference after the takeover frame is expected and not reported as a disagreement.
+  *Was:* "Meanwhile, its option (a): the takeover frame is exact, as above, and live playback continues under R-520 F3,
+  cutting at the segment's second keyframe; the difference after the takeover frame is expected and not reported as a
+  disagreement."
+- **No blank, no jump.** The film frame stays as the backdrop, the snapshot of caching Part 5 (blurred, under its
+  coherence discipline), until the live identity's baseline cover is complete (caching Part 4); then it and the
+  preview badge go. **"Complete" is the cover of the identity being shown** (fix round 12 of PR #286, perf review 5632950982, P5; applied per R-369):
+  while the live player changes identity every frame (a (b) segment), no identity's cover completes, so the backdrop
+  stays until playback holds or ends (the player stops, or reaches a hold) and the identity then shown has its
+  baseline cover complete; the view is never blank meanwhile. From the interaction to then, every displayed frame is
+  the film backdrop or a live render over it, never the canvas background on a pixel the chart classifies as a system
+  (a pixel that is not a system draws it, R-467; caching Part 4), as REQ-GUI-384 says (fix round 16 of PR #286, gui
+  review 5634604753, G7; applied per R-369), a `decode_failed` sample excepted: R-511 draws it blank, as a pixel that
+  is not a system draws it (fix round 23 of PR #286, gui review 5635273226, G1; applied per R-369). *Was:* "From the interaction to then, every displayed frame is the film
+  backdrop or a live render over it, never the canvas background."
+- **Nothing is lost.** The takeover, with the live motion that follows it until the player stops, is one undoable
+  history entry: one undo returns the view to what it was before the reel played. (At cold start there is no previous view; cold start is v2 web's, §3.5.)
+
+### 3.4 The native presentation: the Spotlights window
+
+A plain window, no polish. **Spotlights** opens from Windows › Spotlights…, a window under §G5's rules (R-461). It lists
+the reel's segments in order, each with its provenance (chart, horizon, integrator, build, date), and offers **Play
+reel** (from the selected segment's first frame; the focus then on Stop, §3.3), **Stop**, and
+**Open the sequence**, which
+loads the selected segment's whole spec into the Sequence window (`principia_sequence.md`). With no reel in the build
+it reads "No reel in this build" and Play reel is disabled. **The selection** (fix round 5 of PR #286, gui review
+5631560484, K1; applied per R-369): when the window opens with a reel, the first segment is selected, so a segment is
+always selected while there is a reel; ↑ and ↓ move the selection one segment and Home and End go to the first and the
+last (below); with no reel there is no selection, and Play reel and Open the sequence are disabled. *Was:* "**Play
+reel** (from the selected segment's first frame, or the first segment's; the focus then on Stop, §3.3)".
+**In a result view** (fix round 9 of PR #286, gui review 5631987230, G1; applied per R-369, as `principia_results.md`
+§3.4 disables sim-key edits there "with the reason"): while the view source is `Result`, Play reel is disabled, with the
+reason "result view — switch to Live" shown in the window beside it; the way back is the existing view-source request
+(*Explore from here*, or closing the result), never an implicit switch. Opening a result while the film plays stops the
+film first, exactly as Stop does, so no takeover happens in a result view. Open the sequence, which sends nothing,
+stays enabled.
+
+**Its keyboard order (§G3; fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369).** Spotlights has
+two sections, top to bottom, as the console has (R-450): the **header bar** (Play reel, Stop, Open the sequence and the
+close button ×, in that visual order) and the **segment list**. Opened, it lands on the header bar scope, its first
+section (§G3). Tab and Shift+Tab, and ↑ and ↓ on a section scope, move between the two, staying in the window. Enter on
+the header bar goes in, onto Play reel; ← and → cross every header control in that order, stopping at the row's ends;
+Enter on a control acts as its click. Enter on the segment list starts interaction: ↑ and ↓ move the selection one
+segment, Home and End to the first and the last, the selected row kept in view; Esc or Enter returns to navigation mode
+on the list. **The order never depends on state:** with no reel the list scope is still there, reading "No reel in this
+build", and its keys do nothing; Play reel and Open the sequence are disabled but stay in the order; Stop stays in the
+order whether or not the film plays, disabled when nothing plays (a film pending its first frame counts as playing,
+§3.2, fix round 16 of PR #286, G6); a disabled control is landed on and Enter on it does
+nothing. Play reel, pressed from the keyboard or the mouse, moves the focus to Stop, its right-hand neighbour. Esc from
+Stop goes up to the header bar scope, and Esc from a section scope returns the focus to the top bar's Windows menu,
+the window staying open (§3.3). × (Enter on it, or a click) closes Spotlights and returns the focus to the top bar's
+Windows menu; closed while the film plays, it **stops the film first, exactly as Stop does**, the view as it was
+before the reel and nothing entering the history. The breadcrumb reads "Spotlights › Header › <control>" (Play reel,
+Stop, Open the sequence, Close) and "Spotlights › Segments".
+
+### 3.5 What is v2 web's
+
+The presentation: playing the reel at cold start (the app opening on it, the window `principia_lowering_contract.md`'s
+startup budget names), the gallery of poster tiles, and the film wearing the same header, legend and overlays a live
+view would have at that frame. Natively the film plays only from the Spotlights window, in the Explore canvas, with
+the preview badge and the provenance in the header strip (R-571; the human's scope, above; applied per R-369).
+
+## 4. Fit with rulings
+
+- Implements export contract Part 7 and REQ-TOOL-084, which R-578 amends: the click is any interaction, at that exact
+  frame, and playback continues.
+- R-571: the machinery here is native and tested natively; §3.5 is v2 web's.
+- R-521 and image embedding §6: the build refuses, never substitutes. R-484: a takeover is the identity.
+- R-523 and §G1: the preview badge and the provenance sit in the header strip, never over the figure.
+- Caching Part 5's snapshot fallback is the takeover's backdrop, as it already names it.
+- R-520 F3 against "live and film disagreeing is a bug": RQ-561.
+- Amends `principia_gui_state_contract.md` §2's window names (adds Spotlights) and the GUI spec (§G9a).
+
+## 5. Decided
+
+The human, 21 Oct 2026 (`reel_click.md`, "Decided", verbatim):
+
+> - **After takeover it keeps playing** whatever the clip was doing, now live ("Yeah keep playing").
+> - **The film is not computed in the app.** It is rendered once per release, offline, by the blocking exporter, and
+>   shipped as a video file. The app only plays it; the engine starts computing at the takeover.
+
+## 6. Tests
+
+Each with what makes it fail.
+
+- **reel_manifest**: a three-spec reel from fixtures: the manifest has one entry per film frame, and each entry's
+  segment, frame within the spec and state hash are those the exporter rendered. *Fails on* an off-by-one in the
+  segment manifest.
+- **reel_build_refuses**: a spec with one changed link entry hash stops `cargo xtask reel`, naming it, and nothing is
+  written. *Fails if* it renders. Control: matching hashes build.
+- **reel_plays_without_compute**: playing the film integrates nothing and dispatches no march, and stopping it leaves
+  the view bitwise as it was. *Fails if* the player renders the spec live.
+- **takeover_identity**: a click, a drag, a scroll and a key in the Figure scope at film frame `i` each load exactly the
+  spec, state and playhead of that frame, and playing continues; a modifier pressed alone does not take over; a pan
+  during the live motion stops the player and stays, while a cursor moved over the figure does not stop it; one undo
+  returns to the view before the reel. *Fails on* an
+  off-by-one in the segment manifest, a takeover that pauses, or a player that overwrites the pan.
+- **spotlights_window**: the window's two sections are in the order of §3.4 in every state (no reel, a reel, the film
+  playing or not), Stop in the order, disabled when nothing plays (a film pending its first frame plays, §3.2); the window opens with segment 1 selected, and Tab to the segment
+  list, Enter, ↓ selects segment 2; Play reel
+  then puts the focus on Stop; Esc twice puts it on the top bar's Windows menu with Spotlights still open; Windows ›
+  Spotlights… puts it back on Stop; × while the film plays stops it as Stop does. *Fails if* the order changes with the
+  state, Stop leaves the order, Esc closes the window, the way back lands elsewhere, closing leaves the film
+  playing, or the window opens with no segment selected (fix round 4 of PR #286, gui review 5631472413, J1, J2; fix
+  round 5, gui review 5631560484, K1).
+- **film_holds_explore**: while the film plays, moving the cursor over the figure sends no hover, the Legend shows no
+  keys, the decoder badge is absent, `t` reads "—", the Profiler opens and Stop is pressed by keyboard without taking
+  over (Stop reached again by Windows › Spotlights…, which lands on it while the film plays), the top bar's undo does
+  nothing and Ctrl+Z in the Figure takes over; touching the Manifold view's slider takes over. *Fails if* a hover is
+  sent, a decoder badge or a number for `t` is shown, the Profiler takes over, the top bar's undo acts, or the slider's
+  edit lands on the hidden live view.
+- **no_blank_handover**: from the interaction until live has resolved, every displayed frame is the film backdrop or a
+  live render over it. *Fails if* any frame shows nothing.
+- **preview_marker**: the badge is present on every film frame and gone after the handover. *Fails if* a film frame
+  lacks it.

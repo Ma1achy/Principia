@@ -831,6 +831,19 @@ a click does, as a click on a console control does (R-450 A3), landing in naviga
 click on the Figure that pins a sample (R-453) ends typing and leaves the focus where it was (R-456, amending R-450 A3
 and R-409 G4 for text fields; its scope applied per R-369). The footer and the console follow the same two modes (R-405, R-409).
 
+**The docked Sequence (R-577, §G9a).** It is a window, not a big scope: the order above is unchanged. Esc from its top
+level returns the focus to the Figure, and Windows › Sequence… on an open Sequence gives it the focus again, on its
+header bar in navigation mode (fix round 1 of PR #286, gui review 5631060675, F3; applied per R-369).
+
+**Spotlights (R-578, §G9a).** A window too, with two sections in this order: the header bar (Play reel, Stop, Open the
+sequence, ×) and the segment list (Enter, then ↑ ↓, Home and End, select a segment; the first segment is selected when
+it opens with a reel, and with no reel nothing is, fix round 5 of PR #286, K1). The order does not depend on
+state: Stop stays in it, disabled when nothing plays (a film pending its first frame counts as playing, §G9a,
+fix round 16 of PR #286, G6), and with no reel the list is still there. Esc from its top level
+returns the focus to the top bar's Windows menu and leaves it open; Windows › Spotlights… on an open Spotlights gives
+it the focus on Stop while the film plays, on its header bar otherwise (fix round 4 of PR #286, gui review 5631472413,
+J1, J2; applied per R-369; `principia_spotlight_reel.md` §3.4).
+
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
 console (§G12), as a click does, with the focus inside it. The console is a window with exactly two scopes, top to
@@ -1454,6 +1467,104 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   encoder, MP4/WebM through WebCodecs where supported — export_animation Part 4, R-131), overlays on or off, pxpack in every frame. **Recording integrates each frame to its own `t`**, so
   it's exact, unlike scrubbing. That is the export contract's blocking mode (export_animation Part 4: a hard barrier per
   captured frame).
+
+## G9a. Sequence · Spotlights (no artboard; R-576 to R-578)
+
+### Sequence — keyframed view animations (R-576, R-577)
+
+The screen that makes a keyframe spec (`principia_export_animation_contract.md` Part 3); the design is
+`docs/design/principia_sequence.md`.
+- **Where:** Windows › Sequence…; docked along the bottom of Explore, below the bottom row (Compass, Time, Legend) and
+  above the footer, its top edge a splitter (R-462), its height remembered with the layout; the console docks over it
+  as over the bottom row (R-463). × closes it. Its sections, in §G3's order: the header bar (Add keyframe, Play
+  preview, Proof strip, Export…, Open…, Save…, ×; while a proof strip runs, Proof strip becomes Cancel in the same
+  place, its progress "proof 3 / 5" beside it), the timeline, the inspector. In its scope **K** adds a keyframe and
+  **Delete** removes the selected one; the Figure's K stays the lock (§G4). Esc from its top level returns the focus to
+  the Figure, the window staying open. It is a window, not a big scope, so §G3's Tab order is unchanged; Windows ›
+  Sequence… on an open Sequence gives it the focus on its header bar, the keyboard's way back (fix round 1 of PR #286,
+  gui review 5631060675, F3; applied per R-369).
+- **Keyframes:** Add keyframe captures the whole `SimConfig` and `RenderState` at the timeline cursor. A keyframe shows
+  its values, **Go to** (one undoable entry), **Update** from the view, a drag in time (clamped between its neighbours)
+  and its playhead policy (hold, advance with wall time, set to a value). Add keyframe at a frame a keyframe already
+  holds is refused with the reason in the header bar; a drag stops one frame short of a neighbour's frame; advance's
+  rate starts at the Transport's speed and is editable; an fps that merges two keyframes is refused inline in the
+  planner, naming both. **In a result view** (`principia_results.md` §3.4) Go to, Add keyframe, Update and Play preview are disabled, each with the reason "result view — switch to Live" shown in the Sequence beside it, never over the figure (§G1); the
+  way back is the existing view-source request, never an implicit switch, and opening a result ends a preview first
+  (fix round 9 of PR #286, gui review 5631987230, G1, G2; applied per R-369).
+- **The timeline:** wall time across, keyframes as diamonds; read-only lanes Navigate, Plane, Chart, Links, Playhead,
+  Stain, Print, Lines and Run light where a field in the lane differs between a segment's two keyframes; segments
+  coloured by class (a), (b) or (c) with their frame counts; a chart or link-id change shows a cut mark.
+- **A segment:** its easing, set per segment (R-576); cut or dissolve, with its length, at a chart change; at a
+  link-parameter change R-520's rule, shown ("link parameters interpolated: every frame a different decoder"; whether a
+  cut is offered there is RQ-560); REQ-TOOL-075's fixed rules shown, not offered.
+- **Play preview** runs the sequence in the live frame loop, link parameters and dissolves as cuts (R-520 F3), under
+  the banner "Preview: not converged; cuts where the export interpolates". It is a transient view the engine plays from
+  a preview request carrying the spec: no `SetField` is sent, nothing enters the history, and when it stops or ends
+  the view is the user's view from before it, bitwise; a user edit that enters the history, or an undo or redo, while
+  it plays stops it first and applies to the user's view, the hover not stopping it; Esc in the Sequence stops it and
+  does nothing else. While it plays the header strip shows a badge **preview** and no decoder badge, the Legend only
+  "Preview: the legend returns when it stops", `t` reads "—" and no hover is sent (fix round 2 of PR #286, gui review 5631227164, G1, G2, G4; applied per
+  R-369). *Was:* "its frames entering no undo (R-101)." (fix round 1 of PR #286, gui review 5631060675, F2;
+  applied per R-369).
+  **Proof strip:** one small frame per keyframe and per segment midpoint through the blocking exporter at the lowest
+  tier, as a lower-priority, cancellable background job with progress; the frame's size is REQ-GUI-388's calibration.
+  While it runs the button reads Cancel in place, "proof 3 / 5" beside it; Cancel keeps the finished frames and leaves
+  the rest as empty slots; the job renders the spec it started from, and an edit marks the strip stale (fix round 15 of PR #286, gui review 5634549430, G1).
+  While a preview runs the user's baseline cover stays pinned, so returning is never blank (fix round 12 of PR #286, perf review 5632950982, P3, P6).
+- **Export…** opens the planner first (one row per segment: class, frames, integration cost, flags, estimated time, the
+  estimate the cost over the device throughput model of `principia_quality_device_note.md` §2, per trajectory-step
+  (the model over `2(E_probe + 1)`), the export's samples × `2(E_export + 1)` × steps, derated by the solve's thermal
+  headroom, one value with its provenance key, shown once under the rows as "measured on <adapter name> · probe v<version>" (`principia_sequence.md` §3.7; fix round 13 of PR #286, perf review 5634346116; fix round 15 of PR #286, gui review 5634549430, G3), or "no measurement on this machine yet", never a number; *was:* "the estimate a range from this
+  machine's measured throughput"; fix round 12 of PR #286, perf review 5632950982, P1, P2),
+  then the export's parameters (size, fps, quality tier, format, Plain or styled, R-489); Start runs it in the
+  background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
+  every export.
+- **Open… / Save…** a `.principia-seq.json`, the spec in its canonical serialisation (R-309) with the build hash, the
+  schema version and the link entry hashes (R-521); opening is the identity (R-484). Whether an edit to the sequence
+  is undoable, and in which history, is RQ-559's; nothing is applied meanwhile.
+
+### Spotlights — the reel, natively (R-578)
+
+The reel's machinery, natively, with a rough presentation; its polished presentation is v2 web's (R-571). The design
+is `docs/design/principia_spotlight_reel.md`.
+- **Where:** Windows › Spotlights…, a window under §G5's rules (R-461): the reel's segments in order, each with its
+  provenance (chart, horizon, integrator, build, date); **Play reel**, **Stop**, **Open the sequence** (into Sequence).
+  With no reel in the build: "No reel in this build", Play reel disabled. Its sections, in §G3's order: the header bar
+  (Play reel, Stop, Open the sequence, ×) and the segment list, where Enter starts interaction and ↑ ↓, Home and End
+  select a segment, the first segment selected when the window opens with a reel and none with no reel, Play reel and
+  Open the sequence then disabled (fix round 5 of PR #286, gui review 5631560484, K1; applied per R-369); the order is
+  the same in every state, no reel, the film playing or not, Stop staying in it,
+  disabled when nothing plays (a film pending its first frame counts as playing, below). × closes it; closed while the film plays, it stops the film first, as Stop does. Esc
+  from its top level returns the focus to the top bar's Windows menu, the window staying open, and Windows ›
+  Spotlights… on an open Spotlights gives it the focus on Stop while the film plays, on its header bar otherwise, the
+  keyboard's way back (fix round 4 of PR #286, gui review 5631472413, J1, J2; applied per R-369;
+  `principia_spotlight_reel.md` §3.4).
+- **Playing:** the film plays in the Explore canvas, the live view paused and hidden beneath, nothing computed; the
+  header strip shows the badge **preview** and the segment's provenance (R-523), never over the plot, and no decoder
+  badge. Play reel leaves the focus on Stop in the Spotlights window, and Esc from the window's top level returns it to
+  the top bar's Windows menu, Spotlights staying open (fix round 4, J1), so Stop, the window and the top bar stay reachable by §G3's keys (*was:* "Play reel gives
+  the focus to the Figure scope."; fix round 3 of PR #286, gui review 5631344897, H1; applied per R-369). While it plays the hover is held off (no `Hover` sent), the
+  Legend shows only "Film: the legend returns when live", `t` reads "—", and the top bar's undo and redo do nothing.
+  Stop leaves the view as it was. *Was:* "and undo and redo are disabled." (fix round 2 of PR #286, gui review 5631227164, G3).
+  In a result view Play reel is disabled with the reason "result view — switch to Live", and opening a result while
+  the film plays stops it first, as Stop does, so no takeover happens there (fix round 9 of PR #286, gui review
+  5631987230, G1; applied per R-369).
+  When the decode ring runs dry the displayed frame is held and every film frame is shown in order, never skipped and
+  never blank (fix round 15 of PR #286, gui review 5634549430, G4). **Before the first frame:** from Play reel the film
+  counts as playing, Stop enabled with the focus on it; until the selected segment's first frame is shown the canvas
+  is the live view under its normal rules, no badge and none of the holds above, and any interaction that would take
+  over, or an undo or redo, cancels the pending film as Stop does and then acts on the live view as usual, with no
+  takeover (fix round 16 of PR #286, gui review 5634604753, G6; applied per R-369; `principia_spotlight_reel.md`
+  §3.2).
+- **The takeover:** a press, drag or scroll on the figure, any key in the Figure scope (Tab, Esc and Ctrl+Z included; a
+  modifier alone excepted), or a
+  touch on any control that would send a `SetField` takes over at the displayed frame, consumed: its spec's state
+  loaded live, bitwise the exporter's, and it keeps playing, live, the player's frames coalesced into the takeover's one
+  undoable entry until the spec ends, or a user edit that enters the history, an undo or a redo stops it (the hover
+  does not). (*Was:* "The keyboard's way out of the film is a key, then one Ctrl+Z, which returns to the view before the reel.";
+  fix round 3 of PR #286, gui review 5631344897, H1: the keyboard's Stop is Enter on Stop.) The film frame stays as the backdrop until the live
+  baseline cover is complete; then the badge goes. (Fix round 1 of PR #286, gui review 5631060675, F2 and F4; applied
+  per R-369.)
 
 ## G10. Measure — a tool on the figure (`10_measure.png`)
 
