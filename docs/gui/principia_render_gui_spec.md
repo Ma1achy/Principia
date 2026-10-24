@@ -744,6 +744,7 @@ button over the figure is not an element; the Home key does its work.
 | letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
+| Ctrl+C · Ctrl+V | in the Inspector, copy the IC's record (`principia.ic/1`) and paste one, opening it in Create & locate (R-586, §G8), in either mode, except while a text field is being typed in, when they copy and paste its text (R-409; applied per R-369, fix round 1 of PR #287, gui review 5638052211, G2) |
 | Alt+L | show or hide all lines (Lines ▾, R-476), wherever the focus is, in either mode; it is not the Figure's L and never starts listening; while a text field is being typed in it types what the platform types (on macOS "¬"), as every key does there; on the mock it does nothing (R-476, M6 and M9) |
 | ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
 | Home | Home: Slice centre, Tilt and Navigate reset to the chart preset's values, one undoable command, wherever the focus is, in either mode, except on the console's log in interaction mode (its first entry, R-450) and while a text field is being typed in (the caret to the line's start); Shift and Alt change nothing, Ctrl and Cmd make it no Home; it does not repeat (R-466) |
@@ -1459,11 +1460,13 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
 - **Tabs: Inspect** and **Create & locate**: build an IC, see where it lands in `z` and its distance from the slice, then
   **lock the view on it**, **centre a slice through it**, **mark it in the figure**, or **keep it**.
 - **Copy, save, open, mark and export (R-586, R-587; `principia_ic_save.md`).** Ctrl+C copies the IC's record
-  (`principia.ic/1`), *Copy as text* a 1-based table, and Ctrl+V pastes one; **File › Save IC…** writes
+  (`principia.ic/1`), *Copy as text* a 1-based table, and Ctrl+V pastes one, except while a text field is being typed
+  in (§G3); **File › Save IC…** writes
   `<label>.principia-ic.json` and **File › Open IC…** (or a drop) opens one in Create & locate, in its as-built frame,
   recovered, physics only (naming the link) or corrupt, the stored `z` against the recomputed shown as a residual. A
   reopened IC sits in the hemisphere it was built in, its twin opposite. **Mark** is the durable act: a marked IC is a
-  `Trace` in `Lines`, travelling with the view; **Mark all kept** promotes the kept list. **Export trajectory…** writes
+  `Trace` in `Lines`, travelling with the view; **Mark all kept** promotes the kept list; each is one `SetField` on
+  `RenderField::Lines` and one undo entry (R-69). **Export trajectory…** writes
   `<label>.traj.csv`, one row per step as taken, its body columns labelled 1-based (`body1_x` …).
 
 ## G9. Import picture · saved views · record a sweep (`09_importrecord.png`)
@@ -1479,7 +1482,11 @@ holds no sound control. Gui review 5595359543 of PR #267, G1.)"
   A GIF, MP4 or WebM recording is read from the record its container carries (R-584). A picture the view refers to that
   neither the store nor the PNG's `prPc` chunk holds is listed as missing, and the view draws "Picture missing" in its
   header strip, never a substitute (R-585; `principia_uploaded_picture.md` §3.5). A frozen colour window reads "frozen
-  at export" on its node, and **Re-measure** clears it, one undo entry (R-581).
+  at export" in its node's inspector and on the Legend's key for it, and **Re-measure** clears it, one undo entry
+  (R-581). An image exported "As seen with <mode>" carries the badge "As seen with <mode>" in the preview's header
+  strip, and the report names it; restoring the view leaves the colour-vision simulation as the user has it (R-582;
+  `principia_export_details.md` §3.2). *Was:* "A frozen colour window reads "frozen at export" on its node, and
+  **Re-measure** clears it, one undo entry (R-581)."
 - **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view". A saved view reopens under the
   tilt map it was saved with, one saved before R-474 under Lean each axis (R-474). A saved view is a whole view; a
   saved chart (§G2's Save view as chart, R-475) is a chart in the picker.

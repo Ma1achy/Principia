@@ -57,6 +57,11 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
   the node's inspector removes its entry, one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry
   (R-69). A snapshot JSON or share link is not an image export: it carries `frozen_ranges` as the view has it and
   freezes nothing (applied per R-369).
+- **An entry goes with its node** (applied per R-369, fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node with
+  an entry (Delete node, render GUI spec Part II §7) or a preset replacing the whole graph (Part II §11) drops the
+  entry of every node no longer in the graph in the same undoable command, one history key and one undo entry
+  (§G2's "one undoable command"), and undo restores both; so a new node that reuses an id never inherits a stale
+  freeze.
 
 ### 3.2 The viewer's settings stay with the viewer (R-582)
 
@@ -90,6 +95,10 @@ arrows, label offsets and the smart-ink radius are "px" with no rule (lines §3,
   scale of 1, whatever `base_width` says, so a mark keeps its size when the window is resized), `k` for a `k×` export,
   and the same ratio for any size. **Label placement runs at base size and is then scaled**: spacing, collisions and
   offsets are decided in base px, so a 4× export places the same labels as the screen.
+- **On screen 1 base px is one logical px** (applied per R-369, fix round 1 of PR #287, gui review 5638052211, G5): at a display scale factor `s` a mark
+  of `L` base px is drawn `L × s` physical px long, as every other GUI length is. `base_width` and the view's size are
+  in logical px, and Export & share's "multiples of the view" count logical px: a `k×` export is `k × base_width` px
+  wide, so its ratio is `k` on every display.
 - **`device_px` stays the one exception**, listed (`principia_print_graph.md` §6.2): a node that models the display
   itself keeps true screen pixels, and an export's record lists every `device_px` node it drew.
 - **Physical size** is an optional export field, a width in mm and a DPI, which sets `output_width =

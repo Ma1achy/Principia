@@ -48,6 +48,8 @@ question 4, (a)). A non-finite value is refused at entry, in the constructor and
 
 - **Copy**: Ctrl+C in the Inspector copies the record as its JSON text; *Copy as text* gives a 1-based table, read by a
   person (bodies 1, 2, 3; R-449). **Ctrl+V** in the Inspector pastes a record, as *Open IC…* does.
+  While a text field is being typed in (a mass, a position, a velocity), Ctrl+C and Ctrl+V copy and paste its text,
+  never the record, as every chord in §G3's table does there (R-409; applied per R-369, fix round 1 of PR #287, gui review 5638052211, G2).
 - **Save**: *File › Save IC…* writes `<label>.principia-ic.json`.
 - **Open**: *File › Open IC…*, or a drop of the file, opens it in *Create & locate*, in its as-built frame, with one of
   three outcomes:
@@ -98,6 +100,10 @@ its IC's projection on the current slice and, under the trace settings, its path
 saved views, share links, the animation spec and the pxpack (tier 2), round-tripping under R-484. *Mark all kept*
 promotes the kept list to marks. One record is roughly 0.6 KB (an estimate, to be measured), so marks crowd 64²'s tier
 2 (1,516 B, embedding §7): tier 2 drops whole, and `tEXt` keeps everything.
+
+**Mark** sends one `SetField` on `RenderField::Lines` and makes one undo entry, and *Mark all kept* with n kept orbits
+is one `SetField` and one undo entry, never n (R-69, R-52; applied per R-369, fix round 1 of PR #287, gui review
+5638052211, G1).
 
 **A kept orbit's `Trace` is RQ-564.** R-553 (RQ-428 (a)) made a kept orbit's `Trace`, its IC and style, `Lines` state
 that round-trips with `RenderState`; the draft's "Keep stays scratch" and its test "kept-only ICs are absent" were

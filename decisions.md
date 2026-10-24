@@ -25008,6 +25008,9 @@ freezes nothing a state has not already frozen and keeps its `base_width`; and a
   `SimConfig` and `RenderState` as a sidecar outside the identity, as `f3_fill` does (R-484 J3), in tier 2 of the low-bit
   record with `f3_fill` and always in the `tEXt` chunk; `frozen_ranges` is `RenderState`'s, in tier 2 with the ramp
   window.
+- **An entry goes with its node** (fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node, or a preset
+  replacing the graph, drops the entries of the nodes no longer present in the same undoable command, one undo entry,
+  so a reused id never inherits a stale freeze (`principia_export_details.md` §3.1).
 - **One task, M8:** TASK-M8-80 builds R-581 and R-582 and R-583's export side; R-583's base px for every mark is
   TASK-M7-70's.
 
@@ -25097,6 +25100,9 @@ recommendations:
   pixels per metre, unit 1; the pt readout is `base px × (width_mm / 25.4 × 72) / base_width`, a readout, never a
   second unit.
 - **The export's record lists every `device_px` node it drew**, in the export block (R-581).
+- **On screen 1 base px is one logical px** (fix round 1 of PR #287, gui review 5638052211, G5): at a display scale factor `s` a mark is `s` times its
+  base px in physical px; `base_width` and Export & share's "multiples of the view" count logical px, so a `k×`
+  export's ratio is `k` on every display (`principia_export_details.md` §3.3).
 - **Two tasks:** TASK-M7-70 (M7) builds base px and `base_width` in the line engine and the Print graph, after
   TASK-M7-42 and TASK-M7-55, which keep REQ-RENDER-088 and REQ-RENDER-111 as amended; TASK-M8-80 the physical size.
 
@@ -25324,6 +25330,10 @@ integrated; (a) −0 normalised to +0.
   TASK-M8-16, which gains it as a dependency.
 - **"Corrupt"** is a record whose JSON does not parse, with a field missing or non-finite, or whose re-derived values
   contradict the stored ones beyond what the residual reports.
+- **Mark and Mark all kept** (fix round 1 of PR #287, gui review 5638052211, G1) are each one `SetField` on `RenderField::Lines` and one undo entry
+  (R-69, R-52), Mark all kept never one per orbit.
+- **Ctrl+C and Ctrl+V** (fix round 1 of PR #287, gui review 5638052211, G2) join §G3's key table, scoped to the Inspector; while a text field is
+  being typed in they copy and paste its text, never the record (R-409).
 - **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
   reopening, marks and the trajectory CSV, R-587).
 
