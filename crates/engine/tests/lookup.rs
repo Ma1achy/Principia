@@ -1907,6 +1907,108 @@ negative_control!(
     })
 );
 
+/// States with body 2 at the inner pair's centre of mass, `λ = 0`, so `α = 0` and `β` undefined, `α` clamping, and
+/// `L_z = 0` (`q₁ = 0`), with the verdict the interim pole rule gives each (§ "The class a clamp moves", "At the
+/// `α = 0` pole"; RQ-565): `p_λ ≠ 0` is rejected, `p_λ = 0` accepted.
+fn poles() -> [(&'static str, Ic<f64>, Option<Class>); 4] {
+    let euler = |p: [[f64; 2]; 3]| Ic {
+        m: [0.25, 0.25, 0.5],
+        r: [[-1.0, 0.0], [1.0, 0.0], [0.0, 0.0]],
+        p,
+    };
+    [
+        (
+            "equal masses, kick across the line",
+            euler([[0.0, -0.25], [0.0, -0.25], [0.0, 0.5]]),
+            Some(Class::Rotation),
+        ),
+        (
+            "equal masses, kick along the line",
+            euler([[-0.25, 0.0], [-0.25, 0.0], [0.5, 0.0]]),
+            Some(Class::Rotation),
+        ),
+        (
+            "masses 0.2, 0.3, 0.5, kick across the line",
+            Ic {
+                m: [0.2, 0.3, 0.5],
+                r: [[-0.6, 0.0], [0.4, 0.0], [0.0, 0.0]],
+                p: [[0.0, -0.2], [0.0, -0.3], [0.0, 0.5]],
+            },
+            Some(Class::Rotation),
+        ),
+        ("equal masses at rest", euler([[0.0; 2]; 3]), None),
+    ]
+}
+
+/// The verdict lookup gives `x` on the latent chart: `None` where it locks, the class where layer 1 rejects it.
+fn verdict(x: &Ic<f64>) -> Option<Class> {
+    match lookup::<Defaults, _, _>(&latent_chart(), &Exact::Physical(*x), phys, &tol()) {
+        Ok(_) => None,
+        Err(Rejected {
+            layer: Layer::Hypercube,
+            failed: Failed::Clamp { class, .. },
+        }) => Some(class),
+        Err(other) => panic!("not a layer-1 verdict: {other:?}"),
+    }
+}
+
+/// Checks that each of [`poles`] gets its one verdict, read by `read`, over 64 gauge images, rotated, offset,
+/// scaled by `2^[−3, 3]`, boosted on odd images and mirrored on every other pair, among them images where `C` lands
+/// with `λ̃ = 0` exactly (`β` the defined 0, so clamped too) and images where it lands on rounding.
+fn check_poles(read: impl Fn(&Ic<f64>) -> Option<Class>) {
+    for (what, x, want) in poles() {
+        let (mut exact, mut rounded) = (0, 0);
+        for k in 0..64 {
+            let g = validation::gauge::Gauge {
+                a: [0.3 * (k % 5) as f64, -0.7],
+                u: if k % 2 == 1 { [0.5, -0.25] } else { [0.0; 2] },
+                theta: 0.37 * k as f64,
+                s: ((k % 7) as f64 - 3.0).exp2(),
+                mirror: k % 4 >= 2,
+            }
+            .act(&x);
+            let en = e(&g);
+            assert_eq!(en.blocks.clamped & 1, 1, "{what}, image {k}: α clamps");
+            if en.blocks.clamped & 0b10 != 0 {
+                exact += 1;
+            } else {
+                rounded += 1;
+            }
+            assert_eq!(
+                read(&g),
+                want,
+                "{what}, image {k}: one verdict in every gauge"
+            );
+        }
+        assert!(
+            exact > 0 && rounded > 0,
+            "{what}: images on λ̃ = 0 ({exact}) and on rounding ({rounded})"
+        );
+    }
+}
+
+#[test]
+fn lookup_validation_ladder_pole() {
+    check_poles(verdict);
+}
+
+negative_control!(
+    lookup_validation_ladder_pole,
+    "reading β at the pole as defined where λ̃ = 0 exactly, and as rounding elsewhere, splits the verdict",
+    expected = "one verdict in every gauge",
+    check_poles(|x: &Ic<f64>| {
+        let en = e(x);
+        let ext = Extents::entered(x, en.canonical.lambda);
+        let before = Classes::within(&en.canonical.ic, &ext);
+        let band = tol().zero_class;
+        changed(
+            &before,
+            &after(&before, &engine::lookup::moves_within::<Defaults>(&en, &en.z.z, &ext, 0.0), band),
+            band,
+        )
+    })
+);
+
 /// Checks R-13 for the pair `(i, j)` made to coincide in `generic()`: the lookup locks it, clamped, never refused.
 fn check_coincident(pairs: &[(usize, usize)]) {
     for &(i, j) in pairs {

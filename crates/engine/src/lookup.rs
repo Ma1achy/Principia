@@ -579,8 +579,23 @@ impl Dual {
 /// `U = −(m₀m₁/a + m₀m₂/r₀₂ + m₁m₂/r₁₂)`, `r₀₂ = ‖λ + (m₁/M₀₁)ρ‖`, `r₁₂ = ‖λ − (m₀/M₀₁)ρ‖`, `ρ = (a, 0)`,
 /// `λ = b·(cos β, sin β)`. The parameters' rounding, in units of `ε`: `mᵢ` for each mass, `R·(√μ_ρ + √μ_λ) + α`
 /// for `α`, `R/b + R/a + β` for `β` and `P + (R/a + R + 1)·maxₖ|qₖ|` for each `qₖ`, `R/a` the canonical frame's
-/// own, its rotation being `ρ`'s direction, and `R` the rescale's.
+/// own, its rotation being `ρ`'s direction, and `R` the rescale's. The `α = 0` pole is read at the register's
+/// `zero_class` ([`moves_within`]).
 pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: &Extents) -> Moves {
+    moves_within::<S>(e, z, ext, ZERO_CLASS.number() * f64::EPSILON)
+}
+
+/// [`moves`], the `α = 0` pole read at the zero-class band `pole` (§ "The class a clamp moves", "At the `α = 0`
+/// pole"; RQ-565, interim, applied per R-369): where `b` is 0 within `pole` of its bound, `β` is undefined, so each
+/// move is its worst case over every direction of `λ` after the clamp, the one of largest magnitude, and each value
+/// after it the one of the range nearest the other side of its value before: for `L_z` the directions along
+/// `±(q₃, −q₂)`, where `λ × p_λ = ±b·‖p_λ‖`, and for `E` those with `cos β = ±1` or `r₀₂ = r₁₂`, the extremes of `U`.
+pub fn moves_within<S: Selection>(
+    e: &kernel::encode::Encoded<f64>,
+    z: &[f64; 8],
+    ext: &Extents,
+    pole: f64,
+) -> Moves {
     let bits = e.blocks.clamped;
     let on = |k: u32| bits & (1 << k) != 0;
     let (za, zb) = config::angles::<S, f64>([z[0], z[1]]);
@@ -607,8 +622,6 @@ pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: 
     let q_round = ext.p + (frame + ext.r + 1.0) * q_bound;
     let qs: [Dual; 4] =
         std::array::from_fn(|k| Dual::param(q[k], zq[k], on(2 + k as u32), q_round));
-    let (c, s) = Dual::trig(beta, zb, on(1), beta_round);
-    let lz = a.mul(qs[1]).add(b.mul(c.mul(qs[3]).sub(s.mul(qs[2]))));
     let square = |x: Dual| x.mul(x);
     let kinetic = square(qs[0])
         .add(square(qs[1]))
@@ -616,26 +629,92 @@ pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: 
         .div(mu_rho)
         .add(square(qs[2]).add(square(qs[3])).half().div(mu_lambda));
     let (w0, w1) = (ms[0].div(m01), ms[1].div(m01));
-    let (bc, y) = (b.mul(c), b.mul(s));
-    let r02 = square(bc.add(w1.mul(a))).add(square(y)).sqrt();
-    let r12 = square(bc.sub(w0.mul(a))).add(square(y)).sqrt();
-    let potential = ms[0]
-        .mul(ms[1])
-        .div(a)
-        .add(ms[0].mul(ms[2]).div(r02))
-        .add(ms[1].mul(ms[2]).div(r12))
-        .neg();
-    let energy = kinetic.add(potential);
+    // `L_z` and `E` at the direction `(c, s)` of `λ`.
+    let at = |c: Dual, s: Dual| {
+        let lz = a.mul(qs[1]).add(b.mul(c.mul(qs[3]).sub(s.mul(qs[2]))));
+        let (bc, y) = (b.mul(c), b.mul(s));
+        let r02 = square(bc.add(w1.mul(a))).add(square(y)).sqrt();
+        let r12 = square(bc.sub(w0.mul(a))).add(square(y)).sqrt();
+        let potential = ms[0]
+            .mul(ms[1])
+            .div(a)
+            .add(ms[0].mul(ms[2]).div(r02))
+            .add(ms[1].mul(ms[2]).div(r12))
+            .neg();
+        (lz, kinetic.add(potential))
+    };
+    let (lz, energy) = if b.v <= pole * b.r {
+        // `β` before is kept as encoded; after the clamp, `λ`'s direction `(c, s)` is a unit vector, rounded once.
+        let toward = |c: f64, s: f64| {
+            at(
+                Dual::param(beta.cos(), c, true, 1.0),
+                Dual::param(beta.sin(), s, true, 1.0),
+            )
+        };
+        let (q2, q3) = (qs[2].w, qs[3].w);
+        let n = q2.hypot(q3);
+        let (c, s) = if n > 0.0 {
+            (q3 / n, -q2 / n)
+        } else {
+            (1.0, 0.0)
+        };
+        let lzs = [toward(c, s).0, toward(-c, -s).0];
+        let mut es = vec![toward(1.0, 0.0).1, toward(-1.0, 0.0).1];
+        // `r₀₂ = r₁₂` where `cos β = (w₀ − w₁)·a/2b`, after the clamp.
+        let even = (w0.w - w1.w) * a.w / (2.0 * b.w);
+        if even.abs() <= 1.0 {
+            es.push(toward(even, (1.0 - even * even).sqrt()).1);
+        }
+        (worst(&lzs), worst(&es))
+    } else {
+        let (c, s) = Dual::trig(beta, zb, on(1), beta_round);
+        let (lz, energy) = at(c, s);
+        let one = |x: Dual| Worst { moved: x, after: x };
+        (one(lz), one(energy))
+    };
     Moves {
-        lz: lz.d,
-        lz_scale: lz.s,
-        e: energy.d,
-        e_scale: energy.s,
-        lz_after: lz.w,
-        lz_after_scale: lz.t,
-        e_after: energy.w,
-        e_after_scale: energy.t,
+        lz: lz.moved.d,
+        lz_scale: lz.moved.s,
+        e: energy.moved.d,
+        e_scale: energy.moved.s,
+        lz_after: lz.after.w,
+        lz_after_scale: lz.after.t,
+        e_after: energy.after.w,
+        e_after_scale: energy.after.t,
     }
+}
+
+/// A constant's worst case over a range of values after the clamps: the move of largest magnitude, and the value
+/// after nearest the other side of the value before.
+#[derive(Clone, Copy, Debug)]
+struct Worst {
+    moved: Dual,
+    after: Dual,
+}
+
+/// The worst case over `range`, which is not empty, all one constant's, so of one value before.
+fn worst(range: &[Dual]) -> Worst {
+    let before = range[0].v;
+    let mut out = Worst {
+        moved: range[0],
+        after: range[0],
+    };
+    for &x in &range[1..] {
+        if x.d.abs() > out.moved.d.abs() {
+            out.moved = x;
+        }
+        let nearer = if before > 0.0 {
+            x.w < out.after.w
+        } else if before < 0.0 {
+            x.w > out.after.w
+        } else {
+            x.w.abs() > out.after.w.abs()
+        };
+        if nearer {
+            out.after = x;
+        }
+    }
+    out
 }
 
 /// Layer 3's residuals of `x` (§ "Decode sanity"): `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, each sum in body order, `R_x` and
@@ -865,7 +944,11 @@ where
     if moved.controls != 0 {
         let ext = Extents::entered(x, e.canonical.lambda);
         let before = Classes::within(&e.canonical.ic, &ext);
-        let after = after(&before, &moves::<S>(e, &z, &ext), tol.zero_class);
+        let after = after(
+            &before,
+            &moves_within::<S>(e, &z, &ext, tol.zero_class),
+            tol.zero_class,
+        );
         if let Some(class) = changed(&before, &after, tol.zero_class) {
             let failed = Failed::Clamp {
                 controls: moved.controls,
