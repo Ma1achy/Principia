@@ -117,7 +117,7 @@ pub fn centre(plane: &Plane) -> Latent {
 
 /// Sets the lock at the affine chart's pixel `(s, t)` (Part 4, "Setting the lock"): `z_locked = z₀ + (2s−1)q₁ +
 /// (2t−1)q₂`, CPU arithmetic with no readback, as the recentring `SetField` on `z₀` and the lock group's, one command
-/// under one history key ([`lock_edits`]).
+/// under one history key (gui_state_contract §2, R-466).
 pub fn set(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 2], LockError> {
     finite(&[s, t])?;
     let z_locked = point(plane, s, t);
@@ -198,7 +198,7 @@ impl FrozenControls for InvariantLK<f64> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChartLock {
     /// The recentring `SetField` on `z₀ = z_locked` and the lock group's, one command under one history key
-    /// ([`lock_edits`]).
+    /// (gui_state_contract §2, R-466).
     pub edits: [SetField; 2],
     /// The window re-centred on the clicked chart point, its half-widths kept. It is chart construction and belongs in
     /// `SimConfig`'s chart group (R-69), which TASK-M2-21 fills (REQ-SYS-011); until then it is returned here, and
@@ -215,7 +215,7 @@ pub struct ChartLock {
 /// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z`
 /// gives `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit, so the
 /// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point. The edits
-/// are one command under one history key ([`lock_edits`]).
+/// are one command under one history key (gui_state_contract §2, R-466).
 pub fn set_on_chart<S, C, N>(
     chart: &C,
     window: &Window,
@@ -447,7 +447,7 @@ where
 }
 
 /// The re-centre lock validation offers: the lock at the nearest feasible point, the `SetField` on `z₀` and the lock
-/// group's, one command under one history key ([`lock_edits`]).
+/// group's, one command under one history key (gui_state_contract §2, R-466).
 pub fn recentre(nearest: &Nearest) -> [SetField; 2] {
     lock_edits(nearest.z)
 }
