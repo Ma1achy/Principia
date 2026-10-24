@@ -4,8 +4,9 @@
 //!
 //! - `lock_set` (REQ-GUI-004): on the affine chart and on two nonlinear charts, the centre pixel's IC after the lock is
 //!   the clicked pixel's, bit for bit; a lock at a point `validate` refuses sets nothing.
-//! - `lock_anchor_invariance` (REQ-GUI-005): random tilts, zooms and chart switches leave the centre IC bitwise
-//!   constant; an excursion moves it, and snap-back restores the stored anchor bitwise.
+//! - `lock_anchor_invariance` (REQ-GUI-005): a property under `validation::prop` (`CASES` = 256, REQ-VAL-151): random
+//!   tilts, zooms and chart switches leave the centre IC bitwise constant; an excursion moves it, and snap-back
+//!   restores the stored anchor bitwise.
 //! - `lock_sliders` (REQ-GUI-006): a slider moved while locked is an excursion along its control, re-based on the
 //!   anchor; unlock leaves the free state the last locked one.
 //! - `lock_setfields` (REQ-GUI-007): every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`.
@@ -47,7 +48,9 @@ use kernel::generated::links::{
     StickBreaking,
 };
 use kernel::stage::decode::DecodeUniforms;
+use proptest::prelude::*;
 use validation::negative_control;
+use validation::prop::{check_with_seed, run};
 use validation::roundtrip::phys;
 
 type Sticks =
@@ -377,22 +380,6 @@ negative_control!(
 
 // ---- lock_anchor_invariance (REQ-GUI-005) ----
 
-/// A small deterministic generator: xorshift64*, uniform in `[0, 1)`.
-struct Draws(u64);
-
-impl Draws {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 >> 12;
-        self.0 ^= self.0 << 25;
-        self.0 ^= self.0 >> 27;
-        (self.0.wrapping_mul(0x2545_F491_4F6C_DD1D) >> 11) as f64 / (1u64 << 53) as f64
-    }
-
-    fn within(&mut self, lo: f64, hi: f64) -> f64 {
-        lo + (hi - lo) * self.next()
-    }
-}
-
 /// `ê_k`.
 fn e(k: usize) -> Latent {
     let mut v = [0.0; 8];
@@ -400,61 +387,86 @@ fn e(k: usize) -> Latent {
     v
 }
 
-/// One random anchor-preserving edit of `sim`'s basis: a tilt pair, a zoom or a chart switch to another axis pair.
-fn anchor_preserving(sim: &SimConfig, draws: &mut Draws) -> SetField {
-    let plane = &sim.plane;
-    match (draws.next() * 3.0) as u32 {
-        0 => {
-            let targets = hidden(plane).expect("a plane");
-            let pick = |d: &mut Draws| targets[(d.next() * 6.0) as usize].direction;
-            let (d1, d2) = (pick(draws), pick(draws));
-            let (t1, t2) = (draws.within(-89.0, 89.0), draws.within(-89.0, 89.0));
-            ChartConstructor::new(plane.clone())
-                .tilt_pair(plane, (t1, &d1), (t2, &d2))
-                .unwrap_or_else(|_| zoom(plane, 0.5).expect("a zoom"))
-        }
-        1 => zoom(plane, draws.within(-3.0, 3.0)).expect("a zoom"),
-        _ => {
-            let a = (draws.next() * 8.0) as usize;
-            let b = (a + 1 + (draws.next() * 7.0) as usize) % 8;
-            let k = draws.within(0.05, 2.0);
-            SetField {
-                edit: Edit::Sim(SimField::Basis {
-                    q1: scale(&e(a), k),
-                    q2: scale(&e(b), k),
-                }),
-                no_history: false,
+/// One anchor-preserving edit of a locked view's basis, drawn by [`gestures`].
+#[derive(Clone, Debug)]
+enum Gesture {
+    /// A raw tilt pair toward two distinct hidden directions, the `first` and the `(first + 1 + gap) mod 6`-th, by
+    /// `tau` degrees each.
+    Tilt {
+        first: usize,
+        gap: usize,
+        tau: (f64, f64),
+    },
+    /// A zoom by `octaves`.
+    Zoom(f64),
+    /// A chart switch to the axis pair `(ê_a, ê_(a + 1 + gap) mod 8)` at scale `k`.
+    Switch { a: usize, gap: usize, k: f64 },
+}
+
+/// Sequences of 1 to 24 gestures.
+fn gestures() -> impl Strategy<Value = Vec<Gesture>> {
+    let gesture = prop_oneof![
+        (0..6usize, 0..5usize, -89.0..89.0f64, -89.0..89.0f64).prop_map(|(first, gap, t1, t2)| {
+            Gesture::Tilt {
+                first,
+                gap,
+                tau: (t1, t2),
             }
+        }),
+        (-3.0..3.0f64).prop_map(Gesture::Zoom),
+        (0..8usize, 0..7usize, 0.05..2.0f64).prop_map(|(a, gap, k)| Gesture::Switch { a, gap, k }),
+    ];
+    prop::collection::vec(gesture, 1..=24)
+}
+
+/// The basis edit of `gesture` on `sim`'s plane. Two distinct hidden directions, each orthogonal to the plane and to
+/// each other, tilted by less than 90° always span a plane, so a tilt pair that gives no edit fails the case.
+fn anchor_preserving(sim: &SimConfig, gesture: &Gesture) -> SetField {
+    let plane = &sim.plane;
+    match *gesture {
+        Gesture::Tilt { first, gap, tau } => {
+            let targets = hidden(plane).expect("a plane");
+            let d1 = targets[first].direction;
+            let d2 = targets[(first + 1 + gap) % 6].direction;
+            ChartConstructor::new(plane.clone())
+                .tilt_pair(plane, (tau.0, &d1), (tau.1, &d2))
+                .expect("a tilt pair toward two distinct hidden directions")
         }
+        Gesture::Zoom(octaves) => zoom(plane, octaves).expect("a zoom"),
+        Gesture::Switch { a, gap, k } => SetField {
+            edit: Edit::Sim(SimField::Basis {
+                q1: scale(&e(a), k),
+                q2: scale(&e((a + 1 + gap) % 8), k),
+            }),
+            no_history: false,
+        },
     }
 }
 
-/// Locks at a pixel, then applies `steps` random edits from `edit`, checking after each that `z₀` and the centre
-/// pixel's IC are the anchor's bit for bit; then an excursion, which moves them, and snap-back by `home`, which
-/// restores both bit for bit.
+/// Locks at a pixel, then applies `gestures` through `edit`, checking after each that `z₀` and the centre pixel's IC
+/// are the anchor's bit for bit; then an excursion, which moves them, and snap-back by `home`, which restores both bit
+/// for bit.
 fn check_anchor_invariance(
-    seed: u64,
-    steps: usize,
-    edit: fn(&SimConfig, &mut Draws) -> SetField,
+    gestures: &[Gesture],
+    edit: fn(&SimConfig, &Gesture) -> SetField,
     home: fn(&SimConfig) -> SetField,
-) {
-    let mut draws = Draws(seed);
+) -> Result<(), TestCaseError> {
     let plane = oblique_plane();
     let mut st = store(sim(plane.clone()));
     apply(&mut st, set(&plane, 0.71, 0.33).expect("a lock"));
     let anchor = now(&mut st).lock.z_locked;
     let anchor_ic = bits(&ic_of(&anchor));
-    for step in 0..steps {
-        let e = edit(&now(&mut st), &mut draws);
+    for (step, g) in gestures.iter().enumerate() {
+        let e = edit(&now(&mut st), g);
         apply(&mut st, [e]);
         let s = now(&mut st);
-        assert!(
+        prop_assert!(
             same_bits(&s.plane.z0, &anchor) && bits(&ic_of(&centre(&s.plane))) == anchor_ic,
-            "step {step}: the centre IC moved"
+            "step {step}, {g:?}: the centre IC moved"
         );
-        assert!(
+        prop_assert!(
             same_bits(&s.lock.z_locked, &anchor),
-            "step {step}: the anchor moved"
+            "step {step}, {g:?}: the anchor moved"
         );
     }
     let s = now(&mut st);
@@ -463,52 +475,65 @@ fn check_anchor_invariance(
     let moved = move_slider(&now(&mut st), 6, 0.123).expect("a slider");
     apply(&mut st, [moved]);
     let away = now(&mut st);
-    assert!(
+    prop_assert!(
         !same_bits(&away.plane.z0, &anchor),
         "the excursion did not move the centre"
     );
     let delta = away.lock.excursion(&away.plane.z0).expect("locked");
-    assert!(
+    prop_assert!(
         delta.iter().any(|&x| x != 0.0),
         "δ is 0 after the excursion"
     );
     apply(&mut st, [home(&away)]);
     let back = now(&mut st);
-    assert!(
+    prop_assert!(
         same_bits(&back.plane.z0, &anchor),
         "snap-back did not restore the stored anchor bitwise"
     );
-    assert!(
+    prop_assert!(
         bits(&ic_of(&centre(&back.plane))) == anchor_ic,
         "snap-back's centre IC is not the anchor's"
     );
-    assert_eq!(
+    prop_assert_eq!(
         back.lock.excursion(&back.plane.z0),
         Some([0.0; 8]),
         "δ is not 0 after snap-back"
     );
+    Ok(())
+}
+
+/// Snap-back, the home a locked view returns by.
+fn snap(s: &SimConfig) -> SetField {
+    snap_back(s).expect("locked")
+}
+
+/// The property at a fixed seed, which the test runs beside `run`'s and each control runs broken: its failure, printed,
+/// as the panic.
+fn at_seed(edit: fn(&SimConfig, &Gesture) -> SetField, home: fn(&SimConfig) -> SetField) {
+    if let Err(failure) = check_with_seed(0x23_23, &gestures(), |g| {
+        check_anchor_invariance(&g, edit, home)
+    }) {
+        panic!("{failure}");
+    }
 }
 
 #[test]
 fn lock_anchor_invariance() {
-    for seed in [0x9E37_79B9_7F4A_7C15, 0xD1B5_4A32_D192_ED03, 7] {
-        check_anchor_invariance(seed, 300, anchor_preserving, |s| {
-            snap_back(s).expect("locked")
-        });
-    }
+    run(&gestures(), |g| {
+        check_anchor_invariance(&g, anchor_preserving, snap)
+    });
+    at_seed(anchor_preserving, snap);
     let free = sim(oblique_plane());
     assert_eq!(snap_back(&free), Err(LockError::NotLocked));
 }
 
 negative_control!(
     lock_anchor_invariance,
-    "a pan among the edits moves the centre",
+    "a pan in place of each basis edit moves the centre",
     expected = "the centre IC moved",
-    check_anchor_invariance(
-        3,
-        20,
-        |s, d| engine::nav::pan(&s.plane, d.within(0.01, 0.2), 0.0).expect("a pan"),
-        |s| snap_back(s).expect("locked")
+    at_seed(
+        |s, _| engine::nav::pan(&s.plane, 0.1, 0.0).expect("a pan"),
+        snap
     )
 );
 
@@ -516,7 +541,7 @@ negative_control!(
     lock_anchor_invariance_snap_back,
     "unlock in place of snap-back leaves the excursion",
     expected = "snap-back did not restore",
-    check_anchor_invariance(7, 5, anchor_preserving, |s| unlock(s).expect("locked"))
+    at_seed(anchor_preserving, |s| unlock(s).expect("locked"))
 );
 
 // ---- lock_sliders (REQ-GUI-006) ----
