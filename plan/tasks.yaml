@@ -2529,7 +2529,7 @@
 - id: TASK-M7-70
   milestone: M7
   title: "Base px: every mark length of the line system and the Print graph in one unit, scaled by `output_width / base_width`, labels placed at base size, `RenderState.base_width` (R-583)"
-  depends_on: [TASK-M7-42, TASK-M7-55]
+  depends_on: [TASK-M7-42, TASK-M7-55, TASK-M7-44]
   needs: []
   requirements: [REQ-RENDER-118]
   reviewers: [code, qa, gui]
@@ -3171,7 +3171,7 @@
   title: "Export details: every measured colour window frozen at export and at Record, the clipped shares and the export block, the colour-vision simulation never in an export unless asked, `render_scale` 1, and the physical size (R-581 to R-583)"
   depends_on: [TASK-M8-32, TASK-M8-33, TASK-M8-23, TASK-M8-78, TASK-M8-53, TASK-M7-70, TASK-M7-25]
   needs: [REQ-RENDER-118]
-  requirements: [REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205]
+  requirements: [REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205, REQ-TOOL-216, REQ-TOOL-217, REQ-TOOL-218]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-81
@@ -3193,8 +3193,8 @@
 - id: TASK-M8-83
   milestone: M8
   title: "The Precision ring's state-in entry, `computeICState(state, simKey)`, beside `computeIC`, and the frame the constructor integrates (R-586)"
-  depends_on: [TASK-M3-19]
-  needs: [REQ-SYS-017, REQ-INT-055]
+  depends_on: [TASK-M3-19, TASK-M2-43]
+  needs: [REQ-SYS-017, REQ-INT-055, REQ-CHART-081]
   requirements: [REQ-INT-107]
   reviewers: [code, qa, physics]
   pitfalls: []

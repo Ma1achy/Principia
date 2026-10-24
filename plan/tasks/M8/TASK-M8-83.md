@@ -2,8 +2,8 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-INT-107
-- **Depends on:** TASK-M3-19
-- **Needs (earlier milestones):** REQ-SYS-017, REQ-INT-055
+- **Depends on:** TASK-M3-19, TASK-M2-43
+- **Needs (earlier milestones):** REQ-SYS-017, REQ-INT-055, REQ-CHART-081
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
 - **Size:** ~200 lines, the tests included
@@ -31,3 +31,4 @@ The Precision ring gains `computeICState(state, simKey) → SimState`, the integ
 - **RQ-563 is open** (the frame integrated, against R-544; physics): meanwhile its option (a), `C(as_built)` with the mirror step not taken, the hemisphere kept; nothing waits. A ruling for (b) would fold the mirror here.
 - TASK-M8-16 depends on this task: its Inspector reaches the engine through `computeIC` and `computeICState` (REQ-GUI-117).
 - **Fix round 2 of PR #287 (qa review 5638084688, Q8, applied per R-369):** the acceptance lines follow the new verifies. *Was:* "`cargo test -p engine compute_ic_state` — for a picked IC, computeICState on computeIC's decoded state gives a SimState bitwise equal to computeIC's; for a built IC in the lower hemisphere the state integrated keeps its hemisphere (its λ̃_y sign) and its L_z sign, the rotation and centre of mass canonicalised; the entry runs RK45 in f64 (controls: an entry that folds the mirror, giving the twin's trajectory, and one that re-decodes z, which is not bitwise, each fail); review (physics) (REQ-INT-107)."
+- **Fix round 3 of PR #287 (code review 5638122561, C2, applied per R-369):** this task depends on TASK-M2-43, whose `canon.rs` gives the shared `C` its step-3-not-taken entry (REQ-CHART-081). *Was:* "- **Depends on:** TASK-M3-19"; "- **Needs (earlier milestones):** REQ-SYS-017, REQ-INT-055".
