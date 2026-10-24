@@ -380,7 +380,8 @@ constant's move is read as its worst case over every direction of `λ'`: `ΔL_z 
 larger magnitude, `+` where `ΔA = 0`, attained where `λ'` lies along `±(q₃', −q₂')`; and `ΔE`'s extremes over `cos β' ∈ [−1, 1]`, at
 `cos β' = ±1` and, where it lies in that range, at `r₀₂' = r₁₂'`, `cos β' = (m₀ − m₁)·a'/(2M₀₁b')`, `U`'s one
 stationary point, `K` not depending on `β`. A constant in class 0 before takes the class of the largest move; any
-other, the class of the value after nearest the other side. So the clamp is rejected in every gauge unless `p_λ` is
+other, the class of the value after nearest the other side (a value before of exactly 0 is in class 0, and its
+value after, reported as the largest, is not read). So the clamp is rejected in every gauge unless `p_λ` is
 0 within its bound (and `E` keeps its class over every direction), and accepted in every gauge where it is: one
 physical state, one verdict. *Was:* nothing at the pole; `R/b` was written without an exception, and lookup took it
 as 0 at `b = 0`, a rule not stated, under which the same state was accepted in some gauges and rejected in others.
