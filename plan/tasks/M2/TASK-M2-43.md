@@ -147,8 +147,11 @@ the four, and the tests that asserted the 2-to-1 cover:
   `rho_angle` at a `−0` second operand are `±π/2` on the first operand's side on CPU-f64, CPU-f32 and GPU-f32
   (`canonicaliser_phi_signed_zero`, `encode_beta_signed_zero`, `decode_stage_rho_angle_signed_zero`), the shape
   sphere's inverse at `p = −0` agrees across backends (`decode_cross_backend_continuous`), and the CPU's values are
-  unchanged; controls: Metal's `atan2` modelled on the CPU fails each (pitfalls §11). Added by PR #288's code review
-  5640125368, C1, and physics review 5640193616, P1 (applied per R-369): the mechanism this task found, recorded.
+  unchanged; controls: Metal's `atan2` modelled on the CPU (`atan(y/x)`, turned by `π` only where `x < 0`; pitfalls
+  §11) without the select fails each of the three, and fails `canon_rotation_angle` at `ρ_x = −0`;
+  `decode_cross_backend_continuous`'s own control, an f64 reference whose `z₀` is moved by `10⁻⁴`, fails REQ-DEC-043's
+  factor. Added by PR #288's code review 5640125368, C1, and physics review 5640193616, P1 (applied per R-369): the
+  mechanism this task found, recorded.
 - Review checklist (physics reviewer): the decode, the held momentum and the lookup against R-544 and its "Applied per
   R-369" decisions; `checks/r544_check.py` (`python3 -I`) is the port's model of checks 1 to 3.
 
