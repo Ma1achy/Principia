@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 49 |
 | ENC | 35 |
-| CHART | 85 |
-| INT | 105 |
+| CHART | 87 |
+| INT | 106 |
 | EVT | 31 |
 | PAY | 107 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
-| RENDER | 116 |
-| COL | 158 |
-| GUI | 363 |
-| TOOL | 198 |
+| RENDER | 119 |
+| COL | 160 |
+| GUI | 371 |
+| TOOL | 216 |
 | VAL | 198 |
 | PERF | 112 |
 | SYS | 90 |
-| **total** | **1845** |
+| **total** | **1879** |
 
-Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 161 calibration, 161 definition, 1557 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -33,26 +33,26 @@ Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 108 |
 | M2 | 212 |
-| M3 | 219 |
+| M3 | 221 |
 | M4 | 106 |
 | M5 | 179 |
 | M6 | 223 |
-| M7 | 257 |
-| M8 | 419 |
+| M7 | 258 |
+| M8 | 450 |
 
 ## Sections
 
-1497 sections in 56 files: 1215 yield at least one requirement; 282 yield none and are listed below with the reason.
+1554 sections in 60 files: 1244 yield at least one requirement; 310 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 188 |
+| informative only | 208 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 49 |
+| parent heading (obligations are in its subsections) | 53 |
 | planned (the plan PR) | 22 |
-| rationale | 14 |
+| rationale | 18 |
 | superseded (kept for the record) | 4 |
 
 
@@ -409,6 +409,18 @@ Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for th
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
 
+### `docs/design/principia_export_details.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: export details — the colour window, the viewer's settings and mark sizes | informative only | preface and the port's status note (R-581 to R-583); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-581 to R-583; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.4 |
+| 4. Fit with rulings | informative only | how R-581 to R-583 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-581 to R-583; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-RENDER-117, REQ-RENDER-118, REQ-TOOL-201 to REQ-TOOL-205, REQ-GUI-389, REQ-GUI-390, REQ-RENDER-088, REQ-RENDER-111) |
+
 ### `docs/design/principia_honesty_precision.md`
 
 | section | reason | note |
@@ -418,6 +430,18 @@ Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for th
 | 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
 | 3.7 The README line | informative only | records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation |
 | 4. Fit with rulings | informative only | how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks |
+
+### `docs/design/principia_ic_save.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: saving, sharing and exporting an initial condition | informative only | preface and the port's status note (R-586, R-587); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-586, R-587; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.6 |
+| 4. Fit with rulings | informative only | how R-586, R-587 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-586, R-587; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-INT-107, REQ-RENDER-119, REQ-TOOL-211 to REQ-TOOL-213, REQ-GUI-393 to REQ-GUI-395, REQ-GUI-117) |
 
 ### `docs/design/principia_lines.md`
 
@@ -526,6 +550,30 @@ Of these: 158 calibration, 159 definition, 1528 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Principia — trajectory viewing (hover trace + click inspector) | informative only | summary; supersession note |
+
+### `docs/design/principia_uploaded_picture.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the uploaded picture — storing and carrying "Your image…" | informative only | preface and the port's status note (R-585); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-585; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
+| 4. Fit with rulings | informative only | how R-585 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-585; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-COL-160, REQ-COL-161, REQ-TOOL-208 to REQ-TOOL-210, REQ-GUI-391, REQ-GUI-392) |
+
+### `docs/design/principia_video_carrier.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the video carrier — a recording carries its settings in its own file | informative only | preface and the port's status note (R-584); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-584; no obligation |
+| 2. What was measured | rationale | the human's measurement (vt.py, kept as evidence) behind §3.1's choice of carrier; its obligations are in §3.1 and REQ-TOOL-206 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.4 |
+| 3.5 What does not change | informative only | the reel's film (R-578) and a single figure's embedding defaults (embedding §9) are unchanged; no new obligation |
+| 4. Fit with rulings | informative only | how R-584 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-584; the obligations they settle are in §3 |
 
 ### `docs/gui/principia_render_gui_spec.md`
 

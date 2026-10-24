@@ -130,6 +130,7 @@ Export runs the **same frame loop** as interactive playback with **one policy ch
 - **Export quality tier** may exceed the interactive tier (more samples/quad, deeper refinement, full E — motion gating does not apply, scheduler Part 9) — priced into the estimate. Samples/quad is a sim-key difference; depth and `E` are not on the sim key (R-89).
 - **Checkerboard is force-off in export, regardless of the user setting** (`principia_checkerboard_contract.md` §3/§6): every captured frame computes all visible pixels at one `t` — the strict single-playhead invariant holds unconditionally here. (The motion-time levers in general — checkerboard, E-reduction, coarse refinement floor — are interactive concessions; export takes none of them.)
 - **Resolution/fps/duration** are job parameters; the exporter renders offscreen at target resolution, independent of the window.
+- **`render_scale` = 1, and the colour-vision simulation off unless chosen (R-582).** The exporter renders at the export's own resolution whatever the view's `render_scale`, as the checkerboard is forced off, and never applies the viewer's colour-vision simulation (`ViewUI.cvd`) unless the user picks "As seen with", which is recorded (`principia_export_details.md` §3.2). Every measured colour window is frozen at the window on screen when the export starts (R-581, §3.1), and every mark length is in base px, scaled by `output_width / base_width` (R-583, §3.3).
 - **The encoders (R-131).** Native: PNG frames, GIF, and MP4 through a system `ffmpeg` when one is present. Browser: PNG frames (zipped), GIF via a wasm encoder, and MP4/WebM through WebCodecs where supported. GIF is one encoder in both builds: the Rust `gif` crate (MIT or Apache-2.0), with `color_quant` for palettes, compiled to wasm for the browser (R-155).
 
 ---
@@ -150,6 +151,8 @@ only an image's low-bit embedding degrades (`principia_dd_image_embedding.md` §
 ## Part 6 — Sharing: the spec is the object, the video is its shadow
 
 Unchanged in principle, sharpened by lockstep: since there is no stored temporal data at all, **the only complete description of an animation is its spec** — `ViewState + sim key + render state + transport/keyframe spec`. Sharing ships that object (URL-encodable), its `SimConfig` and `RenderState` in their one canonical serialisation (`principia_gui_state_contract.md` §2, R-309); receiving it re-renders bit-comparable playback (Part 5). Exported videos embed (or link) the spec so provenance travels with the pixels.
+
+**How a recording carries it (R-584; `principia_video_carrier.md`).** Always, and once per file, in the format's own metadata: a GIF's comment block and an application extension, an MP4's standard comment, a WebM's tag, each holding the compressed record; PNG frames keep the low-bit record in every frame; and the settings file is always written beside the export, since no metadata survives an upload to most websites. A frame's playhead follows from its index and the recording's settings.
 
 **Receiving a spec (R-483, X4; R-484, RT1).** The spec carries, beside its state, the build hash and the schema version.
 A spec naming a link the receiving build lacks, or one whose definition changed, is "state present, cannot recreate",

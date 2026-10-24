@@ -5362,6 +5362,37 @@
   rq:
   - RQ-528
   note: "Physics review 5605806092 of PR #277, F6 (applied per R-369): REQ-INT-085's calibration measured only the occupants with regularisation none, and TASK-M3-05, which closes it, comes before Heggie is built (TASK-M3-08), so the default occupant's measurement is its own requirement. Closed by TASK-M3-41. It waits with TASK-M3-41, which builds nothing before RQ-526 to RQ-528 are ruled (applied per R-369, physics review 5606990734 of PR #277)."
+- id: REQ-INT-107
+  area: INT
+  statement: "The Precision ring must offer a state-in entry beside `computeIC`, `computeICState(state, simKey) → SimState`, which runs the integration `computeIC` runs after its decode, from the full state given, on the CPU in f64 under R-33's RK45; the constructor must integrate through it `C(as_built)`, `as_built` normalised at entry (−0 as +0, REQ-TOOL-211), with `C`'s steps 1a, 0, 1b and 2 taken and its step 3, the mirror, not taken, bitwise the shared `C`'s step-3-not-taken result (REQ-CHART-081), the hemisphere kept, never the mirror twin (R-589), and a picked IC must still enter through `computeIC`."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.4 Integration
+  - file: docs/contracts/principia_parity_contract.md
+    section: 1. The principle
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 6 — The canonical inverse policy, completed
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 5 — Units and the horizon (inherited scale gauge)
+  - file: decisions.md
+    section: "R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine compute_ic_state: the test first asserts that its built fixture's state is changed by decode(encode(state)), so the re-decode control can fail; for a picked IC, computeICState on computeIC's decoded state gives a SimState bitwise equal to computeIC's; for a built IC in the lower hemisphere the integrated initial state is bitwise the shared C's step-3-not-taken result on as_built (REQ-CHART-081): the centre of mass at the origin and at rest, I = 1, ρ̃ on +x, its λ̃_y sign and its L_z sign kept; the entry runs RK45 in f64 (controls: an entry that folds the mirror, giving the twin's trajectory, one that re-decodes z, which is not bitwise, one that skips the rescale, and one that skips the boost, each fail); review (physics)"
+  rulings:
+  - R-23
+  - R-33
+  - R-544
+  - R-586
+  - R-589
+  milestone: M8
+  note: "R-586: the human accepted the draft's state-in entry, which amends computeIC's contract (parity contract §1). The frame integrated is RQ-563's, ruled by R-589 (24 Oct 2026): option (a), C(as_built) with step 3 not taken, the hemisphere kept. Closed by TASK-M8-83. Fix round 2 of PR #287 (qa review 5638084688, Q8, applied per R-369): the fixture precondition. *Was (verify):* \"cargo test -p engine compute_ic_state: for a picked IC, computeICState on computeIC's decoded state gives a SimState bitwise equal to computeIC's; for a built IC in the lower hemisphere the state integrated keeps its hemisphere (its λ̃_y sign) and its L_z sign, the rotation and centre of mass canonicalised; the entry runs RK45 in f64 (controls: an entry that folds the mirror, giving the twin's trajectory, and one that re-decodes z, which is not bitwise, each fail); review (physics)\" Fix round 4 of PR #287 (physics review 5638148080, P2, applied per R-369): the integrated state is bitwise the shared C's with steps 1a, 0, 1b and 2 taken; controls for a skipped rescale and a skipped boost. *Was (statement):* \"The Precision ring must offer a state-in entry beside `computeIC`, `computeICState(state, simKey) → SimState`, which runs the integration `computeIC` runs after its decode, from the full state given, on the CPU in f64 under R-33's RK45; the constructor must integrate through it `C(as_built)` with `C`'s step 3, the mirror, not taken, the hemisphere kept (RQ-563's option (a)), and a picked IC must still enter through `computeIC`.\" *Was (verify):* \"cargo test -p engine compute_ic_state: the test first asserts that its built fixture's state is changed by decode(encode(state)), so the re-decode control can fail; for a picked IC, computeICState on computeIC's decoded state gives a SimState bitwise equal to computeIC's; for a built IC in the lower hemisphere the state integrated keeps its hemisphere (its λ̃_y sign) and its L_z sign, the rotation and centre of mass canonicalised; the entry runs RK45 in f64 (controls: an entry that folds the mirror, giving the twin's trajectory, and one that re-decodes z, which is not bitwise, each fail); review (physics)\" Fix round 5 of PR #287 (physics review 5638172877, P5, applied per R-369): C runs on the as_built normalised at entry. *Was (statement):* \"The Precision ring must offer a state-in entry beside `computeIC`, `computeICState(state, simKey) → SimState`, which runs the integration `computeIC` runs after its decode, from the full state given, on the CPU in f64 under R-33's RK45; the constructor must integrate through it `C(as_built)` with `C`'s steps 1a, 0, 1b and 2 taken and its step 3, the mirror, not taken, bitwise the shared `C`'s step-3-not-taken result (REQ-CHART-081), the hemisphere kept (RQ-563's option (a)), and a picked IC must still enter through `computeIC`.\" R-589 (24 Oct 2026, closing RQ-563): the statement cites the ruling. *Was (statement):* \"The Precision ring must offer a state-in entry beside `computeIC`, `computeICState(state, simKey) → SimState`, which runs the integration `computeIC` runs after its decode, from the full state given, on the CPU in f64 under R-33's RK45; the constructor must integrate through it `C(as_built)`, `as_built` normalised at entry (−0 as +0, REQ-TOOL-211), with `C`'s steps 1a, 0, 1b and 2 taken and its step 3, the mirror, not taken, bitwise the shared `C`'s step-3-not-taken result (REQ-CHART-081), the hemisphere kept (RQ-563's option (a)), and a picked IC must still enter through `computeIC`.\" *Was (note):* \"The frame integrated is RQ-563; its option (a), C(as_built) with step 3 not taken, applied meanwhile; nothing waits.\""
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -8594,7 +8625,7 @@
   note: "R-426 (RQ-274): the human's \"an undeclared range is a ledger gap, not 'spans zero'\"; applied per R-369: a lin or diverging scalar field whose range is undeclared fails generation, as dd_generation_root §3.8's \"A field without a complete entry fails generation loudly\" has it, save q_mass and mean_y, which the same ruling keeps on cool-warm provisionally. C_ty was on cool-warm by the same default (RQ-277); decided per R-369 by the orchestrator, option (a), in PR #205's fix round: it is signed, as diffusion is, and stays on cool-warm. energy_drift and Lz_drift added in the same fix round (physics review 5506860821, code review 5506873900): §3.8 declares them, the ledger did not. Closed by TASK-M1-21."
 - id: REQ-GEN-036
   area: GEN
-  statement: "Every machine-readable export and dump (the export decoder's columns, generation root seam 13; CSV columns, JSON fields; .raw and .prnq dumps once the corpus defines them) must keep the internal 0-based body and pair ids (R-22) for each body- or pair-indexed field (detail under escape and collision, dmin_pair, m0 m1 m2, any per-body or per-pair field) and must say so in its header or schema: \"body index, 0-based\", and for a pair id \"pair id, 0-based; pair k is the side opposite body k\" (R-449); an export's caption, read by a person, is 1-based (REQ-GUI-188)."
+  statement: "Every machine-readable export and dump (the export decoder's columns, generation root seam 13; CSV columns, JSON fields; .raw and .prnq dumps once the corpus defines them) must keep the internal 0-based body and pair ids (R-22) for each body- or pair-indexed field (detail under escape and collision, dmin_pair, m0 m1 m2, any per-body or per-pair field) and must say so in its header or schema: \"body index, 0-based\", and for a pair id \"pair id, 0-based; pair k is the side opposite body k\" (R-449); an export's caption, read by a person, is 1-based (REQ-GUI-188); the trajectory CSV's body column labels are 1-based, its preamble saying so, the one exception (R-587, REQ-TOOL-212)."
   source:
   - file: decisions.md
     section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
@@ -8602,6 +8633,10 @@
     section: 3.8 Metadata schema (what every entry must carry)
   - file: docs/design/principia_dd_simstate_payload.md
     section: "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+  - file: docs/design/principia_ic_save.md
+    section: 3.6 Trajectory export (R-587)
+  - file: decisions.md
+    section: "R-587 — The trajectory CSV: one row per step as taken, never resampled, its body columns labelled 1-based (`body1_x` …) as bodies are always displayed, the preamble saying so; the record's own fields and the outcome's `detail` stay 0-based with a 1-based gloss *(amends R-449 for the trajectory CSV's column labels)*"
   verify:
     method: unit test
     detail: "cargo test -p engine export_index_base: the generated export decoder's header or schema states \"body index, 0-based\" for each body-indexed field and \"pair id, 0-based; pair k is the side opposite body k\" for detail under collision and dmin_pair, generated from the ledger, not hand-written; an exported collision of bodies 0 and 1 writes detail 2 and an escape of body 0 writes 0; a ledger entry marked body-indexed without the text fails generation; control: a header without the base fails"
@@ -8609,8 +8644,9 @@
   - R-22
   - R-449
   - R-549
+  - R-587
   milestone: M2
-  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). R-549 (RQ-336, 21 Oct 2026): R-449 item 5 names prin-rs's dump formats (.raw, .prnq) as examples; the rule covers every machine-readable export the corpus defines, and any defined later, and R-449's quoted words are not changed. *Was:* \".raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are.\" (reworded, kept here)."
+  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). R-549 (RQ-336, 21 Oct 2026): R-449 item 5 names prin-rs's dump formats (.raw, .prnq) as examples; the rule covers every machine-readable export the corpus defines, and any defined later, and R-449's quoted words are not changed. *Was:* \".raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are.\" (reworded, kept here). R-587 (21 Oct 2026) amends R-449 for the trajectory CSV's body column labels only; this requirement's verify and TASK-M2-33's code are unchanged, the CSV not existing before TASK-M8-84. *Was (statement):* \"Every machine-readable export and dump (the export decoder's columns, generation root seam 13; CSV columns, JSON fields; .raw and .prnq dumps once the corpus defines them) must keep the internal 0-based body and pair ids (R-22) for each body- or pair-indexed field (detail under escape and collision, dmin_pair, m0 m1 m2, any per-body or per-pair field) and must say so in its header or schema: \"body index, 0-based\", and for a pair id \"pair id, 0-based; pair k is the side opposite body k\" (R-449); an export's caption, read by a person, is 1-based (REQ-GUI-188).\""
 - id: REQ-GEN-037
   area: GEN
   statement: "Each link registry entry must declare its tunable parameters, each with a name (a chart constant the entry already declares and its trees read), a default (that constant's value), a closed allowed range [lo, hi] and a citation, in a table beside the entries: today `mu_max` on `softmax_tanh` and `q_max` on `sigmoid_q`, `tanh_q` and `softsign_q`, with `alpha_min` not tunable; and `check` must refuse, at generation, an entry whose forward leaves its declared codomain and a slot given an entry of another codomain, never merely leaving it out of a list."
@@ -12849,19 +12885,24 @@
   note: "R-476 L1, M2 (flagged). R-487, R-531 (20 Oct 2026): this pass is the pass drawn over; the line sets marked `through_medium` are drawn by the same renderer before the Print graph (REQ-RENDER-114). Closed by TASK-M7-42."
 - id: REQ-RENDER-088
   area: RENDER
-  statement: "The line system's data model must be principia_lines.md §3's: LineStyle (stroke, dash, outline, ink, label, units), LabelStyle, LineRef (a style by name with partial overrides), ContourSet, Trace, Axes and Lines { styles, contours, traces, axes }; a line refers to a style by name and may override single fields without forking it; editing a style updates every line that uses it; PrintPt sizes in points for exports."
+  statement: "The line system's data model must be principia_lines.md §3's: LineStyle (stroke, dash, outline, ink, label, with no units field, every length being in base px, R-583), LabelStyle, LineRef (a style by name with partial overrides), ContourSet, Trace, Axes and Lines { styles, contours, traces, axes }; a line refers to a style by name and may override single fields without forking it; editing a style updates every line that uses it."
   source:
   - file: decisions.md
     section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
   - file: docs/design/principia_lines.md
     section: 3. The data model
+  - file: docs/design/principia_export_details.md
+    section: "3.3 One size rule: base px (R-583)"
+  - file: decisions.md
+    section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
   verify:
     method: unit test
-    detail: "cargo test -p render line_model: a LineRef override changes only its field; editing the library's style updates every line naming it; a Lines value round-trips through its canonical serialisation bitwise; PrintPt widths scale with the export's DPI; control: an override that forks the style stops following it"
+    detail: "cargo test -p render line_model: a LineRef override changes only its field; editing the library's style updates every line naming it; a Lines value round-trips through its canonical serialisation bitwise; LineStyle has no units field (base px is REQ-RENDER-118's); control: an override that forks the style stops following it"
   rulings:
   - R-476
+  - R-583
   milestone: M7
-  note: R-476 L1. Closed by TASK-M7-42.
+  note: "R-476 L1. Closed by TASK-M7-42. R-583 (gap sweep PR 2c, 21 Oct 2026): PrintPt is retired, every length in base px (REQ-RENDER-118, TASK-M7-70). *Was (statement):* \"The line system's data model must be principia_lines.md §3's: LineStyle (stroke, dash, outline, ink, label, units), LabelStyle, LineRef (a style by name with partial overrides), ContourSet, Trace, Axes and Lines { styles, contours, traces, axes }; a line refers to a style by name and may override single fields without forking it; editing a style updates every line that uses it; PrintPt sizes in points for exports.\" *Was (verify):* \"cargo test -p render line_model: a LineRef override changes only its field; editing the library's style updates every line naming it; a Lines value round-trips through its canonical serialisation bitwise; PrintPt widths scale with the export's DPI; control: an override that forks the style stops following it\""
 - id: REQ-RENDER-089
   area: RENDER
   statement: "Lines must be drawn as screen-space polylines with dashes by arc length, the pattern continuing along the whole line, outline first then stroke with the same dash pattern and phase, dash lengths not scaling with width, opacity per vertex drawn in runs of equal ink and quantised opacity, in px on screen and pt in print."
@@ -13289,7 +13330,7 @@
   note: "Waits on RQ-538 (applied meanwhile: none; every other task tests `device_px` nodes and the anchored sheet at render_scale 1). Closed by TASK-M7-69, a leaf."
 - id: REQ-RENDER-111
   area: RENDER
-  statement: "Every Print graph length parameter must declare a unit: `ref_px` (the default for marks: pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time), `device_px` (only for nodes that model the display itself, listed), or `fraction` (a fraction of the figure width); a preset rendered at 512² and at 2048² downsampled must agree within REQ-RENDER-112's tolerance for every `ref_px` and `fraction` node, `device_px` nodes exempt and listed."
+  statement: "Every Print graph length parameter must declare a unit: `ref_px` (the default for marks: base px, pixels on a figure `RenderState.base_width` wide, 1024 where the state has none, scaled by `output_width / base_width` at render time, R-583), `device_px` (only for nodes that model the display itself, listed), or `fraction` (a fraction of the figure width); a preset rendered at 512² and at 2048² downsampled must agree within REQ-RENDER-112's tolerance for every `ref_px` and `fraction` node, `device_px` nodes exempt and listed."
   source:
   - file: docs/design/principia_print_graph.md
     section: "6.2 Units: a medium must look the same at every export size"
@@ -13297,13 +13338,16 @@
     section: 11. Tests (each with an arm that can fail)
   - file: decisions.md
     section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
+  - file: decisions.md
+    section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
   verify:
     method: unit test
     detail: "cargo test -p render print_scale_invariance (§11 test 4): the harness renders each registered `ref_px` and `fraction` node at 512² and at 2048² downsampled and compares within REQ-RENDER-112; the `device_px` exemption list is printed and equals the registry's; control: a fixture node deliberately left in `device_px` but not listed fails"
   rulings:
   - R-490
+  - R-583
   milestone: M7
-  note: "The harness lands here and each port task runs it on its nodes (REQ-COL-143 to REQ-COL-151). Closed by TASK-M7-55."
+  note: "The harness lands here and each port task runs it on its nodes (REQ-COL-143 to REQ-COL-151). Closed by TASK-M7-55. R-583 (21 Oct 2026): `ref_px` is base px; the harness renders both sizes from one state, so one base_width, and its test is unchanged; base_width is REQ-RENDER-118's (TASK-M7-70). *Was (statement):* \"Every Print graph length parameter must declare a unit: `ref_px` (the default for marks: pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time), `device_px` (only for nodes that model the display itself, listed), or `fraction` (a fraction of the figure width); a preset rendered at 512² and at 2048² downsampled must agree within REQ-RENDER-112's tolerance for every `ref_px` and `fraction` node, `device_px` nodes exempt and listed.\""
 - id: REQ-RENDER-112
   area: RENDER
   kind: calibration
@@ -13418,6 +13462,84 @@
   - R-557
   milestone: M8
   note: "Fix round 3 of PR #281 (perf review 5608473498, F4, applied per R-369). Closed by TASK-M8-69."
+- id: REQ-RENDER-117
+  area: RENDER
+  statement: "An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing; the export must report, in its export block's `froze.nodes`, every node whose entry it wrote and no other, in `node_id` order (R-588)."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes, the one first in the stain graph having the higher node_id, and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry, and its export block's froze.nodes lists exactly the two measured nodes, in node_id order; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a second export of the imported view, whose nodes are already frozen, lists no node in froze.nodes; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, an export that measures its window over the 4× pixels, an export whose froze.nodes omits a node it froze, one whose froze.nodes lists a node the view had already frozen, and one listing its nodes in graph order, not node_id order, each fail)"
+  rulings:
+  - R-581
+  - R-588
+  milestone: M8
+  note: "R-581 (gap sweep PR 2c). Closed by TASK-M8-80. How the frozen window sits with R-484's identity is RQ-562's, ruled by R-588 (24 Oct 2026): option (a), the identity on the record written, import giving back bitwise the RenderState the export wrote, frozen windows included. *Was (note):* \"How the frozen window sits with R-484's identity is RQ-562; its option (a), the identity on the record written, applied meanwhile; nothing waits.\" Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q1, applied per R-369). *Was (statement):* \"An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing.\" *Was (verify):* \"cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, and an export that measures its window over the 4× pixels, each fail)\" Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, the audit the coordinator asked for, applied per R-369): R-588's froze tested. *Was (statement):* \"An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing; the export must report, in its export block's `froze.nodes`, every node whose entry it wrote and no other (R-588).\" *Was (verify):* \"cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry, and its export block's froze.nodes lists exactly the two measured nodes; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a second export of the imported view, whose nodes are already frozen, lists no node in froze.nodes; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, an export that measures its window over the 4× pixels, an export whose froze.nodes omits a node it froze, and one whose froze.nodes lists a node the view had already frozen, each fail)\" Fix round of PR #287's rulings port (qa review 5638354385 of PR #287, Q8, applied per R-369): froze's node_id order, the resize under every policy, scale factor 2, the Sequence's pre-pass. *Was (verify):* \"cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry, and its export block's froze.nodes lists exactly the two measured nodes, in node_id order; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a second export of the imported view, whose nodes are already frozen, lists no node in froze.nodes; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, an export that measures its window over the 4× pixels, an export whose froze.nodes omits a node it froze, one whose froze.nodes lists a node the view had already frozen, and one listing its nodes out of node_id order, each fail)\""
+- id: REQ-RENDER-118
+  area: RENDER
+  statement: "Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and on screen at one logical px per base px (the display's scale factor of physical px) whatever `base_width` says, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, a headless writer keeping the state's and a record without it reading 1024 (the GUI's save and Export & share writers are REQ-TOOL-218's); `device_px` nodes stay the one exception."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: "3.3 One size rule: base px (R-583)"
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: docs/design/principia_lines.md
+    section: 5. Drawing a line
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width; at a display scale factor of 2 every on-screen mark is twice its base px in physical px (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, a headless writer that rewrites base_width, and a mark drawn at 1 physical px per base px at scale factor 2, each fail)"
+  rulings:
+  - R-476
+  - R-490
+  - R-583
+  - R-588
+  milestone: M7
+  note: "R-583 (gap sweep PR 2c). Closed by TASK-M7-70. How base_width, written by the writer, sits with R-484's identity is RQ-562's, ruled by R-588 (24 Oct 2026): option (a), the identity on the record written, base_width included. Fix round 1 of PR #287 (gui review 5638052211, G5, applied per R-369): 1 base px is one logical px on screen (principia_export_details.md §3.3). *Was (statement):* \"Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and at a scale of 1 on screen whatever `base_width` says, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, written by the writer when a view is saved or exported, a headless writer keeping the state's and a record without it reading 1024; `device_px` nodes stay the one exception.\" *Was (verify):* \"cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width and a GUI save writes the figure's (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, and a writer that keeps a stale base_width on a GUI save, each fail)\" Fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369): kept to the destinations M7 builds, as TASK-M7-45's F1 of PR #265; the GUI's save and Export & share arms move to REQ-TOOL-218 (TASK-M8-80). *Was (statement):* \"Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and on screen at one logical px per base px (the display's scale factor of physical px) whatever `base_width` says, Export & share's multiples of the view counting logical px, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, written by the writer when a view is saved or exported, a headless writer keeping the state's and a record without it reading 1024; `device_px` nodes stay the one exception.\" *Was (verify):* \"cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width and a GUI save writes the figure's; at a display scale factor of 2 every on-screen mark is twice its base px in physical px, and a 1× export of a view 800 logical px wide is 800 px wide (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, a writer that keeps a stale base_width on a GUI save, and a mark drawn at 1 physical px per base px at scale factor 2, each fail)\" *Was (note):* \"How base_width, written by the writer, sits with R-484's identity is RQ-562; its option (a) applied meanwhile; nothing waits.\""
+- id: REQ-RENDER-119
+  area: RENDER
+  statement: "`Trace.ic` must be an `IcRef = OnChart { chart, uv } | Built(IcRecord)` and a marked IC a `Trace` of kind `Marked(id)` in `RenderState.Lines`, drawn as REQ-GUI-120's crosshair at its IC's projection on the current slice and, under the trace settings, its path, so that a marked IC round-trips bitwise through every export path (snapshot JSON, a saved view, a share link, the animation spec, the pxpack in tier 2 and the `tEXt` chunk); Mark all kept must make one mark of each kept orbit."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: "3.5 In views: marks"
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  verify:
+    method: unit test
+    detail: "cargo test -p render ic_marks_travel: a view with one OnChart and one Built mark (an off-slice IC) round-trips bitwise through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk; at 64² tier 2 drops whole and the tEXt chunk still carries both marks; Mark all kept with three kept orbits adds three Marked traces (controls: marks held in ViewUI, and a Built mark that round-trips only its z, each fail)"
+  rulings:
+  - R-484
+  - R-586
+  milestone: M8
+  note: "R-586; the Marked kind applied per R-369. Closed by TASK-M8-84. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q5, applied per R-369). The record's measured size stays TASK-M8-84's deliverable (written into principia_ic_save.md §3.5), not a verify arm, since it cannot fail. *Was (verify):* \"cargo test -p render ic_marks_travel: a view with one OnChart and one Built mark (an off-slice IC) round-trips bitwise through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk; at 64² tier 2 drops whole and the tEXt chunk still carries both marks; Mark all kept with three kept orbits adds three Marked traces; the record's size is measured and written into principia_ic_save.md §3.5 (controls: marks held in ViewUI, and a Built mark that round-trips only its z, each fail)\""
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -16735,6 +16857,42 @@
   - R-536
   milestone: M7
   note: "R-536 D1, D2. Closed by TASK-M7-66. Fix round 5 of PR #281 (physics review 5608575083, P4, applied per R-369): the reference takes REQ-COL-154's normalisation and REQ-COL-158's windows, and only units and seeding deviations may explain a mismatch. *Was (statement):* \"The four \"Driven by the data\" presets (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain) must each record in their registry entry the stand-in their lab graph actually uses (Relief of lifetime `brightness`; the other three `edges`, fringe density, where Wet's and Unfinished's `brightness` is a threshold window on it, not a stand-in), as R-492's deviation, and must read the real field in place of the stand-in node only: `t_end` for the relief, the ensemble spread for the wash, and REQ-COL-156's fields for the other two, the windows kept on the real field; each matched to its lab reference with that deviation listed.\" *Was (verify):* \"cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made by substituting the fixture's field for the stand-in in the lab's graph, or lists the deviation; controls: Wet with its threshold node replaced too fails the graph-shape check, and a preset reading brightness when its field is present fails\" Fix round 8 of PR #281 (qa review 5608745757, finding 1, applied per R-369): the golden-image method runs under its runner, `cargo xtask golden print-data-driven`, with its baselines in `fixtures/golden/print/` (plan/WORKFLOW.md § \"Conventions: crates and runners (R-146)\"; R-110). *Was (verify):* \"cargo test -p render print_port_data_driven: each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made from the lab's graph with the stand-in replaced by the fixture's field normalised by REQ-COL-154's rule and its threshold windows set to REQ-COL-158's (R-536 D2, R-492), a mismatch beyond the tolerance accepted only where it comes from a deviation of the kinds print_graph §10 and R-492 name (screen-pixel units, frame-seeded noise) listed in the registry entry; controls: Wet with its threshold node replaced too fails the graph-shape check, a preset reading brightness when its field is present fails, a reference keeping the lab's windows where REQ-COL-158's differ is refused by the reference check, and a mismatch beyond the tolerance listed as a deviation of any other kind fails\" Fix round 9 of PR #281 (qa re-check 5624154623, A, applied per R-369): the suite's baselines are in its own directory, `fixtures/golden/<suite>/`, where `cargo xtask golden <suite>` reads them (rows of fixtures/golden/BASELINES.md keyed `<suite>/<case>`), not `fixtures/golden/print/` as round 8 had it. *Was (verify):* \"cargo xtask golden print-data-driven: against the baselines in `fixtures/golden/print/` (R-146, R-110; the M8 browser suite checks the same baselines) (the reference this verify defines, rendered once and pinned there), each preset's registry entry lists its stand-in as above; the stand-in node, and only it, is replaced by a `field` node; each renders on a fixture payload within REQ-COL-142's tolerance of a reference made from the lab's graph with the stand-in replaced by the fixture's field normalised by REQ-COL-154's rule and its threshold windows set to REQ-COL-158's (R-536 D2, R-492), a mismatch beyond the tolerance accepted only where it comes from a deviation of the kinds print_graph §10 and R-492 name (screen-pixel units, frame-seeded noise) listed in the registry entry; controls: Wet with its threshold node replaced too fails the graph-shape check, a preset reading brightness when its field is present fails, a reference keeping the lab's windows where REQ-COL-158's differ is refused by the reference check, and a mismatch beyond the tolerance listed as a deviation of any other kind fails\""
+- id: REQ-COL-160
+  area: COL
+  kind: calibration
+  statement: "The uploaded picture's ingest limits must be calibrated: the largest file accepted (proposed 32 MB) and the largest decoded size (proposed 8192 × 8192), proposed with their evidence by the task that needs them, provisional until the M8 gate, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.1 Ingest
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the two limits with their evidence (the ingest's peak memory and time at each limit on the reference machine, and the decoders' own limits); a reviewer checks them; the human confirms them at the M8 gate"
+  rulings:
+  - R-71
+  - R-585
+  milestone: M8
+  note: "R-585: the draft names 32 MB and 8192² as calibration values (R-71). Closed by TASK-M8-82."
+- id: REQ-COL-161
+  area: COL
+  statement: "\"Your image…\" must take a PNG or a JPEG, refuse with a reason naming the limit a file over REQ-COL-160's limits, convert it to 8-bit sRGB from its embedded profile (none being sRGB), the conversion recorded in the import report, composite it over the canvas background where it has alpha, and resample it to 256 × 256 by exact area averaging in the app's own code (each texel the overlap-area-weighted mean of the source pixels it covers, in integers, rounded half to even), stretched to the square, row 0 the top edge, `v = 1`; those 196,608 bytes of RGB8 are the canonical picture and the original file is not kept."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.1 Ingest
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render picture_ingest: a fixture PNG, a JPEG and a PNG with alpha ingest to texels whose SHA-256 equals the checked-in hash on every CI platform; the PNG fixtures' expected texels and hash are computed by a stand-alone script checked in beside them (Python's standard library only: zlib to decode, the integer formula in exact fractions, hashlib's SHA-256), sharing no code with the crate, and the JPEG's checked-in hash proves only that every CI platform agrees; a 3 × 2 source with known values gives the texels the integer formula gives; a 512 × 256 source whose horizontally adjacent pixel pairs hold 0 and 1, and 2 and 3, in every channel gives texels 0 and 2 (ties rounded half to even); a one-pixel change in the source changes the hash; a 600 × 300 source fills the whole square, stretched; a fixture with an embedded profile records its conversion; a file over each limit is refused with a reason naming it and nothing is stored (controls: round half up, which gives 1 and 3, the platform's or a floating-point resampler, a fit with bars, a silent downscale of an over-limit file, and a hash that skips the texels, each fail)"
+  rulings:
+  - R-585
+  milestone: M8
+  note: "R-585; the exact integer averaging and the app's own decode applied per R-369. Closed by TASK-M8-82. Fix round 2 of PR #287 (qa review 5638084688, Q4, applied per R-369): a downsampled fixture with exact ties and a round-half-up control; the expected hash computed independently of the code under test. *Was (verify):* \"cargo test -p render picture_ingest: a fixture PNG, a JPEG and a PNG with alpha ingest to texels whose SHA-256 equals the checked-in hash on every CI platform; a 3 × 2 source with known values gives the texels the integer formula gives; a one-pixel change in the source changes the hash; a 600 × 300 source fills the whole square, stretched; a fixture with an embedded profile records its conversion; a file over each limit is refused with a reason naming it and nothing is stored (controls: the platform's or a floating-point resampler, a fit with bars, a silent downscale of an over-limit file, and a hash that skips the texels, each fail)\""
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -18667,7 +18825,7 @@
   milestone: M8
 - id: REQ-GUI-117
   area: GUI
-  statement: "Editing the IC must re-integrate the orbit live through computeIC on the CPU in f64, the Inspector reaching the engine only through computeIC."
+  statement: "Editing the IC must re-integrate the orbit live on the CPU in f64, the Inspector reaching the engine only through computeIC and, for an IC given as its state (a built IC), its state-in sibling computeICState (REQ-INT-107, R-586)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
@@ -18677,11 +18835,17 @@
     section: 1. The single mechanism
   - file: docs/design/principia_trajectory_viewing.md
     section: 6. Placement
+  - file: docs/design/principia_ic_save.md
+    section: 3.4 Integration
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
   verify:
     method: unit test
-    detail: "a body drag triggers one computeIC call and the trajectory panes update; no other engine entry point is called"
-  rulings: []
+    detail: "a body drag triggers one computeICState call and the trajectory panes update; clicking an atlas pixel opens the Inspector through one computeIC call; no other engine entry point is called"
+  rulings:
+  - R-586
   milestone: M8
+  note: "R-586 (gap sweep PR 2c, 21 Oct 2026): the human accepted the draft's state-in entry, built by TASK-M8-83, on which TASK-M8-16 now depends. *Was (statement):* \"Editing the IC must re-integrate the orbit live through computeIC on the CPU in f64, the Inspector reaching the engine only through computeIC.\" *Was (verify):* \"a body drag triggers one computeIC call and the trajectory panes update; no other engine entry point is called\""
 - id: REQ-GUI-118
   area: GUI
   statement: "The Inspector must offer Reset, Randomise, Burrau-ish, Rotate 15°, Scale × 1.25 and Boost → as buttons, and the canonical pane must not move under the gauge buttons."
@@ -18724,11 +18888,15 @@
     section: 05 Inspector — one IC, its trajectory, one timeline
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Bridges to the main view
+  - file: docs/design/principia_ic_save.md
+    section: "3.5 In views: marks"
   verify:
     method: unit test
     detail: "build an IC: 'mark' draws a crosshair at z's projection on the current slice; 'lock' sets the lock fields to that z; 'centre' sets z₀; 'keep' adds a kept orbit"
-  rulings: []
+  rulings:
+  - R-586
   milestone: M8
+  note: "R-586 (21 Oct 2026): mark is the durable act, a Trace of kind Marked in Lines whose ic is an IcRef, travelling with the view (REQ-RENDER-119, TASK-M8-84); this requirement's crosshair is how it is drawn."
 - id: REQ-GUI-121
   area: GUI
   statement: "The Measure tool must let the user drag a square region on the plot itself, draw the sampled pairs on it with disagreeing pairs marked, leave on Esc, and offer Export CSV and Keep region."
@@ -23463,6 +23631,182 @@
   - R-577
   milestone: M8
   note: "Fix round 12 of PR #286 (perf review 5632950982, P6; applied per R-369): no corpus value gives \"small\". Closed by TASK-M8-78."
+- id: REQ-GUI-389
+  area: GUI
+  statement: "A frozen node must read \"frozen at export\" in its inspector and on the Legend's key for it, and Re-measure in its inspector must remove only its entry by one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry; a stain-graph edit that removes a node, or a preset replacing the graph, must drop the entries of the nodes no longer present in the same undoable command, one undo entry."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 7. Canvas interactions
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 11. Presets = whole graphs
+  verify:
+    method: unit test
+    detail: "cargo test -p gui frozen_at_export: after importing an export with two frozen nodes, a node's inspector and its Legend key read \"frozen at export\"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry; deleting a frozen node drops its entry in the deletion's one undo entry, undo restoring node and entry, and a new node given the deleted node's id measures; loading a preset drops every entry of the replaced graph (controls: a Re-measure that clears both nodes, one that adds two undo entries, a stale entry that freezes a new node with a reused id, and a drop that adds its own undo entry, fail)"
+  rulings:
+  - R-69
+  - R-581
+  milestone: M8
+  note: "R-581. Closed by TASK-M8-80. Fix round 1 of PR #287 (gui review 5638052211, G6, applied per R-369): an entry goes with its node (principia_export_details.md §3.1). *Was (statement):* \"A frozen node must read \"frozen at export\" in its inspector and on the Legend's key for it, and Re-measure in its inspector must remove only its entry by one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry.\" *Was (verify):* \"cargo test -p gui frozen_at_export: after importing an export with two frozen nodes, a node's inspector and its Legend key read \"frozen at export\"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry (controls: a Re-measure that clears both nodes, and one that adds two undo entries, fail)\""
+- id: REQ-GUI-390
+  area: GUI
+  statement: "The colour-vision simulation must be `ViewUI.cvd` (off, deuteranopia, protanopia, tritanopia, achromatopsia), set by the GUI as a render uniform, never undoable, never written to a record or restored from one, and remembered across sessions in the GUI's own settings; Export & share's Image section must offer \"As seen with: <mode>\", a checkbox off by default and offered only while it is not Off; and wherever the app shows an image exported with it, the header strip must carry the badge \"As seen with <mode>\"."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.2 The viewer's settings stay with the viewer (R-582)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless \"As seen with\" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui cvd_viewer_setting: changing the simulation sends no SetField and adds no undo entry; the view's snapshot JSON and pxpack carry no cvd field; the setting is restored from the GUI's settings after a restart; the As seen with checkbox is absent with the simulation off and present and unticked with it on; Import picture's preview of an As-seen export shows the badge inside the header strip's rect and outside the plot's (controls: a change entering undo, a record carrying cvd, the checkbox ticked by default, and a badge drawn over the plot, each fail)"
+  rulings:
+  - R-123
+  - R-523
+  - R-582
+  milestone: M8
+  note: "R-582; \"badges the header strip\" read as the app's showing of such an image, applied per R-369. Closed by TASK-M8-80."
+- id: REQ-GUI-391
+  area: GUI
+  statement: "When a picture's hash is in neither the store nor a `prPc` chunk, the view must recreate everything else bitwise, the Picture base drawing `#141418` with its layers over it, the header strip saying \"Picture missing: <name> · <hash, 8>\" and the import report listing it; Locate picture… must accept only a file whose ingested texels hash to the reference; no built-in may ever stand in, and the hatch is not used."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.5 Missing
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui picture_missing: a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, a Locate that accepts any file, and a badge drawn over the plot, each fail)"
+  rulings:
+  - R-467
+  - R-523
+  - R-585
+  milestone: M8
+  note: "R-585. Closed by TASK-M8-82. Fix round 1 of PR #287 (gui review 5638052211, G4, applied per R-369): the badge-placement control, as REQ-GUI-390 has (R-523). *Was (verify):* \"cargo test -p gui picture_missing: a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, and a Locate that accepts any file, each fail)\""
+- id: REQ-GUI-392
+  area: GUI
+  statement: "The \"Your image…\" dialog must show the picture as it will be applied, stretched to the 256 × 256 square, before it is applied, and refuse a file over the limits with the reason shown in the dialog."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.1 Ingest
+  - file: docs/design/principia_state_map.md
+    section: SM8. Image mode
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui picture_upload_dialog: with a 600 × 300 fixture the dialog's preview is the ingested 256 × 256 texels, drawn in a square rect with no bars, before anything is applied; no SetField is sent until Apply, and Apply is offered only once the preview is shown; Cancel sends no SetField and leaves RenderState unchanged; an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, a preview that is not the ingested texels, an Apply offered before the preview, and a Cancel that sends a SetField, each fail); cargo xtask screenshot picture_upload: the dialog's layout only (R-68)"
+  rulings:
+  - R-68
+  - R-585
+  milestone: M8
+  note: "R-585. REQ-GUI-340's control opens it. Closed by TASK-M8-82. Fix round 1 of PR #287 (gui review 5638052211, G3, applied per R-369): the behaviour moved from the screenshot, which compares layout only (R-68), into picture_upload_dialog. *Was (verify):* GUI screenshot, \"cargo xtask screenshot picture_upload: the dialog shows a 600 × 300 fixture stretched to the square before it is applied, and Cancel leaves RenderState unchanged; cargo test -p gui picture_upload_dialog: an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, and an apply before the preview, fail)\""
+- id: REQ-GUI-393
+  area: GUI
+  statement: "The Inspector must copy the IC's record with Ctrl+C and a 1-based table with Copy as text, paste a record with Ctrl+V, and save it with File › Save IC… as `<label>.principia-ic.json`; File › Open IC… (or a drop) must open a record in Create & locate, in its as-built frame, as recovered, physics only (a link unknown or its entry hash different: as_built loaded and only \"locate on this chart\" refused, naming the link) or corrupt, showing the stored `z` against the recomputed as a residual; while a text field is being typed in, Ctrl+C and Ctrl+V must copy and paste its text, never the record (R-409)."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.2 Copy, save, open
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui ic_copy_save_open: Ctrl+C puts the record's JSON on the clipboard and Copy as text a table naming bodies 1, 2, 3; Ctrl+V of that JSON opens the IC in Create & locate bitwise; Save IC… writes <label>.principia-ic.json and Open IC… reads it back as recovered with its residual shown; a record with one link's entry hash changed opens as physics only, as_built loaded and locate refused naming that link; truncated JSON opens as corrupt; Ctrl+V of a record while a mass field is being typed in pastes the text into that field and opens no IC, and Ctrl+C there copies the field's selected text, not the record (controls: a default link standing in, a table numbering bodies 0, 1, 2, a corrupt record that loads, and a record pasted over a typed field, each fail)"
+  rulings:
+  - R-409
+  - R-449
+  - R-521
+  - R-586
+  milestone: M8
+  note: "R-586. Closed by TASK-M8-84. Fix round 1 of PR #287 (gui review 5638052211, G2, applied per R-369): the text-field arm (render GUI spec §G3's Ctrl+C · Ctrl+V row). *Was (statement):* \"The Inspector must copy the IC's record with Ctrl+C and a 1-based table with Copy as text, paste a record with Ctrl+V, and save it with File › Save IC… as `<label>.principia-ic.json`; File › Open IC… (or a drop) must open a record in Create & locate, in its as-built frame, as recovered, physics only (a link unknown or its entry hash different: as_built loaded and only \"locate on this chart\" refused, naming the link) or corrupt, showing the stored `z` against the recomputed as a residual.\" *Was (verify):* \"cargo test -p gui ic_copy_save_open: Ctrl+C puts the record's JSON on the clipboard and Copy as text a table naming bodies 1, 2, 3; Ctrl+V of that JSON opens the IC in Create & locate bitwise; Save IC… writes <label>.principia-ic.json and Open IC… reads it back as recovered with its residual shown; a record with one link's entry hash changed opens as physics only, as_built loaded and locate refused naming that link; truncated JSON opens as corrupt (controls: a default link standing in, a table numbering bodies 0, 1, 2, and a corrupt record that loads, each fail)\" Fix round 2 of PR #287 (qa review 5638084688, Q6, applied per R-369): what is corrupt and what a residual is REQ-TOOL-211's, tested there; this verify keeps the truncated-JSON arm."
+- id: REQ-GUI-394
+  area: GUI
+  statement: "A reopened IC must sit where it was built: its as-built hemisphere kept, the constructor's dot in that hemisphere and the mirror twin's faint marker opposite, and on the seam (`hemisphere = 0`) no twin."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.3 The mirror twin
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui ic_reopen_twin: an IC built in the lower hemisphere, saved and reopened, has its dot in the lower hemisphere and the twin marker in the upper, and its record's hemisphere −1; one built on the seam reopens with no twin marker (control: an open that loads the canonical, folded form fails)"
+  rulings:
+  - R-544
+  - R-586
+  milestone: M8
+  note: R-586. Closed by TASK-M8-84.
+- id: REQ-GUI-395
+  area: GUI
+  statement: "A kept orbit's `Trace`, an IC only kept, not marked, must travel with an export on every path (snapshot JSON, a saved view, a share link, the animation spec, the pxpack in tier 2 and the `tEXt` chunk), round-tripping in `Lines` with its `ic` an `IcRef`, a kept built IC as `Built(IcRecord)` whole, not only its `z` (R-553, R-590), and the Trajectory panel's kept-orbit tabs, `ViewUI`, must not travel."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: "3.5 In views: marks"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
+  - file: decisions.md
+    section: "R-590 — A kept orbit's `Trace` travels with an export: R-553 stands, the `Trace` round-tripping in `Lines`, its `ic` an `IcRef`; the draft's \"kept-only ICs are absent\" arm leaves REQ-GUI-395's test, replaced by the Trajectory panel's kept-orbit tabs (`ViewUI`) not travelling *(closes RQ-564; settles R-586's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui ic_kept_only: a view with one marked IC and one kept-only IC built in the constructor off the slice, its ic Built, exported through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk carries the mark and the kept orbit's Trace, its ic Built with the whole IcRecord, bitwise; the Trajectory panel's kept-orbit tabs (ViewUI) do not travel (controls: the kept-orbit tabs in an export, an export that drops the kept orbit's Trace, and a Built IC that round-trips only its z, each fail)"
+  rulings:
+  - R-553
+  - R-586
+  - R-590
+  milestone: M8
+  note: "R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) was RQ-564, ruled by R-590 (24 Oct 2026): R-553 stands, the arm is dropped, and its replacement is that the Trajectory panel's kept-orbit tabs (ViewUI) do not travel; nothing waits. Closed by TASK-M8-84. *Was (statement):* \"Whether an IC only kept, not marked, travels with an export must follow RQ-564's ruling: under the draft's option a kept-only IC is absent from every export path; under R-553, applied meanwhile, a kept orbit's `Trace` round-trips in `Lines`.\" *Was (verify):* \"cargo test -p gui ic_kept_only: under RQ-564's ruling, a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and either omits the kept-only IC's Trace (the draft) or carries it (R-553), as ruled; the kept-orbit tabs never travel (control: the kept-orbit tabs in an export fail)\" *Was (note):* \"R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) is RQ-564; this requirement waits on it, its arm the only part of R-586 that does. Closed by TASK-M8-84.\" Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q3, applied per R-369). *Was (statement):* \"A kept orbit's `Trace`, an IC only kept, not marked, must travel with an export on every path, round-tripping in `Lines` with its `ic` an `IcRef` (R-553, R-590), and the Trajectory panel's kept-orbit tabs, `ViewUI`, must not travel.\" *Was (verify):* \"cargo test -p gui ic_kept_only: a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and the kept orbit's Trace, its ic an IcRef, bitwise; the Trajectory panel's kept-orbit tabs (ViewUI) do not travel (controls: the kept-orbit tabs in an export, and an export that drops the kept orbit's Trace, each fail)\""
+- id: REQ-GUI-396
+  area: GUI
+  statement: "Mark and Mark all kept must each send one `SetField` on `RenderField::Lines` and make one undo entry, Mark all kept with n kept orbits one entry, never n (R-69, R-52)."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: "3.5 In views: marks"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui ic_mark_undo: Mark on a built IC sends one SetField on Lines and adds one undo entry, and undo removes the mark; Mark all kept with three kept orbits sends one SetField and adds one undo entry, and one undo removes all three marks (controls: a mark that enters no history, and Mark all kept making three entries, each fail)"
+  rulings:
+  - R-52
+  - R-69
+  - R-586
+  milestone: M8
+  note: "Fix round 1 of PR #287 (gui review 5638052211, G1), applied per R-369. Closed by TASK-M8-84."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -24552,13 +24896,18 @@
   source:
   - file: docs/design/principia_dd_image_embedding.md
     section: 9. Obligations
+  - file: docs/design/principia_video_carrier.md
+    section: 3.2 PNG frames keep the low-bit record
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
   verify:
     method: unit test
     detail: "figure export pixels equal renderer output bit-for-bit; share export has LSB payload and a tEXt chunk"
   rulings:
   - R-484
+  - R-584
   milestone: M7
-  note: "R-484 RT1: the tEXt chunk always carries all three tiers (20 Oct 2026)."
+  note: "R-484 RT1: the tEXt chunk always carries all three tiers (20 Oct 2026). R-584 (21 Oct 2026): this default holds for a single figure; a recording always carries its record, each PNG frame in its low bits and a GIF, MP4 or WebM in its container (REQ-TOOL-206, REQ-TOOL-106)."
 - id: REQ-TOOL-071
   area: TOOL
   statement: "The reader must report exactly one of three distinguishable outcomes: no embedded state, state present but corrupt, or recovered with how."
@@ -24711,17 +25060,23 @@
   milestone: M8
 - id: REQ-TOOL-083
   area: TOOL
-  statement: "Shared and exported artefacts must embed or link the spec (ViewState + sim key + render state + transport / keyframe spec), and receiving it must re-render bit-comparable playback."
+  statement: "Shared and exported artefacts must embed or link the spec (ViewState + sim key + render state + transport / keyframe spec), and receiving it must re-render bit-comparable playback; a recording carries it once per file in its format's own metadata, always, with its settings file beside it (R-584)."
   source:
   - file: docs/contracts/principia_export_animation_contract.md
     section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
   - file: docs/gui/principia_render_gui_spec.md
     section: Export & share
+  - file: docs/design/principia_video_carrier.md
+    section: 3.1 Once per file, in the format's own metadata, always
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
   verify:
     method: unit test
-    detail: "an exported video's embedded spec re-renders identical frames"
-  rulings: []
+    detail: "cargo test -p engine export_embeds_spec: a GIF and an MP4 export of a Sequence fixture each carry the record in their container, read back bitwise equal to the .principia-seq.json beside it, and re-render identical frames; the MP4 reads back bitwise after an ffmpeg remux (-c copy) and after an ffmpeg re-encode at its defaults, and in CI these arms fail, never skip, when the system ffmpeg is absent; the export job's parameters have no switch that skips the record; a WebM, written only by the browser build (R-131), is tested by REQ-TOOL-214 (controls: an MP4 written with a custom metadata key, which the remux drops, a spec read from a GIF's frame low bits, and a job parameter that turns the record off, each fail)"
+  rulings:
+  - R-584
   milestone: M8
+  note: "R-584 (gap sweep PR 2c, 21 Oct 2026): the test reads the container's record back bitwise, with a re-encode arm for MP4 and WebM; the carriers are REQ-TOOL-206's (TASK-M8-81). *Was (statement):* \"Shared and exported artefacts must embed or link the spec (ViewState + sim key + render state + transport / keyframe spec), and receiving it must re-render bit-comparable playback.\" *Was (verify):* \"an exported video's embedded spec re-renders identical frames\" Fix round 2 of PR #287 (qa review 5638084688, Q2, Q9, applied per R-369): the WebM arm, which a native test never runs, moves to REQ-TOOL-214's browser suite; the ffmpeg arms fail rather than skip. *Was (verify):* \"cargo test -p engine export_embeds_spec: a GIF and an MP4 export of a Sequence fixture (and a WebM where the build writes WebM) each carry the record in their container, read back bitwise equal to the .principia-seq.json beside it, and re-render identical frames; the MP4 (and the WebM) read back bitwise after an ffmpeg remux (-c copy) and after an ffmpeg re-encode at its defaults; the export job's parameters have no switch that skips the record (controls: an MP4 written with a custom metadata key, which the remux drops, a spec read from a GIF's frame low bits, and a job parameter that turns the record off, each fail)\""
 - id: REQ-TOOL-084
   area: TOOL
   statement: "The spotlight reel must be produced once per release, offline, by the blocking exporter (`cargo xtask reel`) from a curated list of spec objects (`reel/specs/NN_name.principia-seq.json`, in NN order), as one film file and a manifest giving each segment's spec and its first and last film frame and, for every film frame, its segment, its frame and wall time within the spec and the hash of the SimConfig and RenderState it was rendered from, a dissolve frame (two renders composited) carrying both states' hashes, the blend weight and which of the two live playback shows at that frame (the outgoing before the segment's second keyframe's frame, the incoming from it); each segment must show its spec's provenance."
@@ -25035,7 +25390,7 @@
   note: "Where saved views are stored: REQ-GUI-153 (definition)."
 - id: REQ-TOOL-106
   area: TOOL
-  statement: "Record a time sweep must take a time range, a frame count, the per-frame refinement quality, a size at the view's aspect, a format, overlays on or off, and embed pxpack in every frame; the formats are, natively, PNG frames, GIF and MP4 through a system ffmpeg when present, and in the browser PNG frames (zipped), GIF via a wasm encoder, GIF being one encoder in both builds — the Rust gif crate (MIT or Apache-2.0) with color_quant for palettes, compiled to wasm for the browser (R-155) — and MP4/WebM through WebCodecs where supported."
+  statement: "Record a time sweep must take a time range, a frame count, the per-frame refinement quality, a size at the view's aspect, a format, overlays on or off, and carry its record by format, each PNG frame its own low-bit pxpack and a GIF, MP4 or WebM its record once per file in its container, always (R-584); the formats are, natively, PNG frames, GIF and MP4 through a system ffmpeg when present, and in the browser PNG frames (zipped), GIF via a wasm encoder, GIF being one encoder in both builds — the Rust gif crate (MIT or Apache-2.0) with color_quant for palettes, compiled to wasm for the browser (R-155) — and MP4/WebM through WebCodecs where supported."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
@@ -25043,13 +25398,21 @@
     section: R-131 — The video encoders *(closes RQ-108)*
   - file: decisions.md
     section: R-155 — One GIF encoder for both builds *(closes RQ-125)*
+  - file: docs/design/principia_video_carrier.md
+    section: 3.1 Once per file, in the format's own metadata, always
+  - file: docs/design/principia_video_carrier.md
+    section: 3.2 PNG frames keep the low-bit record
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
   verify:
     method: unit test
-    detail: "record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; size aspect equals the view's; natively MP4 is offered only when a system ffmpeg is found; in the browser MP4/WebM is offered only where WebCodecs supports it (R-131)"
+    detail: "record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; record the same 5 frames as a GIF and as an MP4: each file carries the record once in its container, read back bitwise equal to the .principia-sweep.json beside it, its frames' low bits not read; the dialog offers no switch that skips the record (R-584); size aspect equals the view's; natively MP4 is offered only when a system ffmpeg is found; in the browser MP4/WebM is offered only where WebCodecs supports it (R-131) (controls: a Record dialog with a switch that skips the record, a GIF or MP4 record read from the frames' low bits, and a PNG-frames recording that follows the single-figure default, low bits off, each fail)"
   rulings:
   - R-131
   - R-155
+  - R-584
   milestone: M8
+  note: "R-584 (gap sweep PR 2c, 21 Oct 2026): §G9's \"pxpack in every frame\" becomes the record in the file, by format. *Was (statement):* \"Record a time sweep must take a time range, a frame count, the per-frame refinement quality, a size at the view's aspect, a format, overlays on or off, and embed pxpack in every frame; the formats are, natively, PNG frames, GIF and MP4 through a system ffmpeg when present, and in the browser PNG frames (zipped), GIF via a wasm encoder, GIF being one encoder in both builds — the Rust gif crate (MIT or Apache-2.0) with color_quant for palettes, compiled to wasm for the browser (R-155) — and MP4/WebM through WebCodecs where supported.\" *Was (verify):* \"record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; size aspect equals the view's; natively MP4 is offered only when a system ffmpeg is found; in the browser MP4/WebM is offered only where WebCodecs supports it (R-131)\" Fix round 2 of PR #287 (qa review 5638084688, Q7, applied per R-369): the R-584 arms gain their controls, as REQ-TOOL-083 has. *Was (verify):* \"record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; record the same 5 frames as a GIF and as an MP4: each file carries the record once in its container, read back bitwise equal to the .principia-sweep.json beside it, its frames' low bits not read; the dialog offers no switch that skips the record (R-584); size aspect equals the view's; natively MP4 is offered only when a system ffmpeg is found; in the browser MP4/WebM is offered only where WebCodecs supports it (R-131)\""
 - id: REQ-TOOL-107
   area: TOOL
   statement: "Recording a sweep must integrate each frame to its own t through the export contract's blocking mode, a hard barrier per captured frame, not by scrubbing."
@@ -26816,13 +27179,405 @@
     section: 3.7 The planner and export
   - file: decisions.md
     section: "R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*"
+  - file: docs/design/principia_video_carrier.md
+    section: 3.3 The settings file beside every export
   verify:
     method: unit test
     detail: "cargo test -p gui export_writes_seq: an export as PNG frames and one as GIF each leave a .principia-seq.json beside the output, bitwise the file Save… writes for the spec (control: an export with no file beside it fails)"
   rulings:
   - R-577
+  - R-584
   milestone: M8
-  note: "R-577. How a GIF, MP4 or WebM carries the spec in itself is the video carrier's design (gap sweep PR 2c), not this requirement's (applied per R-369). Each PNG frame's own record is REQ-TOOL-185's. Closed by TASK-M8-78."
+  note: "R-577. How a GIF, MP4 or WebM carries the spec in itself is the video carrier's design (gap sweep PR 2c), not this requirement's (applied per R-369). Each PNG frame's own record is REQ-TOOL-185's. Closed by TASK-M8-78. R-584 (gap sweep PR 2c, 21 Oct 2026): the carrier in the file is REQ-TOOL-206's, and this file is the settings file R-584 writes beside every recording (REQ-TOOL-207 adds the time sweep's)."
+- id: REQ-TOOL-201
+  area: TOOL
+  statement: "Record a time sweep must freeze, when Record is pressed, every measured colour window at the window on screen and read it in every frame, recording `range_policy = frozen`; per frame must be an explicit choice in the Record dialog, off by default, labelled \"re-ranges every frame: frames not comparable\" and recorded as `range_policy = per_frame`; and the Sequence's export must freeze, when its Start is pressed, the window on screen for every measured node the view draws, and a measured node no keyframe shares with that view at the first export frame that draws it, naming each such node in the planner and the record; every recording must report in its export block's `froze` the nodes it froze, in `node_id` order (under `per_frame` none; the Sequence's export both those frozen at Start and those frozen at their first frame) and, as `base_width`, the figure's logical width when Record or Start is pressed, at any display scale factor and whatever the range policy, the same value in every frame's `RenderState` even if the figure is resized while it records (R-588)."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: docs/design/principia_sequence.md
+    section: 3.7 The planner and export
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 4 — Export: the frame loop in blocking mode"
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui recording_one_window: a 10-frame sweep of a view with a measured node records an equal u_range in every frame's record, equal to the window on screen when Record was pressed, and range_policy frozen, its export block's froze.nodes listing that node (control: per frame gives at least two distinct windows and records per_frame); the same sweep under per_frame reports froze.nodes []; the dialog's per-frame option is off by default and carries its label; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks whose node_id is lower than the first's node's, freezes the first's node at Start and the second's at its first frame, both named in the planner and the record, and its froze.nodes lists both in node_id order, the late-frozen node first; base_width: the frozen sweep, the per_frame sweep and the Sequence export, each of a figure 800 logical px wide, run at display scale factors 1 and 2 and with the figure resized to 1200 logical px after the third frame, each record base_width 800 in every frame's RenderState and froze.base_width 800, the width when Record or Start was pressed (controls: a Sequence export that re-measures every frame, a frozen recording reporting froze.nodes [], a per_frame recording listing the node, a Sequence export whose froze.nodes omits the late-frozen node, one listing its nodes in the order they were frozen, a recording whose froze.base_width is null, a frozen, a per_frame and a Sequence recording each taking base_width from the live view after the resize, giving 1200 in froze.base_width or in a frame after it, and a recording that writes 1600, physical px, for the 800-wide figure at scale factor 2, each fail)"
+  rulings:
+  - R-581
+  - R-588
+  milestone: M8
+  note: "R-581; the Sequence's rule applied per R-369 (the human's \"frozen when Record is pressed\" names the sweep's button). Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638318769 of PR #287, Q6, applied per R-369): a recording's froze is tested. *Was (statement):* \"Record a time sweep must freeze, when Record is pressed, every measured colour window at the window on screen and read it in every frame, recording `range_policy = frozen`; per frame must be an explicit choice in the Record dialog, off by default, labelled \"re-ranges every frame: frames not comparable\" and recorded as `range_policy = per_frame`; and the Sequence's export must freeze, when its Start is pressed, the window on screen for every measured node the view draws, and a measured node no keyframe shares with that view at the first export frame that draws it, naming each such node in the planner and the record.\" *Was (verify):* \"cargo test -p gui recording_one_window: a 10-frame sweep of a view with a measured node records an equal u_range in every frame's record, equal to the window on screen when Record was pressed, and range_policy frozen (control: per frame gives at least two distinct windows and records per_frame); the dialog's per-frame option is off by default and carries its label; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks, freezes the first's node at Start and the second's at its first frame, both named in the planner and the record (control: a Sequence export that re-measures every frame fails)\" Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, N2, applied per R-369): R-588's froze tested. *Was (statement):* \"Record a time sweep must freeze, when Record is pressed, every measured colour window at the window on screen and read it in every frame, recording `range_policy = frozen`; per frame must be an explicit choice in the Record dialog, off by default, labelled \"re-ranges every frame: frames not comparable\" and recorded as `range_policy = per_frame`; and the Sequence's export must freeze, when its Start is pressed, the window on screen for every measured node the view draws, and a measured node no keyframe shares with that view at the first export frame that draws it, naming each such node in the planner and the record; every recording must report in its export block's `froze` the nodes it froze (under `per_frame` none; the Sequence's export both those frozen at Start and those frozen at their first frame) and, as `base_width`, the figure's logical width when Record or Start is pressed (R-588).\" *Was (verify):* \"cargo test -p gui recording_one_window: a 10-frame sweep of a view with a measured node records an equal u_range in every frame's record, equal to the window on screen when Record was pressed, and range_policy frozen, its export block's froze.nodes listing that node and froze.base_width the figure's logical width when Record was pressed (control: per frame gives at least two distinct windows and records per_frame); the same sweep under per_frame reports froze.nodes [] and the same froze.base_width; the dialog's per-frame option is off by default and carries its label; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks, freezes the first's node at Start and the second's at its first frame, both named in the planner and the record, and its froze.nodes lists both (controls: a Sequence export that re-measures every frame, a frozen recording reporting froze.nodes [], a per_frame recording listing the node, a Sequence export whose froze.nodes omits the late-frozen node, and a recording whose froze.base_width is null, each fail)\" Fix round of PR #287's rulings port (qa review 5638354385 of PR #287, Q8, Q9, Q10, applied per R-369): froze's node_id order, the resize under every policy, scale factor 2, the Sequence's pre-pass. *Was (statement):* \"Record a time sweep must freeze, when Record is pressed, every measured colour window at the window on screen and read it in every frame, recording `range_policy = frozen`; per frame must be an explicit choice in the Record dialog, off by default, labelled \"re-ranges every frame: frames not comparable\" and recorded as `range_policy = per_frame`; and the Sequence's export must freeze, when its Start is pressed, the window on screen for every measured node the view draws, and a measured node no keyframe shares with that view at the first export frame that draws it, naming each such node in the planner and the record; every recording must report in its export block's `froze` the nodes it froze (under `per_frame` none; the Sequence's export both those frozen at Start and those frozen at their first frame) and, as `base_width`, the figure's logical width when Record or Start is pressed, the same value in every frame's `RenderState` even if the figure is resized while it records (R-588).\" *Was (verify):* \"cargo test -p gui recording_one_window: a 10-frame sweep of a view with a measured node records an equal u_range in every frame's record, equal to the window on screen when Record was pressed, and range_policy frozen, its export block's froze.nodes listing that node and froze.base_width the figure's logical width when Record was pressed (control: per frame gives at least two distinct windows and records per_frame); the same sweep under per_frame reports froze.nodes [] and the same froze.base_width; a sweep of a view 800 logical px wide whose figure is resized to 1200 after its third frame records base_width 800 in every frame's RenderState and froze.base_width 800; the dialog's per-frame option is off by default and carries its label; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks, freezes the first's node at Start and the second's at its first frame, both named in the planner and the record, and its froze.nodes lists both and its froze.base_width is the figure's logical width when Start was pressed (controls: a Sequence export that re-measures every frame, a frozen recording reporting froze.nodes [], a per_frame recording listing the node, a Sequence export whose froze.nodes omits the late-frozen node, a recording whose froze.base_width is null, and a recording that reads base_width at its end or per frame, giving 1200 in froze.base_width or in a frame after the resize, each fail)\""
+- id: REQ-TOOL-202
+  area: TOOL
+  statement: "Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes, froze }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`; `froze` must report the fields the export wrote into the `RenderState` it records: `nodes`, the nodes whose `frozen_ranges` entries it wrote, and `base_width`, the value it wrote, `nodes: []` and `base_width: null` from a headless export, an image or a recording (the reel's builder), which keeps every frame's `base_width` as the state had it (R-588)."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: docs/design/principia_export_details.md
+    section: 3.4 What every image records
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either; a headless image export and a headless 3-frame recording, the reel's builder's path, of a state that already carries frozen_ranges and a base_width each report froze { nodes: [], base_width: null } and leave both fields as the state had them, in every frame's record for the recording (controls: a share that reads 0, one that counts not-a-system pixels, a block missing from tEXt, a headless image export that reports a node or a base_width, and a headless recording that reports a node or a base_width or rewrites a frame's base_width, each fail)"
+  rulings:
+  - R-484
+  - R-581
+  - R-582
+  - R-583
+  - R-588
+  milestone: M8
+  note: "R-581 to R-583; the block's place (a sidecar, tier 2 and tEXt) and the clipped share's pixels are applied per R-369. Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q1, applied per R-369). *Was (statement):* \"Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`.\" *Was (verify):* \"cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either (controls: a share that reads 0, one that counts not-a-system pixels, and a block missing from tEXt, each fail)\" Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, N1, applied per R-369): R-588's froze tested. *Was (statement):* \"Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes, froze }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`; `froze` must report the fields the export wrote into the `RenderState` it records: `nodes`, the nodes whose `frozen_ranges` entries it wrote, and `base_width`, the value it wrote, `nodes: []` and `base_width: null` from a headless export (R-588).\" *Was (verify):* \"cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either; a headless export of a state that already carries frozen_ranges and a base_width reports froze { nodes: [], base_width: null } and leaves both fields as the state had them (controls: a share that reads 0, one that counts not-a-system pixels, a block missing from tEXt, and a headless export that reports a node or a base_width, each fail)\""
+- id: REQ-TOOL-203
+  area: TOOL
+  statement: "An export must never include the colour-vision simulation (`ViewUI.cvd`) unless \"As seen with: <mode>\" is picked; picked, the export's pixels must be the simulation's, its record must carry `cvd_simulated: <mode>` (`null` in every other export), its file name must gain the suffix `__as_seen_<mode>`, and Import picture's report must name it, restoring the view without turning the simulation on."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.2 The viewer's settings stay with the viewer (R-582)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 4 — Export: the frame loop in blocking mode"
+  - file: decisions.md
+    section: "R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless \"As seen with\" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured"
+  verify:
+    method: unit test
+    detail: "cargo test -p render cvd_not_in_export: with ViewUI.cvd at deuteranopia an export's pixels equal, bitwise, the same export with it off, and its record carries cvd_simulated null; with As seen with picked the pixels differ from those and equal the simulation applied to them, the record carries deuteranopia and the file name ends __as_seen_deuteranopia; importing that file reports it and leaves ViewUI.cvd as it was (controls: an export that bakes the simulation without the choice, and one that picks it but records null, fail)"
+  rulings:
+  - R-123
+  - R-582
+  milestone: M8
+  note: R-582. Closed by TASK-M8-80.
+- id: REQ-TOOL-204
+  area: TOOL
+  statement: "Every export must render at `render_scale = 1`, at its own resolution, whatever the view's `render_scale`, as the checkerboard is forced off."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.2 The viewer's settings stay with the viewer (R-582)
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 4 — Export: the frame loop in blocking mode"
+  - file: decisions.md
+    section: "R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless \"As seen with\" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured"
+  verify:
+    method: unit test
+    detail: "cargo test -p render render_scale_forced: an export made with the view at render_scale 0.5 equals, bitwise, the same export made at render_scale 1, and its export block records 1 (control: an exporter that inherits the view's render_scale fails)"
+  rulings:
+  - R-582
+  milestone: M8
+  note: R-582. Closed by TASK-M8-80.
+- id: REQ-TOOL-205
+  area: TOOL
+  statement: "An export's optional physical size, a width in mm and a DPI, must set `output_width = round(width_mm / 25.4 × DPI)` and write the PNG's `pHYs` chunk (`round(DPI / 0.0254)` pixels per metre, unit 1), and the style editor must then show each length in pt beside its base px, `pt = base px × (width_mm / 25.4 × 72) / base_width`, as a readout, never a second unit."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: "3.3 One size rule: base px (R-583)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: decisions.md
+    section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render physical_size: an export of 100 mm at 300 DPI is 1181 px wide with pHYs 11811 pixels per metre, unit 1; a 2 base px stroke on a base_width of 1024 reads 0.554 pt to three places; an export with no physical size writes no pHYs (controls: a pHYs in pixels per inch, and a pt value stored on the style as a unit, fail)"
+  rulings:
+  - R-583
+  milestone: M8
+  note: "R-583; the arithmetic is applied per R-369. Closed by TASK-M8-80."
+- id: REQ-TOOL-206
+  area: TOOL
+  statement: "A recording must always carry its record once per file in its format's own metadata, with no option to turn it off: the embedding's record (its header, the raw-DEFLATE payload of the recording's settings in the canonical serialisation, and its CRCs), written when the recording ends, in a GIF as a Comment Extension holding it as base64 (RFC 4648 §4, padded, no line breaks) and an Application Extension with identifier `PRINCPIA` and authentication code `REC` holding its raw bytes, both after the last frame and before the trailer; in an MP4 as the standard comment field, written through the system ffmpeg; and in a WebM as a tag `PRINCIPIA_SPEC` holding the base64; reading one back must give the embedding's three outcomes, a GIF whose two blocks disagree reported so."
+  source:
+  - file: docs/design/principia_video_carrier.md
+    section: 3.1 Once per file, in the format's own metadata, always
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 9. Obligations
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
+  - file: docs/design/principia_video_carrier.md
+    section: 6. Tests
+  verify:
+    method: unit test
+    detail: "cargo test -p render video_carrier: a GIF and an MP4 of a 12-frame fixture each hold exactly one record, the GIF's comment and application extension after its last frame, and decode to the recording's settings bitwise; for a fixture record the GIF's bytes from the Comment Extension's introducer to the trailer equal checked-in expected bytes (the comment's base64 in the standard alphabet, padded and on one line, RFC 4648 §4; the Application Extension's identifier PRINCPIA and authentication code REC; sub-blocks of at most 255 bytes), the expected bytes written from §3.1's layout by a stand-alone script that shares no code with the crate; one byte of the MP4's base64 changed reads state present, corrupt; a GIF whose comment has one byte changed reads recovered from the application extension and is reported as disagreeing; the GIF re-encoded by the system ffmpeg reads no embedded state; the MP4 after an ffmpeg remux (-c copy) and after a re-encode at ffmpeg's defaults reads recovered, bitwise; a checked-in WebM fixture carrying PRINCIPIA_SPEC on the file as a whole (made with the system ffmpeg's -metadata PRINCIPIA_SPEC=<base64>, the command checked in beside it) reads recovered, bitwise, and so after an ffmpeg remux and a re-encode; in CI the ffmpeg arms fail, never skip, when the system ffmpeg is absent (controls: a record in every frame, an MP4 custom metadata key, which the remux drops, a reader that takes the comment's block, base64url, line-wrapped base64, a sub-block over 255 bytes, a reader that reads a PRINCIPIA_SPEC tag on a track rather than the file, and a reader that accepts a custom tag name, each fail)"
+  rulings:
+  - R-131
+  - R-155
+  - R-584
+  milestone: M8
+  note: "R-584 (gap sweep PR 2c); the record's bytes, the base64 and the GIF blocks' identifiers applied per R-369. WebM is the browser's (R-131); its arm runs where the build writes WebM. The re-encode arms use the system ffmpeg, which CI provides. Closed by TASK-M8-81, which TASK-M8-31 and TASK-M8-33 use; the Record dialog's and the export job's lack of a switch are REQ-TOOL-106's and REQ-TOOL-083's arms. Fix round 2 of PR #287 (qa review 5638084688, Q1, Q2, Q3, Q9, applied per R-369): the corrupt arm on the MP4, the GIF disagreement arm, the known-answer layout, the native WebM reader on a fixture (the writer is REQ-TOOL-214's, in the browser suite), and ffmpeg arms that fail rather than skip. *Was (verify):* \"cargo test -p render video_carrier: a GIF and an MP4 of a 12-frame fixture each hold exactly one record, the GIF's comment and application extension after its last frame, and decode to the recording's settings bitwise; one byte of the base64 changed reads state present, corrupt; the GIF re-encoded by the system ffmpeg reads no embedded state; the MP4 after an ffmpeg remux (-c copy) and after a re-encode at ffmpeg's defaults reads recovered, bitwise; a GIF whose two blocks differ is reported as disagreeing (controls: a record in every frame, and an MP4 custom metadata key, which the remux drops, each fail)\""
+- id: REQ-TOOL-207
+  area: TOOL
+  statement: "Every recording must write its settings file beside the export in every format, PNG frames included: the Sequence's `.principia-seq.json` (REQ-TOOL-200) and Record a time sweep's `<name>.principia-sweep.json` (`{ format: \"principia.sweep/1\", build, schema, entry_hashes, sim, render, sweep, export }` in the canonical serialisation), the same JSON its container's record holds; and a sweep's frame `i` of `n` must be at `t_start + (t_end − t_start) × i / (n − 1)`, evaluated in f64 in that order, a one-frame sweep at `t_start`."
+  source:
+  - file: docs/design/principia_video_carrier.md
+    section: 3.3 The settings file beside every export
+  - file: docs/design/principia_video_carrier.md
+    section: 3.4 A frame's playhead
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui sweep_settings_file: a sweep recorded as PNG frames, as a GIF and as an MP4 leaves a .principia-sweep.json beside each, bitwise the JSON its container's record holds, and each PNG frame's own record carries the same sim and render; with n = 11 from t = 0 to 1 frame i's recorded playhead equals (1 − 0) × i / 10 bitwise (0.3 at i = 3); with n = 11 from t = 0.1 to 0.7 frame 9's recorded playhead is 0.1 + (0.7 − 0.1) × 9 / 10 in that order, 0.6399999999999999; and a one-frame sweep is at t_start (controls: a PNG-frames export with no file beside it, a playhead computed as i × ((t_end − t_start) / (n − 1)), which gives 0.30000000000000004 at i = 3, one computed as t_start + (t_end − t_start) × (i / (n − 1)), and one computed as t_start × (1 − i / (n − 1)) + t_end × (i / (n − 1)), the last two giving 0.64 at i = 9, each fail)"
+  rulings:
+  - R-584
+  milestone: M8
+  note: "R-584; the sweep file's name and fields and the frame rule applied per R-369. Closed by TASK-M8-33, which builds Record a time sweep. Fix round 2 of PR #287 (qa review 5638084688, Q5, applied per R-369): an arm that tells the stated evaluation order from the two other orders. *Was (verify):* \"cargo test -p gui sweep_settings_file: a sweep recorded as PNG frames, as a GIF and as an MP4 leaves a .principia-sweep.json beside each, bitwise the JSON its container's record holds, and each PNG frame's own record carries the same sim and render; with n = 11 from t = 0 to 1 frame i's recorded playhead equals (1 − 0) × i / 10 bitwise (0.3 at i = 3), and a one-frame sweep is at t_start (controls: a PNG-frames export with no file beside it, and a playhead computed as i × ((t_end − t_start) / (n − 1)), which gives 0.30000000000000004 at i = 3, fail)\""
+- id: REQ-TOOL-208
+  area: TOOL
+  statement: "The uploaded picture must be referred to in `RenderState` by `PictureRef { hash, name, w: 256, h: 256, resample: \"area/1\" }`, never by its texels, `hash` the SHA-256 of the ASCII bytes `principia.picture/1`, then `w` and `h` as u32 big-endian, then the texels row by row, written as 64 lowercase hex digits, the render key covering it; `PictureRef` must be tier 2 in `tiers.rs`, and a record that drops tier 2 must report the picture among what it dropped."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.2 Identity
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.4 How it travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_colour_composition.md
+    section: 3. The `ctx` contract
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine picture_ref_tier: the hash of a fixture's texels equals the checked-in digest computed from the stated bytes; PictureRef is assigned tier 2 in tiers.rs and the table stays exhaustive; an image squeezed to tier 1 reports the picture as dropped; two RenderStates differing only in the hash have different render keys; the hash is written as 64 lowercase hex digits, in the reference and in the store's path (controls: the texels in RenderState, the reference in tier 1 or none, a silent drop, and an uppercase digest, each fail)"
+  rulings:
+  - R-484
+  - R-585
+  milestone: M8
+  note: "R-585; the hash's byte layout applied per R-369. Settles colour composition §3's and TASK-M7-49's tier: 2. Closed by TASK-M8-82. Fix round 2 of PR #287 (qa review 5638084688, Q10, applied per R-369): the lowercase-hex arm. *Was (verify):* \"cargo test -p engine picture_ref_tier: the hash of a fixture's texels equals the checked-in digest computed from the stated bytes; PictureRef is assigned tier 2 in tiers.rs and the table stays exhaustive; an image squeezed to tier 1 reports the picture as dropped; two RenderStates differing only in the hash have different render keys (controls: the texels in RenderState, the reference in tier 1 or none, and a silent drop, each fail)\""
+- id: REQ-TOOL-209
+  area: TOOL
+  statement: "A content-addressed store, `pictures/<hash>.png` in the app's data folder, must hold each picture as a lossless 256 × 256 RGB PNG, re-hashed on every read (a file whose texels do not hash to its name not used) and kept while any history entry, saved view or result refers to it; an upload must write the store first and then send one `SetField` with the reference only, and undo must restore the previous reference, the bytes kept."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.3 The store
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui picture_store: an upload writes pictures/<hash>.png and then one SetField whose value holds only the reference, one undo entry; undo restores the previous reference and the stored file stays; a collection with the entry still in the history keeps it, and collects it once nothing refers to it; an entry referred to only by a saved view, and one referred to only by a result folder, is kept, and collected once that view or result is deleted; a stored file altered by one byte is not used and reads as missing (controls: texels in the history, a referenced entry collected, an entry collected while only a saved view refers to it, one collected while only a result refers to it, and an unverified read, each fail)"
+  rulings:
+  - R-69
+  - R-585
+  milestone: M8
+  note: "R-585; the store's place applied per R-369. Closed by TASK-M8-82. Fix round 2 of PR #287 (qa review 5638084688, Q10, applied per R-369): the saved-view and result pinning arms. *Was (verify):* \"cargo test -p gui picture_store: an upload writes pictures/<hash>.png and then one SetField whose value holds only the reference, one undo entry; undo restores the previous reference and the stored file stays; a collection with the entry still in the history keeps it, and collects it once nothing refers to it; a stored file altered by one byte is not used and reads as missing (controls: texels in the history, a referenced entry collected, and an unverified read, each fail)\""
+- id: REQ-TOOL-210
+  area: TOOL
+  statement: "Every exported PNG whose `RenderState` refers to a picture must carry its texels in the private ancillary chunk `prPc` (the 32 raw hash bytes, then the 196,608 texel bytes, uncompressed), named in the export's report, and a reader must use a `prPc` only if its texels hash to the reference, reading one that does not as \"state present, corrupt\"; a result folder must hold the texels as `picture.png`."
+  source:
+  - file: docs/design/principia_uploaded_picture.md
+    section: 3.4 How it travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 9. Obligations
+  - file: decisions.md
+    section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render picture_chunk: an exported PNG of a view with an uploaded picture, reopened with an empty store, renders the picture bitwise and writes it to the store; the chunk type is prPc, ancillary and private, and for a fixture picture its data is 196,640 bytes, the reference's 32 raw hash bytes then the 196,608 texel bytes row by row from row 0, uncompressed, equal to checked-in expected bytes written by a stand-alone script that shares no code with the crate; a prPc with one texel byte changed reads state present, corrupt and draws as missing; a result folder of that view holds picture.png with the texels (controls: a PNG without the chunk, a reader that ignores it, one that uses it unverified, a zlib-compressed chunk, and a hash written as hex, each fail)"
+  rulings:
+  - R-484
+  - R-585
+  milestone: M8
+  note: "R-585; the chunk's layout applied per R-369. Closed by TASK-M8-82. Fix round 2 of PR #287 (qa review 5638084688, Q3, applied per R-369): the known-answer arm on prPc's layout. *Was (verify):* \"cargo test -p render picture_chunk: an exported PNG of a view with an uploaded picture, reopened with an empty store, renders the picture bitwise and writes it to the store; the chunk type is prPc, ancillary and private; a prPc with one texel byte changed reads state present, corrupt and draws as missing; a result folder of that view holds picture.png with the texels (controls: a PNG without the chunk, a reader that ignores it, and one that uses it unverified, each fail)\""
+- id: REQ-TOOL-211
+  area: TOOL
+  statement: "The IC record `principia.ic/1` must be one JSON object in JCS holding `format`, `bodies` (\"0-based; shown as bodies 1, 2, 3 (R-449)\"), `as_built { m, r, v }`, `canonical { z, mirrored, hemisphere, links, entry_hashes }`, `source` (\"built\" or `{ pixel: { chart, uv } }`), `sim` and its build, schema, label and made (made outside the identity); its primary must be `as_built` for a built IC and `source.pixel` with `sim` for a picked one, `v` primary and `p` derived, everything else re-derived on load and compared, `hemisphere` from R-82's one mirror test as the kernel makes it (`−1` iff `lookup_mirrored`, `+1` iff the same test on the reflected state, `0` otherwise), never from the rounded `λ̃_y`; −0 must be turned into +0 by one function at entry (in the constructor, on paste and on open) and on write, and a non-finite value refused at entry and on load (on load a number token that overflows f64, such as `1e999`); a record must open as corrupt when its JSON does not parse, a field is missing, a value is non-finite, or a field re-derived exactly from the primary (`mirrored`, `hemisphere`, `source`'s kind) contradicts the stored one, and the stored `z` against the recomputed must be a residual, recovered within REQ-TOOL-215's bound and corrupt beyond it; a re-save must keep the opened record's `made`."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.1 The IC record
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-318 — The canonical serialisation is JCS (RFC 8785) *(amends R-309)*"
+  - file: docs/design/principia_ic_save.md
+    section: 3.2 Copy, save, open
+  verify:
+    method: unit test
+    detail: "cargo test -p engine ic_record: save, open and re-save give a byte-identical file, the re-save keeping the opened record's made; as_built is bitwise over 10⁴ random ICs, −0 included, a −0 written 0; the constructor's entry given a NaN or an infinite value refuses it naming the field, the IC unchanged; a hand-written record whose velocity is the token 1e999 is refused on load naming the field, and one holding a bare NaN does not parse and opens as corrupt; a record missing a field opens as corrupt naming it; a record whose stored hemisphere or mirrored contradicts the value re-derived from as_built opens as corrupt; a record whose stored z differs from the recomputed within REQ-TOOL-215's bound opens as recovered with the residual shown, and one beyond it as corrupt; a record saved and reopened on the machine and build that saved it has a residual of exactly 0; a branch-cut IC, collinear on the x-axis with ρ̃_x < 0, r1_y = +0 and r2_y = −0, entered in the constructor, saved and reopened, has a residual of exactly 0 and a computeICState initial state bitwise the original's; over built states whose λ̃_y lies within a few ulps either side of +δ_λ and of −δ_λ, mirrored holds exactly when hemisphere is −1, and hemisphere is +1 exactly when the mirror test on the reflected state passes (controls: a lossy number format, a −0 that survives, p stored as primary, a re-save stamped with a new made, a record with a missing field that loads, a contradiction that loads, a value refused only on load and not at entry, a residual within the bound read as corrupt, a save that rounds z, giving a non-zero residual on the saving machine, hemisphere taken from the rounded lambda_t_y, and −0 normalised only on write, each fail)"
+  rulings:
+  - R-71
+  - R-82
+  - R-318
+  - R-449
+  - R-586
+  milestone: M8
+  note: "R-586. Closed by TASK-M8-84. Fix round 2 of PR #287 (qa review 5638084688, Q6, applied per R-369): which disagreements are corrupt and which a residual, the residual's bound a calibration value (REQ-TOOL-215); the non-finite token, the entry arm and the kept `made`. *Was (statement):* \"The IC record `principia.ic/1` must be one JSON object in JCS holding `format`, `bodies` (\"0-based; shown as bodies 1, 2, 3 (R-449)\"), `as_built { m, r, v }`, `canonical { z, mirrored, hemisphere, links, entry_hashes }`, `source` (\"built\" or `{ pixel: { chart, uv } }`), `sim` and its build, schema, label and made (made outside the identity); its primary must be `as_built` for a built IC and `source.pixel` with `sim` for a picked one, `v` primary and `p` derived, everything else re-derived on load and compared; −0 must be written as +0 by one function, and a non-finite value refused at entry and on load.\" *Was (verify):* \"cargo test -p engine ic_record: save, open and re-save give a byte-identical file; as_built is bitwise over 10⁴ random ICs, −0 included, a −0 written 0; a record with a NaN or an infinity is refused naming the field; the re-derived canonical z equals the stored z for a recovered record (controls: a lossy number format, a −0 that survives, and p stored as primary, each fail)\" Fix round 4 of PR #287 (physics review 5638148080, P1, P4, applied per R-369): hemisphere from R-82's one test, with the arm across ±δ_λ; the residual exactly 0 on the saving machine. *Was (statement):* \"The IC record `principia.ic/1` must be one JSON object in JCS holding `format`, `bodies` (\"0-based; shown as bodies 1, 2, 3 (R-449)\"), `as_built { m, r, v }`, `canonical { z, mirrored, hemisphere, links, entry_hashes }`, `source` (\"built\" or `{ pixel: { chart, uv } }`), `sim` and its build, schema, label and made (made outside the identity); its primary must be `as_built` for a built IC and `source.pixel` with `sim` for a picked one, `v` primary and `p` derived, everything else re-derived on load and compared; −0 must be written as +0 by one function, and a non-finite value refused at entry and on load (on load a number token that overflows f64, such as `1e999`); a record must open as corrupt when its JSON does not parse, a field is missing, a value is non-finite, or a field re-derived exactly from the primary (`mirrored`, `hemisphere`, `source`'s kind) contradicts the stored one, and the stored `z` against the recomputed must be a residual, recovered within REQ-TOOL-215's bound and corrupt beyond it; a re-save must keep the opened record's `made`.\" *Was (verify):* \"cargo test -p engine ic_record: save, open and re-save give a byte-identical file, the re-save keeping the opened record's made; as_built is bitwise over 10⁴ random ICs, −0 included, a −0 written 0; the constructor's entry given a NaN or an infinite value refuses it naming the field, the IC unchanged; a hand-written record whose velocity is the token 1e999 is refused on load naming the field, and one holding a bare NaN does not parse and opens as corrupt; a record missing a field opens as corrupt naming it; a record whose stored hemisphere or mirrored contradicts the value re-derived from as_built opens as corrupt; a record whose stored z differs from the recomputed within REQ-TOOL-215's bound opens as recovered with the residual shown, and one beyond it as corrupt (controls: a lossy number format, a −0 that survives, p stored as primary, a re-save stamped with a new made, a record with a missing field that loads, a contradiction that loads, a value refused only on load and not at entry, and a residual within the bound read as corrupt, each fail)\" Fix round 5 of PR #287 (physics review 5638172877, P5, applied per R-369): −0 normalised at entry, with the branch-cut arm. *Was (statement):* \"The IC record `principia.ic/1` must be one JSON object in JCS holding `format`, `bodies` (\"0-based; shown as bodies 1, 2, 3 (R-449)\"), `as_built { m, r, v }`, `canonical { z, mirrored, hemisphere, links, entry_hashes }`, `source` (\"built\" or `{ pixel: { chart, uv } }`), `sim` and its build, schema, label and made (made outside the identity); its primary must be `as_built` for a built IC and `source.pixel` with `sim` for a picked one, `v` primary and `p` derived, everything else re-derived on load and compared, `hemisphere` from R-82's one mirror test as the kernel makes it (`−1` iff `lookup_mirrored`, `+1` iff the same test on the reflected state, `0` otherwise), never from the rounded `λ̃_y`; −0 must be written as +0 by one function, and a non-finite value refused at entry and on load (on load a number token that overflows f64, such as `1e999`); a record must open as corrupt when its JSON does not parse, a field is missing, a value is non-finite, or a field re-derived exactly from the primary (`mirrored`, `hemisphere`, `source`'s kind) contradicts the stored one, and the stored `z` against the recomputed must be a residual, recovered within REQ-TOOL-215's bound and corrupt beyond it; a re-save must keep the opened record's `made`.\" *Was (verify):* \"cargo test -p engine ic_record: save, open and re-save give a byte-identical file, the re-save keeping the opened record's made; as_built is bitwise over 10⁴ random ICs, −0 included, a −0 written 0; the constructor's entry given a NaN or an infinite value refuses it naming the field, the IC unchanged; a hand-written record whose velocity is the token 1e999 is refused on load naming the field, and one holding a bare NaN does not parse and opens as corrupt; a record missing a field opens as corrupt naming it; a record whose stored hemisphere or mirrored contradicts the value re-derived from as_built opens as corrupt; a record whose stored z differs from the recomputed within REQ-TOOL-215's bound opens as recovered with the residual shown, and one beyond it as corrupt; a record saved and reopened on the machine and build that saved it has a residual of exactly 0; over built states whose λ̃_y lies within a few ulps either side of +δ_λ and of −δ_λ, mirrored holds exactly when hemisphere is −1, and hemisphere is +1 exactly when the mirror test on the reflected state passes (controls: a lossy number format, a −0 that survives, p stored as primary, a re-save stamped with a new made, a record with a missing field that loads, a contradiction that loads, a value refused only on load and not at entry, a residual within the bound read as corrupt, a save that rounds z, giving a non-zero residual on the saving machine, and hemisphere taken from the rounded lambda_t_y, each fail)\""
+- id: REQ-TOOL-212
+  area: TOOL
+  statement: "Export trajectory… must write `<label>.traj.csv`: a `#` preamble holding the IC record, the integrator (RK45 at f64 and its tolerances), the outcome and its `detail` 0-based with its 1-based gloss, \"incomplete: step budget\" where that applies, the frame and units the rows are in (REQ-TOOL-213) and the rescale `λ` `C` applied, as `lookup_rescaled` reports it, with the centre-of-mass offset and velocity and step 2's rotation angle `θ`, so a row can be related back to `as_built`, and the line that the bodies are labelled 1-based, as everywhere they are shown, the record's own fields 0-based; then one row per step as taken, never resampled, its body columns labelled 1-based (`t, body1_x, body1_y, body2_x, body2_y, body3_x, body3_y, body1_vx, body1_vy, body2_vx, body2_vy, body3_vx, body3_vy, E, Lz`, then REQ-TOOL-213's columns); an optional stride must be labelled \"every k-th step; close encounters not resolved\"."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.6 Trajectory export (R-587)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: decisions.md
+    section: "R-587 — The trajectory CSV: one row per step as taken, never resampled, its body columns labelled 1-based (`body1_x` …) as bodies are always displayed, the preamble saying so; the record's own fields and the outcome's `detail` stay 0-based with a 1-based gloss *(amends R-449 for the trajectory CSV's column labels)*"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
+  - file: decisions.md
+    section: "R-33 — The independent convergence reference is Brutus-style *(IE-5, amended)*"
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 6 — The canonical inverse policy, completed
+  verify:
+    method: unit test
+    detail: "cargo test -p gui traj_csv: the CSV's rows equal the Inspector's steps one for one, bitwise at f64; a run cut by the step budget carries \"incomplete: step budget\"; for one collision of bodies 1 and 2 the preamble's detail is 2 (0-based) with the gloss collision 1–2, as the GUI labels it; the header row's body columns are body1_x to body3_vy in that order, and the preamble says they are 1-based; the preamble states the frame (C(as_built), step 3 not taken), the canonical units and the rescale λ, equal to lookup_rescaled's for that IC, and the centre-of-mass offset and velocity and θ, equal to those recomputed from the as_built it holds, and the rows' first state equals that frame's initial state bitwise; a stride of 3 keeps every third step and carries its label (controls: a preamble without the frame and rescale, one without θ, rows in the as-built frame, resampled rows, a silent cut, a skipped or doubled conversion, and a body column labelled body0_x, each fail)"
+  rulings:
+  - R-33
+  - R-449
+  - R-587
+  milestone: M8
+  note: "R-587 (amends R-449 for these column labels only). Closed by TASK-M8-84. Fix round 4 of PR #287 (physics review 5638148080, P3, applied per R-369): the preamble states the rows' frame, units and the rescale. *Was (statement):* \"Export trajectory… must write `<label>.traj.csv`: a `#` preamble holding the IC record, the integrator (RK45 at f64 and its tolerances), the outcome and its `detail` 0-based with its 1-based gloss, \"incomplete: step budget\" where that applies, and the line that the bodies are labelled 1-based, as everywhere they are shown, the record's own fields 0-based; then one row per step as taken, never resampled, its body columns labelled 1-based (`t, body1_x, body1_y, body2_x, body2_y, body3_x, body3_y, body1_vx, body1_vy, body2_vx, body2_vy, body3_vx, body3_vy, E, Lz`, then REQ-TOOL-213's columns); an optional stride must be labelled \"every k-th step; close encounters not resolved\".\" *Was (verify):* \"cargo test -p gui traj_csv: the CSV's rows equal the Inspector's steps one for one, bitwise at f64; a run cut by the step budget carries \"incomplete: step budget\"; for one collision of bodies 1 and 2 the preamble's detail is 2 (0-based) with the gloss collision 1–2, as the GUI labels it; the header row's body columns are body1_x to body3_vy in that order, and the preamble says they are 1-based; a stride of 3 keeps every third step and carries its label (controls: resampled rows, a silent cut, a skipped or doubled conversion, and a body column labelled body0_x, each fail)\" Fix round 5 of PR #287 (physics review 5638172877, non-blocking note on P3, applied per R-369): the preamble states the centre-of-mass offset and velocity and θ. *Was (statement):* \"Export trajectory… must write `<label>.traj.csv`: a `#` preamble holding the IC record, the integrator (RK45 at f64 and its tolerances), the outcome and its `detail` 0-based with its 1-based gloss, \"incomplete: step budget\" where that applies, the frame and units the rows are in (REQ-TOOL-213) and the rescale `λ` `C` applied, as `lookup_rescaled` reports it, and the line that the bodies are labelled 1-based, as everywhere they are shown, the record's own fields 0-based; then one row per step as taken, never resampled, its body columns labelled 1-based (`t, body1_x, body1_y, body2_x, body2_y, body3_x, body3_y, body1_vx, body1_vy, body2_vx, body2_vy, body3_vx, body3_vy, E, Lz`, then REQ-TOOL-213's columns); an optional stride must be labelled \"every k-th step; close encounters not resolved\".\" *Was (verify):* \"cargo test -p gui traj_csv: the CSV's rows equal the Inspector's steps one for one, bitwise at f64; a run cut by the step budget carries \"incomplete: step budget\"; for one collision of bodies 1 and 2 the preamble's detail is 2 (0-based) with the gloss collision 1–2, as the GUI labels it; the header row's body columns are body1_x to body3_vy in that order, and the preamble says they are 1-based; the preamble states the frame (C(as_built), step 3 not taken), the canonical units and the rescale λ, equal to lookup_rescaled's for that IC, and the rows' first state equals that frame's initial state bitwise; a stride of 3 keeps every third step and carries its label (controls: a preamble without the frame and rescale, rows in the as-built frame, resampled rows, a silent cut, a skipped or doubled conversion, and a body column labelled body0_x, each fail)\""
+- id: REQ-TOOL-213
+  area: TOOL
+  kind: definition
+  statement: "Every trajectory-CSV column's frame and unit must be defined in principia_ic_save.md §3.6: `t`, the positions, the velocities, `E` and `Lz` in the frame the constructor integrates (`C(as_built)` with step 3 not taken: the centre of mass at the origin and at rest, `I = 1`, `ρ̃` on +x at `t = 0`) and the canonical units `G = M = I = 1`; and the columns after `Lz` (the draft's `n0, n1, n2` and `dE_E`) must be defined there by the task that needs them, each column's quantity, frame, unit and name, a body-indexed column labelled 1-based as the others are, a pair-indexed one named by its two bodies (R-449) and a vector's component by the corpus's own name for it, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.6 Trajectory export (R-587)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-587 — The trajectory CSV: one row per step as taken, never resampled, its body columns labelled 1-based (`body1_x` …) as bodies are always displayed, the preamble saying so; the record's own fields and the outcome's `detail` stay 0-based with a 1-based gloss *(amends R-449 for the trajectory CSV's column labels)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 5 — Units and the horizon (inherited scale gauge)
+  verify:
+    method: review checklist
+    detail: "§3.6 names the frame and unit of every column, and each column after Lz with its quantity, frame, unit and name and the rule each name follows; physics reviewer approved; cargo test -p gui traj_csv_columns: the header row after Lz equals the defined names in order (control: a column named with a 0-based body or pair index fails)"
+  rulings:
+  - R-72
+  - R-449
+  - R-587
+  milestone: M8
+  note: "R-587, applied per R-369: the draft's n0, n1, n2 are defined nowhere. Closed by TASK-M8-84. Fix round 4 of PR #287 (physics review 5638148080, P3, applied per R-369): widened to every column's frame and unit (R-72). *Was (statement):* \"The trajectory CSV's columns after `Lz` (the draft's `n0, n1, n2` and `dE_E`) must be defined in principia_ic_save.md §3.6 by the task that needs them, each column's quantity, unit and name, a body-indexed column labelled 1-based as the others are, a pair-indexed one named by its two bodies (R-449) and a vector's component by the corpus's own name for it, and reviewed by the physics reviewer before merge.\" *Was (verify):* \"§3.6 names each column after Lz with its quantity, unit and name and the rule each name follows; physics reviewer approved; cargo test -p gui traj_csv_columns: the header row after Lz equals the defined names in order (control: a column named with a 0-based body or pair index fails)\""
+- id: REQ-TOOL-214
+  area: TOOL
+  statement: "In the browser build a WebM recording must carry its record as a tag named `PRINCIPIA_SPEC` on the file as a whole (the segment's tags, not a track's), holding the record's base64 (RFC 4648 §4, padded, on one line), the same record as the settings file beside it."
+  source:
+  - file: docs/design/principia_video_carrier.md
+    section: 3.1 Once per file, in the format's own metadata, always
+  - file: docs/design/principia_video_carrier.md
+    section: 6. Tests
+  - file: decisions.md
+    section: "R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's \"off by default for figure export\" stays for single figures"
+  - file: decisions.md
+    section: R-131 — The video encoders *(closes RQ-108)*
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate browser-webm-carrier: in the M8 Playwright browser suite on Chromium (R-134, R-149), a 12-frame sweep recorded as WebM through WebCodecs carries exactly one PRINCIPIA_SPEC tag, on the file as a whole, whose base64 decodes to the record, bitwise the .principia-sweep.json written beside it, and the native reader reads the downloaded file as recovered (controls: a tag on a track rather than the file, and a custom tag name, each fail)"
+  rulings:
+  - R-131
+  - R-134
+  - R-149
+  - R-584
+  milestone: M8
+  note: "Fix round 2 of PR #287 (qa review 5638084688, Q2, applied per R-369): the native build writes no WebM (R-131), so the writer is tested in the browser suite. Closed by TASK-M8-85. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q4, applied per R-369): relabelled numerical gate, as every `cargo xtask gate` verify is. *Was (verify method):* \"unit test\""
+- id: REQ-TOOL-215
+  area: TOOL
+  kind: calibration
+  statement: "The bound on the IC record's `z` residual, `‖Δz‖` between the stored `canonical.z` and the one re-derived from the primary on load, measured as REQ-VAL-022 measures `‖z − z′‖` (exactly 0 on the machine and build that saved the record, `as_built` being normalised at entry (REQ-TOOL-211), non-zero only from another platform's maths library or another build), within which a record opens as recovered with the residual shown and beyond which it is corrupt, must be a calibration value (R-71), proposed with its evidence and confirmed by the human at the M8 gate."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: 3.2 Copy, save, open
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the bound on ‖Δz‖, as REQ-VAL-022 measures it, with its evidence (the residual exactly 0 when reopened on the saving machine, and the largest residual over 10⁴ random ICs saved on the reference machine and reopened on CI and the reverse, against a record with one z component perturbed by a known amount); a reviewer checks it; the human confirms it at the M8 gate"
+  rulings:
+  - R-71
+  - R-586
+  milestone: M8
+  note: "Fix round 2 of PR #287 (qa review 5638084688, Q6, applied per R-369): the corpus gives no bound, so it is a calibration value. Closed by TASK-M8-84. Fix round 4 of PR #287 (physics review 5638148080, P4, applied per R-369): the measure named, and where a residual can come from. *Was (statement):* \"The bound on the IC record's `z` residual (the stored `canonical.z` against the one re-derived from the primary on load), within which a record opens as recovered with the residual shown and beyond which it is corrupt, must be a calibration value (R-71), proposed with its evidence and confirmed by the human at the M8 gate.\" *Was (verify):* \"the PR proposes the bound with its evidence (the largest residual over 10⁴ random ICs, saved and reopened on the reference machine and on CI, against a record with one z component perturbed by a known amount); a reviewer checks it; the human confirms it at the M8 gate\" Fix round 5 of PR #287 (physics review 5638172877, P5, applied per R-369): why the residual is 0 on the saving machine. *Was (statement):* \"The bound on the IC record's `z` residual, `‖Δz‖` between the stored `canonical.z` and the one re-derived from the primary on load, measured as REQ-VAL-022 measures `‖z − z′‖` (exactly 0 on the machine and build that saved the record, non-zero only from another platform's maths library or another build), within which a record opens as recovered with the residual shown and beyond which it is corrupt, must be a calibration value (R-71), proposed with its evidence and confirmed by the human at the M8 gate.\""
+- id: REQ-TOOL-216
+  area: TOOL
+  statement: "Record a time sweep and the Sequence's export must offer an opt-in pre-pass, off by default, labelled \"window from a quick pass over every frame\": picked, every frame is rendered once at REQ-TOOL-217's reduced resolution before the recording starts and each measured node's window is measured per frame, and the union of those windows (the smallest `lo`, the largest `hi`) is frozen for the whole recording, recorded as `range_policy = prepass_union`, the clipped shares still recorded per frame at the recording's own resolution; a pre-pass recording must report in its export block's `froze` the measured nodes the union froze, in `node_id` order, the Sequence's export each node at the union of its windows over the frames that draw it, a node first drawn after Start included, and, as `base_width`, the figure's logical width when Record or Start is pressed, at any display scale factor, the same value in every frame's `RenderState` even if the figure is resized while it records (R-588)."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: docs/design/principia_export_details.md
+    section: 3.4 What every image records
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui recording_prepass: a 10-frame sweep of a view with one measured node whose window widens over time, recorded with the pre-pass picked, records the same u_range in every frame's record, equal to the union of the windows the pre-pass measured per frame, with range_policy prepass_union and one clipped map per frame, its export block's froze.nodes listing the measured node; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks whose node_id is lower than the first's node's, each node's window widening over the frames that draw it, exported with the pre-pass picked, records in every frame's record each drawn node's u_range equal to the union of that node's pre-pass windows over the frames that draw it, and its froze.nodes lists both in node_id order, the late node included and first; base_width: the pre-pass sweep and the pre-pass Sequence export, each of a figure 800 logical px wide, run at display scale factors 1 and 2 and with the figure resized to 1200 logical px after the third frame, each record base_width 800 in every frame's RenderState and froze.base_width 800, the width when Record or Start was pressed; the pre-pass is offered, off by default, in the Record dialog and in the Sequence's planner; with it off the window is the screen's at Record and range_policy frozen (controls: a pre-pass window taken from the final frame only, one taken from the first frame only, a pre-pass rendered at the recording's full resolution, a pre-pass on by default, a pre-pass recording reporting froze.nodes [], a pre-pass Sequence export whose froze.nodes omits the late node, one that freezes the late node at its window in its first drawing frame, one that takes the Start node's window from the screen at Start, one listing its nodes in the order first drawn, one whose froze.base_width is null, a pre-pass sweep and a pre-pass Sequence export each taking base_width from the live view after the resize, and a pre-pass recording that writes 1600, physical px, for the 800-wide figure at scale factor 2, each fail)"
+  rulings:
+  - R-581
+  - R-588
+  milestone: M8
+  note: "Fix round 3 of PR #287 (code review 5638122561, C1, applied per R-369): the draft's open question 1, \"*Recommend (i)*, clipping reported; (ii) opt-in.\", accepted as proposed; the port had dropped (ii). Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, Q7, applied per R-369): R-588's froze tested. *Was (statement):* \"Record a time sweep and the Sequence's export must offer an opt-in pre-pass, off by default, labelled \"window from a quick pass over every frame\": picked, every frame is rendered once at REQ-TOOL-217's reduced resolution before the recording starts and each measured node's window is measured per frame, and the union of those windows (the smallest `lo`, the largest `hi`) is frozen for the whole recording, recorded as `range_policy = prepass_union`, the clipped shares still recorded per frame at the recording's own resolution.\" *Was (verify):* \"cargo test -p gui recording_prepass: a 10-frame sweep of a view with one measured node whose window widens over time, recorded with the pre-pass picked, records the same u_range in every frame's record, equal to the union of the windows the pre-pass measured per frame, with range_policy prepass_union and one clipped map per frame; the pre-pass is offered, off by default, in the Record dialog and in the Sequence's planner; with it off the window is the screen's at Record and range_policy frozen (controls: a pre-pass window taken from the final frame only, one taken from the first frame only, a pre-pass rendered at the recording's full resolution, and a pre-pass on by default, each fail)\" Fix round of PR #287's rulings port (qa review 5638354385 of PR #287, Q9, Q10, N3, applied per R-369): froze's node_id order, the resize under every policy, scale factor 2, the Sequence's pre-pass. *Was (statement):* \"Record a time sweep and the Sequence's export must offer an opt-in pre-pass, off by default, labelled \"window from a quick pass over every frame\": picked, every frame is rendered once at REQ-TOOL-217's reduced resolution before the recording starts and each measured node's window is measured per frame, and the union of those windows (the smallest `lo`, the largest `hi`) is frozen for the whole recording, recorded as `range_policy = prepass_union`, the clipped shares still recorded per frame at the recording's own resolution; a pre-pass recording must report in its export block's `froze` the measured nodes the union froze and, as `base_width`, the figure's logical width when Record or Start is pressed (R-588).\" *Was (verify):* \"cargo test -p gui recording_prepass: a 10-frame sweep of a view with one measured node whose window widens over time, recorded with the pre-pass picked, records the same u_range in every frame's record, equal to the union of the windows the pre-pass measured per frame, with range_policy prepass_union and one clipped map per frame, its export block's froze.nodes listing the measured node and froze.base_width the figure's logical width when Record was pressed; the pre-pass is offered, off by default, in the Record dialog and in the Sequence's planner; with it off the window is the screen's at Record and range_policy frozen (controls: a pre-pass window taken from the final frame only, one taken from the first frame only, a pre-pass rendered at the recording's full resolution, a pre-pass on by default, a pre-pass recording reporting froze.nodes [], and one whose froze.base_width is null, each fail)\" Fix round of PR #287's rulings port (qa review 5638378799 of PR #287, Q11, applied per R-369): the Sequence's pre-pass arm's windows widen, so the union is told apart from the freeze without the pre-pass. *Was (verify):* \"cargo test -p gui recording_prepass: a 10-frame sweep of a view with one measured node whose window widens over time, recorded with the pre-pass picked, records the same u_range in every frame's record, equal to the union of the windows the pre-pass measured per frame, with range_policy prepass_union and one clipped map per frame, its export block's froze.nodes listing the measured node; a Sequence fixture of two keyframes, the second's stain holding a node the first's lacks whose node_id is lower than the first's node's, exported with the pre-pass picked, freezes each node at the union of its windows over the frames that draw it, and its froze.nodes lists both in node_id order, the late node included and first; base_width: the pre-pass sweep and the pre-pass Sequence export, each of a figure 800 logical px wide, run at display scale factors 1 and 2 and with the figure resized to 1200 logical px after the third frame, each record base_width 800 in every frame's RenderState and froze.base_width 800, the width when Record or Start was pressed; the pre-pass is offered, off by default, in the Record dialog and in the Sequence's planner; with it off the window is the screen's at Record and range_policy frozen (controls: a pre-pass window taken from the final frame only, one taken from the first frame only, a pre-pass rendered at the recording's full resolution, a pre-pass on by default, a pre-pass recording reporting froze.nodes [], a pre-pass Sequence export whose froze.nodes omits the late node, one whose froze.base_width is null, a pre-pass sweep and a pre-pass Sequence export each taking base_width from the live view after the resize, and a pre-pass recording that writes 1600, physical px, for the 800-wide figure at scale factor 2, each fail)\""
+- id: REQ-TOOL-217
+  area: TOOL
+  kind: calibration
+  statement: "The resolution at which REQ-TOOL-216's pre-pass renders every frame (its width as a fraction of the recording's) must be a calibration value (R-71), proposed with its evidence and confirmed by the human at the M8 gate."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: 3.1 The window is frozen at export (R-581)
+  - file: decisions.md
+    section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the PR proposes the resolution with its evidence (the pre-pass's time against the recording's on the reference machine, and how far the union at that resolution falls inside the full-resolution union over the fixture sweeps, as the clipped shares it leaves); a reviewer checks it; the human confirms it at the M8 gate"
+  rulings:
+  - R-71
+  - R-581
+  milestone: M8
+  note: "Fix round 3 of PR #287 (code review 5638122561, C1, applied per R-369): the draft says \"cheap low-resolution\" and gives no value. Closed by TASK-M8-80."
+- id: REQ-TOOL-218
+  area: TOOL
+  statement: "The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display; the export must report the `base_width` it wrote in its export block's `froze.base_width`, and importing a GUI save or export must give back, bitwise, the `base_width` it wrote, never the importing window's width (R-588)."
+  source:
+  - file: docs/design/principia_export_details.md
+    section: "3.3 One size rule: base px (R-583)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800 and froze.base_width 800, each at display scale factors 1 and 2; importing the 2× export and the save into a window 1200 logical px wide gives back base_width 800 and 1600 bitwise (controls: a writer that keeps a stale base_width on a GUI save, an export width counted in physical px, an importer that rewrites base_width to the live window's width, an export whose froze.base_width is null, and one whose froze.base_width is counted in physical px (1600 for the 800-wide view at scale factor 2), each fail)"
+  rulings:
+  - R-583
+  - R-588
+  milestone: M8
+  note: "Fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369): REQ-RENDER-118's GUI-save and Export & share arms, moved here since their writers on the real engine are M8's (TASK-M8-32, TASK-M8-33), as TASK-M7-45's F1 of PR #265. Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q2, applied per R-369). *Was (statement):* \"The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display.\" *Was (verify):* \"cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800, each at display scale factors 1 and 2 (controls: a writer that keeps a stale base_width on a GUI save, and an export width counted in physical px, each fail)\" Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, the audit the coordinator asked for, applied per R-369): R-588's froze tested. *Was (verify):* \"cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800 and froze.base_width 800, each at display scale factors 1 and 2; importing the 2× export and the save into a window 1200 logical px wide gives back base_width 800 and 1600 bitwise (controls: a writer that keeps a stale base_width on a GUI save, an export width counted in physical px, an importer that rewrites base_width to the live window's width, and an export whose froze.base_width is null, each fail)\""
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

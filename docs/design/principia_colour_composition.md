@@ -491,7 +491,8 @@ presets** (fragment-decode vs kernel-payload) as live checks of that translation
 payload lane's live state at the playhead and its masses, through the encode `ROUNDTRIP` already runs; it adds no
 field to any lane's buffer. A Picture base reads one image, a texture bound in a render-side bind group, never a sim
 struct. The uploaded picture is a `RenderState` field, assigned its tier in R-484's table by the task that builds it
-(applied per R-369). Chart position also reads the target chart and its inverse, which seam 6 and render contract
+(applied per R-369): it is a reference, `PictureRef`, tier 2, its texels travelling as an attachment
+(`principia_uploaded_picture.md`, R-585). Chart position also reads the target chart and its inverse, which seam 6 and render contract
 Part 4 keep from a colour occupant; it is a named exception to seam 6, as ROUNDTRIP and DECODE are, listed in render
 contract Part 4 and in the lint, the target's inverse generated to WGSL from the one Rust source (R-116; R-558,
 RQ-489 (a)). *Was:* "that is RQ-489, and the source waits on it."
@@ -683,6 +684,8 @@ anything applied after it is meaningless and anything that lets it be misplaced 
 that can lie. It is an **accessibility/display setting** alongside `render_scale`, and it therefore
 applies uniformly to *everything* — main render, sphere preview, equirect unwrap, node thumbnails —
 which is exactly what an accessibility audit wants: check the whole instrument at once. The CVD
+simulation's setting is the viewer's, `ViewUI.cvd`, never in an export unless "As seen with" is picked
+(`principia_export_details.md` §3.2, R-582). The
 simulation is real Viénot (protan, deutan) and Brettel (tritan) through LMS from linear sRGB, with matrices and golden
 values from a published reference implementation, named with its version when the task lands (R-78; dd_colouring §3.8).
 The reference is DaltonLens-Python at commit `3cba5e6`, named by R-383 in dd_colouring §3.8.

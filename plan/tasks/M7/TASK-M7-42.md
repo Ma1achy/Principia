@@ -36,3 +36,4 @@ The line system's engine, outside the node graph: its overlay pass after the gam
 ## Notes
 - **Where the pass sits** (R-476 M2, flagged): after the gamut clamp, before CVD simulation.
 - **The mock gains no line system** (R-476 M6).
+- **R-583 (21 Oct 2026, gap sweep PR 2c):** `LineStyle` has no `units` field and `PrintPt` is retired; every length is base px, scaled by TASK-M7-70 (REQ-RENDER-118). REQ-RENDER-088's verify gains the no-`units` arm; the acceptance line reads that verify.

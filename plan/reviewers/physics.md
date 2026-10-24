@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*116 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*117 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -138,6 +138,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-GUI-149 — the proposal shows the fitted α on the fixture at the default settings and the tolerance with its margin
 - [ ] REQ-GUI-150 — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not
 - [ ] REQ-TOOL-115 — the proposal shows idle memory traces with and without an injected leak and a threshold and window that flag the leak and not the clean trace
+- [ ] REQ-TOOL-214 — cargo xtask gate browser-webm-carrier: in the M8 Playwright browser suite on Chromium (R-134, R-149), a 12-frame sweep recorded as WebM through WebCodecs carries exactly one PRINCIPIA_SPEC tag, on the file as a whole, whose base64 decodes to the record, bitwise the .principia-sweep.json written beside it, and the native reader reads the downloaded file as recovered (controls: a tag on a track rather than the file, and a custom tag name, each fail)
 - [ ] REQ-VAL-099 — the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results
 - [ ] REQ-VAL-102 — spectral entropy for the figure-eight ≈ 0.076 and for the chaotic reference ≈ 0.177; periodic < chaotic
 - [ ] REQ-VAL-103 — a recorded measurement of spectral line resolution vs t gives the minimum t used by listen

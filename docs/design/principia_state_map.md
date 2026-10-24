@@ -429,7 +429,9 @@ wave `s ↦ s mod 2, 2 − s past 1`, and multiplied by 0.62 outside `[0, 1]` (t
 an 8 × 8 checkerboard, its cells at OKLab `L = 0.82` or `0.50`, `(a, b) = 0.12((i + ½)/4 − 1, 1 − (j + ½)/4)`; a 16 × 16
 grid of 2 px lines `#f2efe6` on `#101114`, with a red bar `#ff5a4f` along the top half of the top edge and a blue bar
 `#4fb6ff` down the top half of the left edge, so orientation reads; and 18 rings, alternately `L = 0.80` and `0.42`,
-`(a, b) = 0.1(cos r, sin r)`. The user's picture is scaled to the same 256 × 256. Layers (SM11) apply over a picture as
+`(a, b) = 0.1(cos r, sin r)`. The user's picture is scaled to the same 256 × 256: resampled by area averaging in the
+app's own code and stretched to the square, its texels referred to by SHA-256 and carried as an attachment
+(`principia_uploaded_picture.md`, R-585). Layers (SM11) apply over a picture as
 over any base. The brightness slot does not apply under Picture in the prototype; the file's words govern (RQ-499, ruled by R-558):
 the brightness slot applies to every base, Picture included, and the prototype skipped it.
 
