@@ -3220,7 +3220,7 @@
   depends_on: [TASK-M8-81, TASK-M8-33, TASK-M8-40]
   needs: []
   requirements: [REQ-TOOL-214]
-  reviewers: [code, qa]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

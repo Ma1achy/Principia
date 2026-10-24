@@ -4,7 +4,7 @@
 - **Closes:** REQ-TOOL-214
 - **Depends on:** TASK-M8-81, TASK-M8-33, TASK-M8-40
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa
+- **Reviewers:** code, qa, physics
 - **Pitfalls:** none
 - **Size:** ~150 lines, the tests included
 
@@ -29,3 +29,4 @@ In the browser build, Record a time sweep's WebM (through WebCodecs where suppor
 
 ## Notes
 - Fix round 2 of PR #287 (qa review 5638084688, Q2, applied per R-369): the native build writes no WebM (R-131), so REQ-TOOL-083's and REQ-TOOL-206's WebM arms could never run natively; the writer is tested here, the native reader on a fixture by TASK-M8-81.
+- **Fix round of the rulings port (qa review 5638292369 of PR #287, Q4, applied per R-369):** REQ-TOOL-214 runs under `cargo xtask gate`, so its verify is a `numerical gate`, and `plan/WORKFLOW.md` § "Reviewers" has physics review a task that touches a numerical gate: physics joins this task's reviewers, its checklist item the gate run with its controls. *Was:* "- **Reviewers:** code, qa".

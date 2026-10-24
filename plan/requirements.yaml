@@ -13464,7 +13464,7 @@
   note: "Fix round 3 of PR #281 (perf review 5608473498, F4, applied per R-369). Closed by TASK-M8-69."
 - id: REQ-RENDER-117
   area: RENDER
-  statement: "An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing."
+  statement: "An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing; the export must report, in its export block's `froze.nodes`, every node whose entry it wrote and no other (R-588)."
   source:
   - file: docs/design/principia_export_details.md
     section: 3.1 The window is frozen at export (R-581)
@@ -13480,12 +13480,12 @@
     section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
   verify:
     method: unit test
-    detail: "cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, and an export that measures its window over the 4× pixels, each fail)"
+    detail: "cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry, and its export block's froze.nodes lists exactly the two measured nodes; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a second export of the imported view, whose nodes are already frozen, lists no node in froze.nodes; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, an export that measures its window over the 4× pixels, an export whose froze.nodes omits a node it froze, and one whose froze.nodes lists a node the view had already frozen, each fail)"
   rulings:
   - R-581
   - R-588
   milestone: M8
-  note: "R-581 (gap sweep PR 2c). Closed by TASK-M8-80. How the frozen window sits with R-484's identity is RQ-562's, ruled by R-588 (24 Oct 2026): option (a), the identity on the record written, import giving back bitwise the RenderState the export wrote, frozen windows included. *Was (note):* \"How the frozen window sits with R-484's identity is RQ-562; its option (a), the identity on the record written, applied meanwhile; nothing waits.\""
+  note: "R-581 (gap sweep PR 2c). Closed by TASK-M8-80. How the frozen window sits with R-484's identity is RQ-562's, ruled by R-588 (24 Oct 2026): option (a), the identity on the record written, import giving back bitwise the RenderState the export wrote, frozen windows included. *Was (note):* \"How the frozen window sits with R-484's identity is RQ-562; its option (a), the identity on the record written, applied meanwhile; nothing waits.\" Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q1, applied per R-369). *Was (statement):* \"An image export must freeze every colour window whose source is measured (a stain node's `range_norm` under `RANGE_AUTO`, and a Print graph field input that reads the stain's window rule) at the `u_range` the screen is drawing with when Export is pressed, writing it into `RenderState.frozen_ranges { node_id → (lo, hi) }`, and a node with an entry must read it instead of measuring (`range_norm`'s third source, frozen); a declared range is never frozen, and a snapshot JSON or a share link freezes nothing.\" *Was (verify):* \"cargo test -p render frozen_range_roundtrip: a 4× image export of a view with two measured nodes and one declared writes both measured nodes' on-screen u_range into frozen_ranges and gives the declared node no entry; importing it and rendering at the export's size gives pixels bitwise equal to the export, each frozen node reading its entry and not measuring; a snapshot JSON of the same view writes no entry (controls: an import that re-measures, and an export that measures its window over the 4× pixels, each fail)\""
 - id: REQ-RENDER-118
   area: RENDER
   statement: "Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and on screen at one logical px per base px (the display's scale factor of physical px) whatever `base_width` says, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, a headless writer keeping the state's and a record without it reading 1024 (the GUI's save and Export & share writers are REQ-TOOL-218's); `device_px` nodes stay the one exception."
@@ -13534,12 +13534,12 @@
     section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
   verify:
     method: unit test
-    detail: "cargo test -p render ic_marks_travel: a view with one OnChart and one Built mark (an off-slice IC) round-trips bitwise through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk; at 64² tier 2 drops whole and the tEXt chunk still carries both marks; Mark all kept with three kept orbits adds three Marked traces; the record's size is measured and written into principia_ic_save.md §3.5 (controls: marks held in ViewUI, and a Built mark that round-trips only its z, each fail)"
+    detail: "cargo test -p render ic_marks_travel: a view with one OnChart and one Built mark (an off-slice IC) round-trips bitwise through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk; at 64² tier 2 drops whole and the tEXt chunk still carries both marks; Mark all kept with three kept orbits adds three Marked traces (controls: marks held in ViewUI, and a Built mark that round-trips only its z, each fail)"
   rulings:
   - R-484
   - R-586
   milestone: M8
-  note: "R-586; the Marked kind applied per R-369. Closed by TASK-M8-84."
+  note: "R-586; the Marked kind applied per R-369. Closed by TASK-M8-84. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q5, applied per R-369). The record's measured size stays TASK-M8-84's deliverable (written into principia_ic_save.md §3.5), not a verify arm, since it cannot fail. *Was (verify):* \"cargo test -p render ic_marks_travel: a view with one OnChart and one Built mark (an off-slice IC) round-trips bitwise through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk; at 64² tier 2 drops whole and the tEXt chunk still carries both marks; Mark all kept with three kept orbits adds three Marked traces; the record's size is measured and written into principia_ic_save.md §3.5 (controls: marks held in ViewUI, and a Built mark that round-trips only its z, each fail)\""
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -23765,7 +23765,7 @@
   note: R-586. Closed by TASK-M8-84.
 - id: REQ-GUI-395
   area: GUI
-  statement: "A kept orbit's `Trace`, an IC only kept, not marked, must travel with an export on every path, round-tripping in `Lines` with its `ic` an `IcRef` (R-553, R-590), and the Trajectory panel's kept-orbit tabs, `ViewUI`, must not travel."
+  statement: "A kept orbit's `Trace`, an IC only kept, not marked, must travel with an export on every path (snapshot JSON, a saved view, a share link, the animation spec, the pxpack in tier 2 and the `tEXt` chunk), round-tripping in `Lines` with its `ic` an `IcRef`, a kept built IC as `Built(IcRecord)` whole, not only its `z` (R-553, R-590), and the Trajectory panel's kept-orbit tabs, `ViewUI`, must not travel."
   source:
   - file: docs/design/principia_ic_save.md
     section: "3.5 In views: marks"
@@ -23779,13 +23779,13 @@
     section: "R-590 — A kept orbit's `Trace` travels with an export: R-553 stands, the `Trace` round-tripping in `Lines`, its `ic` an `IcRef`; the draft's \"kept-only ICs are absent\" arm leaves REQ-GUI-395's test, replaced by the Trajectory panel's kept-orbit tabs (`ViewUI`) not travelling *(closes RQ-564; settles R-586's interim)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui ic_kept_only: a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and the kept orbit's Trace, its ic an IcRef, bitwise; the Trajectory panel's kept-orbit tabs (ViewUI) do not travel (controls: the kept-orbit tabs in an export, and an export that drops the kept orbit's Trace, each fail)"
+    detail: "cargo test -p gui ic_kept_only: a view with one marked IC and one kept-only IC built in the constructor off the slice, its ic Built, exported through snapshot JSON, a saved view, a share link, the animation spec, the pxpack at 1024² and the tEXt chunk carries the mark and the kept orbit's Trace, its ic Built with the whole IcRecord, bitwise; the Trajectory panel's kept-orbit tabs (ViewUI) do not travel (controls: the kept-orbit tabs in an export, an export that drops the kept orbit's Trace, and a Built IC that round-trips only its z, each fail)"
   rulings:
   - R-553
   - R-586
   - R-590
   milestone: M8
-  note: "R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) was RQ-564, ruled by R-590 (24 Oct 2026): R-553 stands, the arm is dropped, and its replacement is that the Trajectory panel's kept-orbit tabs (ViewUI) do not travel; nothing waits. Closed by TASK-M8-84. *Was (statement):* \"Whether an IC only kept, not marked, travels with an export must follow RQ-564's ruling: under the draft's option a kept-only IC is absent from every export path; under R-553, applied meanwhile, a kept orbit's `Trace` round-trips in `Lines`.\" *Was (verify):* \"cargo test -p gui ic_kept_only: under RQ-564's ruling, a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and either omits the kept-only IC's Trace (the draft) or carries it (R-553), as ruled; the kept-orbit tabs never travel (control: the kept-orbit tabs in an export fail)\" *Was (note):* \"R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) is RQ-564; this requirement waits on it, its arm the only part of R-586 that does. Closed by TASK-M8-84.\""
+  note: "R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) was RQ-564, ruled by R-590 (24 Oct 2026): R-553 stands, the arm is dropped, and its replacement is that the Trajectory panel's kept-orbit tabs (ViewUI) do not travel; nothing waits. Closed by TASK-M8-84. *Was (statement):* \"Whether an IC only kept, not marked, travels with an export must follow RQ-564's ruling: under the draft's option a kept-only IC is absent from every export path; under R-553, applied meanwhile, a kept orbit's `Trace` round-trips in `Lines`.\" *Was (verify):* \"cargo test -p gui ic_kept_only: under RQ-564's ruling, a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and either omits the kept-only IC's Trace (the draft) or carries it (R-553), as ruled; the kept-orbit tabs never travel (control: the kept-orbit tabs in an export fail)\" *Was (note):* \"R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) is RQ-564; this requirement waits on it, its arm the only part of R-586 that does. Closed by TASK-M8-84.\" Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q3, applied per R-369). *Was (statement):* \"A kept orbit's `Trace`, an IC only kept, not marked, must travel with an export on every path, round-tripping in `Lines` with its `ic` an `IcRef` (R-553, R-590), and the Trajectory panel's kept-orbit tabs, `ViewUI`, must not travel.\" *Was (verify):* \"cargo test -p gui ic_kept_only: a view with one marked IC and one kept-only IC exported through snapshot JSON, a saved view, the tEXt chunk and a share link carries the mark and the kept orbit's Trace, its ic an IcRef, bitwise; the Trajectory panel's kept-orbit tabs (ViewUI) do not travel (controls: the kept-orbit tabs in an export, and an export that drops the kept orbit's Trace, each fail)\""
 - id: REQ-GUI-396
   area: GUI
   statement: "Mark and Mark all kept must each send one `SetField` on `RenderField::Lines` and make one undo entry, Mark all kept with n kept orbits one entry, never n (R-69, R-52)."
@@ -27212,7 +27212,7 @@
   note: "R-581; the Sequence's rule applied per R-369 (the human's \"frozen when Record is pressed\" names the sweep's button). Closed by TASK-M8-80."
 - id: REQ-TOOL-202
   area: TOOL
-  statement: "Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`."
+  statement: "Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes, froze }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`; `froze` must report the fields the export wrote into the `RenderState` it records: `nodes`, the nodes whose `frozen_ranges` entries it wrote, and `base_width`, the value it wrote, `nodes: []` and `base_width: null` from a headless export (R-588)."
   source:
   - file: docs/design/principia_export_details.md
     section: 3.1 The window is frozen at export (R-581)
@@ -27224,16 +27224,19 @@
     section: 2. The editable state is the entire coupling surface
   - file: decisions.md
     section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
   verify:
     method: unit test
-    detail: "cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either (controls: a share that reads 0, one that counts not-a-system pixels, and a block missing from tEXt, each fail)"
+    detail: "cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either; a headless export of a state that already carries frozen_ranges and a base_width reports froze { nodes: [], base_width: null } and leaves both fields as the state had them (controls: a share that reads 0, one that counts not-a-system pixels, a block missing from tEXt, and a headless export that reports a node or a base_width, each fail)"
   rulings:
   - R-484
   - R-581
   - R-582
   - R-583
+  - R-588
   milestone: M8
-  note: "R-581 to R-583; the block's place (a sidecar, tier 2 and tEXt) and the clipped share's pixels are applied per R-369. Closed by TASK-M8-80."
+  note: "R-581 to R-583; the block's place (a sidecar, tier 2 and tEXt) and the clipped share's pixels are applied per R-369. Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q1, applied per R-369). *Was (statement):* \"Every exported image and recording must carry, beside `SimConfig` and `RenderState`, the export block `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes }`, a sidecar outside the round-trip identity as `f3_fill` is (R-484 J3), in tier 2 of the low-bit record with `f3_fill` and always in the `tEXt` chunk; `clipped` must give, per frozen node (and per frame, in frame order, for a recording), the fraction of the export's pixels the chart classifies as a system whose value fell below `lo` and above `hi`.\" *Was (verify):* \"cargo test -p render clipped_share_counts: a fixture field forced past its frozen window's hi on a quarter of the system pixels reports clipped (0, 0.25) for that node, the not-a-system pixels counted at neither end; a 3-frame recording carries three maps in frame order; the export block reads back from the tEXt chunk and from the low-bit record's tier 2, and importing the export restores SimConfig and RenderState bitwise without the block in either (controls: a share that reads 0, one that counts not-a-system pixels, and a block missing from tEXt, each fail)\""
 - id: REQ-TOOL-203
   area: TOOL
   statement: "An export must never include the colour-vision simulation (`ViewUI.cvd`) unless \"As seen with: <mode>\" is picked; picked, the export's pixels must be the simulation's, its record must carry `cvd_simulated: <mode>` (`null` in every other export), its file name must gain the suffix `__as_seen_<mode>`, and Import picture's report must name it, restoring the view without turning the simulation on."
@@ -27481,7 +27484,7 @@
   - file: decisions.md
     section: R-131 — The video encoders *(closes RQ-108)*
   verify:
-    method: unit test
+    method: numerical gate
     detail: "cargo xtask gate browser-webm-carrier: in the M8 Playwright browser suite on Chromium (R-134, R-149), a 12-frame sweep recorded as WebM through WebCodecs carries exactly one PRINCIPIA_SPEC tag, on the file as a whole, whose base64 decodes to the record, bitwise the .principia-sweep.json written beside it, and the native reader reads the downloaded file as recovered (controls: a tag on a track rather than the file, and a custom tag name, each fail)"
   rulings:
   - R-131
@@ -27489,7 +27492,7 @@
   - R-149
   - R-584
   milestone: M8
-  note: "Fix round 2 of PR #287 (qa review 5638084688, Q2, applied per R-369): the native build writes no WebM (R-131), so the writer is tested in the browser suite. Closed by TASK-M8-85."
+  note: "Fix round 2 of PR #287 (qa review 5638084688, Q2, applied per R-369): the native build writes no WebM (R-131), so the writer is tested in the browser suite. Closed by TASK-M8-85. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q4, applied per R-369): relabelled numerical gate, as every `cargo xtask gate` verify is. *Was (verify method):* \"unit test\""
 - id: REQ-TOOL-215
   area: TOOL
   kind: calibration
@@ -27549,7 +27552,7 @@
   note: "Fix round 3 of PR #287 (code review 5638122561, C1, applied per R-369): the draft says \"cheap low-resolution\" and gives no value. Closed by TASK-M8-80."
 - id: REQ-TOOL-218
   area: TOOL
-  statement: "The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display."
+  statement: "The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display; the export must report the `base_width` it wrote in its export block's `froze.base_width`, and importing a GUI save or export must give back, bitwise, the `base_width` it wrote, never the importing window's width (R-588)."
   source:
   - file: docs/design/principia_export_details.md
     section: "3.3 One size rule: base px (R-583)"
@@ -27559,13 +27562,16 @@
     section: 2. The editable state is the entire coupling surface
   - file: decisions.md
     section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
+  - file: decisions.md
+    section: "R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800, each at display scale factors 1 and 2 (controls: a writer that keeps a stale base_width on a GUI save, and an export width counted in physical px, each fail)"
+    detail: "cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800 and froze.base_width 800, each at display scale factors 1 and 2; importing the 2× export and the save into a window 1200 logical px wide gives back base_width 800 and 1600 bitwise (controls: a writer that keeps a stale base_width on a GUI save, an export width counted in physical px, an importer that rewrites base_width to the live window's width, and an export whose froze.base_width is null, each fail)"
   rulings:
   - R-583
+  - R-588
   milestone: M8
-  note: "Fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369): REQ-RENDER-118's GUI-save and Export & share arms, moved here since their writers on the real engine are M8's (TASK-M8-32, TASK-M8-33), as TASK-M7-45's F1 of PR #265. Closed by TASK-M8-80."
+  note: "Fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369): REQ-RENDER-118's GUI-save and Export & share arms, moved here since their writers on the real engine are M8's (TASK-M8-32, TASK-M8-33), as TASK-M7-45's F1 of PR #265. Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q2, applied per R-369). *Was (statement):* \"The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display.\" *Was (verify):* \"cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800, each at display scale factors 1 and 2 (controls: a writer that keeps a stale base_width on a GUI save, and an export width counted in physical px, each fail)\""
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
