@@ -21,8 +21,8 @@
 //!   `z₀ ← z_locked`, the stored anchor, bit for bit; unlock ([`unlock`]) clears the lock group and keeps
 //!   `(z₀, q₁, q₂)`.
 //! - **Lock validation** on an invariant chart ([`validate`]): each pixel's `(L_z, y)` read at its own configuration,
-//!   tagged where layer 2 fails it, never dropped, with the re-centre and the switch to the latent chart offered
-//!   ([`Report::offer`], [`recentre`]).
+//!   tagged where layer 2 fails it, or `DEGENERATE` where its construction finds no seed, never dropped, with the
+//!   re-centre and the switch to the latent chart offered ([`Report::offer`], [`recentre`]).
 //! - **A curve's tangent tilt needs a lock** ([`curve_tilt`]): `γ′(ν₀)` pulled back to the latent controls
 //!   ([`curve_tangent`]), refused where a link's inverse clamps, then `nav::tilt_tangent`.
 //!
@@ -386,7 +386,7 @@ impl Report {
     }
 
     /// The remedies offered: none where every pixel is feasible; else the re-centre to each tagged pixel's nearest
-    /// feasible point, in pixel order, then the switch to the latent chart.
+    /// feasible point, in pixel order, then the switch to the latent chart. A `Degenerate` pixel is offered nothing.
     pub fn offer(&self) -> Vec<Remedy> {
         if self.infeasible() == 0 {
             return Vec::new();
