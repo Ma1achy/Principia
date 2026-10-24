@@ -13425,7 +13425,7 @@
   note: "R-581 (gap sweep PR 2c). Closed by TASK-M8-80. How the frozen window sits with R-484's identity is RQ-562; its option (a), the identity on the record written, applied meanwhile; nothing waits."
 - id: REQ-RENDER-118
   area: RENDER
-  statement: "Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and at a scale of 1 on screen whatever `base_width` says, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, written by the writer when a view is saved or exported, a headless writer keeping the state's and a record without it reading 1024; `device_px` nodes stay the one exception."
+  statement: "Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and on screen at one logical px per base px (the display's scale factor of physical px) whatever `base_width` says, Export & share's multiples of the view counting logical px, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, written by the writer when a view is saved or exported, a headless writer keeping the state's and a record without it reading 1024; `device_px` nodes stay the one exception."
   source:
   - file: docs/design/principia_export_details.md
     section: "3.3 One size rule: base px (R-583)"
@@ -13441,13 +13441,13 @@
     section: "R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*"
   verify:
     method: unit test
-    detail: "cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width and a GUI save writes the figure's (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, and a writer that keeps a stale base_width on a GUI save, each fail)"
+    detail: "cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width and a GUI save writes the figure's; at a display scale factor of 2 every on-screen mark is twice its base px in physical px, and a 1× export of a view 800 logical px wide is 800 px wide (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, a writer that keeps a stale base_width on a GUI save, and a mark drawn at 1 physical px per base px at scale factor 2, each fail)"
   rulings:
   - R-476
   - R-490
   - R-583
   milestone: M7
-  note: "R-583 (gap sweep PR 2c). Closed by TASK-M7-70. How base_width, written by the writer, sits with R-484's identity is RQ-562; its option (a) applied meanwhile; nothing waits."
+  note: "R-583 (gap sweep PR 2c). Closed by TASK-M7-70. How base_width, written by the writer, sits with R-484's identity is RQ-562; its option (a) applied meanwhile; nothing waits. Fix round 1 of PR #287 (gui review 5638052211, G5, applied per R-369): 1 base px is one logical px on screen (principia_export_details.md §3.3). *Was (statement):* \"Every mark length the line system and the Print graph draw (a stroke's width, a dash's lengths, an outline's width, a label's size, offset, halo width and spacing, an icon's, an arrow's and a tick's size, smart ink's radius, and every `ref_px` parameter) must be in base px, rendered at length × `output_width / base_width` and at a scale of 1 on screen whatever `base_width` says, with label placement run at base size and then scaled; `RenderState.base_width` must be the figure's logical width, written by the writer when a view is saved or exported, a headless writer keeping the state's and a record without it reading 1024; `device_px` nodes stay the one exception.\" *Was (verify):* \"cargo test -p render base_px_invariance: a view with contours and their labels, a trace with icons and arrows, axes with ticks and a ref_px Print graph node, rendered at 1× and at 4× box-downsampled, agrees within REQ-RENDER-112's tolerance on every mark and places the identical set of labels; resizing the figure from 1024 to 1600 logical px leaves every on-screen mark length unchanged; a record without base_width renders as at 1024; a headless export keeps the state's base_width and a GUI save writes the figure's (controls: a mark kept at its screen size in the 4× export, label placement run at the 4× size, and a writer that keeps a stale base_width on a GUI save, each fail)\""
 - id: REQ-RENDER-119
   area: RENDER
   statement: "`Trace.ic` must be an `IcRef = OnChart { chart, uv } | Built(IcRecord)` and a marked IC a `Trace` of kind `Marked(id)` in `RenderState.Lines`, drawn as REQ-GUI-120's crosshair at its IC's projection on the current slice and, under the trace settings, its path, so that a marked IC round-trips bitwise through every export path (snapshot JSON, a saved view, a share link, the animation spec, the pxpack in tier 2 and the `tEXt` chunk); Mark all kept must make one mark of each kept orbit."
@@ -23567,7 +23567,7 @@
   note: "Fix round 12 of PR #286 (perf review 5632950982, P6; applied per R-369): no corpus value gives \"small\". Closed by TASK-M8-78."
 - id: REQ-GUI-389
   area: GUI
-  statement: "A frozen node must read \"frozen at export\" in its inspector and on the Legend's key for it, and Re-measure in its inspector must remove only its entry by one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry."
+  statement: "A frozen node must read \"frozen at export\" in its inspector and on the Legend's key for it, and Re-measure in its inspector must remove only its entry by one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry; a stain-graph edit that removes a node, or a preset replacing the graph, must drop the entries of the nodes no longer present in the same undoable command, one undo entry."
   source:
   - file: docs/design/principia_export_details.md
     section: 3.1 The window is frozen at export (R-581)
@@ -23577,14 +23577,18 @@
     section: 2. The editable state is the entire coupling surface
   - file: decisions.md
     section: "R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads \"frozen at export\" until Re-measure *(queues RQ-562)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 7. Canvas interactions
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 11. Presets = whole graphs
   verify:
     method: unit test
-    detail: "cargo test -p gui frozen_at_export: after importing an export with two frozen nodes, a node's inspector and its Legend key read \"frozen at export\"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry (controls: a Re-measure that clears both nodes, and one that adds two undo entries, fail)"
+    detail: "cargo test -p gui frozen_at_export: after importing an export with two frozen nodes, a node's inspector and its Legend key read \"frozen at export\"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry; deleting a frozen node drops its entry in the deletion's one undo entry, undo restoring node and entry, and a new node given the deleted node's id measures; loading a preset drops every entry of the replaced graph (controls: a Re-measure that clears both nodes, one that adds two undo entries, a stale entry that freezes a new node with a reused id, and a drop that adds its own undo entry, fail)"
   rulings:
   - R-69
   - R-581
   milestone: M8
-  note: R-581. Closed by TASK-M8-80.
+  note: "R-581. Closed by TASK-M8-80. Fix round 1 of PR #287 (gui review 5638052211, G6, applied per R-369): an entry goes with its node (principia_export_details.md §3.1). *Was (statement):* \"A frozen node must read \"frozen at export\" in its inspector and on the Legend's key for it, and Re-measure in its inspector must remove only its entry by one `SetField` on `RenderField::FrozenRanges` (the whole map), one undo entry.\" *Was (verify):* \"cargo test -p gui frozen_at_export: after importing an export with two frozen nodes, a node's inspector and its Legend key read \"frozen at export\"; Re-measure removes only that node's entry, sends one SetField on FrozenRanges and adds one undo entry, the node then measuring; undo restores the entry (controls: a Re-measure that clears both nodes, and one that adds two undo entries, fail)\""
 - id: REQ-GUI-390
   area: GUI
   statement: "The colour-vision simulation must be `ViewUI.cvd` (off, deuteranopia, protanopia, tritanopia, achromatopsia), set by the GUI as a render uniform, never undoable, never written to a record or restored from one, and remembered across sessions in the GUI's own settings; Export & share's Image section must offer \"As seen with: <mode>\", a checkbox off by default and offered only while it is not Off; and wherever the app shows an image exported with it, the header strip must carry the badge \"As seen with <mode>\"."
@@ -23624,13 +23628,13 @@
     section: "R-523 — Badges go in the chrome or the status line, never over the figure: the decoder badge sits in the figure's header strip, above the plot *(closes RQ-387; amends R-479)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui picture_missing: a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, and a Locate that accepts any file, each fail)"
+    detail: "cargo test -p gui picture_missing: a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, a Locate that accepts any file, and a badge drawn over the plot, each fail)"
   rulings:
   - R-467
   - R-523
   - R-585
   milestone: M8
-  note: R-585. Closed by TASK-M8-82.
+  note: "R-585. Closed by TASK-M8-82. Fix round 1 of PR #287 (gui review 5638052211, G4, applied per R-369): the badge-placement control, as REQ-GUI-390 has (R-523). *Was (verify):* \"cargo test -p gui picture_missing: a share link of a view with an uploaded picture opened with an empty store restores SimConfig and RenderState bitwise, draws #141418 where the picture was with the layers over it, shows the badge with the name and the hash's first 8 hex digits in the header strip, outside the plot, and lists it in the report; Locate picture… with a different image is refused naming both hashes, and with the original file restores the picture (controls: a built-in drawn instead, the hatch, a restore that aborts, and a Locate that accepts any file, each fail)\""
 - id: REQ-GUI-392
   area: GUI
   statement: "The \"Your image…\" dialog must show the picture as it will be applied, stretched to the 256 × 256 square, before it is applied, and refuse a file over the limits with the reason shown in the dialog."
@@ -23642,15 +23646,16 @@
   - file: decisions.md
     section: "R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible \"Picture missing\" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*"
   verify:
-    method: GUI screenshot
-    detail: "cargo xtask screenshot picture_upload: the dialog shows a 600 × 300 fixture stretched to the square before it is applied, and Cancel leaves RenderState unchanged; cargo test -p gui picture_upload_dialog: an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, and an apply before the preview, fail)"
+    method: unit test
+    detail: "cargo test -p gui picture_upload_dialog: with a 600 × 300 fixture the dialog's preview is the ingested 256 × 256 texels, drawn in a square rect with no bars, before anything is applied; no SetField is sent until Apply, and Apply is offered only once the preview is shown; Cancel sends no SetField and leaves RenderState unchanged; an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, a preview that is not the ingested texels, an Apply offered before the preview, and a Cancel that sends a SetField, each fail); cargo xtask screenshot picture_upload: the dialog's layout only (R-68)"
   rulings:
+  - R-68
   - R-585
   milestone: M8
-  note: R-585. REQ-GUI-340's control opens it. Closed by TASK-M8-82.
+  note: "R-585. REQ-GUI-340's control opens it. Closed by TASK-M8-82. Fix round 1 of PR #287 (gui review 5638052211, G3, applied per R-369): the behaviour moved from the screenshot, which compares layout only (R-68), into picture_upload_dialog. *Was (verify):* GUI screenshot, \"cargo xtask screenshot picture_upload: the dialog shows a 600 × 300 fixture stretched to the square before it is applied, and Cancel leaves RenderState unchanged; cargo test -p gui picture_upload_dialog: an over-limit file is refused in the dialog with the limit named and no SetField sent (controls: a preview with bars, and an apply before the preview, fail)\""
 - id: REQ-GUI-393
   area: GUI
-  statement: "The Inspector must copy the IC's record with Ctrl+C and a 1-based table with Copy as text, paste a record with Ctrl+V, and save it with File › Save IC… as `<label>.principia-ic.json`; File › Open IC… (or a drop) must open a record in Create & locate, in its as-built frame, as recovered, physics only (a link unknown or its entry hash different: as_built loaded and only \"locate on this chart\" refused, naming the link) or corrupt, showing the stored `z` against the recomputed as a residual."
+  statement: "The Inspector must copy the IC's record with Ctrl+C and a 1-based table with Copy as text, paste a record with Ctrl+V, and save it with File › Save IC… as `<label>.principia-ic.json`; File › Open IC… (or a drop) must open a record in Create & locate, in its as-built frame, as recovered, physics only (a link unknown or its entry hash different: as_built loaded and only \"locate on this chart\" refused, naming the link) or corrupt, showing the stored `z` against the recomputed as a residual; while a text field is being typed in, Ctrl+C and Ctrl+V must copy and paste its text, never the record (R-409)."
   source:
   - file: docs/design/principia_ic_save.md
     section: 3.2 Copy, save, open
@@ -23660,15 +23665,18 @@
     section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
   - file: decisions.md
     section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
   verify:
     method: unit test
-    detail: "cargo test -p gui ic_copy_save_open: Ctrl+C puts the record's JSON on the clipboard and Copy as text a table naming bodies 1, 2, 3; Ctrl+V of that JSON opens the IC in Create & locate bitwise; Save IC… writes <label>.principia-ic.json and Open IC… reads it back as recovered with its residual shown; a record with one link's entry hash changed opens as physics only, as_built loaded and locate refused naming that link; truncated JSON opens as corrupt (controls: a default link standing in, a table numbering bodies 0, 1, 2, and a corrupt record that loads, each fail)"
+    detail: "cargo test -p gui ic_copy_save_open: Ctrl+C puts the record's JSON on the clipboard and Copy as text a table naming bodies 1, 2, 3; Ctrl+V of that JSON opens the IC in Create & locate bitwise; Save IC… writes <label>.principia-ic.json and Open IC… reads it back as recovered with its residual shown; a record with one link's entry hash changed opens as physics only, as_built loaded and locate refused naming that link; truncated JSON opens as corrupt; Ctrl+V of a record while a mass field is being typed in pastes the text into that field and opens no IC, and Ctrl+C there copies the field's selected text, not the record (controls: a default link standing in, a table numbering bodies 0, 1, 2, a corrupt record that loads, and a record pasted over a typed field, each fail)"
   rulings:
+  - R-409
   - R-449
   - R-521
   - R-586
   milestone: M8
-  note: R-586. Closed by TASK-M8-84.
+  note: "R-586. Closed by TASK-M8-84. Fix round 1 of PR #287 (gui review 5638052211, G2, applied per R-369): the text-field arm (render GUI spec §G3's Ctrl+C · Ctrl+V row). *Was (statement):* \"The Inspector must copy the IC's record with Ctrl+C and a 1-based table with Copy as text, paste a record with Ctrl+V, and save it with File › Save IC… as `<label>.principia-ic.json`; File › Open IC… (or a drop) must open a record in Create & locate, in its as-built frame, as recovered, physics only (a link unknown or its entry hash different: as_built loaded and only \"locate on this chart\" refused, naming the link) or corrupt, showing the stored `z` against the recomputed as a residual.\" *Was (verify):* \"cargo test -p gui ic_copy_save_open: Ctrl+C puts the record's JSON on the clipboard and Copy as text a table naming bodies 1, 2, 3; Ctrl+V of that JSON opens the IC in Create & locate bitwise; Save IC… writes <label>.principia-ic.json and Open IC… reads it back as recovered with its residual shown; a record with one link's entry hash changed opens as physics only, as_built loaded and locate refused naming that link; truncated JSON opens as corrupt (controls: a default link standing in, a table numbering bodies 0, 1, 2, and a corrupt record that loads, each fail)\""
 - id: REQ-GUI-394
   area: GUI
   statement: "A reopened IC must sit where it was built: its as-built hemisphere kept, the constructor's dot in that hemisphere and the mirror twin's faint marker opposite, and on the seam (`hemisphere = 0`) no twin."
@@ -23711,6 +23719,27 @@
   rq:
   - RQ-564
   note: "R-586: the draft's \"kept-only ICs are absent\" against R-553 (RQ-428 (a)) is RQ-564; this requirement waits on it, its arm the only part of R-586 that does. Closed by TASK-M8-84."
+- id: REQ-GUI-396
+  area: GUI
+  statement: "Mark and Mark all kept must each send one `SetField` on `RenderField::Lines` and make one undo entry, Mark all kept with n kept orbits one entry, never n (R-69, R-52)."
+  source:
+  - file: docs/design/principia_ic_save.md
+    section: "3.5 In views: marks"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui ic_mark_undo: Mark on a built IC sends one SetField on Lines and adds one undo entry, and undo removes the mark; Mark all kept with three kept orbits sends one SetField and adds one undo entry, and one undo removes all three marks (controls: a mark that enters no history, and Mark all kept making three entries, each fail)"
+  rulings:
+  - R-52
+  - R-69
+  - R-586
+  milestone: M8
+  note: "Fix round 1 of PR #287 (gui review 5638052211, G1), applied per R-369. Closed by TASK-M8-84."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

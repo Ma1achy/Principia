@@ -3203,7 +3203,7 @@
   title: "Saving an IC: the `principia.ic/1` record, copy, paste, Save IC… and Open IC…, the twin on reopening, marks in `Lines`, and the trajectory CSV with its bodies labelled 1-based (R-586, R-587)"
   depends_on: [TASK-M8-17, TASK-M8-83, TASK-M8-67, TASK-M8-58, TASK-M8-53]
   needs: [REQ-GUI-188]
-  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213]
+  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M0-35
