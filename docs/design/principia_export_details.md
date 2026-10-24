@@ -151,8 +151,11 @@ in the export block, outside the identity, so the `RenderState` an import gives 
 **A recording's `froze`** (applied per R-369, qa review 5638292369's follow-up 5638318769 of PR #287, Q6): a recording
 has one `froze` for the whole file. Under `frozen` its `nodes` are the measured nodes frozen when Record is pressed;
 under `prepass_union` the measured nodes the pre-pass's union froze; under `per_frame` `[]`; the Sequence's export lists
-both the nodes frozen at its Start and each node frozen at the first export frame that draws it (§3.1). Its
-`base_width` is the figure's logical width when Record or the Sequence's Start is pressed, written into every frame's
+both the nodes frozen at its Start and each node frozen at the first export frame that draws it (§3.1), and with the
+pre-pass picked every measured node the union froze, each at the union of its windows over the frames that draw it, a
+node first drawn after Start included (applied per R-369, qa review 5638354385, N3); in every case `nodes` are in
+`node_id` order, never in the order they were frozen. Its `base_width` is the figure's logical width when Record or
+the Sequence's Start is pressed (logical px at any display scale factor, §3.3), written into every frame's
 `RenderState` and reported once, whatever the range policy, since `base_width` is not a window, and a resize of the
 figure while it records changes neither; a headless recording (the reel's builder) reports `null`, keeping the
 state's.

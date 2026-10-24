@@ -25561,6 +25561,10 @@ The next (5638334977, Q7, N1, N2, and an audit of every `froze` claim) changes R
 rulings, source, note), REQ-TOOL-201, REQ-TOOL-202 and REQ-RENDER-117 (statement, verify, note) and REQ-TOOL-218
 (verify, note), so a pre-pass recording, a headless recording, a resize while recording, the order of `froze.nodes`
 and a `froze.base_width` in physical px each have a control.
+The next (5638354385, Q8 to Q10, N3) changes REQ-TOOL-201, REQ-TOOL-216 and REQ-RENDER-117 (statement, verify,
+note): a recording's `froze.nodes` in `node_id` order, the resize arm under every range policy and the Sequence's
+export, display scale factor 2, and the Sequence's export with the pre-pass, whose `froze.nodes` include a node first
+drawn after Start (*applied per R-369*, `principia_export_details.md` §3.4).
 
 ## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
 *24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
