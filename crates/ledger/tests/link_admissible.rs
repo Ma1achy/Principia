@@ -496,6 +496,27 @@ fn check_sample(pinned: [u64; 3]) {
         two.contains(&vec![1e8, -1e8]),
         "a pair of saturating controls"
     );
+    let mixed: Vec<f64> = (0..11)
+        .map(|i| {
+            let (ad, da) = (&two[64 + 13 * i + 11], &two[64 + 13 * i + 12]);
+            assert_eq!(
+                (ad[0], da[1]),
+                (one[64 + i][0], one[64 + i][0]),
+                "the saturating control beside a draw"
+            );
+            assert_eq!(
+                ad[1], da[0],
+                "the draw beside a saturating control, each way"
+            );
+            ad[1]
+        })
+        .collect();
+    assert!(
+        mixed.iter().all(|&d| (-8.0..8.0).contains(&d))
+            && mixed.iter().any(|&d| d < 0.0)
+            && mixed.iter().any(|&d| d > 0.0),
+        "the draws beside the saturating controls span the box: {mixed:?}"
+    );
     let r = range_values(1.0, 3.0);
     assert_eq!(r[..2], [1.0, 3.0], "the ends");
     assert_eq!(range_values(1.0, 3.0), r, "the sample is not reproducible");
