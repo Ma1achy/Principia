@@ -49,10 +49,17 @@
 //! configuration block 0: every `D ∘ Φ` entry, [`fn@crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
-//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): three, each between values already computed and
+//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): four, each between values already computed and
 //! continuous across its boundary, so a backend fork there moves the output by rounding only: `r = 0` in
-//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), and R-437's
-//! `p = q = 0` in [`inverse`] (the defined 0).
+//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's
+//! `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`.
+//!
+//! **`p = −0`** (applied per R-369, TASK-M2-43). On the spherical map's pole rows the point's `n₁ = sin φ·sin θ` is a
+//! signed zero, `−0` where `sin θ` rounds below 0 (`θ = 2π·½` at f32), and `atan2(q, −0)` with `q > 0` is `π/2` on the
+//! CPU but `−π/2` on a GPU we run (Metal, through naga), which puts `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at
+//! `L⁺`'s pixel. `C`'s mirror hid it while the decode folded (R-141); with step 3 not taken (R-544) it is the decode's
+//! output, so the zero's sign is cleared by a select on `p` against 0, as the encode's `spherical_inverse` clears
+//! `n₁`'s. `atan2(q, +0)` is the CPU's `atan2(q, −0)`, so the CPU's value is unchanged, bit for bit.
 //!
 //! **Validation** (inverse_encode_contract § "Chart-aware validation"; R-26). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
 //! are the point's own azimuth and polar angle, which every point of S² has: past `[0,1]²` the spherical map's θ is
@@ -170,6 +177,7 @@ pub fn inverse<R: Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let a = select(upper, large, small);
     let b = select(upper, small, large);
     let p = inertia * n[1] / two;
+    let p = select(p == R::zero(), R::zero(), p);
     let q = inertia * n[2] / two;
     let beta = select(
         (p == R::zero()) & (q == R::zero()),
