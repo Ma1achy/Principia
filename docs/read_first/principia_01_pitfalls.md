@@ -431,3 +431,41 @@ which is precision, which is expected, which is reported. **Not because two back
 
 **The rule: a test that holds a variable fixed says nothing about the regime where that variable
 moves.** State the domain of a determinism result as loudly as the result.
+
+---
+
+## 11. A SIGNED ZERO THE CPU IGNORES AND A GPU READS — `atan2(y, −0)`
+
+**Observed** (TASK-M2-43, PR #288): once the shape sphere's decode stopped folding (R-544),
+`decode_cross_backend_continuous` put `L⁻`'s shape at `L⁺`'s pixel on Metal, and nowhere on the CPU.
+
+**Assumed:** `atan2(y, −0)` and `atan2(y, +0)` are one value for `y ≠ 0`. They are, under IEEE 754 and on
+every CPU libm: both are `±π/2` on `y`'s side. So a `−0` second operand looked harmless, and only
+`atan2(0, 0)` was guarded (R-437).
+
+**Actual:** Metal, through naga, evaluates `atan2(y, x)` as `atan(y/x)`, turned by `π` toward `y`'s side
+where `x < 0`. A `−0` is not below 0, so no turn is made, and `y/−0` is `∓∞`. `atan2(y, −0)` therefore comes out
+as `∓π/2`, the opposite sign to IEEE's. On the shape sphere's pole rows the decode's `p = I·n₁/2` is a
+`−0`, because `sin θ` rounds below 0 at `θ = 2π·½` in f32. So `β` turned `λ̃` to the other side of `ρ̃`.
+While the decode folded, `C`'s mirror step undid the turn. That is why it showed only when the fold went:
+**a symmetry step downstream can hide a sign error upstream.**
+
+**Measurement:** each site was checked on Metal (Apple M3 Pro), on states built so the second operand is
+`−0` exactly and the first is not 0, against the CPU at f32 and f64. A test-side assertion confirms each
+state reaches its case, the zero's sign included. All four sites were off by `π` on Metal (`1.68·10⁷` f32 eps
+of `π/2`):
+- the shape sphere's inverse (`decode_cross_backend_continuous`);
+- `C`'s recorded `φ` at `ρ_x = −0` (`canonicaliser_phi_signed_zero`);
+- encode's `β` at `λ̃_x = −0` (`encode_beta_signed_zero`);
+- the descriptor's `rho_angle` at `ρ · λ = −0` (`decode_stage_rho_angle_signed_zero`).
+
+With the second operand's zero taken as `+0`, all four agree with the CPU. The CPU's own values are
+unchanged, bit for bit, because IEEE's `atan2` reads neither zero's sign when `y ≠ 0`.
+
+**The rule:**
+- **Every `atan2` a GPU stage reaches, whose second operand can be a zero while its first is not, takes that
+  operand through a select that maps a zero to `+0`.**
+  Where both operands can be 0, R-437's select comes first.
+- The select is on a comparison with 0, never `x + 0.0`, which a shader compiler may fold to `x`.
+- **A sign error masked by a later symmetry step is still an error.** When a fold, mirror or gauge is
+  removed, re-run every cross-backend check it sat downstream of.
