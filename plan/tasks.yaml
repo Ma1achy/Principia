@@ -794,9 +794,9 @@
   title: "The shape sphere chart is the whole sphere: the signed decode, the held momentum unmirrored below the equator, the signed lookup, the spherical map's system_image one-to-one, and the tests that asserted the 2-to-1 cover (R-544) ⚑"
   depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-17]
   needs: []
-  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034]
+  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034, REQ-DEC-050]  # REQ-DEC-050: PR #288 code review C1, applied per R-369
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
-  pitfalls: [PIT-9]
+  pitfalls: [PIT-9, PIT-11]
 - id: TASK-M2-47
   milestone: M2
   title: "Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form"
