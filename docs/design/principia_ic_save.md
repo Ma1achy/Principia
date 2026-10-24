@@ -48,6 +48,12 @@ on the reflected state; `0` otherwise, on the seam. So `mirrored ⇔ hemisphere 
 per R-369, fix round 4 of PR #287, physics review 5638148080, P1). *Was:* "`hemisphere` is the sign of `λ̃_y` past `δ_λ`, `+1`, `−1`, or `0` on the seam;
 `mirrored` is the lookup's `lookup_mirrored` (R-544)."
 
+**−0 at entry** (applied per R-369, fix round 5 of PR #287, physics review 5638172877, P5). The one function that turns −0 into +0 runs at entry, in the
+constructor and on paste and open, as well as on write, so the in-memory `as_built`, `E(as_built)` and
+`computeICState`'s input are always the values the record holds. The reflection the `+1` test runs on is `Π`, the
+full state reflected through the x-axis, every `rᵢ` and every `pᵢ`, as `C`'s step 3 reflects it
+(`principia_inverse_encode_contract.md` Part 6).
+
 JSON has no literal for a non-finite number, so on load a number token that overflows f64 (for example `1e999`) is
 read as non-finite and refused, naming the field, and a bare `NaN` or `Infinity` does not parse. `made` is when the IC
 was made: a re-save of an opened record keeps the record's `made`, so save, open and re-save give the same bytes
@@ -78,7 +84,9 @@ stored one and the residual is exactly 0; a residual arises only from another pl
 as `‖Δz‖`, the norm REQ-VAL-022 gates `‖z − z′‖` by: within its bound the record is recovered with the residual
 shown, beyond it corrupt (fix round 4 of PR #287, physics review 5638148080, P4, applied per R-369). *Was:* "`canonical.z` is re-derived through the decoder,
 which is not bitwise, so the stored `z` against the recomputed is a residual: within its bound the record is
-recovered with the residual shown, beyond it corrupt." The bound is a calibration value (R-71, REQ-TOOL-215), proposed
+recovered with the residual shown, beyond it corrupt." The residual is 0 on the saving machine because `as_built` is
+normalised at entry (§3.1): a −0 left in the constructor's `as_built` would turn `atan2(−0, ρ̃_x)`, `ρ̃_x < 0`, into
+`−π` before the save and `+π` after it (fix round 5 of PR #287, physics review 5638172877, P5). The bound is a calibration value (R-71, REQ-TOOL-215), proposed
 with its evidence by the task that builds the record and confirmed by the human at the M8 gate; a link that is
 unknown or whose entry hash differs is physics only, never corrupt (R-521).
 
@@ -112,6 +120,8 @@ integrated initial state is bitwise the shared `C`'s step-3-not-taken result on 
 TASK-M2-43): the centre of mass at the origin and at rest, `I = 1` (the rescale `λ` recorded, `lookup_rescaled`),
 `ρ̃` on +x, `λ̃_y`'s sign kept. Skipping the rescale or the boost would integrate another system in the survey's
 units, whose horizon is in those units (`principia_integrator_contract.md` Part 5).
+`C` runs on the `as_built` normalised at entry (§3.1), so a reopened IC integrates bitwise the state its first run did
+(fix round 5 of PR #287, physics review 5638172877, P5).
 
 ### 3.5 In views: marks
 
@@ -160,6 +170,9 @@ built IC round-trips; the kept-orbit tabs stay `ViewUI`; and the test's "kept-on
   canonical energy and angular momentum. The preamble states that frame and the rescale `C` applied, `λ` as
   `lookup_rescaled` reports it (`principia_inverse_encode_contract.md` Part 6, step 0), so a row can be related to the
   `as_built` the record holds; the columns after `Lz` carry their frame and unit in their definition.
+- **Back to `as_built`** (applied per R-369, fix round 5 of PR #287, physics review 5638172877): a row's frame is `as_built`'s translated by its centre of
+  mass, boosted by its centre-of-mass velocity, rescaled by `λ` and rotated by `θ`, step 2's angle; the preamble states
+  the centre-of-mass offset and velocity and `θ` beside `λ`, each recomputable from the `as_built` it holds.
 
 ## 4. Fit with rulings
 

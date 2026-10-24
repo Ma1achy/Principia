@@ -25444,6 +25444,10 @@ integrated; (a) −0 normalised to +0.
   and the rescale `λ` (`lookup_rescaled`); the `z` residual is `‖Δz‖` as REQ-VAL-022 measures it, exactly 0 on the
   machine that saved the record, non-zero only across platforms or builds (`principia_ic_save.md` §3.1, §3.2, §3.4,
   §3.6).
+- **−0 at entry** (fix round 5 of PR #287, physics review 5638172877, P5): −0 is turned into +0 at entry, in the constructor and on paste and open, as well
+  as on write, so `z` and the integrated state are always computed from the normalised `as_built` and a branch-cut IC
+  (`ρ̃_y = −0`, `ρ̃_x < 0`) reopens with residual 0 and the same integrated state; the reflection is `Π`, every `rᵢ`
+  and `pᵢ`; the trajectory CSV's preamble states the centre-of-mass offset and velocity and `θ` beside `λ`.
 - **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
   reopening, marks and the trajectory CSV, R-587).
 
