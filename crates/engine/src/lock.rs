@@ -22,7 +22,7 @@
 //!   tagged where layer 2 fails it, never dropped, with the re-centre and the switch to the latent chart offered
 //!   ([`Report::offer`], [`recentre`]).
 //! - **A curve's tangent tilt needs a lock** ([`curve_tilt`]): `γ′(ν₀)` pulled back to the latent controls
-//!   ([`curve_tangent`]), then `nav::tilt_tangent`.
+//!   ([`curve_tangent`]), refused where a link's inverse clamps, then `nav::tilt_tangent`.
 //!
 //! **What the GPU knows: nothing** (Part 4). The kernel's chart is [`kernel_chart`]: `(z₀, q₁, q₂)` and nothing of the
 //! lock, so a locked and a free view of the same plane send the kernel the same uniform.
@@ -32,6 +32,7 @@ use kernel::chart::{
     Chart, Constraint, InvariantLE, InvariantLK, Latent as LatentChart, Mixed, ValidationResult,
 };
 use kernel::decode::Ic;
+use kernel::encode::blocks::clamps;
 use kernel::encode::by_kind::{fibre, ByKind, InvariantAxis, Lookup};
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{Link, Selection};
@@ -58,6 +59,9 @@ pub enum LockError {
     Refused(Rejected),
     /// The tangent tilt gave no direction.
     Nav(NavError),
+    /// A curve's tangent at a point where a link's inverse clamps (the contract's definition): `controls[k]` set for
+    /// each control `z[k]` whose inverse clamps, so its pullback is not `γ′(ν₀)`'s.
+    Saturated { controls: [bool; LATENT_DIM] },
 }
 
 /// [`LockError::NonFinite`] unless every value is finite.
@@ -452,8 +456,13 @@ fn masses(mu: [f64; 2]) -> [f64; 3] {
 /// `γ′(ν₀)` of `curve` pulled back to the latent controls under the link selection `S`, at the embed's controls
 /// `z(ν₀)` (the contract's definition): `dz_α = dα/f_α′(z_α)`, `dz_β = dβ/f_β′(z_β)`, `f′ = exp(log_det)`; the momenta
 /// 0, the curve a rest start; the mass controls the derivative of the mass link's inverse along `(dμ₁, dμ₂)`, by a
-/// central difference of step `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`.
-pub fn curve_tangent<S: Selection>(curve: &CurveMeta, nu0: f64) -> Result<Latent, LockError> {
+/// central difference of step `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`. [`LockError::Saturated`], naming the controls, where `α`'s
+/// or `β`'s inverse clamps at `z(ν₀)`, or the mass link's at `μ` or at either difference point `μ ± h·dμ`.
+pub fn curve_tangent<S>(curve: &CurveMeta, nu0: f64) -> Result<Latent, LockError>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
     finite(&[nu0])?;
     let p: CurvePoint = (curve.embed)(nu0);
     let d: CurvePoint = (curve.tangent)(nu0);
@@ -464,21 +473,36 @@ pub fn curve_tangent<S: Selection>(curve: &CurveMeta, nu0: f64) -> Result<Latent
     let slope_beta = <S::BetaLink as Link<1, 1>>::log_det([z_beta]).exp();
     let dmu = [d.mu1, d.mu2];
     let size = dmu[0].hypot(dmu[1]);
+    let masses_at = |k: f64| masses([p.mu1 + k * dmu[0], p.mu2 + k * dmu[1]]);
+    let mut mass_clamps = <S::MassLink as SimplexClamp>::clamps(masses([p.mu1, p.mu2]));
     // A curve that moves no mass has a mass tangent of 0, with no step to take.
     let dz_mass = match size == 0.0 {
         true => [0.0; 2],
         false => {
             let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / size;
-            let at = |k: f64| {
-                <S::MassLink as Link<2, 3>>::inverse(masses([
-                    p.mu1 + k * dmu[0],
-                    p.mu2 + k * dmu[1],
-                ]))
-            };
-            let (hi, lo) = (at(h), at(-h));
+            let (m_hi, m_lo) = (masses_at(h), masses_at(-h));
+            mass_clamps |= <S::MassLink as SimplexClamp>::clamps(m_hi)
+                | <S::MassLink as SimplexClamp>::clamps(m_lo);
+            let hi = <S::MassLink as Link<2, 3>>::inverse(m_hi);
+            let lo = <S::MassLink as Link<2, 3>>::inverse(m_lo);
             [(hi[0] - lo[0]) / (2.0 * h), (hi[1] - lo[1]) / (2.0 * h)]
         }
     };
+    let saturated = [
+        clamps::<S::AlphaLink, f64>(p.alpha),
+        clamps::<S::BetaLink, f64>(p.beta),
+        false,
+        false,
+        false,
+        false,
+        mass_clamps & 1 != 0,
+        mass_clamps & 2 != 0,
+    ];
+    if saturated.contains(&true) {
+        return Err(LockError::Saturated {
+            controls: saturated,
+        });
+    }
     let tangent = [
         d.alpha / slope_alpha,
         d.beta / slope_beta,
@@ -495,14 +519,18 @@ pub fn curve_tangent<S: Selection>(curve: &CurveMeta, nu0: f64) -> Result<Latent
 /// A curve axis's tangent tilt (Part 4, "Directions are axis kinds"): `q_tilt(τ) = length·normalise(cos τ·γ̂′(ν₀) +
 /// sin τ·d̂)`, `γ′(ν₀)` the [`curve_tangent`] at the centre's `ν₀`. Refused without a lock: the tangent moves along the
 /// curve, so the tilt is well-posed only at a pinned centre.
-pub fn curve_tilt<S: Selection>(
+pub fn curve_tilt<S>(
     lock: &Lock,
     curve: &CurveMeta,
     nu0: f64,
     length: f64,
     tau_deg: f64,
     target: &Latent,
-) -> Result<Latent, LockError> {
+) -> Result<Latent, LockError>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
     if !lock.locked {
         return Err(LockError::NotLocked);
     }

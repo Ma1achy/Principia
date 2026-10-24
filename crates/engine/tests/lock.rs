@@ -16,7 +16,7 @@
 //! - `lock_infeasible_tilt` (REQ-CHART-010): a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
 //!   carries out, and lock validation offers the re-centre and the latent chart.
 //! - `curve_tilt_requires_lock` (REQ-CHART-007): a curve axis's tangent tilt is refused free, and locked it reads
-//!   `γ′(ν₀)` pulled back to the latent controls.
+//!   `γ′(ν₀)` pulled back to the latent controls; it is refused, naming the controls, where a link's inverse clamps.
 
 use engine::chart_authoring::charts::{nu_embed, NU_CURVE};
 use engine::chart_authoring::CurvePoint;
@@ -45,6 +45,8 @@ use kernel::chart::{
 use kernel::decode::descriptor::potential;
 use kernel::decode::{decode, Ic};
 use kernel::encode::by_kind::{feasibility, invariants, Feasibility};
+use kernel::encode::SimplexClamp;
+use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
     Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
     StickBreaking,
@@ -1120,7 +1122,11 @@ fn unit(a: &Latent) -> Latent {
 
 /// Checks the tangent tilt at `nu0` under `S`: refused free; locked, `τ = 0` is the latent embed's tangent at `nu0`,
 /// by an independent central difference, and `τ = 90°` the target.
-fn check_curve_tilt<S: Selection>(nu0: f64, at: f64) {
+fn check_curve_tilt<S>(nu0: f64, at: f64)
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
     let free = Lock {
         locked: false,
         z_locked: [0.0; 8],
@@ -1267,4 +1273,144 @@ negative_control!(
     "the tangent at another point of the curve is not γ′(ν₀)",
     expected = "is not γ′(ν₀)",
     check_curve_tilt::<Defaults>(0.2, 0.6)
+);
+
+/// The controls named, by index.
+fn named(controls: [bool; 8]) -> Vec<usize> {
+    (0..8).filter(|&k| controls[k]).collect()
+}
+
+/// A curve at one point, `p`, moving along `d`.
+macro_rules! at_point {
+    ($p:expr, $d:expr) => {
+        engine::chart_authoring::CurveMeta {
+            parameter: "s",
+            embed: |_| $p,
+            tangent: |_| $d,
+        }
+    };
+}
+
+/// The tangent tilt at `nu0` on the Burrau curve under `S` is refused, naming exactly the controls `want`, both bare and
+/// locked; `want` empty, it is a tangent.
+fn check_saturated<S>(nu0: f64, want: &[usize])
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
+    let got = curve_tangent::<S>(&NU_CURVE, nu0);
+    match got {
+        Err(LockError::Saturated { controls }) => assert_eq!(
+            named(controls),
+            want,
+            "the tangent at ν₀ = {nu0} names the wrong controls"
+        ),
+        Ok(_) => assert!(
+            want.is_empty(),
+            "the tangent at ν₀ = {nu0}, where {want:?} clamp, is not refused"
+        ),
+        other => panic!("the tangent at ν₀ = {nu0} gives {other:?}"),
+    }
+    let locked = Lock {
+        locked: true,
+        z_locked: [0.0; 8],
+    };
+    assert_eq!(
+        curve_tilt::<S>(&locked, &NU_CURVE, nu0, 1.0, 10.0, &e(3)).err(),
+        got.err(),
+        "the locked tilt does not refuse as the tangent does"
+    );
+}
+
+#[test]
+fn curve_tilt_requires_lock_refuses_a_saturated_control() {
+    // Near ν = 1 the mass link's inverse clamps `μ₂`, and near ν = 0 `μ₁` (physics review 5640537524 of PR #290, P2).
+    check_saturated::<Defaults>(0.995, &[7]);
+    check_saturated::<Defaults>(0.999, &[7]);
+    check_saturated::<Defaults>(0.003, &[6]);
+    check_saturated::<Defaults>(0.5, &[]);
+    let cap = (1.0 - <f64 as ChartConstants>::EPS_MU) * <f64 as ChartConstants>::MU_MAX;
+    // The curve point 1e-5 inside the clamp, and the step `h·‖dμ‖ = ε^{1/3}·(1 + ‖μ‖)`, about 3.6e-5, past it: refused
+    // at a difference point.
+    let edge = at_point!(
+        CurvePoint {
+            alpha: 0.6,
+            beta: 1.2,
+            mu1: 0.0,
+            mu2: 1e-5 - (1.0 - <f64 as ChartConstants>::EPS_MU) * <f64 as ChartConstants>::MU_MAX,
+        },
+        CurvePoint {
+            alpha: 0.0,
+            beta: 0.0,
+            mu1: 0.0,
+            mu2: -1.0,
+        }
+    );
+    let p = (edge.embed)(0.0);
+    assert!(
+        p.mu2 > -cap,
+        "the edge curve's point is past the clamp: the case does not straddle"
+    );
+    assert_eq!(
+        <SoftmaxTanh as SimplexClamp>::clamps(softmax(p.mu1, p.mu2)),
+        0,
+        "the edge curve's point clamps: the case does not straddle"
+    );
+    assert_eq!(
+        curve_tangent::<Defaults>(&edge, 0.0),
+        Err(LockError::Saturated {
+            controls: [false, false, false, false, false, false, false, true],
+        }),
+        "a step past the clamp is not refused"
+    );
+    // The configuration's links: `α` at 0 and `β` at `π` clamp.
+    let flat = at_point!(
+        CurvePoint {
+            alpha: 0.0,
+            beta: 1.2,
+            mu1: 0.0,
+            mu2: 0.0,
+        },
+        CurvePoint {
+            alpha: 0.1,
+            beta: 0.1,
+            mu1: 0.0,
+            mu2: 0.0,
+        }
+    );
+    assert_eq!(
+        curve_tangent::<Defaults>(&flat, 0.0).map_err(|e| match e {
+            LockError::Saturated { controls } => named(controls),
+            other => panic!("{other:?}"),
+        }),
+        Err(vec![0])
+    );
+    let collinear = at_point!(
+        CurvePoint {
+            alpha: 0.6,
+            beta: std::f64::consts::PI,
+            mu1: 0.0,
+            mu2: 0.0,
+        },
+        CurvePoint {
+            alpha: 0.1,
+            beta: 0.1,
+            mu1: 0.0,
+            mu2: 0.0,
+        }
+    );
+    assert_eq!(
+        curve_tangent::<Defaults>(&collinear, 0.0).map_err(|e| match e {
+            LockError::Saturated { controls } => named(controls),
+            other => panic!("{other:?}"),
+        }),
+        Err(vec![1])
+    );
+}
+
+negative_control!(
+    curve_tilt_requires_lock_refuses_a_saturated_control,
+    "the tangent at ν₀ = 0.5, inside every clamp, is no refusal",
+    expected = "is not refused",
+    check_saturated::<Defaults>(0.5, &[7])
 );
