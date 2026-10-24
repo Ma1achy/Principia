@@ -25008,3 +25008,45 @@ stepper it marches is not, as TASK-M3-38 does.
 R-580 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-544.
 
 Changes REQ-INT-082 (statement, verify, rulings, rq, note).
+
+## R-591 — At the `α = 0` pole, where the state does not define `β`, lookup reads a layer-1 clamp's move as its worst case over `β`: `|ΔL_z| ≤ b'·‖p_λ‖`, and likewise `ΔU`'s `β`-dependent part, so the clamp is rejected in every gauge unless `p_λ` is zero within its own bound; the clamp's image of `β` is not defined along `p_λ` *(closes RQ-565; the contract's interim pole rule becomes the ruled rule; changes inverse_encode_contract § "Chart-aware validation", "The class a clamp moves", and REQ-ENC-038; R-437 and R-438 untouched)*
+*24 Oct 2026 · applied in `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The class
+a clamp moves", "At the `α = 0` pole" (its interim wording kept as a *Was*), `docs/archive/review_queue/M0.md`
+(RQ-565, moved with its ruling), REQ-ENC-038 (reqio: statement, rulings, source, note), TASK-M2-19 (its acceptance
+line and a note), `crates/engine/src/lookup.rs` (a doc comment, no change in behaviour) and `plan/rule_groups.yaml`;
+built by TASK-M2-19 (PR #284, whose fix round 5 applied it as the interim)*
+
+The human's message, 24 Oct 2026, its ruling, verbatim:
+
+> RQ-565 (verdict at the α = 0 pole): (a).
+> Read the clamp's move as its worst case over β: |ΔL_z| ≤ b'·‖p_λ‖, and likewise ΔU's β-dependent part. The clamp is rejected in every gauge unless p_λ is zero within its own bound.
+> Reason: at the pole the state does not define β, and the clamp moves body 2 a finite distance b' in some direction. (b) picks the one direction, along p_λ, that makes r × p vanish. It hides the L_z change by choosing the most favourable answer for a quantity the state does not have.
+> R-437 and R-438 are untouched. The interim stands as the ruling.
+
+*What it decides:* RQ-565's option (a). Where body 2 sits at the inner pair's centre of mass (`α = 0`, `b = 0`), the
+state does not define `β`, and a clamp of `α` moves body 2 a finite distance `b'` in a direction the state does not
+give. Lookup's layer-1 verdict reads each constant's move there as its worst case over every direction: `L_z`'s
+`β`-dependent part `λ' × p_λ'` at its largest magnitude, `|ΔL_z| ≤ b'·‖p_λ‖` (attained along `±(q₃', −q₂')`), and
+`ΔE = ΔU`'s `β`-dependent part at its extremes over `cos β' ∈ [−1, 1]`. The clamp is therefore rejected in every gauge
+unless `p_λ` is zero within its own bound, and one physical state gets one verdict in every gauge (REQ-ENC-036).
+Option (b), defining the clamp's image of `β` along `p_λ` so that `r × p` vanishes and the clamp is accepted, is
+refused: it hides the `L_z` change by choosing the most favourable answer for a quantity the state does not have.
+Encode's `β` convention, R-437's defined `β = 0` at `λ̃ = 0` and R-438, is untouched. The contract's interim pole rule,
+applied per R-369 in fix round 5 of PR #284, stands as the ruling; the code and its test,
+`lookup_validation_ladder_pole`, do not change.
+
+*Also in the human's message, 24 Oct 2026, verbatim* (the human's acceptance of an R-369 decision of PR #284, recorded
+with this ruling, from the same message):
+
+> On zero_class going from 2^24 to 16: accepted. The band is now k times a first-order rounding bound (S_{L_z}, S_E), not k·ε_R times a raw scale, so the old and new k are not comparable numbers.
+
+This accepts the change qa's fix round 4 of PR #284 made under R-369: the constants register's `zero_class`
+(`docs/design/principia_dd_generation_root.md`) went from 2²⁴ to 16 when the zero-class band became `k·ε_R` times the
+first-order bound on each value's rounding, `S_{L_z}` and `S_E` (inverse_encode_contract § "Chart-aware validation",
+"The zero class in floating point"), in place of a raw scale. It is not the M2 gate's confirmation of the value:
+REQ-ENC-037 keeps `zero_class` provisional until the human confirms it at the M2 gate, and this acceptance is noted for
+that gate.
+
+R-591 is in the "physics" group of `plan/rule_groups.yaml`, with R-437, R-438 and R-580.
+
+Changes REQ-ENC-038 (statement, rulings, source, note).

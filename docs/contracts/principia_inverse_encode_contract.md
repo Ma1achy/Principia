@@ -179,6 +179,39 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   the current locked $\nu$, or $\nu = 1/2$; momentum → rest start; latent coordinates → 0. Then set the slice
   basis to span the unspecified degrees of freedom.
 
+**The physical form's masses** (R-72, applied per R-369; TASK-M2-19; physics review 5630998530 of PR #284, P1,
+applied per R-369). The section's unit of mass is `M = Σmᵢ = 1` (`G = M = I = 1`). An entry whose masses sum to
+`M ≠ 1` is carried to it by the change of the unit of mass with `G = 1` and the unit of length kept, the similarity
+Part 1's T3 preserves the physics under: `mᵢ ← mᵢ/M`, `rᵢ` kept, `vᵢ ← vᵢ/√M`, so `pᵢ ← pᵢ/M^{3/2}`, and then
+`E ← E/M²`, `L_z ← L_z/M^{3/2}` and `t ← t·√M`, which keeps every ratio of the motion (`K/|U|`, the signs of `E` and
+`L_z`). Keeping `pᵢ` instead would multiply every velocity by `M`. `M` is recorded with the lock beside `λ`, since
+encode reports what it discards (REQ-ENC-014) and the multiply-back of a literature IC needs it (REQ-VAL-019,
+REQ-VAL-174). The pair and triple forms are Burrau systems, each mass its opposite side
+(`principia_chart_reference.md` §4.1), so their `M` is the perimeter `a + b + c` (12 for `(2, 1)`); a raw `z` decodes
+at `M = 1`. In the partial form the default masses are `⅓` each, or the Burrau system's on a Burrau chart, each set
+summing to 1, so a momentum block given without masses is read in `M = 1` units; masses given carry the momenta given
+with them as above. Every entered mass is positive and every entered value finite, or the entry is refused before the
+validation layers, naming which; `(m, n)` must be a primitive pair (`principia_chart_reference.md` §4.1) and a triple
+must satisfy `a² + b² = c²` with every side positive, each the Burrau system of its triangle at rest. *Was:* "The
+section's unit of mass is `M = Σmᵢ = 1` (`G = M = I = 1`), so an entry's masses are read as proportions, each divided
+by their sum, and its positions and momenta in those units." (stale reading, replaced per R-369 by physics review
+5630998530 of PR #284, P1: the momenta kept unchanged made the entry a different system).
+
+**The partial specification's blocks and slice basis** (R-72; REQ-ENC-031; TASK-M2-19). A partial entry gives any of
+the three blocks: the masses, the configuration (the positions) and the momenta. A block not given takes the
+default above, and its latent controls are the unspecified degrees of freedom: the configuration's `z_α, z_β` (on a
+chart not of the Burrau family its default is these controls at 0, the "latent coordinates → 0"), the masses'
+`z_μ1, z_μ2` and the momenta's `z_q0 … z_q3`. So a partial entry leaves 2, 4, 6 or 8 controls unspecified, never
+one; one with all three blocks is the exact form, and leaves the slice alone. The slice is centred on the lock,
+`z₀ = z`, and spans two of the unspecified controls, `q₁ = ê_i` and `q₂ = ê_j`, `i` and `j` the first two unspecified
+in the order `z_α, z_β` (the shape), then `z_μ1, z_μ2` (the masses), then `z_q0, z_q1, z_q2, z_q3` (the momenta, the
+inner pair's `p_ρ` first). Where more than two are unspecified, the rest keep their defaults in `z₀`, frozen, as
+every chart's slice pins the six degrees of freedom it does not sweep (`principia_chart_decoder_contract.md` Part 5).
+The order follows the defaults: the momenta default to the rest start, and a rest start's family, the free-fall
+problem, is spanned by its shape and its mass ratios, so the slice sweeps those before it leaves the rest start;
+among them the shape first, since the masses default to a named point (equal, or Burrau's) and the shape on a
+non-Burrau chart to no point of physical meaning.
+
 **Three inverse cases.**
 
 1. **Exact inverse available**: latent chart, mass simplex, Burrau geometry, free Jacobi momenta. Part 3's closed forms apply.
@@ -248,6 +281,125 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    **There is no coincident-bodies rejection (R-13).** A looked-up IC takes the same path as any pixel: bodies
    within $r_{\mathrm{coll}}$ give a $t = 0$ collision outcome, which is a real outcome. Exactly coincident bodies
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
+
+**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). The controls `z ∈ ℝ⁸` are unbounded: each is a
+logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it
+into before its affine scale, Part 3's clamp space: `s_α = 2α/π`, `s_β = β/π` and `s_qk = ½(q_k/q_max + 1)`, each
+`σ(z_k)` under the default links, and for the masses `μ_k/μ_max = tanh(z_μk)`. The bounds are the clamps', not the
+ends of `[0, 1]`: `s ∈ [ε_z, 1 − ε_z]` for `α` and `β`, `s ∈ [ε_q, 1 − ε_q]` for the momenta and
+`|μ_k/μ_max| ≤ 1 − ε_μ` for the masses, or under another registered link its inverse's own clamp interval (Part 3,
+the registry's inverse), since `σ` and `tanh` reach the ends only at `z = ±∞` and a value between a clamp and an end
+is one the inverse cannot give back unclamped. So layer 1 is the block inverses' clamp test: a control fails it iff
+its `lookup_clamped` bit is set (Part 3), and the coincident inner pair, `ρ̃ = 0`, fails it too (R-13). An entered
+raw `z` is tested on its decode, each control whose decoded value the clamp test fails replaced by the inverse's
+clamped value and every other kept bit for bit. The remedy is the clamp, the moved controls named; a clamp that
+changes the class of `L_z` or `E` (below, "A qualitatively different IC") is rejected, naming the controls. An entered
+state whose `L_z` or `E` is not finite, the coincident pair's `U = −∞` among them, has no class there to change, so
+its clamp stands: there is no coincident-bodies rejection.
+
+**The zero class in floating point** (R-72; REQ-ENC-036; TASK-M2-19; physics review 5630998530 of PR #284, P2, and
+qa's fix round 4, both applied per R-369). `L_z` and `E` are computed in rounded arithmetic, so a value zero in exact
+arithmetic comes out as rounding whose sign, and whether it is exactly 0, follows the entry's gauge (its orientation,
+scale, offset and boost). Layer 1's class test (above; "A qualitatively different IC") therefore reads class 0 as a
+band that absorbs that rounding and nothing else: a value `v` is in class 0 iff `|v| ≤ k·ε_R·S_v`, the band's edge
+included, `S_v` the first-order bound on `v`'s rounding in units of `ε_R`; outside the band the class is the value's
+sign. A value or a scale that is not finite has no class. The bound is the rounding of the computation that gave the
+value, so it reads the entered state's extents as well as the canonical state's: with `R = λ·maxᵢ‖rᵢ‖` and
+`P = λ^{−1/2}·maxᵢ‖pᵢ‖` the entry's extents in canonical units, before `C`'s translation, boost, rotation and rescale
+(`λ = I_in^{−1/2}`, Part 2), each position of `C(x)` carries `C`'s rounding of the translation, `ε_R·R`, each momentum
+that of the boost, `ε_R·P`, and the rescale, `I_in` read from positions so rounded, scales every vector by `1 + R`. On
+`C(x)`, before the clamp:
+
+- `S_{L_z} = Σᵢ((1 + R)‖rᵢ‖‖pᵢ‖ + R‖pᵢ‖ + ‖rᵢ‖P)`;
+- `S_E = Σᵢ((1 + R)‖pᵢ‖²/2 + ‖pᵢ‖P)/mᵢ + Σ_{i<j} mᵢmⱼ/rᵢⱼ·(1 + R + 2R/rᵢⱼ)`.
+
+The state after the clamp is classed by the rule (§ "The class a clamp moves", below), not by its decoded value. A
+constant in class 0 before the clamp is 0 in exact arithmetic but for rounding, so its class after is the class of the
+move, `ΔL_z` or `ΔE`, at the move's own bound; any other constant's class after is that of its value on the clamped
+parameters at that value's bound. So the band only has to separate rounding from a value, and a clamp's move, however
+small, is never read as rounding: the band needs no margin below the smallest move. `k` is the constants register's
+`zero_class` (R-71; REQ-ENC-037), proposed from a measurement of the rounding against its bound, of `C`'s `L_z` and
+`E` over gauge images of states across the controls' range and of the moves and the values after them over clamped
+`z`, set at least 4× above the larger, and provisional until the M2 gate. *Was:* "Layer 1's class test (above; "A
+qualitatively different IC") therefore reads class 0 as a band relative to each value's own scale, on the state it
+classifies, the entered state's `C(x)` before the clamp and the decode of the clamped `z` after it: `L_z` is in class
+0 iff `|L_z| ≤ k·ε_R·Σ‖rᵢ‖‖pᵢ‖`, and `E` iff `|E| ≤ k·ε_R·(K + |U|)`, the band's edge included; outside the band the
+class is the value's sign. A value or a scale that is not finite has no class. `k` is the constants register's
+`zero_class` (R-71; REQ-ENC-037), proposed from a measurement of `C`'s rounding of `L_z` and `E` over gauge images of
+states across the controls' range and of the decode's over unclamped `z`, set at least 4× above it and at least 4×
+below the smallest class change a clamp makes (about `ε_z` relative, `β`'s clamp at a collinear configuration), and
+provisional until the M2 gate." The scales on the canonical state alone were not the rounding's bound, so a boosted
+entry's `C(x)` read a zero `L_z` as a sign (qa's fix round 4); and the smallest class change a clamp makes is not
+`ε_z` relative but as small as the entered momentum makes it (`β`'s move below is `∝ |p_λ|`), so no `k` lay 4× below
+it.
+
+**The class a clamp moves** (R-72; REQ-ENC-038; TASK-M2-19; qa's fix round 4, applied per R-369). In exact
+arithmetic, from the decoder's forms (`principia_dd_decoder.md` §3.1, §3.2 and §3.4): the canonical-frame parameters
+are the masses `mᵢ`, `α`, `β` and the Jacobi momenta `q = (q₀, q₁, q₂, q₃) = (p_ρ, p_λ)`. With `M₀₁ = m₀ + m₁`,
+`μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `a = ‖ρ‖ = cos α/√μ_ρ`, `b = ‖λ‖ = sin α/√μ_λ`, `ρ = (a, 0)` and
+`λ = b·(cos β, sin β)`:
+
+- `L_z = A + B`, `A = ρ × p_ρ = a·q₁` and `B = λ × p_λ = b·(cos β·q₃ − sin β·q₂)`;
+- `K = (q₀² + q₁²)/2μ_ρ + (q₂² + q₃²)/2μ_λ`;
+- `U = −(m₀m₁/a + m₀m₂/r₀₂ + m₁m₂/r₁₂)`, `r₀₂ = ‖λ + (m₁/M₀₁)ρ‖` and `r₁₂ = ‖λ − (m₀/M₀₁)ρ‖`.
+
+A clamp moves its control's parameter to the clamp's image, Part 3's clamp space: `α' = (π/2)·s_α'` and
+`β' = π·s_β'` with `s' ∈ {ε_z, 1 − ε_z}`, `qₖ' = ±q_max(1 − 2ε_q)` with the sign of `qₖ`, and the masses decoded from
+`|μₖ'/μ_max| = 1 − ε_μ`. Every other parameter is kept. The move of each constant, `Δ = after − before`, by control:
+
+- **`α`**: `ΔL_z = A(a'/a − 1) + B(b'/b − 1)`. From `L_z = 0` (`B = −A`), `ΔL_z = A·sin(α − α')/(sin α·cos α)`:
+  nonzero iff `A ≠ 0`, its sign `sign(A)·sign(α − α')`. `K` is kept, so `ΔE = ΔU =
+  Σ_{i<j} mᵢmⱼ(rᵢⱼ' − rᵢⱼ)/(rᵢⱼrᵢⱼ')`, its sign that sum's.
+- **`β`**: with `Δβ = β' − β` and `ê = (cos β̄, sin β̄)`, `β̄ = (β + β')/2`,
+  `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)`: nonzero iff `b ≠ 0` and `p_λ·ê ≠ 0`, its sign `−sign(Δβ)·sign(p_λ·ê)`. At a
+  collinear configuration with `p_λ` along it, `|ΔL_z| ≈ π·ε_z·b·|p_λ|`, as small as `p_λ` is. `K` and `a` are kept,
+  and `ΔE = ΔU = 2ab·(m₀m₁m₂/M₀₁)·(cos β' − cos β)·[1/(r₀₂r₀₂'(r₀₂ + r₀₂')) − 1/(r₁₂r₁₂'(r₁₂ + r₁₂'))]`, its sign
+  that product's.
+- **`qₖ`**: `ΔL_z = 0` for `q₀`, `a·Δq` for `q₁`, `−b·sin β·Δq` for `q₂` and `b·cos β·Δq` for `q₃`, `Δq = qₖ' − qₖ`;
+  so `q₀` never moves `L_z`, and `q₁`, `q₂` and `q₃` move it iff their coefficient is nonzero, its sign that of
+  `−sign(qₖ)` times the coefficient. `U` is kept, and `ΔE = ΔK = Δq·(qₖ + qₖ')/2μ`, `μ = μ_ρ` for `q₀, q₁` and `μ_λ`
+  for `q₂, q₃`: the clamp moves `qₖ` toward 0 on its own side, so `ΔE < 0` always.
+- **The masses**: `α`, `β` and `q` are kept, so `a' = a·√(μ_ρ/μ_ρ')` and `b' = b·√(μ_λ/μ_λ')`, and
+  `ΔL_z = A(√(μ_ρ/μ_ρ') − 1) + B(√(μ_λ/μ_λ') − 1)`; from `L_z = 0`, `ΔL_z = A(√(μ_ρ/μ_ρ') − √(μ_λ/μ_λ'))`, nonzero
+  iff `A ≠ 0` and `μ_ρ/μ_ρ' ≠ μ_λ/μ_λ'`. `ΔE = ΔK + ΔU`, `K` and `U` at the clamped masses and `a'`, `b'`. At rest
+  (`q = 0`) `L_z = ΔL_z = 0` and `E = U < 0` before and after, so a rest start's mass clamp changes no class.
+
+Where several controls clamp together, the move is the difference of the forms above with every clamped parameter
+moved. Lookup evaluates the move from the parameters' changes, never as the difference of two rounded values (a
+trigonometric change as a product of half-angle sines, so `Δβ`'s term is `sin(Δβ/2)`, not `cos β' − cos β` rounded),
+and with it the first-order bound of its rounding: each parameter's own, in units of `ε_R`, `mᵢ` for each mass,
+`R·(√μ_ρ + √μ_λ) + |α|` for `α`, `R/b + R/a + |β|` for `β` off the `α = 0` pole (below), and `P + (R/a + R + 1)·maxₖ|qₖ|` for each `qₖ`, where
+`R/a` is the canonical frame's, its rotation being `ρ`'s direction, and `R` the rescale's; carried through each
+operation to first order, by `Δ(xy) = Δx·y' + x·Δy`, `Δ(x/y) = Δx/y' − x·Δy/(y·y')` and `Δ√x = Δx/(√x + √x')`,
+each operation adding its own rounding. A parameter no clamp moved has a move
+of exactly 0. The class after the clamp is then read through the band (above). `R/a` is not formed at `a = 0`, the
+coincident inner pair, whose `U = −∞` has no class (§ "Layer 1's space and bounds").
+
+**At the `α = 0` pole** (R-591, closing RQ-565; R-72; REQ-ENC-038; TASK-M2-19; physics review 5638054366 of PR #284,
+P1). Where body 2 sits at the inner pair's centre of mass, `b = 0`, `β` is undefined:
+`C` gives R-437's defined `β = 0` where `λ̃` lands on 0 exactly and a direction of rounding elsewhere, so `R/b` is
+infinite or as large as `R/ε`, and neither reading is the state's. There, `b` read as 0 when it is in class 0 at the
+band against its own bound, the clamp of `α` moves body 2 to `b' > 0` in a direction that is not defined, and each
+constant's move is read as its worst case over every direction of `λ'`: `ΔL_z = ΔA ± b'·‖p_λ'‖`, the sign that of
+larger magnitude, `+` where `ΔA = 0`, attained where `λ'` lies along `±(q₃', −q₂')`; and `ΔE`'s extremes over `cos β' ∈ [−1, 1]`, at
+`cos β' = ±1` and, where it lies in that range, at `r₀₂' = r₁₂'`, `cos β' = (m₀ − m₁)·a'/(2M₀₁b')`, `U`'s one
+stationary point, `K` not depending on `β`. A constant in class 0 before takes the class of the largest move; any
+other, the class of the value after nearest the other side (a value before of exactly 0 is in class 0, and its
+value after, reported as the largest, is not read). So the clamp is rejected in every gauge unless `p_λ` is
+0 within its own bound (and `E` keeps its class over every direction), and accepted in every gauge where it is: one
+physical state, one verdict. The clamp's image of `β` is not defined along `p_λ`, which would make `λ' × p_λ'` vanish
+and hide the `L_z` change by choosing the most favourable answer for a quantity the state does not have (R-591); R-437's
+`β = 0` at `λ̃ = 0` and R-438 are untouched. *Was* (fix round 5, as the interim): "(R-72; REQ-ENC-038; TASK-M2-19;
+physics review 5638054366 of PR #284, P1; interim, applied per R-369 until RQ-565 is ruled)" and "unless `p_λ` is 0
+within its bound". *Was:* nothing at the pole; `R/b` was written without an exception, and lookup took it
+as 0 at `b = 0`, a rule not stated, under which the same state was accepted in some gauges and rejected in others.
+
+**Layer 3's tolerance** (R-71; REQ-ENC-027; TASK-M2-19). "Within tolerance" is `‖Σmᵢrᵢ‖/R_x ≤ k·ε_R` for the CoM and
+`‖Σpᵢ‖/P_x ≤ k·ε_R` for the total momentum, on the lock decoded as a pixel decodes it (the chart's decode at a chart
+landing, else the free decode of `z`), `R_x` and `P_x` Part 4's extents floored at 1 and `ε_R` the precision's machine
+epsilon. `k` is the constants register's `decode_sanity`, proposed by the `decode-sanity` gate over the decode of
+every registered chart and of fuzzed `z` at f64 and f32, and provisional until the M2 gate. Neither a projection nor a
+clamp is defined for layer 3, so a failure is rejected, naming the constraint.
 
 **On failure**, in order of preference:
 
