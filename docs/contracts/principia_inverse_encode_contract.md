@@ -377,7 +377,7 @@ per R-369 until RQ-565 is ruled). Where body 2 sits at the inner pair's centre o
 infinite or as large as `R/ε`, and neither reading is the state's. There, `b` read as 0 when it is in class 0 at the
 band against its own bound, the clamp of `α` moves body 2 to `b' > 0` in a direction that is not defined, and each
 constant's move is read as its worst case over every direction of `λ'`: `ΔL_z = ΔA ± b'·‖p_λ'‖`, the sign that of
-larger magnitude, attained where `λ'` lies along `±(q₃', −q₂')`; and `ΔE`'s extremes over `cos β' ∈ [−1, 1]`, at
+larger magnitude, `+` where `ΔA = 0`, attained where `λ'` lies along `±(q₃', −q₂')`; and `ΔE`'s extremes over `cos β' ∈ [−1, 1]`, at
 `cos β' = ±1` and, where it lies in that range, at `r₀₂' = r₁₂'`, `cos β' = (m₀ − m₁)·a'/(2M₀₁b')`, `U`'s one
 stationary point, `K` not depending on `β`. A constant in class 0 before takes the class of the largest move; any
 other, the class of the value after nearest the other side. So the clamp is rejected in every gauge unless `p_λ` is
