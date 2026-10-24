@@ -1088,3 +1088,67 @@ papers hold, and the task may not download them.*
   values as the check.
 - **Applied meanwhile:** nothing. TASK-M2-20 waits as a whole: its REQ-VAL-019 and REQ-VAL-120 name the Anosova starts,
   and building the rest alone would split the task, which needs a ruling (WORKFLOW § "No deferral").
+
+## RQ-570: Table 1's column 8 (E·10⁻⁷) of Agekyan & Anosova (1968) does not equal eq. (4) on columns 2 and 3 *(found by TASK-M2-20; REQ-VAL-019; context: TASK-M2-20, the RQ-566 ruling's item 5)*
+
+*Filed as the RQ-566 ruling's item 5 asks. Physics, for the human; not resolved here. TASK-M2-20 records column 8
+without asserting it until this is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf`, p. 1007 eq. (4),
+  "E = −G(1 + 1/√((ξ+½)²+η²) + 1/√((ξ−½)²+η²)) + L₀", and Table 1, pp. 1010–1012, column 8 "E·10⁻⁷"; the RQ-566
+  ruling (24 Oct 2026), item 5: "Table 1's column 8 (E·1e-7) does not equal eq. (4) evaluated on columns 2–3."
+- **The comparison, all 100 rows** (G = 6.67·10⁻⁸, L₀ = K₀ = 7.5·10⁻⁹, m = 1; the 62 rows that print a value): the
+  ratio column 8 / eq. (4) runs from 0.029 (N = 24: eq. (4) −7.228, printed −0.207) to 1.571 (N = 26: −2.056,
+  printed −3.231), wider than the ruling's 0.23–1.25, which came from a sample. N = 1: −2.464 against −2.254; N = 3:
+  −2.589 against −2.041; N = 10: −3.858 against −0.887, as the ruling found. The 38 rows that print "—" have nothing to
+  compare. Every row's figures are in `col8_comparison.csv` (the implementer's scratch, `/Volumes/X10 Pro/Principia/scratch/m220-implementer/`), committed beside the fixture once RQ-571 is ruled.
+- **What paper II says** (`agekyan_anosova_1968_Ap_4_11_part2.pdf`, p. 11 and Table 1, pp. 12–14): the same 100
+  configurations ("exactly the same as in [1]"), units "the same as in [1]", started at exact rest; its column 6 is
+  "the total energy E (with minus sign)". Its values sit K₀ = 0.075·10⁻⁷ from paper I's column 8, not from eq. (4):
+  N = 1, II 2.329, I −2.254; N = 3, II 2.116, I −2.041 (both differ by exactly 0.075); N = 10, II 0.971, I −0.887
+  (0.084). Eq. (4) at rest gives −2.539, −2.664 and −3.933. So both papers print one energy that is not eq. (4) on the
+  printed (ξ, η): a scan or OCR error in one paper alone does not explain it. II's Table 3 gives −E·10⁻⁷ for the 38
+  rows I left at "—".
+- **Possible causes:** (a) column 8 (and II's column 6) is a different E from eq. (4): another configuration than
+  the printed (ξ, η), another normalisation, or another quantity; (b) a print error common to both tables (unlikely,
+  since II was set separately and agrees with I to K₀); (c) the printed (ξ, η) are not the configurations the
+  energies were computed from, though column 11 matches η·10⁻⁴ on 95 rows (RQ-571).
+- **Also recorded here, as dispatched:** N = 17's ξ in paper I has a broken sixth decimal. Transcription A read
+  0.115219340, B 0.115279340; at 600 dpi the glyph is a slanted stem with no top bar, the slant of row 16's "7", while
+  every "1" in the cell is upright with a flat foot, so the third reading is "7"; paper II prints 0.115279340 cleanly.
+  The fixture carries 0.115279340 and both readings.
+- **Applied meanwhile:** column 8 is transcribed and recorded, never asserted.
+- **Options seen:** (a) column 8 stays recorded and unasserted at M2, and the Anosova chart's milestone decides; (b)
+  the human identifies column 8's definition and it is asserted as that.
+
+## RQ-571: Table 1 as printed breaks the RQ-566 ruling's item 4(i) on five rows, and its row 88 lies outside region D *(found by TASK-M2-20; REQ-VAL-019; context: TASK-M2-20)*
+
+*Physics and the ruling's own assertion set, for the human. The task waits: item 4(i) cannot pass as ruled.*
+
+- **File, section:** the RQ-566 ruling (24 Oct 2026), item 4(i): "M = Σ m(xẏ − yẋ) = η·1e-4 from eq. (3) must match
+  column 11 to the table's printed precision on every row. My spot check: 5 of 5 agree exactly." Item 3: "Keep
+  every row … Never discard a row." Paper I, Table 1, pp. 1010–1011, columns 3 and 11; p. 1008: "Computations … were
+  performed for 100 successive pairs of initial values ξ, η satisfying the condition (8)".
+- **Column 11 against η·10⁻⁴, the 62 rows that print it:** 57 agree; five do not, each read at 600 dpi and agreed by
+  both transcriptions:
+  - N = 16, η 0.349994402 → 0.3500, printed 0.3490;
+  - N = 23, η 0.033925931 → 0.0339, printed 0.3393;
+  - N = 26, η 0.760908567 → 0.7609, printed 0.7509;
+  - N = 32, η 0.567962233 → 0.5680, printed 0.4680;
+  - N = 34, η 0.572102054 → 0.5721, printed 0.4721.
+  Eq. (3) gives M = η·10⁻⁴ exactly (bodies 1 and 2 have y = ẏ = 0, and the total momentum is zero, so M does not
+  depend on the origin). Paper II's Table 3 gives M only for the 38 rows I left blank, so it cannot check these five.
+  Paper II's Table 1 prints N = 26's η as 0.760908565 (I: …567).
+- **Row 88:** paper I prints η = 0.7311230217 (ten decimals, every other η nine). With ξ = 0.432697866, (ξ+½)² + η² =
+  1.404 > 1: outside region D, against p. 1008's "satisfying the condition (8)". Paper II prints η = 0.311230217
+  (inside D), and II's Table 3 prints M·10⁻⁴ = 0.3112 for row 88, agreeing with II's η. Column 11 of I is "—" for
+  row 88.
+- **Options seen:**
+  - (a) Item 4(i) asserts on the rows whose column 11 agrees with η·10⁻⁴ (57), and the five rows are recorded as
+    print errors in column 11 (or 3), each named, not asserted; row 88 is kept as printed and is reported outside D
+    by the import, with paper II's reading beside it.
+  - (b) As (a), but the fixture carries a second, corrected value from paper II where II prints one (row 88's η,
+    row 26's η), and the gate asserts on those.
+  - (c) Item 4(i) stays "every row", and the gate fails until a source settles the five rows.
+- **Applied meanwhile:** nothing is built; TASK-M2-20 stops before the port (docs, plan, code), per the dispatch's
+  "if anything else … conflicts with the ruling, stop and report".
