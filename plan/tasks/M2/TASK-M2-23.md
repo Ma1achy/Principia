@@ -51,3 +51,4 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 - Gap G16 applies to "re-centred to the nearest feasible point".
 - Lock is undoable (R-69) through the contract's history; the GUI binding (K, right-click) lands at M8.
 - **R-473 (20 Oct 2026):** REQ-CHART-007 is reworded: the tangent tilt keeps its lock, and the GUI's tilt of a curved chart is the rotation on the chart's own parameters (REQ-CHART-062, TASK-M2-36), which needs none.
+- **RQ-572 (open; fix round 1 of PR #290, gui review 5640556420, G3):** the contract offers one re-centre, "the nearest feasible point"; which one for a view of many tagged pixels is the human's to rule. REQ-CHART-010 carries `rq: RQ-572`; `Report::offer` stays one re-centre per tagged pixel until then.

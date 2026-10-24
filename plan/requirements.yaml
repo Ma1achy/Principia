@@ -1858,6 +1858,8 @@
   rulings:
   - R-72
   milestone: M2
+  rq:
+  - RQ-572
   note: "The label infeasible pixels carry: REQ-DEC-040 (definition)."
 - id: REQ-CHART-011
   area: CHART
