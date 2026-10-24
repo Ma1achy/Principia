@@ -5,6 +5,8 @@
 //! - `encode_beta_half_axis`: `β` on the `−x` half-axis, `λ̃_y = ±0` and `λ̃_x < 0`, is `π̂` by the select, never
 //!   `atan2`'s value, on CPU-f64, CPU-f32 and GPU-f32, `±0` operands included; at `λ̃ = (±0, ±0)` it is 0; and collinear
 //!   states with body 2 on the `−x` side encode on the GPU as on the CPU (R-438; REQ-ENC-007).
+//! - `encode_beta_signed_zero`: `λ̃_x = ±0` with `λ̃_y ≠ 0`: `β` is `π/2` on CPU-f64, CPU-f32 and GPU-f32, Metal's
+//!   `atan2(y, −0)` sign kept out by `beta`'s select (pitfalls §11; REQ-ENC-007).
 //! - `encode_exact_poles`: configurations with `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, `±0` components included: no NaN,
 //!   the output identical on repeat, bit for bit, and on CPU-f64, CPU-f32 and GPU-f32 to the precision (`z` against
 //!   CPU-f32's, the angles and the decoded state against CPU-f64's), the notices identical, and `lookup_clamped` set, the
@@ -317,6 +319,96 @@ negative_control!(
     {
         let pairs = [[-0.6f32, 0.0]];
         check_half_axis(&[(-0.0f32).atan2(-0.6)], &pairs, "atan2");
+    }
+);
+
+// ── encode_beta_signed_zero (REQ-ENC-007; pitfalls §11) ─────────────────────────────────────────────────────────
+
+/// `β`'s limit off `π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading `λ̃_x = −0`'s
+/// sign turns `β` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
+const SIGNED_ZERO_EPS: f64 = 4.0;
+
+/// The `y` axis's operands, `λ̃_x` each sign of zero, `λ̃_y` of each sign from 3 to the smallest normal: `β = π/2`.
+fn y_axis() -> Vec<[f32; 2]> {
+    let mut pairs = Vec::new();
+    for y in [3.0f32, 1.0, -1.0, 0.5, 1e-3, -1e-20, f32::MIN_POSITIVE] {
+        pairs.push([-0.0, y]);
+        pairs.push([0.0, y]);
+    }
+    pairs
+}
+
+/// `β` is `π/2` within [`SIGNED_ZERO_EPS`] `eps` of it at each operand; returns the worst miss in `eps`.
+fn check_y_axis<R: LinkReal>(betas: &[R], pairs: &[[f32; 2]], eps: f64, backend: &str) -> f64 {
+    assert_eq!(
+        betas.len(),
+        pairs.len(),
+        "{} β for {} operands on {backend}",
+        betas.len(),
+        pairs.len()
+    );
+    let quarter = std::f64::consts::FRAC_PI_2;
+    let mut worst = 0.0f64;
+    for (b, pair) in betas.iter().zip(pairs) {
+        let b = b.to_f64().unwrap();
+        let err = (b - quarter).abs() / (eps * quarter);
+        assert!(
+            err <= SIGNED_ZERO_EPS,
+            "β = {b:e}, not π/2 ({err:.3e} eps), on the y axis at {pair:?} on {backend}"
+        );
+        worst = worst.max(err);
+    }
+    worst
+}
+
+/// Metal's `atan2` through naga, as measured (pitfalls §11): `atan(y/x)`, turned by `π` to `y`'s side where `x < 0`; a
+/// `−0` `x` is not below 0, so `atan2(y, −0)` is `atan(∓∞)`, the opposite sign of `π/2` to IEEE's.
+#[cfg(feature = "controls")]
+fn metal_atan2(y: f32, x: f32) -> f32 {
+    let t = (y / x).atan();
+    match (x < 0.0, y >= 0.0) {
+        (true, true) => t + std::f32::consts::PI,
+        (true, false) => t - std::f32::consts::PI,
+        _ => t,
+    }
+}
+
+#[test]
+fn encode_beta_signed_zero() {
+    let h = harness();
+    let pairs = y_axis();
+    let wide: Vec<[f64; 2]> = pairs.iter().map(|p| p.map(f64::from)).collect();
+    let worst = check_y_axis(&gpu_beta(&h, &pairs), &pairs, EPS32, "GPU-f32");
+    check_y_axis(
+        &pairs.iter().map(|p| blocks::beta(*p)).collect::<Vec<f32>>(),
+        &pairs,
+        EPS32,
+        "CPU-f32",
+    );
+    check_y_axis(
+        &wide.iter().map(|p| blocks::beta(*p)).collect::<Vec<f64>>(),
+        &pairs,
+        f64::EPSILON,
+        "CPU-f64",
+    );
+    let info = h.adapter_info();
+    eprintln!(
+        "encode_beta_signed_zero: worst GPU-f32 β {worst:.2} f32 eps of π/2 on {} ({:?})",
+        info.name, info.backend
+    );
+}
+
+negative_control!(
+    encode_beta_signed_zero,
+    "β from Metal's atan2 with λ̃_x's zero sign kept, which turns β by π at λ̃_x = −0, must fail",
+    expected = "not π/2",
+    {
+        let pairs = y_axis();
+        let betas: Vec<f32> = pairs
+            .iter()
+            .map(|[x, y]| metal_atan2(y.abs(), *x))
+            .collect();
+        check_y_axis(&betas, &pairs, EPS32, "Metal's atan2");
     }
 );
 

@@ -7,6 +7,8 @@
 //!   pipeline (REQ-DEC-007).
 //! - `decode_stage_descriptor`: the GPU `ICDescriptor` against the f64 decode's, within REQ-DEC-043's factor; at the
 //!   poles, the GPU stores the bits the f64 decode does (REQ-TOOL-030, R-436).
+//! - `decode_stage_rho_angle_signed_zero`: `ρ · λ = −0` exactly with `ρ × λ ≠ 0`: `rho_angle` is `±π/2` on CPU-f64,
+//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `angle`'s select (pitfalls §11; REQ-TOOL-030).
 //! - `decode_stage_mode`: `DECODE_MODE` linearised writes nothing in the kernel and is refused by the host until M6
 //!   (REQ-DEC-007).
 //! - `decode_only_sim_key`: `decode_only` is the stage's source at f64, from the chart's parameters widened, and only
@@ -587,6 +589,140 @@ negative_control!(
             &f64_decodes(&shifted),
             factor(),
         )
+    }
+);
+
+// ── decode_stage_rho_angle_signed_zero (REQ-TOOL-030; pitfalls §11) ─────────────────────────────────────────────
+
+/// `rho_angle`'s limit off `±π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading
+/// `ρ · λ = −0`'s sign turns it by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
+const SIGNED_ZERO_EPS: f64 = 4.0;
+
+/// States, masses `(¼, ¼, ½)`, whose `ρ · λ` is `−0` exactly and `ρ × λ ≠ 0`, `ρ` on the `y` axis and `λ` on the `x`
+/// axis with zeros signed so both products of `ρ · λ` are `−0`; with `ρ × λ`'s sign, `rho_angle = ±π/2`.
+fn signed_zero_dot() -> Vec<(&'static str, f64, Ic<f64>)> {
+    let m = [0.25, 0.25, 0.5];
+    let p = [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]];
+    [
+        (
+            "ρ = (−0, 2), λ = (1, −0)",
+            -1.0,
+            [0.0, -1.0],
+            [-0.0, 1.0],
+            [1.0, -0.0],
+        ),
+        (
+            "ρ = (+0, 2), λ = (−1, −0)",
+            1.0,
+            [-0.0, -1.0],
+            [0.0, 1.0],
+            [-1.0, -0.0],
+        ),
+        (
+            "ρ = (−0, −2), λ = (1, +0)",
+            1.0,
+            [0.0, 1.0],
+            [-0.0, -1.0],
+            [1.0, 0.0],
+        ),
+    ]
+    .map(|(name, sign, r0, r1, r2)| {
+        (
+            name,
+            sign,
+            Ic {
+                m,
+                r: [r0, r1, r2],
+                p,
+            },
+        )
+    })
+    .to_vec()
+}
+
+/// `angle` is `sign·π/2` within [`SIGNED_ZERO_EPS`] `eps` of `π/2`; returns the miss in `eps`.
+fn check_quarter(angle: f64, sign: f64, eps: f64, at: &str) -> f64 {
+    let quarter = std::f64::consts::FRAC_PI_2;
+    let err = (angle - sign * quarter).abs() / (eps * quarter);
+    assert!(
+        err <= SIGNED_ZERO_EPS,
+        "rho_angle = {angle:e} at {at}, not {}π/2 ({err:.3e} eps)",
+        if sign < 0.0 { "−" } else { "+" }
+    );
+    err
+}
+
+/// `ρ · λ` and `ρ × λ` of `x`, formed as `describe` forms them.
+fn dot_cross(x: &Ic<f32>) -> (f32, f32) {
+    let [m0, m1, _] = x.m;
+    let [r0, r1, r2] = x.r;
+    let rho = [r1[0] - r0[0], r1[1] - r0[1]];
+    let m01 = m0 + m1;
+    let inner = [
+        (m0 * r0[0] + m1 * r1[0]) / m01,
+        (m0 * r0[1] + m1 * r1[1]) / m01,
+    ];
+    let lambda = [r2[0] - inner[0], r2[1] - inner[1]];
+    (
+        rho[0] * lambda[0] + rho[1] * lambda[1],
+        rho[0] * lambda[1] - rho[1] * lambda[0],
+    )
+}
+
+/// Metal's `atan2` through naga, as measured (pitfalls §11): `atan(y/x)`, turned by `π` to `y`'s side where `x < 0`; a
+/// `−0` `x` is not below 0, so `atan2(y, −0)` is `atan(∓∞)`, the opposite sign of `π/2` to IEEE's.
+#[cfg(feature = "controls")]
+fn metal_atan2(y: f32, x: f32) -> f32 {
+    let t = (y / x).atan();
+    match (x < 0.0, y >= 0.0) {
+        (true, true) => t + std::f32::consts::PI,
+        (true, false) => t - std::f32::consts::PI,
+        _ => t,
+    }
+}
+
+#[test]
+fn decode_stage_rho_angle_signed_zero() {
+    let h = harness();
+    let states = signed_zero_dot();
+    let narrowed: Vec<Ic<f32>> = states.iter().map(|(_, _, x)| narrow(x)).collect();
+    let gpu = describe_gpu(
+        h.device(),
+        h.queue(),
+        &wgsl(),
+        &narrowed,
+        FastMath::default(),
+    )
+    .expect("describe");
+    let mut worst = 0.0f64;
+    for (k, (name, sign, x)) in states.iter().enumerate() {
+        // The case is reached: `ρ · λ`, formed as `describe` forms it, is `−0`, and `ρ × λ` is not 0.
+        let (dot, cross) = dot_cross(&narrowed[k]);
+        assert_eq!(
+            (dot.to_bits(), cross != 0.0),
+            ((-0.0f32).to_bits(), true),
+            "ρ · λ = {dot:e}, ρ × λ = {cross:e} at {name}"
+        );
+        check_quarter(describe(x).rho_angle, *sign, f64::EPSILON, name);
+        check_quarter(describe(&narrowed[k]).rho_angle.into(), *sign, EPS, name);
+        worst = worst.max(check_quarter(gpu[k].rho_angle.into(), *sign, EPS, name));
+    }
+    let info = h.adapter_info();
+    eprintln!(
+        "decode_stage_rho_angle_signed_zero: worst GPU-f32 rho_angle {worst:.2} f32 eps of π/2 on {} ({:?})",
+        info.name, info.backend
+    );
+}
+
+negative_control!(
+    decode_stage_rho_angle_signed_zero,
+    "rho_angle from Metal's atan2 with ρ · λ's zero sign kept, which turns it by π at ρ · λ = −0, must fail",
+    expected = "not −π/2",
+    {
+        for (name, sign, x) in signed_zero_dot() {
+            let (dot, cross) = dot_cross(&narrow(&x));
+            check_quarter(metal_atan2(cross, dot).into(), sign, EPS, name);
+        }
     }
 );
 
