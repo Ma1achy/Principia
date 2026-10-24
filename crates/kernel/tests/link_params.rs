@@ -418,6 +418,14 @@ fn check_active(q15: &LinkParams<f64>) {
         0,
         "a ratio of e^4.5 inside μ_max = 5's cap"
     );
+    // A simplex link whose clamp reads no tunable parameter keeps its own clamp at any value.
+    let edge = [1e-20, 0.5, 0.5];
+    assert_eq!(StickBreaking::clamps(edge), 1, "the stick's edge clamps");
+    assert_eq!(
+        StickBreaking::clamps_at(edge, &mu4),
+        StickBreaking::clamps(edge),
+        "stick_breaking's clamp moved with μ_max"
+    );
     let cap = (1.0 - <f64 as ChartConstants>::EPS_MU) * 4.0;
     let [z1, _] = SoftmaxTanh::inverse_at(m, &mu4);
     assert_eq!(
