@@ -669,8 +669,10 @@ fn dot_cross(x: &Ic<f32>) -> (f32, f32) {
     )
 }
 
-/// Metal's `atan2` through naga, as measured (pitfalls §11): `atan(y/x)`, turned by `π` to `y`'s side where `x < 0`; a
-/// `−0` `x` is not below 0, so `atan2(y, −0)` is `atan(∓∞)`, the opposite sign of `π/2` to IEEE's.
+/// A model of Metal's own `atan2` at its default math mode (naga passes the call through; pitfalls §11), consistent
+/// with the outputs measured at the four sites, not taken from Metal's implementation: `atan(y/x)`, turned by `π` to
+/// `y`'s side where `x < 0`; a `−0` `x` is not below 0, so `atan2(y, −0)` is `atan(∓∞)`, the opposite sign of `π/2` to
+/// IEEE's.
 #[cfg(feature = "controls")]
 fn metal_atan2(y: f32, x: f32) -> f32 {
     let t = (y / x).atan();
