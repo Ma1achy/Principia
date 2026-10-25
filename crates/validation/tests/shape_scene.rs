@@ -9,6 +9,8 @@
 //!   nothing (R-544; REQ-CHART-002, REQ-RENDER-026).
 //! - `shape_scene_controls_are_wrong`: the one-hemisphere control draws no sample below the equator, and the flagged
 //!   control's twin is the spherical scene's except on the lower half's stripes, where it is black (REQ-CHART-002).
+//! - `shape_scene_class_signs`, `shape_scene_twin_on_the_equator`: the twin reads each sign of `n` strictly, as the
+//!   occupant does, a zero not below it; a sample on the equator is not striped by the flagged control.
 //! - `shape_scene_binary_writes_the_render`: `golden_harness --scene` writes each scene's render.
 //!
 //! Each test registers its negative control (R-176).
@@ -205,6 +207,72 @@ negative_control!(
         s.scene.set.sample(0).r(mirrored);
         check_samples(&s, Projection::Equirectangular);
     }
+);
+
+/// `class` reads each sign strictly, as the occupant's `select(…, n.x < 0.0)` does: a zero of either sign is not below
+/// it, and the least negative value is.
+fn check_class(class: fn([f32; 3]) -> u32) {
+    for (n, want) in [
+        ([0.0, 0.0, 0.0], 0),
+        ([-0.0, -0.0, -0.0], 0),
+        ([-f32::MIN_POSITIVE, 0.0, 0.0], 1),
+        ([0.0, -f32::MIN_POSITIVE, 0.0], 2),
+        ([0.0, 0.0, -f32::MIN_POSITIVE], 4),
+        ([-1.0, -1.0, -1.0], 7),
+    ] {
+        assert_eq!(class(n), want, "the class of {n:?} is not the occupant's");
+    }
+}
+
+#[test]
+fn shape_scene_class_signs() {
+    check_class(ShapeScene::class);
+}
+
+negative_control!(
+    shape_scene_class_signs,
+    "a class that reads a zero as below its sign must fail",
+    expected = "is not the occupant's",
+    check_class(|n| u32::from(n[0] <= 0.0)
+        + 2 * u32::from(n[1] <= 0.0)
+        + 4 * u32::from(n[2] <= 0.0))
+);
+
+/// The flagged control with its sample 0 collinear on the x axis, so its read `n.z` is a zero: `want` gives the twin,
+/// and the render must be it, the zero not striped as below the equator.
+fn check_equator_sample(want: fn(&ShapeScene) -> Vec<Rgb>) {
+    let h = gpu();
+    let mut s = named("shape_control_flagged");
+    s.scene
+        .set
+        .sample(0)
+        .r([[-1.0, 0.0], [0.25, 0.0], [0.75, 0.0]]);
+    let n = s.shapes()[0];
+    assert_eq!(n[2], 0.0, "sample 0's n = {n:?} is not on the equator");
+    check_image(&s, &render(&h, &s), &want(&s));
+}
+
+#[test]
+fn shape_scene_twin_on_the_equator() {
+    check_equator_sample(ShapeScene::expected);
+}
+
+negative_control!(
+    shape_scene_twin_on_the_equator,
+    "a twin that stripes the equator's zero as below it is not the render",
+    expected = "not its CPU twin",
+    check_equator_sample(|s| {
+        let mut image = s.expected();
+        let grid = s.scene.context.grid;
+        let width = s.scene.size().0;
+        for (k, px) in image.iter_mut().enumerate() {
+            let (x, y) = (k as u32 % width, k as u32 / width);
+            if grid.cell(x, y).sample == 0 && ShapeScene::stripe(x, y) {
+                *px = [0.0; 3];
+            }
+        }
+        image
+    })
 );
 
 /// The one-hemisphere control `one` draws no sample below the equator and spans the upper hemisphere, its samples
