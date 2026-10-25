@@ -135,7 +135,7 @@ fn check_evidence(rows: &[Tunable]) {
                 String::new()
             };
             println!(
-                "| {label} | {:.1} | {:.1} | {:.1e} | {:.1e} | {:.1e} | {:.1e} | {:.2} | {:.2} | {} / {} |{floor}",
+                "| {label} | {:.1} | {:.1} | {:.1e} | {:.1e} | {:.1e} | {:.1e} | {:.4} | {:.4} | {} / {} |{floor}",
                 a.rt, b.rt, a.dz, b.dz, a.c1_rel, b.c1_rel, a.c1_use, b.c1_use, a.unsaturated, b.unsaturated
             );
             for (at, ty) in [(a, "f64"), (b, "f32")] {
