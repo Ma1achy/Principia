@@ -17,7 +17,7 @@ use validation::spawn::Spawn;
 use xtask::build_kernel::{
     backend_built, build_backend, check_channel, check_locked, check_source, ensure_backend,
     exact_requirement, locked_version, pinned_channel, prepare_backend, run, to_wgsl, BACKEND_LOCK,
-    BACKEND_TOML, BACKEND_VERSION, SPV, WGSL,
+    BACKEND_TOML, BACKEND_VERSION, SPV, TARGET, WGSL,
 };
 
 fn root() -> PathBuf {
@@ -691,4 +691,161 @@ negative_control!(
     "crates.io's pinned release itself, given to the refusal check",
     expected = "a rust-gpu other than crates.io's pinned release was accepted",
     check_source_refused(&crates_io(BACKEND_VERSION))
+);
+
+// ── the workspace's host flags never reach the SPIR-V build (R-547, REQ-TOOL-188) ──────────────────────────────
+
+/// spirv-builder 0.10.0-alpha.1's own rustflags for the SPIR-V build, after its `-Zcodegen-backend=<backend>`
+/// (`spirv-builder/src/lib.rs`, `invoke_rustc`, the `rustflags` list), as build-kernel's builder configures it: no
+/// `-Cllvm-args`, target features, `-Dwarnings` or RUSTGPU_RUSTFLAGS. Its own `-Zmir-enable-passes=-GVN` is among
+/// them; spirv-builder passes the list as CARGO_ENCODED_RUSTFLAGS, which overrides every rustflags table of the
+/// workspace's `.cargo/config.toml`.
+const SPIRV_BUILDER_FLAGS: &[&str] = &[
+    "-Zbinary-dep-depinfo",
+    "-Csymbol-mangling-version=v0",
+    "-Zcrate-attr=feature(register_tool)",
+    "-Zcrate-attr=register_tool(rust_gpu)",
+    "-Coverflow-checks=off",
+    "-Cdebug-assertions=off",
+    "-Zinline-mir=off",
+    "-Zmir-enable-passes=-GVN",
+    "-Zshare-generics=off",
+];
+
+/// `flags`, a SPIR-V build's rustflags, are exactly spirv-builder's own: its codegen backend, then
+/// [`SPIRV_BUILDER_FLAGS`], nothing of the workspace's added.
+fn check_spirv_flags(flags: &[String]) {
+    assert!(
+        flags
+            .first()
+            .is_some_and(|f| f.starts_with("-Zcodegen-backend=")),
+        "the SPIR-V build's rustflags do not start with spirv-builder's codegen backend: {flags:?}"
+    );
+    assert!(
+        flags[1..] == *SPIRV_BUILDER_FLAGS,
+        "the SPIR-V build's rustflags are not spirv-builder's own: {flags:?}"
+    );
+}
+
+/// The rustflags each build of the kernel's library for the SPIR-V target was compiled with, as cargo's fingerprints
+/// in spirv-builder's target directory (`<target>/spirv-builder/<target triple>/release`) record them, written by
+/// `cargo xtask build-kernel`; at least one.
+fn spirv_kernel_rustflags() -> Vec<Vec<String>> {
+    let target = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .parent()
+        .expect("the target directory")
+        .join("spirv-builder")
+        .join(TARGET)
+        .join("release/.fingerprint");
+    let mut found = Vec::new();
+    for entry in fs::read_dir(&target).unwrap_or_else(|e| {
+        panic!(
+            "{}: {e}; run `cargo xtask build-kernel` first",
+            target.display()
+        )
+    }) {
+        let path = entry.unwrap().path().join("lib-kernel.json");
+        if let Ok(text) = fs::read_to_string(&path) {
+            let json: serde_json::Value = serde_json::from_str(&text).unwrap();
+            let flags = json["rustflags"]
+                .as_array()
+                .unwrap_or_else(|| panic!("{}: no rustflags", path.display()))
+                .iter()
+                .map(|f| f.as_str().unwrap().to_owned())
+                .collect();
+            found.push(flags);
+        }
+    }
+    assert!(
+        !found.is_empty(),
+        "{}: no fingerprint of the kernel's SPIR-V build",
+        target.display()
+    );
+    found
+}
+
+#[test]
+fn build_kernel_spirv_flags_are_spirv_builders_own() {
+    for flags in spirv_kernel_rustflags() {
+        check_spirv_flags(&flags);
+    }
+}
+
+negative_control!(
+    build_kernel_spirv_flags_are_spirv_builders_own,
+    "the kernel's SPIR-V rustflags with the workspace's host flag added to spirv-builder's own",
+    expected = "the SPIR-V build's rustflags are not spirv-builder's own",
+    {
+        let mut flags = spirv_kernel_rustflags().remove(0);
+        flags.push("-Zmir-enable-passes=-GVN".to_owned());
+        check_spirv_flags(&flags)
+    }
+);
+
+/// The table of `.cargo/config.toml` that carries the native build's `-Zmir-enable-passes=-GVN` (R-547).
+const HOST_TABLE: &str = r#"cfg(not(target_arch = "spirv"))"#;
+
+/// In `config`, the text of a `.cargo/config.toml`: `[target.'cfg(not(target_arch = "spirv"))']` carries
+/// `-Zmir-enable-passes=-GVN`, and no other rustflags, `[build]`'s or another target table's, carries any
+/// `-Zmir-enable-passes`, so the flag reaches every target but SPIR-V.
+fn check_config_scope(config: &str) {
+    let doc: toml_edit::DocumentMut = config.parse().expect(".cargo/config.toml parses");
+    let flags = |item: Option<&toml_edit::Item>| -> Vec<String> {
+        item.and_then(|t| t.get("rustflags"))
+            .and_then(|f| f.as_array())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let gvn = |flags: &[String]| flags.iter().any(|f| f.starts_with("-Zmir-enable-passes"));
+    let targets = doc.get("target").and_then(|t| t.as_table_like());
+    assert!(
+        flags(targets.and_then(|t| t.get(HOST_TABLE)))
+            .contains(&"-Zmir-enable-passes=-GVN".to_owned()),
+        "[target.'{HOST_TABLE}'] does not carry -Zmir-enable-passes=-GVN"
+    );
+    assert!(
+        !gvn(&flags(doc.get("build"))),
+        "[build] rustflags carry -Zmir-enable-passes, which a build for the SPIR-V target would take"
+    );
+    for (name, table) in targets.into_iter().flat_map(|t| t.iter()) {
+        assert!(
+            name == HOST_TABLE || !gvn(&flags(Some(table))),
+            "[target.'{name}'] carries -Zmir-enable-passes"
+        );
+    }
+}
+
+#[test]
+fn build_kernel_gvn_flag_is_scoped_off_spirv() {
+    check_config_scope(&read(".cargo/config.toml"));
+}
+
+negative_control!(
+    build_kernel_gvn_flag_is_scoped_off_spirv,
+    "the workspace's config with the GVN flag in [build] rustflags too, which reach every target",
+    expected = "[build] rustflags carry -Zmir-enable-passes",
+    check_config_scope(&format!(
+        "{}\n[build]\nrustflags = [\"-Zmir-enable-passes=-GVN\"]\n",
+        read(".cargo/config.toml")
+    ))
+);
+
+/// The same check, here for its control on the host's table: the native build takes the flag at all.
+#[test]
+fn build_kernel_gvn_flag_reaches_the_host() {
+    check_config_scope(&read(".cargo/config.toml"));
+}
+
+negative_control!(
+    build_kernel_gvn_flag_reaches_the_host,
+    "the workspace's config with the host table's rustflags emptied",
+    expected = "does not carry -Zmir-enable-passes=-GVN",
+    check_config_scope(&read(".cargo/config.toml").replace(
+        "rustflags = [\"-Zmir-enable-passes=-GVN\"]",
+        "rustflags = []"
+    ))
 );
