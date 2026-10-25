@@ -1069,7 +1069,7 @@ pair, not per view. Physics, where the choice changes which lock the user is off
   after a tilt alone, at `δ = 0`, the centre is the anchor, feasible by construction, so the nearest feasible point to
   the lock is the lock itself and re-centring there changes nothing. TASK-M2-23 as built offers one re-centre per tagged pixel, in
   pixel order, then the latent chart; on a 1024² view that is up to ~10⁶ re-centres, and the GUI may not choose among
-  them (it holds no sim logic, gui_state_contract §2). Which single point does the lock offer?
+  them (it holds no sim logic, gui_state_contract §1, "The one-way dependency rule"). Which single point does the lock offer?
 - **Options seen:** (a) the centre's own: offered only where the centre pixel is itself tagged (an excursion, or a
   tilt about an off-centre pin, carried it out, chart_decoder_contract § "The lock's construction, defined"), its
   nearest feasible point; where only the neighbourhood is tagged, only the switch to the latent chart is
@@ -1081,4 +1081,7 @@ pair, not per view. Physics, where the choice changes which lock the user is off
 - **Fix round 2 of PR #290 (physics review 5642882158, P5; applied per R-369):** the question's premise is at `δ = 0`,
   and option (a)'s centre is carried out by an excursion or a tilt about an off-centre pin. *Was:* "after a tilt
   alone the centre is the anchor, feasible by construction" and "(an excursion carried it out)".
+- **Fix round 3 of PR #290 (gui review 5642898583, G4; applied per R-369):** the rule that the GUI holds no sim logic
+  is cited at gui_state_contract §1, "The one-way dependency rule". *Was:* "(it holds no sim logic, gui_state_contract
+  §2)".
 - **Waits:** REQ-CHART-010's offer, `rq: RQ-572` (TASK-M2-23). The rest of TASK-M2-23 does not wait.
