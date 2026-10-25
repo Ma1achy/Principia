@@ -362,8 +362,16 @@ fn nextest_list(args: &[String], profile: Option<&str>) -> Vec<String> {
         .collect()
 }
 
+/// A step at the release profile: `ci-release`'s, which runs the `ci` profile's tests again at `--release` (R-547,
+/// REQ-TOOL-189).
+fn at_release(step: &Step) -> bool {
+    step.args.iter().any(|a| a == "--release")
+}
+
 /// For each of `replaced` (some of `REPLACED`), the test steps of `workflows` in its feature set together list every
-/// test it lists, as many times.
+/// test it lists, as many times. The steps at the release profile ([`at_release`]) are not counted: they run again
+/// tests the others run, so the others must list every test without them, and a shard or profile dropped from those
+/// is still seen; listing them would also build the workspace at release inside the listing's timeout.
 fn check_no_test_dropped(workflows: &[String], replaced: &[&str]) {
     let (steps, _) = test_steps(workflows);
     for replaced in replaced {
@@ -371,7 +379,7 @@ fn check_no_test_dropped(workflows: &[String], replaced: &[&str]) {
         let mut covered: BTreeMap<String, usize> = BTreeMap::new();
         for step in steps
             .iter()
-            .filter(|s| features(&s.args) == features(&replaced))
+            .filter(|s| features(&s.args) == features(&replaced) && !at_release(s))
         {
             let listed = if step.doc {
                 let mut args = step.args.clone();

@@ -1,2 +1,12 @@
 [alias]
 xtask = "run --quiet --package xtask --"
+
+# The native build runs without rustc's MIR GVN pass (R-547; canonical_spec §1 item 2; REQ-TOOL-188): the pinned
+# nightly (`rust-toolchain.toml`) miscompiles plain Rust above opt-level 0 in that pass (RQ-299), so every build for a
+# target that is not SPIR-V, the host's among them, carries `-Zmir-enable-passes=-GVN`. The SPIR-V build never takes
+# this table: its target is `spirv`, and rust-gpu's builder sets the build's rustflags itself, through
+# CARGO_ENCODED_RUSTFLAGS, which overrides every rustflags table here. An environment RUSTFLAGS overrides it too, so a
+# step that sets RUSTFLAGS for a native build names the flag itself. The flag goes when the pin moves to a nightly
+# without the fault that `rustc_codegen_spirv` builds against (R-547, R-414).
+[target.'cfg(not(target_arch = "spirv"))']
+rustflags = ["-Zmir-enable-passes=-GVN"]
