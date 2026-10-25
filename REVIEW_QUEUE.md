@@ -1152,3 +1152,46 @@ without asserting it until this is ruled.*
   - (c) Item 4(i) stays "every row", and the gate fails until a source settles the five rows.
 - **Applied meanwhile:** nothing is built; TASK-M2-20 stops before the port (docs, plan, code), per the dispatch's
   "if anything else … conflicts with the ruling, stop and report".
+
+## RQ-573: With paper II's η applied wherever paper II reprints a row, Table 1's printed M column mismatches on six rows, not the five of the RQ-571 ruling's exception list: N = 93 joins it *(found by TASK-M2-20; REQ-VAL-019; context: TASK-M2-20, the RQ-571 ruling of 25 Oct 2026)*
+
+*Physics and the ruling's own assertion set, for the human. The task stops before the port (docs, plan, code): the
+dispatch says that if the mismatch set is not exactly {16, 23, 26, 32, 34} once paper II's η is applied, the list is
+not adjusted here and goes back to the human.*
+
+- **File, section:** the RQ-571 ruling (25 Oct 2026): "Where paper II reprints a row, take paper II's η (this fixes
+  N=88, giving 0.311230217). Record paper I's printed value beside it." and "The table's printed M column must match
+  the computed value on every row except an explicit exception list of N = 16, 23, 26, 32, 34." Paper I
+  (`docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf`), Table 1, p. 1011, row 93; paper
+  II (`agekyan_anosova_1968_Ap_4_11_part2.pdf`), Table 1, p. 14, row 93.
+- **What paper II reprints:** columns 2 and 3 (ξ, η) of all 100 rows ("The initial random configurations were exactly
+  the same as in [1]", p. 11), read at 300 dpi row by row against paper I. η differs from paper I on six rows:
+
+  | N | paper I η | paper II η | II's η·10⁻⁴ | paper I col. 11 | agrees |
+  |---|---|---|---|---|---|
+  | 26 | 0.760908567 | 0.760908565 | 0.7609 | 0.7509 | no (listed) |
+  | 61 | 0.150592949 | 0.150593949 | 0.1506 | 0.1506 | yes |
+  | 69 | 0.238608305 | 0.238608354 | 0.2386 | 0.2386 | yes |
+  | 77 | 0.032869382 | 0.032869383 | 0.0329 | 0.0329 | yes |
+  | 88 | 0.7311230217 | 0.311230217 | 0.3112 | — | nothing printed |
+  | 93 | 0.471972279 | 0.471612279 | 0.4716 | 0.4720 | **no (not listed)** |
+
+  Row 93 is clear in both scans: paper I prints 0.471972279 (and its column 11, 0.4720, agrees with it), paper II
+  prints 0.471612279. Taking II's η there, as the ruling says, makes the computed M 0.4716 against the printed 0.4720,
+  so the mismatch set is {16, 23, 26, 32, 34, 93}. The five listed rows are unchanged (16, 23, 32 and 34 have the
+  same η in both papers; 26's II reading still rounds to 0.7609).
+- **Also seen, not acted on** (the ruling takes II's η only): paper II's ξ differs from paper I's on four rows:
+  N = 35, I 0.480736434, II 0.480236434; N = 49, I 0.057727505, II 0.058727505; N = 54, I 0.007748064, II
+  0.077480639 (the digits shifted one place); N = 65, I 0.306397814, II 0.306897814. None of them moves eq. (4) near
+  column 8 (N = 54: −2.360 on I's ξ, −2.363 on II's, printed −2.452), so they do not bear on RQ-570. The other 90 rows
+  agree in both ξ and η.
+- **Options seen:**
+  - (a) The exception list becomes {16, 23, 26, 32, 34, 93}, row 93 carrying II's η, its computed 0.4716 and the
+    printed 0.4720 (paper I's η 0.471972279 beside it).
+  - (b) II's η is taken only where it differs from I's and I's is the outlier (row 88, outside region D as printed);
+    elsewhere paper I's η stands, so row 93 keeps 0.471972279 and matches, and the list stays at five.
+  - (c) As the ruling, but where the two papers' η disagree and paper I's column 11 agrees with paper I's η (row 93),
+    the row is flagged as a disagreement between the papers rather than a print error in column 11.
+- **Applied meanwhile:** nothing is built; TASK-M2-20 stops before the port. Paper II's ξ and η, as read, are in the
+  implementer's scratch (`/Volumes/X10 Pro/Principia/scratch/m220-impl2/paper2_xi_eta.csv`, with paper I's beside
+  them), for the fixture once this is ruled.
