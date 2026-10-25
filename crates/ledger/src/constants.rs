@@ -900,7 +900,7 @@ pub const DECODE_SANITY: ConstantBuilder = proposed(
 /// TASK-M2-20's proposal (R-71): the `literature-import` gate's `literature.json`, the Burrau rest start and Table 1's
 /// 100 region-D near-rest starts, measures a worst of 89.74 `ε` (`L_z²·|E|/(G²·M⁵)`, `N = 56`; `L_z`'s worst is
 /// 46.68 and `E`'s 3.89), so 256 covers it by 2.9×; the physical residual `‖D(z) − C(x)‖_phys` is at most 5.4e-16 and
-/// `κ(z)` lies in [1.78, 81.8].
+/// `κ(x)`, the encode Jacobian's weighted norm at the start (inverse-encode contract Part 4), lies in [3.37, 142].
 pub const LITERATURE_IMPORT_TOL: ConstantBuilder = proposed(
     "literature_import_tol",
     256.0,
