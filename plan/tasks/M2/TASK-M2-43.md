@@ -1,11 +1,11 @@
 # TASK-M2-43 — The shape sphere chart is the whole sphere: the signed decode, the held momentum unmirrored below the equator, the signed lookup, the spherical map's system_image one-to-one, and the tests that asserted the 2-to-1 cover (R-544) ⚑
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-081, REQ-CHART-082, REQ-ENC-034
+- **Closes:** REQ-CHART-081, REQ-CHART-082, REQ-ENC-034, REQ-DEC-050
 - **Depends on:** TASK-M2-08, TASK-M2-14, TASK-M2-17
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
-- **Pitfalls:** PIT-9
+- **Pitfalls:** PIT-9, PIT-11
 - **Size:** ~400 lines
 
 ## Goal
@@ -141,6 +141,17 @@ the four, and the tests that asserted the 2-to-1 cover:
 - `cargo xtask gate shape-roundtrip` and `cargo test -p kernel shape_sphere` — REQ-CHART-020's amended verify: `Φ`
   alone round-trips on both hemispheres (R-178), the decode's canonical form keeps the sign below the equator, and the
   shared decoder's `ic` is `C` of the joined blocks with step 3 not taken.
+- `cargo test -p engine --features controls --test canon_gpu --test encode_gpu --test decode_stage_gpu --test
+  decode_cross_backend` and `cargo test -p kernel canon_rotation_angle` — REQ-DEC-050's verify: at each GPU-reached
+  `atan2` whose second operand can be a zero with its first nonzero, that zero is taken as `+0`, so `φ`, `β` and
+  `rho_angle` at a `−0` second operand are `±π/2` on the first operand's side on CPU-f64, CPU-f32 and GPU-f32
+  (`canonicaliser_phi_signed_zero`, `encode_beta_signed_zero`, `decode_stage_rho_angle_signed_zero`), the shape
+  sphere's inverse at `p = −0` agrees across backends (`decode_cross_backend_continuous`), and the CPU's values are
+  unchanged; controls: Metal's `atan2` modelled on the CPU (`atan(y/x)`, turned by `π` only where `x < 0`; pitfalls
+  §11) without the select fails each of the three, and fails `canon_rotation_angle` at `ρ_x = −0`;
+  `decode_cross_backend_continuous`'s own control, an f64 reference whose `z₀` is moved by `10⁻⁴`, fails REQ-DEC-043's
+  factor. Added by PR #288's code review 5640125368, C1, and physics review 5640193616, P1 (applied per R-369): the
+  mechanism this task found, recorded.
 - Review checklist (physics reviewer): the decode, the held momentum and the lookup against R-544 and its "Applied per
   R-369" decisions; `checks/r544_check.py` (`python3 -I`) is the port's model of checks 1 to 3.
 

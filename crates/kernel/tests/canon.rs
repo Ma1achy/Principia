@@ -33,6 +33,9 @@
 //! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`
 //!   for every sign of the zeros (R-437), and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it
 //!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
+//! - `canon_rotation_angle`: step 2's recorded `φ` ([`canon::rotation_angle`]) is IEEE's `atan2(ρ_y, ρ_x)` bit for bit
+//!   on random `ρ`, `±π/2` where `ρ_x` is either zero and `ρ_y ≠ 0`, `+0` at the pole, and `C`'s recorded `φ`, at
+//!   each precision (REQ-ENC-016; R-437, pitfalls §11).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included, and nothing past the last state.
 //!
@@ -1554,6 +1557,97 @@ fn canon_rotation() {
     let w64 = check_rotation::<f64>(canon::rotation, -1074, 1023, 2.0);
     eprintln!("canon_rotation: worst {w32:.2} eps at f32, {w64:.2} at f64 (bound 2)");
 }
+
+// ── canon_rotation_angle (REQ-ENC-016; R-437, pitfalls §11) ─────────────────────────────────────────────────────
+
+/// A step-2 angle: `ρ ↦ φ`.
+type Angle<R> = fn([R; 2]) -> R;
+
+/// Step 2's recorded `φ` ([`canon::rotation_angle`]) at `R`: IEEE's `atan2(ρ_y, ρ_x)`, bit for bit, on 4096 random `ρ`
+/// over every quadrant; `±π/2` on `ρ_y`'s side, IEEE's `atan2(ρ_y, +0)`'s bits, where `ρ_x` is either zero and
+/// `ρ_y ≠ 0` (pitfalls §11); `+0` at the pole, every sign of the zeros (R-437); and `C`'s recorded `φ` is it.
+fn check_angle<R: Precision>(angle: Angle<R>) {
+    let f = |v: R| -> f64 { v.into() };
+    let bits = |v: R| f(v).to_bits();
+    for y in [3.0, 1.0, -1.0, 1e-3, -1e-20] {
+        let want = cast::<R>(y).atan2(R::zero());
+        for x in [-0.0, 0.0] {
+            let phi = angle([cast::<R>(x), cast::<R>(y)]);
+            assert!(
+                bits(phi) == bits(want),
+                "{}: φ = {:e} at ρ = ({x:?}, {y:e}), not {:e}",
+                R::NAME,
+                f(phi),
+                f(want)
+            );
+        }
+    }
+    for rho in [[0.0, 0.0], [-0.0, 0.0], [0.0, -0.0], [-0.0, -0.0]] {
+        let phi = angle(rho.map(cast::<R>));
+        assert!(
+            bits(phi) == 0f64.to_bits(),
+            "{}: φ = {:e} at the pole ρ = {rho:?}, not +0",
+            R::NAME,
+            f(phi)
+        );
+    }
+    let mut rng = SplitMix::new(11);
+    for _ in 0..4096 {
+        let rho = [rng.uniform(-4.0, 4.0), rng.uniform(-4.0, 4.0)].map(|v| cast::<R>(v.into()));
+        let (phi, want) = (angle(rho), rho[1].atan2(rho[0]));
+        assert!(
+            bits(phi) == bits(want),
+            "{}: φ = {:e} at ρ = {:?}, not atan2's {:e}",
+            R::NAME,
+            f(phi),
+            rho.map(Into::<f64>::into),
+            f(want)
+        );
+    }
+    let x = from64::<R>(&Ic {
+        m: [0.25, 0.375, 0.375],
+        r: [[0.0, -1.0], [-0.0, 1.0], [0.7, 0.2]],
+        p: [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]],
+    });
+    let rho = [x.r[1][0] - x.r[0][0], x.r[1][1] - x.r[0][1]];
+    let (recorded, step) = (canonicalise(&x).phi, angle(rho));
+    assert!(
+        bits(recorded) == bits(step),
+        "{}: C records φ = {:e} at ρ = {:?}, not step 2's {:e}",
+        R::NAME,
+        f(recorded),
+        rho.map(Into::<f64>::into),
+        f(step)
+    );
+}
+
+#[test]
+fn canon_rotation_angle() {
+    check_angle::<f32>(canon::rotation_angle);
+    check_angle::<f64>(canon::rotation_angle);
+}
+
+negative_control!(
+    canon_rotation_angle,
+    "φ from Metal's atan2 (pitfalls §11), atan(ρ_y/ρ_x) turned by π only where ρ_x < 0, must fail at ρ_x = −0",
+    expected = "at ρ = (-0.0",
+    {
+        check_angle::<f32>(|rho| {
+            let [x, y] = rho;
+            let t = (y / x).atan();
+            let t = match (x < 0.0, y >= 0.0) {
+                (true, true) => t + std::f32::consts::PI,
+                (true, false) => t - std::f32::consts::PI,
+                _ => t,
+            };
+            if x == 0.0 && y == 0.0 {
+                0.0
+            } else {
+                t
+            }
+        });
+    }
+);
 
 negative_control!(
     canon_rotation,

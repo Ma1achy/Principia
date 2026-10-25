@@ -949,6 +949,20 @@
   - R-550
   milestone: M6
   note: "R-550 (RQ-341 (a)), J1: a definition requirement (R-72) closed by TASK-M6-35, the task that needs it; written into principia_deep_zoom.md §2 as \"The latent Jacobian\". Physics review is required."
+- id: REQ-DEC-050
+  area: DEC
+  statement: "Every atan2 a GPU stage reaches whose second operand can be a zero while its first is not must take that zero as +0, by a select on the operand against 0, before atan2 (after R-437's select where both operands can be 0): Metal's atan2 at its default math mode gives atan2(y, −0) the opposite sign of π/2 to IEEE's, which a CPU never shows (pitfalls §11). The CPU's values must stay unchanged, bit for bit. Since a fast-math compiler may fold any form of the clearing, select(x == 0, 0, x) included, each such site must be guarded by a cross-backend test of its −0 case that fails without the select."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: "11. A SIGNED ZERO THE CPU IGNORES AND A GPU READS — `atan2(y, −0)`"
+  - file: docs/notes/principia_gpu_determinism_note.md
+    section: The discipline (each rule = one measured failure)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine --features controls --test canon_gpu --test encode_gpu --test decode_stage_gpu --test decode_cross_backend, on the GPU (Metal and lavapipe): canonicaliser_phi_signed_zero (C's recorded φ at ρ_x = −0, ρ_y ≠ 0), encode_beta_signed_zero (β at λ̃_x = −0, λ̃_y ≠ 0) and decode_stage_rho_angle_signed_zero (the descriptor's rho_angle at ρ · λ = −0, ρ × λ ≠ 0), each ±π/2 on the first operand's side on CPU-f64, CPU-f32 and GPU-f32 within 4 f32 eps of π/2, with a test-side assertion that each state reaches its −0 case; decode_cross_backend_continuous (the shape sphere's inverse at p = −0, its pole-row and L⁻ pixels); controls: Metal's atan2 modelled on the CPU (atan(y/x), turned by π only where x < 0) without the select fails each of the three; and cargo test -p kernel canon_rotation_angle: φ is IEEE's atan2 bit for bit on the CPU, ±π/2 at either zero ρ_x, +0 at the pole, its control the same model failing at ρ_x = −0"
+  rulings: []
+  milestone: M2
+  note: "Code review 5640125368 of PR #288, C1, and physics review 5640193616, P1 (applied per R-369, the orchestrator's decision): the rule pitfalls §11 records, found by TASK-M2-43 (commit 7a600c41) and closed by it. Each test failed on Metal before its select (1.68e7 f32 eps of π/2)."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
