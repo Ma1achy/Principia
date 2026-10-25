@@ -279,8 +279,9 @@ enum Stand {
 /// rounding-level criterion `step_reversal_tol` and its domain's three edges, `step_reversal_edge_f64`,
 /// `step_reversal_edge_f32` and `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate,
 /// citing REQ-VAL-191; and the `N_sub` threshold table's maximum length `nsub_table_max`, proposed by TASK-M3-03 and
-/// provisional until the M3 gate, citing REQ-INT-094 (R-502).
-const TABLE: [(&str, Stand); 31] = [
+/// provisional until the M3 gate, citing REQ-INT-094 (R-502); and the literature import's tolerance
+/// `literature_import_tol`, proposed by TASK-M2-20 and provisional until the M2 gate, citing REQ-VAL-120 (R-592).
+const TABLE: [(&str, Stand); 32] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -302,6 +303,7 @@ const TABLE: [(&str, Stand); 31] = [
     ("eps_phys", Stand::Until("M2", "REQ-ENC-024")),
     ("decode_sanity", Stand::Until("M2", "REQ-ENC-027")),
     ("zero_class", Stand::Until("M2", "REQ-ENC-037")),
+    ("literature_import_tol", Stand::Until("M2", "REQ-VAL-120")),
     ("burrau_nu_half_tol", Stand::Until("M2", "REQ-VAL-118")),
     ("burrau_theta_min", Stand::Until("M2", "REQ-CHART-045")),
     ("burrau_theta_max", Stand::Until("M2", "REQ-CHART-045")),
