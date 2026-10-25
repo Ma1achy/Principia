@@ -23,14 +23,21 @@ tests at the release profile; the fault is reported upstream; the pin moves to a
 ## Deliverables
 - The host-target rustflags (`.cargo/config.toml` or the build's equivalent) carrying `-Zmir-enable-passes=-GVN`,
   never reaching the rust-gpu SPIR-V build.
-- RQ-299's standalone reproducer as a test, and a check that the SPIR-V build's flags carry no `-Zmir-enable-passes`.
+- RQ-299's standalone reproducer as a test, and a check that the workspace adds nothing to the SPIR-V build: the flag
+  only under `[target.'cfg(not(target_arch = "spirv"))']`, and the SPIR-V build's rustflags exactly spirv-builder's
+  own, its own `-Zmir-enable-passes=-GVN` among them (applied per R-369, the orchestrator's decision on PR #291).
+  *Was:* "a check that the SPIR-V build's flags carry no `-Zmir-enable-passes`."
 - A CI job that runs the native tests at the release profile.
 - The upstream report drafted in the PR (the reproducer, the toolchain table, the pass named).
 
 ## Acceptance tests
 - `cargo test -p kernel --release --test canon` — `stage_canon_native` passes; the reproducer prints 0.5 at opt-level
-  1, 2 and 3 with the workspace's host flags; control: on the pin without the flag it prints −0.5; the SPIR-V build's
-  flags carry no `-Zmir-enable-passes` (REQ-TOOL-188).
+  1, 2 and 3 with the workspace's host flags; control: on the pin without the flag it prints −0.5 (REQ-TOOL-188).
+  *Was:* "…; the SPIR-V build's flags carry no `-Zmir-enable-passes` (REQ-TOOL-188)."
+- `cargo xtask build-kernel`, then `cargo test -p xtask --test build_kernel` — the workspace adds nothing to the SPIR-V
+  build: `.cargo/config.toml` carries the flag only under `[target.'cfg(not(target_arch = "spirv"))']`, and the
+  kernel's SPIR-V build's rustflags, as cargo's fingerprint records them, are exactly spirv-builder's own
+  (REQ-TOOL-188; applied per R-369, the orchestrator's decision on PR #291).
 - CI log on the PR — the release-profile job green; a `measure/` run (R-272) shows it failing `stage_canon_native`
   with the flag removed (REQ-TOOL-189).
 
@@ -41,3 +48,26 @@ tests at the release profile; the fault is reported upstream; the pin moves to a
   physics.
 - The pin's move, R-547's "then (a)", is a toolchain change through `rust-toolchain.toml` in its own PR when a fixed
   nightly that `rustc_codegen_spirv` builds against exists (R-414); it drops the flag.
+- Reproducer (transcribed from RQ-299, R-547). Applied per R-369: RQ-299's reproducer and measurement table are
+  transcribed from `docs/archive/review_queue/M0.md` § RQ-299 into this task file as test data (the orchestrator read
+  the archive; this task file is the citation). The reproducer, verbatim:
+
+  ```rust
+  fn main() {
+      let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
+      let flip = |mut x: [[f32; 2]; 3]| { for v in x.iter_mut() { v[1] = -v[1]; } x };
+      let pair = |mut x: [[f32; 2]; 3]| { x[1] = x[0]; x };
+      let s = [flip(plain), pair(flip(plain))];
+      println!("{} (want 0.5)", s[1][0][1]);
+  }
+  ```
+
+  Measured (`rustc +<toolchain> -C opt-level=<n>`): nightly-2026-04-11 (the pin): opt-level 0 → 0.5, 1/2/3 → −0.5;
+  stable 1.99.0 → 0.5 at every level. On the pin, `-Zmir-opt-level=0` or `-Zmir-enable-passes=-GVN` at opt-level 1
+  gives 0.5, and opt-level 0 with `-Zmir-opt-level=2` gives −0.5 (the fault is MIR GVN, not LLVM). Close variants pass
+  (`#[inline(always)]` fns; without the first `flip(plain)`; `pair(plain)` in its place; a two-element i32 array), so
+  the trigger is uncharacterised.
+- Applied per R-369 (the orchestrator's decision on PR #291): `ci-release` runs as a release nextest archive built
+  once in `ci-release-archive` and 2 shards (`--partition hash:k/2`), so each job stays within R-325's ~10.5 min;
+  REQ-SYS-078's verify allows one archive job per build profile. qa updates `xtask/tests/qa_TASK-M0-52.rs`'s
+  `check_archive` under the exception R-325 forces (R-290).

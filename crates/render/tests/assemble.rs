@@ -1004,7 +1004,12 @@ fn hlsl_loads(source: &str, layout: &[(String, u32, u32)]) -> Loads {
 }
 
 fn spirv(module: &Module, info: &ModuleInfo) -> Vec<u32> {
-    naga::back::spv::write_vec(module, info, &Default::default(), None)
+    // naga's default options emit the debug names (`OpName`) only under `debug_assertions`, and the loads below are
+    // found through them (`simstate_buffer`, `word_buffer`), so the names are asked for at every profile: at the
+    // release profile (CI's `ci-release`, R-547) the default SPIR-V has none, and no load is found.
+    let mut options = naga::back::spv::Options::default();
+    options.flags |= naga::back::spv::WriterFlags::DEBUG;
+    naga::back::spv::write_vec(module, info, &options, None)
         .unwrap_or_else(|e| panic!("SPIR-V: {e}"))
 }
 
