@@ -9,11 +9,16 @@
 //!
 //! None of it reaches the kernel (Part 4, "What the GPU knows"): the directions are read from the shared CPU decode
 //! (`kernel::decode`) and the selected links, and a gesture along one is an edit of `z₀` or the basis.
+//!
+//! **The active values** (chart_reference §0.1; R-481 G4; REQ-DEC-048): the named directions read the mass link's
+//! inverse and the momentum links' log-dets, so each has a form at the tunable parameters `p`
+//! ([`mass_away_from_burrau_params`], [`energy_at_fixed_lz_params`], [`morph_params`], [`library_params`]) that reads
+//! the active `μ_max` and `q_max`; the forms without them are these at `LinkParams::DEFAULT`.
 
 use kernel::decode::latent::Latent as Controls;
 use kernel::decode::{self, invariant};
 use kernel::generated::constants::ChartConstants;
-use kernel::generated::links::{Link, Selection};
+use kernel::generated::links::{Link, LinkParams, Selection};
 
 use super::{axpy, dot, frame, norm, off_plane, unit, unit_of, BasisVector, NavError};
 use crate::contract::sim_config::{Latent, Plane, LATENT_DIM};
@@ -92,8 +97,16 @@ fn named_unit(v: &Latent, size: f64, zero: Unavailable) -> Result<Latent, Unavai
 /// latent line from the centre's mass controls (the Burrau logits at a Burrau centre) to equal masses. Unavailable
 /// where the centre's mass controls are `z_eq`.
 pub fn mass_away_from_burrau<S: Selection>(z0: &Latent) -> Result<Latent, Unavailable> {
+    mass_away_from_burrau_params::<S>(z0, &LinkParams::DEFAULT)
+}
+
+/// [`mass_away_from_burrau`] at the tunable parameters `p`: `z_eq` the mass link's inverse at the active `μ_max`.
+pub fn mass_away_from_burrau_params<S: Selection>(
+    z0: &Latent,
+    p: &LinkParams<f64>,
+) -> Result<Latent, Unavailable> {
     let third = 1.0 / 3.0;
-    let z_eq = <S::MassLink as Link<2, 3>>::inverse([third; 3]);
+    let z_eq = <S::MassLink as Link<2, 3>>::inverse_at([third; 3], p);
     let mut d = [0.0; LATENT_DIM];
     d[6] = z_eq[0] - z0[6];
     d[7] = z_eq[1] - z0[7];
@@ -106,7 +119,16 @@ pub fn mass_away_from_burrau<S: Selection>(z0: &Latent) -> Result<Latent, Unavai
 /// pulled back through each momentum link's derivative `exp(log_det)`, normalised. Unavailable where a derivative
 /// underflows to 0.
 pub fn energy_at_fixed_lz<S: Selection>(z0: &Latent) -> Result<Latent, Unavailable> {
-    let decoded = decode::decode::<S, f64>(&Controls::new(*z0));
+    energy_at_fixed_lz_params::<S>(z0, &LinkParams::DEFAULT)
+}
+
+/// [`energy_at_fixed_lz`] at the tunable parameters `params`: the centre decoded, and each momentum link's derivative, at the
+/// active `μ_max` and `q_max`.
+pub fn energy_at_fixed_lz_params<S: Selection>(
+    z0: &Latent,
+    params: &LinkParams<f64>,
+) -> Result<Latent, Unavailable> {
+    let decoded = decode::decode_at::<S, f64>(&Controls::new(*z0), params);
     let (masses, config) = (&decoded.masses, &decoded.config);
     let (m, r, p) = (masses.m, config.r, decoded.momentum.p);
     let v: [[f64; 2]; 3] = std::array::from_fn(|i| [p[i][0] / m[i], p[i][1] / m[i]]);
@@ -121,10 +143,10 @@ pub fn energy_at_fixed_lz<S: Selection>(z0: &Latent) -> Result<Latent, Unavailab
     let jacobi = |c: usize| (m[0] * dp[1][c] - m[1] * dp[0][c]) / masses.m01;
     let dq = [jacobi(0), jacobi(1), dp[2][0], dp[2][1]];
     let slopes = [
-        <S::Q0Link as Link<1, 1>>::log_det([z0[2]]).exp(),
-        <S::Q1Link as Link<1, 1>>::log_det([z0[3]]).exp(),
-        <S::Q2Link as Link<1, 1>>::log_det([z0[4]]).exp(),
-        <S::Q3Link as Link<1, 1>>::log_det([z0[5]]).exp(),
+        <S::Q0Link as Link<1, 1>>::log_det_at([z0[2]], params).exp(),
+        <S::Q1Link as Link<1, 1>>::log_det_at([z0[3]], params).exp(),
+        <S::Q2Link as Link<1, 1>>::log_det_at([z0[4]], params).exp(),
+        <S::Q3Link as Link<1, 1>>::log_det_at([z0[5]], params).exp(),
     ];
     if slopes.contains(&0.0) {
         return Err(Unavailable::SaturatedMomentum);
@@ -183,10 +205,19 @@ pub fn morph_source(plane: &Plane) -> Result<BasisVector, NavError> {
 /// vectors"; chart_reference §4.6): its source [`morph_source`], its target the named direction `into` names with its
 /// component in the plane projected out, normalised, so a tilt along it leaves the plane and keeps `z(½,½) = z₀`.
 pub fn morph<S: Selection>(plane: &Plane, into: MorphInto) -> Result<Morph, NavError> {
+    morph_params::<S>(plane, into, &LinkParams::DEFAULT)
+}
+
+/// [`morph`] at the tunable parameters `p`: its target the named direction at the active values.
+pub fn morph_params<S: Selection>(
+    plane: &Plane,
+    into: MorphInto,
+    p: &LinkParams<f64>,
+) -> Result<Morph, NavError> {
     let source = morph_source(plane)?;
     let direction = match into {
-        MorphInto::Mass => mass_away_from_burrau::<S>(&plane.z0),
-        MorphInto::Momentum => energy_at_fixed_lz::<S>(&plane.z0),
+        MorphInto::Mass => mass_away_from_burrau_params::<S>(&plane.z0, p),
+        MorphInto::Momentum => energy_at_fixed_lz_params::<S>(&plane.z0, p),
     }
     .map_err(NavError::Unavailable)?;
     let off = off_plane(plane, &direction)?;
@@ -212,11 +243,16 @@ pub struct Library {
 /// The library at `plane`'s centre under the link selection `S`; call it again when the centre moves, as the named
 /// directions are recomputed with it.
 pub fn library<S: Selection>(plane: &Plane) -> Library {
+    library_params::<S>(plane, &LinkParams::DEFAULT)
+}
+
+/// [`library`] at the tunable parameters `p`: each named direction at the active values.
+pub fn library_params<S: Selection>(plane: &Plane, p: &LinkParams<f64>) -> Library {
     Library {
         hidden: hidden(plane),
-        mass: mass_away_from_burrau::<S>(&plane.z0),
-        energy: energy_at_fixed_lz::<S>(&plane.z0),
-        morph_mass: morph::<S>(plane, MorphInto::Mass),
-        morph_momentum: morph::<S>(plane, MorphInto::Momentum),
+        mass: mass_away_from_burrau_params::<S>(&plane.z0, p),
+        energy: energy_at_fixed_lz_params::<S>(&plane.z0, p),
+        morph_mass: morph_params::<S>(plane, MorphInto::Mass, p),
+        morph_momentum: morph_params::<S>(plane, MorphInto::Momentum, p),
     }
 }

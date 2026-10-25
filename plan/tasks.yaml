@@ -634,7 +634,7 @@
   title: "The lock: the anchor, the excursion δ, re-based sliders and SimConfig lock fields"
   depends_on: [TASK-M2-06, TASK-M2-19, TASK-M2-22]
   needs: [REQ-GUI-001]
-  requirements: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-SYS-012, REQ-CHART-010, REQ-CHART-007]
+  requirements: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007, REQ-SYS-012, REQ-CHART-010, REQ-CHART-007, REQ-CHART-089]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9]
 - id: TASK-M2-24

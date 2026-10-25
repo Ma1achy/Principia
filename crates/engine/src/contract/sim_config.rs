@@ -71,8 +71,10 @@ pub struct Slice {}
 
 /// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69): the lock is CPU-side chart
 /// construction (chart_decoder_contract Part 4, "The lock"). The flag and the anchor are added for the dev GUI's lock
-/// (R-390, "Contract fields"); the excursion is read as `z₀ − z_locked`, the anchor stored, not re-derived, and
-/// TASK-M2-23 keeps the lock's requirements.
+/// (R-390, "Contract fields"). The excursion is held by the stored pair, `δ = z₀ − z_locked` ([`Lock::excursion`]),
+/// the anchor stored, not re-derived (chart_decoder_contract Part 4, "The lock's construction, defined"; R-72): a slice
+/// step or a slider move edits `z₀` alone, snap-back sets `z₀` to the anchor bit for bit, and `δ` has no field of its
+/// own that could disagree with `z₀`. TASK-M2-23 keeps the lock's requirements (`crate::lock`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Lock {
@@ -80,6 +82,14 @@ pub struct Lock {
     pub locked: bool,
     /// The anchor `z_locked`; meaningful while `locked`.
     pub z_locked: Latent,
+}
+
+impl Lock {
+    /// The excursion `δ = z₀ − z_locked` of the centre `z0` from the anchor while locked; `None` while free.
+    pub fn excursion(&self, z0: &Latent) -> Option<Latent> {
+        self.locked
+            .then(|| std::array::from_fn(|i| z0[i] - self.z_locked[i]))
+    }
 }
 
 /// Link ids (gui_state_contract §2).

@@ -87,11 +87,17 @@
 //! decode the seed rule never degenerates (`crate::decode::invariant`'s note: the largest norm is at least ½), so an
 //! invariant chart's frozen configuration never gives it; a configuration from elsewhere takes the rule on its computed
 //! norms ([`SeedRule::ByNorms`], the decoder's `construct_by_norms`), where it can.
+//!
+//! **The active values** (chart_reference §0.1; chart_decoder_contract § "Tunable parameters": the encode's clamps and
+//! its layer-1 range check read the active value; R-481 G4; REQ-DEC-048). Every path here has a form at the tunable
+//! parameters `p` ([`encode_into_within_params`], [`Residual::controls_at`], [`fibre_at_params`], [`fibre_params`]):
+//! `E(x)`, the chart's decode, the mass link's inverse and the momentum clamps, so layer 1's `lookup_clamped` bits, all
+//! at the active `μ_max` and `q_max`. The forms without them are these at `LinkParams::DEFAULT`.
 
 use spirv_std::num_traits::{Float, FloatConst};
 
 use super::curve::CurveEncoded;
-use super::{encode, Encoded, SimplexClamp};
+use super::{encode_at, Encoded, SimplexClamp};
 use crate::canon;
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
@@ -100,7 +106,7 @@ use crate::decode::config::{self, Config};
 use crate::decode::invariant::{construct, construct_by_norms, infeasible, Outcome};
 use crate::decode::mass::{self, Masses};
 use crate::decode::{descriptor, Ic};
-use crate::generated::links::{Link, LinkReal, Selection};
+use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::shape::shape_vec;
 
@@ -232,11 +238,36 @@ where
     C: ByKind,
     N: Fn(&Ic<R>, &Ic<R>) -> R,
 {
-    let encoded = encode::<S, R>(ic);
+    encode_into_within_params::<S, R, C, N>(chart, ic, norm, eps_phys, tol, &LinkParams::DEFAULT)
+}
+
+/// [`encode_into_within`] at the tunable parameters `p`, the active values (the module's note): `E(ic)` at them, its
+/// clamp bits layer 1's at the active `μ_max` and `q_max`, and the chart's decode at them
+/// ([`ChartDecode::decode_at_params`]).
+#[inline]
+pub fn encode_into_within_params<S, R, C, N>(
+    chart: &C,
+    ic: &Ic<R>,
+    norm: N,
+    eps_phys: R,
+    tol: R,
+    p: &LinkParams<R>,
+) -> ChartEncoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
+{
+    let encoded = encode_at::<S, R>(ic, p);
     let (coords, curve) = chart.coords_within::<S, R>(&encoded, tol);
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
-            let d = norm(&chart.section(&encoded), &chart.decode_at::<S, R>(u, v).ic);
+            let d = norm(
+                &chart.section(&encoded),
+                &chart.decode_at_params::<S, R>(u, v, p).ic,
+            );
             (
                 Some(d),
                 select(d <= eps_phys, Landing::Chart { u, v }, Landing::Latent),
@@ -397,11 +428,18 @@ pub trait Residual {
 
     /// The mass controls of [`Residual::masses`] under the selection `S`: the mass link's inverse, the forward axis's
     /// latent point and encode's alike. A mass that is not positive is guarded as the block inverse guards it
-    /// (`super::blocks::guard`).
+    /// (`super::blocks::guard`). [`Residual::controls_at`] at the defaults.
     #[inline]
     fn controls<S: Selection, R: LinkReal>(m0: R, held: [R; 3]) -> [R; 2] {
+        Self::controls_at::<S, R>(m0, held, &LinkParams::DEFAULT)
+    }
+
+    /// [`Residual::controls`] at the tunable parameters `p`: the mass link's inverse at the active `μ_max`, so the
+    /// decode at the same `p` gives the masses back (the module's note).
+    #[inline]
+    fn controls_at<S: Selection, R: LinkReal>(m0: R, held: [R; 3], p: &LinkParams<R>) -> [R; 2] {
         let m = super::blocks::guard(Self::masses(m0, held));
-        <S::MassLink as Link<2, 3>>::inverse(m)
+        <S::MassLink as Link<2, 3>>::inverse_at(m, p)
     }
 }
 
@@ -717,14 +755,40 @@ pub enum Lookup<R> {
 
 /// The fibre point of `(lz, k)`, `K* = k`, at `masses` and `config`, under `S` (the module's note): feasibility first,
 /// with `low` and `wide` the constraints named; then the construction, its seed by `rule`; then the free-momentum
-/// inverse of its `p`, in `z[2:6]`.
+/// inverse of its `p`, in `z[2:6]`. [`fibre_at_params`] at the defaults.
 #[inline]
 pub fn fibre_at<S, R>(
     masses: &Masses<R>,
     config: &Config<R>,
     rule: SeedRule<R>,
+    targets: (R, R),
+    constraints: (Constraint, Constraint),
+) -> Lookup<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal,
+{
+    fibre_at_params::<S, R>(
+        masses,
+        config,
+        rule,
+        targets,
+        constraints,
+        &LinkParams::DEFAULT,
+    )
+}
+
+/// [`fibre_at`] at the tunable parameters `params`: the free-momentum inverse and its clamp bits, layer 1, at the active
+/// `q_max`, so a constructed momentum past it is clamped and flagged (the module's note).
+#[inline]
+pub fn fibre_at_params<S, R>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    rule: SeedRule<R>,
     (lz, k): (R, R),
     (low, wide): (Constraint, Constraint),
+    params: &LinkParams<R>,
 ) -> Lookup<R>
 where
     S: Selection,
@@ -747,7 +811,7 @@ where
                 r: config.r,
                 p: c.p,
             };
-            let inverted = super::blocks::invert::<S, R>(&ic);
+            let inverted = super::blocks::invert_at::<S, R>(&ic, params);
             let mut z = [R::zero(); 8];
             // The momentum block by literal indices (gpu_determinism_note rule 5).
             z[2] = inverted.z[2];
@@ -771,7 +835,8 @@ where
 
 /// An entered `(L_z, y)` on the invariant chart `chart`, `y` its vertical value (`E` or `K`), under `S`: the chart's
 /// frozen masses and configuration decoded as the pixel's are, `K*` from `y` at their potential, then [`fibre_at`] with
-/// the pixel's seed, decided on the frozen `z_α`; the frozen controls fill the rest of `z`.
+/// the pixel's seed, decided on the frozen `z_α`; the frozen controls fill the rest of `z`. [`fibre_params`] at the
+/// defaults.
 #[inline]
 pub fn fibre<S, R, C>(chart: &C, lz: R, y: R) -> Lookup<R>
 where
@@ -780,8 +845,21 @@ where
     R: LinkReal + PayloadReal + From<C::Param>,
     C: InvariantAxis,
 {
+    fibre_params::<S, R, C>(chart, lz, y, &LinkParams::DEFAULT)
+}
+
+/// [`fibre`] at the tunable parameters `p`: the frozen masses at the active `μ_max`, as the pixel's decode at `p` gives
+/// them, and [`fibre_at_params`] at `p`.
+#[inline]
+pub fn fibre_params<S, R, C>(chart: &C, lz: R, y: R, p: &LinkParams<R>) -> Lookup<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: InvariantAxis,
+{
     let frozen = chart.invariant().frozen::<R>().z;
-    let masses = mass::decode::<S, R>([frozen[6], frozen[7]]);
+    let masses = mass::decode_at::<S, R>([frozen[6], frozen[7]], p);
     let z_cfg = [frozen[0], frozen[1]];
     let config = config::decode::<S, R>(z_cfg, &masses);
     let at_rest = Ic {
@@ -791,7 +869,7 @@ where
     };
     let k = C::kinetic(y, descriptor::potential(&at_rest));
     let rule = SeedRule::Decoded { z_alpha: z_cfg[0] };
-    match fibre_at::<S, R>(&masses, &config, rule, (lz, k), (C::LOW, C::WIDE)) {
+    match fibre_at_params::<S, R>(&masses, &config, rule, (lz, k), (C::LOW, C::WIDE), p) {
         Lookup::Encoded {
             z,
             lz,

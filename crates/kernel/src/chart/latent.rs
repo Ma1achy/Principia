@@ -27,7 +27,9 @@
 use spirv_std::num_traits::Float;
 
 use super::{Chart, ChartOut, ValidationResult};
-use crate::decode;
+use crate::decode::{self, Decoded};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
+use crate::payload::PayloadReal;
 
 /// The latent chart: slice centre `z0` and the plane's directions `q1`, `q2`, each in the decoder's block layout.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -96,5 +98,26 @@ impl<P: Copy> Chart for Latent<P> {
     /// shared decoder's construction (the module's header).
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid
+    }
+
+    /// [`Chart::decode_params`] at the defaults.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        self.decode_params::<S, R>(u, v, &LinkParams::DEFAULT)
+    }
+
+    /// The shared decoder on `Φ`'s `z`, the mass and momentum links at the tunable parameters `p` (`crate::chart`'s
+    /// note; R-481 G4).
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode::decode_at::<S, R>(&self.map(u, v).z, p)
     }
 }

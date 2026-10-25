@@ -464,6 +464,61 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 
 **Nonlinear charts:** the anchor is preserved by re-centring `Φ` on `z_locked` via the inverse-encode path (two options: CPU replicate-and-evaluate, or per-pixel readback). Feasibility applies: an excursion or tilt can carry the neighbourhood outside the feasible region of an invariant chart — those pixels are tagged, never dropped, exactly as for any chart.
 
+**The lock's construction, defined** (R-72; REQ-CHART-089; TASK-M2-23):
+
+- **The excursion is held by the stored pair.** `z₀` holds the centre and `z_locked` the anchor, and `δ = z₀ − z_locked`:
+  a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back is `z₀ ← z_locked`, bit for bit; and
+  `δ` has no field of its own that could disagree with `z₀`. Unlock clears the flag and the anchor and leaves
+  `(z₀, q₁, q₂)` as it stands. A basis edit (a tilt, a zoom, a chart-mode switch) turns about the pin
+  (render_gui_spec §G4; R-451, "Locked"; R-466 K5): at `δ = 0` the pin is the centre and the edit keeps `z₀`; where `δ`
+  has an in-plane part the pin is off-centre, and the edit's `SetField` on `z₀` moves `z₀`, and with it `δ`.
+- **The window on a nonlinear chart.** The view is a window on the chart's own parameters,
+  `(u, v) = c + ((2s−1)·h_u, (2t−1)·h_v)`, `c` its centre and `h` its half-widths: Part 3's placement of the addressing
+  space, applied to the chart's coordinates, the window pan and zoom move past the square (R-537) and whose offsets a
+  tilt reads (R-473).
+- **Setting the lock on a nonlinear chart.** `Φ` and `D` are replayed on the CPU at the clicked pixel's `(u, v)`, which
+  must pass `validate` (R-469); the state they decode goes through lookup's ladder (inverse_encode_contract §
+  "Chart-aware validation"), the inverse-encode path, and a lock the ladder refuses sets nothing. The ladder's `z` gives
+  `z_locked` the controls the chart's axes set; every other control of `z_locked` is the clicked pixel's own frozen
+  control, bit for bit, as the invariant charts' fibre point keeps them. The chart's hidden coordinates are `z₀`'s
+  (`principia_chart_reference.md` §2.1), so the chart rebuilt on `z₀ = z_locked` freezes what it froze before. The
+  window is re-centred, `c ← (u, v)`, so the rebuilt chart's centre pixel decodes the clicked state bit for bit. Where
+  the ladder clamps none of the controls the chart's axes set, `z_locked` decodes the clicked state within lookup's
+  `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
+  decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
+  clicked state bit for bit. The edits are the `SetField` on `z₀ = z_locked` and the lock group's:
+  one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
+  (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
+  window is chart construction, held in `SimConfig` (R-69) among "chart id and params"; `SimConfig`'s chart group has no
+  fields yet (R-133), and TASK-M2-21 fills it, the ViewState record that must restore any chart exactly being
+  `SimConfig`'s serialisation (REQ-SYS-011; R-483 H2). Until then the lock returns the re-centred window beside its
+  edits, and undoing a nonlinear lock restores `z₀` and the lock group but not the window.
+- **Lock validation on an invariant chart.** Each pixel of the locked view is read as an entered pair `(L_z, y)`, `y`
+  the chart's vertical value, `E` or `K`, at its own configuration and masses: the chart frozen at the pixel's hidden
+  coordinates, which a tilt or an excursion moves. A pair that fails the chart's layer 2 there is tagged with the
+  constraint it failed and its nearest feasible point (inverse_encode_contract § "The nearest valid point"), or with
+  none where that projection would change `L_z`'s class; no pixel is dropped. A pixel whose construction finds no seed
+  (R-82) is tagged `DEGENERATE`, its label, never dropped; it is not counted infeasible and is offered no re-centre.
+  Where any pixel is tagged infeasible, lock validation gives one notice for the view, never one per tagged pixel
+  (R-593). It offers the switch to the latent chart, which has no layer-2 constraint, and a re-centre only where the
+  lock's own centre has gone infeasible: the view's centre pixel, `(s, t) = (½, ½)`, whose IC is `z₀`, read as its
+  entered pair like any other pixel, tagged infeasible with a nearest feasible point. The re-centre is a lock at that
+  point, the one "nearest feasible point" (inverse_encode_contract § "Lock validation"; REQ-CHART-010). Where the centre
+  is feasible, as after a tilt alone at `δ = 0`, the centre being the anchor, or is tagged with no nearest point, or
+  `DEGENERATE`, only the switch is offered. The other tagged pixels' nearest points stay in their tags and are not
+  offered. Where no pixel is tagged infeasible there is no notice. *Was:* "the lock offers the re-centre to each tagged
+  pixel's nearest feasible point, a lock there, and the switch to the latent chart … which point that is for a view of
+  many tagged pixels is open (RQ-572)."
+- **A curve's tangent at the lock.** The tangent tilt reads `γ′(ν₀)` pulled back to the latent controls through the
+  selected links, at the embed's controls `z(ν₀)`: `dz_α = dα/f_α′(z_α)` and `dz_β = dβ/f_β′(z_β)`,
+  `f′ = exp(log_det)`; the momenta's 0, the curve being a rest start; and the mass controls' the derivative of the mass
+  link's inverse along `(dμ₁, dμ₂)`, `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`, by a central difference of step
+  `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`, `ε` f64's machine epsilon, its error of order `ε^{2/3}`, the registry giving no mass
+  link's Jacobian. Without a lock the tangent tilt is refused. It is refused too, naming the controls, where a link's
+  inverse clamps (inverse_encode_contract Part 3's clamp test, `lookup_clamped`'s): `α`'s or `β`'s at `z(ν₀)`, or the
+  mass link's at `μ` or at either difference point `μ ± h·dμ`. A clamped control's map is flat there, so its pullback
+  is not `γ′(ν₀)`'s, as `d_E` is unavailable where an `f_k′` underflows to 0 (§ "Directions are axis kinds").
+
 ### What the GPU knows about all of this: nothing
 
 The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock (chart construction, R-69), the `δ` memory, the ghost marks, the direction library — none of it reaches the kernel. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part. A curved chart's tilt (R-473) is a chart parameter like any other: its rotation `R`, its targets' indices and their scales, computed on the CPU from the stored angles and the map and sent as part of "chart id + params".
