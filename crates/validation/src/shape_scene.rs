@@ -1,32 +1,36 @@
-//! The golden harness's shape-sphere scenes (`shape-sphere` and `shape-sphere-projection`; R-113; TASK-M2-28): the
-//! shape-sphere chart drawn through a colour occupant of its own ([`WGSL`]), one sample per display tile, rendered by
-//! `golden_harness` as every `golden_scene` scene is, through the render harness. [`ShapeScene::expected`] is its CPU
-//! twin, from the read side's `n` of each sample (`Scene::read`).
+//! The golden harness's shape-sphere scenes (`shape-sphere` and `shape-sphere-projection`; R-113, R-544; TASK-M2-28):
+//! the shape-sphere chart drawn through a colour occupant of its own ([`WGSL`]), one sample per display tile, rendered
+//! by `golden_harness` as every `golden_scene` scene is, through the render harness. [`ShapeScene::expected`] is its
+//! CPU twin, from the read side's `n` of each sample (`Scene::read`).
 //!
 //! **What a sample holds.** Each display tile shows one chart sample (chart_reference §3.3): its display point through
 //! the projection ([`Projection::chart_point`]) gives the chart point `(s, t)`, and the sample is the one whose chart
-//! cell, of [`CHART`]'s grid over `[0,1]²`, holds it, decoded at that cell's centre, with no interpolation. The sample
-//! holds `Φ`'s own configuration there (`Decoded::config`, before `C` folds the lower hemisphere onto the upper, R-141),
-//! with the chart's masses, so the read side's `n` is the chart's point. A display tile showing no chart point, outside
-//! Hammer's ellipse, is not a system: the chart's classification marks it (`ctx.validity.forbidden`) and the occupant
-//! draws the debug views' hatch there (R-470: a debug view draws such a pixel with the hatch, never a palette colour).
+//! cell, of the scene's chart grid over `[0,1]²`, holds it, decoded at that cell's centre, with no interpolation. The
+//! sample holds the decode's own state, `Decoded::ic`, the system whose signed `n̂` is the chart's point (R-544: `C`'s
+//! mirror step not taken, nothing folded), with its masses, so the read side's `n` is the chart's point in either
+//! hemisphere. A display tile showing no chart point, outside Hammer's ellipse, is not a system: the chart's
+//! classification marks it (`ctx.validity.forbidden`) and the occupant draws the debug views' hatch there (R-470: a debug
+//! view draws such a pixel with the hatch, never a palette colour).
 //!
-//! **What the occupant draws** ([`WGSL`]): the quadrant of `n`'s azimuth, the signs of `n.x` and `n.y`, as Okabe–Ito
-//! classes 1 to 4 (`dbg_cat`); where the chart is n-to-1 over its φ hemispheres (`u_fold` 1, R-141), the redundant
-//! hemisphere, `n.z < 0`, whose systems the `w ≥ 0` hemisphere holds, carries the redundancy flag, black diagonal
-//! stripes 2 px wide. The chart's label ([`ShapeSphere::label`]) says the same in words.
+//! **What the occupant draws** ([`WGSL`]): the octant of `n`, the signs of `n.x`, `n.y` and `n.z`, as Okabe–Ito classes
+//! 1 to 8 (`dbg_cat`): the quadrant of its azimuth, classes 1 to 4 above the equator and 5 to 8 below it, so both
+//! hemispheres are drawn and told apart, and nothing marks either as redundant (R-544; REQ-CHART-002). The chart's
+//! label ([`ShapeSphere::label`]) names no hemisphere.
 //!
 //! **The scenes** ([`NAMES`]):
-//! - `shape_equirectangular`: the spherical map in the default projection, both hemispheres drawn and the redundancy
-//!   flagged: the `shape-sphere` suite's `both_flagged` and the `shape-sphere-projection` suite's `equirectangular`.
-//! - `shape_equal_area`: the same chart under Hammer's equal-area projection, a display remap, the ellipse's outside
-//!   hatched: `shape-sphere-projection`'s `equal_area`.
-//! - `shape_one_hemisphere`: the exponential map about a point near `L⁺` whose cap lies in `w ≥ 0`, bijective, one
-//!   labelled hemisphere, no flag: `shape-sphere`'s `one_hemisphere`.
+//! - `shape_spherical`: the spherical map in the default projection, the whole sphere, pole to pole: the
+//!   `shape-sphere` suite's `spherical` and the `shape-sphere-projection` suite's `equirectangular`.
+//! - `shape_equal_area`: the same chart under Hammer's equal-area projection, a display remap, both hemispheres drawn,
+//!   the ellipse's outside hatched: `shape-sphere-projection`'s `equal_area`.
+//! - `shape_exponential_straddling`: the exponential map about a point of the equator whose cap straddles it, both
+//!   halves drawn, each pixel its own system: `shape-sphere`'s `exponential_straddling`.
+//! - The controls, each rendered against `spherical`'s reference by a case that expects to fail:
+//!   `shape_control_one_hemisphere`, one hemisphere drawn across the whole square (R-412's withdrawn remap,
+//!   `φ = (π/2)·(1 − t)`), and `shape_control_flagged`, the whole sphere with the lower half striped as redundant
+//!   (R-141's withdrawn flag, black diagonal stripes 2 px wide where `n.z < 0`; `u_flag` 1, which no chart scene sets).
 
 use kernel::chart::shape_sphere::{Projection, ShapeMap, ShapeSphere};
 use kernel::chart::Chart;
-use kernel::chart::SystemImage;
 use kernel::generated::links::Defaults;
 use render::present::{self, Rgb};
 use render::raster::Grid;
@@ -35,27 +39,42 @@ use crate::golden_scene::{Colouring, Scene};
 use engine::synthetic::Synthetic;
 
 /// The scenes, by name.
-pub const NAMES: [&str; 3] = [
-    "shape_equirectangular",
+pub const NAMES: [&str; 5] = [
+    "shape_spherical",
     "shape_equal_area",
-    "shape_one_hemisphere",
+    "shape_exponential_straddling",
+    "shape_control_one_hemisphere",
+    "shape_control_flagged",
 ];
 
-/// The colour occupant: the quadrant of `n`'s azimuth, the redundancy flag, and the hatch where no chart point shows.
+/// The colour occupant: the octant of `n`, the control's redundancy stripes, and the hatch where no chart point shows.
 pub const WGSL: &str = include_str!("shape_scene.wgsl");
 
 /// The spherical map's chart grid, `[θ cells, φ cells]` over `[0,1]²`.
 pub const CHART: [u32; 2] = [32, 16];
 
-/// The spherical map's display grid, in tiles, and each tile's side in pixels: 128 × 64 px, two display tiles to a
-/// chart cell along each axis under the default projection.
+/// The spherical map's display grid, in tiles: 128 × 64 px, two display tiles to a chart cell along each axis under
+/// the default projection.
 pub const DISPLAY: [u32; 2] = [64, 32];
 
-/// The exponential map's grid, chart and display alike, and its tiles' side.
+/// The exponential map's grid, chart and display alike.
 pub const CAP_GRID: [u32; 2] = [32, 32];
 
 /// Every display tile's side in pixels.
 pub const TILE_PX: u32 = 2;
+
+/// How a scene draws its chart: the chart's own render, or one of the two controls.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Draw {
+    /// The chart's own render: the whole sphere, or the cap, each sample the chart's point.
+    Chart,
+    /// The one-hemisphere control: the chart point `(s, t)` drawn from `(s, (1 + t)/2)`, `φ`'s span remapped to end at
+    /// the equator (R-412, withdrawn by R-544).
+    OneHemisphere,
+    /// The flagged control: the chart's own samples, the lower half, `n.z < 0`, striped as redundant (R-141, withdrawn
+    /// by R-544).
+    Flagged,
+}
 
 /// A scene with the chart it draws.
 pub struct ShapeScene {
@@ -63,8 +82,10 @@ pub struct ShapeScene {
     pub scene: Scene,
     /// The chart drawn.
     pub chart: ShapeSphere<f64>,
-    /// Whether the redundancy flag is drawn: the chart n-to-1 over its φ hemispheres.
-    pub fold: bool,
+    /// The projection it is drawn through.
+    pub projection: Projection,
+    /// How it is drawn.
+    pub draw: Draw,
     /// Each sample's masses, as its `ICDescriptor` holds them: zero where the tile shows no chart point.
     pub masses: Vec<[f32; 3]>,
 }
@@ -84,17 +105,16 @@ pub fn spherical() -> ShapeSphere<f64> {
     }
 }
 
-/// The exponential map about the point at polar angle 0.3 from `L⁺` toward `+u`, `e₁ = ŷ`, `e₂` along the meridian
-/// toward `L⁺`, extent `s = 0.7`: its cap holds `L⁺` and lies in `w ≥ 0`, its farthest corner at polar angle
-/// `0.3 + 0.7√2 < π/2`.
-pub fn one_hemisphere() -> ShapeSphere<f64> {
-    let alpha: f64 = 0.3;
+/// The exponential map about `n₀ = x̂`, a point of the equator, `e₁ = ŷ`, `e₂ = ŵ`, extent `s = 1`: its cap straddles
+/// the equator, the top half of the square at `w > 0` and the bottom half at `w < 0`, and lies in `n.x > 0`, its
+/// farthest corner at `r = √2 < π/2`.
+pub fn straddling() -> ShapeSphere<f64> {
     ShapeSphere {
         map: ShapeMap::Exponential,
-        n0: [alpha.sin(), 0.0, alpha.cos()],
+        n0: [1.0, 0.0, 0.0],
         e1: [0.0, 1.0, 0.0],
-        e2: [-alpha.cos(), 0.0, alpha.sin()],
-        scale: 0.7,
+        e2: [0.0, 0.0, 1.0],
+        scale: 1.0,
         ..spherical()
     }
 }
@@ -111,13 +131,34 @@ pub fn cell_centre(c: f64, cells: u32) -> f64 {
     centre(k, cells)
 }
 
-/// `chart` over a `display` grid of tiles through `projection` onto a `cells` chart grid: each tile's sample the chart
-/// cell's holding its chart point, decoded at the cell's centre, or marked as no system where none shows.
+/// The chart point display tile `(col, row)` of a `display` grid shows through `projection` onto a `cells` chart grid,
+/// drawn as `draw` draws it: its display point's chart point, the chart cell holding it, that cell's centre; `None`
+/// where it shows none.
+pub fn shown(
+    projection: Projection,
+    draw: Draw,
+    display: [u32; 2],
+    cells: [u32; 2],
+    col: u32,
+    row: u32,
+) -> Option<[f64; 2]> {
+    let [s, t] = projection.chart_point(centre(col, display[0]), centre(row, display[1]))?;
+    let t = match draw {
+        Draw::OneHemisphere => (1.0 + t) / 2.0,
+        Draw::Chart | Draw::Flagged => t,
+    };
+    Some([cell_centre(s, cells[0]), cell_centre(t, cells[1])])
+}
+
+/// `chart` over a `display` grid of tiles through `projection` onto a `cells` chart grid, drawn as `draw` draws it:
+/// each tile's sample the decode's state at the chart point it shows ([`shown`]), or marked as no system where none
+/// shows.
 fn fill(
     chart: &ShapeSphere<f64>,
     display: [u32; 2],
     cells: [u32; 2],
     projection: Projection,
+    draw: Draw,
 ) -> Result<(Grid, Synthetic, Vec<[f32; 3]>), String> {
     let grid = Grid::new(display, 1, 0, TILE_PX)?;
     let mut set = Synthetic::flat(grid, 0);
@@ -125,16 +166,13 @@ fn fill(
     for row in 0..display[1] {
         for col in 0..display[0] {
             let i = row * display[0] + col;
-            let Some([s, t]) =
-                projection.chart_point(centre(col, display[0]), centre(row, display[1]))
-            else {
+            let Some([s, t]) = shown(projection, draw, display, cells, col, row) else {
                 set.set_forbidden(i, true);
                 continue;
             };
-            let (s, t) = (cell_centre(s, cells[0]), cell_centre(t, cells[1]));
             let d = chart.decode::<Defaults, f64>(s, t);
-            let r = d.config.r.map(|p| p.map(|c| c as f32));
-            let m = d.masses.m.map(|m| m as f32);
+            let r = d.ic.r.map(|p| p.map(|c| c as f32));
+            let m = d.ic.m.map(|m| m as f32);
             set.sample(i).r(r);
             let ic = set.ic(i);
             (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
@@ -152,25 +190,24 @@ pub fn scene(name: &str) -> Result<ShapeScene, String> {
             NAMES.join(", ")
         )
     })?;
-    let (chart, (grid, set, masses)) = match name {
-        "shape_equirectangular" => {
-            let c = spherical();
-            (c, fill(&c, DISPLAY, CHART, Projection::Equirectangular)?)
-        }
-        "shape_equal_area" => {
-            let c = spherical();
-            (c, fill(&c, DISPLAY, CHART, Projection::EqualArea)?)
-        }
-        _ => {
-            let c = one_hemisphere();
-            (
-                c,
-                fill(&c, CAP_GRID, CAP_GRID, Projection::Equirectangular)?,
-            )
-        }
+    let (chart, projection, draw) = match name {
+        "shape_spherical" => (spherical(), Projection::Equirectangular, Draw::Chart),
+        "shape_equal_area" => (spherical(), Projection::EqualArea, Draw::Chart),
+        "shape_exponential_straddling" => (straddling(), Projection::Equirectangular, Draw::Chart),
+        "shape_control_one_hemisphere" => (
+            spherical(),
+            Projection::Equirectangular,
+            Draw::OneHemisphere,
+        ),
+        _ => (spherical(), Projection::Equirectangular, Draw::Flagged),
     };
-    let fold = chart.system_image() == SystemImage::NToOne(2);
-    let params = vec![("u_fold".to_owned(), vec![f64::from(u8::from(fold))])];
+    let (display, cells) = match chart.map {
+        ShapeMap::Spherical => (DISPLAY, CHART),
+        ShapeMap::Exponential => (CAP_GRID, CAP_GRID),
+    };
+    let (grid, set, masses) = fill(&chart, display, cells, projection, draw)?;
+    let flag = draw == Draw::Flagged;
+    let params = vec![("u_flag".to_owned(), vec![f64::from(u8::from(flag))])];
     Ok(ShapeScene {
         scene: Scene {
             name,
@@ -179,15 +216,24 @@ pub fn scene(name: &str) -> Result<ShapeScene, String> {
             colouring: Colouring::Probe(WGSL.to_owned(), params),
         },
         chart,
-        fold,
+        projection,
+        draw,
         masses,
     })
 }
 
 impl ShapeScene {
-    /// The redundancy flag's stripe at the pixel `(x, y)`, from the top left: stripe `⌊(x + y)/2⌋` even.
+    /// The control's redundancy stripe at the pixel `(x, y)`, from the top left: stripe `⌊(x + y)/2⌋` even.
     pub fn stripe(x: u32, y: u32) -> bool {
         ((x + y) / 2).is_multiple_of(2)
+    }
+
+    /// The chart grid the scene samples, and its display grid.
+    pub fn grids(&self) -> ([u32; 2], [u32; 2]) {
+        match self.chart.map {
+            ShapeMap::Spherical => (CHART, DISPLAY),
+            ShapeMap::Exponential => (CAP_GRID, CAP_GRID),
+        }
     }
 
     /// Each sample's shape `n` as the read side derives it, with the sample's own masses ([`ShapeScene::masses`]):
@@ -198,11 +244,18 @@ impl ShapeScene {
             .collect()
     }
 
+    /// The occupant's class of the shape `n`: the quadrant of its azimuth, `[n.x < 0] + 2·[n.y < 0]`, plus 4 below the
+    /// equator, `n.z < 0`; 0 to 7.
+    pub fn class(n: [f32; 3]) -> u32 {
+        u32::from(n[0] < 0.0) + 2 * u32::from(n[1] < 0.0) + 4 * u32::from(n[2] < 0.0)
+    }
+
     /// The render's CPU twin: each pixel's linear RGB, rows from the top (the module's notes).
     pub fn expected(&self) -> Vec<Rgb> {
         let (width, height) = self.scene.size();
         let grid = self.scene.context.grid;
         let shapes = self.shapes();
+        let flag = self.draw == Draw::Flagged;
         let mut out = Vec::with_capacity((width * height) as usize);
         for y in 0..height {
             for x in 0..width {
@@ -212,11 +265,10 @@ impl ShapeScene {
                     present::debug_invalid(frag)
                 } else {
                     let n = shapes[i as usize];
-                    let q = u32::from(n[0] < 0.0) + 2 * u32::from(n[1] < 0.0);
-                    if self.fold && n[2] < 0.0 && Self::stripe(x, y) {
+                    if flag && n[2] < 0.0 && Self::stripe(x, y) {
                         [0.0; 3]
                     } else {
-                        present::dbg_cat(q + 1, 8)
+                        present::dbg_cat(Self::class(n) + 1, 8)
                     }
                 });
             }

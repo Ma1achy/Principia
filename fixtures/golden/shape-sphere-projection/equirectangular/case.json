@@ -1,5 +1,5 @@
 {
-  "render": { "harness": "shape_equirectangular", "width": 128, "height": 64 },
+  "render": { "harness": "shape_spherical", "width": 128, "height": 64 },
   "reference": "reference.png",
   "tolerance": "REQ-VAL-138",
   "expect": "pass",
