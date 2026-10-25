@@ -19,7 +19,7 @@
 use kernel::decode::{self, Ic, Latent};
 use kernel::encode::encode;
 use kernel::encode::ingest::{
-    condition, ingest, kappa, sigma_min, weighted_jacobian, Ingested, Phys,
+    components, condition, ingest, kappa, sigma_min, weighted_jacobian, weights, Ingested, Phys,
 };
 use kernel::generated::links::{Defaults, Select, SigmoidAlpha, SigmoidBeta, SoftmaxTanh, TanhQ};
 use validation::negative_control;
@@ -389,6 +389,89 @@ negative_control!(
     check_known(diagonal([3.0, 0.5, 7.0, 0.25, 2.0, 1.0, 4.0, 0.75]), 0.125)
 );
 
+/// A 15 × 8 matrix of pseudo-random entries in `[−1, 1)` (a 64-bit LCG from a fixed seed), column `j` scaled by
+/// `gradeʲ`: a dense matrix that is not orthogonal (its least column norm, 1.82, is well above its `σ_min`, 1.09).
+fn dense(grade: f64) -> [Phys<f64>; 8] {
+    let mut x: u64 = 12345;
+    let mut cols = [[0.0; 15]; 8];
+    for (j, col) in cols.iter_mut().enumerate() {
+        for c in col.iter_mut() {
+            x = x
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            *c = ((x >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0) * grade.powi(j as i32);
+        }
+    }
+    cols
+}
+
+/// `σ_min` is a property of the matrix, not of its scale or column order: `σ_min(c·A) = c·σ_min(A)` at `c = 10^±20`,
+/// where each pair's orthogonality test must scale with the columns, and `σ_min(A·P) = σ_min(A)` for the column
+/// reversal `P` on a strongly graded `A` (column `j` scaled by `10^(−3j)`), where the rotation angle must be Jacobi's.
+fn check_invariance(scale: f64, grade: f64) {
+    let a = dense(1.0);
+    let base = sigma_min(a);
+    let scaled = sigma_min(a.map(|col| col.map(|c| c * scale)));
+    assert!(
+        (scaled / (scale * base) - 1.0).abs() <= 1e-12,
+        "σ_min of the matrix scaled by {scale:e} is {scaled:e}, not {scale:e} × {base:e}"
+    );
+    let g = dense(grade);
+    let mut reversed = g;
+    reversed.reverse();
+    let (fwd, back) = (sigma_min(g), sigma_min(reversed));
+    assert!(
+        (back / fwd - 1.0).abs() <= 1e-12,
+        "σ_min of the graded matrix is {fwd:e} and of its columns reversed {back:e}"
+    );
+}
+
+#[test]
+fn ingest_outputs_sigma_min_is_scale_and_order_free() {
+    check_invariance(1e-20, 1e-3);
+    check_invariance(1e20, 1e-3);
+}
+
+negative_control!(
+    ingest_outputs_sigma_min_is_scale_and_order_free,
+    "σ_min of a matrix scaled by 10⁻²⁰ is not 10⁻¹⁹ times the matrix's",
+    expected = "σ_min of the matrix scaled by",
+    {
+        let a = dense(1.0);
+        let scaled = sigma_min(a.map(|col| col.map(|c| c * 1e-20)));
+        assert!(
+            (scaled / (1e-19 * sigma_min(a)) - 1.0).abs() <= 1e-12,
+            "σ_min of the matrix scaled by 1e-20 is {scaled:e}"
+        );
+    }
+);
+
+/// Part 4's difference step `hₖ = ε_R^{1/3}·max(1, |zₖ|)` grows with `|zₖ|`, so a far coordinate still moves the decode:
+/// at `z_q0 = 10⁶` a step of `ε_R^{1/3}` alone would vanish in `z_q0`'s rounding and the quotient would be `0/0`.
+fn check_far_step(z: [f64; 8], q0: f64) {
+    let mut w = z;
+    w[2] = q0;
+    let cols = weighted_jacobian::<Defaults, f64>(&Latent::new(w));
+    for (k, col) in cols.iter().enumerate() {
+        assert!(
+            col.iter().all(|c| c.is_finite()),
+            "column {k} of W·J_D at z_q0 = {q0:e} is not finite: {col:?}"
+        );
+    }
+}
+
+#[test]
+fn ingest_outputs_jacobian_step_follows_z() {
+    check_far_step(ingested(&starts()[2].1).encoded.z.z, 1e6);
+}
+
+negative_control!(
+    ingest_outputs_jacobian_step_follows_z,
+    "a latent coordinate that is not a number gives no finite Jacobian",
+    expected = "is not finite",
+    check_far_step(ingested(&starts()[2].1).encoded.z.z, f64::NAN)
+);
+
 /// Part 4's bound: for `x̃ = D(z + δz)` near `x = D(z)`, `‖E(x̃) − z‖_∞ ≤ 3·κ·‖x̃ − x‖_phys`, `κ` as given, along each
 /// control and along four mixed directions.
 fn check_bound(name: &str, z: &Latent<f64>, k: f64) {
@@ -514,4 +597,55 @@ negative_control!(
     "the two links' κ do not differ by a factor of 10⁶",
     expected = "differ by",
     check_link_dependence(&kicked(), 1e6)
+);
+
+/// `W` is Part 4's weight at `x`: 1 on each mass, `1/R_x` on each position component and `1/P_x` on each momentum
+/// component, `R_x = max(1, maxⱼ‖rⱼ‖)` and `P_x` likewise; a block whose extent is below 1 is weighted 1.
+fn check_weights(x: &Ic<f64>, r_x: f64, p_x: f64) {
+    let w = weights(x);
+    let mut want = [1.0; 15];
+    want[3..9].fill(1.0 / r_x);
+    want[9..15].fill(1.0 / p_x);
+    assert_eq!(
+        w, want,
+        "the weights at {x:?} are not 1, 1/R_x = 1/{r_x}, 1/P_x = 1/{p_x}"
+    );
+    assert_eq!(
+        components(x),
+        [
+            x.m[0], x.m[1], x.m[2], x.r[0][0], x.r[0][1], x.r[1][0], x.r[1][1], x.r[2][0],
+            x.r[2][1], x.p[0][0], x.p[0][1], x.p[1][0], x.p[1][1], x.p[2][0], x.p[2][1]
+        ],
+        "the components are not the masses, positions and momenta in order"
+    );
+}
+
+/// A state whose largest position has norm 2 (body 2 at `(0, 2)`) and largest momentum norm 4 (body 3's `(4, 0)`), and
+/// one whose blocks lie inside the unit ball.
+fn extents() -> (Ic<f64>, Ic<f64>) {
+    let big = Ic {
+        m: [0.2, 0.3, 0.5],
+        r: [[0.5, 0.0], [0.0, 2.0], [-1.0, 1.0]],
+        p: [[1.0, 1.0], [-2.0, 0.5], [4.0, 0.0]],
+    };
+    let small = Ic {
+        m: [0.2, 0.3, 0.5],
+        r: [[0.5, 0.0], [0.0, -0.75], [0.25, 0.25]],
+        p: [[0.1, 0.0], [0.0, -0.2], [0.3, 0.4]],
+    };
+    (big, small)
+}
+
+#[test]
+fn ingest_outputs_weights_are_part4s() {
+    let (big, small) = extents();
+    check_weights(&big, 2.0, 4.0);
+    check_weights(&small, 1.0, 1.0);
+}
+
+negative_control!(
+    ingest_outputs_weights_are_part4s,
+    "the positions weighted by R_x itself, not 1/R_x, are not Part 4's weight",
+    expected = "the weights at",
+    check_weights(&extents().0, 0.5, 4.0)
 );
