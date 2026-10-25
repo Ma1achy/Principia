@@ -7,6 +7,8 @@
 //!   each with its page of paper I (pp. 1010–1012, as the scan splits them) and its outcome text.
 //! - Which `η` each row uses: paper II's only on `N = 88`; paper I's on `N = 26, 61, 69, 77, 93`, paper II's value
 //!   recorded beside it (R-592's table); on every other row the papers agree.
+//! - Which `ξ` each row uses: paper I's on every row, paper II's recorded in the note on exactly `N = 35, 49, 54, 65`
+//!   where the papers differ; `N = 17`'s broken glyph settled as `0.115279340`, the other reading recorded (R-592).
 //! - (i) `M = Σ m(xẏ − yẋ)` with eq. 3's velocities equals `η·10⁻⁴` on every row, and the printed column 11 matches
 //!   it to four decimals on every row printing one except exactly `N = 16, 23, 26, 32, 34`; through the gate, a new
 //!   mismatch fails, a listed row that starts matching fails, and paper II's `η` on row 93 fails.
@@ -927,4 +929,71 @@ negative_control!(
     "without M² the energy does not read −12.8167",
     expected = "the Burrau constants read back",
     check_burrau(0)
+);
+
+// ── Table 1's ξ: paper I's on every row (R-592's applied text) ───────────────────────────────────────────────────
+
+/// R-592 and dd_validation_orbits §1.6: paper II's `ξ` differs from paper I's on four rows; paper I's is the `ξ` used,
+/// and paper II's is recorded in the row's note. `N`, paper I's `ξ`, paper II's.
+const XI_DIFFER: [(u32, &str, &str); 4] = [
+    (35, "0.480736434", "0.480236434"),
+    (49, "0.057727505", "0.058727505"),
+    (54, "0.007748064", "0.077480639"),
+    (65, "0.306397814", "0.306897814"),
+];
+
+/// The transcriptions' one difference, `N = 17`'s `ξ`: A read `0.115219340`, B `0.115279340`, settled as B's.
+const XI_17: (&str, &str) = ("0.115279340", "0.115219340");
+
+fn check_xi(rows: &[QaRow]) {
+    for &(n, i, ii) in &XI_DIFFER {
+        let r = rows.iter().find(|r| r.n == n).expect("the row");
+        assert_eq!(r.xi, i, "N = {n}: the ξ used is paper I's");
+        assert!(
+            r.note.contains(ii),
+            "N = {n}: paper II's ξ {ii} is recorded in the note"
+        );
+    }
+    for r in rows {
+        if XI_DIFFER.iter().all(|d| d.0 != r.n) {
+            assert!(
+                !r.note.contains("paper II prints xi"),
+                "N = {}: paper II's ξ differs only on N = 35, 49, 54, 65",
+                r.n
+            );
+        }
+    }
+}
+
+fn check_xi_17(rows: &[QaRow]) {
+    let r17 = rows.iter().find(|r| r.n == 17).expect("row 17");
+    assert_eq!(r17.xi, XI_17.0, "N = 17: ξ is settled as 0.115279340");
+    assert!(
+        r17.note.contains(XI_17.1),
+        "N = 17: the other reading, 0.115219340, is recorded"
+    );
+}
+
+#[test]
+fn qa_m2_20_xi_is_paper_ones_on_every_row() {
+    check_xi(&rows());
+}
+
+negative_control!(
+    qa_m2_20_xi_is_paper_ones_on_every_row,
+    "row 54 taking paper II's ξ is not R-592's choice",
+    expected = "N = 54: the ξ used is paper I's",
+    check_xi(&qa_rows(&table_with(54, "xi", "0.077480639")))
+);
+
+#[test]
+fn qa_m2_20_xi_17_is_the_settled_reading() {
+    check_xi_17(&rows());
+}
+
+negative_control!(
+    qa_m2_20_xi_17_is_the_settled_reading,
+    "row 17 taking transcription A's reading is not the settled ξ",
+    expected = "N = 17: ξ is settled as 0.115279340",
+    check_xi_17(&qa_rows(&table_with(17, "xi", "0.115219340")))
 );
