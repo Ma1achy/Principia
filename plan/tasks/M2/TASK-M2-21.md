@@ -38,6 +38,7 @@ The exported ViewState records (z₀, q₁, q₂), the chart id and params, the 
 - `cargo test -p engine links_filled` — REQ-SYS-083's verify.
 - `cargo test -p engine links_written_in_full` — REQ-SYS-084's verify.
 - REQ-SYS-011's verify gains a non-default link parameter and C6's control, the export with the parameter stripped failing to reproduce (R-482).
+- `cargo test -p engine lock_window_undo` — once `SimConfig`'s chart group holds a nonlinear chart's window (`engine::lock::Window`), `engine::lock::set_on_chart`'s window `SetField` joins the lock's command under the same history key, and one undo restores z₀, the lock group and the window (R-69; gui_state_contract §2, R-466; REQ-SYS-011; gui review 5642898583 of PR #290, G5, applied per R-369).
 
 ## Notes
 - RQ-95 ruled: R-113 — REQ-CHART-033 is split: this task asserts registry-only links, provenance and the two-direction swap; "a link swap changes the sim key, recompiles and re-integrates from t = 0" is REQ-CHART-052 (TASK-M4-08). This settles Gap G23.
