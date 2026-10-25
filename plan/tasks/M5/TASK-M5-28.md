@@ -55,7 +55,7 @@ readback (R-294).
 
 ## Acceptance tests
 - `cargo test -p engine frame_substep_histogram` — a synthetic frame whose pixels take known substep counts, cap hits
-  among them, records `substep_histogram` with each pixel in its bin, a count of `k·N_max/16` in bin k and `N_max − 1` in bin 15,
+  among them, records `substep_histogram` with each pixel in its bin, a count of `k·N_max/16` in bin k and `N_max − 1` in bin 15 (at an `N_max` that is a multiple of 16), and at `N_max = 50` each count n in bin `⌊16·n/50⌋` (24 in bin 7, 25 in bin 8, 46 in bin 14, 47 and 49 in bin 15, 50 in the seventeenth; control: an integer bin width `⌊50/16⌋ = 3` fails; qa review 5644656634 of PR #293, Q7),
   and the cap hits in the seventeenth, 17 entries summing to the pixel count (R-614; *was:* "the cap hits in the last,
   16 entries"); the next frame's histogram is reset; it comes back on the telemetry readback without stalling the
   frame; the JSON Schema and the reader accept a v1 frame without the key and reject one with it `null` or with a
