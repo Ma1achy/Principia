@@ -16,9 +16,10 @@
 use std::path::Path;
 
 use validation::import::{
-    angular_eq3, check_exceptions, column8_csv, energy_eq4, import, in_region_d, invariants,
-    printed_m, printed_report, region_d_report, round_decimal, table1, Back, Exception, Printed,
-    RegionD, Row, Source, Start, TABLE1_HEADER,
+    angular_eq3, check_exceptions, column8_csv, energy_eq4, fails, fields, import, in_region_d,
+    invariants, printed_m, printed_report, region_d_report, relative, round_decimal, table1,
+    unit_state, Back, Exception, LiteratureImportGate, Printed, RegionD, Rescale, Row, Source,
+    Start, Tagged, TABLE1_HEADER,
 };
 use validation::negative_control;
 
@@ -581,4 +582,337 @@ negative_control!(
         "fixtures/gates/literature-import",
         &[("length_only.json", "pass")]
     )
+);
+
+/// Each input's negative results: the length-only input says it is multiplied back by the length factor alone and
+/// must fail (PIT-3); the recorded one says nothing of it.
+fn check_negative_note(dir: &str, input: &str, noted: bool) {
+    use validation::gate::{config, Gate as _};
+    let cfg = config(root(), "literature-import").expect("gate.json");
+    let mut v: serde_json::Value =
+        serde_json::from_str(&read(&format!("{dir}/{input}"))).expect("json");
+    v.as_object_mut().expect("an object").remove("expected");
+    let r = LiteratureImportGate.run(&cfg, input, &v).expect("measured");
+    assert_eq!(r.gate, "literature-import", "the report's gate");
+    let has = r.negative_results.iter().any(|n| n.contains("PIT-3"));
+    assert_eq!(
+        has, noted,
+        "{input}'s negative results {:?} on the length-only rescale",
+        r.negative_results
+    );
+}
+
+#[test]
+fn literature_import_gate_notes_the_length_only_input() {
+    use validation::gate::Gate as _;
+    assert_eq!(LiteratureImportGate.name(), "literature-import");
+    let dir = "fixtures/gates/literature-import";
+    check_negative_note(dir, "length_only.json", true);
+    check_negative_note(dir, "literature.json", false);
+}
+
+negative_control!(
+    literature_import_gate_notes_the_length_only_input,
+    "the recorded input does not carry the length-only note",
+    expected = "on the length-only rescale",
+    check_negative_note("fixtures/gates/literature-import", "literature.json", true)
+);
+
+// ── The pieces, on hand-checked values ───────────────────────────────────────────────────────────────────────────
+
+/// `invariants` on a state worked by hand: masses `(1, 2, 3)`, `G = 2`, positions `(1, 0)`, `(0, 2)`, `(−2, −1)`,
+/// velocities `(1, 2)`, `(−1, ½)`, `(½, −1)`, the centre of mass at `(−⅚, ⅙)`. `T = 5.625`, `L_z = 13.5`; `U` and `R`
+/// to 30 digits (mpmath): `U = −7.01442215545223408843672546239`, `R = 1.81046341520003595398191556246`. Body 3's
+/// `x = −2` keeps `m₃·x₃` apart from `m₃/x₃` in the centre of mass.
+fn check_by_hand(g: f64) {
+    let got = invariants(
+        g,
+        [1.0, 2.0, 3.0],
+        [[1.0, 0.0], [0.0, 2.0], [-2.0, -1.0]],
+        [[1.0, 2.0], [-1.0, 0.5], [0.5, -1.0]],
+    );
+    for (what, got, want) in [
+        ("E", got.e, 5.625 - 7.014_422_155_452_234),
+        ("L_z", got.lz, 13.5),
+        ("R", got.hyper, 1.810_463_415_200_036),
+    ] {
+        assert!(
+            relative(got, want) <= 4.0 * f64::EPSILON,
+            "{what} of the hand-worked state is {got:e}, by hand {want:e}"
+        );
+    }
+}
+
+#[test]
+fn literature_import_invariants_by_hand() {
+    check_by_hand(2.0);
+}
+
+negative_control!(
+    literature_import_invariants_by_hand,
+    "G = 1 is not the hand-worked state's energy",
+    expected = "E of the hand-worked state",
+    check_by_hand(1.0)
+);
+
+/// `unit_state` refuses a start with a mass or `G` that is zero, negative or not finite, or a coordinate that is not
+/// finite; and scales a good one to `Σmᵢ = 1`, `G = 1`, `pᵢ = (mᵢ/M)·vᵢ/√(G·M)`.
+fn check_refusals(bad: &[(&str, Start)]) {
+    for (why, s) in bad {
+        let e = unit_state(s).expect_err(why);
+        assert!(e.contains("must be positive"), "{why}: {e}");
+    }
+}
+
+fn good() -> Start {
+    Start {
+        name: "good".to_owned(),
+        citation: "by hand".to_owned(),
+        g: 4.0,
+        m: [1.0, 1.0, 2.0],
+        r: [[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0]],
+        v: [[4.0, 0.0], [0.0, -8.0], [1.0, 1.0]],
+    }
+}
+
+fn bad_starts() -> Vec<(&'static str, Start)> {
+    let with = |f: &dyn Fn(&mut Start)| {
+        let mut s = good();
+        f(&mut s);
+        s
+    };
+    vec![
+        ("a zero mass is refused", with(&|s| s.m[1] = 0.0)),
+        ("a negative mass is refused", with(&|s| s.m[2] = -1.0)),
+        (
+            "an infinite mass is refused",
+            with(&|s| s.m[0] = f64::INFINITY),
+        ),
+        ("G = 0 is refused", with(&|s| s.g = 0.0)),
+        ("an infinite G is refused", with(&|s| s.g = f64::INFINITY)),
+        ("a NaN position is refused", with(&|s| s.r[2][1] = f64::NAN)),
+        (
+            "an infinite velocity is refused",
+            with(&|s| s.v[0][0] = f64::INFINITY),
+        ),
+    ]
+}
+
+#[test]
+fn literature_import_unit_state_refuses_and_scales() {
+    check_refusals(&bad_starts());
+    let x = unit_state(&good()).expect("a good start");
+    assert_eq!(x.m, [0.25, 0.25, 0.5], "the masses over M = 4");
+    assert_eq!(x.r, good().r, "the positions unchanged");
+    // √(G·M) = 4: p₁ = ¼·(4, 0)/4, p₂ = ¼·(0, −8)/4, p₃ = ½·(1, 1)/4.
+    assert_eq!(
+        x.p,
+        [[0.25, 0.0], [0.0, -0.5], [0.125, 0.125]],
+        "the momenta"
+    );
+}
+
+negative_control!(
+    literature_import_unit_state_refuses_and_scales,
+    "a good start is not refused",
+    expected = "a good start is refused",
+    check_refusals(&[("a good start is refused", good())])
+);
+
+/// The recorded rescale's factors on hand values, `M = 4`, `G = 9`, `λ = ¼`: `E = G·M²·λ·E_c = 36·E_c`, `L_z =
+/// ±√G·M^{3/2}·λ^{−1/2}·L_{z,c} = ±48·L_{z,c}`, minus where mirrored, `R = 1/λ = 4`; the length-only rescale keeps
+/// `λ` and the mirror and sets `M = G = 1`.
+fn check_rescale(mirrored: bool, sign: f64) {
+    let r = Rescale {
+        mass: 4.0,
+        g: 9.0,
+        lambda: 0.25,
+        mirrored,
+    };
+    assert_eq!(r.energy(1.0), 36.0, "E = G·M²·λ·E_c");
+    assert_eq!(
+        r.lz(1.0),
+        sign * 48.0,
+        "L_z = ±√G·M^{{3/2}}·λ^{{−1/2}}·L_z,c"
+    );
+    assert_eq!(r.hyper(), 4.0, "R = 1/λ");
+    assert_eq!(
+        r.length_only(),
+        Rescale {
+            mass: 1.0,
+            g: 1.0,
+            lambda: 0.25,
+            mirrored
+        },
+        "the length-only rescale"
+    );
+}
+
+#[test]
+fn literature_import_rescale_factors() {
+    check_rescale(false, 1.0);
+    check_rescale(true, -1.0);
+}
+
+negative_control!(
+    literature_import_rescale_factors,
+    "a mirrored start's L_z keeps its sign",
+    expected = "L_z = ±√G",
+    check_rescale(true, 1.0)
+);
+
+/// `relative` is `|got − want|/|want|`, and `|got|` where `want` is 0.
+fn check_relative(cases: &[(f64, f64, f64)]) {
+    for &(got, want, r) in cases {
+        assert_eq!(relative(got, want), r, "relative({got}, {want})");
+    }
+}
+
+#[test]
+fn literature_import_relative_difference() {
+    check_relative(&[
+        (3.0, 2.0, 0.5),
+        (1.0, -4.0, 1.25),
+        (-3.0, 0.0, 3.0),
+        (7.0, 7.0, 0.0),
+    ]);
+}
+
+negative_control!(
+    literature_import_relative_difference,
+    "the relative difference of 3 from 2 is not the absolute one",
+    expected = "relative(3, 2)",
+    check_relative(&[(3.0, 2.0, 1.0)])
+);
+
+/// A CSV line's fields: a quoted field keeps its commas, and `""` inside it is one `"`.
+fn check_fields(line: &str, want: &[&str]) {
+    assert_eq!(fields(line), want, "the fields of {line}");
+}
+
+#[test]
+fn literature_import_csv_fields() {
+    check_fields(r#"a,"b, ""c""",d"#, &["a", r#"b, "c""#, "d"]);
+    check_fields(r#""",x,"""#, &["", "x", ""]);
+    check_fields("1,,2", &["1", "", "2"]);
+}
+
+negative_control!(
+    literature_import_csv_fields,
+    "a quoted comma does not split the field",
+    expected = "the fields of",
+    check_fields(r#""a,b",c"#, &["a", "b", "c"])
+);
+
+/// `check_exceptions` on small lists: the exact list passes; a mismatch not listed, a listed row whose values differ,
+/// and a listed row that matches each fail with their own reason.
+fn exception(n: u32, computed: &str) -> Exception {
+    Exception {
+        n,
+        printed: "0.1000".to_owned(),
+        computed: computed.to_owned(),
+    }
+}
+
+fn check_exception_cases(cases: &[(Vec<Exception>, Vec<Exception>, Option<&str>)]) {
+    for (got, listed, reason) in cases {
+        match (check_exceptions(got, listed), reason) {
+            (Ok(()), None) => {}
+            (Err(e), Some(r)) if e.contains(r) => {}
+            (out, _) => panic!("check_exceptions({got:?}, {listed:?}) is {out:?}, not {reason:?}"),
+        }
+    }
+}
+
+#[test]
+fn literature_import_exception_check() {
+    let (a, b) = (exception(3, "0.1001"), exception(7, "0.1002"));
+    check_exception_cases(&[
+        (vec![a.clone()], vec![a.clone()], None),
+        (vec![a.clone(), b.clone()], vec![b.clone(), a.clone()], None),
+        (
+            vec![a.clone(), b.clone()],
+            vec![a.clone()],
+            Some("N = 7 mismatches and is not listed"),
+        ),
+        (
+            vec![a.clone()],
+            vec![exception(3, "0.1009")],
+            Some("N = 3 is listed as"),
+        ),
+        (
+            vec![a.clone()],
+            vec![a.clone(), b],
+            Some("N = 7 is listed but its printed M matches"),
+        ),
+        (vec![], vec![], None),
+    ]);
+}
+
+negative_control!(
+    literature_import_exception_check,
+    "a mismatch left off the list passes",
+    expected = "check_exceptions(",
+    check_exception_cases(&[(vec![exception(3, "0.1001")], vec![], None)])
+);
+
+/// `worst` is the largest `eps` compared, NaN where one is NaN; `eps` is the relative difference in units of `2⁻⁵²`;
+/// `fails` is `worst > k`, NaN, or a printed value not read back; and the report line names the start, its paper and
+/// each quantity. Checked on N = 1 multiplied back by the length factor alone, whose `E` is off by about `G·M²`.
+fn check_worst(k_of: impl Fn(f64) -> f64) {
+    let d = region();
+    let r = &rows()[0];
+    let t: Tagged =
+        region_d_report(&d, "N = 1", r.xi(), r.eta(), Back::LengthOnly).expect("in region D");
+    let max = t.compared.iter().map(|c| c.eps).fold(0.0, f64::max);
+    assert!(
+        max > 1e12,
+        "the length-only E is off by {max:e} ε, not about G·M²"
+    );
+    for c in &t.compared {
+        assert_eq!(
+            c.eps,
+            relative(c.imported, c.paper) / f64::EPSILON,
+            "{}'s ε",
+            c.what
+        );
+    }
+    assert_eq!(t.worst(), max, "worst is the largest ε");
+    let k = k_of(max);
+    assert!(!fails(&t, k), "a start at its threshold, {k:e} ε, fails");
+    assert!(
+        fails(&t, max.next_down()),
+        "a start past its threshold passes"
+    );
+    let mut nan = t.clone();
+    nan.compared[1].eps = f64::NAN;
+    assert!(nan.worst().is_nan(), "a NaN ε is not the worst");
+    assert!(fails(&nan, f64::INFINITY), "a NaN ε passes");
+    let mut misprinted = t.clone();
+    misprinted
+        .misprinted
+        .push("E reads 1, printed 2".to_owned());
+    assert!(
+        fails(&misprinted, f64::INFINITY),
+        "a misprinted value passes"
+    );
+    let line = t.line();
+    for part in ["N = 1", &t.citation, "κ =", "E ", "L_z ", "L_z²|E|/(G²M⁵)"] {
+        assert!(
+            line.contains(part),
+            "the report line {line} does not name {part}"
+        );
+    }
+}
+
+#[test]
+fn literature_import_worst_and_fails() {
+    check_worst(|max| max);
+}
+
+negative_control!(
+    literature_import_worst_and_fails,
+    "a start just past its threshold does not fail",
+    expected = "a start at its threshold",
+    check_worst(f64::next_down)
 );
