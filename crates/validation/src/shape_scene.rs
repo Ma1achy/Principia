@@ -8,26 +8,30 @@
 //! cell, of the scene's chart grid over `[0,1]²`, holds it, decoded at that cell's centre, with no interpolation. The
 //! sample holds the decode's own state, `Decoded::ic`, the system whose signed `n̂` is the chart's point (R-544: `C`'s
 //! mirror step not taken, nothing folded), with its masses, so the read side's `n` is the chart's point in either
-//! hemisphere. A display tile showing no chart point, outside Hammer's ellipse, is not a system: the chart's
-//! classification marks it (`ctx.validity.forbidden`) and the occupant draws the debug views' hatch there (R-470: a debug
-//! view draws such a pixel with the hatch, never a palette colour).
+//! hemisphere. A display tile showing no chart point, outside Hammer's ellipse, is no pixel of the chart but display
+//! margin, as Fit's margin is (REQ-GUI-229), not a classified not-a-system sample, so it is not in the forbidden lane
+//! (REQ-COL-102): the occupant tests the tile's centre against the ellipse itself and draws the canvas background there,
+//! blank (chart_reference §3.3: "drawn blank (R-470), and never counted"); its sample is never read.
 //!
-//! **What the occupant draws** ([`WGSL`]): the octant of `n`, the signs of `n.x`, `n.y` and `n.z`, as Okabe–Ito classes
-//! 1 to 8 (`dbg_cat`): the quadrant of its azimuth, classes 1 to 4 above the equator and 5 to 8 below it, so both
-//! hemispheres are drawn and told apart, and nothing marks either as redundant (R-544; REQ-CHART-002). The chart's
-//! label ([`ShapeSphere::label`]) names no hemisphere.
+//! **What the occupant draws** ([`WGSL`]): the octant `k` of `n` ([`ShapeScene::class`]), the quadrant of its azimuth,
+//! 0 to 3 above the equator and 4 to 7 below it, in the hue wheel at `(8k + 7)/64` turns ([`octant_colour`]): eight
+//! hues 45° apart at one OKLCH lightness and chroma, none black and none near the canvas background, offset by 7/64,
+//! of 1/2048's steps the one farthest from an 8-bit rounding tie (0.09 of a step), so both hemispheres are
+//! drawn and told apart, and nothing marks either as redundant (R-544; REQ-CHART-002). Okabe–Ito has seven colours
+//! besides black, one short of the octants. The chart's label ([`ShapeSphere::label`]) names no hemisphere.
 //!
 //! **The scenes** ([`NAMES`]):
 //! - `shape_spherical`: the spherical map in the default projection, the whole sphere, pole to pole: the
 //!   `shape-sphere` suite's `spherical` and the `shape-sphere-projection` suite's `equirectangular`.
 //! - `shape_equal_area`: the same chart under Hammer's equal-area projection, a display remap, both hemispheres drawn,
-//!   the ellipse's outside hatched: `shape-sphere-projection`'s `equal_area`.
+//!   the ellipse's outside blank, the canvas background: `shape-sphere-projection`'s `equal_area`.
 //! - `shape_exponential_straddling`: the exponential map about a point of the equator whose cap straddles it, both
 //!   halves drawn, each pixel its own system: `shape-sphere`'s `exponential_straddling`.
 //! - The controls, each rendered against `spherical`'s reference by a case that expects to fail:
 //!   `shape_control_one_hemisphere`, one hemisphere drawn across the whole square (R-412's withdrawn remap,
 //!   `φ = (π/2)·(1 − t)`), and `shape_control_flagged`, the whole sphere with the lower half striped as redundant
-//!   (R-141's withdrawn flag, black diagonal stripes 2 px wide where `n.z < 0`; `u_flag` 1, which no chart scene sets).
+//!   (R-141's withdrawn flag, white diagonal stripes 2 px wide where `n.z < 0`, white no octant's colour; `u_flag` 1,
+//!   which no chart scene sets).
 
 use kernel::chart::shape_sphere::{Projection, ShapeMap, ShapeSphere};
 use kernel::chart::Chart;
@@ -47,7 +51,8 @@ pub const NAMES: [&str; 5] = [
     "shape_control_flagged",
 ];
 
-/// The colour occupant: the octant of `n`, the control's redundancy stripes, and the hatch where no chart point shows.
+/// The colour occupant: the octant of `n`, the control's redundancy stripes, and the canvas background where no chart
+/// point shows.
 pub const WGSL: &str = include_str!("shape_scene.wgsl");
 
 /// The spherical map's chart grid, `[θ cells, φ cells]` over `[0,1]²`.
@@ -88,6 +93,23 @@ pub struct ShapeScene {
     pub draw: Draw,
     /// Each sample's masses, as its `ICDescriptor` holds them: zero where the tile shows no chart point.
     pub masses: Vec<[f32; 3]>,
+    /// Whether each display tile shows a chart point: `false` only outside Hammer's ellipse, the display margin.
+    pub chart_point: Vec<bool>,
+}
+
+/// The colour of octant `k`, 0 to 7: the hue wheel at `(8k + 7)/64` turns, as the occupant computes it, exact at f32
+/// (`present::hue_wheel`; the module's notes).
+pub fn octant_colour(k: u32) -> Rgb {
+    present::hue_wheel(f64::from(8 * k + 7) / 64.0)
+}
+
+/// The flagged control's stripe colour, white, which no octant's colour is.
+pub const STRIPE: Rgb = [1.0; 3];
+
+/// The canvas background the margin draws, linear, the f32 the harness's uniform holds
+/// (`crate::golden_scene::BACKGROUND`).
+pub fn background() -> Rgb {
+    present::srgb8(crate::golden_scene::BACKGROUND).map(|c| f64::from(c as f32))
 }
 
 /// The spherical map: `I = 1`, `φ_f = 0`, equal masses at rest.
@@ -150,25 +172,26 @@ pub fn shown(
 }
 
 /// `chart` over a `display` grid of tiles through `projection` onto a `cells` chart grid, drawn as `draw` draws it:
-/// each tile's sample the decode's state at the chart point it shows ([`shown`]), or marked as no system where none
-/// shows.
+/// each tile's sample the decode's state at the chart point it shows ([`shown`]); where none shows, the tile is
+/// margin, its sample left flat and its mask entry `false`.
 fn fill(
     chart: &ShapeSphere<f64>,
     display: [u32; 2],
     cells: [u32; 2],
     projection: Projection,
     draw: Draw,
-) -> Result<(Grid, Synthetic, Vec<[f32; 3]>), String> {
+) -> Result<Filled, String> {
     let grid = Grid::new(display, 1, 0, TILE_PX)?;
     let mut set = Synthetic::flat(grid, 0);
     let mut masses = vec![[0.0; 3]; grid.sample_count() as usize];
+    let mut chart_point = vec![false; grid.sample_count() as usize];
     for row in 0..display[1] {
         for col in 0..display[0] {
             let i = row * display[0] + col;
             let Some([s, t]) = shown(projection, draw, display, cells, col, row) else {
-                set.set_forbidden(i, true);
                 continue;
             };
+            chart_point[i as usize] = true;
             let d = chart.decode::<Defaults, f64>(s, t);
             let r = d.ic.r.map(|p| p.map(|c| c as f32));
             let m = d.ic.m.map(|m| m as f32);
@@ -178,7 +201,20 @@ fn fill(
             masses[i as usize] = m;
         }
     }
-    Ok((grid, set, masses))
+    Ok(Filled {
+        grid,
+        set,
+        masses,
+        chart_point,
+    })
+}
+
+/// What [`fill`] gives: the display grid, its samples, each sample's masses, and whether each tile shows a chart point.
+struct Filled {
+    grid: Grid,
+    set: Synthetic,
+    masses: Vec<[f32; 3]>,
+    chart_point: Vec<bool>,
 }
 
 /// The scene `name`, or why not.
@@ -204,9 +240,20 @@ pub fn scene(name: &str) -> Result<ShapeScene, String> {
         ShapeMap::Spherical => (DISPLAY, CHART),
         ShapeMap::Exponential => (CAP_GRID, CAP_GRID),
     };
-    let (grid, set, masses) = fill(&chart, display, cells, projection, draw)?;
+    let Filled {
+        grid,
+        set,
+        masses,
+        chart_point,
+    } = fill(&chart, display, cells, projection, draw)?;
     let flag = draw == Draw::Flagged;
-    let params = vec![("u_flag".to_owned(), vec![f64::from(u8::from(flag))])];
+    let ellipse = projection == Projection::EqualArea;
+    let params = vec![
+        ("u_flag".to_owned(), vec![f64::from(u8::from(flag))]),
+        ("u_ellipse".to_owned(), vec![f64::from(u8::from(ellipse))]),
+        ("u_cols".to_owned(), vec![f64::from(display[0])]),
+        ("u_rows".to_owned(), vec![f64::from(display[1])]),
+    ];
     Ok(ShapeScene {
         scene: Scene {
             name,
@@ -218,6 +265,7 @@ pub fn scene(name: &str) -> Result<ShapeScene, String> {
         projection,
         draw,
         masses,
+        chart_point,
     })
 }
 
@@ -259,15 +307,14 @@ impl ShapeScene {
         for y in 0..height {
             for x in 0..width {
                 let i = grid.cell(x, y).sample;
-                let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
-                out.push(if self.scene.set.forbidden(i) {
-                    present::debug_invalid(frag)
+                out.push(if !self.chart_point[i as usize] {
+                    background()
                 } else {
                     let n = shapes[i as usize];
                     if flag && n[2] < 0.0 && Self::stripe(x, y) {
-                        [0.0; 3]
+                        STRIPE
                     } else {
-                        present::dbg_cat(Self::class(n) + 1, 8)
+                        octant_colour(Self::class(n))
                     }
                 });
             }

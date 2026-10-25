@@ -5,10 +5,13 @@
 //!   REQ-RENDER-026).
 //! - `shape_scene_samples_the_chart`: each display tile's sample of a chart scene is the chart's signed point at the
 //!   chart cell its display point falls in, through the projection, the decode's own state with nothing folded; Hammer's
-//!   ellipse's outside, and only it, is no system; every chart scene draws both hemispheres, bijective, and flags
-//!   nothing (R-544; REQ-CHART-002, REQ-RENDER-026).
+//!   ellipse's outside, and only it, is display margin, no sample in the forbidden lane, each tile centre clear of the
+//!   ellipse's edge; every chart scene draws both hemispheres, bijective, and flags nothing (R-544; REQ-CHART-002,
+//!   REQ-RENDER-026).
+//! - `shape_scene_octant_palette`: the eight octant colours are distinct, none the stripe colour, none black or near
+//!   the canvas background.
 //! - `shape_scene_controls_are_wrong`: the one-hemisphere control draws no sample below the equator, and the flagged
-//!   control's twin is the spherical scene's except on the lower half's stripes, where it is black (REQ-CHART-002).
+//!   control's twin is the spherical scene's except on the lower half's stripes, where it is white (REQ-CHART-002).
 //! - `shape_scene_class_signs`, `shape_scene_twin_on_the_equator`: the twin reads each sign of `n` strictly, as the
 //!   occupant does, a zero not below it; a sample on the equator is not striped by the flagged control.
 //! - `shape_scene_binary_writes_the_render`: `golden_harness --scene` writes each scene's render.
@@ -24,7 +27,8 @@ use validation::golden_scene::{encode_image, tie_margin};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::shape_scene::{
-    cell_centre, scene, shown, Draw, ShapeScene, CAP_GRID, CHART, DISPLAY, NAMES,
+    background, cell_centre, octant_colour, scene, shown, Draw, ShapeScene, CAP_GRID, CHART,
+    DISPLAY, NAMES, STRIPE,
 };
 
 /// The largest per-channel difference, linear RGB, between a render and its CPU twin, as the other scenes' tests allow.
@@ -85,7 +89,7 @@ fn check_image(s: &ShapeScene, image: &[Rgb], want: &[Rgb]) {
 fn check_sign_margins(s: &ShapeScene) {
     let shapes = s.shapes();
     for i in 0..s.scene.context.grid.sample_count() {
-        if s.scene.set.forbidden(i) {
+        if !s.chart_point[i as usize] {
             continue;
         }
         let n = shapes[i as usize];
@@ -141,15 +145,15 @@ fn check_samples(s: &ShapeScene, projection: Projection) {
             let i = row * grid.quads[0] + col;
             let Some([cs, ct]) = shown(projection, Draw::Chart, display, cells, col, row) else {
                 assert!(
-                    s.scene.set.forbidden(i),
+                    !s.chart_point[i as usize],
                     "`{}` tile ({col}, {row}) shows no chart point",
                     s.scene.name
                 );
                 continue;
             };
             assert!(
-                !s.scene.set.forbidden(i),
-                "`{}` tile ({col}, {row}) is marked no system",
+                s.chart_point[i as usize],
+                "`{}` tile ({col}, {row}) is marked margin",
                 s.scene.name
             );
             let want = s.chart.point::<f64>(cs, ct);
@@ -179,10 +183,33 @@ fn shape_scene_samples_the_chart() {
         check_samples(&s, projection);
     }
     let hammer = named("shape_equal_area");
-    let outside = (0..hammer.scene.context.grid.sample_count())
-        .filter(|&i| hammer.scene.set.forbidden(i))
-        .count();
+    let outside = hammer.chart_point.iter().filter(|&&c| !c).count();
     assert!(outside > 0, "Hammer's scene shows its whole square");
+    // No sample of any scene is in the forbidden lane: the margin is not a classified not-a-system sample (REQ-COL-102).
+    for name in NAMES {
+        let s = named(name);
+        let grid = s.scene.context.grid;
+        assert!(
+            (0..grid.sample_count()).all(|i| !s.scene.set.forbidden(i)),
+            "`{name}` marks a sample forbidden"
+        );
+    }
+    // Every display tile's centre lies at least 10⁻⁴ from the ellipse's edge, so the occupant's f32 test and the CPU's
+    // f64 one agree on every tile.
+    let centre = |i: u32, n: u32| (f64::from(i) + 0.5) / f64::from(n);
+    for row in 0..DISPLAY[1] {
+        for col in 0..DISPLAY[0] {
+            let (h, k) = (
+                2.0 * centre(col, DISPLAY[0]) - 1.0,
+                2.0 * centre(row, DISPLAY[1]) - 1.0,
+            );
+            let q = h * h + k * k;
+            assert!(
+                (q - 1.0).abs() >= 1e-4,
+                "tile ({col}, {row}) lies at q = {q}, on the ellipse's edge"
+            );
+        }
+    }
     assert_eq!(named("shape_spherical").grids(), (CHART, DISPLAY));
     assert_eq!(
         named("shape_exponential_straddling").grids(),
@@ -238,6 +265,35 @@ negative_control!(
         + 4 * u32::from(n[2] <= 0.0))
 );
 
+/// The eight octant colours `colour` gives are distinct, none the stripe colour, and none black or near the canvas
+/// background: each is more than 0.05 from the background in some linear channel.
+fn check_palette(colour: fn(u32) -> Rgb) {
+    let all: Vec<Rgb> = (0..8).map(colour).collect();
+    let bg = background();
+    for (k, c) in all.iter().enumerate() {
+        assert!(
+            c.iter().zip(&bg).any(|(a, b)| (a - b).abs() > 0.05),
+            "octant {k}'s colour {c:?} is black or near the canvas background {bg:?}"
+        );
+        assert_ne!(*c, STRIPE, "octant {k} is drawn in the stripe colour");
+        for (j, d) in all.iter().enumerate().take(k) {
+            assert_ne!(c, d, "octants {j} and {k} share a colour");
+        }
+    }
+}
+
+#[test]
+fn shape_scene_octant_palette() {
+    check_palette(octant_colour);
+}
+
+negative_control!(
+    shape_scene_octant_palette,
+    "Okabe–Ito cycling over eight octants draws octant 7 black, which must fail",
+    expected = "is black or near the canvas background",
+    check_palette(|k| render::present::dbg_cat(k + 1, 8))
+);
+
 /// The flagged control with its sample 0 collinear on the x axis, so its read `n.z` is a zero: `want` gives the twin,
 /// and the render must be it, the zero not striped as below the equator.
 fn check_equator_sample(want: fn(&ShapeScene) -> Vec<Rgb>) {
@@ -268,7 +324,7 @@ negative_control!(
         for (k, px) in image.iter_mut().enumerate() {
             let (x, y) = (k as u32 % width, k as u32 / width);
             if grid.cell(x, y).sample == 0 && ShapeScene::stripe(x, y) {
-                *px = [0.0; 3];
+                *px = STRIPE;
             }
         }
         image
@@ -277,7 +333,7 @@ negative_control!(
 
 /// The one-hemisphere control `one` draws no sample below the equator and spans the upper hemisphere, its samples
 /// from within 0.1 of the pole `w = 1` to within 0.1 of the equator; the flagged control `flagged`'s twin is `whole`'s
-/// twin except on the lower half's stripes, where it is black, and there is at least one such pixel.
+/// twin except on the lower half's stripes, where it is [`STRIPE`], and there is at least one such pixel.
 fn check_controls(one: &ShapeScene, flagged: &ShapeScene, whole: &ShapeScene) {
     let shapes = one.shapes();
     let below = shapes.iter().filter(|n| n[2] < 0.0).count();
@@ -302,7 +358,7 @@ fn check_controls(one: &ShapeScene, flagged: &ShapeScene, whole: &ShapeScene) {
         if lower && ShapeScene::stripe(x, y) {
             striped += 1;
             assert_eq!(
-                *g, [0.0; 3],
+                *g, STRIPE,
                 "the flagged control's ({x}, {y}) is not striped"
             );
         } else {
