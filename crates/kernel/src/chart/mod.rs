@@ -403,12 +403,13 @@ pub fn family_label(axes: [AxisMeta; 2]) -> &'static str {
 }
 
 /// How a chart's address map folds onto distinct systems: the `system_image` descriptor (chart_decoder_contract Part 5,
-/// its four values; R-104, R-141, R-157).
+/// its four values; R-104, R-157, R-544).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SystemImage {
     /// Every pixel is a distinct system.
     Bijective,
-    /// A fixed finite number `n` of pixels share each system; the shape sphere is 2-to-1 over its φ hemispheres (R-141).
+    /// A fixed finite number `n` of pixels share each system. Not the shape sphere's spherical map, which is the whole
+    /// sphere, each pixel its own system (R-544).
     NToOne(u32),
     /// Each shape is covered twice, as two labelled systems: the full-range Burrau chart, where the leg swap relabels
     /// the bodies (R-27, R-104, R-157).

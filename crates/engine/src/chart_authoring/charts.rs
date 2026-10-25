@@ -11,11 +11,12 @@
 //! strips the construction's deterministic seed pins the momentum block's two DOF the two invariants leave
 //! (chart_reference §2.2, R-82).
 //!
-//! **`system_image`** (R-27, R-104, R-141, R-157). The shape sphere is n-to-1 with n = 2, its φ hemispheres
-//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map, the exponential map's
-//! own value being RQ-371's. The `ν`-axis charts are `DoubleCover` where their range reaches both leg orderings and
-//! bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the swap out and are bijective. Every
-//! other chart is bijective: its decode takes distinct points to distinct systems.
+//! **`system_image`** (R-27, R-104, R-157, R-544). The shape sphere's spherical map is bijective: the chart is the whole
+//! sphere, each pixel its own system, θ's period and the poles its axis types (R-407), not a fold (R-544). Its
+//! exponential map's value is TASK-M2-28's, computed from its cap (REQ-CHART-075); until it lands that map keeps the
+//! value it had, n-to-1 with n = 2 (R-141's, which R-544 withdraws). The `ν`-axis charts are `DoubleCover` where their
+//! range reaches both leg orderings and bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the
+//! swap out and are bijective. Every other chart is bijective: its decode takes distinct points to distinct systems.
 
 use kernel::burrau::System;
 use kernel::chart::burrau::embed;
@@ -192,13 +193,19 @@ where
     ShapeSphere<P>: Chart,
 {
     /// The shape's two angles, kind 2 in the configuration, each the other's residual; `z₀`'s mass and momentum blocks
-    /// held. n-to-1 with n = 2 (R-141), the `(θ, φ)` chart's (R-117).
+    /// held. The spherical map bijective (R-544); the exponential map n-to-1 with n = 2 until TASK-M2-28 computes its
+    /// value from its cap (the module's note).
     fn descriptor(&self) -> ChartDescriptor {
-        let (h, v) = match self.map {
-            ShapeMap::Spherical => ("θ, the azimuth", "φ, the polar angle"),
+        let (h, v, system_image) = match self.map {
+            ShapeMap::Spherical => (
+                "θ, the azimuth",
+                "φ, the polar angle",
+                SystemImage::Bijective,
+            ),
             ShapeMap::Exponential => (
                 "the exponential map along e₁",
                 "the exponential map along e₂",
+                SystemImage::NToOne(2),
             ),
         };
         let other = Residual {
@@ -212,7 +219,7 @@ where
             ],
             slice: frozen(|c| Block::of(c) != Block::Config),
             conventions: vec![],
-            system_image: SystemImage::NToOne(2),
+            system_image,
             has_feasibility_boundary: false,
             coupling: Coupling::none(),
             annotation: false,
