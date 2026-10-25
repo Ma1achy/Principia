@@ -479,8 +479,11 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   `z_locked` the controls the chart's axes set; every other control of `z_locked` is the clicked pixel's own frozen
   control, bit for bit, as the invariant charts' fibre point keeps them. The chart's hidden coordinates are `z₀`'s
   (`principia_chart_reference.md` §2.1), so the chart rebuilt on `z₀ = z_locked` freezes what it froze before. The
-  window is re-centred, `c ← (u, v)`, so the rebuilt chart's centre pixel decodes the clicked state bit for bit, and
-  `z_locked` decodes it within lookup's `ε_phys`. The edits are the `SetField` on `z₀ = z_locked` and the lock group's:
+  window is re-centred, `c ← (u, v)`, so the rebuilt chart's centre pixel decodes the clicked state bit for bit. Where
+  the ladder clamps none of the controls the chart's axes set, `z_locked` decodes the clicked state within lookup's
+  `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
+  decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
+  clicked state bit for bit. The edits are the `SetField` on `z₀ = z_locked` and the lock group's:
   one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
   (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
   window is chart construction, held in `SimConfig` (R-69) among "chart id and params"; `SimConfig`'s chart group has no
