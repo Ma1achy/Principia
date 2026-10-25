@@ -88,7 +88,10 @@ ones (a schema change; their layout is REQ-PAY-111, a definition). The suspect f
 regularised drift; the Cartesian drift is diagnostic only, since at a close approach it is a cancellation of two large
 terms, and it is wrong exactly where a run stopped at an event. A run that stopped at an event draws in the drift view
 as now, its readout saying "stopped at event". The energy-suspect threshold is recalibrated on Heggie × RK4's
-regularised drift at the M3 gate (REQ-INT-109), measured first, as before the ruling (REQ-INT-106). *Was:* "Where the
+regularised drift at the M3 gate (REQ-INT-109), measured first, as before the ruling (REQ-INT-106). The recalibrated
+value replaces REQ-INT-085's one threshold, applied at every precision to every occupant, so its proposal also reports
+what Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light at it on dd tests 2 and 7 at each precision, and whether
+REQ-INT-085's and REQ-VAL-031's pass conditions (Euler lighting `SUSPECT_ENERGY` on test 2) still hold. *Was:* "Where the
 regularised drift is stored, and how a drift view draws a run that stopped at an event, is RQ-528."
 
 This factoring is load-bearing: it puts all the shared, determinism-critical machinery in one place, and keeps occupants trivially simple and interchangeable. Adaptive substepping lives in the **wrapper**, not the integrator — the wrapper calls `STEP` `N_sub` times at `dt_macro/N_sub`. RK4-as-validation and the inspector's f64 run are just "different occupant + different precision," no special path.

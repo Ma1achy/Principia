@@ -5530,7 +5530,7 @@
 - id: REQ-INT-109
   area: INT
   kind: calibration
-  statement: "The energy-suspect threshold must be recalibrated on Heggie × RK4's regularised drift (R-605): proposed after REQ-INT-106's measurement, with it as its evidence, by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md beside REQ-INT-085's record."
+  statement: "The energy-suspect threshold must be recalibrated on Heggie × RK4's regularised drift (R-605), the recalibrated value replacing REQ-INT-085's one threshold at every precision and for every occupant: proposed after REQ-INT-106's measurement, with it as its evidence, by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md beside REQ-INT-085's record."
   source:
   - file: decisions.md
     section: "R-605 — Both energy drifts are stored: the suspect flags and the drift view read the regularised drift, the Cartesian drift being diagnostic only; an event-stopped run draws as now, its readout saying \"stopped at event\"; the energy-suspect threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate, measured first *(closes RQ-528; a schema change)*"
@@ -5538,14 +5538,16 @@
     section: 3.5 Invariant monitoring (per `STEP`, post-projection)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate suspect-default-occupant --propose: from REQ-INT-106's measured regularised relative δE, final and max, on dd_integrator test 2's orbit and test 7's IC at f32 and f64, the energy-suspect threshold proposed with which predicates light at it on each; recorded in decisions.md beside REQ-INT-085's record; control: a proposal computed from the Cartesian drift fails its input check"
+    detail: "cargo xtask gate suspect-default-occupant --propose: from REQ-INT-106's measured regularised relative δE, final and max, on dd_integrator test 2's orbit and test 7's IC at f32 and f64, the energy-suspect threshold proposed with which predicates light at it on each; at the proposed value the proposal also reports which predicates Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light on test 2's orbit and test 7's IC at each precision (REQ-INT-085's measurements), and states whether REQ-INT-085's energy-suspect pass condition (Euler lights SUSPECT_ENERGY on test 2's orbit, no symplectic occupant does at any precision) and REQ-VAL-031's (Euler on test 2) still hold; recorded in decisions.md beside REQ-INT-085's record; control: a proposal computed from the Cartesian drift fails its input check"
   rulings:
   - R-71
   - R-605
   milestone: M3
-  note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41."
+  note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."

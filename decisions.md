@@ -26026,7 +26026,11 @@ The human's words, verbatim:
 stored in payload fields of their own, beside the Cartesian ones (a schema change). The suspect flags and the drift
 view read the regularised drift. Option (c)'s display: an event-stopped run draws as today, and its readout says
 "stopped at event". Option (d): REQ-INT-106 measures Heggie × RK4's regularised drift first, as meanwhile ((d2)), and
-the energy-suspect threshold is then recalibrated on it at the M3 gate.
+the energy-suspect threshold is then recalibrated on it at the M3 gate. The recalibrated value replaces REQ-INT-085's
+one threshold, which the predicate applies at every precision and to every occupant, so it moves REQ-INT-085's
+verdicts too: its proposal also reports, at the new value, what Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light on dd
+tests 2 and 7 at each precision, and whether REQ-INT-085's pass conditions and REQ-VAL-031's (Euler lighting
+`SUSPECT_ENERGY` on test 2) still hold (physics review 5644374613 of PR #293, F2, applied per R-369).
 
 *Applied per R-369:* the new fields' layout is a definition, REQ-PAY-111 (R-72), written into payload §1 and §5 by
 TASK-M3-41. The recalibration is its own R-71 calibration, REQ-INT-109, closed by TASK-M3-41 after REQ-INT-106's
