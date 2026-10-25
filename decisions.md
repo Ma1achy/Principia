@@ -756,6 +756,8 @@ Depth is a scheduler knob, not on the sim key. E changes live: copies are cached
 excludes E. The ladder has ~8–12 rungs in total.
 
 ## R-90 — The decoder switchover trigger *(closes RQ-41)*
+*Refined by R-599 (collapse is judged per in-plane axis: a quad stops at `AT_F32_FLOOR` only when every axis along which the field varies has collapsed, or at the screen floor).*
+*Still in force: all of it; the terminal stop's collapse is judged per in-plane axis, a saturated axis not counting (R-599).*
 *25 Sep 2026 · applied in step 7*
 
 Switch to the linearised decoder when the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as
@@ -15634,9 +15636,12 @@ The lab's caption and the design doc §4.4 name different stand-ins for the four
 R-486 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*
+*Amended by R-618 (a Print graph's `device_px` nodes and the screen-anchored sheet run in a second pass at screen resolution, after the display scale).*
 *Amended in part by R-531 (20 Oct 2026; RQ-395, option (c): the lines drawn over keep R-476 M2's place, after the
 gamut clamp and before the colour-vision simulation; the design doc §2's diagram is corrected to match).*
-*Still in force: all of it but the design doc's place for the lines drawn over; K1 and K2 stand.*
+*Still in force: all of it but the design doc's place for the lines drawn over, and the Print graph's one pass: its
+`device_px` nodes and the sheet run in a second pass at screen resolution, after the display scale (R-618); K1 and K2
+stand.*
 *20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the
 pipeline)" and § "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4
 — Semantic rules" (the composite order), `docs/design/principia_lines.md` § "2. Where it sits" and § "3. The data model"
@@ -17080,7 +17085,8 @@ Changes REQ-GEN-014 (rulings, source, note).
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
 *Amended by R-623 (at a link-parameter change a segment offers cut or interpolate, interpolating by default) and read by R-624 for a reel takeover.*
 *Amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).*
-*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576).*
+*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576); in a
+blocking export a segment set to cut cuts its link parameters, interpolating being the default (R-623).*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
 REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
@@ -17529,6 +17535,8 @@ and marks the run "mobile, best effort".
 R-530 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
 
 ## R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*
+*Amended by R-618 (the chain gains the Print graph's screen pass after the display scale).*
+*Still in force: all of it; the chain gains the Print graph's screen pass, for the `device_px` nodes and the sheet, after the display scale and before the gamut clamp (R-618).*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "2. Where it sits" (the diagram corrected, the
 delivered one kept as *Was*) and its adoption note, `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
 rules" (the Print graph stage's chain, with its earlier words kept), `docs/design/principia_colour_composition.md` § "4.3
@@ -19580,6 +19588,8 @@ Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-08
 REQ-GUI-097 (notes).
 
 ## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended by R-611 (where R-543's text and its code disagree the text wins, the code used only where the text is silent).*
+*Amended by R-612 (under a Torus base, Left its starting tile compares the Torus's own period cell).*
 *Amended in part by R-543 (21 Oct 2026; SM8's mirror-repeat and dimming past the Picture's square becomes the default of
 a wrap mode, Repeat, Mirror or Clamp, with a separate dim setting; SM6 and SM11 gain the Torus gradient, SM8 the tileable
 checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboard under Repeat, dimming off).*
@@ -19592,7 +19602,8 @@ hemisphere fold and in-square mirror pixels, SM4's hemisphere row and SM7's iden
 sphere target is the whole sphere, read by its signed n̂, and its identity holds point for point (R-544);
 and what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names, the brightness slot under a Picture
 and the fade's function the file's; Replace-L's chroma scaling an option, off by default; Chart position a named
-seam-6 exception, no longer waiting on RQ-489.*
+seam-6 exception, no longer waiting on RQ-489; and, for R-543's maps, its text winning where the code disagrees (R-611),
+and under a Torus base Left its starting tile comparing the Torus's own period cell (R-612).*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -20256,6 +20267,8 @@ R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
 
 ## R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*
+*Amended by R-611 (its text wins over its prototype's code, the code used only where the text is silent) and R-612 (§2.1: under a Torus base, Left its starting tile compares the Torus's own period cell).*
+*Still in force: all of it; where its text and its prototype's code disagree the text wins (R-611), and Left its starting tile under a Torus base compares the period cell `(⌊X⌋, ⌊Y⌋)` (R-612).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_state_map_tiling/` (the follow-up as delivered, and R-543's check
 `checks/r543_tiling_check.py` beside it), `docs/gui/reference/state_map/state_flow.html` (version 9 in place of version
 8), `docs/design/principia_state_map.md` (the header note; § "0. My words", the follow-up's words; § "SM6. Colour maps:
@@ -20801,6 +20814,8 @@ R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412
 
 ## R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*
 *Amended by R-614 (`substep_histogram` has 17 entries, 16 equal bins and a separate cap bin).*
+*Still in force: all of it but the histogram's length: `substep_histogram` is `[u32; 17]`, sixteen equal bins and a
+separate cap bin (R-614).*
 *21 Oct 2026 · the batch recorded whole in `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`; applied in
 `docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21's sentence), § "Layout and §3.8
 entries" (the §3.8 entries' range sentence, the two one-signed rows and `alpha_energy`'s row, with their earlier words
@@ -21265,6 +21280,8 @@ REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-47 to TASK-M2-49.
 
 ## R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
 *Corrected by R-595 (a guarded E < 0 state that passes the dispersal step's tests goes on to the hierarchy step; "falls through to …" was an incomplete list).*
+*Still in force: all of it, its "falls through to B-stable, OS-candidate or B-so-far" read as an incomplete list: a
+guarded E < 0 state that passes step 1's geometric tests goes on to the hierarchy step (R-595).*
 *21 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes" (the halves
 paragraph, with its earlier words kept), § "3.2 The rule, in order" (the order and the two differences, with their
 earlier words kept), § "4. Validation" (a sentence), § "4.3 On real charts (48 × 48)", § "5.6 `chazy_escaper` and
@@ -23562,6 +23579,8 @@ Changes REQ-GUI-244 (rulings, note).
 
 ## R-569 — Trace playback and icons: a new trace while playing restarts the playhead at `t = 0`; paused at `t = 0` the whole trace is drawn dotted, not yet played, and the legend keys it; every event, start and path icon placed wholly on screen by its measured extent, the start icon pinned, repeats never moved *(amends R-538)*
 *Amended by R-617 (only the trace's own marker restarts, never the figure's playhead) and read by R-616 (only a new run restarts).*
+*Still in force: all of it but ruling 1's restart of the playhead: a new run restarts only the trace's own head, the
+figure's global playhead and the field untouched (R-617), and only a new run restarts (R-616).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_trace_playback/` (the instruction, the demos Trace Markers version
 29 and Trace Sound version 10, and the human's check and its output, as delivered, with a README giving each file's
 sha256), `docs/design/principia_lines.md` § "8. Traces" (the breaks bullet, a sentence; the off-screen icons bullet,
@@ -24307,6 +24326,8 @@ R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
 
 ## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
 *Refined by R-621 (the header strip states `T` and the f32 trust time measured for the current view).*
+*Still in force: all of it; nothing changes in the atlas's colours, and the header strip states `T` and the f32 trust
+time measured for the current view (R-621).*
 *21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
 §4 (the real-space bullet and row) and §5 (a lead bullet) and its closing line, `docs/gui/principia_render_gui_spec.md`
 §G2 (the Trajectory panel) and §G8 (the Inspector), `README.md` (the Honesty line), `docs/read_first/principia_INDEX.md`,
@@ -24504,6 +24525,7 @@ REQ-GUI-369 (what the viewer shows), REQ-GUI-370 (the trust line) and REQ-GUI-37
 
 ## R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
 *Amended by R-610 (`T_horizon ∈ [0.4, 200]`; RQ-555 closed).*
+*Still in force: the default 50, raised or lowered, not floored at 50, within `[0.4, 200]` (R-610).*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar",
 `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units
 and the horizon (inherited scale gauge)", `docs/design/principia_dd_integrator.md` § "2. Consolidated contract",
@@ -24640,6 +24662,8 @@ REQ-TOOL-197 (definition).
 
 ## R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*
 *Amended by R-622 (sequences are shared state under the one history) and R-623 (the link-parameter segment's choice).*
+*Still in force: all of it but the Sequence's undo, which is typed `SetField`s in the contract's one history (R-622),
+and the link-parameter segment, which offers cut or interpolate, interpolating by default (R-623).*
 *21 Oct 2026 · applied in `docs/design/principia_sequence.md` (new), `docs/gui/principia_render_gui_spec.md` § "G9a.
 Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
 open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
@@ -25735,8 +25759,8 @@ notes and acceptance line) and `plan/rule_groups.yaml`; built by TASK-M7-35*
 the decisions made under R-369. It is recorded whole, as relayed to the port, in
 `docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md` (sha256
 `5ded0d131aa49dfc737c3932470f13e5b679aad986da47ee40465ae477e97ee1`, 94 lines). It is ported one ruling per entry, in the
-message's order, from R-595 to R-624, and R-625 records its last three lines. R-592 to R-594 are held by other work.
-The same messages also ruled RQ-570 to RQ-573, which their own task PRs port (R-592, R-593), and RQ-574, ported
+message's order, from R-595 to R-624, and R-625 records its last three lines. The numbers just before R-595 are held
+by other work. The same messages also ruled entries that their own task PRs port (R-593 among them) and RQ-574, ported
 separately; none of those is ported here.
 
 The human's words on RQ-521, verbatim:
@@ -26117,7 +26141,7 @@ Changes REQ-GUI-339, REQ-GUI-340 and REQ-COL-136 (rq removed, rulings, note).
 
 ## R-612 — Under a Torus base, "Left its starting tile" compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods *(closes RQ-507; amends R-542's brightness and R-543 §2.1)*
 *25 Oct 2026 · applied in `docs/design/principia_state_map.md` (its heading note, SM6, SM11's brightness and its
-transcribed brightness rule, each with an *Amended by R-612* line), `docs/archive/review_queue/M0.md` (RQ-507, moved
+transcribed brightness rule, each with a line naming R-612), `docs/archive/review_queue/M0.md` (RQ-507, moved
 with its ruling), REQ-COL-128 and REQ-COL-136 (reqio), TASK-M7-48 and `plan/rule_groups.yaml`; built by TASK-M7-48*
 
 The human's words, verbatim:
@@ -26398,7 +26422,7 @@ R-624 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-GUI-383 (statement, rulings, note).
 
-## R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10; the decisions made under R-369 stand, with no vetoes *(amends nothing; extends R-568, R-522 and R-527)*
+## R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10; the decisions made under R-369 stand, with no vetoes *(amends nothing; R-568's, R-522's and R-527's parking stands)*
 *25 Oct 2026 · applied in `REVIEW_QUEUE.md` (a dated line in RQ-378, RQ-386 and RQ-391) and `plan/rule_groups.yaml`*
 
 The human's words, the batch's last lines, verbatim:
