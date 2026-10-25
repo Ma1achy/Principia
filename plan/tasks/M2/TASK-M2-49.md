@@ -23,14 +23,21 @@ tests at the release profile; the fault is reported upstream; the pin moves to a
 ## Deliverables
 - The host-target rustflags (`.cargo/config.toml` or the build's equivalent) carrying `-Zmir-enable-passes=-GVN`,
   never reaching the rust-gpu SPIR-V build.
-- RQ-299's standalone reproducer as a test, and a check that the SPIR-V build's flags carry no `-Zmir-enable-passes`.
+- RQ-299's standalone reproducer as a test, and a check that the workspace adds nothing to the SPIR-V build: the flag
+  only under `[target.'cfg(not(target_arch = "spirv"))']`, and the SPIR-V build's rustflags exactly spirv-builder's
+  own, its own `-Zmir-enable-passes=-GVN` among them (applied per R-369, the orchestrator's decision on PR #291).
+  *Was:* "a check that the SPIR-V build's flags carry no `-Zmir-enable-passes`."
 - A CI job that runs the native tests at the release profile.
 - The upstream report drafted in the PR (the reproducer, the toolchain table, the pass named).
 
 ## Acceptance tests
 - `cargo test -p kernel --release --test canon` — `stage_canon_native` passes; the reproducer prints 0.5 at opt-level
-  1, 2 and 3 with the workspace's host flags; control: on the pin without the flag it prints −0.5; the SPIR-V build's
-  flags carry no `-Zmir-enable-passes` (REQ-TOOL-188).
+  1, 2 and 3 with the workspace's host flags; control: on the pin without the flag it prints −0.5 (REQ-TOOL-188).
+  *Was:* "…; the SPIR-V build's flags carry no `-Zmir-enable-passes` (REQ-TOOL-188)."
+- `cargo xtask build-kernel`, then `cargo test -p xtask --test build_kernel` — the workspace adds nothing to the SPIR-V
+  build: `.cargo/config.toml` carries the flag only under `[target.'cfg(not(target_arch = "spirv"))']`, and the
+  kernel's SPIR-V build's rustflags, as cargo's fingerprint records them, are exactly spirv-builder's own
+  (REQ-TOOL-188; applied per R-369, the orchestrator's decision on PR #291).
 - CI log on the PR — the release-profile job green; a `measure/` run (R-272) shows it failing `stage_canon_native`
   with the flag removed (REQ-TOOL-189).
 
