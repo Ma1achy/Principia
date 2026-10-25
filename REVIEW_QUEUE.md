@@ -98,3 +98,12 @@ later." For the human: yes, whether there is a Frame stage at all.*
     `t_part` also exceeds `T`.
 - **Applied meanwhile:** none. REQ-VAL-199 carries `rq: RQ-575` for this rule only.
 - **Waits:** REQ-VAL-199's gate (TASK-M8-76).
+- **Second question (physics review 5644374613 of PR #293, F3; added on R-600's port, the text above unchanged):**
+  which statistic the gate compares. The prediction is per start, but `principia_honesty_precision.md` §6
+  (ensemble_ratio) says "the median measured `t_part(f32)/t_part(f64)` compared with the predicted one", REQ-VAL-199's
+  statement "the median … against its expected value" and its verify "the measured ratios against the predicted". Two
+  readings fit, and they pass different ensembles.
+  - **Options seen:** (i) the median of the measured ratios against the median of the predicted ratios, the tolerance
+    on their difference; (ii) the median, over the starts, of each start's measured ratio divided by its predicted
+    ratio, against 1, the tolerance on its distance from 1.
+  - **Applied meanwhile:** none; REQ-VAL-199's `rq: RQ-575` covers this rule too.

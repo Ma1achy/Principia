@@ -25911,11 +25911,16 @@ an R-71 calibration, confirmed at the M8 gate (REQ-VAL-199).
 *Read so (flagged, applied per R-369):* the human's `tol` in `ln(tol/δ0)` is option (b)'s `θ`, the parted mark (0.1,
 R-574's "parted at", the human's value, not a calibration), and "the tolerance" in the last sentence is the gate's
 tolerance on the ratio, option (b)'s "the tolerance calibrated". `δ₀` is each pair's measured chord at the first sync
-boundary, as the probe measured its starting chords.
+boundary, `k = 1`, `t = Δ_sync`, not `t = 0`: integrator contract Part 2a numbers the boundaries `t = k·Δ_sync`, and
+`Δ_sync` is REQ-INT-080's calibration. The probe's starting chords were measured at `t = 0.1` (RQ-557's text)
+(physics review 5644374613 of PR #293, F3).
 
 *Queued:* "all 256 starts, not a subset" replaces the options' "over the ICs where both pairs part, the count
 reported", and leaves open how a start whose pair has not parted by the horizon (`T` at most 200, R-610) enters the
-median: RQ-575. REQ-VAL-199 waits on it for that rule only.
+median: RQ-575. Which statistic compares the measured with the predicted ratios, the median of the measured ratios
+against the median of the predicted or the median of each start's measured over predicted, changes which ensembles
+pass, so it is RQ-575's second question, for the human (physics review 5644374613 of PR #293, F3). REQ-VAL-199 waits
+on RQ-575 for those two rules only.
 
 R-600 is in the "physics" group of `plan/rule_groups.yaml`.
 
