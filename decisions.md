@@ -25750,20 +25750,20 @@ R-593 is in the "physics" group of `plan/rule_groups.yaml`, with R-591.
 Changes REQ-CHART-010 (verify, rulings, source, rq, note).
 
 ## R-595 — Under R-548's `E ≥ 0` guard an E < 0 state that passes the dispersal step's geometric tests goes on to the hierarchy step, where it may read HE, PE, B-stable or excursion: the guard is for dispersal (H, HP, P), and a binary plus an escaper is the ordinary E < 0 escape *(closes RQ-521; corrects R-548's "falls through to …" list)*
-*25 Oct 2026 · the batch recorded, its RQ-571 and RQ-570 paragraphs left out, in
+*25 Oct 2026 · the batch recorded, its two Table 1 paragraphs left out, in
 `docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md`; applied in `docs/design/principia_dd_chazy_final_motion.md`
 § "3.2 The rule, in order" and § "11.3 Open questions", R-548's forward line, `docs/archive/review_queue/M0.md`
 (RQ-521, moved with its ruling), REQ-PAY-099 (reqio), TASK-M7-35 (its notes and acceptance line) and
 `plan/rule_groups.yaml`; built by TASK-M7-35*
 
 **The batch.** The human's first message of 25 Oct 2026 rules thirty review-queue entries, keeps three parked, and
-rules RQ-571 and RQ-570, which TASK-M2-20 ports. It is recorded in
+rules two entries on Table 1's M and energy columns, which TASK-M2-20 ports. It is recorded in
 `docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md` (sha256
-`6e673a76f6fca1af36b093c47361b6bf840e3726c69c3fc173c96d6caff2cc1f`, 95 lines) as given, except that the RQ-571 and
-RQ-570 paragraphs are left out, and the record says so where they stand. The thirty are ported one ruling per entry,
-in the message's order, from R-595 to R-624, and R-625 records the message's last two lines. The numbers just before
-R-595 are held by other work. The human's second message of 25 Oct 2026 rules RQ-572, RQ-573 and RQ-574: RQ-574 is
-ported here, by R-626, and the others by their own task PRs (RQ-572 by R-593).
+`6e673a76f6fca1af36b093c47361b6bf840e3726c69c3fc173c96d6caff2cc1f`, 95 lines) as given, except that the two Table 1
+paragraphs are left out, and the record says so where they stand, naming them. The thirty are ported one ruling per
+entry, in the message's order, from R-595 to R-624, and R-625 records the message's last two lines. The numbers just
+before R-595 are held by other work. The human's second message of 25 Oct 2026 rules RQ-572, RQ-574 and one other
+entry: RQ-574 is ported here, by R-626, and the others by their own task PRs (RQ-572 by R-593).
 
 The human's words on RQ-521, verbatim:
 

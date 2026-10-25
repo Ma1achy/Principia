@@ -8893,7 +8893,7 @@
   - file: decisions.md
     section: "R-597 — \"No blank\" on latent and flat charts holds at the default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate and draws as not a system, with the reason in the readout *(closes RQ-536; qualifies R-570 item 3; caps REQ-GEN-038's `μ_max` range)*"
   - file: decisions.md
-    section: "R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10; the decisions made under R-369 stand, with no vetoes *(amends nothing; R-568's, R-522's and R-527's parking stands)*"
+    section: "R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10 *(amends nothing; R-568's, R-522's and R-527's parking stands)*"
   verify:
     method: review checklist
     detail: "the proposal gives lo and hi for mu_max, hi at most 10 (R-597; a proposed hi above 10 fails the check), and for q_max with the check's output at both ends and the sampled interior, and the inverse's round-trip error at f32 and f64 at each end; the physics reviewer confirms each end keeps the three requirements"
