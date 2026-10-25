@@ -25765,7 +25765,9 @@ starts" leaves REQ-VAL-019's and REQ-VAL-120's text for the Anosova half (the Bu
 II changes none of paper I's velocities or units: it reruns the same 100 configurations from exact rest. Its `ξ`
 differs from paper I's on `N = 35, 49, 54` and `65`; paper I's `ξ` is kept on every row, and paper II's is recorded in
 the fixture's note on those four (dd_validation_orbits §1.6). The scan of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being
-taken as printed. Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed.
+taken as printed. Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed;
+the one difference, `N = 17`'s `ξ` (a broken fifth decimal, A `1` flagged uncertain, B `7`), is settled as `7` by the
+glyph's slant and paper II's clean print.
 The asserted set is item 4 of the RQ-566 ruling, with item 4(i) as the RQ-571 ruling refines it: the computed `M =
 η·10⁻⁴` on every row, the printed column 11 on every row printing one but the five listed, and the list itself
 asserted. RQ-573's ruling narrows RQ-571's "Where paper II reprints a row, take paper II's η" to the rows where paper I

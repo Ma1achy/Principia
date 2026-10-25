@@ -15,7 +15,7 @@ page,N,xi,eta_I,eta_II,eta_used,eta_source,E_col8_e7,M_col11_e4,outcome,note
 1010,14,0.189034578,0.099451113,,0.099451113,I,—,—,Close approach,
 1010,15,0.008491508,0.593936046,,0.593936046,I,-2.564,0.5939,Disintegration,
 1010,16,0.078425390,0.349994402,,0.349994402,I,-1.747,0.3490,Disintegration,
-1010,17,0.115279340,0.749806025,,0.749806025,I,-3.185,0.7498,Disintegration,"xi's fifth decimal is a broken glyph (a slanted stem, no top bar), read 7 by both transcriptions (A, 600 dpi row bands; B, 450 dpi column strips); paper II prints 0.115279340"
+1010,17,0.115279340,0.749806025,,0.749806025,I,-3.185,0.7498,Disintegration,"xi's fifth decimal is a broken glyph (a slanted stem, no top bar): transcription A read 1 (0.115219340), flagged uncertain, B read 7; 7 is used, for the glyph's slant and because paper II prints 0.115279340 cleanly"
 1010,18,0.012014848,0.514189941,,0.514189941,I,—,—,Close approach,
 1010,19,0.041515318,0.353444473,,0.353444473,I,—,—,Close approach,
 1010,20,0.355454774,0.287990767,,0.287990767,I,-1.168,0.2880,Disintegration,

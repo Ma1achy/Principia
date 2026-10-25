@@ -173,7 +173,10 @@ arXiv:1805.07980 (2018), §2, an open restatement of region D at exact rest with
 **Table 1** (I, pp. 1010–1012) is the fixture `fixtures/anosova/table1.csv`: every row, the `ΔE/E > 0.05` rows and the
 rows printing "—" included, each with its page; columns `N`, `ξ`, paper I's printed `η`, paper II's `η` where it
 differs, the `η` used and why, `E·10⁻⁷` (column 8), `M·10⁻⁴` (column 11) and the outcome (column 4) as text. It was
-transcribed twice, independently, and the two diffed before it was committed. **The `η` used** is paper I's, except on
+transcribed twice, independently, and the two diffed before it was committed: one difference, `N = 17`'s `ξ`, whose
+fifth decimal is a broken glyph (A read `1`, flagged uncertain; B `7`), settled as `7` (`0.115279340`) by the glyph's
+slant and paper II's clean print. *Was:* "the two diffed before it was committed." (code review C4 of PR #294: the
+diff was not empty). **The `η` used** is paper I's, except on
 `N = 88`, where paper II's `0.311230217` is used: I prints `0.7311230217`, outside region D (RQ-571's ruling: "this
 fixes N=88"). The papers' `η` differ on six rows; each keeps its reason in the fixture:
 

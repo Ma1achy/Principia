@@ -1071,10 +1071,11 @@ without asserting it until this is ruled.*
   the printed (ξ, η), another normalisation, or another quantity; (b) a print error common to both tables (unlikely,
   since II was set separately and agrees with I to K₀); (c) the printed (ξ, η) are not the configurations the
   energies were computed from, though column 11, printed on 62 rows, matches η·10⁻⁴ on 57 (RQ-571).
-- **Also recorded here, as dispatched:** N = 17's ξ in paper I has a broken fifth decimal. Both transcriptions, A
-  (600 dpi row bands) and B (450 dpi column strips), read 0.115279340; at 600 dpi the glyph is a slanted stem with no
-  top bar, the slant of row 16's "7", while every "1" in the cell is upright with a flat foot, so it is read "7"; paper
-  II prints 0.115279340 cleanly. The fixture carries 0.115279340 and notes the glyph.
+- **Also recorded here, as dispatched:** N = 17's ξ in paper I has a broken fifth decimal. Transcription A read
+  0.115219340 (a damaged "1", flagged uncertain: "it could be a '7'"), B 0.115279340: the one difference between the
+  two transcriptions. At 600 dpi the glyph is a slanted stem with no top bar, the slant of row 16's "7", while every
+  "1" in the cell is upright with a flat foot, so it is read "7"; paper II prints 0.115279340 cleanly. The fixture
+  carries 0.115279340 and both readings.
 - **Applied meanwhile:** column 8 is transcribed and recorded, never asserted.
 - **Options seen:** (a) column 8 stays recorded and unasserted at M2, and the Anosova chart's milestone decides; (b)
   the human identifies column 8's definition and it is asserted as that.
