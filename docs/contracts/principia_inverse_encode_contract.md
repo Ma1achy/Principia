@@ -138,6 +138,36 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   it to `ε_phys`. A control past its clamp by the same factor, `s` within `ε/2` of 0 or 1 or `|μₖ| ≥ (1 − ε_μ/2)·μ_max`,
   is clamp-adjacent and must set its `lookup_clamped` bit; a control clear of its clamp must leave its bit unset.
 
+**The conditioning number `κ(z)`** (defined per R-72, REQ-ENC-025; TASK-M2-20). At a point `z`, with `x = D(z)` on
+the canonical section, let `J_D(z) = ∂D/∂z` be the decode's Jacobian, 15 × 8 (the three masses, the three positions and
+the three momenta, against the eight controls), and `W` the diagonal weight of `‖·‖_phys` at `x`: 1 on each mass,
+`1/R_x` on each position component and `1/P_x` on each momentum component, `R_x` and `P_x` as above. Then
+
+```
+κ(z)  =  1 / σ_min( W · J_D(z) )
+```
+
+the reciprocal of the smallest singular value; `κ(z) = +∞` where `W·J_D(z)` loses rank. On the section `E` is `D`'s
+inverse, so `κ(z)` is the norm of encode's Jacobian there, `‖J_E‖`, from the weighted physical norm to `z`: the
+ground-truth note's "`κ` of the encode Jacobian at the point".
+
+- **It bounds the T2 residual** (Part 1). For a state `x̃` on the section near `x`, to first order in `x̃ − x`,
+  `‖E(x̃) − z‖_∞ ≤ ‖E(x̃) − z‖₂ ≤ κ(z)·‖W(x̃ − x)‖₂ ≤ 3·κ(z)·‖x̃ − x‖_phys`, the last because `‖W·δx‖₂²` sums nine
+  block terms, each at most `‖δx‖_phys²`. T2's `x̃` is the decode's own rounded `D(z)`, and encode's rounding enters
+  the same way, so `E(D(z))` misses `z` by at most `3·κ(z)` times their physical rounding: the z-space amplification
+  this Part warns of. The physical residual `‖D(z) − D(E(D(z)))‖_phys` does not carry `κ`: it is asserted against
+  `ε_phys` as above.
+- **It builds on the links' derivatives.** `D` is the block construction `B` after the links `Φ`, `v = Φ(z)` the
+  controls' values (`α`, `β`, the four `q` and the masses), so `J_D = J_B·Λ`, `Λ = ∂Φ/∂z` block diagonal: one
+  derivative `dvₖ/dzₖ` for each of `α`, `β` and `q₀ … q₃`, and the mass link's 3 × 2 Jacobian for `(z_μ1, z_μ2)`. A
+  sigmoid link onto `[a, a + w]` has `dv/dz = w·s(1 − s)`, `s = σ(z)`, so `1/(dv/dz) = (1/w)·d logit/ds =
+  1/(w·s(1 − s))`, up to `1/(w·ε)` at the clamps. Hence `κ(z) ≤ 1/(σ_min(Λ)·σ_B)`, `σ_B` the least gain of `W·J_B` on
+  `Λ`'s range: the link's factor, which re-encoding under another registry link changes (Part 7: "link-fixable"), and
+  the block geometry's, which no link changes (at an `α`-pole `∂D/∂z_β = 0` and `κ = +∞`: `β` is not defined there).
+- **How it is evaluated** (TASK-M2-20, `kernel::encode::ingest`). At the precision encode ran at: `J_D`'s column `k`
+  by the central difference `(D(z + hₖeₖ) − D(z − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |zₖ|)`, every column weighted
+  by `W` at `x`, and `σ_min` by one-sided Jacobi rotations on the 15 × 8 matrix, so `σ_min²` is never formed.
+
 ---
 
 ## Part 5 — Inverse by axis kind (completing the four kinds)

@@ -25672,3 +25672,118 @@ that gate.
 R-591 is in the "physics" group of `plan/rule_groups.yaml`, with R-437, R-438 and R-580.
 
 Changes REQ-ENC-038 (statement, rulings, source, note).
+
+## R-592 — Anosova region D: Agekyan & Anosova (1968) is the source, its near-rest starts ported as a definition and its Table 1 as a fixture; `M = η·10⁻⁴` asserted on every row and the printed `M` column on every row but `N = 16, 23, 26, 32, 34`; paper II's `η` taken only where paper I is the outlier (`N = 88`); column 8 recorded, never asserted, while RQ-570 is open *(closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open; changes REQ-VAL-019 and REQ-VAL-120)*
+*25 Oct 2026 · applied in `docs/design/principia_dd_validation_orbits.md` § "1.6 Agekyan–Anosova region D — the
+near-rest starts (R-592)" (new) and § "2. What the suite tests that the current gates do not" (the Burrau constants'
+`R` and the recorded rescale, defined per R-72), `docs/design/principia_dd_encode.md` § "4. Seams (obligations →
+integration tests)" (the validation import row, its old wording kept as a *Was*), `docs/archive/review_queue/M0.md`
+(RQ-566, RQ-571 and RQ-573, moved with their rulings), REQ-VAL-019 and REQ-VAL-120 (reqio: statement, rulings,
+source, rq, verify, note), `plan/rule_groups.yaml`, and the fixtures `fixtures/anosova/`; built by TASK-M2-20*
+
+The human's message, 24 Oct 2026, its ruling on RQ-566, verbatim:
+
+> RQ-566 ruling (24 Oct 2026): (a), the papers are in the repo. This supersedes my earlier reading of (b).
+>
+> 1. Sources. Put the three PDFs in docs/incoming/2026-10-24_anosova/ with a README giving each full citation:
+>    - I: Agekyan & Anosova, "A study of the dynamics of triple systems by means of statistical sampling",
+>      Soviet Astronomy 11(6), 1006–1014 (1968); Astron. Zh. 44(6), 1261–1273 (1967).
+>      ADS 1968SvA....11.1006A. This is the primary source.
+>    - II: Agekyan & Anosova, "Investigation of the dynamics of triple systems by the method of statistical tests. II",
+>      Astrophysics 4(1), 11–16 (1968), doi:10.1007/BF01013153. Read it and record whether it changes the ICs,
+>      velocities or units of I. Don't assume it doesn't.
+>    - III: Li & Liao, arXiv:1805.07980 (2018), §2. This is an open restatement of region D at exact rest, G = 1.
+>
+> 2. The definition, from I, p. 1007–1008:
+>    - Equal masses m = 1.
+>    - A1 = (−1/2, 0), A2 = (+1/2, 0), A3 = (ξ, η).
+>    - Region D: ξ ≥ 0, η ≥ 0, (ξ + 1/2)² + η² ≤ 1 (eq. 8).
+>    - G = 6.67e-8 in their units (unit length 3e16 cm, unit mass 2e33 g).
+>    - Initial velocities (eq. 3): ẋ1 = ẋ2 = +5e-5, ẋ3 = −1e-4, all ẏ = 0. Their total momentum is 0.
+>    - Initial kinetic energy K0 = 7.5e-9. These are NEAR-rest starts, not rest. Name them that way, and drop "rest
+>      starts" from REQ text.
+>    - Check the scan for the ξ, η scale factors (p. 1008: random numbers × 1/2 and × "3/2", which may be √3/2) and
+>      record what you read.
+>
+> 3. Fixture: transcribe Table 1 (p. 1010 and following) to fixtures/anosova/table1.csv. Columns: N, ξ, η, E·1e-7,
+>    M·1e-4, plus the outcome column as text.
+>    - Transcribe it twice, independently, and diff the two before committing. Record the page for each row.
+>    - Keep every row, including the "ΔE/E > 0.05" and blank rows. Never discard a row.
+>
+> 4. What is asserted at M2 (TASK-M2-20):
+>    (i) Angular momentum. M = Σ m(xẏ − yẋ) = η·1e-4 from eq. (3) must match column 11 to the table's printed
+>        precision on every row. My spot check: 5 of 5 agree exactly.
+>    (ii) Energy, by formula. E = −G(1 + 1/r13 + 1/r23) + K0 (eq. 4), computed from the definition.
+>    (iii) Exact-rest control, a separate fixture: velocities exactly 0, so L_z == 0 bitwise and E == U.
+>    (iv) Through the chart: the decode canonicalises (centre of mass at the origin, I = 1, G = 1). Compare after scaling
+>         back with the stated length factor, as #284 does for Burrau (REQ-VAL-174). Also compare the scale-free
+>         invariant L_z²·|E| / (G²·M⁵), which needs no factor.
+>    (v) Control: one point outside D (eq. 8 false) must be rejected, or flagged as outside the region.
+>
+> 5. NEW RQ, physics, for me. Do not resolve it: Table 1's column 8 (E·1e-7) does not equal eq. (4) evaluated on
+>    columns 2–3.
+>    Examples:
+>    - N=1: computed −2.464, table −2.254.
+>    - N=3: computed −2.589, table −2.041.
+>    - N=10: computed −3.858, table −0.887.
+>    The ratio varies from 0.23 to 1.25 across rows, so it is not a unit factor, and shifting the column by a row does
+>    not fix it either.
+>    Record the comparison for all 100 rows. Assert (ii), and record column 8 without asserting it until this is
+>    ruled. Possible causes for the RQ to list: a different definition of E in column 8, an OCR or print error in the
+>    scan, or something said in paper II.
+>
+> 6. Do not import anything else from the papers as reference values (disintegration times, p, p_min, outcome
+>    fractions). Those wait for the Anosova chart's milestone.
+
+The human's message, 25 Oct 2026, its rulings on RQ-571 and RQ-570, verbatim:
+
+> RQ-571 (Table 1's M column): (b), with a guard.
+> - Every row asserts the computed M = η·1e-4. That follows from the definition and is never skipped.
+> - Where paper II reprints a row, take paper II's η (this fixes N=88, giving 0.311230217). Record paper I's printed
+>   value beside it.
+> - The table's printed M column must match the computed value on every row except an explicit exception list of
+>   N = 16, 23, 26, 32, 34. Each entry carries its printed and computed values.
+> - The exception list is itself asserted: a new mismatch fails, and so does a listed row that starts matching. No row is
+>   dropped.
+>
+> RQ-570 (Table 1's energy column): stays queued. Record the comparison; assert nothing on column 8.
+
+The human's second message, 25 Oct 2026, its ruling on RQ-573, verbatim:
+
+> RQ-573: (b). Take paper II's η only where paper I is the outlier, as on N=88, i.e. where paper II's value agrees with
+> paper I's own printed M and paper I's η does not.
+> - On row 93, paper I is self-consistent: η = 0.471972279 gives M = 0.4720, as printed. Paper II's 0.471612279 is the
+>   misprint.
+> - Keep paper I's value. Record paper II's beside it, labelled as paper II's misprint.
+> - The exception list stays at exactly N = 16, 23, 26, 32, 34.
+> - Record all six rows where the papers differ, each with which paper's value is used and why.
+
+*What it decides:* region D and its starts are ported from paper I as a definition (R-72), with the papers' citations,
+into dd_validation_orbits §1.6: equal unit masses at `(−½, 0)`, `(+½, 0)` and `(ξ, η)`, region D by eq. 8, `G =
+6.67·10⁻⁸` in the papers' units, and eq. 3's velocities, so the starts are **near-rest starts**, named so, and "rest
+starts" leaves REQ-VAL-019's and REQ-VAL-120's text for the Anosova half (the Burrau start stays a rest start). Paper
+II changes none of paper I's initial conditions, velocities or units: it reruns the same 100 configurations from exact
+rest. The scan of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being
+taken as printed. Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed.
+The asserted set is item 4 of the RQ-566 ruling, with item 4(i) as the RQ-571 ruling refines it: the computed `M =
+η·10⁻⁴` on every row, the printed column 11 on every row printing one but the five listed, and the list itself
+asserted. RQ-573's ruling narrows RQ-571's "Where paper II reprints a row, take paper II's η" to the rows where paper I
+is the outlier, so paper I's `η` stands on rows 26, 61, 69, 77 and 93, row 93's paper II value recorded as paper II's
+misprint. Column 8 is recorded beside eq. 4 on every row and never asserted while RQ-570 is open. Nothing else is
+imported from the papers.
+
+*Applied per R-369, recorded here* (the orchestrator's note on applying RQ-573; the human was told and did not object):
+RQ-573's criterion, "where paper II's value agrees with paper I's own printed M and paper I's η does not", cannot apply
+to `N = 88`, which prints no `M`. `N = 88` still takes paper II's `η`, under RQ-571's explicit "this fixes N=88": paper
+I's value lies outside region D. Rows 26, 61, 69, 77 and 93 keep paper I.
+
+*Also applied per R-72 by TASK-M2-20, recorded with this port* (definitions the import needs, for the physics
+reviewer): the Burrau constants' `R` is the hyperradius `√(I/M)` (`√5 = 2.2361` on the Burrau rest start), and the
+recorded rescale is `(M, G, λ)` with `C`'s mirror flag, multiplying back as `E = G·M²·λ·E_c` and `L_z =
+±√G·M^{3/2}·λ^{−1/2}·L_{z,c}` (dd_validation_orbits §2). The RQ-566 ruling's item 4(iv) says "scaling back with the
+stated length factor"; the length factor alone does not bring back `E` and `L_z` once the masses are normalised and `G`
+set to 1, so the rescale carries the mass and `G` factors with it.
+
+R-592 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-019 and REQ-VAL-120 (statement, rulings, source, rq, verify, note).
