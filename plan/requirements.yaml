@@ -3154,7 +3154,7 @@
   note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
 - id: REQ-CHART-074
   area: CHART
-  statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on the mass simplex chart and identical payloads on a latent configuration view with both mass logits at 0."
+  statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on a latent configuration view at the fixed non-zero mass logit z_μ = (0.5, −0.3), whose masses softmax(0, μ_max·tanh z_μ) go through the mass link (R-626; the mass simplex chart, which sets its masses directly, cannot show it), and identical payloads on a latent configuration view with both mass logits at 0."
   source:
   - file: decisions.md
     section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
@@ -3162,16 +3162,17 @@
     section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Links carry a measure
+  - file: decisions.md
+    section: "R-626 — R-482 C3's mass-varying chart is a latent configuration view at a fixed non-zero mass logit, or a mixed chart with a mass axis, not the mass simplex chart, which sets its masses directly and cannot show `μ_max` moving them *(closes RQ-574; amends R-482 C3's choice of chart)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine link_param_moves: mu_max 4 vs 5 on the mass simplex chart, payloads differ; control (C3): the same pair on a latent configuration view with both mass logits at 0 (equal masses) gives bitwise-identical payloads, so the first arm cannot pass vacuously"
+    detail: "cargo test -p engine link_param_moves: mu_max 4 vs 5 on a latent configuration view at the mass logit z_μ = (0.5, −0.3), payloads differ (R-626); control (C3): the same pair on a latent configuration view with both mass logits at 0 (equal masses) gives bitwise-identical payloads, so the first arm cannot pass vacuously"
   rulings:
   - R-481
   - R-482
+  - R-626
   milestone: M4
-  rq:
-  - RQ-574
-  note: R-482 C3 (20 Oct 2026).
+  note: "R-482 C3 (20 Oct 2026). R-626 (25 Oct 2026, RQ-574 (a)): the mass-varying chart is a latent view at a fixed non-zero mass logit, the logit z_μ = (0.5, −0.3) applied per R-369; the mass simplex chart sets its masses directly, so μ_max cannot move its payloads. *Was (statement):* \"A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on the mass simplex chart and identical payloads on a latent configuration view with both mass logits at 0.\" *Was (verify):* \"cargo test -p engine link_param_moves: mu_max 4 vs 5 on the mass simplex chart, payloads differ; control (C3): the same pair on a latent configuration view with both mass logits at 0 (equal masses) gives bitwise-identical payloads, so the first arm cannot pass vacuously\""
 - id: REQ-CHART-075
   area: CHART
   statement: "The shape sphere's exponential map must compute its system_image from its cap, the pixels of [0,1]² with r = ‖d‖ ≤ π: bijective over its cap, whether or not the cap straddles the equator, each pixel its own system (R-544); and a pixel with r > π must be the domain's end, not a system, out of the count and the total (R-503). How pixels exactly on r = π count is REQ-CHART-078's."

@@ -15043,6 +15043,10 @@ link functions), REQ-GEN-041 (C4), REQ-GEN-042 (the hash), REQ-DEC-048 (A2), REQ
 renders and payloads) and REQ-CHART-074 (C3); changes REQ-DEC-009 (the constants are defaults).
 
 ## R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone
+*Amended in part by R-626 (25 Oct 2026; RQ-574 closed: C3's mass-varying chart is a latent configuration view at a
+fixed non-zero mass logit, not the mass simplex chart, which sets its masses directly).*
+*Still in force: all of it but C3's "The mass-varying chart is the mass simplex chart", which R-626 replaces; C3's
+constant-mass control, the latent view with both mass logits at 0, stands.*
 *20 Oct 2026 · applied in the verify of each requirement R-478 to R-481 add, REQ-SYS-011's (C6; reqio), `plan/tasks.yaml`
 and `plan/rule_groups.yaml`; built by the tasks those requirements name*
 
@@ -26439,3 +26443,30 @@ them, and what each applies stays applied. The calibration values are proposed a
 as planned; the cap on `μ_max` is R-597's.
 
 R-625 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-626 — R-482 C3's mass-varying chart is a latent configuration view at a fixed non-zero mass logit, or a mixed chart with a mass axis, not the mass simplex chart, which sets its masses directly and cannot show `μ_max` moving them *(closes RQ-574; amends R-482 C3's choice of chart)*
+*25 Oct 2026 · the human's second message of that day; applied in R-482's forward line,
+`docs/archive/review_queue/M0.md` (RQ-574, moved with its ruling), REQ-CHART-074 (reqio), TASK-M4-21 (its goal,
+acceptance line and a note) and `plan/rule_groups.yaml`; built by TASK-M4-21*
+
+The human's words, verbatim:
+
+> RQ-574: (a). Use a latent view at a fixed non-zero mass logit, or a mixed chart with a mass axis. The mass simplex
+> chart sets its masses directly, so it cannot show μ_max moving them.
+
+*What it decides:* RQ-574's option (a). C3's first arm, "`μ_max = 4` against `5` gives different payloads on a
+mass-varying chart", is run on a chart whose masses go through the `softmax_tanh` mass link, so that `μ_max` reaches
+them: a latent view at a fixed non-zero mass logit, or a mixed chart with a mass axis. The mass simplex chart sets its
+masses directly and reads no mass link, so `μ_max` cannot move its payloads, and R-482 C3's "The mass-varying chart is
+the mass simplex chart" is replaced. The constant-mass control is unchanged: a latent configuration view with both
+mass logits at 0, the equal masses `(⅓, ⅓, ⅓)`, which `μ_max` does not move. No contract text names C3's chart; the
+choice lives in REQ-CHART-074 and TASK-M4-21.
+
+*Applied per R-369:* of the two the human allows, the test takes the latent configuration view at the fixed mass logit
+`z_μ = (0.5, −0.3)`, the option's own example, whose masses `softmax(0, μ_max·tanh z_μ)` differ between `μ_max = 4`
+and `5` (the logits `(0, 1.85, −1.17)` against `(0, 2.31, −1.46)`). The two arms then run on the same latent view and
+differ only in the mass logit, so the control isolates what makes the masses constant.
+
+R-626 is in the "process" group of `plan/rule_groups.yaml`, with R-482.
+
+Changes REQ-CHART-074 (statement, verify, rq removed, rulings, source, note).

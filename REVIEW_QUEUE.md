@@ -73,30 +73,6 @@ later." For the human: yes, whether there is a Frame stage at all.*
   medium (R-486).
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-527); what it applies stays applied, and nothing waits.
 
-## RQ-574: R-482 C3's mass-varying chart is the mass simplex chart, whose masses `μ_max` cannot move *(found by the physics re-check 5643056937 of PR #289, TASK-M2-41; R-482 C3 against `crates/kernel/src/chart/mass_simplex.rs`; REQ-CHART-074; context: TASK-M4-21)*
-
-*Found in TASK-M2-41's fix round 2. C3's choice was "applied per R-369", not the human's words, so a reviewer can
-settle it; queued because the requirement's verify names the chart, and a test written to it cannot pass.*
-
-- **File, section:**
-  - `decisions.md` § "R-482 — The tests of R-478 to R-481, …", C3: "REQ-CHART-074 (TASK-M4-21). The mass-varying chart
-    is the mass simplex chart; the constant-mass control is a latent configuration view with both mass logits at 0, the
-    equal masses `(⅓, ⅓, ⅓)`, which `μ_max` does not move (`μₖ = μ_max·tanh 0 = 0`). … (applied per R-369)."
-  - `plan/requirements.yaml` REQ-CHART-074: "`mu_max = 4` against 5 must give different payloads on the mass simplex
-    chart and identical payloads on a latent configuration view with both mass logits at 0"; verify: "cargo test -p
-    engine link_param_moves: mu_max 4 vs 5 on the mass simplex chart, payloads differ".
-  - `crates/kernel/src/chart/mass_simplex.rs`, the module's note (lines 1–17): "the masses swept over the simplex, the
-    bodies at rest"; "the masses through the shared entry for a chart that sets masses
-    ([`crate::decode::mass::from_masses`] …), … every momentum 0". The chart sets its masses directly: no mass link and
-    no momentum link is read, so `μ_max` (and `q_max`) cannot reach its payloads (TASK-M2-41's `Chart::decode_params`
-    keeps the default, which ignores the parameters, for this chart).
-- **The question:** `link_param_moves`' first arm, "payloads differ" on the mass simplex chart, cannot pass; which
-  chart is the mass-varying one?
-- **Options seen:** (a) a latent view at a fixed non-zero mass logit (say `z_μ = (0.5, −0.3)`), whose masses
-  `softmax(0, μ_max·tanh z_μ)` move with `μ_max`, or a mixed chart with a mass axis (`z_μ₁`), whose masses move at
-  every pixel off `z_μ₁ = 0`; the constant-mass control unchanged; (b) other.
-- **Applied meanwhile:** none: TASK-M4-21 is not built. Waits: REQ-CHART-074 (TASK-M4-21).
-
 ## RQ-575: Under R-600's "all 256 starts, not a subset", how a start whose pair has not parted by the horizon enters the ensemble ratio's median *(physics; found by R-600's port; R-600, R-574, R-610; REQ-VAL-199; context: TASK-M8-76)*
 
 *Found by R-600's port. For the human: yes (physics: it changes what the gate passes).*
