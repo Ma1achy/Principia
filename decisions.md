@@ -26283,11 +26283,12 @@ The human's words, verbatim:
 head at 0 and runs it at the transport's rate while the transport plays, the figure's playhead and the field
 unaffected (as the own clock does)."
 
-*Applied per R-369:* each of the Time panel's own controls that moves its playhead (render_gui_spec §G2's Time
+*Applied per R-369:* each of the Time panel's own controls that jumps its playhead (render_gui_spec §G2's Time
 panel: the scrubber dragged, the scrubber clicked to a time, a step, and the loop's wrap to 0) puts the trace's head back on the figure's
 playhead, and while the transport is paused the head does not move (`principia_lines.md` §8). The port's first
 wording, "a scrub, a seek or a restart of the Time panel", named controls the spec does not define (qa review
-5644700214 of PR #293, N2).
+5644700214 of PR #293, N2); "jumps", not "moves", so that play is not among them (qa review 5644735344,
+N5).
 
 R-617 is in the "design" group of `plan/rule_groups.yaml`.
 
