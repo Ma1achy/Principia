@@ -248,5 +248,5 @@ mutant = "crates/engine/src/lookup.rs:637:34: replace > with >= in moves_within_
 justification = "they differ only at len == 0: a = cos α/√μ_ρ is never 0 (no finite f64 has cos 0, and |cos α| >= 6.1e-17 cannot underflow over a finite √μ_ρ), and b == 0 (α = ±0, or underflow) is within any band pole >= 0 of its finite bound b.r >= 0, so the α = 0 pole branch is taken, which never reads beta_round (inverse_encode_contract § Chart-aware validation, R/b only off the pole; R-591)"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/ingest.rs:127:10: replace > with >= in condition"
+mutant = "crates/kernel/src/encode/ingest.rs:177:10: replace > with >= in condition"
 justification = "s is a minimum of square roots of mul_add sums started at +0.0, so s is never -0.0, and at s == +0.0 both branches give +inf (1/+0.0 = +inf)"

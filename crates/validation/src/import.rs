@@ -169,7 +169,7 @@ impl Rescale {
 /// those multiplied back.
 #[derive(Clone, Copy, Debug)]
 pub struct Imported {
-    /// `z`, `C(x)`, `D(z)`, the residual and `κ(z)`.
+    /// `z`, `C(x)`, `D(z)`, the residual and `κ(x)` at the unit state.
     pub ingested: Ingested<f64>,
     /// The recorded rescale.
     pub rescale: Rescale,

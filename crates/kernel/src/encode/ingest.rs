@@ -5,14 +5,20 @@
 //! - **the physical residual** `‖D(z) − C(x)‖_phys` ([`Ingested::residual`]), the bug signal: `D(z)`, the free decode
 //!   of the `z` encode returned, measured from `C(x)`, the canonical representative of the input, in Part 4's norm,
 //!   which the caller passes, as `super::by_kind::encode_into` takes it (REQ-ENC-029);
-//! - **the conditioning number** `κ(z) = 1/σ_min(W·J_D(z))` ([`Ingested::kappa`], [`kappa`]), Part 4's definition: `J_D`
-//!   the decode's 15 × 8 Jacobian at `z` (the three masses, positions and momenta against the eight controls), `W` the
-//!   weight of `‖·‖_phys` at `D(z)` (1 on a mass, `1/R_x` on a position component, `1/P_x` on a momentum component).
+//! - **the conditioning number** `κ(x) = ‖J_E(x)·W⁻¹‖₂` ([`Ingested::kappa`], [`kappa`]), Part 4's definition: `J_E`
+//!   the encode's 8 × 15 Jacobian at the input `x` itself, on the canonical section or off it (the eight controls
+//!   against the three masses, positions and momenta), `W` the weight of `‖·‖_phys` at `x` (1 on a mass, `1/R_x` on a
+//!   position component, `1/P_x` on a momentum component): the ground-truth note's "`κ` of the encode Jacobian at the
+//!   point".
 //!
-//! **How `κ` is evaluated** (Part 4, "How it is evaluated"): `J_D`'s column `k` by the central difference
-//! `(D(z + hₖeₖ) − D(z − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |zₖ|)` at the precision `R`, each column weighted by `W`,
-//! and `σ_min` by one-sided Jacobi rotations on the columns ([`sigma_min`]), so `σ_min²` is never formed. Where the
-//! weighted Jacobian loses rank, `σ_min = 0` and `κ = +∞`.
+//! **How `κ` is evaluated** (Part 4, "How it is evaluated"): `J_E`'s column `k` by the central difference
+//! `(E(x + hₖeₖ) − E(x − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |xₖ|)` at the precision `R`, each column divided by `W`'s
+//! entry `wₖ` ([`weighted_encode_jacobian`]), and the largest singular value by one-sided Jacobi rotations on the
+//! transpose's eight columns ([`sigma_max`]), so no Gram matrix is formed.
+//!
+//! **The section's tangent alone** ([`weighted_jacobian`], [`condition`]): `1/σ_min(W·J_D(z))` is the encode
+//! Jacobian's norm on the section's tangent only. Since `J_E·J_D = I` there, it bounds `κ` from below; a state moved off
+//! the section (its masses, centre of mass, total momentum, scale or orientation) can see more.
 //!
 //! **CPU only.** Ingestion is the validation programme's import path (Part 7), run by `validation::import`. The module
 //! is gated off the SPIR-V build (`#[cfg(not(target_arch = "spirv"))]` in `encode/mod.rs`), as the driver's
@@ -40,11 +46,11 @@ pub struct Ingested<R> {
     pub decoded: Ic<R>,
     /// `‖D(z) − C(x)‖_phys`, `C(x)` the reference state (Part 7's output 2).
     pub residual: R,
-    /// `κ(z)` (Part 4; Part 7's output 3).
+    /// `κ(x)` at the input (Part 4; Part 7's output 3).
     pub kappa: R,
 }
 
-/// Ingests `ic` under the selection `S`: `E(ic)`, `D(z)`, the residual `norm(C(ic), D(z))` and `κ(z)`. `norm(x, x′)`
+/// Ingests `ic` under the selection `S`: `E(ic)`, `D(z)`, the residual `norm(C(ic), D(z))` and `κ(ic)`. `norm(x, x′)`
 /// is Part 4's `‖x′ − x‖_phys`, `x` the reference; `ic.m` is positive with `Σmᵢ = 1`, as `C` requires.
 pub fn ingest<S, R, N>(ic: &Ic<R>, norm: N) -> Ingested<R>
 where
@@ -59,7 +65,7 @@ where
         encoded,
         decoded,
         residual: norm(&encoded.canonical.ic, &decoded),
-        kappa: kappa::<S, R>(&encoded.z),
+        kappa: kappa::<S, R>(ic),
     }
 }
 
@@ -69,6 +75,15 @@ pub fn components<R: Copy>(x: &Ic<R>) -> Phys<R> {
         x.m[0], x.m[1], x.m[2], x.r[0][0], x.r[0][1], x.r[1][0], x.r[1][1], x.r[2][0], x.r[2][1],
         x.p[0][0], x.p[0][1], x.p[1][0], x.p[1][1], x.p[2][0], x.p[2][1],
     ]
+}
+
+/// The state whose components are `c`, in [`Phys`]'s order.
+pub fn state<R: Copy>(c: &Phys<R>) -> Ic<R> {
+    Ic {
+        m: [c[0], c[1], c[2]],
+        r: [[c[3], c[4]], [c[5], c[6]], [c[7], c[8]]],
+        p: [[c[9], c[10]], [c[11], c[12]], [c[13], c[14]]],
+    }
 }
 
 /// `max(1, maxⱼ ‖vⱼ‖)`: Part 4's extent `R_x` or `P_x` of the block `v`.
@@ -89,7 +104,8 @@ pub fn weights<R: LinkReal>(x: &Ic<R>) -> Phys<R> {
 }
 
 /// `W·J_D(z)`, column by column: column `k` is the central difference of the decode along `z[k]`, step
-/// `hₖ = ε_R^{1/3}·max(1, |zₖ|)`, weighted by `W` at `D(z)`.
+/// `hₖ = ε_R^{1/3}·max(1, |zₖ|)`, weighted by `W` at `D(z)`. The section's tangent alone: [`condition`] of it bounds
+/// [`kappa`] at `D(z)` from below (the module's note).
 pub fn weighted_jacobian<S, R>(z: &Latent<R>) -> [Phys<R>; 8]
 where
     S: Selection,
@@ -114,16 +130,48 @@ where
     cols
 }
 
-/// `κ(z) = 1/σ_min(W·J_D(z))` under the selection `S` (Part 4), `+∞` where `σ_min = 0`.
-pub fn kappa<S, R>(z: &Latent<R>) -> R
+/// `(J_E(x)·W⁻¹)ᵀ`, as its eight columns, one per control: entry `k` of column `i` is the central difference of
+/// `E(x)ᵢ` along `x`'s component `k`, step `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry `wₖ` at `x`. `x` may be
+/// on the canonical section or off it; every component is moved, the masses included.
+pub fn weighted_encode_jacobian<S, R>(x: &Ic<R>) -> [Phys<R>; 8]
 where
     S: Selection,
-    R: LinkReal + PayloadReal,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + IeeeBits,
 {
-    condition(weighted_jacobian::<S, R>(z))
+    let w = weights(x);
+    let c = components(x);
+    let step = Float::cbrt(<R as Float>::epsilon());
+    let mut cols = [[R::zero(); 15]; 8];
+    for (k, (ck, wk)) in c.iter().zip(&w).enumerate() {
+        let h = step * Float::max(R::one(), Float::abs(*ck));
+        let (mut up, mut down) = (c, c);
+        up[k] = *ck + h;
+        down[k] = *ck - h;
+        let plus = encode::<S, R>(&state(&up)).z.z;
+        let minus = encode::<S, R>(&state(&down)).z.z;
+        // The step actually taken: `x ± h` rounded, so the difference quotient divides by what was added.
+        let span = (up[k] - down[k]) * *wk;
+        for (col, (a, b)) in cols.iter_mut().zip(plus.iter().zip(&minus)) {
+            col[k] = (*a - *b) / span;
+        }
+    }
+    cols
 }
 
-/// `1/σ_min` of the 15 × 8 matrix whose columns are `cols`, `+∞` where `σ_min = 0`: [`kappa`] on `W·J_D(z)`.
+/// `κ(x) = ‖J_E(x)·W⁻¹‖₂` under the selection `S` (Part 4): the largest singular value of the weighted encode
+/// Jacobian at `x`, on the section or off it.
+pub fn kappa<S, R>(x: &Ic<R>) -> R
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + IeeeBits,
+{
+    sigma_max(weighted_encode_jacobian::<S, R>(x))
+}
+
+/// `1/σ_min` of the 15 × 8 matrix whose columns are `cols`, `+∞` where `σ_min = 0`: on `W·J_D(z)`, the encode
+/// Jacobian's norm on the section's tangent alone, a lower bound of [`kappa`] at `D(z)`.
 pub fn condition<R: LinkReal>(cols: [Phys<R>; 8]) -> R {
     let s = sigma_min(cols);
     if s > R::zero() {
@@ -142,10 +190,31 @@ fn dot<R: LinkReal>(a: &Phys<R>, b: &Phys<R>) -> R {
     s
 }
 
-/// The smallest singular value of the 15 × 8 matrix whose columns are `cols`, by one-sided Jacobi (Hestenes): pairs of
-/// columns are rotated until every pair is orthogonal to the precision's epsilon, and the singular values are then the
-/// columns' norms. A sweep visits every pair once; the sweeps stop when one rotates nothing, or after 64.
-pub fn sigma_min<R: LinkReal>(mut cols: [Phys<R>; 8]) -> R {
+/// The smallest singular value of the 15 × 8 matrix whose columns are `cols` ([`singular_values`]).
+pub fn sigma_min<R: LinkReal>(cols: [Phys<R>; 8]) -> R {
+    let v = singular_values(cols);
+    let mut least = v[0];
+    for s in &v[1..] {
+        least = Float::min(least, *s);
+    }
+    least
+}
+
+/// The largest singular value of the 15 × 8 matrix whose columns are `cols` ([`singular_values`]): its operator
+/// 2-norm, and its transpose's.
+pub fn sigma_max<R: LinkReal>(cols: [Phys<R>; 8]) -> R {
+    let v = singular_values(cols);
+    let mut most = v[0];
+    for s in &v[1..] {
+        most = Float::max(most, *s);
+    }
+    most
+}
+
+/// The singular values of the 15 × 8 matrix whose columns are `cols`, unordered, by one-sided Jacobi (Hestenes): pairs
+/// of columns are rotated until every pair is orthogonal to the precision's epsilon, and the singular values are then
+/// the columns' norms. A sweep visits every pair once; the sweeps stop when one rotates nothing, or after 64.
+pub fn singular_values<R: LinkReal>(mut cols: [Phys<R>; 8]) -> [R; 8] {
     let eps = <R as Float>::epsilon();
     for _ in 0..64 {
         let mut rotated = false;
@@ -174,9 +243,5 @@ pub fn sigma_min<R: LinkReal>(mut cols: [Phys<R>; 8]) -> R {
             break;
         }
     }
-    let mut least = Float::sqrt(dot(&cols[0], &cols[0]));
-    for col in &cols[1..] {
-        least = Float::min(least, Float::sqrt(dot(col, col)));
-    }
-    least
+    cols.map(|col| Float::sqrt(dot(&col, &col)))
 }

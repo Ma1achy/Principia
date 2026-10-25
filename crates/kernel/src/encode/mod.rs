@@ -11,7 +11,7 @@
 //! [`by_kind`] then encodes into the active chart, axis by axis by kind, and lands in latent `z` where the chart does
 //! not represent the state (Parts 5 and 6, step 4); [`curve`] is kind 4's, the Burrau family's closed form, its
 //! off-curve projection and the fold.
-//! [`ingest`] is the ground-truth import's (Part 7): `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(z)`.
+//! [`ingest`] is the ground-truth import's (Part 7): `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
 //! **T1, constant on gauge orbits** (Part 1; dd_encode §3.3): translation and boost are removed by `C`'s 1a and 1b,
 //! rotation by step 2, scale by step 0, and the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no

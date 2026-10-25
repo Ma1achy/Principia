@@ -1,6 +1,6 @@
 //! Ground-truth ingestion (inverse-encode contract Parts 4 and 7; REQ-VAL-014, REQ-ENC-025; TASK-M2-20): foreign
 //! states, the Lagrange equilateral, the figure-eight and the Burrau rest start, each in its published frame, are
-//! ingested, and the result carries `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(z)`.
+//! ingested, and the result carries `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
 //! **The starts** (`principia_listen.md` § "12. Sweep and known orbits", total mass 1 and `G = 1`): the figure-eight,
 //! masses ⅓, `r₁ = (−0.97000436, 0.24308753)`, `r₂ = −r₁`, `r₃ = 0`, `v₁ = v₂ = −v·s/2`, `v₃ = v·s`, `v = (−0.93240737,
@@ -11,15 +11,18 @@
 //! **What is checked** (applied per R-369, the test's decisions): the result is `E(x)`, the free decode of its `z`, the
 //! residual Part 4's norm from `C(x)` to `D(z)`, within `ε_phys` (REQ-ENC-024's register value) with no control clamped
 //! (the figure-eight's published start is collinear with body 3 at the inner pair's centre of mass, the `α = 0` pole:
-//! it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(z)` is
-//! `1/σ_min(W·J_D)`, checked against an independent oracle: the Gram matrix `(W·J_D)ᵀ(W·J_D)` less `σ²·(1 − δ)` is
-//! positive definite and less `σ²·(1 + δ)` is not (Cholesky), `δ = 10⁻⁶`; and Part 4's bound `‖E(x̃) − z‖_∞ ≤
-//! 3·κ(z)·‖x̃ − x‖_phys` on states `x̃ = D(z + δz)` near `x`.
+//! it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(x)` is `σ_max(J_E(x)·W⁻¹)`, the
+//! encode's weighted Jacobian at the input itself, checked against an independent oracle: `σ²·(1 + δ)` less the Gram
+//! matrix `(J_E·W⁻¹)(J_E·W⁻¹)ᵀ` is positive definite and `σ²·(1 − δ)` less it is not (Cholesky), `δ = 10⁻⁶`; and Part
+//! 4's bound `‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys` on states `x̃` moved off `x` along every
+//! component, off the canonical section as well as along it (the physics review of PR #294, P1: the section's tangent
+//! alone, `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::encode::encode;
 use kernel::encode::ingest::{
-    components, condition, ingest, kappa, sigma_min, weighted_jacobian, weights, Ingested, Phys,
+    components, condition, ingest, kappa, sigma_max, sigma_min, state as from_components,
+    weighted_encode_jacobian, weighted_jacobian, weights, Ingested, Phys,
 };
 use kernel::generated::links::{Defaults, Select, SigmoidAlpha, SigmoidBeta, SoftmaxTanh, TanhQ};
 use validation::negative_control;
@@ -110,7 +113,7 @@ fn ingested(x: &Ic<f64>) -> Ingested<f64> {
 }
 
 /// The result carries `E(x)`, the free decode of its `z`, the residual from `C(x)` to `D(z)` in Part 4's norm and
-/// `κ(z)`, each as its definition gives it.
+/// `κ(x)` at the input, each as its definition gives it.
 fn check_outputs(name: &str, x: &Ic<f64>, got: &Ingested<f64>) {
     let e = encode::<Defaults, f64>(x);
     assert_eq!(got.encoded, e, "{name}: the encoded part is not E(x)");
@@ -121,8 +124,8 @@ fn check_outputs(name: &str, x: &Ic<f64>, got: &Ingested<f64>) {
         phys(&e.canonical.ic, &d).to_bits(),
         "{name}: the residual is not ‖D(z) − C(x)‖_phys"
     );
-    let k = kappa::<Defaults, f64>(&e.z);
-    assert_eq!(got.kappa.to_bits(), k.to_bits(), "{name}: κ is not κ(z)");
+    let k = kappa::<Defaults, f64>(x);
+    assert_eq!(got.kappa.to_bits(), k.to_bits(), "{name}: κ is not κ(x)");
     assert!(
         got.kappa.is_finite() && got.kappa >= 1.0,
         "{name}: κ = {} is not a finite condition number",
@@ -254,79 +257,123 @@ fn positive_definite(a: &[[f64; 8]; 8]) -> bool {
     true
 }
 
-/// `σ` is the smallest singular value of `cols` to the relative `δ = 10⁻⁶`: `AᵀA − σ²(1 − δ)I` is positive definite
-/// and `AᵀA − σ²(1 + δ)I` is not.
+/// `σ` is the largest singular value of `cols` to the relative `δ = 10⁻⁶`: `σ²(1 + δ)I − AᵀA` is positive definite
+/// and `σ²(1 − δ)I − AᵀA` is not.
 fn check_sigma(name: &str, cols: &[Phys<f64>; 8], sigma: f64) {
     let g = gram(cols);
     let shifted = |f: f64| {
-        let mut a = g;
+        let mut a = g.map(|row| row.map(|v| -v));
         for (i, row) in a.iter_mut().enumerate() {
-            row[i] -= sigma * sigma * f;
+            row[i] += sigma * sigma * f;
         }
         a
     };
     assert!(
-        positive_definite(&shifted(1.0 - 1e-6)),
-        "{name}: σ = {sigma:e} is above the smallest singular value"
+        positive_definite(&shifted(1.0 + 1e-6)),
+        "{name}: σ = {sigma:e} is below the largest singular value"
     );
     assert!(
-        !positive_definite(&shifted(1.0 + 1e-6)),
-        "{name}: σ = {sigma:e} is below the smallest singular value"
+        !positive_definite(&shifted(1.0 - 1e-6)),
+        "{name}: σ = {sigma:e} is above the largest singular value"
     );
 }
 
 #[test]
-fn ingest_outputs_kappa_is_one_over_the_least_singular_value() {
-    // The Gram oracle squares the condition, so it resolves σ_min only where κ² is well inside 1/ε: not at the
-    // figure-eight's α = 0 pole, where κ ≥ 10⁵ (check_residual).
+fn ingest_outputs_kappa_is_the_encode_jacobians_norm() {
+    // The Gram oracle squares κ, so it resolves σ_max only where κ² is well inside 1/ε: not at the figure-eight's
+    // α = 0 pole, where κ ≥ 10⁵ (check_residual).
     for (name, x) in foreign()
         .into_iter()
         .filter(|(n, _)| !n.starts_with("figure-eight"))
     {
-        let z = ingested(&x).encoded.z;
-        let cols = weighted_jacobian::<Defaults, f64>(&z);
-        let sigma = sigma_min(cols);
+        let cols = weighted_encode_jacobian::<Defaults, f64>(&x);
+        let sigma = sigma_max(cols);
         check_sigma(&name, &cols, sigma);
         assert_eq!(
-            kappa::<Defaults, f64>(&z),
-            1.0 / sigma,
-            "{name}: κ is not 1/σ_min"
+            kappa::<Defaults, f64>(&x),
+            sigma,
+            "{name}: κ is not σ_max(J_E·W⁻¹)"
         );
     }
 }
 
 negative_control!(
-    ingest_outputs_kappa_is_one_over_the_least_singular_value,
-    "twice the least singular value is not the least singular value",
-    expected = "is above the smallest singular value",
+    ingest_outputs_kappa_is_the_encode_jacobians_norm,
+    "twice the largest singular value is not the largest singular value",
+    expected = "is above the largest singular value",
     {
         let (name, x) = &foreign()[3];
-        let cols = weighted_jacobian::<Defaults, f64>(&ingested(x).encoded.z);
-        check_sigma(name, &cols, 2.0 * sigma_min(cols));
+        let cols = weighted_encode_jacobian::<Defaults, f64>(x);
+        check_sigma(name, &cols, 2.0 * sigma_max(cols));
     }
 );
 
 mod half_sigma {
     use super::*;
     negative_control!(
-        ingest_outputs_kappa_is_one_over_the_least_singular_value,
-        "half the least singular value is not the least singular value",
-        expected = "is below the smallest singular value",
+        ingest_outputs_kappa_is_the_encode_jacobians_norm,
+        "half the largest singular value is not the largest singular value",
+        expected = "is below the largest singular value",
         {
             let (name, x) = &foreign()[3];
-            let cols = weighted_jacobian::<Defaults, f64>(&ingested(x).encoded.z);
-            check_sigma(name, &cols, 0.5 * sigma_min(cols));
+            let cols = weighted_encode_jacobian::<Defaults, f64>(x);
+            check_sigma(name, &cols, 0.5 * sigma_max(cols));
         }
     );
 }
 
-/// `sigma_min` on matrices whose singular values are known: a diagonal one, the same with its columns mixed by a
-/// rotation (which keeps the singular values), and one with a zero column, where `condition` is `+∞`.
-fn check_known(cols: [Phys<f64>; 8], want: f64) {
+/// The encode Jacobian's column `k`, read back from [`weighted_encode_jacobian`], is the central difference of `E`
+/// along `x`'s component `k` divided by `W`'s entry: checked on the light start's `m₀` and on body 3's `p_y`, against
+/// a difference formed here at the same step.
+fn check_column(x: &Ic<f64>, k: usize, scale: f64) {
+    let cols = weighted_encode_jacobian::<Defaults, f64>(x);
+    let c = components(x);
+    let w = weights(x);
+    let h = f64::EPSILON.cbrt() * c[k].abs().max(1.0);
+    let (mut up, mut down) = (c, c);
+    up[k] += h;
+    down[k] -= h;
+    let (zp, zm) = (
+        encode::<Defaults, f64>(&from_components(&up)).z.z,
+        encode::<Defaults, f64>(&from_components(&down)).z.z,
+    );
+    for i in 0..8 {
+        let want = scale * (zp[i] - zm[i]) / ((up[k] - down[k]) * w[k]);
+        assert_eq!(
+            cols[i][k], want,
+            "entry ({i}, {k}) of J_E·W⁻¹ is {:e}, the difference {want:e}",
+            cols[i][k]
+        );
+    }
+}
+
+#[test]
+fn ingest_outputs_encode_jacobian_columns() {
+    let (raw, _) = light();
+    check_column(&raw, 0, 1.0);
+    check_column(&raw, 14, 1.0);
+    check_column(&starts()[2].1, 4, 1.0);
+}
+
+negative_control!(
+    ingest_outputs_encode_jacobian_columns,
+    "a column not divided by W's entry is not J_E·W⁻¹'s",
+    expected = "of J_E·W⁻¹ is",
+    check_column(&starts()[2].1, 4, 1.0 / weights(&starts()[2].1)[4])
+);
+
+/// `sigma_min` and `sigma_max` on matrices whose singular values are known: a diagonal one, the same with its columns
+/// mixed by a rotation (which keeps the singular values), and one with a zero column, where `condition` is `+∞`.
+fn check_known(cols: [Phys<f64>; 8], least: f64, most: f64) {
     let got = sigma_min(cols);
     assert!(
-        (got - want).abs() <= 1e-14 * want.max(1.0),
-        "sigma_min is {got:e}, the matrix's least singular value is {want:e}"
+        (got - least).abs() <= 1e-14 * least.max(1.0),
+        "sigma_min is {got:e}, the matrix's least singular value is {least:e}"
+    );
+    let got = sigma_max(cols);
+    assert!(
+        (got - most).abs() <= 1e-14 * most.max(1.0),
+        "sigma_max is {got:e}, the matrix's largest singular value is {most:e}"
     );
 }
 
@@ -351,7 +398,7 @@ fn mix(mut cols: [Phys<f64>; 8], p: usize, q: usize, theta: f64) -> [Phys<f64>; 
 #[test]
 fn ingest_outputs_sigma_min_on_known_matrices() {
     let values = [3.0, 0.5, 7.0, 0.125, 2.0, 1.0, 4.0, 0.75];
-    check_known(diagonal(values), 0.125);
+    check_known(diagonal(values), 0.125, 7.0);
     let mut mixed = diagonal(values);
     for (p, q, t) in [
         (0, 3, 0.3),
@@ -363,13 +410,17 @@ fn ingest_outputs_sigma_min_on_known_matrices() {
     ] {
         mixed = mix(mixed, p, q, t);
     }
-    check_known(mixed, 0.125);
+    check_known(mixed, 0.125, 7.0);
     let mut equal = diagonal([2.0; 8]);
     equal = mix(equal, 0, 1, 0.9);
-    check_known(equal, 2.0);
+    check_known(equal, 2.0, 2.0);
     let mut singular = diagonal(values);
     singular[5] = [0.0; 15];
-    check_known(singular, 0.0);
+    check_known(singular, 0.0, 7.0);
+    let mut top = diagonal(values);
+    top[0] = [0.0; 15];
+    top[0][1] = 9.5;
+    check_known(top, 0.125, 9.5);
     assert_eq!(
         condition(singular),
         f64::INFINITY,
@@ -386,8 +437,26 @@ negative_control!(
     ingest_outputs_sigma_min_on_known_matrices,
     "a matrix whose least singular value is 0.25 is not read as 0.125",
     expected = "the matrix's least singular value is",
-    check_known(diagonal([3.0, 0.5, 7.0, 0.25, 2.0, 1.0, 4.0, 0.75]), 0.125)
+    check_known(
+        diagonal([3.0, 0.5, 7.0, 0.25, 2.0, 1.0, 4.0, 0.75]),
+        0.125,
+        7.0
+    )
 );
+
+mod largest_misread {
+    use super::*;
+    negative_control!(
+        ingest_outputs_sigma_min_on_known_matrices,
+        "a matrix whose largest singular value is 8 is not read as 7",
+        expected = "the matrix's largest singular value is",
+        check_known(
+            diagonal([3.0, 0.5, 8.0, 0.125, 2.0, 1.0, 4.0, 0.75]),
+            0.125,
+            7.0
+        )
+    );
+}
 
 /// A 15 × 8 matrix of pseudo-random entries in `[−1, 1)` (a 64-bit LCG from a fixed seed), column `j` scaled by
 /// `gradeʲ`: a dense matrix that is not orthogonal (its least column norm, 1.82, is well above its `σ_min`, 1.09).
@@ -472,52 +541,129 @@ negative_control!(
     check_far_step(ingested(&starts()[2].1).encoded.z.z, f64::NAN)
 );
 
-/// Part 4's bound: for `x̃ = D(z + δz)` near `x = D(z)`, `‖E(x̃) − z‖_∞ ≤ 3·κ·‖x̃ − x‖_phys`, `κ` as given, along each
-/// control and along four mixed directions.
-fn check_bound(name: &str, z: &Latent<f64>, k: f64) {
-    let x = decode::decode::<Defaults, f64>(z).ic;
-    let mut dirs: Vec<[f64; 8]> = (0..8)
+/// Part 4's step `hₖ = ε_R^{1/3}·max(1, |xₖ|)` grows with `|xₖ|`, so a far component still moves the encode: on a state
+/// scaled by `10⁶` a step of `ε_R^{1/3}` alone would vanish in the positions' rounding and the quotient would be
+/// `0/0`.
+fn check_far_encode_step(x: &Ic<f64>) {
+    let cols = weighted_encode_jacobian::<Defaults, f64>(x);
+    for (i, col) in cols.iter().enumerate() {
+        assert!(
+            col.iter().all(|c| c.is_finite()),
+            "row {i} of J_E·W⁻¹ is not finite: {col:?}"
+        );
+    }
+}
+
+#[test]
+fn ingest_outputs_encode_step_follows_x() {
+    check_far_encode_step(&moved(&starts()[2].1, 0.3, [2e6, -1e6], [0.0, 0.0], 1e6));
+}
+
+negative_control!(
+    ingest_outputs_encode_step_follows_x,
+    "a position that is not a number gives no finite Jacobian",
+    expected = "is not finite",
+    {
+        let mut x = starts()[2].1;
+        x.r[1][0] = f64::NAN;
+        check_far_encode_step(&x);
+    }
+);
+
+/// The light start of the physics review of PR #294 (P1): masses `(0.05, 0.15, 0.8)`, slow momenta, a foreign frame;
+/// and its canonical representative `D(E(x))`, on the section.
+fn light() -> (Ic<f64>, Ic<f64>) {
+    let raw = Ic {
+        m: [0.05, 0.15, 0.8],
+        r: [[0.3, 0.1], [-0.9, 0.4], [0.05, -0.08]],
+        p: [[0.001, 0.002], [-0.003, 0.001], [0.002, -0.003]],
+    };
+    let on = decode::decode::<Defaults, f64>(&encode::<Defaults, f64>(&raw).z).ic;
+    (raw, on)
+}
+
+/// Part 4's bound at `x`: for `x̃ = x + δ·W⁻¹u`, `δ = 10⁻⁶`, along each of the 15 components (each mass alone, so
+/// `Σmᵢ` moves, each position and momentum component alone, so the centre of mass, the total momentum, `I` and the
+/// orientation move: off the section) and four mixed directions, `‖E(x̃) − z‖₂ ≤ κ·‖W(x̃ − x)‖₂` and `‖E(x̃) − z‖_∞ ≤
+/// 3·κ·‖x̃ − x‖_phys`, `κ` as given, to first order (a slack of 10⁻³).
+fn check_bound(name: &str, x: &Ic<f64>, k: f64) {
+    let z = encode::<Defaults, f64>(x).z.z;
+    let c = components(x);
+    let w = weights(x);
+    let mut dirs: Vec<[f64; 15]> = (0..15)
         .map(|j| std::array::from_fn(|i| if i == j { 1.0 } else { 0.0 }))
         .collect();
     dirs.extend([
-        [0.3, -0.7, 0.1, 0.5, -0.2, 0.9, -0.4, 0.6],
-        [-0.5, 0.2, 0.8, -0.1, 0.6, 0.3, 0.7, -0.9],
-        [1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0],
-        [0.05, 0.9, -0.3, -0.6, 0.2, 0.1, -0.8, 0.4],
+        std::array::from_fn(|i| ((i * 7 + 3) % 11) as f64 / 5.0 - 1.0),
+        std::array::from_fn(|i| ((i * 5 + 1) % 13) as f64 / 6.0 - 1.0),
+        std::array::from_fn(|i| if i % 2 == 0 { 1.0 } else { -1.0 }),
+        std::array::from_fn(|i| if i < 3 { 1.0 } else { 0.1 }),
     ]);
     for u in dirs {
-        let zt = Latent::new(std::array::from_fn(|i| z.z[i] + 1e-6 * u[i]));
-        let xt = decode::decode::<Defaults, f64>(&zt).ic;
-        let back = encode::<Defaults, f64>(&xt).z;
-        let dz = (0..8)
-            .map(|i| (back.z[i] - z.z[i]).abs())
-            .fold(0.0, f64::max);
-        let bound = 3.0 * k * phys(&x, &xt);
+        let xt = from_components(&std::array::from_fn(|i| c[i] + 1e-6 * u[i] / w[i]));
+        let ct = components(&xt);
+        let zt = encode::<Defaults, f64>(&xt).z.z;
+        let dz2 = (0..8).map(|i| (zt[i] - z[i]).powi(2)).sum::<f64>().sqrt();
+        let dzi = (0..8).map(|i| (zt[i] - z[i]).abs()).fold(0.0, f64::max);
+        let wdx = (0..15)
+            .map(|i| (w[i] * (ct[i] - c[i])).powi(2))
+            .sum::<f64>()
+            .sqrt();
         assert!(
-            dz <= bound * (1.0 + 1e-3),
-            "{name}: ‖E(x̃) − z‖_∞ = {dz:e} exceeds 3·κ·‖x̃ − x‖_phys = {bound:e} along {u:?}"
+            dz2 <= k * wdx * (1.0 + 1e-3),
+            "{name}: ‖E(x̃) − z‖₂ = {dz2:e} exceeds κ·‖W(x̃ − x)‖₂ = {:e} along {u:?}",
+            k * wdx
+        );
+        let bound = 3.0 * k * phys(x, &xt);
+        assert!(
+            dzi <= bound * (1.0 + 1e-3),
+            "{name}: ‖E(x̃) − z‖_∞ = {dzi:e} exceeds 3·κ·‖x̃ − x‖_phys = {bound:e} along {u:?}"
         );
     }
 }
 
 #[test]
 fn ingest_outputs_kappa_bounds_the_z_residual() {
-    for (name, x) in starts() {
+    let (raw, on) = light();
+    // Not the figure-eight's published start: it sits at the α = 0 pole, where E is not differentiable (β is not
+    // defined, Part 4: κ = +∞), so a move of 10⁻⁶ swings z by O(1) and the central difference's large finite κ bounds
+    // nothing; its κ ≥ 10⁵ is checked in check_residual.
+    let mut states: Vec<(String, Ic<f64>)> = foreign()
+        .into_iter()
+        .filter(|(n, _)| !n.starts_with("figure-eight"))
+        .collect();
+    states.push(("light, foreign".to_owned(), raw));
+    states.push(("light, on the section".to_owned(), on));
+    for (name, x) in states {
         let got = ingested(&x);
-        check_bound(name, &got.encoded.z, got.kappa);
+        check_bound(&name, &x, got.kappa);
     }
 }
 
 negative_control!(
     ingest_outputs_kappa_bounds_the_z_residual,
-    "a tenth of κ does not bound the z residual",
-    expected = "exceeds 3·κ·‖x̃ − x‖_phys",
+    "the section's tangent alone, 1/σ_min(W·J_D), does not bound a move of m₀ off the section (P1)",
+    expected = "exceeds κ·‖W(x̃ − x)‖₂",
     {
-        let (name, x) = &starts()[2];
-        let got = ingested(x);
-        check_bound(name, &got.encoded.z, got.kappa / 10.0);
+        let (_, on) = light();
+        let z = encode::<Defaults, f64>(&on).z;
+        let tangent = condition(weighted_jacobian::<Defaults, f64>(&z));
+        check_bound("light, on the section", &on, tangent);
     }
 );
+
+mod tenth {
+    use super::*;
+    negative_control!(
+        ingest_outputs_kappa_bounds_the_z_residual,
+        "a tenth of κ does not bound the z residual",
+        expected = "exceeds",
+        {
+            let (name, x) = &starts()[2];
+            check_bound(name, x, ingested(x).kappa / 10.0);
+        }
+    );
+}
 
 /// Near a clamp `κ` grows as the link's `1/(dv/dz)`: at `z_q0 = z₀`, the `q₀` column of `W·J_D` is the sigmoid's
 /// `s(1 − s)` times the column of `∂D/∂q₀`, so `κ ≥ 1/‖W·J_D·e_q0‖`. Checked at `z_q0 = 12` on the Burrau start's `z`,
@@ -529,17 +675,18 @@ fn check_clamp_growth(z: [f64; 8], factor: f64) {
         w[2] = q0;
         Latent::new(w)
     };
+    let point = |q0: f64| decode::decode::<Defaults, f64>(&at(q0)).ic;
     let (k0, k12) = (
-        kappa::<Defaults, f64>(&at(0.0)),
-        kappa::<Defaults, f64>(&at(12.0)),
+        kappa::<Defaults, f64>(&point(0.0)),
+        kappa::<Defaults, f64>(&point(12.0)),
     );
-    for zz in [at(0.0), at(12.0)] {
-        let cols = weighted_jacobian::<Defaults, f64>(&zz);
-        let k = kappa::<Defaults, f64>(&zz);
+    for q0 in [0.0, 12.0] {
+        let cols = weighted_jacobian::<Defaults, f64>(&at(q0));
+        let k = kappa::<Defaults, f64>(&point(q0));
         for col in cols {
             let n = col.iter().map(|c| c * c).sum::<f64>().sqrt();
             assert!(
-                k * n >= 1.0 - 1e-12,
+                k * n >= 1.0 - 1e-6,
                 "κ = {k:e} is below 1/‖column‖ = {:e}",
                 1.0 / n
             );
@@ -564,12 +711,11 @@ negative_control!(
     check_clamp_growth(ingested(&starts()[2].1).encoded.z.z, 1e9)
 );
 
-/// `κ` is the link's: at a state with a near-saturated momentum control, re-encoding under another registry link for
-/// the momenta (`tanh_q` for `sigmoid_q`) changes `κ` (Part 7, "link-fixable").
+/// `κ` is the link's: at a state with a near-saturated momentum control, encoding under another registry link for
+/// the momenta (`tanh_q` for `sigmoid_q`) changes `κ` (Part 7, "link-fixable"). Deep in saturation the two links'
+/// inverse derivatives differ by a factor tending to 2 (measured 1.9999999 here), so the check asks for 1.5.
 fn check_link_dependence(x: &Ic<f64>, ratio: f64) {
-    let zs = encode::<Defaults, f64>(x).z;
-    let zt = encode::<TanhMomenta, f64>(x).z;
-    let (ks, kt) = (kappa::<Defaults, f64>(&zs), kappa::<TanhMomenta, f64>(&zt));
+    let (ks, kt) = (kappa::<Defaults, f64>(x), kappa::<TanhMomenta, f64>(x));
     let r = ks.max(kt) / ks.min(kt);
     assert!(
         r >= ratio,
@@ -589,7 +735,7 @@ fn kicked() -> Ic<f64> {
 
 #[test]
 fn ingest_outputs_kappa_depends_on_the_link() {
-    check_link_dependence(&kicked(), 2.0);
+    check_link_dependence(&kicked(), 1.5);
 }
 
 negative_control!(
