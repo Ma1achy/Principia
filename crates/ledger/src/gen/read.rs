@@ -46,8 +46,10 @@
 //!
 //! **The shape point** `n = shape(r, masses)` (payload §5; integrator dd §3.7; chart_reference §3.1; R-14) has one Rust
 //! source, `kernel::shape::shape`, the march's own, which the Rust read side re-exports and calls; the WGSL read side's
-//! `shape` is that function written in WGSL, operation for operation, and `kernel/tests/derived.rs` holds the two to
-//! each other on the GPU (`shape_twin`), as it holds the two `hamiltonian`s (`current_drift`).
+//! `shape` is that function's translation, rust-gpu → SPIR-V → WGSL, which `cargo xtask build-kernel` emits to
+//! `crates/ledger/wgsl/shape.wgsl` ([`SHAPE_WGSL`]; R-116, REQ-SYS-085), never a string here, and
+//! `kernel/tests/derived.rs` holds the two to each other on the GPU (`shape_twin`), as it holds the two `hamiltonian`s
+//! (`current_drift`).
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -979,6 +981,7 @@ struct SimState {{
     }
     out.push_str("}\n");
     out.push_str(WGSL_HELPERS);
+    out.push_str(SHAPE_WGSL);
     let (ic, sample): (Vec<&str>, Vec<&str>) = fields.iter().partition(|f| f.starts_with("ic."));
     out.push_str(&sample_read(&members, tier, &sample)?);
     out.push_str(&ic_read(&ic)?);
@@ -1082,23 +1085,11 @@ fn energy_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>, e_
 fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
     return angular_momentum_z(r, p) - lz_0;
 }
-
-// The shape-sphere point `n = (u, v, w)/I` of the configuration `r` with masses `m`, the current `n` (payload §5;
-// integrator dd §3.7; chart_reference §3.1; R-14): `kernel::shape::shape`, operation for operation. `ρ = r₁ − r₀`,
-// `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`; `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2ρ̃·λ̃`, `w = 2ρ̃∧λ̃`, `I = ‖ρ̃‖² + ‖λ̃‖²`.
-fn shape(r: array<vec2<f32>, 3>, m: vec3<f32>) -> vec3<f32> {
-    let m01 = m.x + m.y;
-    let mu_rho = m.x * m.y / m01;
-    let mu_lambda = m.z * m01;
-    let rho = vec2<f32>(r[1].x - r[0].x, r[1].y - r[0].y);
-    let r01 = vec2<f32>((m.x * r[0].x + m.y * r[1].x) / m01, (m.x * r[0].y + m.y * r[1].y) / m01);
-    let lambda = vec2<f32>(r[2].x - r01.x, r[2].y - r01.y);
-    let a = mu_rho * (rho.x * rho.x + rho.y * rho.y);
-    let b = mu_lambda * (lambda.x * lambda.x + lambda.y * lambda.y);
-    let s = sqrt(mu_rho * mu_lambda);
-    let p = s * (rho.x * lambda.x + rho.y * lambda.y);
-    let q = s * (rho.x * lambda.y - rho.y * lambda.x);
-    let i = a + b;
-    return vec3<f32>((a - b) / i, 2.0 * p / i, 2.0 * q / i);
-}
 ";
+
+/// The WGSL read side's shape map, `shape(r, m)`: the shape-sphere point `n` of the configuration `r` with masses `m`,
+/// the current `n` (payload §5; integrator dd §3.7; chart_reference §3.1; R-14). A build output, never written here:
+/// `cargo xtask build-kernel` emits it from the rust-gpu → SPIR-V → WGSL translation of `kernel::shape::shape`, the
+/// march's own (R-116; REQ-SYS-085, R-547), and fails when the checked-in file differs from the translation.
+pub const SHAPE_WGSL: &str = include_str!("../../wgsl/shape.wgsl");
+
