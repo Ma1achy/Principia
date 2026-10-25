@@ -1070,7 +1070,7 @@ without asserting it until this is ruled.*
 - **Possible causes:** (a) column 8 (and II's column 6) is a different E from eq. (4): another configuration than
   the printed (ξ, η), another normalisation, or another quantity; (b) a print error common to both tables (unlikely,
   since II was set separately and agrees with I to K₀); (c) the printed (ξ, η) are not the configurations the
-  energies were computed from, though column 11 matches η·10⁻⁴ on 95 rows (RQ-571).
+  energies were computed from, though column 11, printed on 62 rows, matches η·10⁻⁴ on 57 (RQ-571).
 - **Also recorded here, as dispatched:** N = 17's ξ in paper I has a broken sixth decimal. Transcription A read
   0.115219340, B 0.115279340; at 600 dpi the glyph is a slanted stem with no top bar, the slant of row 16's "7", while
   every "1" in the cell is upright with a flat foot, so the third reading is "7"; paper II prints 0.115279340 cleanly.
