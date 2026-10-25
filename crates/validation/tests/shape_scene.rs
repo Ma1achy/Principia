@@ -8,10 +8,11 @@
 //!   ellipse's outside, and only it, is display margin, no sample in the forbidden lane, each tile centre clear of the
 //!   ellipse's edge; every chart scene draws both hemispheres, bijective, and flags nothing (R-544; REQ-CHART-002,
 //!   REQ-RENDER-026).
-//! - `shape_scene_octant_palette`: the eight octant colours are distinct, none the stripe colour, none black or near
-//!   the canvas background.
+//! - `shape_scene_octant_palette`: every pair of the eight octant colours lies at least R-429's τ apart under normal
+//!   vision and R-383's protan, deutan and tritan simulations, each at least 0.4 from the background and the stripes,
+//!   the upper ones lighter than the lower.
 //! - `shape_scene_controls_are_wrong`: the one-hemisphere control draws no sample below the equator, and the flagged
-//!   control's twin is the spherical scene's except on the lower half's stripes, where it is white (REQ-CHART-002).
+//!   control's twin is the spherical scene's except on the lower half's stripes, where it is black (REQ-CHART-002).
 //! - `shape_scene_class_signs`, `shape_scene_twin_on_the_equator`: the twin reads each sign of `n` strictly, as the
 //!   occupant does, a zero not below it; a sample on the equator is not striped by the flagged control.
 //! - `shape_scene_binary_writes_the_render`: `golden_harness --scene` writes each scene's render.
@@ -22,7 +23,8 @@ use std::process::Command;
 
 use kernel::chart::shape_sphere::Projection;
 use kernel::chart::SystemImage;
-use render::present::Rgb;
+use render::display::cvd::{self, CvdMode};
+use render::present::{self, Rgb};
 use validation::golden_scene::{encode_image, tie_margin};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -265,21 +267,71 @@ negative_control!(
         + 4 * u32::from(n[2] <= 0.0))
 );
 
-/// The eight octant colours `colour` gives are distinct, none the stripe colour, and none black or near the canvas
-/// background: each is more than 0.05 from the background in some linear channel.
+/// R-429's τ: the OKLab distance from `#FF00FF` to `#E034C6`, 0.101, the corpus's bar for two colours told apart.
+fn tau() -> f64 {
+    distance(
+        present::srgb8([0xff, 0x00, 0xff]),
+        present::srgb8([0xe0, 0x34, 0xc6]),
+    )
+}
+
+/// The OKLab distance between two linear colours.
+fn distance(a: Rgb, b: Rgb) -> f64 {
+    let (p, q) = (present::linear_to_oklab(a), present::linear_to_oklab(b));
+    ((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2) + (p[2] - q[2]).powi(2)).sqrt()
+}
+
+/// Normal vision, then R-383's three dichromat simulations.
+const VISION: [Option<CvdMode>; 4] = [
+    None,
+    Some(CvdMode::Deuteranopia),
+    Some(CvdMode::Protanopia),
+    Some(CvdMode::Tritanopia),
+];
+
+/// What the screen shows of `c` under `mode`: simulated and clamped to [0, 1], as the pass writes.
+fn seen(mode: Option<CvdMode>, c: Rgb) -> Rgb {
+    mode.map_or(c, |m| cvd::simulate(m, c).map(|x| x.clamp(0.0, 1.0)))
+}
+
+/// The palette criterion (gui review 5644431015, G3, applied per R-369): under normal vision and each of R-383's
+/// protan, deutan and tritan simulations, every pair of the eight octant colours `colour` gives lies at least τ apart,
+/// and every colour at least 0.4 from the canvas background and from the stripe colour; and every upper colour is
+/// lighter in OKLab than every lower one.
 fn check_palette(colour: fn(u32) -> Rgb) {
     let all: Vec<Rgb> = (0..8).map(colour).collect();
-    let bg = background();
-    for (k, c) in all.iter().enumerate() {
-        assert!(
-            c.iter().zip(&bg).any(|(a, b)| (a - b).abs() > 0.05),
-            "octant {k}'s colour {c:?} is black or near the canvas background {bg:?}"
-        );
-        assert_ne!(*c, STRIPE, "octant {k} is drawn in the stripe colour");
-        for (j, d) in all.iter().enumerate().take(k) {
-            assert_ne!(c, d, "octants {j} and {k} share a colour");
+    for mode in VISION {
+        let s: Vec<Rgb> = all.iter().map(|&c| seen(mode, c)).collect();
+        for k in 0..8 {
+            for j in 0..k {
+                let d = distance(s[j], s[k]);
+                assert!(
+                    d >= tau(),
+                    "{mode:?}: octants {j} and {k} lie {d:.4} apart, under τ = {:.4}",
+                    tau()
+                );
+            }
+            let bg = distance(s[k], seen(mode, background()));
+            assert!(
+                bg >= 0.4,
+                "{mode:?}: octant {k} lies {bg:.4} from the canvas background"
+            );
+            let stripe = distance(s[k], seen(mode, STRIPE));
+            assert!(
+                stripe >= 0.4,
+                "{mode:?}: octant {k} lies {stripe:.4} from the stripe colour"
+            );
         }
     }
+    let l = |k: usize| present::linear_to_oklab(all[k])[0];
+    let (low_up, high_down) = (
+        (0..4).map(l).fold(1.0, f64::min),
+        (4..8).map(l).fold(0.0, f64::max),
+    );
+    assert!(
+        low_up > high_down,
+        "the upper colours are not all lighter than the lower ones"
+    );
 }
 
 #[test]
@@ -289,9 +341,9 @@ fn shape_scene_octant_palette() {
 
 negative_control!(
     shape_scene_octant_palette,
-    "Okabe–Ito cycling over eight octants draws octant 7 black, which must fail",
-    expected = "is black or near the canvas background",
-    check_palette(|k| render::present::dbg_cat(k + 1, 8))
+    "the same-lightness hue wheel at (8k + 7)/64 turns, 9899c04f's palette, collapses pairs under deutan, so it must fail",
+    expected = "under τ",
+    check_palette(|k| present::hue_wheel(f64::from(8 * k + 7) / 64.0))
 );
 
 /// The flagged control with its sample 0 collinear on the x axis, so its read `n.z` is a zero: `want` gives the twin,

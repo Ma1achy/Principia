@@ -14,11 +14,14 @@
 //! blank (chart_reference §3.3: "drawn blank (R-470), and never counted"); its sample is never read.
 //!
 //! **What the occupant draws** ([`WGSL`]): the octant `k` of `n` ([`ShapeScene::class`]), the quadrant of its azimuth,
-//! 0 to 3 above the equator and 4 to 7 below it, in the hue wheel at `(8k + 7)/64` turns ([`octant_colour`]): eight
-//! hues 45° apart at one OKLCH lightness and chroma, none black and none near the canvas background, offset by 7/64,
-//! of 1/2048's steps the one farthest from an 8-bit rounding tie (0.09 of a step), so both hemispheres are
-//! drawn and told apart, and nothing marks either as redundant (R-544; REQ-CHART-002). Okabe–Ito has seven colours
-//! besides black, one short of the octants. The chart's label ([`ShapeSphere::label`]) names no hemisphere.
+//! 0 to 3 above the equator and 4 to 7 below it, in [`OCTANT_SRGB8`]'s colour `k` ([`octant_colour`]); the hemisphere
+//! is carried by lightness, every upper colour lighter in OKLab than every lower one, and the quadrant by hue, each
+//! upper colour within 46° of hue of its lower twin. The eight colours are chosen so that every pair lies at least
+//! R-429's τ (0.101 OKLab, `#FF00FF` to `#E034C6`) apart under normal vision and under each of R-383's protan, deutan
+//! and tritan simulations (`render::display::cvd`), every colour at least 0.4 from the canvas background and from the
+//! flagged control's black stripes under each; the closest pair is 0.132 (applied per R-369, gui review 5644431015, G3).
+//! So both hemispheres are drawn and told apart, and nothing marks either as redundant (R-544; REQ-CHART-002). The
+//! chart's label ([`ShapeSphere::label`]) names no hemisphere.
 //!
 //! **The scenes** ([`NAMES`]):
 //! - `shape_spherical`: the spherical map in the default projection, the whole sphere, pole to pole: the
@@ -30,8 +33,8 @@
 //! - The controls, each rendered against `spherical`'s reference by a case that expects to fail:
 //!   `shape_control_one_hemisphere`, one hemisphere drawn across the whole square (R-412's withdrawn remap,
 //!   `φ = (π/2)·(1 − t)`), and `shape_control_flagged`, the whole sphere with the lower half striped as redundant
-//!   (R-141's withdrawn flag, white diagonal stripes 2 px wide where `n.z < 0`, white no octant's colour; `u_flag` 1,
-//!   which no chart scene sets).
+//!   (R-141's withdrawn flag, black diagonal stripes 2 px wide where `n.z < 0`, black at least 0.4 from every octant's
+//!   colour; `u_flag` 1, which no chart scene sets).
 
 use kernel::chart::shape_sphere::{Projection, ShapeMap, ShapeSphere};
 use kernel::chart::Chart;
@@ -97,14 +100,27 @@ pub struct ShapeScene {
     pub chart_point: Vec<bool>,
 }
 
-/// The colour of octant `k`, 0 to 7: the hue wheel at `(8k + 7)/64` turns, as the occupant computes it, exact at f32
-/// (`present::hue_wheel`; the module's notes).
+/// The octants' colours, 8-bit sRGB, octant `k` at index `k` (the module's notes): above the equator `#F0FFD2`,
+/// `#F0B4A5`, `#00FF0F`, `#4BB4FF`, below it `#96A500`, `#E15A96`, `#78782D`, `#1E78FF`. The occupant's `OCTANT` holds the
+/// same codes. Found by a max–min search over the 8-bit colours on a grid of 15 codes, under the module's criterion.
+pub const OCTANT_SRGB8: [[u8; 3]; 8] = [
+    [0xf0, 0xff, 0xd2],
+    [0xf0, 0xb4, 0xa5],
+    [0x00, 0xff, 0x0f],
+    [0x4b, 0xb4, 0xff],
+    [0x96, 0xa5, 0x00],
+    [0xe1, 0x5a, 0x96],
+    [0x78, 0x78, 0x2d],
+    [0x1e, 0x78, 0xff],
+];
+
+/// The colour of octant `k`, 0 to 7: [`OCTANT_SRGB8`]'s, decoded to linear, as the occupant's `dbg_srgb8` decodes it.
 pub fn octant_colour(k: u32) -> Rgb {
-    present::hue_wheel(f64::from(8 * k + 7) / 64.0)
+    present::srgb8(OCTANT_SRGB8[k as usize])
 }
 
-/// The flagged control's stripe colour, white, which no octant's colour is.
-pub const STRIPE: Rgb = [1.0; 3];
+/// The flagged control's stripe colour, black, at least 0.4 OKLab from every octant's colour.
+pub const STRIPE: Rgb = [0.0; 3];
 
 /// The canvas background the margin draws, linear, the f32 the harness's uniform holds
 /// (`crate::golden_scene::BACKGROUND`).
