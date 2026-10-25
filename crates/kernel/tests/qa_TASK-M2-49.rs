@@ -4,11 +4,15 @@
 //! control: the reproducer built on the pin without the flag prints −0.5". The reproducer is RQ-299's, as transcribed
 //! into `plan/tasks/M2/TASK-M2-49.md` § "Notes", with the value returned rather than printed.
 //!
-//! - `qa_m249_repro_under_the_workspace_config`: the reproducer, a crate of its own written into this test's
-//!   temporary directory (outside the workspace), built by cargo with the workspace's `.cargo/config.toml` passed as
+//! - `qa_m249_repro_under_the_workspace_config`: the reproducer, a crate of its own written into the system's
+//!   temporary directory (outside the checkout, so cargo discovers no `.cargo/config.toml` of the repo's: CI's
+//!   `CARGO_TARGET_TMPDIR` is inside the checkout, and cargo merges a discovered config's rustflags array with one
+//!   passed as `--config` rather than replacing it), built by cargo with the workspace's `.cargo/config.toml` passed as
 //!   `--config` and every rustflags variable of the environment removed, on the pin's own rustc, prints 0.5 at
-//!   opt-level 1, 2 and 3. Its control builds it the same way with the config's host table emptied: the miscompile
-//!   shows, so the config is what removes it.
+//!   opt-level 1, 2 and 3. A build script in the crate fails the build unless the rustflags cargo compiled it with are
+//!   exactly the ones the test expects, so no config but the one passed can supply or keep the flag unseen. Its
+//!   control builds it the same way with the config's host table emptied, its build script checking that no flag is
+//!   left: the miscompile shows, so the config is what removes it.
 //! - `qa_m249_this_build_is_not_miscompiled`: the reproducer compiled into this very test binary returns 0.5. At the
 //!   dev profile that holds whatever the flags; at the release profile (`cargo test -p kernel --release`, CI's
 //!   `ci-release`, REQ-TOOL-189) it holds only because the workspace's build carries the flag, so the build the tests
@@ -41,6 +45,16 @@ fn repro() -> f32 {
     s[1][0][1]
 }
 
+/// The reproducer crate's build script: it fails the build unless the rustflags cargo builds the crate with
+/// (`CARGO_ENCODED_RUSTFLAGS`, the flags separated by 0x1f) are exactly `QA_M249_EXPECT_RUSTFLAGS`, joined the same way.
+const REPRO_BUILD: &str = r#"fn main() {
+    println!("cargo:rerun-if-env-changed=QA_M249_EXPECT_RUSTFLAGS");
+    let got = std::env::var("CARGO_ENCODED_RUSTFLAGS").unwrap_or_default();
+    let want = std::env::var("QA_M249_EXPECT_RUSTFLAGS").unwrap_or_default();
+    assert_eq!(got, want, "qa_m249: the reproducer's rustflags are not the expected ones");
+}
+"#;
+
 /// The reproducer's source as a program, verbatim from RQ-299 but for the printed text: the value alone.
 const REPRO_MAIN: &str = r#"fn main() {
     let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
@@ -62,12 +76,21 @@ fn workspace_config() -> String {
 }
 
 /// The reproducer built and run under cargo, at the release profile with `opt_level`, with `config` (the text of a
-/// cargo config file) passed as `--config`, in a crate and target directory of its own named by `tag`; what it
-/// printed. Every rustflags variable of the environment is removed, so the build's rustflags are the config's alone,
-/// and the rustc is the one beside the cargo that built these tests, the pin's.
-fn repro_built(tag: &str, config: &str, opt_level: u8) -> f32 {
-    let dir =
-        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m249_repro/{tag}-o{opt_level}"));
+/// cargo config file) passed as `--config`, in a crate and target directory of its own named by `tag`, under the
+/// system's temporary directory, outside the checkout; what it printed. Every rustflags variable of the environment
+/// is removed, so the build's rustflags are the config's alone, and the crate's build script fails the build unless
+/// they are exactly `rustflags`. The rustc is the one beside the cargo that built these tests, the pin's.
+fn repro_built(tag: &str, config: &str, rustflags: &[&str], opt_level: u8) -> f32 {
+    let tmp = std::env::temp_dir().canonicalize().unwrap();
+    assert!(
+        !tmp.starts_with(workspace().canonicalize().unwrap()),
+        "the temporary directory {} is inside the checkout",
+        tmp.display()
+    );
+    let dir = tmp.join(format!(
+        "qa_m249_repro-{}-{tag}-o{opt_level}",
+        std::process::id()
+    ));
     fs::create_dir_all(dir.join("src")).unwrap();
     fs::write(
         dir.join("Cargo.toml"),
@@ -75,6 +98,7 @@ fn repro_built(tag: &str, config: &str, opt_level: u8) -> f32 {
     )
     .unwrap();
     fs::write(dir.join("src/main.rs"), REPRO_MAIN).unwrap();
+    fs::write(dir.join("build.rs"), REPRO_BUILD).unwrap();
     let config_file = dir.join("config.toml");
     fs::write(&config_file, config).unwrap();
     let cargo = Path::new(env!("CARGO"));
@@ -89,6 +113,7 @@ fn repro_built(tag: &str, config: &str, opt_level: u8) -> f32 {
     if rustc.exists() {
         cmd.env("RUSTC", &rustc);
     }
+    cmd.env("QA_M249_EXPECT_RUSTFLAGS", rustflags.join("\u{1f}"));
     let out = cmd
         .current_dir(&dir)
         .args(["run", "--quiet", "--release", "--config"])
@@ -99,6 +124,7 @@ fn repro_built(tag: &str, config: &str, opt_level: u8) -> f32 {
         .arg(dir.join("target"))
         .timed_output()
         .expect("cargo runs the reproducer");
+    let _ = fs::remove_dir_all(&dir);
     assert!(
         out.status.success(),
         "building or running the reproducer failed ({}):\n{}",
@@ -120,19 +146,23 @@ fn check_not_miscompiled(what: &str, value: f32) {
     );
 }
 
-/// The reproducer, built under `config` at opt-level 1, 2 and 3, gives 0.5 each time.
-fn check_under_config(tag: &str, config: &str) {
+/// The reproducer, built under `config` with exactly `rustflags` at opt-level 1, 2 and 3, gives 0.5 each time.
+fn check_under_config(tag: &str, config: &str, rustflags: &[&str]) {
     for opt_level in [1, 2, 3] {
         check_not_miscompiled(
             &format!("{tag}, opt-level {opt_level}"),
-            repro_built(tag, config, opt_level),
+            repro_built(tag, config, rustflags, opt_level),
         );
     }
 }
 
 #[test]
 fn qa_m249_repro_under_the_workspace_config() {
-    check_under_config("workspace", &workspace_config());
+    check_under_config(
+        "workspace",
+        &workspace_config(),
+        &["-Zmir-enable-passes=-GVN"],
+    );
 }
 
 negative_control!(
@@ -143,7 +173,7 @@ negative_control!(
         let config = workspace_config();
         let emptied = config.replace("rustflags = [\"-Zmir-enable-passes=-GVN\"]", "rustflags = []");
         assert_ne!(emptied, config, "the workspace's config has no host rustflags to empty");
-        check_under_config("no-host-flags", &emptied)
+        check_under_config("no-host-flags", &emptied, &[])
     }
 );
 
@@ -156,5 +186,5 @@ negative_control!(
     qa_m249_this_build_is_not_miscompiled,
     "the value the reproducer gives built at the release profile with no rustflags at all, on the pin",
     expected = "RQ-299's reproducer is miscompiled (release, no flags)",
-    check_not_miscompiled("release, no flags", repro_built("no-flags", "", 3))
+    check_not_miscompiled("release, no flags", repro_built("no-flags", "", &[], 3))
 );
