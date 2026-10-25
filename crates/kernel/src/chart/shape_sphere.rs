@@ -76,16 +76,13 @@
 //! bound has no constant of its own.
 //!
 //! **`system_image` and the label** ([`ShapeSphere::system_image`], [`ShapeSphere::label`]; chart_decoder_contract
-//! Part 5; chart_reference §3.3; R-141, R-503; REQ-CHART-002, REQ-CHART-075). The spherical map is n-to-1 with n = 2,
-//! its φ hemispheres reflection-equivalent: it draws both and its label flags the redundancy. The exponential map's
-//! value is computed from its cap, at f64 on the CPU, as `validate` is: [`ShapeSphere::cap`] decides from the computed
-//! `w` at the centre and the four corners of `[0,1]²` which closed hemisphere the cap lies in (`r cot r` is concave, so
-//! the square's extreme `w` lies at a corner), bijective there, its label naming the one hemisphere; a cap reaching
-//! `r = π` or crossing the equator is n-to-1 with the per-pixel fold, at most 2. [`ShapeSphere::exp_pixel`] is the
-//! per-pixel rule: past `r = π` the domain's end; on it the one point `−n₀`, whose pixels count once together
-//! (REQ-CHART-078, [`ShapeSphere::antipode_counts`]); else counted where the computed `w ≥ 0` or the mirror `w → −w`
-//! lies outside the cap ([`ShapeSphere::in_view`], through the log map [`exponential_inverse`]), folded otherwise.
-//! [`ShapeSphere::exp_counted_total`] counts a grid of pixel centres by it. These are the untilted chart's values.
+//! Part 5; chart_reference §3.3; R-503, R-544; REQ-CHART-002, REQ-CHART-075, REQ-CHART-078). The chart is the whole
+//! sphere, each pixel its own system, so both maps are bijective, and the label names no hemisphere and flags no
+//! redundancy. The exponential map's value is its cap's, computed at f64 on the CPU as `validate` is:
+//! [`ShapeSphere::exp_pixel`] reads each pixel's computed `r`, its own system below π whichever hemisphere it lies in,
+//! the one system `−n₀` on π, counted once together (REQ-CHART-078), and the domain's end past π (R-503);
+//! [`ShapeSphere::exp_counted_total`] counts a grid of pixel centres by it. These are the untilted chart's values, and a
+//! tilted view's too (R-544: no mirror pair to fold at any tilt).
 //!
 //! **The projection** ([`Projection`]; chart_reference §3.3; REQ-RENDER-026, REQ-CHART-047): a display remap of the
 //! spherical map's render, not a chart map, so never on the sim key: equirectangular by default, the display point the
@@ -100,7 +97,6 @@ use crate::decode::config::{self, Config};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
-use crate::encode::by_kind::exponential_inverse;
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
 
@@ -360,34 +356,20 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 }
 
-// ── `system_image`, the label, and the exponential map's cap and fold (R-141, R-503) ───────────────────────────────
+// ── `system_image`, the label, and the exponential map's cap and count (R-503, R-544) ─────────────────────────────
 
-/// Which closed hemisphere the exponential map's cap lies in (chart_reference §3.3, "Which closed hemisphere the cap
-/// lies in"; R-503).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Cap {
-    /// Within `w ≥ 0`: bijective.
-    Upper,
-    /// Within `w ≤ 0` and not within `w ≥ 0`: bijective.
-    Lower,
-    /// Across the equator: n-to-1 with the per-pixel fold, at most 2.
-    Straddling,
-}
-
-/// How one pixel of the exponential map counts (chart_reference §3.3; R-503; REQ-CHART-075, REQ-CHART-078).
+/// How one pixel of the exponential map counts (chart_reference §3.3; R-503, R-544; REQ-CHART-075, REQ-CHART-078).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PixelCount {
-    /// Counted here, 1: its computed `w ≥ 0` (±0.0 on the equator), or its mirror `w → −w` outside the cap.
-    Counted,
-    /// Counted at its mirror, 0: `w < 0`, its mirror in view.
-    Folded,
-    /// On `r = π`, the one point `−n₀`: its pixels count once together ([`ShapeSphere::antipode_counts`]).
+    /// `r < π`: its own system, counted once, whichever hemisphere it lies in (R-544).
+    System,
+    /// On `r = π`, the one point `−n₀`: its pixels are one system and count once together (REQ-CHART-078).
     Antipode,
-    /// Past `r = π`: the domain's end, not a system, out of the count and the total.
+    /// Past `r = π`: the domain's end, not a system, out of the count and the total (R-503).
     DomainEnd,
 }
 
-/// π at f64, the float type the cap and the count are computed at.
+/// π at f64, the float type the count is computed at.
 const PI64: f64 = core::f64::consts::PI;
 
 /// The centre of pixel `i` of `n` along an axis of `[0,1]²`: `(i + ½)/n`.
@@ -400,86 +382,37 @@ impl<P: Copy> ShapeSphere<P>
 where
     f64: From<P>,
 {
-    /// The exponential map's frame `(n₀, e₁, e₂)` and extent `s`, at f64.
-    fn frame(&self) -> ([f64; 3], [f64; 3], [f64; 3], f64) {
-        let wide = <f64 as From<P>>::from;
-        (
-            self.n0.map(wide),
-            self.e1.map(wide),
-            self.e2.map(wide),
-            wide(self.scale),
-        )
-    }
-
     /// The exponential map's point at `(u, v)` at f64, with its radius `r = ‖d‖` as [`exponential`] computes it.
     pub fn exp_at(&self, u: f64, v: f64) -> ([f64; 3], f64) {
-        let (n0, e1, e2, s) = self.frame();
+        let (n0, e1, e2) = (widen3(self.n0), widen3(self.e1), widen3(self.e2));
+        let s = f64::from(self.scale);
         (
             exponential(n0, e1, e2, s, u, v),
             radius(offset(e1, e2, s, u, v)),
         )
     }
 
-    /// The exponential map's point and radius at the four corners of `[0,1]²` ([`ShapeSphere::exp_at`]).
-    fn corners(&self) -> [([f64; 3], f64); 4] {
-        let (lo, hi) = (0.0, 1.0);
-        [(lo, lo), (hi, lo), (lo, hi), (hi, hi)].map(|(u, v)| self.exp_at(u, v))
-    }
-
-    /// Whether the circle `r = π` meets `[0,1]²`: a corner at `r ≥ π` (`s√2 ≥ π`).
-    pub fn reaches_antipode(&self) -> bool {
-        self.corners().iter().any(|&(_, r)| r >= PI64)
-    }
-
-    /// Which closed hemisphere the exponential map's cap lies in (chart_reference §3.3): straddling where a corner
-    /// reaches `r = π`; else [`Cap::Upper`] where the computed `w ≥ 0` at the centre and the four corners,
-    /// [`Cap::Lower`] where `w ≤ 0` there, else straddling. `r cot r`'s concavity puts the extreme `w` of the square at
-    /// a corner, so the five points decide it exactly.
-    pub fn cap(&self) -> Cap {
-        if self.reaches_antipode() {
-            return Cap::Straddling;
-        }
-        let centre = self.exp_at(0.5, 0.5).0[2];
-        let w = self.corners().map(|(n, _)| n[2]);
-        let w = [centre, w[0], w[1], w[2], w[3]];
-        if w.iter().all(|&w| w >= 0.0) {
-            Cap::Upper
-        } else if w.iter().all(|&w| w <= 0.0) {
-            Cap::Lower
-        } else {
-            Cap::Straddling
-        }
-    }
-
-    /// The chart's `system_image` (chart_decoder_contract Part 5): the spherical map's n-to-1 with n = 2, its φ
-    /// hemispheres reflection-equivalent (R-141); the exponential map's from its cap, bijective within one closed
-    /// hemisphere, else n-to-1 with the per-pixel fold, at most 2, the value's name kept (R-503).
+    /// The chart's `system_image` (chart_decoder_contract Part 5; chart_reference §3.3; R-544): bijective on either
+    /// map. The spherical map is the whole sphere, each pixel its own system, θ's period and the poles its axis types
+    /// (R-407), not a fold. The exponential map's value is its cap's, `[0,1]²`'s pixels with `r ≤ π`: each pixel with
+    /// `r < π` its own system, its mirror `w → −w` another, whether the cap lies in one hemisphere or straddles the
+    /// equator; the pixels on `r = π` one system, counted once ([`ShapeSphere::exp_pixel`], REQ-CHART-078), an
+    /// identification of measure zero and not a fold; past `r = π` the domain's end, no system (R-503). So no frame or
+    /// extent gives another value: the cap decides which pixels are systems and how many there are
+    /// ([`ShapeSphere::exp_counted_total`]), never a multiplicity.
     pub fn system_image(&self) -> SystemImage {
-        match self.map {
-            ShapeMap::Spherical => SystemImage::NToOne(2),
-            ShapeMap::Exponential => match self.cap() {
-                Cap::Upper | Cap::Lower => SystemImage::Bijective,
-                Cap::Straddling => SystemImage::NToOne(2),
-            },
-        }
+        SystemImage::Bijective
     }
 
-    /// The quotient the chart covers, in words, for its [`ChartLabel`]: both hemispheres drawn and the redundancy
-    /// flagged, one labelled hemisphere, or the per-pixel fold (REQ-CHART-002; chart_reference §3.3).
+    /// The quotient the chart covers, in words, for its [`ChartLabel`]: the whole sphere, or the exponential map's cap,
+    /// each pixel its own system, with no hemisphere named and no redundancy flagged (R-544; REQ-CHART-002).
     pub fn quotient(&self) -> &'static str {
         match self.map {
-            ShapeMap::Spherical => {
-                "both φ hemispheres drawn, redundant: (θ, φ) and (θ, π − φ) decode to one system, its w ≥ 0 point \
-                 canonical"
+            ShapeMap::Spherical => "the whole sphere, pole to pole: each pixel its own system",
+            ShapeMap::Exponential => {
+                "the cap r ≤ π about n₀: each pixel its own system, those on r = π the one system −n₀, past r = π \
+                 the domain's end"
             }
-            ShapeMap::Exponential => match self.cap() {
-                Cap::Upper => "one hemisphere, w ≥ 0: each system in the cap once",
-                Cap::Lower => "one hemisphere, w ≤ 0: each system in the cap once",
-                Cap::Straddling => {
-                    "the cap straddles the equator, a per-pixel fold: a pixel whose mirror w → −w is in view counts \
-                     once with it, at its w > 0 pixel"
-                }
-            },
         }
     }
 
@@ -492,65 +425,35 @@ where
         }
     }
 
-    /// Whether the point `m` of S² is in the exponential map's view (chart_reference §3.3): its log map about `n₀`
-    /// lands in `[0,1]²`, with `r ≤ π` by construction. Where the log map is singular, `m` is `n₀`, the centre, in
-    /// view, or `−n₀`, in view exactly where the circle `r = π` meets `[0,1]²` (REQ-CHART-078). The singular test is
-    /// [`exponential_inverse`]'s own, `‖m − (m·n₀)·n₀‖² = 0`, with its `fma`s.
-    pub fn in_view(&self, m: [f64; 3]) -> bool {
-        let (n0, e1, e2, s) = self.frame();
-        let c = Float::mul_add(m[2], n0[2], Float::mul_add(m[1], n0[1], m[0] * n0[0]));
-        let perp = [0, 1, 2].map(|k| Float::mul_add(-c, n0[k], m[k]));
-        let sin2 = Float::mul_add(
-            perp[2],
-            perp[2],
-            Float::mul_add(perp[1], perp[1], perp[0] * perp[0]),
-        );
-        if sin2 == 0.0 {
-            return c > 0.0 || self.reaches_antipode();
-        }
-        let (u, v) = exponential_inverse(m, (n0, e1, e2), s);
-        (0.0..=1.0).contains(&u) && (0.0..=1.0).contains(&v)
-    }
-
-    /// How the exponential map's pixel at `(u, v)` counts (chart_reference §3.3's per-pixel rule; R-503): past `r = π`
-    /// the domain's end; on it the antipode's group; else counted where the computed `w ≥ 0` or the mirror point lies
-    /// outside the cap, folded otherwise.
+    /// How the exponential map's pixel at `(u, v)` counts (chart_reference §3.3; R-503, R-544): past `r = π` the
+    /// domain's end; on it the antipode's one system; else its own system, in either hemisphere.
     pub fn exp_pixel(&self, u: f64, v: f64) -> PixelCount {
-        let (n, r) = self.exp_at(u, v);
+        let r = self.exp_at(u, v).1;
         if r > PI64 {
             PixelCount::DomainEnd
         } else if r == PI64 {
             PixelCount::Antipode
-        } else if n[2] >= 0.0 || !self.in_view([n[0], n[1], -n[2]]) {
-            PixelCount::Counted
         } else {
-            PixelCount::Folded
+            PixelCount::System
         }
     }
 
-    /// Whether the pixels on `r = π` count, once together (REQ-CHART-078): `−n₀` by the per-pixel rule, its
-    /// `w = −n₀·ŵ ≥ 0` or its mirror outside the cap.
-    pub fn antipode_counts(&self) -> bool {
-        let (n0, ..) = self.frame();
-        -n0[2] >= 0.0 || !self.in_view([-n0[0], -n0[1], n0[2]])
-    }
-
     /// The counted total of the exponential map over the `nx` × `ny` pixels of `[0,1]²`, each at its centre
-    /// ([`pixel_centre`]): one per [`PixelCount::Counted`] pixel, plus one for the pixels on `r = π` where there are
-    /// any and they count ([`ShapeSphere::antipode_counts`]); a folded pixel and the domain's end add none.
+    /// ([`pixel_centre`]): one per [`PixelCount::System`] pixel, plus one where any pixel lies on `r = π`, the one
+    /// system `−n₀` (REQ-CHART-078); the domain's end adds none.
     pub fn exp_counted_total(&self, nx: u32, ny: u32) -> u64 {
         let mut total = 0u64;
         let mut antipode = false;
         for j in 0..ny {
             for i in 0..nx {
                 match self.exp_pixel(pixel_centre(i, nx), pixel_centre(j, ny)) {
-                    PixelCount::Counted => total += 1,
+                    PixelCount::System => total += 1,
                     PixelCount::Antipode => antipode = true,
-                    PixelCount::Folded | PixelCount::DomainEnd => {}
+                    PixelCount::DomainEnd => {}
                 }
             }
         }
-        total + u64::from(antipode && self.antipode_counts())
+        total + u64::from(antipode)
     }
 }
 

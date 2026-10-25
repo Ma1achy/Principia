@@ -13,8 +13,9 @@
 //!
 //! **`system_image`** (R-27, R-104, R-157, R-544). The shape sphere's spherical map is bijective: the chart is the whole
 //! sphere, each pixel its own system, θ's period and the poles its axis types (R-407), not a fold (R-544). Its
-//! exponential map's value is TASK-M2-28's, computed from its cap (REQ-CHART-075); until it lands that map keeps the
-//! value it had, n-to-1 with n = 2 (R-141's, which R-544 withdraws). The `ν`-axis charts are `DoubleCover` where their
+//! exponential map's value is its cap's, bijective whether or not the cap straddles the equator, its pixels on `r = π`
+//! one system and past `r = π` the domain's end (R-503, R-544; REQ-CHART-075, REQ-CHART-078;
+//! `kernel::chart::shape_sphere`). The `ν`-axis charts are `DoubleCover` where their
 //! range reaches both leg orderings and bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the
 //! swap out and are bijective. Every other chart is bijective: its decode takes distinct points to distinct systems.
 
@@ -195,19 +196,13 @@ where
     ShapeSphere<P>: Chart,
 {
     /// The shape's two angles, kind 2 in the configuration, each the other's residual; `z₀`'s mass and momentum blocks
-    /// held. The spherical map bijective (R-544); the exponential map n-to-1 with n = 2 until TASK-M2-28 computes its
-    /// value from its cap (the module's note).
+    /// held. The chart's own `system_image`, bijective on either map, the exponential map's its cap's (R-503, R-544).
     fn descriptor(&self) -> ChartDescriptor {
-        let (h, v, system_image) = match self.map {
-            ShapeMap::Spherical => (
-                "θ, the azimuth",
-                "φ, the polar angle",
-                SystemImage::Bijective,
-            ),
+        let (h, v) = match self.map {
+            ShapeMap::Spherical => ("θ, the azimuth", "φ, the polar angle"),
             ShapeMap::Exponential => (
                 "the exponential map along e₁",
                 "the exponential map along e₂",
-                SystemImage::NToOne(2),
             ),
         };
         let other = Residual {
@@ -221,7 +216,7 @@ where
             ],
             slice: frozen(|c| Block::of(c) != Block::Config),
             conventions: vec![],
-            system_image,
+            system_image: self.system_image(),
             has_feasibility_boundary: false,
             coupling: Coupling::none(),
             annotation: false,
