@@ -767,13 +767,16 @@
     section: 0.1 Masses
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-597 — \"No blank\" on latent and flat charts holds at the default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate and draws as not a system, with the reason in the readout *(closes RQ-536; qualifies R-570 item 3; caps REQ-GEN-038's `μ_max` range)*"
   verify:
     method: review checklist
-    detail: "the proposal states whether ε is one of ε_μ, ε_z, ε_q, ε_w or a new constant, with the M₀₁ range reachable at μ_max = 5 as evidence; recorded in decisions.md"
+    detail: "the proposal states whether ε is one of ε_μ, ε_z, ε_q, ε_w or a new constant, with the M₀₁ range reachable at μ_max = 5 and at the top of μ_max's allowed range, 10 (R-597, REQ-GEN-038), as evidence; the gap's upper side is softmax_tanh's far-field floor at μ_max = 10, (1 + e^−10)/(1 + e^−10 + e^10) ≈ 4.5×10⁻⁵, and a proposed ε at or above it fails; recorded in decisions.md"
   rulings:
   - R-71
+  - R-597
   milestone: M2
-  note: "TASK-M2-02 proposes ε = ε_M01 = 10⁻⁵, a new chart constant (REQ-DEC-009), in the measured gap between stick_breaking's corner pile-up at ε_μ − ε_μ²/4 and the ternary plot's floor 2ε_m (dd_decoder §3.1; fixtures/gates/m01_tiny/measurement.toml); provisional until the M2 gate."
+  note: "TASK-M2-02 proposes ε = ε_M01 = 10⁻⁵, a new chart constant (REQ-DEC-009), in the measured gap between stick_breaking's corner pile-up at ε_μ − ε_μ²/4 and the ternary plot's floor 2ε_m (dd_decoder §3.1; fixtures/gates/m01_tiny/measurement.toml); provisional until the M2 gate. R-597 (25 Oct 2026; physics review 5644374613 of PR #293, F4, applied per R-369): the gap's upper side is the far-field floor at the cap μ_max = 10, ≈ 4.5×10⁻⁵, so a proposed ε at or above it fails. *Was (verify):* \"the proposal states whether ε is one of ε_μ, ε_z, ε_q, ε_w or a new constant, with the M₀₁ range reachable at μ_max = 5 as evidence; recorded in decisions.md\""
 - id: REQ-DEC-040
   area: DEC
   kind: definition

@@ -25844,10 +25844,15 @@ edge-reaching simplex link a pixel whose `M₀₁ < 10⁻⁵` is tagged `DEGENER
 R-511 draws one, with the reason in the readout (R-553: "not a system" and the check named). REQ-GEN-038's
 calibration keeps its other ends; its `μ_max` `hi` is at most 10.
 
+*Applied per R-369:* `ε_M01` is still an open calibration (REQ-DEC-039), so the guarantee is tied to it: the gap's
+upper side in REQ-DEC-039's verify and `docs/design/principia_dd_decoder.md` §3.1 is the far-field floor at the cap,
+`μ_max = 10`, `≈ 4.5×10⁻⁵`, not the value at `μ_max = 5`, and a proposed `ε_M01` at or above it fails (physics review
+5644374613 of PR #293, F4).
+
 R-597 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-087 (statement, verify, rq, rulings, source, note), REQ-GUI-357 (statement, rulings, note) and
-REQ-GEN-038 (statement, verify, rulings, note).
+REQ-GEN-038 (statement, verify, rulings, note) and REQ-DEC-039 (verify, rulings, source, note).
 
 ## R-598 — With energy normalisation off every latent pixel is a system; with it on, a pixel whose target energy cannot be reached has no system at that energy and draws as not a system, with the reason in the readout, never unnormalised *(closes RQ-552; qualifies R-570 item 3)*
 *25 Oct 2026 · applied with R-597 in the same texts, `docs/archive/review_queue/M0.md` (RQ-552, moved with its ruling),
