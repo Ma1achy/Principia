@@ -479,8 +479,10 @@ zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r =
 where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
 count and the total (§5.4). Inside `[0,1]²` such a pixel is the domain's end by design, as is one exactly on `r = π` if
 REQ-CHART-078 makes it so: it draws blank and logs no decoder-bug warning (R-554, ruling RQ-470). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
-exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
-R-72), and the fixtures avoid that circle.
+exactly on `r = π` maps to the one point `−n0`; how such pixels count is REQ-CHART-078's definition (R-72), "Pixels on
+`r = π`" below: they are a system, not the domain's end, so they do not draw blank. The fixtures avoid that circle.
+*Was:* "how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078, R-72), and the fixtures avoid that
+circle."
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
@@ -518,6 +520,19 @@ which all map to `−n0`, count as REQ-CHART-078 defines. The chart computes the
 change, and its label shows it. *Was (R-503's per-pixel fold, withdrawn by R-544):* where the cap straddles the
 equator, n-to-1 with a per-pixel fold, a pixel counting 1 if its `w ≥ 0` or its mirror lies outside the cap, else 0,
 its representative the pixel with `w > 0`; bijective only within one closed hemisphere.
+
+**Pixels on `r = π` (defined per R-72, REQ-CHART-078; TASK-M2-28).** A pixel whose computed `r` is π, the float type's
+π exactly, the `r = ‖d‖` the map computes from the pixel's `(u, v)`, lies in the cap, which is `r ≤ π`, and is a
+system: R-503 bounds the radius at π and makes only what lies past it the domain's end. Every such pixel maps to the one
+point `−n0`, one system, so together they count **once**, as each system counts once (`principia_chart_decoder_contract.md`
+Part 5): a counted total over a grid of pixels is the number of its pixels with `r < π`, plus 1 where any of its pixels
+lies on `r = π`, and nothing for the pixels past it. Each of them draws that one system, the decode at its own
+`(u, v)`, which reaches `−n0` to rounding (`sin r` at the float type's π is not 0). The circle is the cap's own edge,
+where every direction of `d` reaches the one antipode, as each of the spherical map's pole rows reaches one pole: an
+identification on a set of measure zero, not a fold, with no mirror in it (R-544), so the value stays bijective. Pixel
+centres land on the circle only for a measure-zero set of `s`; the rule decides that set, and REQ-CHART-075's fixtures
+keep every pixel centre more than `10⁻⁶` from it. *Was (PR #271, under R-503's fold, kept as the record):* the group
+counting 1 or 0 "by the per-pixel rule applied to `−n0`".
 
 **Under a tilt (R-473 T1, T2, J1; R-544).** Two pixels fold only when their full `(a, b, d)` decode to the same
 system (`principia_chart_decoder_contract.md` Part 5's definition of `system_image`). Under a nonzero tilt a pixel at
