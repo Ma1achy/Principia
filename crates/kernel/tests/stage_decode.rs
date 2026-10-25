@@ -32,6 +32,7 @@ use kernel::stage::decode::{
     LatentDefaults, LatentStickBreaking, ShapeSphereDefaults, UniformChart,
 };
 use spirv_std::glam::{UVec3, UVec4};
+use std::hint::black_box;
 use validation::negative_control;
 
 /// A latent chart whose 24 parameters are distinct: `z₀[k] = k + 1`, `q₁[k] = −(k + 1)/8`, `q₂[k] = (k + 1)/16`.
@@ -409,10 +410,17 @@ fn check_entry(run: fn(&Latent<f32>, u32) -> Written) {
         q1: [0.1, 0.0, 0.2, 0.0, 0.0, 0.1, 0.0, 0.3],
         q2: [0.0, 0.2, 0.0, -0.1, 0.1, 0.0, 0.2, 0.0],
     };
-    let (ic, tags, d) = run(&chart, flags(DecodeMode::Full));
+    // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
+    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
+    let (ic, tags, d) = run(black_box(&chart), flags(DecodeMode::Full));
     for (i, uv) in [[0.25f32, 0.75], [0.5, 0.5], [1.0, 0.0]].iter().enumerate() {
-        let want = sample::<_, Defaults, f32>(&chart, uv[0], uv[1]);
-        let direct = chart::decode::<Defaults, f32, _>(&chart, uv[0], uv[1]);
+        let want =
+            sample::<_, Defaults, f32>(black_box(&chart), black_box(uv[0]), black_box(uv[1]));
+        let direct = chart::decode::<Defaults, f32, _>(
+            black_box(&chart),
+            black_box(uv[0]),
+            black_box(uv[1]),
+        );
         assert_eq!(
             (want.ic, want.descriptor, want.degenerate),
             (direct.ic, direct.descriptor, direct.degenerate),
@@ -494,22 +502,35 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
         energy: Default::default(),
     };
     let uv = [0.2f32, 0.7, 0.6, 0.3];
+    // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
+    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
+    let expect = |i: usize| {
+        (
+            black_box(&chart),
+            black_box(uv[2 * i]),
+            black_box(uv[2 * i + 1]),
+        )
+    };
     for (name, run, want) in
         [
             (
                 "latent_defaults",
                 defaults,
-                [0, 1].map(|i| sample::<_, Defaults, f32>(&chart, uv[2 * i], uv[2 * i + 1])),
+                [0, 1].map(|i| {
+                    let (c, u, v) = expect(i);
+                    sample::<_, Defaults, f32>(c, u, v)
+                }),
             ),
             (
                 "latent_stick_breaking",
                 stick,
                 [0, 1].map(|i| {
+                    let (c, u, v) = expect(i);
                     sample::<
                         _,
                         <LatentStickBreaking as kernel::stage::decode::DecodeVariant>::Links,
                         f32,
-                    >(&chart, uv[2 * i], uv[2 * i + 1])
+                    >(c, u, v)
                 }),
             ),
         ]
@@ -518,8 +539,8 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
         for i in 0..3 {
             run(
                 UVec3::new(i, 0, 0),
-                &uniforms,
-                &uv,
+                black_box(&uniforms),
+                black_box(&uv),
                 &mut ic,
                 &mut tags,
                 &mut d,
@@ -536,19 +557,22 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
         }
     }
     // describe: two samples' (m, r, p) in, their descriptors out; the third invocation writes nothing.
-    let ics = [0, 1].map(|i| sample::<_, Defaults, f32>(&chart, uv[2 * i], uv[2 * i + 1]).ic);
+    let ics = [0, 1].map(|i| {
+        let (c, u, v) = expect(i);
+        sample::<_, Defaults, f32>(c, u, v).ic
+    });
     let mut words = vec![0; 2 * ic_words()];
     for (i, ic) in ics.iter().enumerate() {
         write_ic(&mut words, i, ic);
     }
     let mut d = vec![u32::MAX; 3 * descriptor_words()];
     for i in 0..3 {
-        describe_entry(UVec3::new(i, 0, 0), &words, &mut d);
+        describe_entry(UVec3::new(i, 0, 0), black_box(&words), &mut d);
     }
     for (i, ic) in ics.iter().enumerate() {
         assert_eq!(
             read_descriptor(&d, i),
-            kernel::decode::descriptor::describe(ic),
+            kernel::decode::descriptor::describe(black_box(ic)),
             "describe sample {i}'s descriptor"
         );
     }
@@ -599,8 +623,8 @@ fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
     for i in 0..2 {
         wrapper(
             UVec3::new(i, 0, 0),
-            std::hint::black_box(&uniforms),
-            std::hint::black_box(&uv),
+            black_box(&uniforms),
+            black_box(&uv),
             &mut ic,
             &mut tags,
             &mut d,
@@ -608,9 +632,9 @@ fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
     }
     for i in 0..2 {
         let want = sample::<V::Chart, V::Links, f32>(
-            std::hint::black_box(chart),
-            std::hint::black_box(uv[2 * i]),
-            std::hint::black_box(uv[2 * i + 1]),
+            black_box(chart),
+            black_box(uv[2 * i]),
+            black_box(uv[2 * i + 1]),
         );
         let name = V::ENTRY;
         assert_eq!(read_ic(&ic, i), want.ic, "{name} sample {i}'s (m, r, p)");
@@ -701,13 +725,15 @@ negative_control!(
 fn check_link_tanh(entry: fn(UVec3, &[f32], &mut [f32])) {
     let input = [0.5f32, -3.0, 25.0];
     let mut output = [f32::MAX; 4];
+    // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
+    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
     for i in 0..4 {
-        entry(UVec3::new(i, 0, 0), &input, &mut output);
+        entry(UVec3::new(i, 0, 0), black_box(&input), &mut output);
     }
     for (i, x) in input.iter().enumerate() {
         assert_eq!(
             output[i].to_bits(),
-            kernel::generated::links::tanh_sat(*x).to_bits(),
+            kernel::generated::links::tanh_sat(black_box(*x)).to_bits(),
             "word {i}"
         );
     }
