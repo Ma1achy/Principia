@@ -21,8 +21,10 @@
 //!   construction.
 //! - **Annotation** ([`Coord::Annotation`]): nothing to invert; the axis gives no coordinate and nothing is compared
 //!   for it.
-//! - **Kind 4, coupled curve**: the Burrau family's encode, its closed form and off-curve projection, is
-//!   TASK-M2-18's; no impl here.
+//! - **Kind 4, coupled curve** (`super::curve`): the Burrau charts' impls are there, beside the closed form, the
+//!   off-curve projection and the fold. The curve axis's coordinate is kind 4's landing at the curve tolerance `tol`
+//!   ([`ByKind::coords_within`]; REQ-ENC-026): the closed form's on the curve, `ν*`'s within `tol`, and none beyond
+//!   it; the chart's other axis is read by its own kind.
 //!
 //! **Lowered, never interpreted** (chart_decoder_contract design axiom 4; lowering Part 2): the kind is each chart
 //! type's impl, monomorphised, as the decode is; the kernel holds no runtime axis-kind value. The authoring layer's
@@ -31,8 +33,22 @@
 //! **Where possible** (inverse_encode_contract Part 6, step 4's definition, R-72): `x` lands on the chart iff
 //! `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, `D(Φ(c(x)))` the chart's decode at `c(x)`
 //! ([`crate::chart::ChartDecode::decode_at`]), both states canonical: Part 4's norm (REQ-ENC-029) and tolerance
-//! (REQ-ENC-024). [`encode_into`] takes both from its caller, the lookup, and fixes neither. A coordinate that is not
-//! finite, or an axis that cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison.
+//! (REQ-ENC-024). [`encode_into_within`] takes both from its caller, the lookup, and fixes neither, and with them kind
+//! 4's curve tolerance `tol` (REQ-ENC-026), which only a curve chart reads; [`encode_into`] is it at `tol = 0`, where a
+//! curve chart represents only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so it
+//! places essentially no state: a caller on a curve chart calls [`encode_into_within`] with REQ-ENC-026's tolerance
+//! (inverse_encode_contract Part 6, step 4). A coordinate that is not finite, or an axis that
+//! cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report,
+//! `d`, `ν*` and the fold's flag, is [`ChartEncoded::curve`].
+//!
+//! **The shape sphere's section** (R-544; inverse_encode_contract Parts 5 and 6, "On the shape sphere chart";
+//! REQ-ENC-034). The shape sphere chart decodes with `C`'s step 3 not taken (`crate::canon::canonicalise_signed`), so
+//! its states keep their signed shape, and its point and its comparison are read off that section, not `C(x)`'s: `C(x)`
+//! with step 3's mirror undone on the full state, every `rᵢ` and `pᵢ`, where `lookup_mirrored` is set
+//! ([`ByKind::section`]). So `x` and `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, and a lower-hemisphere `x` whose masses
+//! and unmirrored body-frame momenta are the slice's lands on the chart and decodes back to itself. `E(x)` itself, its
+//! `z` and T1 over the gauge group with its `Z₂` mirror, is unchanged, and so is every other chart's point and
+//! comparison, against `C(x)`.
 //!
 //! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
 //! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
@@ -47,6 +63,8 @@
 //!   subtractions, no division.
 //! - **The pole and `θ`'s sign**, in [`spherical_inverse`]: `n₀`, `n₁` against 0, `θ`'s sign decided on `n₁`, never on
 //!   `atan2`'s output; the pole's `θ` is selected as 0, as `crate::canon`'s rotation angle selects `φ` (R-437).
+//! - **The signed point and section**, in [`ShapeSphere`]'s impl: `C`'s own `lookup_mirrored`, decided by
+//!   `crate::canon::mirror_decision` in its fixed form, no float of this module's.
 //! - **The centre**, in [`exponential_inverse`]: `‖n⊥‖²`, a chain of explicit `fma`s, against 0, not its `sqrt`.
 //! - **The warp at rest**, in [`warp_inverse`]: `K` against 0, where `L_max(K) = 0`, not `L_max` itself.
 //! - **Feasibility**, in [`feasibility`]: the finiteness of the entries; the construction's own exact test
@@ -72,7 +90,9 @@
 
 use spirv_std::num_traits::{Float, FloatConst};
 
+use super::curve::CurveEncoded;
 use super::{encode, Encoded, SimplexClamp};
+use crate::canon;
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
 use crate::chart::{ChartDecode, Constraint, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere};
@@ -124,6 +144,28 @@ pub trait ByKind: ChartDecode {
     where
         S: Selection,
         R: LinkReal + PayloadReal + From<Self::Param>;
+
+    /// The chart coordinates at kind 4's curve tolerance `tol` (Part 5 kind 4; REQ-ENC-026), and a curve chart's curve
+    /// encode (`super::curve`). A chart with no curve axis ignores `tol`: its [`ByKind::coords`], and no curve encode.
+    #[inline]
+    fn coords_within<S, R>(
+        &self,
+        e: &Encoded<R>,
+        _tol: R,
+    ) -> ([Coord<R>; 2], Option<CurveEncoded<R>>)
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<Self::Param>,
+    {
+        (self.coords::<S, R>(e), None)
+    }
+
+    /// The state the chart's decode at `c(x)` is compared with, on the chart's own section (Part 6, step 4): `C(x)`,
+    /// `e`'s canonical state, on every chart but the shape sphere ([`ShapeSphere`]'s impl, the module's note).
+    #[inline]
+    fn section<R: LinkReal>(&self, e: &Encoded<R>) -> Ic<R> {
+        e.canonical.ic
+    }
 }
 
 /// Encode into the active chart: `E(x)`, the chart point read off it by kind, and where it lands.
@@ -137,6 +179,10 @@ pub struct ChartEncoded<R> {
     pub residual: Option<R>,
     /// The chart point, or latent `z`.
     pub landing: Landing<R>,
+    /// A curve chart's curve encode at the caller's `tol`: the closed form, its `past_fold` flag among it, `d`, `ν*`
+    /// where the projection ran, and the landing on the curve (`super::curve`; REQ-ENC-022, REQ-ENC-026). `None` on
+    /// every other chart.
+    pub curve: Option<CurveEncoded<R>>,
 }
 
 /// The chart coordinate an axis's [`Coord`] places: `Some` for a finite coordinate, and 0 for an annotation axis, which
@@ -150,10 +196,9 @@ fn placed<R: LinkReal>(c: Coord<R>) -> Option<R> {
     }
 }
 
-/// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind, and the chart
-/// as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from `C(ic)`, is at most `eps_phys`, else
-/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
-/// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible").
+/// [`encode_into_within`] at `tol = 0` (the module's note): a curve chart represents only a state on its curve exactly,
+/// and rounding alone puts `d > 0` on the curve, so there it places essentially no state. On a curve chart, call
+/// [`encode_into_within`] with REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
 #[inline]
 pub fn encode_into<S, R, C, N>(chart: &C, ic: &Ic<R>, norm: N, eps_phys: R) -> ChartEncoded<R>
 where
@@ -163,11 +208,35 @@ where
     C: ByKind,
     N: Fn(&Ic<R>, &Ic<R>) -> R,
 {
+    encode_into_within::<S, R, C, N>(chart, ic, norm, eps_phys, R::zero())
+}
+
+/// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind at the curve
+/// tolerance `tol`, and the chart as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from
+/// `C(ic)` (on the shape sphere, from [`ByKind::section`]'s `C(ic)` with the mirror undone), is at most `eps_phys`, else
+/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
+/// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible"), and `tol` Part 5 kind 4's (REQ-ENC-026), the
+/// caller's too.
+#[inline]
+pub fn encode_into_within<S, R, C, N>(
+    chart: &C,
+    ic: &Ic<R>,
+    norm: N,
+    eps_phys: R,
+    tol: R,
+) -> ChartEncoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
+{
     let encoded = encode::<S, R>(ic);
-    let coords = chart.coords::<S, R>(&encoded);
+    let (coords, curve) = chart.coords_within::<S, R>(&encoded, tol);
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
-            let d = norm(&encoded.canonical.ic, &chart.decode_at::<S, R>(u, v).ic);
+            let d = norm(&chart.section(&encoded), &chart.decode_at::<S, R>(u, v).ic);
             (
                 Some(d),
                 select(d <= eps_phys, Landing::Chart { u, v }, Landing::Latent),
@@ -180,6 +249,7 @@ where
         coords,
         residual,
         landing,
+        curve,
     }
 }
 
@@ -447,8 +517,10 @@ pub fn exponential_inverse<R: LinkReal>(
 }
 
 /// The shape sphere: both axes kind 2 in the configuration block, together pinning its two DOF, so no residual. The
-/// point is `n = shape_vec(ρ̃, λ̃)` of `C(x)` (`crate::shape`), on the upper hemisphere, `C` having mirrored the lower
-/// onto it (R-141), through the chart map's inverse. The held masses and momenta are [`encode_into`]'s comparison.
+/// point is the state's signed `n̂` (R-544; REQ-ENC-034): `n = shape_vec(ρ̃, λ̃)` of `C(x)` with step 3's mirror undone
+/// where `lookup_mirrored` is set, `λ̃_y` and `ρ̃_y` negated back, so a lower-hemisphere state is placed below the
+/// equator, through the chart map's inverse. The held masses and momenta are [`encode_into`]'s comparison, against
+/// [`ByKind::section`], the same state undone in full.
 impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -457,7 +529,9 @@ impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let j = &e.blocks.jacobi;
-        let n = shape_vec(j.rho_t, j.lambda_t);
+        let flip = e.canonical.mirrored;
+        let undo = |v: [R; 2]| [v[0], select(flip, -v[1], v[1])];
+        let n = shape_vec(undo(j.rho_t), undo(j.lambda_t));
         let (u, v) = match self.map {
             ShapeMap::Spherical => spherical_inverse(n, wide(P::PI())),
             ShapeMap::Exponential => exponential_inverse(
@@ -467,6 +541,13 @@ impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
             ),
         };
         [Coord::At(u), Coord::At(v)]
+    }
+
+    /// `C(x)` with step 3's mirror undone on the full state, every `rᵢ` and every `pᵢ`, where `lookup_mirrored` is set:
+    /// the decode's own section, `C` with its step 3 not taken (the module's note).
+    #[inline]
+    fn section<R: LinkReal>(&self, e: &Encoded<R>) -> Ic<R> {
+        canon::reflect(&e.canonical.ic, e.canonical.mirrored)
     }
 }
 

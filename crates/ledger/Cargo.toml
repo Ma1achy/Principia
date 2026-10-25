@@ -4,6 +4,11 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
+# `cargo xtask codegen` evaluates the default sim key's `N_sub` thresholds (`gen::nsub`; R-502) in f64 through a pinned
+# pure-software libm: libm, already in the build under naga and spirv-std, at the version `Cargo.lock` holds, with
+# `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes the `pow`.
+[dependencies]
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
 
 # Controls reach ledger's tests through a dev-dependency on validation; they are integration tests in `tests/`, never
 # unit tests in `src/` (R-176, R-187).

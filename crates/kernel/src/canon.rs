@@ -9,11 +9,19 @@
 //! 0  SCALE   I_in = Σ mᵢ‖rᵢ‖² in the CoM frame;  r ← r/√I_in,  p ← I_in^{1/4}·p;  λ = I_in^{−1/2} recorded
 //! 1b BOOST   p ← p − mᵢ·P_tot                      P_tot = Σ pᵢ    (M = 1)
 //! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped (R-13)
+//!            R(−φ)'s cos φ and sin φ formed as ρ/‖ρ‖, the same in exact arithmetic (rotation)
 //! 3  MIRROR  iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ):  y → −y on every rᵢ and pᵢ;  lookup_mirrored;
 //!            |λ̃_y| ≤ δ_λ → no mirror (R-82)
 //! ```
 //! CoM subtraction precedes the `I` computation because `I` is CoM-frame-defined. After step 3, `λ̃_y ≥ −δ_λ`, not
 //! `λ̃_y ≥ 0`: the deadband is left unmirrored, `−0` included (R-82, R-438).
+//!
+//! **Step 3 not taken** (R-544; chart_reference §3, §0.4; chart_decoder_contract Part 2). `C` is one function, its
+//! steps written once, in one private function: [`canonicalise`] runs all five, as encode and every other caller do, and
+//! [`canonicalise_signed`] runs 1a, 0, 1b and 2 and not 3, so `λ̃_y` keeps its sign and the state its signed shape.
+//! The shape sphere chart's decode is its one caller: a lower-hemisphere pixel decodes to its own system, never to its
+//! mirror. Its `lookup_mirrored` is never raised, there being no mirror. [`reflect`] is the mirror itself, `Π`, the
+//! `y → −y` of every `rᵢ` and every `pᵢ`, which step 3 applies.
 //!
 //! **Precondition.** The masses are positive and `Σmᵢ = 1`, as the decode emits them: `R_com` and `P_tot` are the
 //! mass-weighted sums with `M = 1`.
@@ -188,10 +196,41 @@ pub fn coincident<R: LinkReal>(rho: [R; 2]) -> bool {
     (rho[0] == R::zero()) & (rho[1] == R::zero())
 }
 
-/// Step 2's angle `φ = atan2(ρ_y, ρ_x)`, and 0 at `ρ = 0` for every sign of the zeros, selected (R-437).
+/// Step 2's angle `φ = atan2(ρ_y, ρ_x)`, and 0 at `ρ = 0` for every sign of the zeros, selected (R-437). A zero `ρ_x`
+/// is taken as `+0` before `atan2`, by a select on `ρ_x` against 0: Metal's `atan2` at its default math mode gives
+/// `atan2(ρ_y, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Where `ρ_y ≠ 0` IEEE's `atan2(ρ_y, ±0)` is one
+/// value, and where `ρ_y = 0` the pole's select discards it, so the CPU's `φ` is unchanged, bit for bit.
 #[inline]
 pub fn rotation_angle<R: LinkReal>(rho: [R; 2]) -> R {
-    select(coincident(rho), R::zero(), Float::atan2(rho[1], rho[0]))
+    let x = select(rho[0] == R::zero(), R::zero(), rho[0]);
+    select(coincident(rho), R::zero(), Float::atan2(rho[1], x))
+}
+
+/// Step 2's turn `(c, s) = (cos φ, sin φ)` for `φ` = [`rotation_angle`]`(ρ)`, formed as `ρ̂ = ρ/‖ρ‖`, not through `φ`;
+/// at `ρ = 0`, `(1, 0)`, so `R(−φ)` is the identity there (R-437). In exact arithmetic `ρ̂` is `(cos φ, sin φ)`. In
+/// rounded arithmetic `sin` and `cos` of a rounded `atan2` turn `ρ` off `+x` by their error in `φ`, which WGSL bounds
+/// only loosely (`atan2` to 4096 ulp, `sin` and `cos` to an absolute `2⁻¹¹`) and `R(−φ)` multiplies by each `‖rᵢ‖`; a
+/// light body is far out at `I = 1` (`‖r₁‖ ≈ 27` at `m₁ ≈ 1.2·10⁻³`), and through the sines CI's lavapipe put that
+/// body's `r_y` 273.88 eps from the f64 decode where the native f32 decode is 1.12 (PR #262). `ρ̂`'s direction is
+/// rounded only by the two products `ρ_x·k` and `ρ_y·k`, half an ulp each, the error of `k = 1/√(ρ_x² + ρ_y²)`
+/// scaling both alike. `ρ` is first scaled by `2^−e`, `e` its larger component's exponent, in two exact steps that keep
+/// each factor normal (`2^−⌊e/2⌋`, then `2^(⌊e/2⌋−e)`), taking that component into `[1, 2)` (from a subnormal, at
+/// least `2⁻²²` at f32), so `ρ_x² + ρ_y²` neither overflows nor underflows for a finite `ρ`, and is 0 only at `ρ = 0`
+/// (or where a GPU flushes a subnormal `ρ` to 0, RQ-298).
+#[inline]
+pub fn rotation<R: LinkReal + IeeeBits>(rho: [R; 2]) -> (R, R) {
+    let (ex, ey) = (rho[0].exponent(), rho[1].exponent());
+    let e = select(ex > ey, ex, ey);
+    let h = e >> 1;
+    let (a, b) = (R::pow2(-h), R::pow2(h - e));
+    let (x, y) = (rho[0] * a * b, rho[1] * a * b);
+    let n2 = Float::mul_add(x, x, y * y);
+    let pole = n2 == R::zero();
+    let k = R::one() / Float::sqrt(select(pole, R::one(), n2));
+    (
+        select(pole, R::one(), x * k),
+        select(pole, R::zero(), y * k),
+    )
 }
 
 /// `R(−φ)·v` with `c = cos φ`, `s = sin φ`: `(c·v_x + s·v_y, c·v_y − s·v_x)`, each an explicit `fma`.
@@ -357,9 +396,42 @@ fn mirror<R: LinkReal>(v: [R; 2], flip: bool) -> [R; 2] {
     [v[0], select(flip, -v[1], v[1])]
 }
 
+/// `Π·ic` where `flip` holds, else `ic`: the mirror through the `x`-axis on the full state, `y → −y` on every `rᵢ` and
+/// every `pᵢ` (inverse-encode contract Part 1, "The classic bug"; step 3's), selected; the masses unchanged.
+#[inline]
+pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
+    Ic {
+        m: ic.m,
+        r: [
+            mirror(ic.r[0], flip),
+            mirror(ic.r[1], flip),
+            mirror(ic.r[2], flip),
+        ],
+        p: [
+            mirror(ic.p[0], flip),
+            mirror(ic.p[1], flip),
+            mirror(ic.p[2], flip),
+        ],
+    }
+}
+
 /// `C`: `ic` onto the canonical section, in R-23's order (the module's note). `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
 pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
+    canonical(ic, true)
+}
+
+/// `C` with its step 3, the mirror, not taken (R-544; the module's note): 1a, 0, 1b and 2, so the state is at its CoM,
+/// at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign. `mirrored` is `false`. The shape sphere chart's
+/// decode; every other caller runs [`canonicalise`].
+#[inline]
+pub fn canonicalise_signed<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
+    canonical(ic, false)
+}
+
+/// `C`'s steps, written once: 1a, 0, 1b and 2, then step 3 where `mirror_step` holds and R-82's test mirrors.
+#[inline]
+fn canonical<R: LinkReal + IeeeBits>(ic: &Ic<R>, mirror_step: bool) -> Canonical<R> {
     let m = ic.m;
     // 1a: the CoM frame.
     let com = centre_of_mass(m, ic.r);
@@ -375,7 +447,7 @@ pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
     let rho = [ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]];
     let clamped = coincident(rho);
     let phi = rotation_angle(rho);
-    let mirrored = mirror_decision(m, ic.r);
+    let mirrored = mirror_step & mirror_decision(m, ic.r);
     let (r, p, lambda) = similarity(centred, ic.p, i_in);
     // 1b: zero total momentum.
     let total = [p[0][0] + p[1][0] + p[2][0], p[0][1] + p[1][1] + p[2][1]];
@@ -390,26 +462,14 @@ pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
         unboost(p[1], m[1]),
         unboost(p[2], m[2]),
     ];
-    // 2: ρ onto +x.
-    let (s, c) = (Float::sin(phi), Float::cos(phi));
+    // 2: ρ onto +x, by ρ̂, `φ`'s cosine and sine.
+    let (c, s) = rotation(rho);
     let r = [rotate(r[0], c, s), rotate(r[1], c, s), rotate(r[2], c, s)];
     let p = [rotate(p[0], c, s), rotate(p[1], c, s), rotate(p[2], c, s)];
     // 3: the mirror, in encode's frame, as decided above; λ̃_y recorded.
     let lambda_t_y = lambda_t_y(m, r);
     Canonical {
-        ic: Ic {
-            m,
-            r: [
-                mirror(r[0], mirrored),
-                mirror(r[1], mirrored),
-                mirror(r[2], mirrored),
-            ],
-            p: [
-                mirror(p[0], mirrored),
-                mirror(p[1], mirrored),
-                mirror(p[2], mirrored),
-            ],
-        },
+        ic: reflect(&Ic { m, r, p }, mirrored),
         i_in,
         lambda,
         phi,

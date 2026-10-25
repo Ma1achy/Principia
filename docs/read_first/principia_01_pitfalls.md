@@ -146,7 +146,8 @@ ESCAPE  <=>  |Δn̂| over a window < tau    AND    E_rel > 0
   mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
   pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
 - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
-  unregularised occupants and at sync boundaries for regularised ones (R-95).
+  unregularised occupants and at sync boundaries for regularised ones (R-95), on the fixed grid `Δ_sync`, the window
+  stated in physical time (R-565).
 - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
   centre of mass, the same `d` as in `E_rel` (R-61).
 - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
@@ -232,7 +233,9 @@ step at the finest stride**. That is the wrong shape for a resolved quantity, an
 **A DIAGNOSTIC MUST REUSE THE ORIGINAL DISCRETISATION.** A persistence check re-ran trajectories with
 `n_sync` rescaled per window, making every window a different discretisation. It produced
 0.162, 0.219, 0.011, 0.083, 0.335 and read exactly like a flickering condition. **The project's own
-`n_sync`/`t_max` trap, inside a diagnostic written to catch traps.**
+`n_sync`/`t_max` trap, inside a diagnostic written to catch traps.** *Since R-565 the regularised occupants' sync
+grid is one fixed quantum of physical time, `Δ_sync`, never `t_max / n_sync`, so this trap cannot be built: there is
+one grid (integrator contract Part 2a). The rule stands for every other step parameter.*
 
 **A DISCRIMINATOR CAN BE POISONED BY ITS OWN SUBJECT.** `d_min` was used to test whether new escapes
 were spurious mid-encounter firings, on the grounds that the re-labelled population had *larger*
@@ -428,3 +431,58 @@ which is precision, which is expected, which is reported. **Not because two back
 
 **The rule: a test that holds a variable fixed says nothing about the regime where that variable
 moves.** State the domain of a determinism result as loudly as the result.
+
+---
+
+## 11. A SIGNED ZERO THE CPU IGNORES AND A GPU READS — `atan2(y, −0)`
+
+**Observed** (TASK-M2-43, PR #288): once the shape sphere's decode stopped folding (R-544),
+`decode_cross_backend_continuous` put `L⁻`'s shape at `L⁺`'s pixel on Metal, and nowhere on the CPU.
+
+**Assumed:** `atan2(y, −0)` and `atan2(y, +0)` are one value for `y ≠ 0`. They are, under IEEE 754 and on
+every CPU libm: both are `±π/2` on `y`'s side. So a `−0` second operand looked harmless, and only
+`atan2(0, 0)` was guarded (R-437).
+
+**Actual:** Metal's own `atan2`, compiled at Metal's default (fast) math mode, gives `atan2(y, −0)` with
+`y ≠ 0` the opposite sign of `π/2` to IEEE's. It was measured at the four sites below: `−π/2` for `y > 0` and
+`+π/2` for `y < 0`.
+- **Where it comes from.** naga passes the call through unchanged: naga 30.0.1, `src/back/msl/writer.rs`,
+  `Atan2 => "atan2"`. wgpu-hal 30.0.1 sets no math mode on the Metal library (`src/metal/device.rs`), so
+  the source is Metal's `atan2` at its default mode, not naga.
+- **A model, not the implementation.** The measured outputs are consistent with `atan(y/x)`, turned by `π`
+  only where `x < 0`: a `−0` is not below 0, and `y/−0` is `∓∞`. That model is inferred from the outputs, not
+  seen in Metal's implementation. The tests' negative controls use it.
+- **Where the `−0` arises on the shape sphere.** The decode's `p = I·n₁/2` is `−0` wherever one factor of
+  `n₁ = sin φ·sin θ` is a zero and the other is negative. At f32 that happens in two places:
+  - The whole `L⁺` row (`t = 1`, `φ = +0`) for `s ∈ [½, 1)`. For `s > ½`, `sin θ` really is negative,
+    at f64 as well. At `s = ½`, f32's `π` lies above π, so `sin θ` rounds below 0.
+  - The `L⁻` pixel `(s, t) = (0, 0)`, where `sin(π_f32) < 0` meets `sin 0 = +0`. There `q = −I/2`, and
+    Metal's `atan2(−I/2, −0)` gives `+π/2` where IEEE gives `−π/2`, putting `L⁺` at `L⁻`'s pixel.
+- **What it did.** Each time, `β` turned `λ̃` to the other side of `ρ̃`. While the decode folded, `C`'s mirror
+  step undid the turn. That is why it showed only when the fold went:
+  **a symmetry step downstream can hide a sign error upstream.**
+
+**Measurement:** each site was checked on Metal (Apple M3 Pro), on states built so the second operand is
+`−0` exactly and the first is not 0, against the CPU at f32 and f64. A test-side assertion confirms each
+state reaches its case, the zero's sign included. All four sites were off by `π` on Metal (`1.68·10⁷` f32 eps
+of `π/2`):
+- the shape sphere's inverse (`decode_cross_backend_continuous`);
+- `C`'s recorded `φ` at `ρ_x = −0` (`canonicaliser_phi_signed_zero`);
+- encode's `β` at `λ̃_x = −0` (`encode_beta_signed_zero`);
+- the descriptor's `rho_angle` at `ρ · λ = −0` (`decode_stage_rho_angle_signed_zero`).
+
+With the second operand's zero taken as `+0`, all four agree with the CPU. The CPU's own values are
+unchanged, bit for bit, because IEEE's `atan2` reads neither zero's sign when `y ≠ 0`.
+
+**The rule:**
+- **Every `atan2` a GPU stage reaches, whose second operand can be a zero while its first is not, takes that
+  operand through a select that maps a zero to `+0`.**
+  Where both operands can be 0, R-437's select comes first.
+- **No form of the clearing is safe by construction.** A compiler that assumes no signed zeros (fast math)
+  may fold `select(x == 0, 0, x)` to `x`, just as it may fold `x + 0.0`.
+- **What guards it is a cross-backend test of the `−0` case at each site.** Each of these failed on Metal
+  before the select: `canonicaliser_phi_signed_zero`, `encode_beta_signed_zero`,
+  `decode_stage_rho_angle_signed_zero` and `decode_cross_backend_continuous`. A form holds only while
+  its test passes, so a future compiler fold shows up as a red test.
+- **A sign error masked by a later symmetry step is still an error.** When a fold, mirror or gauge is
+  removed, re-run every cross-backend check it sat downstream of.

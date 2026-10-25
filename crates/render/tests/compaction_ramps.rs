@@ -310,7 +310,7 @@ fn closure_floor() -> f64 {
 }
 
 /// The ramp styles the −1.0 sentinel, in its WGSL's invalid test and in its CPU twin, and on the GPU draws it as the
-/// hatch while every other value is on the ramp.
+/// invalid colour, `#141418` (R-467), while every other value is on the ramp.
 fn check_sentinel(h: &GpuHarness, ramp: &FieldRamp) {
     let wgsl = ramp.wgsl();
     assert!(
@@ -1210,7 +1210,7 @@ fn render_with(h: &GpuHarness, s: &Scene, ramp: &FieldRamp, post: Option<bool>) 
 fn want_at(s: &Scene, i: u32, ramp: &FieldRamp, (x, y): (u32, u32)) -> Rgb {
     let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
     let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
-    ramp.colour_at_reads(v, gate, frag, Invalid::Pattern, reads(s))
+    ramp.colour_at_reads(v, gate, frag, Invalid::Default, reads(s))
         .unwrap_or_else(|| {
             let Shown::Ramp(b) = ramp.shown_at(v, gate, reads(s)) else {
                 unreachable!("a placed sample")
@@ -1266,7 +1266,7 @@ fn measured(s: &Scene) -> [f64; 2] {
 
 /// FTLE bound as the colour, by its default (the greyscale) and through viridis, and as the brightness, with its
 /// style post when `post`: each assembles, compiles, renders, and is its CPU twin at every pixel, the invalid samples
-/// hatched in both roles.
+/// `#141418` in both roles (R-467).
 fn check_either_role(h: &GpuHarness, post: bool) {
     let s = ftle_scene();
     let e = entry("ftle");
@@ -1320,7 +1320,7 @@ fn field_either_role_ftle_as_colour_and_brightness() {
 
 negative_control!(
     field_either_role_ftle_as_colour_and_brightness,
-    "the brightness without its style post draws an invalid FTLE as black, not the hatch",
+    "the brightness without its style post draws an invalid FTLE as black, not #141418",
     expected = "FTLE as brightness: sample 0",
     check_either_role(&gpu(), false)
 );
@@ -1513,7 +1513,7 @@ fn check_pixels(pixels: &[[u8; 4]], ramp: &FieldRamp, u_range: [f64; 2], what: &
     for (i, (&v, p)) in E0.iter().zip(pixels).enumerate() {
         let frag = [i as f64 + 0.5, 0.5];
         let want = ramp
-            .colour_at_reads(v, true, frag, Invalid::Pattern, reads)
+            .colour_at_reads(v, true, frag, Invalid::Default, reads)
             .expect("a colour ramp");
         for c in 0..3 {
             assert!(
@@ -1704,9 +1704,9 @@ fn check_twin_edges(bands: Ramp) {
         "the override colour"
     );
     assert_eq!(
-        lin.colour_at(nan, true, [0.5, 0.5], Invalid::Pattern),
-        Some(present::debug_invalid([0.5, 0.5])),
-        "the hatch"
+        lin.colour_at(nan, true, [0.5, 0.5], Invalid::Default),
+        Some(present::present_invalid()),
+        "the default invalid colour, #141418 (R-467)"
     );
     let light = closure_ramp(
         Compaction::Lin { lo: -2.0, hi: 2.0 },
@@ -1714,7 +1714,7 @@ fn check_twin_edges(bands: Ramp) {
         Polarity::High,
     );
     assert_eq!(
-        light.colour_at(1.0, true, [0.5, 0.5], Invalid::Pattern),
+        light.colour_at(1.0, true, [0.5, 0.5], Invalid::Default),
         None
     );
     assert_eq!(light.slot(), Slot::Brightness);

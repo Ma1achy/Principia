@@ -71,6 +71,22 @@ use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 
+/// The chart registry: every chart of this crate, by its [`Chart::name`], in chart_reference §5.1's order (the module's
+/// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`).
+pub const REGISTRY: [&str; 11] = [
+    "Latent",
+    "ShapeSphere",
+    "Burrau",
+    "EuclidPlane",
+    "BurrauThetaK",
+    "BurrauThetaLz",
+    "BurrauThetaDeltaM",
+    "InvariantLE",
+    "InvariantLK",
+    "MassSimplex",
+    "Mixed",
+];
+
 /// What `Φ` hands the shared decoder (chart_reference §5.1: `ChartOut` is whatever `D` consumes). The latent chart
 /// hands it the eight controls `z`; a chart that sets masses, `(α, β)`, an explicit `(ρ, λ)` or a `(L_z, K)` request
 /// adds its output here with the chart.
@@ -219,7 +235,8 @@ impl<P: Copy> ChartDecode for Latent<P> {
 }
 
 impl<P: Copy> ChartDecode for InvariantLE<P> {
-    /// [`invariant::decode`]: the construction's outcome is not part of [`Decoded`] (`invariant`'s note).
+    /// [`invariant::decode`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`] (`invariant`'s note).
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -258,7 +275,8 @@ impl<P: Copy> ChartDecode for Burrau<P>
 where
     f64: From<P>,
 {
-    /// [`burrau::decode`]: the construction's outcome is not part of [`Decoded`], as for the invariant charts.
+    /// [`burrau::decode`]: the construction's outcome is returned beside the decode, its tag carried in
+    /// [`Decoded::degenerate`], as for the invariant charts.
     #[inline]
     fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -385,12 +403,13 @@ pub fn family_label(axes: [AxisMeta; 2]) -> &'static str {
 }
 
 /// How a chart's address map folds onto distinct systems: the `system_image` descriptor (chart_decoder_contract Part 5,
-/// its four values; R-104, R-141, R-157).
+/// its four values; R-104, R-157, R-544).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SystemImage {
     /// Every pixel is a distinct system.
     Bijective,
-    /// A fixed finite number `n` of pixels share each system; the shape sphere is 2-to-1 over its φ hemispheres (R-141).
+    /// A fixed finite number `n` of pixels share each system. Not the shape sphere's spherical map, which is the whole
+    /// sphere, each pixel its own system (R-544).
     NToOne(u32),
     /// Each shape is covered twice, as two labelled systems: the full-range Burrau chart, where the leg swap relabels
     /// the bodies (R-27, R-104, R-157).

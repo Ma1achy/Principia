@@ -34,24 +34,28 @@ Every body name a person reads is 1-based, through TASK-M2-33's one display conv
 - `decisions.md` § "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
 - `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
 
 ## Deliverables
 - The Chazy legends' titles and labels on TASK-M8-22's generated legend.
 - The one-body legends, reading TASK-M7-41's fallback flag.
-- The three-panel layout, where RQ-323 places it.
+- The three-panel layout: one figure, the view's canvas split into three panels (R-548, RQ-323).
+- The legend help (R-548): OS-candidate and B-stable marked provisional, the class and the escape event able to
+  differ, and the one-body legends' count of pixels where `chazy_escaper` differs from the event's escape detail.
 
 ## Acceptance tests
-- `cargo xtask screenshot chazy-legend` — the seven-class, four-family, Okabe–Ito, status, seven-class × energy and structure × energy stains' legends against `06_legend.png`'s layout: the title carries `t`, B's label reads "bound, or nobody has left yet" in each final-motion legend, the shares sum to 1, the status legend's names are in full, the energy stains carry a brightness bar for `q` with parabolic marked at ½, and the keys equal the stain's output (REQ-GUI-185).
+- `cargo xtask screenshot chazy-legend` — the seven-class, four-family, Okabe–Ito, status, seven-class × energy and structure × energy stains' legends against `06_legend.png`'s layout: the title carries `t`, B's label reads "bound, or nobody has left yet" in each final-motion legend, the shares sum to 1, the status legend's names are in full, the energy stains carry a brightness bar for `q` with parabolic marked at ½, the status legend's help marks OS-candidate and B-stable provisional, the final-motion and status legends' help says the class and the escape event can differ, and the keys equal the stain's output (REQ-GUI-185).
 - `cargo xtask screenshot chazy-three-bodies` — three panels at one playhead, titled body 1, 2, 3, each equal pixel for pixel to the body lens rendered alone at its k at the panel's size, chart and playhead (REQ-GUI-186).
-- `cargo xtask screenshot chazy-one-body-legend` — the body lens, body lens with energy, escaper map and rank views' legends against `06_legend.png`'s layout: the title carries t and the lens body as body 1, 2 or 3, and no legend or label reads body 0; the bound row reads "bound, or nobody has left yet"; the energy lens shows its flat role key, a `q_k` bar and the note that its grey and black roles draw alike at equal `q_k`; the shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; and the keys equal the stain's output (REQ-GUI-187).
+- `cargo xtask screenshot chazy-one-body-legend` — the body lens, body lens with energy, escaper map and rank views' legends against `06_legend.png`'s layout: the title carries t and the lens body as body 1, 2 or 3, and no legend or label reads body 0; the bound row reads "bound, or nobody has left yet"; the energy lens shows its flat role key, a `q_k` bar and the note that its grey and black roles draw alike at equal `q_k`; the shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; on a fixture where `chazy_escaper` and the event's escape detail name different bodies the legends that read `chazy_escaper` count exactly those pixels; and the keys equal the stain's output (REQ-GUI-187).
 
 ## Notes
-- Whether OS-candidate and B-stable are marked provisional in the legend help is RQ-315; REQ-GUI-185 waits on it for
-  that clause.
-- REQ-GUI-076's ban on "Chazy subtitles" is RQ-312; REQ-GUI-185, REQ-GUI-186 and REQ-GUI-187 carry it, so this task
-  opens no PR before it is decided and the ban is not read as covering these legends.
-- Where the three panels live is RQ-323; REQ-GUI-186 waits on it. Its option (a), one figure split into three panels,
-  is the orchestrator's call per R-369; options (b) and (c) defer or drop part of R-443 and are the human's.
+- R-548 (21 Oct 2026) rules this task's three entries, and none of its requirements waits: OS-candidate and B-stable
+  ship marked provisional in the status legend's help (RQ-315); REQ-GUI-076's ban covers Chazy subtitles, captions over
+  the figure, and not the Chazy fields, stains or legends (RQ-312); the three panels are one figure, the view's canvas
+  split into three (RQ-323, option (a)). It also adds the legend help on the class and the escape event (RQ-313) and the
+  count of pixels where `chazy_escaper` differs from the event's escape detail (RQ-321). *Was:* "Whether OS-candidate
+  and B-stable are marked provisional in the legend help is RQ-315; … Where the three panels live is RQ-323;
+  REQ-GUI-186 waits on it. …" (the three notes, which waited on those entries).
 - The bound row's label and the energy lens's legend are R-369 decisions recorded in the drill-down's §10.11.1 and
   §10.11.2 (the PR #223 gui review).
 - R-449 (16 Oct 2026): every body name this task shows (the one-body legends, the three panels' titles) comes from TASK-M2-33's conversion module (REQ-GUI-188), 1-based, never "body 0"; TASK-M2-33 is reached through TASK-M7-41.

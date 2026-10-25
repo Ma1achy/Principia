@@ -994,7 +994,36 @@ pub fn state_codes() -> String {
             name.to_uppercase()
         );
     }
+    out.push_str(&decode_failed_details());
     out
+}
+
+/// Payload §2's `detail` codes under `decode_failed`, its failure enum, as constants `DETAIL_DECODE_FAILED_<MEANING>`,
+/// each meaning at its code in the ledger's table ([`crate::payload::detail_meanings`]): the decode's `DEGENERATE`
+/// reasons map onto them (dd_decoder §2, "The `DEGENERATE` cause set"), never onto a literal code.
+fn decode_failed_details() -> String {
+    let mut out = String::new();
+    let failed = crate::payload::detail_meanings()
+        .into_iter()
+        .find(|(state, _)| *state == "decode_failed");
+    for (code, meaning) in failed.into_iter().flat_map(|(_, m)| m).enumerate() {
+        let _ = write!(
+            out,
+            "\n/// `decode_failed`'s `detail` code {code}: {meaning} (payload §2).\npub const DETAIL_DECODE_FAILED_{}: u32 = {code};\n",
+            slug(meaning)
+        );
+    }
+    out
+}
+
+/// `meaning` as a constant's name: upper case, each run of characters other than letters and digits one `_`.
+fn slug(meaning: &str) -> String {
+    meaning
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_ascii_uppercase)
+        .collect::<Vec<_>>()
+        .join("_")
 }
 
 /// The fixed part of the accessor code: the bit helpers, the `no_std` binary16 conversion and the `pack2x16float` /

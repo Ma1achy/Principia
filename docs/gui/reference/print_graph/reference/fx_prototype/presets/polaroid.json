@@ -1,0 +1,52 @@
+{
+ "name": "Polaroid",
+ "doc": "Instant film colour: lifted blacks, cyan shadows, warm highlights, softness, a light leak, grain. Full bleed.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "b": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "g": {
+   "op": "draw",
+   "in": {
+    "rng": "b.rng"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW1"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "b": "b.out",
+    "gr": "g.out"
+   },
+   "p": {
+    "f": "L = lum(I)[..., None]\nout = 0.07 + 0.86*I\nout = out + array([-0.015, 0.02, 0.035])*(1-L) + array([0.04, 0.02, -0.035])*L\ng = lum(out)[..., None]; out = g+(out-g)*0.82\nout = blur(out, 0.9)\nrr = hypot((xx-W/2)/W, (yy-H/2)/H); out = out*(1-0.35*rr**2*2)[..., None]\nleak = exp(-(((xx-W)/(0.35*W))**2 + ((yy)/(0.4*H))**2))\nout = out + leak[..., None]*array([0.35, 0.10, 0.02])\nbub = gaussian((b < 0.00001).astype(float), 2.5)*60\nout = out + clip(bub, 0, 0.5)[..., None]*0.4\nout = out + 0.03*gr\nout = clip(out, 0, 1)"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

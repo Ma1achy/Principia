@@ -1,0 +1,145 @@
+{
+ "name": "Graphite",
+ "doc": "Hatching along the forms, crossed in the darks, broken by the tooth, burnished to silver.",
+ "settings": {
+  "seed": 0,
+  "paper": [
+   0.95,
+   0.94,
+   0.91
+  ]
+ },
+ "nodes": {
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(lum(I), 0.7))"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 4
+   }
+  },
+  "a2": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*cos(pi/4)-ty*sin(pi/4)"
+   }
+  },
+  "b2": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "tx*sin(pi/4)+ty*cos(pi/4)"
+   }
+  },
+  "a3": {
+   "op": "expr",
+   "in": {
+    "ty": "f.ty"
+   },
+   "p": {
+    "f": "ty"
+   }
+  },
+  "b3": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx"
+   },
+   "p": {
+    "f": "-tx"
+   }
+  },
+  "h1": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 0.7,
+    "density": 0.012,
+    "length": 18,
+    "seed": "$seed",
+    "amp_var": 0.5
+   }
+  },
+  "h2": {
+   "op": "strokes",
+   "in": {
+    "tx": "a2",
+    "ty": "b2"
+   },
+   "p": {
+    "width": 0.7,
+    "density": 0.012,
+    "length": 18,
+    "seed": "$seed+1",
+    "amp_var": 0.5
+   }
+  },
+  "h3": {
+   "op": "strokes",
+   "in": {
+    "tx": "a3",
+    "ty": "b3"
+   },
+   "p": {
+    "width": 0.7,
+    "density": 0.012,
+    "length": 18,
+    "seed": "$seed+2",
+    "amp_var": 0.5
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "fine": {
+   "op": "noise",
+   "p": {
+    "scale": 1.0,
+    "octaves": 1,
+    "seed": "$seed+3"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "L": "L",
+    "h1": "h1",
+    "h2": "h2",
+    "h3": "h3",
+    "pt": "pt",
+    "fine": "fine",
+    "paper": "$paper"
+   },
+   "p": {
+    "f": "T = (1-L)**1.1\nh1 = clip(h1*1.8, 0, 1); h2 = clip(h2*1.8, 0, 1); h3 = clip(h3*1.8, 0, 1)\ntooth = z(pt)\nbite = clip(0.62+0.2*tooth+0.16*fine, 0, 1)\nhatch = 1-(1-h1*clip(T*1.5, 0, 1)*0.8)*(1-h2*clip(T*1.9-0.55, 0, 1)*0.75)*(1-h3*clip(T*2.4-1.35, 0, 1)*0.75)\ncov = 0.62*T**1.15 + 0.5*hatch\ngx, gy = gradient(gaussian(L, 1.0)); edge = clip(hypot(gx, gy)*8-0.1, 0, 1)\ncov = clip(cov*bite*1.05 + 0.45*edge*bite + 0.08*gaussian(cov, 4), 0, 0.93)\nlead = array([0.17, 0.17, 0.19]); sheen = array([0.40, 0.41, 0.45])\nburn = clip(cov*2.0-1.25, 0, 1)[..., None]\nink = lead*(1-burn*0.5)+sheen*burn*0.5\nout = array(paper)*(1-cov[..., None]) + ink*cov[..., None]\nout = out*(1+0.02*tooth)[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

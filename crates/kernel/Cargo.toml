@@ -13,6 +13,13 @@ spirv-std = "=0.10.0-alpha.1"
 # Cargo.lock holds spirv-std's glam (">=0.30.8") at 0.32: glam 0.33 puts its integer vectors, spirv-std's `UVec3` among
 # them, behind features spirv-std does not enable on the SPIR-V target, so `cargo xtask build-kernel` fails on it.
 
+# The host's `N_sub` threshold generator (`driver::nsub_table`; R-502, REQ-INT-091) computes its `pow` in f64 through a
+# pinned pure-software libm: libm, already in the build under naga and spirv-std, at the version `Cargo.lock` holds, with
+# `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes it, and the
+# native and wasm hosts give the same bits. The generator is host code, so the SPIR-V build does not take it.
+[target.'cfg(not(target_arch = "spirv"))'.dependencies]
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
+
 # systems_architecture §7.1: kernel -> ledger is a build-dependency only (R-185).
 [build-dependencies]
 ledger = { path = "../ledger" }
@@ -25,6 +32,10 @@ validation = { path = "../validation" }
 proptest = "1.11"
 # The golden IC's hand-computed values, `fixtures/golden_ic/z0.json` (TASK-M2-03), are read as JSON.
 serde_json = "1"
+# The order-condition check (`tests/occupant.rs`, REQ-INT-090) evaluates Yoshida's order conditions exactly, in rational
+# arithmetic, on the shipped f64 coefficients; num-rational and num-bigint are already in the build, under `num`.
+num-bigint = "0.4"
+num-rational = "0.4"
 
 # Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
 [features]

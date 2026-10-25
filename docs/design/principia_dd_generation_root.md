@@ -18,7 +18,7 @@ From the **chart contract (Part 2.5)**: every link is constraint-preserving, inv
 
 From the **lowering contract** (Part 2, the substrate split): the generated artefacts split by target — link functions and the kernel's pack/unpack are **generated Rust** (compute side, monomorphised, no assembler); the fragment unpack accessors and debug catalogue are **generated WGSL** flowing through the fragment assembler alongside authored colour code; link selection is baked per block.
 
-From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger, not a hand-bumped integer (R-36).**
+From the **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a layout or kernel change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger's columns that decide the payload's layout or the kernel's output, not a hand-bumped integer (R-36, R-545):** `scale`, and any render-only column a ruling names, leaves the hash, so a ledger scale change re-styles the view with zero recompute (dd_colouring seam 5; RQ-297). *Was:* "a layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised §3 ledger, not a hand-bumped integer (R-36).**"
 
 From the **inverse-encode contract**: link inverses are the encode path's block inverses; tolerances asserted in physical units; ε clamps are part of the registry entries.
 
@@ -490,7 +490,7 @@ time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does n
 **The §3.8 entries.** Every member is `provenance: reduction` and `consumers: [scheduler, debug]`; an f16 range lies
 within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
 are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
-at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are. The ranges and
+at most N² (R-315); each member's range is the one its row in the table below declares, citing §3.7's table: a declaration, not a default for a member given no range (R-545, RQ-278). *Was:* "an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are." `running_mean_divergence` and `coherence` are one-signed: each gets a formula and a declared range that does not span zero, with its citation (R-72, REQ-PAY-109), so both stay `lin` on viridis; until then their rows keep the `(−∞, ∞)` the ledger was built with (PR #208), marked as waiting on it. `alpha_energy`'s range and its placement, centred on its analytic 1.0, are settled with REQ-PAY-093 at the M5 gate. The ranges and
 `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
 `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed, R-71 (REQ-PAY-093; R-418 adds the
 last three), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate. The sentinels of
@@ -524,12 +524,21 @@ its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 | `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
 | `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
 
+*The three rows as built (R-545, RQ-278).* The `alpha_energy`, `running_mean_divergence` and `coherence` rows above are
+the ledger as built, which `crates/ledger/tests/quad_reduction.rs` parses against this table; they change together with
+the ledger in TASK-M5-32, the task that implements RQ-278's ruling. Under R-545: `running_mean_divergence` and
+`coherence` are one-signed, each declared a range that does not span zero, with its formula and citation (REQ-PAY-109),
+so both stay `lin` on viridis; `alpha_energy` keeps `lin`, centred on its analytic 1.0, its range and that placement
+proposed with REQ-PAY-093 and confirmed at the M5 gate. Until TASK-M5-32 lands, the `(−∞, ∞)` here is the built value,
+not a declaration R-545 makes. *Was (fix round 1 of PR #274):* the three cells read "lin, centred on 1.0 / proposed
+(REQ-PAY-093; M5 gate)" and "one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208)".
+
 **Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
 `categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,
 `roundtrip_error` and `worst_energy_drift` are `log`: each is a magnitude ≥ 0 whose values span decades (`error_ratio`
 reads 1.0 under exact dynamics and 204.8 at 2.9% drift; drift's finite tail spans ten orders of magnitude, above).
 `alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
-range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero.
+range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero; its range and that placement are confirmed with REQ-PAY-093 at the M5 gate (R-545, RQ-278 (c)).
 
 #### Open
 
@@ -810,6 +819,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `shape_vec_js_tol` | 2⁻⁴⁸ ≈ 3.55e-15, the agreement of the shape map's `n` with the IC Inspector's on random ICs, the largest component difference (chart_reference §3.1; TASK-M2-08) | canonical-units | M2 | REQ-CHART-049 |
 | `shape_roundtrip_bound` | 10⁻¹³, the shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (chart_reference §3.2; R-178, R-181; TASK-M2-08) | canonical-units | M2 | REQ-CHART-053 |
 | `eps_phys` | 64, `k` in `ε_phys = k·ε_R`, the round trip's tolerance in `‖·‖_phys`, `ε_R` the precision's machine epsilon (inverse-encode contract Part 4; TASK-M2-16) | canonical-units | M2 | REQ-ENC-024 |
+| `decode_sanity` | 16, `k` in `k·ε_R`, lookup's layer-3 tolerance on the CoM and `Σpᵢ` residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x` of the decoded lock (inverse-encode contract § "Chart-aware validation", "Layer 3's tolerance"; TASK-M2-19) | canonical-units | M2 | REQ-ENC-027 |
+| `zero_class` | 16, `k` in `k·ε_R`, lookup's layer-1 zero-class band, relative to the first-order bound on each value's rounding, `S_{L_z}` and `S_E` on the entered state's extents, and each clamp's move's own (inverse-encode contract § "Chart-aware validation", "The zero class in floating point"; TASK-M2-19) | canonical-units | M2 | REQ-ENC-037 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
@@ -1069,7 +1080,7 @@ in `z₂`).
 | **13** one-source generation | pack, unpack, export decoder, catalogue emitted from §3 only | mutate one ledger entry → all four artefacts change together; a hand-edit to any generated file is detected (generated-file guard) |
 | **5 / Memory** | the payload's physical truth is this ledger | the sub-field debug views (visual bit-layout unit test) show live, sane values per field |
 | **2 / 8** links | decode consumes registry link functions (generated Rust); encode consumes registry inverses | link swap ⇒ recompile + re-integrate; T2 round-trips through registry inverses only |
-| **sim key** | schema version (the ledger's content hash, R-36) ∈ payload compatibility signature | any ledger change invalidates every cached payload (cache serves nothing stale-schema'd) |
+| **sim key** | schema version (the ledger's content hash over its layout and kernel columns, R-36, R-545) ∈ payload compatibility signature | a layout or kernel change invalidates every cached payload (cache serves nothing stale-schema'd); a `scale` edit does not (RQ-297). *Was:* "any ledger change invalidates every cached payload" |
 | **Observation ring** | catalogue exhaustive by construction | new field appears in the picker automatically or generation fails |
 
 ---

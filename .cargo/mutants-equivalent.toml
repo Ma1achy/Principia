@@ -236,17 +236,13 @@ mutant = "crates/validation/src/inspector.rs:77:49: replace < with <= in ball"
 justification = "they differ only on a draw whose squared norm equals radius² exactly, which no seed the gates and tests use draws (each coordinate is one of 2⁵³ values), and such a point lies on the sphere, inside every bound the gates read either way"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/shape_sphere.rs:496:22: replace > with >= in ShapeSphere<P>::in_view"
-justification = "sin2 == 0.0 needs every component of m − c·n₀ below about 1e-154, so for m on S² |c| = 1 to rounding there; c is never 0 in that branch, and c > 0.0 and c >= 0.0 agree"
+mutant = "crates/kernel/src/canon.rs:212:23: replace > with >= in rotation"
+justification = "at ex == ey both arms of the select are the same exponent, so > and >= pick the same e"
 
 [[equivalent]]
-mutant = "crates/validation/src/shape_scene.rs:215:44: replace < with <= in ShapeScene::expected"
-justification = "expected() reads only the three fixed scenes, whose every sample has |n.x| >= 1e-3 (shape_scene_renders_its_twin_clear_of_ties, check_sign_margins), so n.x is never ±0.0 and < and <= agree"
+mutant = "crates/kernel/src/driver/substep.rs:117:10: replace < with <= in least"
+justification = "where b == a both arms return floats with equal bits: a pair's d² is a sum of squares each +0 or positive (square never returns -0), and a NaN compares false under both"
 
 [[equivalent]]
-mutant = "crates/validation/src/shape_scene.rs:215:72: replace < with <= in ShapeScene::expected"
-justification = "expected() reads only the three fixed scenes, whose every sample has |n.y| >= 1e-3 (shape_scene_renders_its_twin_clear_of_ties, check_sign_margins), so n.y is never ±0.0 and < and <= agree"
-
-[[equivalent]]
-mutant = "crates/validation/src/shape_scene.rs:216:42: replace < with <= in ShapeScene::expected"
-justification = "n.z is read only where fold is set, and there every sample of the fixed scenes has |n.z| >= 1e-3 (shape_scene_renders_its_twin_clear_of_ties, check_sign_margins), so n.z is never ±0.0 and < and <= agree"
+mutant = "crates/engine/src/lookup.rs:618:34: replace > with >= in moves_within"
+justification = "they differ only at len == 0: a = cos α/√μ_ρ is never 0 (no finite f64 has cos 0, and |cos α| >= 6.1e-17 cannot underflow over a finite √μ_ρ), and b == 0 (α = ±0, or underflow) is within any band pole >= 0 of its finite bound b.r >= 0, so the α = 0 pole branch is taken, which never reads beta_round (inverse_encode_contract § Chart-aware validation, R/b only off the pole; R-591)"

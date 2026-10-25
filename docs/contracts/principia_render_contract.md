@@ -38,6 +38,11 @@ source(s) → brightness? ┘
 | combiner | `combine(rgb, b) → vec3` | Principia default (OKLab replace-L), multiply, custom |
 | post | `post(rgb) → vec3` (a chain of zero or more) | invert, structural overlays, custom (colour-vision simulation is not a post node — it is in the display stage, R-67) |
 
+**A post node may read a render-side texture bound to it** (R-548, RQ-320): the Chazy "what just changed" view's
+previous-class texture, written each frame, is the one such texture (Chazy drill-down §10.8.2). It is render-side
+state, never a payload field; how the post node reads it beside this frame's coarse class is written here by the task
+that builds the view (TASK-M7-40; R-72).
+
 **Custom is not a node kind — it is an occupant.** Swapping a node's shader source is the *only* extension mechanism. Built-in, debug, and custom occupants share one compile path: full fragment source regenerated from the shared prelude + one function per node + the generated `shade()` that walks the graph (render_gui_spec Part II §10.1); schema-driven uniforms; hot reload with per-node failure isolation (a broken custom keeps the last valid source in that node; the other nodes are untouched). **Backbone order is constitutional** — sources feed colour and brightness, they meet only at the combiner, and the post chain runs after it; nobody feeds post back into colour (the graph is acyclic). **The built-in occupants are themselves customs through this path** — they are the proof it works, which is *why* the read-side interface below is identical for both.
 
 **Reading `SimState` at any tier (the author contract).** The read-side `SimState` type is **fixed across all tiers** — every field is always present, read by plain member access (`sample.ftle`, `sample.ensemble_spread`), never a getter (lowering contract Part 3a). A tier that bakes a feature out does **not** remove the field; it makes the field read **NaN**. So:
@@ -86,6 +91,23 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 **Composite order (constitutional):** baked base → combine (L-override) → the post chain: the physics overlay (`site_overlay`, evaluated per fragment, never baked — R-121, colour_composition §4.2) and the structural/debug overlays → `OUT`; then the display stage, outside the graph (R-67): style → **display scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the display-sized swap chain; all prior stages run at render resolution) → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system** (R-476; `principia_lines.md`: contours, traces,
 axes, grids) draws its own overlay pass, outside the graph and after the gamut clamp, before the colour-vision
 simulation, which sees the lines too; it changes no pixel's colour value and never touches the sim key. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
+
+**The Print graph stage (R-485 to R-492; `principia_print_graph.md`).** In the display stage, where R-67 had style, the
+Print graph runs on the finished colours: SimState → stain → [the line sets marked `through_medium`] → **Print graph** →
+display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen (R-487; R-531, ruling
+RQ-395: the pass drawn over keeps the line system's place above, after the gamut clamp). *Was:* "→ **Print graph** →
+[the line sets drawn over] → display scale → gamut clamp → colour-vision simulation → screen (R-487; where the pass
+drawn over sits, before the display scale or after the gamut clamp as above, is RQ-395, and it keeps the place above
+until RQ-395 is ruled)". It is a node graph of its own, outside the stain graph, with its own registry and WGSL; its
+default, Plain, is the bitwise identity; it re-integrates nothing and touches no sim key (`RenderState.print`, R-491).
+It reads the stain's output and payload fields only as read-only inputs, normalised by the stain's own window rule,
+never writing them (design doc §4.4); no readback, statistic, legend, readout or golden reads its output (R-489).
+**Debug views bypass it** (R-487): View › Debug view, a baked variant of the pipeline (R-41, R-467), and every stain
+whose colour occupant is a debug view (Part 6) are drawn with Plain, never styled, because a debug view exists to show
+the data. At a pixel that is not a system, blank above (R-470, R-511), it prints the sheet (its Ground, Age and
+Viewing slots) and never a mark (its Palette, Medium, On the ground and Unfinished slots), so no palette colour reaches
+that pixel (R-533, ruling RQ-398). It is a stage of the frame record, the print stage (`stage_ms.post`; the human's ruling on RQ-497, 21 Oct 2026), and degrades while the camera
+moves (R-488).
 
 **Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default `#141418` in a presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (R-79, R-132, R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (R-79, R-132)" (stale value, replaced by R-467). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
@@ -153,7 +175,9 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   built, the DECODE view, its agreement presets and ROUNDTRIP, which read `ctx.chart.z` (the chart's; Part 6's field
   views), the impurity-mask cross-check, which reads the quad's `dominant_outcome` (the scheduler's; Part 6's
   cross-checks), and the diffusion (Welford) cross-check, which reads `ctx.params.dt_macro` to recompute `C_tt(n)` (the
-  integrator's; dd_generation_root §3.5).
+  integrator's; dd_generation_root §3.5). Chart position, the state map's source, is one too (R-558, ruling RQ-489):
+  when built, it reads the target chart, its parameters and its inverse, generated to WGSL from the one Rust source
+  (R-116; `principia_state_map.md` SM2), past seam 6's chart rule, and TASK-M7-47 adds it here and to the lint's list.
 
 ---
 

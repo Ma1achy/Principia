@@ -34,6 +34,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) — `θ̃`'s frozen pole reference (R-397)"
 - `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
 - `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+- `decisions.md` § "R-580 — dd_integrator §5 test 8 drops "`retrograde` matches the L_z sign": the mirror leaves `θ̃` and `retrograde` unchanged and negates `L_z`; the test keeps `θ̃` continuous and `orbit_count` against a hand count, and gains the mirror pair, `θ̃(t)` and `retrograde` bitwise identical and `L_z` opposite *(closes RQ-537; changes dd_integrator §5 test 8 and REQ-INT-082)*"
 
 ## Deliverables
 - `crates/kernel/src/driver/shape.rs` — `shape(r, masses)` (no momenta), per-macro-step readout.
@@ -44,7 +45,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 
 ## Acceptance tests
 - `cargo test -p kernel shape_identities` — dd test 9: ‖n‖ = 1; equilateral → n_w = ±1; collinear → n_w = 0; n agrees with the IC Inspector's shapePoint on 5,000 random ICs to f64 round-off after the mirror fold (REQ-INT-042).
-- `cargo test -p kernel theta_unwrap_real_orbit` — dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps, orbit_count matches a hand count and retrograde matches the L_z sign (REQ-INT-082).
+- `cargo test -p kernel theta_unwrap_real_orbit` — dd test 8: on a circulating bounded orbit θ̃ has no 2π jumps, orbit_count matches a hand count, and retrograde (θ̃'s sign) matches the hand-counted direction of travel along the equator, the hand count signed and built independently of the march's own atan2(v, u), from the order in which the orbit crosses the three binary-collision half-meridians, each the half on b̂ₖ's side (positive dot product with b̂ₖ), not the whole great circle, whose far half meets the equator at −b̂ₖ, a collinear point in the arc that holds the Euler point Eₖ and Eₖ itself only at equal masses; the run from Π·x, Π (y → −y) applied to every position and momentum of the orbit's initial state, has θ̃(t) and retrograde bitwise identical to the run from x at every sampled step, and L_z opposite, bitwise (−L_z exactly) at every sampled step, on a fixture whose |L_z| exceeds a bound stated in the test; controls: a march with θ̃'s sense reversed (u and v swapped, or v negated) fails the direction check while orbit_count and the mirror arm pass, retrograde computed from sign(L_z) (retrograde differs across the pair), θ̃ read from w (θ̃ not identical across the pair), and a positions-only Π on an initial state whose momenta have nonzero y-components (L_z not opposite), each fail (REQ-INT-082, R-580). *Was:* "orbit_count matches a hand count and retrograde matches the L_z sign"; and, as R-580 was first ported, "θ̃ has no 2π jumps and orbit_count matches a hand count;" and "and L_z opposite (REQ-INT-082, R-580)" (fix round of PR #276, qa review 5635487490 Q1 and Q2, physics review 5635496144 P1; applied per R-369); and "the hand count signed;" (fix round 2, physics review 5635567722, non-blocking; applied per R-369); and "from the order in which the orbit passes the binary-collision meridians;" (fix round 3, physics review 5635643767, non-blocking; applied per R-369); and "whose far half runs through the Euler points;" (fix round 4, physics review 5635696210, N2; applied per R-369).
 - `cargo test -p kernel closure_registers` — on a fixture trajectory closure_min matches an offline minimum over the stored shape path and closure_step equals the argmin step (REQ-PAY-043).
 - Review (physics): the shape helper's signature takes r (and masses), not p (REQ-PAY-055).
 - `cargo test -p kernel closure_departure` — a periodic orbit's closure_min ≈ 0 at closure_step ≈ period/dt_macro; closure before departure is ignored (REQ-PAY-056).
@@ -52,13 +53,43 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
 - `cargo test -p kernel theta_ref_code` — every code round-trips, `encode(decode(c)) = c`; the encode's error is at most π/65535 + 4·ulp_Real(2π) (+1.9e-6 at f32, +3.6e-15 at f64), whatever the evaluation order, and never yields 0xFFFF, and a truncating encode (no `+ ½`) fails that bound; decode lies in (−π, π) (REQ-INT-087).
 - Review (physics): the sim-parity comparison treats `_reserved` as Tier N/S with θ̃ (one code apart allowed given the same entry state, mod 65535), never as Tier B; sentinel-or-code is exact across backends at the same `Real` and may differ at the disc edge across precisions; the one-code allowance needs REQ-INT-086's `r_pole` above about 2e-3 (REQ-INT-087; parity contract Tier B).
 - `cargo test -p ledger theta_ref_register` — `theta_ref_steps` and `theta_ref_none` are register entries hashed into the schema version; changing either's value changes it (REQ-INT-087).
-- `cargo test -p kernel theta_hold_state` — a fresh sample's `_reserved` is 0xFFFF; it is 0xFFFF outside the disc after every step; entry writes the code of the last longitude outside; exit adds `wrap(exit − decode(code))`, ±π adding +π, and writes 0xFFFF; an IC inside adds nothing at its first exit; the inside test is recomputed from the current state; descriptor bits 10–15 stay zero (REQ-INT-088).
+- `cargo test -p kernel theta_hold_state` — a fresh sample's `_reserved` is 0xFFFF; it is 0xFFFF outside the disc after every step; entry writes the code of the last longitude outside; exit adds `wrap(exit − decode(code))`, ±π adding +π, and writes 0xFFFF; an IC inside adds nothing at its first exit; the inside test is recomputed from the current state; the hold writes no descriptor bit: bits 10–14 stay zero and bit 15 is the departed bit's (REQ-VAL-055, R-545), unchanged by the hold (REQ-INT-088). *Was:* "descriptor bits 10–15 stay zero" (fix round 1 of PR #274, qa Q3).
 - `cargo test -p kernel theta_resume_split` — one call against k ∈ {2, 3, 7} resumed calls at f32 and f64, split on a pole passage's entry step, inside it and on its exit step, and inside the disc for an IC that starts there: θ̃'s bits and `_reserved` are identical; a negative control holding the reference unquantised within a dispatch fails (REQ-INT-089).
 - Review (physics): the alignment recheck (REQ-PAY-009) for `_reserved` and for each member this task adds (the lagged `n̂` register): sizes and offsets stated, and payload §1's totals recomputed.
 - `cargo xtask gate delta-dep` — measurement report of |n̂(t) − n̂(0)| distributions on periodic-orbit and generic fixtures justifying δ_dep; the ledger row for the departed bit exists and the schema version changes (REQ-VAL-055).
 
 ## Notes
+- qa exceptions forced by R-545 (RQ-310: bit 15 is R-37's departed bit, which this task writes for REQ-VAL-055), named per
+  R-290 and R-369, each an `M` line on a qa file whose commits are all qa's: `crates/ledger/tests/qa_TASK-M0-10.rs:106-155`
+  (`reserved_bits_qa_ledger_reserves_exactly_10_to_15`: bit 15 leaves the reserved span, which becomes 10–14);
+  `crates/kernel/tests/qa_TASK-M0-10.rs:128-150` (`PackA`'s packer and "bits 10–15 are zero": bit 15 carries the
+  departed field); and, if the packer's change reaches it, `crates/kernel/tests/qa_TASK-M0-10_r288.rs:223-289` (the
+  reserved bits kept through `set_d_min`). TASK-M7-35 narrows the same two spans again for bits 10–14. The code reviewer
+  confirms no other assertion is weakened.
+- qa-file exceptions further to the above (qa re-check 5606819712 of PR #274, Q10; each span checked against the tree),
+  forced by R-545 (RQ-310: bit 15 the departed bit):
+  - `crates/kernel/tests/qa_TASK-M0-10.rs:333-371` (`reserved_bits_qa_zero_with_every_field_at_max`; `:359` asserts
+    `PACKED_A_RESERVED == [(10, 6)]`), an `M` line under R-290, its commits all qa's.
+  - `crates/ledger/tests/qa_TASK-M0-09.rs:172-179` (`check_packed`: `packed_a`'s reserved spans exactly `[(10, 6)]`).
+    The file has implementer commits (382c9de2, 8952af9d, 7b3725ee beside qa's 2c567619), so R-290's qa-only rule does
+    not cover it: it is an exception applied per R-369, the ruling forcing the change.
+  - `crates/ledger/tests/qa_TASK-M1-08.rs:460-489` (`with_qa_cat`: a test field at bits 10–11 and the reserved span
+    narrowed to 12–15; once bit 15 is a field the span overlaps it and `check::check`, `crates/ledger/src/gen/mod.rs:272`,
+    panics), an `M` line under R-290, its commits all qa's.
+  - If the packer's change reaches it (a departed argument to `pack_packed_a`, or a setter that writes the bit):
+    `crates/kernel/tests/qa_TASK-M0-11.rs:239-337` (`qa_payload_sizes_descriptor_bits_10_to_15_never_written` and its
+    controls, one reading "a packer that spends bit 15 must fail"), an `M` line under R-290, its commits all qa's.
 - R-113 (RQ-94): REQ-INT-001's dd test 8 on a real orbit is split off as REQ-INT-082 and closed here; the synthetic-path half stays in TASK-M1-11.
+- R-580 (RQ-537, 23 Oct 2026): dd test 8's "retrograde matches the L_z sign" is dropped; the mirror leaves θ̃ and
+  retrograde unchanged and negates L_z, so it cannot hold for both members of a mirror pair. The mirror-pair arm takes
+  its place, bitwise where the integration is mirror-exact (R-544 §4); if the stepper the march runs is not
+  mirror-exact, stop and queue rather than loosen "bitwise" to a tolerance (applied per R-369, as TASK-M3-38).
+- Fix round of PR #276 (qa review 5635487490 Q1 and Q2, physics review 5635496144 P1; applied per R-369, test
+  details under R-580's own words, "retrograde is the direction of travel along the shape sphere's equator"):
+  orbit_count is unsigned and the mirror arm compares two runs that can be wrong the same way, so retrograde is checked
+  against the signed hand count of the direction of travel along the equator, with a reversed-sense control; this does
+  not reinstate the L_z clause. "L_z opposite" is vacuous on an L_z = 0 orbit (the figure-eight, any release from rest),
+  so the fixture states a bound on |L_z|, the comparison is bitwise at every sampled step, and the arm has its controls.
 - δ_dep must be relative or gap-set (pitfalls §3, 'A threshold on a quantity spanning decades must be relative'). The value is recorded with its measurement; R-37 says the value is set by measurement.
 - R-397 (RQ-226), applied per R-369: TASK-M3-11 owns the storage of θ̃'s pole hold as well as θ̃ in the march, since it already edits the ledger with a schema-version change (REQ-VAL-055, REQ-PAY-059); no separate ledger task. The member keeps its name `_reserved` (R-343 and R-351 name its WGSL home `closure_step_reserved`), has no field entry, and gets no read-side accessor or catalogue view. The bring-up pattern keeps `_reserved = 0` (colour_composition Appendix A).
 - R-397's quantisation applies wherever the march stores the reference: the hold's helper in `crates/kernel/src/shape.rs` (TASK-M1-11) may be kept, with the march quantising on entry, or changed. If the march quantises on entry and keeps the helper, TASK-M1-11's qa tests stay untouched. If this task makes the helper quantise, `crates/kernel/tests/qa_TASK-M1-11.rs` (the unquantised hold rule at :84–94) and `crates/kernel/tests/qa_TASK-M1-11_config.rs` (`expected` at :55–69, the f64 tolerance from :155, `edge_check!(edge64, f64, 1e-12)` at :504) break, since they compare `theta_step` and `theta_step_config` with the unquantised hold at tolerances far below π/65535; those are qa-file changes the PR lists and justifies (R-290), conditional on that design choice, not forced by the ruling.

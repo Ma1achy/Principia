@@ -867,7 +867,10 @@ pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
 /// f64 and 64·2⁻²³ ≈ 7.63e-6 at f32. TASK-M2-16's proposal (R-71): the `encode-eps-phys` gate's `interior.json`, 65 536
 /// points on each registered chart and 2²⁰ latent `z` on `[−6, 6]⁸`, the defaults links, at f64 and f32, measures a
 /// worst interior residual of 21.90 `ε_R` (the ternary mass plot, f64); seeds 2 to 9 of the same draws, about 3.1·10⁷
-/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×.
+/// interior samples in all, give at most 25.64 (the 8-D latent interior, f32), so 64 covers them by 2.5×. These
+/// measurements were made under R-141's fold, every shape sphere decode on the upper hemisphere; R-544 makes the shape
+/// sphere the whole sphere, its gate rows taken against `C(x)`, and they are kept, not re-measured (R-544, "Results
+/// measured under one hemisphere").
 pub const EPS_PHYS: ConstantBuilder = proposed(
     "eps_phys",
     64.0,
@@ -875,6 +878,199 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "REQ-ENC-024",
     "M2",
 );
+
+/// Lookup's layer-3 tolerance, decode sanity: the CoM at the origin and `Σpᵢ = 0` within it, as `k` in `k·ε_R` on the
+/// residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, `R_x` and `P_x` Part 4's extents (inverse-encode § "Chart-aware
+/// validation", layer 3; REQ-ENC-027): 16, so 16·2⁻⁵² ≈ 3.55e-15 at f64 and 16·2⁻²³ ≈ 1.91e-6 at f32. TASK-M2-19's
+/// proposal (R-71): the `decode-sanity` gate's `fuzz.json`, 65 536 points on each registered chart and 2²⁰ latent `z`
+/// on `[−16, 16]⁸`, past every control's saturation, the defaults links, at f64 and f32, measures a worst of 1.54
+/// `ε_R` (`Σpᵢ`, the `latent` chart's row, f64; the 8-D latent `z`'s worst is 1.47), so 16 covers it by 10×; no
+/// decoded mass is not positive.
+pub const DECODE_SANITY: ConstantBuilder = proposed(
+    "decode_sanity",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-027",
+    "M2",
+);
+
+/// Lookup's layer-1 zero-class band, `k` in `|v| ≤ k·ε_R·S_v` for class 0, `S_v` the first-order bound on the
+/// rounding of `L_z` or `E`, on the entered state's extents, or of a clamp's move or the value after it
+/// (inverse-encode § "Chart-aware validation", "The zero class in floating point" and "The class a clamp moves";
+/// REQ-ENC-036, REQ-ENC-037, REQ-ENC-038): 16, so `k·ε` ≈ 3.55e-15 at f64. The band absorbs rounding only; a clamp's
+/// class is read from its move, so `k` has no bound below. TASK-M2-19's proposal (R-71):
+/// `lookup_validation_ladder_zero_band_measure`, 2²⁰ states decoded from latent `z` on `[−8, 8]⁸`, 16 in every 18
+/// with one control pushed to `±20` so that it clamps, each against a random gauge image of itself (offsets and
+/// boosts on `[−8, 8)²`, scales `2^±12`, either parity), measures a worst difference of 1.18 `ε` of the bound for
+/// `C`'s `L_z` and `E` and 1.95 `ε` for the moves and the values after them, so 16 covers both by 8×.
+pub const ZERO_CLASS: ConstantBuilder = proposed(
+    "zero_class",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-037",
+    "M2",
+);
+
+// ── The steppers' coefficients (dd_integrator §3.2; REQ-INT-037, REQ-INT-056; R-501, R-515) ─────────────────────
+//
+// The free weights of Yoshida's two compositions, as dd_integrator §3.2 prints them; each consistency weight `w₀` and
+// the kick sequences are derived from them in f64 by the steppers' emitter (`crate::gen::steppers`), which writes them
+// into the kernel. Pure numbers, the same in any units, so admissible as expressed in canonical units (applied per
+// R-369, as the chart constants are). Citation: Yoshida, H. (1990), "Construction of higher order symplectic
+// integrators", Phys. Lett. A 150, 262–268 (R-501); the paper is not in the corpus, and the register cites the section
+// that prints the digits.
+
+/// The section that prints the steppers' coefficients.
+const OCCUPANTS: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_integrator.md",
+    section: "3.2 Occupants",
+};
+
+/// A stepper coefficient of dd_integrator §3.2, with its citation.
+const fn coefficient(name: &'static str, value: f64) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        value: Some(Value::Exact(value)),
+        class: Some(Admissibility::CanonicalUnits),
+        citation: Some(OCCUPANTS),
+        relative_basis: None,
+        provisional: None,
+    }
+}
+
+/// Yoshida-4's `w₁ = 1 / (2 − 2^{1/3})`, correctly rounded to f64 (Yoshida 1990, the fourth-order symmetric triple
+/// composition, in closed form; R-515).
+pub const YOSHIDA4_W1: ConstantBuilder = coefficient("yoshida4_w1", 1.3512071919596575);
+
+/// Yoshida-6's `w₁` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W1: ConstantBuilder = coefficient("yoshida6_w1", -1.17767998417887);
+
+/// Yoshida-6's `w₂` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W2: ConstantBuilder = coefficient("yoshida6_w2", 0.235573213359357);
+
+/// Yoshida-6's `w₃` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.784513610477560);
+
+/// dd_integrator §5 test 3's rounding-level criterion (REQ-VAL-191), as `k` in `k·ε_R`, `ε_R` the precision's machine
+/// epsilon: the residual of `STEP(dt)`, momentum negation, `STEP(dt)`, negation, its Euclidean norm over the positions
+/// and momenta divided by the state's, below which the state counts as returned. TASK-M3-02's proposal (R-71),
+/// provisional until the M3 gate (R-427). The criterion holds only in its domain, [`STEP_REVERSAL_EDGE_F64`] (10⁻²)
+/// `≤ dt/τ ≤` [`STEP_REVERSAL_EDGE_MAX`] (1) at f64 and [`STEP_REVERSAL_EDGE_F32`] (0.4) `≤ dt/τ ≤`
+/// [`STEP_REVERSAL_EDGE_MAX`] at f32, where `τ` is the step's shortest two-body time: the least `√(r³ / (G m_pair))`,
+/// `G = 1`, `m_pair = mᵢ + mⱼ`, over the three pairs at every position at which test 3 evaluates the force, every force
+/// evaluation of `STEP(dt)` from the state and of `STEP(dt)` from its momentum-negated result, the start's positions
+/// included (the f64 step's positions at either precision). The start's positions alone do not bound the step's
+/// conditioning: a pair already approaching, or one a stage brings close (Burrau's start at rest), passes far closer
+/// within one step than the start's `τ` says (qa reviews 5608308863 Q1 and Q2). In the domain dd's named controls, RK4
+/// and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, read above the criterion at the same dt; outside it a
+/// residual under the criterion says nothing, and no verdict is taken there (REQ-VAL-191). Its evidence,
+/// `crates/kernel/tests/occupant.rs` (`step_reversibility`, `step_reversibility_upper_edge`,
+/// `step_reversibility_domain`), on six fixtures, a generic state, a close pair, Burrau's (3, 4, 5) start at rest and
+/// three approaching pairs (equal masses, speed and impact parameter 1 and 0.05, 5 and 0.05, 2 and 0.003), at the dt
+/// ladder, at each edge and across the domain at 16 points per decade: KDK, Yoshida-4 and Yoshida-6 at most 1.3 `ε_R`
+/// at f64 and 0.92 `ε_R` at f32 there, and at most 3.31 `ε_R` at f64 and 2.35 `ε_R` at f32 (Burrau, dt/τ 0.777 and
+/// 0.764) on qa's placement, 1,993 cells over the domain (`crates/kernel/tests/qa_TASK-M3-02.rs`), so 16 covers them by
+/// 4.8×; RK4 at least 68 `ε_R` at f64 and 98 `ε_R` at f32, both on the approach at the lower edge, 4.3× and 6.1× the
+/// criterion; the asymmetric Yoshida-4 at least 5.2·10⁷ `ε_R` at f64 and 7.7·10⁴ `ε_R` at f32. Below the domain a
+/// control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric Yoshida-4 (its stages satisfy `Σw = 1` and
+/// `Σw³ = 0`, so the first term odd under reversal of their order is the `h⁴` commutator `[A₁, A₃]`) and `O((dt/τ)⁶)`
+/// for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls under the precision's
+/// rounding.
+pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
+    "step_reversal_tol",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-191",
+    "M3",
+);
+
+/// The f64 lower edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ`, `τ` the step's shortest
+/// two-body time ([`STEP_REVERSAL_TOL`]'s), at which test 3 discriminates at f64. TASK-M3-02's proposal (R-71),
+/// provisional until the M3 gate (R-427). Its evidence, [`STEP_REVERSAL_TOL`]'s: at the edge RK4 reads 68 `ε_R` on the
+/// approach, 4.3× the criterion, and 86 to 5.2·10³ `ε_R` on the other fixtures.
+pub const STEP_REVERSAL_EDGE_F64: ConstantBuilder = proposed(
+    "step_reversal_edge_f64",
+    1e-2,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-191",
+    "M3",
+);
+
+/// The f32 lower edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191): the smallest `dt/τ`, `τ` the step's, at which
+/// test 3 discriminates at f32. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its evidence,
+/// [`STEP_REVERSAL_TOL`]'s: at the edge RK4 reads 98 `ε_R` on the approach, 6.1× the criterion, and 120 to 1.8·10³
+/// `ε_R` on the other fixtures; on the approach it reads 22 `ε_R` at dt/τ 0.30, 1.4×, and 3.6 `ε_R` at 0.21. *Was:*
+/// 0.3, on the start's `τ` (fix rounds 2 to 4).
+pub const STEP_REVERSAL_EDGE_F32: ConstantBuilder = proposed(
+    "step_reversal_edge_f32",
+    0.4,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-191",
+    "M3",
+);
+
+/// The upper edge of [`STEP_REVERSAL_TOL`]'s domain (REQ-VAL-191), at f64 and f32: the largest `dt/τ`, `τ` the step's,
+/// at which the criterion is applied. TASK-M3-02's proposal (R-71), provisional until the M3 gate (R-427). Its
+/// evidence, [`STEP_REVERSAL_TOL`]'s, and a sweep of eleven fixtures (those six, a hierarchical triple, a rotating
+/// Lagrange triangle and approaches at speed 0.75 and 2 with impact parameters 0.01 and 0.003) at 32 points per decade:
+/// KDK, Yoshida-4 and Yoshida-6 at most 2.2 `ε_R` up to dt/τ 1 on that sweep and 3.31 `ε_R` on qa's placement (Burrau,
+/// f64, dt/τ 0.777), 4.8× under the criterion, 2.0 from 1 to 1.2, 3.9 up to 2, and up to 22 `ε_R` at f64 and 44 `ε_R`
+/// at f32 between 2 and 4, where the step's conditioning amplifies rounding past the criterion. *Was:* 0.5, on the
+/// start's `τ` (fix round 4).
+pub const STEP_REVERSAL_EDGE_MAX: ConstantBuilder = proposed(
+    "step_reversal_edge_max",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-191",
+    "M3",
+);
+
+// ── The curve projection's search (dd_encode §3.4; REQ-ENC-020; TASK-M2-18) ──────────────────────────────────────
+//
+// The minimiser `kernel::encode::curve::nearest` reads, as dd_encode §3.4's "As built" defines it (R-72, applied per
+// R-369): a grid over the chart's `ν` span, then a fixed count of golden-section steps. None decides what the payload
+// stores, so none is hashed (`crate::version::STORED_BITS`). The kernel reads each from its generated
+// `generated/constants.rs` (`crate::gen::links`).
+
+/// The section that defines the curve projection's minimiser.
+const CURVE_PROJECTION_SECTION: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_encode.md",
+    section: "3.4 Curve projection (off-curve input) — metric pinned",
+};
+
+/// `log₂` of the search's grid, 6: `2⁶ = 64` cells, 65 points, the span's edges included (dd_encode §3.4, "The
+/// minimiser"). Admissible as expressed in canonical units, the span's own: the spacing is the span times `2⁻⁶`, a
+/// power of two, so it and every grid fraction `k·2⁻⁶` are exact at both widths and no division is formed (dd_encode
+/// §3.4, "The branch inputs").
+pub const CURVE_GRID_LOG2: ConstantBuilder = ConstantBuilder {
+    name: "curve_grid_log2",
+    value: Some(Value::Exact(6.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(CURVE_PROJECTION_SECTION),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// The golden-section steps inside the best grid point's two cells, 80, a fixed count (dd_encode §3.4, "The
+/// minimiser"). Admissible as bounded by its own achievable maximum: each step shrinks the bracket by `1/φ`, so 80
+/// take its width, `2/64` of the span, to `(2/64)·φ⁻⁸⁰ < 10⁻¹⁷`, past f64's resolution on `(0, 1)`; a further step
+/// resolves nothing.
+pub const CURVE_GOLDEN_STEPS: ConstantBuilder =
+    maximum("curve_golden_steps", 80.0, CURVE_PROJECTION_SECTION);
+
+/// `1/φ = (√5 − 1)/2`, the golden section's ratio (dd_encode §3.4, "The branch inputs": a constant, correctly rounded
+/// at each width, never a runtime `sqrt`): 0.6180339887498949, the f64 nearest, bits `0x3FE3_C6EF_372F_E950`. Its
+/// rounding to f32, `0x3F1E_377A`, is the f32 nearest to `1/φ` as well, so the one value serves both widths with no
+/// double-rounding error (the kernel's `encode_curve_primitives` holds both). Admissible as expressed in canonical
+/// units: a pure number.
+pub const INV_PHI: ConstantBuilder = ConstantBuilder {
+    name: "inv_phi",
+    value: Some(Value::Exact(0.6180339887498949)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(CURVE_PROJECTION_SECTION),
+    relative_basis: None,
+    provisional: None,
+};
 
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
@@ -904,14 +1100,99 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+// ── The substep law (dd_integrator §3.3; integrator_contract Part 3, Part 4; R-502) ───────────────────────────────
+//
+// `N_sub = min(bucket(d²), N_max)`, the bucket a comparison of the position-quantised `d²` against the sim key's
+// thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)`, `n = 1 … L_max`, generated on the host per sim key (R-502).
+// The three defaults are the sim key's, the integrator contract's Part 3 values, user-adjustable; `cargo xtask codegen`
+// evaluates the default table from them (`crate::gen::nsub`), which the host generator must reproduce bit for bit
+// (REQ-INT-092). The table's maximum length is a calibration (REQ-INT-094). Pure numbers or lengths in canonical units.
+
+/// The section that owns the substep law's parameters and their defaults.
+const SUBSTEP_PARAMETERS: Citation = Citation::Corpus {
+    file: "docs/contracts/principia_integrator_contract.md",
+    section: "Part 3 — Parameter ownership (who owns what)",
+};
+
+/// `r_sub`'s default, 0.05, a length: the separation below which a macro-step takes more than one substep, the scale
+/// of the substep law `N_sub = clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` (dd_integrator §3.3). A sim-key value.
+pub const R_SUB: ConstantBuilder = ConstantBuilder {
+    name: "r_sub",
+    value: Some(Value::Exact(0.05)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `gamma_sub`'s default, 1.5, the substep law's exponent (dd_integrator §3.3). A sim-key value.
+pub const GAMMA_SUB: ConstantBuilder = ConstantBuilder {
+    name: "gamma_sub",
+    value: Some(Value::Exact(1.5)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `N_max`'s default, 64, the substep cap per macro-step (R-68: the corpus's default wins). A sim-key value, at most
+/// [`NSUB_TABLE_MAX`]; the host generator refuses one above it or below 1 (R-502).
+pub const N_MAX: ConstantBuilder = ConstantBuilder {
+    name: "n_max",
+    value: Some(Value::Exact(64.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(SUBSTEP_PARAMETERS),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// `L_max`, the `N_sub` threshold table's maximum length (R-502; REQ-INT-094): the number of thresholds `SimUniforms`
+/// holds, the leaves of the comparison tree less one, and the largest `N_max` the host generator accepts. 256,
+/// TASK-M3-03's proposal (R-71), provisional until the M3 gate. Its evidence: the table takes `4·L_max` = 1 KiB of
+/// `SimUniforms` on every backend, as 64 rows of four u32 (a uniform array's 16-byte stride, so no padding), within
+/// WebGPU's default 64 KiB uniform binding and Vulkan's guaranteed 16 KiB; the generated tree is 256 comparisons and
+/// 257 leaves, at most `⌈log₂ 257⌉` = 9 comparisons deep per lookup; and with `horizon_steps` at most 65535
+/// ([`HORIZON_STEPS_MAX`]) the exact `total_substeps` u32 holds `65535 × 256` = 16,776,960 ≤ 2³² − 1 with room, the bound
+/// allowing an `N_max` up to 65537. Four times the default `N_max`, so raising the cap to resolve close encounters
+/// before the integration floor (integrator_contract Part 3) has two doublings of room.
+pub const NSUB_TABLE_MAX: ConstantBuilder = proposed(
+    "nsub_table_max",
+    256.0,
+    Admissibility::CanonicalUnits,
+    "REQ-INT-094",
+    "M3",
+);
+
+/// The least threshold the host generator accepts where it decides `N_sub` (`THR[n]`, `n < N_max`), `2⁻⁵⁵`, a `d²`.
+/// Derived from the bucket's `d²` form (dd_integrator §3.3, the determinism pin; R-547): the square's floor sets an
+/// axis square below `2⁻⁸⁰` to 0, lowering `d²` by less than `2⁻⁷⁹`, so at a threshold of at least `2⁻⁵⁵` it moves a
+/// decision only within `2⁻²⁴` relative of the edge, one f32 unit roundoff beside the threshold's and `d²`'s own
+/// roundings (`kernel::driver::nsub_table`). Below it the floor alone could decide `N_sub` against the specification
+/// (REQ-INT-028), so the generator refuses such a sim key (R-502); `2⁻⁵⁵` is a closest approach of about `5·10⁻⁹`
+/// canonical lengths. A settled consequence of the floor, not a calibration.
+pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
+    name: "nsub_threshold_least",
+    value: Some(Value::Exact(2.775_557_561_562_891_4e-17)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_dd_integrator.md",
+        section: "3.3 Substep law — and the determinism pin, made concrete",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
 /// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
 /// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
 /// (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances
-/// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion`
-/// sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
+/// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), the curve projection's search (TASK-M2-18; REQ-ENC-020), and the
+/// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
+/// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
+/// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
+/// REQ-INT-094).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -957,6 +1238,24 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
+    DECODE_SANITY,
+    ZERO_CLASS,
+    CURVE_GRID_LOG2,
+    CURVE_GOLDEN_STEPS,
+    INV_PHI,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
+    YOSHIDA4_W1,
+    YOSHIDA6_W1,
+    YOSHIDA6_W2,
+    YOSHIDA6_W3,
+    STEP_REVERSAL_TOL,
+    STEP_REVERSAL_EDGE_F64,
+    STEP_REVERSAL_EDGE_F32,
+    STEP_REVERSAL_EDGE_MAX,
+    R_SUB,
+    GAMMA_SUB,
+    N_MAX,
+    NSUB_TABLE_MAX,
+    NSUB_THRESHOLD_LEAST,
 ];

@@ -1,0 +1,97 @@
+{
+ "name": "Cyanotype",
+ "doc": "Prussian blue and paper white, streaky hand-coated sensitiser, full bleed.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 60,
+    "octaves": 3,
+    "seed": "$seed"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 12,
+    "octaves": 2,
+    "seed": "$seed+1"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "nz": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "ng": {
+   "op": "expr",
+   "in": {
+    "n": "nz.out"
+   },
+   "p": {
+    "f": "gaussian(n, 3)"
+   }
+  },
+  "one": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.ones((H, W))"
+   }
+  },
+  "zero": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.zeros((H, W))"
+   }
+  },
+  "sm": {
+   "op": "smear",
+   "in": {
+    "x": "ng",
+    "tx": "one",
+    "ty": "zero"
+   },
+   "p": {
+    "length": 30
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "n0": "n0",
+    "n1": "n1",
+    "sm": "sm",
+    "pt": "pt"
+   },
+   "p": {
+    "f": "L = stretch(blur(lum(I), 0.8)); d = (1-L)**0.85\nd = d*(0.93+0.07*clip(n0, -2, 2)) + 0.07\nedge = np.full((H, W), 40.0)\nstrokes = 6*z(sm)\ncoat = sig((edge + strokes + 6*n1)/2.5)\nd = clip(d*(0.94+0.06*coat), 0, 1)\nout = array([0.95, 0.94, 0.90])*(1-d[..., None]) + array([0.04, 0.17, 0.38])*d[..., None]\nout = out*(1+0.025*z(pt))[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

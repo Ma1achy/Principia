@@ -2,14 +2,14 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032
-- **Depends on:** TASK-M8-14, TASK-M8-15, TASK-M4-15
+- **Depends on:** TASK-M8-14, TASK-M8-15, TASK-M4-15, TASK-M8-83
 - **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074, REQ-GUI-188
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-9
 - **Size:** ~500 lines
 
 ## Goal
-Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation with no comparison claimed. One ViewUI `t_cursor`, independent of the survey's playhead, scrubs all three panes, and hovering a sphere point jumps real space to it. Editing the IC re-integrates live through computeIC only. The readout row shows latent z, α, β, masses, E · L_z, outcome, F₂ word, round-trip error and gauge error with plots of energy error and pair separations; the scalar readout shows t_end_step, state, escaper, d_min and the drifts at the cursor; the measurement panel shows the ic_inspector list, and a live conditioning number flags ρ → 0 and R → 0. The frame each readout is shown in is defined in the docs so no readout moves under scale-all, and every gauge-invariant readout holds under the four handles.
+Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation with no comparison claimed. One ViewUI `t_cursor`, independent of the survey's playhead, scrubs all three panes, and hovering a sphere point jumps real space to it. Editing the IC re-integrates live through computeICState (TASK-M8-83), a picked IC entering through computeIC, and through no other engine entry point (R-586). The readout row shows latent z, α, β, masses, E · L_z, outcome, F₂ word, round-trip error and gauge error with plots of energy error and pair separations; the scalar readout shows t_end_step, state, escaper, d_min and the drifts at the cursor; the measurement panel shows the ic_inspector list, and a live conditioning number flags ρ → 0 and R → 0. The frame each readout is shown in is defined in the docs so no readout moves under scale-all, and every gauge-invariant readout holds under the four handles.
 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "05 Inspector — one IC, its trajectory, one timeline"
@@ -28,7 +28,7 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - `crates/gui/src/windows/inspector/{pane_real,timeline,readouts,measurements}.rs`.
 - `crates/engine/src/inspector/readouts.rs` — the readout values and the conditioning number.
 - Doc changes: `docs/notes/ic_inspector_scratchpad.md` § "Measurement readouts …" and `docs/gui/principia_render_gui_spec.md` §G8 (the frame per readout).
-- Tests: `t_cursor_shared`, `edit_calls_compute_ic_once`, `conditioning_blowup`, `readout_invariance` (proptest); screenshot cases `05_inspectors/pane3`, `05_inspectors/readouts`, `05_inspectors/measurements`, `05_inspectors/scalar_readout`.
+- Tests: `t_cursor_shared`, `edit_calls_compute_ic_state_once`, `conditioning_blowup`, `readout_invariance` (proptest); screenshot cases `05_inspectors/pane3`, `05_inspectors/readouts`, `05_inspectors/measurements`, `05_inspectors/scalar_readout`.
 
 ## Acceptance tests
 - `cargo xtask screenshot 05_inspectors` (scalar readout) — screenshot against 05_inspectors.png's readouts (REQ-GUI-055).
@@ -36,7 +36,7 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - `cargo test -p engine conditioning_blowup` — the readout rises without bound as ρ → 0 and as R → 0 and is finite elsewhere; pole configs stay finite and SAT-flagged (REQ-GUI-067).
 - `cargo xtask screenshot 05_inspectors` (pane 3) — screenshot against 05_inspectors.png (REQ-GUI-115).
 - `cargo test -p gui t_cursor_shared` — setting t_cursor updates all panes; the global playhead is unchanged; t_cursor is a ViewUI field (REQ-GUI-116).
-- `cargo test -p gui edit_calls_compute_ic_once` — a body drag triggers one computeIC call and the trajectory panes update; no other engine entry point is called (REQ-GUI-117).
+- `cargo test -p gui edit_calls_compute_ic_state_once` — a body drag triggers one computeICState call and the trajectory panes update; clicking an atlas pixel opens the Inspector through one computeIC call; no other engine entry point is called (REQ-GUI-117).
 - `cargo xtask screenshot 05_inspectors` (readout row) — screenshot against 05_inspectors.png's readout row (REQ-GUI-119).
 - Doc review of `docs/notes/ic_inspector_scratchpad.md` § "Measurement readouts (gauge-invariant → hold under all four handles)" and §G8 — the docs name the frame per readout; the reviewer checks every listed readout is invariant under all four handles in that frame; the physics reviewer approves the doc change before merge (REQ-GUI-145).
 - `cargo test -p engine readout_invariance` — random ICs: translate-, boost- and rotate-all leave every readout unchanged to round-off; scale-all leaves angles, α, β and z unchanged (REQ-VAL-108).
@@ -47,3 +47,5 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - Definitions (R-72) written here: REQ-GUI-145. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - Closes, for gaps the corpus leaves open: REQ-ENC-032 (R-72 definition) (classification accepted by R-132).
 - R-449 (16 Oct 2026): every body and pair name this task shows comes from TASK-M2-33's conversion function (REQ-GUI-188), 1-based, never "body 0" or a pair id; TASK-M2-33 is reached through TASK-M8-14.
+- **R-586 (21 Oct 2026, gap sweep PR 2c):** the Inspector reaches the engine through `computeIC` and the state-in entry `computeICState`, built by TASK-M8-83, on which this task now depends; the test is renamed to match. *Was (goal):* "Editing the IC re-integrates live through computeIC only." *Was:* "`cargo test -p gui edit_calls_compute_ic_once` — a body drag triggers one computeIC call and the trajectory panes update; no other engine entry point is called (REQ-GUI-117)."; the Tests line named `edit_calls_compute_ic_once`.
+- **Fix round 3 of PR #287 (code review 5638122561, C4, applied per R-369):** the Tests line R-586's port replaced, quoted. *Was:* "Tests: `t_cursor_shared`, `edit_calls_compute_ic_once`, `conditioning_blowup`, `readout_invariance` (proptest); screenshot cases `05_inspectors/pane3`, `05_inspectors/readouts`, `05_inspectors/measurements`, `05_inspectors/scalar_readout`."

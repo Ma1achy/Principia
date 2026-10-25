@@ -25,36 +25,52 @@
 //!
 //! **The held values** (chart_reference §3, "The held values", R-72, REQ-CHART-048). `m_fixed` is the slice pin `z₀`'s
 //! mass block through the shared `D_mass`, and `p_fixed` its momentum block through the shared `D_mom`, both under the
-//! chart's link selection; `z₀`'s configuration block is not held, the shape replacing it. `p_fixed` is a
-//! canonical-frame momentum, and `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge
-//! `C` then removes, decided as `C` decides it on that configuration ([`held_momentum`]): mirrored where `C` mirrors
-//! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)` ([`canon::rotation_angle`]) and scaled by
-//! `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
-//! hemispheres' mirror points decode to one system (R-141). `I` and `φ_f` are gauge: they change `Φ`'s output, not
-//! `C`'s, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in `C`'s configuration. Their
-//! defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
+//! chart's link selection; `z₀`'s configuration block is not held, the shape replacing it. `p_fixed` is a body-frame
+//! momentum, the Jacobi momenta relative to the frame with `ρ̃` on `+x`, unmirrored, `λ̃` in either half-plane (R-544;
+//! R-538 J9), and `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge the decode then
+//! removes, decided on that configuration ([`held_momentum`]): turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)`, its cosine
+//! and sine formed as `C` forms them ([`canon::rotation`]), and scaled by `I^{−1/4}`, never mirrored. So the decode's
+//! state has masses `m_fixed` and momenta `p_fixed` at every pixel of both hemispheres, to rounding, and the pixels
+//! `(θ, φ)` and `(θ, π − φ)` are mirror images of each other exactly where `p_fixed` is its own mirror image, its
+//! `y`-components zero (released from rest included), and otherwise two different systems (R-544 items 2 and 5). `I`
+//! and `φ_f` are gauge: they change `Φ`'s output, not the decode's, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where
+//! R-437's `φ = 0` leaves `φ_f` in the decode's configuration. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s
+//! configuration is already on the decode's section, `I = 1` and `ρ̃` on `+x`, on either hemisphere.
 //!
-//! **Into the shared decoder** (REQ-CHART-015). The chart sets the configuration explicitly, which `ChartOut`'s latent
-//! controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its order, `D_mass` on
-//! `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum block placed by [`held_momentum`]; then `C` ([`canon::canonicalise`], its scale included) on the joined state, and
-//! the shared descriptor of `C`'s output. So the decode's `ic` is the canonical `(m, r, p)`, `G = M = I = 1`, which
-//! crosses to the integrator, and its descriptor that state's (dd_decoder §2, §3.6), while its `config` and `momentum`
-//! stay the blocks' outputs in `Φ`'s gauge; `C` folds the lower hemisphere onto the upper at `(θ, π − φ)` (R-141).
+//! **Into the shared decoder** (REQ-CHART-015, REQ-CHART-081). The chart sets the configuration explicitly, which
+//! `ChartOut`'s latent controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its
+//! order, `D_mass` on `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum block placed by
+//! [`held_momentum`]; then the one shared `C` with its step 3, the mirror, not taken ([`canon::canonicalise_signed`],
+//! its scale included) on the joined state, and the shared descriptor of its output. So the decode's `ic` has its CoM
+//! at the origin and at rest, `I = 1`, `ρ̃` on `+x` and `λ̃_y` keeping its sign: the system whose signed `n̂` is the
+//! pixel's (R-544), `G = M = I = 1`, which crosses to the integrator, and its descriptor that state's (dd_decoder §2,
+//! §3.6), while its `config` and `momentum` stay the blocks' outputs in `Φ`'s gauge. No pixel is folded onto another.
 //! `Φ` alone, without `C`, is [`place`] (R-178's round trip). [`Chart::map`] hands over the held blocks with the
 //! configuration block 0: every `D ∘ Φ` entry, [`fn@crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
-//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): three, each between values already computed and
+//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): four, each between values already computed and
 //! continuous across its boundary, so a backend fork there moves the output by rounding only: `r = 0` in
-//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), and R-437's
-//! `p = q = 0` in [`inverse`] (the defined 0).
+//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), R-437's
+//! `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken as `+0` before `atan2(q, p)`.
+//!
+//! **`p = −0`** (applied per R-369, TASK-M2-43; pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
+//! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where
+//! `sin θ < 0` at any precision, and at `s = ½`, where f32's `π` lies above π so `sin θ` rounds below 0; and at the
+//! `L⁻` pixel `(0, 0)` at f32, where `sin(π_f32) < 0` meets `sin 0 = +0`. Metal's `atan2` at its default math mode
+//! (naga passes the call through) gives `atan2(q, −0)` with `q ≠ 0` the opposite sign of `π/2` to IEEE's, which puts
+//! `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at `L⁺`'s pixel, and `L⁺`'s at `L⁻`'s. `C`'s mirror hid it while the
+//! decode folded (R-141); with step 3 not taken (R-544) it is the decode's output, so the zero's sign is cleared by a
+//! select on `p` against 0, as the encode's `spherical_inverse` clears `n₁`'s, and `decode_cross_backend_continuous`
+//! is its guard, since a fast-math compiler may fold the select. `atan2(q, +0)` is the CPU's `atan2(q, −0)`, so the
+//! CPU's value is unchanged, bit for bit.
 //!
 //! **Validation** (inverse_encode_contract § "Chart-aware validation"; R-26). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
 //! are the point's own azimuth and polar angle, which every point of S² has: past `[0,1]²` the spherical map's θ is
 //! periodic and its φ pole-crossing, so its pixels there are systems `[0,1]²` holds (chart_reference §5.4), and the
 //! exponential map's are points of S² as well, its bounded axes hatched by their declaration, not by `validate`.
 //! Layer 3 holds by construction: the masses are `D_mass`'s, the CoM is at the origin by §0.2's reconstruction, and
-//! `Σpᵢ = 0` by `D_mom`, kept by a mirror, a turn and a scale. So `validate` is `Valid` at every `(u, v)`.
+//! `Σpᵢ = 0` by `D_mom`, kept by a turn and a scale. So `validate` is `Valid` at every `(u, v)`.
 //!
 //! **π** is taken at the parameters' type, `P::PI()` widened (`F: From<P>`), as every parameter is: the trait's float
 //! bound has no constant of its own.
@@ -198,6 +214,7 @@ pub fn inverse<R: Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let a = select(upper, large, small);
     let b = select(upper, small, large);
     let p = inertia * n[1] / two;
+    let p = select(p == R::zero(), R::zero(), p);
     let q = inertia * n[2] / two;
     let beta = select(
         (p == R::zero()) & (q == R::zero()),
@@ -231,8 +248,8 @@ pub fn place<R: LinkReal>(n: [R; 3], inertia: R, phase: R, masses: &Masses<R>) -
     }
 }
 
-/// `p_fixed`, `D_mom` on `z_mom` under `S`, in the gauge of `config` (the module's notes): each Jacobi momentum
-/// mirrored where `C` mirrors `config`, turned by `C`'s angle on it and scaled by `I^{−1/4}`, and the particle momenta
+/// `p_fixed`, `D_mom` on `z_mom` under `S`, in the gauge of `config` (the module's notes): each Jacobi momentum turned
+/// by `C`'s angle on `config` and scaled by `I^{−1/4}`, unmirrored at every pixel (R-544), and the particle momenta
 /// rebuilt from them by the shared [`momentum::to_particles`]. The controls `q` are `D_mom`'s.
 #[inline]
 pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
@@ -243,14 +260,9 @@ pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
 ) -> Momentum<R> {
     let fixed = momentum::decode::<S, R>(z_mom, masses);
     let r = config.r;
-    let phi = canon::rotation_angle([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
-    let flip = canon::mirror_decision(masses.m, r);
-    let (s, c) = (Float::sin(phi), Float::cos(phi));
+    let (c, s) = canon::rotation([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
     let k = R::one() / Float::sqrt(Float::sqrt(inertia));
-    let gauge = |v: [R; 2]| {
-        let y = select(flip, -v[1], v[1]);
-        [k * (c * v[0] - s * y), k * (s * v[0] + c * y)]
-    };
+    let gauge = |v: [R; 2]| [k * (c * v[0] - s * v[1]), k * (s * v[0] + c * v[1])];
     let p_rho = gauge(fixed.p_rho);
     let p_lambda = gauge(fixed.p_lambda);
     Momentum {
@@ -269,9 +281,9 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
         match self.map {
             ShapeMap::Spherical => spherical(u, v, wide(P::PI())),
             ShapeMap::Exponential => exponential(
-                self.n0.map(wide),
-                self.e1.map(wide),
-                self.e2.map(wide),
+                widen3(self.n0),
+                widen3(self.e1),
+                widen3(self.e2),
                 wide(self.scale),
                 u,
                 v,
@@ -303,8 +315,9 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 
     /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum`], then
-    /// `C` on the joined state and the descriptor of `C`'s output. The `ic` is canonical;
-    /// `config` and `momentum` are the blocks' outputs, in `Φ`'s gauge.
+    /// `C` with its step 3 not taken on the joined state ([`canon::canonicalise_signed`], R-544) and the descriptor of
+    /// its output. The `ic` keeps the pixel's signed shape; `config` and `momentum` are the blocks' outputs, in `Φ`'s
+    /// gauge.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -313,10 +326,10 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode::<S, R>(self.z_mass.map(wide));
+        let masses = mass::decode::<S, R>(widen2(self.z_mass));
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum::<S, R>(self.z_mom.map(wide), &masses, &config, inertia);
-        let ic = canon::canonicalise(&Ic {
+        let momentum = held_momentum::<S, R>(widen4(self.z_mom), &masses, &config, inertia);
+        let ic = canon::canonicalise_signed(&Ic {
             m: masses.m,
             r: config.r,
             p: momentum.p,
@@ -600,6 +613,26 @@ pub fn hammer_forward(s: f64, t: f64) -> [f64; 2] {
         (Float::cos(lat) * Float::sin(half) / d + 1.0) / 2.0,
         (Float::sin(lat) / d + 1.0) / 2.0,
     ]
+}
+
+/// Each parameter of `a` widened to `F`, at constant indices: the kernel's SPIR-V has no `[T; N]::map`, whose
+/// iterator casts the array to a slice (rust-gpu: "cannot cast between pointer types"), and a loop over a runtime index
+/// is lowered with bounds-check breaks (gpu_determinism_note rule 5), so each length has its own unrolled helper.
+#[inline]
+fn widen2<P: Copy, F: From<P>>(a: [P; 2]) -> [F; 2] {
+    [F::from(a[0]), F::from(a[1])]
+}
+
+/// [`widen2`] for three parameters.
+#[inline]
+fn widen3<P: Copy, F: From<P>>(a: [P; 3]) -> [F; 3] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2])]
+}
+
+/// [`widen2`] for four parameters.
+#[inline]
+fn widen4<P: Copy, F: From<P>>(a: [P; 4]) -> [F; 4] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2]), F::from(a[3])]
 }
 
 /// `t` where `c` holds, else `f`: a select, both operands computed.

@@ -1,0 +1,28 @@
+{
+ "name": "Oil painting on a CRT",
+ "doc": "oil → crt",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "s0": {
+   "op": "preset:oil",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "s1": {
+   "op": "preset:crt",
+   "in": {
+    "src": "s0"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "s1"
+}

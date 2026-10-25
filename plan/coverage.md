@@ -6,25 +6,25 @@
 
 | area | count |
 |---|---|
-| DEC | 48 |
-| ENC | 33 |
-| CHART | 79 |
-| INT | 96 |
+| DEC | 49 |
+| ENC | 38 |
+| CHART | 87 |
+| INT | 106 |
 | EVT | 31 |
-| PAY | 106 |
-| GEN | 42 |
-| SCHED | 100 |
+| PAY | 107 |
+| GEN | 43 |
+| SCHED | 103 |
 | REF | 52 |
-| RENDER | 100 |
-| COL | 134 |
-| GUI | 315 |
-| TOOL | 184 |
-| VAL | 191 |
-| PERF | 95 |
-| SYS | 84 |
-| **total** | **1690** |
+| RENDER | 119 |
+| COL | 160 |
+| GUI | 371 |
+| TOOL | 216 |
+| VAL | 198 |
+| PERF | 112 |
+| SYS | 90 |
+| **total** | **1882** |
 
-Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 162 calibration, 163 definition, 1557 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,26 +32,27 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 204 |
-| M3 | 209 |
+| M2 | 215 |
+| M3 | 221 |
 | M4 | 106 |
-| M5 | 176 |
-| M6 | 220 |
-| M7 | 215 |
-| M8 | 330 |
+| M5 | 179 |
+| M6 | 223 |
+| M7 | 258 |
+| M8 | 450 |
 
 ## Sections
 
-1333 sections in 50 files: 1106 yield at least one requirement; 227 yield none and are listed below with the reason.
+1558 sections in 60 files: 1248 yield at least one requirement; 310 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
-| informative only | 168 |
+| gap (RQ-391) | 2 |
+| informative only | 208 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 40 |
-| rationale | 11 |
+| parent heading (obligations are in its subsections) | 53 |
+| planned (the plan PR) | 22 |
+| rationale | 18 |
 | superseded (kept for the record) | 4 |
 
 
@@ -167,7 +168,21 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
 | R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
 | R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement. Superseded in part by R-446 (16 Oct 2026): the line is reworded, the tagged pixels drawn black #141418 in the outcome view, not white |
+| R-493 — One scenario runner and one scenario registry serve `prin profile`, `cargo xtask bench` and the GUI's "Run benchmark"; they differ only in which scenarios they select | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-494 — A benchmark scenario is data: a file in `bench/scenarios/`, validated at load, with a full canonical start state, a frame-indexed timeline reusing the export keyframe spec, and a suite hash | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-495 — The suite is the design doc's §3 table, swept across the whole tier ladder with the quality arbiter off, plus one arbiter row per scenario; the run modes are Quick, Full and Soak | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-496 — The benchmark runs from the Profiler window's "Run benchmark…" or `prin bench`; a run hides the chrome, ignores input but Esc, and on abort still writes a valid file marked incomplete | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-497 — One plain-text result file, profiler schema v1 plus a benchmark block, carrying no score | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-498 — `prin bench report` turns one or more result files into the design doc's §7 fixed-structure Markdown report, for agents | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-499 — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied | gap (RQ-378) | a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note) |
+| R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built | gap (RQ-391) | a deferral by the human's ruling, with no target: RQ-391 stays open; nothing is built |
+| R-528 — On first launch an opt-in prompt offers the benchmark's Quick suite; nothing runs unless the user accepts *(closes RQ-392)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-529 — Benchmark results come back as files, by hand; there is no upload *(closes RQ-393)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best effort" *(closes RQ-394)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
+| R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -245,6 +260,24 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | Principia — symbolic-dynamics contract (free-group word interpretation) | informative only | preamble: the word's storage is in payload §3 |
 | 2. The punctured-sphere relation (third pair) | out of v1 (R-125) | per-pair views are v2 (PL-3, R-38); REQ-PAY-071, which cited it, is retired |
 
+### `docs/design/principia_benchmark.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the benchmark | informative only | title and adoption note |
+| 1. What exists, and what this adds | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 2. A scenario is data | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 4. The sweep, and the three run modes | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 5. Running it | parent heading (obligations are in its subsections) | its subsections |
+| 5.1 From the GUI | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 5.2 From the command line | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 5.3 In the browser build | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 6. The result file | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 7. Feeding it back: `prin bench report` | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 8. Determinism of the work | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 9. Tests (each with an arm that can fail) | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
+| 10. Open questions (for the review queue) | planned (the plan PR) | the design doc's three open questions, queued as RQ-392 to RQ-394 and ruled by R-528 to R-530; the plan PR's requirements cite this section |
+
 ### `docs/design/principia_chart_reference.md`
 
 | section | reason | note |
@@ -290,7 +323,7 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
 | 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
 | 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
-| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.3 Open questions | informative only | the open questions, each an RQ entry, all ruled: RQ-310 by R-545, RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467; their obligations are in the requirements they changed |
 | 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
 | 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
 | 13. References | informative only | bibliography |
@@ -376,6 +409,40 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
 
+### `docs/design/principia_export_details.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: export details — the colour window, the viewer's settings and mark sizes | informative only | preface and the port's status note (R-581 to R-583); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-581 to R-583; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.4 |
+| 4. Fit with rulings | informative only | how R-581 to R-583 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-581 to R-583; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-RENDER-117, REQ-RENDER-118, REQ-TOOL-201 to REQ-TOOL-205, REQ-GUI-389, REQ-GUI-390, REQ-RENDER-088, REQ-RENDER-111) |
+
+### `docs/design/principia_honesty_precision.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: honesty as a measurement — f32 against f64 in the trajectory viewer | informative only | preface and the port's status note (R-574, R-575); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-574; no obligation |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 3.7 The README line | informative only | records the README's Honesty line as R-574 reworded it; applied in README.md, no build obligation |
+| 4. Fit with rulings | informative only | how R-574 and R-575 sit with earlier rulings; the amendments it names are carried by REQ-VAL-106, REQ-TOOL-127, REQ-INT-081 and their tasks |
+
+### `docs/design/principia_ic_save.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: saving, sharing and exporting an initial condition | informative only | preface and the port's status note (R-586, R-587); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-586, R-587; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.6 |
+| 4. Fit with rulings | informative only | how R-586, R-587 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-586, R-587; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-INT-107, REQ-RENDER-119, REQ-TOOL-211 to REQ-TOOL-213, REQ-GUI-393 to REQ-GUI-395, REQ-GUI-117) |
+
 ### `docs/design/principia_lines.md`
 
 | section | reason | note |
@@ -390,7 +457,18 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 |---|---|---|
 | Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
 | 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322) |
-| 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
+| 14. What the demo is not | informative only | where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-349 and REQ-SYS-060 |
+
+### `docs/design/principia_print_graph.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the Print graph (post-processing) | informative only | title and adoption note |
+| 4. The data model | parent heading (obligations are in its subsections) | its subsections |
+| 6. Determinism, scale and time | parent heading (obligations are in its subsections) | its subsections |
+| 7. The GUI | parent heading (obligations are in its subsections) | its subsections |
+| 8. Cost and motion | parent heading (obligations are in its subsections) | its subsections |
+| 12. Open questions (for the review queue, not the agent to settle) | gap (RQ-391) | the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, built by TASK-M7-64 (R-524, R-525), TASK-M8-68 (R-525 V3) and TASK-M7-66 (R-526); 4 deferred by the human's ruling (R-527), RQ-391 open |
 
 ### `docs/design/principia_quality_device_note.md`
 
@@ -398,6 +476,15 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 |---|---|---|
 | Principia — quality presets & device characterisation | informative only | preamble; obligations in subsections |
 | Auto is a continuous controller — the adaptive control architecture | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_results.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Result — from a view to a full-precision batch run, and back | informative only | preface and the port's status note (R-572, R-573); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus and of prin-rs before R-572; no obligation |
+| 2. The gap | rationale | why the Result exists; its obligations are in §3 |
+| 3.6 Philosophy §2 | informative only | records the sentence R-572 wrote into philosophy § "The prebake — a measuring instrument" and its table; applied there, no build obligation |
 
 ### `docs/design/principia_scratchpad_pointer_channels.md`
 
@@ -410,6 +497,30 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | 5. The prediction worth testing early, because it is the demo | informative only | working notes: only §4 is normative (R-109) |
 | 6. What this reuses rather than adds | informative only | working notes: only §4 is normative (R-109) |
 | 7. Open | informative only | working notes: only §4 is normative (R-109) |
+
+### `docs/design/principia_sequence.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: Sequence — keyframed view animations in the native GUI | informative only | preface and the port's status note (R-576, R-577); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-576 and R-577; no obligation |
+| 2. The gap | rationale | why the Sequence window exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
+| 4. Fit with rulings | informative only | how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-576; the obligations they settle are in §3.4 and REQ-TOOL-076 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-GUI-373 to REQ-GUI-381, REQ-TOOL-076, REQ-TOOL-200, REQ-PERF-110) |
+
+### `docs/design/principia_spotlight_reel.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the spotlight reel — a film that passes for Explore | informative only | preface, the port's status note and the human's scope (R-578, R-571); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-578; no obligation |
+| 2. The gap | rationale | why the reel needs a manifest and a takeover; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
+| 4. Fit with rulings | informative only | how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561 |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-578; the obligations they settle are in §3.1, §3.3 and REQ-TOOL-199, REQ-GUI-383 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382 to REQ-GUI-385) |
 
 ### `docs/design/principia_state_map.md`
 
@@ -440,11 +551,36 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 |---|---|---|
 | Principia — trajectory viewing (hover trace + click inspector) | informative only | summary; supersession note |
 
+### `docs/design/principia_uploaded_picture.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the uploaded picture — storing and carrying "Your image…" | informative only | preface and the port's status note (R-585); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-585; no obligation |
+| 2. The gap | rationale | why the design exists; its obligations are in §3 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
+| 4. Fit with rulings | informative only | how R-585 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-585; the obligations they settle are in §3 |
+| 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-COL-160, REQ-COL-161, REQ-TOOL-208 to REQ-TOOL-210, REQ-GUI-391, REQ-GUI-392) |
+
+### `docs/design/principia_video_carrier.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the video carrier — a recording carries its settings in its own file | informative only | preface and the port's status note (R-584); obligations in §3 |
+| 1. What exists | informative only | the state of the corpus before R-584; no obligation |
+| 2. What was measured | rationale | the human's measurement (vt.py, kept as evidence) behind §3.1's choice of carrier; its obligations are in §3.1 and REQ-TOOL-206 |
+| 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.4 |
+| 3.5 What does not change | informative only | the reel's film (R-578) and a single figure's embedding defaults (embedding §9) are unchanged; no new obligation |
+| 4. Fit with rulings | informative only | how R-584 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs |
+| 5. Decided | informative only | the human's words, quoted verbatim in R-584; the obligations they settle are in §3 |
+
 ### `docs/gui/principia_render_gui_spec.md`
 
 | section | reason | note |
 |---|---|---|
 | Part I — The dev GUI | parent heading (obligations are in its subsections) |  |
+| G9a. Sequence · Spotlights (no artboard; R-576 to R-578) | parent heading (obligations are in its subsections) | its two subsections, Sequence and Spotlights |
 | 14. Prototype → GUI mapping | informative only | maps HTML prototypes to GUI roles; the prototypes are prior art |
 
 ### `docs/notes/ic_inspector_scratchpad.md`
@@ -483,8 +619,6 @@ Of these: 142 calibration, 137 definition, 1411 obligation. Retired (kept for th
 | 2. The two paths, and why the split is the whole design | parent heading (obligations are in its subsections) |  |
 | 4. Six commitments, each earned by a measured failure | parent heading (obligations are in its subsections) |  |
 | 5. What the instrument is actually looking for | informative only | scientific goals; no build obligation stated |
-| 7.2 Tiled prebake | informative only | parked post-1.0 (§7); out of scope for the build |
-| 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
 | 7.6a The truncated-Fourier block — a possible future feature (R-420) | out of v1 (R-420) | parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path |

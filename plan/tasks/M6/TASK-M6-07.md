@@ -39,3 +39,4 @@ Deep quads get the linearised decode (deep_zoom §2), on the x₀ and J_D TASK-M
 - Calibration proposed: REQ-DEC-042 (slope tolerance about 2).
 - PIT-10: the O(h²) agreement holds at fixed inputs; state the domain (decode only, not trajectory outcomes).
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D by central differences) moved to M5 (TASK-M5-04); this task keeps the error-fit tests (REQ-DEC-034, REQ-DEC-042) and the |det J_D| check.
+- **The central-difference step** (physics review 5624781454 of PR #279, an observation): the corpus states none (REQ-DEC-049 refers to REQ-DEC-034's step rule, which gives no value). RQ-553's per-direction saturation test (REQ-GUI-012, TASK-M6-21) reads exact zeros of `J_D` and assumes the step is at least the quad's sample spacing; this task's physics review confirms the step it chooses meets that.

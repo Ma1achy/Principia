@@ -1,7 +1,7 @@
 //! QA tests for TASK-M2-14, written from the requirements it closes (REQ-CHART-004, -006, -011, -012, -014, -035,
 //! REQ-SYS-013) and their sources (chart_decoder_contract § "The four axis kinds — a closed set", Part 5, design axioms;
-//! chart_reference §4.5; render_gui_spec §G7; lowering_contract Part 5; R-25, R-26, R-27, R-141, R-157), not from the
-//! implementation.
+//! chart_reference §4.5; render_gui_spec §G7; lowering_contract Part 5; R-25, R-26, R-27, R-141, R-157, R-544), not from
+//! the implementation.
 //!
 //! - `qa_m214_well_posedness_*` (REQ-CHART-011): the fixtures 2 swept + 6 frozen and 1 swept + annotation + 7 frozen are
 //!   accepted, on several block placements and with the annotation axis on either side; a double-written block and an
@@ -13,7 +13,8 @@
 //!   depends on is upstream of the sector it solves into, and refused where any is the sector itself or downstream;
 //!   two invariants swept into one sector (`(L_z, E)`, `(L_z, K)`) solve jointly, one alone does not.
 //! - `qa_m214_chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and
-//!   validates; the shape sphere is n-to-1 with n = 2 (R-141); a `ν`-axis chart is `DoubleCover` exactly when its range
+//!   validates; the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system (R-544), its
+//!   exponential map's value TASK-M2-28's (REQ-CHART-075); a `ν`-axis chart is `DoubleCover` exactly when its range
 //!   straddles the leg swap's fixed point `√2 − 1` (chart_reference §4.5, R-157), the default Euclid range among them;
 //!   feasibility, coupling and annotation are as each chart's axes say; `E` and `L_z` are `conserved_along_flow`, `K`
 //!   is not; each axis carries the metadata of its kind.
@@ -879,8 +880,9 @@ fn qa_m214_chart_descriptors_registered() {
         },
         plain(Bijective, false),
     );
-    // R-141: the shape sphere is n-to-1 with n = 2, whichever chart map (R-117).
-    check_descriptor(shape(ShapeMap::Spherical), plain(NToOne(2), false));
+    // R-544: the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system. The
+    // exponential map keeps main's n-to-1 with n = 2 until TASK-M2-28 computes its value (REQ-CHART-075).
+    check_descriptor(shape(ShapeMap::Spherical), plain(Bijective, false));
     check_descriptor(shape(ShapeMap::Exponential), plain(NToOne(2), false));
     // R-27, R-157, chart_reference §4.5: a ν-axis chart is DoubleCover where its range straddles √2 − 1, the default
     // range among them; on one side, bijective.

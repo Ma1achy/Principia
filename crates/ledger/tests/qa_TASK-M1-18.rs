@@ -271,8 +271,16 @@ enum Stand {
 /// citing REQ-CHART-049, and `shape_roundtrip_bound`, citing REQ-CHART-053 (R-181); and the Burrau `ν = 1/2`
 /// tolerance `burrau_nu_half_tol`, proposed by TASK-M2-10 and provisional until the M2 gate, citing REQ-VAL-118; and
 /// the round trip's `eps_phys`, `k` in `ε_phys = k·ε_R`, proposed by TASK-M2-16 and provisional until the M2 gate,
-/// citing REQ-ENC-024 (inverse-encode contract Part 4).
-const TABLE: [(&str, Stand); 24] = [
+/// citing REQ-ENC-024 (inverse-encode contract Part 4); and lookup's layer-3 tolerance `decode_sanity`, `k` in `k·ε_R`
+/// on the CoM and `Σpᵢ` residuals, proposed by TASK-M2-19 and provisional until the M2 gate, citing REQ-ENC-027
+/// (inverse-encode contract § "Chart-aware validation"); and lookup's layer-1 zero-class band `zero_class`, `k` in
+/// `k·ε_R` relative to `L_z`'s and `E`'s scales, proposed by TASK-M2-19 and provisional until the M2 gate, citing
+/// REQ-ENC-037 (§ "Chart-aware validation", "The zero class in floating point"); and dd_integrator §5 test 3's
+/// rounding-level criterion `step_reversal_tol` and its domain's three edges, `step_reversal_edge_f64`,
+/// `step_reversal_edge_f32` and `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate,
+/// citing REQ-VAL-191; and the `N_sub` threshold table's maximum length `nsub_table_max`, proposed by TASK-M3-03 and
+/// provisional until the M3 gate, citing REQ-INT-094 (R-502).
+const TABLE: [(&str, Stand); 31] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -292,6 +300,8 @@ const TABLE: [(&str, Stand); 24] = [
     ("shape_vec_js_tol", Stand::Until("M2", "REQ-CHART-049")),
     ("shape_roundtrip_bound", Stand::Until("M2", "REQ-CHART-053")),
     ("eps_phys", Stand::Until("M2", "REQ-ENC-024")),
+    ("decode_sanity", Stand::Until("M2", "REQ-ENC-027")),
+    ("zero_class", Stand::Until("M2", "REQ-ENC-037")),
     ("burrau_nu_half_tol", Stand::Until("M2", "REQ-VAL-118")),
     ("burrau_theta_min", Stand::Until("M2", "REQ-CHART-045")),
     ("burrau_theta_max", Stand::Until("M2", "REQ-CHART-045")),
@@ -300,6 +310,11 @@ const TABLE: [(&str, Stand); 24] = [
         "burrau_theta_lz_fraction",
         Stand::Until("M2", "REQ-CHART-046"),
     ),
+    ("step_reversal_tol", Stand::Until("M3", "REQ-VAL-191")),
+    ("step_reversal_edge_f64", Stand::Until("M3", "REQ-VAL-191")),
+    ("step_reversal_edge_f32", Stand::Until("M3", "REQ-VAL-191")),
+    ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
+    ("nsub_table_max", Stand::Until("M3", "REQ-INT-094")),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.

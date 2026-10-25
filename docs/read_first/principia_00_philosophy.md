@@ -44,8 +44,12 @@ result.
 Same kernel, same charts, precision instead of interactivity. Uniform tiles, no scheduler, no camera,
 no frame budget. `advance to t`, return, stitch, exit.
 
-CPU at arbitrary precision, or GPU at emulated double/double-double. Hours, not milliseconds. **This
-is where results come from.**
+The shared kernel at f64 on the CPU, or f32 on the GPU for a fast uniform pass. Arbitrary precision lives only in
+R-33's independent reference, which checks a result rather than making one (R-265). Hours, not milliseconds. **This
+is where results come from.** In the app it is a **Result** (`principia_results.md`, R-572).
+
+*Was (before R-572):* "CPU at arbitrary precision, or GPU at emulated double/double-double. Hours, not milliseconds.
+**This is where results come from.**"
 
 ### The IC inspector — the prebake standard at a single point
 
@@ -76,8 +80,10 @@ the atlas: it buys **attention**, not **truth**.
 | | scope | precision | cost | answers |
 |---|---|---|---|---|
 | **atlas** (+ microscope) | the manifold | f32 | milliseconds | *where should I look?* |
-| **inspector** | one IC | f64 and up | seconds | *is this worth the expensive pass?* |
-| **prebake** | one slice | arbitrary | hours | *what is actually true here?* |
+| **inspector** | one IC | f64 | seconds | *is this worth the expensive pass?* |
+| **prebake** | one slice | f64 (f32, labelled) | hours | *what is actually true here?* |
+
+*Was (before R-572):* the inspector's precision "f64 and up", the prebake's "arbitrary".
 
 **Each is cheap enough to justify the next**, which is what makes it a loop rather than three
 separate tools. A discovery walks up the ladder; nothing expensive is spent on a hunch.
@@ -348,6 +354,10 @@ inspector applied to a small grid**, which is exactly the workflow: find somethi
 > re-coloured and re-running costs six hours. **Include fields no current shader reads** —
 > `closure_step`, `first_divergence_t`, the per-arm spreads — precisely because you cannot know now
 > what someone will want to colour by.
+
+> **Unparked for the Result (R-572, 21 Oct 2026).** The reduced tier is the Result's payload, and the full `SimState`
+> per copy its option (all `E + 1` copies), both f64 wide at either precision (`principia_results.md` §3.3). §7.2's
+> tiling, the trajectory tiers and the rest of this section stay parked; REQ-SYS-007 is amended to say so.
 
 Subsampling is what makes trajectory dumps usable, with a caveat: **a subsampled trajectory cannot
 resolve close encounters**, which is where the structure is. Log-spaced sampling probably beats

@@ -1,7 +1,7 @@
 # TASK-M2-02 — Decoder: the latent type, the mass block and the configuration block
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044
+- **Closes:** REQ-DEC-010, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044
 - **Depends on:** TASK-M2-01
 - **Needs (earlier milestones):** REQ-PAY-017, REQ-SYS-004, REQ-PAY-014
 - **Reviewers:** code, qa, physics

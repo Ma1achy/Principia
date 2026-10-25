@@ -6,11 +6,14 @@
 //!   same scene's with the canonical NaN in its place (the acceptance's "pixel-identical to a NaN's"), and that within
 //!   the harness tolerance of the hatch itself; every finite sample, `±0` and `±` the smallest subnormal among them,
 //!   draws bit-identical to the NaN scene's too, so `±∞` moves no measured range end (`qa_gpu_non_finite_views_*`);
-//! - `d_min`'s view and its field ramp draw the unset `+∞` in the "not yet" style and `−∞` and NaN as the hatch, so
-//!   the unset line comes before the guard on the GPU (`qa_gpu_non_finite_d_min_*`).
+//! - `d_min`'s view and its field ramp draw the unset `+∞` in the "not yet" style, so the unset line comes before the
+//!   guard on the GPU; the view draws `−∞` and NaN as the hatch, and the field ramp, a presentation view, draws them
+//!   bounded / nothing yet's `#141418`, never the hatch (R-467 D14, REQ-COL-108; amended by qa for TASK-M2-34)
+//!   (`qa_gpu_non_finite_d_min_*`).
 //!
 //! Each test registers its negative control (R-176).
 
+use render::present;
 use validation::golden_scene::{row_scene, Colouring, Look, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -239,10 +242,13 @@ const D_MIN: [(u32, f32); 4] = [
     (0x3800, 0.5),
 ];
 
-/// The look `d_min`'s sample `i` must draw: the unset `+∞` "not yet", `−∞` and NaN the hatch; `None` for the finite.
-fn d_min_look(i: usize) -> Option<Look> {
+/// The look `d_min`'s sample `i` must draw: the unset `+∞` "not yet"; `−∞` and NaN the hatch in the view and, in the
+/// field ramp (`ramp`), a presentation view, bounded / nothing yet's `#141418` decoded from its sRGB code (R-467
+/// clause 2, D4, D14; colour_composition §1.4; amended by qa for TASK-M2-34); `None` for the finite.
+fn d_min_look(i: usize, ramp: bool) -> Option<Look> {
     match i {
         0 => Some(Look::NotYet),
+        1 | 2 if ramp => Some(Look::Flat(present::srgb8([0x14, 0x14, 0x18]))),
         1 | 2 => Some(Look::Invalid),
         _ => None,
     }
@@ -276,7 +282,9 @@ fn d_min_scene(ramp: bool) -> Scene {
 fn check_d_min(what: &str, s: &Scene, got: &[[f32; 4]]) {
     let width = s.size().0;
     for (i, (_, v)) in D_MIN.iter().enumerate() {
-        let Some(look) = d_min_look(i) else { continue };
+        let Some(look) = d_min_look(i, what == "field ramp") else {
+            continue;
+        };
         for (x, y) in s.pixels(i as u32) {
             let want = look.colour([x, y]);
             let k = (y * width + x) as usize;
@@ -354,3 +362,19 @@ negative_control!(
         "bitcast<u32>(v) != 0x7fc00000u"
     )))
 );
+
+/// R-467 D14 and REQ-COL-108's control: a field ramp that still hatches `−∞` and NaN, as before R-467, is caught
+/// (added by qa for TASK-M2-34).
+#[cfg(feature = "controls")]
+mod qa_gpu_non_finite_d_min_ramp_hatch {
+    use super::*;
+    negative_control!(
+        qa_gpu_non_finite_d_min_ramp_unset_first,
+        "d_min's field ramp drawing -inf and NaN in the hatch is caught",
+        expected = "`d_min`'s field ramp draws -inf",
+        check_d_min_ramp(Some((
+            "return select(PRESENT_INVALID,",
+            "return select(debug_invalid(ctx.frag_xy),"
+        )))
+    );
+}

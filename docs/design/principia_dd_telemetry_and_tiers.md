@@ -21,6 +21,11 @@ where the *work* is held constant.
 **It must sweep, not sample.** A single setting tells you pass/fail on that device; a sweep tells
 you *where the device's boundary is*, which is what a tier needs.
 
+**The suite is `principia_benchmark.md` (R-493 to R-499).** Its scenarios are data, run by one runner that `prin
+profile`, `cargo xtask bench` and the Profiler window's Run benchmark… share; its §3 is this suite written out, swept
+across the tier ladder with the arbiter off and one arbiter row; its result file is §5's artefact plus a benchmark block,
+profiler schema v2 (R-534).
+
 ### 1.2 Passive telemetry — what interaction actually looks like
 
 Log while someone uses it normally. **The benchmark tells you what the device can do; this tells you
@@ -44,6 +49,8 @@ quads_computed     new quads this frame
 quads_reused       cache hits
 samples            quads x N^2 x (E+1) — the actual integration work
 substeps_total     the honest cost measure; steps are not comparable across steppers
+substep_histogram  [u32; 16], substeps per pixel this frame: equal bins of width N_max/16, cap hits their own
+                   last bin (R-545, RQ-286; the bin edges are RQ-520)
 playhead_dt        how far time moved
 camera_delta       pan/zoom magnitude — 0 for a static frame
 tree_depth_max     and leaf count
@@ -56,6 +63,19 @@ stage_ms           breakdown: integrate / reduce / colour / upload / present
 Both are atomic counters, counted in release builds as well as debug ones, and read back asynchronously on the
 profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
 sole automatic return of simulation data (R-142, R-288).
+
+`substep_histogram` (R-545, RQ-286) is what the Profiler's substeps-per-pixel histogram draws
+(`principia_render_gui_spec.md` § "Profiler"). It is counted on the GPU beside the two counters above and read back
+with them on the existing readback, a schema v1 change made by the ruling; schema v2 (R-534) is v1 plus, so it
+carries it too. A file written before it reads with the key not recorded, never as zeros.
+
+**The print stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
+`post`, its ms, between `colour` and `upload`, and each frame records `post_level`, the degrade level that ran (`full`,
+`reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump the profiler schema to
+v2 (§5, "Schema v2"; R-534). *Was:* "They bump profiler schema v1 (§5, "The bumped schema"; the version is RQ-399)."
+The stage is named the print stage (the human's ruling on RQ-497, 21 Oct 2026: "print stage"); its keys stay `post` and `post_level`, as the
+human's rulings on RQ-479 and RQ-495 name them (R-557; applied per R-369). The stage's time is recorded but excluded
+from the Auto arbiter's rung solve, and `post_level` is recorded under every tier, Auto, named or Custom (R-557). *Was:* "The post stage", here and in §5.
 
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
@@ -190,7 +210,8 @@ solve   for the three axes: eps, per-frame budget, hard cap
 safety. And **report which one bound**, per §3.5.
 
 **That makes the tier a function of measured capability**, and it means a device nobody tested still
-gets a sensible answer by running the suite once on first launch. The alternative — a table of device
+gets a sensible answer by running the suite once on first launch, when the user accepts the first launch's opt-in
+prompt (R-528; §8: "Explicit, opt-in, run when asked"). The alternative — a table of device
 names — is unmaintainable and wrong for anything unlisted.
 
 **Report which constraint binds**, per device: samples, bandwidth, memory, or dispatch overhead.
@@ -229,7 +250,10 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 **Profiler schema v1: the keys and the nesting (R-56, R-72).** This is the definition REQ-TOOL-120 asks for. Its typed
 form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
-key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+key. One key is the stated exception: the frame record's `substep_histogram`, which the human's ruling adds to
+schema v1 (R-545, RQ-286), may be missing from a frame written before it; the schema and the reader both accept such a
+frame and report the histogram as not recorded, never as zeros. Where the key is present it is an array of exactly 16
+integers, never `null` (fix round 1 of PR #274, qa Q4, applied per R-369). A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 The typed form gives every count and size an explicit width, u32 or u64, never `usize` (R-329).
 
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores_available`, `cpu_cores_total`, `gpu_cores`,
@@ -344,6 +368,7 @@ frame's end:
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
 frame_ms        wall clock
 quads_computed  quads_reused  samples  substeps_total
+substep_histogram  [u32; 16]: §2's per-pixel substep bins (R-545, RQ-286)
 playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
 camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
 tree_depth_max  leaf_count
@@ -369,6 +394,31 @@ It is a snapshot, not a change, so a downsampled file still shows each kept fram
 has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are `null` and the keys stay the same.
 The two are `null` together or present together: a frame with a present time and no present sections, or the reverse,
 is neither a batch render nor an interactive frame, and is not schema v1.
+
+**Schema v2 (R-488, R-497, R-534).** The Print graph's stage and the benchmark add to schema v1 as follows, and the
+result is **profiler schema v2**: the header line's `schema` is `"principia-profile-v2"`, and nothing else of this
+section changes. Schema v1 stays as defined above, and every reader accepts both: a v1 file is checked against v1's
+closed set, a v2 file against v2's (R-534). *Was:* "**The bumped schema (R-488, R-497; its version and name are
+RQ-399).** The Print graph's stage and the benchmark add to schema v1 as follows; nothing else of this section
+changes."
+- **The print stage.** `stage_ms` and `stages` gain `post`, so the stages are integrate, reduce, colour, post, upload
+  and present, written in that order; `post` is `null` in a frame that runs no Print graph stage (a headless scenario
+  with no figure), as `present` is in a batch render. The finer category "stain + style" (below) is "stain" under
+  `colour`; the Print graph's own scopes nest under `post`.
+- **`post_level`**, per frame: `"full"`, `"reduced"` or `"plain"` (R-488), or `null` where `post` is `null`.
+- **The benchmark block** (`principia_benchmark.md` §6, R-497): a benchmark result's header line carries `bench`
+  (`mode`, `suite_hash`, `complete`, each scenario's `ran | skipped(reason) | aborted`, power source, low-power mode and
+  thermal state at start; `surface`, the run's offscreen surface, `{width, height}` in pixels (R-535); and, for a phone
+  (R-530), `mobile`, `"best effort"` or `null`, `visual_viewport`, `{width, height, device_pixel_ratio}` at start in CSS
+  pixels, or `null`, and `wake_lock`, `"granted"`, `"refused"`, `"unsupported"` or `null`, each `null` off a phone;
+  perf review 5596612647 of PR #268, F4, applied per R-369), each scenario is bracketed by a `scenario_begin` and a `scenario_end` line, and the last line
+  is the run summary. These lines are part of schema v2, one schema (R-534); a trace that is not a benchmark result
+  has none of them. *Was:* "Whether these lines are part of the bumped schema or a block beside it is RQ-399."
+- **How an earlier file is read (R-497, K3).** A file written as schema v1 before the print stage stays readable: a
+  reader takes its frames, with no `post` stage and no `post_level`, and reports both as not recorded, never as 0 ms or
+  `"full"`; `prin profile diff` between it and a later file lists `post` and its scopes as only in one file, as any
+  missing scope is listed (`principia_render_gui_spec.md` § "Profiler"), and compares the rest; `prin bench report`
+  and `compare` read it as a trace with no benchmark block. Writers write only the later form, v2 (R-534).
 
 `dmin_nan_unset` and `dmin_negative_floored` are telemetry §2's two per-frame `d_min` counters (R-288, closing
 RQ-171), each a u32 count for the frame: how many `d_min` values the packer received as NaN and stored as unset, and

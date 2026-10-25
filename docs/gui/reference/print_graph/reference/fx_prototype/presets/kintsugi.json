@@ -1,0 +1,158 @@
+{
+ "name": "Kintsugi",
+ "doc": "The render as glazed ceramic, broken along its fate boundaries and mended with gold.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "rg": {
+   "op": "regions",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": 5,
+    "b": 3.5,
+    "mode": 11
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 20,
+    "octaves": 2,
+    "seed": "$seed"
+   }
+  },
+  "wide": {
+   "op": "expr",
+   "in": {
+    "bd": "bd",
+    "n0": "n0"
+   },
+   "p": {
+    "f": "seam = gaussian(bd.astype(float), 1.0) > 0.12\nseam = seam & ~ndi.binary_opening(seam, iterations=3)\nw = ndi.binary_dilation(seam, iterations=1) | (seam & (n0 > 0.4))\nout = ndi.binary_dilation(w, iterations=1)"
+   }
+  },
+  "bd": {
+   "op": "boundary",
+   "in": {
+    "labels": "rg.labels"
+   }
+  },
+  "jp": {
+   "op": "jitter_points",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "spacing": 26,
+    "jitter": 0.5
+   }
+  },
+  "cz": {
+   "op": "voronoi",
+   "in": {
+    "points": "jp.points"
+   }
+  },
+  "craze": {
+   "op": "boundary",
+   "in": {
+    "labels": "cz"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 3,
+    "octaves": 1,
+    "seed": "$seed+1"
+   }
+  },
+  "gh": {
+   "op": "expr",
+   "in": {
+    "w": "wide",
+    "n1": "n1"
+   },
+   "p": {
+    "f": "gaussian(w.astype(float), 1.3)*3 + 0.3*n1*w"
+   }
+  },
+  "lg": {
+   "op": "light",
+   "in": {
+    "height": "gh"
+   },
+   "p": {
+    "strength": 1.0,
+    "shin": 60,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "n3": {
+   "op": "noise",
+   "p": {
+    "scale": 80,
+    "octaves": 2,
+    "seed": "$seed+3"
+   }
+  },
+  "n3h": {
+   "op": "expr",
+   "in": {
+    "n": "n3"
+   },
+   "p": {
+    "f": "n*2"
+   }
+  },
+  "lw": {
+   "op": "light",
+   "in": {
+    "height": "n3h"
+   },
+   "p": {
+    "strength": 1.0,
+    "shin": 80,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "craze": "craze",
+    "diff": "lg.diff",
+    "spec": "lg.spec",
+    "gspec": "lw.spec",
+    "wide": "wide"
+   },
+   "p": {
+    "f": "glaze = blur(I, 1.3); g = lum(glaze)[..., None]; glaze = g+(glaze-g)*0.9\nglaze = glaze*(1-0.10*gaussian(craze.astype(float), 0.5))[..., None]\nG = array([0.80, 0.62, 0.24])*(0.55+0.6*clip(diff, 0, 1.4))[..., None] + spec[..., None]*array([1, 0.95, 0.8])*0.9\nyi, xi = np.mgrid[0:H, 0:W]\nwin = sig((0.25*W - abs(xi-0.3*W))/12)*sig((0.18*H - abs(yi-0.22*H))/12)\nout = glaze*0.96 + 0.10*gaussian(win, 18)[..., None]\nout = out + 0.10*gspec[..., None]\na = gaussian(wide.astype(float), 0.6)[..., None]\nout = out*(1-a) + G*a"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}
