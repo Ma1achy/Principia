@@ -26140,6 +26140,12 @@ escape arm cannot fire"; above 200 it clamps to 200, as before; a press of ↓ o
 sets it to 0.4 if it is above, and otherwise leaves it, replacing PR #283's interim (to 0.2, the Alt step, with 0 the
 limit). `dt_macro` is unchanged.
 
+*Read so (flagged, applied per R-369):* the human's "one closure window (0.4)" is R-29's escape window, the `|Δn̂|`
+window of integrator contract Part 3 (`tau`, escape window, "0.4 (provisional)"), and the floor is stated as that
+window, not as the literal: one escape window, 0.4 while the window is 0.4. If the window is recalibrated (M3), the
+floor, the refusal's reason and the line beside the field move with it, so that they keep agreeing; the 0.4 in the
+range and the tests stands while the window is 0.4 (physics review 5644374613 of PR #293, F5).
+
 R-610 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (statement, rulings, note) and

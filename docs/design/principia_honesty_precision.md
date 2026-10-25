@@ -238,9 +238,10 @@ predictability horizon", is RQ-556."
 
 The default horizon stays 50, and it can be **raised or lowered**, not floored at 50. This amends the Run window's
 `T_horizon ∈ [50, 200]` (render_gui_spec § "Run — from the top bar") and R-132 (R-575). The lowest horizon, and
-whether 200 still caps it, are ruled (R-610, closing RQ-555): `T_horizon ∈ [0.4, 200]`, default 50, the floor one
-closure window, below which the escape arm cannot fire, and the cap 200 until long horizons are measured for cost, with
-`dt_macro = max(10⁻³, T/65535)` unchanged. *Was:* "are RQ-555; meanwhile `T_horizon ∈ (0, 200]`"
+whether 200 still caps it, are ruled (R-610, closing RQ-555): `T_horizon ∈ [0.4, 200]`, default 50, the floor one escape
+window (0.4 provisional, R-29; the floor follows the window's value), below which the escape arm cannot fire, and the
+cap 200 until long horizons are measured for cost, with `dt_macro = max(10⁻³, T/65535)` unchanged. *Was:* "are
+RQ-555; meanwhile `T_horizon ∈ (0, 200]`"
 
 ### 3.7 The README line
 

@@ -1102,9 +1102,10 @@ corpus's top display bar (R-67).
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, default 50, raised or
-  lowered, `∈ [0.4, 200]`, Part 5; R-132 as amended by R-575, its range R-610: the floor one closure window, below
-  which the escape arm cannot fire, the cap 200 until long horizons are measured for cost; *was:* "`∈ (0, 200]`
-  meanwhile, … its range RQ-555"; *was:* "`∈ [50, 200]`, default 50"),
+  lowered, `∈ [0.4, 200]`, Part 5; R-132 as amended by R-575, its range R-610: the floor one escape window (0.4
+  provisional, R-29; the floor follows the window's value), below which the escape arm cannot fire, the cap 200 until
+  long horizons are measured for cost; *was:* "`∈ (0, 200]` meanwhile, … its range RQ-555"; *was:* "`∈ [50, 200]`,
+  default 50"),
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
   Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
@@ -1129,6 +1130,8 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
 `[0.4, 200]` is taken; a value below 0.4 is refused with its reason, "below one closure window (0.4) the escape arm
 cannot fire"; a value above 200 is clamped to 200, the cap staying until long horizons are measured for cost (R-610).
 The field's settings say so: beside it, "0.4 to 200: below one closure window the escape arm cannot fire" (R-610).
+The 0.4 in the range, the reason and the line is the escape window's value (integrator contract Part 3, 0.4
+provisional, R-29), and moves with it (R-610, flagged).
 **The floor** (applied per R-369 under R-610, replacing PR #283's interim): a press of ↓, with or without Shift or Alt
 (§G3), or a drag, that would take `T` below 0.4 sets `T` to 0.4 if `T` is above it, and otherwise leaves `T`
 unchanged; ↓ never raises `T`. So Shift+↓ at `T = 10` gives 0.4, and ↓ at `T = 0.4` leaves 0.4. ↑ and a drag stop at

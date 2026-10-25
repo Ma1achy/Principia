@@ -4947,7 +4947,7 @@
   note: "R-565 (21 Oct 2026): was \"the number of sync boundaries n_sync over the horizon\"; the grid is a fixed quantum of physical time, never t_max / n_sync."
 - id: REQ-INT-081
   area: INT
-  statement: "The horizon T_horizon must default to 50 and be raisable and lowerable within integrator_contract's range, [0.4, 200] (R-610): the floor one closure window, 0.4, below which the escape arm cannot fire, and the cap 200 until long horizons are measured for cost, and dt_macro must be max(10⁻³, T/65535), so the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 holds over the whole range and the u16 step indices stay exact (R-86)."
+  statement: "The horizon T_horizon must default to 50 and be raisable and lowerable within integrator_contract's range, [0.4, 200] (R-610): the floor one escape window (0.4 provisional, R-29; the floor follows the window's value), below which the escape arm cannot fire, and the cap 200 until long horizons are measured for cost, and dt_macro must be max(10⁻³, T/65535), so the dispatch-enforced ⌈T/dt_macro⌉ ≤ 65535 holds over the whole range and the u16 step indices stay exact (R-86)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 3 — Parameter ownership (who owns what)
@@ -4977,7 +4977,7 @@
   - R-575
   - R-610
   milestone: M3
-  note: "R-132 rules the values the R-71 calibration asked for; nothing here stays calibrated. R-575 (21 Oct 2026): the horizon is no longer floored at 50; (0, 200] is RQ-555's option (a) and (i), applied meanwhile, nothing waiting. Was: \"must default to 50 within integrator_contract's [50, 200]\" and, in the verify, \"no T in [50, 200] is refused at dispatch\". R-610 (25 Oct 2026, RQ-555): the floor one closure window, 0.4, and the cap 200; dt_macro unchanged. *Was (statement):* \"within integrator_contract's range, (0, 200] meanwhile (R-575; the range RQ-555),\" *Was (verify):* \"at T = 10 and T = 0.5, dt_macro = 10⁻³ and the dispatch accepts it\" and \"no T in (0, 200] is refused at dispatch, and T ≤ 0 is refused with its reason\""
+  note: "R-132 rules the values the R-71 calibration asked for; nothing here stays calibrated. R-575 (21 Oct 2026): the horizon is no longer floored at 50; (0, 200] is RQ-555's option (a) and (i), applied meanwhile, nothing waiting. Was: \"must default to 50 within integrator_contract's [50, 200]\" and, in the verify, \"no T in [50, 200] is refused at dispatch\". R-610 (25 Oct 2026, RQ-555): the floor one escape window (0.4 provisional, R-29; the floor follows the window's value), and the cap 200 (the floor tied to the window, flagged in R-610; physics review 5644374613 of PR #293, F5); dt_macro unchanged. *Was (statement):* \"within integrator_contract's range, (0, 200] meanwhile (R-575; the range RQ-555),\" *Was (verify):* \"at T = 10 and T = 0.5, dt_macro = 10⁻³ and the dispatch accepts it\" and \"no T in (0, 200] is refused at dispatch, and T ≤ 0 is refused with its reason\""
 - id: REQ-INT-082
   area: INT
   statement: "The unwrapped phase θ̃ accumulated over a real march must have no 2π jumps, with the derived orbit_count matching the orbit and retrograde (θ̃'s sign) matching the orbit's direction of travel along the shape sphere's equator; the run from the mirrored state Π·x (y → −y on every position and momentum) must have a θ̃(t) and a retrograde bitwise identical to the run from x's, and an L_z opposite, bitwise (R-580)."
@@ -18812,7 +18812,7 @@
   note: "R-476 L2, M3 (20 Oct 2026). *Was:* \"The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair.\" R-509 Y5. *Was:* \"The Display window must offer the overlays class edges and cursor crosshair; the grid and the t_end contours are Lines ▾ presets (REQ-GUI-247).\""
 - id: REQ-GUI-102
   area: GUI
-  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (default 50, raised or lowered, in [0.4, 200], R-610, the window saying beside the field that below one closure window (0.4) the escape arm cannot fire), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, two selectors, Heggie × RK4 by default (R-560), Aarseth–Zare available), with no 'tolerance' field."
+  statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (default 50, raised or lowered, in [0.4, 200], R-610, the window saying beside the field that below one closure window (0.4) the escape arm cannot fire, the 0.4 being the escape window's value, 0.4 provisional (R-29), the floor following it), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, two selectors, Heggie × RK4 by default (R-560), Aarseth–Zare available), with no 'tolerance' field."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Run — from the top bar
