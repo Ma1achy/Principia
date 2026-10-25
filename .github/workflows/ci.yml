@@ -334,13 +334,14 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      - name: cargo nextest run --workspace --release
+      # `--no-fail-fast`: every test that fails at the release profile is shown, not only the first.
+      - name: cargo nextest run --workspace --release --no-fail-fast
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run --workspace --release
+        run: cargo nextest run --workspace --release --no-fail-fast
       # The workspace's doctests at the same profile, which nextest does not run, as beside every nextest step (R-231).
-      - name: cargo test --workspace --release --doc
-        run: cargo test --workspace --release --doc
+      - name: cargo test --workspace --release --no-fail-fast --doc
+        run: cargo test --workspace --release --no-fail-fast --doc
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
   # REQ-SYS-076): `cargo xtask build-kernel` compiles the kernel to the GPU, rust-gpu → SPIR-V → naga → WGSL
