@@ -24,8 +24,9 @@
 //!   `z₀ ← z_locked`, the stored anchor, bit for bit; unlock ([`unlock`]) clears the lock group and keeps
 //!   `(z₀, q₁, q₂)`.
 //! - **Lock validation** on an invariant chart ([`validate`]): each pixel's `(L_z, y)` read at its own configuration,
-//!   tagged where layer 2 fails it, or `DEGENERATE` where its construction finds no seed, never dropped, with the
-//!   re-centre and the switch to the latent chart offered ([`Report::offer`], [`recentre`]).
+//!   tagged where layer 2 fails it, or `DEGENERATE` where its construction finds no seed, never dropped; one notice for
+//!   the view, the switch to the latent chart with a re-centre only where the lock's own centre has gone infeasible
+//!   (R-593; [`Report::offer`], [`recentre`]).
 //! - **A curve's tangent tilt needs a lock** ([`curve_tilt`]): `γ′(ν₀)` pulled back to the latent controls
 //!   ([`curve_tangent`]), refused where a link's inverse clamps, then `nav::tilt_tangent`.
 //!
@@ -365,20 +366,23 @@ pub enum Tag {
     Degenerate,
 }
 
-/// What lock validation found: one tag per pixel, in order, none dropped.
+/// What lock validation found: one tag per pixel, in order, none dropped, and the lock's own centre's.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Report {
     /// The tags.
     pub tags: Vec<Tag>,
+    /// The tag of the lock's own centre, the view's centre pixel `(s, t) = (½, ½)`, whose IC is `z₀`.
+    pub centre: Tag,
 }
 
-/// A remedy lock validation offers (inverse_encode_contract § "Lock validation").
+/// The one notice lock validation gives a view with a pixel tagged infeasible (inverse_encode_contract § "Lock
+/// validation"; R-593): it always offers the switch to the latent chart, where the lock is valid, the latent chart
+/// having no layer-2 constraint, and the re-centre only where the lock's own centre has gone infeasible.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Remedy {
-    /// Re-centre: a lock at the tagged pixel's nearest feasible point ([`recentre`]).
-    Recentre { pixel: usize, nearest: Nearest },
-    /// Switch to the latent chart, where the lock is valid: it has no layer-2 constraint.
-    SwitchToLatent,
+pub struct Notice {
+    /// The re-centre: a lock at the centre's nearest feasible point ([`recentre`]); `None` where the centre is
+    /// feasible, `DEGENERATE`, or tagged with no nearest point.
+    pub recentre: Option<Nearest>,
 }
 
 impl Report {
@@ -390,36 +394,24 @@ impl Report {
             .count()
     }
 
-    /// The remedies offered: none where every pixel is feasible; else the re-centre to each tagged pixel's nearest
-    /// feasible point, in pixel order, then the switch to the latent chart. A `Degenerate` pixel is offered nothing.
-    /// The contract offers one re-centre, "to the nearest feasible point"; which one for a view of many tagged pixels
-    /// is RQ-572's, open, and this offer stands until it is ruled.
-    pub fn offer(&self) -> Vec<Remedy> {
-        if self.infeasible() == 0 {
-            return Vec::new();
-        }
-        let recentre = self
-            .tags
-            .iter()
-            .enumerate()
-            .filter_map(|(pixel, t)| match t {
-                Tag::Infeasible {
-                    nearest: Some(nearest),
-                    ..
-                } => Some(Remedy::Recentre {
-                    pixel,
-                    nearest: *nearest,
-                }),
-                _ => None,
-            });
-        recentre.chain([Remedy::SwitchToLatent]).collect()
+    /// The offer (R-593): no notice where neither a pixel nor the centre is tagged infeasible; else one notice for the
+    /// view, never one per pixel, offering the switch to the latent chart and, only where the lock's own centre is
+    /// tagged infeasible with a nearest feasible point, the re-centre there. The other tagged pixels' nearest points
+    /// stay in their tags and are not offered.
+    pub fn offer(&self) -> Option<Notice> {
+        let recentre = match self.centre {
+            Tag::Infeasible { nearest, .. } => nearest,
+            Tag::Feasible | Tag::Degenerate if self.infeasible() == 0 => return None,
+            Tag::Feasible | Tag::Degenerate => None,
+        };
+        Some(Notice { recentre })
     }
 }
 
 /// Lock validation of a locked view's `pixels` on an invariant chart, under the link selection `S` (the contract's
-/// definition): each pair tested at its own configuration by the chart's own feasibility test and remedy
-/// (`kernel::encode::by_kind::fibre`), and tagged.
-pub fn validate<S, C>(pixels: &[Pixel<C>]) -> Report
+/// definition): each pair, and the lock's own `centre`, the view's centre pixel, tested at its own configuration by the
+/// chart's own feasibility test and remedy (`kernel::encode::by_kind::fibre`), and tagged.
+pub fn validate<S, C>(pixels: &[Pixel<C>], centre: &Pixel<C>) -> Report
 where
     S: Selection,
     S::MassLink: SimplexClamp,
@@ -448,6 +440,7 @@ where
     };
     Report {
         tags: pixels.iter().map(tag).collect(),
+        centre: tag(centre),
     }
 }
 

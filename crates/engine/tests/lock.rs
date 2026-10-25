@@ -14,7 +14,8 @@
 //! - `lock_kernel_uniform_identical` (REQ-SYS-012): the kernel's uniform has no lock field, and a locked and a free
 //!   view of one plane give it bitwise; the GPU half is `lock_gpu.rs`.
 //! - `lock_infeasible_tilt` (REQ-CHART-010): a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
-//!   carries out, and lock validation offers the re-centre and the latent chart.
+//!   carries out, and lock validation gives one notice: the switch to the latent chart, with a re-centre to the
+//!   centre's own nearest feasible point only where an excursion carried the centre out (R-593).
 //! - `curve_tilt_requires_lock` (REQ-CHART-007): a curve axis's tangent tilt is refused free, and locked it reads
 //!   `γ′(ν₀)` pulled back to the latent controls; it is refused, naming the controls, where a link's inverse clamps.
 
@@ -31,7 +32,7 @@ use engine::contract::store::StateStore;
 use engine::lock::{
     centre, curve_tangent, curve_tilt, kernel_chart, move_slider, point, recentre, set,
     set_on_chart, slider, snap_back, unlock, validate, ChartLock, FrozenControls, LockError,
-    Nearest, Pixel, Remedy, Report, Tag, Window,
+    Nearest, Notice, Pixel, Report, Tag, Window,
 };
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
@@ -895,9 +896,10 @@ fn le_at(z_alpha: f64) -> InvariantLE<f64> {
 
 /// The locked `(L_z, E)` view's pixels, its range mapped linearly: the anchor `(L₀, E₀)`, `n × n` pixels at window
 /// offsets `x, y ∈ [−1, 1]`, half-widths `(h_l, h_e)`, the horizontal axis tilted by `tau` degrees into the hidden
-/// `z_α`, `span` its units (R-473's single-angle rotation: `(a, d) = (cos τ·x, sin τ·x)`). `own` reads each pixel at its
-/// own `z_α`, as lock validation must; otherwise at the anchor's.
-fn tilted_view(tau: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
+/// `z_α`, `span` its units (R-473's single-angle rotation: `(a, d) = (cos τ·x, sin τ·x)`), and the centre moved by an
+/// excursion `ex` along `z_α`. `own` reads each pixel at its own `z_α`, as lock validation must; otherwise at the
+/// anchor's. Returns the pixels and the centre pixel's index.
+fn tilted_view(tau: f64, ex: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
     let anchor = invariant_le();
     let x0 = anchor.decode_at::<Defaults, f64>(0.98, 0.45).ic;
     let inv = invariants(&x0);
@@ -909,7 +911,7 @@ fn tilted_view(tau: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
         for i in 0..n {
             let x = -1.0 + 2.0 * i as f64 / (n - 1) as f64;
             let y = -1.0 + 2.0 * j as f64 / (n - 1) as f64;
-            let z_alpha = anchor.0.z_cfg[0] + if own { sin * x * span } else { 0.0 };
+            let z_alpha = anchor.0.z_cfg[0] + if own { sin * x * span + ex } else { 0.0 };
             pixels.push(Pixel {
                 chart: le_at(z_alpha),
                 lz: l0 + cos * x * h_l,
@@ -920,35 +922,36 @@ fn tilted_view(tau: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
     (pixels, n * n / 2)
 }
 
-/// Checks lock validation of the tilted view: untilted every pixel feasible and nothing offered; tilted, pixels tagged
-/// past the parabola, none dropped, the centre kept, each tag's nearest point feasible, and the offer the re-centre to
-/// each, then the latent chart.
+/// The tilt, in degrees, that carries part of the view past the parabola.
+const TILT: f64 = 60.0;
+
+/// The excursion along `z_α` that carries the centre out: to the tilted view's edge, `x = ±1`, on the side the tilt
+/// tags.
+fn excursion() -> f64 {
+    let span = 1.5;
+    let (pixels, c) = tilted_view(TILT, 0.0, true);
+    let right = validate::<Defaults, _>(&pixels[c + 4..c + 5], &pixels[c]).infeasible();
+    TILT.to_radians().sin() * span * if right == 1 { 1.0 } else { -1.0 }
+}
+
+/// Checks lock validation's tags of a locked view: untilted every pixel feasible; tilted, pixels tagged past the
+/// parabola, none dropped, each tag's nearest point feasible on `L_z`'s side, and the centre kept.
 fn check_infeasible_tilt(own: bool) {
-    let (flat, _) = tilted_view(0.0, own);
-    let untilted = validate::<Defaults, _>(&flat);
+    let (flat, c) = tilted_view(0.0, 0.0, own);
+    let untilted = validate::<Defaults, _>(&flat, &flat[c]);
     assert_eq!(untilted.infeasible(), 0, "the untilted view is infeasible");
-    assert!(
-        untilted.offer().is_empty(),
-        "a feasible view is offered a remedy"
-    );
-    let (pixels, centre_pixel) = tilted_view(60.0, own);
-    let report = validate::<Defaults, _>(&pixels);
+    let (pixels, c) = tilted_view(TILT, 0.0, own);
+    let report = validate::<Defaults, _>(&pixels, &pixels[c]);
     assert_eq!(report.tags.len(), pixels.len(), "a pixel was dropped");
     assert!(report.infeasible() > 0, "no pixel tagged past the parabola");
     assert_eq!(
-        report.tags[centre_pixel],
+        report.centre,
         Tag::Feasible,
         "the tilt moved the lock off its fibre"
     );
-    let offer = report.offer();
-    assert_eq!(
-        offer.last(),
-        Some(&Remedy::SwitchToLatent),
-        "the latent chart is not offered"
-    );
-    let mut recentres = 0;
+    let mut nearest = 0;
     for (i, tag) in report.tags.iter().enumerate() {
-        let Tag::Infeasible { failed, nearest } = tag else {
+        let Tag::Infeasible { failed, nearest: n } = tag else {
             continue;
         };
         assert_eq!(
@@ -956,15 +959,8 @@ fn check_infeasible_tilt(own: bool) {
             Constraint::LzEParabola,
             "pixel {i} failed {failed:?}"
         );
-        let Some(n) = nearest else { continue };
-        recentres += 1;
-        assert!(
-            offer.contains(&Remedy::Recentre {
-                pixel: i,
-                nearest: *n
-            }),
-            "pixel {i}'s re-centre is not offered"
-        );
+        let Some(n) = n else { continue };
+        nearest += 1;
         assert_eq!(
             feasibility(n.lz, n.k, Constraint::LzEParabola, Constraint::LzEParabola),
             Feasibility::Valid,
@@ -973,15 +969,12 @@ fn check_infeasible_tilt(own: bool) {
         assert_eq!(
             n.lz.signum(),
             pixels[i].lz.signum(),
-            "pixel {i}'s re-centre changed L_z's sign"
+            "pixel {i}'s nearest point changed L_z's sign"
         );
-        let [z0, _] = recentre(n);
-        assert!(matches!(z0.edit, Edit::Sim(SimField::Z0(z)) if same_bits(&z, &n.z)));
     }
-    assert_eq!(
-        offer.len(),
-        recentres + 1,
-        "the offer is not each re-centre and the latent chart"
+    assert!(
+        nearest > 1,
+        "fewer than two tagged pixels have a nearest point"
     );
 }
 
@@ -997,35 +990,121 @@ negative_control!(
     check_infeasible_tilt(false)
 );
 
-/// The tags' arms and the offer's count: a pair below the apex has no nearest point that keeps `L_z`'s class, and a
-/// view with exactly one tagged pixel offers its re-centre and the latent chart.
+/// Checks the offer, `offer`, of a locked view (R-593): untilted, no notice; tilted, many pixels tagged and the centre
+/// the anchor, one notice offering only the switch to the latent chart; tilted with an excursion that carries the
+/// centre out, one notice offering the re-centre to the centre's own nearest feasible point, a lock there.
+fn check_offer(offer: fn(&Report) -> Option<Notice>) {
+    let (flat, c) = tilted_view(0.0, 0.0, true);
+    assert_eq!(
+        offer(&validate::<Defaults, _>(&flat, &flat[c])),
+        None,
+        "a feasible view is given a notice"
+    );
+    let (pixels, c) = tilted_view(TILT, 0.0, true);
+    let report = validate::<Defaults, _>(&pixels, &pixels[c]);
+    assert!(
+        report.infeasible() > 1,
+        "the tilt tagged fewer than two pixels"
+    );
+    assert_eq!(
+        offer(&report),
+        Some(Notice { recentre: None }),
+        "a tilt alone, the centre the anchor, is not offered only the switch to the latent chart"
+    );
+    let (out, c) = tilted_view(TILT, excursion(), true);
+    let carried = validate::<Defaults, _>(&out, &out[c]);
+    let Tag::Infeasible {
+        failed: Constraint::LzEParabola,
+        nearest: Some(n),
+    } = carried.centre
+    else {
+        panic!(
+            "the excursion did not carry the centre out: {:?}",
+            carried.centre
+        );
+    };
+    assert_eq!(
+        carried.tags[c], carried.centre,
+        "the centre pixel's tag is not the centre's"
+    );
+    assert!(
+        carried.infeasible() > 1,
+        "the excursion's view has no tagged pixel but the centre"
+    );
+    assert_eq!(
+        offer(&carried),
+        Some(Notice { recentre: Some(n) }),
+        "the centre carried out is not offered its own nearest feasible point"
+    );
+    assert_eq!(
+        feasibility(n.lz, n.k, Constraint::LzEParabola, Constraint::LzEParabola),
+        Feasibility::Valid,
+        "the centre's nearest feasible point is not feasible"
+    );
+    let [z0, _] = recentre(&n);
+    assert!(matches!(z0.edit, Edit::Sim(SimField::Z0(z)) if same_bits(&z, &n.z)));
+}
+
+/// The per-pixel offer R-593 refuses, as one notice: the first tagged pixel's nearest feasible point.
+fn first_tagged(report: &Report) -> Option<Notice> {
+    let first = report.tags.iter().find_map(|t| match t {
+        Tag::Infeasible { nearest, .. } => Some(*nearest),
+        _ => None,
+    })?;
+    Some(Notice { recentre: first })
+}
+
+#[test]
+fn lock_infeasible_tilt_offer() {
+    check_offer(Report::offer);
+}
+
+negative_control!(
+    lock_infeasible_tilt_offer,
+    "an offer of a tagged pixel's nearest point, not the centre's, re-centres a tilt whose centre is the anchor",
+    expected = "a tilt alone, the centre the anchor, is not offered only the switch",
+    check_offer(first_tagged)
+);
+
+/// The tags' arms, and the offer's: a pair below the apex has no nearest point that keeps `L_z`'s class; a notice
+/// wherever a pixel or the centre is tagged infeasible, none where neither is, a degenerate pixel counted neither; a
+/// re-centre only to the centre's own nearest point.
 #[test]
 fn lock_infeasible_tilt_tags() {
     let chart = invariant_le();
     let u = potential(&chart.decode_at::<Defaults, f64>(0.5, 0.0).ic);
-    let report = validate::<Defaults, _>(&[
-        Pixel {
-            chart,
-            lz: 0.0,
-            y: u + 0.5,
-        },
-        Pixel {
-            chart,
-            lz: 0.3,
-            y: u - 0.1,
-        },
-        Pixel {
-            chart,
-            lz: 2.0,
-            y: u + 0.5,
-        },
-        Pixel {
-            chart,
-            lz: f64::NAN,
-            y: u,
-        },
-    ]);
+    let feasible = Pixel {
+        chart,
+        lz: 0.0,
+        y: u + 0.5,
+    };
+    let report = validate::<Defaults, _>(
+        &[
+            feasible,
+            Pixel {
+                chart,
+                lz: 0.3,
+                y: u - 0.1,
+            },
+            Pixel {
+                chart,
+                lz: 2.0,
+                y: u + 0.5,
+            },
+            Pixel {
+                chart,
+                lz: f64::NAN,
+                y: u,
+            },
+        ],
+        &feasible,
+    );
     assert_eq!(report.tags[0], Tag::Feasible);
+    assert_eq!(
+        report.centre,
+        Tag::Feasible,
+        "the centre is not read like a pixel"
+    );
     assert_eq!(
         report.tags[1],
         Tag::Infeasible {
@@ -1034,41 +1113,70 @@ fn lock_infeasible_tilt_tags() {
         },
         "a pair below the apex with L_z ≠ 0 has a nearest point"
     );
-    assert!(matches!(
-        report.tags[2],
-        Tag::Infeasible {
-            nearest: Some(_),
-            ..
-        }
-    ));
+    let Tag::Infeasible {
+        nearest: Some(near),
+        ..
+    } = report.tags[2]
+    else {
+        panic!(
+            "a pair past the parabola has no nearest point: {:?}",
+            report.tags[2]
+        );
+    };
     assert!(matches!(
         report.tags[3],
         Tag::Infeasible { nearest: None, .. }
     ));
     assert_eq!(report.infeasible(), 3);
-    let one = Report {
-        tags: vec![Tag::Feasible, report.tags[2], Tag::Degenerate],
-    };
     assert_eq!(
-        one.infeasible(),
+        report.offer(),
+        Some(Notice { recentre: None }),
+        "a feasible centre is offered a tagged pixel's re-centre"
+    );
+    let offer = |tags: Vec<Tag>, centre: Tag| Report { tags, centre }.offer();
+    let (with, without) = (report.tags[2], report.tags[1]);
+    // One tagged pixel, the fewest that gives a notice; none, no notice, the centre feasible or degenerate.
+    assert_eq!(
+        Report {
+            tags: vec![Tag::Feasible, with, Tag::Degenerate],
+            centre: Tag::Feasible
+        }
+        .infeasible(),
         1,
         "a degenerate pixel is counted infeasible"
     );
-    assert!(matches!(
-        one.offer()[..],
-        [Remedy::Recentre { pixel: 1, .. }, Remedy::SwitchToLatent]
-    ));
-    let none = Report {
-        tags: vec![Tag::Feasible, Tag::Degenerate],
-    };
-    assert!(
-        none.offer().is_empty(),
-        "a degenerate pixel alone is offered a remedy"
+    for centre in [Tag::Feasible, Tag::Degenerate] {
+        assert_eq!(
+            offer(vec![Tag::Feasible, with], centre),
+            Some(Notice { recentre: None }),
+            "one tagged pixel, the centre {centre:?}, is not one notice of the switch alone"
+        );
+        assert_eq!(
+            offer(vec![Tag::Feasible, Tag::Degenerate], centre),
+            None,
+            "an untagged view, the centre {centre:?}, is given a notice"
+        );
+    }
+    // The centre tagged: its own nearest point, or none, whatever the other pixels are.
+    assert_eq!(
+        offer(vec![Tag::Feasible, without], with),
+        Some(Notice {
+            recentre: Some(near)
+        }),
+        "the centre carried out is not offered its own nearest point"
     );
-    let rejected_only = Report {
-        tags: vec![report.tags[1]],
-    };
-    assert_eq!(rejected_only.offer(), vec![Remedy::SwitchToLatent]);
+    assert_eq!(
+        offer(vec![Tag::Feasible], with),
+        Some(Notice {
+            recentre: Some(near)
+        }),
+        "a tagged centre alone is given no notice"
+    );
+    assert_eq!(
+        offer(vec![with], without),
+        Some(Notice { recentre: None }),
+        "a centre with no nearest point is offered a tagged pixel's"
+    );
 }
 
 negative_control!(
@@ -1078,11 +1186,12 @@ negative_control!(
     {
         let chart = invariant_le();
         let u = potential(&chart.decode_at::<Defaults, f64>(0.5, 0.0).ic);
-        let report = validate::<Defaults, _>(&[Pixel {
+        let p = Pixel {
             chart,
             lz: 0.0,
             y: u + 0.5,
-        }]);
+        };
+        let report = validate::<Defaults, _>(&[p], &p);
         assert_eq!(
             report.tags[0],
             Tag::Infeasible {
