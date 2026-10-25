@@ -31,6 +31,7 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 - `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Directions are axis kinds — the unifying rule"
+- `decisions.md` § "R-593 — Lock validation gives one notice, never one per pixel: it offers a re-centre, to the nearest feasible point of the lock's own centre, only when that centre has gone infeasible; otherwise it offers only the switch to the latent chart *(closes RQ-572; changes chart_decoder_contract § "The lock (projective microscope)", "Lock validation on an invariant chart", inverse_encode_contract § "Chart-aware validation", "Lock validation", and REQ-CHART-010)*"
 
 ## Deliverables
 - `crates/engine/src/contract/sim_config.rs`: the lock flag, z_locked anchor and δ excursion fields.
@@ -43,7 +44,7 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 - `cargo test -p engine lock_sliders` — moving a slider while locked is an excursion along that control; unlock → the free state equals the last locked state (REQ-GUI-006).
 - `cargo test -p engine lock_setfields` — the lock action emits SetFields on `SimConfig`'s lock fields and z₀; none are `ViewUI` (REQ-GUI-007).
 - Review (physics) + `cargo test -p engine lock_kernel_uniform_identical` — the kernel uniform struct has no lock field; locked and unlocked renders of the same (z₀, q₁, q₂) through the decode stage are bitwise identical (REQ-SYS-012).
-- `cargo test -p engine lock_infeasible_tilt` — tilt a locked (L_z, E) view past the parabola; infeasible pixels are tagged; lock validation reports and offers re-centre (REQ-CHART-010).
+- `cargo test -p engine lock_infeasible_tilt` — tilt a locked (L_z, E) view past the parabola; infeasible pixels are tagged; lock validation reports one notice, offering a re-centre to the centre's nearest feasible point only where an excursion carried the centre out, else only the switch to the latent chart (REQ-CHART-010; R-593).
 - `cargo test -p engine curve_tilt_requires_lock` — tilting a curve axis without a lock is refused; with a lock the tilt uses γ'(ν₀) (REQ-CHART-007).
 - Definition: the lock's construction (the excursion's storage, the nonlinear chart's window and its re-centring, lock validation's tags and offer, the tangent's pullback) written into chart_decoder_contract § "The lock (projective microscope)" and approved by the physics reviewer (REQ-CHART-089).
 
@@ -51,4 +52,4 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 - Gap G16 applies to "re-centred to the nearest feasible point".
 - Lock is undoable (R-69) through the contract's history; the GUI binding (K, right-click) lands at M8.
 - **R-473 (20 Oct 2026):** REQ-CHART-007 is reworded: the tangent tilt keeps its lock, and the GUI's tilt of a curved chart is the rotation on the chart's own parameters (REQ-CHART-062, TASK-M2-36), which needs none.
-- **RQ-572 (open; fix round 1 of PR #290, gui review 5640556420, G3):** the contract offers one re-centre, "the nearest feasible point"; which one for a view of many tagged pixels is the human's to rule. REQ-CHART-010 carries `rq: RQ-572`; `Report::offer` stays one re-centre per tagged pixel until then.
+- **R-593 (25 Oct 2026; closes RQ-572, filed by fix round 1 of PR #290, gui review 5640556420, G3):** lock validation gives one notice, never one per pixel; it offers a re-centre, to the lock's own centre's nearest feasible point, only when that centre has gone infeasible, and otherwise only the switch to the latent chart. *Was:* "RQ-572 (open …): … which one for a view of many tagged pixels is the human's to rule. REQ-CHART-010 carries `rq: RQ-572`; `Report::offer` stays one re-centre per tagged pixel until then."

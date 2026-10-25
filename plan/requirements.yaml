@@ -1866,15 +1866,16 @@
     section: Chart-aware validation
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-593 — Lock validation gives one notice, never one per pixel: it offers a re-centre, to the nearest feasible point of the lock's own centre, only when that centre has gone infeasible; otherwise it offers only the switch to the latent chart *(closes RQ-572; changes chart_decoder_contract § \"The lock (projective microscope)\", \"Lock validation on an invariant chart\", inverse_encode_contract § \"Chart-aware validation\", \"Lock validation\", and REQ-CHART-010)*"
   verify:
     method: unit test
-    detail: "tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports and offers re-centre"
+    detail: "tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports one notice: a re-centre to the centre's nearest feasible point only where the centre is tagged infeasible (an excursion carried it out), else only the switch to the latent chart (R-593)"
   rulings:
   - R-72
+  - R-593
   milestone: M2
-  rq:
-  - RQ-572
-  note: "The label infeasible pixels carry: REQ-DEC-040 (definition)."
+  note: "The label infeasible pixels carry: REQ-DEC-040 (definition). Which re-centre is offered, the nearest feasible point of the lock's own centre, only where that centre is infeasible, one notice per view: R-593 (closes RQ-572). *Was (verify):* \"tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports and offers re-centre\"."
 - id: REQ-CHART-011
   area: CHART
   statement: "The well-posedness validator must confirm, from each axis's block-touch set, conventions, invariant/curve status and the slice, that all 8 DOF are determined exactly once (annotation axes counting none) and refuse any chart that leaves a block under-determined or double-writes one."

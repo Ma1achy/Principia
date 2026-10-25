@@ -496,10 +496,16 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   constraint it failed and its nearest feasible point (inverse_encode_contract § "The nearest valid point"), or with
   none where that projection would change `L_z`'s class; no pixel is dropped. A pixel whose construction finds no seed
   (R-82) is tagged `DEGENERATE`, its label, never dropped; it is not counted infeasible and is offered no re-centre.
-  Where any pixel is tagged infeasible, the lock offers the re-centre to each tagged pixel's nearest feasible point, a
-  lock there, and the switch to the latent chart, which has no layer-2 constraint. The contract offers one re-centre,
-  "to the nearest feasible point" (inverse_encode_contract § "Lock validation"; REQ-CHART-010); which point that is for
-  a view of many tagged pixels is open (RQ-572).
+  Where any pixel is tagged infeasible, lock validation gives one notice for the view, never one per tagged pixel
+  (R-593). It offers the switch to the latent chart, which has no layer-2 constraint, and a re-centre only where the
+  lock's own centre has gone infeasible: the view's centre pixel, `(s, t) = (½, ½)`, whose IC is `z₀`, read as its
+  entered pair like any other pixel, tagged infeasible with a nearest feasible point. The re-centre is a lock at that
+  point, the one "nearest feasible point" (inverse_encode_contract § "Lock validation"; REQ-CHART-010). Where the centre
+  is feasible, as after a tilt alone at `δ = 0`, the centre being the anchor, or is tagged with no nearest point, or
+  `DEGENERATE`, only the switch is offered. The other tagged pixels' nearest points stay in their tags and are not
+  offered. Where no pixel is tagged infeasible there is no notice. *Was:* "the lock offers the re-centre to each tagged
+  pixel's nearest feasible point, a lock there, and the switch to the latent chart … which point that is for a view of
+  many tagged pixels is open (RQ-572)."
 - **A curve's tangent at the lock.** The tangent tilt reads `γ′(ν₀)` pulled back to the latent controls through the
   selected links, at the embed's controls `z(ν₀)`: `dz_α = dα/f_α′(z_α)` and `dz_β = dβ/f_β′(z_β)`,
   `f′ = exp(log_det)`; the momenta's 0, the curve being a rest start; and the mass controls' the derivative of the mass
