@@ -29,6 +29,7 @@ The engine↔GUI membrane has exactly three crossings for engine state, in v1 we
 - `crates/engine/src/wasm/input.rs` — the SAB and postMessage backends behind one trait, boot selection.
 - `web/src/{input,snapshot,inspector}.ts`; `crates/engine/src/wasm/inspector_entry.rs` — the second wasm context running TASK-M8-09's worker.
 - Tests: `sab_coalesce`, `boot_selects_backend`, `snapshot_rate`, `transports_equal`.
+- `cargo xtask lint membrane` (`xtask/src/lint_membrane.rs`, R-619's CI check of both lists), its control fixtures in `cargo test -p xtask lint_membrane` (qa review 5644656634 of PR #293, Q3, applied per R-369).
 
 ## Acceptance tests
 - `npm --prefix web test -- sab_coalesce` — burst of pointermoves produces one SAB state, not queued messages (REQ-SYS-040).
@@ -37,7 +38,7 @@ The engine↔GUI membrane has exactly three crossings for engine state, in v1 we
 - `npm --prefix web test -- transports_equal` — both transports deliver the same edit sequence; snapshot rate is capped (REQ-SYS-050).
 - Review checklist (code reviewer) — no wasm-bindgen object handle is exported to JS; snapshot payload size is GUI-sized (REQ-SYS-051).
 - Review checklist (code reviewer) of the wasm-bindgen layer — review the wasm-bindgen layer: exported functions take/return serialised data only; no exported struct with callable methods reaches the scheduler or other internals (REQ-SYS-055).
-- `cargo xtask check` (membrane crossings) — REQ-SYS-059's verify: each wasm module's imports and exports, and the messages between the two contexts, checked against the three crossings and the platform list; controls: an extra export or message carrying engine state, a platform crossing missing from the list, and an engine-sized message, each fail the check (REQ-SYS-059; R-619). *Was:* "Review checklist (code reviewer) — the wasm exports are set_field, snapshot and the one-time canvas init (REQ-SYS-059)."
+- `cargo xtask lint membrane` and `cargo test -p xtask lint_membrane` — REQ-SYS-059's verify: each wasm module's imports and exports, and the messages between the two contexts, checked against the three crossings and the platform list, the lint passing on the build; controls, as xtask fixtures: an extra export or message carrying engine state, a platform crossing missing from the list, and an engine-sized message, each fail the lint, naming the crossing (REQ-SYS-059; R-619; qa review 5644656634 of PR #293, Q3: xtask has no `check` subcommand; *was:* "`cargo xtask check` (membrane crossings) — … each fail the check"). *Was:* "Review checklist (code reviewer) — the wasm exports are set_field, snapshot and the one-time canvas init (REQ-SYS-059)."
 - Review checklist (the reviewers) — systems_architecture §3's row 14 states how `prin profile query --live` reaches the page's profiler in v1 web, as plain data (REQ-SYS-091).
 - Review checklist (perf reviewer) — inspector runs in a separate worker; main thread never blocks (REQ-SYS-044).
 
