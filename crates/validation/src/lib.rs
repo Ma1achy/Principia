@@ -70,6 +70,10 @@ pub use ledger::constants::{
     BURRAU_THETA_LZ_FRACTION, BURRAU_THETA_LZ_K, BURRAU_THETA_MAX, BURRAU_THETA_MIN,
 };
 
+/// The tunable link parameters' declarations and the evaluator of the registry's trees (R-481; TASK-M2-41), for the
+/// kernel crate's tests, which test the generated links at each declared range, as `r_pole` is.
+pub use ledger::links::{eval, range_values, registered, tunables, Fl, Tunable, Values};
+
 /// The payload's pair-id map (R-22; payload §2), for the kernel crate's tests, as `r_pole` is.
 pub use ledger::payload::pair_bodies;
 

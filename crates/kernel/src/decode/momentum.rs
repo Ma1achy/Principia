@@ -23,7 +23,7 @@
 //! tag tested. No guard: `|qₖ| ≤ q_max` is the link's codomain, reached at saturation (R-417).
 
 use crate::decode::mass::Masses;
-use crate::generated::links::{Link, LinkReal, Selection};
+use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 
 /// The momentum block's output.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -41,10 +41,17 @@ pub struct Momentum<R> {
 /// `(q₀, q₁, q₂, q₃)` from `z[2:6]`, each through the selection's link for its control.
 #[inline]
 pub fn controls<S: Selection, R: LinkReal>(z_mom: [R; 4]) -> [R; 4] {
-    let [q0] = <S::Q0Link as Link<1, 1>>::forward([z_mom[0]]);
-    let [q1] = <S::Q1Link as Link<1, 1>>::forward([z_mom[1]]);
-    let [q2] = <S::Q2Link as Link<1, 1>>::forward([z_mom[2]]);
-    let [q3] = <S::Q3Link as Link<1, 1>>::forward([z_mom[3]]);
+    controls_at::<S, R>(z_mom, &LinkParams::DEFAULT)
+}
+
+/// [`controls`] at the tunable parameters `p`: each link reads the active `q_max`, so `|qₖ| ≤ q_max` at its active
+/// value (R-481 A2, G4; REQ-DEC-048).
+#[inline]
+pub fn controls_at<S: Selection, R: LinkReal>(z_mom: [R; 4], p: &LinkParams<R>) -> [R; 4] {
+    let [q0] = <S::Q0Link as Link<1, 1>>::forward_at([z_mom[0]], p);
+    let [q1] = <S::Q1Link as Link<1, 1>>::forward_at([z_mom[1]], p);
+    let [q2] = <S::Q2Link as Link<1, 1>>::forward_at([z_mom[2]], p);
+    let [q3] = <S::Q3Link as Link<1, 1>>::forward_at([z_mom[3]], p);
     [q0, q1, q2, q3]
 }
 
@@ -69,7 +76,17 @@ pub fn to_particles<R: LinkReal>(
 /// `D_mom`, free: the momentum controls `z[2:6]`, with the mass block's output, to the particle momenta.
 #[inline]
 pub fn decode<S: Selection, R: LinkReal>(z_mom: [R; 4], masses: &Masses<R>) -> Momentum<R> {
-    let q = controls::<S, R>(z_mom);
+    decode_at::<S, R>(z_mom, masses, &LinkParams::DEFAULT)
+}
+
+/// [`decode`] at the tunable parameters `p` ([`controls_at`]).
+#[inline]
+pub fn decode_at<S: Selection, R: LinkReal>(
+    z_mom: [R; 4],
+    masses: &Masses<R>,
+    p: &LinkParams<R>,
+) -> Momentum<R> {
+    let q = controls_at::<S, R>(z_mom, p);
     let p_rho = [q[0], q[1]];
     let p_lambda = [q[2], q[3]];
     Momentum {

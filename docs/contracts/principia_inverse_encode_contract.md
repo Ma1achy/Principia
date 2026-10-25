@@ -467,7 +467,10 @@ no real value there. So projecting it to `t = 0` changes no class, and the proje
 
 **Lock validation.** A clicked pixel is valid by construction, but a tilt can carry the lock's neighbourhood
 into an infeasible region. Detect it, then re-centre to the nearest feasible point or switch to a chart where
-the lock is valid.
+the lock is valid. The nearest feasible point is the lock's own centre's, and the re-centre is offered only when that
+centre has gone infeasible; otherwise only the switch to the latent chart is offered, and the view gets one notice,
+never one per pixel (R-593; chart_decoder_contract § "The lock (projective microscope)", "Lock validation on an
+invariant chart").
 
 **Implementation.** Each chart type registers `validate(u, v) -> ValidationResult`, a CPU-side check: the GPU
 never sees an invalid IC. The quadtree uses the same function to skip quads entirely outside the feasible

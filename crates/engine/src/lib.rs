@@ -133,6 +133,11 @@ pub mod nav;
 // TASK-M2-19): documented in the module itself, whose links resolve there.
 pub mod lookup;
 
+// The lock, CPU-side chart construction held in `SimConfig`: set, excursion, snap-back, unlock, lock validation and the
+// curve tangent tilt it allows (chart_decoder_contract Part 4, "The lock"; TASK-M2-23): documented in the module itself,
+// whose links resolve there.
+pub mod lock;
+
 // The kernel's decode stage dispatched natively, and its CPU-f64 counterpart `decode_only` (TASK-M2-06): documented in
 // the module itself, whose links resolve there.
 pub mod decode_dispatch;

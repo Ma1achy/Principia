@@ -1866,13 +1866,16 @@
     section: Chart-aware validation
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-593 — Lock validation gives one notice, never one per pixel: it offers a re-centre, to the nearest feasible point of the lock's own centre, only when that centre has gone infeasible; otherwise it offers only the switch to the latent chart *(closes RQ-572; changes chart_decoder_contract § \"The lock (projective microscope)\", \"Lock validation on an invariant chart\", inverse_encode_contract § \"Chart-aware validation\", \"Lock validation\", and REQ-CHART-010)*"
   verify:
     method: unit test
-    detail: "tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports and offers re-centre"
+    detail: "tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports one notice: a re-centre to the centre's nearest feasible point only where the centre is tagged infeasible (an excursion carried it out), else only the switch to the latent chart (R-593)"
   rulings:
   - R-72
+  - R-593
   milestone: M2
-  note: "The label infeasible pixels carry: REQ-DEC-040 (definition)."
+  note: "The label infeasible pixels carry: REQ-DEC-040 (definition). Which re-centre is offered, the nearest feasible point of the lock's own centre, only where that centre is infeasible, one notice per view: R-593 (closes RQ-572). *Was (verify):* \"tilt a locked (L_z, E) view past the parabola; infeasible pixels tagged; lock validation reports and offers re-centre\"."
 - id: REQ-CHART-011
   area: CHART
   statement: "The well-posedness validator must confirm, from each axis's block-touch set, conventions, invariant/curve status and the slice, that all 8 DOF are determined exactly once (annotation axes counting none) and refuse any chart that leaves a block under-determined or double-writes one."
@@ -3165,6 +3168,8 @@
   - R-481
   - R-482
   milestone: M4
+  rq:
+  - RQ-574
   note: R-482 C3 (20 Oct 2026).
 - id: REQ-CHART-075
   area: CHART
@@ -3458,6 +3463,21 @@
   - R-570
   milestone: M8
   note: "R-570's test names the tolerance and the corpus states none (R-71). Closed by TASK-M8-57, with REQ-CHART-087. Fix round 1 of PR #279 (physics review 5624655553, P2; applied per R-369): measured on the saturated views only. *Was (statement):* \"The saturation tolerance of R-570's far_field_saturates (\"the decoded states of adjacent pixels agree to within the saturation tolerance\"), the largest difference allowed between the states decoded at adjacent pixels at |z| = 10⁴, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"the proposal states the tolerance with the measured adjacent-pixel differences of each state component at |z| = 10⁴ and near the origin, at f32 and f64, on REQ-CHART-087's views; physics reviewer approves; recorded in decisions.md\""
+- id: REQ-CHART-089
+  area: CHART
+  kind: definition
+  statement: "The lock's construction must be defined in chart_decoder_contract § \"The lock (projective microscope)\" by the task that needs it and reviewed by the physics reviewer before merge: how the excursion δ is held beside the stored anchor, the window on a nonlinear chart and how setting the lock re-centres it through the inverse-encode path, what lock validation on an invariant chart tags and offers, and how a curve's tangent γ′(ν₀) is pulled back to the latent controls for the tangent tilt at a lock."
+  source:
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The lock (projective microscope)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "the contract defines the excursion's storage, the nonlinear chart's window and its re-centring, lock validation's tags and offer and the tangent's pullback; physics reviewer approved; `cargo test -p engine lock_set`, `lock_infeasible_tilt` and `curve_tilt_requires_lock` exercise each"
+  rulings:
+  - R-72
+  milestone: M2
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -33180,7 +33200,7 @@
     section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
   verify:
     method: unit test
-    detail: "export a tilted view with a non-default link and a non-default link parameter, reload, assert bitwise-identical z per pixel and identical link ids and parameter values; likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart; control (C6): the same export with the parameter stripped fails to reproduce"
+    detail: "export a tilted view with a non-default link and a non-default link parameter, reload, assert bitwise-identical z per pixel and identical link ids and parameter values; likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart; control (C6): the same export with the parameter stripped fails to reproduce; and `cargo test -p engine lock_window_undo`: once SimConfig's chart group holds a nonlinear chart's window (`engine::lock::Window`), `engine::lock::set_on_chart`'s window SetField joins the lock's command under the same history key, and one undo restores z₀, the lock group and the window (R-69; gui_state_contract §2, R-466; gui review 5642898583 of PR #290, G5, applied per R-369)"
   rulings:
   - R-471
   - R-473
@@ -33189,7 +33209,7 @@
   - R-482
   - R-483
   milestone: M2
-  note: "R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026). R-482 C6, R-483 H2: the ViewState record is SimConfig's serialisation, not a copy (20 Oct 2026)."
+  note: "R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026). R-482 C6, R-483 H2: the ViewState record is SimConfig's serialisation, not a copy (20 Oct 2026). A nonlinear chart's view window (`engine::lock::Window`, its centre and half-widths) is chart construction among \"chart id and params\" and is held in SimConfig's chart group by TASK-M2-21 (chart_decoder_contract § \"The lock (projective microscope)\", \"The lock's construction, defined\"); once it is, `engine::lock::set_on_chart`'s re-centred window joins the lock's one command as a SetField, so one undo restores it with z₀ and the lock group (R-69; gui_state_contract §2, R-466). Until then TASK-M2-23's lock returns the window beside its edits (code review 5642862326 of PR #290, C4; applied per R-369)."
 - id: REQ-SYS-012
   area: SYS
   statement: "The kernel must receive only (z₀, q₁, q₂, chart id + params), identical in free and locked mode and before/after any tilt, slice or excursion; the lock, δ memory, ghost marks and direction library must live CPU-side, with no locked flag or second kernel code path."

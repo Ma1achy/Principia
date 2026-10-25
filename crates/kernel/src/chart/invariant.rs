@@ -72,7 +72,8 @@ use crate::decode::invariant::{self as construction, infeasible, ExactSign, Outc
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic};
-use crate::generated::links::{LinkReal, Selection};
+use crate::generated::constants::ChartConstants;
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
@@ -287,6 +288,16 @@ impl<P: Copy> Chart for InvariantLE<P> {
         decode::<S, R, Self>(self, u, v).0
     }
 
+    /// [`decode_params()`] at `p`, the outcome dropped, as [`Chart::decode`].
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode_params::<S, R, Self>(self, u, v, p).0
+    }
+
     /// Layer 2's parabola `|L_z| ≤ √(2I(E − U))` (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         check(u, v, Constraint::LzEParabola, Constraint::LzEParabola)
@@ -327,6 +338,16 @@ impl<P: Copy> Chart for InvariantLK<P> {
         decode::<S, R, Self>(self, u, v).0
     }
 
+    /// [`decode_params()`] at `p`, the outcome dropped, as [`Chart::decode`].
+    #[inline]
+    fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode_params::<S, R, Self>(self, u, v, p).0
+    }
+
     /// Layer 2's `K ≥ 0` and `K ≥ L_z²/2I` (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         check(u, v, Constraint::KNonNegative, Constraint::KAboveLzBound)
@@ -335,7 +356,8 @@ impl<P: Copy> Chart for InvariantLK<P> {
 
 /// The invariant charts' decoder under the selection `S`: the shared mass and configuration blocks, the construction
 /// in place of the free momentum block, and the shared derived invariants. The configuration block keeps the `z_α` it
-/// decoded, which the construction's seed rule reads.
+/// decoded, which the construction's seed rule reads. The mass block reads the tunable parameters `params`, the active
+/// `μ_max` (`crate::chart`'s note; R-481 G4).
 pub struct InvariantBlocks<S, R> {
     /// The target `L_z`.
     lz: R,
@@ -345,18 +367,29 @@ pub struct InvariantBlocks<S, R> {
     z_alpha: R,
     /// What the construction did.
     outcome: Outcome,
+    /// The tunable parameters the mass block reads.
+    params: LinkParams<R>,
     links: PhantomData<S>,
 }
 
-impl<S, R: Float> InvariantBlocks<S, R> {
-    /// The decoder of the targets `lz`, `k_star`.
+impl<S, R: Float + ChartConstants> InvariantBlocks<S, R> {
+    /// The decoder of the targets `lz`, `k_star`, at the default parameters.
     #[inline]
     pub fn new(lz: R, k_star: R) -> Self {
+        Self::new_at(lz, k_star, LinkParams::DEFAULT)
+    }
+}
+
+impl<S, R: Float> InvariantBlocks<S, R> {
+    /// The decoder of the targets `lz`, `k_star` at the tunable parameters `params`.
+    #[inline]
+    pub fn new_at(lz: R, k_star: R, params: LinkParams<R>) -> Self {
         InvariantBlocks {
             lz,
             k_star,
             z_alpha: R::zero(),
             outcome: Outcome::Feasible,
+            params,
             links: PhantomData,
         }
     }
@@ -385,7 +418,7 @@ pub(crate) fn jacobi<R: LinkReal>(masses: &Masses<R>, p: [[R; 2]; 3]) -> Momentu
 impl<S: Selection, R: LinkReal + PayloadReal + ExactSign> Blocks<R> for InvariantBlocks<S, R> {
     #[inline]
     fn mass(&mut self, z_mass: [R; 2]) -> Masses<R> {
-        mass::decode::<S, R>(z_mass)
+        mass::decode_at::<S, R>(z_mass, &self.params)
     }
 
     #[inline]
@@ -424,9 +457,21 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
     C: InvariantChart,
 {
+    decode_params::<S, R, C>(chart, u, v, &LinkParams::DEFAULT)
+}
+
+/// [`decode()`] at the tunable parameters `p`: the frozen masses through the mass link at the active `μ_max`
+/// (`crate::chart`'s note).
+#[inline]
+pub fn decode_params<S, R, C>(chart: &C, u: R, v: R, p: &LinkParams<R>) -> (Decoded<R>, Outcome)
+where
+    S: Selection,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
+    C: InvariantChart,
+{
     let inv = chart.invariant();
     let t = inv.targets(u, v);
-    let mut blocks = InvariantBlocks::<S, R>::new(t.lz, t.k);
+    let mut blocks = InvariantBlocks::<S, R>::new_at(t.lz, t.k, *p);
     let decoded = decode::decode_with(&mut blocks, &chart.map(u, v).z);
     (decoded, blocks.outcome())
 }

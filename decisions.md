@@ -25787,3 +25787,38 @@ set to 1, so the rescale carries the mass and `G` factors with it.
 R-592 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-019 and REQ-VAL-120 (statement, rulings, source, rq, verify, note).
+
+## R-593 — Lock validation gives one notice, never one per pixel: it offers a re-centre, to the nearest feasible point of the lock's own centre, only when that centre has gone infeasible; otherwise it offers only the switch to the latent chart *(closes RQ-572; changes chart_decoder_contract § "The lock (projective microscope)", "Lock validation on an invariant chart", inverse_encode_contract § "Chart-aware validation", "Lock validation", and REQ-CHART-010)*
+
+*25 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)",
+"The lock's construction, defined", "Lock validation on an invariant chart" (its open wording kept as a *Was*),
+`docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "Lock validation",
+`docs/archive/review_queue/M0.md` (RQ-572, moved with its ruling), REQ-CHART-010 (reqio: verify, rulings, source, rq,
+note), TASK-M2-23 (its acceptance line and a note), `crates/engine/src/lock.rs` and `plan/rule_groups.yaml`; built by
+TASK-M2-23 (PR #290, whose fix round 1 filed RQ-572)*
+
+The human's message, 25 Oct 2026, its ruling, verbatim:
+
+> RQ-572: (a). Offer a re-centre only when the lock's own centre has gone infeasible. Otherwise offer only "switch to the latent chart". Never offer one notice per pixel.
+
+*What it decides:* RQ-572's option (a). Lock validation still tags every pixel of the locked view that a tilt or an
+excursion carries outside an invariant chart's feasible region, each with the constraint it failed and its own nearest
+feasible point, none dropped (chart_decoder_contract § "The lock (projective microscope)"); what changes is the offer.
+Where any pixel is tagged infeasible, lock validation offers one notice for the view, never one per tagged pixel. The
+notice offers a re-centre only where the lock's own centre, the view's centre pixel `(s, t) = (½, ½)`, whose IC is
+`z₀ = z_locked + δ`, is itself tagged infeasible with a nearest feasible point: the re-centre is a lock at that point,
+the "nearest feasible point" of inverse_encode_contract § "Lock validation", in that section's metric. Otherwise, the
+centre feasible, or tagged with no nearest point that keeps `L_z`'s class, or `DEGENERATE`, the notice offers only the
+switch to the latent chart. The switch is offered in every notice. Where no pixel is tagged infeasible there is no
+notice.
+
+So after a tilt alone, at `δ = 0`, the centre is the anchor, feasible by construction, and only the switch is offered:
+re-centring the lock to itself would change nothing. An excursion, or a tilt about an off-centre pin, can carry the
+centre out, and then its nearest feasible point is offered. The other tagged pixels' nearest points stay in their tags,
+for the view's labels; none is offered as a re-centre, and the GUI never chooses among them (it holds no sim logic,
+gui_state_contract §1, "The one-way dependency rule"). Options (b) and (c), one tagged pixel chosen by its place in the
+view or by its projection, and (d), one re-centre per tagged pixel shown as one notice, are not taken.
+
+R-593 is in the "physics" group of `plan/rule_groups.yaml`, with R-591.
+
+Changes REQ-CHART-010 (verify, rulings, source, rq, note).

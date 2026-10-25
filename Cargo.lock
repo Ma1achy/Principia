@@ -1175,6 +1175,7 @@ dependencies = [
  "ledger",
  "naga",
  "pollster",
+ "proptest",
  "render",
  "ryu",
  "serde",

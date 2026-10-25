@@ -39,7 +39,7 @@ pub use report::Report;
 
 use crate::canon::{canonicalise, Canonical};
 use crate::decode::{Ic, Latent};
-use crate::generated::links::{LinkReal, Selection};
+use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::real::IeeeBits;
 
 /// An encoded state: `z`, `C`'s canonical state, the block inverses' intermediates and the discard report.
@@ -63,8 +63,20 @@ where
     S::MassLink: SimplexClamp,
     R: LinkReal + IeeeBits,
 {
+    encode_at::<S, R>(ic, &LinkParams::DEFAULT)
+}
+
+/// [`encode`] at the tunable parameters `p`: the block inverses and their clamp tests, encode's layer 1, at the active
+/// `μ_max` and `q_max` (R-481 A2, G4; REQ-DEC-048).
+#[inline]
+pub fn encode_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Encoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + IeeeBits,
+{
     let canonical = canonicalise(ic);
-    let blocks = blocks::invert::<S, R>(&canonical.ic);
+    let blocks = blocks::invert_at::<S, R>(&canonical.ic, p);
     Encoded {
         z: Latent::new(blocks.z),
         canonical,

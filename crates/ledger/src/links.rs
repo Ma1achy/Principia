@@ -15,13 +15,24 @@
 //!
 //! **The chart constants** (REQ-DEC-009) are register entries ([`crate::constants`]), read here by name
 //! ([`CHART_CONSTANTS`]); an entry's ε clamps and parameters are chart constants, and its trees name them.
+//!
+//! **Tunable parameters** (R-481 ⚑; §3.9, "Tunable parameters"). A table beside the entries ([`tunables`]) declares
+//! each tunable parameter: the entry, the parameter (a chart constant the entry declares and reads), its default (that
+//! constant's value), its closed allowed range and its citation. [`check`] refuses a range under which the entry breaks
+//! any of Part 2.5's three hard requirements, at its ends and a seeded interior ([`admissible`]), and an entry whose
+//! forward leaves its codomain at any value (R-482 C1). The entries' members are unchanged, so their hashed bytes stand;
+//! the declarations are hashed as a block of their own ([`crate::version`]).
+
+pub mod admissible;
+
+pub use admissible::{controls, eval, range_values, Fl, Values};
 
 use std::f64::consts::{FRAC_PI_2, PI};
 use std::sync::OnceLock;
 
 use crate::constants::{
-    ConstantBuilder, ALPHA_MIN, DELTA_LAMBDA, EPS_M01, EPS_MU, EPS_Q, EPS_W, EPS_Z, MU_MAX, Q_MAX,
-    TANH_SAT,
+    Citation, ConstantBuilder, ALPHA_MIN, DELTA_LAMBDA, EPS_M01, EPS_MU, EPS_Q, EPS_W, EPS_Z,
+    MU_MAX, Q_MAX, TANH_SAT,
 };
 
 /// A link's constraint, the block codomain it maps onto (§3.9's first column).
@@ -225,7 +236,19 @@ impl Codomain {
 
     /// The closed bounds of an interval codomain, from the chart constants; `None` for the simplex and the lines.
     pub fn range(self) -> Option<(f64, f64)> {
-        self.range_at(ALPHA_MIN.number(), Q_MAX.number())
+        self.range_with(&[])
+    }
+
+    /// [`Codomain::range`] at the active values `active`, each a tunable parameter's value by name, the chart constants
+    /// where `active` names none: the momenta's bounds are `±q_max` at the active `q_max` (R-481 A2, G4; REQ-DEC-048).
+    pub fn range_with(self, active: &[Param]) -> Option<(f64, f64)> {
+        let value = |k: &ConstantBuilder| {
+            active
+                .iter()
+                .find(|p| p.name == k.name)
+                .map_or(k.number(), |p| p.value)
+        };
+        self.range_at(value(&ALPHA_MIN), value(&Q_MAX))
     }
 
     /// [`Codomain::range`] at the chart constants `alpha_min` and `q_max`.
@@ -739,6 +762,99 @@ pub fn builders() -> &'static [LinkBuilder] {
     })
 }
 
+// ── The tunable parameters ──────────────────────────────────────────────────────────────────────────────────────
+
+/// A tunable parameter's declaration (R-481 A1, G1; §3.9, "Tunable parameters"): one row of the table beside the
+/// entries.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Tunable {
+    /// The entry's name.
+    pub entry: &'static str,
+    /// The parameter's name: a chart constant the entry declares among its parameters and its trees read.
+    pub param: &'static str,
+    /// Its default: that chart constant's register value.
+    pub default: f64,
+    /// Its allowed range's lower end, closed.
+    pub lo: f64,
+    /// Its allowed range's upper end, closed.
+    pub hi: f64,
+    /// The calibration that sets the range (R-481 G2); not hashed, as a constant's citation is not (R-251).
+    pub citation: Citation,
+}
+
+/// The table of tunable parameters (§3.9): `softmax_tanh`'s `mu_max` and the momentum links' `q_max`, each at its
+/// chart constant's value, R-10's `μ_max = 5` and `q_max = 2`, now their defaults (R-481 A2). `alpha_min` is no row
+/// (R-21; R-518). Ledger data, the registry's declarations (REQ-SYS-082); each range is REQ-GEN-038's proposal (R-71),
+/// provisional until the M2 gate's confirmation: `mu_max ∈ [1, 10]`, `q_max ∈ [0.5, 8]` (TASK-M2-41's evidence, in its
+/// PR).
+pub fn tunables() -> &'static [Tunable] {
+    static TUNABLES: OnceLock<Vec<Tunable>> = OnceLock::new();
+    TUNABLES.get_or_init(|| {
+        let row = |entry, k: &ConstantBuilder, lo, hi| Tunable {
+            entry,
+            param: k.name,
+            default: k.number(),
+            lo,
+            hi,
+            citation: Citation::Calibration("REQ-GEN-038"),
+        };
+        vec![
+            row("softmax_tanh", &MU_MAX, 1.0, 10.0),
+            row("sigmoid_q", &Q_MAX, 0.5, 8.0),
+            row("tanh_q", &Q_MAX, 0.5, 8.0),
+            row("softsign_q", &Q_MAX, 0.5, 8.0),
+        ]
+    })
+}
+
+/// The declarations' problems against the built registry `built` (§3.9): a row naming no entry, or a parameter its
+/// entry does not declare among its parameters, a default that is not that chart constant's value, a range that is
+/// not finite with `lo ≤ default ≤ hi`, two rows of one entry and parameter, and a row on `alpha_min`, which stays
+/// fixed (R-518).
+fn tunable_problems(built: &[(Link, Codomain)], tunables: &[Tunable]) -> Vec<String> {
+    let mut bad = Vec::new();
+    for (i, t) in tunables.iter().enumerate() {
+        let name = format!("tunable `{}` of link `{}`", t.param, t.entry);
+        if tunables[..i]
+            .iter()
+            .any(|u| u.entry == t.entry && u.param == t.param)
+        {
+            bad.push(format!(
+                "{name} is declared twice (dd_generation_root §3.9)"
+            ));
+        }
+        if t.param == ALPHA_MIN.name {
+            bad.push(format!(
+                "{name}: `alpha_min` stays fixed, no tunable parameter (R-518)"
+            ));
+        }
+        match built.iter().find(|(l, _)| l.name == t.entry) {
+            None => bad.push(format!(
+                "{name} names no entry of the registry (dd_generation_root §3.9)"
+            )),
+            Some((l, _)) => match l.params.iter().find(|p| p.name == t.param) {
+                None => bad.push(format!(
+                    "{name}: the entry declares no parameter `{}` (dd_generation_root §3.9)",
+                    t.param
+                )),
+                Some(p) if p.value.to_bits() != t.default.to_bits() => bad.push(format!(
+                    "{name}: its default {} is not the chart constant's value {} (R-481 G1)",
+                    t.default, p.value
+                )),
+                Some(_) => {}
+            },
+        }
+        let finite = t.lo.is_finite() && t.hi.is_finite();
+        if !(finite && t.lo <= t.default && t.default <= t.hi) {
+            bad.push(format!(
+                "{name}: its range [{}, {}] is not finite with lo ≤ default {} ≤ hi (R-481 G1)",
+                t.lo, t.hi, t.default
+            ));
+        }
+    }
+    bad
+}
+
 // ── The checks ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each `input(i)` index `e` reads, into `out`.
@@ -823,7 +939,22 @@ fn entry_problems(l: &Link, codomain: Codomain) -> Vec<String> {
 /// count or input index its codomain does not have, a clamp or parameter that is not the chart constant of its name
 /// and value or that no tree reads, a read of one it does not declare, a row of [`rows`] with an entry missing, a slot whose default is not an entry of its
 /// codomain, and a slot whose codomain has fewer than two entries with differing sampling notes (REQ-GEN-014).
+///
+/// It checks the declarations of [`tunables`] and Part 2.5's three requirements too ([`check_with`]).
 pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<String>> {
+    check_with(builders, &slots(), tunables())
+}
+
+/// [`check`] of the registry `builders` with the block controls `slots` and the declarations `tunables`: besides the
+/// structural problems, a declaration `tunable_problems` refuses, an entry whose forward leaves its codomain at its
+/// declared values, and a declared range under which an entry breaks any of Part 2.5's three requirements at its ends
+/// or seeded interior, at f32 or f64, each line naming the entry, the parameter, its value and the requirement
+/// (R-481 G3; R-482 C1, C4).
+pub fn check_with(
+    builders: &[LinkBuilder],
+    slots: &[Slot],
+    tunables: &[Tunable],
+) -> Result<Vec<(Link, Codomain)>, Vec<String>> {
     let mut bad = Vec::new();
     let mut built = Vec::new();
     for (i, b) in builders.iter().enumerate() {
@@ -849,7 +980,7 @@ pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<Stri
             ));
         }
     }
-    for slot in slots() {
+    for slot in slots {
         if !named(slot.default).is_some_and(|(_, c)| *c == slot.codomain) {
             bad.push(format!(
                 "slot `{}`: its default `{}` is not an entry onto `{}` (REQ-GEN-013)",
@@ -873,6 +1004,8 @@ pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<Stri
             ));
         }
     }
+    bad.extend(tunable_problems(&built, tunables));
+    bad.extend(admissible::problems(&built, tunables));
     if bad.is_empty() {
         Ok(built)
     } else {
