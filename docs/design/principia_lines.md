@@ -85,7 +85,6 @@ LineStyle {                      // a named entry in the library
   outline: Option<{ colour, width }>      // drawn under the stroke, following the same dashes
   ink:     Fixed | Smart { radius, hysteresis, mode: LightDark | KeepHue }
   label:   LabelStyle
-  units:   ScreenPx | PrintPt
   through_medium: bool            // R-487: drawn before the Print graph, through the medium; default false, drawn over
 }
 
@@ -103,8 +102,8 @@ ContourSet {
 }
 
 Trace {
-  kind:    Hover | Pinned | Kept(id),
-  ic:      the decoded IC (chart, uv, sim key),
+  kind:    Hover | Pinned | Kept(id) | Marked(id),      // Marked: an IC marked in the figure (R-586)
+  ic:      IcRef = OnChart { chart, uv } | Built(IcRecord),   // with the sim key (R-586; principia_ic_save.md §3.5)
   line:    LineRef,
   length:  ToPlayhead | Window(t0, t1) | LastDt(dt),
   fade:    Option<{ floor }>,             // opacity per vertex from distance to the slice
@@ -135,6 +134,11 @@ Axes {
 Lines { styles: Library, contours: [ContourSet], traces: [Trace], axes: Axes }   // part of the exported view state
 ```
 
+*`LineStyle` and `Trace` as R-583 and R-586 amend them:* `LineStyle` has no `units` field, since every length is in
+base px (R-583; `principia_export_details.md` §3.3); `Trace.kind` gains `Marked(id)` and `Trace.ic` is an `IcRef`, so a
+built, off-slice IC can be held (R-586). *Was:* "`units:   ScreenPx | PrintPt`", "`kind:    Hover | Pinned | Kept(id),`"
+and "`ic:      the decoded IC (chart, uv, sim key),`".
+
 *`Trace` as R-538 amends it (§8):* `markers` is the icon set and its toggles, `join_jumps` is new and the head marker
 no longer sits under `tail`, since its default is on with the tail off. *Was:* "`markers: bool, // start ●, collision ×,
 escape →, horizon ▪`" and "`tail: Option<{ dt, ghost_rest: bool, head_marker: bool }>, // for the two animated modes`".
@@ -148,7 +152,11 @@ AutoFromPalette | AlongTime(Ramp),`".
 - Editing a style updates every line that uses it.
 - The library ships with **Screen contour**, **Dashed secondary**, **Trace**, **Grid** and **Print**, and the user can
   add, duplicate and rename styles.
-- `PrintPt` sizes a style in points for exports, where screen pixels mean nothing.
+- **Every length is in base px (R-583):** a stroke's, a dash's, an outline's, a label's size, offset, halo and spacing,
+  an icon's, an arrow's and a tick's, and smart ink's radius; rendered at `output_width / base_width` of its value, 1 on
+  screen (`principia_export_details.md` §3.3). The style editor shows a length in pt beside it when the export has a
+  physical size, as a readout. *Was:* "`PrintPt` sizes a style in points for exports, where screen pixels mean
+  nothing." (stale value, replaced by R-583).
 
 ---
 
@@ -218,7 +226,8 @@ styling, so that dashes and labels run continuously along the whole line.
   outline stays aligned with its stroke.
 - **Opacity per vertex** (traces): consecutive vertices of equal ink and quantised opacity are drawn as one run, which
   keeps dashes continuous.
-- **Units:** screen px on screen, pt in a print export.
+- **Units:** base px, scaled by `output_width / base_width`, 1 on screen; label placement runs at base size and is
+  then scaled, so a `k×` export places the same labels (R-583). *Was:* "screen px on screen, pt in a print export."
 
 ---
 
