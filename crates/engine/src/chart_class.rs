@@ -12,8 +12,16 @@
 //! **Past `[0,1]²`** the axes' extension types act first (chart_decoder_contract Part 3, R-407), and a bounded axis
 //! past its edge hatches the point: that is TASK-M8-05's (REQ-CHART-054), so
 //! [`forbidden`](crate::chart_class::forbidden) classifies no point outside the square and returns `None` there.
+//!
+//! **The active values** (chart_reference §0.1, "every chart reads the active value"; R-481 G4; REQ-DEC-048's
+//! host-side checks): the hatch reads the chart's check at the tunable link parameters `p`
+//! ([`forbidden_params`](crate::chart_class::forbidden_params), [`fill_params`](crate::chart_class::fill_params),
+//! through [`Chart::validate_params`](kernel::chart::Chart::validate_params)), so a momentum axis is hatched past the
+//! active `q_max` and not inside it; [`forbidden`](crate::chart_class::forbidden) and
+//! [`fill`](crate::chart_class::fill) are these at `LinkParams::DEFAULT`.
 
 use kernel::chart::{Chart, ChartOut, ValidationResult};
+use kernel::generated::links::LinkParams;
 
 use crate::synthetic::Synthetic;
 
@@ -28,11 +36,21 @@ fn evaluated(out: &ChartOut<f64>) -> bool {
 /// `validate` rejects it (any result but `Valid`: layer 2, or layer 3 on its decoded state), or `Φ` fails to evaluate
 /// there. `None` outside `[0,1]²`, where the extension types decide first (TASK-M8-05).
 pub fn forbidden<C: Chart<Param = f64>>(chart: &C, u: f64, v: f64) -> Option<bool> {
+    forbidden_params(chart, u, v, &LinkParams::DEFAULT)
+}
+
+/// [`forbidden`] at the tunable parameters `p`: the chart's check at the active values ([`Chart::validate_params`]).
+pub fn forbidden_params<C: Chart<Param = f64>>(
+    chart: &C,
+    u: f64,
+    v: f64,
+    p: &LinkParams<f64>,
+) -> Option<bool> {
     let inside = |x: f64| (0.0..=1.0).contains(&x);
     if !(inside(u) && inside(v)) {
         return None;
     }
-    let valid = chart.validate(u, v) == ValidationResult::Valid;
+    let valid = chart.validate_params(u, v, p) == ValidationResult::Valid;
     Some(!valid || !evaluated(&chart.map(u, v)))
 }
 
@@ -43,9 +61,19 @@ pub fn fill<C: Chart<Param = f64>>(
     chart: &C,
     at: impl Fn(u32) -> [f64; 2],
 ) -> Result<(), String> {
+    fill_params(set, chart, at, &LinkParams::DEFAULT)
+}
+
+/// [`fill`] at the tunable parameters `p`: each sample classified by [`forbidden_params`] at the active values.
+pub fn fill_params<C: Chart<Param = f64>>(
+    set: &mut Synthetic,
+    chart: &C,
+    at: impl Fn(u32) -> [f64; 2],
+    p: &LinkParams<f64>,
+) -> Result<(), String> {
     for i in 0..set.grid().sample_count() {
         let [u, v] = at(i);
-        let f = forbidden(chart, u, v).ok_or_else(|| {
+        let f = forbidden_params(chart, u, v, p).ok_or_else(|| {
             format!("sample {i}'s chart point ({u}, {v}) is outside [0,1]²: the extension types classify it")
         })?;
         set.set_forbidden(i, f);

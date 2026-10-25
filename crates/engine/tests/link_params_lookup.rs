@@ -2,9 +2,10 @@
 //! the active value"; chart_decoder_contract § "Tunable parameters": the encode's clamps and its layer-1 range check;
 //! inverse_encode_contract § "Chart-aware validation"; R-481 G4; REQ-DEC-048): a looked-up momentum past the active
 //! `q_max` is clamped and flagged `lookup_clamped`, a raw `z` is decoded at the active values, a mixed chart's lock
-//! decodes to its axes' values, and the named directions read the active `μ_max`; at the defaults every form is
-//! today's, bit for bit.
+//! decodes to its axes' values, the named directions read the active `μ_max`, and the outcome view's hatch
+//! (REQ-COL-102) reads the chart's check at the active `q_max`; at the defaults every form is today's, bit for bit.
 
+use engine::chart_class::{fill, fill_params, forbidden, forbidden_params};
 use engine::contract::sim_config::Plane;
 use engine::lookup::{
     lookup, lookup_params, lookup_partial, lookup_partial_params, Exact, Locked, Partial,
@@ -14,11 +15,13 @@ use engine::nav::directions::{
     energy_at_fixed_lz, energy_at_fixed_lz_params, library, library_params, mass_away_from_burrau,
     mass_away_from_burrau_params,
 };
+use engine::synthetic::Synthetic;
 use kernel::chart::mixed::{PLambdaY, PRhoX};
-use kernel::chart::{Chart, Latent, Mixed};
+use kernel::chart::{Chart, Latent, Mixed, ValidationResult};
 use kernel::decode::{self, momentum, Ic};
 use kernel::encode::by_kind::Landing;
 use kernel::generated::links::{Defaults, Link, LinkParams, SigmoidQ};
+use render::raster::Grid;
 use validation::negative_control;
 use validation::roundtrip::phys;
 
@@ -236,4 +239,94 @@ negative_control!(
     "at the defaults the direction is the default's, as one that ignored the active value would be",
     expected = "is the default's",
     check_nav(&D)
+);
+
+// ── The hatch (REQ-COL-102) ─────────────────────────────────────────────────────────────────────────────────────────
+
+type Wide = Mixed<PRhoX, PLambdaY, f64>;
+
+/// `(p_ρ,x, p_λ,y)` on `[−3, 3] × [−1.2, 1.2]`: `u` = 0.77 reads 1.62, `u` = 0.9 reads 2.4.
+fn wide() -> Wide {
+    Mixed::new(FROZEN, [-3.0, 3.0], [-1.2, 1.2])
+}
+
+/// A classification of the chart point `(u, v)` at the parameters `p`.
+type Classify = fn(&Wide, f64, f64, &LinkParams<f64>) -> Option<bool>;
+
+fn classify_params(c: &Wide, u: f64, v: f64, p: &LinkParams<f64>) -> Option<bool> {
+    forbidden_params(c, u, v, p)
+}
+
+/// The hatch read off the chart's check at the defaults, whatever `p`.
+fn classify_default(c: &Wide, u: f64, v: f64, p: &LinkParams<f64>) -> Option<bool> {
+    forbidden_params(c, u, v, p).map(|_| c.validate(u, v) != ValidationResult::Valid)
+}
+
+/// The hatch at the active `q_max`: `p_ρ,x` = 1.62 is forbidden at `q_max` = 1.5 and not at the default 2; 2.4 is
+/// valid at `q_max` = 8 and forbidden at the default; `fill_params` writes the field at `p`; and at the defaults the
+/// classification and the fill are today's.
+fn check_hatch(classify: Classify) {
+    let c = wide();
+    let q15 = LinkParams { q_max: 1.5, ..D };
+    let q8 = LinkParams { q_max: 8.0, ..D };
+    assert!((c.h(0.77_f64) - 1.62).abs() < 1e-12 && (c.h(0.9_f64) - 2.4).abs() < 1e-12);
+    assert_eq!(
+        classify(&c, 0.77, 0.5, &q15),
+        Some(true),
+        "p_ρ,x = 1.62 is not hatched at q_max = 1.5"
+    );
+    assert_eq!(
+        classify(&c, 0.77, 0.5, &D),
+        Some(false),
+        "p_ρ,x = 1.62 is hatched at q_max = 2"
+    );
+    assert_eq!(
+        classify(&c, 0.9, 0.5, &q8),
+        Some(false),
+        "p_ρ,x = 2.4 is hatched at q_max = 8"
+    );
+    assert_eq!(
+        classify(&c, 0.9, 0.5, &D),
+        Some(true),
+        "p_ρ,x = 2.4 is not hatched at q_max = 2"
+    );
+    let points = [[0.5, 0.5], [0.77, 0.5], [0.9, 0.5]];
+    let grid = Grid::new([3, 1], 1, 0, 8).expect("a grid");
+    let mut set = Synthetic::flat(grid, 3);
+    fill_params(&mut set, &c, |i| points[i as usize], &q15).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        (0..3).map(|i| set.forbidden(i)).collect::<Vec<_>>(),
+        [false, true, true]
+    );
+    let mut today = Synthetic::flat(grid, 3);
+    fill(&mut today, &c, |i| points[i as usize]).unwrap_or_else(|e| panic!("{e}"));
+    let mut at_d = Synthetic::flat(grid, 3);
+    fill_params(&mut at_d, &c, |i| points[i as usize], &D).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        today.bytes().chart_forbidden,
+        at_d.bytes().chart_forbidden,
+        "the fill at the defaults"
+    );
+    for u in [0.0, 0.3, 0.6, 0.77, 0.9, 1.0, 1.5] {
+        assert_eq!(
+            forbidden(&c, u, 0.5),
+            forbidden_params(&c, u, 0.5, &D),
+            "the hatch at the defaults"
+        );
+    }
+}
+
+#[test]
+fn link_params_active_hatch() {
+    check_hatch(classify_params);
+    // What the threading prevents: the default check leaves 1.62 unhatched at q_max = 1.5.
+    let q15 = LinkParams { q_max: 1.5, ..D };
+    assert_eq!(classify_default(&wide(), 0.77, 0.5, &q15), Some(false));
+}
+
+negative_control!(
+    link_params_active_hatch,
+    "a hatch that reads validate, at the defaults, leaves 1.62 unhatched at q_max = 1.5",
+    expected = "p_ρ,x = 1.62 is not hatched at q_max = 1.5",
+    check_hatch(classify_default)
 );
