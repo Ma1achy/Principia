@@ -6,8 +6,9 @@
 //! inertia about the centre of mass computed here, and the tangent pushed forward through the links' `forward` against
 //! `γ′(ν₀)` and the softmax's analytic derivative.
 //!
-//! The random draws are a fixed-seed SplitMix64 over `validation::prop::CASES` cases (REQ-VAL-151): `engine` has no
-//! `proptest` dev-dependency, so this file cannot add one.
+//! The anchor's invariance (REQ-GUI-005, a property) runs under `validation::prop::run`, `CASES` cases (REQ-VAL-151),
+//! its control through `check_with_seed` at a fixed seed; the other random draws are a fixed-seed SplitMix64 over
+//! `CASES`-scaled cases.
 
 use engine::chart_authoring::charts::NU_CURVE;
 use engine::chart_authoring::{CurveMeta, CurvePoint};
@@ -21,11 +22,11 @@ use engine::contract::sim_config::{
 use engine::contract::store::StateStore;
 use engine::lock::{
     curve_tangent, curve_tilt, kernel_chart, move_slider, recentre, set, set_on_chart, slider,
-    snap_back, unlock, validate, LockError, Pixel, Remedy, Report, Tag, Window,
+    snap_back, unlock, validate, FrozenControls, LockError, Pixel, Remedy, Report, Tag, Window,
 };
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
-use engine::nav::{oblique, pan, slice, zoom, BasisVector, ChartConstructor};
+use engine::nav::{oblique, slice, zoom, BasisVector, ChartConstructor};
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Beta, ZQ1};
 use kernel::chart::{
@@ -34,12 +35,15 @@ use kernel::chart::{
 };
 use kernel::decode::descriptor::potential;
 use kernel::decode::{decode, Ic};
+use kernel::encode::blocks::clamps;
 use kernel::encode::by_kind::ByKind;
+use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
     Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
 };
+use proptest::prelude::*;
 use validation::negative_control;
-use validation::prop::CASES;
+use validation::prop::{check_with_seed, run, CASES};
 use validation::roundtrip::phys;
 
 type Sticks =
@@ -240,11 +244,19 @@ negative_control!(
 /// Locks the nonlinear `chart` at the pixel `(s, t)` of `window` and checks: `Φ` and `D` replayed on the CPU, so the
 /// lock's state is the chart's own decode at the clicked chart point; the window is re-centred there, its zoom kept,
 /// so the centre pixel decodes the clicked state; `z_locked` is the inverse-encode of that state, decoding back to it
-/// within `ε_phys` (REQ-ENC-024); the edits are `z₀ = z_locked` then the lock group; and through the store the free
-/// latent centre `z(½,½)` is `z_locked` bit for bit.
-fn check_chart<C>(chart: &C, window: &Window, s: f64, t: f64, read_at: fn(f64, f64) -> (f64, f64))
-where
-    C: ByKind<Param = f64> + ChartDecode,
+/// within `ε_phys` (REQ-ENC-024); the edits are `z₀ = z_locked` then the lock group; through the store the free
+/// latent centre `z(½,½)` is `z_locked` bit for bit; and the chart rebuilt on that post-lock `z₀` by `rebuild` (its
+/// hidden coordinates `z₀`'s, chart_reference §2.1) decodes the clicked state bit for bit at the re-centred window's
+/// centre (the contract: "the rebuilt chart's centre pixel decodes the clicked state bit for bit").
+fn check_chart<C>(
+    chart: &C,
+    window: &Window,
+    s: f64,
+    t: f64,
+    read_at: fn(f64, f64) -> (f64, f64),
+    rebuild: fn(&C, &Latent) -> C,
+) where
+    C: ByKind<Param = f64> + ChartDecode + FrozenControls,
 {
     let (ps, pt) = read_at(s, t);
     let u = window.centre[0] + (2.0 * ps - 1.0) * window.half[0];
@@ -291,6 +303,26 @@ where
         latent_bits(&group.z_locked),
         "the free centre is not z_locked"
     );
+    let rebuilt = rebuild(chart, &after.plane.z0);
+    assert!(
+        ic_bits(&rebuilt.decode_at::<Defaults, f64>(c[0], c[1]).ic) == ic_bits(&clicked),
+        "the chart rebuilt on the post-lock z₀ does not decode the clicked pixel at its centre on {} at ({s}, {t})",
+        chart.name()
+    );
+}
+
+/// `(L_z, K)` rebuilt on `z₀`: its configuration and mass controls `z₀`'s, its `K_max` and `γ_K` kept.
+fn rebuild_lk(c: &InvariantLK<f64>, z0: &Latent) -> InvariantLK<f64> {
+    InvariantLK(Invariant {
+        z_cfg: [z0[0], z0[1]],
+        z_mass: [z0[6], z0[7]],
+        ..c.0
+    })
+}
+
+/// The mixed `(β, z_q1)` chart rebuilt on `z₀`: its frozen controls `z₀`, its ranges kept.
+fn rebuild_mixed(c: &Mixed<Beta, ZQ1, f64>, z0: &Latent) -> Mixed<Beta, ZQ1, f64> {
+    Mixed::new(*z0, c.h_range, c.v_range)
 }
 
 fn unit_e(k: usize) -> Latent {
@@ -353,10 +385,10 @@ fn qa_lock_set_nonlinear() {
     ];
     for w in &windows {
         for (s, t) in valid_pixels(&lk(), w, &mut rng, 16) {
-            check_chart(&lk(), w, s, t, |s, t| (s, t));
+            check_chart(&lk(), w, s, t, |s, t| (s, t), rebuild_lk);
         }
         for (s, t) in valid_pixels(&beta_q1(), w, &mut rng, 16) {
-            check_chart(&beta_q1(), w, s, t, |s, t| (s, t));
+            check_chart(&beta_q1(), w, s, t, |s, t| (s, t), rebuild_mixed);
         }
     }
 }
@@ -373,7 +405,29 @@ negative_control!(
         },
         0.3,
         0.6,
-        |s, t| (t, s)
+        |s, t| (t, s),
+        rebuild_mixed
+    )
+);
+
+negative_control!(
+    qa_lock_set_nonlinear_rebuilt,
+    "a chart rebuilt on z₀ moved 1e-9 in a hidden control, z_α, is not the chart the lock froze",
+    expected = "the chart rebuilt on the post-lock z₀",
+    check_chart(
+        &beta_q1(),
+        &Window {
+            centre: [0.5, 0.5],
+            half: [0.5, 0.5]
+        },
+        0.3,
+        0.6,
+        |s, t| (s, t),
+        |c, z0| {
+            let mut z = *z0;
+            z[0] += 1e-9;
+            rebuild_mixed(c, &z)
+        }
     )
 );
 
@@ -478,8 +532,13 @@ fn basis_gesture(s: &SimConfig, rng: &mut Rng) -> Option<SetField> {
 
 /// One case: lock at a random pixel, then `n` gestures from `gesture`, the centre's IC and `z₀` the anchor's bit for
 /// bit after each; then an excursion (a slice and a slider move), `δ = z₀ − z_locked` nonzero and ghost-marked, the
-/// basis gestures keeping it; then snap-back, `δ → 0` exactly and the centre the anchor's bit for bit.
-fn check_anchor(seed: u64, n: usize, gesture: fn(&SimConfig, &mut Rng) -> Option<SetField>) {
+/// basis gestures keeping it; then snap-back, `δ → 0` exactly and the centre the anchor's bit for bit. A failure is the
+/// property's (`validation::prop`), so the runner names the seed that reproduces it.
+fn check_anchor(
+    seed: u64,
+    n: usize,
+    gesture: fn(&SimConfig, &mut Rng) -> Option<SetField>,
+) -> Result<(), TestCaseError> {
     let mut rng = Rng(seed);
     let plane = random_plane(&mut rng);
     let mut st = store(sim(plane.clone()));
@@ -495,18 +554,19 @@ fn check_anchor(seed: u64, n: usize, gesture: fn(&SimConfig, &mut Rng) -> Option
         apply(&mut st, [g]);
         applied += 1;
         let s = sim_of(&mut st);
-        assert!(
+        prop_assert!(
             latent_bits(&s.plane.z0) == latent_bits(&anchor)
                 && ic_bits(&pixel_ic(&s.plane, 0.5, 0.5)) == anchor_ic,
-            "the centre IC moved off the anchor (seed {seed})"
+            "the centre IC moved off the anchor (seed {})",
+            seed
         );
-        assert_eq!(
+        prop_assert_eq!(
             latent_bits(&s.lock.z_locked),
             latent_bits(&anchor),
             "the stored anchor moved"
         );
     }
-    assert!(applied > 0, "no gesture applied (seed {seed})");
+    prop_assert!(applied > 0, "no gesture applied (seed {})", seed);
     // The excursion.
     let s = sim_of(&mut st);
     let d = hidden(&s.plane).expect("a plane")[rng.below(6)].direction;
@@ -524,24 +584,26 @@ fn check_anchor(seed: u64, n: usize, gesture: fn(&SimConfig, &mut Rng) -> Option
         .excursion(&away.plane.z0)
         .expect("locked: δ exists");
     for i in 0..8 {
-        assert_eq!(
+        prop_assert_eq!(
             delta[i].to_bits(),
             (away.plane.z0[i] - anchor[i]).to_bits(),
-            "δ[{i}] is not z₀ − z_locked"
+            "δ[{}] is not z₀ − z_locked",
+            i
         );
     }
-    assert!(delta.iter().any(|&x| x != 0.0), "the excursion left δ = 0");
+    prop_assert!(delta.iter().any(|&x| x != 0.0), "the excursion left δ = 0");
     let ghost = slider(&away, k).expect("a control");
-    assert_eq!(
+    prop_assert_eq!(
         ghost.anchor.map(f64::to_bits),
         Some(anchor[k].to_bits()),
         "the anchor is not ghost-marked"
     );
-    // A basis gesture during the excursion keeps it.
+    // A basis gesture's own SetField during the excursion edits the basis alone, so it keeps the excursion; the turn
+    // about an off-centre pin is a separate SetField on z₀ (chart_decoder_contract Part 4, §G4), not this edit's.
     if let Some(g) = basis_gesture(&away, &mut rng) {
         apply(&mut st, [g]);
         let s = sim_of(&mut st);
-        assert_eq!(
+        prop_assert_eq!(
             latent_bits(&s.plane.z0),
             latent_bits(&away.plane.z0),
             "a tilt moved the excursion"
@@ -551,35 +613,48 @@ fn check_anchor(seed: u64, n: usize, gesture: fn(&SimConfig, &mut Rng) -> Option
     let s = sim_of(&mut st);
     apply(&mut st, [snap_back(&s).expect("locked")]);
     let back = sim_of(&mut st);
-    assert_eq!(
+    prop_assert_eq!(
         latent_bits(&back.plane.z0),
         latent_bits(&anchor),
         "snap-back did not restore the anchor bitwise"
     );
-    assert!(
+    prop_assert!(
         ic_bits(&pixel_ic(&back.plane, 0.5, 0.5)) == anchor_ic,
         "snap-back's centre IC is not the anchor's"
     );
     let zero = back.lock.excursion(&back.plane.z0).expect("still locked");
-    assert!(
+    prop_assert!(
         zero.iter().all(|&x| x == 0.0),
-        "δ is {zero:?} after snap-back, not 0"
+        "δ is {:?} after snap-back, not 0",
+        zero
     );
-    assert!(back.lock.locked, "snap-back unlocked");
+    prop_assert!(back.lock.locked, "snap-back unlocked");
+    Ok(())
+}
+
+/// The property over `validation::prop`'s `CASES` cases, each case's draws seeded by the runner's `u64`.
+fn anchor_property(seed: Option<u64>, gesture: fn(&SimConfig, &mut Rng) -> Option<SetField>) {
+    let case = |draws: u64| check_anchor(draws, 24, gesture);
+    match seed {
+        None => run(&any::<u64>(), case),
+        Some(seed) => {
+            if let Err(failure) = check_with_seed(seed, &any::<u64>(), case) {
+                panic!("{failure}");
+            }
+        }
+    }
 }
 
 #[test]
 fn qa_lock_anchor_property() {
-    for case in 0..CASES as u64 {
-        check_anchor(0xA11C_E000 + case, 24, basis_gesture);
-    }
+    anchor_property(None, basis_gesture);
 }
 
 negative_control!(
     qa_lock_anchor_property,
     "a pan is not anchor-preserving",
     expected = "the centre IC moved off the anchor",
-    check_anchor(17, 8, |s, rng| pan(
+    anchor_property(Some(17), |s, rng| engine::nav::pan(
         &s.plane,
         rng.in_(0.05, 0.3),
         rng.in_(0.05, 0.3)
@@ -1096,7 +1171,11 @@ fn dsoftmax(mu: [f64; 2], dmu: [f64; 2]) -> [f64; 3] {
 /// The tangent `dz` at `z(ν₀)` pushed forward through the links' `forward` by a central difference: it must be `γ′(ν₀)`
 /// (`dα`, `dβ`, and the softmax's derivative along `(dμ₁, dμ₂)`) to the difference's error, the contract's `ε^{2/3}`
 /// order, bounded here by `√ε`; the momenta's tangent 0, the curve a rest start.
-fn check_pushforward<S: Selection>(curve: &CurveMeta, nu0: f64, tangent_at: f64) {
+fn check_pushforward<S>(curve: &CurveMeta, nu0: f64, tangent_at: f64)
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
     let p: CurvePoint = (curve.embed)(nu0);
     let g: CurvePoint = (curve.tangent)(nu0);
     let dz = curve_tangent::<S>(curve, tangent_at).expect("a tangent");
@@ -1238,4 +1317,193 @@ negative_control!(
     "the Burrau curve moves its mass, so its mass tangent is not 0",
     expected = "a still mass has tangent",
     check_still(&NU_CURVE)
+);
+
+// ---- REQ-CHART-007, REQ-CHART-089: the tangent is refused, naming the controls, where a link's inverse clamps ----
+
+thread_local! {
+    /// The point and tangent [`HELD`] holds at every `ν`.
+    static HELD_AT: std::cell::Cell<(CurvePoint, CurvePoint)> = const {
+        std::cell::Cell::new((
+            CurvePoint {
+                alpha: 0.0,
+                beta: 0.0,
+                mu1: 0.0,
+                mu2: 0.0,
+            },
+            CurvePoint {
+                alpha: 0.0,
+                beta: 0.0,
+                mu1: 0.0,
+                mu2: 0.0,
+            },
+        ))
+    };
+}
+
+/// A curve at one point moving along one tangent, both set per case in [`HELD_AT`].
+const HELD: CurveMeta = CurveMeta {
+    parameter: "s",
+    embed: |_| HELD_AT.with(|c| c.get().0),
+    tangent: |_| HELD_AT.with(|c| c.get().1),
+};
+
+/// The controls the contract names for the tangent at `p` along `d` (chart_decoder_contract Part 4, "A curve's tangent
+/// at the lock"), under the clamp test of inverse_encode_contract Part 3: `z_α` where `α`'s inverse clamps at `z(ν₀)`,
+/// `z_β` where `β`'s does, and each mass control whose inverse clamps at `μ` or, with `ends`, at either difference point
+/// `μ ± h·dμ`, `h = ε^{1/3}·(1 + ‖μ‖)/‖dμ‖` (a curve that moves no mass takes no step). The simplex test's bit `k` is
+/// the `k`-th mass control, `z[6 + k]`.
+fn contract_saturation<S>(p: &CurvePoint, d: &CurvePoint, ends: bool) -> [bool; 8]
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
+    let mu = [p.mu1, p.mu2];
+    let dmu = [d.mu1, d.mu2];
+    let bits_at = |k: f64| {
+        <S::MassLink as SimplexClamp>::clamps::<f64>(softmax([
+            mu[0] + k * dmu[0],
+            mu[1] + k * dmu[1],
+        ]))
+    };
+    let mut mass = bits_at(0.0);
+    let size = dmu[0].hypot(dmu[1]);
+    if ends && size != 0.0 {
+        let h = f64::EPSILON.cbrt() * (1.0 + mu[0].hypot(mu[1])) / size;
+        mass |= bits_at(h) | bits_at(-h);
+    }
+    [
+        clamps::<S::AlphaLink, f64>(p.alpha),
+        clamps::<S::BetaLink, f64>(p.beta),
+        false,
+        false,
+        false,
+        false,
+        mass & 1 != 0,
+        mass & 2 != 0,
+    ]
+}
+
+/// Draws curve points about the mass link's clamp edge, at random offsets along a random ray within two difference
+/// steps of it, with random tangents, and `α`, `β` now inside their range and now at or past its ends; the tangent
+/// must be a tangent where the contract names no control and [`LockError::Saturated`] naming exactly those it names
+/// (by `want`, the contract's set), the locked tilt refusing alike. Every class must be drawn: no clamp, the mass
+/// clamped at the point, at the forward difference point alone, at the backward one alone, and `α` or `β` clamped.
+fn check_saturation<S>(seed: u64, want: fn(&CurvePoint, &CurvePoint) -> [bool; 8])
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+{
+    let mut rng = Rng(seed);
+    let mass_bits = |mu: [f64; 2]| <S::MassLink as SimplexClamp>::clamps::<f64>(softmax(mu));
+    let locked = Lock {
+        locked: true,
+        z_locked: [0.0; 8],
+    };
+    // [none, at the point, forward only, backward only, α or β, both difference points and not the point]
+    let mut seen = [0usize; 6];
+    for case in 0..4 * CASES {
+        // A ray from an interior point to the clamp's edge, by bisection on the link's own clamp test.
+        let base = [rng.in_(-1.0, 1.0), rng.in_(-1.0, 1.0)];
+        let angle = rng.in_(0.0, std::f64::consts::TAU);
+        let dir = [angle.cos(), angle.sin()];
+        let along = |r: f64| [base[0] + r * dir[0], base[1] + r * dir[1]];
+        assert_eq!(mass_bits(base), 0, "the ray's base clamps");
+        let (mut lo, mut hi) = (0.0, 64.0);
+        assert_ne!(mass_bits(along(hi)), 0, "the ray never reaches the clamp");
+        for _ in 0..200 {
+            let mid = 0.5 * (lo + hi);
+            if mass_bits(along(mid)) == 0 {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        let step = f64::EPSILON.cbrt() * (1.0 + along(lo)[0].hypot(along(lo)[1]));
+        let mu = along(lo + rng.in_(-2.0, 2.0) * step);
+        let turn = rng.in_(0.0, std::f64::consts::TAU);
+        let speed = rng.in_(0.1, 3.0);
+        let mut edge = |range: f64| match rng.below(8) {
+            0 => -rng.in_(0.0, 0.05),
+            1 => range + rng.in_(0.0, 0.05),
+            2 => 0.0,
+            3 => range,
+            _ => rng.in_(0.2, range - 0.2),
+        };
+        let p = CurvePoint {
+            alpha: edge(std::f64::consts::FRAC_PI_2),
+            beta: edge(std::f64::consts::PI),
+            mu1: mu[0],
+            mu2: mu[1],
+        };
+        let d = CurvePoint {
+            alpha: rng.in_(-1.0, 1.0),
+            beta: rng.in_(-1.0, 1.0),
+            mu1: speed * turn.cos(),
+            mu2: speed * turn.sin(),
+        };
+        HELD_AT.with(|c| c.set((p, d)));
+        let expected = want(&p, &d);
+        let got = curve_tangent::<S>(&HELD, 0.0);
+        let named = match &got {
+            Ok(_) => [false; 8],
+            Err(LockError::Saturated { controls }) => *controls,
+            Err(other) => panic!("case {case}: the tangent at {p:?} gives {other:?}"),
+        };
+        assert_eq!(
+            named, expected,
+            "case {case}: the tangent at {p:?} along {d:?} names {named:?} where the contract's clamp test names \
+             {expected:?}"
+        );
+        assert_eq!(
+            curve_tilt::<S>(&locked, &HELD, 0.0, 1.0, 10.0, &unit_e(3)).err(),
+            got.err(),
+            "case {case}: the locked tilt does not refuse as the tangent does"
+        );
+        // The class of the case, from the contract's own points.
+        let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / speed;
+        let at = |k: f64| mass_bits([p.mu1 + k * d.mu1, p.mu2 + k * d.mu2]) != 0;
+        let class = match (expected[0] || expected[1], at(0.0), at(h), at(-h)) {
+            (true, ..) => 4,
+            (false, true, ..) => 1,
+            (false, false, true, false) => 2,
+            (false, false, false, true) => 3,
+            (false, false, false, false) => 0,
+            (false, false, true, true) => 5,
+        };
+        seen[class] += 1;
+    }
+    println!(
+        "tangent saturation classes [none, point, forward, backward, α/β, both ends]: {seen:?}"
+    );
+    assert!(
+        seen[..5].iter().all(|&n| n > 0),
+        "a class of the clamp is never drawn: {seen:?}"
+    );
+}
+
+#[test]
+fn qa_curve_tangent_refuses_where_a_link_clamps() {
+    check_saturation::<Defaults>(0x5A7_0001, |p, d| {
+        contract_saturation::<Defaults>(p, d, true)
+    });
+    check_saturation::<Sticks>(0x5A7_0002, |p, d| contract_saturation::<Sticks>(p, d, true));
+}
+
+negative_control!(
+    qa_curve_tangent_refuses_where_a_link_clamps,
+    "the mass link read at the curve point alone misses a step past the clamp",
+    expected = "where the contract's clamp test names",
+    check_saturation::<Defaults>(0x5A7_0001, |p, d| contract_saturation::<Defaults>(
+        p, d, false
+    ))
+);
+
+negative_control!(
+    qa_curve_tangent_refuses_where_a_link_clamps_sticks,
+    "the stick-breaking link read at the curve point alone misses a step past the clamp",
+    expected = "where the contract's clamp test names",
+    check_saturation::<Sticks>(0x5A7_0002, |p, d| contract_saturation::<Sticks>(
+        p, d, false
+    ))
 );
