@@ -1,22 +1,28 @@
 //! qa's tests for TASK-M0-52, written from REQ-SYS-078: "The `ci` CI job's test binaries must be built once per
 //! feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its
 //! `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still
-//! run every test the unsharded run did" (R-372); verify: "`ci.yml` builds the archive once per feature set in one job
-//! and every `ci` shard runs from it, with no `cargo build` or test compile of its own; [...] the doctests still run,
-//! in shard 1". The task's deliverables add: the archive is built with the `ci` profile's settings, uploaded as a
-//! workflow artifact, and each job's cache keys name its job, with R-326's save rule (R-285).
+//! run every test the unsharded run did" (R-372); verify, as amended per R-369 (the orchestrator's decision on PR #291,
+//! TASK-M2-49): "`ci.yml` builds the tests once per build profile, in one archive job each: the dev feature sets in
+//! `ci-archive`, which every `ci` shard runs from, and the release set in `ci-release-archive`, which every
+//! `ci-release` shard runs from (R-547, REQ-TOOL-189); each archive is built once and shared by its shards, with no
+//! `cargo build` or test compile of their own; [...] the doctests still run, in shard 1". The task's deliverables add:
+//! the archive is built with the `ci` profile's settings, uploaded as a workflow artifact, and each job's cache keys
+//! name its job, with R-326's save rule (R-285).
 //!
-//! - The workflow (`.github/workflows/ci.yml`): one job builds every archive, one per feature set the shards run; the
-//!   `ci` job waits on it (`needs:`), downloads the artifact it uploads, and runs from the very file it built; no
-//!   other `cargo` command in a shard builds or compiles, but the doctests, in shard 1 alone; the archive is built
-//!   under the shards' nextest profile; each cache key names its job and is saved only on a push to `main`.
+//! - The workflow (`.github/workflows/ci.yml`): one job builds every archive of a build profile, `ci-archive` the dev
+//!   profile's, one per feature set the `ci` shards run, `ci-release-archive` the release profile's; each archive file
+//!   is built once; each shard job (`ci`, a 4-shard matrix, and `ci-release`) runs from the archives of one build
+//!   profile, waits on that profile's archive job (`needs:`), downloads the artifact it uploads, and runs from the very
+//!   file it built; no other `cargo` command in a shard builds or compiles, but the workspace's doctests, at the job's
+//!   build profile, in shard 1 alone; the archive is built under the shards' nextest profile; each cache key names its
+//!   job and is saved only on a push to `main`.
 //! - nextest itself, on a fixture crate of its own: the 4 `hash:` shards run from one archive, with the crate's own
 //!   build directory gone, together list every test the source build lists, each once, and running them compiles
 //!   nothing.
 //!
 //! Each test registers a negative control (R-176).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -202,19 +208,48 @@ fn feature_set(words: &[&str]) -> String {
     f.join(" ")
 }
 
-/// An archive step: its job, its `--archive-file` (as the shell sees it), its words, its NEXTEST_PROFILE.
+/// The cargo build profile a command's words select: `release` for `--release`, the name `--cargo-profile` or
+/// `--profile` gives, `dev` otherwise.
+fn build_profile(words: &[&str]) -> String {
+    if words.contains(&"--release") {
+        return "release".to_owned();
+    }
+    opt(words, "--cargo-profile")
+        .or_else(|| opt(words, "--profile"))
+        .unwrap_or_else(|| "dev".to_owned())
+}
+
+/// An archive step: its job, its `--archive-file` (as the shell sees it), its words, its NEXTEST_PROFILE, and the
+/// cargo build profile it builds the tests at.
 struct Archive {
     job: String,
     file: String,
     words: Vec<String>,
     profile: Option<String>,
+    build: String,
 }
+
+impl Archive {
+    /// The build profile and feature set the archive's tests are built with.
+    fn set(&self) -> (String, String) {
+        let words: Vec<&str> = self.words.iter().map(String::as_str).collect();
+        (self.build.clone(), feature_set(&words))
+    }
+}
+
+/// The archive job REQ-SYS-078's verify names for each build profile, as amended per R-369 (the orchestrator's
+/// decision on PR #291): the dev feature sets in `ci-archive`, the release set in `ci-release-archive`.
+const ARCHIVE_JOBS: &[(&str, &str)] = &[("dev", "ci-archive"), ("release", "ci-release-archive")];
+
+/// The shard jobs REQ-SYS-078's verify names, each with the build profile whose archive its every shard runs from:
+/// `ci`'s from `ci-archive`'s, `ci-release`'s from `ci-release-archive`'s (R-547, REQ-TOOL-189).
+const SHARD_JOBS: &[(&str, &str)] = &[("ci", "dev"), ("ci-release", "release")];
 
 /// REQ-SYS-078 on `workflow`.
 fn check_archive(workflow: &str) {
     let jobs = jobs(workflow);
 
-    // The archives: every `cargo nextest archive` step, all in one job.
+    // The archives: every `cargo nextest archive` step, all of one build profile in one job, each file built once.
     let mut archives: Vec<Archive> = Vec::new();
     for job in &jobs {
         for step in job.steps() {
@@ -231,151 +266,235 @@ fn check_archive(workflow: &str) {
                     file: shell_path(&file),
                     words: words.iter().map(|w| (*w).to_owned()).collect(),
                     profile: key(&step, "NEXTEST_PROFILE"),
+                    build: build_profile(&words),
                 });
             }
         }
     }
-    let archive_jobs: BTreeSet<&str> = archives.iter().map(|a| a.job.as_str()).collect();
+    let builds: BTreeSet<&str> = archives.iter().map(|a| a.build.as_str()).collect();
+    let mut archive_job_of: BTreeMap<String, String> = BTreeMap::new();
+    for build in &builds {
+        let in_jobs: BTreeSet<&str> = archives
+            .iter()
+            .filter(|a| a.build == *build)
+            .map(|a| a.job.as_str())
+            .collect();
+        assert_eq!(
+            in_jobs.len(),
+            1,
+            "the {build} archives are built in {} jobs ({in_jobs:?}), not in one",
+            in_jobs.len()
+        );
+        archive_job_of.insert(
+            (*build).to_owned(),
+            in_jobs.into_iter().next().unwrap().to_owned(),
+        );
+    }
+    let want_archive_jobs: BTreeMap<String, String> = ARCHIVE_JOBS
+        .iter()
+        .map(|(b, j)| ((*b).to_owned(), (*j).to_owned()))
+        .collect();
     assert_eq!(
-        archive_jobs.len(),
-        1,
-        "the archives are built in {} jobs ({archive_jobs:?}), not in one",
-        archive_jobs.len()
+        archive_job_of, want_archive_jobs,
+        "the archive job of each build profile is not the one REQ-SYS-078 names"
     );
-    let archive_job_id = archive_jobs.into_iter().next().unwrap().to_owned();
-    let archive_job = jobs.iter().find(|j| j.id == archive_job_id).unwrap();
+    let mut files: BTreeSet<&str> = BTreeSet::new();
+    for a in &archives {
+        assert!(
+            files.insert(a.file.as_str()),
+            "the archive `{}` is built more than once",
+            a.file
+        );
+    }
 
-    // The `ci` job: the one whose steps run nextest's `hash:` slices of a 4-shard matrix.
+    // The shard jobs: every job whose steps run nextest's `hash:` slices of a shard matrix.
     let shard_jobs: Vec<&Job> = jobs
         .iter()
         .filter(|j| {
             j.steps().iter().flat_map(|s| commands(s)).any(|c| {
                 c.starts_with("cargo nextest run")
-                    && c.contains("--partition hash:${{ matrix.shard }}/4")
+                    && c.contains("--partition hash:${{ matrix.shard }}/")
             })
         })
         .collect();
-    assert_eq!(shard_jobs.len(), 1, "no single job runs the nextest shards");
-    let ci = shard_jobs[0];
-    assert_eq!(
-        ci.shards(),
-        Some(vec!["1".into(), "2".into(), "3".into(), "4".into()]),
-        "job `{}`'s matrix is not the shards 1 to 4",
-        ci.id
-    );
-    assert!(
-        ci.needs().contains(&archive_job_id),
-        "job `{}` does not wait (`needs:`) on `{archive_job_id}`, which builds its archive",
-        ci.id
-    );
-
-    // The artifact: uploaded from the archive job, downloaded by the shards.
-    let uploads: Vec<(String, String)> = archive_job
-        .steps()
+    let quarters: Vec<&str> = shard_jobs
         .iter()
-        .filter(|s| key(s, "uses").is_some_and(|u| u.starts_with("actions/upload-artifact@")))
-        .map(|s| {
-            (
-                key(s, "name").unwrap_or_default(),
-                shell_path(&key(s, "path").unwrap_or_default()),
-            )
+        .filter(|j| {
+            j.steps()
+                .iter()
+                .flat_map(|s| commands(s))
+                .any(|c| c.contains("--partition hash:${{ matrix.shard }}/4"))
         })
+        .map(|j| j.id.as_str())
         .collect();
-    let downloads: Vec<(String, String)> = ci
-        .steps()
+    assert_eq!(quarters, ["ci"], "no single job runs the nextest shards");
+
+    // The artifacts: uploaded by the archive jobs.
+    let uploads: Vec<(String, String, String)> = jobs
         .iter()
-        .filter(|s| key(s, "uses").is_some_and(|u| u.starts_with("actions/download-artifact@")))
-        .map(|s| {
-            (
-                key(s, "name").unwrap_or_default(),
-                shell_path(&key(s, "path").unwrap_or_default()),
-            )
+        .filter(|j| archive_job_of.values().any(|a| *a == j.id))
+        .flat_map(|j| {
+            j.steps()
+                .into_iter()
+                .filter(|s| {
+                    key(s, "uses").is_some_and(|u| u.starts_with("actions/upload-artifact@"))
+                })
+                .map(|s| {
+                    (
+                        j.id.clone(),
+                        key(&s, "name").unwrap_or_default(),
+                        shell_path(&key(&s, "path").unwrap_or_default()),
+                    )
+                })
+                .collect::<Vec<_>>()
         })
         .collect();
 
-    // Every `cargo` command of a shard: a run from a downloaded archive, or the doctests in shard 1.
-    let mut shard_features: BTreeSet<String> = BTreeSet::new();
-    let mut doctests = 0;
-    for step in ci.steps() {
-        for c in commands(&step) {
-            if !c.starts_with("cargo ") {
-                continue;
-            }
-            let words: Vec<&str> = c.split_whitespace().collect();
-            if c.starts_with("cargo nextest run ") {
-                let file = opt(&words, "--archive-file")
-                    .map(|f| shell_path(&f))
-                    .unwrap_or_else(|| {
+    // Each shard job: every `cargo` command a run from a downloaded archive of one build profile, or the doctests in
+    // shard 1 at that profile.
+    let mut shard_sets: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut runs_from: BTreeMap<String, String> = BTreeMap::new();
+    let mut checks: Vec<(&Job, String, Vec<String>)> = Vec::new();
+    for sj in &shard_jobs {
+        let downloads: Vec<(String, String)> = sj
+            .steps()
+            .iter()
+            .filter(|s| key(s, "uses").is_some_and(|u| u.starts_with("actions/download-artifact@")))
+            .map(|s| {
+                (
+                    key(s, "name").unwrap_or_default(),
+                    shell_path(&key(s, "path").unwrap_or_default()),
+                )
+            })
+            .collect();
+        let mut sj_builds: BTreeSet<String> = BTreeSet::new();
+        let mut parts: BTreeSet<String> = BTreeSet::new();
+        let mut doctests: Vec<String> = Vec::new();
+        for step in sj.steps() {
+            for c in commands(&step) {
+                if !c.starts_with("cargo ") {
+                    continue;
+                }
+                let words: Vec<&str> = c.split_whitespace().collect();
+                if c.starts_with("cargo nextest run ") {
+                    let file = opt(&words, "--archive-file")
+                        .map(|f| shell_path(&f))
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "a `{}` shard compiles its tests: `{c}` runs from no archive",
+                                sj.id
+                            )
+                        });
+                    let built = archives.iter().find(|a| a.file == file).unwrap_or_else(|| {
                         panic!(
-                            "a `{}` shard compiles its tests: `{c}` runs from no archive",
-                            ci.id
+                            "a `{}` shard runs from `{file}`, which no archive step builds",
+                            sj.id
                         )
                     });
-                let built = archives.iter().find(|a| a.file == file).unwrap_or_else(|| {
-                    panic!(
-                        "a `{}` shard runs from `{file}`, which no archive step builds",
-                        ci.id
-                    )
-                });
-                let up = uploads
-                    .iter()
-                    .find(|(_, p)| *p == built.file)
-                    .unwrap_or_else(|| {
-                        panic!("`{archive_job_id}` does not upload the archive `{file}`")
-                    });
-                let file_name = Path::new(&file)
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned();
-                assert!(
-                    downloads
+                    let up = uploads
                         .iter()
-                        .any(|(name, dir)| *name == up.0 && format!("{dir}/{file_name}") == file),
-                    "a `{}` shard runs from `{file}`, but downloads no artifact `{}` there",
-                    ci.id,
-                    up.0
-                );
-                assert!(
-                    built.words.iter().any(|w| w == "--workspace"),
-                    "the archive `{file}` is not of the whole workspace"
-                );
-                assert_eq!(
-                    built.profile,
-                    key(&step, "NEXTEST_PROFILE"),
-                    "the archive `{file}` is not built under the shards' nextest profile"
-                );
-                let built_words: Vec<&str> = built.words.iter().map(String::as_str).collect();
-                shard_features.insert(feature_set(&built_words));
-            } else if c.starts_with("cargo test ") && words.contains(&"--doc") {
-                assert_eq!(
-                    key(&step, "if").as_deref(),
-                    Some("matrix.shard == 1"),
-                    "a `{}` shard's doctest step `{c}` runs in some shard other than shard 1 alone",
-                    ci.id
-                );
-                if words.contains(&"--workspace") {
-                    doctests += 1;
+                        .find(|(j, _, p)| *j == built.job && *p == built.file)
+                        .unwrap_or_else(|| {
+                            panic!("`{}` does not upload the archive `{file}`", built.job)
+                        });
+                    let file_name = Path::new(&file)
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .into_owned();
+                    assert!(
+                        downloads.iter().any(
+                            |(name, dir)| *name == up.1 && format!("{dir}/{file_name}") == file
+                        ),
+                        "a `{}` shard runs from `{file}`, but downloads no artifact `{}` there",
+                        sj.id,
+                        up.1
+                    );
+                    assert!(
+                        built.words.iter().any(|w| w == "--workspace"),
+                        "the archive `{file}` is not of the whole workspace"
+                    );
+                    assert_eq!(
+                        built.profile,
+                        key(&step, "NEXTEST_PROFILE"),
+                        "the archive `{file}` is not built under the shards' nextest profile"
+                    );
+                    if let Some((_, n)) = c.split_once("--partition hash:${{ matrix.shard }}/") {
+                        parts.insert(n.split_whitespace().next().unwrap_or("").to_owned());
+                    }
+                    sj_builds.insert(built.build.clone());
+                    shard_sets.insert(built.set());
+                } else if c.starts_with("cargo test ") && words.contains(&"--doc") {
+                    assert_eq!(
+                        key(&step, "if").as_deref(),
+                        Some("matrix.shard == 1"),
+                        "a `{}` shard's doctest step `{c}` runs in some shard other than shard 1 alone",
+                        sj.id
+                    );
+                    if words.contains(&"--workspace") {
+                        doctests.push(build_profile(&words));
+                    }
+                } else {
+                    panic!("a `{}` shard builds or compiles of its own: `{c}`", sj.id);
                 }
-            } else {
-                panic!("a `{}` shard builds or compiles of its own: `{c}`", ci.id);
             }
         }
+        assert_eq!(
+            sj_builds.len(),
+            1,
+            "the `{}` shards run from the archives of {} build profiles ({sj_builds:?}), not of one",
+            sj.id,
+            sj_builds.len()
+        );
+        let build = sj_builds.into_iter().next().unwrap();
+
+        // The matrix is the shards 1 to n of the `hash:<k>/n` the job runs.
+        let n: u32 = parts
+            .iter()
+            .find_map(|n| n.parse().ok())
+            .unwrap_or_else(|| panic!("job `{}` runs no `hash:<k>/<n>` slice", sj.id));
+        assert_eq!(
+            sj.shards(),
+            Some((1..=n).map(|k| k.to_string()).collect::<Vec<_>>()),
+            "job `{}`'s matrix is not the shards 1 to {n}",
+            sj.id
+        );
+
+        runs_from.insert(sj.id.clone(), build.clone());
+        checks.push((sj, build, doctests));
     }
+    let want_runs_from: BTreeMap<String, String> = SHARD_JOBS
+        .iter()
+        .map(|(j, b)| ((*j).to_owned(), (*b).to_owned()))
+        .collect();
     assert_eq!(
-        doctests, 1,
-        "the workspace's doctests do not run, once, in shard 1"
+        runs_from, want_runs_from,
+        "the shard jobs do not each run from the archive of the build profile REQ-SYS-078 names"
     );
 
-    // One archive per feature set the shards run, and none other.
-    let mut built_features: Vec<String> = archives
-        .iter()
-        .map(|a| feature_set(&a.words.iter().map(String::as_str).collect::<Vec<_>>()))
-        .collect();
-    built_features.sort();
+    // Each shard job waits on its profile's archive job, and runs the workspace's doctests once, in shard 1, at its
+    // build profile.
+    for (sj, build, doctests) in checks {
+        let archive_job_id = &archive_job_of[&build];
+        assert!(
+            sj.needs().contains(archive_job_id),
+            "job `{}` does not wait (`needs:`) on `{archive_job_id}`, which builds its archive",
+            sj.id
+        );
+        assert_eq!(
+            doctests,
+            std::slice::from_ref(&build),
+            "the workspace's doctests do not run, once, in shard 1 of `{}`, at its build profile {build}",
+            sj.id
+        );
+    }
+
+    // One archive per build profile and feature set the shards run, and none other.
+    let mut built_sets: Vec<(String, String)> = archives.iter().map(Archive::set).collect();
+    built_sets.sort();
     assert_eq!(
-        built_features,
-        shard_features.into_iter().collect::<Vec<_>>(),
+        built_sets,
+        shard_sets.into_iter().collect::<Vec<_>>(),
         "the archives are not one per feature set the shards run"
     );
 
@@ -469,7 +588,7 @@ fn qa_m0_52_the_archive_is_built_in_one_job() {
 negative_control!(
     qa_m0_52_the_archive_is_built_in_one_job,
     "the checked-in workflow with `ci-workspace` building a nextest archive of its own as well",
-    expected = "the archives are built in 2 jobs",
+    expected = "the dev archives are built in 2 jobs",
     check_archive(&edited(
         &the_workflow(),
         "        run: cargo nextest run -p xtask\n",
@@ -538,6 +657,110 @@ negative_control!(
         &the_workflow(),
         "shared-key: ci-archive\n",
         "shared-key: ci\n"
+    ))
+);
+
+#[test]
+fn qa_m0_52_the_release_archive_is_built_in_one_job() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_the_release_archive_is_built_in_one_job,
+    "the checked-in workflow with `ci-archive` building a release archive of its own beside `ci-release-archive`'s",
+    expected = "the release archives are built in 2 jobs",
+    check_archive(&edited(
+        &the_workflow(),
+        "        run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst\n",
+        "        run: cargo nextest archive --workspace --archive-file $RUNNER_TEMP/nextest-ci.tar.zst\n      - run: cargo nextest archive --workspace --release --archive-file $RUNNER_TEMP/nextest-r2.tar.zst\n"
+    ))
+);
+
+#[test]
+fn qa_m0_52_each_archive_is_built_once() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_each_archive_is_built_once,
+    "the checked-in workflow with `ci-release-archive` building its archive twice",
+    expected = "the archive `$RUNNER_TEMP/nextest-release.tar.zst` is built more than once",
+    check_archive(&edited(
+        &the_workflow(),
+        "        run: cargo nextest archive --workspace --release --archive-file $RUNNER_TEMP/nextest-release.tar.zst\n",
+        "        run: cargo nextest archive --workspace --release --archive-file $RUNNER_TEMP/nextest-release.tar.zst\n      - run: cargo nextest archive --workspace --release --archive-file $RUNNER_TEMP/nextest-release.tar.zst\n"
+    ))
+);
+
+#[test]
+fn qa_m0_52_release_shards_wait_on_their_archive_job() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_release_shards_wait_on_their_archive_job,
+    "the checked-in workflow with `ci-release`'s `needs:` dropped, so a release shard can start before its archive exists",
+    expected = "job `ci-release` does not wait (`needs:`) on `ci-release-archive`",
+    check_archive(&edited(
+        &the_workflow(),
+        "  ci-release:\n    needs: ci-release-archive\n",
+        "  ci-release:\n"
+    ))
+);
+
+#[test]
+fn qa_m0_52_release_shards_run_from_the_release_archive() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_release_shards_run_from_the_release_archive,
+    "the checked-in workflow with `ci-release`'s shards running from (and waiting on) the dev archive",
+    expected = "the shard jobs do not each run from the archive of the build profile REQ-SYS-078 names",
+    check_archive(&edited(
+        &edited(
+            &edited(
+                &the_workflow(),
+                "  ci-release:\n    needs: ci-release-archive\n",
+                "  ci-release:\n    needs: ci-archive\n"
+            ),
+            "          name: nextest-release\n          path: ${{ runner.temp }}\n",
+            "          name: nextest-ci\n          path: ${{ runner.temp }}\n"
+        ),
+        "run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst",
+        "run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst"
+    ))
+);
+
+#[test]
+fn qa_m0_52_release_shards_compile_nothing() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_release_shards_compile_nothing,
+    "the checked-in workflow with `ci-release`'s shards back on `cargo nextest run --workspace --release`",
+    expected = "a `ci-release` shard compiles its tests",
+    check_archive(&edited(
+        &the_workflow(),
+        "run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite",
+        "run: cargo nextest run --workspace --release"
+    ))
+);
+
+#[test]
+fn qa_m0_52_release_doctests_at_release_in_shard_1() {
+    check_archive(&the_workflow());
+}
+
+negative_control!(
+    qa_m0_52_release_doctests_at_release_in_shard_1,
+    "the checked-in workflow with `ci-release`'s doctests at the dev profile",
+    expected = "the workspace's doctests do not run, once, in shard 1 of `ci-release`, at its build profile release",
+    check_archive(&edited(
+        &the_workflow(),
+        "        run: cargo test --workspace --release --no-fail-fast --doc\n",
+        "        run: cargo test --workspace --no-fail-fast --doc\n"
     ))
 );
 
