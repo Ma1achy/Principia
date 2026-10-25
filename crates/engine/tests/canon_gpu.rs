@@ -22,6 +22,8 @@
 //!   CoM-frame one, and the output is the canonical representative on both backends (REQ-ENC-015).
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
 //!   CPU-f64 and GPU-f32, `ρ = (±0, ±0)` included; a `ρ` one step off 0 does not (REQ-ENC-016, R-13, R-437).
+//! - `canonicaliser_phi_signed_zero`: `ρ_x = −0` exactly with `ρ_y ≠ 0`: `φ` is `±π/2` on `ρ_y`'s side on CPU-f64,
+//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `rotation_angle`'s select (pitfalls §11; REQ-ENC-016).
 //! - `canonicaliser_noop_gpu`: dd_decoder §5 test 5 on the GPU, `C` on the GPU's own canonical-frame decodes, saturated
 //!   controls included, takes no mirror, turns by 0 and moves nothing beyond rounding (REQ-DEC-018).
 //!
@@ -1119,6 +1121,104 @@ negative_control!(
         for (name, x) in signed_poles() {
             let rho = [x.r[1][0] - x.r[0][0], x.r[1][1] - x.r[0][1]];
             check_pole_phi(rho[1].atan2(rho[0]), name);
+        }
+    }
+);
+
+// ── canonicaliser_phi_signed_zero (REQ-ENC-016; pitfalls §11) ───────────────────────────────────────────────────
+
+/// `φ`'s limit off `±π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading `ρ_x = −0`'s
+/// sign turns `φ` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
+const SIGNED_ZERO_EPS: f64 = 4.0;
+
+/// States whose `ρ = r₁ − r₀` has `ρ_x = −0` exactly and `ρ_y ≠ 0` (`r₁_x = −0`, `r₀_x = +0`), each sign of `ρ_y`, one
+/// `ρ_y` small, and one with `ρ_x = +0` beside them: `φ = ±π/2` on `ρ_y`'s side.
+fn signed_zero_rho() -> Vec<(&'static str, f64, Ic<f64>)> {
+    let m = [0.25, 0.375, 0.375];
+    let p = [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]];
+    let tiny = 2f64.powi(-20);
+    [
+        ("(−0, +2)", 1.0, [0.0, -1.0], [-0.0, 1.0], [0.7, 0.2]),
+        ("(−0, −2)", -1.0, [0.0, 1.0], [-0.0, -1.0], [-0.7, 0.2]),
+        ("(−0, +2⁻²⁰)", 1.0, [0.0, 0.0], [-0.0, tiny], [0.5, -0.3]),
+        ("(+0, −2)", -1.0, [-0.0, 1.0], [0.0, -1.0], [0.4, 0.6]),
+    ]
+    .map(|(name, sign, r0, r1, r2)| {
+        (
+            name,
+            sign,
+            Ic {
+                m,
+                r: [r0, r1, r2],
+                p,
+            },
+        )
+    })
+    .to_vec()
+}
+
+/// `φ` is `sign·π/2` within [`SIGNED_ZERO_EPS`] `eps` of `π/2`; returns the miss in `eps`.
+fn check_quarter(phi: f64, sign: f64, eps: f64, at: &str) -> f64 {
+    let quarter = std::f64::consts::FRAC_PI_2;
+    let err = (phi - sign * quarter).abs() / (eps * quarter);
+    assert!(
+        err <= SIGNED_ZERO_EPS,
+        "φ = {phi:e} at ρ = {at}, not {}π/2 ({err:.3e} eps)",
+        if sign < 0.0 { "−" } else { "+" }
+    );
+    err
+}
+
+/// A model of Metal's own `atan2` at its default math mode (naga passes the call through; pitfalls §11), consistent
+/// with the outputs measured at the four sites, not taken from Metal's implementation: `atan(y/x)`, turned by `π` to
+/// `y`'s side where `x < 0`; a `−0` `x` is not below 0, so `atan2(y, −0)` is `atan(∓∞)`, the opposite sign of `π/2` to
+/// IEEE's.
+#[cfg(feature = "controls")]
+fn metal_atan2(y: f32, x: f32) -> f32 {
+    let t = (y / x).atan();
+    match (x < 0.0, y >= 0.0) {
+        (true, true) => t + std::f32::consts::PI,
+        (true, false) => t - std::f32::consts::PI,
+        _ => t,
+    }
+}
+
+#[test]
+fn canonicaliser_phi_signed_zero() {
+    let h = harness();
+    let states = signed_zero_rho();
+    let narrowed: Vec<Ic<f32>> = states.iter().map(|(_, _, x)| narrow(x)).collect();
+    let gpu_out = gpu(&h, &narrowed);
+    let mut worst = 0.0f64;
+    for (k, (name, sign, x)) in states.iter().enumerate() {
+        // The case is reached: step 2's `ρ_x`, formed as `C` forms it, is the zero the name gives, its sign included.
+        let n = &narrowed[k];
+        let rho_x = n.r[1][0] - n.r[0][0];
+        assert_eq!(
+            (rho_x == 0.0, rho_x.is_sign_negative()),
+            (true, name.starts_with("(−0")),
+            "ρ_x = {rho_x:e} at ρ = {name}"
+        );
+        check_quarter(canonicalise(x).phi, *sign, f64::EPSILON, name);
+        check_quarter(canonicalise(n).phi.into(), *sign, EPS32, name);
+        worst = worst.max(check_quarter(gpu_out[k].phi.into(), *sign, EPS32, name));
+    }
+    let info = h.adapter_info();
+    eprintln!(
+        "canonicaliser_phi_signed_zero: worst GPU-f32 φ {worst:.2} f32 eps of π/2 on {} ({:?})",
+        info.name, info.backend
+    );
+}
+
+negative_control!(
+    canonicaliser_phi_signed_zero,
+    "φ from Metal's atan2 with ρ_x's zero sign kept, which turns φ by π at ρ_x = −0, must fail",
+    expected = "not +π/2",
+    {
+        for (name, sign, x) in signed_zero_rho() {
+            let n = narrow(&x);
+            let rho = [n.r[1][0] - n.r[0][0], n.r[1][1] - n.r[0][1]];
+            check_quarter(metal_atan2(rho[1], rho[0]).into(), sign, EPS32, name);
         }
     }
 );

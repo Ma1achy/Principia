@@ -6,7 +6,10 @@
 //! **The measure** ([`crate::roundtrip`]). At each sample, the chart's own decode `D(·)` at the precision, `E` on it
 //! under the defaults links, the free decode of its `z`, and the residual `‖·‖_phys` of Part 4: the largest of
 //! `|Δmᵢ|`, `‖Δrᵢ‖/R_x` and `‖Δpᵢ‖/P_x`, `R_x` and `P_x` the decoded state's extent in positions and momenta, floored
-//! at 1. It is reported in units of the precision's epsilon, so the two precisions read on one scale.
+//! at 1. It is reported in units of the precision's epsilon, so the two precisions read on one scale. On the shape
+//! sphere chart's rows the residual is taken against `C(x)`, `D(E(x))` against `x`'s canonical state, as T3's: its
+//! decode at a lower-hemisphere pixel is off `C`'s section (R-544; inverse-encode Part 1's T2;
+//! [`crate::roundtrip::Against`]). Every other row is against `x`.
 //!
 //! **Interior** (Part 1, T2: "away from clamps"). A sample is interior when each of its eight controls lies at least
 //! twice its clamp's `ε` inside the clamp, by the oracle [`crate::roundtrip::margins`], which reads Part 3's formulas
@@ -39,7 +42,7 @@ use crate::gate::{Gate, GateConfig};
 use crate::gauge::uniform;
 use crate::oklab::quantile;
 use crate::roundtrip::{
-    margins, registry, trip_with, widen, DecodeAt, Precision, Registered, Sides, Trip,
+    margins, registry, trip_against, widen, Against, DecodeAt, Precision, Registered, Sides, Trip,
 };
 use ledger::constants::EPS_PHYS;
 
@@ -102,11 +105,11 @@ pub struct Row {
     pub p99: f64,
 }
 
-/// The round trip at `x` under the input's encode.
-fn round<R: Precision>(kind: EncodeKind, x: &Ic<R>) -> Trip<R> {
+/// The round trip at `x` under the input's encode, its residual against `against`'s state.
+fn round<R: Precision>(kind: EncodeKind, x: &Ic<R>, against: Against) -> Trip<R> {
     match kind {
-        EncodeKind::Defaults => trip_with::<Defaults, Defaults, R>(x),
-        EncodeKind::Mismatched => trip_with::<Mismatched, Defaults, R>(x),
+        EncodeKind::Defaults => trip_against::<Defaults, Defaults, R>(x, against),
+        EncodeKind::Mismatched => trip_against::<Mismatched, Defaults, R>(x, against),
     }
 }
 
@@ -116,13 +119,18 @@ pub fn agrees(sides: Sides, bits: u32) -> bool {
     (sides.past & !bits) == 0 && (sides.inside & bits) == 0
 }
 
-/// The row over the decoded states `xs`, from `source` at `R`.
-fn row<R: Precision>(source: &str, kind: EncodeKind, xs: impl Iterator<Item = Ic<R>>) -> Row {
+/// The row over the decoded states `xs`, from `source` at `R`, each residual against `against`'s state.
+fn row<R: Precision>(
+    source: &str,
+    kind: EncodeKind,
+    against: Against,
+    xs: impl Iterator<Item = Ic<R>>,
+) -> Row {
     let (mut clamped, mut band, mut mismatches) = (0, 0, 0);
     let mut residuals = Vec::new();
     let mut worst = (0.0f64, 0usize);
     for (i, x) in xs.enumerate() {
-        let t = round(kind, &x);
+        let t = round(kind, &x, against);
         let sides = Sides::of(margins(&widen(&x)));
         let bits = t.encoded.report.clamped_controls;
         mismatches += usize::from(!agrees(sides, bits));
@@ -168,12 +176,12 @@ pub fn latents(input: &Input) -> Vec<[f64; 8]> {
         .collect()
 }
 
-/// `chart`'s row at `R`.
+/// `chart`'s row at `R`, against the chart's own reference ([`Registered::against`]).
 pub fn chart_row<R: DecodeAt>(chart: &dyn Registered, input: &Input) -> Row {
     let xs = points(input)
         .into_iter()
         .map(|(u, v)| R::decode_at(chart, u, v).ic);
-    row(chart.key(), input.encode, xs)
+    row(chart.key(), input.encode, chart.against(), xs)
 }
 
 /// The 8-D interior's row at `R`.
@@ -181,7 +189,7 @@ pub fn fuzz_row<R: Precision>(input: &Input) -> Row {
     let xs = latents(input)
         .into_iter()
         .map(|z| decode::decode::<Defaults, R>(&Latent::new(z.map(R::of))).ic);
-    row("latent z (8-D)", input.encode, xs)
+    row("latent z (8-D)", input.encode, Against::Decoded, xs)
 }
 
 /// Every row: each registered chart at f64 and f32, in the registry's order, then the 8-D interior.
@@ -246,8 +254,8 @@ impl EpsPhysGate {
         let rows = rows(input);
         let verdict = verdict(&rows, k);
         let mut scatter = vec![format!(
-            "‖D(z) − D(E(D(z)))‖_phys over interior samples, in the precision's ε (f64 2⁻⁵², f32 2⁻²³), against \
-             ε_phys = {k}·ε"
+            "‖D(z) − D(E(D(z)))‖_phys over interior samples (the shape sphere's rows ‖C(D(z)) − D(E(D(z)))‖_phys, \
+             R-544), in the precision's ε (f64 2⁻⁵², f32 2⁻²³), against ε_phys = {k}·ε"
         )];
         for r in &rows {
             scatter.push(format!(

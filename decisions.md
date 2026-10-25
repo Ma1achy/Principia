@@ -10815,6 +10815,10 @@ R-448 is in the "design" group of `plan/rule_groups.yaml`.
 Changes REQ-COL-067 and REQ-COL-068 (verify, rulings, sources, note).
 
 ## R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*
+*Amended in part by R-587 (21 Oct 2026; the trajectory CSV's body columns are labelled 1-based, `body1_x` …, the
+preamble saying so).*
+*Still in force: all of it, but that the trajectory CSV's body column labels are 1-based (R-587); every other
+machine-readable export, the IC record's fields and the outcome's `detail` stay 0-based and say so.*
 *16 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of
 `packed_a`) — 10 used, rest reserved" (a bullet, "What a person reads", added), `docs/design/principia_colour_composition.md`
 § "1.4 Categorical colour-assignment — the outcome-state default palette" (the two tables' class names, a paragraph
@@ -14380,9 +14384,11 @@ off-screen pinning, repeats and not-a-system handling, and its length and colour
 follows).*
 *Amended in part by R-541 (21 Oct 2026; Lines ▾ no longer lists the traces, whose controls move to Overlays ▾ › Trace,
 the Trajectory panel and `Trace…`; whether Lines ▾ stays for the rest is RQ-448, its option (a) applied).*
+*Amended in part by R-583 (21 Oct 2026; one size rule, base px: `PrintPt` and `LineStyle`'s `units` are retired).*
 *Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces,
-§8's markers and trace defaults as adopted, which R-538 replaces, and Lines ▾'s listing of the traces, which R-541
-replaces.*
+§8's markers and trace defaults as adopted, which R-538 replaces, Lines ▾'s listing of the traces, which R-541
+replaces, and `LineStyle`'s `units: ScreenPx | PrintPt` and §5's "pt in a print export", which R-583 replaces with
+base px.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -15266,6 +15272,9 @@ REQ-SCHED-100 (X8, C13); changes REQ-TOOL-065 (X3), REQ-TOOL-066 and REQ-TOOL-11
 REQ-VAL-098 (C10), REQ-SCHED-048 (X8), REQ-CHART-033, REQ-CHART-052 and REQ-GUI-036 (notes).
 
 ## R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)
+*Amended in part by R-585 (21 Oct 2026; tier 2 holds `RenderState` as built-ins plus references, and content too big for
+the low bits, the uploaded picture's texels, travels as an attachment in a chunk of its own, outside the tiers).*
+*Still in force: all of it, tier 2 reading "`RenderState` as built-ins, plus references" (R-585).*
 *20 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` § 2 (the round-trip rule, the tier table's
 home), `docs/design/principia_dd_image_embedding.md` § "2. Layout" (the `colour` flag), § "6. What travels" (the tiers)
 and § "9. Obligations" (the report, the outcomes), `docs/contracts/principia_export_animation_contract.md` § "Part 5 —
@@ -15742,6 +15751,10 @@ over a pixel that is not a system, which R-470 draws blank, never a palette colo
 R-489 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default
+*Amended in part by R-583 (21 Oct 2026; `ref_px` is base px, scaled by `output_width / base_width`, 1024 the base where a
+state has none).*
+*Still in force: all of it, `ref_px` reading base px (R-583); the export-size invariance, `device_px`, `fraction`,
+the seeding, the anchored sheet and `boil` stand.*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 6 (adopted); the tasks and requirements follow in the
 plan PR*
 
@@ -25008,6 +25021,615 @@ stepper it marches is not, as TASK-M3-38 does.
 R-580 is in the "physics" group of `plan/rule_groups.yaml`, with R-389 and R-544.
 
 Changes REQ-INT-082 (statement, verify, rulings, rq, note).
+
+## R-581 — Export freezes every measured colour window, as numbers: an image at the window on screen when Export is pressed, a recording at the window on screen when Record is pressed, per frame only as an explicit labelled choice; the share each clamped is reported; an imported frozen window reads "frozen at export" until Re-measure *(queues RQ-562)*
+*21 Oct 2026 · applied in `docs/design/principia_export_details.md` (new, §3.1, §3.4), `docs/gui/principia_render_gui_spec.md`
+§ "Export & share", § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)" and Part II § "10.1
+The shared prelude library", `docs/contracts/principia_export_animation_contract.md` § "Part 4 — Export: the frame loop
+in blocking mode", `docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_dd_image_embedding.md`
+§6 (tier 2's row), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-562, new), REQ-RENDER-117,
+REQ-TOOL-201, REQ-TOOL-202 and REQ-GUI-389 (new), TASK-M8-80 (new) and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-80; and, in fix round 3 of PR #287 (code review 5638122561, C1, applied per R-369),
+REQ-TOOL-216 and REQ-TOOL-217 (new; the latter a calibration), closed by TASK-M8-80*
+
+R-581 to R-587 are the gap sweep's PR 2c, the part of the bundle's "PR 2 — New design documents" that carries
+`designs/export_details.md`, `designs/video_carrier_test.md`, `designs/uploaded_picture.md` and `designs/ic_save.md`.
+The orchestrator split the bundle's PR 2 into three and told the human: 2a `results.md` and `honesty_precision.md` (PR
+#283), 2b `keyframes_reel.md` and `reel_click.md` (PR #286), 2c these four. The bundle's `INSTRUCTION.md` header and
+the human's covering message are quoted in R-560; the lead of its PR 2 section in R-577.
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `export_details.md` item, verbatim:
+
+> - `export_details.md`: a recording's colour range is frozen at Record, with clipping reported. Colour-blindness
+>   simulation is never baked into an export unless asked, and is recorded when it is. One size rule ("base px") for
+>   lines, labels and marks; PrintPt is retired (amends REQ-RENDER-088 and print_graph §6.2).
+
+`DECISIONS_2026-10-21.md`, its "Export details" line, verbatim:
+
+> Export details: yes to all three (recording colour range frozen at Record; colour-blindness simulation not baked in
+> unless asked; line and label sizes scale with the export).
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> All three accepted as proposed: a recording's colour range is frozen when Record is pressed (clipping reported);
+> colour-blindness simulation is never baked into an export unless asked, and is recorded when it is; line, label and
+> mark sizes scale with the export by one rule ("base px").
+
+"Accepted as proposed" accepts the draft's §3 and, for each of its §5 open questions, the option it recommends: (i)
+the screen's window at Record, clipping reported (question 1); (i) the colour-vision simulation in `ViewUI` with a
+uniform, remembered across sessions (question 2, R-582); (i) `PrintPt` retired, base px with a pt readout (question 3,
+R-583); (i) base px for the Print graph on screen (question 4, R-583). R-581 is the first of the three, R-582 the
+second and R-583 the third.
+
+*What it decides:* the draft's §3 (a), written as `principia_export_details.md` §3.1:
+- **An image export freezes every measured range.** When Export is pressed, each `range_norm` window in use whose
+  source is measured (`RANGE_AUTO = 1`: a stain node's, and a Print graph field input's, which reads the stain's window
+  rule) is written, as the `u_range` the screen is drawing with, into `RenderState.frozen_ranges { node_id → (lo, hi)
+  }`; a node with an entry reads it instead of measuring. `range_norm` gains a third source, frozen.
+- **Clipping is stated**: the share of exported pixels clamped at each end, per frozen node.
+- **A recording uses one window**, frozen when Record is pressed, its clipped shares per frame; **per frame** is an
+  explicit choice, labelled "re-ranges every frame: frames not comparable", recorded as `range_policy=per_frame`.
+- **On import** the node shows "frozen at export"; **Re-measure** clears it, one undo entry.
+
+*Queued, not resolved, as the bundle's instruction says ("Where anything here conflicts with a ruling or a queue entry
+these texts don't address, queue it rather than resolving it"):* **RQ-562.** The export writes `frozen_ranges` (and,
+under R-583, `base_width`) into the `RenderState` it records, so importing an export gives the live view's state plus
+the window frozen at export. R-484 RT1: "Import of an export is the identity on `SimConfig` and `RenderState`", and its
+T1 round-trips a state "in which every field differs from its default". Meanwhile the identity is read on the record:
+what an import reads back is, bitwise, the `RenderState` the export wrote; T1 runs on the headless paths, whose writer
+freezes nothing a state has not already frozen and keeps its `base_width`; and a GUI export's `frozen_ranges` and
+`base_width` are named in the export's report as written by the export. Nothing waits.
+
+*24 Oct 2026:* RQ-562 is ruled, option (a), by **R-588**: the identity read on the record, as above, is no longer
+an interim. Import gives back, bitwise, the `RenderState` the export wrote, frozen windows and `base_width` included;
+the export reports the fields it froze; T1 runs on the headless paths. Nothing above holds on RQ-562 now.
+
+*Applied per R-369:*
+- **The clipped share** is the fraction of the export's pixels the chart classifies as a system (R-467) whose value
+  fell below `lo` or above `hi`, a pixel that is not a system counting at neither end.
+- **The Sequence's export is a recording too**: it freezes, when its Start is pressed, the window on screen for every
+  measured node the view on screen draws; a measured node no keyframe shares with that view is frozen at the first
+  export frame that draws it, measured there at the export's size, and named in the planner and the record; the
+  planner offers per frame as Record does.
+- **A snapshot JSON or a share link** is not an image export: it carries `frozen_ranges` as the view has it and freezes
+  nothing.
+- **Re-measure** is one `SetField` on `RenderField::FrozenRanges`, the whole map, undoable (R-69); "frozen at export"
+  shows in the node's inspector and on the Legend's key.
+- **The export block**, `export { range_policy, clipped, cvd_simulated, render_scale, device_px_nodes }`, rides beside
+  `SimConfig` and `RenderState` as a sidecar outside the identity, as `f3_fill` does (R-484 J3), in tier 2 of the low-bit
+  record with `f3_fill` and always in the `tEXt` chunk; `frozen_ranges` is `RenderState`'s, in tier 2 with the ramp
+  window.
+- **The pre-pass, opt-in** (fix round 3 of PR #287, code review 5638122561, C1: the port had dropped it): the draft's open question 1 reads "**Which window
+  does a recording freeze?** (i) the screen's at Record; (ii) a cheap low-resolution pre-pass over all frames, union of
+  ranges; (iii) the final frame's. *Recommend (i)*, clipping reported; (ii) opt-in.", and the human accepted it as
+  proposed. So the Record dialog, and the Sequence's planner, offer a pre-pass, off by default, that renders every
+  frame at a reduced resolution and freezes the union of the windows measured, `range_policy = prepass_union`, the
+  clipped shares still per frame; its resolution is a calibration value (R-71, REQ-TOOL-217)
+  (`principia_export_details.md` §3.1). REQ-TOOL-216; TASK-M8-80.
+- **An entry goes with its node** (fix round 1 of PR #287, gui review 5638052211, G6): a stain-graph edit that removes a node, or a preset
+  replacing the graph, drops the entries of the nodes no longer present in the same undoable command, one undo entry,
+  so a reused id never inherits a stale freeze (`principia_export_details.md` §3.1).
+- **One task, M8:** TASK-M8-80 builds R-581 and R-582 and R-583's export side; R-583's base px for every mark is
+  TASK-M7-70's.
+
+*Applied per R-369* (gui review 5638421533 of PR #287, G8): the Record dialog's and the Sequence's planner's colour
+window is one exclusive choice of three, Frozen at Record (the default), Pre-pass and Per frame, so no recording has
+two `range_policy` values (`principia_export_details.md` §3.1, render GUI spec §G9; REQ-TOOL-201, REQ-TOOL-216).
+
+R-581 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-RENDER-117 (the frozen source), REQ-TOOL-201 (a recording's one window), REQ-TOOL-202 (the export block and
+the clipped shares) and REQ-GUI-389 (frozen at export and Re-measure).
+Fix round 3 of PR #287 adds REQ-TOOL-216 (the opt-in pre-pass) and REQ-TOOL-217 (calibration: the pre-pass's
+resolution) (code review 5638122561, C1, applied per R-369).
+
+## R-582 — The colour-vision simulation is the viewer's setting, `ViewUI.cvd`: never in an export unless "As seen with" is picked, which is recorded, suffixes the file name and is badged; `render_scale` is 1 in every export; a screenshot is the screen and records what it captured
+*21 Oct 2026 · applied in `docs/design/principia_export_details.md` (new, §3.2), `docs/gui/principia_render_gui_spec.md`
+§ "Export & share" and § "Display — the last stages", `docs/contracts/principia_export_animation_contract.md` § "Part 4
+— Export: the frame loop in blocking mode", `docs/contracts/principia_gui_state_contract.md` §2,
+`docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)", REQ-TOOL-203,
+REQ-TOOL-204 and REQ-GUI-390 (new), TASK-M8-80 (new) and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-80*
+
+The human's words for it are quoted in R-581: "Colour-blindness simulation is never baked into an export unless asked,
+and is recorded when it is" (the instruction), "colour-blindness simulation not baked in unless asked" (the decisions)
+and "colour-blindness simulation is never baked into an export unless asked, and is recorded when it is" (the
+design's "Decided").
+
+*What it decides:* the draft's §3 (b), written as `principia_export_details.md` §3.2, with its open question 2's
+recommendation:
+- **The colour-vision simulation lives in `ViewUI`**, reaching the renderer as a GUI-set uniform, as the canvas
+  background does; never undoable, never restored from a record; remembered across sessions.
+- **Exports never include it** unless the user picks **"As seen with: [mode]"**, which records `cvd_simulated`,
+  suffixes the file name and badges the header strip.
+- **`render_scale` = 1 in every export**, as the checkerboard is forced off (export contract Part 4). A **screenshot**
+  is the screen: its record names the `render_scale` and the mode it captured.
+
+*Applied per R-369:*
+- **"As seen with"** is a checkbox in Export & share's Image section, off by default, offered while `ViewUI.cvd` is not
+  Off; picked, the record carries `cvd_simulated: <mode>` (`null` in every other export) and the file name the suffix
+  `__as_seen_<mode>`.
+- **"Badges the header strip"** is read as: wherever the app shows such an image (Import picture's preview), its header
+  strip carries "As seen with <mode>" (R-523), and Import picture's report names it; restoring the view does not turn
+  the simulation on, the restored `ViewUI` being the user's own.
+- **The screenshot**: the app writes none today, so the rule is for any it adds: it records the `render_scale` and the
+  mode it captured, beside its record, and is never an export.
+
+R-582 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-203 (no simulation in an export unless asked), REQ-TOOL-204 (`render_scale` 1 in every export) and
+REQ-GUI-390 (the viewer's setting, "As seen with" and its badge).
+
+## R-583 — One size rule, base px: every mark length (strokes, dashes, outlines, labels, offsets, halos, spacing, icons, arrows, ticks, smart ink's radius and the Print graph's marks) is in base px, rendered at `output_width / base_width`, 1 on screen, labels placed at base size; `device_px` the one listed exception; `PrintPt` retired, a physical size an optional export field with a pt readout *(amends R-476 as to lines §3 and §5's units; amends R-490 as to `ref_px`)*
+*21 Oct 2026 · applied in `docs/design/principia_export_details.md` (new, §3.3), `docs/design/principia_lines.md` § "3.
+The data model" (`LineStyle`'s `units`, the PrintPt rule) and § "5. Drawing a line" (Units), each with its earlier words
+kept, `docs/design/principia_print_graph.md` § "6.2 Units: a medium must look the same at every export size" (`ref_px`,
+its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "Export & share",
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/contracts/principia_export_animation_contract.md` § "Part 4
+— Export: the frame loop in blocking mode", `docs/design/principia_dd_image_embedding.md` §6 (tier 2's row), R-476's
+and R-490's heading blocks (a forward line each, their "Still in force" lines), REQ-RENDER-088 and REQ-RENDER-111
+(reqio), REQ-RENDER-118 and REQ-TOOL-205 (new), TASK-M7-70 and TASK-M8-80 (new), TASK-M7-42 and TASK-M7-55 and
+`plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M7-70,
+TASK-M7-42, TASK-M7-55 and TASK-M8-80; and, in fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369), REQ-RENDER-118
+(reqio, cut to the destinations M7 builds), REQ-TOOL-218 (new), TASK-M7-70 (a dependency on TASK-M7-44) and TASK-M8-80
+(closes REQ-TOOL-218)*
+
+The human's words for it are quoted in R-581: "One size rule ("base px") for lines, labels and marks; PrintPt is retired
+(amends REQ-RENDER-088 and print_graph §6.2)" (the instruction), "line and label sizes scale with the export" (the
+decisions) and "line, label and mark sizes scale with the export by one rule ("base px")" (the design's "Decided").
+
+*What it decides:* the draft's §3 (c), written as `principia_export_details.md` §3.3, with its open questions 3 and 4's
+recommendations:
+- **Every mark length is in base px**: stroke, dash, outline, label size, offset, halo and spacing, icon and arrow size,
+  tick length, smart ink's radius, and the Print graph's `ref_px` marks.
+- **`RenderState.base_width`** is the figure's width in logical px (the scale factor removed) when saved or exported; a
+  spec with no view (the reel, headless) and older records take 1024.
+- **Rendered length = length × `output_width / base_width`**: 1 on screen, `k` for a `k×` export, the same ratio at any
+  size. Label placement runs at base size and is scaled, so a 4× export places the same labels.
+- **`device_px`** stays the one listed exception.
+- **Physical size** (mm, DPI) is an optional export field that sets `output_width` and writes the PNG's `pHYs`; the
+  style editor reads widths in pt for it.
+- **R-476 is amended** as to the units `principia_lines.md` §3 and §5 gave, which it adopted: `LineStyle` loses
+  `units: ScreenPx | PrintPt`, "`PrintPt` sizes a style in points for exports" and "pt in a print export" go, each kept
+  as a *Was:*. REQ-RENDER-088 follows, its "PrintPt sizes in points for exports" and its verify's "PrintPt widths scale
+  with the export's DPI" replaced.
+- **R-490 is amended** as to `ref_px`: "pixels on a 1024-wide figure scaled by `output_width / 1024`" becomes base px,
+  `output_width / base_width`, 1024 the base where the state has none, so on screen a medium keeps its size when the
+  window is resized; R-490's export-size invariance still holds, and its determinism, `device_px`, `fraction`, the
+  sheet and `boil` stand. REQ-RENDER-111 follows.
+
+*Applied per R-369:*
+- **On screen** the renderer draws at a scale of 1 whatever `base_width` says; the writer sets `base_width` to the
+  figure's logical width when a view is saved or exported from the GUI, and a headless writer keeps the state's (how
+  this sits with R-484's identity is RQ-562, R-581).
+- **Physical size's arithmetic**: `output_width = round(width_mm / 25.4 × DPI)`; `pHYs` gives `round(DPI / 0.0254)`
+  pixels per metre, unit 1; the pt readout is `base px × (width_mm / 25.4 × 72) / base_width`, a readout, never a
+  second unit.
+- **The export's record lists every `device_px` node it drew**, in the export block (R-581).
+- **On screen 1 base px is one logical px** (fix round 1 of PR #287, gui review 5638052211, G5): at a display scale factor `s` a mark is `s` times its
+  base px in physical px; `base_width` and Export & share's "multiples of the view" count logical px, so a `k×`
+  export's ratio is `k` on every display (`principia_export_details.md` §3.3).
+- **Two tasks:** TASK-M7-70 (M7) builds base px and `base_width` in the line engine and the Print graph, after
+  TASK-M7-42 and TASK-M7-55, which keep REQ-RENDER-088 and REQ-RENDER-111 as amended; TASK-M8-80 the physical size.
+- **Fix round 3 of PR #287** (code review 5638122561, C3, applied per R-369): the GUI's save and Export & share writers
+  of `base_width` move to TASK-M8-80 (REQ-TOOL-218, new), since their writers on the real engine are M8's (TASK-M8-32,
+  TASK-M8-33); REQ-RENDER-118 is cut to the destinations M7 builds (the renderer, the headless writer, a record
+  without `base_width`), as TASK-M7-45's F1 of PR #265; and TASK-M7-70 depends on TASK-M7-44 (the tier table).
+
+*24 Oct 2026:* RQ-562 is ruled, option (a), by **R-588**: the `base_width` a GUI save or export writes is in
+R-484's identity on the record written, and a headless writer keeps the state's. Nothing here holds on RQ-562 now.
+
+R-583 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-RENDER-088 (statement, verify, rulings, source, note) and REQ-RENDER-111 (statement, rulings, source, note).
+Adds REQ-RENDER-118 (base px) and REQ-TOOL-205 (physical size).
+Fix round 3 of PR #287 adds REQ-TOOL-218 (the GUI's `base_width` writers) (code review 5638122561, C3, applied per
+R-369).
+
+## R-584 — A recording always carries its settings, once per file, in its format's own metadata (a GIF's comment and application extension, an MP4's comment, a WebM's tag); PNG frames keep the low-bit record in every frame; the settings file is always written beside the export; embedding §9's "off by default for figure export" stays for single figures
+*21 Oct 2026 · applied in `docs/design/principia_video_carrier.md` (new), `docs/gui/principia_render_gui_spec.md` §
+"G9. Import picture · saved views · record a sweep (`09_importrecord.png`)" (Record a time sweep's "pxpack in every
+frame", its earlier words kept, and Import picture), `docs/contracts/principia_export_animation_contract.md` § "Part 6
+— Sharing: the spec is the object, the video is its shadow", `docs/design/principia_dd_image_embedding.md` § "9.
+Obligations" (its first bullet), `docs/read_first/principia_INDEX.md`, REQ-TOOL-083 and REQ-TOOL-106 (reqio:
+statement, verify, rulings, source, note), REQ-TOOL-070 and REQ-TOOL-200 (reqio: note, rulings), REQ-TOOL-206 and
+REQ-TOOL-207 (new), TASK-M8-81 (new), TASK-M8-31 and TASK-M8-33 and `plan/rule_groups.yaml`; the record, with the
+human's test script, is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-81, TASK-M8-31 and
+TASK-M8-33*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `video_carrier_test.md` item, verbatim:
+
+> - `video_carrier_test.md`: a recording carries its settings once per file in the format's own metadata (GIF comment,
+>   MP4 comment, WebM tag), and **always** (my words: "yes always embed the settings"); PNG frames keep the low-bit
+>   record; the settings file is always written beside the export. Amend §G9's "pxpack in every frame" and the tests of
+>   REQ-TOOL-083 and -106. Embedding §9's "off by default for figure export" stays for single figures.
+
+`DECISIONS_2026-10-21.md`, its "Video" line, verbatim:
+
+> Video: always embed the settings. "yes always embed the settings"
+
+The test's "Proposed" section, verbatim:
+
+> - **A recording carries its spec once per file, not in every frame.** For GIF that's the comment block (plus an
+>   application extension), for MP4 the standard comment field, and for WebM a tag, each holding the compressed record.
+>   A frame's playhead follows from its index and the recording's settings, so per-frame copies add nothing.
+> - **PNG frame sequences keep the low-bit pxpack in each frame**, as now.
+> - **The spec file is always written beside the export as well.** No metadata survives upload to most websites, which
+>   strip it and re-encode.
+> - **Amend:** §G9's "pxpack in every frame" becomes "the record in the file, by format", and REQ-TOOL-083/106's tests
+>   read the container record back bitwise, with a re-encode arm for MP4 and WebM.
+> - **Also unresolved, for you:** embedding §9 says pxpack is **off by default for figure export** and on for share,
+>   while §G9 implies it is always on for recordings. Pick one default for recordings.
+
+*What it decides:* the test's proposal, written as `principia_video_carrier.md`; the human's "always" answers its open
+question:
+- **Once per file, always**: a GIF carries the record in its comment block and an application extension, an MP4 in
+  its standard comment field, a WebM in a tag named `PRINCIPIA_SPEC`; no option turns it off. A frame's playhead
+  follows from its index and the recording's settings.
+- **PNG frames keep the low-bit pxpack in every frame**, always on for a recording's frames.
+- **The settings file is always written beside the export**, in every format.
+- **§G9's "pxpack in every frame"** becomes "the record in the file, by format", kept as a *Was:*; REQ-TOOL-083's and
+  REQ-TOOL-106's tests read the container's record back bitwise, with a re-encode arm for MP4 and WebM.
+- **Embedding §9's "off by default for figure export" stays for single figures**; a recording always embeds. §9's
+  bullet says so.
+
+*Applied per R-369:*
+- **"The compressed record"** is the embedding's record (`principia_dd_image_embedding.md` §2: header, raw-DEFLATE
+  payload and CRCs), its payload the recording's settings in the canonical serialisation, written when the recording
+  ends; a text field holds it as base64 (RFC 4648 §4, padded, no line breaks), as the human's script `vt.py` wrote it.
+  The GIF's application extension has the identifier `PRINCPIA` and the authentication code `REC`, and holds the
+  record's raw bytes; both GIF blocks sit after the last frame, before the trailer, and a reader takes the application
+  extension's, reporting a disagreement between the two. Reading back has the embedding's three outcomes.
+- **The time sweep's settings file** is `<name>.principia-sweep.json`, `{ format: "principia.sweep/1", build, schema,
+  entry_hashes, sim, render, sweep, export }` in the canonical serialisation; the Sequence's is its
+  `.principia-seq.json` (R-577). The container's record holds the same JSON as the file beside it.
+- **A sweep frame's playhead**: frame `i` of `n` is at `t_start + (t_end − t_start) × i / (n − 1)`, in f64 in that
+  order; one frame is at `t_start`.
+- **The spotlight reel's film** (R-578) is a release output with its manifest, not a user's recording; nothing here
+  changes it.
+- **WebM is the browser's** (R-131); natively the formats are PNG frames, GIF and MP4.
+- **The tests' reach** (fix round 2 of PR #287, qa review 5638084688, Q1 to Q3, Q9): a GIF whose two blocks differ reads the application extension's record
+  and reports them as disagreeing; the GIF and `prPc` layouts are pinned by known-answer fixtures; the WebM tag's writer
+  is tested in the M8 Playwright browser suite (the native build writes no WebM, R-131) and the native reader on a
+  checked-in fixture, by TASK-M8-85; in CI the ffmpeg arms fail, never skip, when ffmpeg is absent.
+- **One task, M8:** TASK-M8-81 builds the carriers and the file beside; TASK-M8-33 keeps REQ-TOOL-106 and TASK-M8-31
+  REQ-TOOL-083 as amended.
+
+R-584 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-083 and REQ-TOOL-106 (statement, verify, rulings, source, note), REQ-TOOL-070 (rulings, note) and
+REQ-TOOL-200 (rulings, note). Adds REQ-TOOL-206 (the carriers) and REQ-TOOL-207 (the settings file beside every
+recording, and a frame's playhead).
+
+## R-585 — The uploaded picture: ingested by area averaging in the app's own code to 256², stretched to fit, its texels canonical; referred to in `RenderState` by a SHA-256 `PictureRef`, tier 2; a content-addressed store; the texels carried in a private PNG chunk, `prPc`, an attachment outside the tiers; a missing picture a visible "Picture missing" badge over `#141418`, never substituted *(amends R-484 as to tier 2's contents)*
+*21 Oct 2026 · applied in `docs/design/principia_uploaded_picture.md` (new), `docs/design/principia_dd_image_embedding.md`
+§6 (tier 2's row, its earlier words kept, and the attachments paragraph), `docs/design/principia_colour_composition.md`
+§ "3. The `ctx` contract", `docs/design/principia_state_map.md` § "SM8. Image mode", `docs/gui/principia_render_gui_spec.md`
+§ "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)", `docs/contracts/principia_gui_state_contract.md`
+§2, `docs/read_first/principia_INDEX.md`, R-484's heading block (a forward line, its "Still in force" line),
+REQ-COL-160 (new, calibration), REQ-COL-161, REQ-TOOL-208 to REQ-TOOL-210, REQ-GUI-391 and REQ-GUI-392 (new),
+TASK-M8-82 (new) and `plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`;
+built by TASK-M8-82*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `uploaded_picture.md` item, verbatim:
+
+> - `uploaded_picture.md`: a SHA-256 reference in the view; texels in a private PNG chunk; stretched to fit; a visible
+>   "Picture missing" badge, never a substitute.
+
+`DECISIONS_2026-10-21.md`, its "Uploaded picture" line, verbatim:
+
+> Uploaded picture: yes, as drafted (SHA-256, stretch, missing badge).
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> Accepted as proposed: SHA-256, stretch to fit, a visible "Picture missing" badge, texels carried in a private PNG
+> chunk, never substituted.
+
+"Accepted as proposed" accepts the draft's §3 and each of its §5 open questions' recommendation: (a) SHA-256; (a) a
+`prPc` chunk; (a) stretch; (a) convert ICC to sRGB, recorded; (a) `#141418` plus a badge; (a) a fixed 256².
+
+*What it decides:* the draft's proposal, written as `principia_uploaded_picture.md`:
+- **Ingest**: PNG or JPEG, refused with a reason over 32 MB or 8192² decoded (calibration values, R-71); decoded to
+  8-bit sRGB, composited over the canvas background where it has alpha, **resampled to 256 × 256 by area averaging in
+  Principia's own code**, stretched, the dialog showing the stretch; row 0 the top edge; **the canonical picture is
+  those texels**, 196,608 B of RGB8; the original not kept.
+- **Identity**: `PictureRef { hash, name, w: 256, h: 256, resample: "area/1" }`, `hash` SHA-256 over
+  `"principia.picture/1"`, the dimensions and the texels.
+- **Store**: `pictures/<hash>.png`, lossless, re-hashed on read, kept while any history entry, saved view or result
+  refers to it; an upload writes the store, then one `SetField` with the reference only; undo restores the previous
+  reference, the bytes kept.
+- **How it travels**: the reference in snapshot JSON, share links, the animation spec, saved views and the low-bit
+  record (tier 2); `tEXt` the reference; the texels in a private ancillary chunk `prPc`; a result folder `picture.png`.
+  The texels stay out of the low bits by arithmetic.
+- **Missing**: the base draws `#141418` (R-467) with its layers over it; the header strip says "Picture missing:
+  <name> · <hash, 8>" (R-523); the import report lists it; *Locate picture…* accepts only a file whose resampled hash
+  matches; **no built-in ever stands in**; a `prPc` whose texels do not hash to the reference is "state present,
+  corrupt".
+- **R-484 is amended** as to tier 2's contents: "`RenderState` as built-ins" becomes built-ins plus references, and the
+  embedding gains an attachment channel outside the tiers for content too big for the low bits, in its own chunk and
+  named in the report. R-484's identity holds, since `RenderState` holds the reference; its tiers, the drop from the
+  bottom and never below physics, stand. Colour composition §3's and TASK-M7-49's "assigned its tier … by the task
+  that builds it" is settled: tier 2.
+
+*Applied per R-369:*
+- **Area averaging is exact**: each texel the overlap-area-weighted mean of the 8-bit sRGB source pixels it covers,
+  computed in integers (the footprint's edges at multiples of `W/256` and `H/256`) and rounded half to even; the decode
+  and the profile conversion before it the app's own pinned code, never the platform's libraries, so one file gives one
+  hash on every machine.
+- **The hash's bytes**: the ASCII `principia.picture/1`, then `w` and `h` as u32 big-endian, then the texels row by
+  row, written as 64 lowercase hex digits; `name` is shown and outside the hash.
+- **`prPc`'s layout**: the 32 raw hash bytes, then the 196,608 texel bytes, uncompressed, PNG's CRC covering the chunk;
+  written into every exported PNG whose `RenderState` refers to a picture, and named in the export's report.
+- **The store** is in the app's data folder, beside its settings; a stored file whose texels do not hash to its name is
+  not used.
+- **The calibration**: 32 MB and 8192² are the draft's proposed values, REQ-COL-160, confirmed by the human at the M8
+  gate.
+- **One task, M8:** TASK-M8-82, after TASK-M7-49 (the Picture base), TASK-M7-51 (its "Your image…" control), TASK-M7-44
+  (the tier table) and TASK-M8-33 (Import picture's report).
+
+R-585 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-160 (calibration: the ingest's limits), REQ-COL-161 (the ingest), REQ-TOOL-208 (the reference, its hash
+and its tier), REQ-TOOL-209 (the store), REQ-TOOL-210 (the `prPc` chunk), REQ-GUI-391 (missing) and REQ-GUI-392 (the
+"Your image…" dialog).
+
+## R-586 — An initial condition is saved, shared and reopened: the `principia.ic/1` record in JCS, bitwise at f64 with −0 normalised, copied, pasted, saved and opened into Create & locate in its as-built frame with three outcomes; a state-in entry, `computeICState`, beside `computeIC`; the mirror twin shown on reopening; a marked IC a `Trace` whose `ic` is an `IcRef`, travelling in `Lines` *(queues RQ-563 and RQ-564)*
+*21 Oct 2026 · applied in `docs/design/principia_ic_save.md` (new), `docs/gui/principia_render_gui_spec.md` § "G8.
+Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" (the integration bullet, its earlier words
+kept, and a bullet), `docs/contracts/principia_parity_contract.md` § "1. The principle" (the public surface),
+`docs/design/principia_lines.md` § "3. The data model" (`Trace.kind` and `Trace.ic`, their earlier words kept),
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_dd_image_embedding.md` §6 (tier 2's row),
+`docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-563 and RQ-564, new), REQ-GUI-117 and REQ-GUI-120 (reqio),
+REQ-INT-107, REQ-RENDER-119, REQ-TOOL-211 and REQ-GUI-393 to REQ-GUI-395 (new), TASK-M8-83 and TASK-M8-84 (new),
+TASK-M8-16 and `plan/rule_groups.yaml`; the record is `docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built
+by TASK-M8-83 and TASK-M8-84; and, in fix round 3 of PR #287 (code review 5638122561, C2, applied per R-369), TASK-M8-83 (a dependency on TASK-M2-43, a need
+of REQ-CHART-081)*
+
+`INSTRUCTION.md` § "PR 2 — New design documents", its `ic_save.md` item, verbatim:
+
+> - `ic_save.md`: an IC file, copy and paste, reopening in the constructor, and trajectory CSV with bodies labelled
+>   1-based (`body1_x` …).
+
+`DECISIONS_2026-10-21.md`, its "Saving a starting condition" line, verbatim:
+
+> Saving a starting condition: yes, as drafted (CSV bodies labelled 1-based, body1/body2/body3).
+
+The design's "Decided" section, verbatim:
+
+> ## Decided (Malachy, 21 Oct 2026)
+>
+> Accepted as proposed, with one change: **CSV body labels are 1-based** (`body1_x` …), as bodies are always displayed
+> 1-based. The preamble says so.
+
+"Accepted as proposed" accepts the draft's §3 and each of its §5 open questions' recommendation but the fifth, which
+the human changed (R-587): (a) marks in `RenderState.Lines`; (a) `v` primary, `p` derived; (a) the canonical frame
+integrated; (a) −0 normalised to +0.
+
+*What it decides:* the draft's proposal, written as `principia_ic_save.md` §3.1 to §3.5:
+- **The IC record**, `principia.ic/1`, JSON in JCS: `bodies` (the 0-based note), `as_built { m, r, v }`, `canonical { z,
+  mirrored, hemisphere, links, entry_hashes }`, `source` ("built" or a pixel), `sim` and its build, schema, label and
+  made; the primary `as_built` for a built IC, `source.pixel` with `sim` for a picked one, the rest re-derived and
+  compared; bitwise at f64, −0 normalised to +0 as written; non-finite values refused at entry.
+- **Copy, save, open**: Ctrl+C copies the record, *Copy as text* a 1-based table, Ctrl+V pastes; *File › Save IC…*
+  writes `<label>.principia-ic.json`; *Open IC…* or a drop opens it in Create & locate in its as-built frame:
+  **recovered**, **physics only** (a link unknown or its entry hash different, R-521: `as_built` loads and only
+  "locate on this chart" is refused, naming why) or **corrupt**; the stored `z` against the recomputed shown as a
+  residual.
+- **The mirror twin**: both hemispheres shown with a faint marker at the twin (R-544); `as_built` keeps the hemisphere
+  it was built in, `canonical` folded with `mirrored` and `hemisphere`; on the seam no twin.
+- **Integration**: the constructor integrates `canonicalise(as_built)`, the survey's frame, and says so, through a
+  state-in entry beside `computeIC(chart, uv, …)`. The draft: "**Amends** `computeIC`'s contract (parity :17; REQ
+  :15877, "only through computeIC"). This needs a ruling." The human accepted the proposal as it stands, and this
+  ruling records it: parity §1's public surface gains `computeICState(state, simKey) → SimState`, and the Inspector
+  reaches the engine through `computeIC` and, for an IC given as its state, `computeICState` (REQ-GUI-117).
+- **In views**: *Keep* stays scratch; **Mark** is the durable act, `Trace.ic` widening to `IcRef = OnChart { chart, uv
+  } | Built(IcRecord)` inside `RenderState.Lines`, so a marked IC travels in snapshots, saved views, share links, the
+  animation spec and the pxpack (tier 2), round-tripping under R-484; *Mark all kept* promotes the list; a record about
+  0.6 KB, measured by the task.
+
+*Queued, not resolved, as the bundle's instruction says:*
+- **RQ-563, the frame integrated, against R-544.** The draft: "`canonical` is folded" and "The constructor integrates
+  `canonicalise(as_built)`, the survey's frame"; it was written before R-544, which makes the shape sphere chart's
+  decode signed, the mirror "never identified", `C(x)` taken there with its step 3 not taken. Integrating a folded
+  state would run a lower-hemisphere IC as its twin, `L_z` opposite. Meanwhile the constructor integrates `C(as_built)`
+  with step 3 not taken, in the hemisphere it was built in, as the shape sphere chart's decode does; `canonical.z`,
+  `mirrored` and `hemisphere` are recorded as drafted. Nothing waits.
+- **RQ-564, a kept orbit's `Trace`, against R-553.** The draft: "*Keep* stays scratch" and its test "kept-only ICs are
+  absent"; R-553 (RQ-428 (a)), ruled after the draft was written: "A kept orbit's `Trace` (its IC and style, ramp
+  included) is `Lines` state and round-trips with `RenderState`." Meanwhile R-553 stands: a kept orbit's `Trace` stays
+  in `Lines`, its `ic` an `IcRef` too, and the test's "kept-only ICs are absent" arm waits (REQ-GUI-395, `rq: RQ-564`).
+
+*24 Oct 2026:* RQ-563 is ruled, option (a), by **R-589**: the constructor integrates `C(as_built)` with steps 1a,
+0, 1b and 2 taken and step 3 not taken, the hemisphere kept; the trajectory CSV stays in that frame. RQ-564 is
+ruled, option (a), by **R-590**: R-553 stands, and REQ-GUI-395's "kept-only ICs are absent" arm is dropped, its
+replacement that the Trajectory panel's kept-orbit tabs (`ViewUI`) do not travel. Neither holds on its RQ now.
+
+*Applied per R-369:*
+- **A mark is a `Trace` of a new kind, `Marked(id)`**, drawn as REQ-GUI-120's crosshair at its IC's projection on the
+  current slice and, under the trace settings, its path: the kind that holds what the draft's "Mark" makes durable.
+- **`hemisphere`** is `+1`, `−1`, or `0` on the seam; `mirrored` is the lookup's `lookup_mirrored` (R-544).
+- **`computeICState`** runs the integration `computeIC` runs after its decode, from the state given, on the CPU in f64
+  under R-33's RK45, and a picked IC still enters through `computeIC`; TASK-M8-83 builds it before the Inspector's
+  TASK-M8-16, which gains it as a dependency.
+- **"Corrupt"** is a record whose JSON does not parse, with a field missing or non-finite, or whose re-derived values
+  contradict the stored ones beyond what the residual reports.
+- **Mark and Mark all kept** (fix round 1 of PR #287, gui review 5638052211, G1) are each one `SetField` on `RenderField::Lines` and one undo entry
+  (R-69, R-52), Mark all kept never one per orbit.
+- **Ctrl+C and Ctrl+V** (fix round 1 of PR #287, gui review 5638052211, G2) join §G3's key table, scoped to the Inspector; while a text field is
+  being typed in they copy and paste its text, never the record (R-409).
+- **Corrupt or a residual** (fix round 2 of PR #287, qa review 5638084688, Q6): missing fields, non-finite values (on load a token such as `1e999`
+  that overflows f64) and an exactly re-derived field (`mirrored`, `hemisphere`, `source`'s kind) that contradicts the
+  stored one are corrupt; the stored `z` against the recomputed is a residual, recovered within its bound and corrupt
+  beyond it, the bound a calibration value (R-71, REQ-TOOL-215, M8 gate); a re-save keeps the opened record's `made`.
+- **Physics** (fix round 4 of PR #287, physics review 5638148080, P1 to P4): `hemisphere` comes from R-82's one mirror test as the kernel makes it, `−1` iff
+  `lookup_mirrored`, `+1` iff the same test on the reflected state, `0` otherwise, never from the rounded `λ̃_y`;
+  the constructor's `C(as_built)` takes steps 1a, 0, 1b and 2 and not step 3, its result bitwise the shared `C`'s;
+  the trajectory CSV's rows are in that frame and the canonical units `G = M = I = 1`, the preamble stating the frame
+  and the rescale `λ` (`lookup_rescaled`); the `z` residual is `‖Δz‖` as REQ-VAL-022 measures it, exactly 0 on the
+  machine that saved the record, non-zero only across platforms or builds (`principia_ic_save.md` §3.1, §3.2, §3.4,
+  §3.6).
+- **−0 at entry** (fix round 5 of PR #287, physics review 5638172877, P5): −0 is turned into +0 at entry, in the constructor and on paste and open, as well
+  as on write, so `z` and the integrated state are always computed from the normalised `as_built` and a branch-cut IC
+  (`ρ̃_y = −0`, `ρ̃_x < 0`) reopens with residual 0 and the same integrated state; the reflection is `Π`, every `rᵢ`
+  and `pᵢ`; the trajectory CSV's preamble states the centre-of-mass offset and velocity and `θ` beside `λ`.
+- **Two tasks, M8:** TASK-M8-83 (the state-in entry) and TASK-M8-84 (the record, copy, save and open, the twin on
+  reopening, marks and the trajectory CSV, R-587).
+- **Fix round 3 of PR #287** (code review 5638122561, C2, applied per R-369): TASK-M8-83 depends on TASK-M2-43, whose
+  `canon.rs` gives the shared `C` its step-3-not-taken entry, and needs REQ-CHART-081.
+
+R-586 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-117 (statement, verify, rulings, source, note) and REQ-GUI-120 (rulings, note). Adds REQ-INT-107 (the
+state-in entry), REQ-RENDER-119 (marks in `Lines`), REQ-TOOL-211 (the IC record), REQ-GUI-393 (copy, save and open),
+REQ-GUI-394 (the twin on reopening) and REQ-GUI-395 (a kept-only IC, `rq: RQ-564`).
+
+## R-587 — The trajectory CSV: one row per step as taken, never resampled, its body columns labelled 1-based (`body1_x` …) as bodies are always displayed, the preamble saying so; the record's own fields and the outcome's `detail` stay 0-based with a 1-based gloss *(amends R-449 for the trajectory CSV's column labels)*
+*21 Oct 2026 · applied in `docs/design/principia_ic_save.md` (new, §3.6), `docs/gui/principia_render_gui_spec.md` §
+"G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)", R-449's heading block (a forward line, its
+"Still in force" line), REQ-GEN-036 (reqio: statement, rulings, note), REQ-TOOL-212 and REQ-TOOL-213 (new, the second a
+definition), TASK-M8-84 (new) and `plan/rule_groups.yaml`; the record is
+`docs/incoming/2026-10-21_gap_sweep_exports_picture_ic/`; built by TASK-M8-84*
+
+The human's words for it are quoted in R-586: "trajectory CSV with bodies labelled 1-based (`body1_x` …)" (the
+instruction), "CSV bodies labelled 1-based, body1/body2/body3" (the decisions) and "Accepted as proposed, with one
+change: **CSV body labels are 1-based** (`body1_x` …), as bodies are always displayed 1-based. The preamble says so."
+(the design's "Decided"). The draft's open question 5 had recommended "(a) 0-based, with the preamble saying so", per
+R-449; the human chose its (b).
+
+*What it decides:* the draft's trajectory export, written as `principia_ic_save.md` §3.6, with the human's change:
+- *Export trajectory…* writes `<label>.traj.csv`: a `#` preamble holding the IC record, the integrator (RK45 at f64 and
+  its tolerances, R-33), the outcome and its `detail`, 0-based with a 1-based gloss, "incomplete: step budget" where
+  that applies, and the line that the bodies are labelled 1-based; then one row per step as taken, no resampling; an
+  optional stride labelled "every k-th step; close encounters not resolved".
+- **The body columns are labelled 1-based**: `t, body1_x, body1_y, body2_x, body2_y, body3_x, body3_y, body1_vx,
+  body1_vy, body2_vx, body2_vy, body3_vx, body3_vy, E, Lz`, then the draft's `n0, n1, n2` and `dE_E`.
+- **R-449 is amended** for these column labels only: its "storage, computation and machine-readable exports stay
+  0-based and say so" holds for every other export, for the IC record's fields and for the outcome's `detail`, which
+  the preamble gives 0-based with its 1-based gloss, as the draft has it. REQ-GEN-036's statement names the exception.
+
+*Applied per R-369:* the draft's columns `n0, n1, n2` are defined nowhere, so their meaning and names are a definition
+(R-72), REQ-TOOL-213, written into `principia_ic_save.md` §3.6 by TASK-M8-84 and reviewed by the physics reviewer: a
+body-indexed column is labelled 1-based as the others are, a pair-indexed one named by its two bodies (R-449), and a
+component of a vector by the corpus's own name for it.
+
+R-587 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GEN-036 (statement, rulings, note). Adds REQ-TOOL-212 (the trajectory CSV) and REQ-TOOL-213 (definition:
+the columns after `Lz`).
+
+## R-588 — An export is a record of what was drawn: R-484's identity holds on the record, so importing an export gives back, bitwise, the `RenderState` the export wrote, its frozen windows and `base_width` included, and the export reports the fields it froze; T1 runs on the headless paths, which freeze nothing *(closes RQ-562; settles R-581's and R-583's interim)*
+*24 Oct 2026 · applied in R-581's and R-583's dated lines (forward sentences), `docs/design/principia_export_details.md`
+(its heading note, §3.1 and §4, their earlier words kept), `docs/contracts/principia_gui_state_contract.md` §2 (the
+export details and the round-trip rule), `docs/archive/review_queue/M0.md` (RQ-562, moved with its ruling),
+REQ-RENDER-117 and REQ-RENDER-118 (reqio: rulings, source, note), TASK-M8-80 and TASK-M7-70 (their notes and
+references) and `plan/rule_groups.yaml`; built by TASK-M8-80 and TASK-M7-70*
+
+The human's message, 24 Oct 2026, its second ruling, verbatim:
+
+> RQ-562 (frozen windows and base_width in an export's RenderState): (a).
+> R-484's identity holds on the record. Import gives back, bitwise, the RenderState the export wrote, frozen windows and base_width included, and the export reports the fields it froze.
+> Reason: an export is a record of what was drawn. Importing it must reproduce that image, not re-measure a live window that would land differently.
+> T1 runs on the headless paths, which freeze nothing.
+
+*What it decides:* RQ-562's option (a), the interim R-581 and R-583 applied. R-484 RT1's "import of an export is the
+identity on `SimConfig` and `RenderState`" reads on the record the export wrote, not on the exporter's live view: a
+GUI image export writes each measured window it freezes into `RenderState.frozen_ranges` and the figure's width into
+`RenderState.base_width`, and importing it gives back that `RenderState` bitwise, frozen windows and `base_width`
+included, so the import reproduces the image that was drawn and never re-measures. The export reports the fields it
+froze. R-484's T1 (every field off its default, round-tripped through every path) runs on the headless paths, whose
+writer freezes nothing and keeps the state's `base_width`, so T1's identity is exact there. Options (b) (a sidecar
+outside the identity) and (c) (nothing frozen in `RenderState`) are not taken.
+
+*Applied per R-369* (qa review 5638292369 of PR #287, Q1, Q2): the report lives in the export block, as
+`froze: { nodes: [node_id], base_width: null | u32 }`, the nodes whose `frozen_ranges` entries the export wrote and the
+`base_width` it wrote, `[]` and `null` on a headless export (`principia_export_details.md` §3.4); REQ-RENDER-117 and
+REQ-TOOL-202 test it, and REQ-TOOL-218 tests that an import gives back the written `base_width`, never the live
+window's.
+*Applied per R-369* (qa review 5638318769 of PR #287, Q6): a recording has one `froze` for the file: under `frozen`
+and `prepass_union` the nodes frozen, under `per_frame` none, for the Sequence's export the nodes frozen at Start and
+those frozen at their first export frame; its `base_width` is the figure's logical width when Record or Start is
+pressed, whatever the range policy, `null` from a headless recording (`principia_export_details.md` §3.4); REQ-TOOL-201
+tests it.
+
+R-588 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-RENDER-117 and REQ-RENDER-118 (rulings, source, note).
+The qa fix round (5638292369, Q1, Q2) also changes REQ-RENDER-117 (statement, verify, note), REQ-TOOL-202
+(statement, verify, rulings, source, note) and REQ-TOOL-218 (statement, verify, rulings, source, note).
+Its follow-up (5638318769, Q6) changes REQ-TOOL-201 (statement, verify, rulings, source, note).
+The next (5638334977, Q7, N1, N2, and an audit of every `froze` claim) changes REQ-TOOL-216 (statement, verify,
+rulings, source, note), REQ-TOOL-201, REQ-TOOL-202 and REQ-RENDER-117 (statement, verify, note) and REQ-TOOL-218
+(verify, note), so a pre-pass recording, a headless recording, a resize while recording, the order of `froze.nodes`
+and a `froze.base_width` in physical px each have a control.
+The next (5638354385, Q8 to Q10, N3) changes REQ-TOOL-201, REQ-TOOL-216 and REQ-RENDER-117 (statement, verify,
+note): a recording's `froze.nodes` in `node_id` order, the resize arm under every range policy and the Sequence's
+export, display scale factor 2, and the Sequence's export with the pre-pass, whose `froze.nodes` include a node first
+drawn after Start (*applied per R-369*, `principia_export_details.md` §3.4).
+
+## R-589 — The IC constructor integrates `C(as_built)` with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken: the hemisphere kept, as the shape sphere chart's own decode does, never the mirror twin; the trajectory CSV stays in that frame *(closes RQ-563; settles R-586's interim)*
+*24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
+note, §3.4 and §4, their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one IC, its
+trajectory, one timeline (`05_inspectors.png`)" (a sentence), `docs/archive/review_queue/M0.md` (RQ-563, moved with its
+ruling), REQ-INT-107 (reqio: statement, rulings, source, note), TASK-M8-83 and TASK-M8-84 (their notes and references)
+and `plan/rule_groups.yaml`; built by TASK-M8-83 and TASK-M8-84*
+
+The human's message, 24 Oct 2026, its first ruling, verbatim:
+
+> RQ-563 (frame the IC constructor integrates): (a).
+> C(as_built) with steps 1a, 0, 1b and 2 taken and step 3, the mirror, not taken. The hemisphere is kept.
+> Reason: for L_z ≠ 0 the mirror twin Π·x is a different physical system: L_z reversed, trajectory reflected. Folding would integrate something other than what was built. (a) matches the shape-sphere chart's own decode, so a built IC and the same system picked on the chart integrate the same state. R-544: "never identified".
+> The trajectory CSV stays in C(as_built)'s frame, as #287 already does.
+
+*What it decides:* RQ-563's option (a), the interim R-586 applied. The constructor integrates, through
+`computeICState`, `C(as_built)` with steps 1a, 0, 1b and 2 taken (the centre of mass at the origin and at rest,
+`I = 1`, the rotation) and step 3, the mirror, not taken, so a lower-hemisphere IC is integrated as itself, never as its
+twin `Π·x`, whose `L_z` is reversed and trajectory reflected. This is the shape sphere chart's own decode (R-544), so a
+built IC and the same system picked on the chart integrate the same state. The draft's "The constructor integrates
+`canonicalise(as_built)`, the survey's frame" (its open question 3, (a)) is not adopted. The trajectory CSV's rows stay
+in `C(as_built)`'s frame, as `principia_ic_save.md` §3.6 and REQ-TOOL-212 already have them. The record's
+`canonical.z`, `mirrored` and `hemisphere` are recorded as R-586 has them; the ruling does not touch them.
+
+R-589 is in the "physics" group of `plan/rule_groups.yaml`, with R-544.
+
+Changes REQ-INT-107 (statement, rulings, source, note).
+
+## R-590 — A kept orbit's `Trace` travels with an export: R-553 stands, the `Trace` round-tripping in `Lines`, its `ic` an `IcRef`; the draft's "kept-only ICs are absent" arm leaves REQ-GUI-395's test, replaced by the Trajectory panel's kept-orbit tabs (`ViewUI`) not travelling *(closes RQ-564; settles R-586's interim)*
+*24 Oct 2026 · applied in R-586's dated line (a forward sentence), `docs/design/principia_ic_save.md` (its heading
+note, §3.5, §4 and §6's table, their earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G8. Inspector — one
+IC, its trajectory, one timeline (`05_inspectors.png`)" (a sentence), `docs/contracts/principia_gui_state_contract.md`
+§2 (the IC's marks), `docs/archive/review_queue/M0.md` (RQ-564, moved with its ruling), REQ-GUI-395 (reqio: statement,
+verify, rulings, `rq` removed, source, note), TASK-M8-84 (its acceptance line, notes and references) and
+`plan/rule_groups.yaml`; built by TASK-M8-84*
+
+The human's message, 24 Oct 2026, its third ruling, verbatim:
+
+> RQ-564 (an IC that is kept but not marked, in exports): (a).
+> R-553 stands: a kept orbit's Trace round-trips in Lines, its ic an IcRef. Drop the draft's "kept-only ICs are absent" arm from REQ-GUI-395's test.
+> Its replacement arm: the Trajectory panel's kept-orbit tabs (ViewUI) do not travel.
+
+*What it decides:* RQ-564's option (a). R-553 (RQ-428 (a)) stands: a kept orbit's `Trace`, its IC and style, is
+`Lines` state and round-trips with `RenderState` on every path, its `ic` an `IcRef` as a mark's is, so a kept built IC
+travels too. The draft's "kept-only ICs are absent" arm is dropped from REQ-GUI-395's test (`principia_ic_save.md` §6's
+table). Its replacement arm: the Trajectory panel's kept-orbit tabs, `ViewUI`, do not travel. The draft's "*Keep* stays
+scratch" reads, under R-553, as the kept-orbit list and its tabs being `ViewUI`; a kept orbit's `Trace` is not scratch.
+
+*Also in the same message:* "Decisions taken under R-369 in #284, #276, #286 and #287: no vetoes. All stand."
+
+*Applied per R-369* (gui review 5638421533 of PR #287, G9): Mark, on a kept orbit, and Mark all kept convert its
+`Kept(id)` trace into a `Marked(id)` trace with the same `ic` and style, never adding one beside it, so no IC is drawn
+twice; the kept-orbit list and its tabs (`ViewUI`, never undoable) stay; one `SetField`, one undo entry, and undo
+restores the kept traces bitwise (`principia_ic_save.md` §3.5; REQ-RENDER-119, REQ-GUI-396). And (G10) every control
+the gap sweep added has its place in the keyboard tree, Locate picture… a button of the import report and the
+"Picture missing" badge not an element (render GUI spec §G3); REQ-GUI-389 to REQ-GUI-393, REQ-GUI-396, REQ-TOOL-201,
+REQ-TOOL-205 and REQ-TOOL-216 gain keyboard arms.
+
+R-590 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-395 (statement, verify, rulings, rq, source, note).
 
 ## R-591 — At the `α = 0` pole, where the state does not define `β`, lookup reads a layer-1 clamp's move as its worst case over `β`: `|ΔL_z| ≤ b'·‖p_λ‖`, and likewise `ΔU`'s `β`-dependent part, so the clamp is rejected in every gauge unless `p_λ` is zero within its own bound; the clamp's image of `β` is not defined along `p_λ` *(closes RQ-565; the contract's interim pole rule becomes the ruled rule; changes inverse_encode_contract § "Chart-aware validation", "The class a clamp moves", and REQ-ENC-038; R-437 and R-438 untouched)*
 *24 Oct 2026 · applied in `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The class

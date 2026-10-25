@@ -15,6 +15,7 @@ Chaos is not an exception to this — it is the case where the identical logic *
 <!-- retired-terms -->
 ```
 computeIC(chart, uv, simKey)      → SimState              // one IC, full f64
+computeICState(state, simKey)     → SimState              // one IC given as its state, full f64 (R-586)
 computeQuad(chart, quadID, simKey) → SimState[]           // a quad's samples, full f64  (was computeTile — 'tile' is retired for quadtree nodes, memory-tiers §1)
 stepOnce(state, dt, params)        → state'                // one STEP, either occupant  (parity workhorse)
 decodeOnly(chart, uv, simKey)      → (m, r, p, ICDescriptor)

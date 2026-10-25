@@ -21,6 +21,11 @@
 //! dd §2: decoded states are already canonical), so `E`'s `C` is a no-op on it to rounding, and T2 exercises the block
 //! inverses and their numerics (Part 1, T2).
 //!
+//! **The shape sphere chart** (R-544; Part 1's T2, Part 4; REQ-ENC-004, REQ-ENC-024) decodes with `C`'s step 3 not
+//! taken, so at a lower-hemisphere pixel its state is off `C`'s section and `D(E(x))` is `C(x)`, the mirror image `Π·x`
+//! to rounding, at a residual of order 1 against `x`. There T2 compares `D(E(x))` against `C(x)`, as T3 does
+//! ([`Against::Canonical`], [`Reference`]); every other chart against `x` ([`Against::Decoded`]).
+//!
 //! **The link set** is the registry's defaults ([`Defaults`]) throughout: the clamp oracle's formulas are Part 3's for
 //! those links (`s_α = 2α/π`, `s_β = β/π`, `s_q = ½(q/q_max + 1)` into `[ε, 1 − ε]`, and `|μₖ| ≤ (1 − ε_μ)·μ_max`).
 
@@ -108,15 +113,24 @@ pub fn eps_phys<R: Precision>() -> f64 {
     EPS_PHYS.number() * R::EPS
 }
 
+/// What a round trip's residual measures `D(E(x))` against (Part 1's T2, R-544; the module's note).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Against {
+    /// `x`, the decoded state itself, on `C`'s section: every chart but the shape sphere.
+    Decoded,
+    /// `C(x)`, `E`'s canonical state: the shape sphere chart, whose lower-hemisphere states are off `C`'s section.
+    Canonical,
+}
+
 /// One round trip from the decoded state `x`: `E(x)` under `S`, then the free decode of its `z`, and
-/// `‖x − D(E(x))‖_phys`.
+/// `‖x − D(E(x))‖_phys`, or `‖C(x) − D(E(x))‖_phys` [`Against::Canonical`].
 #[derive(Clone, Copy, Debug)]
 pub struct Trip<R: PayloadReal> {
     /// `E(x)`.
     pub encoded: Encoded<R>,
     /// `D(E(x))`.
     pub back: Decoded<R>,
-    /// `‖x − D(E(x))‖_phys`, in f64 from `R`'s values.
+    /// `‖x − D(E(x))‖_phys`, or against `C(x)`, in f64 from `R`'s values.
     pub residual: f64,
 }
 
@@ -139,12 +153,28 @@ where
     D: Selection,
     R: Precision,
 {
+    trip_against::<E, D, R>(x, Against::Decoded)
+}
+
+/// [`trip_with`], its residual measured against `against`'s state: `x`, or `C(x)`, `E(x)`'s canonical state, on the
+/// shape sphere chart (the module's note).
+pub fn trip_against<E, D, R>(x: &Ic<R>, against: Against) -> Trip<R>
+where
+    E: Selection,
+    E::MassLink: SimplexClamp,
+    D: Selection,
+    R: Precision,
+{
     let encoded = encode::<E, R>(x);
     let back = decode::decode::<D, R>(&encoded.z);
+    let reference = match against {
+        Against::Decoded => *x,
+        Against::Canonical => encoded.canonical.ic,
+    };
     Trip {
         encoded,
         back,
-        residual: phys(&widen(x), &widen(&back.ic)),
+        residual: phys(&widen(&reference), &widen(&back.ic)),
     }
 }
 
@@ -242,6 +272,46 @@ pub trait Registered {
     fn decode64(&self, u: f64, v: f64) -> Decoded<f64>;
     /// The chart's `D ∘ Φ` at `(u, v)`, its parameters at f32.
     fn decode32(&self, u: f32, v: f32) -> Decoded<f32>;
+    /// What the chart's T2 measures `D(E(x))` against: `x` by default, `C(x)` on the shape sphere ([`Reference`]).
+    fn against(&self) -> Against {
+        Against::Decoded
+    }
+}
+
+/// What a chart type's T2 compares against (the module's note): its decode is on `C`'s section, `x` itself, or, on the
+/// shape sphere chart, off it below the equator, `C(x)` (R-544). Every registered chart type declares it.
+pub trait Reference {
+    /// The chart type's reference.
+    const AGAINST: Against;
+}
+
+/// The chart types whose decode lands on `C`'s section.
+macro_rules! on_section {
+    ($($chart:ident),*) => {
+        $(impl<P> Reference for $chart<P> {
+            const AGAINST: Against = Against::Decoded;
+        })*
+    };
+}
+
+on_section!(
+    Latent,
+    Burrau,
+    EuclidPlane,
+    BurrauThetaK,
+    BurrauThetaLz,
+    BurrauThetaDeltaM,
+    InvariantLE,
+    InvariantLK,
+    MassSimplex
+);
+
+impl<H, V, P> Reference for Mixed<H, V, P> {
+    const AGAINST: Against = Against::Decoded;
+}
+
+impl<P> Reference for ShapeSphere<P> {
+    const AGAINST: Against = Against::Canonical;
 }
 
 /// The decode at `R`: [`Registered::decode64`] or [`Registered::decode32`].
@@ -277,7 +347,7 @@ fn short_type<T>() -> &'static str {
 
 impl<A, B> Registered for Entry<A, B>
 where
-    A: Authored<Param = f64>,
+    A: Authored<Param = f64> + Reference,
     B: Authored<Param = f32>,
 {
     fn key(&self) -> &'static str {
@@ -294,6 +364,10 @@ where
 
     fn decode32(&self, u: f32, v: f32) -> Decoded<f32> {
         self.c32.chart().decode::<Defaults, f32>(u, v)
+    }
+
+    fn against(&self) -> Against {
+        A::AGAINST
     }
 }
 
@@ -462,7 +536,7 @@ pub mod charts {
 pub fn chart(key: &str) -> Option<Box<dyn Registered>> {
     fn entry<A, B>(key: &'static str, a: A, b: B) -> Box<dyn Registered>
     where
-        A: Authored<Param = f64> + 'static,
+        A: Authored<Param = f64> + Reference + 'static,
         B: Authored<Param = f32> + 'static,
     {
         Box::new(Entry {

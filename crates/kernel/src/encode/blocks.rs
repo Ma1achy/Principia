@@ -25,7 +25,10 @@
 //! - `atan2(|λ̃_y|, λ̃_x)` above `π̂`: `π̂`. Near the `−x` half-axis the true `β` is just below π, and an f32 `atan2`
 //!   that rounds to nearest (glibc's `atan2f`; Apple's returns `π̂` there) gives f32's nearest π, above `π̂` (C8/Q5;
 //!   dd_encode §3.1);
-//! - elsewhere `atan2(|λ̃_y|, λ̃_x)`.
+//! - elsewhere `atan2(|λ̃_y|, λ̃_x)`, a zero `λ̃_x` taken as `+0` by a select on it against 0: Metal's `atan2` at its
+//!   default math mode gives `atan2(y, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Where `λ̃_y ≠ 0`
+//!   IEEE's `atan2(|λ̃_y|, ±0)` is one value, and at the pole the pole's select discards it, so the CPU's `β` is
+//!   unchanged.
 //!
 //! The two zero-selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
 //! section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only where `C` could not reach `I = 1`, all three
@@ -130,7 +133,8 @@ pub fn beta<R: LinkReal>(lambda_t: [R; 2]) -> R {
     let zero = R::zero();
     let pi = pi_image::<R>();
     let [x, y] = lambda_t;
-    let raw = Float::atan2(Float::abs(y), x);
+    let x0 = select(x == zero, zero, x);
+    let raw = Float::atan2(Float::abs(y), x0);
     let off_axis = select(raw > pi, pi, raw);
     let half_axis = (y == zero) & (x < zero);
     let pole = (x == zero) & (y == zero);
