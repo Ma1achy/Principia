@@ -3165,6 +3165,8 @@
   - R-481
   - R-482
   milestone: M4
+  rq:
+  - RQ-574
   note: R-482 C3 (20 Oct 2026).
 - id: REQ-CHART-075
   area: CHART
