@@ -35,12 +35,13 @@ when both are open. It has a × to close it. Like every window it is `ViewUI`'s,
 RQ-559, option (ii)): the sequence being edited is contract state, not the GUI's own document, and every edit to it
 is a typed `SetField` in the contract's one undo/redo history (R-52), Go to and sequence edits interleaved in it. Its
 place in the contract state and its `SetField` paths are a definition, REQ-GUI-399 (R-72), written into
-`principia_gui_state_contract.md` §2 by TASK-M8-77. The engine reads it only as the spec a preview, proof or export
-request carries. Outside the preview, the `SetField`s the Sequence sends are its edits, Go to's (§3.2) and, after a
-reel takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3). *Was:* "The sequence being edited is the
-GUI's own document, beside `ViewUI`: … (applied per R-369; whether its edits enter any history is RQ-559). Outside the
-preview, the only `SetField`s the Sequence sends are Go to's (§3.2) and, after a reel takeover, the live sequence
-player's (…)."
+`principia_gui_state_contract.md` §2 by TASK-M8-77. Outside the preview, the `SetField`s the Sequence sends are its
+edits, Go to's (§3.2) and, after a reel takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3).
+*Was:* "The sequence being edited is the GUI's own document, beside `ViewUI`: the engine reads it only as the spec a
+preview, proof or export request carries (applied per R-369; whether its edits enter any history is RQ-559). Outside
+the preview, the only `SetField`s the Sequence sends are Go to's (§3.2) and, after a reel takeover, the live sequence
+player's (…)." (The engine-reads-it-only-as-a-request's-spec clause went with the GUI's own document: under R-622 the
+engine applies the sequence's `SetField`s; code review 5644267473 of PR #293, C3.)
 
 Its keyboard model is §G3's for a window, with three sections in order: the **header bar** (Add keyframe, Play preview,
 Proof strip, Export…, Open…, Save…, ×; while a proof strip runs, Proof strip becomes **Cancel** in the same place, with
