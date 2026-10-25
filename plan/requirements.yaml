@@ -34272,7 +34272,7 @@
     section: "R-372 — #117's shard times are accepted, ~10.5 min staying the target; the shards share one test build, as a follow-up task *(amends R-336 and R-366 as they apply to #117)*"
   verify:
     method: review checklist
-    detail: "code and qa: `ci.yml` builds the archive once per feature set in one job and every `ci` shard runs from it, with no `cargo build` or test compile of its own; the shards' test lists together equal the unsharded run's (the R-231 listing check and `nextest_ci_shards_together_list_every_test` still pass); the doctests still run, in shard 1; the PR shows each `ci` shard's warm wall time, and the archive job's, against ~10.5 min"
+    detail: "code and qa: `ci.yml` builds the tests once per build profile, in one archive job each: the dev feature sets in `ci-archive`, which every `ci` shard runs from, and the release set in `ci-release-archive`, which every `ci-release` shard runs from (R-547, REQ-TOOL-189); each archive is built once and shared by its shards, with no `cargo build` or test compile of their own; the `ci` shards' test lists together equal the unsharded run's (the R-231 listing check and `nextest_ci_shards_together_list_every_test` still pass); the doctests still run, in shard 1; the PR shows each shard's warm wall time, and each archive job's, against ~10.5 min. *Was:* \"code and qa: `ci.yml` builds the archive once per feature set in one job and every `ci` shard runs from it, with no `cargo build` or test compile of its own; …\" — amended per R-369 (the orchestrator's decision on PR #291): the human's words in R-372 are \"build the tests once and share them\", and an unsharded release job breaks R-325's ≤ ~10.5 min per job"
   rulings:
   - R-231
   - R-325

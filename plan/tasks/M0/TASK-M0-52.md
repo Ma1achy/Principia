@@ -57,3 +57,7 @@ compiling no test. The shards together still run every test the unsharded run di
   `xtask/tests/support/qa_m0_01.rs`, `xtask/tests/qa_TASK-M0-29.rs` and the qa-only ones R-366 lists) may need their
   step matches moved again. Where this task's change forces that, the exception is decided and recorded in the PR
   under R-369, qa changes only those matches, and the code reviewer confirms nothing else changed.
+
+- Later (applied per R-369, the orchestrator's decision on PR #291, TASK-M2-49): REQ-SYS-078's verify allows one
+  archive job per build profile, the dev feature sets in `ci-archive` and the release set in `ci-release-archive`
+  (R-547, REQ-TOOL-189), each built once and shared by its shards (R-372, R-325).

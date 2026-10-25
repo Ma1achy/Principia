@@ -67,3 +67,7 @@ tests at the release profile; the fault is reported upstream; the pin moves to a
   gives 0.5, and opt-level 0 with `-Zmir-opt-level=2` gives −0.5 (the fault is MIR GVN, not LLVM). Close variants pass
   (`#[inline(always)]` fns; without the first `flip(plain)`; `pair(plain)` in its place; a two-element i32 array), so
   the trigger is uncharacterised.
+- Applied per R-369 (the orchestrator's decision on PR #291): `ci-release` runs as a release nextest archive built
+  once in `ci-release-archive` and 2 shards (`--partition hash:k/2`), so each job stays within R-325's ~10.5 min;
+  REQ-SYS-078's verify allows one archive job per build profile. qa updates `xtask/tests/qa_TASK-M0-52.rs`'s
+  `check_archive` under the exception R-325 forces (R-290).
