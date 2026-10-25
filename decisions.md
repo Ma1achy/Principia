@@ -25788,7 +25788,8 @@ Changes REQ-PAY-099 (verify, rq removed, rulings, source, note).
 ## R-596 — The trace fade's off-plane distance is taken in the physical mass metric pulled back through the decoder's Jacobian, `g = Jᵀ W J`, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units *(closes RQ-522; settles R-509 (3)'s and R-550's open metric)*
 *25 Oct 2026 · applied in `docs/design/principia_lines.md` § "11. Open questions" (item 3's ruling),
 `docs/gui/principia_render_gui_spec.md` § "G2" (the Lines paragraph), `docs/archive/review_queue/M0.md` (RQ-522, moved
-with its ruling), REQ-GUI-266 (reqio), TASK-M8-54 and `plan/rule_groups.yaml`; built by TASK-M8-54*
+with its ruling), REQ-GUI-266 and REQ-GUI-400 (reqio, the second new, a definition), TASK-M8-54 and
+`plan/rule_groups.yaml`; built by TASK-M8-54*
 
 The human's words, verbatim:
 
@@ -25803,12 +25804,13 @@ trajectory's encoded point to the slice plane under `g = Jᵀ W J`. REQ-GUI-266 
 
 *Applied per R-369:* `J` is R-550's eight-column f64 central-difference Jacobian `∂x/∂z`, taken at the slice centre as
 option (b) said; the distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to `span(q̂₁, q̂₂)`.
-Where `g` is singular along a direction, which the mass directions of `z` may be, physics review of TASK-M8-54 decides
-the reading, the requirement's verify carrying the case.
+Where `g` is singular along a direction, which the mass directions of `z` may be, the reading is a definition,
+REQ-GUI-400 (R-72), written into lines §8 by TASK-M8-54 and approved by its physics reviewer, REQ-GUI-266's verify
+checking it (code review 5644267473 of PR #293, C2).
 
 R-596 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-GUI-266 (statement, verify, rq removed, rulings, source, note).
+Changes REQ-GUI-266 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-400.
 
 ## R-597 — "No blank" on latent and flat charts holds at the default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate and draws as not a system, with the reason in the readout *(closes RQ-536; qualifies R-570 item 3; caps REQ-GEN-038's `μ_max` range)*
 *25 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Three hard requirements on any

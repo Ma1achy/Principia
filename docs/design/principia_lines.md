@@ -541,7 +541,8 @@ can be restyled like any contour.
    the slice centre, and `W` the mass-weighted (kinetic) metric on positions, `Σ mᵢ‖δrᵢ‖²`, with its dual on momenta,
    `Σ ‖δpᵢ‖²/mᵢ`, in canonical units (`G = M = I = 1`), the metric the shape sphere's distances already come from. The
    distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to the slice plane `span(q̂₁, q̂₂)`
-   (REQ-GUI-266).
+   (REQ-GUI-266). Where `g` is singular along a direction of `z`, as a mass direction may be, the reading is a
+   definition (REQ-GUI-400, R-72), written into §8 by TASK-M8-54 and approved by its physics reviewer.
 4. **Label collisions.** Between contour labels and the trace's tick labels: which wins?
 5. **Class edges.** Should they move onto the line system as "contours of a categorical field", or stay in the stain?
 6. **Default style for new contour sets.** Screen contour (white with outline), or smart ink on by default?

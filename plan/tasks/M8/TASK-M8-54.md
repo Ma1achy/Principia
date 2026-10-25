@@ -1,7 +1,7 @@
 # TASK-M8-54 — The trace fade's general off-plane distance in the pulled-back mass metric (R-509 part 3, R-550 J7, R-596) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-266
+- **Closes:** REQ-GUI-266, REQ-GUI-400
 - **Depends on:** TASK-M8-51
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -12,8 +12,9 @@
 On a chart with no proxy, a trace fades off the plane by the general distance, the distance in `z` from the trajectory's encoded point to the slice plane, encoded per step, in the metric `g = Jᵀ W J` on `z` (R-596, RQ-522 (b)): `J` R-550's eight-column f64 central-difference Jacobian `∂x/∂z`
 at the slice centre, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units;
 the distance is the `g`-length of the part of `z − z₀` `g`-orthogonal to the slice plane (applied per R-369). Where `g`
-is singular along a direction of `z`, physics review here settles the reading and its arm. TASK-M8-51 draws no fade
-there meanwhile. *Was:* "in the metric on `z` RQ-522 rules (R-509 Y3; RQ-341's ruling, R-550, gives the latent
+is singular along a direction of `z`, this task defines the reading in lines §8 (REQ-GUI-400, R-72), the physics
+reviewer approving it, and REQ-GUI-266's verify checks it. TASK-M8-51 draws no fade there meanwhile. *Was:* "physics
+review here settles the reading and its arm". *Was:* "in the metric on `z` RQ-522 rules (R-509 Y3; RQ-341's ruling, R-550, gives the latent
 Jacobian and no metric on `z`, R-550 J7)".
 
 ## References
@@ -27,12 +28,17 @@ Jacobian and no metric on `z`, R-550 J7)".
 ## Deliverables
 - The per-step encode and the distance in the trace renderer (`crates/render/src/lines/`), in R-596's metric (*was:* "per RQ-341's ruling").
 - Test `trace_fade_distance`.
+- Doc change: lines §8 — how the distance is read where `g` is singular along a direction of `z` (REQ-GUI-400, R-72).
 
 ## Acceptance tests
 - `cargo test -p render trace_fade_distance` — REQ-GUI-266's verify.
+- Review checklist (physics) — lines §8 states, for a direction of `z` along which `g` is singular at the slice centre,
+  how the `g`-orthogonal part of `z − z₀` and its `g`-length are taken, and REQ-GUI-266's verify checks it
+  (REQ-GUI-400).
 
 ## Notes
 - **⚑ Physics review is required**: the distance and its metric; it does not merge on the code reviewer's word alone.
+- Definition written here (R-72; the physics reviewer approves before merge): REQ-GUI-400.
 - **A leaf task; R-596 rules RQ-522** (RQ-341 ruled by R-550, J7): nothing depends on it. *Was:* "A leaf task waiting
   for RQ-522 (`rq: RQ-522` on REQ-GUI-266; …)", and before it "waiting for RQ-341 (`rq: RQ-341` on REQ-GUI-266)". Numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53 (applied per R-369).
 - **It supersedes REQ-GUI-249's no-fade arm** on the charts the general distance covers, and its settings line "fade: no off-plane distance on this chart (RQ-341)" there (REQ-GUI-266; R-509 Y3). **qa's file:** TASK-M8-51's qa test of REQ-GUI-249's latent-chart arm (`crates/render/tests/qa_TASK-M8-51.rs`, `trace_fade`'s "every vertex at full opacity and the settings line names RQ-341" on the latent chart) changes in this task's qa commit and only there, the PR listing its `M` line with the reason, the code reviewer confirming no other assertion is weakened (R-290; the ruling forcing the change, applied per R-369, gui review 5587650119 of PR #255, G13).

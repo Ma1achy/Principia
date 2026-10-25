@@ -21881,13 +21881,14 @@
     section: "R-596 — The trace fade's off-plane distance is taken in the physical mass metric pulled back through the decoder's Jacobian, `g = Jᵀ W J`, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units *(closes RQ-522; settles R-509 (3)'s and R-550's open metric)*"
   verify:
     method: unit test
-    detail: "cargo test -p render trace_fade_distance: on the latent chart a trace in the slice is at full opacity and one leaving it fades to the floor by the g-distance, which equals a reference computed from the decoder's Jacobian at the slice centre and the masses to 1e-12 relative; on the latent chart the settings line naming RQ-341 is gone; the case where g is singular along a direction of z (a mass direction) has the arm physics review of TASK-M8-54 settles (R-596, applied per R-369); controls: a fade by the proxy on a chart that does not define it differs, a distance in the plain Euclidean metric on z, or with W the identity, differs on a fixture with unequal masses and fails, and a settings line naming RQ-341 left in place on the latent chart fails; review (physics)"
+    detail: "cargo test -p render trace_fade_distance: on the latent chart a trace in the slice is at full opacity and one leaving it fades to the floor by the g-distance, which equals a reference computed from the decoder's Jacobian at the slice centre and the masses to 1e-12 relative; on the latent chart the settings line naming RQ-341 is gone; where g is singular along a direction of z (a mass direction) the distance is read as REQ-GUI-400 defines, and the arm checks that reading (R-596, R-72); controls: a fade by the proxy on a chart that does not define it differs, a distance in the plain Euclidean metric on z, or with W the identity, differs on a fixture with unequal masses and fails, and a settings line naming RQ-341 left in place on the latent chart fails; review (physics)"
   rulings:
+  - R-72
   - R-509
   - R-550
   - R-596
   milestone: M8
-  note: "R-509 Y3; R-550 J7. R-596 (25 Oct 2026, RQ-522 (b)): the metric is g = Jᵀ W J, W the human's mass-weighted kinetic metric; J at the slice centre and the g-orthogonal reading applied per R-369. Closed by TASK-M8-54, a leaf task. Meanwhile no fade there (REQ-GUI-249). Physics review is required (⚑); it does not merge on the code reviewer's word alone. gui review 5587650119 of PR #255, G13 (applied per R-369): it supersedes REQ-GUI-249's no-fade arm and settings line where it applies; TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit. *Was:* \"in the metric RQ-341 rules\" and \"Waits for RQ-341\". *Was (statement):* \"in the metric on z RQ-522 rules (R-509 (3): the real distance waited on RQ-341, whose ruling, R-550, gives the latent Jacobian and no metric on z)\" *Was (note):* \"Waits for RQ-522 (the metric on z; RQ-341 was ruled by R-550 without one); closed by TASK-M8-54, a leaf task.\" *Was (verify):* \"cargo test -p render trace_fade_distance: on the latent chart a trace in the slice is at full opacity and one leaving it fades to the floor by the ruled distance; on the latent chart the settings line naming RQ-341 is gone; controls: a fade by the proxy on a chart that does not define it differs, and a settings line naming RQ-341 left in place on the latent chart fails; review (physics)\""
+  note: "R-509 Y3; R-550 J7. R-596 (25 Oct 2026, RQ-522 (b)): the metric is g = Jᵀ W J, W the human's mass-weighted kinetic metric; J at the slice centre and the g-orthogonal reading applied per R-369. Where g is singular, the reading is a definition, REQ-GUI-400 (R-72; code review 5644267473 of PR #293, C2). Closed by TASK-M8-54, a leaf task. Meanwhile no fade there (REQ-GUI-249). Physics review is required (⚑); it does not merge on the code reviewer's word alone. gui review 5587650119 of PR #255, G13 (applied per R-369): it supersedes REQ-GUI-249's no-fade arm and settings line where it applies; TASK-M8-51's qa test of them changes in TASK-M8-54's qa commit. *Was:* \"in the metric RQ-341 rules\" and \"Waits for RQ-341\". *Was (statement):* \"in the metric on z RQ-522 rules (R-509 (3): the real distance waited on RQ-341, whose ruling, R-550, gives the latent Jacobian and no metric on z)\" *Was (note):* \"Waits for RQ-522 (the metric on z; RQ-341 was ruled by R-550 without one); closed by TASK-M8-54, a leaf task.\" *Was (verify):* \"cargo test -p render trace_fade_distance: on the latent chart a trace in the slice is at full opacity and one leaving it fades to the floor by the ruled distance; on the latent chart the settings line naming RQ-341 is gone; controls: a fade by the proxy on a chart that does not define it differs, and a settings line naming RQ-341 left in place on the latent chart fails; review (physics)\""
 - id: REQ-GUI-267
   area: GUI
   statement: "On the real engine, with the controls shown or hidden, pan must move the view's window and zoom scale it past the chart's [0,1]² in any direction (R-537 EX1): F3's Extend only adding window area at the same scale (R-406), Fit scaling the view's own square wherever it sits (R-468 E2; R-552, RQ-416 (a): R-472 X2's \"with no extension\" meaning no window area beyond that square), and nothing about what a pixel means changing with F3; periodic charts must have no zoom-out limit beyond the frame budget and the baseline cover (R-552, RQ-409 (a)); the only navigation limit must be R-469's stop on the centre (EX3), validate evaluated on the centre after the axes' types have folded it, so that a pan across a periodic seam or over a pole never stops, an affine latent axis never stops, and on a chart whose square is its whole domain the centre stops at the last valid value while the window shows blank past it."
@@ -24143,6 +24144,23 @@
   - R-622
   milestone: M8
   note: "R-622 (25 Oct 2026, RQ-559 (ii)): applied per R-369. Closed by TASK-M8-77."
+- id: REQ-GUI-400
+  area: GUI
+  kind: definition
+  statement: "How the trace fade's off-plane distance is read where g = Jᵀ W J (R-596) is singular along a direction of z at the slice centre, as a mass direction of z may be, W weighing positions and momenta only, must be defined: what the g-orthogonal part of z − z₀ and its g-length are there, written into lines §8 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-596 — The trace fade's off-plane distance is taken in the physical mass metric pulled back through the decoder's Jacobian, `g = Jᵀ W J`, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units *(closes RQ-522; settles R-509 (3)'s and R-550's open metric)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  verify:
+    method: review checklist
+    detail: "lines §8 states, for a direction of z along which g is singular at the slice centre, how the g-orthogonal part of z − z₀ and its g-length are taken, and REQ-GUI-266's verify checks that reading; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-596
+  milestone: M8
+  note: "R-596 (25 Oct 2026, RQ-522 (b)): the singular case a definition (code review 5644267473 of PR #293, C2), applied per R-369. Closed by TASK-M8-54. Physics review is required (⚑)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

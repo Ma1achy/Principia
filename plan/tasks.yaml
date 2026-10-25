@@ -2971,7 +2971,7 @@
   title: "The trace fade's general off-plane distance in the pulled-back mass metric (R-509 part 3, R-550 J7, R-596) ⚑"
   depends_on: [TASK-M8-51]  # R-509 Y3, R-550 J7: a leaf; RQ-522 ruled by R-596 (RQ-341 by R-550), was "waiting for RQ-522"; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
   needs: []
-  requirements: [REQ-GUI-266]
+  requirements: [REQ-GUI-266, REQ-GUI-400]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-55
