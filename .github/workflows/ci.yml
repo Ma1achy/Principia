@@ -7,7 +7,8 @@
 # `cargo test` did. `ci`, `ci-workspace` and `gpu-kernel` split the workspace's tests between them by nextest profile
 # (`.config/nextest.toml`), each step's NEXTEST_PROFILE: `gpu-kernel` runs the kernel's, `ci-workspace` the xtask
 # tests that run cargo on the workspace's own target directory, and `ci` every other test. `ci-release` runs the `ci`
-# profile's tests again, at the release profile, in a job of its own (R-547, REQ-TOOL-189).
+# profile's tests again, at the release profile, as 2 shards from a release archive `ci-release-archive` builds once
+# (R-547, REQ-TOOL-189; R-325, REQ-SYS-078).
 # Sharding (R-336, R-360, R-366, REQ-SYS-077): `ci` runs its nextest run as 4 parallel shards, a matrix, each running
 # nextest's `--partition hash:<k>/4`, which together run every test the unsharded run did; formatting, lints, the
 # docs (R-387), the build and the crate-graph check run once, beside them, in `ci-checks`. `xtask-ci` runs
@@ -290,22 +291,22 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: for r in $RESULTS; do [ "$r" = success ] || { echo "a job ci gathers ended $r"; exit 1; }; done
 
-  # The native tests at the release profile, in a job of their own on every push (R-547, REQ-TOOL-189): the pinned
-  # nightly miscompiled plain Rust above opt-level 0 in rustc's MIR GVN pass (RQ-299), which the other jobs, building
-  # the tests at opt-level 0, do not see. `cargo nextest run --workspace --release` on the host target, with the
-  # workspace's flags, `.cargo/config.toml`'s `-Zmir-enable-passes=-GVN` among them, so no step here sets RUSTFLAGS:
-  # the `ci` profile's tests (`.config/nextest.toml`), every native test but those that need the built kernel, which
-  # `gpu-kernel` runs, and those that run cargo on the workspace's own target directory, which `ci-workspace` runs.
-  # The GPU harness self-tests among them run on lavapipe, as in `ci`. Not gathered by the required check `ci`, as
-  # `gpu-kernel` is not (applied per R-369). Its build is its own, so it frees the runner's disk as `ci-checks` does.
-  ci-release:
+  # The native tests at the release profile, on every push (R-547, REQ-TOOL-189): the pinned nightly miscompiled plain
+  # Rust above opt-level 0 in rustc's MIR GVN pass (RQ-299), which the other jobs, building the tests at opt-level 0,
+  # do not see. `ci-release-archive` builds the workspace's tests once at `--release`, as a nextest archive, on the
+  # host target with the workspace's flags, `.cargo/config.toml`'s `-Zmir-enable-passes=-GVN` among them, so no step
+  # sets RUSTFLAGS; `ci-release` runs it as 2 shards (`--partition hash:<k>/2`), so each job stays within ~10.5 min
+  # (R-325; REQ-SYS-078 allows one archive job per build profile, applied per R-369). Under the `ci` profile
+  # (`.config/nextest.toml`): every native test but those that need the built kernel, which `gpu-kernel` runs, and
+  # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. Not gathered by the
+  # required check `ci`, as `gpu-kernel` is not (applied per R-369). The archive job frees the runner's disk as
+  # `ci-checks` does.
+  ci-release-archive:
     runs-on: ubuntu-24.04
-    env:
-      PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@v4
-      # Runner disk: the workspace's release build and its tests' fixture builds. Remove the preinstalled toolsets it
-      # does not use, as `ci-checks` does, logging the free space before and after. Test infrastructure only.
+      # Runner disk: the workspace's release build. Remove the preinstalled toolsets it does not use, as `ci-checks`
+      # does, logging the free space before and after. Test infrastructure only.
       - name: Free runner disk
         run: |
           df -h /
@@ -319,10 +320,44 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           prefix-key: cargo-registry
-          shared-key: ci-release
+          shared-key: ci-release-archive
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo nextest archive --workspace --release
+        env:
+          NEXTEST_PROFILE: ci
+        run: cargo nextest archive --workspace --release --archive-file $RUNNER_TEMP/nextest-release.tar.zst
+      # Already zstd-compressed, so uploaded as it is; kept a day, the run's own.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextest-release
+          path: ${{ runner.temp }}/nextest-release.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  # The release archive's tests as 2 shards, each running its `hash:` slice from `ci-release-archive`'s archive, with
+  # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
+  # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
+  # lavapipe, as in `ci`.
+  ci-release:
+    needs: ci-release-archive
+    runs-on: ubuntu-24.04
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      # The toolchain rust-toolchain.toml pins (R-169): the tests run cargo themselves, on the fixtures.
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
       # xtask's plan_check tests run plan/check_plan.py, which needs Python and PyYAML (TASK-M0-02).
       - uses: actions/setup-python@v5
         with:
@@ -334,13 +369,17 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.146
-      # `--no-fail-fast`: every test that fails at the release profile is shown, not only the first.
-      - name: cargo nextest run --workspace --release --no-fail-fast
+      - uses: actions/download-artifact@v4
+        with:
+          name: nextest-release
+          path: ${{ runner.temp }}
+      - name: cargo nextest run --archive-file … --partition hash:${{ matrix.shard }}/2
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run --workspace --release --no-fail-fast
-      # The workspace's doctests at the same profile, which nextest does not run, as beside every nextest step (R-231).
+        run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite --no-fail-fast --partition hash:${{ matrix.shard }}/2
+      # The workspace's doctests at the release profile, once, in shard 1, which nextest does not run (R-231).
       - name: cargo test --workspace --release --no-fail-fast --doc
+        if: matrix.shard == 1
         run: cargo test --workspace --release --no-fail-fast --doc
 
   # The GPU kernel build and the tests that need the built kernel, in a job of their own beside `ci` (R-325,
