@@ -430,11 +430,13 @@ it:
       integrates no new run and does not restart; "another point" in R-569 meant another run. **Only the trace's own
       marker restarts** (R-617, closing RQ-534): under "With the playhead" the new trace's head starts at 0 and runs at
       the transport's rate while the transport plays, as the own clock does; the figure's global playhead (the Time
-      panel's) and the field's live march are untouched, so hovering never restarts the field. A scrub, a seek or a
-      restart of the Time panel itself puts the head back on the figure's playhead, and while the transport is paused
-      the head does not move (applied per R-369, R-617's port). *Was:* "The playhead is the Time panel's (above), so the
-      restart is that playhead's (RQ-534 (a), applied meanwhile)." The own clock already restarts per trace and is
-      unchanged.
+      panel's) and the field's live march are untouched, so hovering never restarts the field. Each of the Time panel's
+      own controls that moves its playhead (render_gui_spec §G2, the Time panel) puts the head back on the figure's
+      playhead: the scrubber dragged (a scrub), the scrubber clicked to a time, a step, and the loop's wrap to 0; while
+      the transport is paused the head does not move (applied per R-369, R-617's port; qa review 5644700214 of PR
+      #293, N2). *Was:* "A scrub, a seek or a restart of the Time panel itself puts the head back on the figure's
+      playhead". *Was:* "The playhead is the Time panel's (above), so the restart is that playhead's (RQ-534 (a),
+      applied meanwhile)." The own clock already restarts per trace and is unchanged.
     - **Paused at `t = 0`, the line is drawn dotted (R-569).** With the transport paused, the scrubber not held, and the
       playhead at exactly 0, the trace is drawn to its extent as above (TF3: the default length to its end; a `Window`
       or `LastDt` length as chosen, RQ-427 (a)), but its line is **dotted**: round dots in the trace's own colour (the
