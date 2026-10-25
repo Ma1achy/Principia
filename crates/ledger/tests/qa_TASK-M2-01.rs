@@ -522,15 +522,18 @@ fn qa_link_registry_generated_files_current() {
 
 negative_control!(
     qa_link_registry_generated_files_current,
-    "a registry with tanh_q's cap doubled does not generate the checked-in links",
+    "a registry with tanh_q's forward edited to 1·(its forward) does not generate the checked-in links",
     expected = "(current)",
     {
+        // The edit changes the tree, so the emitted code, but not a value: under R-481's admissibility check
+        // (REQ-GEN-037, REQ-GEN-041) a doubled cap would be refused before anything is generated, so the edit keeps
+        // the entry admissible and the registry still generates (qa, TASK-M2-41).
         let mut b = builders().to_vec();
         let i = b.iter().position(|b| b.name == "tanh_q").unwrap();
         let f = b[i].forward.unwrap()[0];
         b[i].forward = Some(Box::leak(Box::new([Expr::Op(
             Op::Mul,
-            Box::leak(Box::new([Expr::Num(2.0), f])),
+            Box::leak(Box::new([Expr::Num(1.0), f])),
         )])));
         let files: Vec<(String, String)> = generate(&b)
             .expect("still generates")

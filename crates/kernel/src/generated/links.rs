@@ -6,6 +6,7 @@ use core::marker::PhantomData;
 use spirv_std::num_traits::Float;
 
 use super::constants::ChartConstants;
+pub use super::constants::LinkParams;
 use crate::Real;
 
 /// The literal numbers of the registry's trees at a float type, each its `num(v)`.
@@ -82,7 +83,9 @@ pub enum Constraint {
 pub trait Codomain {
     const NAME: &'static str;
     const CONSTRAINT: Constraint;
-    /// The closed bounds of each physical component, for host-side checks; infinite where unbounded.
+    /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;
+    /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active
+    /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).
     const LO: f64;
     const HI: f64;
 }
@@ -149,6 +152,10 @@ impl Codomain for RealLine {
 
 /// A registry entry: `C` controls onto `P` physical components (dd_generation_root §3.9). The log-det is the log
 /// of the forward's volume factor: `log |det J|`, or `log √det(JᵀJ)` where `J` is not square (R-368).
+///
+/// Each function has an `_at` form taking the tunable parameters `p` (R-481 G7): a generated entry reads its
+/// tunable parameters from `p`, and its plain form is the `_at` form at `LinkParams::DEFAULT`; a link that reads
+/// none, as written outside the registry, ignores `p` by default.
 pub trait Link<const C: usize, const P: usize> {
     /// The link id provenance records.
     const NAME: &'static str;
@@ -156,6 +163,24 @@ pub trait Link<const C: usize, const P: usize> {
     fn forward<R: LinkReal>(v: [R; C]) -> [R; P];
     fn inverse<R: LinkReal>(v: [R; P]) -> [R; C];
     fn log_det<R: LinkReal>(v: [R; C]) -> R;
+
+    /// The forward at the tunable parameters `p`.
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> [R; P] {
+        Self::forward(v)
+    }
+
+    /// The inverse at the tunable parameters `p`.
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; P], _p: &LinkParams<R>) -> [R; C] {
+        Self::inverse(v)
+    }
+
+    /// The log-det at the tunable parameters `p`: a quantitative pass reweights at the active values (R-481 A4).
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> R {
+        Self::log_det(v)
+    }
 }
 
 /// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, then ±1 where its magnitude exceeds 1, by
@@ -209,11 +234,16 @@ impl Link<2, 3> for SoftmaxTanh {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 2]) -> [R; 3] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 2], p: &LinkParams<R>) -> [R; 3] {
         let t0 = tanh_sat(v[0]);
-        let t1 = R::MU_MAX * t0;
+        let t1 = p.mu_max * t0;
         let t2 = Float::exp(t1);
         let t3 = tanh_sat(v[1]);
-        let t4 = R::MU_MAX * t3;
+        let t4 = p.mu_max * t3;
         let t5 = Float::exp(t4);
         let t6 = R::LIT_0 + t2 + t5;
         let t7 = R::LIT_0 / t6;
@@ -224,31 +254,41 @@ impl Link<2, 3> for SoftmaxTanh {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 3]) -> [R; 2] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 3], p: &LinkParams<R>) -> [R; 2] {
         let t0 = v[1] / v[0];
         let t1 = Float::ln(t0);
         let t2 = R::LIT_0 - R::EPS_MU;
-        let t3 = t2 * R::MU_MAX;
+        let t3 = t2 * p.mu_max;
         let t4 = -t3;
         let t5 = Float::min(Float::max(t1, t4), t3);
-        let t6 = t5 / R::MU_MAX;
+        let t6 = t5 / p.mu_max;
         let t7 = Float::atanh(t6);
         let t8 = v[2] / v[0];
         let t9 = Float::ln(t8);
         let t10 = Float::min(Float::max(t9, t4), t3);
-        let t11 = t10 / R::MU_MAX;
+        let t11 = t10 / p.mu_max;
         let t12 = Float::atanh(t11);
         [t7, t12]
     }
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 2]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 2], p: &LinkParams<R>) -> R {
         let t0 = Float::ln(R::LIT_2);
         let t1 = R::LIT_1 * t0;
         let t2 = tanh_sat(v[0]);
-        let t3 = R::MU_MAX * t2;
+        let t3 = p.mu_max * t2;
         let t4 = Float::exp(t3);
         let t5 = tanh_sat(v[1]);
-        let t6 = R::MU_MAX * t5;
+        let t6 = p.mu_max * t5;
         let t7 = Float::exp(t6);
         let t8 = R::LIT_0 + t4 + t7;
         let t9 = R::LIT_0 / t8;
@@ -257,7 +297,7 @@ impl Link<2, 3> for SoftmaxTanh {
         let t12 = Float::ln(t11);
         let t13 = t7 / t8;
         let t14 = Float::ln(t13);
-        let t15 = Float::ln(R::MU_MAX);
+        let t15 = Float::ln(p.mu_max);
         let t16 = R::LIT_3 * t15;
         let t17 = Float::ln(R::LIT_3);
         let t18 = -v[0];
@@ -293,6 +333,11 @@ impl Link<2, 3> for StickBreaking {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 2]) -> [R; 3] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 2], _p: &LinkParams<R>) -> [R; 3] {
         let t0 = R::LIT_3 * v[0];
         let t1 = -t0;
         let t2 = sigmoid(t1);
@@ -316,6 +361,11 @@ impl Link<2, 3> for StickBreaking {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 3]) -> [R; 2] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 3], _p: &LinkParams<R>) -> [R; 2] {
         let t0 = v[1] + v[2];
         let t1 = R::LIT_3 * t0;
         let t2 = t1 - R::LIT_0;
@@ -336,6 +386,11 @@ impl Link<2, 3> for StickBreaking {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 2]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 2], _p: &LinkParams<R>) -> R {
         let t0 = Float::ln(R::LIT_2);
         let t1 = R::LIT_1 * t0;
         let t2 = Float::ln(R::LIT_5);
@@ -379,6 +434,11 @@ impl Link<1, 1> for SigmoidAlpha {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = sigmoid(v[0]);
@@ -389,6 +449,11 @@ impl Link<1, 1> for SigmoidAlpha {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] - R::ALPHA_MIN;
         let t1 = R::LIT_3 * R::ALPHA_MIN;
         let t2 = R::LIT_6 - t1;
@@ -401,6 +466,11 @@ impl Link<1, 1> for SigmoidAlpha {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = Float::ln(t1);
@@ -423,6 +493,11 @@ impl Link<1, 1> for SigmoidBeta {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = sigmoid(v[0]);
         let t1 = R::LIT_7 * t0;
         [t1]
@@ -430,6 +505,11 @@ impl Link<1, 1> for SigmoidBeta {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] / R::LIT_7;
         let t1 = R::LIT_0 - R::EPS_Z;
         let t2 = Float::min(Float::max(t0, R::EPS_Z), t1);
@@ -439,6 +519,11 @@ impl Link<1, 1> for SigmoidBeta {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = Float::ln(R::LIT_7);
         let t1 = -v[0];
         let t2 = softplus(t1);
@@ -460,6 +545,11 @@ impl Link<1, 1> for TanhAlpha {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
@@ -472,6 +562,11 @@ impl Link<1, 1> for TanhAlpha {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] - R::ALPHA_MIN;
         let t1 = R::LIT_3 * R::ALPHA_MIN;
         let t2 = R::LIT_6 - t1;
@@ -487,6 +582,11 @@ impl Link<1, 1> for TanhAlpha {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
@@ -514,6 +614,11 @@ impl Link<1, 1> for TanhBeta {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = tanh_sat(v[0]);
         let t1 = R::LIT_0 + t0;
         let t2 = R::LIT_6 * t1;
@@ -522,6 +627,11 @@ impl Link<1, 1> for TanhBeta {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] / R::LIT_6;
         let t1 = t0 - R::LIT_0;
         let t2 = R::LIT_0 - R::EPS_Z;
@@ -533,6 +643,11 @@ impl Link<1, 1> for TanhBeta {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = Float::ln(R::LIT_6);
         let t1 = Float::ln(R::LIT_3);
         let t2 = -v[0];
@@ -560,6 +675,11 @@ impl Link<1, 1> for SoftsignAlpha {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
@@ -575,6 +695,11 @@ impl Link<1, 1> for SoftsignAlpha {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] - R::ALPHA_MIN;
         let t1 = R::LIT_3 * R::ALPHA_MIN;
         let t2 = R::LIT_6 - t1;
@@ -594,6 +719,11 @@ impl Link<1, 1> for SoftsignAlpha {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
@@ -621,6 +751,11 @@ impl Link<1, 1> for SoftsignBeta {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = -v[0];
         let t1 = Float::min(Float::max(v[0], t0), R::LIT_4);
         let t2 = R::LIT_3 + t1;
@@ -632,6 +767,11 @@ impl Link<1, 1> for SoftsignBeta {
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = v[0] / R::LIT_6;
         let t1 = t0 - R::LIT_0;
         let t2 = R::LIT_0 - R::EPS_Z;
@@ -647,6 +787,11 @@ impl Link<1, 1> for SoftsignBeta {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::LIT_6;
         let t1 = Float::ln(t0);
         let t2 = -v[0];
@@ -667,16 +812,26 @@ impl Link<1, 1> for SigmoidQ {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
         let t0 = sigmoid(v[0]);
         let t1 = R::LIT_3 * t0;
         let t2 = t1 - R::LIT_0;
-        let t3 = R::Q_MAX * t2;
+        let t3 = p.q_max * t2;
         [t3]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
-        let t0 = v[0] / R::Q_MAX;
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
+        let t0 = v[0] / p.q_max;
         let t1 = t0 + R::LIT_0;
         let t2 = R::LIT_1 * t1;
         let t3 = R::LIT_0 - R::EPS_Q;
@@ -687,7 +842,12 @@ impl Link<1, 1> for SigmoidQ {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
-        let t0 = R::LIT_3 * R::Q_MAX;
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
+        let t0 = R::LIT_3 * p.q_max;
         let t1 = Float::ln(t0);
         let t2 = -v[0];
         let t3 = softplus(t2);
@@ -708,14 +868,24 @@ impl Link<1, 1> for TanhQ {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
         let t0 = tanh_sat(v[0]);
-        let t1 = R::Q_MAX * t0;
+        let t1 = p.q_max * t0;
         [t1]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
-        let t0 = v[0] / R::Q_MAX;
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
+        let t0 = v[0] / p.q_max;
         let t1 = R::LIT_0 - R::EPS_Q;
         let t2 = -t1;
         let t3 = Float::min(Float::max(t0, t2), t1);
@@ -725,7 +895,12 @@ impl Link<1, 1> for TanhQ {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
-        let t0 = Float::ln(R::Q_MAX);
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
+        let t0 = Float::ln(p.q_max);
         let t1 = Float::ln(R::LIT_3);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
@@ -752,17 +927,27 @@ impl Link<1, 1> for SoftsignQ {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
         let t0 = -v[0];
         let t1 = Float::min(Float::max(v[0], t0), R::LIT_4);
         let t2 = R::LIT_3 + t1;
         let t3 = v[0] / t2;
-        let t4 = R::Q_MAX * t3;
+        let t4 = p.q_max * t3;
         [t4]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
-        let t0 = v[0] / R::Q_MAX;
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> [R; 1] {
+        let t0 = v[0] / p.q_max;
         let t1 = R::LIT_0 - R::EPS_Q;
         let t2 = -t1;
         let t3 = Float::min(Float::max(t0, t2), t1);
@@ -776,7 +961,12 @@ impl Link<1, 1> for SoftsignQ {
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
-        let t0 = R::LIT_3 * R::Q_MAX;
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
+        let t0 = R::LIT_3 * p.q_max;
         let t1 = Float::ln(t0);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
@@ -797,18 +987,33 @@ impl Link<1, 1> for Softplus {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = softplus(v[0]);
         [t0]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = inv_softplus(v[0]);
         [t0]
     }
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = -v[0];
         let t1 = softplus(t0);
         -t1
@@ -824,18 +1029,33 @@ impl Link<1, 1> for Exp {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = Float::exp(v[0]);
         [t0]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         let t0 = Float::ln(v[0]);
         [t0]
     }
 
     #[inline]
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         v[0]
     }
 }
@@ -849,16 +1069,31 @@ impl Link<1, 1> for Identity {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         [v[0]]
     }
 
     #[inline]
     fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
         [v[0]]
     }
 
     #[inline]
-    fn log_det<R: LinkReal>(_v: [R; 1]) -> R {
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(_v: [R; 1], _p: &LinkParams<R>) -> R {
         R::LIT_8
     }
 }

@@ -29,7 +29,7 @@ use std::fmt;
 
 use kernel::chart::{family_label, swept, Axis, BlockTouch};
 use kernel::decode::Decoded;
-use kernel::generated::links::Selection;
+use kernel::generated::links::{LinkParams, Selection};
 
 use super::axis::{blocks, dof, meets, names, no_blocks, union, within, AxisKind, Block};
 use super::descriptor::{Authored, ChartDescriptor, ChartKind, Coupling, Frozen};
@@ -189,7 +189,16 @@ impl<C: Authored> ValidatedChart<C> {
     where
         f64: From<C::Param>,
     {
-        self.chart.decode::<S, f64>(u, v)
+        self.decode_params::<S>(u, v, &LinkParams::DEFAULT)
+    }
+
+    /// [`ValidatedChart::decode`] at the tunable parameters `p`, the active values (`Chart::decode_params`; chart_reference
+    /// §0.1, "every chart reads the active value"; R-481 G4).
+    pub fn decode_params<S: Selection>(&self, u: f64, v: f64, p: &LinkParams<f64>) -> Decoded<f64>
+    where
+        f64: From<C::Param>,
+    {
+        self.chart.decode_params::<S, f64>(u, v, p)
     }
 }
 

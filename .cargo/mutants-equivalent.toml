@@ -176,36 +176,36 @@ mutant = "crates/kernel/src/chart/burrau.rs:106:29: replace | with ^ in seed"
 justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:207:41: replace | with ^ in <impl SimplexClamp for SoftmaxTanh>::clamps"
+mutant = "crates/kernel/src/encode/blocks.rs:247:41: replace | with ^ in <impl SimplexClamp for SoftmaxTanh>::clamps_at"
 justification = "the operands are select(.., 1, 0) and select(.., 2, 0), disjoint single bits, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:222:39: replace | with ^ in <impl SimplexClamp for StickBreaking>::clamps"
+mutant = "crates/kernel/src/encode/blocks.rs:262:39: replace | with ^ in <impl SimplexClamp for StickBreaking>::clamps"
 justification = "the operands are select(.., 1, 0) and select(.., 2, 0), disjoint single bits, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:276:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:328:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:277:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:329:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:278:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:330:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:279:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:331:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:280:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:332:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:281:9: replace | with ^ in invert"
-justification = "each operand of invert's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
+mutant = "crates/kernel/src/encode/blocks.rs:333:9: replace | with ^ in invert_at"
+justification = "each operand of invert_at's clamp word is bit(.., k) = select(.., 1 << k, 0) for its own k in 0..6, or the mass's two bits << 6, so the bits are disjoint and ^ is |"
 
 [[equivalent]]
 mutant = "crates/kernel/src/stage/encode.rs:27:16: replace | with ^ in notices"
@@ -216,7 +216,7 @@ mutant = "crates/kernel/src/stage/encode.rs:27:27: replace | with ^ in notices"
 justification = "coincident | mirrored uses bits 0 and 1, and clamped_controls << 8 only bits 8 and up, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/encode/blocks.rs:134:31: replace > with >= in beta"
+mutant = "crates/kernel/src/encode/blocks.rs:138:31: replace > with >= in beta"
 justification = "where raw == π̂ both select π̂: select(true, pi, raw) and select(false, pi, raw) are the same value"
 
 [[equivalent]]
@@ -244,5 +244,5 @@ mutant = "crates/kernel/src/driver/substep.rs:117:10: replace < with <= in least
 justification = "where b == a both arms return floats with equal bits: a pair's d² is a sum of squares each +0 or positive (square never returns -0), and a NaN compares false under both"
 
 [[equivalent]]
-mutant = "crates/engine/src/lookup.rs:618:34: replace > with >= in moves_within"
+mutant = "crates/engine/src/lookup.rs:637:34: replace > with >= in moves_within_params"
 justification = "they differ only at len == 0: a = cos α/√μ_ρ is never 0 (no finite f64 has cos 0, and |cos α| >= 6.1e-17 cannot underflow over a finite √μ_ρ), and b == 0 (α = ±0, or underflow) is within any band pole >= 0 of its finite bound b.r >= 0, so the α = 0 pole branch is taken, which never reads beta_round (inverse_encode_contract § Chart-aware validation, R/b only off the pole; R-591)"

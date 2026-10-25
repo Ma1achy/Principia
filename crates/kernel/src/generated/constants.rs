@@ -59,6 +59,27 @@ impl ChartConstants for f64 {
     const EPS_M01: f64 = 1e-5;
 }
 
+/// The tunable link parameters' values at a float type (R-481 G7; dd_generation_root §3.9, "Tunable
+/// parameters"): one field per tunable parameter of the registry, which the link functions' `_at` forms read in
+/// place of the chart constant of its name, so a parameter change is a value and not a compiled variant. On the
+/// GPU it is a uniform (TASK-M4-21).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LinkParams<R> {
+    /// `mu_max`, tunable on `softmax_tanh`.
+    pub mu_max: R,
+    /// `q_max`, tunable on `sigmoid_q`, `tanh_q`, `softsign_q`.
+    pub q_max: R,
+}
+
+impl<R: ChartConstants> LinkParams<R> {
+    /// The defaults, each field its chart constant (R-481 A2): the link functions at them are bitwise those that
+    /// read the constants.
+    pub const DEFAULT: Self = LinkParams {
+        mu_max: R::MU_MAX,
+        q_max: R::Q_MAX,
+    };
+}
+
 /// `tanh_sat` = 20.0: a chart constant an operator reads, not a tree (dd_generation_root §3.9), at the float
 /// type `R`, the register entry's value converted from f32, where it is exact. Emitted as a function of `R`
 /// rather than a [`ChartConstants`] item: an operator's bound is one number at every float type the links are
