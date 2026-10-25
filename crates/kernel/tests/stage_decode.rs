@@ -604,7 +604,14 @@ fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
         );
     }
     for i in 0..2 {
-        let want = sample::<V::Chart, V::Links, f32>(chart, uv[2 * i], uv[2 * i + 1]);
+        // The expected side's inputs go through `black_box`, so it calls the run-time libm as the entry point does: at
+        // the release profile LLVM folds f32 `tanh` on the test's literal chart at compile time, and glibc 2.39's
+        // `tanhf(0.3)` differs from the folded value by 1 ulp (measure run 40187630582, TASK-M2-49).
+        let want = sample::<V::Chart, V::Links, f32>(
+            std::hint::black_box(chart),
+            std::hint::black_box(uv[2 * i]),
+            std::hint::black_box(uv[2 * i + 1]),
+        );
         let name = V::ENTRY;
         assert_eq!(read_ic(&ic, i), want.ic, "{name} sample {i}'s (m, r, p)");
         assert_eq!(
