@@ -6,7 +6,8 @@
 //! - `validator_invariant_downstream_*` (REQ-CHART-006): an invariant axis whose dependency set is not upstream of its
 //!   sector is refused; `(L_z, E)` solves jointly.
 //! - `chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and passes;
-//!   the shape sphere is 2-to-1 (R-141), the full-range Burrau (Euclid) chart `DoubleCover` (R-157); `E` and `L_z` are
+//!   the shape sphere's spherical map bijective (R-544; its exponential map's value TASK-M2-28's), the full-range Burrau
+//!   (Euclid) chart `DoubleCover` (R-157); `E` and `L_z` are
 //!   `conserved_along_flow`, `K` is not; each curve's tangent is its embed's derivative.
 //! - `physical_axis_nonlinear` (REQ-CHART-035): a physical-quantity axis makes the chart nonlinear, and the decode path
 //!   then calls `Φ`.
@@ -1059,10 +1060,10 @@ fn check_registered<C: Authored>(chart: C, swept: u32, image: SystemImage) -> Ch
 fn chart_descriptors_registered_charts() {
     let bij = SystemImage::Bijective;
     check_registered(latent(e(0), e(6)), 2, bij);
-    // The shape sphere is n-to-1 with n = 2 (R-141), on either chart map (R-117).
-    for map in [ShapeMap::Spherical, ShapeMap::Exponential] {
-        check_registered(shape(map), 2, SystemImage::NToOne(2));
-    }
+    // The shape sphere's spherical map is bijective, the whole sphere (R-544). The exponential map's value is
+    // TASK-M2-28's (REQ-CHART-075), computed from its cap; until it lands that map keeps main's n-to-1 with n = 2.
+    check_registered(shape(ShapeMap::Spherical), 2, bij);
+    check_registered(shape(ShapeMap::Exponential), 2, SystemImage::NToOne(2));
     // The full-range Burrau charts are DoubleCover (R-27, R-157); a one-sided range is bijective.
     let euclid_full = check_registered(euclid(EUCLID_NU), 1, SystemImage::DoubleCover);
     assert!(euclid_full.annotation);
@@ -1096,10 +1097,10 @@ fn chart_descriptors_registered_charts() {
 
 negative_control!(
     chart_descriptors_registered_charts,
-    "the shape sphere read as bijective fails",
+    "the shape sphere's spherical map read as n-to-1 with n = 2, R-141's fold, which R-544 removes, fails",
     expected = "system_image",
     {
-        check_registered(shape(ShapeMap::Spherical), 2, SystemImage::Bijective);
+        check_registered(shape(ShapeMap::Spherical), 2, SystemImage::NToOne(2));
     }
 );
 

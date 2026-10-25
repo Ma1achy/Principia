@@ -255,8 +255,11 @@ share link reproduce a styled figure (the round-trip rule, tier 2).
 The lab measures stroke widths, dot pitches and cell sizes in **screen pixels**. A 4096² export would then be a
 different picture: strokes a quarter as wide relative to the figure. So every length parameter declares a unit:
 
-- **`ref_px`** (the default for marks: strokes, dots, cells, stitches): pixels on a 1024-wide figure, scaled by
-  `output_width / 1024` at render time.
+- **`ref_px`** (the default for marks: strokes, dots, cells, stitches): base px (R-583; `principia_export_details.md`
+  §3.3), pixels on a figure `RenderState.base_width` wide, 1024 where the state has none, scaled by
+  `output_width / base_width` at render time, so on screen a medium keeps its size when the window is resized. *Was:*
+  "pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time." The export-size invariance below
+  still holds: two exports of one state scale by the same rule.
 - **`device_px`**: true screen pixels. Only for effects that model the display itself: CRT scanlines, LCD subpixels,
   LED pitch.
 - **`fraction`**: a fraction of the figure width, for broad effects such as vignette and lighting.

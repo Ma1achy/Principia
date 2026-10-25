@@ -23,12 +23,12 @@
 //! - REQ-CHART-020, R-141 (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at `(θ, π − φ)` on the lower hemisphere,
 //!   at `(θ, φ)` on the upper, and at the default gauge (`I = 1`, `φ_f = 0`) an upper-hemisphere `Φ` is on `C`'s section,
 //!   so `C` leaves it.
-//! - dd_decoder §2, §3.3, §3.5, §3.6; REQ-CHART-020 (`shape_sphere_decode_canonical_qa`,
+//! - dd_decoder §2, §3.3, §3.5, §3.6; REQ-CHART-020, R-544 (`shape_sphere_decode_canonical_qa`,
 //!   `shape_sphere_energy_norm_qa`): the decode's `ic` is canonical, `G = M = I = 1`, at any chart `I` and on both
-//!   hemispheres: the CoM at rest at the origin, `I = 1`, `ρ` on `+x`, `λ̃_y ≥ −δ_λ`, the masses `m_fixed`, the shape
-//!   `C`'s fold of `n(u, v)`, the energy `√I·E(Φ)` and `|L_z|` `I^{−1/4}·|L_z(Φ)|` (§3.5's similarity), the descriptor
-//!   read from it; `η_E`'s entry decodes the chart's shape, with no target as the chart's own decode, with `E*` at the
-//!   same positions and energy `E*`.
+//!   hemispheres, with `C`'s step 3, the mirror, not taken (R-544): the CoM at rest at the origin, `I = 1`, `ρ` on
+//!   `+x`, `λ̃_y` keeping `n₂`'s sign, the masses `m_fixed`, the shape the signed `n(u, v)`, the energy `√I·E(Φ)` and
+//!   `|L_z|` `I^{−1/4}·|L_z(Φ)|` (§3.5's similarity), the descriptor read from it; `η_E`'s entry decodes the chart's
+//!   signed shape, with no target as the chart's own decode, with `E*` at the same positions and energy `E*`.
 //! - REQ-CHART-036, REQ-INT-003 (`shape_landmarks_qa_equal_masses`, `shape_landmarks_mass_weighted_qa`,
 //!   `shape_landmarks_qa_inspector`): equal masses, `BC₀₁ = (−1, 0, 0)` at 180°, `BC₁₂` at 60°, `BC₂₀` at 300°, 120°
 //!   apart, `L± = (0, 0, ±1)`; random masses, `BC₀₁ = (−1, 0, 0)`, every collision on `w = 0` at its mass-weighted
@@ -914,12 +914,12 @@ fn shape_sphere_roundtrip_qa_poles() {
                 dist(shape(r, m), pole) <= ROUNDTRIP,
                 "Φ({s}, {t}) is not at {pole:?}"
             );
-            // C folds L⁻ onto L⁺ (R-141): the decode's canonical ic is at L⁺ from either pole.
+            // The decode keeps the signed shape (R-544): its canonical ic is at the pole it decodes, L⁻ at t = 0.
             let d = chart.decode::<Defaults, f64>(s, t);
             assert!(
                 d.ic.r.iter().flatten().all(|x| x.is_finite())
-                    && dist(shape(d.ic.r, d.ic.m), [0.0, 0.0, 1.0]) <= ROUNDTRIP,
-                "C(Φ({s}, {t})) is not finite at L⁺: {:?}",
+                    && dist(shape(d.ic.r, d.ic.m), pole) <= ROUNDTRIP,
+                "the decode at ({s}, {t}) is not finite at {pole:?}: {:?}",
                 d.ic.r
             );
         }
@@ -1068,14 +1068,15 @@ negative_control!(
     }
 );
 
-// ── dd_decoder §2, §3.5: the decode hands the integrator C(Φ), canonical ───────────────────────────────────────────
+// ── dd_decoder §2, §3.5, R-544: the decode hands the integrator C(Φ), step 3 not taken, canonical ──────────────────
 
 /// The canonical section's identities (`I = 1`, the CoM, `ρ_y`, `Σp`) and §3.5's scalings of `E` and `L_z`: `C`'s
 /// rotation, mirror and scale, a few roundings each, against the state's own size (applied per R-369, a test decision).
 const CANON_TOL: f64 = 64.0 * EPS;
 
-/// dd_decoder §3.3's mirror deadband `δ_λ`.
-const DELTA_LAMBDA: f64 = 1e-12;
+/// `|n₂|` above which `λ̃_y`'s sign is asserted to be `n₂`'s: with `ρ` on `+x`, `n₂ = 2ρ̃ₓλ̃_y` at `I = 1` (§3.1), so the
+/// two share a sign; at `n₂` within a few roundings of 0 the sign is the rounding's (applied per R-369, a test decision).
+const SIGN_FLOOR: f64 = CANON_TOL;
 
 /// `(com, I, E, L_z, size, L_z's scale)` of a state: the mass-weighted moment of inertia about the CoM, §3.6's
 /// `K₀ + V₀` with `G = 1`, `Σ rᵢ × pᵢ`, the scale `Σ mᵢ‖rᵢ‖ + Σ‖pᵢ‖` the relative checks are taken against, and
@@ -1106,23 +1107,14 @@ fn state(ic: &Ic<f64>) -> ([f64; 2], f64, f64, f64, f64, f64) {
     (com, inertia, kinetic + potential, lz, size, lz_scale)
 }
 
-/// `C`'s fold of `n` (R-141): the upper hemisphere stays, the lower goes to `(θ, π − φ)`, `w → −w`.
-fn folded(n: [f64; 3]) -> [f64; 3] {
-    if n[2] < 0.0 {
-        [n[0], n[1], -n[2]]
-    } else {
-        n
-    }
-}
-
 type DecodedFn = fn(&ShapeSphere<f64>, f64, f64) -> Decoded<f64>;
 
 /// The decode's `ic` on random charts of both maps, `I ∈ [¼, 4]`, both hemispheres drawn, is canonical in
 /// `G = M = I = 1` (dd_decoder §2, §3.3, §3.5): the CoM at the origin and at rest, `I = 1`, `ρ = r₁ − r₀` on `+x`,
-/// `λ̃_y ≥ −δ_λ` (no mirror left), the masses the blocks' `m_fixed`, its shape `C`'s fold of `n(u, v)` within
-/// `shape_roundtrip_bound`, and §3.5's similarity of `Φ`'s state, `ℓ = √I`: `E = ℓ·E(Φ)`, `|L_z| = ℓ^{−½}·|L_z(Φ)|`.
-/// Its descriptor is read from that `ic` (§3.6): `rho_mag² + lambda_mag² = 1`, `K₀ + V₀ = E`. Returns the worst
-/// relative miss of the identities.
+/// `λ̃_y` of `n₂`'s sign (`C`'s mirror not taken, R-544), the masses the blocks' `m_fixed`, its shape the signed
+/// `n(u, v)` within `shape_roundtrip_bound`, and §3.5's similarity of `Φ`'s state, `ℓ = √I`: `E = ℓ·E(Φ)`,
+/// `|L_z| = ℓ^{−½}·|L_z(Φ)|`. Its descriptor is read from that `ic` (§3.6): `rho_mag² + lambda_mag² = 1`,
+/// `K₀ + V₀ = E`. Returns the worst relative miss of the identities.
 fn check_decode_canonical(decode: DecodedFn) -> f64 {
     let mut rng = SplitMix::new(0x0236);
     let (mut worst, mut lower, mut far): (f64, u32, u32) = (0.0, 0, 0);
@@ -1164,16 +1156,17 @@ fn check_decode_canonical(decode: DecodedFn) -> f64 {
         );
         worst = worst.max(miss);
         assert!(rho[0] > 0.0, "ρ at ({u}, {v}) is not on +x: {rho:?}");
-        assert!(
-            lambda_y >= -DELTA_LAMBDA,
-            "λ̃_y = {lambda_y:e} at ({u}, {v}): C's mirror is left undone"
-        );
         assert!(ic.m == d.masses.m, "the canonical masses are not m_fixed");
         let n = chart.point(u, v);
+        assert!(
+            n[2].abs() <= SIGN_FLOOR || (lambda_y < 0.0) == (n[2] < 0.0),
+            "λ̃_y = {lambda_y:e} at ({u}, {v}), n₂ = {:e}: C's mirror step is taken",
+            n[2]
+        );
         let got = shape(ic.r, ic.m);
         assert!(
-            dist(got, folded(n)) <= ROUNDTRIP,
-            "the decode's shape at ({u}, {v}) is {got:?}, not the fold of n {n:?}"
+            dist(got, n) <= ROUNDTRIP,
+            "the decode's shape at ({u}, {v}) is {got:?}, not the signed n {n:?}"
         );
         let q = &d.descriptor;
         assert!(
@@ -1221,8 +1214,7 @@ mod decode_unfolded {
     use super::*;
     negative_control!(
         shape_sphere_decode_canonical_qa,
-        "Φ scaled to I = 1 but neither turned nor mirrored leaves ρ off +x and the lower hemisphere unfolded, so it must \
-         fail",
+        "Φ scaled to I = 1 but not turned leaves ρ off +x, so it must fail",
         expected = "is not canonical",
         {
             check_decode_canonical(|c, u, v| {
@@ -1241,26 +1233,18 @@ mod decode_unfolded {
     );
 }
 
-mod decode_unmirrored {
+mod decode_mirrored {
     use super::*;
     negative_control!(
         shape_sphere_decode_canonical_qa,
-        "Φ scaled and turned to put ρ on +x but never mirrored leaves the lower hemisphere at λ̃_y < 0, so it must fail",
-        expected = "C's mirror is left undone",
+        "R-141's gauge left in, C's mirror step run on the decode, puts the lower hemisphere at λ̃_y > 0, so it must fail",
+        expected = "C's mirror step is taken",
         {
             check_decode_canonical(|c, u, v| {
-                let phi = chart_phi(c, u, v);
-                let ell = c.inertia.sqrt();
-                let rho = [phi.r[1][0] - phi.r[0][0], phi.r[1][1] - phi.r[0][1]];
-                let (sin, cos) = (-rho[1].atan2(rho[0])).sin_cos();
-                let turn = |x: [f64; 2]| [cos * x[0] - sin * x[1], sin * x[0] + cos * x[1]];
+                let d = c.decode::<Defaults, f64>(u, v);
                 Decoded {
-                    ic: Ic {
-                        r: phi.r.map(|x| turn(x).map(|y| y / ell)),
-                        p: phi.p.map(|x| turn(x).map(|y| y * ell.sqrt())),
-                        ..phi
-                    },
-                    ..c.decode::<Defaults, f64>(u, v)
+                    ic: canonicalise(&d.ic).ic,
+                    ..d
                 }
             });
         }
@@ -1270,7 +1254,7 @@ mod decode_unmirrored {
 type DecodeChartFn = fn(&ShapeSphere<f64>, f64, f64, Option<f64>) -> (Decoded<f64>, Outcome);
 
 /// `η_E`'s entry on the shape sphere (dd_decoder §3.7): with no target (`None`, "Off") the decode is the chart's own,
-/// its shape the fold of `n(u, v)`; with `E* = V₀ + ½` (feasible, `K₀ > 0`) the positions are the same, the outcome
+/// its shape the signed `n(u, v)` (R-544); with `E* = V₀ + ½` (feasible, `K₀ > 0`) the positions are the same, the outcome
 /// `Scaled`, the energy of the result `E*` within `CANON_TOL` relative, and the descriptor's `K₀ + V₀` too.
 fn check_energy_norm(decode: DecodeChartFn) {
     let mut rng = SplitMix::new(0x0237);
@@ -1281,8 +1265,8 @@ fn check_energy_norm(decode: DecodeChartFn) {
         let (off, outcome) = decode(&chart, u, v, None);
         let got = shape(off.ic.r, off.ic.m);
         assert!(
-            dist(got, folded(n)) <= ROUNDTRIP,
-            "η_E's entry at ({u}, {v}) decodes the shape {got:?}, not the fold of n {n:?}"
+            dist(got, n) <= ROUNDTRIP,
+            "η_E's entry at ({u}, {v}) decodes the shape {got:?}, not the signed n {n:?}"
         );
         assert_eq!(outcome, Outcome::Off, "the outcome with no target");
         assert!(
@@ -1315,7 +1299,7 @@ fn shape_sphere_energy_norm_qa() {
 negative_control!(
     shape_sphere_energy_norm_qa,
     "η_E's entry decoding map's latent alone, through D_cfg, loses the chart's shape, so it must fail",
-    expected = "not the fold of n",
+    expected = "not the signed n",
     {
         check_energy_norm(|c, u, v, e| {
             energy_norm::decode_with(

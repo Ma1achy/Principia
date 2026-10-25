@@ -794,9 +794,9 @@
   title: "The shape sphere chart is the whole sphere: the signed decode, the held momentum unmirrored below the equator, the signed lookup, the spherical map's system_image one-to-one, and the tests that asserted the 2-to-1 cover (R-544) ⚑"
   depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-17]
   needs: []
-  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034]
+  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034, REQ-DEC-050]  # REQ-DEC-050: PR #288 code review C1, applied per R-369
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
-  pitfalls: [PIT-9]
+  pitfalls: [PIT-9, PIT-11]
 - id: TASK-M2-47
   milestone: M2
   title: "Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form"
@@ -2534,6 +2534,14 @@
   requirements: [REQ-RENDER-110]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
+- id: TASK-M7-70
+  milestone: M7
+  title: "Base px: every mark length of the line system and the Print graph in one unit, scaled by `output_width / base_width`, labels placed at base size, `RenderState.base_width` (R-583)"
+  depends_on: [TASK-M7-42, TASK-M7-55, TASK-M7-44]
+  needs: []
+  requirements: [REQ-RENDER-118]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -2657,7 +2665,7 @@
 - id: TASK-M8-16
   milestone: M8
   title: Inspector pane 3, the one timeline, and the readouts
-  depends_on: [TASK-M8-14, TASK-M8-15, TASK-M4-15]
+  depends_on: [TASK-M8-14, TASK-M8-15, TASK-M4-15, TASK-M8-83]
   needs: [REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074, REQ-GUI-188]
   requirements: [REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032]
   reviewers: [code, qa, physics, gui]
@@ -2777,7 +2785,7 @@
 - id: TASK-M8-31
   milestone: M8
   title: "Keyframes, the export planner and the spec object: serialise, share, re-render"
-  depends_on: [TASK-M8-30, TASK-M7-31, TASK-M7-45]  # TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
+  depends_on: [TASK-M8-30, TASK-M7-31, TASK-M7-45, TASK-M8-81]  # TASK-M7-45 generates the entry hashes (R-521 H5; code review F9 of PR #265, applied per R-369)
   needs: [REQ-SYS-011, REQ-SCHED-048, REQ-TOOL-065, REQ-VAL-057, REQ-VAL-064, REQ-GUI-002]
   requirements: [REQ-TOOL-074, REQ-TOOL-075, REQ-TOOL-076, REQ-TOOL-095, REQ-TOOL-096, REQ-TOOL-083, REQ-VAL-100, REQ-TOOL-129, REQ-TOOL-175, REQ-TOOL-185, REQ-TOOL-197]  # R-576: REQ-TOOL-197 (easing curves, playhead policies); R-578: REQ-TOOL-084 moved to TASK-M8-79 with the reel builder (applied per R-369)
   reviewers: [code, qa, physics, perf]
@@ -2793,9 +2801,9 @@
 - id: TASK-M8-33
   milestone: M8
   title: Import picture, saved views, and record a time sweep (09_importrecord.png)
-  depends_on: [TASK-M8-32, TASK-M8-08, TASK-M6-48, TASK-M6-49]  # TASK-M6-48 and TASK-M6-49 for the tilt map and saved charts (R-474, R-475)
+  depends_on: [TASK-M8-32, TASK-M8-08, TASK-M6-48, TASK-M6-49, TASK-M8-81]  # TASK-M6-48 and TASK-M6-49 for the tilt map and saved charts (R-474, R-475)
   needs: [REQ-TOOL-061, REQ-TOOL-063, REQ-TOOL-066, REQ-TOOL-071, REQ-SYS-011]
-  requirements: [REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107, REQ-TOOL-170]
+  requirements: [REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107, REQ-TOOL-170, REQ-TOOL-207]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1]
 - id: TASK-M8-34
@@ -3165,6 +3173,54 @@
   needs: [REQ-RENDER-045]
   requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386, REQ-PERF-111]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b)); REQ-PERF-111: fix round 12 (perf P4)
   reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
+  pitfalls: []
+- id: TASK-M8-80
+  milestone: M8
+  title: "Export details: every measured colour window frozen at export and at Record, the clipped shares and the export block, the colour-vision simulation never in an export unless asked, `render_scale` 1, and the physical size (R-581 to R-583)"
+  depends_on: [TASK-M8-32, TASK-M8-33, TASK-M8-23, TASK-M8-78, TASK-M8-53, TASK-M7-70, TASK-M7-25]
+  needs: [REQ-RENDER-118]
+  requirements: [REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205, REQ-TOOL-216, REQ-TOOL-217, REQ-TOOL-218]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-81
+  milestone: M8
+  title: "The video carrier: a recording's record once per file in its container, always (a GIF's comment and application extension, an MP4's comment, a WebM's tag), read back with the embedding's three outcomes (R-584)"
+  depends_on: [TASK-M8-30, TASK-M7-32]
+  needs: [REQ-TOOL-110]
+  requirements: [REQ-TOOL-206]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M8-82
+  milestone: M8
+  title: "The uploaded picture: ingest in the app's own code, the SHA-256 `PictureRef` in tier 2, the content-addressed store, the `prPc` chunk, and a visible \"Picture missing\", never a substitute (R-585)"
+  depends_on: [TASK-M8-33, TASK-M8-53, TASK-M8-74, TASK-M7-49, TASK-M7-51]
+  needs: [REQ-COL-130, REQ-GUI-340, REQ-TOOL-180]
+  requirements: [REQ-COL-160, REQ-COL-161, REQ-TOOL-208, REQ-TOOL-209, REQ-TOOL-210, REQ-GUI-391, REQ-GUI-392]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-83
+  milestone: M8
+  title: "The Precision ring's state-in entry, `computeICState(state, simKey)`, beside `computeIC`, and the frame the constructor integrates (R-586)"
+  depends_on: [TASK-M3-19, TASK-M2-43]
+  needs: [REQ-SYS-017, REQ-INT-055, REQ-CHART-081]
+  requirements: [REQ-INT-107]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-84
+  milestone: M8
+  title: "Saving an IC: the `principia.ic/1` record, copy, paste, Save IC… and Open IC…, the twin on reopening, marks in `Lines`, and the trajectory CSV with its bodies labelled 1-based (R-586, R-587)"
+  depends_on: [TASK-M8-17, TASK-M8-83, TASK-M8-67, TASK-M8-58, TASK-M8-53]
+  needs: [REQ-GUI-188]
+  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396, REQ-TOOL-215]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-85
+  milestone: M8
+  title: "The WebM carrier in the browser build: the `PRINCIPIA_SPEC` tag on the file, tested by the Playwright suite (R-584)"
+  depends_on: [TASK-M8-81, TASK-M8-33, TASK-M8-40]
+  needs: []
+  requirements: [REQ-TOOL-214]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

@@ -1180,6 +1180,122 @@
   section: 6. Tests
   reason: informative only
   note: the draft's tests, each carried by a requirement's verify (REQ-GUI-373 to REQ-GUI-381, REQ-TOOL-076, REQ-TOOL-200, REQ-PERF-110)
+- file: docs/design/principia_export_details.md
+  section: "Principia: export details — the colour window, the viewer's settings and mark sizes"
+  reason: informative only
+  note: "preface and the port's status note (R-581 to R-583); obligations in §3"
+- file: docs/design/principia_export_details.md
+  section: 1. What exists
+  reason: informative only
+  note: the state of the corpus before R-581 to R-583; no obligation
+- file: docs/design/principia_export_details.md
+  section: 2. The gap
+  reason: rationale
+  note: why the design exists; its obligations are in §3
+- file: docs/design/principia_export_details.md
+  section: 3. The design
+  reason: parent heading (obligations are in its subsections)
+  note: §3.1 to §3.4
+- file: docs/design/principia_export_details.md
+  section: 4. Fit with rulings
+  reason: informative only
+  note: how R-581 to R-583 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs
+- file: docs/design/principia_export_details.md
+  section: 5. Decided
+  reason: informative only
+  note: "the human's words, quoted verbatim in R-581 to R-583; the obligations they settle are in §3"
+- file: docs/design/principia_export_details.md
+  section: 6. Tests
+  reason: informative only
+  note: "the draft's tests, each carried by a requirement's verify (REQ-RENDER-117, REQ-RENDER-118, REQ-TOOL-201 to REQ-TOOL-205, REQ-GUI-389, REQ-GUI-390, REQ-RENDER-088, REQ-RENDER-111)"
+- file: docs/design/principia_video_carrier.md
+  section: "Principia: the video carrier — a recording carries its settings in its own file"
+  reason: informative only
+  note: "preface and the port's status note (R-584); obligations in §3"
+- file: docs/design/principia_video_carrier.md
+  section: 1. What exists
+  reason: informative only
+  note: the state of the corpus before R-584; no obligation
+- file: docs/design/principia_video_carrier.md
+  section: 2. What was measured
+  reason: rationale
+  note: "the human's measurement (vt.py, kept as evidence) behind §3.1's choice of carrier; its obligations are in §3.1 and REQ-TOOL-206"
+- file: docs/design/principia_video_carrier.md
+  section: 3. The design
+  reason: parent heading (obligations are in its subsections)
+  note: §3.1 to §3.4
+- file: docs/design/principia_video_carrier.md
+  section: 3.5 What does not change
+  reason: informative only
+  note: "the reel's film (R-578) and a single figure's embedding defaults (embedding §9) are unchanged; no new obligation"
+- file: docs/design/principia_video_carrier.md
+  section: 4. Fit with rulings
+  reason: informative only
+  note: how R-584 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs
+- file: docs/design/principia_video_carrier.md
+  section: 5. Decided
+  reason: informative only
+  note: "the human's words, quoted verbatim in R-584; the obligations they settle are in §3"
+- file: docs/design/principia_video_carrier.md
+  section: 6. Tests
+  reason: informative only
+  note: "the draft's tests, each carried by a requirement's verify (REQ-TOOL-206, REQ-TOOL-207, REQ-TOOL-083, REQ-TOOL-106)"
+- file: docs/design/principia_uploaded_picture.md
+  section: "Principia: the uploaded picture — storing and carrying \"Your image…\""
+  reason: informative only
+  note: "preface and the port's status note (R-585); obligations in §3"
+- file: docs/design/principia_uploaded_picture.md
+  section: 1. What exists
+  reason: informative only
+  note: the state of the corpus before R-585; no obligation
+- file: docs/design/principia_uploaded_picture.md
+  section: 2. The gap
+  reason: rationale
+  note: why the design exists; its obligations are in §3
+- file: docs/design/principia_uploaded_picture.md
+  section: 3. The design
+  reason: parent heading (obligations are in its subsections)
+  note: §3.1 to §3.5
+- file: docs/design/principia_uploaded_picture.md
+  section: 4. Fit with rulings
+  reason: informative only
+  note: how R-585 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs
+- file: docs/design/principia_uploaded_picture.md
+  section: 5. Decided
+  reason: informative only
+  note: "the human's words, quoted verbatim in R-585; the obligations they settle are in §3"
+- file: docs/design/principia_uploaded_picture.md
+  section: 6. Tests
+  reason: informative only
+  note: "the draft's tests, each carried by a requirement's verify (REQ-COL-160, REQ-COL-161, REQ-TOOL-208 to REQ-TOOL-210, REQ-GUI-391, REQ-GUI-392)"
+- file: docs/design/principia_ic_save.md
+  section: "Principia: saving, sharing and exporting an initial condition"
+  reason: informative only
+  note: "preface and the port's status note (R-586, R-587); obligations in §3"
+- file: docs/design/principia_ic_save.md
+  section: 1. What exists
+  reason: informative only
+  note: "the state of the corpus before R-586, R-587; no obligation"
+- file: docs/design/principia_ic_save.md
+  section: 2. The gap
+  reason: rationale
+  note: why the design exists; its obligations are in §3
+- file: docs/design/principia_ic_save.md
+  section: 3. The design
+  reason: parent heading (obligations are in its subsections)
+  note: §3.1 to §3.6
+- file: docs/design/principia_ic_save.md
+  section: 4. Fit with rulings
+  reason: informative only
+  note: "how R-586, R-587 sit with earlier rulings; the amendments it names are carried by the requirements of §3 and the open RQs"
+- file: docs/design/principia_ic_save.md
+  section: 5. Decided
+  reason: informative only
+  note: "the human's words, quoted verbatim in R-586, R-587; the obligations they settle are in §3"
+- file: docs/design/principia_ic_save.md
+  section: 6. Tests
+  reason: informative only
+  note: "the draft's tests, each carried by a requirement's verify (REQ-INT-107, REQ-RENDER-119, REQ-TOOL-211 to REQ-TOOL-213, REQ-GUI-393 to REQ-GUI-395, REQ-GUI-117)"
 - file: docs/design/principia_spotlight_reel.md
   section: "Principia: the spotlight reel — a film that passes for Explore"
   reason: informative only
