@@ -465,8 +465,8 @@ pub struct Scene {
 const DT_MACRO: f32 = 0.01;
 
 /// The context every scene reads with: `dt_macro` 0.01, `δ₀` 10⁻⁶, a renormalisation every 16 steps, a horizon of
-/// 1000 steps, E = 0.
-fn context(grid: Grid) -> Context {
+/// 1000 steps, E = 0; the shape-sphere scenes' too (`crate::shape_scene`).
+pub fn context(grid: Grid) -> Context {
     Context {
         dt_macro: DT_MACRO,
         delta_0: 1e-6,

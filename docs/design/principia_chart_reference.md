@@ -479,8 +479,10 @@ zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r =
 where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
 count and the total (§5.4). Inside `[0,1]²` such a pixel is the domain's end by design, as is one exactly on `r = π` if
 REQ-CHART-078 makes it so: it draws blank and logs no decoder-bug warning (R-554, ruling RQ-470). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
-exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
-R-72), and the fixtures avoid that circle.
+exactly on `r = π` maps to the one point `−n0`; how such pixels count is REQ-CHART-078's definition (R-72), "Pixels on
+`r = π`" below: they are a system, not the domain's end, so they do not draw blank. The fixtures avoid that circle.
+*Was:* "how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078, R-72), and the fixtures avoid that
+circle."
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
@@ -519,6 +521,19 @@ change, and its label shows it. *Was (R-503's per-pixel fold, withdrawn by R-544
 equator, n-to-1 with a per-pixel fold, a pixel counting 1 if its `w ≥ 0` or its mirror lies outside the cap, else 0,
 its representative the pixel with `w > 0`; bijective only within one closed hemisphere.
 
+**Pixels on `r = π` (defined per R-72, REQ-CHART-078; TASK-M2-28).** A pixel whose computed `r` is π, the float type's
+π exactly, the `r = ‖d‖` the map computes from the pixel's `(u, v)`, lies in the cap, which is `r ≤ π`, and is a
+system: R-503 bounds the radius at π and makes only what lies past it the domain's end. Every such pixel maps to the one
+point `−n0`, one system, so together they count **once**, as each system counts once (`principia_chart_decoder_contract.md`
+Part 5): a counted total over a grid of pixels is the number of its pixels with `r < π`, plus 1 where any of its pixels
+lies on `r = π`, and nothing for the pixels past it. Each of them draws that one system, the decode at its own
+`(u, v)`, which reaches `−n0` to rounding (`sin r` at the float type's π is not 0). The circle is the cap's own edge,
+where every direction of `d` reaches the one antipode, as each of the spherical map's pole rows reaches one pole: an
+identification on a set of measure zero, not a fold, with no mirror in it (R-544), so the value stays bijective. Pixel
+centres land on the circle only for a measure-zero set of `s`; the rule decides that set, and REQ-CHART-075's fixtures
+keep every pixel centre more than `10⁻⁶` from it. *Was (PR #271, under R-503's fold, kept as the record):* the group
+counting 1 or 0 "by the per-pixel rule applied to `−n0`".
+
 **Under a tilt (R-473 T1, T2, J1; R-544).** Two pixels fold only when their full `(a, b, d)` decode to the same
 system (`principia_chart_decoder_contract.md` Part 5's definition of `system_image`). Under a nonzero tilt a pixel at
 window offset `(u, v)` maps to `(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1).
@@ -543,6 +558,34 @@ distorts area near the poles but keeps coordinates readable. For quantitative ar
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
 section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
 at the poles at equal masses and can be compressed to invisibility in equirectangular.
+
+**The equal-area projection is Hammer's (Hammer–Aitoff), a display remap (defined per R-72, REQ-CHART-047;
+TASK-M2-28).** Of the two the paragraph above offers, Hammer's is taken because both its maps are closed form;
+Mollweide's forward map solves `2γ + sin 2γ = π sin ℓ` by iteration. It is a **display remap** of the spherical map's
+render, not a chart map: it moves where each system is drawn, never which system a chart point `(s, t)` decodes to, so
+switching projection changes nothing on the sim key and re-integrates nothing, and the chart's descriptors, its
+`system_image` and what R-408 counts are the spherical map's. The equirectangular display is the identity, display
+point `(x, y) = (s, t)`. Under Hammer's, with `(x, y) ∈ [0,1]²` the display point, bottom-left origin and Y-up
+(`principia_coordinate_conventions_note.md`), its longitude `λ = θ − π` (θ = π on the vertical centre line) and its
+latitude `ℓ = π/2 − φ` (`L⁺` at the top):
+
+```
+inverse (display → chart):  X = 2√2·(2x − 1),   Y = √2·(2y − 1)
+                            shown only where q = (2x − 1)² + (2y − 1)² ≤ 1      (the 2:1 ellipse)
+                            z = √(1 − q/2)                                      (= √(1 − X²/16 − Y²/4))
+                            λ = 2·atan2(z·X, 2·(1 − q)),   ℓ = asin(z·Y)
+                            (s, t) = ((λ + π)/2π, ℓ/π + ½)
+forward (chart → display):  λ = 2π·s − π,   ℓ = π·(t − ½),   D = √(1 + cos ℓ·cos(λ/2))
+                            X = 2√2·cos ℓ·sin(λ/2)/D,   Y = √2·sin ℓ/D
+                            (x, y) = ((X/(2√2) + 1)/2, (Y/√2 + 1)/2)
+```
+
+Inside the ellipse `2(2z² − 1) = 2(1 − q) ≥ 0`, so `atan2` stays on its principal branch and `λ ∈ [−π, π]`. The map is
+equal-area: every display area element covers the same solid angle, `4π` over the ellipse's area `π/4` of the display
+square, `dΩ = 16 dx dy`, so equal areas of the display are equal solid angles of the shape sphere, the polar caps
+included. A display point outside the ellipse shows no chart point: it is no pixel of the chart, drawn blank (R-470),
+and never counted. A display pixel shows the sample whose tile holds its `(s, t)`, with no interpolation, one sample
+per tile as the raster draws every view. The exponential map has no projection: it has no θ or φ axis.
 
 **Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
 **pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
