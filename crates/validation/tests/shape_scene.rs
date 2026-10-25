@@ -8,9 +8,10 @@
 //!   ellipse's outside, and only it, is display margin, no sample in the forbidden lane, each tile centre clear of the
 //!   ellipse's edge; every chart scene draws both hemispheres, bijective, and flags nothing (R-544; REQ-CHART-002,
 //!   REQ-RENDER-026).
-//! - `shape_scene_octant_palette`: every pair of the eight octant colours lies at least R-429's τ apart under normal
-//!   vision and R-383's protan, deutan and tritan simulations, each at least 0.4 from the background and the stripes,
-//!   the upper ones lighter than the lower.
+//! - `shape_scene_octant_palette`, `_deutan`, `_protan`, `_tritan`: every pair of the eight octant colours lies at least
+//!   R-429's τ apart under normal vision and under each of R-383's deutan, protan and tritan simulations.
+//! - `shape_scene_octant_palette_background`, `_stripe`, `_lighter`: under each, every octant colour lies at least 0.4
+//!   from the canvas background and from the stripes, and the upper colours are all lighter than the lower.
 //! - `shape_scene_controls_are_wrong`: the one-hemisphere control draws no sample below the equator, and the flagged
 //!   control's twin is the spherical scene's except on the lower half's stripes, where it is black (REQ-CHART-002).
 //! - `shape_scene_class_signs`, `shape_scene_twin_on_the_equator`: the twin reads each sign of `n` strictly, as the
@@ -294,56 +295,170 @@ fn seen(mode: Option<CvdMode>, c: Rgb) -> Rgb {
     mode.map_or(c, |m| cvd::simulate(m, c).map(|x| x.clamp(0.0, 1.0)))
 }
 
-/// The palette criterion (gui review 5644431015, G3, applied per R-369): under normal vision and each of R-383's
-/// protan, deutan and tritan simulations, every pair of the eight octant colours `colour` gives lies at least τ apart,
-/// and every colour at least 0.4 from the canvas background and from the stripe colour; and every upper colour is
-/// lighter in OKLab than every lower one.
-fn check_palette(colour: fn(u32) -> Rgb) {
-    let all: Vec<Rgb> = (0..8).map(colour).collect();
-    for mode in VISION {
-        let s: Vec<Rgb> = all.iter().map(|&c| seen(mode, c)).collect();
-        for k in 0..8 {
-            for j in 0..k {
-                let d = distance(s[j], s[k]);
-                assert!(
-                    d >= tau(),
-                    "{mode:?}: octants {j} and {k} lie {d:.4} apart, under τ = {:.4}",
-                    tau()
-                );
-            }
-            let bg = distance(s[k], seen(mode, background()));
+/// How a failure names the vision it was found under.
+fn vision(mode: Option<CvdMode>) -> String {
+    mode.map_or("normal vision".to_owned(), |m| format!("{m:?}"))
+}
+
+/// The eight octant colours the scenes draw, octant k at index k.
+fn octants() -> [Rgb; 8] {
+    std::array::from_fn(|k| octant_colour(k as u32))
+}
+
+/// The octant colours with octant `k`'s replaced by the 8-bit code `code`: a control palette.
+#[cfg(feature = "controls")]
+fn with(k: usize, code: [u8; 3]) -> [Rgb; 8] {
+    let mut p = octants();
+    p[k] = present::srgb8(code);
+    p
+}
+
+/// The palette criterion (gui review 5644431015, G3, applied per R-369), its first part: under `mode`, every pair of
+/// the eight colours lies at least R-429's τ apart.
+fn check_distinct(mode: Option<CvdMode>, palette: [Rgb; 8]) {
+    let s = palette.map(|c| seen(mode, c));
+    for k in 0..8 {
+        for j in 0..k {
+            let d = distance(s[j], s[k]);
             assert!(
-                bg >= 0.4,
-                "{mode:?}: octant {k} lies {bg:.4} from the canvas background"
-            );
-            let stripe = distance(s[k], seen(mode, STRIPE));
-            assert!(
-                stripe >= 0.4,
-                "{mode:?}: octant {k} lies {stripe:.4} from the stripe colour"
+                d >= tau(),
+                "{}: octants {j} and {k} lie {d:.4} apart, under τ = {:.4}",
+                vision(mode),
+                tau()
             );
         }
     }
-    let l = |k: usize| present::linear_to_oklab(all[k])[0];
+}
+
+/// The palette criterion, its second part: under normal vision and each simulation, every colour lies at least 0.4
+/// from the canvas background.
+fn check_background(palette: [Rgb; 8]) {
+    for mode in VISION {
+        for (k, &c) in palette.iter().enumerate() {
+            let d = distance(seen(mode, c), seen(mode, background()));
+            assert!(
+                d >= 0.4,
+                "{}: octant {k} lies {d:.4} from the canvas background",
+                vision(mode)
+            );
+        }
+    }
+}
+
+/// The palette criterion, its third part: under normal vision and each simulation, every colour lies at least 0.4
+/// from the stripe colour `stripe`.
+fn check_stripe(palette: [Rgb; 8], stripe: Rgb) {
+    for mode in VISION {
+        for (k, &c) in palette.iter().enumerate() {
+            let d = distance(seen(mode, c), seen(mode, stripe));
+            assert!(
+                d >= 0.4,
+                "{}: octant {k} lies {d:.4} from the stripe colour",
+                vision(mode)
+            );
+        }
+    }
+}
+
+/// The palette criterion, its last part: every upper colour (octants 0–3) is lighter in OKLab than every lower one.
+fn check_lighter(palette: [Rgb; 8]) {
+    let l = |k: usize| present::linear_to_oklab(palette[k])[0];
     let (low_up, high_down) = (
         (0..4).map(l).fold(1.0, f64::min),
         (4..8).map(l).fold(0.0, f64::max),
     );
     assert!(
         low_up > high_down,
-        "the upper colours are not all lighter than the lower ones"
+        "the upper colours are not all lighter than the lower ones ({low_up:.4} against {high_down:.4})"
     );
 }
 
 #[test]
 fn shape_scene_octant_palette() {
-    check_palette(octant_colour);
+    check_distinct(None, octants());
 }
 
 negative_control!(
     shape_scene_octant_palette,
-    "the same-lightness hue wheel at (8k + 7)/64 turns, 9899c04f's palette, collapses pairs under deutan, so it must fail",
-    expected = "under τ",
-    check_palette(|k| present::hue_wheel(f64::from(8 * k + 7) / 64.0))
+    "the same-lightness hue wheel at (8k + 7)/64 turns, 9899c04f's palette, fails under normal vision (octants 0 and 1 0.0918 apart), so it must fail",
+    expected = "normal vision: octants 0 and 1",
+    check_distinct(None, std::array::from_fn(|k| present::hue_wheel(f64::from(8 * k as u32 + 7) / 64.0)))
+);
+
+#[test]
+fn shape_scene_octant_palette_deutan() {
+    check_distinct(Some(CvdMode::Deuteranopia), octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_deutan,
+    "octant 6 as #B400FF passes every other check but lies 0.0034 from another octant under deutan simulation, so it must fail",
+    expected = "Deuteranopia: octants",
+    check_distinct(Some(CvdMode::Deuteranopia), with(6, [0xb4, 0x00, 0xff]))
+);
+
+#[test]
+fn shape_scene_octant_palette_protan() {
+    check_distinct(Some(CvdMode::Protanopia), octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_protan,
+    "octant 6 as #8769B4 passes every other check but lies 0.057 from another octant under protan simulation, so it must fail",
+    expected = "Protanopia: octants",
+    check_distinct(Some(CvdMode::Protanopia), with(6, [0x87, 0x69, 0xb4]))
+);
+
+#[test]
+fn shape_scene_octant_palette_tritan() {
+    check_distinct(Some(CvdMode::Tritanopia), octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_tritan,
+    "octant 6 as #4B873C passes every other check but lies 0.078 from another octant under tritan simulation, so it must fail",
+    expected = "Tritanopia: octants",
+    check_distinct(Some(CvdMode::Tritanopia), with(6, [0x4b, 0x87, 0x3c]))
+);
+
+#[test]
+fn shape_scene_octant_palette_background() {
+    check_background(octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_background,
+    "octant 7 as #003CC3 passes every other check but lies 0.31–0.36 from the canvas background, so it must fail",
+    expected = "from the canvas background",
+    check_background(with(7, [0x00, 0x3c, 0xc3]))
+);
+
+#[test]
+fn shape_scene_octant_palette_stripe() {
+    check_stripe(octants(), STRIPE);
+}
+
+negative_control!(
+    shape_scene_octant_palette_stripe,
+    "white stripes, 9899c04f's, lie under 0.4 from octant 0's #F0FFD2, while the octants pass every other check, so they must fail",
+    expected = "from the stripe colour",
+    check_stripe(octants(), [1.0; 3])
+);
+
+#[test]
+fn shape_scene_octant_palette_lighter() {
+    check_lighter(octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_lighter,
+    "the octant colours with octants 3 and 7 swapped keep every distance but put a lower colour above an upper one, so they must fail",
+    expected = "not all lighter",
+    check_lighter({
+        let mut p = octants();
+        p.swap(3, 7);
+        p
+    })
 );
 
 /// The flagged control with its sample 0 collinear on the x axis, so its read `n.z` is a zero: `want` gives the twin,
