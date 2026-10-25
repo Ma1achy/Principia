@@ -1059,7 +1059,7 @@ without asserting it until this is ruled.*
   ratio column 8 / eq. (4) runs from 0.029 (N = 24: eq. (4) −7.228, printed −0.207) to 1.571 (N = 26: −2.056,
   printed −3.231), wider than the ruling's 0.23–1.25, which came from a sample. N = 1: −2.464 against −2.254; N = 3:
   −2.589 against −2.041; N = 10: −3.858 against −0.887, as the ruling found. The 38 rows that print "—" have nothing to
-  compare. Every row's figures are in `col8_comparison.csv` (the implementer's scratch, `/Volumes/X10 Pro/Principia/scratch/m220-implementer/`), committed beside the fixture once RQ-571 is ruled.
+  compare. Every row's figures are in `fixtures/anosova/col8_comparison.csv`, committed beside the fixture.
 - **What paper II says** (`agekyan_anosova_1968_Ap_4_11_part2.pdf`, p. 11 and Table 1, pp. 12–14): the same 100
   configurations ("exactly the same as in [1]"), units "the same as in [1]", started at exact rest; its column 6 is
   "the total energy E (with minus sign)". Its values sit K₀ = 0.075·10⁻⁷ from paper I's column 8, not from eq. (4):
