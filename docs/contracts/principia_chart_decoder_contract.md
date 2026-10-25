@@ -98,7 +98,8 @@ The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (ma
 
 **Tunable parameters (R-481 ⚑).** Each registry entry declares its tunable parameters, each with a name, a default, an
 allowed range and a citation: today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, with defaults 5 and 2
-(R-10); `α_min` stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)",
+(R-10), `μ_max`'s range capped at 10 (R-597: at 10 the far field's `M₀₁` floor, `(1 + e^−10)/(1 + e^−10 + e^10) ≈ 4.5×10⁻⁵`,
+stays above the `M01_TINY` fence's `10⁻⁵`, so no far-field pixel at the default link is tagged); `α_min` stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)",
 a stale value, replaced by R-518). The allowed range keeps **all three** requirements above for **every**
 value in it, and the registry's check tests them at the range's ends and on a sampled interior
 (`principia_dd_generation_root.md` §3.9). Everything that reads a parameter by name reads the active value: the link
@@ -289,8 +290,10 @@ a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J
 the pole maps apply on a tilted view iff `N_a = 0` and `N_b = 0` for chart_reference §3.3's `N`, decided exactly on the
 stored angles (Tip as sheet `m == 180`; Lean each axis only untilted, its one-target corner ray-degenerate with no
 fold; two targets iff `τ₁, τ₂ ∈ {0, ±180}`), and otherwise the view is affine along that axis and draws no image
-(R-554, ruling RQ-472 (a)); there is no equator fold on any view (R-544), and the human's RQ-472 ruling's equator
-clause, which keeps one where `N_b = 0`, is RQ-508 (R-544 applied meanwhile; R-554 leaves that clause unapplied).
+(R-554, ruling RQ-472 (a)); there is no equator fold on any view (R-544): R-544 wins and there is no fold anywhere,
+the human's RQ-472 ruling's equator clause, which kept one where `N_b = 0`, and its pixel fold for the statistics not
+applied (R-613, closing RQ-508, as applied meanwhile; *was:* "is RQ-508 (R-544 applied meanwhile; R-554 leaves that
+clause unapplied)").
 *Was (R-544 removes the hemisphere's fold from the repeats):* "(past a periodic axis's period, over a pole, past the
 hemisphere's fold)"; "with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at both edges, …; with one
 hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and R-412's fold at the equator, `t = 0`,
@@ -341,7 +344,7 @@ number of chart squares; the only limits are the frame budget and the baseline c
 Part 4), and a frame's cost is set by the screen, not by the view's extent: where the viewport spans many level-0
 roots the cover is taken at a level `L < 0`, coarser than the root (`principia_scheduler_contract.md` Part 3,
 "Infinite zoom-out: levels coarser than the root"; RQ-535, decided per R-369). **Every pixel is a system** at any pan or zoom: no hatch, no blank, no
-"not a system" (at the decoder's default links, η_E off (`None`); RQ-536, RQ-552). **Far out the field goes flat, and that is correct:** the
+"not a system" (at the decoder's default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10, η_E off (`None`); R-597 and R-598, closing RQ-536 and RQ-552: under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate, and with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as not a system, with the reason in the readout; *was:* "(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552)"). **Far out the field goes flat, and that is correct:** the
 decoder saturates every coordinate (`principia_chart_reference.md` §0: the configuration through a sigmoid, the momenta
 to `±q_max`, the masses through `μ_max·tanh`), so far from the origin neighbouring pixels decode to nearly the same
 system; nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the decoded system as for

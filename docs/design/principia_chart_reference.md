@@ -525,8 +525,10 @@ window offset `(u, v)` maps to `(a, b, d) = R·(u, v, 0)`, and `d` is added to a
 On the shape sphere a pixel and its mirror are distinct systems at any tilt, as they are untilted, so a tilted view is
 one-to-one on either map, beyond the untilted chart's own identifications, and its pixels in view are the tilted view's
 own (blank past a bounded edge, R-512). The chart recomputes the value whenever `n0`, `e1`, `e2`, `s`, `τ₁`, `τ₂` or the
-tilt's targets change. The human's ruling on RQ-472, recorded as R-554, keeps an equator fold on a tilted view where
-`N_b = 0`; that clash with R-544 is RQ-508, R-544 applied meanwhile and R-554 leaving the clause unapplied. A view
+tilt's targets change. The human's ruling on RQ-472, recorded as R-554, kept an equator fold on a tilted view where
+`N_b = 0`; R-544 wins (R-613, closing RQ-508, as applied meanwhile): no fold anywhere, no equator fold and no pixel fold
+on any view, tilted or not, and RQ-472's ruling keeps only its pole maps. *Was:* "that clash with R-544 is RQ-508,
+R-544 applied meanwhile and R-554 leaving the clause unapplied." A view
 whose map `(u, v) → (a, b, d)` loses rank (Lean each axis with one target at `|τ₁| = |τ₂| = 90°`) reports
 `ray-degenerate` (R-554, ruling RQ-471 (a)): no fold is applied, there being no normal, every area weight is 0 (the
 Gram factor), and the legend shows each share as undefined ("—"), never 0%; TASK-M2-36 builds and tests it. *Was:*
@@ -896,7 +898,7 @@ past `θ`'s edges; … the fallback hatches the zero- or negative-mass area".
 **`Latent`, the flat slices and `BodyPlane` at any pan or zoom (R-570).** The table's first row holds wherever the view
 goes: these charts have no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4, "Latent and flat
 charts: no limit on pan or zoom-out"). Their `validate` accepts every `z`, so every pixel is a system at any pan or zoom
-(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552), and the row's "what fails validation" is empty for them. Far from the origin
+(at the decoder's default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10, η_E off (`None`); R-597 and R-598, closing RQ-536 and RQ-552: under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate, and with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as not a system, with the reason in the readout; *was:* "(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552)"), and the row's "what fails validation" is empty for them. Far from the origin
 §0's links saturate (`σ` onto α and β, `q_max·(2σ − 1)` onto the momenta, `μ_max·tanh` onto the mass logits), so
 neighbouring pixels decode to nearly the same system and the field goes flat. That is correct, not a bug: nothing
 clamps, rescales, wraps or fades it, and each pixel is the system it decodes to (REQ-CHART-087). The saturation is per

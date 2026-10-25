@@ -92,6 +92,12 @@ unresolved(f)  ⟺  spread_shape(f) > eps          the payload has not settled
                 ∨  its latched running maximum of spread_shape ever exceeded eps   (R-91; per footprint, R-99)
 ```
 
+**A footprint undetermined by a regularised copy's step budget does not split** (R-603, closing RQ-526). Its copy ran
+out of its budget (the sticky `budget_exhausted` flag, integrator contract Part 6), and halving the cell does not help
+it: it takes §6's `Undetermined` decision, never `Split`, and is never discarded and never treated as resolved. Its
+remedy is finer steps, as an explicit re-run, never an automatic one. The other undetermined footprints (a non-finite
+spread, an unusable copy of another kind) split as above.
+
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous
 policy's threshold had to sit *inside a distribution whose median moves six orders between regions*,
 which is why it needed per-region tuning and never got it right.
@@ -255,7 +261,8 @@ runs 0.30× at `tau=eps` and **15.26×** at `tau=eps/3.3`.
 
 `Keep`, `Split`, `Floor`, `ScreenFloor`, `Undetermined`, `Collapsed`, `Merged`, `BalanceForced`.
 
-> **`Undetermined` means FINER `eta`, NOT FINER CELLS.** That is a **second refinement axis** and
+> **`Undetermined` means FINER `eta`, NOT FINER CELLS.** For a footprint undetermined by a regularised copy's step
+> budget the finer steps are an explicit re-run, never automatic (R-603). That is a **second refinement axis** and
 > nothing in the architecture currently has one. It measured **exactly 0.0000 in all 36 cells** of the
 > tolerance grid — but that is a property of the **shipped step control**, not of the policy. A chart
 > that still integrates badly reintroduces it, and the budget model would then need two lines.

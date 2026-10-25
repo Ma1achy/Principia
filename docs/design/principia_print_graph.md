@@ -261,7 +261,12 @@ different picture: strokes a quarter as wide relative to the figure. So every le
   "pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time." The export-size invariance below
   still holds: two exports of one state scale by the same rule.
 - **`device_px`**: true screen pixels. Only for effects that model the display itself: CRT scanlines, LCD subpixels,
-  LED pitch.
+  LED pitch. *Ruled (R-618, closing RQ-538, option (b)):* the nodes whose lengths are in `device_px`, and the sheet
+  anchored to the screen (§6.3), run in a **second print pass at screen resolution**, after the display scale, so a
+  scanline is exactly one screen pixel at every `render_scale`; the rest of the graph runs before the display scale
+  at render resolution, as before. Screen-anchored coordinates are the pixel's screen position. At export a display
+  pixel is an export pixel. How a graph is split into its two passes, where a `device_px` node or the sheet sits among
+  the others, is a definition (REQ-RENDER-120, R-72), written here by TASK-M7-69.
 - **`fraction`**: a fraction of the figure width, for broad effects such as vignette and lighting.
 
 The acceptance test renders a preset at 512² and 2048², downsamples the second, and requires agreement within
@@ -271,6 +276,8 @@ tolerance for every `ref_px` and `fraction` node. `device_px` nodes are exempt a
 
 - **The sheet is anchored to the screen.** Paper tooth, canvas weave, grain and the ground stay fixed while the figure
   pans and zooms beneath them. The picture is redrawn each frame, but the sheet it is drawn on does not move.
+  It is drawn in the second print pass, at screen resolution, so its grain does not change while Auto moves
+  `render_scale` (R-618, §6.2).
 - **Marks are stable where the picture is.** Noise-driven marks (dither thresholds, stipple, stroke seeds) are seeded
   from screen-anchored coordinates and the graph's seed, never from the frame. Where the figure does not change
   between frames, neither do the marks: a still region of a moving playhead does not shimmer.

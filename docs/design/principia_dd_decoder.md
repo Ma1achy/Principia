@@ -410,7 +410,10 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 - **Energy normalisation `η_E`**: specified in §3.7, its outcomes at `K₀ = 0` and on `E* < U` included (REQ-DEC-041).
   It is kept, with an explicit `Option` off switch (R-25), which settles audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
-- **KS-regularised state representation (v2)** — changes the decoder's output type; explicitly out of scope until then.
+- **KS-regularised state representation** — not built (R-607, closing RQ-530): the integrator contract's Part 2b
+  regularisations are the four, and a later method, Kustaanheimo–Stiefel among them, would be added by its own ruling;
+  it would change the decoder's output type. *Was:* "**KS-regularised state representation (v2)** — changes the
+  decoder's output type; explicitly out of scope until then."
 
 ---
 

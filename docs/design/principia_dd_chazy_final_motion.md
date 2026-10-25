@@ -191,8 +191,12 @@ off):
 6. Otherwise **B-so-far**.
 
 The spec's table and prin-rs's code differed in two places, and R-548 rules both, adding the `E ≥ 0` guard of steps
-1 and 2 (§2; RQ-325). Under the ruled order an E < 0 state that passes step 1's geometric tests goes on to step 2;
-whether it may read HE, PE or excursion there is RQ-521. *Was:* "The order `classify` evaluates them in
+1 and 2 (§2; RQ-325). Under the ruled order an E < 0 state that passes step 1's geometric tests goes on to step 2,
+the hierarchy step, where it may read HE, PE, B-stable or excursion (R-595, closing RQ-521): the `E ≥ 0` guard is for
+dispersal (H, HP, P), where all three bodies separate, which needs `E ≥ 0`; a binary plus an escaper (HE, PE) is the
+ordinary E < 0 escape, so an E < 0 state must reach the hierarchy step. R-548's "falls through to B-stable,
+OS-candidate or B-so-far" was an incomplete list, in the human's words. *Was:* "; whether it may read HE, PE or
+excursion there is RQ-521." *Was:* "The order `classify` evaluates them in
 (prin-rs PR #32, `src/chazy.rs::classify`, transcribed; …)", steps 1, 2 and 4 with no energy test and step 2's
 "pair bound and outer band `−1`: **excursion**", and "The spec's table and the code's order differ in two places:":
 
@@ -1034,7 +1038,8 @@ and RQ-310 by R-545): RQ-311 (a), the seven-class default stays, Okabe–Ito a p
 covers captions over the figure only; RQ-313 (a), accepted, the legend help saying so; RQ-314 (a), a label on a real
 trajectory, reported; RQ-315 (a), both shipped, marked provisional; RQ-316 (a), as applied; RQ-317 (a) and RQ-322 (a),
 `#141418` and `#8A8A90` near-neutral, held to chroma ≤ 0.009; RQ-318 (c), RQ-324 (b) and RQ-325 (b), §3.2's ruled
-order and guards, with RQ-521 left open; RQ-320 (a), a render-side previous-class texture; RQ-321 (c),
+order and guards, with RQ-521 left open (ruled (a) by R-595, 25 Oct 2026: an E < 0 state that passes the dispersal
+step's tests goes on to the hierarchy step); RQ-320 (a), a render-side previous-class texture; RQ-321 (c),
 `chazy_escaper` always, the differing pixels counted; RQ-323 (a), one figure split into three panels.
 
 ### 11.4 Not done, and natural next steps

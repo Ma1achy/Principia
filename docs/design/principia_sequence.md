@@ -5,7 +5,9 @@
 draft, and what a reel click opens, is `principia_spotlight_reel.md` (R-578). The engine side (the spec object,
 interpolation, the planner's classes, the blocking export) is `principia_export_animation_contract.md` Parts 2 to 6,
 built by TASK-M8-30 and TASK-M8-31; this document is the screen that makes a spec, and what it adds to the export.
-Queued from it: RQ-559 (the Sequence's undo) and RQ-560 (a cut offered at a link-parameter change).*
+Queued from it: RQ-559 (the Sequence's undo) and RQ-560 (a cut offered at a link-parameter change), ruled on 25 Oct
+2026: the sequences become shared state under the one history (R-622) and a link-parameter segment offers the choice,
+easing by default (R-623).*
 
 ## 1. What exists
 
@@ -29,10 +31,16 @@ The spec object had one `easing` for the whole animation; the human set easing p
 Time, Legend) and above the footer, its top edge a splitter (R-462), its height remembered with the layout and reset by
 a double-click or View › reset layout. The console, docked over the bottom row (R-463), docks over the Sequence too
 when both are open. It has a × to close it. Like every window it is `ViewUI`'s, never read by the engine
-(`principia_gui_state_contract.md` §2). The sequence being edited is the GUI's own document, beside `ViewUI`: the engine
-reads it only as the spec a preview, proof or export request carries (applied per R-369; whether its edits enter any
-history is RQ-559). Outside the preview, the only `SetField`s the Sequence sends are Go to's (§3.2) and, after a reel
-takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3).
+(`principia_gui_state_contract.md` §2). **The sequences are shared state under the one history** (R-622, closing
+RQ-559, option (ii)): the sequence being edited is contract state, not the GUI's own document, and every edit to it
+is a typed `SetField` in the contract's one undo/redo history (R-52), Go to and sequence edits interleaved in it. Its
+place in the contract state and its `SetField` paths are a definition, REQ-GUI-399 (R-72), written into
+`principia_gui_state_contract.md` §2 by TASK-M8-77. The engine reads it only as the spec a preview, proof or export
+request carries. Outside the preview, the `SetField`s the Sequence sends are its edits, Go to's (§3.2) and, after a
+reel takeover, the live sequence player's (`principia_spotlight_reel.md` §3.3). *Was:* "The sequence being edited is the
+GUI's own document, beside `ViewUI`: … (applied per R-369; whether its edits enter any history is RQ-559). Outside the
+preview, the only `SetField`s the Sequence sends are Go to's (§3.2) and, after a reel takeover, the live sequence
+player's (…)."
 
 Its keyboard model is §G3's for a window, with three sections in order: the **header bar** (Add keyframe, Play preview,
 Proof strip, Export…, Open…, Save…, ×; while a proof strip runs, Proof strip becomes **Cancel** in the same place, with
@@ -137,8 +145,11 @@ A selected segment offers:
   shows a dissolve as a cut at the second keyframe, as it shows every chart switch;
 - **at a link-parameter change**, R-520 as written: interpolated in a blocking export, every frame a different decoder,
   and a cut in live playback, shown with R-520's words "link parameters interpolated: every frame a different decoder".
-  The draft offers the user a choice here, cut or interpolate (export only); a cut in a blocking export is not R-520's,
-  so the choice is RQ-560, and meanwhile the segment shows R-520's rule, not a choice;
+  **The segment offers the choice** (R-623, closing RQ-560, option (b), amending R-520): cut or interpolate (export
+  only), **interpolate by default**; the spec's segment records the choice, and the planner's flag names only the
+  segments that interpolate. A segment set to cut is a cut in the blocking export as in live playback. *Was:* "The
+  draft offers the user a choice here, cut or interpolate (export only); a cut in a blocking export is not R-520's, so
+  the choice is RQ-560, and meanwhile the segment shows R-520's rule, not a choice";
 - **the fixed rules**, shown, not offered: zoom log-lerped, the basis along the Grassmannian geodesic, `z₀` eased
   componentwise (REQ-TOOL-075).
 
@@ -150,11 +161,12 @@ A selected segment offers:
 and on every segment, bitwise (R-484). A file naming a link the build lacks, or whose entry hash differs, opens as
 "state present, cannot recreate", naming the link, and is never recreated under another link (Part 6, R-521).
 
-**Undo.** Whether an edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing
-or transition) is undoable, and in which history, is RQ-559: the draft gives the window its own history, the contract
-keeps one history and a GUI none of its own (R-52), and RQ-559 also offers no undo. Nothing is applied meanwhile: if
-RQ-559 rules a history, each edit is one entry in it, a drag one entry; if it rules none, no sequence edit enters the
-contract's history. Go to is the contract's own entry either way. *Was:* "Every edit to the sequence (add, delete,
+**Undo.** Every edit to the sequence (add, delete, Update, a drag in time, a playhead policy, a segment's easing,
+transition or link choice) is a typed `SetField` in the contract's one history, undoable and redoable there, one
+entry per edit and a drag one entry, interleaved with Go to's entries and every other edit (R-622, closing RQ-559,
+option (ii); R-52 unchanged, the GUI keeping no history of its own). *Was (fix round 1 of PR #286):* "Whether an edit
+to the sequence (…) is undoable, and in which history, is RQ-559: … Go to is the contract's own entry either way."
+*Was:* "Every edit to the sequence (add, delete,
 Update, a drag in time, a playhead policy, a segment's easing or transition) is undoable and redoable, one entry per
 edit, a drag one entry. The draft gives the window its own history; the contract keeps one history and a GUI none of
 its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review 5631060675, F5).
@@ -166,8 +178,10 @@ its own (R-52), so which history is RQ-559." (fix round 1 of PR #286, gui review
   where the export interpolates". While it plays the timeline cursor follows it. A preview started mid-way through a
   link-parameter ease shows the first keyframe's value up to the second keyframe (say `μ_max` 5 between 5 and 4),
   wherever it starts: it is ordinary live playback (export contract Part 3). A reel takeover at the same frame would
-  instead hold the frame's eased value (4.6), RQ-561's interim (`principia_spotlight_reel.md` §3.3); the two differ
-  under RQ-561's interim; whether they differ once it is ruled is RQ-561's second question (fix round 9 of PR #286,
+  instead hold the frame's eased value (4.6) (`principia_spotlight_reel.md` §3.3); the two differ, and the difference
+  is accepted (R-624, closing RQ-561: its option (a), with the interim rule for a mid-ease takeover; *was:* "RQ-561's
+  interim (…); the two differ under RQ-561's interim; whether they differ once it is ruled is RQ-561's second
+  question") (fix round 9 of PR #286,
   gui review 5631987230, G3; fix round 11, physics review 5632129472, P7; *was:* "the two differ until RQ-561 is
   ruled").
   - **A transient view, not an edit.** The GUI sends one **preview request** carrying the spec and the cursor's wall
@@ -274,8 +288,10 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
   amended by R-576 (easing per segment). R-520 appears as the segment's link rule (§3.4).
 - Amends `principia_gui_state_contract.md` §2's window names (adds Sequence) and the GUI spec (§G9a).
 - Proof frames are exported frames, not scrub over stored data (Part 1, R-66).
-- Undo: R-52 holds the contract's one history; the draft's own history for the window is RQ-559.
-- R-520 F3 holds: live playback, the preview included, cuts link parameters and dissolves; the export eases them.
+- Undo: R-52 holds the contract's one history, and the sequences are shared state in it (R-622); *was:* "the draft's
+  own history for the window is RQ-559".
+- R-520 F3 holds: live playback, the preview included, cuts link parameters and dissolves; the export eases them,
+  unless a link-parameter segment is set to cut (R-623).
 - R-69 and R-101 hold: the preview edits no `SimConfig` or `RenderState` field and sends no `SetField` (§3.6).
 
 ## 5. Decided
@@ -287,7 +303,7 @@ The human, 21 Oct 2026 (`keyframes_reel.md`, "Decided", verbatim):
 > - **What clicking a reel clip opens is not decided** ("We need to deisgn"): designed separately, `reel_click.md`.
 
 The draft's open questions 3 (the reel's storage) and 4 (keyframe undo) were not ruled: 3 is decided per R-369 in
-`principia_spotlight_reel.md` §3.1, and 4 is RQ-559.
+`principia_spotlight_reel.md` §3.1, and 4 is RQ-559, ruled (ii) by R-622 (25 Oct 2026).
 
 ## 6. Tests
 

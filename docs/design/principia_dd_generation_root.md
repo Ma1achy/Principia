@@ -970,7 +970,8 @@ formula writes one as a literal. They are `mu_max` = 5 and `q_max` = 2 (R-10; th
 REQ-GEN-038)*. A parameter an entry's trees read may be declared tunable, in a table beside the entries, one row per
 tunable parameter: the entry's name, the parameter's name (a chart constant the entry declares and reads), its default
 (that constant's register value), its allowed range `[lo, hi]`, closed, and its citation. Today the rows are
-`softmax_tanh`'s `mu_max` and `sigmoid_q`'s, `tanh_q`'s and `softsign_q`'s `q_max`; `alpha_min` is declared by the α
+`softmax_tanh`'s `mu_max`, its range's `hi` at most 10 (R-597, the human's cap, so that no far-field pixel reaches the
+`M01_TINY` fence; REQ-GEN-038), and `sigmoid_q`'s, `tanh_q`'s and `softsign_q`'s `q_max`; `alpha_min` is declared by the α
 entries and stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)", a
 stale value, replaced by R-518). The declaration adds no member to an entry, so the entries' canonical bytes
 above stand.

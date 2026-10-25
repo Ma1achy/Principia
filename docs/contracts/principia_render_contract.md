@@ -94,8 +94,14 @@ simulation, which sees the lines too; it changes no pixel's colour value and nev
 
 **The Print graph stage (R-485 to R-492; `principia_print_graph.md`).** In the display stage, where R-67 had style, the
 Print graph runs on the finished colours: SimState → stain → [the line sets marked `through_medium`] → **Print graph** →
-display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen (R-487; R-531, ruling
-RQ-395: the pass drawn over keeps the line system's place above, after the gamut clamp). *Was:* "→ **Print graph** →
+display scale → **Print graph's screen pass** → gamut clamp → [the line sets drawn over] → colour-vision simulation →
+screen (R-487; R-531, ruling RQ-395: the pass drawn over keeps the line system's place above, after the gamut clamp).
+The screen pass (R-618, closing RQ-538, option (b)) runs the graph's `device_px` nodes and the screen-anchored sheet
+after the display scale, at display resolution, so a `device_px` length is a screen pixel at every `render_scale`; the
+rest of the graph runs at render resolution before it, and with neither a `device_px` node nor a sheet in the graph
+the screen pass is the identity. At export a display pixel is an export pixel (`principia_print_graph.md` §6.2).
+*Was:* "→ **Print graph** → display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation →
+screen (R-487; R-531, …)", with no screen pass. *Was:* "→ **Print graph** →
 [the line sets drawn over] → display scale → gamut clamp → colour-vision simulation → screen (R-487; where the pass
 drawn over sits, before the display scale or after the gamut clamp as above, is RQ-395, and it keeps the place above
 until RQ-395 is ruled)". It is a node graph of its own, outside the stain graph, with its own registry and WGSL; its

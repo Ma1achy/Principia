@@ -52,7 +52,7 @@ data. The two words name one object. The **figure** is the rendered slice.
   with no separate interface design. Where the browser cannot do something the native app does, the app says so where
   the native app has the feature: the control is shown disabled, with a note that the browser cannot do it, as the
   Run window's fast-math control is (R-303); it is never removed, moved or redesigned (REQ-SYS-086; applied per R-369:
-  "says so in the app" is read as R-303's pattern). Which features those are waits on what v1 web may cross, RQ-550. A gap with no native control to disable (runtime-authored colour occupants from the scanned filesystem, persistence across reloads, `prin profile query --live`) is RQ-550's to settle (applied per R-369, gui review 5608379011 of PR #282).
+  "says so in the app" is read as R-303's pattern). Which features those are follows from what v1 web may cross, two lists enforced in CI: the three engine-state crossings and the platform list (R-619, closing RQ-550; `principia_systems_architecture.md` §3). The gaps with no native control to disable are crossed (applied per R-369 under R-619): runtime-authored colour occupants come from files the user picks or drops, the browser having no folder to scan, kept in the page's storage; persistence across reloads is the page's storage; `prin profile query --live` reaches the page by its own transport (REQ-SYS-091). *Was:* "Which features those are waits on what v1 web may cross, RQ-550. A gap with no native control to disable (runtime-authored colour occupants from the scanned filesystem, persistence across reloads, `prin profile query --live`) is RQ-550's to settle (applied per R-369, gui review 5608379011 of PR #282)."
 - **With the layer hidden, the figure fills the window (R-406), by one of two modes (R-468).** **Extend**, the
   default and R-406's fill: F3 hiding egui makes the figure fill the whole window, showing more of the field at the
   same scale in every direction, never the shown view stretched: each point of the field keeps the screen position it
@@ -133,7 +133,9 @@ data. The two words name one object. The **figure** is the rendered slice.
 **F3 hide**, **F3 fills by: Extend / Fit**, one row of two radio options, R-468, **Debug view**, a check entry, R-467,
 **Save view as chart**, R-475, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
 many are on; **Lines ▾** beside it, with a count, `Alt+L` showing or hiding all lines (R-476); **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
-`budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
+`budget-bound` when the frame budget binds, undo / redo depth, "F3 hide", and, while the bound occupant is a pair
+measured not to work, that pair's warning, the integrator contract's measured text (R-615, closing RQ-525: "the
+Problems panel" of R-561 is the status line and the Run window).
 
 **Overlays ▾** holds the toggles, grouped, each with an Alt+digit shortcut, plus **all off** and **save as default**:
 - Quadtree: tile bounds, depth colouring, priority heatmap, `refine_flagged`, split / merge activity.
@@ -193,8 +195,10 @@ Editing a line is one undoable
 `SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are ruled (R-509,
 ruling RQ-377): a contour expression is typed in the stain's expression syntax; the playhead reads any payload field
 the generation root's ledger declares; a trace fades off the plane by the proxy where the chart defines one, and
-elsewhere does not fade and its settings say so (the general distance waits on RQ-522, its metric on `z`,
-which RQ-341's ruling, R-550, leaves open; *was:* "waits on RQ-341"); a trace's tick labels win
+elsewhere fades by the general off-plane distance, the distance in `z` from the trajectory's encoded point to the
+slice plane under the pulled-back mass metric `g = Jᵀ W J` (R-596, closing RQ-522; `principia_lines.md` §8; REQ-GUI-266,
+TASK-M8-54), and until that lands does not fade and its settings say so (*was:* "(the general distance waits on
+RQ-522, its metric on `z`, which RQ-341's ruling, R-550, leaves open; *was:* "waits on RQ-341")"); a trace's tick labels win
 over contour labels; class edges are a Lines preset; a new contour set takes Screen contour, smart ink opt-in.
 *Was:* "Its six open questions are RQ-377." In the keyboard tree Lines ▾ follows Overlays ▾ in the top bar's scope
 and opens as it does; the contour-set editor and the style library are windows (§G5), their sections reached with
@@ -233,8 +237,12 @@ in Lines ▾ holds its settings, in this order," and "each control is in the key
 from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
 - **A new trace while playing restarts at `t = 0`.** Under "With the playhead", while the Time panel plays, a hover or
   click that integrates a different IC sets the playhead to 0 and keeps playing; paused, the playhead does not move;
-  a pan, zoom or re-projection of the same trace never restarts it (RQ-534 (a), applied meanwhile: the restart is the
-  Time panel's playhead).
+  a pan, zoom or re-projection of the same trace never restarts it. Only a new run restarts: a hover into a repeat of
+  the shown system, or a click that pins the trace the hover already shows, integrates no new run and restarts nothing
+  (R-616, closing RQ-533). Only the trace's own marker restarts (R-617, closing RQ-534): the new trace's head starts at
+  0 and runs at the transport's rate while the transport plays; the figure's global playhead, the Time panel's, and
+  the field's live march are untouched, hovering never restarting the field. *Was:* "(RQ-534 (a), applied meanwhile:
+  the restart is the Time panel's playhead)".
 - **Paused at `t = 0`, the trace is drawn dotted.** Paused, not scrubbed, the playhead at exactly 0: the trace is drawn
   (every trace shown, kept traces and repeats included) to its end as TF3 has it, but its line is dotted (round dots in
   its own colour over their halo, the gap scaled with the width), marking it as not yet played; its markers and icons
@@ -243,8 +251,8 @@ from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
 - **Every icon is wholly on screen.** Every event, start and path icon of each shown trace (hover, pinned or kept) is
   moved inward just far enough that its whole drawn extent, measured from what it draws, halo included, at its rotation
   and size, lies inside the view; faint only when its point is off screen and pinned; the start icon pinned like the
-  others; a repeat's icons never moved or pinned; an icon larger than the view on an axis centred on that axis (RQ-533
-  (a), applied meanwhile); the seam ticks and direction arrows are line marks and unchanged.
+  others; a repeat's icons never moved or pinned; an icon larger than the view on an axis centred on that axis (R-616,
+  the words; *was:* "(RQ-533 (a), applied meanwhile)"); the seam ticks and direction arrows are line marks and unchanged.
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
@@ -401,7 +409,7 @@ control caps either.** The drag, the wheel, the arrows and + / −, the centre `
 centre sliders and Navigate's zoom row all send the value asked for, and the view state records it unclamped; a
 slider's span is the range its handle covers, never a clamp, so a zoom past the zoom row's span is kept and shown, the
 handle at the end of the rail (REQ-GUI-357). Every pixel is a system at any pan or zoom: no hatch, no blank, no "not a
-system" (at the decoder's default links, η_E off (`None`); RQ-536, RQ-552). Far out the field goes flat, because the decoder saturates every
+system" (at the decoder's default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10, η_E off (`None`); R-597 and R-598, closing RQ-536 and RQ-552: under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate, and with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as not a system, with the reason in the readout; *was:* "(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552)"). Far out the field goes flat, because the decoder saturates every
 coordinate; that is correct, nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the
 decoded system as for any pixel. Precision is never a navigation limit: the deep-zoom ladder handles it
 (`principia_deep_zoom.md` §4). **The reference demos' caps are never ported:** the trace demo, the Listen demo and the
@@ -918,7 +926,8 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 - the frame-time trace, with frame ms, p50, p95, p99 and the worst frame;
 - where the frame goes (a donut), stacked per-frame bars for the last 60 frames;
 - a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence), drawn
-  from the frame record's `substep_histogram` (telemetry §2; R-545, RQ-286);
+  from the frame record's `substep_histogram` (telemetry §2; R-545, RQ-286): sixteen equal bins of width `N_max/16`
+  over `[0, N_max)`, then the cap hits in a seventeenth bin of their own, the cap marked at its edge (R-614);
 - a flame chart of nested scopes on the main thread; GPU timestamps per pass;
 - memory (heap, GPU, tile cache) over time; live allocations by type, with their change over 60 s;
 - a **leak detector** that flags steady growth while idle;
@@ -1093,15 +1102,17 @@ corpus's top display bar (R-67).
 Rarely changed, so it lives in a window, not on the page. Every field is a `SimConfig` field (gui_state_contract §2).
 **The Run window exposes the parameters the contracts define, under their contract names (R-68).**
 - **Integration:** integrator_contract Part 3's parameters — `T_horizon` (physical time, default 50, raised or
-  lowered, `∈ (0, 200]` meanwhile, Part 5; R-132 as amended by R-575, its range RQ-555; *was:* "`∈ [50, 200]`, default
-  50"),
+  lowered, `∈ [0.4, 200]`, Part 5; R-132 as amended by R-575, its range R-610: the floor one closure window, below
+  which the escape arm cannot fire, the cap 200 until long horizons are measured for cost; *was:* "`∈ (0, 200]`
+  meanwhile, … its range RQ-555"; *was:* "`∈ [50, 200]`, default 50"),
   `dt_macro` (derived, not editable: shown read-only with its rule `max(1e-3, T/65535)`, R-138), `N_max` (default 64; at most the substep table's maximum length, a larger value refused with its reason, R-502), `r_sub` / `gamma_sub` (editable: the substep thresholds are generated from them per sim key, R-502), `r_coll` (a user-exposed sim key, Part 7), `r_close`,
   `eps_E` / `eps_L` — and the integrator occupant (stepper × regularisation; Heggie × RK4 is the default (R-560),
   Aarseth–Zare is kept for benchmarks; Part 2b). The regularisation (`none` included) and the stepper are two
   selectors, and every pair can be chosen (the Euler pairs in the debug selection only, Euler never being a production
   option, REQ-INT-015; applied per R-369, qa review 5607548278 of PR #277, Q6); a pair measured not to work shows its warning beside the selectors, the
   integrator contract's measured text, and stays selectable (R-561; Part 2b's pair table). The warning is also in the
-  Problems panel (which panel is RQ-525) and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
+  status line (R-615, closing RQ-525: "the Problems panel" is the status line and the Run window; *was:* "Problems
+  panel (which panel is RQ-525)") and in each export's settings (§ "Export & share"). *Was:* "Heggie with KDK
   leapfrog is the general default".
 - **Compute fast-math** (R-297): off by default; on is an opt-in optimisation for speed, and while it is on, parity
   is measured, not exact (`principia_parity_contract.md` §4). It is on the sim key, so changing it re-integrates. In
@@ -1114,12 +1125,18 @@ Rarely changed, so it lives in a window, not on the page. Every field is a `SimC
   per pixel); the **target-utilisation ceiling** (telemetry §6.4, "A deliberate ceiling, user-visible"; R-129).
 - **Recompute** and **Cancel**, with progress.
 
-**`T_horizon`'s ends (R-575; gui review 5627122883 of PR #283, G8, applied per R-369).** A typed value in `(0, 200]` is
-taken; a value at or below 0 is refused with its reason; a value above 200 is clamped to 200, as before R-575, since
-only RQ-555 can move the cap. **The floor** (gui review 5627280803 of PR #283, N3; applied per R-369): a press of ↓,
-with or without Shift or Alt (§G3), or a drag, that would take `T` to 0 or below sets `T` to the Alt step, 0.2, if `T`
-is above 0.2, and otherwise leaves `T` unchanged; ↓ never raises `T`. So Shift+↓ at `T = 10` gives 0.2, and ↓ at
-`T = 0.2` leaves 0.2. ↑ and a drag stop at 200.
+**`T_horizon`'s ends (R-575, R-610; gui review 5627122883 of PR #283, G8, applied per R-369).** A typed value in
+`[0.4, 200]` is taken; a value below 0.4 is refused with its reason, "below one closure window (0.4) the escape arm
+cannot fire"; a value above 200 is clamped to 200, the cap staying until long horizons are measured for cost (R-610).
+The field's settings say so: beside it, "0.4 to 200: below one closure window the escape arm cannot fire" (R-610).
+**The floor** (applied per R-369 under R-610, replacing PR #283's interim): a press of ↓, with or without Shift or Alt
+(§G3), or a drag, that would take `T` below 0.4 sets `T` to 0.4 if `T` is above it, and otherwise leaves `T`
+unchanged; ↓ never raises `T`. So Shift+↓ at `T = 10` gives 0.4, and ↓ at `T = 0.4` leaves 0.4. ↑ and a drag stop at
+200. *Was:* "A typed value in `(0, 200]` is taken; a value at or below 0 is refused with its reason; a value above 200
+is clamped to 200, as before R-575, since only RQ-555 can move the cap. **The floor** (gui review 5627280803 of PR #283,
+N3; applied per R-369): a press of ↓, with or without Shift or Alt (§G3), or a drag, that would take `T` to 0 or below
+sets `T` to the Alt step, 0.2, if `T` is above 0.2, and otherwise leaves `T` unchanged; ↓ never raises `T`. So Shift+↓
+at `T = 10` gives 0.2, and ↓ at `T = 0.2` leaves 0.2."
 
 The surfaces with no artboard (the Custom quality fields, the utilisation ceiling, the Profiler's Arbiter tab, the
 passive-logging switch and indicator, the compute fast-math control and the Profiler's fast-math line, R-297) are checked by presence only, not layout, until the M8 dev GUI (R-129).
@@ -1274,8 +1291,8 @@ run, each drawn as the figure draws it. With sound on it adds `♪ ◀ left ▶ 
 channel colours. The full key is `Trace… › key…`. The block is a key of figure marks (R-539), not a dimension of the
 stain; walking the stain adds nothing to it (applied per R-369, R-541 P13).
 While the trace is drawn dotted, paused at `t = 0` (R-569; `principia_lines.md` §8, "Animation"), the block gains one
-key line, its line drawn dotted as the figure draws it: "Dotted: paused at t = 0, not yet played" (the human's words;
-the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played", RQ-533). The full key
+key line, its line drawn dotted as the figure draws it: "Dotted: paused at t = 0, not yet played" (the human's words,
+which win, R-616; the demos' key reads "Dotted: paused at t = 0, the whole trace, not yet played"; *was:* "…, RQ-533"). The full key
 (`Trace… › key…`) carries the line always (applied per R-369; REQ-GUI-328).
 
 **The state map's legend (R-542; `principia_state_map.md` SM9).** A Chart position stain's legend is its colour slot,
@@ -1547,8 +1564,9 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   Stain, Print, Lines and Run light where a field in the lane differs between a segment's two keyframes; segments
   coloured by class (a), (b) or (c) with their frame counts; a chart or link-id change shows a cut mark.
 - **A segment:** its easing, set per segment (R-576); cut or dissolve, with its length, at a chart change; at a
-  link-parameter change R-520's rule, shown ("link parameters interpolated: every frame a different decoder"; whether a
-  cut is offered there is RQ-560); REQ-TOOL-075's fixed rules shown, not offered.
+  link-parameter change a choice, interpolate (export only; the default, shown with R-520's words "link parameters
+  interpolated: every frame a different decoder") or cut (R-623, closing RQ-560; *was:* "R-520's rule, shown (…;
+  whether a cut is offered there is RQ-560)"); REQ-TOOL-075's fixed rules shown, not offered.
 - **Play preview** runs the sequence in the live frame loop, link parameters and dissolves as cuts (R-520 F3), under
   the banner "Preview: not converged; cuts where the export interpolates". It is a transient view the engine plays from
   a preview request carrying the spec: no `SetField` is sent, nothing enters the history, and when it stops or ends
@@ -1572,8 +1590,9 @@ The screen that makes a keyframe spec (`principia_export_animation_contract.md` 
   background with progress, ETA, the last frame's thumbnail and Cancel. The `.principia-seq.json` is written beside
   every export.
 - **Open… / Save…** a `.principia-seq.json`, the spec in its canonical serialisation (R-309) with the build hash, the
-  schema version and the link entry hashes (R-521); opening is the identity (R-484). Whether an edit to the sequence
-  is undoable, and in which history, is RQ-559's; nothing is applied meanwhile.
+  schema version and the link entry hashes (R-521); opening is the identity (R-484). Every edit to the sequence is a typed
+  `SetField` in the contract's one history, the sequences being shared state (R-622, closing RQ-559; *was:* "Whether an
+  edit to the sequence is undoable, and in which history, is RQ-559's; nothing is applied meanwhile.").
 
 ### Spotlights — the reel, natively (R-578)
 

@@ -102,11 +102,14 @@ where the GPU flushes subnormals, is part of the f32 trace's definition (REQ-TOO
 
 **Past a terminal event.** The marks were measured with termination off, every run reaching the horizon, and each
 run's fate its first event. The atlas latches its first terminal event and stops there (integrator contract Part 7).
-Whether the viewer's four runs carry on past their first event, as measured, or stop there as the atlas does, and what
-the chord reads after a run has stopped, is RQ-558. *Applied meanwhile:* its option (a), as measured: each run's fate
-and `t_end` are its first event, latched as the atlas latches it, and the run carries on to the horizon for the chord;
-a run that fails or runs out of its step budget ends there, shown as such with its end time, and its chords read
-"ended at `t = …`" after it.
+**The four runs keep going, as measured** (R-601, closing RQ-558, option (a)): each run's fate and `t_end` are its
+first event, latched as the atlas latches it, and the run carries on to the horizon for the chord; a run that fails or
+runs out of its step budget ends there, shown as such with its end time, and its chords read "ended at `t = …`" after
+it. Stopping at the first event would make an early-colliding pair agree trivially: maximum confidence exactly where
+least is known. **The first event time is marked on the comparison**: each run's first event, at its `t_end`, is
+marked on the chord plot, so a pair's agreement after it reads as after the event. *Was:* "Whether the viewer's four
+runs carry on past their first event, as measured, or stop there as the atlas does, and what the chord reads after a
+run has stopped, is RQ-558. *Applied meanwhile:* its option (a), as measured: …" (the rest as above).
 
 ### 3.2 The chord and the two marks
 
@@ -223,15 +226,21 @@ for it.)
 **The atlas stays f32 on the GPU, coloured as now** ("Why would we show different colours in the atlas for
 precision?"). The draft's stain preset **How far f32 sees** is not made, and the draft's header text for the atlas
 ("Horizon `T = 50` · f32 trustworthy to about `t ≈ 23` (derived, not yet measured on this GPU)") is not applied: the
-human decided "The header states the horizon; the viewer states each point's parting." What the header strip states,
-against REQ-SYS-061's "The interactive atlas must state its predictability horizon", is RQ-556.
+human decided "The header states the horizon; the viewer states each point's parting." **The header strip states `T`
+and the f32 trust time** (R-621, closing RQ-556, option (b) with a change): the trust time is measured for the current
+view, not a constant such as the draft's derived "≈ 23", and the per-point trust stays in the viewer (§3.3). How the
+current view's trust time is measured (which points, which runs, which statistic, and when it is re-measured) is a
+definition, REQ-VAL-200 (R-72), written here by TASK-M8-76; the header's text is REQ-GUI-398. The atlas's colours are
+unchanged. *Was:* "What the header strip states, against REQ-SYS-061's "The interactive atlas must state its
+predictability horizon", is RQ-556."
 
 ### 3.6 The horizon
 
 The default horizon stays 50, and it can be **raised or lowered**, not floored at 50. This amends the Run window's
 `T_horizon ∈ [50, 200]` (render_gui_spec § "Run — from the top bar") and R-132 (R-575). The lowest horizon, and
-whether 200 still caps it, are RQ-555; meanwhile `T_horizon ∈ (0, 200]`, default 50, with `dt_macro =
-max(10⁻³, T/65535)` unchanged.
+whether 200 still caps it, are ruled (R-610, closing RQ-555): `T_horizon ∈ [0.4, 200]`, default 50, the floor one
+closure window, below which the escape arm cannot fire, and the cap 200 until long horizons are measured for cost, with
+`dt_macro = max(10⁻³, T/65535)` unchanged. *Was:* "are RQ-555; meanwhile `T_horizon ∈ (0, 200]`"
 
 ### 3.7 The README line
 
@@ -305,8 +314,14 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   estimate, or "unreliable" from the sign, shows.
 - **marks_follow_edits**: editing a mark to 10⁻² moves "parted at" to the first boundary above 10⁻² on a recorded
   chord series. *Fails if* the mark is a constant.
-- **ensemble_ratio**: over ≥ 256 chaotic ICs, the median `t_part(f32)/t_part(f64)` near `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
-  Never read off one trajectory. Its expected value and tolerance are RQ-557 and REQ-VAL-199.
+- **ensemble_ratio**: over 256 chaotic starts, all of them, not a subset (R-600, closing RQ-557, option (b)), each
+  start's parting time predicted from its measured initial gap, `ln(tol/δ₀)` for each precision (`δ₀` the pair's chord
+  at the first boundary, `tol` the parted mark, 0.1), so its predicted ratio is `ln(tol/δ₃₂)/ln(tol/δ₆₄)`, and the
+  median measured `t_part(f32)/t_part(f64)` compared with the predicted one, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
+  Never read off one trajectory. The tolerance is a calibration for the gate (REQ-VAL-199). How a start whose pair
+  has not parted by the horizon enters the median is RQ-575. *Was:* "over ≥ 256 chaotic ICs, the median
+  `t_part(f32)/t_part(f64)` near `ln eps₃₂ / ln eps₆₄ ≈ 0.44`. … Its expected value and tolerance are RQ-557 and
+  REQ-VAL-199."
 - **agreement_wording**: the same fate latched after parting reads "not evidence". Mutation: drop the before/after
   check and it reads "settled": fails.
 - **self_check_unreliable**: with Δ = 0.1, a chord series whose two marks are one boundary apart (a measured gap of
