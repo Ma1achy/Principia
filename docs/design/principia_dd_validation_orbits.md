@@ -163,7 +163,12 @@ arXiv:1805.07980 (2018), §2, an open restatement of region D at exact rest with
   many draws eq. 8 rejects, not region D; Table 1's rows are taken as printed, so the factor enters nothing here.
 - **Paper II** uses "exactly the same" 100 configurations, in the units of I, and reprints eq. 3's velocities, but its
   own runs start at exact rest ("the initial velocities of the components were taken to be zero"). It changes none of
-  I's initial conditions, velocities or units. Its Table 1 reprints `ξ` and `η` of all 100 rows.
+  I's velocities or units. Its Table 1 reprints `ξ` and `η` of all 100 rows, and its `ξ` differs from I's on four:
+  `N = 35` (II `0.480236434`, I `0.480736434`), `N = 49` (`0.058727505`, `0.057727505`), `N = 54` (`0.077480639`,
+  `0.007748064`) and `N = 65` (`0.306897814`, `0.306397814`). Each would be another start; I's `ξ` is kept on every
+  row, and II's is recorded in the fixture's `note` on those four. *Was:* "It changes none of I's initial conditions,
+  velocities or units. Its Table 1 reprints `ξ` and `η` of all 100 rows." (code review C5 of PR #294: II's `ξ`
+  differs on four rows).
 
 **Table 1** (I, pp. 1010–1012) is the fixture `fixtures/anosova/table1.csv`: every row, the `ΔE/E > 0.05` rows and the
 rows printing "—" included, each with its page; columns `N`, `ξ`, paper I's printed `η`, paper II's `η` where it
