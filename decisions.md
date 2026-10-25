@@ -25806,8 +25806,12 @@ named, but the mass-weighted kinetic metric, `Σ mᵢ‖δrᵢ‖²` on position
 canonical units (`G = M = I = 1`). The trace fade's general off-plane distance is the distance in `z` from the
 trajectory's encoded point to the slice plane under `g = Jᵀ W J`. REQ-GUI-266 no longer waits.
 
-*Applied per R-369:* `J` is R-550's eight-column f64 central-difference Jacobian `∂x/∂z`, taken at the slice centre as
-option (b) said; the distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to `span(q̂₁, q̂₂)`.
+*Applied per R-369:* `J` is the decoder's own Jacobian, `J = ∂(r, p)/∂z` of the decoder's particle-frame output (after
+canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64, central difference,
+REQ-DEC-034's step rule) at the slice centre, as option (b) said of the point; it is not R-550's compass-view Jacobian,
+whose Jacobi or Shape coordinates (angles, rates, mass fractions) the human's `W` is not defined on, and which would
+make the fade change with the compass view selected (physics review 5644374613 of PR #293, F1). `W`'s masses are those
+decoded at the slice centre, so that `g` is one metric on `z` for the view, as `J` is. The distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to `span(q̂₁, q̂₂)`.
 Where `g` is singular along a direction, which the mass directions of `z` may be, the reading is a definition,
 REQ-GUI-400 (R-72), written into lines §8 by TASK-M8-54 and approved by its physics reviewer, REQ-GUI-266's verify
 checking it (code review 5644267473 of PR #293, C2).

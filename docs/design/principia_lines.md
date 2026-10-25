@@ -537,9 +537,13 @@ can be restyled like any contour.
    point to the slice plane, which needs the encode at every step (and the metric RQ-341 raises). The mock-up uses a
    proxy: the scale-normalised Jacobi momentum magnitude, which this shape chart holds at zero.
    *Ruled (R-596, 25 Oct 2026, closing RQ-522, option (b)):* the metric on `z` is the physical mass metric pulled back
-   through the decoder's Jacobian, `g = Jᵀ W J`: `J` R-550's eight-column f64 central-difference Jacobian `∂x/∂z` at
-   the slice centre, and `W` the mass-weighted (kinetic) metric on positions, `Σ mᵢ‖δrᵢ‖²`, with its dual on momenta,
-   `Σ ‖δpᵢ‖²/mᵢ`, in canonical units (`G = M = I = 1`), the metric the shape sphere's distances already come from. The
+   through the decoder's Jacobian, `g = Jᵀ W J`: `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame
+   output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64,
+   central difference, REQ-DEC-034's step rule) at the slice centre, not R-550's compass-view Jacobian, whose angles,
+   rates and mass fractions `W` is not defined on; and `W` the mass-weighted (kinetic) metric on positions,
+   `Σ mᵢ‖δrᵢ‖²`, with its dual on momenta, `Σ ‖δpᵢ‖²/mᵢ`, in canonical units (`G = M = I = 1`), its masses those
+   decoded at the slice centre, so that `g` is one metric on `z` for the view; the metric the shape sphere's distances
+   already come from. The
    distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to the slice plane `span(q̂₁, q̂₂)`
    (REQ-GUI-266). Where `g` is singular along a direction of `z`, as a mass direction may be, the reading is a
    definition (REQ-GUI-400, R-72), written into §8 by TASK-M8-54 and approved by its physics reviewer.

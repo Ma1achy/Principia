@@ -9,8 +9,9 @@
 - **Size:** ~250 lines, the tests included
 
 ## Goal
-On a chart with no proxy, a trace fades off the plane by the general distance, the distance in `z` from the trajectory's encoded point to the slice plane, encoded per step, in the metric `g = Jᵀ W J` on `z` (R-596, RQ-522 (b)): `J` R-550's eight-column f64 central-difference Jacobian `∂x/∂z`
-at the slice centre, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units;
+On a chart with no proxy, a trace fades off the plane by the general distance, the distance in `z` from the trajectory's encoded point to the slice plane, encoded per step, in the metric `g = Jᵀ W J` on `z` (R-596, RQ-522 (b)): `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64, central difference, REQ-DEC-034's step rule)
+at the slice centre, not R-550's compass-view Jacobian; `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units, its masses those decoded at the slice centre
+(physics review 5644374613 of PR #293, F1; *was:* "`J` R-550's eight-column f64 central-difference Jacobian `∂x/∂z` at the slice centre");
 the distance is the `g`-length of the part of `z − z₀` `g`-orthogonal to the slice plane (applied per R-369). Where `g`
 is singular along a direction of `z`, this task defines the reading in lines §8 (REQ-GUI-400, R-72), the physics
 reviewer approving it, and REQ-GUI-266's verify checks it. TASK-M8-51 draws no fade there meanwhile. *Was:* "physics
@@ -23,6 +24,7 @@ Jacobian and no metric on `z`, R-550 J7)".
 - `docs/design/principia_lines.md` § "11. Open questions"
 - `docs/design/principia_trajectory_viewing.md` § "3. Hover trace — projection onto the current (tilted, sliced) plane"
 - `decisions.md` § "R-596 — The trace fade's off-plane distance is taken in the physical mass metric pulled back through the decoder's Jacobian, `g = Jᵀ W J`, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units *(closes RQ-522; settles R-509 (3)'s and R-550's open metric)*"
+- `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision"
 - `decisions.md` § "R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*"
 
 ## Deliverables
