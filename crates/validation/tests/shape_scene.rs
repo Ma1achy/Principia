@@ -10,8 +10,10 @@
 //!   REQ-RENDER-026).
 //! - `shape_scene_octant_palette`, `_deutan`, `_protan`, `_tritan`: every pair of the eight octant colours lies at least
 //!   R-429's τ apart under normal vision and under each of R-383's deutan, protan and tritan simulations.
-//! - `shape_scene_octant_palette_background`, `_stripe`, `_lighter`: under each, every octant colour lies at least 0.4
-//!   from the canvas background and from the stripes, and the upper colours are all lighter than the lower.
+//! - `shape_scene_octant_palette_background`, `_stripe`, `_lighter`: under normal vision and each simulation, every
+//!   octant colour lies at least 0.4 from the canvas background and from the stripes; the upper colours are all
+//!   lighter than the lower. `_background_cvd` and `_stripe_cvd` repeat the first two, their controls failing only
+//!   under a simulation.
 //! - `shape_scene_controls_are_wrong`: the one-hemisphere control draws no sample below the equator, and the flagged
 //!   control's twin is the spherical scene's except on the lower half's stripes, where it is black (REQ-CHART-002).
 //! - `shape_scene_class_signs`, `shape_scene_twin_on_the_equator`: the twin reads each sign of `n` strictly, as the
@@ -434,6 +436,18 @@ negative_control!(
 );
 
 #[test]
+fn shape_scene_octant_palette_background_cvd() {
+    check_background(octants());
+}
+
+negative_control!(
+    shape_scene_octant_palette_background_cvd,
+    "octant 4 as #0000F0 passes every other check and is 0.4 from the background under normal vision, but not under tritan simulation, so it must fail",
+    expected = "Tritanopia: octant",
+    check_background(with(4, [0x00, 0x00, 0xf0]))
+);
+
+#[test]
 fn shape_scene_octant_palette_stripe() {
     check_stripe(octants(), STRIPE);
 }
@@ -443,6 +457,18 @@ negative_control!(
     "white stripes, 9899c04f's, lie under 0.4 from octant 0's #F0FFD2, while the octants pass every other check, so they must fail",
     expected = "from the stripe colour",
     check_stripe(octants(), [1.0; 3])
+);
+
+#[test]
+fn shape_scene_octant_palette_stripe_cvd() {
+    check_stripe(octants(), STRIPE);
+}
+
+negative_control!(
+    shape_scene_octant_palette_stripe_cvd,
+    "stripes of #00003C lie 0.4 from every octant under normal vision, but not under tritan simulation, so they must fail",
+    expected = "Tritanopia: octant",
+    check_stripe(octants(), present::srgb8([0x00, 0x00, 0x3c]))
 );
 
 #[test]
