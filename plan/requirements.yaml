@@ -33194,7 +33194,7 @@
   - R-482
   - R-483
   milestone: M2
-  note: "R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026). R-482 C6, R-483 H2: the ViewState record is SimConfig's serialisation, not a copy (20 Oct 2026)."
+  note: "R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026). R-482 C6, R-483 H2: the ViewState record is SimConfig's serialisation, not a copy (20 Oct 2026). A nonlinear chart's view window (`engine::lock::Window`, its centre and half-widths) is chart construction among \"chart id and params\" and is held in SimConfig's chart group by TASK-M2-21 (chart_decoder_contract § \"The lock (projective microscope)\", \"The lock's construction, defined\"); once it is, `engine::lock::set_on_chart`'s re-centred window joins the lock's one command as a SetField, so one undo restores it with z₀ and the lock group (R-69; gui_state_contract §2, R-466). Until then TASK-M2-23's lock returns the window beside its edits (code review 5642862326 of PR #290, C4; applied per R-369)."
 - id: REQ-SYS-012
   area: SYS
   statement: "The kernel must receive only (z₀, q₁, q₂, chart id + params), identical in free and locked mode and before/after any tilt, slice or excursion; the lock, δ memory, ghost marks and direction library must live CPU-side, with no locked flag or second kernel code path."
