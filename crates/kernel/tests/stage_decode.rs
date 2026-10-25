@@ -593,20 +593,20 @@ fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
     };
     let uv = [0.2f32, 0.7, 0.6, 0.3];
     let (mut ic, mut tags, mut d) = buffers(2);
+    // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
+    // libm: at the release profile LLVM folds f32 `tanh` on literal inputs, and glibc 2.39's `tanhf(0.3)` differs from
+    // the folded value by 1 ulp (measure run 40187630582, TASK-M2-49).
     for i in 0..2 {
         wrapper(
             UVec3::new(i, 0, 0),
-            &uniforms,
-            &uv,
+            std::hint::black_box(&uniforms),
+            std::hint::black_box(&uv),
             &mut ic,
             &mut tags,
             &mut d,
         );
     }
     for i in 0..2 {
-        // The expected side's inputs go through `black_box`, so it calls the run-time libm as the entry point does: at
-        // the release profile LLVM folds f32 `tanh` on the test's literal chart at compile time, and glibc 2.39's
-        // `tanhf(0.3)` differs from the folded value by 1 ulp (measure run 40187630582, TASK-M2-49).
         let want = sample::<V::Chart, V::Links, f32>(
             std::hint::black_box(chart),
             std::hint::black_box(uv[2 * i]),
