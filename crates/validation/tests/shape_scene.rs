@@ -207,13 +207,21 @@ negative_control!(
     }
 );
 
-/// The one-hemisphere control `one` draws no sample below the equator; the flagged control `flagged`'s twin is
-/// `whole`'s twin except on the lower half's stripes, where it is black, and there is at least one such pixel.
+/// The one-hemisphere control `one` draws no sample below the equator and spans the upper hemisphere, its samples
+/// from within 0.1 of the pole `w = 1` to within 0.1 of the equator; the flagged control `flagged`'s twin is `whole`'s
+/// twin except on the lower half's stripes, where it is black, and there is at least one such pixel.
 fn check_controls(one: &ShapeScene, flagged: &ShapeScene, whole: &ShapeScene) {
-    let below = one.shapes().iter().filter(|n| n[2] < 0.0).count();
+    let shapes = one.shapes();
+    let below = shapes.iter().filter(|n| n[2] < 0.0).count();
     assert_eq!(
         below, 0,
         "the one-hemisphere control draws {below} samples below the equator"
+    );
+    let w = shapes.iter().map(|n| n[2]);
+    let (low, high) = (w.clone().fold(1.0, f32::min), w.fold(0.0, f32::max));
+    assert!(
+        low < 0.1 && high > 0.9,
+        "the one-hemisphere control spans w ∈ [{low}, {high}], not pole to equator"
     );
     let (want, got) = (whole.expected(), flagged.expected());
     let grid = whole.scene.context.grid;
