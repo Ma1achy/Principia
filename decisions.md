@@ -25761,13 +25761,15 @@ The human's second message, 25 Oct 2026, its ruling on RQ-573, verbatim:
 *What it decides:* region D and its starts are ported from paper I as a definition (R-72), with the papers' citations,
 into dd_validation_orbits §1.6: equal unit masses at `(−½, 0)`, `(+½, 0)` and `(ξ, η)`, region D by eq. 8, `G =
 6.67·10⁻⁸` in the papers' units, and eq. 3's velocities, so the starts are **near-rest starts**, named so, and "rest
-starts" leaves REQ-VAL-019's and REQ-VAL-120's text for the Anosova half (the Burrau start stays a rest start). Paper
-II changes none of paper I's velocities or units: it reruns the same 100 configurations from exact rest. Its `ξ`
-differs from paper I's on `N = 35, 49, 54` and `65`; paper I's `ξ` is kept on every row, and paper II's is recorded in
-the fixture's note on those four (dd_validation_orbits §1.6). The scan of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being
-taken as printed. Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed;
-the one difference, `N = 17`'s `ξ` (a broken fifth decimal, A `1` flagged uncertain, B `7`), is settled as `7` by the
-glyph's slant and paper II's clean print.
+starts" leaves REQ-VAL-019's and REQ-VAL-120's text for the Anosova half (the Burrau start stays a rest start). Paper II
+reprints eq. 3's velocities, in paper I's units, so it redefines none of paper I's starts, but its own runs start at
+exact rest ("the initial velocities of the components were taken to be zero"); its 100 configurations are, in its own
+words, "exactly the same" as paper I's. Its `ξ` differs from paper I's on `N = 35, 49, 54` and `65`; paper I's `ξ` is
+kept on every row, and paper II's is recorded in the fixture's note on those four (dd_validation_orbits §1.6). The scan
+of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being taken as printed.
+Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed; the one difference,
+`N = 17`'s `ξ` (a broken fifth decimal, A `1` flagged uncertain, B `7`), is settled as `7` by the glyph's slant and
+paper II's clean print.
 The asserted set is item 4 of the RQ-566 ruling, with item 4(i) as the RQ-571 ruling refines it: the computed `M =
 η·10⁻⁴` on every row, the printed column 11 on every row printing one but the five listed, and the list itself
 asserted. RQ-573's ruling narrows RQ-571's "Where paper II reprints a row, take paper II's η" to the rows where paper I
