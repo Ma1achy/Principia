@@ -1045,15 +1045,6 @@ fn check_offer(offer: fn(&Report) -> Option<Notice>) {
     assert!(matches!(z0.edit, Edit::Sim(SimField::Z0(z)) if same_bits(&z, &n.z)));
 }
 
-/// The per-pixel offer R-593 refuses, as one notice: the first tagged pixel's nearest feasible point.
-fn first_tagged(report: &Report) -> Option<Notice> {
-    let first = report.tags.iter().find_map(|t| match t {
-        Tag::Infeasible { nearest, .. } => Some(*nearest),
-        _ => None,
-    })?;
-    Some(Notice { recentre: first })
-}
-
 #[test]
 fn lock_infeasible_tilt_offer() {
     check_offer(Report::offer);
@@ -1063,7 +1054,17 @@ negative_control!(
     lock_infeasible_tilt_offer,
     "an offer of a tagged pixel's nearest point, not the centre's, re-centres a tilt whose centre is the anchor",
     expected = "a tilt alone, the centre the anchor, is not offered only the switch",
-    check_offer(first_tagged)
+    {
+        /// The per-pixel offer R-593 refuses, as one notice: the first tagged pixel's nearest feasible point.
+        fn first_tagged(report: &Report) -> Option<Notice> {
+            let first = report.tags.iter().find_map(|t| match t {
+                Tag::Infeasible { nearest, .. } => Some(*nearest),
+                _ => None,
+            })?;
+            Some(Notice { recentre: first })
+        }
+        check_offer(first_tagged)
+    }
 );
 
 /// The tags' arms, and the offer's: a pair below the apex has no nearest point that keeps `L_z`'s class; a notice
