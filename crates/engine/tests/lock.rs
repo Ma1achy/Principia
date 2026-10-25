@@ -1408,6 +1408,57 @@ fn curve_tilt_requires_lock_refuses_a_saturated_control() {
         }),
         Err(vec![1])
     );
+    check_both_steps_clamp(<StickBreaking as SimplexClamp>::clamps::<f64>, |mu| {
+        curve_tangent::<Sticks>(&ACROSS, mu)
+    });
+}
+
+/// The curve `μ₁ = μ₂ = s`, moving along `(dμ₁, dμ₂) = (1, −1)`, the configuration held inside its clamps.
+const ACROSS: engine::chart_authoring::CurveMeta = engine::chart_authoring::CurveMeta {
+    parameter: "s",
+    embed: |s| CurvePoint {
+        alpha: 0.6,
+        beta: 1.2,
+        mu1: s,
+        mu2: s,
+    },
+    tangent: |_| CurvePoint {
+        alpha: 0.0,
+        beta: 0.0,
+        mu1: 1.0,
+        mu2: -1.0,
+    },
+};
+
+/// Under the stick-breaking link, `z_μ1`'s inverse clamps where `m₀ = 1/(1 + e^μ₁ + e^μ₂)` falls below
+/// `T = (1 − (1 − ε_μ)²)/2`. Along `(1, −1)` from `μ₁ = μ₂ = μ`, `m₀` is largest at the curve point, so with `μ` placed
+/// a quarter of the step's drop, `h²/4`, above the clamp's edge, the curve point stays inside and both difference
+/// points `μ ± h·dμ` fall past it: the step clamps at both ends and not between. `clamps` is the link's clamp test and
+/// `tangent` the tangent of [`ACROSS`] at `μ`, which must be refused naming `z_μ1` alone.
+fn check_both_steps_clamp(
+    clamps: fn([f64; 3]) -> u32,
+    tangent: fn(f64) -> Result<Latent, LockError>,
+) {
+    let keep = 1.0 - <f64 as ChartConstants>::EPS_MU;
+    let edge = (1.0 - keep * keep) / 2.0;
+    let mu_edge = ((1.0 / edge - 1.0) / 2.0).ln();
+    // The contract's step, `ε^{1/3}·(1 + ‖μ‖)/‖dμ‖`, at `‖μ‖ = √2·μ` and `‖dμ‖ = √2`.
+    let h =
+        f64::EPSILON.cbrt() * (1.0 + std::f64::consts::SQRT_2 * mu_edge) / std::f64::consts::SQRT_2;
+    let mu = ((1.0 - h * h / 4.0) / edge - 1.0).ln() - std::f64::consts::LN_2;
+    let at = |k: f64| softmax(mu + k, mu - k);
+    assert_eq!(
+        (clamps(at(0.0)), clamps(at(h)), clamps(at(-h))),
+        (0, 1, 1),
+        "the case does not clamp at both difference points and not at the curve point (μ = {mu}, h = {h})"
+    );
+    assert_eq!(
+        tangent(mu),
+        Err(LockError::Saturated {
+            controls: [false, false, false, false, false, false, true, false],
+        }),
+        "a step that clamps at both ends is not refused"
+    );
 }
 
 negative_control!(
@@ -1415,4 +1466,13 @@ negative_control!(
     "the tangent at ν₀ = 0.5, inside every clamp, is no refusal",
     expected = "is not refused",
     check_saturated::<Defaults>(0.5, &[7])
+);
+
+negative_control!(
+    curve_tilt_requires_lock_refuses_a_saturated_control_both_ends,
+    "the curve a unit inside the clamp, where no difference point reaches it, is no refusal",
+    expected = "is not refused",
+    check_both_steps_clamp(<StickBreaking as SimplexClamp>::clamps::<f64>, |mu| {
+        curve_tangent::<Sticks>(&ACROSS, mu - 1.0)
+    })
 );
