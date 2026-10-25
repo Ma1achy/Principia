@@ -105,16 +105,15 @@ pub fn spherical() -> ShapeSphere<f64> {
     }
 }
 
-/// The exponential map about `n₀ = x̂`, a point of the equator, `e₁ = ŷ`, `e₂ = ŵ`, extent `s = 1`: its cap straddles
-/// the equator, the top half of the square at `w > 0` and the bottom half at `w < 0`, and lies in `n.x > 0`, its
-/// farthest corner at `r = √2 < π/2`.
+/// The exponential map about `n₀ = x̂`, a point of the equator, `e₁ = ŷ`, `e₂ = ŵ`, extent `s = 1` ([`spherical`]'s):
+/// its cap straddles the equator, the top half of the square at `w > 0` and the bottom half at `w < 0`, and lies in
+/// `n.x > 0`, its farthest corner at `r = √2 < π/2`.
 pub fn straddling() -> ShapeSphere<f64> {
     ShapeSphere {
         map: ShapeMap::Exponential,
         n0: [1.0, 0.0, 0.0],
         e1: [0.0, 1.0, 0.0],
         e2: [0.0, 0.0, 1.0],
-        scale: 1.0,
         ..spherical()
     }
 }
