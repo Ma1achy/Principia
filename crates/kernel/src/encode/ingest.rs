@@ -14,8 +14,10 @@
 //! and `σ_min` by one-sided Jacobi rotations on the columns ([`sigma_min`]), so `σ_min²` is never formed. Where the
 //! weighted Jacobian loses rank, `σ_min = 0` and `κ = +∞`.
 //!
-//! **CPU only.** Ingestion is the validation programme's import path (Part 7), run by `validation::import`; no shader
-//! entry point reaches it, so it branches on floats where the GPU rules (gpu_determinism_note) would ask for selects.
+//! **CPU only.** Ingestion is the validation programme's import path (Part 7), run by `validation::import`. The module
+//! is gated off the SPIR-V build (`#[cfg(not(target_arch = "spirv"))]` in `encode/mod.rs`), as the driver's
+//! `nsub_table` is: it uses `+∞` and a swept loop with `continue` and `break`, which the GPU rules (gpu_determinism_note
+//! rules 4 and 5) ban in shader code.
 
 use spirv_std::num_traits::Float;
 
