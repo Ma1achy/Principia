@@ -1155,7 +1155,7 @@
   depends_on: [TASK-M3-40]
   needs: []
   requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219]  # R-603 to R-605 (25 Oct 2026)
-  reviewers: [code, qa, physics]
+  reviewers: [code, qa, physics, gui]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1)
   pitfalls: [PIT-3]
 - id: TASK-M4-01
   milestone: M4

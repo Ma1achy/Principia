@@ -27966,11 +27966,11 @@
     section: COM projection and invariant monitoring
   verify:
     method: unit test
-    detail: "cargo test -p render drift_view_regularised: on the radial collision under Heggie × RK4 the energy-drift view's input at each pixel is bitwise the regularised drift latch, and the run stopped at its collision draws as before and its readout reads \"stopped at event\"; controls: a view fed the Cartesian drift receives a different input and fails, and a readout without the words fails"
+    detail: "cargo test -p render drift_view_regularised: on the radial collision under Heggie × RK4 the energy-drift view's input at each pixel is bitwise the regularised drift latch, and the run stopped at its collision draws as before and its pixel carries its stopped-at-event status for the readout; controls: a view fed the Cartesian drift receives a different input and fails, and a pixel whose stopped-at-event status is dropped fails; cargo test -p gui drift_readout_stopped_at_event: the hover readout of that event-stopped pixel in the energy-drift view reads \"stopped at event\" (control: a readout without the words fails)"
   rulings:
   - R-605
   milestone: M3
-  note: "R-605 (25 Oct 2026, RQ-528 (b), (c)). Closed by TASK-M3-41 (applied per R-369)."
+  note: "R-605 (25 Oct 2026, RQ-528 (b), (c)). Closed by TASK-M3-41 (applied per R-369). qa review 5644656634 of PR #293, Q1 (applied per R-369): the readout's words are the gui crate's, so the render test asserts the status carried for the readout, as REQ-CHART-087 (4) and (5) do, and a -p gui arm checks the words; gui added to TASK-M3-41's reviewers. *Was (verify):* \"cargo test -p render drift_view_regularised: on the radial collision under Heggie × RK4 the energy-drift view's input at each pixel is bitwise the regularised drift latch, and the run stopped at its collision draws as before and its readout reads \"stopped at event\"; controls: a view fed the Cartesian drift receives a different input and fails, and a readout without the words fails\""
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
