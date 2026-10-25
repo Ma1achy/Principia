@@ -25762,8 +25762,9 @@ The human's second message, 25 Oct 2026, its ruling on RQ-573, verbatim:
 into dd_validation_orbits §1.6: equal unit masses at `(−½, 0)`, `(+½, 0)` and `(ξ, η)`, region D by eq. 8, `G =
 6.67·10⁻⁸` in the papers' units, and eq. 3's velocities, so the starts are **near-rest starts**, named so, and "rest
 starts" leaves REQ-VAL-019's and REQ-VAL-120's text for the Anosova half (the Burrau start stays a rest start). Paper
-II changes none of paper I's initial conditions, velocities or units: it reruns the same 100 configurations from exact
-rest. The scan of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being
+II changes none of paper I's velocities or units: it reruns the same 100 configurations from exact rest. Its `ξ`
+differs from paper I's on `N = 35, 49, 54` and `65`; paper I's `ξ` is kept on every row, and paper II's is recorded in
+the fixture's note on those four (dd_validation_orbits §1.6). The scan of p. 1008 prints the `η` factor as `3/2`, with no radical; it enters nothing, Table 1's rows being
 taken as printed. Table 1 is the fixture `fixtures/anosova/table1.csv`, every row kept, transcribed twice and diffed.
 The asserted set is item 4 of the RQ-566 ruling, with item 4(i) as the RQ-571 ruling refines it: the computed `M =
 η·10⁻⁴` on every row, the printed column 11 on every row printing one but the five listed, and the list itself
