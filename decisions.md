@@ -25750,18 +25750,20 @@ R-593 is in the "physics" group of `plan/rule_groups.yaml`, with R-591.
 Changes REQ-CHART-010 (verify, rulings, source, rq, note).
 
 ## R-595 — Under R-548's `E ≥ 0` guard an E < 0 state that passes the dispersal step's geometric tests goes on to the hierarchy step, where it may read HE, PE, B-stable or excursion: the guard is for dispersal (H, HP, P), and a binary plus an escaper is the ordinary E < 0 escape *(closes RQ-521; corrects R-548's "falls through to …" list)*
-*25 Oct 2026 · the batch recorded whole in `docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md`; applied in
-`docs/design/principia_dd_chazy_final_motion.md` § "3.2 The rule, in order" and § "11.3 Open questions", R-548's
-forward line, `docs/archive/review_queue/M0.md` (RQ-521, moved with its ruling), REQ-PAY-099 (reqio), TASK-M7-35 (its
-notes and acceptance line) and `plan/rule_groups.yaml`; built by TASK-M7-35*
+*25 Oct 2026 · the batch recorded, its RQ-571 and RQ-570 paragraphs left out, in
+`docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md`; applied in `docs/design/principia_dd_chazy_final_motion.md`
+§ "3.2 The rule, in order" and § "11.3 Open questions", R-548's forward line, `docs/archive/review_queue/M0.md`
+(RQ-521, moved with its ruling), REQ-PAY-099 (reqio), TASK-M7-35 (its notes and acceptance line) and
+`plan/rule_groups.yaml`; built by TASK-M7-35*
 
-**The batch.** The human's message of 25 Oct 2026 rules thirty review-queue entries, keeps three parked, and accepts
-the decisions made under R-369. It is recorded whole, as relayed to the port, in
+**The batch.** The human's first message of 25 Oct 2026 rules thirty review-queue entries, keeps three parked, and
+rules RQ-571 and RQ-570, which TASK-M2-20 ports. It is recorded in
 `docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md` (sha256
-`5ded0d131aa49dfc737c3932470f13e5b679aad986da47ee40465ae477e97ee1`, 94 lines). It is ported one ruling per entry, in the
-message's order, from R-595 to R-624, and R-625 records its last three lines. The numbers just before R-595 are held
-by other work. The same messages also ruled entries that their own task PRs port (R-593 among them) and RQ-574, ported
-separately; none of those is ported here.
+`6e673a76f6fca1af36b093c47361b6bf840e3726c69c3fc173c96d6caff2cc1f`, 95 lines) as given, except that the RQ-571 and
+RQ-570 paragraphs are left out, and the record says so where they stand. The thirty are ported one ruling per entry,
+in the message's order, from R-595 to R-624, and R-625 records the message's last two lines. The numbers just before
+R-595 are held by other work. The human's second message of 25 Oct 2026 rules RQ-572, RQ-573 and RQ-574: RQ-574 is
+ported here, by R-626, and the others by their own task PRs (RQ-572 by R-593).
 
 The human's words on RQ-521, verbatim:
 
@@ -26422,18 +26424,16 @@ R-624 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-GUI-383 (statement, rulings, note).
 
-## R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10; the decisions made under R-369 stand, with no vetoes *(amends nothing; R-568's, R-522's and R-527's parking stands)*
+## R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10 *(amends nothing; R-568's, R-522's and R-527's parking stands)*
 *25 Oct 2026 · applied in `REVIEW_QUEUE.md` (a dated line in RQ-378, RQ-386 and RQ-391) and `plan/rule_groups.yaml`*
 
 The human's words, the batch's last lines, verbatim:
 
 > Parked (RQ-378, RQ-386, RQ-391): stay parked.
 > Calibrations: at the gate, as planned. Keep μ_max ≤ 10 (see RQ-536).
->
-> Decisions under R-369: no vetoes.
 
 *What it decides:* RQ-378 (R-510, R-568), RQ-386 (R-522) and RQ-391 (R-527) stay open and parked; nothing waits on
 them, and what each applies stays applied. The calibration values are proposed and confirmed at their milestone gates,
-as planned; the cap on `μ_max` is R-597's. Every decision recorded "applied per R-369" before this message stands.
+as planned; the cap on `μ_max` is R-597's.
 
 R-625 is in the "one_off" group of `plan/rule_groups.yaml`.
