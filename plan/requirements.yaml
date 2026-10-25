@@ -27957,7 +27957,7 @@
   milestone: M2
 - id: REQ-VAL-019
   area: VAL
-  statement: "Anosova region-D and Burrau rest starts must encode → decode with their invariants matching the papers' stated values after the recorded rescale."
+  statement: "Anosova region-D near-rest starts (Agekyan & Anosova 1968, Table 1) and the Burrau rest start must encode → decode with their invariants matching the papers' stated values after the recorded rescale."
   source:
   - file: docs/design/principia_dd_encode.md
     section: 4. Seams (obligations → integration tests)
@@ -27965,15 +27965,22 @@
     section: 1. What it is
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-592 — Anosova region D: Agekyan & Anosova (1968) is the source, its near-rest starts ported as a definition and its Table 1 as a fixture; `M = η·10⁻⁴` asserted on every row and the printed `M` column on every row but `N = 16, 23, 26, 32, 34`; paper II's `η` taken only where paper I is the outlier (`N = 88`); column 8 recorded, never asserted, while RQ-570 is open *(closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open; changes REQ-VAL-019 and REQ-VAL-120)*"
   verify:
     method: numerical gate
-    detail: "import the literature ICs; compare E, L_z after multiplying back by the recorded rescale"
+    detail: "import the literature ICs; compare E, L_z after multiplying back by the recorded rescale. Anosova (R-592): every Table 1 row's computed M = η·10⁻⁴; the printed M column on every row printing one but the exception list N = 16, 23, 26, 32, 34, itself asserted; E by eq. 4; the exact-rest control (L_z == 0, E == U); E, L_z and L_z²|E|/(G²M⁵) through the chart; a point outside region D refused. Column 8 recorded, not asserted (RQ-570)"
   rulings:
   - R-71
+  - R-592
   milestone: M2
   rq:
-  - RQ-566
-  note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration)."
+  - RQ-570
+  note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration). Region D's reference values are computed from the definition (E by eq. 4, M = η·10⁻⁴) and Table 1's printed M column (R-592); column 8 waits on RQ-570."
 - id: REQ-VAL-020
   area: VAL
   statement: "A chart-landmark test must assert the decoder places the Lagrange equilateral configuration at `z = 0` and the Euler collinear configurations at the β edges: at `beta = 0`, reached exactly where the β link underflows (f32 and f64), and toward `beta = pi`, approached from below, the upper image staying inside π (R-417)."
@@ -29713,20 +29720,21 @@
 - id: REQ-VAL-120
   area: VAL
   kind: calibration
-  statement: "The literature-import reference values (Anosova region-D and Burrau rest starts, as the papers state them) and the tolerance to which the imported invariants must match them must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The literature-import reference values (Anosova region-D near-rest starts and the Burrau rest start, as the papers state them) and the tolerance to which the imported invariants must match them must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_encode.md
     section: 4. Seams (obligations → integration tests)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
   verify:
     method: review checklist
     detail: "the proposal cites each paper's stated values, the recorded rescale and the measured import residuals; recorded in decisions.md"
   rulings:
   - R-71
+  - R-592
   milestone: M2
-  rq:
-  - RQ-566
 - id: REQ-VAL-121
   area: VAL
   kind: calibration
