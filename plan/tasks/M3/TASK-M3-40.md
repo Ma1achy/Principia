@@ -20,6 +20,7 @@ The regularised occupants' sync grid is a fixed quantum of physical time, `Δ_sy
 - `docs/read_first/principia_01_pitfalls.md` § "3. Standing rules earned in this sequence"
 - `decisions.md` § "R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time"
 - `decisions.md` § "R-19 — Change 8 landed in full *(closes RQ-17)*"
+- `decisions.md` § "R-602 — R-565's fixed quantum is the regularised occupants' sync grid only; the unregularised macro-step grid stays R-132's `dt_macro = max(1e-3, T/65535)` *(closes RQ-524)*"
 
 ## Deliverables
 - `crates/kernel/src/regularisation/sync.rs` — the grid: boundaries at `k·Δ_sync` from the constants register, `ADVANCE`'s target snapped to the latest boundary at or before it, each interval's step control sized from `Δ_sync` (Aarseth–Zare's `dt_left` is `Δ_sync`).
@@ -30,5 +31,5 @@ The regularised occupants' sync grid is a fixed quantum of physical time, `Δ_sy
 
 ## Notes
 - R-565 (21 Oct 2026). The cost and label-flip evidence for `Δ_sync` is prin-rs's `sync_grid_probe` (PR #34; `docs/incoming/2026-10-21_gap_sweep_integrator/`, a record). The value is proposed by TASK-M3-07 (REQ-INT-080) and confirmed at the M3 gate; until then the tests run at the proposal's value and at a second one.
-- The unregularised macro-step grid is unchanged (RQ-524's (a), applied meanwhile).
+- The unregularised macro-step grid is unchanged: R-132's `dt_macro` (R-602, RQ-524 (a); *was:* "(RQ-524's (a), applied meanwhile)").
 - The frame loop's side, the live set advancing by whole quanta, is TASK-M5-21's (REQ-SCHED-103).

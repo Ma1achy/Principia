@@ -32,6 +32,7 @@ readback (R-294).
 - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - `decisions.md` § "R-294 — R-288's counters belong to the frame; no mutable statics in the kernel *(amends R-288; closes RQ-174)*"
 - `decisions.md` § "R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*"
+- `decisions.md` § "R-614 — The frame record's `substep_histogram` has 17 entries: 16 equal bins of width `N_max/16` over `[0, N_max)`, half-open, and a separate cap bin *(closes RQ-520; amends R-545 as to the histogram's length)*"
 
 ## Deliverables
 - Doc change: `docs/gui/principia_render_gui_spec.md` § "Profiler" — the `deep_zoom_03` scenario (chart, camera path, depth and frame count) (definition, REQ-TOOL-130), with the "Removed lines" note; the scenario registered with `prin profile`.
@@ -46,16 +47,20 @@ readback (R-294).
 - `crates/kernel` (R-294, REQ-TOOL-140): the survey entry point binds the per-frame `d_min` counter buffer, and the
   `d_min` packer increments it atomically on the GPU; one packer path for the f32 and f64 instantiations, no `#[cfg]`
   or type-dependent branch in its logic (code checklist § 1), and no mutable static.
-- The frame record's `substep_histogram: [u32; 16]` (R-545, RQ-286; REQ-TOOL-187): per-pixel substep counts binned
-  on the GPU into an atomic u32 buffer beside the `d_min` counters, reset each frame and read back with them on the
-  existing readback, written into that frame's record after `substeps_total`; the bin edges as RQ-520 rules.
+- The frame record's `substep_histogram: [u32; 17]` (R-545, RQ-286; R-614; REQ-TOOL-187): per-pixel substep counts
+  binned on the GPU into an atomic u32 buffer beside the `d_min` counters, sixteen equal half-open bins of width
+  `N_max/16` over `[0, N_max)` and the cap hits in a seventeenth, reset each frame and read back with them on the
+  existing readback, written into that frame's record after `substeps_total`. *Was:* "`[u32; 16]`" and "the bin edges
+  as RQ-520 rules" (R-614).
 
 ## Acceptance tests
 - `cargo test -p engine frame_substep_histogram` — a synthetic frame whose pixels take known substep counts, cap hits
-  among them, records `substep_histogram` with each pixel in its bin and the cap hits in the last, 16 entries summing to
-  the pixel count; the next frame's histogram is reset; it comes back on the telemetry readback without stalling the
+  among them, records `substep_histogram` with each pixel in its bin, a count of `k·N_max/16` in bin k and `N_max − 1` in bin 15,
+  and the cap hits in the seventeenth, 17 entries summing to the pixel count (R-614; *was:* "the cap hits in the last,
+  16 entries"); the next frame's histogram is reset; it comes back on the telemetry readback without stalling the
   frame; the JSON Schema and the reader accept a v1 frame without the key and reject one with it `null` or with a
-  length other than 16; controls: a histogram not reset between frames fails, and a schema that requires the key, or
+  length other than 17, 16 among them; controls: a histogram not reset between frames fails, a cap hit counted in
+  bin 15, or a count at a bin's lower edge counted in the bin below, fails, and a schema that requires the key, or
   accepts it `null`, fails (REQ-TOOL-187).
 - `cargo test -p engine frame_record_fields` — a recorded frame deserialises with every field present (REQ-TOOL-050).
 - `cargo test -p prin report_percentiles` — synthetic frame log: percentiles and the motion-only headline match hand-computed values (REQ-TOOL-051).
@@ -68,7 +73,8 @@ readback (R-294).
 
 ## Notes
 - R-545 (RQ-286): `substep_histogram` is this task's (applied per R-369: it is the frame record's task and shares
-  R-288's readback); REQ-TOOL-187's bin edges wait on RQ-520, the field and its readback do not.
+  R-288's readback); its bin edges are R-614's (RQ-520 (a); *was:* "REQ-TOOL-187's bin edges wait on RQ-520, the field and
+  its readback do not").
 - A frame without `substep_histogram` (written before R-545) is telemetry §5's stated exception (fix round 1 of PR
   #274, qa Q4, applied per R-369), so qa's hand-written v1 frames stay valid and no qa file changes:
   `crates/engine/tests/qa_TASK-M0-17.rs` (:40-80, `check_bases_accepted`), `qa_TASK-M0-51.rs:44`,

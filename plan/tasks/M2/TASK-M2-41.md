@@ -38,5 +38,5 @@ Each link registry entry declares its tunable parameters (`mu_max` on `softmax_t
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers each range (G2), the inverse's conditioning at its ends at f32 and f64 (G3, C4), and the log-det against the forward at non-default values by finite differences (G6, C5) (R-481 G8).
 - A5 is resolved as a uniform (R-481 G7, applied per R-369): the parameters are an argument, never a compiled variant; the GPU's uniform is TASK-M4-21's. The at-default functions stay, so no existing caller or qa file changes; a qa file that would have to change is a C2 failure.
-- The ranges are provisional until the M2 gate (REQ-GEN-038, R-71); nothing waits on them.
+- The ranges are provisional until the M2 gate (REQ-GEN-038, R-71); nothing waits on them. R-597 and R-625 (25 Oct 2026) cap `μ_max`'s range at 10; the proposal merged here, `mu_max ∈ [1, 10]` (`crates/ledger/src/links.rs`, `tunables()`), is within the cap, so nothing changes.
 - R-10 is amended (R-481): `μ_max = 5` and `q_max = 2` become the defaults; `constants.rs` keeps the values and still cites R-10.

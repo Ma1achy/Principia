@@ -22,6 +22,7 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-207 — Export trace also writes the Chrome Trace Event format"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the sender"
+- `decisions.md` § "R-614 — The frame record's `substep_histogram` has 17 entries: 16 equal bins of width `N_max/16` over `[0, N_max)`, half-open, and a separate cap bin *(closes RQ-520; amends R-545 as to the histogram's length)*"
 
 ## Deliverables
 - `crates/gui/src/windows/profiler/{timeline,flame,gpu,memory,counters}.rs`.
@@ -32,7 +33,7 @@ The Profiler window has Timeline, Flame, GPU, Memory and Counters tabs with live
 - Calibration proposal: idle traces with and without an injected leak; the threshold and window.
 
 ## Acceptance tests
-- `cargo xtask screenshot 04_windows` (Profiler; histogram cap marker at N_max) — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; `cargo test -p gui profiler_reads_prin_file` — the window reads the profiler file `prin profile` writes, and that file's header config is REQ-GUI-039's provenance object (R-113) (REQ-TOOL-098).
+- `cargo xtask screenshot 04_windows` (Profiler; histogram cap marker at N_max) — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max, its seventeen bars the frame record's sixteen equal bins and the cap bin (R-614; the merged mock's placeholder bins in `crates/gui/src/mock/profile.rs` change here); `cargo test -p gui profiler_reads_prin_file` — the window reads the profiler file `prin profile` writes, and that file's header config is REQ-GUI-039's provenance object (R-113) (REQ-TOOL-098).
 - `cargo test -p engine leak_detector` (threshold and window: REQ-TOOL-115, calibrated) — synthetic idle trace with steady heap growth is flagged; a flat idle trace and growth during activity are not (REQ-TOOL-099).
 - `cargo test -p engine profile_summaries` — an exported trace contains leak-flag and hot-path summary sections consistent with its raw scopes (REQ-TOOL-100).
 - `cargo test -p prin profile_query_live` — 'top 10 scopes by p95' against a running app returns ten v1-schema scope records (REQ-TOOL-101).
