@@ -11,6 +11,9 @@
 //!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
 //!   recentring, §G4) and the lock group's, one command sent under one history key, one undo entry (gui_state_contract
 //!   §2, R-466), and the centre pixel, of the chart rebuilt on that `z₀`, decodes the clicked pixel's state bit for bit.
+//!   On a nonlinear chart `z_locked`'s own decode is within lookup's `ε_phys` of that state where the ladder clamps
+//!   none of the controls the axes set; where it clamps one, `z_locked` holds the clamp's image and the lock's notices
+//!   carry `lookup_clamped`.
 //! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`) that turn about the pin
 //!   (render_gui_spec §G4; R-451; R-466 K5). At `δ = 0` the pin is the centre, so they keep `z₀` and the centre
 //!   `z(½,½) = z₀` ([`centre`]) is exactly constant through them; where `δ` has an in-plane part the pin is off-centre,
@@ -214,8 +217,10 @@ pub struct ChartLock {
 /// contract's definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate`
 /// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z`
 /// gives `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit, so the
-/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point. The edits
-/// are one command under one history key (gui_state_contract §2, R-466).
+/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point, bit for bit.
+/// `z_locked`'s own decode is within `tol`'s `ε_phys` of that state where the ladder clamps none of the controls the
+/// axes set; where it clamps one, `z_locked` holds the clamp's image and [`ChartLock::notices`] carry `lookup_clamped`.
+/// The edits are one command under one history key (gui_state_contract §2, R-466).
 pub fn set_on_chart<S, C, N>(
     chart: &C,
     window: &Window,
