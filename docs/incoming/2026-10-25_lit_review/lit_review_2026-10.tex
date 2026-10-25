@@ -100,11 +100,19 @@ since been a canonical benchmark for three-body codes and a standard demonstrati
 sensitivity to initial conditions.
 
 Aarseth, Anosova, Orlov \& Szebehely~\cite{aarseth1994} investigated the chaoticity structure
-near the standard Pythagorean IC, sampling points on concentric circles of radii $5 \times
-10^{-8}$ to $5 \times 10^{-3}$ around each body's position and applying time-reversal accuracy
-tests.  They identified regular regions adjacent to regions where the escape angle and the
-identity of the escaping body vary abruptly with IC---a first map of the IC-space fractal near
-the Pythagorean point.
+near the standard Pythagorean IC.  They displaced one body at a time to 100 points on each of six
+circles of radius $5 \times 10^{-8}$ to $5 \times 10^{-3}$ about its standard position, recorded
+the escape angle and the identity of the escaper, and used time-reversed integrations to set
+aside non-predictable runs.  A small neighbourhood of the standard position of each body is a
+regular region, in which the final outcome varies continuously with the initial position; other
+regular regions exist, and outside them the outcome changes abruptly.  Escape follows a close
+triple approach, and close triple approaches often made the motion non-predictable even with
+regularisation---a first map of the IC-space structure near the Pythagorean point, and an early
+statement of the reliability problem taken up in \S\ref{sec:reliability}.  The Burrau problem
+remains a test case: Boekholt, Moerman \& Portegies Zwart~\cite{boekholt2021} solve it to
+convergence in its Newtonian limit as the control for a relativistic study, and Chitan, Myll\"{a}ri
+\& Haque~\cite{chitan2022} integrate all sixteen Pythagorean triangles with hypotenuse below 100,
+each mass equal to the opposite side, mainly to measure post-Newtonian effects.
 
 The (3,4,5) configuration is the simplest member of an infinite family indexed by primitive
 Pythagorean triples: every primitive triple $(a,b,c)$ with $a^2+b^2=c^2$ yields a distinct
@@ -147,13 +155,9 @@ pixel-by-pixel computation over the Agekyan--Anosova domain using approximately 
 simulations, colour-coding each IC by the lifetime of the triple system before dissolution.  The
 resulting image resembles a Maasai warrior's shield: broad bands of short-lived systems flanked
 by intricate swirling structures of longer-lived systems.  Zooming in reveals the same band
-structure repeating at every scale, consistent with fractal basin boundaries.  In related work,
-Heinäm\"{a}ki, Lehto, Valtonen \& Chernin~\cite{heinamaki1998} analysed the three-body flow
-using intermittency and found a strange attractor of Hausdorff dimension $D \approx 2.1$.  This
-is the dimension of the attractor traced by the flow in phase space, not the fractal dimension of
-the basin boundary in the IC manifold: the two are distinct objects---one measured along
-trajectories, the other across a grid of initial conditions---and their dimensions are not
-directly comparable.
+structure repeating at every scale, consistent with fractal basin boundaries; Lehto et al.\ report
+a Hausdorff dimension of 1.5 for their map and find 28.6\% of positions locally
+homogeneous at its finest scale, and they map time-reversibility over the same domain.
 
 This study is the closest existing precedent to Principia's rendering task.  It is, however,
 subject to the same restrictions as the Agekyan--Anosova map: equal masses, zero velocities, and
@@ -161,12 +165,47 @@ a single diagnostic (lifetime), computed in batch with no provision for interact
 zoom.  For Principia, the Lehto et al.\ study both validates the rendering paradigm and defines
 the narrow 2D subspace within which all prior high-resolution work has been done.
 
+\subsection{Converged maps and the structure of the free-fall plane}
+
+Boekholt, Portegies Zwart \& Valtonen~\cite{boekholt2020} integrated a uniform grid of 1212
+initial conditions over the Agekyan--Anosova domain with the arbitrary-precision code Brutus, at
+accuracies from $10^{-6}$ down to $10^{-70}$, to $t = 10^4$.  The same initial condition can live
+for very different times at the two extremes while the two lifetime maps remain statistically
+indistinguishable, and the fraction of solutions that cannot be reversed falls as a power law
+with the numerical accuracy: a map of this domain whose individual pixels have a known accuracy.
+
+Tanikawa and collaborators studied the same plane through its collisions.  The initial
+conditions that lead to a binary collision form curves, and these curves bound the regions of
+the plane that share a symbol sequence~\cite{tanikawa1995,tanikawa2008,tanikawa2015}; Tanikawa
+\& Mikkola~\cite{tanikawa2021} confirm numerically that triple-collision orbits exist inside the
+domain, at points where binary-collision curves meet, and tabulate them.  Mikkola \&
+Tanikawa~\cite{mikkola2007} relate the lifetime of each free-fall system to its Lyapunov time,
+which ties a lifetime map and a Lyapunov map of the same plane together.
+
+Parischewsky, Trani \& Leigh~\cite{parischewsky2023} map planar free fall near the equilateral
+(Lagrange) configuration, from the triple-collision singularity out to the hierarchical limit,
+with outcome maps in the space of side ratios that separate regular from ergodic runs and compare
+both with the statistical escape theory.
+
+\subsection{Beyond the zero-velocity, equal-mass surface}
+
+Published maps off this surface are few and narrow.  Tanikawa \&
+Mikkola~\cite{tanikawa2008} extend their first-symbol maps of the free-fall plane to non-zero
+angular momentum.  \v{S}uvakov \& Dmitra\v{s}inovi\'{c}~\cite{suvakov2013} search a
+two-dimensional slice of initial velocities, at fixed collinear positions and equal masses, for
+periodic orbits.  Li, Li \& Liao~\cite{lili2020} continue one stable periodic-orbit family across
+a plane of two mass ratios and map its period and stability there---the closest published
+analogue to a mass chart, though for one orbit family rather than for outcomes.  Anosova~\cite{anosova1969}
+gave the first outcome statistics for unequal masses in region $D$, and Valtonen, Myll\"{a}ri,
+Orlov \& Rubinov~\cite{valtonen2005} integrated 120,000 rotating equal-mass systems from random
+initial conditions, but these are statistics over random samples, not maps.
+
 \subsection{Trani et al.\ and isles of regularity}
 
 Trani, Leigh, Boekholt \& Portegies Zwart~\cite{trani2024} performed a large-scale IC scan with
 the \emph{Tsunami} regularised N-body code, running $\mathcal{O}(10^6)$ scattering simulations
-over a 2D parameterisation that varies the phase of a pre-existing binary and the approach angle
-of a third body.  They found that regular (non-chaotic) trajectories occupy a substantial
+with unequal masses over a 2D parameterisation that varies the phase of a pre-existing binary and
+the inclination of the incoming third body.  They found that regular (non-chaotic) trajectories occupy a substantial
 fraction of the scanned IC space, forming connected ``isles of regularity'' in the chaotic sea,
 and they separate physical chaos from numerical chaos in doing so.  This confirms the picture of
 a fractal IC-space boundary interspersed with structured regular regions, and demonstrates that
@@ -176,7 +215,9 @@ shifted in orbital phase, and regions where they decorrelate.
 
 The scattering parameterisation of Trani et al.\ is adapted to hierarchical encounters (one body
 arriving from far away to interact with a pre-existing binary) and does not cover the
-non-hierarchical regime in which all three bodies start with comparable separations.  It is also
+non-hierarchical regime in which all three bodies start with comparable separations; its
+inclination axis also takes the map out of the plane, so only one row of it lies in the planar
+problem.  It is also
 static: results are computed offline and cannot be explored interactively.
 
 \subsection{Fractal basin boundaries}
@@ -431,7 +472,12 @@ Stone \& Leigh~\cite{stone2019} gave a closed-form statistical solution to the n
 three-body problem under an ergodicity assumption: the predicted outcome distribution agrees well
 with numerical ensembles for ``resonant'' encounters (those involving multiple close triple
 approaches) but not for the non-resonant (``prompt'') fraction, which escapes without full ergodic
-mixing.
+mixing.  Valtonen et al.~\cite{valtonen2005} test the statistical escape theory against rotating
+systems; Manwadkar, Trani \& Leigh~\cite{manwadkar2020} characterise the chaotic phase through
+L\'{e}vy flights and the time spent in democratic configurations, and Manwadkar, Kol, Trani \&
+Leigh~\cite{manwadkar2021} test the flux-based theory of Kol~\cite{kol2021} on escape
+probabilities for unequal masses.  Orlov, Rubinov \& Shevchenko~\cite{orlov2010} measure the
+algebraic tail of the lifetime distribution of disrupting triples.
 
 Breen et al.~\cite{breen2020} trained a deep neural network to predict three-body trajectories at
 a fraction of the cost of direct integration, demonstrating that the IC space contains learnable
@@ -467,9 +513,14 @@ that decide three-body outcomes.
 Regularisation removes the collision singularity by a change of coordinates and of the time
 variable.  Kustaanheimo \& Stiefel~\cite{ks1965} regularised the two-body problem in three
 dimensions with a four-dimensional spinor transformation.  Aarseth \& Zare~\cite{aarseth1974}
-regularised two of the three pairs of the three-body problem, with respect to a reference body
-that must be re-chosen as the configuration changes, and Heggie~\cite{heggie1974} gave a global
-regularisation in which all three pairs are regularised simultaneously.  Chain regularisation
+built an eight-dimensional regularisation of the general three-body problem on Kustaanheimo--Stiefel
+regularisation: collisions of a reference body with each of the other two are regular, and the
+method stays well behaved while the third distance is not the smallest, which may require
+occasional transformations back to physical variables to re-label the bodies.  Heggie~\cite{heggie1974}
+extended their work to a global regularisation, a transformation independent of the
+configuration under which a collision between any pair is regular; simultaneous collisions of
+more than one pair and vanishing masses are excepted, and the same construction generalises to
+the N-body problem.  Chain regularisation
 (Mikkola \& Aarseth~\cite{mikkola1993}) and the algorithmic, logarithmic-Hamiltonian
 regularisation of Mikkola \& Tanikawa~\cite{mikkola1999} and Preto \& Tremaine~\cite{preto1999}
 extend these ideas to more bodies and to explicit schemes.  Aarseth's
@@ -486,6 +537,7 @@ and with step control held fixed it reduced that sensitivity tenfold; this, rath
 energy error alone, is why it is the default.
 
 \subsection{Numerical reliability}
+\label{sec:reliability}
 
 Li \& Liao~\cite{li2017} demonstrated that reliable long-time trajectories in the chaotic
 three-body problem need extended-precision arithmetic (``clean numerical simulation'').  Boekholt
@@ -561,8 +613,11 @@ islands of regularity expected in the IC maps, and the tabulated orbits give an 
 validation set: a correct integrator and word reader should reproduce the published words and
 sequences.
 
-We have not found prior dynamical-systems work that uses the Pythagorean-triple family as an
-indexing scheme for three-body configurations.
+The family itself has been integrated before: Chitan, Myll\"{a}ri \& Haque~\cite{chitan2022} run
+all sixteen Pythagorean triangles with hypotenuse below 100, one trajectory each in the Newtonian
+case, as a test set for relativistic corrections.  We have not found prior dynamical-systems work
+that uses the Pythagorean-triple family as an indexing scheme for three-body configurations, or
+that maps the IC space around its members.
 
 % =========================================================
 \section{Validation Targets}
@@ -571,7 +626,9 @@ indexing scheme for three-body configurations.
 Several published solutions serve as exact or reference tests for an instrument of this kind:
 the Lagrange and Euler analytic solutions; the figure-eight~\cite{moore1993,chenciner2000}; the
 Burrau problem as solved by Szebehely \& Peters~\cite{szebehely1967}; the periodic-orbit
-catalogues above~\cite{suvakov2013,suvakov2014,threebodygallery,li2018,hristov2024}; and the
+catalogues above~\cite{suvakov2013,suvakov2014,threebodygallery,li2018,hristov2024}; the
+triple-collision points tabulated inside region $D$~\cite{tanikawa2021}; the lifetime grid of~\cite{boekholt2020}
+at accuracy $10^{-70}$; and the
 Agekyan--Anosova initial conditions~\cite{agekian1967,agekian1968b}, whose tabulated angular
 momenta follow directly from their stated ICs.  The tabulated energies in~\cite{agekian1967} do
 not follow from the paper's own energy formula; that discrepancy is recorded rather than resolved.
@@ -587,10 +644,12 @@ entropy structure.  The theoretical foundations in shape space, symbolic dynamic
 Lyapunov theory, and statistical mechanics are well developed.  The following gaps are identified.
 
 \paragraph{Coverage of the IC manifold.}
-All prior pixel-scale IC surveys are restricted to a 2-dimensional subspace of the
-8-dimensional symmetry-reduced IC manifold.  The Agekyan--Anosova tradition fixes equal masses
-and (near-)zero velocities; Trani et al.\ fix a hierarchical encounter geometry.  The four momentum
-dimensions and the two mass dimensions are absent from existing maps.
+Almost all prior pixel-scale IC surveys of the general problem lie on one 2-dimensional surface of
+the 8-dimensional symmetry-reduced IC manifold: equal masses at (near-)zero velocity.  The
+exceptions are few and narrow: first-symbol maps at non-zero angular momentum, a velocity slice
+searched for periodic orbits, a mass plane mapped for one orbit family, and scattering maps that
+fix a hierarchical geometry.  We have not found outcome or chaos maps that let the momentum and mass
+dimensions vary in general, or that move between such slices.
 
 \paragraph{Interactivity and zoom.}
 All prior IC maps were computed offline in batch.  We have not identified a tool that permits
@@ -611,13 +670,15 @@ Existing symbolic dynamics uses coarse regional codings, unsigned shape-sphere s
 not, to our knowledge, been reported as a dense per-pixel field.
 
 \paragraph{Variable-mass IC maps.}
-We have not found IC-map work that includes mass ratio as a free parameter or chart axis.  The
-effect of mass variation on basin topology, fractal dimension, and regular-island structure is not
-systematically documented in the literature we have reviewed.
+Mass ratios appear as a map axis only for the continuation of a periodic-orbit family, and unequal
+masses otherwise only as fixed parameters or in outcome statistics.  The effect of mass variation
+on basin topology, fractal dimension, and regular-island structure is not systematically
+documented in the literature we have reviewed.
 
 \paragraph{Structured family surveys.}
-We are not aware of a systematic survey of how three-body dynamics varies across the
-Burrau--Pythagorean family, or any other number-theoretically indexed family of configurations.
+The Pythagorean family has been integrated member by member, one trajectory each.  We are not
+aware of a systematic survey of how the IC structure around each member varies across the family,
+or across any other number-theoretically indexed family of configurations.
 
 \paragraph{Scope of the review.}
 This review is necessarily incomplete; the gaps identified are those apparent from the literature
@@ -794,11 +855,6 @@ Binary evolution in stellar dynamics.
 Heggie, D.\,C., \& Hut, P. (2003).
 \textit{The Gravitational Million-Body Problem}.
 Cambridge University Press.
-
-\bibitem{heinamaki1998}
-Heinäm\"{a}ki, P., Lehto, H.\,J., Valtonen, M.\,J., \& Chernin, A.\,D. (1998).
-Three-body dynamics: intermittent chaos with strange attractor.
-\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{298}, 790--800.
 
 \bibitem{hernandez2020}
 Hernandez, D.\,M., Hadden, S., \& Makino, J. (2020).
@@ -1024,6 +1080,77 @@ WebGPU specification.
 Yoshida, H. (1990).
 Construction of higher order symplectic integrators.
 \textit{Physics Letters A}, \textbf{150}(5--7), 262--268.
+
+\bibitem{anosova1969}
+Anosova, Zh.\,P. (1969).
+Investigation of the dynamics of triple systems by the Monte Carlo method.\ III. The case of components with different masses.
+\textit{Astrophysics}, \textbf{5}, 81--84.
+
+\bibitem{boekholt2021}
+Boekholt, T.\,C.\,N., Moerman, F., \& Portegies Zwart, S.\,F. (2021).
+Relativistic Pythagorean three-body problem.
+\textit{Physical Review D}, \textbf{104}, 083020.
+
+\bibitem{chitan2022}
+Chitan, A.\,S., Myll\"{a}ri, A., \& Haque, S. (2022).
+Relativistic effects on triple black holes: Burrau's problem revisited.
+\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{509}, 1919--1928.
+
+\bibitem{kol2021}
+Kol, B. (2021).
+Flux-based statistical prediction of three-body outcomes.
+\textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{133}, 17.
+
+\bibitem{lili2020}
+Li, X., Li, X., \& Liao, S. (2020).
+One family of 13315 stable periodic orbits of the non-hierarchical unequal-mass triple system.
+arXiv:2007.10184.
+
+\bibitem{manwadkar2020}
+Manwadkar, V., Trani, A.\,A., \& Leigh, N.\,W.\,C. (2020).
+Chaos and L\'{e}vy flights in the three-body problem.
+\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{497}, 3694--3712.
+
+\bibitem{manwadkar2021}
+Manwadkar, V., Kol, B., Trani, A.\,A., \& Leigh, N.\,W.\,C. (2021).
+Testing the flux-based statistical prediction of the three-body problem.
+\textit{Monthly Notices of the Royal Astronomical Society}.
+doi:10.1093/mnras/stab1689; arXiv:2101.03661.
+
+\bibitem{mikkola2007}
+Mikkola, S., \& Tanikawa, K. (2007).
+Correlation of macroscopic instability and Lyapunov times in the general three-body problem.
+\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{379}, L21--L24.
+
+\bibitem{orlov2010}
+Orlov, V.\,V., Rubinov, A.\,V., \& Shevchenko, I.\,I. (2010).
+The disruption of three-body gravitational systems: lifetime statistics.
+\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{408}, 1623--1627.
+
+\bibitem{parischewsky2023}
+Parischewsky, H.\,D., Trani, A.\,A., \& Leigh, N.\,W.\,C. (2023).
+Chaos in the vicinity of a singularity in the three-body problem: the equilateral triangle experiment in the zero angular momentum limit.
+\textit{SciPost Physics Core}, \textbf{6}, 016.
+
+\bibitem{tanikawa1995}
+Tanikawa, K., Umehara, H., \& Abe, H. (1995).
+A search for collision orbits in the free-fall three-body problem I. Numerical procedure.
+\textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{62}, 335--362.
+
+\bibitem{tanikawa2008}
+Tanikawa, K., \& Mikkola, S. (2008).
+A trial symbolic dynamics of the planar three-body problem.
+arXiv:0802.2465.
+
+\bibitem{tanikawa2021}
+Tanikawa, K., \& Mikkola, S. (2021).
+Numerical confirmation of the existence of triple collision orbits inside the domain of the free-fall three-body problem.
+\textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{133}, 52.
+
+\bibitem{valtonen2005}
+Valtonen, M., Myll\"{a}ri, A., Orlov, V., \& Rubinov, A. (2005).
+Dynamics of rotating triple systems: statistical escape theory versus numerical simulations.
+\textit{Monthly Notices of the Royal Astronomical Society}, \textbf{364}, 91--98.
 
 \end{thebibliography}
 

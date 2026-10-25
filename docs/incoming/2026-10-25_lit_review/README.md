@@ -6,8 +6,8 @@ The human's literature review, as a record (R-1, R-159). It is not authority. It
 | Path | sha256 | What it is |
 |---|---|---|
 | `lit_review.tex` | `8a6e9970de30422bb4b7c7fdb397f0882b14320bd3025c2076302165e6d4675c` | "Related Work — Principia: A Real-Time WebGPU Explorer of the Three-Body Initial-Condition Manifold", M. Doherty, March 2026. Byte for byte as delivered on 25 Oct 2026; only the extension was changed, from `.txt` to `.tex` |
-| `lit_review_2026-10.tex` | `a4c20e22a1ee16bc041de53cf476596caf05c4e7b3275d3034badf6fc9998cd7` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
-| `lit_review_2026-10.pdf` | `35634a424535e1a936c738d06e373b80651ae0460ef144c34c944af8f4a315ca` | The revision, typeset |
+| `lit_review_2026-10.tex` | `19e20554fb815806022b6a8c2839ac233677a9e75b4a7d37f978b32044ea1f8d` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
+| `lit_review_2026-10.pdf` | `7bc6ba4f023cf982093efa7b8d9d4cafa5d1c21a7704a7baf5c6664971f04556` | The revision, typeset |
 
 What the revision changed:
 
@@ -32,5 +32,23 @@ test, and the tenfold drop in sync-cadence sensitivity under Heggie.
 
 Citations corrected against Crossref after a second check: Li & Liao is *New Astron.* 70, 22 (2019); Trani et al. is
 *A&A* 689, A24; Heinämäki et al. on Kolmogorov–Sinai entropy is 1999, under its own title; Lehto et al. runs 965–970.
-One citation from the original is still unverified: Heinämäki et al. 1998 (*MNRAS* 298, 790), which a search could
-not locate.
+Second revision, 25 Oct 2026, after the replication papers (`../2026-10-25_replication/papers/`) were in hand, with
+each new description checked against the paper itself:
+
+- **Mapping section:** two new subsections. "Converged maps and the structure of the free-fall plane" covers Boekholt
+  et al. 2020, the Tanikawa–Mikkola collision-curve and symbol work (1995, 2008, 2015, 2021), Mikkola & Tanikawa 2007,
+  and Parischewsky et al. 2023. "Beyond the zero-velocity, equal-mass surface" covers Tanikawa & Mikkola 2008 at
+  non-zero angular momentum, Šuvakov & Dmitrašinović's velocity slice, Li, Li & Liao's mass plane, Anosova 1969 and
+  Valtonen et al. 2005.
+- **Burrau section:** Aarseth et al. 1994 is now described from the paper (100 points on each of six circles, time
+  reversal, a regular region around each standard position). Boekholt, Moerman & Portegies Zwart 2021 and Chitan,
+  Mylläri & Haque 2022 are added.
+- **Regularisation:** Aarseth & Zare and Heggie are now described from their own abstracts.
+- **Statistics:** Valtonen et al. 2005, Manwadkar et al. 2020 and 2021, Kol 2021 and Orlov et al. 2010 are added.
+- **Gap claims softened.** "The momentum and mass dimensions are absent from existing maps" became "few and narrow",
+  with the exceptions named. The structured-family gap now acknowledges that Chitan et al. integrated the sixteen
+  Pythagorean triangles, one trajectory each. The Pythagorean-indexing claim stands, narrowed to indexing and to
+  mapping around each member.
+- **Removed:** the Heinämäki et al. 1998 citation (*MNRAS* 298, 790) and its strange-attractor dimension
+  D ≈ 2.1. The paper could not be found; the nearest match is an extended abstract by Chernin (Kluwer, 1999) that
+  states no dimension.
