@@ -22,8 +22,8 @@ which its About page cites. In this folder:
   source, the syzygy count, symmetry, and closure for the published and the refined initial conditions.
 - `extract_ics.py`: extracts one row per orbit from the site's per-orbit files into `threebodyorbits_ics.csv`: the
   catalogue fields plus both sets of initial conditions as full f64 (`repr`), `pub_*` as the source paper published
-  them and `ref_*` as the site re-converged them. E and L are recomputed from `ref_*` as a check on the layout. **The CSV
-  is not committed** (see "Data terms"); it is regenerated locally.
+  them and `ref_*` as the site re-converged them. E and L are recomputed from `ref_*` as a check on the layout.
+- `threebodyorbits_ics.csv`: that CSV, committed (see "Data terms"). Regenerating it reproduces it byte for byte.
 
 What it covers that nothing else in the suite does:
 
@@ -74,12 +74,13 @@ The full double-double values are not available; the operator would have to re-r
   Liao 2017 that come from Li, Jing & Liao 2018. Every figure cites from there.
 - **The site's About page licenses more than the email named**: "Everything the atlas computed, the catalogue of
   measurements, the stored splines, the thumbnails and the map layout" under CC BY 4.0, with Reusser's initial
-  conditions under MIT. Committing the extracted CSV is therefore allowed; whether to is the human's call.
-- **Only `catalogue.json` is committed**, the one file the grant names. The human, 26 Oct 2026: "guess maybe just use
-  the ones explicitly been given permission to". The extracted initial conditions (the CSV) and the operator's
-  `atlas-params.json` (below) are held outside the repo until the operator confirms the grant covers them. Their
-  first 2,386 sets of initial conditions come from Ricky Reusser's MIT-licensed notebook and the rest from the papers.
-  Until then, the tests that integrate initial conditions run from a locally regenerated CSV and commit no data.
+  conditions under MIT.
+- **So the extracted CSV is committed**, under those terms. The human, 26 Oct 2026: "put in repo". Its first 2,386
+  sets of initial conditions come from Ricky Reusser's MIT-licensed notebook, whose notice is in `CITATIONS.md`, and the
+  rest from the papers; every use credits as `CITATIONS.md` says.
+- **`atlas-params.json` (below) stays outside the repo.** The operator sent it rather than published it, and the About
+  page does not name it. (Earlier, only `catalogue.json` was committed: the human, 26 Oct 2026, "guess maybe just use
+  the ones explicitly been given permission to". The About page is that permission for the CSV.)
 
 **`atlas-params.json` (attached to the operator's reply; not committed).** One entry per orbit, keyed as the
 catalogue, all 3,943 present. Measured on receipt:
@@ -95,8 +96,8 @@ catalogue, all 3,943 present. Measured on receipt:
   Liao). On the other 99, all with an empty `source`, it differs from the published values by 2e-7 to 3e-6 and agrees
   with the refined `ref_*` instead: a high-precision value from somewhere else, possibly the site's own refinement.
   Until traced, those 99 are closure tests only, like the site's own orbits.
-- Data terms: it came attached to the reply granting CC BY 4.0 but is not the file the grant names, so it is held
-  outside the repo with the CSV until confirmed.
+- Data terms: it came attached to the reply granting CC BY 4.0 but is neither the file the grant names nor published
+  on the site, so it is held outside the repo.
 
 ### 2. The Belgrade three-body gallery (three-body.ipb.ac.rs) and its free-group words
 
