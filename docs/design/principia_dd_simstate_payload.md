@@ -124,7 +124,8 @@ at f32 `SimStateFTLE` is still **144 B** = 18×8 and `SimStateBase` **96 B** = 1
 the next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104. The other precision rows keep their declared 4 B
 `_tail` (f64 272 B and 176 B; DoubleF64 520 B and 328 B, below): there a new u32 fills the tail at no cost, and a new
 `Real` costs 8 B at f64 and 16 B at DoubleF64. A new member's recheck is therefore made per precision row. The
-schema version changes with the ledger, as R-36 makes it (§2).
+schema version changes with the ledger, as R-36 makes it (§2). These are R-397's figures, before R-603's and R-605's
+two u32s; the current widths are the next recheck's, below (perf review 5662126729 of PR #293, the sweep).
 
 **The recheck, on R-603's and R-605's two u32s (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1,
 applied per R-369).** `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
@@ -647,7 +648,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 > **Recomputed at 144 / 96 B (pending change 9).** The closure field (§1) moved `SimStateFTLE` 136 → 144
 > (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte aligned, so nothing repacks. The
-> figures below are at the new widths; at the old widths they were 1.261 / 0.863 / 0.431 / 5.043 / 1.725 GB.
+> figures below were at the new widths (since recomputed at 152 / 104 B, the next note; perf review 5662126729 of PR #293, the sweep); at the old widths they were 1.261 / 0.863 / 0.431 / 5.043 / 1.725 GB.
 
 > **Recomputed at 152 / 104 B (R-603, R-605; perf review 5661999637 of PR #293, P1).** R-603's and R-605's two u32s (§1) moved
 > `SimStateFTLE` 144 → 152 (**+5.6%**) and `SimStateBase` 96 → 104 (**+8.3%**), still 8-byte aligned. The figures below

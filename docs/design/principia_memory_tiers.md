@@ -243,10 +243,12 @@ is capped for it.
 **Live:** pull **render_scale / E / refinement-floor** down the sub-rungs under motion; restore at rest. If **locked to native**, render_scale is held at 1.0 and adaptation runs on E and the refinement floor only. Never exceed the memory ceiling (the hard clamp) — live adjustment operates *within* the boot-selected memory tier.
 
 **Examples** (totals at the stated display; memory is rarely the binding constraint above the low end — compute usually is):
-- **16 GB M-series Pro, 1440p:** boots **High** (~2.4 GB) comfortably, reaches **Ultra** (~4.8 GB, provisional); compute-bound not memory-bound — drops E under motion.
-- **8 GB discrete, 1080p:** **High** (~1.4 GB) or **Ultra** (~2.7 GB, provisional) with wide memory margin; frame budget decides.
-- **2 GB integrated laptop, 4K panel:** memory-tight — **Low** (0.36 GB, renders at 0.5×→1920×1080) is the safe boot; **Medium** (1.65 GB with FTLE) may fit memory but likely fails the compute probe (FTLE's 2× trajectories on a weak iGPU), so auto holds Low.
+- **16 GB M-series Pro, 1440p:** boots **High** (~2.6 GB) comfortably, reaches **Ultra** (~5.0 GB, provisional); compute-bound not memory-bound — drops E under motion.
+- **8 GB discrete, 1080p:** **High** (~1.4 GB) or **Ultra** (~2.8 GB, provisional) with wide memory margin; frame budget decides.
+- **2 GB integrated laptop, 4K panel:** memory-tight — **Low** (0.37 GB, renders at 0.5×→1920×1080) is the safe boot; **Medium** (1.72 GB with FTLE) may fit memory but likely fails the compute probe (FTLE's 2× trajectories on a weak iGPU), so auto holds Low.
 - **Phone (~1 GB), 1080p:** **Potato** (0.04 GB, 480×270 upscaled) or **Low** (0.09 GB) — both FTLE-off, which is what keeps them affordable on a phone GPU (the gating is doing compute work here, not memory).
+
+*Was, at the 144 / 96 B widths (perf review 5662126729 of PR #293, the sweep, applied per R-369): High ~2.4 GB and Ultra ~4.8 GB at 1440p; Ultra ~2.7 GB at 1080p; Low 0.36 GB and Medium 1.65 GB at 4K. The figures follow §4's table; High at 1080p and the phone's Potato and Low are unchanged at this rounding.*
 
 ---
 
