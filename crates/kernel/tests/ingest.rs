@@ -780,7 +780,7 @@ fn check_clamp_growth(z: [f64; 8], factor: f64) {
         for col in cols {
             let n = col.iter().map(|c| c * c).sum::<f64>().sqrt();
             assert!(
-                k * n >= 1.0 - 1e-6,
+                k * n >= 1.0 - 1e-12,
                 "κ = {k:e} is below 1/‖column‖ = {:e}",
                 1.0 / n
             );
