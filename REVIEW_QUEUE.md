@@ -107,3 +107,38 @@ later." For the human: yes, whether there is a Frame stage at all.*
     on their difference; (ii) the median, over the starts, of each start's measured ratio divided by its predicted
     ratio, against 1, the tolerance on its distance from 1.
   - **Applied meanwhile:** none; REQ-VAL-199's `rq: RQ-575` covers this rule too.
+
+## RQ-581: The Cartesian drift latches `dE_max` and `dLz_max` are linear binary16, whose floor sits above the f64 path's drift *(physics; found by physics review 5662346996 of PR #293, a non-blocking note on F1; payload §1, §2; REQ-PAY-012, REQ-PAY-041, REQ-PAY-044, REQ-TOOL-023; context: none in this PR)*
+
+*Found by physics review 5662346996 of PR #293, outside its diff. For the human: yes (physics: the encoding sets what
+the drift view and the drift fields can show).*
+
+- **File, section:**
+  - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct", the field:
+    "`packed_b : u32,               // dE_max:f16[low] | dLz_max:f16[high]`".
+  - The same file, § "Why closure is here, at this width, unconditionally", "**Why f32 and not f16.**": "f16 cannot
+    hold that linearly — its smallest subnormal is 6.0e-8 with ~1 digit, and a closure of 1e-9 **flushes to zero**,
+    making every periodic orbit indistinguishable from a merely quiet region. … because it does not truncate the **f64
+    CPU path**, where closure genuinely reaches ~1e-16."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed
+    wrapper": "the regularised energy stays at round-off (prin-rs `HgOut::drift` against `drift_reg`)".
+  - The same payload file, the precision rule: "**f16, safe — but they are MONOTONE LATCHES** … `dE_max = max(dE_max,
+    |ΔE|)`, `dLz_max = max(dLz_max, |ΔLz|)` … **threshold/suspect decisions must use the live f32 measurement, never
+    the unpacked f16 latch** (the f16 latch is for display, not for control flow)."
+- **The question:** on the f64 CPU path (and wherever a good integrator holds the Cartesian drift near round-off), a
+  drift below about 6e-8 stores as zero or with about one digit, so quiet runs and mildly drifting ones read alike in
+  the stored latches. The precision rule keeps control flow on the live value, so no decision is wrong; what is lost
+  is what the stored latch, and anything that reads it at rest, can show. Is linear binary16 the right encoding for
+  `dE_max` and `dLz_max`?
+- **Options seen:**
+  - (a) Keep linear binary16, display only, as the precision rule has it, and state its floor where the latches are
+    shown (the field views, REQ-TOOL-160's log floor).
+  - (b) A log-encoded 16-bit form in the same bits, so `packed_b` keeps its size; the field views and REQ-TOOL-023's
+    round-trip change with it.
+  - (c) The latches follow `Real` (f32 at f32, f64 at f64), a width change with its own REQ-PAY-009 recheck at every
+    precision row.
+  - (d) The same encoding as `dE_reg`'s halves, which TASK-M3-41 chooses against REQ-INT-106's measured drift
+    (REQ-PAY-111; physics review 5662346996 of PR #293, F1).
+- **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
+- **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
+  carries it yet.
