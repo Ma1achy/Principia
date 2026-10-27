@@ -1,0 +1,6 @@
+# Fits to fig4_1_region_boundaries.csv. These are OUR descriptions of the drawn curves; the book gives no definition.
+# dist_b = distance of each boundary pixel from body b at (1,0).
+boundary,n_px,x_min,x_max,dist_b_mean,dist_b_sd,free_circle_fit,line_fit
+L/M,64,0.019,0.491,1.3852,0.0023,"centre (0.930, 0.103) r 1.2619 rms 0.0024",
+H boundary,117,0.446,0.890,0.5352,0.0101,"centre (0.965, 0.020) r 0.4984 rms 0.0100",
+M/A,104,0.019,0.441,,,,"y = 0.4246 -0.5026 x, rms 0.0028"
