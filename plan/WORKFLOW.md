@@ -21,6 +21,8 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
 - A GUI-track task's PR description (R-390; TASK-M6-24 to TASK-M6-29, TASK-M6-30 and TASK-M6-31, R-406 and R-409,
   TASK-M6-32 to TASK-M6-36, R-450 to R-453, TASK-M6-37, R-451 B11, TASK-M6-38 to TASK-M6-44, R-457 to R-463, and TASK-M6-45, R-466) also has a "What to try" section for the human: the clicks and keys that show what changed, on
   `cargo run -p gui --features mock`.
+- So does the PR of each of M8's GUI-track tasks (R-627: TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24, and TASK-M8-86 and TASK-M8-96, the v1 web skeleton and its measurements).
+  A wiring task's PR (TASK-M8-88 to TASK-M8-95) shows its track task's acceptance lines re-run on the real engine.
 - A task that is to be split is split **in the plan first**: new task files and manifest entries, `plan/check_plan.py`
   green, then the work. Whether to split is judgement, not a line count (§ "Task files", R-369).
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
@@ -177,6 +179,10 @@ R-390's GUI track (TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from
 TASK-M6-36 from R-450 to R-453, TASK-M6-37 from R-451 B11, TASK-M6-38 to TASK-M6-44 from R-457 to R-463, and TASK-M6-45 from R-466) is the exception:
 it runs now, in parallel with the physics and renderer chain, and each of its tasks merges once its reviews pass and CI
 is green, without waiting for the gates of M1 to M5.
+R-627 (27 Oct 2026) extends the exception to M8's GUI-track tasks (TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24, and TASK-M8-86 and TASK-M8-96, the v1
+web skeleton and its measurements): each merges once its reviews pass and CI is green without waiting for the gates of M3 to M6; the gates of M2
+and M7, which R-627 does not name, by R-415's test above, recorded in the PR. Their wiring tasks, TASK-M8-88 to
+TASK-M8-95, run on the real engine and wait for the gates as any other task does.
 
 ## Escalation
 

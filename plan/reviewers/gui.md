@@ -271,3 +271,8 @@ For TASK-M6-24 to TASK-M6-29, and every later GUI PR that runs on the mock.
 - [ ] The conformance suite passes on both engines, and a contract change re-runs it for both.
 - [ ] The PR description has a "What to try" section the human can follow on `cargo run -p gui --features mock`, and
   every look, feel or behaviour the sources leave open is recorded as "applied per R-369".
+- [ ] R-627 extends this section to M8's track tasks (TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24, and TASK-M8-86 and TASK-M8-96, the v1 web skeleton and its measurements), which run on the
+  mock as R-390's do. For their wiring tasks, TASK-M8-88 to TASK-M8-95, the reviewer has the track task's screenshots
+  re-captured on the real engine and finds each screen as it was on the mock, the "mock engine" tag gone, and the
+  conformance suite passing on both engines with every contract field the track task added among its cases.
+  `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"

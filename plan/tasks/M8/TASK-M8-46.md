@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-227, REQ-GUI-230
-- **Depends on:** TASK-M8-05, TASK-M8-22, TASK-M2-34, TASK-M6-46, TASK-M6-47
+- **Depends on:** TASK-M8-87, TASK-M8-22, TASK-M2-34, TASK-M6-46, TASK-M6-47
 - **Needs (earlier milestones):** REQ-COL-108, REQ-COL-109, REQ-GUI-225, REQ-GUI-226, REQ-GUI-229
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -44,3 +44,4 @@ On the real engine, View › Debug view draws REQ-COL-109's styles from the engi
   TASK-M8-46 depends on TASK-M8-22 (R-467 D13; code review 5585240188 of PR #253, F4, applied per R-369).
 - **TASK-M8-32 depends on this task** for Fit in present mode (REQ-GUI-100).
 - **R-470 (20 Oct 2026):** the real engine's View › Debug view selects the baked debug variant (REQ-COL-109's note, R-41); scope unchanged.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M8-22, TASK-M2-34, TASK-M6-46, TASK-M6-47".

@@ -408,9 +408,25 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   the graph editor, the badge and Styled / Plain export, provenance and round trip, degrade while moving and the print
   stage's budget (TASK-M8-68 to TASK-M8-73). `settle_ms`, the print share and the thumbnail budget are confirmed at
   this gate.
+- **M8's GUI track on the mock engine (R-627):** TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24 are built on the mock as R-390's track is, TASK-M8-05
+  first, merging without waiting for the gates of M3 to M6; each has a small wiring task, TASK-M8-88 to TASK-M8-95,
+  that wires it to the real engine under the conformance suite. TASK-M8-87 is split from TASK-M8-05: the figure past
+  `[0,1]²`, its axis extension types and area statistics, on the real engine. TASK-M8-01 is re-planned on the contract
+  that exists. The physics-coupled M8 work stays behind the engine chain.
+- **The v1 web skeleton (R-627; TASK-M8-86, measured by TASK-M8-96):** the egui app and the mock engine in wasm on
+  WebGPU, deployed to the GitHub Pages site by hand only; TASK-M8-96 measures COOP/COEP and SharedArrayBuffer, wasm
+  threads, text input, the clipboard and the frame rate there against RQ-550 and RQ-551. TASK-M8-37 builds v1 web
+  proper on the skeleton.
+- **Put to the human at this gate (R-627; REQ-GUI-401):** TASK-M8-96's cells no script can drive, in each Safari
+  layout run an IME composition and a paste from another application, on the deployed site. The human records "works"
+  or "does not" for each, and the orchestrator enters each in systems_architecture §3; the gate does not pass until each
+  is recorded (qa review 5665189777 of R-627's port, F3, applied per R-369; counted per Safari layout run by gui review
+  5665475922, G1, applied per R-369). *Was:* "TASK-M8-96's two cells no script can drive, an IME composition and a
+  paste from another application, both in Safari, on the deployed site. The human records "works" or "does not" for
+  each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 457 requirements** (and every earlier gate still green):
+**Exit gate — 470 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
@@ -420,9 +436,9 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - REF (1): REQ-REF-054
 - RENDER (8): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116…117, REQ-RENDER-119
 - COL (7): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135, REQ-COL-160…161
-- GUI (255): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…400
-- TOOL (82): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218
+- GUI (264): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409
+- TOOL (83): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218, REQ-TOOL-220
 - VAL (23): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200
-- PERF (28): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114
-- SYS (30): REQ-SYS-039…062, REQ-SYS-086…091
+- PERF (29): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115
+- SYS (32): REQ-SYS-039…062, REQ-SYS-086…093
 <!-- /gate:M8 -->

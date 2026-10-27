@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-108
-- **Depends on:** TASK-M8-05, TASK-M8-26, TASK-M8-03, TASK-M6-28
+- **Depends on:** TASK-M8-87, TASK-M8-26, TASK-M8-03, TASK-M6-28
 - **Needs (earlier milestones):** REQ-TOOL-002, REQ-TOOL-008, REQ-GUI-012
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -27,3 +27,4 @@ The console is the footer opened: severity, time, source and message columns; fi
 
 ## Notes
 - R-390: TASK-M6-28 builds the console on the mock engine and closes REQ-GUI-126; this task depends on it, re-runs REQ-GUI-126's acceptance on the real engine's telemetry stream and keeps REQ-TOOL-108.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M8-26, TASK-M8-03, TASK-M6-28".

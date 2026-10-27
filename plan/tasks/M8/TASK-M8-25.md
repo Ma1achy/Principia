@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-045, REQ-GUI-046, REQ-PERF-074, REQ-GUI-044, REQ-PERF-092
-- **Depends on:** TASK-M8-24
+- **Depends on:** TASK-M8-95
 - **Needs (earlier milestones):** REQ-PERF-025, REQ-PERF-031, REQ-PERF-028, REQ-PERF-040, REQ-PERF-053, REQ-TOOL-001
 - **Reviewers:** code, qa, gui, perf
 - **Pitfalls:** none
@@ -37,3 +37,4 @@ An attempted quality setting change is checked and answered with one of three no
 - RQ-100 ruled: R-113 — REQ-PERF-074's memory-fit margin half is REQ-PERF-093 (M5, TASK-M5-10); this task keeps the fps thresholds.
 - RQ-105 ruled: R-129 — the target-utilisation ceiling lives in the Run window; with no artboard it is checked by presence, not layout.
 - Closes, for gaps the corpus leaves open: REQ-PERF-092 (R-71 calibration) (classification accepted by R-132).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-24 by TASK-M8-95 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-24".

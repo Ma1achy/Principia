@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378, REQ-GUI-399
-- **Depends on:** TASK-M8-31, TASK-M8-05, TASK-M6-43, TASK-M8-75
+- **Depends on:** TASK-M8-31, TASK-M8-87, TASK-M6-43, TASK-M8-75
 - **Needs (earlier milestones):** REQ-GUI-213
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -64,3 +64,4 @@ Windows › Sequence… docks the Sequence window along the bottom of Explore, b
 - **Fix round 19 of PR #286 (qa review 5634897299, Q2, Q4, Q5, Q7; applied per R-369):** the segment label is the frames the segment owns (principia_sequence.md §3.3), 6 and 5 on the fixture, with off-by-one controls, and a link-id cut-mark arm (REQ-GUI-374); a file naming a link the build lacks (REQ-GUI-377); the console docking over the window, Esc leaving it open, the big scopes' Tab order and the splitter's restore and reset, each with a control (REQ-GUI-372); the drag and fps-merge arms pinned to §3.7's "at 12 fps keyframes 2 and 3 share frame 7" with keyframes at 0, 0.6 s, 0.62 s and 1.5 s (REQ-GUI-373).
 - **Fix round 20 of PR #286 (gui review 5634976775, G2; qa review 5634992669, R1; applied per R-369):** sequence_window's console arm is checked at the console's minimum height (header bar and three log rows), a height between and the maximised height: it docks from the bottom and is drawn above the Sequence wherever they overlap, covering it when maximised (R-463, §G12) (REQ-GUI-372).
 - **Fix round 22 of PR #286 (qa review 5635045004, O3; applied per R-369):** sequence_window gains the controls "a console that pushes the Sequence up" and "a maximised console that leaves part of the Sequence visible" (REQ-GUI-372).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-31, TASK-M8-05, TASK-M6-43, TASK-M8-75".

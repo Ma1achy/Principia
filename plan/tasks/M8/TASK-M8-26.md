@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-092, REQ-TOOL-089, REQ-TOOL-090, REQ-TOOL-088
-- **Depends on:** TASK-M8-05, TASK-M5-24
+- **Depends on:** TASK-M8-87, TASK-M5-24
 - **Needs (earlier milestones):** REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-050, REQ-TOOL-052, REQ-TOOL-057, REQ-SCHED-044, REQ-PERF-050
 - **Reviewers:** code, qa, gui, perf
 - **Pitfalls:** none
@@ -32,3 +32,4 @@ The calibration record carries every field telemetry § "Collect everything rele
 
 ## Notes
 - RQ-105 ruled: R-129 — passive logging is a Profiler switch with its indicator in the footer; with no artboard both are checked by presence, not layout.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M5-24".
