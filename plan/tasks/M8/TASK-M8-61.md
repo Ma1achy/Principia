@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-324, REQ-GUI-325, REQ-GUI-326, REQ-GUI-333
-- **Depends on:** TASK-M8-58, TASK-M8-11, TASK-M8-13
+- **Depends on:** TASK-M8-58, TASK-M8-11, TASK-M8-91
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -44,3 +44,4 @@ R-541's placing of the trace, G1 to G4 and G9 (Listen's half is TASK-M8-64's): e
   assert that the Inspector shows "listen". That qa file's only commits are qa's (1f3f8462, d6dd8ada), so its change
   is an `M` line forced by R-556 (RQ-466 (a)) under R-290, made by qa, listed in the PR with its reason.
 - **PR #267's second review round (applied per R-369):** REQ-GUI-325's acceptance line gains the ? sheet and text-field controls (gui review 5595467390, H3) and REQ-GUI-326's names + keep, sphere / unwrapped and turn (H4); with TASK-M8-13 no longer depending on TASK-M8-12 (code review 5595481919, F5), this task's ancestors reach none of TASK-M8-12, -59 and -60. *Was:* "cargo test -p gui trace_keys: with the focus in the Figure, in each mode, T, ⇧T and Y toggle their Overlays ▾ › Trace fields (one SetField each), Space keeps and K locks; each is listed on the ? sheet; none acts while a text field is typed in or with the focus outside the Figure; controls: K keeping, or a key acting outside the Figure, each fail (REQ-GUI-325)." and "cargo xtask screenshot 01_main (trajectory_panel: at rest, Trace expanded) and cargo test -p gui trajectory_tabs (R-541 G10 Tabs, its trace half): the panel's order and its Trace and Numbers sections' rows are §G2's; switching tabs switches the trace and the previews together; the collapsed Trace row's switch sets T's field on the under-cursor tab and the kept trace's own visible field on a kept tab, one SetField each; Tab and Enter reach, in §G2's order, the tabs, the two views, the sections' rows and, expanded, the Trace section's controls (show, colour and swatch, ramp, width, time ticks and labels, arrows, the marker chips, the icon set), the playhead, unpin, Open full viewer… and IC Inspector…, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: the previews not following the tab, the kept tab's switch setting T's field, and a control unreachable or out of order, each fail (REQ-GUI-326)."
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-13 by TASK-M8-91 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-58, TASK-M8-11, TASK-M8-13".

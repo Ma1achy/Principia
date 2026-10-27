@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-057, REQ-CHART-083
-- **Depends on:** TASK-M8-05, TASK-M2-28
+- **Depends on:** TASK-M8-87, TASK-M2-28
 - **Needs (earlier milestones):** REQ-CHART-002
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -63,3 +63,4 @@ the pairs whose fate a rounding-level difference in the decode flips, a signed c
   on it.
 - A statistic measured under one hemisphere says so, beside R-544 (R-544 item 7). None in the corpus was (R-544's
   "Results measured under one hemisphere").
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M2-28".

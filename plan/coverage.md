@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 120 |
 | COL | 160 |
-| GUI | 374 |
-| TOOL | 217 |
+| GUI | 384 |
+| TOOL | 218 |
 | VAL | 199 |
-| PERF | 112 |
-| SYS | 91 |
-| **total** | **1896** |
+| PERF | 115 |
+| SYS | 93 |
+| **total** | **1912** |
 
-Of these: 165 calibration, 170 definition, 1561 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -37,12 +37,12 @@ Of these: 165 calibration, 170 definition, 1561 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 179 |
 | M6 | 223 |
-| M7 | 259 |
-| M8 | 455 |
+| M7 | 260 |
+| M8 | 470 |
 
 ## Sections
 
-1591 sections in 60 files: 1281 yield at least one requirement; 310 yield none and are listed below with the reason.
+1595 sections in 60 files: 1285 yield at least one requirement; 310 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |

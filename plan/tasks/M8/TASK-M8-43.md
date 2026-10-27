@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-163, REQ-GUI-164
-- **Depends on:** TASK-M8-24, TASK-M8-28, TASK-M4-08
+- **Depends on:** TASK-M8-95, TASK-M8-28, TASK-M4-08
 - **Needs (earlier milestones):** REQ-SCHED-097, REQ-TOOL-141
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -42,3 +42,4 @@ off). Neither has an artboard, so both are checked by presence only (R-129).
 ## Notes
 - R-303 (closes RQ-177): in the browser build the Run window's control is shown disabled, with a note that the browser chooses the mode.
 - TASK-M8-42's screen sweep, which checks every schema field is exposed, depends on this task.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-24 by TASK-M8-95 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-24, TASK-M8-28, TASK-M4-08".

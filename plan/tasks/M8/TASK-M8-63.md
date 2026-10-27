@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-330, REQ-GUI-331, REQ-GUI-332
-- **Depends on:** TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22
+- **Depends on:** TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-90, TASK-M8-22
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -35,3 +35,4 @@ Listen in the bottom band and the legend, R-541 G7 and G8: with sound on, an eve
 - **Split (code review 5595371779 of PR #267, F2; the orchestrator's decision, applied per R-369):** this task follows TASK-M8-64 (the panel's Listen) and TASK-M8-65 (`Listen…`, which the expanded strip opens). REQ-GUI-330 gains the strip's keyboard reach and RQ-463 (a)'s and RQ-446 (a)'s controls (gui review 5595359543 of PR #267, G2, G4). *Was:* Depends on "TASK-M8-61, TASK-M8-60, TASK-M8-07, TASK-M8-22"; the REQ-GUI-330 acceptance line "cargo test -p gui band_height (R-541 G10 Band height): turning ♪ on changes no pixel of the view's size; expanding the strip shrinks it by exactly the band's growth, and collapsing restores it; while expanded the compass's buttons are out of the keyboard tree and the Legend's column shows the spectrum; control: the strip pushing the view on sound-on fails (REQ-GUI-330)."
 - **R-569 (21 Oct 2026):** while the trace is drawn dotted, paused at `t = 0`, the legend's trace block gains the key line "Dotted: paused at t = 0, not yet played", its line drawn dotted as the figure draws it (REQ-GUI-332; R-616, ruling RQ-533: the words' text, not the demos' longer one, as applied meanwhile). The dotted line itself is TASK-M8-58's (REQ-GUI-355), which this task reaches through its dependencies.
 - **R-569's key line (PR #278's fix round 1, gui review 5624167760, G1, applied per R-369):** the deliverables and the REQ-GUI-332 acceptance line follow its verify, with the `trace_block_dotted` arm and its control. The full key's line is TASK-M8-62's (REQ-GUI-328). *Was (deliverables):* "Tests `band_height` and `spectrogram_shared_axis`; screenshot `06_legend` (trace_block)." *Was (the acceptance line):* "cargo xtask screenshot 06_legend (trace_block, sound on and off): the block sits after the stain's keys and before the debug key, its entries drawn as the figure draws them; no block while no trace is shown; control: a block shown with no trace, or one among the stain's keys, fails (REQ-GUI-332)."
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-07 by TASK-M8-90 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22".

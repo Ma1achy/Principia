@@ -6284,6 +6284,8 @@ Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries
 *Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).*
 *Amended in part by R-409 (ORDER item 3's compass: it has no orbit, and its Tilt and Slice buttons switch its mode as
 well as the slider touched).*
+*Extended by R-627 (27 Oct 2026; M8's GUI tasks join the track on the mock engine, each followed by a small task wiring
+it to the real engine; a v1 web skeleton on the mock, deployed to GitHub Pages by hand only).*
 *Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
 gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
 Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
@@ -26627,3 +26629,186 @@ differ only in the mass logit, so the control isolates what makes the masses con
 R-626 is in the "process" group of `plan/rule_groups.yaml`, with R-482.
 
 Changes REQ-CHART-074 (statement, verify, rq removed, rulings, source, note).
+
+## R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*
+
+*27 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0,
+`docs/contracts/principia_caching_contract.md` Part 6a, `docs/design/principia_systems_architecture.md` §3 (added
+paragraphs), `REVIEW_QUEUE.md` (RQ-550 and RQ-551, an added line each), `plan/HUMAN_SETUP.md` §5 and §6 (new),
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track (R-390)", `plan/MILESTONES.md` § "M8 — The dev GUI, tooling,
+v1 web and the release gates", `plan/reviewers/gui.md` §8, REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to
+REQ-GUI-409 and REQ-PERF-115 (reqio, new), twenty-three requirements' notes (reqio), TASK-M8-86 to TASK-M8-96 (new),
+TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and
+TASK-M8-24 (the track), the tasks that depended on them, TASK-M8-37, TASK-M6-22, TASK-M6-26 and TASK-M6-27 (notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human's message, 27 Oct 2026, verbatim:
+
+> Extending R-390 to M8. M8's GUI tasks may be built on the mock engine, as the M6 GUI track is: on spare slots, never
+> holding up the physics chain, merging without waiting for M3–M6 gates. Their dependence on M6-21 and M6-22 is
+> satisfied by the mock's events and quality tier; each gets a later small task wiring it to the real engine, covered
+> by the conformance suite. Re-plan M8-01 against the state contract that already exists in crates/engine/src/contract,
+> and start with M8-05 (Explore shell).
+>
+> Add a v1 web skeleton task now: the egui app and the mock engine compiled to wasm with WebGPU, deployed to the GitHub
+> Pages site, in a Web Worker on an OffscreenCanvas if it will run there. Measure, don't argue: COOP/COEP on Pages
+> (SharedArrayBuffer), text input and clipboard, and frame rate. Report the results against RQ-550 and RQ-551.
+>
+> Physics-coupled M8 work (Result runs, precision, payload readers) stays behind the engine chain.
+>
+> Separately, propose (don't apply) whether mock-engine GUI tasks can be implemented in cloud sessions on lavapipe, with
+> the Mac doing only their screenshot and Metal checks — what it would change in R-357 and what it would cost.
+
+The human's follow-up decision, 27 Oct 2026, verbatim, which he asked to be recorded "in the R-627 port or as its own
+ruling, quoting this message"; it is recorded here:
+
+> Yes: enable GitHub Pages with source "GitHub Actions". Conditions:
+> - Deploy only by workflow_dispatch (manual) for now, from main only, through the github-pages environment. No
+>   automatic deploy on merge until I say v1 is ready to be found.
+> - The skeleton tests the COOP/COEP workaround on Pages (a service worker such as coi-serviceworker) and reports
+>   whether SharedArrayBuffer and wasm threads actually work there, against RQ-550/551, alongside the other
+>   measurements.
+> - Nothing else about the repo's settings changes.
+> Record this as my decision in the R-627 port or as its own ruling, quoting this message.
+
+*Done (27 Oct 2026, by the orchestrator, on the human's decision above):* GitHub Pages is enabled with build type
+"workflow" (source "GitHub Actions"), at https://ma1achy.github.io/Principia/. The `github-pages` environment's
+deployment branch policy is custom, with one branch policy, `main`. No other setting of the repository was changed.
+`plan/HUMAN_SETUP.md` § "5. GitHub Pages (R-627): done" records it.
+
+*What it decides:*
+- **M8's GUI tasks join R-390's track.** A GUI task of M8 may be built on the mock engine, as TASK-M6-24 onward are:
+  on spare agent slots, never holding up the physics chain, and merging once its reviews pass and CI is green without
+  waiting for the gates of M3 to M6. Everything R-390 says of the track (its sources and silences, its placeholders,
+  "Contract fields", "What to try", the gui reviewer's screenshot comparison, the feedback rule) holds for these tasks
+  too. R-390's own words are unchanged.
+- **Their dependence on TASK-M6-21 and TASK-M6-22 is satisfied by the mock**: the mock's precision events stand in for
+  M6-21's, and its quality tier for M6-22's.
+- **Each such task gets a later, small task wiring it to the real engine**, covered by the contract conformance suite
+  (`crates/engine/src/contract/conformance.rs`), which runs on both engines.
+- **TASK-M8-01 is re-planned against the state contract that already exists in `crates/engine/src/contract`**, so it
+  builds on what is there and does not redefine it.
+- **TASK-M8-05, the Explore shell, goes first** among M8's GUI tasks.
+- **A v1 web skeleton task, now**: the egui app and the mock engine compiled to wasm on WebGPU, deployed to the GitHub
+  Pages site, in a Web Worker on an OffscreenCanvas if it will run there. It measures, and doesn't argue: COOP/COEP on
+  Pages (SharedArrayBuffer), with a service worker such as coi-serviceworker, and whether SharedArrayBuffer and wasm
+  threads actually work there; text input and the clipboard; and the frame rate. The results are reported against
+  RQ-550 and RQ-551, which stay open for the human.
+- **The Pages deploy is manual, for now**: only by `workflow_dispatch`, only from `main`, only through the
+  `github-pages` environment, with no automatic deploy on merge until the human says v1 is ready to be found. Nothing
+  else about the repository's settings changes.
+- **Physics-coupled M8 work stays behind the engine chain**: Result runs, precision, the payload readers, and anything
+  else that needs the real engine's output.
+- **The cloud question is a proposal, requested and not applied**: whether mock-engine GUI tasks can be implemented in
+  cloud sessions on lavapipe, with the Mac doing only their screenshot and Metal checks, what it would change in R-357
+  and what it would cost. A separate agent writes it; nothing of R-357 or `plan/OPERATIONS.md` changes here.
+
+*Flagged (the gates, applied as the words read):* the message says the M8 tasks merge "as the M6 GUI track is", which
+merges without waiting for the gates of M1 to M5 (R-390; `plan/WORKFLOW.md`), and also names the gates "M3–M6". The two
+differ on the gates of M2 and M7, which an M8 task would otherwise wait for. Applied: a track task of M8 merges without
+waiting for the gates of M3 to M6, as the words say; for the M2 and M7 gates it uses R-415's test (it may merge before
+them if its dependencies have merged and it relies on no value or behaviour those gates calibrate or could change),
+recorded in its PR. A mock-engine task relies on none, as R-390's track relied on none of M2's. Merge timing only;
+nothing built changes, so it is not asked.
+
+*Flagged (the M6-21 and M6-22 dependence):* no M8 GUI task depends on TASK-M6-21 or TASK-M6-22 directly; each reaches
+them through TASK-M8-01, the only M8 task that names them, and through TASK-M8-03 and TASK-M8-04 after it. Applied:
+the track tasks no longer depend on TASK-M8-01, TASK-M8-03 or TASK-M8-04, so they no longer wait for either; each wiring
+task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stands in for.
+
+*Applied per R-369 (the plan):*
+- **Which tasks are GUI tasks.** A track task's work is a screen, window or control in the gui crate that the mock can
+  drive with plausible data in the contract's shape, computing no physics and reading no payload. Eight are:
+  TASK-M8-05 (the Explore shell), TASK-M8-06 (the Manifold view panel), TASK-M8-07 (lock, compass and time controls),
+  TASK-M8-13 (keyboard scopes and keys), TASK-M8-19 (Stain mode's layout), TASK-M8-20 (the Stain canvas), TASK-M8-23
+  (the Display window) and TASK-M8-24 (the Run window). Every other M8 task stays where it is, behind the engine chain:
+  the contract and firewall tasks (TASK-M8-01 to TASK-M8-04, engine side, built on the real engine's events, quality and
+  frame loop), and every task whose substance is the real engine's output (integration, decode and encode, the
+  payload, the figure's own drawing, telemetry, export, measurement, sound, the browser engine, Result and precision).
+  The classification, with a reason for each borderline call, is in this port's PR description.
+- **A track task depends only on merged work, on R-390's track and on other M8 track tasks.** Every other dependency,
+  with the `needs` it carried, moves to its wiring task. TASK-M8-05 no longer depends on TASK-M8-03, TASK-M8-04,
+  TASK-M6-20 or TASK-M7-21 (to TASK-M8-88's or TASK-M8-87's), or on TASK-M2-32, TASK-M2-34 or TASK-M6-48 (to
+  TASK-M8-87's, with the split below); TASK-M8-13 on TASK-M8-03 or TASK-M8-11; TASK-M8-19 on TASK-M8-18, TASK-M7-14 or
+  TASK-M7-22; TASK-M8-23 on TASK-M8-08; TASK-M8-24 on TASK-M3-39. Each task file keeps the old line as a *Was*. Where
+  a `needs` entry a track task keeps is closed by merged work that its remaining dependencies no longer reach, that
+  merged task is named in its Depends on, so the entry stays reachable (`plan/check_plan.py`): TASK-M2-14, TASK-M2-17,
+  TASK-M2-22, TASK-M2-23 and TASK-M2-28 for TASK-M8-06, TASK-M2-23 for TASK-M8-07, TASK-M2-22 for TASK-M8-13,
+  TASK-M7-20 for TASK-M8-23 and TASK-M3-02 for TASK-M8-24; nothing waits on them.
+- **What a track task closes.** It keeps every requirement it shows in full, look, feel and behaviour, on the mock, as
+  R-390's tasks do. A requirement whose check is on the real engine's own output or wiring moves to the wiring task
+  with its acceptance line, as R-390's "What stays" kept such requirements with the real-engine task: REQ-GUI-070
+  (egui-wgpu on the engine's device) and REQ-GUI-078 (the status line, whose `budget-bound` the mock never binds) from
+  TASK-M8-05; REQ-GUI-092 (a scrub re-integrating from 0) and REQ-GUI-155 (the definition of the scrub's progress
+  percentage, physics-reviewed; physics review 5664187570 of this port's PR, F1) from TASK-M8-07; REQ-GEN-023 (the
+  debug tags of the real registry, TASK-M7-13's) from TASK-M8-19, to TASK-M8-92; REQ-GUI-351 and REQ-GUI-352 (the
+  stepper pair's warnings, from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone
+  and rulings; its note names R-627 and both tasks. REQ-GUI-070 then moves on from TASK-M8-88 to TASK-M8-87, which
+  places the real canvas and depends on TASK-M8-88: its verify's threshold, the figure identical over the shown
+  figure's rect, runs only there, and TASK-M8-88 keeps the egui-wgpu construction as a deliverable check (applied per
+  R-369; code review 5665363835 of this port's PR, F1).
+- **TASK-M8-05 is split, in the plan first.** Its axis extension types, area statistics and F3 fill past `[0,1]²`
+  (REQ-GUI-180, REQ-CHART-054, REQ-CHART-056 and REQ-CHART-071, reviewed by physics) are kernel physics drawn on the
+  real figure, not a screen the mock can show. They move, with their acceptance lines, deliverables and notes, to
+  TASK-M8-87 (new), which depends on TASK-M8-88, the shell's wiring task, and stays behind the engine chain. TASK-M8-05
+  keeps the shell (the top bar, the footer, the menus' entry points, the window registry, nothing over the figure),
+  reviewed by code, qa and gui.
+- **The wiring tasks, TASK-M8-88 to TASK-M8-95**, one per track task (TASK-M8-05, -06, -07, -13, -19, -20, -23, -24, in
+  that order). Each depends on its track task, on TASK-M6-21 and TASK-M6-22, and on the dependencies its track task
+  gave up; it wires the screen to the real engine (`StateStore` and the engine side of `engine::contract::canvas`),
+  re-runs every acceptance line of its track task on the real engine, and runs the conformance suite on both engines,
+  every contract field its track task added among its cases. Each closes one new requirement, REQ-GUI-402 to
+  REQ-GUI-409, "this screen on the real engine", and the requirements moved to it. Its reviewers are its track task's,
+  and physics on TASK-M8-90 for REQ-GUI-155 (physics review 5664187570 of this port's PR, F1) and on TASK-M8-88 for
+  REQ-GUI-176, the frame summary's definition, which its frame loop may revise (physics review 5665205331, P1).
+  R-390 had no such tasks (its M8 tasks were the real-engine side), so these follow R-390's own pattern: the
+  real-engine task depends on the track task and re-runs its acceptance there.
+- **The tasks that depended on a track task now depend on its wiring task**, which depends on it: an engine-side task
+  runs on the real engine, so it needs the screen wired, as it needed the whole of the old task. Those that depended on
+  TASK-M8-05 depend on TASK-M8-87, which reaches TASK-M8-88 and TASK-M8-05.
+- **TASK-M8-05 goes first** among the track tasks of M8: its dependencies are merged or R-390's track's (TASK-M6-24,
+  TASK-M6-30, TASK-M6-46, TASK-M6-47 and TASK-M6-49), and `plan/OPERATIONS.md` § "The GUI track (R-390)" gives it the
+  first track slot of M8.
+- **TASK-M8-01's dependencies are unchanged.** It is the contract, engine side, not a screen: it fills the groups
+  `SimConfig` and `RenderState` still leave empty from their owning contracts, among them the quality settings TASK-M6-22
+  owns, and builds on M3's and M5's fields its `needs` name, so it stays behind the chain. No track task waits for it
+  now. Its goal, deliverables and acceptance are re-planned on what exists (`interface.rs`, `set_field.rs`,
+  `snapshot.rs`, `sim_config.rs`, `render_state.rs`, `view_ui.rs`, `canonical.rs`, `store.rs` and `conformance.rs`),
+  each changed line kept as a *Was*.
+- **The v1 web skeleton is two tasks** (split in the plan first; code review 5663981956 of this port's PR, F1), in M8
+  beside TASK-M8-37, TASK-M8-38 and TASK-M8-41, which RQ-550 and RQ-551 name. Its measurements can be taken only on the
+  Pages site, which only a manual deploy from `main` reaches (the `github-pages` environment allows `main` alone), so
+  they cannot be shown in the PR that builds the skeleton:
+  - **TASK-M8-86, the skeleton**: the egui app and the mock engine in wasm on WebGPU, its `web/`, the Pages workflow
+    and its wasm build in CI. It depends only on TASK-M6-24 (merged), so it can start now; reviewers code, qa and gui.
+    Perf joins them, since its frame statistics and delay flag touch the frame loop (applied per R-369; code review
+    5665363835 of this port's PR, F2).
+    It closes REQ-TOOL-220 (the Pages workflow: `workflow_dispatch` only, `main` only, the `github-pages` environment,
+    no push trigger).
+  - **TASK-M8-96, the measurements**: it depends on TASK-M8-86 and starts from the first manual deploy of it from
+    `main`; it measures on the Pages URL and writes the results into systems_architecture §3, "Measured on the v1 web
+    skeleton", against RQ-550 and RQ-551; reviewers code, qa, gui and perf (the frame rate). It closes REQ-SYS-092
+    (where the skeleton runs: a worker on an OffscreenCanvas or, where it will not run there, the fallback it does run
+    in), REQ-SYS-093 (the COOP/COEP workaround on Pages, and whether SharedArrayBuffer and wasm threads work there),
+    REQ-GUI-401 (text input and the clipboard) and REQ-PERF-115 (the frame rate).
+  Both are track tasks (the mock engine), merging without the gates of M3 to M6, with no wiring task. None of the five
+  requirements carries `rq`: the skeleton measures and settles nothing, so neither task waits on either RQ; the results
+  are numbers with their browser, version and method, pointed at from RQ-550 and RQ-551. TASK-M8-37, which builds v1
+  web proper on the skeleton's `web/` and workflow, depends on TASK-M8-86. The deploy stays manual until the human says
+  v1 is ready to be found; TASK-M8-41's release check is run on a manual deploy.
+- R-627 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+*The number:* PR #293's batch of thirty-two rulings, numbered from the next free number on 25 Oct, is not merged;
+R-627 is the next number after it. This port's new requirement ids likewise start after the ones #293 adds.
+
+*Merged with PR #293 (27 Oct 2026, applied per R-369):* #293 merged first, with R-595 to R-626; no ruling, review-queue,
+requirement or task id collided, so nothing was renumbered. Its R-619 and R-620 had closed RQ-550 (option (a)) and
+RQ-551 (option (b): egui on the main thread in its own wasm context, the engine in its worker) on 25 Oct, two days
+before this ruling, so where this record says the two "stay open for the human", that held only on this branch: the
+skeleton's results are reported against the closed entries and reopen neither. The added line of each entry moved with
+it to `docs/archive/review_queue/M0.md`; systems_architecture §3, caching_contract Part 6a and TASK-M8-96 say so, each
+with a *Was*. *Flagged:* R-627's words ask the skeleton to run "in a Web Worker on an OffscreenCanvas if it will run
+there", RQ-551's option (a), which R-620 did not take. Applied as the words read, the later ruling being the human's own
+instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
+built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
+(`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.

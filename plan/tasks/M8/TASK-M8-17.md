@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-120, REQ-ENC-021, REQ-ENC-028, REQ-VAL-106, REQ-VAL-107, REQ-TOOL-097
-- **Depends on:** TASK-M8-14, TASK-M8-16, TASK-M8-07, TASK-M4-13
+- **Depends on:** TASK-M8-14, TASK-M8-16, TASK-M8-90, TASK-M4-13
 - **Needs (earlier milestones):** REQ-ENC-008, REQ-VAL-073, REQ-VAL-017, REQ-SYS-026, REQ-TOOL-040, REQ-TOOL-043, REQ-GUI-004
 - **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** PIT-10, PIT-1.7
@@ -38,3 +38,4 @@ The Create & locate tab builds an IC, shows where it lands in z and its distance
 ## Notes
 - The on-demand GPU trace needs a dense n(t) output buffer outside the generation-root ledger; its shape is for the implementer to propose within trajectory_viewing §5 ("one trajectory's history is trivial memory") and the physics reviewer to check.
 - Calibrations (R-71) proposed here: REQ-ENC-028. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-07 by TASK-M8-90 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-14, TASK-M8-16, TASK-M8-07, TASK-M4-13".

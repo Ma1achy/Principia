@@ -387,6 +387,20 @@ the six.
   human before then; list them in TASK-M6-31's PR for that try.
 - **Contract changes.** A track task that adds to the contract surface re-runs the conformance suite on both engines,
   and the code reviewer checks the field is as the corpus names it (R-390's "Contract fields").
+- **M8's GUI track (R-627, 27 Oct 2026).** TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24 are track tasks too, built on the mock engine with every rule
+  above; their dependence on TASK-M6-21 and TASK-M6-22 is satisfied by the mock's precision events and quality tier.
+  **TASK-M8-05, the Explore shell, goes first** among them: it takes the first track slot M8 gets. Each has a small
+  wiring task, TASK-M8-88 to TASK-M8-95 in the same order, which depends on it and on TASK-M6-21 and TASK-M6-22, wires
+  it to the real engine and re-runs its acceptance there with the conformance suite on both engines; a wiring task is
+  engine-side work, dispatched when its dependencies are merged, with no track priority of its own. TASK-M8-86, the v1
+  web skeleton (the egui app and the mock engine in wasm on WebGPU), and TASK-M8-96, its measurements against RQ-550
+  and RQ-551, are track tasks with no wiring task; they settle neither RQ. The deploy is by hand only: once TASK-M8-86
+  merges, the orchestrator runs `gh workflow run pages.yml --ref main`, through the `github-pages` environment, and
+  then dispatches TASK-M8-96 on that deploy; no workflow deploys the site on a merge or a push until the human
+  says v1 is ready to be found, and no other repository setting changes (R-627; `plan/HUMAN_SETUP.md` §5).
+- **The cloud proposal (R-627).** Whether mock-engine GUI tasks can be implemented in cloud sessions on lavapipe, the
+  Mac doing only their screenshot and Metal checks, is a proposal the human asked for, written separately, and not
+  applied: R-357 and § "Resources" stand until the human rules on it.
 
 ## Size
 
