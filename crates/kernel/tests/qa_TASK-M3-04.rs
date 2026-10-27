@@ -7,8 +7,11 @@
 //! - REQ-INT-007 (`qa_same_spec_twice`): the same IC and sim key integrated twice, with other ICs integrated between,
 //!   give bit-identical `SimState`s. Control: a sim key one ulp of `dt_macro` away is caught as a different render.
 //! - REQ-INT-008, REQ-INT-038, REQ-INT-022 (`qa_wrapper_is_contract_loop`): `integrate` equals the contract loop bit
-//!   for bit (state, `total_substeps`, `t_end_step` the integer horizon, `bounded`, `saturated`), for every occupant
-//!   through the one loop, stopped by `done` or not. Control: the oracle run with another occupant is caught.
+//!   for bit (state, `total_substeps`, `t_end_step` the completed macro-steps, `bounded`, `saturated`), for every
+//!   occupant through the one loop, stopped by `done` or not. `t_end_step` is `step_count`, the completed macro-steps
+//!   (integrator_contract Part 5, "Exact step-index timing invariant"; payload §2; generation_root's `t_end_step` row):
+//!   a macro-step `done` cut short is begun, not completed. Controls: the oracle run with another occupant is caught,
+//!   and so is the begun count in place of the completed one on a run stopped mid-macro-step.
 //! - REQ-INT-008 (`qa_seam4_trace_shared`): the wrapper's calls into `ADVANCE`, `(t_now, t_target, dt_macro, N_sub)`,
 //!   are identical across occupants where the table forces `N_sub`, while their end states differ (only the stepper's
 //!   arithmetic changes). Control: a trace from another horizon is caught.
@@ -308,7 +311,9 @@ macro_rules! each_occupant {
 struct Oracle<R> {
     state: State<R>,
     steps: u32,
-    macros: u32,
+    /// `step_count`: the macro-steps whose `N_sub` substeps were all taken (Part 5; payload §2). The loop's counter
+    /// `macro` bounds the loop only: it also counts a macro-step `done` cut short.
+    completed: u32,
     saturated: bool,
     done: bool,
 }
@@ -324,7 +329,7 @@ fn contract_loop<S: Stepper, R: Q, C: Cadence<R>>(
         p: ic.p,
     };
     let mut geom = Geom::new(&state.m, &state.r);
-    let (mut macros, mut steps, mut saturated) = (0u32, 0u32, false);
+    let (mut macros, mut completed, mut steps, mut saturated) = (0u32, 0u32, 0u32, false);
     while macros < u.horizon_steps && !cadence.done() {
         let n = n_sub(d2_quantised(&state.r), &u.thresholds, u.n_max);
         saturated |= n == u.n_max;
@@ -338,12 +343,13 @@ fn contract_loop<S: Stepper, R: Q, C: Cadence<R>>(
             s += 1;
             steps += 1;
         }
+        completed += u32::from(s == n);
         macros += 1;
     }
     Oracle {
         state,
         steps,
-        macros,
+        completed,
         saturated,
         done: cadence.done(),
     }
@@ -361,8 +367,8 @@ fn check_against_loop<R: Q>(who: &str, got: &SimStateBaseOf<R>, want: &Oracle<R>
     );
     assert_eq!(
         tm_t_end_step(got.times),
-        want.macros,
-        "{who}: t_end_step differs from the contract loop's macro-step count"
+        want.completed,
+        "{who}: t_end_step differs from the contract loop's completed macro-steps"
     );
     let label = if want.done {
         STATE_RUNNING
@@ -470,6 +476,26 @@ negative_control!(
         check_against_loop("control", &got, &want);
     }
 );
+
+mod begun_not_completed {
+    use super::*;
+
+    negative_control!(
+        qa_wrapper_is_contract_loop,
+        "a run stopped at the 4th of 3-substep macro-steps, against the begun count (2) for t_end_step",
+        expected = "t_end_step differs from the contract loop's completed macro-steps",
+        {
+            let ic = decoded::<f64>([0.3, -0.2, 0.1, 0.4, -0.3, 0.2, 0.5, -0.1]);
+            let u = key::<f64>(1e-2, 6, Table::Forced(3));
+            let got = integrate_with::<Kdk, f64, _>(&ic, &u, &mut StopAfter::new(Some(4)));
+            let mut want = contract_loop::<Kdk, f64, _>(&ic, &u, &mut StopAfter::new(Some(4)));
+            // 4 substeps of 3-substep macro-steps: one completed, a second begun and cut short.
+            assert_eq!(want.completed, 1, "control: the stop is not mid-macro-step");
+            want.completed = 2;
+            check_against_loop("control", &got, &want);
+        }
+    );
+}
 
 mod horizon_one_longer {
     use super::*;
