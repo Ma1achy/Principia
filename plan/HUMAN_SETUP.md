@@ -62,7 +62,8 @@ R-627's port, G3, applied per R-369).
 1. The wasm target: `rustup target add wasm32-unknown-unknown`.
 2. `wasm-bindgen-cli` at the version of the `wasm-bindgen` crate in `Cargo.lock` (0.2.129 today; TASK-M8-86's PR names
    the version it pins): `cargo install wasm-bindgen-cli --version 0.2.129 --locked`.
-3. Node.js 18 or later for the browser runner: `node --version`, and `brew install node` if it is absent. Playwright
-   itself is pinned in the repo and installed there by `npm ci`; it drives the installed Chrome stable
-   (`channel: "chrome"`), so no Playwright browser download is needed.
-4. Safari's WebDriver: `sudo safaridriver --enable`, and in Safari, Develop → "Allow Remote Automation".
+3. Node.js 20 or later (the floor the pinned Playwright declares) for the browser runner: `node --version`, and `brew
+   install node` if it is absent. Playwright itself is pinned in the repo and installed there by `npm ci`; it drives
+   the installed Chrome stable (`channel: "chrome"`), so no Playwright browser download is needed.
+4. Safari's WebDriver: `sudo safaridriver --enable`; then in Safari, first Settings → Advanced → "Show features for
+   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals.

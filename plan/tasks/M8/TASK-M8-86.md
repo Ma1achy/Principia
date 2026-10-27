@@ -77,11 +77,13 @@ TASK-M8-38's, built on it.
   deploy the branch, took them in "a measurement commit [that] follows the merge, reviewed as a follow-up of this task".
   The measurements are TASK-M8-96's, a task of their own that starts from the manual deploy.
 - *Was (gui review 5664362471 of R-627's port, G5):* the panel deliverable ended "and the frame rate over a timed window; and a scripted pan for the frame-rate runs." with no placement or lifetime.
-- **Setup outside the repo (R-349; gui review 5664362471 of R-627's port, G3).** The build and the browser runs need, on the human's Mac, each done or
-  approved by the human, since they touch `~/.rustup`, `~/.cargo` or the system (`plan/HUMAN_SETUP.md` §6): the wasm
-  target, `rustup target add wasm32-unknown-unknown`; `wasm-bindgen-cli` at the version of the `wasm-bindgen` crate in
-  `Cargo.lock` (0.2.129 today), `cargo install wasm-bindgen-cli --version 0.2.129 --locked`; Node.js for the browser
-  runner, `node --version` 18 or later (`brew install node` if absent), the runner itself, Playwright at a pinned
-  version, installed in the repo by `npm ci` and driving the installed Chrome stable (`channel: "chrome"`, so no
-  Playwright browser download); and Safari's WebDriver, `sudo safaridriver --enable` with Develop → "Allow Remote
-  Automation" in Safari. Until they are done, the task cannot run its local gui line.
+- **Setup outside the repo (R-349; gui review 5664362471 of R-627's port, G3).** The build and the browser runs need,
+  on the human's Mac, each done or approved by the human, since they touch `~/.rustup`, `~/.cargo` or the system
+  (`plan/HUMAN_SETUP.md` §6): the wasm target, `rustup target add wasm32-unknown-unknown`; `wasm-bindgen-cli` at the
+  version of the `wasm-bindgen` crate in `Cargo.lock` (0.2.129 today), `cargo install wasm-bindgen-cli --version
+  0.2.129 --locked`; Node.js for the browser runner, `node --version` 20 or later (the floor the pinned Playwright
+  declares) (`brew install node` if absent), the runner itself, Playwright at a pinned version, installed in the repo
+  by `npm ci` and driving the installed Chrome stable (`channel: "chrome"`, so no Playwright browser download); and
+  Safari's WebDriver, `sudo safaridriver --enable`, then in Safari Settings → Advanced → "Show features for web
+  developers" first, and only then Develop → "Allow Remote Automation". Until they are done, the task cannot run its
+  local gui line.

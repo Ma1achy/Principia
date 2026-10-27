@@ -18146,7 +18146,7 @@
   - R-390
   - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-88's, which wires TASK-M8-05's shell; TASK-M8-05 builds the shell on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
+  note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-88's, which wires TASK-M8-05's shell; TASK-M8-05 builds the shell on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-076
   area: GUI
   statement: "The dev GUI must not include Chazy subtitles (captions over the figure) or the object-based stain desk, and its Stain mode must be the plain node-graph editor; the ban does not cover the Chazy fields, stains or legends (R-548)."
@@ -19171,7 +19171,7 @@
   - R-390
   - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-19, which re-runs its acceptance on the real engine and depends on TASK-M6-29) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-92's, which wires TASK-M8-19's Stain layout; TASK-M8-19 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-19, which re-runs its acceptance on the real engine and depends on TASK-M6-29). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-92's, which wires TASK-M8-19's Stain layout; TASK-M8-19 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-129
   area: GUI
   statement: "Stain mode must show a live preview of the current OUT, toggleable between the shape sphere and an illustrative slice."
@@ -19211,7 +19211,7 @@
   - R-390
   - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-20, which re-runs its acceptance on the real engine and depends on TASK-M6-29) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real stain graph is TASK-M8-93's, which wires TASK-M8-20's canvas; TASK-M8-20 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-20, which re-runs its acceptance on the real engine and depends on TASK-M6-29). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real stain graph is TASK-M8-93's, which wires TASK-M8-20's canvas; TASK-M8-20 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-132
   area: GUI
   statement: "While a wire is dragged compatible in-ports must highlight and incompatible ones dim, and releasing on empty canvas must open a node-create menu filtered to nodes that accept the dragged type."
