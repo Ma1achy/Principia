@@ -7,8 +7,8 @@ delivered them; only the filenames were changed.
 
 | Path | sha256 | What it is |
 |---|---|---|
-| `INSTRUCTION_replication_suite_2026-10-25.md` | `4c54f71f9f8d62340fab4f86f0fb64fd06e62778f602629b596bd16404a53156` | The plan: rules, tiers A–D, what cannot be replicated, sequencing, papers to fetch |
-| `catalogue.md` | `03be781c423c107415eaa2532060971bea183e73c1cf26cade4f6d6a69805deb` | About 35 published maps, tables and statistics, each with its citation (checked against Crossref where marked [CR]), what it publishes and how hard it is to reproduce |
+| `INSTRUCTION_replication_suite_2026-10-25.md` | `76fe5df348d2fe46e7b324531361b94bd7cc0de22c98cabf00f51299ee664e43` | The plan: rules, tiers A–D, what cannot be replicated, sequencing, papers to fetch |
+| `catalogue.md` | `c0605be0f95bd80e3056a2e8a0f1d6862673c8e7355edd37db9fe1e4f2e565c7` | About 35 published maps, tables and statistics, each with its citation (checked against Crossref where marked [CR]), what it publishes and how hard it is to reproduce |
 | `papers/aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf` | `5505c8a5d90839f1cb656c85f13375864b226e8cfdf85ab37c70af9eb70c93e5` | Aarseth, Anosova, Orlov & Szebehely (1994), "Global chaoticity in the Pythagorean three-body problem", *CeMDA* 58, 1–16, doi:10.1007/BF00692114 |
 | `papers/heggie_1974_CeMech_10_217.pdf` | `3d6bd96043a715507c3bc2116df5f06e6c57925445f362738373cef6caf3a3ee` | Heggie (1974), "A global regularisation of the gravitational N-body problem", *Celest. Mech.* 10, 217–241, doi:10.1007/BF01227621 |
 | `papers/aarseth_zare_1974_CeMech_10_185.pdf` | `d1969c53dedf44765266bf5ea66b127e2835a84a32cec9e444a495555cd5b7f2` | Aarseth & Zare (1974), "A regularization of the three-body problem", *Celest. Mech.* 10, 185–205, doi:10.1007/BF01227619 |

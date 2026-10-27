@@ -4,6 +4,12 @@ Compiled 2026-10-25. Scope: the general (non-restricted) problem. The one restri
 
 **How the citations were checked.** Every citation marked **[CR]** was resolved against Crossref (authors, title, journal, volume, pages/article number, DOI). **[arXiv]** means the arXiv full text was read for the figure and parameter details quoted. **UNVERIFIED** marks anything I could not check against a primary record in this session; those details come from secondary citations or memory. Some details could not be read because ADS, OUP, Turku and some arXiv/ar5iv pages were blocked for this agent; they are listed at the end.
 
+**Revised 27 Oct 2026** against the PDFs delivered that day (`../2026-10-27_papers/README.md`). The entries for
+Agekyan & Anosova (§1.1, §2.5), Lehto et al. (§1.2), Aarseth et al. 1994a (§3.2), Boekholt et al. 2021 (§3.3), the
+Šuvakov slice (§2.3) and Li & Liao (§6.3) were checked against the papers themselves. Their UNVERIFIED marks are
+resolved and their errors corrected, each with a "*27 Oct 2026*" note saying what changed. Aarseth et al. 1994b is
+added as §3.5. Each entry points at its targets in `../2026-10-27_papers/TARGETS.md`.
+
 **Coordinate conventions differ between papers.** This matters for pixel-exact replication. The Agekyan–Anosova (AA) convention puts two bodies at (−0.5, 0) and (+0.5, 0) and the third at P = (x, y) in D = {x ≥ 0, y ≥ 0, (x+0.5)² + y² ≤ 1}. Lehto et al. 2008 instead use bodies at (0,0) and (1,0) with the third at (x, y), x ∈ [0,1], |y| ≤ √3/2. Tanikawa's papers use D11 = {x ≥ 0, y ≥ 0, (x−0.5)² + y² ≤ 1}, the mirror labelling. Breen et al. 2020 fix x1 = (1,0) at unit distance from the barycentre. Each map has to be remapped to the engine's own region-D chart before comparing.
 
 **Escape criteria differ.** They include 50×a_bin + hyperbolic (Orlov, Mikkola & Tanikawa), 100×a + hyperbolic (TSUNAMI, Parischewsky), r > 10 + receding + E > 0 (Brutus papers), semi-major-axis ratio ≥ 100 or ≥ 2000 (Lehto), and Fewbody's tidal tolerance. Lifetimes near a boundary in lifetime are criterion-dependent. Outcome identities are robust once escape is real.
@@ -12,24 +18,48 @@ Compiled 2026-10-25. Scope: the general (non-restricted) problem. The one restri
 
 ## (1) Maps over region D / free fall (equal masses, zero velocity)
 
-### 1.1 Agekian & Anosova 1967/68: the original homology map and the 100-IC table
-- **Citation:** T. A. Agekian & Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical sampling", *Astron. Zh.* 44, 1261 (1967); English translation *Soviet Astronomy* 11, 1006 (1968). **UNVERIFIED** against ADS. This is the standard citation, but Soviet Astronomy is not in Crossref. Part II **[CR / catalogue]**: Agekyan & Anosova, *Astrofizika* 4, 31–40 (1968) = *Astrophysics* 4, 11–16 (1969), doi:10.1007/BF01013153. Part III, unequal masses **[CR]**: Z. P. Anosova, *Astrophysics* 5, 81–84 (1969), doi:10.1007/BF01013354.
+### 1.1 Agekyan & Anosova 1967/68: the original region-D map and the 100-IC table
+- **Citation [verified on the PDFs, 27 Oct 2026]:**
+  - **Part I:** T. A. Agekyan & Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical
+    sampling", *Astron. Zh.* 44(6), 1261–1273 (Nov–Dec 1967); English translation *Soviet Astronomy* 11(6), 1006–1014
+    (May–June 1968), ADS `1968SvA....11.1006A`. Not in Crossref.
+  - **Part II [CR]:** "Investigation of the dynamics of triple systems by the method of statistical tests. II",
+    *Astrofizika* 4(1), 31–40 (1968) = *Astrophysics* 4(1), 11–16, doi:10.1007/BF01013153. The repo cites the 1968
+    volume year that the paper prints; Crossref dates the translation's issue 1969.
+  - **Part III [CR]:** Z. P. Anosova, *Astrophysics* 5(1), 81–84, doi:10.1007/BF01013354, from *Astrofizika* 5(1),
+    161–167 (1969). Same convention: the volume year is 1969, and Crossref dates the translation 1970.
+  - Both translations spell the first author "Agekyan"; "Agekian" is the transliteration Aarseth et al. 1994 use.
+  - *27 Oct 2026, was:* "T. A. Agekian & Zh. P. Anosova … **UNVERIFIED** against ADS … *Astrophysics* 4, 11–16
+    (1969) … *Astrophysics* 5, 81–84 (1969) [CR]". The papers are now read, and the [CR] year for Part III was wrong:
+    Crossref gives 1970.
 - **Access:** ADS scan (Sov. Astron.), Springer (Astrophysics, paywalled), arar.sci.am (Armenian digital library, Russian original).
-- **What can be replicated:** The definition of region D. The original Table 1, as described in the brief, holds 100 random ICs in D with the outcome of each (escape or binary formation, which body escapes, time). Equal masses, zero velocity, coarse 1960s integrator.
-- **Data:** The table itself, about 100 rows, can be transcribed from the scan.
+- **What can be replicated:**
+  - The definition of region D (I, Fig. 1 and eq. 8).
+  - **Part I's Table 1** (pp. 1010–1012): 100 ICs in D started *near* rest (eq. 3). Its twelve columns are N, ξ, η,
+    the outcome as text (disintegration, nominal disintegration, close approach, or ΔE/E > 0.05), T (in the
+    per-IC crossing time τ of eq. 7), p, p_min, E, ΔE/E, Δ′E/E, M and ΔM/M. **No escaper identity is tabulated.**
+    *27 Oct 2026, was:* "holds 100 random ICs in D with the outcome of each (escape or binary formation, which body
+    escapes, time)", which came from the brief, not the paper.
+  - **Part II** repeats the same 100 configurations from **exact rest** (Table 1, pp. 12–14) and completes the 38
+    near-rest runs Part I could not finish (Table 3, p. 15).
+- **Data:** Part I's ξ, η, E, M and outcome are in `fixtures/anosova/table1.csv` (R-592). Its T, p and p_min, and
+  Part II's Tables 1 and 3 in full, were transcribed twice on 27 Oct 2026 into `../2026-10-27_papers/*.csv`.
+- **Targets:** `../2026-10-27_papers/TARGETS.md` AA-1 to AA-8; AA-6, exact rest, is the strongest.
 - **Difficulty / caveat:** A per-IC comparison is possible, but agreement is only expected for short-lived systems. The 1967 integrator was unregularised and low-precision, so long-lived cases cannot be expected to match. Treat a mismatch on long-lived rows as information about *their* integration, not about the engine. Part III gives the first unequal-mass statistics (see §2).
 
 ### 1.2 Lehto, Kotiranta, Valtonen, Heinämäki, Mikkola & Chernin 2008: the high-resolution lifetime ("Maasai shield") and reversibility map
 - **Citation [CR][arXiv]:** H. J. Lehto et al., "Mapping the three-body system – decay time and reversibility", *MNRAS* 388, 965–970 (2008), doi:10.1111/j.1365-2966.2008.13450.x (the DOI ends 13450, not 13460), arXiv:0805.2844. The precursor is Lehto, Heinämäki, Chernin & Valtonen, "Masaai warrior shield: the life time of a three body system", *IAU Colloq.* 174, 314–317 (2000), doi:10.1017/S0252921100055196 **[CR]**.
 - **Access:** arXiv (open).
 - **What can be replicated:**
-  - **Domain:** Bodies at (0,0) and (1,0), the third at (x, y) with x ∈ [0,1] and y ∈ [−√3/2, √3/2]. Equal masses, at rest, L = 0, G = 1.
+  - **Domain:** Bodies at (0,0) and (1,0), the third at (x, y) with x ∈ [0,1] and y ∈ [−√3/2, √3/2]. Equal masses, at rest, L = 0, G = 1. The paper calls it "a shield shaped area" and gives only these ranges. That it is the lens |P| ≤ 1, |P − (1,0)| ≤ 1 is an inference from its "R is the longest separation" (*27 Oct 2026*).
   - **Fig. 1:** Lifetime map, pixel 1.25×10⁻³, colour capped at 13 crossing times (red < 1, orange < 2, dark blue > 13).
   - **Fig. 2:** The same map at pixel 2.5×10⁻⁴.
   - **Fig. 3:** Zoom at pixel 3.125×10⁻⁶, linear scale to 20 crossing times.
   - **Fig. 7:** Reversibility fraction ξ.
   - **Numbers:** About 200 000 systems. A local-homogeneity test on 8-orbit stencils (ε = ±1.25×10⁻³) finds 28.6% homogeneous and 71.4% sensitive. Hausdorff dimension D_H = 1.5, with p_ε ∝ ε^−0.5.
-  - **Escape criterion:** Semi-major-axis ratio ≥ 100 with the escaper hyperbolic and receding, or a ratio ≥ 2000 alone. Breakup is the first time the escaper has E ≥ 0 and r ≥ 1 from both other bodies.
+  - **Escape criterion:** Semi-major-axis ratio ≥ 100 with the escaper hyperbolic and receding, or a ratio ≥ 2000 alone (p. 6, after Anosova 1986). Breakup: the escaper has E ≥ 0 and is at r ≥ 1 from both other bodies (p. 2). *27 Oct 2026, was:* "Breakup is the first time …"; the paper does not say "first".
+  - **Zoom windows, read off the axes:** Fig. 2 has lower-left corner (0.70, 0.45) and spans x to 0.80, y to about 0.62. Fig. 3 is x ∈ [0.700, 0.70125], y ∈ [0.450, 0.45125].
+  - **Targets:** `../2026-10-27_papers/TARGETS.md` L-1 to L-5.
   - **Integrators:** Chain-regularised Bulirsch–Stoer (Mikkola–Aarseth), plus logH leapfrog for the reversal test.
 - **Data:** Not released. Figures only.
 - **Difficulty:** Qualitative to semi-quantitative. Morphology (the shield) and lifetime bands can be compared directly. The 28.6% homogeneous fraction and D_H = 1.5 are summary statistics that can be replicated with the same stencil. This is the most natural first target for the AA/region-D chart, and the colour scale is in crossing times rather than t, so check the unit. **Caveat:** The crossing-time unit and the R normalisation (R is the longest side of the initial triangle) need care.
@@ -144,6 +174,7 @@ See §1.4. The arXiv:0802.2465 Fig. 7 gives first-digit maps for k = T/|U| = 0 �
   - **Table:** Fifteen ICs and periods (butterfly I is (0.30689, 0.12551) with T = 6.2356; I also read figure-eight-related entries and others).
   - **Search:** About 50 candidate regions at return proximity ~10⁻¹.
 - **Data:** The table is in the paper. The full catalogue is on the Belgrade three-body gallery (three-body.ipb.ac.rs, **UNVERIFIED** URL).
+- **Map over this slice (27 Oct 2026):** Hudomal's 2015 thesis, Fig. 8 (p. 26), is a −log₁₀ return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5] at 2000 × 4000 points. Fig. 34 (p. 55) is a zoom on butterfly III. Targets HU-1 to HU-5 in `../2026-10-27_papers/TARGETS.md`.
 - **Difficulty:** **Exact.** This is a 2D chart with momenta, and a return-proximity or FTLE map over (ẋ₁, ẏ₁) must show minima at the tabulated points. Each listed orbit must close to about 10⁻⁵ after T. Strongly recommended for a "slice with momenta" chart.
 
 ### 2.4 Li & Liao 2017; Li, Jing & Liao 2018: thousands of periodic ICs, equal and unequal masses
@@ -159,7 +190,8 @@ See §1.4. The arXiv:0802.2465 Fig. 7 gives first-digit maps for k = T/|U| = 0 �
 - **Difficulty:** **Exact** (periodicity checks). The m₁–m₂ stability map is a published **mass-plane map**, the closest published analogue to a mass-simplex chart, though restricted to one orbit family.
 
 ### 2.5 Anosova 1969: first unequal-mass statistics from region D
-- **Citation [CR]:** Z. P. Anosova, "Investigation of the dynamics of triple systems by the Monte Carlo method. III. The case of components with different masses", *Astrophysics* 5, 81–84 (1969), doi:10.1007/BF01013354.
+- **Citation [CR]:** Z. P. Anosova, "Investigation of the dynamics of triple systems by the Monte Carlo method. III. The case of components with different masses", *Astrophysics* 5(1), 81–84, doi:10.1007/BF01013354, from *Astrofizika* 5(1), 161–167 (1969). Crossref dates the translation 1970; the repo cites the 1969 volume year the paper prints (*27 Oct 2026*).
+- **From its abstract (27 Oct 2026):** 300 configurations from rest in three mass sets, (9, 3, 1), (3, 3, 1) and (3, 1, 1). Every run decayed after a close triple approach. Mean decay time (27.8 ± 3.5)τ. The lightest body usually escapes, and the mass spread shortens decay by about a factor of three.
 - **Access:** Paywalled (Springer). The Russian original is *Astrofizika* 5, 161–167.
 - **What can be replicated:** Escape probabilities by mass. The lightest body escapes preferentially. Statistical; the tables are **UNVERIFIED** in detail.
 - **Difficulty:** Statistical, small-N, old integrator.
@@ -203,17 +235,42 @@ See §1.4. The arXiv:0802.2465 Fig. 7 gives first-digit maps for k = T/|U| = 0 �
 - **What can be replicated:** Masses 3, 4, 5 at rest at (1,3), (−2,−1), (1,−1), G = 1. The masses 4 and 5 form a binary and the mass-3 body escapes. Breakup is around t ≈ 59.4 (Janssens' review quotes 59.406); the escape is asymptotic over t ≈ 60–70. The paper gives the times and distances of close approaches, and the final binary's elements.
 - **Difficulty:** **Exact.** The trajectory is non-chaotic enough to reproduce to many digits with a regularised integrator. **Caveat:** This is the engine's `near-field` IC. Its escape lies beyond the project's t = 13 horizon, consistent with the standing finding.
 
-### 3.2 Aarseth, Anosova, Orlov & Szebehely 1994: global chaoticity around the Pythagorean IC
-- **Citation [CR]:** S. J. Aarseth, J. P. Anosova, V. V. Orlov & V. G. Szebehely, "Global chaoticity in the Pythagorean three-body problem", *CeMDA* 58, 1–16 (1994), doi:10.1007/BF00692114.
-- **Access:** Paywalled (Springer). An ADS scan may exist (**UNVERIFIED**).
-- **What can be replicated:** Outcome and escape maps under displacement of one body around the standard Burrau positions. There is a **regular region containing the Burrau IC itself**, where outcomes change smoothly, surrounded by abrupt changes. Time reversal is used as the reliability check. The axes, step and resolution are **UNVERIFIED** (abstract only).
+### 3.2 Aarseth, Anosova, Orlov & Szebehely 1994a: global chaoticity around the Pythagorean IC
+- **Citation [CR]:** S. J. Aarseth, J. P. Anosova, V. V. Orlov & V. G. Szebehely, "Global chaoticity in the Pythagorean three-body problem", *CeMDA* 58(1), 1–16 (1994), doi:10.1007/BF00692114. Called **1994a** from 27 Oct 2026, to separate it from §3.5.
+- **Access:** In the repo (`papers/aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf`). An ADS image scan also exists (bibcode `1994CeMDA..58....1A`). *27 Oct 2026, was:* "Paywalled (Springer). An ADS scan may exist (**UNVERIFIED**)."
+- **What can be replicated** (read from the paper, 27 Oct 2026; was "The axes, step and resolution are **UNVERIFIED** (abstract only)"):
+  - **Displacements.** One body is displaced at a time onto **six circles**, δ = 5×10⁻⁸, 5×10⁻⁷, …, 5×10⁻³, about its Burrau position, at **100 azimuths** α = 3.6n°, n = 0–99 (§2, eq. 1). That is 1800 runs. This is a polar sampling, not a Cartesian grid.
+  - **Integrator and escape.** Aarseth–Zare with Bulirsch–Stoer, tolerance 10⁻¹³, repeated at 10⁻¹⁵ when needed. Escape is Standish's criterion outside 3R_grav (R_grav = 3.67), or conditional escape beyond 5R_grav; the time limit is 200.
+  - **Reliability.** A run is kept only if time reversal returns the coordinates and the velocities to r.m.s. < 0.001 ("predictable"). 831 runs are predictable escapes.
+  - **Outputs.** Escape angle β, escaper identity and escape time T (Figs. 2–4). Table I gives escape times by δ; Tables II–VII give β, A, E, P, I, R and the reversal errors by δ; Table VIII gives escaper statistics (75/15/10%).
+  - The **regular region around each standard position**: at δ = 5×10⁻⁸ the β-ring is complete for m₁ (β ≈ 70°) and a "horseshoe" for m₂ and m₃ (p. 8).
+  - Fine scans at 0.36° steps, δ = 3, 5 and 7 ×10⁻⁷, in 36° sectors: qualitative only.
+  - **Targets:** `../2026-10-27_papers/TARGETS.md` P-1 to P-6, with Tables I–VIII transcribed.
 - **Difficulty:** Qualitative to semi-quantitative. The existence and rough extent of the regular island around the nominal IC is a direct test of the BodyPlane chart centred on Burrau. **Caveat:** The 1994 integrators were regularised but double precision, and the authors themselves flag unreliable regions.
 
 ### 3.3 Boekholt, Moerman & Portegies Zwart 2021: relativistic Pythagorean problem (Newtonian limit as control)
-- **Citation [CR][arXiv]:** T. C. N. Boekholt, F. Moerman & S. F. Portegies Zwart, "Relativistic Pythagorean three-body problem", *Phys. Rev. D* 104, 083020 (2021), doi:10.1103/PhysRevD.104.083020, arXiv:2109.07013.
+- **Citation [CR][arXiv]:** T. C. N. Boekholt, A. Moerman & S. F. Portegies Zwart, "Relativistic Pythagorean three-body problem", *Phys. Rev. D* 104(8), 083020 (2021), doi:10.1103/PhysRevD.104.083020, arXiv:2109.07013. *27 Oct 2026, was:* "F. Moerman"; the second author is Arend Moerman (byline, Crossref).
 - **Access:** arXiv (open).
-- **What can be replicated:** Not a 2D map. Lifetime against ζ = c/v_scale (Fig. 3), with the Newtonian limit for ζ > 10⁶. A reversibility test perturbs the lightest body's x in the tenth decimal place, integrating to t = 100 and back. Lyapunov time τ_L ≈ 4.3 (Fig. 5). Escape requires r ≥ 5, receding, E > 0, held for 100 time units.
-- **Difficulty:** Exact for the Newtonian lifetime (converged Brutus). The τ_L ≈ 4.3 estimate is a useful FTLE calibration for the near-field chart.
+- **What can be replicated:** Not a 2D map.
+  - Lifetime against ζ, the dimensionless speed of light (Fig. 3), with the Newtonian limit for ζ > 10⁶.
+  - A reversibility test perturbs the lightest body's x in the tenth decimal place, integrating to t = 100 and back.
+  - Lyapunov time τ_L = 4.3 ± 0.2 (Eq. 1, Fig. 5).
+  - Escape requires r ≥ 5 from the **centre of mass**, receding and E > 0, all held for 100 time units.
+- **Difficulty:** Exact in principle (converged Brutus), but **the Newtonian lifetime is not printed**. Fig. 3's plateau reads log₁₀ T_l ≈ 1.8, a figure reading only. τ_L is **fitted over runs at all ζ**, relativistic included, so it calibrates an FTLE only loosely. Table I (p. 10) gives a ζ = 10⁶ reversal at 1PN to 40 digits, not a Newtonian state.
+  - *27 Oct 2026, was:* "Exact for the Newtonian lifetime (converged Brutus). The τ_L ≈ 4.3 estimate is a useful FTLE calibration for the near-field chart."
+  - **Targets:** `../2026-10-27_papers/TARGETS.md` B-1 to B-3.
+
+### 3.5 Aarseth, Anosova, Orlov & Szebehely 1994b: close triple approaches before escape (added 27 Oct 2026)
+- **Citation [CR]:** S. J. Aarseth, J. P. Anosova, V. V. Orlov & V. G. Szebehely, "Close triple approaches and escape in the three-body problem", *CeMDA* 60(1), 131–137 (1994), doi:10.1007/BF00693096.
+- **Access:** In the repo (`papers/aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf`).
+- **What can be replicated:**
+  - **Ensembles.** 2500 equal-mass systems from rest with the third body random in region D, and 2500 with all positions uniform in a unit circle R. Both are compared with the 831 predictable Pythagorean-vicinity escapes of §3.2.
+  - **Escape.** Standish, or conditional escape at 10d, d the virial radius.
+  - **Parameters.** The triple approach at minimum moment of inertia (perimeter < 2d) is described by T, P, I, Y, Z, Ψ, V_b, V_e, A and E. Table I gives their means, Table II their ten-bin histograms with medians, and Table III D + R against 𝒫.
+  - **Monaghan's planar eccentricity distribution** is printed as a binned row, which is exactly computable.
+  - **A random-geometry control for Z** needs no integration.
+- **Difficulty:** Statistical. The A distribution's cut-off at ≈ 0.4 is made by the 10d conditional-escape rule. 1994b's T for 𝒫 (52.4) is in its own crossing-time unit, not 1994a's T_cr = 3.84.
+- **Targets:** `../2026-10-27_papers/TARGETS.md` Q-1 to Q-4, with Tables I–III transcribed.
 
 ### 3.4 Chitan, Mylläri & Haque 2021: Burrau revisited (16 Pythagorean triangles)
 - **Citation [CR][arXiv]:** A. S. Chitan, A. Mylläri & S. Haque, "Relativistic effects on triple black holes: Burrau's problem revisited", *MNRAS* 509, 1919–1928 (2021/22), doi:10.1093/mnras/stab3124, arXiv:2011.03046.
@@ -331,6 +388,9 @@ See §2.1: Fig. A.1 gives nine phase maps for hyperbolic binary–single encount
 - **What can be replicated:**
   - **Domain:** Points in AA region D, with bodies at (∓0.5, 0).
   - **Li & Liao:** 234 orbits for six mass sets, including (1,1,1), (1,0.8,0.8) through (1,0.8,0.2), and (0.6,0.8,1), found on a 10⁻⁴ grid with DOP853 and confirmed by clean numerical simulation. Tables A1–A5 give (x, y, T).
+    - **Verified on the paper, 27 Oct 2026.** The counts are 30, 29, 69, 44, 32 and 30 (Table I). Values are printed to 10 decimals with trailing zeros dropped. The search kept periods < 200 and minimum separations > 10⁻⁶, and accepted a return proximity < 10⁻⁶.
+    - Every orbit has all velocities zero at T/2, a brake orbit (p. 3).
+    - Targets LL-1 to LL-4 in `../2026-10-27_papers/TARGETS.md`.
   - **Hristov:** 12 409 distinct equal-mass solutions with T* < 80. Tables 1–2 give 35-digit ICs.
 - **Difficulty:** **Exact.** Each IC must return to its starting configuration after period T, with zero escape and no collision. These are isolated, unstable, **non-escaping** pixels inside D, and the engine must reproduce them as long-lived points embedded in short-lifetime regions. The unequal-mass Li & Liao sets give **free-fall test points on the mass simplex**. Hardest-to-fake integrator test in the list. **Caveat:** The orbits are unstable, so expect closure only to about the integrator's precision times e^{T/τ_L}. Use the short-period ones.
 
@@ -347,8 +407,8 @@ See §2.1: Fig. A.1 gives nine phase maps for hyperbolic binary–single encount
 ## Blocked or unread (for follow-up)
 - The arXiv abstract page for 2403.03247 and the ar5iv pages for 0704.2671 were blocked; the PDFs were read instead.
 - research.utu.fi (BotStopper) blocked the Tanikawa–Mikkola and Gargantuan records; Crossref was used.
-- These figures were not read: Heinämäki et al. 1999 (MNRAS 310, 811), Martynova et al. 2009 (Astron. Rep. 53, 710), Aarseth et al. 1994 (CeMDA 58, 1), Boyd & McMillan 1993, and the Umehara–Tanikawa figures. All are paywalled or abstract-only.
-- Agekian & Anosova 1967/68 (Sov. Astron. 11, 1006) was not verified against ADS.
+- These figures were not read: Heinämäki et al. 1999 (MNRAS 310, 811), Martynova et al. 2009 (Astron. Rep. 53, 710), Boyd & McMillan 1993, and the Umehara–Tanikawa figures. All are paywalled or abstract-only.
+- *27 Oct 2026:* Aarseth et al. 1994a (CeMDA 58, 1) and Agekyan & Anosova 1967/68 (Sov. Astron. 11, 1006) are now read from the PDFs, and are removed from this list. *Was:* "…, Aarseth et al. 1994 (CeMDA 58, 1), Boyd & McMillan 1993, …" and "Agekian & Anosova 1967/68 (Sov. Astron. 11, 1006) was not verified against ADS."
 
 ## Integrator and data availability summary
 - **Public codes:** Brutus (in AMUSE); Fewbody (Fregeau et al. 2004, public); ARC/logH (Mikkola, on request or partly public). TSUNAMI public availability is **UNVERIFIED** (described in arXiv:2206.10583).
