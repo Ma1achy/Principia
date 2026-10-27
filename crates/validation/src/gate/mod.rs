@@ -26,6 +26,7 @@ use serde::Deserialize;
 pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
 use crate::convergence::ConvergenceGate;
+use crate::decode_agreement::DecodeAgreementGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::decode_sanity::DecodeSanityGate;
 use crate::eps_phys::EpsPhysGate;
@@ -62,6 +63,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &InspectorRoundtripGate,
     &DecodeSanityGate,
     &NsubBucketGate,
+    &DecodeAgreementGate,
 ];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.

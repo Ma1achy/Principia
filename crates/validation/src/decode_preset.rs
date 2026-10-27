@@ -310,6 +310,55 @@ impl Scene {
     }
 }
 
+impl Scene {
+    /// Runs the kernel decode stage (the kernel's WGSL `wgsl`) at every sample's chart point and writes each decode's
+    /// `ICDescriptor` into the payload, as the decode stage writes `ctx.ic`; `shift` writes sample `q`'s at sample
+    /// `(q + shift) mod count` instead, a dispatch scramble (0 is none). Returns the decodes in sample order.
+    pub fn stage_into(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        wgsl: &str,
+        shift: u32,
+    ) -> Result<Vec<DecodeOut<f32>>, String> {
+        let grid = self.context.grid;
+        if grid.n != 1 {
+            return Err("the scene holds one sample per quad".to_owned());
+        }
+        let count = grid.quad_count();
+        let points: Vec<[f32; 2]> = (0..count).map(|q| self.point(q)).collect();
+        let outs = stage(device, queue, wgsl, self.chart, &self.uniforms, &points)?;
+        for (q, o) in (0u32..).zip(&outs) {
+            let i = grid.sample_index((q + shift) % count, 0, 0);
+            *self.set.ic(i) = o.descriptor;
+        }
+        Ok(outs)
+    }
+
+    /// The agreement preset's words (`render::presets::agreement::words`) at every sample, in sample order:
+    /// `(ratio's bits, valid, E's bits, E₀'s bits)`, on one-pixel tiles.
+    pub fn agreement(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<Vec<[u32; 4]>, String> {
+        let grid = self.context.grid;
+        if grid.tile_px != 1 {
+            return Err("the agreement words are read one pixel per sample".to_owned());
+        }
+        let image = self.draw(device, queue, &render::presets::agreement::words())?;
+        let mut out = vec![[0u32; 4]; grid.quad_count() as usize];
+        let (width, height) = self.size();
+        for y in 0..height {
+            for x in 0..width {
+                let w = image.words(x, y);
+                out[grid.cell(x, y).quad as usize] = [w[0], w[1], w[2], w[3]];
+            }
+        }
+        Ok(out)
+    }
+}
+
 /// The f32 value of `bits`, widened.
 pub fn f(bits: u32) -> f64 {
     f64::from(f32::from_bits(bits))

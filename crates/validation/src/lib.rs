@@ -6,6 +6,7 @@ pub mod bench;
 pub mod bringup;
 pub mod control;
 pub mod convergence;
+pub mod decode_agreement;
 pub mod decode_f32_eps;
 pub mod decode_preset;
 pub mod decode_sanity;

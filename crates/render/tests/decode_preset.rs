@@ -8,11 +8,13 @@
 //!   (`validation::decode_f32_eps::error`), the tag word equal, `Φ`'s `z` within the factor and its latent flag the
 //!   chart's; and the identities `Σm = 1`, `Σmᵢrᵢ = 0` and `I = Σmᵢ‖rᵢ‖² = 1` within the same factor. Control: the
 //!   reference decoded `10⁻³` off the fragment's point fails.
-//! - `decode_preset_poles` (R-437, R-436): the fragment's descriptor (`frag_describe`) at a coincident pair stores `V₀`'s
-//!   `−∞` bits and at `λ̃ = 0` `rho_ratio`'s `+∞` bits, as the CPU's f32 descriptor does, every sign of the zeros; the
-//!   fragment encode (`frag_encode`) at `λ̃ = 0` and `ρ̃ = 0` and on the `−x` half-axis (R-438), `±0` components, gives the
-//!   CPU's f32 `α`, `β` and notices bit for bit; and the shape sphere's decode at its `n₀` pole, `(½, ½)`, is finite with
-//!   the CPU's tag.
+//! - `decode_preset_poles` (R-437, R-436, R-438): at a coincident pair (`ρ̃ = 0`), at `λ̃ = 0` and on the `−x` half-axis
+//!   of the inner pair's centre, every sign of the zeros, the fragment's descriptor (`frag_describe`) and encode
+//!   (`frag_encode`) against the CPU's at f32: a non-finite value bit for bit (`V₀`'s `−∞` at the coincident pair, which
+//!   the test also asserts directly), a finite one within REQ-DEC-043's factor (the two compilations may differ in the
+//!   last bits, and a pole's branch taken the other way, `α = π` for `−π`, is far outside it), the notices word
+//!   exactly; and the shape sphere's decode at its `n₀` pole, `(½, ½)`, is finite with the CPU's tag. Control: a finite
+//!   `V₀` at the coincident pair fails.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; the factor is REQ-DEC-043's, provisional until the
 //! M2 gate, on the domains its record lists (`validation::decode_f32_eps`), each chart at the parameters
