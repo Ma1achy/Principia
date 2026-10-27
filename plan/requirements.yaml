@@ -2707,6 +2707,8 @@
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   - file: decisions.md
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is forbidden past every edge; the mass simplex continues and its negative-mass pixels are forbidden by inverse_encode layer 2's narrowed simplex (buffered mᵢ ≥ ε_m, exactly raw mᵢ ≥ 0), at every sample past the edge, including one within ε_m of it, so the forbidden area starts at the edge with no band; control: a check of buffered mᵢ > 0 alone (which passes the band) fails; a custom chart's physical-quantity axis continues linearly in its quantity, and its unreachable pixels (energy beyond what is reachable) are forbidden by validate; a custom chart's undeclared axis is forbidden past its edge; every forbidden pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, a physical-quantity axis built as bounded, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407 and R-408's B1; run on the whole shape sphere, which has no one-hemisphere case (R-544; REQ-CHART-057); the outcome view draws every forbidden pixel as the canvas background, not #141418 and not the hatch, through REQ-COL-102's lane, and the debug view draws it with the hatch (R-446, R-467); control: a pixel past the invariant warp's edge drawn from its decode_failed detail draws black and fails; the shape sphere's pixel past its pole draws its outcome colour in the outcome view, not the background; on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails validate draws the background (physics review 5548113767 on PR #226, P1); control: a lane set from the area statistics' classifier, which leaves that pixel \"not counted\", fails"
@@ -2720,8 +2722,9 @@
   - R-472
   - R-537
   - R-544
+  - R-627
   milestone: M8
-  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view decides these pixels from the chart, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]². R-467 (20 Oct 2026): \"hatched\" is the classification; a presentation view draws these pixels as the canvas background and the debug view hatches them. R-470 (20 Oct 2026): a forbidden pixel draws blank, never a palette colour, the hatch only in the debug views and the optional Overlays › Chart › forbidden region (REQ-COL-111). R-471: a Chart-builder physical-quantity axis of kind 3 (energy, L_z) is warped by default and so bounded (REQ-CHART-067), its linear option the affine B1 axis (REQ-CHART-068); the virial ratio and the mass ratio keep B1; this task's tests run under both mappings. R-472 X3: a tilted, sliced or saved chart extends by its axes' types (REQ-CHART-066). Physics review is required (⚑). R-537 (20 Oct 2026): the types act wherever the view reaches past the square, by navigation too; a pixel in a repeat resolves to its canonical point, and the quadtree follows the same fold (REQ-SCHED-101, TASK-M8-56). R-544 (21 Oct 2026) withdraws R-412: the shape sphere chart is the whole sphere, with no one-hemisphere view, so REQ-CHART-057 now states that no hemisphere mode exists past [0,1]²."
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view decides these pixels from the chart, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]². R-467 (20 Oct 2026): \"hatched\" is the classification; a presentation view draws these pixels as the canvas background and the debug view hatches them. R-470 (20 Oct 2026): a forbidden pixel draws blank, never a palette colour, the hatch only in the debug views and the optional Overlays › Chart › forbidden region (REQ-COL-111). R-471: a Chart-builder physical-quantity axis of kind 3 (energy, L_z) is warped by default and so bounded (REQ-CHART-067), its linear option the affine B1 axis (REQ-CHART-068); the virial ratio and the mass ratio keep B1; this task's tests run under both mappings. R-472 X3: a tilted, sliced or saved chart extends by its axes' types (REQ-CHART-066). Physics review is required (⚑). R-537 (20 Oct 2026): the types act wherever the view reaches past the square, by navigation too; a pixel in a repeat resolves to its canonical point, and the quadtree follows the same fold (REQ-SCHED-101, TASK-M8-56). R-544 (21 Oct 2026) withdraws R-412: the shape sphere chart is the whole sphere, with no one-hemisphere view, so REQ-CHART-057 now states that no hemisphere mode exists past [0,1]². R-627 (27 Oct 2026): closed by TASK-M8-87, no longer TASK-M8-05, since it is kernel physics drawn on the real figure, split from TASK-M8-05 in the plan; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-CHART-055
   area: CHART
   kind: definition
@@ -2763,6 +2766,8 @@
     section: "R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*"
   - file: decisions.md
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel area_stats_primary_range: on the shape sphere's spherical map (the whole sphere), a window that covers [0,1]² and reaches past it in s (a periodic duplicate) and in t (past a pole, θ shifted by π) gives the same forbidden count and the same total as [0,1]² alone, so each periodic duplicate is counted once; on the invariant warp, a window reaching past s's edges or below t = 0 gives the same count and total as [0,1]², its hatched band leaving both (R-508); on the mass simplex, the window's negative-mass pixels count as forbidden and the total grows by the extended pixels, so the forbidden share rises; on a custom chart with a physical-quantity axis, its unreachable pixels count as forbidden; B5's order (on a test chart where no shipped chart has the case): a pixel where layer 2 rejects and Φ fails (non-finite) counts as forbidden, and a pixel where Φ fails and layer 2 accepts is the domain's end, out of the count and the total; inside [0,1]² every chart's statistic is bit-identical to before; controls: counting the periodic duplicate, counting a pixel past a pole, counting the domain-hatched band as forbidden, dropping it from the count but not the total, and a classifier running Φ before validate each fail; review (physics): the primary ranges and the classification order against R-408; run on the whole shape sphere, which has no one-hemisphere case (R-544; REQ-CHART-057, REQ-CHART-083); R-471 (H3): a Chart-builder energy axis under the default warp is bounded past its edge (the domain's end, out of the count and the total) and under the linear option affine (its unreachable pixels forbidden), each tested; review (physics): B1's retirement breaks no area statistic; R-508: on the invariant warp and the (ν, K) chart a window reaching past t = 1 counts its pixels there in the count and the total (an affine side, primary range t ≥ 0) and past s's edges and below t = 0 leaves them out; control: past t = 1 left out of the total fails"
@@ -2773,8 +2778,9 @@
   - R-506
   - R-508
   - R-544
+  - R-627
   milestone: M8
-  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1. R-471 (20 Oct 2026), H3: the only statistic that moves is a builder chart's \"forbidden in view\" past its square under the default; physics checks it (⚑). The Gram factor under Lean each axis is REQ-CHART-071 (R-474 R7). R-508 (RQ-376 ruled): the warp's t > 1 side continues and is counted. R-506: every physical-quantity axis is warped by default, B1 its linear option. Physics review 5587614130 of PR #255, item 1: the invariant-warp arm narrowed to s's edges and t < 0, R-508 counting t > 1. *Was:* \"on the invariant warp, a window reaching past an edge gives the same count and total as [0,1]²\". R-544 (21 Oct 2026) withdraws R-412: there is no one-hemisphere case; the whole-sphere statistics are REQ-CHART-083 (TASK-M8-44)."
+  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1. R-471 (20 Oct 2026), H3: the only statistic that moves is a builder chart's \"forbidden in view\" past its square under the default; physics checks it (⚑). The Gram factor under Lean each axis is REQ-CHART-071 (R-474 R7). R-508 (RQ-376 ruled): the warp's t > 1 side continues and is counted. R-506: every physical-quantity axis is warped by default, B1 its linear option. Physics review 5587614130 of PR #255, item 1: the invariant-warp arm narrowed to s's edges and t < 0, R-508 counting t > 1. *Was:* \"on the invariant warp, a window reaching past an edge gives the same count and total as [0,1]²\". R-544 (21 Oct 2026) withdraws R-412: there is no one-hemisphere case; the whole-sphere statistics are REQ-CHART-083 (TASK-M8-44). R-627 (27 Oct 2026): closed by TASK-M8-87, no longer TASK-M8-05, since it is kernel physics drawn on the real figure, split from TASK-M8-05 in the plan; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-CHART-057
   area: CHART
   statement: "Past [0,1]² the shape sphere must have no hemisphere mode (R-544, withdrawing R-412): φ's span is R-14's φ = π(1 − t), pole to pole, in every view, with no remap to the equator; φ is pole-crossing at both edges and nothing is folded at the equator, a pixel below the equator decoding to its own system, drawn and counted once inside [0,1]² like any other; and the chart offers no hemisphere toggle."
@@ -3105,14 +3111,17 @@
     section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
   - file: docs/design/principia_chart_reference.md
     section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel lean_gram_factor: at τ₁ = 40°, τ₂ = 25°, X = Y, under Lean each axis an absolute area statistic equals the Gram factor times the untilted pixel area sum to 1e-12, and the forbidden share is unchanged; under Tip as sheet the factor is 1 to 1e-15; control: the factor left out gives an area off by the factor √(1 − sin²τ₁ sin²τ₂)"
   rulings:
   - R-408
   - R-474
+  - R-627
   milestone: M8
-  note: "R-474 R7, K9. Closed by TASK-M8-05. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-474 R7, K9. Closed by TASK-M8-05. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-627 (27 Oct 2026): closed by TASK-M8-87, no longer TASK-M8-05, since it is kernel physics drawn on the real figure, split from TASK-M8-05 in the plan; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-CHART-072
   area: CHART
   statement: "Cross-chart consistency (C1): the same state reached through two charts, a shape-sphere pixel and the latent pixel its decoded state encodes to (R-82's encode), must give the same z to the encode's tolerance ε_phys, and then the same payload and the same outcome bit for bit from that z."
@@ -18028,14 +18037,17 @@
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   - file: decisions.md
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field; review that egui-wgpu is constructed from the engine's device/queue, not a second context"
   rulings:
   - R-406
   - R-407
+  - R-627
   milestone: M8
-  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the figure is identical underneath\" is checked over the shown figure's rect. The fill on the real engine is REQ-GUI-180, closed by this requirement's task, TASK-M8-05, under R-407 (RQ-262 ruled). Applied per R-369 (R-407, A4; gui review 5478798782, G5): ctx.screen.uv and ctx.screen.pixel are taken over the figure area as shown, so the check uses a stain that reads no screen-lane field."
+  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the figure is identical underneath\" is checked over the shown figure's rect. The fill on the real engine is REQ-GUI-180, closed by this requirement's task, TASK-M8-05, under R-407 (RQ-262 ruled). Applied per R-369 (R-407, A4; gui review 5478798782, G5): ctx.screen.uv and ctx.screen.pixel are taken over the figure area as shown, so the check uses a stain that reads no screen-lane field. R-627 (27 Oct 2026): closed by TASK-M8-88, no longer TASK-M8-05, since its check is egui-wgpu built from the real engine's device and queue; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-071
   area: GUI
   statement: "Undo and redo must be a single history of typed setField edits kept by the state contract and shared by every GUI, in which a drag coalesces into one entry; a GUI must send undo / redo as requests and keep no history of its own."
@@ -18184,6 +18196,8 @@
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   - file: decisions.md
     section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2"
@@ -18193,8 +18207,9 @@
   - R-468
   - R-475
   - R-476
+  - R-627
   milestone: M8
-  note: "R-466 to R-468: the View menu's entries, in order (render_gui_spec §G2); built on the mock by TASK-M6-45, TASK-M6-46 and TASK-M6-47. R-475 L1: Save view as chart after Debug view, before reset layout (TASK-M6-49 on the mock); R-476 M9: Lines ▾ beside Overlays ▾ (TASK-M8-50). Gui review 5586902228 of PR #255, G4 (applied per R-369): \"Lines ▾ with a count (R-476)\" moved to REQ-GUI-247 (TASK-M8-50 closes it; TASK-M8-05 cannot depend on TASK-M8-50, which depends on it), and TASK-M8-05 depends on TASK-M6-49, which builds the View entry. *Was:* \"Overlays ▾ with a count of overlays on, Lines ▾ with a count (R-476), Run…\"."
+  note: "R-466 to R-468: the View menu's entries, in order (render_gui_spec §G2); built on the mock by TASK-M6-45, TASK-M6-46 and TASK-M6-47. R-475 L1: Save view as chart after Debug view, before reset layout (TASK-M6-49 on the mock); R-476 M9: Lines ▾ beside Overlays ▾ (TASK-M8-50). Gui review 5586902228 of PR #255, G4 (applied per R-369): \"Lines ▾ with a count (R-476)\" moved to REQ-GUI-247 (TASK-M8-50 closes it; TASK-M8-05 cannot depend on TASK-M8-50, which depends on it), and TASK-M8-05 depends on TASK-M6-49, which builds the View entry. *Was:* \"Overlays ▾ with a count of overlays on, Lines ▾ with a count (R-476), Run…\". R-627 (27 Oct 2026): closed by TASK-M8-88, no longer TASK-M8-05, since its `budget-bound` needs the real engine's binding axis, which the mock never binds; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-079
   area: GUI
   statement: "Overlays ▾ must hold the grouped toggles — Quadtree (tile bounds, depth colouring, priority heatmap, refine_flagged, split / merge activity), Integration (substep density, substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function, Burrau lattice) — each with an Alt+digit shortcut, plus 'all off' and 'save as default'; forbidden region and NaN / invalid pixels draw as REQ-COL-111 says; the grid, the t_end contours and the class edges are Lines ▾ presets (REQ-GUI-247)."
@@ -18468,13 +18483,16 @@
     section: Part 1 — Playback is the temporal mechanism
   - file: decisions.md
     section: R-66 — The time scrubber stays *(closes RQ-22)*
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "scrub from t=40 to t=10: the playhead SetField triggers re-integration from 0 with a progress indicator; no frame store is read"
   rulings:
   - R-66
+  - R-627
   milestone: M8
-  note: "The export contract's 'no scrub' applies to exported animations only (R-66)."
+  note: "The export contract's 'no scrub' applies to exported animations only (R-66). R-627 (27 Oct 2026): closed by TASK-M8-90, no longer TASK-M8-07, since its check is a scrub re-integrating from 0 on the real engine; TASK-M8-07 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-093
   area: GUI
   statement: "The footer must show the warning and error counts, the latest message, memory (GPU, heap) and '? keys', and clicking it must open the console."
@@ -20043,6 +20061,8 @@
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   - file: decisions.md
     section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is forbidden on every side, the canvas background in the presentation capture; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each forbidden one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check"
@@ -20052,8 +20072,9 @@
   - R-467
   - R-468
   - R-537
+  - R-627
   milestone: M8
-  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a forbidden pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are R-408's (RQ-263 ruled; REQ-CHART-056); this requirement computes none. R-467 (20 Oct 2026): a forbidden pixel is the canvas background in a presentation view. R-468 (20 Oct 2026): this is the Extend mode; Fit is REQ-GUI-230 (TASK-M8-46). R-537 (20 Oct 2026): the extension is reached by pan and zoom with the controls shown too, not only under F3, and F3's Extend only adds window area; REQ-GUI-267 and REQ-GUI-268 (TASK-M8-55) build that; this requirement's F3 fill is unchanged."
+  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a forbidden pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are R-408's (RQ-263 ruled; REQ-CHART-056); this requirement computes none. R-467 (20 Oct 2026): a forbidden pixel is the canvas background in a presentation view. R-468 (20 Oct 2026): this is the Extend mode; Fit is REQ-GUI-230 (TASK-M8-46). R-537 (20 Oct 2026): the extension is reached by pan and zoom with the controls shown too, not only under F3, and F3's Extend only adds window area; REQ-GUI-267 and REQ-GUI-268 (TASK-M8-55) build that; this requirement's F3 fill is unchanged. R-627 (27 Oct 2026): closed by TASK-M8-87, no longer TASK-M8-05, since it is kernel physics drawn on the real figure, split from TASK-M8-05 in the plan; TASK-M8-05 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-181
   area: GUI
   statement: "On the mock engine, the compass must show the slice plane inside the chart in a fixed orthographic view at its default angle, with no orbit: no drag and no key turns the view; it must have a Tilt and a Slice button beside it, Tilt the default, a click on one switching the mode and the buttons always showing the current mode; touching a slice slider must still switch it to Slice and touching a tilt to Tilt; in tilt mode a drag on it must tilt the plane, one SetField on the basis; and in slice mode a drag anywhere on it must move the slice plane along its normal, one SetField on z₀ per drag, the tilt and γ unchanged, and, locked, an excursion along that line through the anchor."
@@ -22959,13 +22980,16 @@
     section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
   - file: decisions.md
     section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "cargo test -p gui occupant_pair_warning: selecting Heggie × KDK shows the table's warning text beside the selectors and the run proceeds; selecting Heggie × RK4 shows none; every pair of the production steppers is reachable, and the Euler pairs only in the debug selection; controls: a selector that disables a measured-bad pair fails, a warning shown for a not-measured pair fails, and a production selector offering an Euler pair fails"
   rulings:
   - R-561
+  - R-627
   milestone: M8
-  note: "R-561 (21 Oct 2026). Closed by TASK-M8-24. qa review 5607548278 of PR #277, Q6 (applied per R-369): the Euler pairs are debug-only (REQ-INT-015). *Was (statement):* \"must offer every pair,\"."
+  note: "R-561 (21 Oct 2026). Closed by TASK-M8-24. qa review 5607548278 of PR #277, Q6 (applied per R-369): the Euler pairs are debug-only (REQ-INT-015). *Was (statement):* \"must offer every pair,\". R-627 (27 Oct 2026): closed by TASK-M8-95, no longer TASK-M8-24, since its warnings come from TASK-M3-39's measured pair table; TASK-M8-24 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-352
   area: GUI
   statement: "A pair measured not to work must show its warning in the Problems panel, as RQ-525 places it."
@@ -22976,15 +23000,18 @@
     section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
   - file: decisions.md
     section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "cargo test -p gui problems_pair_warning: with Heggie × KDK bound the Problems panel RQ-525 names lists the pair's warning, and with Heggie × RK4 it lists none; control: a binding change that leaves the old warning listed fails"
   rulings:
   - R-561
+  - R-627
   milestone: M8
   rq:
   - RQ-525
-  note: "R-561 (21 Oct 2026). Closed by TASK-M8-24. Waits on RQ-525: the corpus's only Problems pane is the stain editor's."
+  note: "R-561 (21 Oct 2026). Closed by TASK-M8-24. Waits on RQ-525: the corpus's only Problems pane is the stain editor's. R-627 (27 Oct 2026): closed by TASK-M8-95, no longer TASK-M8-24, since its warnings come from TASK-M3-39's measured pair table; TASK-M8-24 builds its screen on the mock engine, and the closing task re-runs this acceptance line on the real engine."
 - id: REQ-GUI-353
   area: GUI
   statement: "Each export's settings (the sidecar carried by an image's pxpack, a snapshot and a share link, and a recording's spec object) must record the occupant's regularisation and stepper and, for a pair measured not to work, its warning text, which a receiver shows."
@@ -23908,6 +23935,173 @@
   - R-586
   milestone: M8
   note: "Fix round 1 of PR #287 (gui review 5638052211, G1), applied per R-369. Closed by TASK-M8-84. Fix round of PR #287's rulings port (gui review 5638421533 of PR #287, G9, G10, applied per R-369). *Was (statement):* \"Mark and Mark all kept must each send one `SetField` on `RenderField::Lines` and make one undo entry, Mark all kept with n kept orbits one entry, never n (R-69, R-52).\" *Was (verify):* \"cargo test -p gui ic_mark_undo: Mark on a built IC sends one SetField on Lines and adds one undo entry, and undo removes the mark; Mark all kept with three kept orbits sends one SetField and adds one undo entry, and one undo removes all three marks (controls: a mark that enters no history, and Mark all kept making three entries, each fail)\" Fix round of PR #287's rulings port (qa review 5639456860 of PR #287, Q2, applied per R-369): the conversion keeping ic and style has a control. *Was (verify):* \"cargo test -p gui ic_mark_undo: Mark on a built IC that is not kept sends one SetField on Lines and adds one undo entry and one Marked trace, and undo removes the mark; Mark on a kept orbit turns its Kept trace into a Marked trace with the same ic and style, Lines holding one trace for that IC; Mark all kept with three kept orbits sends one SetField and adds one undo entry, after which Lines holds three Marked traces and no Kept trace, each IC drawn once (one crosshair and one path per IC in the frame), and the kept-orbit list and its three tabs are unchanged; one undo restores the three Kept traces bitwise and leaves no Marked trace; Mark (mark it in the figure) and Mark all kept, the latter after Copy as text, reached from the keyboard, Enter acting as each one's click, do the same (controls: a mark that enters no history, Mark all kept making three entries, a Mark or Mark all kept that adds a Marked trace beside the Kept one, drawing an IC twice, one that removes the kept-orbit tabs, an undo that leaves a mark or loses a Kept trace, a Mark or Mark all kept the keyboard cannot reach, and a Mark all kept out of that order, each fail)\""
+- id: REQ-GUI-401
+  area: GUI
+  statement: "The v1 web skeleton must measure text input and the clipboard in the browser, in each layout it runs in: typing into an egui text field of the mock app (ASCII, a non-ASCII character and an IME composition), and copy and paste between an egui text field and another application, reporting for each what works and what it needed from the browser or the main thread (R-627; systems_architecture §3, rows 1 and 8)."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: docs/design/principia_systems_architecture.md
+    section: "3. The membrane — the deployment view (demoted, not diminished)"
+  verify:
+    method: review checklist
+    detail: "for each browser of R-110's pair and each layout run, the report in systems_architecture §3 lists ASCII typing, a non-ASCII character, an IME composition, copy out and paste in, each as works or does not, with the mechanism it took (for example a hidden input element, the async Clipboard API, a message to the main thread) and any permission prompt; control: a case with no browser, version or layout fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+- id: REQ-GUI-402
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the Explore shell (the top bar, the footer, the menus' entry points, the window registry, nothing over the figure) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: review checklist
+    detail: "TASK-M8-05's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-05 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-88, the wiring task of TASK-M8-05, which built the screen on the mock engine."
+- id: REQ-GUI-403
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the Manifold view panel (Chart, Navigate, the depth readout, Lock, Slice centre, Tilt, the axis and direction labels) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: review checklist
+    detail: "TASK-M8-06's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-06 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-89, the wiring task of TASK-M8-06, which built the screen on the mock engine."
+- id: REQ-GUI-404
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the lock, compass and time controls (the reticle, the pin, the compass's modes, the scrubber) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G4. Lock — the reticle and the pin (`08_lock.png`)
+  verify:
+    method: review checklist
+    detail: "TASK-M8-07's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-07 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-90, the wiring task of TASK-M8-07, which built the screen on the mock engine."
+- id: REQ-GUI-405
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the keyboard's scopes and keys, the focus ring and the breadcrumb must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: review checklist
+    detail: "TASK-M8-13's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-13 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-91, the wiring task of TASK-M8-13, which built the screen on the mock engine."
+- id: REQ-GUI-406
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), Stain mode's layout (the library drawer, the canvas with Graph | Code, the preview, the Problems pane) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 1. Layout — four surfaces
+  verify:
+    method: review checklist
+    detail: "TASK-M8-19's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-19 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-92, the wiring task of TASK-M8-19, which built the screen on the mock engine."
+- id: REQ-GUI-407
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the Stain canvas (selection, wiring gestures, the node palette, node visuals) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 7. Canvas interactions
+  verify:
+    method: review checklist
+    detail: "TASK-M8-20's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-20 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-93, the wiring task of TASK-M8-20, which built the screen on the mock engine."
+- id: REQ-GUI-408
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the Display window (the last stages and the display overlays) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Display — the last stages
+  verify:
+    method: review checklist
+    detail: "TASK-M8-23's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-23 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-94, the wiring task of TASK-M8-23, which built the screen on the mock engine."
+- id: REQ-GUI-409
+  area: GUI
+  statement: "Built on the mock engine by its track task (R-627), the Run window (integration, escape and refinement settings under their contract names) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Run — from the top bar
+  verify:
+    method: review checklist
+    detail: "TASK-M8-24's acceptance lines re-run on the real engine (`cargo run -p gui` and the headless capture on it) with their outputs in the PR; `cargo test -p engine conformance` and `cargo test -p gui conformance` pass, every contract field TASK-M8-24 added among the suite's cases; control: a contract field the screen reads that no conformance case covers fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-95, the wiring task of TASK-M8-24, which built the screen on the mock engine."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -27685,6 +27879,21 @@
   - R-588
   milestone: M8
   note: "Fix round 3 of PR #287 (code review 5638122561, C3, applied per R-369): REQ-RENDER-118's GUI-save and Export & share arms, moved here since their writers on the real engine are M8's (TASK-M8-32, TASK-M8-33), as TASK-M7-45's F1 of PR #265. Closed by TASK-M8-80. Fix round of PR #287's rulings port (qa review 5638292369 of PR #287, Q2, applied per R-369). *Was (statement):* \"The GUI's save and Export & share writers must write `RenderState.base_width` as the figure's logical width when a view is saved or exported, and Export & share's multiples of the view must count logical px, so that a `k×` export is `k × base_width` px wide on every display.\" *Was (verify):* \"cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800, each at display scale factors 1 and 2 (controls: a writer that keeps a stale base_width on a GUI save, and an export width counted in physical px, each fail)\" Fix round of PR #287's rulings port (qa review 5638334977 of PR #287, the audit the coordinator asked for, applied per R-369): R-588's froze tested. *Was (verify):* \"cargo test -p gui base_width_writers: a GUI save of a view 1600 logical px wide writes base_width 1600, and a 1× and a 2× export of a view 800 logical px wide are 800 and 1600 px wide with base_width 800 and froze.base_width 800, each at display scale factors 1 and 2; importing the 2× export and the save into a window 1200 logical px wide gives back base_width 800 and 1600 bitwise (controls: a writer that keeps a stale base_width on a GUI save, an export width counted in physical px, an importer that rewrites base_width to the live window's width, and an export whose froze.base_width is null, each fail)\""
+- id: REQ-TOOL-220
+  area: TOOL
+  statement: "The GitHub Pages deploy workflow must run only when started by hand (`workflow_dispatch`), only from `main`, and deploy only through the `github-pages` environment, with no push, pull_request, schedule or other trigger, until the human says v1 is ready to be found (R-627)."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: docs/contracts/principia_canonical_spec.md
+    section: 0. What Principia is
+  verify:
+    method: unit test
+    detail: "`cargo test -p xtask pages_workflow_manual` reads `.github/workflows/pages.yml`: its only trigger is `workflow_dispatch`; its deploy job runs only when `github.ref` is `refs/heads/main` and names `environment: github-pages`; controls: the file with a `push` trigger added, and with the ref condition removed, each fail"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -32988,6 +33197,21 @@
   - R-577
   milestone: M8
   note: "Fix round 21 of PR #286 (perf review 5635062315, P1; applied per R-369): REQ-GUI-380's wall-clock 16.7 ms arm moved here, off the hosted runners; report-only, since telemetry §3 sets no pass rule. Closed by TASK-M8-78. Fix round 24 of PR #286 (perf review 5635367539, P1; applied per R-369): a report-only benchmark could never fail (perf.md § 9), so it takes REQ-PERF-106's and REQ-PERF-107's form: the no-strip baseline within noise on the fixed suite's pan-nearfield scenario, which also fixes the pan path. *Was:* the statement \"While a proof strip runs, the GUI's frame times must be measured on the human's Mac and reported against principia_dd_telemetry_and_tiers.md §3's thresholds: p50, p95, p99 and max against the 16.7 ms goal (REQ-PERF-039), and frac_frames_over_41.7ms, the 24 fps hard floor; §3 gives no pass rule for these, so the benchmark reports and gates nothing (R-186).\" and the verify \"prin profile --scenario proof_strip, run on the human's Mac (R-186): a registered, deterministic scenario that runs Proof strip on a fixture three-keyframe spec while the live view pans; the GUI's frame times over the strip's run reported as p50, p95, p99 and max against 16.7 ms, with frac_frames_over_41.7ms, recorded in the PR; report-only, no threshold gates it\"."
+- id: REQ-PERF-115
+  area: PERF
+  statement: "The v1 web skeleton must measure its frame rate on the GitHub Pages site, in each layout it runs in and each browser of R-110's pair, on the human's Mac (R-186), and report it as numbers beside the native mock app's on the same Mac (R-627)."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: docs/design/principia_systems_architecture.md
+    section: "3. The membrane — the deployment view (demoted, not diminished)"
+  verify:
+    method: review checklist
+    detail: "the report in systems_architecture §3 gives, per browser, version, layout and window size, the mean and 5th-percentile frames per second over at least 30 s of a scripted pan and of idle, beside `cargo run -p gui --features mock` on the same Mac; the perf reviewer checks the method; control: a figure with no duration, window size or browser version fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
@@ -34540,3 +34764,39 @@
   - R-72
   - R-572
   milestone: M8
+- id: REQ-SYS-092
+  area: SYS
+  statement: "The v1 web skeleton must run the native app's egui GUI with the mock engine, compiled to wasm on WebGPU, from the GitHub Pages site: in a Web Worker on an OffscreenCanvas where it will run there, and otherwise in the fallback it does run in, with what stopped the worker layout observed and reported (R-627)."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: docs/contracts/principia_canonical_spec.md
+    section: 0. What Principia is
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
+  - file: docs/design/principia_systems_architecture.md
+    section: "3. The membrane — the deployment view (demoted, not diminished)"
+  verify:
+    method: review checklist
+    detail: "the Pages build, deployed by hand, opens in each browser of R-110's pair (Chrome stable and Safari) on the human's Mac and shows the mock app with its \"mock engine\" tag; the report, in systems_architecture §3 under \"Measured on the v1 web skeleton\", gives per browser and version where egui ran (a worker on an OffscreenCanvas, or the fallback) and, for a layout that did not run, the error or missing API observed; control: a layout reported as working or failing with no browser, version or observation fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+- id: REQ-SYS-093
+  area: SYS
+  statement: "On the GitHub Pages site the v1 web skeleton must test the COOP/COEP workaround, a self-hosted, same-origin service worker such as `coi-serviceworker` beside `index.html`, and report whether the page is then cross-origin isolated and whether SharedArrayBuffer and wasm threads actually work there, against RQ-550 and RQ-551 (R-627)."
+  source:
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
+  - file: docs/design/principia_systems_architecture.md
+    section: "3. The membrane — the deployment view (demoted, not diminished)"
+  verify:
+    method: review checklist
+    detail: "on the deployed Pages URL, in each browser of R-110's pair, with the service worker active and again with it unregistered: `crossOriginIsolated`, whether `SharedArrayBuffer` exists, and whether wasm threads work (a wasm module on a shared `WebAssembly.Memory`, a second worker writing a value the first reads through `Atomics`), each recorded as observed with browser and version in systems_architecture §3; control: a result taken from a local server, not the Pages URL, fails the review"
+  rulings:
+  - R-627
+  milestone: M8
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."

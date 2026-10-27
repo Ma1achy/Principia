@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348, REQ-GUI-357
-- **Depends on:** TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48
+- **Depends on:** TASK-M8-56, TASK-M8-87, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -51,3 +51,4 @@ On the real engine the chart's extension is reached by pan and zoom with the con
 - **R-544 (21 Oct 2026):** the shape sphere chart is the whole sphere; its repeats are θ's period and the pole crossings only, a pixel past the equator its own system with its own pick, readout, trajectory, outcome and inspector (REQ-GUI-342); REQ-GUI-268's "hemisphere's fold" goes. It reaches TASK-M2-43's signed decode through TASK-M8-44 and TASK-M2-28.
 - **R-570 (21 Oct 2026):** a latent or flat chart has no limit on pan or zoom-out (REQ-GUI-357). The code site R-570's port found: `crates/gui/src/explore/manifold_view/mod.rs:56`, `ZOOM_RANGE` (four octaves out), read by Navigate's zoom row at `crates/gui/src/explore/manifold_view/navigate.rs:88` under egui's default `SliderClamping::Always`; a slider's span is the range its handle covers, never a clamp (applied per R-369). The wheel, the keys, the centre and `z₀` fields and the Slice centre sliders already send the value asked for. The reference demos' 3× cap and `clampView` exist only because their maps are precomputed images; they are never ported. The test runs at the decoder's default links; a non-default mass link or `μ_max` in the far field waits on RQ-536.
 - **Fix round 1 of PR #279** (gui review 5624653641, G1 to G3; physics review 5624655553, P1; applied per R-369): the test drives each control REQ-GUI-357 names with its own clamp control, checks the far pixel's readout, steps the zoom row by Enter then ↑ (§G3, R-409; + / − are the Figure's) and pins `E* = None`; η_E on the latent chart is RQ-552, open. *Was:* "`cargo test -p gui latent_unbounded_navigation` — REQ-GUI-357's verify (R-570): on the latent chart, zoomed out to 10⁶ × the home view with the centre at `|z| = 10⁴`, every pixel a valid system, none not a system, the view state unclamped; controls: the mass simplex under the same navigation is told apart, and a zoom row writing back its slider's clamped value fails."
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48".

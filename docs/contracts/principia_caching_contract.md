@@ -168,6 +168,8 @@ Why the wasm engine owns **everything** rather than offloading just the schedule
 
 **Deployment for SAB.** SharedArrayBuffer needs COOP + COEP cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`/`credentialless`), and GitHub Pages serves no custom headers. **`coi-serviceworker`** (gzuidhof) supplies them: one self-hosted script beside `index.html`, same-origin (not a CDN), HTTPS (GH Pages is), registering a service worker that synthesises the headers with a single first-load reload. When it's active, the boot check selects SAB; when it isn't (service-worker failure, restrictive embedding, old browser), the same check selects the postMessage backend. No configuration, no second build.
 
+**Measured on Pages first (R-627).** Before v1 web is built, the v1 web skeleton (TASK-M8-86; the egui app and the mock engine in wasm, deployed to the GitHub Pages site by hand) tests this deployment on Pages itself: whether the self-hosted `coi-serviceworker` makes the page cross-origin isolated there, and whether SharedArrayBuffer and wasm threads then actually work, in each browser of R-110's pair. Its numbers are recorded in `principia_systems_architecture.md` §3, beside v1 web's crossings; the split above stands as written until RQ-550 and RQ-551 are ruled.
+
 **Browser support & debugging.** OffscreenCanvas + WebGPU-in-worker is solid in Chromium and improving in Firefox/Safari; worker contexts are fully debuggable (devtools attaches to the worker, breakpoints and `console` work). Resize is main-side (`ResizeObserver` on the element) → one message to the worker → swapchain reconfigure; never hot.
 
 ---

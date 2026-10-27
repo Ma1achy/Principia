@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-121, REQ-VAL-110, REQ-VAL-111, REQ-GUI-147, REQ-GUI-148, REQ-GUI-149, REQ-VAL-143
-- **Depends on:** TASK-M8-05
+- **Depends on:** TASK-M8-87
 - **Needs (earlier milestones):** REQ-SCHED-031, REQ-PAY-064, REQ-SCHED-048, REQ-COL-002
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-3
@@ -38,3 +38,4 @@ The Measure tool lets the user drag a square region on the plot, draws the sampl
 - Calibrations (R-71) proposed here: REQ-GUI-148, REQ-GUI-149. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-GUI-147. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - Closes, for gaps the corpus leaves open: REQ-VAL-143 (R-72 definition) (classification accepted by R-132).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05".

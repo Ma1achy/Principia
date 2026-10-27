@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-136, REQ-GUI-137, REQ-GUI-138, REQ-GUI-043, REQ-GUI-040, REQ-GUI-041, REQ-GUI-042
-- **Depends on:** TASK-M8-20, TASK-M7-16, TASK-M7-18, TASK-M7-23, TASK-M7-24
+- **Depends on:** TASK-M8-93, TASK-M7-16, TASK-M7-18, TASK-M7-23, TASK-M7-24
 - **Needs (earlier milestones):** REQ-RENDER-057, REQ-GUI-017, REQ-GUI-018, REQ-GUI-019, REQ-COL-021, REQ-COL-030, REQ-RENDER-065
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -37,3 +37,4 @@ The node inspector chooses its editor from the node kind and, for colour / brigh
 
 ## Notes
 - none
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-20 by TASK-M8-93 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-20, TASK-M7-16, TASK-M7-18, TASK-M7-23, TASK-M7-24".

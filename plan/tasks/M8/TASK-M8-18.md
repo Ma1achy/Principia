@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
-- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37
+- **Depends on:** TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -49,3 +49,4 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - **R-471 (20 Oct 2026):** a physical-quantity axis of kind 3 (energy, `L_z`) is warped by default, its linear mapping an option (REQ-CHART-067, REQ-CHART-068, TASK-M2-37, a new dependency); the Domain preview's N% is 0 inside the square under the warp. R-475: saved charts share the presets' store (REQ-GUI-108's note). RQ-372 is answered for energy-type axes and stays open, narrowed (TASK-M8-47).
 - **R-506 (20 Oct 2026) rules RQ-372:** every physical-quantity axis, the virial ratio and the mass ratio included, is warped to its feasible range by default (the mass ratio through the mass link), linear an option; the warps not written are REQ-CHART-070's (TASK-M2-37).
 - R-478 W3, R-480 P3 (20 Oct 2026): the read-only links and the warp previews are TASK-M8-52's, after this task.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".

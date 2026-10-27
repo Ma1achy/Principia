@@ -43,3 +43,11 @@ when the R-168 to R-184 rulings were applied; nothing to do unless they're missi
 ## 4. Confirm the crate map (R-170): done
 
 Confirmed by R-185 (26 Sep 2026); TASK-M0-00 is done.
+
+## 5. GitHub Pages (R-627): done
+
+The human's decision of 27 Oct 2026 (R-627): GitHub Pages is enabled with source "GitHub Actions" (build type
+"workflow"), at https://ma1achy.github.io/Principia/. The `github-pages` environment's deployment branch policy is
+custom, with one branch policy, `main`. The orchestrator applied it on the human's word, and no other repository
+setting was changed. The site is deployed only by a manual (`workflow_dispatch`) run from `main` through that
+environment; there is no automatic deploy on merge until the human says v1 is ready to be found.

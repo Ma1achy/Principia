@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-363, REQ-GUI-364, REQ-GUI-365
-- **Depends on:** TASK-M8-68, TASK-M8-32, TASK-M8-22, TASK-M8-34, TASK-M8-14, TASK-M8-05
+- **Depends on:** TASK-M8-68, TASK-M8-32, TASK-M8-22, TASK-M8-34, TASK-M8-14, TASK-M8-87
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, perf
 - **Pitfalls:** none
@@ -32,3 +32,4 @@ While a Print graph other than Plain is active the figure's header strip names i
 ## Notes
 - Reviewers (R-485, the human's point 5): the gui and perf reviewers for the Print graph, with code and qa as always; the physics reviewer for the field inputs only.
 - **Fix round 2 of PR #281 (gui review 5608411706, F6, applied per R-369):** the header claims only what is drawn, so the badge is hidden while a debug view bypasses the print (REQ-RENDER-107) and returns when it closes. *Was:* the Goal's "never over the figure (R-523); the export dialog" and the acceptance line `cargo xtask screenshot print_badge` and `cargo test -p gui print_badge` — REQ-GUI-363's verify (under Linocut the header strip reads "Print: Linocut" and the badge's rect is disjoint from the plot's; under Plain no badge; control: a badge drawn in the canvas corner fails the disjointness check).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-68, TASK-M8-32, TASK-M8-22, TASK-M8-34, TASK-M8-14, TASK-M8-05".

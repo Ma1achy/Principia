@@ -734,6 +734,11 @@ Nothing is ruled. For the human: yes, it changes what v1 web builds or offers.*
   record, not a rule. REQ-SYS-059 and REQ-SYS-051 carry `rq: RQ-550`, and REQ-SYS-086's list of what v1 web says it
   cannot do waits on it.
 - **Waits:** TASK-M8-38 (REQ-SYS-051, REQ-SYS-059) and TASK-M8-41 (REQ-SYS-086).
+- **Measured meanwhile (R-627, 27 Oct 2026):** the v1 web skeleton, TASK-M8-86 (the egui app and the mock engine in
+  wasm on WebGPU, deployed to GitHub Pages by hand), measures text input and the clipboard (rows 1 and 8), whether
+  SharedArrayBuffer and wasm threads work on Pages, and the frame rate, and records the numbers in
+  systems_architecture §3 under "Measured on the v1 web skeleton". It rules nothing; this entry stays open, and
+  TASK-M8-86 does not wait on it.
 
 ## RQ-551: Where the GUI runs in v1 web, and what the main thread holds, now that v1 web's GUI is the native app's egui and not a TS DOM shell *(conflict: R-571 against caching_contract Part 6a, systems_architecture §3, §5 seam 12 and §6 invariant 5, canonical_spec §1 and §6; REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049, REQ-SYS-050, REQ-SYS-056; context: TASK-M8-37, TASK-M8-38)*
 
@@ -783,6 +788,10 @@ Nothing is ruled. For the human: yes, it changes how v1 web is built.*
   shell is v2 web's), and only its main-thread clause waits. REQ-SYS-042 (the coi-serviceworker) is unaffected under
   (a) and (b).
 - **Waits:** TASK-M8-37 and TASK-M8-38.
+- **Measured meanwhile (R-627, 27 Oct 2026):** the v1 web skeleton, TASK-M8-86, tries the egui app and the mock engine
+  in a Web Worker on an OffscreenCanvas, and where that will not run, measures the fallback it does run in; its
+  numbers are in systems_architecture §3 under "Measured on the v1 web skeleton". It rules nothing; this entry stays
+  open, and TASK-M8-86 does not wait on it.
 
 ## RQ-552: R-570's "No hatch, no blank, and no 'not a system' on these charts at any pan or zoom" against energy normalisation η_E, which dd_decoder §3.7 allows on the latent chart and whose tags R-511 draws blank, at the default links, near the origin as well as far out *(conflict: the human's ruling against the decoder's definitions; R-570, R-511, R-25, dd_decoder §3.7; REQ-CHART-087, REQ-GUI-357; context: TASK-M8-55, TASK-M8-57)*
 

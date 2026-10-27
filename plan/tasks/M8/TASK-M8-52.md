@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-253, REQ-GUI-261, REQ-GUI-264
-- **Depends on:** TASK-M6-50, TASK-M8-18, TASK-M8-06, TASK-M8-03, TASK-M4-21
+- **Depends on:** TASK-M6-50, TASK-M8-18, TASK-M8-89, TASK-M8-03, TASK-M4-21
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -30,3 +30,4 @@ On the real engine: the Decoder window's Apply sends the staged `Links` as one r
 
 ## Notes
 - Physics reviews the energy axes' warp preview against the per-pixel warp (R-480 F7); this task does not merge on the code reviewer's word alone.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M6-50, TASK-M8-18, TASK-M8-06, TASK-M8-03, TASK-M4-21".

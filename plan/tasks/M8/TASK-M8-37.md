@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143
-- **Depends on:** TASK-M8-02, TASK-M8-04, TASK-M7-16
+- **Depends on:** TASK-M8-02, TASK-M8-04, TASK-M7-16, TASK-M8-86
 - **Needs (earlier milestones):** REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
@@ -51,3 +51,4 @@ v1 web's build exists (R-571: the whole native app, compiled to run in the brows
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
 - RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.
 - R-571 (21 Oct 2026): the browser build is v1 web, the whole native app compiled to run in the browser, with the same interface, features and stains; its GUI is the native app's egui (REQ-SYS-047 restated), and a TS DOM GUI is v2 web's. Where egui runs in the browser and what the main thread holds is RQ-551: REQ-SYS-039, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049 and REQ-SYS-056 carry `rq: RQ-551`, so this task waits on it. *Was (title):* "the TS shell"; *was (goal):* "The browser product exists" and "the main thread is a separate TS binary — an input pump and DOM-GUI host that owns no simulation state" (gui review 5608379011 of PR #282, applied per R-571: none of RQ-551's options has a DOM GUI); *was (acceptance, REQ-SYS-047):* "the TS shell holds no scheduler/cache/physics state (code review of the TS package)".
+- R-627 (27 Oct 2026): the v1 web skeleton, TASK-M8-86, comes first: the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand only (`workflow_dispatch` from `main` through the `github-pages` environment), with its `web/`, its deploy workflow and its measurements against RQ-550 and RQ-551. This task builds v1 web proper on them, and keeps every requirement it closes; the deploy stays manual until the human says v1 is ready to be found. *Was:* "- **Depends on:** TASK-M8-02, TASK-M8-04, TASK-M7-16".

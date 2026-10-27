@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-246, REQ-GUI-247, REQ-GUI-248
-- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-05, TASK-M8-08, TASK-M8-23, TASK-M8-03
+- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-87, TASK-M8-08, TASK-M8-94, TASK-M8-03
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -41,3 +41,4 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
   and axes with their visibility"). Lines ▾ stays for the rest of the line system: R-556 rules RQ-448 (a),
   Lines ▾ kept for contours, axes, grids, the presets and class edges.
 - R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87; TASK-M8-23 by TASK-M8-94 (applied per R-369). *Was:* "- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-05, TASK-M8-08, TASK-M8-23, TASK-M8-03".
