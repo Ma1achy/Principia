@@ -21,6 +21,21 @@ delivered them; only the filenames were changed.
 
 The Agekyan–Anosova papers are in `../2026-10-24_anosova/`. The open-access papers the plan names are listed below.
 
+## Added 27 Oct 2026
+
+Delivered by the human on 27 Oct 2026 in a batch of twelve PDFs; the batch, and what was done with each file, is
+recorded in `../2026-10-27_papers/README.md`. Byte for byte as delivered (`BF00693096.pdf`); only the filename was
+changed. Its authors and venue were checked against Crossref and against the paper's own first page.
+
+| Path | sha256 | What it is |
+|---|---|---|
+| `papers/aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf` | `6576e7739b37585fecc1cf7f49e3c37b4f7e73657c31245fae3a23259a3d73e7` | Aarseth, Anosova, Orlov & Szebehely (1994b), "Close triple approaches and escape in the three-body problem", *CeMDA* 60(1), 131–137, doi:10.1007/BF00693096 |
+
+**Naming.** The same four authors published twice in *CeMDA* in 1994. From 27 Oct 2026 the docs call
+"Global chaoticity in the Pythagorean three-body problem" (*CeMDA* 58, 1–16) **1994a** and "Close triple approaches
+and escape in the three-body problem" (*CeMDA* 60, 131–137) **1994b**. The 1994a file keeps its original name,
+`aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf`, because other docs already cite that path.
+
 ## Open-access papers, downloaded 25 Oct 2026
 
 Downloaded by Claude at the human's request, unmodified. These are mostly arXiv versions, which can differ from the published text; check a quoted number against the journal version where one is cited. The Li & Liao (2019) free-fall paper is in `../2026-10-24_anosova/`.
