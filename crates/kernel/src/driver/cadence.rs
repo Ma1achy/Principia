@@ -47,7 +47,8 @@ impl<R> Cadence<R> for WrapperCadence {
 }
 
 /// The COM projection after each `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"): the
-/// hook TASK-M3-05 fills; until then the state is left as the step left it.
+/// hook TASK-M3-05 fills; until then the state is left as the step left it. A projection that moves the positions
+/// recomputes `geom` from them, which the next step reads as its force evaluation.
 #[inline]
 pub fn project<R>(_state: &mut State<R>, _geom: &mut Geom<R>) {}
 
