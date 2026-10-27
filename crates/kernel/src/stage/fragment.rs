@@ -18,7 +18,7 @@
 //!   uniform ([`DecodeUniforms`]), read as the stage reads them, so the fragment decodes the pixel as the stage did.
 //! - The descriptor alone ([`describe`]): `(m, r, p)` in, the twelve fields out, so a test reaches the producers' pole
 //!   selects (R-436) on states no decode reaches at f32.
-//! - The encode ([`encode`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order.
+//! - The encode ([`encode()`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order.
 //! - The shape map ([`shape`]): `r` and `m` in, `n` out (`crate::shape::shape`, the read side's `shape()`).
 
 use spirv_std::spirv;

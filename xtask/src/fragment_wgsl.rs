@@ -8,7 +8,7 @@
 //! **The lift** ([`lift`]). The module is cut to the one entry point (naga's `compact`), whose wrapper calls the body;
 //! the body becomes a plain function of its words, `<prefix>_body(words_in: <prefix>_words) -> <prefix>_words`: the
 //! entry point's sized storage array becomes the function's argument, copied into a local the body reads and writes and
-//! returns ([`localise`]), so the snippet keeps no global state and stores to no global; its uniform, where it has one,
+//! returns (`localise`), so the snippet keeps no global state and stores to no global; its uniform, where it has one,
 //! keeps its type and is rebound at the fragment's [`DECODE_UNIFORMS`] group and binding; and every type takes a name
 //! under the prefix (the words' struct `<prefix>_words`, its array the member `w`), so snippets placed side by side, and
 //! the shader around them, share no name.
