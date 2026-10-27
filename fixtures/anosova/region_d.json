@@ -1,0 +1,15 @@
+{
+  "citation": "T. A. Agekyan and Zh. P. Anosova, \"A study of the dynamics of triple systems by means of statistical sampling\", Soviet Astronomy 11(6), 1006-1014 (1968), from Astron. Zh. 44(6), 1261-1273 (1967), ADS 1968SvA....11.1006A, pp. 1007-1008 (eqs. 3, 4 and 8); dd_validation_orbits §1.6 (R-592)",
+  "g": 6.67e-8,
+  "m": [1.0, 1.0, 1.0],
+  "a": [[-0.5, 0.0], [0.5, 0.0]],
+  "v": [[5e-5, 0.0], [5e-5, 0.0], [-1e-4, 0.0]],
+  "k0": 7.5e-9,
+  "m_exceptions": [
+    { "n": 16, "printed": "0.3490", "computed": "0.3500" },
+    { "n": 23, "printed": "0.3393", "computed": "0.0339" },
+    { "n": 26, "printed": "0.7509", "computed": "0.7609" },
+    { "n": 32, "printed": "0.4680", "computed": "0.5680" },
+    { "n": 34, "printed": "0.4721", "computed": "0.5721" }
+  ]
+}

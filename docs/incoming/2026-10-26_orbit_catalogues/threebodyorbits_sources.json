@@ -1,0 +1,416 @@
+{
+ "_about": "Transcribed 26 Oct 2026 from the reference list threebodyorbits.com publishes in js/catalogue.js (SOURCES, and each family's label and source in FAMILIES), read as text. 'liliao2017-10digit' in the catalogue's stab_src is an alias of liliao2017.",
+ "sources": {
+  "suvakov": {
+   "authors": "Šuvakov & Dmitrašinović",
+   "title": "Three classes of Newtonian three-body planar periodic orbits",
+   "venue": "Physical Review Letters 110, 114301",
+   "url": "https://doi.org/10.1103/PhysRevLett.110.114301",
+   "note": "Sequences of orbits from the Belgrade three-body gallery.",
+   "year": "2013",
+   "personal": false
+  },
+  "broucke": {
+   "authors": "Broucke",
+   "title": "On relative periodic solutions of the planar general three-body problem",
+   "venue": "Celestial Mechanics 12, 439–462",
+   "url": "https://doi.org/10.1007/BF01595390",
+   "year": "1975",
+   "personal": false
+  },
+  "liliao2017": {
+   "authors": "Li & Liao",
+   "title": "More than six hundred new families of Newtonian periodic planar collisionless three-body orbits",
+   "venue": "Science China Physics, Mechanics & Astronomy 60, 129511",
+   "url": "https://doi.org/10.1007/s11433-017-9078-5",
+   "year": "2017",
+   "personal": false
+  },
+  "lijingliao2018": {
+   "authors": "Li, Jing & Liao",
+   "title": "Over a thousand new periodic orbits of a planar three-body system with unequal masses",
+   "venue": "Publications of the Astronomical Society of Japan 70, 64",
+   "url": "https://doi.org/10.1093/pasj/psy057",
+   "year": "2018",
+   "personal": false
+  },
+  "liliao2019": {
+   "authors": "Li & Liao",
+   "title": "Collisionless periodic orbits in the free-fall three-body problem",
+   "venue": "New Astronomy 70, 22–26",
+   "url": "https://doi.org/10.1016/j.newast.2019.01.003",
+   "year": "2019",
+   "personal": false
+  },
+  "hristov2026": {
+   "authors": "Hristov, Hristova & Tanikawa",
+   "title": "An extensive search for stable periodic orbits of the equal-mass zero angular momentum three-body problem",
+   "venue": "New Astronomy 125",
+   "url": "https://arxiv.org/abs/2510.22802",
+   "year": "2026",
+   "personal": false
+  },
+  "hristov2023": {
+   "authors": "Hristov, Hristova, Puzynin, Puzynina, Sharipov & Tukhliev",
+   "title": "A database of high precision trivial choreographies for the planar three-body problem",
+   "venue": "Lecture Notes in Computer Science 13858, 171–180",
+   "url": "https://arxiv.org/abs/2210.00594",
+   "year": "2023",
+   "personal": false
+  },
+  "hristov2022": {
+   "authors": "Hristov, Hristova, Puzynin, Puzynina, Sharipov & Tukhliev",
+   "title": "New families of periodic orbits for the planar three-body problem computed with high precision",
+   "venue": "CEUR Workshop Proceedings 3191, 45–50",
+   "url": "https://arxiv.org/abs/2205.14709",
+   "year": "2022",
+   "personal": false
+  },
+  "lililiao2021": {
+   "authors": "Li, Li & Liao",
+   "title": "One family of 13315 stable periodic orbits of non-hierarchical unequal-mass triple systems",
+   "venue": "Science China Physics, Mechanics & Astronomy 64, 219511",
+   "url": "https://doi.org/10.1007/s11433-020-1624-7",
+   "year": "2021",
+   "personal": false
+  },
+  "rose2016": {
+   "authors": "Rose",
+   "title": "Geometric phase and periodic orbits of the equal-mass, planar three-body problem with vanishing angular momentum",
+   "venue": "PhD thesis, University of Sydney",
+   "url": "https://hdl.handle.net/2123/14416",
+   "year": "2016",
+   "personal": false
+  },
+  "hristov2024nc": {
+   "authors": "Hristov, Hristova, Puzynin, Puzynina, Sharipov & Tukhliev",
+   "title": "Nontrivial choreographies of the planar three-body problem",
+   "venue": "Physics of Particles and Nuclei 55, 495–497",
+   "url": "https://doi.org/10.1134/S1063779624030444",
+   "year": "2024",
+   "personal": false
+  },
+  "simo2001": {
+   "authors": "Simó",
+   "title": "Dynamical properties of the figure eight solution of the three-body problem",
+   "venue": "Contemporary Mathematics 292 (Celestial Mechanics, dedicated to Donald Saari)",
+   "url": "https://doi.org/10.1090/conm/292",
+   "year": "2001",
+   "personal": false
+  },
+  "brouckeboggs1975": {
+   "authors": "Broucke & Boggs",
+   "title": "Periodic orbits in the planar general three-body problem",
+   "venue": "Celestial Mechanics 11, 13–38",
+   "url": "https://doi.org/10.1007/BF01228732",
+   "year": "1975",
+   "personal": false
+  },
+  "dmitrasinovic2018": {
+   "authors": "Dmitrašinović, Hudomal, Shibayama & Sugita",
+   "title": "Linear stability of periodic three-body orbits with zero angular momentum and topological dependence of Kepler’s third law",
+   "venue": "Journal of Physics A 51, 315101",
+   "url": "https://arxiv.org/abs/1705.03728",
+   "year": "2018",
+   "personal": false
+  },
+  "titov2012": {
+   "authors": "Titov",
+   "title": "Periodic solutions of the three-body problem with unequal masses in the vicinity of the figure-eight",
+   "venue": "Russian Journal of Nonlinear Dynamics 8, 377–389",
+   "url": "https://doi.org/10.20537/nd1202012",
+   "year": "2012",
+   "personal": false
+  },
+  "mothcap2026": {
+   "authors": "Three-body Moth-I¹³ computer-assisted proof",
+   "title": "A computer-assisted proof of a periodic orbit near moth I at masses 1, 1, 1.001",
+   "venue": "GitHub, Rexyysilent/three-body-moth13-cap",
+   "url": "https://github.com/Rexyysilent/three-body-moth13-cap",
+   "year": "2026",
+   "personal": false
+  },
+  "henon1976": {
+   "authors": "Hénon",
+   "title": "A family of periodic solutions of the planar three-body problem, and their stability",
+   "venue": "Celestial Mechanics 13, 267–285",
+   "url": "https://doi.org/10.1007/BF01228647",
+   "year": "1976",
+   "personal": false
+  },
+  "moorenauenberg2006": {
+   "authors": "Moore & Nauenberg",
+   "title": "New periodic orbits for the n-body problem",
+   "venue": "Journal of Computational and Nonlinear Dynamics 1, 307–311",
+   "url": "https://doi.org/10.1115/1.2338323",
+   "year": "2006",
+   "personal": false
+  },
+  "sheen2016": {
+   "authors": "Sheen",
+   "title": "Periodic three-body solutions found with a root finder, example code for Cornell’s Intermediate Dynamics course",
+   "venue": "GitHub, mws262/MAE5730_examples; six of them in the Belgrade three-body gallery",
+   "url": "https://github.com/mws262/MAE5730_examples/blob/master/3BodySolutions/getSolutionNum.m",
+   "year": "2016",
+   "personal": false
+  },
+  "bh2026": {
+   "authors": "Three Body Orbits",
+   "title": "Two previously uncatalogued Broucke-region orbits",
+   "venue": "Research note, threebodyorbits.com, 8 September 2026",
+   "url": "/papers/broucke-region-orbits-2026.html",
+   "year": "2026",
+   "personal": false
+  },
+  "bh2026r3": {
+   "authors": "Three Body Orbits",
+   "title": "Eight-hour Broucke-like orbit search",
+   "venue": "Research note, threebodyorbits.com, 9 September 2026",
+   "url": "/papers/broucke-like-rosettes-2026.html",
+   "year": "2026",
+   "personal": false
+  },
+  "bh2026r4": {
+   "authors": "Three Body Orbits",
+   "title": "New-family orbit search",
+   "venue": "Research note, threebodyorbits.com, 9 September 2026",
+   "url": "/papers/new-unequal-mass-families-2026.html",
+   "year": "2026",
+   "personal": false
+  },
+  "pancake2026": {
+   "authors": "Three Body Orbits",
+   "title": "golden pancake drama: a linearly stable three-body orbit on an unequal-mass isola",
+   "venue": "Draft numerical research note (PDF), threebodyorbits.com, 9 September 2026",
+   "url": "/papers/golden-pancake-drama-2026.pdf",
+   "year": "2026",
+   "personal": false
+  },
+  "bhh2026": {
+   "authors": "Three Body Orbits",
+   "title": "Stable satellites of the Broucke–Hadjidemetriou–Hénon family",
+   "venue": "Research note, threebodyorbits.com, 27 September 2026",
+   "url": "/papers/bhh-satellites-2026.html",
+   "year": "2026",
+   "personal": false
+  },
+  "suvakovpc": {
+   "authors": "Šuvakov",
+   "title": "Newtonian periodic three-body orbits with angular momentum",
+   "venue": "Personal communication, September 2026",
+   "url": "",
+   "note": "Thirteen equal-mass orbits with angular momentum from Milovan Šuvakov’s own searches, shared with this atlas.",
+   "year": "2026",
+   "personal": true
+  },
+  "vasiljevic2023": {
+   "authors": "Vasiljević, Raonić & Dmitrašinović",
+   "title": "An island of linearly stable non-hierarchical unequal mass periodic three-body orbits",
+   "venue": "New Astronomy 100, 101969",
+   "url": "https://doi.org/10.1016/j.newast.2022.101969",
+   "year": "2023",
+   "personal": false
+  }
+ },
+ "families": {
+  "V": {
+   "label": "Figure-8",
+   "source": "suvakov"
+  },
+  "I": {
+   "label": "Butterfly I",
+   "source": "suvakov"
+  },
+  "II": {
+   "label": "Dragonfly II",
+   "source": "suvakov"
+  },
+  "III": {
+   "label": "Yin-Yang III",
+   "source": "suvakov"
+  },
+  "IVa": {
+   "label": "Moth IVa",
+   "source": "suvakov"
+  },
+  "IVb": {
+   "label": "Butterfly IVb",
+   "source": "suvakov"
+  },
+  "IVc": {
+   "label": "Moth IVc",
+   "source": "suvakov"
+  },
+  "VI": {
+   "label": "Yarn VI",
+   "source": "suvakov"
+  },
+  "VIIa": {
+   "label": "Moth VIIa",
+   "source": "suvakov"
+  },
+  "VIIb": {
+   "label": "Moth VIIb",
+   "source": "suvakov"
+  },
+  "VIII": {
+   "label": "Sequence VIII",
+   "source": "dmitrasinovic2018"
+  },
+  "brouckeA": {
+   "label": "Broucke A",
+   "source": "broucke"
+  },
+  "brouckeR": {
+   "label": "Broucke R",
+   "source": "broucke"
+  },
+  "brouckeS": {
+   "label": "Broucke–Boggs",
+   "source": "brouckeboggs1975"
+  },
+  "rosette": {
+   "label": "Broucke-like rosettes",
+   "source": "bh2026r3"
+  },
+  "li_IA": {
+   "label": "I.A",
+   "source": "lijingliao2018"
+  },
+  "li_IB": {
+   "label": "I.B",
+   "source": "liliao2017"
+  },
+  "li_IC": {
+   "label": "I.C",
+   "source": "lijingliao2018"
+  },
+  "li_IIA": {
+   "label": "II.A",
+   "source": "lijingliao2018"
+  },
+  "li_IIB": {
+   "label": "II.B",
+   "source": "lijingliao2018"
+  },
+  "li_IIC": {
+   "label": "II.C",
+   "source": "liliao2017"
+  },
+  "li_IID": {
+   "label": "II.D",
+   "source": "lijingliao2018"
+  },
+  "freefall": {
+   "label": "Free-fall",
+   "source": "liliao2019"
+  },
+  "hs_eight": {
+   "label": "Figure-8 satellites",
+   "source": "hristov2026"
+  },
+  "hs_moth": {
+   "label": "Moth region",
+   "source": "hristov2026"
+  },
+  "hs_schubart": {
+   "label": "Schubart region",
+   "source": "hristov2026"
+  },
+  "hs_broucke": {
+   "label": "Broucke region",
+   "source": "hristov2026"
+  },
+  "hs_chor": {
+   "label": "Choreographies",
+   "source": "hristov2023"
+  },
+  "hs_nchor": {
+   "label": "Nontrivial choreographies",
+   "source": "hristov2024nc"
+  },
+  "simo": {
+   "label": "Simó’s choreographies",
+   "source": "simo2001"
+  },
+  "titov": {
+   "label": "Split figure-eights",
+   "source": "titov2012"
+  },
+  "certified": {
+   "label": "Certified satellite",
+   "source": "mothcap2026"
+  },
+  "hs_family": {
+   "label": "New families",
+   "source": "hristov2022"
+  },
+  "li2021": {
+   "label": "Moth IVa.2.A, unequal masses",
+   "source": "lililiao2021"
+  },
+  "rose": {
+   "label": "Rose’s Bestiary",
+   "source": "rose2016"
+  },
+  "bhunt": {
+   "label": "New Broucke-region orbits",
+   "source": "bh2026"
+  },
+  "r4new": {
+   "label": "New unequal-mass families",
+   "source": "bh2026r4"
+  },
+  "pancake": {
+   "label": "Golden pancake drama",
+   "source": "pancake2026"
+  },
+  "suvakov_pc": {
+   "label": "Šuvakov’s other orbits",
+   "source": "suvakovpc"
+  },
+  "bhhsat": {
+   "label": "BHH satellites",
+   "source": "bhh2026"
+  },
+  "sheen": {
+   "label": "Sheen’s orbits",
+   "source": "sheen2016"
+  }
+ },
+ "_journal_about": "Added 27 Oct 2026, by the human's instruction of that day: 'journal' is an overlay on 'sources', giving the journal's own wording where the site's differs, checked against the publisher's record deposited with Crossref (and the journal's page where Crossref lacks a field). 'sources' stays as the site published it; citations.py cites the journal's wording and prints the site's beside it. Keys are unchanged, so simo2001 keeps its key although the paper is 2002.",
+ "journal": {
+  "hristov2024nc": {
+   "title": "Searching for New Nontrivial Choreographies for the Planar Three-Body Problem",
+   "checked": "Crossref, https://api.crossref.org/works/10.1134/S1063779624030444, publisher Pleiades Publishing Ltd, fetched 27 Oct 2026 (sha256 402d7072e9df39d57cd5dd0c7df12dc6f101f9eedee04d6d8488176088617395): this title, Physics of Particles and Nuclei 55(3), 495–497, June 2024. The authors’ page https://db2.fmi.uni-sofia.bg/3bodychor164/ gives the same title.",
+   "basis": "RQ-580, closed by the human's instruction of 27 Oct 2026 ('same treatment as RQ-580')"
+  },
+  "simo2001": {
+   "year": "2002",
+   "venue": "Contemporary Mathematics 292, 209–228",
+   "url": "https://doi.org/10.1090/conm/292/04926",
+   "checked": "Crossref, https://api.crossref.org/works/10.1090/conm/292/04926, publisher American Mathematical Society, fetched 27 Oct 2026 (sha256 e25df135f56a5fa580ca9624b35e0376062901cb92cebaa8cb57bde7d1ec8e8f): C. Simó, this title, Contemporary Mathematics (Celestial Mechanics), pages 209–228, issued 2002. Crossref gives no volume for the chapter; its book, Crossref, https://api.crossref.org/works/10.1090/conm/292 (sha256 7951571d5b70c8ed7b743f6a767f6beca3521ff1183234c3d8e797bb957068de), is Celestial Mechanics, ed. Chenciner, Cushman, Robinson & Xia, 2002, volume 292 by its DOI. The title is the site’s.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  },
+  "titov2012": {
+   "title": "Some periodic orbits of general three body problem with vanishing angular momentum",
+   "venue": "Nelineinaya Dinamika 8(2), 377–389",
+   "checked": "Crossref, https://api.crossref.org/works/10.20537/nd1202012, publisher Izhevsk Institute of Computer Science, fetched 27 Oct 2026 (sha256 d0467e27bc70fd12b968eded4adf7e2825a2f7bbc8101298c50287f8b32e14a4): V. B. Titov, this title (original title “Периодические орбиты общей задачи трех тел с нулевым кинетическим моментом”), Nelineinaya Dinamika, pages 377–389, 2012; Crossref gives no volume or issue. The journal’s page for the DOI, https://nd.ics.org.ru/nd1202012/, read 27 Oct 2026: “2012, Vol. 8, No. 2, pp. 377-389”.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref and the journal's page"
+  },
+  "vasiljevic2023": {
+   "title": "An island of linearly stable non-hierarchical unequal mass periodic three-body orbits — A harbinger of circumbinary exoplanets?",
+   "checked": "Crossref, https://api.crossref.org/works/10.1016/j.newast.2022.101969, publisher Elsevier BV, fetched 27 Oct 2026 (sha256 a9239a0e0881e013a1414f8878b4524b483ba1c4361d14773ab041890535aed6): this title, with the subtitle after an em dash and its “A” capitalised, New Astronomy 100, 101969, May 2023.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  },
+  "dmitrasinovic2018": {
+   "title": "Linear stability of periodic three-body orbits with zero angular momentum and topological dependence of Kepler’s third law: a numerical test",
+   "checked": "Crossref, https://api.crossref.org/works/10.1088/1751-8121/aaca41, publisher IOP Publishing, fetched 27 Oct 2026 (sha256 2ad1da3050db1e003ec41aef322485c07ef8ec3910a372cc61887f102e49c7cb), found by a Crossref bibliographic query because the site cites the arXiv preprint: this title, with the subtitle “a numerical test”, Journal of Physics A: Mathematical and Theoretical 51(31), 315101, 2018. Not in the human’s list; the same kind of correction (the human: “titles and years against Crossref”).",
+   "basis": "the human's instruction of 27 Oct 2026 (titles against Crossref); applied per R-369"
+  },
+  "lijingliao2018": {
+   "checked": "Crossref, https://api.crossref.org/works/10.1093/pasj/psy057, publisher Oxford University Press, fetched 27 Oct 2026 (sha256 89955e738892752e9e2b949a031b0acfa3559c1b53b47261ee6bf3e1563da8aa): the site’s title, Publications of the Astronomical Society of Japan 70(4), 64, 2018. Nothing to correct.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  }
+ }
+}

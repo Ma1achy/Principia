@@ -894,6 +894,21 @@ pub const DECODE_SANITY: ConstantBuilder = proposed(
     "M2",
 );
 
+/// The literature import's tolerance (inverse-encode contract Part 7; dd_validation_orbits §1.6 and §2; REQ-VAL-019,
+/// REQ-VAL-120): `k` in `|X − X_paper| ≤ k·ε·|X_paper|`, `ε = 2⁻⁵²`, on each start's `E`, `L_z`, `R` and
+/// `L_z²·|E|/(G²·M⁵)` after multiplying back by the recorded rescale, the import at f64: 256, so 256·2⁻⁵² ≈ 5.68e-14.
+/// TASK-M2-20's proposal (R-71): the `literature-import` gate's `literature.json`, the Burrau rest start and Table 1's
+/// 100 region-D near-rest starts, measures a worst of 89.74 `ε` (`L_z²·|E|/(G²·M⁵)`, `N = 56`; `L_z`'s worst is
+/// 46.68 and `E`'s 3.89), so 256 covers it by 2.9×; the physical residual `‖D(z) − C(x)‖_phys` is at most 5.4e-16 and
+/// `κ(x)`, the encode Jacobian's weighted norm at the start (inverse-encode contract Part 4), lies in [3.37, 142].
+pub const LITERATURE_IMPORT_TOL: ConstantBuilder = proposed(
+    "literature_import_tol",
+    256.0,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-120",
+    "M2",
+);
+
 /// Lookup's layer-1 zero-class band, `k` in `|v| ≤ k·ε_R·S_v` for class 0, `S_v` the first-order bound on the
 /// rounding of `L_z` or `E`, on the entered state's extents, or of a clamp's move or the value after it
 /// (inverse-encode § "Chart-aware validation", "The zero class in floating point" and "The class a clamp moves";
@@ -1240,6 +1255,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EPS_PHYS,
     DECODE_SANITY,
     ZERO_CLASS,
+    LITERATURE_IMPORT_TOL,
     CURVE_GRID_LOG2,
     CURVE_GOLDEN_STEPS,
     INV_PHI,

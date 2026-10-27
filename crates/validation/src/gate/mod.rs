@@ -30,6 +30,7 @@ use crate::decode_agreement::DecodeAgreementGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::decode_sanity::DecodeSanityGate;
 use crate::eps_phys::EpsPhysGate;
+use crate::import::LiteratureImportGate;
 use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
 use crate::nsub_bucket::NsubBucketGate;
@@ -64,6 +65,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &DecodeSanityGate,
     &NsubBucketGate,
     &DecodeAgreementGate,
+    &LiteratureImportGate,
 ];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.

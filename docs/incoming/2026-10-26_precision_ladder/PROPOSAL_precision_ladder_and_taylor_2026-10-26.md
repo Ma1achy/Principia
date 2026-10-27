@@ -45,8 +45,8 @@ The human's words that started it:
 
 - An **image** of a Result cannot run past t ≈ 52 and still be true: philosophy §7.1's horizons use a slice-averaged
   λ ≈ 0.7, so they describe a region, not one trajectory. The single published Burrau trajectory is not the gap: R-33's
-  reference can integrate one trajectory to t ≈ 60, and regularised double-precision codes reproduce it (Wang,
-  Nitadori & Makino 2020 integrate it to t = 63). The gap is **the neighbourhood of Burrau, mapped pixel by pixel**
+  reference can integrate one trajectory to t ≈ 60, and it has been integrated to t = 63 by Antoñana, Chartier,
+  Makazaga & Murua 2020 (global time-renormalisation, in Julia's BigFloat). The gap is **the neighbourhood of Burrau, mapped pixel by pixel**
   past t ≈ 52, where a Brutus-style reference per pixel is too slow. That is R-265's own condition for unparking: "a
   precision question needs it **and Brutus is too slow**".
 - There is no fast extended-precision path: R-33's reference is the only one above f64, and it is a checker.
@@ -469,8 +469,10 @@ Each step is useful alone.
   double-word arithmetic*, ACM Transactions on Mathematical Software 44(2).
 - Boekholt, T. & Portegies Zwart, S. (2015), *On the reliability of N-body simulations*, Computational Astrophysics and
   Cosmology 2, 2. Brutus and self-convergence.
-- Wang, L., Nitadori, K. & Makino, J. (2020), arXiv:2001.01221, §4.1: the Pythagorean (Burrau) problem integrated to
-  t = 63.
+- Antoñana, M., Chartier, P., Makazaga, J. & Murua, A. (2020), *Global time-renormalization of the gravitational
+  N-body problem*, SIAM Journal on Applied Dynamical Systems 19(4), 2658–2681, arXiv:2001.01221. §4.1 integrates the
+  Pythagorean (Burrau) problem to t = 63; its global power series and radius-of-convergence bound bear on the Taylor
+  stepper directly. (The first draft attributed this arXiv number to Wang, Nitadori & Makino; that was wrong.)
 - Heggie, D. C. (1974), *A global regularisation of the gravitational N-body problem*, Celestial Mechanics 10, 217.
   Already in the corpus.
 - Li, X. & Liao, S. (2017 onward), clean numerical simulation: Taylor at high order with MPFR, three-body families.

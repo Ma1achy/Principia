@@ -1,0 +1,18 @@
+{
+  "gate": "literature-import",
+  "inputs": [
+    "literature.json",
+    "length_only.json",
+    "outside_d.json"
+  ],
+  "threshold": {
+    "value": 256,
+    "requirement": "REQ-VAL-120",
+    "status": "provisional",
+    "ruling": "R-71"
+  },
+  "min_regions": {
+    "value": null,
+    "requirement": "REQ-VAL-120"
+  }
+}

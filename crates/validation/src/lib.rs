@@ -15,6 +15,7 @@ pub mod gate;
 pub mod gauge;
 pub mod golden_scene;
 pub mod gpu;
+pub mod import;
 pub mod inspector;
 pub mod invariant_gradient;
 pub mod nsub_bucket;

@@ -24,7 +24,8 @@
 //! `y → −y` of every `rᵢ` and every `pᵢ`, which step 3 applies.
 //!
 //! **Precondition.** The masses are positive and `Σmᵢ = 1`, as the decode emits them: `R_com` and `P_tot` are the
-//! mass-weighted sums with `M = 1`.
+//! mass-weighted sums with `M = 1`. The one exception is `κ`'s mass columns (`encode::ingest`; inverse-encode contract
+//! Part 4, "The mass columns"), which differentiate these formulas off the simplex, `M` still taken as 1.
 //!
 //! **The notices.** [`Canonical`] carries `λ` (`lookup_rescaled`'s value), `lookup_clamped` and `lookup_mirrored`.
 //! When `lookup_rescaled` is raised, for a state already at `I = 1` to rounding included, is open (RQ-295): the corpus

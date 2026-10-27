@@ -1,0 +1,91 @@
+atlas rows with high-precision fields: 1359
+  empty source (matched against hristov2026_971 below): 99
+  sources in scope: {'hristov2022': 9, 'hristov2023': 73, 'hristov2024nc': 167, 'hristov2026': 586, 'liliao2017': 5, 'simo2001': 344}
+  the atlas's own notes and the CAP repository, not in scope: {'bh2026': 3, 'bh2026r3': 14, 'bh2026r4': 42, 'bhh2026': 15, 'mothcap2026': 1, 'pancake2026': 1}
+
+== hristov2022: 9 atlas rows; matched 9 ({'hristov2022_123': 9}); unmatched 0
+  vx (body at -1): digits printed 149-150; identical 9/9; max |diff| 0.0e+00
+  vy (body at -1): digits printed 150-150; identical 9/9; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 149-150; identical 9/9; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 150-150; identical 9/9; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 150-151; identical 9/9; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 149-150; identical 9/9; max |diff| 0.0e+00
+  T: digits printed 150-150; identical 9/9; max |diff| 0.0e+00
+
+== hristov2023: 73 atlas rows; matched 73 ({'hristov2023_462': 73}); unmatched 0
+  vx (body at -1): digits printed 178-180; identical 73/73; max |diff| 0.0e+00
+  vy (body at -1): digits printed 178-180; identical 73/73; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 178-180; identical 73/73; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 178-180; identical 73/73; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 118-120; identical 0/73; others agree to 119-121 digits (median 120); max |diff| 5.0e-121
+  vy (body at 0) = -2 vy: digits printed 119-120; identical 0/73; others agree to 119-121 digits (median 119); max |diff| 4.9e-120
+  T: digits printed 179-180; identical 73/73; max |diff| 0.0e+00
+
+== hristov2024nc: 167 atlas rows; matched 167 ({'hristov2024_nontriv164': 164, 'hristov2024_triv259': 3}); unmatched 0
+  vx (body at -1): digits printed 178-180; identical 167/167; max |diff| 0.0e+00
+  vy (body at -1): digits printed 178-180; identical 167/167; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 178-180; identical 167/167; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 178-180; identical 167/167; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 178-181; identical 167/167; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 178-181; identical 167/167; max |diff| 0.0e+00
+  T: digits printed 177-180; identical 167/167; max |diff| 0.0e+00
+
+== hristov2026: 586 atlas rows; matched 586 ({'hristov2026_971': 586}); unmatched 0
+  vx (body at -1): digits printed 97-100; identical 586/586; max |diff| 0.0e+00
+  vy (body at -1): digits printed 97-100; identical 586/586; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 97-100; identical 586/586; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 97-100; identical 586/586; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 97-101; identical 586/586; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 97-101; identical 586/586; max |diff| 0.0e+00
+  T: digits printed 97-100; identical 586/586; max |diff| 0.0e+00
+
+== liliao2017: 5 atlas rows; matched 5 ({'hristov2026_971': 5}); unmatched 0
+  vx (body at -1): digits printed 100-100; identical 5/5; max |diff| 0.0e+00
+  vy (body at -1): digits printed 98-100; identical 5/5; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 100-100; identical 5/5; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 98-100; identical 5/5; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 99-101; identical 5/5; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 98-100; identical 5/5; max |diff| 0.0e+00
+  T: digits printed 100-100; identical 5/5; max |diff| 0.0e+00
+  Li & Liao 2017 published v1 against vx: digits printed 9-10; identical 0/5; others agree to 8-10 digits (median 9); max |diff| 5.4e-10
+  Li & Liao 2017 published v2 against vy: digits printed 10-10; identical 0/5; others agree to 9-10 digits (median 9); max |diff| 1.4e-10
+  Li & Liao 2017 published T against T: digits printed 11-13; identical 0/5; others agree to 9-10 digits (median 10); max |diff| 8.7e-08
+
+== simo2001: 344 atlas rows; matched 344 ({'masson_simo_345': 344}); unmatched 0
+  x1 = -2 c1: digits printed 12-17; identical 344/344; max |diff| 0.0e+00
+  y1 = 0: digits printed 0-0; identical 344/344; max |diff| 0.0e+00
+  x2 = c1: digits printed 12-16; identical 344/344; max |diff| 0.0e+00
+  y2 = c2: digits printed 11-14; identical 344/344; max |diff| 0.0e+00
+  x3 = c1: digits printed 12-16; identical 344/344; max |diff| 0.0e+00
+  y3 = -c2: digits printed 11-14; identical 344/344; max |diff| 0.0e+00
+  vx1 = 0: digits printed 0-0; identical 344/344; max |diff| 0.0e+00
+  vy1 = -2 c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 28-32 digits (median 30.0); max |diff| 5.0e-31
+  vx2 = c3 sqrt3: digits printed 27-31; identical 0/344; others agree to 29-32 digits (median 30.0); max |diff| 5.0e-31
+  vy2 = c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 27-32 digits (median 30.0); max |diff| 5.0e-31
+  vx3 = -c3 sqrt3: digits printed 27-31; identical 0/344; others agree to 29-32 digits (median 30.0); max |diff| 5.0e-31
+  vy3 = c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 27-32 digits (median 30.0); max |diff| 5.0e-31
+  T = sqrt3 c5: digits printed 29-32; identical 0/344; others agree to 30-34 digits (median 31.0); max |diff| 5.0e-31
+  Simó numbers with no atlas row: [1]
+
+== empty source: 99 atlas rows; matched 97 in hristov2026_971 (93 distinct database rows); unmatched 2 (0 not in the (-1,0), (1,0), (0,0) layout; matched in another Hristov table instead: {})
+  vx (body at -1): digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vy (body at -1): digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 99-101; identical 97/97; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 99-101; identical 97/97; max |diff| 0.0e+00
+  T: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  not in any Hristov table: i_butterfly_i_8_a (family I); nearest Li & Liao 2017 published row I.A-10; all seven identical to its published values: True
+  not in any Hristov table: i_butterfly_i_11_a (family I); nearest Li & Liao 2017 published row I.A-19; all seven identical to its published values: True
+  per family (family and stab_src from the catalogue): rows; matched in hristov2026_971; all seven identical
+    li_IB: 43; 43; 43 (stab_src: hristov2026 43)
+    I: 14; 12; 12 (stab_src: hristov2026 12, liliao2017-10digit 2)
+    li_IIC: 12; 12; 12 (stab_src: hristov2026 12)
+    IVb: 9; 9; 9 (stab_src: hristov2026 9)
+    V: 6; 6; 6 (stab_src: hristov2026 6)
+    VIIb: 5; 5; 5 (stab_src: hristov2026 5)
+    III: 4; 4; 4 (stab_src: hristov2026 4)
+    IVa: 3; 3; 3 (stab_src: hristov2026 3)
+    II: 2; 2; 2 (stab_src: hristov2026 2)
+    VIIa: 1; 1; 1 (stab_src: hristov2026 1)
+  the catalogue's stab_src hristov2026 per family, all orbits: {'I': 12, 'II': 2, 'III': 4, 'IVa': 3, 'IVb': 9, 'V': 6, 'VIIa': 1, 'VIIb': 5, 'li_IB': 43, 'li_IIC': 12} total 97

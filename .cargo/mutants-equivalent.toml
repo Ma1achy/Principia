@@ -254,3 +254,11 @@ justification = "DECODE_Z is 2 (the generated layout, held by kernel/tests/fragm
 [[equivalent]]
 mutant = "crates/validation/src/decode_preset.rs:532:44: replace * with + in golden_cell"
 justification = "GOLDEN_QUADS[1] is 2, so 2 * GOLDEN_QUADS[1] and 2 + GOLDEN_QUADS[1] are the same divisor, 4"
+
+[[equivalent]]
+mutant = "crates/kernel/src/encode/ingest.rs:200:10: replace > with >= in condition"
+justification = "s is a minimum of square roots of mul_add sums started at +0.0, so s is never -0.0, and at s == +0.0 both branches give +inf (1/+0.0 = +inf)"
+
+[[equivalent]]
+mutant = "crates/kernel/src/encode/ingest.rs:165:39: replace * with / in weighted_encode_jacobian"
+justification = "the forward branch is taken only for k < 3, a mass, whose weight weights() sets to exactly 1, so span * 1 and span / 1 are the same value"
