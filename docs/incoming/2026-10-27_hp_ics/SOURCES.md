@@ -673,6 +673,8 @@ checked 27 Oct 2026. No database page, and no data file, states terms of its own
 ## simo2001
 
 - **Authors:** Carles Simó
+- **Credit:** Simó's 345 choreographies; the same orbits also reach this folder as Paul Masson's file
+  `analyticphysics/simo-initial-conditions.txt` (§ Masson, below), credited to both.
 - **Title:** *Dynamical properties of the figure eight solution of the three-body problem*
 - **Journal:** Contemporary Mathematics 292, 209–228 (2002)
 - **DOI:** https://doi.org/10.1090/conm/292/04926
@@ -689,7 +691,9 @@ checked 27 Oct 2026. No database page, and no data file, states terms of its own
 
 ## Masson (not in CITATIONS.md)
 
-- **Authors:** Paul Masson (the values are Simó's, received from him, as the page says)
+- **Authors:** Paul Masson (the file and the page)
+- **Credit:** the orbits are Carles Simó's (`simo2001` above), which Masson received from him, as his page says; the file
+  and its presentation are Masson's. Cite both: Simó for the choreographies, Masson for this file.
 - **Title:** *Simó's Three-Body Choreographies in Action (web page, Analytic Physics)*
 - **Journal:** none: a web page, not a publication
 - **DOI:** none
