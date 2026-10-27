@@ -6,8 +6,8 @@ The human's literature review, as a record (R-1, R-159). It is not authority. It
 | Path | sha256 | What it is |
 |---|---|---|
 | `lit_review.tex` | `8a6e9970de30422bb4b7c7fdb397f0882b14320bd3025c2076302165e6d4675c` | "Related Work — Principia: A Real-Time WebGPU Explorer of the Three-Body Initial-Condition Manifold", M. Doherty, March 2026. Byte for byte as delivered on 25 Oct 2026; only the extension was changed, from `.txt` to `.tex` |
-| `lit_review_2026-10.tex` | `19e20554fb815806022b6a8c2839ac233677a9e75b4a7d37f978b32044ea1f8d` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
-| `lit_review_2026-10.pdf` | `7bc6ba4f023cf982093efa7b8d9d4cafa5d1c21a7704a7baf5c6664971f04556` | The revision, typeset |
+| `lit_review_2026-10.tex` | `807f17fd3837ba3e72c88310e72544e3a07b5a18513a6089f482e23806958057` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
+| `lit_review_2026-10.pdf` | `0b38023fb541b1fd47ac43fafb2185919c548a570bbf9731496c367b21992569` | The revision, typeset |
 
 What the revision changed:
 
@@ -52,3 +52,29 @@ each new description checked against the paper itself:
 - **Removed:** the Heinämäki et al. 1998 citation (*MNRAS* 298, 790) and its strange-attractor dimension
   D ≈ 2.1. The paper could not be found; the nearest match is an extended abstract by Chernin (Kluwer, 1999) that
   states no dimension.
+
+Third revision, 27 Oct 2026, adding the 26 Oct incoming records (`../2026-10-26_orbit_catalogues/`,
+`../2026-10-26_belgrade_gallery/`, `../2026-10-26_precision_ladder/`) and the high-precision record of PR #299. The
+human: "also this work needs to be added into the literature review". Every new reference was checked against
+Crossref or the paper itself:
+
+- **New section, "Periodic-Orbit Catalogues":** the lineages (Broucke, Hénon, the choreographies, the Belgrade gallery
+  and Hudomal's thesis and 2019 table, Li & Liao and Li, Jing & Liao, Hristov et al.'s databases, Vasiljević et al.,
+  Titov, Rose, Sheen); Reusser's compilation and the Three Body Orbits atlas; the measured fact that 87% of the atlas
+  lies on three families of slices; two catalogue discrepancies; and a proposed contribution, the catalogued orbits
+  placed in the IC chart with their stability compared against the structure around them.
+- **Symbolic dynamics:** a paragraph on word conventions. The gallery's words and the PRL's agree only up to a
+  symmetry that varies by orbit, moth III's published word is not freely reduced, and the atlas states its own
+  canonical spelling; a word reader must declare its equivalence.
+- **Numerical reliability:** a paragraph on high-order Taylor methods and double-word arithmetic (Jorba & Zou, TIDES,
+  Antoñana et al., Hida et al., Joldes et al., Thall, CAMPARY), with the extended-precision mode stated as proposed,
+  not built.
+- **Validation targets** add the catalogues of the new section, and Hristov et al.'s 100–180-digit databases as the
+  test above double precision. Simó's 30-digit values are not cited for that: PR #299 found their digits past about 16
+  are arithmetic, not data.
+- **Gaps** add "Periodic orbits in their initial-condition context".
+- **Corrected:** Li, Li & Liao is *Sci. China* 64, 219511 (2021) under its journal title; the gallery's entry records
+  that it is offline and was recovered from the Internet Archive.
+- **Also corrected, in `../2026-10-26_precision_ladder/`:** arXiv:2001.01221, cited there for the Pythagorean problem
+  integrated to t = 63, is Antoñana, Chartier, Makazaga & Murua (SIAM J. Appl. Dyn. Syst. 19, 2658, 2020), not Wang,
+  Nitadori & Makino, which the independent review supplied without checking.
