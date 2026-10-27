@@ -615,10 +615,10 @@ pub const BURRAU_THETA_LZ_FRACTION: ConstantBuilder = proposed(
 /// `lookup_rescaled`. REQ-ENC-035's proposal (R-71), provisional until the M2 gate (R-427): 16 at both precisions, from
 /// the measured `|I_in − 1|` of canonical-frame decodes of fuzzed `z`, as step 0 forms it (TASK-M2-47): at most 4 eps at
 /// f64 and at f32 on the CPU over 64 144 decodes (`kernel/tests/canon.rs`, `scale_step_skip`; 4.5 at f32 over 200 000
-/// in a longer run), and at most 6 f32 eps
-/// on Metal over 66 608 GPU decodes (`engine/tests/canon_gpu.rs`, `canonicaliser_noop_gpu`, which CI runs on lavapipe
-/// too, printing its own); TASK-M2-07 measured up to 3. 16 leaves a margin of 4 over the CPU and of 2.7 over Metal. A
-/// skipped state keeps its `|I_in − 1|`, so `C`'s output is at `I = 1` to within `τ_I`, its positions within `τ_I/2`.
+/// in a longer run), and at most 6 f32 eps on Metal over 66 608 GPU decodes (`engine/tests/canon_gpu.rs`,
+/// `canonicaliser_noop_gpu`, which CI runs on lavapipe too, printing its own); TASK-M2-07 measured up to 3. 16 leaves a
+/// margin of 4 over the CPU and of 2.7 over Metal. A skipped state keeps its `|I_in − 1|`, so `C`'s output is at
+/// `I = 1` to within `τ_I`, its positions within `τ_I/2`.
 pub const TAU_I: ConstantBuilder = proposed(
     "tau_i",
     16.0,
