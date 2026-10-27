@@ -19,12 +19,12 @@
 | COL | 160 |
 | GUI | 384 |
 | TOOL | 218 |
-| VAL | 199 |
+| VAL | 330 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **1912** |
+| **total** | **2043** |
 
-Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 221 calibration, 172 definition, 1650 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,27 +32,28 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 217 |
-| M3 | 227 |
-| M4 | 106 |
+| M2 | 221 |
+| M3 | 332 |
+| M4 | 118 |
 | M5 | 179 |
-| M6 | 223 |
-| M7 | 260 |
-| M8 | 470 |
+| M6 | 225 |
+| M7 | 262 |
+| M8 | 476 |
 
 ## Sections
 
-1595 sections in 60 files: 1285 yield at least one requirement; 310 yield none and are listed below with the reason.
+1630 sections in 61 files: 1304 yield at least one requirement; 326 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 209 |
+| gap (RQ-577) | 2 |
+| informative only | 219 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 52 |
+| parent heading (obligations are in its subsections) | 55 |
 | planned (the plan PR) | 22 |
-| rationale | 18 |
+| rationale | 19 |
 | superseded (kept for the record) | 4 |
 
 
@@ -374,6 +375,27 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 |---|---|---|
 | Refinement policy — `Policy::Tolerance` | informative only | status, evidence base and supersession notes |
 
+### `docs/design/principia_dd_replication.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the replication and verification suite — published three-body results as engine tests | informative only | preface: the rulings that adopted it (R-594, R-629) and the records it transcribes; obligations in §5, §6 and §8 |
+| 1. What this extends, and what it does not change | informative only | its relation to principia_dd_validation_orbits.md, which it extends and does not change (R-594); no obligation of its own |
+| 2. Two layers and four tiers | rationale | the layers, tiers, comparison kinds and chart names each target's requirement states in its note |
+| 3. Sources | informative only | the records' abbreviations and data terms; the terms' obligations are §8.2 rule 17 and §8.3, cited by every target |
+| 4. Three findings carried over from the plan | parent heading (obligations are in its subsections) | its three findings; 4.1 and 4.3 are cited by the targets that depend on them |
+| 4.2 The high-precision rows: 937, not 1,260 | gap (RQ-577) | the rows serve the precision ladder's test 6, which waits on RQ-577 (§5.13); no requirement is added meanwhile |
+| 5. The targets | parent heading (obligations are in its subsections) | its subsections hold the targets, one requirement each |
+| 5.1 Targets already ruled | informative only | lists the requirements already in force by id; this port changes none of them (R-594) |
+| 5.13 The precision ladder: waiting for RQ-577 | gap (RQ-577) | PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250 |
+| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629) |
+| 5.15 Counts | informative only | counts of what the port added |
+| 7. Sequencing by need | informative only | the task order; the obligations are the tasks' (plan/tasks.yaml) |
+| 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |
+| 9. Coverage of initial-condition space, and the gaps | informative only | which region of IC space each target exercises, and the gaps in the records; no obligation |
+| 10. Open questions | informative only | where each open question stands; each is an RQ entry |
+| 11. Corrections the plan records | informative only | PLAN.md §10's record of corrections to older records; the ones to documents in force are queued (RQ-588 to RQ-590), not applied |
+
 ### `docs/design/principia_dd_telemetry_and_tiers.md`
 
 | section | reason | note |
@@ -635,3 +657,19 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | Notes — working notes | informative only | file map |
 | GUI | informative only | file map; precedence (notes over pictures, rulings over both) is carried by R-68 |
 | Experiments — briefs and results | informative only | file map; not sources |
+
+## Errors
+
+- REQ-VAL-042: RQ-584 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-223: RQ-586 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-240: RQ-586 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-311: RQ-582 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-311: RQ-583 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-312: RQ-582 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-312: RQ-583 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-313: RQ-582 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-313: RQ-583 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-314: RQ-582 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-314: RQ-583 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-316: RQ-582 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
+- REQ-VAL-316: RQ-583 is not in REVIEW_QUEUE.md or docs/archive/review_queue/
