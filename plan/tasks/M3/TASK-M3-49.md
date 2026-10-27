@@ -33,6 +33,6 @@ The replication suite's targets TM-1 run as engine tests (`principia_dd_replicat
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-241.
-- Waits on RQ-586: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).
+- Waits on Tanikawa & Mikkola 2021 (doi:10.1007/s10569-021-10050-8): RQ-586 is closed by R-630 item 9, which has it fetched; it is paywalled, so it is listed for the human to fetch, and the task starts only once it is in the repo (R-630 item 9; R-594 item 5).
 - R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

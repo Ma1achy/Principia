@@ -33,6 +33,6 @@ The replication suite's targets OC-4 on the Šuvakov plane, AT-D1, AT-D3 run as 
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes
-- Waits on RQ-582, RQ-583: the task starts only once they are ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).
+- Waits on RQ-583: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5). RQ-582 is closed by R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s labelling.
 - The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com with `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md`'s per-family credits, on every fixture, export and figure. `atlas-params.json` never enters the repo (`scripts/check_no_atlas_params.sh`); no task may commit it.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

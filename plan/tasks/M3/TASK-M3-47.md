@@ -34,6 +34,6 @@ The replication suite's targets LL-3 run as engine tests (`principia_dd_replicat
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-224.
-- Waits on RQ-586: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).
+- Waits on Standish 1970 (doi:10.1007/978-94-010-3323-7_34) and Yasko & Orlov 2015 (doi:10.1134/S106377291505008X): RQ-586 is closed by R-630 item 9, which has them fetched; both are paywalled, so they are listed for the human to fetch, and the task starts only once they are in the repo (R-630 item 9; R-594 item 5).
 - R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

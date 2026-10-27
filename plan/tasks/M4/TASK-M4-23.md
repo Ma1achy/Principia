@@ -34,5 +34,5 @@ The replication suite's targets HU-1, HU-2 run as engine tests (`principia_dd_re
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation at the M4 gate, then recorded in decisions.md): REQ-VAL-315, REQ-VAL-317.
-- Waits on RQ-582, RQ-583: the task starts only once they are ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5).
+- Waits on RQ-583: the task starts only once it is ruled, and builds no chart or diagnostic ahead of the ruling (R-594 item 5). RQ-582 is closed by R-630 item 3: the middle body is body 1, at β = 0, Hudomal eq. (18)'s labelling.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

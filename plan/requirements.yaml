@@ -28992,8 +28992,6 @@
   - R-72
   - R-630
   milestone: M3
-  rq:
-  - RQ-584
   note: "Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration). The reference set is Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits), fetched and verified, not committed (R-630 items 6 and 7, closing RQ-584 and RQ-579). Was: \"Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration).\""
 - id: REQ-VAL-043
   area: VAL
@@ -32385,9 +32383,8 @@
   - R-560
   - R-594
   - R-629
+  - R-630
   milestone: M3
-  rq:
-  - RQ-586
   note: "Reproduces: Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17. Chart: the Anosova physical-frame entry; a MassSimplex point. Milestone: M3. Compare: exact (rule 8). Tolerance: REQ-VAL-224 (calibration, R-71). Row LL-3 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M3-47 (R-594, R-629)."
 - id: REQ-VAL-224
   area: VAL
@@ -32826,9 +32823,8 @@
   - R-560
   - R-594
   - R-629
+  - R-630
   milestone: M3
-  rq:
-  - RQ-586
   note: "Reproduces: Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5). Chart: the Anosova physical-frame entry, after the D11 mirror remap. Milestone: M3. Compare: exact (scaling) (rule 8). Tolerance: REQ-VAL-241 (calibration, R-71). Row TM-1 of principia_dd_replication.md § \"5.5 Regularisation\"; layer replication, tier A; closed by TASK-M3-49 (R-594, R-629)."
 - id: REQ-VAL-241
   area: VAL
@@ -34581,9 +34577,9 @@
   rulings:
   - R-594
   - R-629
+  - R-630
   milestone: M8
   rq:
-  - RQ-582
   - RQ-583
   note: "Reproduces: as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3). Chart: new: SuvakovPlane, at equal masses and at fixed m₃. Milestone: M8. Compare: statistical (rule 8). Tolerance: OC-4's (REQ-VAL-310). Row OC-4 on the Šuvakov plane of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-312
@@ -34608,9 +34604,9 @@
   rulings:
   - R-594
   - R-629
+  - R-630
   milestone: M8
   rq:
-  - RQ-582
   - RQ-583
   note: "Reproduces: the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted. Chart: new: SuvakovPlane. Milestone: M8. Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-313
@@ -34635,9 +34631,9 @@
   rulings:
   - R-594
   - R-629
+  - R-630
   milestone: M8
   rq:
-  - RQ-582
   - RQ-583
   note: "Reproduces: the atlas's 1,350 m₃-free orbits on the eight values of m₃. Chart: new: SuvakovPlane at fixed m₃. Milestone: M8. Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D3 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-314
@@ -34663,9 +34659,9 @@
   - R-71
   - R-594
   - R-629
+  - R-630
   milestone: M4
   rq:
-  - RQ-582
   - RQ-583
   note: "Reproduces: Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima. Chart: new: SuvakovPlane. Milestone: M4. Compare: qualitative; exact at Table 23's minima (rule 8). Tolerance: REQ-VAL-315 (calibration, R-71). Row HU-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M4-23 (R-594, R-629)."
 - id: REQ-VAL-315
@@ -34715,9 +34711,9 @@
   - R-71
   - R-594
   - R-629
+  - R-630
   milestone: M4
   rq:
-  - RQ-582
   - RQ-583
   note: "Reproduces: Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866. Chart: new: SuvakovPlane, zoomed. Milestone: M4. Compare: qualitative + one exact point (rule 8). Tolerance: REQ-VAL-317 (calibration, R-71). Row HU-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M4-23 (R-594, R-629)."
 - id: REQ-VAL-317
