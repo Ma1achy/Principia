@@ -548,8 +548,9 @@ pub const MASS_SIMPLEX_EPS_M: ConstantBuilder = chart("mass_simplex_eps_m", 1e-4
 /// at f64 and f32 the `ν = 1/2` decode equals the `(m, n) = (2, 1)` construction bit for bit, every intermediate an
 /// exact operation or one rounding of the same rational; the classical configuration, normalised and historical,
 /// brought to the canonical section by `C`, differs from it by at most 2 `eps` (4 leaves a margin for a platform's
-/// `sqrt`; 1 `eps` before R-547, the normalised configuration, at `I = 1` to rounding, now left unscaled by step 0's
-/// skip).
+/// `sqrt`; 1 `eps` before R-547: the classical configuration's `I_in` is 0.2, so step 0 runs on it, and the unfused
+/// `Wide` CoM and `I_in` R-547 requires round `I_in` one ulp above the former explicit-`fma` form, `0x1.999999999999cp-3`
+/// against `0x1.999999999999bp-3` at f64, which moves the outputs by 1 `eps`).
 pub const BURRAU_NU_HALF_TOL: ConstantBuilder = proposed(
     "burrau_nu_half_tol",
     4.0,
