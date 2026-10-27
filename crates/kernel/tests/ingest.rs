@@ -347,6 +347,48 @@ fn check_column(x: &Ic<f64>, k: usize, scale: f64) {
     }
 }
 
+/// `W·J_D(z)`'s column `k`, read back from [`weighted_jacobian`], is the central difference of `D` along `zₖ` at
+/// Part 4's step `hₖ = ε_R^{1/3}·max(1, |zₖ|)`, weighted by `W` at `D(z)`: checked against a difference formed here, on
+/// the Burrau start's `z` with `z_q0` set to `−3`, so `|zₖ| > 1` and the step's scale matters.
+fn check_decode_column(z: [f64; 8], k: usize, step: f64) {
+    let cols = weighted_jacobian::<Defaults, f64>(&Latent::new(z));
+    let w = weights(&decode::decode::<Defaults, f64>(&Latent::new(z)).ic);
+    let h = step * z[k].abs().max(1.0);
+    let (mut up, mut down) = (z, z);
+    up[k] += h;
+    down[k] -= h;
+    let plus = components(&decode::decode::<Defaults, f64>(&Latent::new(up)).ic);
+    let minus = components(&decode::decode::<Defaults, f64>(&Latent::new(down)).ic);
+    for i in 0..15 {
+        let want = w[i] * (plus[i] - minus[i]) / (up[k] - down[k]);
+        assert_eq!(
+            cols[k][i], want,
+            "entry ({i}, {k}) of W·J_D is {:e}, the difference at Part 4's step {want:e}",
+            cols[k][i]
+        );
+    }
+}
+
+fn far_z() -> [f64; 8] {
+    let mut z = ingested(&starts()[2].1).encoded.z.z;
+    z[2] = -3.0;
+    z
+}
+
+#[test]
+fn ingest_outputs_decode_jacobian_columns() {
+    for k in 0..8 {
+        check_decode_column(far_z(), k, f64::EPSILON.cbrt());
+    }
+}
+
+negative_control!(
+    ingest_outputs_decode_jacobian_columns,
+    "a difference at twice Part 4's step is not the column W·J_D carries",
+    expected = "the difference at Part 4's step",
+    check_decode_column(far_z(), 2, 2.0 * f64::EPSILON.cbrt())
+);
+
 #[test]
 fn ingest_outputs_encode_jacobian_columns() {
     let (raw, _) = light();
