@@ -1092,4 +1092,3 @@ fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
 /// `cargo xtask build-kernel` emits it from the rust-gpu → SPIR-V → WGSL translation of `kernel::shape::shape`, the
 /// march's own (R-116; REQ-SYS-085, R-547), and fails when the checked-in file differs from the translation.
 pub const SHAPE_WGSL: &str = include_str!("../../wgsl/shape.wgsl");
-
