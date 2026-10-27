@@ -14,7 +14,7 @@
 //! swamps `λ̃` there.
 
 use kernel::chart::{Chart, ShapeMap, ShapeSphere};
-use kernel::decode::descriptor::{angle, config_angle, describe};
+use kernel::decode::descriptor::{angle, config_angle};
 use kernel::decode::energy_norm::{apply, apply_shared};
 use kernel::decode::{decode, Free, Latent};
 use kernel::generated::links::{Defaults, LinkReal};
@@ -205,7 +205,7 @@ negative_control!(
         check_phi(
             &c,
             "positional",
-            describe(&c.decode::<Defaults, f32>(0.5, 0.5).ic).rho_angle,
+            kernel::decode::descriptor::describe(&c.decode::<Defaults, f32>(0.5, 0.5).ic).rho_angle,
         );
     }
 );

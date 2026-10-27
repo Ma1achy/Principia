@@ -32,8 +32,7 @@
 //! domain: at f32 it lies about `5·10⁻⁸` off `BC₀₁` (`render`'s `decode_preset_poles`).
 
 use kernel::chart::{Chart, ShapeMap, ShapeSphere};
-use kernel::decode::descriptor::{angle, describe};
-use kernel::decode::Ic;
+use kernel::decode::descriptor::angle;
 use kernel::generated::links::Defaults;
 use kernel::stage::decode::{DecodeUniforms, UniformChart};
 use kernel::stage::fragment::{
@@ -221,9 +220,10 @@ fn phi_angle(chart: &ShapeSphere<f32>) -> f64 {
 }
 
 /// The CPU decode's `(m, r, p)`, from its words.
-fn ic_of(words: &[u32; DECODE_WORDS]) -> Ic<f32> {
+#[cfg(feature = "controls")]
+fn ic_of(words: &[u32; DECODE_WORDS]) -> kernel::decode::Ic<f32> {
     let w = |k: usize| f32::from_bits(words[DECODE_IC + k]);
-    Ic {
+    kernel::decode::Ic {
         m: [w(0), w(1), w(2)],
         r: [[w(3), w(4)], [w(5), w(6)], [w(7), w(8)]],
         p: [[w(9), w(10)], [w(11), w(12)], [w(13), w(14)]],
@@ -367,10 +367,11 @@ fn check(reference_phase: Option<f32>) {
 
 /// `rho_angle` read from the CPU decode's positions (`descriptor::describe`, the form before R-628), held to `Φ`'s
 /// f64 angle over the sweep by [`check_phi`]: the control of that check, on the CPU alone.
+#[cfg(feature = "controls")]
 fn positional_against_phi() {
     for Case { chart: c, .. } in sweep() {
         let case = format!("n₀ = {:?}, φ_f = {}", c.n0, c.phase);
-        let positional = describe(&ic_of(&cpu(&c))).rho_angle;
+        let positional = kernel::decode::descriptor::describe(&ic_of(&cpu(&c))).rho_angle;
         check_phi(&case, "positional", positional.to_bits(), phi_angle(&c));
     }
 }
