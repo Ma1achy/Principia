@@ -251,7 +251,30 @@ impl Scene {
         queue: &wgpu::Queue,
         preset: &Preset,
     ) -> Result<headless::Image, String> {
-        let module = preset.module(self.chart)?;
+        self.draw_module(device, queue, &preset.module(self.chart)?, preset.output())
+    }
+
+    /// Draws the view `view` (`fn view(rc: RenderContext, l: Lanes)`, after the chart's decode snippet) writing
+    /// `output` over the scene: [`Scene::draw`] for a view that is not a library preset, a test's among them.
+    pub fn draw_view(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        view: &str,
+        output: ViewOutput,
+    ) -> Result<headless::Image, String> {
+        let module = render::presets::module(view, output, self.chart)?;
+        self.draw_module(device, queue, &module, output)
+    }
+
+    /// Draws the fragment module `module`, writing `output`, over the scene.
+    fn draw_module(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        module: &str,
+        output: ViewOutput,
+    ) -> Result<headless::Image, String> {
         let bytes = self.set.bytes();
         let bound = bind::upload_decode(
             device,
@@ -260,7 +283,7 @@ impl Scene {
             &uniform_bytes(&self.uniforms),
         );
         let (width, height) = self.size();
-        let format = match preset.output() {
+        let format = match output {
             ViewOutput::Colour => wgpu::TextureFormat::Rgba32Float,
             ViewOutput::Words => wgpu::TextureFormat::Rgba32Uint,
         };
@@ -268,7 +291,7 @@ impl Scene {
             device,
             queue,
             &Draw {
-                module: &module,
+                module,
                 entry: bind::ENTRY,
                 layouts: &bound.layout_refs(),
                 groups: &bound.group_refs(),
@@ -421,7 +444,8 @@ pub struct State {
 }
 
 impl State {
-    fn ic(&self) -> kernel::decode::Ic<f32> {
+    /// The state as the decoder's `Ic`.
+    pub fn ic(&self) -> kernel::decode::Ic<f32> {
         kernel::decode::Ic {
             m: self.m,
             r: self.r,
@@ -546,7 +570,7 @@ impl Scene {
     }
 
     /// The pixel's within-tile coordinate, Y-up, as the raster forms it (`ctx.tile.uv`).
-    fn tile_uv(&self, x: u32, y: u32) -> [f64; 2] {
+    pub fn tile_uv(&self, x: u32, y: u32) -> [f64; 2] {
         let grid = self.context.grid;
         let cell = grid.cell(x, y);
         let (_, height) = self.size();

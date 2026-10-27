@@ -11,11 +11,18 @@
 //!   lattice with non-finite stored operands (`V₀ = ±∞`, `K₀ = NaN`, each by its bits) and one stored `K₀` moved far
 //!   off: the non-finite ones draw the hatch, the moved one red, the rest green, each pixel the twin's colour. Control:
 //!   a twin that compares the non-finite samples instead of hatching them differs.
+//! - `agreement_preset_stage_into_places`: `Scene::stage_into` writes sample `q`'s descriptor at sample
+//!   `(q + shift) mod count`. Control: the placement read with another shift.
+//! - `agreement_preset_gate_runs`: the `decode-agreement` gate through its trait on 4 × 4 lattices: healthy passes,
+//!   a poisoned `V₀` is hatched and the input passes, a scramble fails, an input without its fields is refused.
+//!   Control: the scramble expected to pass.
 
 use std::path::{Path, PathBuf};
 
 use render::presets::{agreement, DecodeChart};
+use validation::decode_agreement::DecodeAgreementGate;
 use validation::decode_preset::Scene;
+use validation::gate::report::Verdict;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -147,4 +154,93 @@ negative_control!(
     "a twin that compares non-finite operands instead of hatching them must differ",
     expected = "the hatch or the ramp differs",
     check_twin(false)
+);
+
+/// The decode stage's descriptors land where `stage_into` says: sample `q`'s at `(q + shift) mod count`; `claimed` is
+/// the shift the placement is checked against (the control gives another).
+fn check_placement(shift: u32, claimed: u32) {
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let mut scene = Scene::lattice(DecodeChart::ShapeSphere, [3, 2], 2).unwrap();
+    let outs = scene
+        .stage_into(gpu.device(), gpu.queue(), &wgsl(), shift)
+        .unwrap();
+    assert_eq!(outs.len(), 6);
+    for (q, o) in (0u32..).zip(&outs) {
+        let at = (q + claimed) % 6;
+        assert_eq!(
+            *scene.set.ic(at),
+            o.descriptor,
+            "sample {q}'s descriptor is not at sample {at}"
+        );
+    }
+}
+
+#[test]
+fn agreement_preset_stage_into_places() {
+    check_placement(4, 4);
+}
+
+negative_control!(
+    agreement_preset_stage_into_places,
+    "a placement read with another shift must be found",
+    expected = "descriptor is not at sample",
+    check_placement(4, 2)
+);
+
+/// The gate through its trait on small inputs: a healthy lattice passes, a scramble fails, a poisoned sample is hatched;
+/// `scrambled` is the verdict the scramble is expected to give (the control expects a pass).
+fn check_gate(scrambled: Verdict) {
+    use validation::gate::Gate;
+    let root: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let config = validation::gate::config(&root, "decode-agreement").unwrap();
+    let gate = DecodeAgreementGate;
+    assert_eq!(gate.name(), "decode-agreement");
+    let run = |json: serde_json::Value| gate.run(&config, "t.json", &json).unwrap();
+    let healthy = run(serde_json::json!({"description": "h", "side": [4, 4], "depth": 2}));
+    assert_eq!(
+        healthy.verdict,
+        Verdict::Pass,
+        "{:?}",
+        healthy.negative_results
+    );
+    assert_eq!(healthy.gate, "decode-agreement");
+    assert_eq!(healthy.negative_results.len(), 7);
+    let poisoned =
+        run(serde_json::json!({"description": "p", "side": [4, 4], "depth": 2, "poison": [5]}));
+    assert_eq!(
+        poisoned.verdict,
+        Verdict::Pass,
+        "{:?}",
+        poisoned.negative_results
+    );
+    assert!(
+        poisoned.negative_results[0].ends_with("0 with the hatch misplaced; 1 hatched"),
+        "{:?}",
+        poisoned.negative_results
+    );
+    assert!(poisoned
+        .negative_results
+        .iter()
+        .any(|l| l.contains("samples [5]")));
+    let scramble =
+        run(serde_json::json!({"description": "s", "side": [4, 4], "depth": 2, "shift": 5}));
+    assert_eq!(scramble.verdict, scrambled, "the scramble's verdict");
+    assert!(scramble
+        .negative_results
+        .iter()
+        .any(|l| l.contains("5 samples on")));
+    let refused = gate.run(&config, "t.json", &serde_json::json!({"side": [4, 4]}));
+    assert!(refused.unwrap_err().starts_with("refused: "));
+}
+
+#[test]
+fn agreement_preset_gate_runs() {
+    check_gate(Verdict::Fail);
+}
+
+negative_control!(
+    agreement_preset_gate_runs,
+    "a scramble taken for a pass must be found",
+    expected = "the scramble's verdict",
+    check_gate(Verdict::Pass)
 );
