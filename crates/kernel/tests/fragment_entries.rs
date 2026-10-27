@@ -155,9 +155,17 @@ negative_control!(
     check_decode(true)
 );
 
-/// A state of fifteen distinct values, the `k`-th of a few.
+/// A state of fifteen distinct values, the `k`-th of a few; the fifth has its inner pair coincident, so the encode's
+/// notices word is not 0 (bit 0, R-13).
 fn state(k: usize) -> Ic<f32> {
     let s = 1.0 + 0.1 * k as f32;
+    if k == 4 {
+        return Ic {
+            m: [0.2, 0.3, 0.5],
+            r: [[0.4, 0.11], [0.4, 0.11], [-0.4, -0.11]],
+            p: [[0.13, -0.41], [0.29, 0.07], [-0.42, 0.34]],
+        };
+    }
     Ic {
         m: [0.2, 0.3, 0.5],
         r: [[-0.9 * s, 0.11], [0.7, -0.23 * s], [0.31, 0.17]],
@@ -168,7 +176,7 @@ fn state(k: usize) -> Ic<f32> {
 /// `describe`, `encode` and `shape` against their sources; `shift` reads each state's words one place off (the
 /// control).
 fn check_states(shift: bool) {
-    for k in 0..4 {
+    for k in 0..5 {
         let ic = state(k);
         let mut input = ic_words_of(&ic);
         if shift {
@@ -189,6 +197,11 @@ fn check_states(shift: bool) {
         let mut want: Vec<u32> = e.z.z.map(f32::to_bits).to_vec();
         want.extend([e.blocks.alpha, e.blocks.beta, e.report.lambda].map(f32::to_bits));
         want.push(kernel::stage::encode::notices(&e.report));
+        assert_eq!(
+            want[11] != 0,
+            k == 4,
+            "state {k}: the notices word is not set exactly at the coincident pair"
+        );
         assert_eq!(
             words[ENCODE_OUT..].to_vec(),
             want,
