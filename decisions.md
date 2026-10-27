@@ -25832,14 +25832,15 @@ Changes REQ-CHART-010 (verify, rulings, source, rq, note).
 
 ## R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*
 
-*27 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, `docs/contracts/principia_caching_contract.md`
-Part 6a, `docs/design/principia_systems_architecture.md` §3 (added paragraphs), `REVIEW_QUEUE.md` (RQ-550 and RQ-551,
-an added line each), `plan/HUMAN_SETUP.md` §5 and §6 (new), `plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track
-(R-390)", `plan/MILESTONES.md` § "M8 — The dev GUI, tooling, v1 web and the release gates", `plan/reviewers/gui.md` §8,
-REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to REQ-GUI-409 and REQ-PERF-115 (reqio, new), ten requirements'
-notes (reqio), TASK-M8-86 to TASK-M8-96 (new), TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07,
-TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24 (the track), the tasks that depended on them,
-TASK-M8-37, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+*27 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0,
+`docs/contracts/principia_caching_contract.md` Part 6a, `docs/design/principia_systems_architecture.md` §3 (added
+paragraphs), `REVIEW_QUEUE.md` (RQ-550 and RQ-551, an added line each), `plan/HUMAN_SETUP.md` §5 and §6 (new),
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track (R-390)", `plan/MILESTONES.md` § "M8 — The dev GUI, tooling,
+v1 web and the release gates", `plan/reviewers/gui.md` §8, REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to
+REQ-GUI-409 and REQ-PERF-115 (reqio, new), twenty-three requirements' notes (reqio), TASK-M8-86 to TASK-M8-96 (new),
+TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07, TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and
+TASK-M8-24 (the track), the tasks that depended on them, TASK-M8-37, TASK-M6-22, TASK-M6-26 and TASK-M6-27 (notes),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
 
 The human's message, 27 Oct 2026, verbatim:
 

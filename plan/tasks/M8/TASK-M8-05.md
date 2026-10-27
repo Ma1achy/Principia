@@ -46,6 +46,7 @@ On the mock engine (R-627; R-390's track), the Explore page's frame is the shell
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
 - R-390: TASK-M6-24 builds the shell on the mock engine and closes REQ-GUI-075; this task depends on it, wires the shell to the real engine (egui-wgpu on the engine's device and queue, the real status line, the real footer) and re-runs REQ-GUI-075's acceptance there. The console's layout is TASK-M6-28's on the mock (REQ-GUI-126) and TASK-M8-27's on the real engine.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the shell's wiring to the real engine (egui-wgpu on the engine's device and queue, the real status line, the real footer) and REQ-GUI-075's re-run there are TASK-M8-88's; this task builds the shell on the mock (code review 5664955153 of R-627's port, applied per R-369).
 - RQ-243, RQ-247 and RQ-255, decided per R-369 (7 Oct 2026): TASK-M6-24's contract gives the snapshot an optional
   frame summary (`frame_ms`, `fps`, `quad_count`, `live_memory { heap_bytes, gpu_bytes }`), `None` from the real
   engine until this task wires its frame loop to fill it; this task keeps REQ-GUI-078 (`budget-bound`, which the mock
@@ -53,6 +54,7 @@ On the mock engine (R-627; R-390's track), the Explore page's frame is the shell
   trait in `engine::contract`, outside the data contract; the real engine's implementation of it (its device and
   queue, and drawing the figure into the app's pass) is this task's, for REQ-GUI-070. On the real engine the window
   title and the footer carry no "mock engine" tag.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: filling the frame summary from the real engine's frame loop, REQ-GUI-078 and the real engine's canvas implementation for REQ-GUI-070 are TASK-M8-88's; this task's status line reads the mock's frame summary (code review 5664955153 of R-627's port, applied per R-369).
 - R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where the shown layout puts it,
   so REQ-GUI-070's "the figure is identical underneath" is checked over the shown figure's rect. TASK-M6-30 builds it
   on the mock.
@@ -90,6 +92,7 @@ On the mock engine (R-627; R-390's track), the Explore page's frame is the shell
   render draws the canvas background REQ-GUI-180 and REQ-CHART-054 now ask for, and on TASK-M6-46 and TASK-M6-47, which
   build View › Debug view and View › F3 fills by, the entries REQ-GUI-078 now lists; this task wires them on the real
   engine's View menu.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: wiring View › Debug view and View › F3 fills on the real engine's View menu is TASK-M8-88's; this task shows them on the mock (code review 5664955153 of R-627's port, applied per R-369).
 - **R-474 R7 (20 Oct 2026):** under Lean each axis the area statistics take the Gram factor (REQ-CHART-071); depends on TASK-M6-48 for `tilt_map`.
 - **R-470, R-471, R-472 (20 Oct 2026):** a forbidden pixel draws blank, never a palette colour; a builder energy-type axis is warped by default (bounded) and B1's affine axis its linear option, REQ-CHART-054's and REQ-CHART-056's tests run under both mappings; a tilted, sliced or saved chart extends by its axes' types.
 - **⚑ Physics review is required** for REQ-CHART-071 and B1's retirement (R-471, R-474) (the instruction of R-469, "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.

@@ -18137,13 +18137,16 @@
     section: G1. Rules that hold everywhere
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: Rules that hold everywhere
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code"
   rulings:
   - R-390
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24)"
+  note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-88's, which wires TASK-M8-05's shell; TASK-M8-05 builds the shell on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-076
   area: GUI
   statement: "The dev GUI must not include Chazy subtitles (captions over the figure) or the object-based stain desk, and its Stain mode must be the plain node-graph editor; the ban does not cover the Chazy fields, stains or legends (R-548)."
@@ -18268,14 +18271,17 @@
     section: G14. Settled by the notes (record)
   - file: decisions.md
     section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png's left panel, read with R-457: one group, sub-sections in that order, eight named Slice centre sliders, no z₀ values under Navigate and no step under Tilt"
   rulings:
   - R-390
   - R-457
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-06, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-457 (18 Oct 2026) renames Centre z₀ and Slice & tilt to Slice centre and Tilt, adds the tilt targets and removes the slice step; TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-38 builds the new sections on the mock (REQ-GUI-204, REQ-GUI-205), and TASK-M8-06 re-runs this wording on the real engine."
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-06, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-457 (18 Oct 2026) renames Centre z₀ and Slice & tilt to Slice centre and Tilt, adds the tilt targets and removes the slice step; TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-38 builds the new sections on the mock (REQ-GUI-204, REQ-GUI-205), and TASK-M8-06 re-runs this wording on the real engine. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-89's, which wires TASK-M8-06's Manifold view; TASK-M8-06 builds the group on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-082
   area: GUI
   statement: "The Chart sub-group must show the chart preset named by its axes (e.g. 'z_α × z_β', never a nickname), the basis vectors q₁ and q₂ each with an edit button, a Chart builder… button and the chart's kind (affine or nonlinear)."
@@ -18299,13 +18305,16 @@
     section: 01 Explore — the everyday view
   - file: decisions.md
     section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "drag and typed entry on centre u, v, the zoom and each of the eight Slice centre sliders' number boxes emit the same SetField as the slider and round-trip through the snapshot; Navigate has no single-coordinate z₀ box (centre u, v pan within the plane, which edits z₀)"
   rulings:
   - R-457
+  - R-627
   milestone: M8
-  note: "R-457 (18 Oct 2026) removes the eight z₀ value boxes from Navigate: they repeated the Slice centre sliders. Closed by TASK-M8-06 on the real engine; TASK-M6-38 builds it on the mock under REQ-GUI-204."
+  note: "R-457 (18 Oct 2026) removes the eight z₀ value boxes from Navigate: they repeated the Slice centre sliders. Closed by TASK-M8-06 on the real engine; TASK-M6-38 builds it on the mock under REQ-GUI-204. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-06 closes it on the mock engine, and TASK-M8-89 re-runs its acceptance on the real engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-084
   area: GUI
   statement: "The figure's axis labels must carry the short axis name and the range at each end."
@@ -18314,13 +18323,16 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png; after a pan the end values update"
   rulings:
   - R-390
+  - R-627
   milestone: M8
-  note: "R-390: the GUI track builds the axis labels on mock data in TASK-M6-26, since 01_main.png shows them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-06, which wires them to the real chart's ranges."
+  note: "R-390: the GUI track builds the axis labels on mock data in TASK-M6-26, since 01_main.png shows them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-06, which wires them to the real chart's ranges. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-06 keeps it, building the axis labels from the mock's chart axis metadata; the labels on the real chart's ranges are TASK-M8-89's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-085
   area: GUI
   statement: "The hover path must be z(t) through the manifold projected onto this chart's q₁, q₂ — not real space — drawn solid near the slice and faint where it leaves the plane."
@@ -18466,14 +18478,17 @@
     section: G4. Lock — the reticle and the pin (`08_lock.png`)
   - file: decisions.md
     section: "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshots against 01_main.png after touching a slice slider, after touching a tilt and after clicking each of the Tilt and Slice buttons, and against 08_lock.png when locked; 01_main.png's mode labels and its orbit hint are superseded by R-409, so the buttons and the fixed view are checked against R-409 (render_gui_spec §G13)"
   rulings:
   - R-390
   - R-409
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-07, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-409 (10 Oct 2026) rewords it: no orbit, the Tilt and Slice buttons beside the switch by the slider touched, and a drag in slice mode moving the slice along the plane's normal. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new behaviour on the mock (REQ-GUI-181) and re-checks this requirement there, and TASK-M8-07 re-runs it on the real engine as now worded. R-474 (20 Oct 2026): the compass draws the active tilt map (REQ-GUI-235)."
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-07, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-409 (10 Oct 2026) rewords it: no orbit, the Tilt and Slice buttons beside the switch by the slider touched, and a drag in slice mode moving the slice along the plane's normal. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new behaviour on the mock (REQ-GUI-181) and re-checks this requirement there, and TASK-M8-07 re-runs it on the real engine as now worded. R-474 (20 Oct 2026): the compass draws the active tilt map (REQ-GUI-235). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-90's, which wires TASK-M8-07's controls and carries the acceptance line; TASK-M8-07 builds them on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-092
   area: GUI
   statement: "The time controls must offer play, step, a scrubber and speed, and scrubbing back must set the display time and re-integrate progressively, showing it is refining (e.g. 'refining · 72%'), never replaying stored frames."
@@ -18543,6 +18558,8 @@
     section: G14. Settled by the notes (record)
   - file: decisions.md
     section: "R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "Tab / Shift+Tab cycles the eight scopes in order, the footer last; Enter on Manifold view enters Chart"
@@ -18550,8 +18567,9 @@
   - R-390
   - R-405
   - R-457
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-405 (10 Oct 2026) adds the footer as big scope 8, after Legend: TASK-M6-25 (merged) built and checked the seven; TASK-M6-28 adds the footer and extends scope_tab_order_mock to eight under REQ-GUI-178, and TASK-M8-13 re-runs the eight on the real engine. R-457 (18 Oct 2026) renames the sub-scopes Centre z₀ and Slice & tilt to Slice centre and Tilt; TASK-M6-38 renames them on the mock (REQ-GUI-204)."
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-405 (10 Oct 2026) adds the footer as big scope 8, after Legend: TASK-M6-25 (merged) built and checked the seven; TASK-M6-28 adds the footer and extends scope_tab_order_mock to eight under REQ-GUI-178, and TASK-M8-13 re-runs the eight on the real engine. R-457 (18 Oct 2026) renames the sub-scopes Centre z₀ and Slice & tilt to Slice centre and Tilt; TASK-M6-38 renames them on the mock (REQ-GUI-204). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-91's, which wires TASK-M8-13's keyboard; TASK-M8-13 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-096
   area: GUI
   statement: "The global keys must follow §G3's table, in its two modes (R-409): Tab / Shift+Tab next / previous big scope, landing on the big scope itself in navigation mode, from either mode, and from interaction mode inside a window on the window's next or previous section instead, staying in the window (R-409 G6); Enter in navigation mode on a scope into it, on its first element, on the Figure, which has nothing inside, starting interaction mode, on a read-only scope with nothing inside (the Legend) doing nothing, on an element starting interaction mode, and on a button acting as its click; Enter and Esc in interaction mode back to navigation mode on the same element, and Esc in navigation mode up one scope; arrows in navigation mode always between siblings, on a big scope itself between the big scopes in Tab order, and in interaction mode adjusting the focused element; Shift ×10 and Alt ×0.1 steps, everywhere, the compass included; a scope's letter and Space shortcuts acting whenever the focus is in that scope, in either mode, except while a text field is being typed in; held keys delay-then-repeat (DAS / ARR); Ctrl+Z undo from the contract's history, in either mode, and ? shows shortcuts over everything, in either mode, each except while a text field is being typed in, when Ctrl+Z undoes the text edit and ? types a character (R-409 G5)."
@@ -18562,6 +18580,8 @@
     section: 07 Keyboard — design note, not a screen
   - file: decisions.md
     section: "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "synthetic key events for each row in each mode: a Tab landing is on the big scope itself, not its first element, in navigation mode, and Enter into a scope lands in navigation mode on its first element; on a big scope itself the arrows move to the next and previous big scope in Tab order; in navigation mode the arrows move between siblings and adjust nothing; Enter on the Figure starts interaction mode, and Enter on the Legend changes nothing; Enter on a value starts interaction mode and the arrows then adjust it, ×10 with Shift and ×0.1 with Alt; Esc, and in a second run Enter, returns to navigation mode on the same value, and a second Esc goes up one scope; Tab from interaction mode lands in navigation mode on the next big scope; a scope's letter shortcut, Ctrl+Z and ? act in both modes; a held arrow repeats only after the delay; Ctrl+Z calls the contract's undo; controls: Enter on the Figure landing in navigation mode, Enter in interaction mode that does not leave it, and a Tab in interaction mode that stays in interaction mode each fail"
@@ -18569,8 +18589,9 @@
   - R-52
   - R-71
   - R-409
+  - R-627
   milestone: M8
-  note: "The delay and repeat rate: REQ-GUI-146 (calibration). R-409 (10 Oct 2026): the table's Enter, Esc and arrows act by mode; the two modes are built on the mock by TASK-M6-31 (REQ-GUI-182), which TASK-M8-13, closing this requirement on the real engine, depends on through TASK-M6-28. R-409's follow-up answers (F1, F3, F4): the arrows need Enter, letter and Space shortcuts act in either mode, Shift ×10 and Alt ×0.1 hold on the compass too, and a Tab lands on the big scope itself."
+  note: "The delay and repeat rate: REQ-GUI-146 (calibration). R-409 (10 Oct 2026): the table's Enter, Esc and arrows act by mode; the two modes are built on the mock by TASK-M6-31 (REQ-GUI-182), which TASK-M8-13, closing this requirement on the real engine, depends on through TASK-M6-28. R-409's follow-up answers (F1, F3, F4): the arrows need Enter, letter and Space shortcuts act in either mode, Shift ×10 and Alt ×0.1 hold on the compass too, and a Tab lands on the big scope itself. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-13 closes it on the mock engine, and TASK-M8-91 re-runs its acceptance on the real engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-097
   area: GUI
   statement: "The in-scope keys must be as §G3 gives them (R-409): a scope's arrow actions act in interaction mode only, after Enter, and its letter and Space keys act as shortcuts whenever the focus is in the scope, in either mode. Figure — arrows pan; + / − zoom, Space keeps the orbit, K locks (L, the sound, is REQ-GUI-334's). Trajectory — Enter reaches, in §G2's order from the top (R-541 G4), the tabs and + keep, the two views with sphere / unwrapped and turn, the Trace, Listen (REQ-GUI-334's) and Numbers sections, the playhead, unpin, Open full viewer… and IC Inspector…. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere, with no orbit and no separate fine step; in navigation mode its Tilt and Slice buttons reached as siblings, Enter on one setting the mode. Time — Space plays; ← → step, in interaction mode on its scrubber. Legend read-only."
@@ -18596,6 +18617,8 @@
     section: 07 Keyboard — design note, not a screen
   - file: decisions.md
     section: "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: "screenshots before and after moving focus differ only in the ring and the breadcrumb, and before and after Enter on a value only in the ring's colour (and the breadcrumb's, where the look choice of R-409 A6 ties it to the ring's) (07_keyboard.png, whose single blue ring R-409 supersedes)"
@@ -18603,8 +18626,9 @@
   - R-390
   - R-409
   - R-460
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded. R-460 (18 Oct 2026): the ring shows only while keyboard navigation is on, which starts only on keyboard input; a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41). R-464 (18 Oct 2026): after any mouse click or drag the ring is hidden until the next key press, which shows it where the focus is (REQ-GUI-210, TASK-M6-41)."
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded. R-460 (18 Oct 2026): the ring shows only while keyboard navigation is on, which starts only on keyboard input; a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41). R-464 (18 Oct 2026): after any mouse click or drag the ring is hidden until the next key press, which shows it where the focus is (REQ-GUI-210, TASK-M6-41). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-91's, which wires TASK-M8-13's keyboard; TASK-M8-13 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-099
   area: GUI
   statement: "Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector."
@@ -18617,13 +18641,16 @@
     section: 08 Lock — the reticle and the pin
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: screenshot against 08_lock.png after K over a point
   rulings:
   - R-390
+  - R-627
   milestone: M8
-  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock."
+  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-07 keeps it, building the badge and reticle on the mock engine's lock; the real engine's lock is TASK-M8-90's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-100
   area: GUI
   statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), in the mode View › F3 fills by sets (R-468): in Extend past the chart's [0,1]² each axis extending by its declared type with R-407's fallback, a forbidden pixel drawn as the canvas background (R-467); in Fit the view's square scaled to the window's shorter side, the rest the canvas background."
@@ -19135,13 +19162,16 @@
     section: 1. Layout — four surfaces
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 02 Stain — the plain node-graph editor
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: GUI screenshot
     detail: screenshot against 02_stain.png
   rulings:
   - R-390
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-19, which re-runs its acceptance on the real engine and depends on TASK-M6-29)"
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-19, which re-runs its acceptance on the real engine and depends on TASK-M6-29) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-92's, which wires TASK-M8-19's Stain layout; TASK-M8-19 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-129
   area: GUI
   statement: "Stain mode must show a live preview of the current OUT, toggleable between the shape sphere and an illustrative slice."
@@ -19172,13 +19202,16 @@
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 7. Canvas interactions
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "scripted pointer events for each gesture produce the stated selection / position change"
   rulings:
   - R-390
+  - R-627
   milestone: M8
-  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-20, which re-runs its acceptance on the real engine and depends on TASK-M6-29)"
+  note: "R-390: closed by TASK-M6-29 on the mock engine (moved from TASK-M8-20, which re-runs its acceptance on the real engine and depends on TASK-M6-29) R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real stain graph is TASK-M8-93's, which wires TASK-M8-20's canvas; TASK-M8-20 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-132
   area: GUI
   statement: "While a wire is dragged compatible in-ports must highlight and incompatible ones dim, and releasing on empty canvas must open a node-create menu filtered to nodes that accept the dragged type."
@@ -19968,13 +20001,16 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: review checklist
     detail: "gui_state_contract §2 defines quad_count, fps and the footer's GPU and heap against the frame record; the mock's snapshot and the status line and footer follow it, drawing \"—\" for an absent value; physics reviewer approved"
   rulings:
   - R-72
+  - R-627
   milestone: M6
-  note: "RQ-243, decided per R-369. TASK-M8-05 keeps REQ-GUI-078 and may revise the definition through the porting rule when it wires the real engine's frame loop."
+  note: "RQ-243, decided per R-369. TASK-M8-05 keeps REQ-GUI-078 and may revise the definition through the porting rule when it wires the real engine's frame loop. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: wiring the real engine's frame loop, and with it any revision of this definition through the porting rule, is TASK-M8-88's, which closes REQ-GUI-078; TASK-M8-05 reads the mock's frame summary (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-177
   area: GUI
   kind: definition

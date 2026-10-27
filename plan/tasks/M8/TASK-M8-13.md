@@ -38,12 +38,14 @@ The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view
 - Calibrations (R-71) used here: REQ-GUI-146, proposed by TASK-M6-25 since R-390. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - For gaps the corpus leaves open: REQ-GUI-158 (R-71 calibration) (classification accepted by R-132), closed by TASK-M6-25 since R-390 and used here.
 - R-390: TASK-M6-25 builds the scope tree, the global keys, the focus ring, the breadcrumb and `?` on the mock engine, closes REQ-GUI-095 and REQ-GUI-098, and proposes REQ-GUI-146 and REQ-GUI-158; this task depends on it, re-runs REQ-GUI-095's and REQ-GUI-098's acceptance on the real engine, uses the proposed values, and keeps REQ-GUI-096 and REQ-GUI-097.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: re-running REQ-GUI-095's and REQ-GUI-098's acceptance on the real engine is TASK-M8-91's; this task uses the proposed values on the mock (code review 5664955153 of R-627's port, applied per R-369).
 - R-404 (10 Oct 2026): the human confirmed REQ-GUI-146 (500 ms delay, 40 ms interval) and REQ-GUI-158 (the base steps)
   as TASK-M6-25 proposed them, ahead of the M8 gate. This task uses the confirmed values; its two proposal lines have
   nothing left to put to the gate, and the gate lists both as confirmed by R-404.
 - R-405 (10 Oct 2026): the footer is big scope 8, after Legend, and the console a window opened from it (REQ-GUI-178,
   built by TASK-M6-28 on the mock, which this task depends on); REQ-GUI-095 reads eight scopes, and this task re-runs
   the eight on the real engine.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: re-running the eight scopes on the real engine (REQ-GUI-095) is TASK-M8-91's (code review 5664955153 of R-627's port, applied per R-369).
 - R-409 (10 Oct 2026): the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), every
   landing in navigation mode, Enter starting interaction and Esc returning to navigation and then going up a scope; the
   compass has no orbit, and R-404's `Orbit` step is retired. By the human's follow-up answers (R-409 F1, F3, F4), the
