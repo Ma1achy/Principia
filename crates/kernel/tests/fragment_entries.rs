@@ -23,12 +23,11 @@ use validation::negative_control;
 
 type Entry = fn(&DecodeUniforms, &mut [u32; DECODE_WORDS]);
 
+/// The words a chart's sources write at `(u, v)`.
+type Source = fn(&DecodeUniforms, f32, f32) -> Vec<u32>;
+
 /// Each chart, its entry point and the words its source writes at `(u, v)`.
-fn charts() -> Vec<(
-    DecodeChart,
-    Entry,
-    fn(&DecodeUniforms, f32, f32) -> Vec<u32>,
-)> {
+fn charts() -> Vec<(DecodeChart, Entry, Source)> {
     vec![
         (
             DecodeChart::Latent,
