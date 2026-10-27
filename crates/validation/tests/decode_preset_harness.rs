@@ -8,7 +8,7 @@
 //! - `decode_preset_harness_render`: `Scene::render` against `Scene::expected` on one golden scene. Control: another
 //!   chart's twin.
 //! - `decode_preset_harness_cpu`: the f32 state's `Ic`, the descriptor's and encode's words in their orders, the values'
-//!   order, the tag words, and the golden names. Control: a state read with its bodies swapped.
+//!   order, the tag words, a degenerate tag, the shape sphere's held momenta, and the golden names. Control: a state read with its bodies swapped.
 
 use render::bind::ViewOutput;
 use render::presets::DecodeChart;
@@ -227,6 +227,15 @@ fn check_cpu(swap: bool) {
     degenerate.degenerate = Some(kernel::decode::degenerate::Degenerate::EnergyInfeasible);
     assert_eq!(dp::tag(&degenerate), 2, "a degenerate decode's tag");
     assert_eq!(dp::f(0.25f32.to_bits()), 0.25);
+    use kernel::stage::decode::UniformChart;
+    let sphere = kernel::chart::ShapeSphere::<f32>::from_uniform(
+        &dp::uniforms(DecodeChart::ShapeSphere).chart,
+    );
+    assert_eq!(
+        sphere.z_mom,
+        [0.2, -0.1, 0.3, 0.15],
+        "the shape sphere's held momenta"
+    );
     for chart in DecodeChart::ALL {
         assert_eq!(dp::golden_chart(&dp::golden_name(chart)), Some(chart));
         assert!(dp::golden_name(chart).starts_with("decode-preset-"));
