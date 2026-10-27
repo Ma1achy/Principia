@@ -100,6 +100,9 @@ this record; "to" is the text after.
 6. **Agekyan & Anosova II, what it did.** "A companion paper continued the study and reprints the initial
    conditions" → it repeated the same 100 configurations **from exact rest**, linearising the equations inside close
    binary approaches, and completed the 38 near-rest runs that the first paper had to stop (II p. 11).
+6a. **Agekyan & Anosova I, the starting velocities.** "small equal and opposite initial velocities" → "small initial
+   velocities along the line of the first two bodies, with zero total momentum". Eq. (3) gives ẋ₁ = ẋ₂ = +5×10⁻⁵ and
+   ẋ₃ = −10⁻⁴: two equal, the third opposite and doubled.
 7. **Li & Liao 2019, the count.** "Li & Liao report 234 collisionless periodic orbits with unequal masses" → 234 orbits
    over six mass sets, 30 of them equal-mass (their Table I; the six sets are (1,1,1), (1,0.8,0.8), (1,0.8,0.6),
    (1,0.8,0.4), (1,0.8,0.2) and (0.6,0.8,1)).
