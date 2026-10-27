@@ -12,6 +12,7 @@
 Deep zoom works in the extension and in repeats (R-537 EX8): in a repeat the zoom is on the canonical quad, its f64 centre, half-width, `x₀` and `J_D` the canonical ones; on an affine extension far from the root the quad's f32 centre is taken relative to the root cell's own origin, held in f64; and two adjacent images meet with no background pixel between them at any zoom.
 
 ## References
+- `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 - `decisions.md` § "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
 - `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision"
 - `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)"
@@ -35,7 +36,7 @@ Deep zoom works in the extension and in repeats (R-537 EX8): in a repeat the zoo
 - `cargo test -p kernel deep_zoom_extension` — REQ-TOOL-182's verify (R-537 T9, T10).
 - `cargo test -p render image_seams` — REQ-RENDER-100's verify (R-537 T11).
 - `cargo test -p kernel far_field_saturates` — REQ-CHART-087's verify (R-570), at the default links with `E* = None`: where every coordinate the view varies is saturated (views at `10⁴·d`, `d`'s component on each varied coordinate at least 0.1, asserted for the seed) adjacent pixels agree within REQ-CHART-088's tolerance; at `10⁴·ê_k` adjacent pixels along `ê_k` agree; every pixel a valid system, none tagged; controls: near the origin adjacent pixels differ by more than the tolerance, and at `10⁴·ê_k` the plane's other, unsaturated axis stays structured; (3) at `μ_max = 10`, the cap, no pixel tagged (control: a `μ_max` past the cap whose far-field `M₀₁` falls below 10⁻⁵ tags a far pixel); (4) under the edge-reaching simplex link a far pixel with `M₀₁ < 10⁻⁵` is `DEGENERATE(M01_TINY)` and not a system, the tag carried for the readout; (5) with `Some(E*)` at an unreachable energy a far pixel is `ENERGY_INFEASIBLE` or `ENERGY_UNSCALABLE` and not a system, never decoded unnormalised (R-597, R-598).
-- `cargo test -p gui readout_saturated_axis` — REQ-GUI-397's verify (R-599).
+- `cargo test -p gui readout_saturated_axis` — REQ-GUI-397's verify (R-599): the line "saturated along z_k" over the band, none near the origin (gui review 5661813927 of PR #293, G4; *was:* "— REQ-GUI-397's verify (R-599).").
 
 ## Notes
 - **⚑ Physics review is required**: the precision in repeats and far from the root; it does not merge on the code reviewer's word alone.

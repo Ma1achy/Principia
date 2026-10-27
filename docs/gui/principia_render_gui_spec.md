@@ -415,7 +415,12 @@ slider's span is the range its handle covers, never a clamp, so a zoom past the 
 handle at the end of the rail (REQ-GUI-357). Every pixel is a system at any pan or zoom: no hatch, no blank, no "not a
 system" (at the decoder's default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10, η_E off (`None`); R-597 and R-598, closing RQ-536 and RQ-552: under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate, and with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as not a system, with the reason in the readout; *was:* "(at the decoder's default links, η_E off (`None`); RQ-536, RQ-552)"). Far out the field goes flat, because the decoder saturates every
 coordinate; that is correct, nothing clamps, rescales, wraps or fades the view to hide it, and the readout states the
-decoded system as for any pixel. Precision is never a navigation limit: the deep-zoom ladder handles it
+decoded system as for any pixel. **Two readout lines name the field's state (their words applied per R-369, gui review 5661813927 of PR #293, G4):**
+over a pixel of a quad whose collapse is judged flat along a saturated in-plane axis (R-599, closing RQ-554, "The
+readout names the saturated axis"), the hover readout adds the line "saturated along z_μ1", naming each saturated
+in-plane axis by its Slice centre coordinate, comma-separated when there are two ("saturated along z_α, z_β"); and
+under a regularised occupant, in the energy-drift view, the hover readout of a run that stopped at an event adds the
+line "stopped at event" (R-605, closing RQ-528; REQ-TOOL-219), the run drawing as before. Precision is never a navigation limit: the deep-zoom ladder handles it
 (`principia_deep_zoom.md` §4). **The reference demos' caps are never ported:** the trace demo, the Listen demo and the
 state map prototype (`docs/gui/reference/trace/trace_markers.html`, `trace_sound.html`,
 `docs/gui/reference/state_map/state_flow.html`) cap zoom-out at 3× on the sphere and clamp the view to their maps in
