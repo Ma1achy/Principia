@@ -3,7 +3,7 @@
 - **Milestone:** M8
 - **Closes:** REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143
 - **Depends on:** TASK-M8-02, TASK-M8-04, TASK-M7-16
-- **Needs (earlier milestones):** REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058
+- **Needs (earlier milestones):** REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058, REQ-PERF-025
 - **Reviewers:** code, qa, perf
 - **Pitfalls:** none
 - **Size:** ~530 lines
@@ -12,6 +12,7 @@
 v1 web's build exists (R-571: the whole native app, compiled to run in the browser, its GUI the native app's): the whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render, playhead and barrier) runs in the wasm engine inside a Web Worker on an OffscreenCanvas transferred once at startup; the main thread holds the GUI's own wasm context (egui), a loader and the input pump, owns no simulation state and hosts no DOM GUI (R-620, RQ-551 (b)); the figure is drawn on the worker's `OffscreenCanvas` and the GUI on a main-thread canvas above it, two surfaces with no compositing step (applied per R-369). *Was:* "the main thread is a separate binary that owns no simulation state and hosts no DOM GUI, the GUI being the native app's egui (where egui runs, and so what else the main thread holds, is RQ-551)." Resize is observed on the main thread and sent as one message that reconfigures the swapchain in the worker. Cross-origin isolation on GitHub Pages comes from a self-hosted `coi-serviceworker` beside `index.html`. The equirect bake is debounced (120 ms) via `copyExternalImageToTexture` and never lands inside the frame callback.
 
 ## References
+- `docs/design/principia_memory_tiers.md` § "3. Memory model — payload + render targets"
 - `docs/contracts/principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
 - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)"
 - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not diminished)"
@@ -34,12 +35,14 @@ v1 web's build exists (R-571: the whole native app, compiled to run in the brows
 - `crates/engine/src/wasm/bake.rs` — the debounced bake upload.
 - The session header's browser rule (R-303): the header writer takes the running backend's fast-math capability, and the browser build (`crates/engine/src/wasm/entry.rs`) passes one that exposes no control, so each stage's compiled mode is written as "unknown".
 - Tests: `resize_one_message`, `bake_outside_raf`, `session_header_browser_fast_math`.
+- The memory estimator's v1-web term: the GUI's main-thread canvas counted as one more display-res surface, `k_d + 1` (memory_tiers §3), and the startup's record of the canvas's allocation (REQ-SYS-056; perf review 5661999637 of PR #293, P4).
 
 ## Acceptance tests
 - Review checklist (code reviewer) — the build produces the engine's worker module and the GUI's main-thread wasm context; the main-thread bundle contains no engine state (REQ-SYS-039). *Was:* "build produces two binaries; main-thread bundle contains no engine state" (R-620).
 - Review checklist (code reviewer) — the engine crate builds to wasm and contains all CPU-side state; the browser build's GUI is the gui crate's, and web/ holds no GUI and no scheduler/cache/physics state (code review of the web package); the GUI's wasm context runs on the main thread and the engine's in its worker (R-620) (REQ-SYS-047).
 - Review checklist (code reviewer) — the main-thread bundle contains no engine state; two worker wasm instances exist (engine, inspector); the GUI's wasm context runs on the main thread (R-620) (REQ-SYS-049).
 - Review checklist (code reviewer) — review the v1 web startup path: one transferControlToOffscreen / postMessage transfer of the figure's canvas, no later canvas messages carrying state, the GUI on its own main-thread canvas (REQ-SYS-056). *Was:* "review the TS startup path: one transferControlToOffscreen / postMessage transfer, no later canvas messages carrying state" (R-620).
+- `cargo test -p engine memory_estimate_web_canvas` — REQ-SYS-056's memory arm: under v1 web the estimate's display-res term is (k_d + 1) × display_px × 4, natively k_d × display_px × 4 (control: a v1-web estimate without the GUI canvas fails); the v1-web startup records the GUI canvas's allocation (width, height, format, buffer count and bytes) in the PR beside the estimate's term (REQ-SYS-056; perf review 5661999637 of PR #293, P4).
 - `npm --prefix web test -- resize_one_message` — resize event yields one message and one reconfigure (REQ-SYS-045).
 - Review checklist (code reviewer) — deployment contains the script; no CDN (REQ-SYS-042).
 - `npm --prefix web test -- bake_outside_raf` — bake upload scheduled outside the rAF callback (REQ-COL-047).
@@ -52,3 +55,4 @@ v1 web's build exists (R-571: the whole native app, compiled to run in the brows
 - The second (inspector) wasm instance that REQ-SYS-049 names is started here and wired in TASK-M8-38.
 - RQ-99 ruled: R-113 — the M5 native loop runs on a dedicated render thread (REQ-SYS-034); the wasm-engine worker clause of REQ-SYS-034 and REQ-RENDER-045 is REQ-SYS-039/049, closed here.
 - R-571 (21 Oct 2026): the browser build is v1 web, the whole native app compiled to run in the browser, with the same interface, features and stains; its GUI is the native app's egui (REQ-SYS-047 restated), and a TS DOM GUI is v2 web's. R-620 (25 Oct 2026) rules RQ-551 (b): egui in its own wasm context on the main thread, the engine in its worker; nothing waits. *Was:* "Where egui runs in the browser and what the main thread holds is RQ-551: REQ-SYS-039, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049 and REQ-SYS-056 carry `rq: RQ-551`, so this task waits on it." *Was (title):* "the TS shell"; *was (goal):* "The browser product exists" and "the main thread is a separate TS binary — an input pump and DOM-GUI host that owns no simulation state" (gui review 5608379011 of PR #282, applied per R-571: none of RQ-551's options has a DOM GUI); *was (acceptance, REQ-SYS-047):* "the TS shell holds no scheduler/cache/physics state (code review of the TS package)".
+- perf review 5661999637 of PR #293, P4, applied per R-369: R-620's main-thread GUI canvas is a display-res surface the memory estimate did not count; REQ-SYS-056 carries it, `k_d + 1` in v1 web's estimate, and this task records its allocation. The option chosen is REQ-SYS-056, not REQ-PERF-025, so TASK-M5-10's native estimator is unchanged and the v1-web term lands with the v1-web build.

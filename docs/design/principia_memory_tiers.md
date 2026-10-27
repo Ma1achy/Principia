@@ -89,6 +89,11 @@ reduction_mem  = size_of(QuadReduction) × quads                  (one per quad 
 total          ≈ payload_mem + reduction_mem + render_targets + fixed   (fixed = bake texture, staging)
 ```
 
+**v1 web's GUI canvas (R-620).** In v1 web the GUI draws on its own main-thread canvas above the engine's
+OffscreenCanvas, with no compositing step, so it is one more display-res surface: v1 web's estimate counts it,
+`k_d + 1` there, and the native app's stays `k_d`. TASK-M8-37 records the canvas's allocation beside the estimate
+(REQ-SYS-056; perf review 5661999637 of PR #293, P4, applied per R-369).
+
 > **Why the split matters:** the swap chain / final composite are *necessarily display-sized* (that's what is presented), so they do **not** shrink with `render_scale` — only the render-res intermediates do. An all-at-render-resolution model undercounts targets exactly where the term matters (low `render_scale` on big displays). Corrected here; only the sub-native tiers' totals move.
 
 - **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 152/104 (*was* 144/96, before R-603's and R-605's two u32s, payload §1), `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).

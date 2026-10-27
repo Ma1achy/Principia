@@ -34293,20 +34293,22 @@
   note: "R-571 (21 Oct 2026): the TS binding is v2 web's, if there is one; v1 web runs the egui binding, and the data-boundary rule holds for it as written."
 - id: REQ-SYS-056
   area: SYS
-  statement: "The canvas must be the only non-data crossing: in v1 web the figure's OffscreenCanvas is transferred to the engine worker once at startup and never again, the GUI drawing on its own main-thread canvas above it with no compositing step (R-620), and no state may ride on the canvas under either binding."
+  statement: "The canvas must be the only non-data crossing: in v1 web the figure's OffscreenCanvas is transferred to the engine worker once at startup and never again, the GUI drawing on its own main-thread canvas above it with no compositing step (R-620), and no state may ride on the canvas under either binding; the GUI's main-thread canvas is a display-res surface that v1 web's memory estimate counts, k_d + 1 there (memory_tiers §3), and its allocation is recorded."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 1. The one-way dependency rule
   - file: decisions.md
     section: "R-620 — In v1 web egui runs in its own wasm context on the main thread, and the engine stays in its worker *(closes RQ-551)*"
+  - file: docs/design/principia_memory_tiers.md
+    section: 3. Memory model — payload + render targets
   verify:
     method: review checklist
-    detail: "review the v1 web startup path: one transferControlToOffscreen / postMessage transfer of the figure's canvas, no later canvas messages carrying state, the GUI on its own main-thread canvas"
+    detail: "review the v1 web startup path: one transferControlToOffscreen / postMessage transfer of the figure's canvas, no later canvas messages carrying state, the GUI on its own main-thread canvas; memory_estimate_web_canvas: under v1 web the estimate's display-res term is (k_d + 1) × display_px × 4, natively k_d × display_px × 4 (control: a v1-web estimate without the GUI canvas fails); the v1-web startup records the GUI canvas's allocation (its width, height, format and buffer count, and the bytes they give) in the PR beside the estimate's term"
   rulings:
   - R-571
   - R-620
   milestone: M8
-  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built. R-620 (25 Oct 2026, RQ-551 (b)): egui in its own wasm context on the main thread, the engine in its worker; two surfaces, no compositing, since WebGPU shares no texture between a worker's device and the main thread's (applied per R-369). *Was (statement):* \"under the TS binding the OffscreenCanvas is transferred to the engine worker once at startup and never again,\" *Was (verify):* \"review the TS startup path: one transferControlToOffscreen / postMessage transfer, no later canvas messages carrying state\""
+  note: "R-571 (21 Oct 2026): the browser build is v1 web, the whole native app in the browser, its GUI the native app's egui and not a TS DOM GUI; where the GUI runs and what the main thread holds is RQ-551, one of whose options changes this requirement. Meanwhile it stands as written, and nothing is built. R-620 (25 Oct 2026, RQ-551 (b)): egui in its own wasm context on the main thread, the engine in its worker; two surfaces, no compositing, since WebGPU shares no texture between a worker's device and the main thread's (applied per R-369). *Was (statement):* \"under the TS binding the OffscreenCanvas is transferred to the engine worker once at startup and never again,\" *Was (verify):* \"review the TS startup path: one transferControlToOffscreen / postMessage transfer, no later canvas messages carrying state\" perf review 5661999637 of PR #293, P4, applied per R-369: REQ-SYS-056 carries the GUI canvas's memory, k_d + 1 in v1 web's estimate, closed with the rest by TASK-M8-37. *Was (statement end):* \"and no state may ride on the canvas under either binding.\""
 - id: REQ-SYS-057
   area: SYS
   statement: "With no suitable GPU the application must fall back to the CPU path, indicate it loudly and permanently in the UI, and record the reason (no adapter / adapter lacks required features / backend init failed) in telemetry."
