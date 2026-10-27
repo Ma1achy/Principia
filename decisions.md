@@ -26350,6 +26350,7 @@ and REQ-SYS-086 (rq removed, rulings, note); adds REQ-SYS-091.
 *25 Oct 2026 · applied in `docs/contracts/principia_caching_contract.md` Part 6a, `docs/design/principia_systems_architecture.md`
 §3, §5 seam 12 and §6 invariant 5, `docs/contracts/principia_canonical_spec.md` §1 and §6,
 `docs/contracts/principia_gui_state_contract.md` §1, `docs/design/principia_temporal_architecture_note.md`,
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (gui review 5661813927 of PR #293, G5),
 `docs/archive/review_queue/M0.md` (RQ-551, moved with its ruling), REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043,
 REQ-SYS-044, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049, REQ-SYS-050 and REQ-SYS-056 (reqio), TASK-M8-37 and TASK-M8-38 and
 `plan/rule_groups.yaml`; built by TASK-M8-37 and TASK-M8-38*
