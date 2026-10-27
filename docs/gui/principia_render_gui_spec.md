@@ -443,7 +443,8 @@ shows more or less of the field (Layout, below). The orbit's path is drawn from 
 **The decoder badge (R-479, D4; its place R-523).** A badge in the figure's header strip, a one-line strip of chrome at the
 top of the figure region above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
 off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
-· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only. **Where it sits (applied per
+· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds the badges and, at its right end, R-621's horizon item
+(below), and nothing else (*was:* "The strip holds badges only."; gui review 5661813927 of PR #293, G2). **Where it sits (applied per
 R-369, gui review G1 of PR #265; accepted by R-559):** the strip takes its height, one line of the body font with its padding, from the
 top of the figure region (the rect `01_main`'s proportions give the figure). **The shown rect (applied per R-369, gui
 review G3 of PR #265; accepted by R-559)**, the rect R-406, R-468 and REQ-GUI-229 read, is the whole of the figure region below the strip,
@@ -459,6 +460,16 @@ R-523). It hides with the layer (F3, present mode),
 as the Home button does, and the figure then fills the window as R-406 and R-468 say. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
 says so in the same badge (R-483, X5; R-484, RT3). *Was:* "**The decoder badge (R-479, D4; applied meanwhile,
 RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value, replaced by R-523).
+
+**The horizon item (R-621, closing RQ-556; its text, place and visibility applied per R-369, gui review 5661813927 of PR #293, G2).** The
+header strip states `T` and the f32 trust time measured for the current view (`principia_honesty_precision.md` §3.5,
+REQ-VAL-200, REQ-GUI-398), at the strip's right end, right-aligned, the badges keeping the left: "T 50 · f32 trusted to
+t 21.4 · measured for this view", `T` as the Run window shows it and the trust time to three significant figures;
+until the current view's measurement has a value it reads "T 50 · f32 trust: measuring for this view". It is not a
+badge, since it states the horizon rather than what the figure is, so R-523's badge rule does not place it, but like
+the badges it is chrome in the strip and never draws over the shown rect. It hides with the strip (F3, present
+mode); it stays under View › Debug view, which shows the same view's systems; during a preview or a reel's play it
+hides, as the decoder badge does (§G9a), since the frames shown are not the current view.
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample
