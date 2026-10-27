@@ -21,7 +21,8 @@ use kernel::stage::decode::{
 use kernel::stage::fragment::FragmentChart;
 use render::bind::{self, Context, ViewOutput};
 use render::headless::{self, Draw, Target};
-use render::presets::{DecodeChart, Preset};
+pub use render::presets::DecodeChart;
+use render::presets::Preset;
 use render::raster::Grid;
 
 use crate::decode_f32_eps::physics_key;
