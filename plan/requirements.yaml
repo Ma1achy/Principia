@@ -23956,7 +23956,7 @@
   rulings:
   - R-627
   milestone: M8
-  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\". The cells no script can drive, an IME composition and a paste from another application in Safari, are the human's: done on the deployed site, batched like calibration values (R-71) at the M8 gate or sooner when the human chooses, and accepted on the human's recorded \"works\" or \"does not\"; every scriptable cell stays scripted (gui review 5664362471 of R-627's port, G4, applied per R-369)."
 - id: REQ-GUI-402
   area: GUI
   statement: "Built on the mock engine by its track task (R-627), the Explore shell (the top bar, the footer, the menus' entry points, the window registry, nothing over the figure) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."

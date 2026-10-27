@@ -38,6 +38,9 @@ TASK-M8-19 built Stain mode's layout on the mock engine (R-627; R-390's track). 
 - Stain mode's layout wired to the real engine: it reads the real engine's snapshot and sends its `SetField`s and requests to `StateStore` (`crates/engine/src/contract/store.rs`), in place of the mock, when the app runs without `--features mock`.
 - Each contract field TASK-M8-19 added (R-390's "Contract fields"), implemented by the real engine as far as the conformance suite reaches (R-390's "The real engine's side"), with a conformance case in `crates/engine/src/contract/conformance.rs` for any field no case covers, run on both engines.
 - The library drawer on the real registry (TASK-M7-13), its debug tags filtered (REQ-GEN-023); the Code view and the Problems pane on the real WGSL (TASK-M7-14, TASK-M7-24's when merged); the canvas on TASK-M7-22's; the Chart builder's previews on TASK-M8-18's for REQ-GUI-073's aspect cases.
+- `crates/render/src/registry/filter.rs` — `debugVisible` filtering on the `category` tag.
+- `crates/render/src/registry.rs:65`, the `Category` doc comment: "the polished GUI hides [`Category::Debug`]" reworded to "a replacement GUI, if there ever is one (v2 web's, R-571), hides [`Category::Debug`]", following gui_state_contract §3 (R-571; gui re-check 5608472158 of PR #282, applied per R-369).
+- Tests: `debug_visible_filter` (R-627; the three moved from TASK-M8-19, gui review 5664362471 of R-627's port, G1).
 
 ## Acceptance tests
 - `cargo xtask screenshot 02_stain` — screenshot against 02_stain.png (REQ-GUI-128). Closed by TASK-M6-29 on the mock engine since R-390; this task re-runs it on the real engine.

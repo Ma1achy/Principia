@@ -25834,7 +25834,7 @@ Changes REQ-CHART-010 (verify, rulings, source, rq, note).
 
 *27 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0, `docs/contracts/principia_caching_contract.md`
 Part 6a, `docs/design/principia_systems_architecture.md` §3 (added paragraphs), `REVIEW_QUEUE.md` (RQ-550 and RQ-551,
-an added line each), `plan/HUMAN_SETUP.md` §5 (new), `plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track
+an added line each), `plan/HUMAN_SETUP.md` §5 and §6 (new), `plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track
 (R-390)", `plan/MILESTONES.md` § "M8 — The dev GUI, tooling, v1 web and the release gates", `plan/reviewers/gui.md` §8,
 REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to REQ-GUI-409 and REQ-PERF-115 (reqio, new), ten requirements'
 notes (reqio), TASK-M8-86 to TASK-M8-96 (new), TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07,

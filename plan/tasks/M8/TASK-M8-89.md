@@ -26,6 +26,7 @@ TASK-M8-06 built the Manifold view panel on the mock engine (R-627; R-390's trac
 ## Deliverables
 - The Manifold view panel wired to the real engine: it reads the real engine's snapshot and sends its `SetField`s and requests to `StateStore` (`crates/engine/src/contract/store.rs`), in place of the mock, when the app runs without `--features mock`.
 - Each contract field TASK-M8-06 added (R-390's "Contract fields"), implemented by the real engine as far as the conformance suite reaches (R-390's "The real engine's side"), with a conformance case in `crates/engine/src/contract/conformance.rs` for any field no case covers, run on both engines.
+- The Manifold view's controls moved to TASK-M8-01's `SimConfig` paths, each showing the per-field warning from TASK-M8-03's per-field metadata, in place of the mock's paths and metadata; the axis labels (`axis_labels.rs`) on the real chart's axis metadata (R-627; moved from TASK-M8-06, gui review 5664362471 of R-627's port, G1).
 
 ## Acceptance tests
 - `cargo xtask screenshot 01_main` (left panel) — screenshot against 01_main.png's left panel, read with R-457: one group, sub-sections in that order, eight named Slice centre sliders, no z₀ values under Navigate and no step under Tilt (REQ-GUI-081). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.

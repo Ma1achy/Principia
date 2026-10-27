@@ -41,7 +41,7 @@ for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, 
 ## Acceptance tests
 - Review checklist (gui reviewer), on the Pages URL after a manual deploy from `main` — the mock app opens in Chrome stable and Safari on the human's Mac, with its "mock engine" tag; the report gives, per browser and version, where egui ran (a worker on an OffscreenCanvas, or the fallback) and, for a layout that did not run, the error or missing API observed (REQ-SYS-092).
 - Review checklist (code reviewer), on the Pages URL — with the service worker active and again unregistered, in each browser: `crossOriginIsolated`, `SharedArrayBuffer`, and the wasm-threads probe, each as observed; `coi-serviceworker.js` is served from the site's own origin; control: a result taken from a local server fails the review (REQ-SYS-093).
-- Review checklist (gui reviewer) — per browser and layout: ASCII typing, a non-ASCII character, an IME composition, copy out of and paste into an egui text field, each works or does not, with the mechanism it took and any permission prompt (REQ-GUI-401).
+- Review checklist (gui reviewer) — per browser and layout: ASCII typing, a non-ASCII character, an IME composition, copy out of and paste into an egui text field, each works or does not, with the mechanism it took and any permission prompt; the IME and cross-application paste cells in Safari are the human's recorded result (see Notes) (REQ-GUI-401).
 - Review checklist (perf reviewer) — per browser, version, layout and window size, the mean and 5th-percentile frames per second over at least 30 s of the scripted pan and of idle, beside `cargo run -p gui --features mock` on the same Mac (REQ-PERF-115).
 
 ## Notes
@@ -61,7 +61,22 @@ for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, 
   *Was (before G2):* "If a measurement needs something the panel lacks, that is a finding against the skeleton, fixed on
   `main` and deployed again by hand before the measurement is taken, not a code change in this task (applied per
   R-369)."
-- Browsers run on the human's Mac (R-186); a script drives what it can (for example Playwright with WebGPU enabled), and
-  the rest is by hand, each so marked.
+- Browsers run on the human's Mac (R-186); a script drives every cell it can (Playwright on Chrome stable, safaridriver
+  on Safari). The cells no script can drive, an IME composition and a paste from another application in Safari, are
+  the human's: the human does them on the deployed site, batched like calibration values (R-71), at the M8 gate or
+  sooner when the human chooses, and each such cell's acceptance is the human's recorded "works" or "does not", entered
+  in systems_architecture §3 with browser and version. The PR lists those cells and the steps; every scriptable cell
+  stays scripted, and the M8 gate does not pass until the human's cells are recorded (gui review 5664362471 of R-627's port, G4, applied per
+  R-369). *Was:* "a script drives what it can (for example Playwright with WebGPU enabled), and the rest is by hand,
+  each so marked."
 - **What to try.** The PR description has a "What to try" section: the Pages URL, the measurement panel, and typing and
   pasting into a text field.
+- **Setup outside the repo (R-349; gui review 5664362471 of R-627's port, G3).** The build and the browser runs need, on the human's Mac, each done or
+  approved by the human, since they touch `~/.rustup`, `~/.cargo` or the system (`plan/HUMAN_SETUP.md` §6): the wasm
+  target, `rustup target add wasm32-unknown-unknown`; `wasm-bindgen-cli` at the version of the `wasm-bindgen` crate in
+  `Cargo.lock` (0.2.129 today), `cargo install wasm-bindgen-cli --version 0.2.129 --locked`; Node.js for the browser
+  runner, `node --version` 18 or later (`brew install node` if absent), the runner itself, Playwright at a pinned
+  version, installed in the repo by `npm ci` and driving the installed Chrome stable (`channel: "chrome"`, so no
+  Playwright browser download); and Safari's WebDriver, `sudo safaridriver --enable` with Develop → "Allow Remote
+  Automation" in Safari. Until they are done, the task cannot run its local gui line or any browser measurement.
+- *Was (gui review 5664362471 of R-627's port, G4), the REQ-GUI-401 acceptance line's end:* "each works or does not, with the mechanism it took and any permission prompt (REQ-GUI-401).".

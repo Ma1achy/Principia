@@ -25,6 +25,7 @@ TASK-M8-13 built the keyboard's scopes and keys on the mock engine (R-627; R-390
 ## Deliverables
 - The keyboard's scopes and keys wired to the real engine: it reads the real engine's snapshot and sends its `SetField`s and requests to `StateStore` (`crates/engine/src/contract/store.rs`), in place of the mock, when the app runs without `--features mock`.
 - Each contract field TASK-M8-13 added (R-390's "Contract fields"), implemented by the real engine as far as the conformance suite reaches (R-390's "The real engine's side"), with a conformance case in `crates/engine/src/contract/conformance.rs` for any field no case covers, run on both engines.
+- Ctrl+Z wired to the contract's undo, the shared `SetField` history (TASK-M8-03), and the in-scope keys to the real engine's `SetField` / `ViewUI` changes (R-627; moved from TASK-M8-13, gui review 5664362471 of R-627's port, G1).
 
 ## Acceptance tests
 - `cargo test -p gui scope_tab_order` — Tab / Shift+Tab cycles the eight scopes in order, the footer last (R-405); Enter on Manifold view enters Chart (REQ-GUI-095). Closed by TASK-M6-25 on the mock engine since R-390; this task re-runs it on the real engine.

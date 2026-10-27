@@ -33,6 +33,7 @@ TASK-M8-07 built the lock, compass and time controls on the mock engine (R-627; 
 - The scrubber's progress percentage defined in render_gui_spec §G2 (REQ-GUI-155, R-72) from engine state the snapshot carries, and `scrub_progress_real`.
 
 ## Acceptance tests
+- `cargo xtask screenshot 01_main` (slice and tilt cases) and `cargo xtask screenshot 08_lock` — screenshots against 01_main.png after touching a slice slider, after touching a tilt and after clicking each of the Tilt and Slice buttons, and against 08_lock.png when locked, the buttons and the fixed view read with R-409 (REQ-GUI-091). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo test -p gui scrub_reintegrates` — scrub from t=40 to t=10: the playhead SetField triggers re-integration from 0 with a progress indicator; no frame store is read (REQ-GUI-092).
 - Definition: the scrubber's progress percentage written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-155).
 - `cargo test -p gui scrub_progress_real` — on the real engine, a scrub from t=40 to t=10 with the progress percentage sampled from the snapshot every frame: it never falls during the re-integration, and it reads 100% on the first frame the in-view figure has reached the playhead and on no frame before; controls: a recorded sequence with one fall, and one reading 100% a frame before the figure reaches the playhead, each fail (REQ-GUI-155).
