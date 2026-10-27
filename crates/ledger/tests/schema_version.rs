@@ -528,9 +528,10 @@ const PRESENTATION: [&str; 13] = [
 /// lookup's layer-3 `decode_sanity` and layer-1 `zero_class` (TASK-M2-19), validation tolerances on lookup and lock;
 /// and the literature import's `literature_import_tol` (TASK-M2-20), the `literature-import` gate's tolerance; and
 /// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
-/// dd_integrator §5 test 3's criterion and its domain's edges. None is among the entries §3.8 hashes ("The hash"), so
+/// dd_integrator §5 test 3's criterion and its domain's edges; and step 0's skip tolerance `tau_i` (TASK-M2-47), which
+/// decides whether `C` rescales, not what a stored bit means. None is among the entries §3.8 hashes ("The hash"), so
 /// none is hashed.
-const CALIBRATIONS: [&str; 12] = [
+const CALIBRATIONS: [&str; 13] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
@@ -543,6 +544,7 @@ const CALIBRATIONS: [&str; 12] = [
     "step_reversal_edge_f64",
     "step_reversal_edge_f32",
     "step_reversal_edge_max",
+    "tau_i",
 ];
 
 /// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
