@@ -13545,7 +13545,7 @@
   note: "Closed by TASK-M7-55. Fix round 8 of PR #281 (qa review 5608745757, finding 2, applied per R-369): the cross-backend clause has its arm on the golden runner (the method follows it), and the clock and the platform random have controls. *Was (verify method):* \"unit test\" *Was (verify):* \"cargo test -p render print_determinism (§11 test 3): the same graph rendered twice gives the same bytes; control: changing only `seed` changes the bytes, and a fixture node that reads the frame counter fails a two-frame comparison of an unchanged figure\" Fix round 9 of PR #281 (qa re-check 5624154623, A, applied per R-369): the suite's baselines are in its own directory, `fixtures/golden/<suite>/`, where `cargo xtask golden <suite>` reads them (rows of fixtures/golden/BASELINES.md keyed `<suite>/<case>`), not `fixtures/golden/print/` as round 8 had it. *Was (verify):* \"cargo test -p render print_determinism and cargo xtask golden print-determinism (§11 test 3): the same graph rendered twice gives the same bytes; control: changing only `seed` changes the bytes, a fixture node that reads the frame counter fails a two-frame comparison of an unchanged figure, a fixture node that reads the wall clock fails a two-render comparison taken 10 ms apart, and a fixture node that draws from the platform random (the OS generator) fails a two-render comparison; across backends, the golden suite renders a heavy preset and a slot-chain graph with native wgpu on Metal (the human's Mac, R-186) and on lavapipe (CI), each against the one baseline in `fixtures/golden/print/` within REQ-VAL-138's cross-backend tolerance as ruled (R-110, R-269); control: a fixture node whose draw is seeded from the adapter's name exceeds that tolerance on one backend and fails\" Fix round 11 of PR #281 (physics re-check 5624680822, P9, applied per R-369): the cross-backend arm follows parity contract §4, one baseline where the bytes agree and one per backend where they differ near a tie, each such case named with its measured largest step; the adapter-seeded control runs on a case held on one baseline so it can still fail; a larger difference is queued, never given a tolerance; \"as ruled (R-269)\" removed. *Was (verify):* \"cargo test -p render print_determinism and cargo xtask golden print-determinism (§11 test 3): the same graph rendered twice gives the same bytes; control: changing only `seed` changes the bytes, a fixture node that reads the frame counter fails a two-frame comparison of an unchanged figure, a fixture node that reads the wall clock fails a two-render comparison taken 10 ms apart, and a fixture node that draws from the platform random (the OS generator) fails a two-render comparison; across backends, the golden suite renders a heavy preset and a slot-chain graph with native wgpu on Metal (the human's Mac, R-186) and on lavapipe (CI), each against the one baseline in `fixtures/golden/print-determinism/` within REQ-VAL-138's cross-backend tolerance as ruled (R-110, R-269); control: a fixture node whose draw is seeded from the adapter's name exceeds that tolerance on one backend and fails\""
 - id: REQ-RENDER-110
   area: RENDER
-  statement: "A Print graph's nodes whose lengths are in `device_px`, and the screen-anchored sheet, must run in a second print pass at screen resolution, after the display scale, so a `device_px` length is a true screen pixel (a scanline exactly one screen pixel) at every render_scale, the anchoring coordinate the pixel's screen position, and at export a display pixel an export pixel; the rest of the graph runs before the display scale at render resolution, the split REQ-RENDER-120's; with neither in a graph the screen pass is the identity (R-618)."
+  statement: "A Print graph's nodes whose lengths are in `device_px`, and the screen-anchored sheet, must run in a second print pass at screen resolution, after the display scale, so a `device_px` length is a true screen pixel (a scanline exactly one screen pixel) at every render_scale, the anchoring coordinate the pixel's screen position, and at export a display pixel an export pixel; the rest of the graph runs before the display scale at render resolution, the split REQ-RENDER-120's; with neither in a graph the screen pass is the identity (R-618): it is not dispatched and allocates no target, costing nothing, as an overlay that is off (REQ-RENDER-055)."
   source:
   - file: docs/design/principia_print_graph.md
     section: "6.2 Units: a medium must look the same at every export size"
@@ -13559,14 +13559,16 @@
     section: "R-490 — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default"
   - file: decisions.md
     section: "R-618 — A Print graph's `device_px` effects and the screen-anchored sheet run in a second pass at screen resolution, after the display scale; at export a display pixel is an export pixel *(closes RQ-538; amends R-487's and R-531's composite order)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 12.1 Structural overlays and tile debug shaders
   verify:
     method: unit test
-    detail: "cargo test -p render print_device_px_scale: the CRT, LCD and LED matrix nodes and a sheet-only graph rendered at render_scale 0.5, 1 and 2, displayed, agree in pitch, one scanline per screen pixel, and in anchoring at each pixel's screen position; at export a display pixel is an export pixel; a graph with neither a device_px node nor the sheet (Plain) renders bitwise as before (R-618); controls: a node counting device_px in render pixels, run before the display scale, fails the pitch arm at render_scale 0.5, and a sheet anchored in render pixels fails the anchoring arm"
+    detail: "cargo test -p render print_device_px_scale: the CRT, LCD and LED matrix nodes and a sheet-only graph rendered at render_scale 0.5, 1 and 2, displayed, agree in pitch, one scanline per screen pixel, and in anchoring at each pixel's screen position; at export a display pixel is an export pixel; a graph with neither a device_px node nor the sheet (Plain) renders bitwise as before, and with it the frame's counted passes and allocated targets equal the no-Print baseline's, the screen pass neither dispatched nor allocated (R-618); controls: a node counting device_px in render pixels, run before the display scale, fails the pitch arm at render_scale 0.5, and a sheet anchored in render pixels fails the anchoring arm, and a pass-through copy at display resolution under Plain, bitwise equal, fails the count arm"
   rulings:
   - R-490
   - R-618
   milestone: M7
-  note: "R-618 (25 Oct 2026, RQ-538 (b)): a second pass at screen resolution, the sheet with the device_px nodes as the option's words have it (flagged in R-618). Closed by TASK-M7-69, a leaf. *Was (note, R-618):* \"Waits on RQ-538 (applied meanwhile: none; every other task tests `device_px` nodes and the anchored sheet at render_scale 1).\" *Was (statement):* \"A Print graph node whose lengths are in `device_px`, and the sheet anchored to the screen, must keep their look when `render_scale ≠ 1` and at export, in the pixels RQ-538 rules: `device_px` \"true screen pixels\" and screen-anchored coordinates, while the Print graph runs before the display scale at render resolution.\" *Was (verify):* \"cargo test -p render print_device_px_scale: the CRT, LCD and LED matrix nodes and a sheet-only graph rendered at render_scale 0.5, 1 and 2, displayed, agree in pitch and anchoring as RQ-538's ruling says; control: a node counting `device_px` in the wrong pixels fails the pitch arm at render_scale 0.5\""
+  note: "R-618 (25 Oct 2026, RQ-538 (b)): a second pass at screen resolution, the sheet with the device_px nodes as the option's words have it (flagged in R-618). Closed by TASK-M7-69, which TASK-M7-33 follows (perf review 5661999637 of PR #293, P2 (c); *was:* \"a leaf\"). *Was (note, R-618):* \"Waits on RQ-538 (applied meanwhile: none; every other task tests `device_px` nodes and the anchored sheet at render_scale 1).\" *Was (statement):* \"A Print graph node whose lengths are in `device_px`, and the sheet anchored to the screen, must keep their look when `render_scale ≠ 1` and at export, in the pixels RQ-538 rules: `device_px` \"true screen pixels\" and screen-anchored coordinates, while the Print graph runs before the display scale at render resolution.\" *Was (verify):* \"cargo test -p render print_device_px_scale: the CRT, LCD and LED matrix nodes and a sheet-only graph rendered at render_scale 0.5, 1 and 2, displayed, agree in pitch and anchoring as RQ-538's ruling says; control: a node counting `device_px` in the wrong pixels fails the pitch arm at render_scale 0.5\" perf review 5661999637 of PR #293, P2 (a), applied per R-369: \"identity\" is no pass and no target, asserted by count. *Was (statement end):* \"with neither in a graph the screen pass is the identity (R-618).\" *Was (verify):* \"a graph with neither a device_px node nor the sheet (Plain) renders bitwise as before (R-618);\" and the controls ending \"and a sheet anchored in render pixels fails the anchoring arm\"."
 - id: REQ-RENDER-111
   area: RENDER
   statement: "Every Print graph length parameter must declare a unit: `ref_px` (the default for marks: base px, pixels on a figure `RenderState.base_width` wide, 1024 where the state has none, scaled by `output_width / base_width` at render time, R-583), `device_px` (only for nodes that model the display itself, listed), or `fraction` (a fraction of the figure width); a preset rendered at 512² and at 2048² downsampled must agree within REQ-RENDER-112's tolerance for every `ref_px` and `fraction` node, `device_px` nodes exempt and listed."
@@ -13793,12 +13795,12 @@
     section: Part 4 — Semantic rules
   verify:
     method: review checklist
-    detail: "print_graph §6.2 states which nodes run in each pass, what happens to a node between two device_px nodes and where the sheet runs, and that with neither the screen pass is the identity; the reviewers approved"
+    detail: "print_graph §6.2 states which nodes run in each pass, what happens to a node between two device_px nodes and where the sheet runs, and that with neither the screen pass is the identity, not dispatched and allocating no target; the reviewers approved"
   rulings:
   - R-72
   - R-618
   milestone: M7
-  note: "R-618 (25 Oct 2026, RQ-538 (b)): the split a definition, applied per R-369. Closed by TASK-M7-69."
+  note: "R-618 (25 Oct 2026, RQ-538 (b)): the split a definition, applied per R-369. Closed by TASK-M7-69. perf review 5661999637 of PR #293, P2 (a): *was (verify):* \"and that with neither the screen pass is the identity;\"."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -32507,15 +32509,21 @@
   milestone: M7
 - id: REQ-PERF-069
   area: PERF
-  statement: "The render-target buffer counts k_d and k_r must be confirmed by measurement once the render graph is built."
+  statement: "The render-target buffer counts k_d and k_r must be confirmed by measurement once the render graph is built, R-618's Print screen pass included."
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 8. Caveats
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: decisions.md
+    section: "R-618 — A Print graph's `device_px` effects and the screen-anchored sheet run in a second pass at screen resolution, after the display scale; at export a display pixel is an export pixel *(closes RQ-538; amends R-487's and R-531's composite order)*"
   verify:
     method: benchmark
-    detail: "count display-res and render-res targets allocated by the built render graph and record k_d, k_r"
-  rulings: []
+    detail: "count display-res and render-res targets allocated by the built render graph and record k_d, k_r; counted after TASK-M7-69 builds R-618's screen pass, once with a graph holding a device_px node or the sheet and once under Plain, the screen pass's display-res targets in k_d and none under Plain"
+  rulings:
+  - R-618
   milestone: M7
+  note: "perf review 5661999637 of PR #293, P2 (c), applied per R-369: REQ-PERF-069 is counted after TASK-M7-69, so k_d includes the screen pass; TASK-M7-33 depends on TASK-M7-69. *Was (statement):* \"The render-target buffer counts k_d and k_r must be confirmed by measurement once the render graph is built.\" *Was (verify):* \"count display-res and render-res targets allocated by the built render graph and record k_d, k_r\""
 - id: REQ-PERF-070
   area: PERF
   statement: "The at-rest catch-up of the stale half must be measured on weak devices and spread over 2–3 frames if the one-frame fill causes a visible hitch."
@@ -33299,6 +33307,30 @@
   - R-577
   milestone: M8
   note: "Fix round 21 of PR #286 (perf review 5635062315, P1; applied per R-369): REQ-GUI-380's wall-clock 16.7 ms arm moved here, off the hosted runners; report-only, since telemetry §3 sets no pass rule. Closed by TASK-M8-78. Fix round 24 of PR #286 (perf review 5635367539, P1; applied per R-369): a report-only benchmark could never fail (perf.md § 9), so it takes REQ-PERF-106's and REQ-PERF-107's form: the no-strip baseline within noise on the fixed suite's pan-nearfield scenario, which also fixes the pan path. *Was:* the statement \"While a proof strip runs, the GUI's frame times must be measured on the human's Mac and reported against principia_dd_telemetry_and_tiers.md §3's thresholds: p50, p95, p99 and max against the 16.7 ms goal (REQ-PERF-039), and frac_frames_over_41.7ms, the 24 fps hard floor; §3 gives no pass rule for these, so the benchmark reports and gates nothing (R-186).\" and the verify \"prin profile --scenario proof_strip, run on the human's Mac (R-186): a registered, deterministic scenario that runs Proof strip on a fixture three-keyframe spec while the live view pans; the GUI's frame times over the strip's run reported as p50, p95, p99 and max against 16.7 ms, with frac_frames_over_41.7ms, recorded in the PR; report-only, no threshold gates it\"."
+- id: REQ-PERF-113
+  area: PERF
+  statement: "The Print graph's screen pass (R-618), a per-frame pass at display resolution while a graph holds a device_px node or the sheet, must have its frame cost recorded on the Mac (R-186): the frame time and the pass's own time against the Plain baseline, at a 4K display and render_scale 0.5 and 1; a record, with no new threshold."
+  source:
+  - file: docs/design/principia_print_graph.md
+    section: "6.2 Units: a medium must look the same at every export size"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_benchmark.md
+    section: 3. The suite
+  - file: docs/design/principia_dd_telemetry_and_tiers.md
+    section: 1.1 The fixed suite — comparability across devices
+  - file: decisions.md
+    section: "R-618 — A Print graph's `device_px` effects and the screen-anchored sheet run in a second pass at screen resolution, after the display scale; at export a display pixel is an export pixel *(closes RQ-538; amends R-487's and R-531's composite order)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench print-screen-pass, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's scenarios (principia_benchmark.md §3) on a 3840 × 2160 display, at render_scale 0.5 and 1, each under a CRT graph, a sheet-only graph and Plain; frame time p50/p95/p99/max and the screen pass's own GPU time per frame recorded for each, against Plain's (REQ-SYS-060's form; a record, no new threshold); the bench fails if the screen pass was not dispatched under the CRT and sheet-only graphs, or was dispatched under Plain"
+  rulings:
+  - R-186
+  - R-618
+  milestone: M7
+  note: "perf review 5661999637 of PR #293, P2 (b), applied per R-369: the screen pass runs every frame at display resolution, so its cost is measured, a record only. Closed by TASK-M7-69."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

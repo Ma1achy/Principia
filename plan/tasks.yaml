@@ -2240,7 +2240,7 @@
 - id: TASK-M7-33
   milestone: M7
   title: Pipeline precompile at startup and the render-target counts
-  depends_on: [TASK-M7-14, TASK-M7-17, TASK-M7-21, TASK-M5-10, TASK-M5-27]
+  depends_on: [TASK-M7-14, TASK-M7-17, TASK-M7-21, TASK-M5-10, TASK-M5-27, TASK-M7-69]  # TASK-M7-69: k_d counted with the screen pass (perf review 5661999637 of PR #293, P2 (c))
   needs: [REQ-RENDER-040, REQ-RENDER-006, REQ-PERF-031]
   requirements: [REQ-PERF-068, REQ-PERF-069]
   reviewers: [code, qa, perf]
@@ -2531,7 +2531,7 @@
   title: "`device_px` and the screen-anchored sheet in a second pass at screen resolution, at every render_scale and at export (R-490, R-618)"
   depends_on: [TASK-M7-55, TASK-M7-60]
   needs: []
-  requirements: [REQ-RENDER-110, REQ-RENDER-120]
+  requirements: [REQ-RENDER-110, REQ-RENDER-120, REQ-PERF-113]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M7-70

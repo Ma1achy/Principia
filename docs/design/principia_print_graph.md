@@ -274,7 +274,10 @@ different picture: strokes a quarter as wide relative to the figure. So every le
   scanline is exactly one screen pixel at every `render_scale`; the rest of the graph runs before the display scale
   at render resolution, as before. Screen-anchored coordinates are the pixel's screen position. At export a display
   pixel is an export pixel. How a graph is split into its two passes, where a `device_px` node or the sheet sits among
-  the others, is a definition (REQ-RENDER-120, R-72), written here by TASK-M7-69.
+  the others, is a definition (REQ-RENDER-120, R-72), written here by TASK-M7-69. With neither in the graph the screen
+  pass is not dispatched and allocates no target (render contract Part 4); with either, it runs every frame at display
+  resolution, its time recorded on the Mac (REQ-PERF-113) and its targets counted in `k_d` (REQ-PERF-069) (perf review 5661999637 of PR #293, P2,
+  applied per R-369).
 - **`fraction`**: a fraction of the figure width, for broad effects such as vignette and lighting.
 
 The acceptance test renders a preset at 512² and 2048², downsamples the second, and requires agreement within

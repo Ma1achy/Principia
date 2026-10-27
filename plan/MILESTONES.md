@@ -369,7 +369,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 259 requirements** (and every earlier gate still green):
+**Exit gate — 260 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
@@ -380,7 +380,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
-- PERF (4): REQ-PERF-068…069, REQ-PERF-096…097
+- PERF (5): REQ-PERF-068…069, REQ-PERF-096…097, REQ-PERF-113
 <!-- /gate:M7 -->
 
 ## M8 — The dev GUI, tooling, v1 web and the release gates

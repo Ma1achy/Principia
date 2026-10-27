@@ -100,6 +100,11 @@ The screen pass (R-618, closing RQ-538, option (b)) runs the graph's `device_px`
 after the display scale, at display resolution, so a `device_px` length is a screen pixel at every `render_scale`; the
 rest of the graph runs at render resolution before it, and with neither a `device_px` node nor a sheet in the graph
 the screen pass is the identity. At export a display pixel is an export pixel (`principia_print_graph.md` §6.2).
+The identity is **no pass and no target**: with neither in the graph the screen pass is not dispatched and allocates
+nothing, so it costs nothing, as an overlay that is off (render_gui_spec §12.1, REQ-RENDER-055); a pass-through copy
+at display resolution is not the identity, however bitwise its output. When it runs it is a per-frame pass at display
+resolution, whatever `render_scale`; its time is recorded on the Mac (REQ-PERF-113) and its targets are counted in
+`k_d` (memory_tiers §8, REQ-PERF-069) (perf review 5661999637 of PR #293, P2, applied per R-369).
 *Was:* "→ **Print graph** → display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation →
 screen (R-487; R-531, …)", with no screen pass. *Was:* "→ **Print graph** →
 [the line sets drawn over] → display scale → gamut clamp → colour-vision simulation → screen (R-487; where the pass

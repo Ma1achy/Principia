@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*43 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*44 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -144,8 +144,9 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 **M7**
 - [ ] REQ-TOOL-174 — xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for the fixture tier2_typical_stain (R-522), which TASK-M7-44 adds: a built-in colour mode other than the default with every parameter off its default, a fixed ramp window, two overlays on, and the line system holding the Grid preset and one contour set of three levels; a record that does not fit reports not embedded and writes no partial tile
 - [ ] REQ-PERF-068 — count pipeline objects created at startup and measure startup time
-- [ ] REQ-PERF-069 — count display-res and render-res targets allocated by the built render graph and record k_d, k_r
+- [ ] REQ-PERF-069 — count display-res and render-res targets allocated by the built render graph and record k_d, k_r; counted after TASK-M7-69 builds R-618's screen pass, once with a graph holding a device_px node or the sheet and once under Plain, the screen pass's display-res targets in k_d and none under Plain
 - [ ] REQ-PERF-096 — cargo xtask bench print_cost_classes on the human's Mac (R-186): every registered node timed at 1024² at its defaults and at its presets' heaviest settings (median of 60 timed runs after 10 warm-up runs, GPU timestamps), the class from the heavier, the table recorded in the PR and in the registry; controls: a node classed from its defaults where a preset's heavier setting crosses a threshold fails, and a registry entry whose class disagrees with its measured time fails `cargo test -p render print_cost_class_matches`
+- [ ] REQ-PERF-113 — cargo xtask bench print-screen-pass, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's scenarios (principia_benchmark.md §3) on a 3840 × 2160 display, at render_scale 0.5 and 1, each under a CRT graph, a sheet-only graph and Plain; frame time p50/p95/p99/max and the screen pass's own GPU time per frame recorded for each, against Plain's (REQ-SYS-060's form; a record, no new threshold); the bench fails if the screen pass was not dispatched under the CRT and sheet-only graphs, or was dispatched under Plain
 
 **M8**
 - [ ] REQ-TOOL-078 — exporting 600 frames keeps peak memory flat (independent of frame count); the UI stays responsive; cancel stops the job
