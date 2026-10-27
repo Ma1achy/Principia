@@ -26028,7 +26028,8 @@ note); adds REQ-INT-108.
 *25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 1, `docs/design/principia_dd_integrator.md`
 §3.5, R-566's forward line, `docs/archive/review_queue/M0.md` (RQ-528, moved with its ruling), REQ-VAL-195 and
 REQ-INT-106 (reqio), REQ-PAY-111 (reqio, new, a definition), REQ-INT-109 (reqio, new, a calibration), REQ-TOOL-219
-(reqio, new), TASK-M3-41 and `plan/rule_groups.yaml`; built by TASK-M3-41*
+(reqio, new), TASK-M3-41 and `plan/rule_groups.yaml`; payload §1 and §5 (`dE_reg`, perf review 5661999637 of PR #293,
+P1; code review 5662211284 of PR #293, note (c)); built by TASK-M3-41*
 
 The human's words, verbatim:
 

@@ -543,6 +543,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | `retrograde` | `theta < 0` | winding sense |
 | current drift `ΔE` | `H(r,p) − E_0` | cancellation-tolerant (feeds thresholds/display); threshold uses live f32 |
 | current drift `ΔLz` | `L_z(r,p) − Lz_0` | ditto |
+| regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two f16 halves, final and max (§1) | under a regularised occupant the suspect flags and the drift view read it, and the Cartesian `ΔE` above is diagnostic only; the stored state is Cartesian, so the regularised energy cannot be derived here. The halves' names and the accessors that read them are TASK-M3-41's (REQ-PAY-111; code review 5662211284 of PR #293, note (c), applied per R-369) |
 | reduced crossing count | `fgw_reduced_length` — **valid only if `fgw_reduced_length_valid`** | **net branch-cut crossings** (free reduction); **INVALID for truncated samples** (later cancellations untracked after the cap — §3). `fgw_retained_prefix_length` (=76 when truncated) is a debug/export quantity, NOT the reduced count; never expose `127` |
 | `total_substeps_log2` | `total_substeps` (exact u32) via `countLeadingZeros` | complexity proxy derived at read, not stored (§2) |
 | `n` (shape) | `shape(r)` or `shape(r, masses)` | current shape-sphere point (`r` mass-weighted, or pass masses); NOT `shape(r,p)` |
