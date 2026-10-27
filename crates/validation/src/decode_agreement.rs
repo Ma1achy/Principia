@@ -121,7 +121,7 @@ impl Tally {
             } else {
                 f64::from(s.ratio)
             };
-            if !(r <= 1.0) {
+            if r > 1.0 {
                 t.disagree += 1;
             }
             t.worst = t.worst.max(r);

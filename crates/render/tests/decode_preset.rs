@@ -100,12 +100,11 @@ fn compare(gpu: &GpuHarness, chart: DecodeChart, offset: f32) -> Worst {
         let rr = [0, 1, 2].map(|b| [frag[3 + 2 * b], frag[4 + 2 * b]]);
         let sum = m.iter().sum::<f64>();
         worst.note((sum - 1.0).abs() / EPS, || format!("Σm − 1 at {uv:?}"));
-        for a in 0..2 {
-            let com: f64 = (0..3).map(|b| m[b] * rr[b][a]).sum();
-            let scale: f64 = (0..3)
-                .map(|b| (m[b] * rr[b][a]).abs())
-                .sum::<f64>()
-                .max(1.0);
+        // Each axis's mass-weighted coordinates, `mᵢ·rᵢ`, for the CoM.
+        let weighted = [0, 1].map(|a| [0, 1, 2].map(|b| m[b] * rr[b][a]));
+        for (a, w) in weighted.iter().enumerate() {
+            let com: f64 = w.iter().sum();
+            let scale: f64 = w.iter().map(|x| x.abs()).sum::<f64>().max(1.0);
             worst.note(com.abs() / (EPS * scale), || format!("CoM_{a} at {uv:?}"));
         }
         let inertia: f64 = (0..3)
