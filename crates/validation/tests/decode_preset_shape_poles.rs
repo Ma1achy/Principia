@@ -1,0 +1,197 @@
+//! The generated fragment decode at the shape sphere's exact poles (R-437, R-436; REQ-COL-006; dd_decoder §3.2 "Every
+//! `atan2` at a possible pole", §3.3 "`φ` at the pole"; pitfalls §11), against the CPU's f32 decode of the same source.
+//!
+//! - `decode_preset_shape_poles`: the shape-sphere chart on its exponential map (`ShapeMap::Exponential`) at `(½, ½)`,
+//!   where the offset is 0 and `sin r/r` is selected as 1, so the point is `n₀` bit for bit, its zero components
+//!   keeping their signs where the frame's zeros are `−0` (`d = −0`) and turning `+0` where they are `+0`. `n₀ = (−1,
+//!   ±0, ±0)` is the `ρ̃ = 0` collision pole (`BC₀₁`): the inverse's `atan2(q, p)` sees `p = q = ±0` and takes R-437's
+//!   selected 0, `C`'s rotation at `ρ = 0` takes `φ = 0` (§3.3), and the descriptor's `V` takes the section's `−∞`
+//!   select at the zero separation. `n₀ = (+1, ±0, ±0)` is the `λ̃ = 0` pole, the same `atan2` at `±0` operands. Over
+//!   every sign of the two zeros, under both frames, the fragment's probe (`render::presets::decode::probe`: `(m, r,
+//!   p)`, the tag, `z`, the latent flag and the descriptor) is held to `kernel::stage::fragment::decode_at`, the
+//!   fragment decode's own Rust source, run on the CPU at f32 on the same uniforms: a non-finite word bit for bit (`V₀
+//!   = −∞`'s bits at `n₀ = −1`, also asserted directly), a finite one within REQ-DEC-043's factor, the tag and flag
+//!   exactly; `rho_ratio` at the `λ̃ = 0` pole as its reciprocal, since there `‖λ̃‖` is `C`'s rounding residue, not 0,
+//!   and the ratio's `+∞` select is not reached by either decode (`ratio_agrees`). The CPU's point is asserted to be
+//!   the pole, and the cases to reach all four signs of `(p, q)` at each pole. Control: a CPU reference that takes
+//!   `atan2`'s own value at `(+0, −0)`, `π`, in place of the select (the chart's phase `φ_f = π`, which at `ρ̃ = 0`
+//!   moves only `ψ`), is far outside the factor.
+//!
+//! **Domain** (pitfalls §10): the decode alone at one point, `(½, ½)` on a depth-0 quad, inputs held fixed; the chart's
+//! held values `validation::decode_preset::uniforms`'s, its frame the poles'. The spherical map's `(½, ½)` is not this
+//! domain: at f32 it lies about `5·10⁻⁸` off `BC₀₁` (`render`'s `decode_preset_poles`).
+
+use kernel::chart::{ShapeMap, ShapeSphere};
+use kernel::generated::links::Defaults;
+use kernel::stage::decode::{DecodeUniforms, UniformChart};
+use kernel::stage::fragment::{
+    decode_at, DECODE_DESCRIPTOR, DECODE_IC, DECODE_TAG, DECODE_UV, DECODE_WORDS, DECODE_Z,
+    DECODE_Z_LATENT,
+};
+use render::presets::{self, agreement, DecodeChart};
+use validation::decode_preset::{self as dp, Scene};
+use validation::gpu::GpuHarness;
+use validation::negative_control;
+
+/// The descriptor's `rho_ratio` and `lambda_mag`, by their places in its twelve words.
+const RHO_RATIO: usize = 6;
+const LAMBDA_MAG: usize = 5;
+
+/// The probe's words against the CPU decode's, `rho_ratio` apart ([`ratio_agrees`]): `(probe word, decode word,
+/// name)`.
+fn pairs() -> Vec<(usize, usize, String)> {
+    let mut out = Vec::new();
+    for k in 0..15 {
+        out.push((k, DECODE_IC + k, format!("(m, r, p) word {k}")));
+    }
+    for k in 0..8 {
+        out.push((16 + k, DECODE_Z + k, format!("z{k}")));
+    }
+    for k in (0..12).filter(|k| *k != RHO_RATIO) {
+        out.push((
+            25 + k,
+            DECODE_DESCRIPTOR + k,
+            format!("descriptor word {k}"),
+        ));
+    }
+    out
+}
+
+/// One fragment word against the CPU's at f32: bit for bit where either is non-finite (R-436), else within
+/// REQ-DEC-043's factor of the CPU's.
+fn agree(gpu: u32, cpu: u32) -> bool {
+    let (g, c) = (f32::from_bits(gpu), f32::from_bits(cpu));
+    if presets::non_finite_bits(g) || presets::non_finite_bits(c) {
+        return gpu == cpu;
+    }
+    let bound =
+        f64::from(agreement::FACTOR) * f64::from(f32::EPSILON) * f64::from(c.abs()).max(1.0);
+    (f64::from(g) - f64::from(c)).abs() <= bound
+}
+
+/// `rho_ratio = ‖ρ̃‖/‖λ̃‖`, the fragment's against the CPU's. Where the CPU's `‖λ̃‖` is within REQ-DEC-043's factor of
+/// 0, at the `λ̃ = 0` pole, it is `C`'s rounding residue, not 0 (`Φ`'s `λ̃` is 0, the reconstructed positions' is not),
+/// so neither decode takes the ratio's `+∞` select and the ratio divides two compilations' residues: it is held as its
+/// reciprocal `‖λ̃‖/‖ρ̃‖`, which is well conditioned there, within the factor. Elsewhere it is held as every word is.
+fn ratio_agrees(gpu: &[u32], cpu: &[u32; DECODE_WORDS]) -> bool {
+    let (g, c) = (gpu[25 + RHO_RATIO], cpu[DECODE_DESCRIPTOR + RHO_RATIO]);
+    let residue = f64::from(agreement::FACTOR) * f64::from(f32::EPSILON);
+    let lambda = f64::from(f32::from_bits(cpu[DECODE_DESCRIPTOR + LAMBDA_MAG]));
+    let (gf, cf) = (f32::from_bits(g), f32::from_bits(c));
+    if lambda > residue || presets::non_finite_bits(gf) || presets::non_finite_bits(cf) {
+        return agree(g, c);
+    }
+    agree((1.0 / gf).to_bits(), (1.0 / cf).to_bits())
+}
+
+/// The chart at the pole `n₀ = (sign, zeros)`, its frame's zero components `+0` or `−0` by `negative_frame`.
+fn chart(sign: f32, zeros: [f32; 2], negative_frame: bool) -> ShapeSphere<f32> {
+    let held = ShapeSphere::<f32>::from_uniform(&dp::uniforms(DecodeChart::ShapeSphere).chart);
+    let (e1, e2) = if negative_frame {
+        ([-0.0, -1.0, -0.0], [-0.0, -0.0, -1.0])
+    } else {
+        ([0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
+    };
+    ShapeSphere {
+        map: ShapeMap::Exponential,
+        n0: [sign, zeros[0], zeros[1]],
+        e1,
+        e2,
+        phase: 0.0,
+        ..held
+    }
+}
+
+/// The CPU's f32 fragment decode of `chart` at `(½, ½)`.
+fn cpu(chart: &ShapeSphere<f32>) -> [u32; DECODE_WORDS] {
+    let u = DecodeUniforms {
+        chart: chart.uniform(),
+        ..dp::uniforms(DecodeChart::ShapeSphere)
+    };
+    let mut words = [0u32; DECODE_WORDS];
+    words[DECODE_UV] = 0.5f32.to_bits();
+    words[DECODE_UV + 1] = 0.5f32.to_bits();
+    decode_at::<ShapeSphere<f32>, Defaults>(&u, &mut words);
+    words
+}
+
+/// The poles checked; `reference_phase` is the CPU reference's `φ_f`: 0, the chart's own, or `π`, `atan2`'s value at
+/// `(+0, −0)` in place of the select (the control).
+fn check(reference_phase: f32) {
+    let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let mut scene = Scene::new(DecodeChart::ShapeSphere, [1, 1], 1, 0, &[[0, 0]]).unwrap();
+    let mut reached = Vec::new();
+    for sign in [-1.0f32, 1.0] {
+        for zeros in [[0.0f32, 0.0], [0.0, -0.0], [-0.0, 0.0], [-0.0, -0.0]] {
+            for negative_frame in [false, true] {
+                let c = chart(sign, zeros, negative_frame);
+                let case = format!("n₀ = {:?}, frame zeros negative {negative_frame}", c.n0);
+                let n = c.point(0.5f32, 0.5f32);
+                assert!(
+                    n[0] == sign && n[1] == 0.0 && n[2] == 0.0,
+                    "{case}: the CPU's point {n:?} is not the pole"
+                );
+                reached.push((sign, n[1].is_sign_negative(), n[2].is_sign_negative()));
+                scene.uniforms = DecodeUniforms {
+                    chart: c.uniform(),
+                    ..dp::uniforms(DecodeChart::ShapeSphere)
+                };
+                let w = scene.probe(gpu.device(), gpu.queue()).unwrap()[0];
+                assert_eq!(
+                    [w[37], w[38]],
+                    [0.5f32.to_bits(); 2],
+                    "{case}: the probe is not at (½, ½)"
+                );
+                let reference = cpu(&ShapeSphere {
+                    phase: reference_phase,
+                    ..c
+                });
+                assert_eq!(w[15], reference[DECODE_TAG], "{case}: the tag differs");
+                assert_eq!(
+                    w[24], reference[DECODE_Z_LATENT],
+                    "{case}: the latent flag differs"
+                );
+                for (g, r, name) in pairs() {
+                    assert!(
+                        agree(w[g], reference[r]),
+                        "{case}: the fragment's {name} {:#010x} is not the CPU's {:#010x}",
+                        w[g],
+                        reference[r]
+                    );
+                }
+                assert!(
+                    ratio_agrees(&w, &reference),
+                    "{case}: the fragment's rho_ratio {:#010x} is not the CPU's {:#010x}",
+                    w[25 + RHO_RATIO],
+                    reference[DECODE_DESCRIPTOR + RHO_RATIO]
+                );
+                if sign < 0.0 {
+                    assert_eq!(
+                        w[34], 0xff80_0000,
+                        "{case}: the fragment's V_0 at the ρ̃ = 0 pole is not −∞'s bits"
+                    );
+                }
+            }
+        }
+    }
+    for sign in [-1.0f32, 1.0] {
+        for (p, q) in [(false, false), (false, true), (true, false), (true, true)] {
+            assert!(
+                reached.contains(&(sign, p, q)),
+                "n₀ = {sign}: no case reaches p negative {p}, q negative {q}"
+            );
+        }
+    }
+}
+
+#[test]
+fn decode_preset_shape_poles() {
+    check(0.0);
+}
+
+negative_control!(
+    decode_preset_shape_poles,
+    "a reference taking atan2's π at the pole in place of the select must be found",
+    expected = "is not the CPU's",
+    check(std::f32::consts::PI)
+);

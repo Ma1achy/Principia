@@ -13,8 +13,11 @@
 //!   (`frag_encode`) against the CPU's at f32: a non-finite value bit for bit (`V₀`'s `−∞` at the coincident pair, which
 //!   the test also asserts directly), a finite one within REQ-DEC-043's factor (the two compilations may differ in the
 //!   last bits, and a pole's branch taken the other way, `α = π` for `−π`, is far outside it), the notices word
-//!   exactly; and the shape sphere's decode at its `n₀` pole, `(½, ½)`, is finite with the CPU's tag. Control: a finite
-//!   `V₀` at the coincident pair fails.
+//!   exactly; and the shape sphere's decode on its spherical map at `(½, ½)` is finite with the CPU's tag. That point
+//!   is no pole at f32: f32's `θ = 2π·½` lies above π, so `n = (−1, −8.7·10⁻⁸, −4.4·10⁻⁸)`, `BC₀₁` missed by
+//!   `‖ρ̃‖ ≈ 5·10⁻⁸`, a near-collision, and the inverse's `atan2` sees no zero operand. The generated decode at its
+//!   exact poles, `±0` operands included, is `validation`'s `decode_preset_shape_poles`. Control: a finite `V₀` at the
+//!   coincident pair fails.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; the factor is REQ-DEC-043's, provisional until the
 //! M2 gate, on the domains its record lists (`validation::decode_f32_eps`), each chart at the parameters
@@ -412,7 +415,8 @@ fn check_poles(alter: bool) {
 #[test]
 fn decode_preset_poles() {
     check_poles(false);
-    // The shape sphere's n₀ pole, (½, ½), the depth-0 cell: finite, with the CPU's tag.
+    // The shape sphere's spherical map at (½, ½), the depth-0 cell: at f32 the BC₀₁ near-collision, not the pole
+    // (the module's note); finite, with the CPU's tag.
     let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let scene = Scene::new(DecodeChart::ShapeSphere, [1, 1], 1, 0, &[[0, 0]]).unwrap();
     let w = scene.probe(gpu.device(), gpu.queue()).unwrap()[0];
