@@ -21,6 +21,7 @@ TASK-M8-38's, built on it.
 - `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
 - `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
+- `decisions.md` § "R-620 — In v1 web egui runs in its own wasm context on the main thread, and the engine stays in its worker *(closes RQ-551)*"
 - `docs/contracts/principia_canonical_spec.md` § "0. What Principia is"
 - `docs/contracts/principia_caching_contract.md` § "Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)"
 - `docs/design/principia_systems_architecture.md` § "3. The membrane — the deployment view (demoted, not diminished)"
@@ -130,3 +131,9 @@ TASK-M8-38's, built on it.
   naming which." *Was (the native pan):* "in the debug view, reporting the same fields, so REQ-PERF-115 compares native
   and web on one method." *Was (the panel checklist):* "the panel and the native debug view each show the refresh rate"
   and "control: a missing field, a layout flag that is ignored, or a script that writes nothing fails the review;".
+- **Merged with PR #293** (applied per R-369; gui review 5667076816 of R-627's port, G1): R-619 and R-620 ruled RQ-550
+  (a) and RQ-551 (b) on 25 Oct 2026, before R-627, and caching_contract Part 6a now places v1 web's egui on the main
+  thread in its own wasm context, the engine in its worker (R-620). The skeleton still tries the worker layout as the
+  Goal says: it is R-627's measurement, taken as R-627's words ask, and it rules nothing and reopens neither entry.
+  `?layout=main` is R-620's GUI placement. v1 web itself (TASK-M8-37) follows R-620: it takes the skeleton's build,
+  its `coi-serviceworker` and its deploy workflow, not its worker layout.
