@@ -475,16 +475,18 @@ RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value
 (`principia_honesty_precision.md` §3.5, REQ-VAL-200, REQ-GUI-398), at the strip's right end, right-aligned, the badges
 keeping the left: "T 50 · f32 trusted to t 21.4 · measured for this view", `T` as the Run window shows it and the trust
 time to three significant figures; until the current view's measurement has a value it reads "T 50 · f32 trust:
-measuring for this view". It is not a badge, since it states the horizon rather than what the figure is, so R-523's
-badge rule does not place it, but like the badges it is chrome in the strip and never draws over the shown rect. It
-hides with the strip (F3, present mode); it stays under View › Debug view, which shows the same view's systems; during a
-preview or a reel's play it hides, as the decoder badge does (§G9a), since the frames shown are not the current view. It
-shows only over the live atlas figure, whose pixels are the f32 run it measures: in a result view (§G5 "Result…", f64,
-whose own badge already states its "T 50") and on the result side of Compare with live it hides (`principia_results.md`
-§3.4, §3.5; applied per R-369, gui review 5661892857 of PR #293, H2). **When the strip is short of room** (applied per
-R-369, gui review 5661892857 of PR #293, H3), the badges keep priority, since they say what the figure is, and the item
-elides first: it drops "· measured for this view", then "· f32 trusted to t …", leaving "T 50", and if even that does
-not fit it hides. It never overlaps a badge, a fallback note or "Picture missing…".
+measuring for this view", and when the view's measurement finds no parting before `T` (REQ-VAL-200) it reads "T 50 · f32
+trusted through T · measured for this view" (applied per R-369, gui review 5661892857 of PR #293, H4). It is not a
+badge, since it states the horizon rather than what the figure is, so R-523's badge rule does not place it, but like the
+badges it is chrome in the strip and never draws over the shown rect. It hides with the strip (F3, present mode); it
+stays under View › Debug view, which shows the same view's systems; during a preview or a reel's play it hides, as the
+decoder badge does (§G9a), since the frames shown are not the current view. It shows only over the live atlas figure,
+whose pixels are the f32 run it measures: in a result view (§G5 "Result…", f64, whose own badge already states its "T
+50") and on the result side of Compare with live it hides (`principia_results.md` §3.4, §3.5; applied per R-369, gui
+review 5661892857 of PR #293, H2). **When the strip is short of room** (applied per R-369, gui review 5661892857 of PR
+#293, H3), the badges keep priority, since they say what the figure is, and the item elides first: it drops "· measured
+for this view", then "· f32 trusted to t …", leaving "T 50", and if even that does not fit it hides. It never overlaps a
+badge, a fallback note or "Picture missing…".
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample

@@ -230,7 +230,9 @@ human decided "The header states the horizon; the viewer states each point's par
 and the f32 trust time** (R-621, closing RQ-556, option (b) with a change): the trust time is measured for the current
 view, not a constant such as the draft's derived "≈ 23", and the per-point trust stays in the viewer (§3.3). How the
 current view's trust time is measured (which points, which runs, which statistic, and when it is re-measured) is a
-definition, REQ-VAL-200 (R-72), written here by TASK-M8-76; the header's text is REQ-GUI-398. The atlas's colours are
+definition, REQ-VAL-200 (R-72), written here by TASK-M8-76, which also states what the measurement gives when no
+parting is found before `T`, the header then reading "f32 trusted through T" (applied per R-369, gui review 5661892857 of PR #293, H4); the
+header's text is REQ-GUI-398. The atlas's colours are
 unchanged. *Was:* "What the header strip states, against REQ-SYS-061's "The interactive atlas must state its
 predictability horizon", is RQ-556."
 
