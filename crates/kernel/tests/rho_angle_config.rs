@@ -16,7 +16,7 @@
 use kernel::chart::{Chart, ShapeMap, ShapeSphere};
 use kernel::decode::descriptor::{angle, config_angle};
 use kernel::decode::energy_norm::{apply, apply_shared};
-use kernel::decode::{decode, Free, Latent};
+use kernel::decode::{decode, Decoded, Free, Latent};
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::payload::PayloadReal;
 use validation::negative_control;
@@ -66,8 +66,9 @@ impl Draws {
     }
 }
 
-/// The latent decode's `rho_angle` against its `β`, and through `η_E`, at the width `R`.
-fn check_latent<R: Width>() {
+/// The latent decode's `rho_angle` against its `β`, and through `η_E`, at the width `R`; `rewrite` turns each `η_E`
+/// result into the decode checked (the identity, or the control's).
+fn check_latent<R: Width>(rewrite: fn(Decoded<R>) -> Decoded<R>) {
     let mut draws = Draws(0x0628);
     for _ in 0..512 {
         let z: [R; 8] = core::array::from_fn(|_| R::of(draws.on(-4.0, 4.0)));
@@ -92,6 +93,7 @@ fn check_latent<R: Width>() {
                 apply(&mut Free::<Defaults>::new(), d, Some(e), false),
             ),
         ] {
+            let n = rewrite(n);
             assert_eq!(
                 n.descriptor.rho_angle.bits(),
                 got.bits(),
@@ -103,9 +105,28 @@ fn check_latent<R: Width>() {
 
 #[test]
 fn rho_angle_latent_is_beta() {
-    check_latent::<f32>();
-    check_latent::<f64>();
+    check_latent::<f32>(|n| n);
+    check_latent::<f64>(|n| n);
 }
+
+/// `n` with its descriptor rewritten by `describe` from its positions, as `η_E` rewrote it before R-628.
+#[cfg(feature = "controls")]
+fn positional<R: Width>(n: Decoded<R>) -> Decoded<R> {
+    Decoded {
+        descriptor: kernel::decode::descriptor::describe(&n.ic),
+        ..n
+    }
+}
+
+negative_control!(
+    rho_angle_latent_is_beta,
+    "an η_E that rewrites rho_angle from the positions, not the configuration block, must be found",
+    expected = "η_E changed rho_angle",
+    {
+        check_latent::<f32>(positional::<f32>);
+        check_latent::<f64>(positional::<f64>);
+    }
+);
 
 /// The shape sphere at `n₀`, phase `phase`, its masses unequal so that `C`'s residue is not 0.
 fn sphere(n0: [f32; 3], phase: f32) -> ShapeSphere<f32> {
