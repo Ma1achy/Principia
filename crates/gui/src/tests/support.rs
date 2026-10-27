@@ -7,7 +7,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice,
+    Slice, Window,
 };
 
 use crate::app::App;
@@ -27,7 +27,9 @@ pub fn mock_app() -> App<MockSide> {
 /// The skeleton state with the playhead at `t`.
 pub fn state(t: f64) -> (SimConfig, RenderState) {
     let sim = SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -38,7 +40,7 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },

@@ -9,8 +9,9 @@
 //!   replayed on the CPU at the pixel's chart point, lookup's ladder, the inverse-encode path, giving `z_locked` the
 //!   controls the chart's axes set and the pixel's own frozen controls the rest, bit for bit ([`FrozenControls`]), and
 //!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
-//!   recentring, §G4) and the lock group's, one command sent under one history key, one undo entry (gui_state_contract
-//!   §2, R-466), and the centre pixel, of the chart rebuilt on that `z₀`, decodes the clicked pixel's state bit for bit.
+//!   recentring, §G4) and the lock group's, and on a nonlinear chart the `SetField` on the window, held in `SimConfig`'s
+//!   chart group (R-69), one command sent under one history key, one undo entry (gui_state_contract §2, R-466;
+//!   `crate::contract::store::StateStore::set_field_under`), and the centre pixel, of the chart rebuilt on that `z₀`, decodes the clicked pixel's state bit for bit.
 //!   On a nonlinear chart `z_locked`'s own decode is within lookup's `ε_phys` of that state where the ladder clamps
 //!   none of the controls the axes set; where it clamps one, `z_locked` holds the clamp's image and the lock's notices
 //!   carry `lookup_clamped`.
@@ -129,25 +130,9 @@ pub fn set(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 2], LockError> {
     Ok(lock_edits(z_locked))
 }
 
-/// The view's window on a nonlinear chart's own parameters (the contract's definition): the pixel `(s, t)` is the chart
-/// point `c + ((2s−1)·h_u, (2t−1)·h_v)`.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Window {
-    /// The centre `c`, the chart point of the pixel `(½, ½)`.
-    pub centre: [f64; 2],
-    /// The half-widths `(h_u, h_v)`.
-    pub half: [f64; 2],
-}
-
-impl Window {
-    /// The chart point of the pixel `(s, t)`.
-    pub fn at(&self, s: f64, t: f64) -> [f64; 2] {
-        [
-            self.centre[0] + (s + s - 1.0) * self.half[0],
-            self.centre[1] + (t + t - 1.0) * self.half[1],
-        ]
-    }
-}
+/// The view's window on a nonlinear chart's own parameters (the contract's definition), held in `SimConfig`'s chart
+/// group (R-69; REQ-SYS-011).
+pub use crate::contract::sim_config::Window;
 
 /// A nonlinear chart's hidden coordinates (the contract's definition; `principia_chart_reference.md` §2.1: "Untilted,
 /// they are `z₀`'s at every pixel"): the controls it holds frozen, and which of the eight its axes set, which it does
@@ -201,12 +186,11 @@ impl FrozenControls for InvariantLK<f64> {
 /// A lock set on a nonlinear chart.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChartLock {
-    /// The recentring `SetField` on `z₀ = z_locked` and the lock group's, one command under one history key
-    /// (gui_state_contract §2, R-466).
-    pub edits: [SetField; 2],
-    /// The window re-centred on the clicked chart point, its half-widths kept. It is chart construction and belongs in
-    /// `SimConfig`'s chart group (R-69), which TASK-M2-21 fills (REQ-SYS-011); until then it is returned here, and
-    /// undoing the lock does not restore it.
+    /// The lock's one command (gui_state_contract §2, R-466): the recentring `SetField` on `z₀ = z_locked`, the lock
+    /// group's, and the `SetField` on `Chart.window` re-centring the window, sent under one history key, so one undo
+    /// restores `z₀`, the lock group and the window (R-69; REQ-SYS-011).
+    pub edits: [SetField; 3],
+    /// The window re-centred on the clicked chart point, its half-widths kept: the value of the command's window edit.
     pub window: Window,
     /// The clicked pixel's state, `D ∘ Φ` replayed on the CPU: the centre pixel's under the re-centred window.
     pub ic: Ic<f64>,
@@ -252,12 +236,14 @@ where
         true => locked.z[k],
         false => frozen[k],
     });
+    let recentred = Window {
+        centre: [u, v],
+        half: window.half,
+    };
+    let [z0, lock] = lock_edits(z_locked);
     Ok(ChartLock {
-        edits: lock_edits(z_locked),
-        window: Window {
-            centre: [u, v],
-            half: window.half,
-        },
+        edits: [z0, lock, edit(SimField::Window(recentred))],
+        window: recentred,
         ic,
         notices: locked.notices,
     })

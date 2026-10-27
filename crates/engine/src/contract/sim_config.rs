@@ -4,8 +4,14 @@
 //! (R-390, "Contract fields").
 //!
 //! `SimConfig` and its groups serialise in the one canonical serialisation, [`canonical`](super::canonical)
-//! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`.
+//! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`. That text is
+//! the ViewState record ([`view_state`](super::view_state); R-483 H2).
 
+use std::collections::BTreeMap;
+
+use kernel::generated::links::{LinkParams, Selection};
+use ledger::constants::{MU_MAX, Q_MAX};
+use ledger::links::{self as registry, Slot};
 use serde::{Deserialize, Serialize};
 
 /// The sim key (gui_state_contract §2): every sim-side knob, as a typed field.
@@ -20,7 +26,7 @@ pub struct SimConfig {
     pub slice: Slice,
     /// The lock flag, the `z_locked` anchor and the `δ` excursion; lock is chart construction (R-69).
     pub lock: Lock,
-    /// The link ids.
+    /// Each block's link id and tunable parameter values (R-483 X1).
     pub links: Links,
     /// The integrator occupant.
     pub integrator: Integrator,
@@ -36,10 +42,45 @@ pub struct SimConfig {
     pub quality: Quality,
 }
 
-/// Chart id and params (gui_state_contract §2).
+/// Chart id and params (gui_state_contract §2). The view's window on a nonlinear chart's own parameters is chart
+/// construction among them, held here (R-69; chart_decoder_contract Part 4, "The lock's construction, defined";
+/// REQ-SYS-011), so the ViewState record restores it and one undo of a lock restores it with `z₀` and the lock group.
+/// The other chart params join with the requirements that need them (R-133).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Chart {}
+pub struct Chart {
+    /// The window on a nonlinear chart's parameters; the affine chart reads `(z₀, q₁, q₂)` and not this.
+    pub window: Window,
+}
+
+/// The view's window on a nonlinear chart's own parameters (chart_decoder_contract Part 4, "The lock's construction,
+/// defined"): the pixel `(s, t)` is the chart point `c + ((2s−1)·h_u, (2t−1)·h_v)`, Part 3's placement of the
+/// addressing space applied to the chart's coordinates.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Window {
+    /// The centre `c`, the chart point of the pixel `(½, ½)`.
+    pub centre: [f64; 2],
+    /// The half-widths `(h_u, h_v)`.
+    pub half: [f64; 2],
+}
+
+impl Window {
+    /// The window over the chart's whole square `[0,1]²`, where the chart point of the pixel `(s, t)` is `(s, t)`: `Φ`'s
+    /// own domain (chart_decoder_contract Part 3), a structural placement, not a register value.
+    pub const SQUARE: Window = Window {
+        centre: [0.5, 0.5],
+        half: [0.5, 0.5],
+    };
+
+    /// The chart point of the pixel `(s, t)`.
+    pub fn at(&self, s: f64, t: f64) -> [f64; 2] {
+        [
+            self.centre[0] + (s + s - 1.0) * self.half[0],
+            self.centre[1] + (t + t - 1.0) * self.half[1],
+        ]
+    }
+}
 
 /// A point or a direction of the latent space `ℝ⁸`, in chart_decoder_contract Part 2's block order: `z[0:2]`
 /// configuration, `z[2:6]` momentum, `z[6:8]` mass. Its length is the type's own, as a struct's field widths are
@@ -92,10 +133,168 @@ impl Lock {
     }
 }
 
-/// Link ids (gui_state_contract §2).
+/// The links (gui_state_contract §2; R-483 X1, H1; R-106: the chart's per-block registry entries): one choice per row
+/// of the Decoder window, the four momentum controls sharing the Momenta row's (R-479 E1). It is the one place the link
+/// ids and their parameter values live; every destination reads them through the canonical serialisation. Every block
+/// and every parameter is written even at its default: no field here has `skip_serializing_if` or a serde default
+/// (R-483 X2). A text is read only if each block names a registry entry onto that block's codomain and lists exactly
+/// that entry's tunable parameters ([`Links::check`]), so a record with a parameter stripped is refused, never read
+/// under a default.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, try_from = "LinksText")]
+pub struct Links {
+    /// The mass block's link, `z[6:8]`.
+    pub mass: LinkChoice,
+    /// The configuration angle `α`'s link, `z[0]`.
+    pub alpha: LinkChoice,
+    /// The configuration angle `β`'s link, `z[1]`.
+    pub beta: LinkChoice,
+    /// The four free momentum controls' link, `z[2:6]`.
+    pub momenta: LinkChoice,
+}
+
+/// One block's link (R-483 H1): `id` the registry entry's name, `params` each tunable parameter of that entry with its
+/// value (`{"mu_max":5}`), a map, `{}` for an entry with none.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Links {}
+pub struct LinkChoice {
+    /// The registry entry's name (`kernel::generated::links::NAMES`).
+    pub id: String,
+    /// Each tunable parameter's name and value.
+    pub params: BTreeMap<String, f64>,
+}
+
+/// [`Links`] as a text holds it, before [`Links::check`].
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LinksText {
+    mass: LinkChoice,
+    alpha: LinkChoice,
+    beta: LinkChoice,
+    momenta: LinkChoice,
+}
+
+impl TryFrom<LinksText> for Links {
+    type Error = String;
+
+    fn try_from(text: LinksText) -> Result<Self, String> {
+        let links = Links {
+            mass: text.mass,
+            alpha: text.alpha,
+            beta: text.beta,
+            momenta: text.momenta,
+        };
+        links.check().map(|()| links)
+    }
+}
+
+/// The blocks, by their `Links` field's name, and the registry slot whose codomain each takes: the momenta the first
+/// momentum control's, which the other three share.
+const BLOCKS: [(&str, &str); 4] = [
+    ("mass", "mass"),
+    ("alpha", "alpha"),
+    ("beta", "beta"),
+    ("momenta", "q0"),
+];
+
+/// The registry slot named `name`.
+fn slot(name: &str) -> Slot {
+    registry::slots()
+        .into_iter()
+        .find(|s| s.name == name)
+        .unwrap_or_else(|| panic!("the link registry has no slot `{name}`"))
+}
+
+/// `id`'s choice at the defaults of its tunable parameters (dd_generation_root §3.9's table).
+fn at_defaults(id: &str) -> LinkChoice {
+    LinkChoice {
+        id: id.to_owned(),
+        params: registry::tunables()
+            .iter()
+            .filter(|t| t.entry == id)
+            .map(|t| (t.param.to_owned(), t.default))
+            .collect(),
+    }
+}
+
+impl Links {
+    /// The default links, each block's slot default (dd_decoder §3), at its parameters' defaults (R-481 A2).
+    pub fn defaults() -> Links {
+        let [mass, alpha, beta, momenta] = BLOCKS.map(|(_, s)| at_defaults(slot(s).default));
+        Links {
+            mass,
+            alpha,
+            beta,
+            momenta,
+        }
+    }
+
+    /// The links of the selection `S`, at its parameters' defaults; `Err` where the four momentum controls' links
+    /// differ, which one Momenta row cannot hold (R-479 E1).
+    pub fn of<S: Selection>() -> Result<Links, String> {
+        let [mass, alpha, beta, q0, q1, q2, q3] = S::LINK_IDS;
+        if [q1, q2, q3].iter().any(|q| *q != q0) {
+            return Err(format!(
+                "the momentum controls' links differ ({q0}, {q1}, {q2}, {q3}): one Momenta row holds one (R-479 E1)"
+            ));
+        }
+        Ok(Links {
+            mass: at_defaults(mass),
+            alpha: at_defaults(alpha),
+            beta: at_defaults(beta),
+            momenta: at_defaults(q0),
+        })
+    }
+
+    /// Each block with its `Links` field's name, in [`BLOCKS`]' order.
+    pub fn blocks(&self) -> [(&'static str, &LinkChoice); 4] {
+        [
+            (BLOCKS[0].0, &self.mass),
+            (BLOCKS[1].0, &self.alpha),
+            (BLOCKS[2].0, &self.beta),
+            (BLOCKS[3].0, &self.momenta),
+        ]
+    }
+
+    /// `Ok` if each block names a registry entry onto its slot's codomain (REQ-GEN-013) and lists exactly that entry's
+    /// tunable parameters, none missing and none extra (R-483 X2); otherwise each problem, naming its block.
+    pub fn check(&self) -> Result<(), String> {
+        let mut bad = Vec::new();
+        for ((block, choice), (_, s)) in self.blocks().into_iter().zip(BLOCKS) {
+            if let Err(e) = registry::select(&slot(s), &choice.id) {
+                bad.push(format!("links.{block}: {e}"));
+                continue;
+            }
+            let want: Vec<String> = at_defaults(&choice.id).params.into_keys().collect();
+            let got: Vec<String> = choice.params.keys().cloned().collect();
+            if got != want {
+                bad.push(format!(
+                    "links.{block}: `{}` takes the parameters {want:?}, and the record gives {got:?}: none may be \
+                     missing, none extra (R-483 X2)",
+                    choice.id
+                ));
+            }
+        }
+        match bad.is_empty() {
+            true => Ok(()),
+            false => Err(bad.join("; ")),
+        }
+    }
+
+    /// The tunable parameters the kernel's `_at` functions read (R-481 G7): `mu_max` from the mass block's choice and
+    /// `q_max` from the momenta's. A parameter the chosen entry does not take is read by no link of that block, and
+    /// is left at its default.
+    pub fn link_params(&self) -> LinkParams<f64> {
+        let mut p = LinkParams::<f64>::DEFAULT;
+        if let Some(&v) = self.mass.params.get(MU_MAX.name) {
+            p.mu_max = v;
+        }
+        if let Some(&v) = self.momenta.params.get(Q_MAX.name) {
+            p.q_max = v;
+        }
+        p
+    }
+}
 
 /// Integrator occupant (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

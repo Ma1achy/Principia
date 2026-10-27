@@ -10,7 +10,8 @@
 /// GUI-sized [`Snapshot`](contract::snapshot::Snapshot). In: `set_field(path, value)`; out: a snapshot; both plain data.
 /// Beside them, profiler schema v1 ([`profile`](contract::profile), R-56), which the engine writes and `prin` and the
 /// dev GUI read. [`canonical`](contract::canonical) is the one canonical serialisation of `SimConfig` and
-/// `RenderState`, JCS (gui_state_contract §2, R-309, R-318). The interface the GUI calls is
+/// `RenderState`, JCS (gui_state_contract §2, R-309, R-318), and `SimConfig`'s text is the ViewState record
+/// ([`view_state`](contract::view_state), REQ-SYS-011, R-483 H2). The interface the GUI calls is
 /// [`EngineInterface`](contract::interface::EngineInterface), which the real engine's
 /// [`StateStore`](contract::store::StateStore) implements and [`conformance`](contract::conformance) checks; the
 /// [`log`](contract::log) entries ride in the snapshot; [`canvas`](contract::canvas) is §1's sanctioned exception (R-390,
@@ -30,6 +31,7 @@ pub mod contract {
     pub mod sim_config;
     pub mod snapshot;
     pub mod store;
+    pub mod view_state;
     pub mod view_ui;
 
     /// The display names, the one conversion module (R-449; REQ-GUI-188): what a person reads for a body, a pair, a
@@ -50,6 +52,7 @@ pub mod contract {
         mod latent;
         mod occupant;
         mod profile_v1;
+        mod view_state;
     }
 }
 
