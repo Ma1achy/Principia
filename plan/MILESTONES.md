@@ -412,10 +412,13 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   WebGPU, deployed to the GitHub Pages site by hand only; TASK-M8-96 measures COOP/COEP and SharedArrayBuffer, wasm
   threads, text input, the clipboard and the frame rate there against RQ-550 and RQ-551. TASK-M8-37 builds v1 web
   proper on the skeleton.
-- **Put to the human at this gate (R-627; REQ-GUI-401):** TASK-M8-96's two cells no script can drive, an IME
-  composition and a paste from another application, both in Safari, on the deployed site. The human records "works" or
-  "does not" for each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both
-  are recorded (qa review 5665189777 of R-627's port, F3, applied per R-369).
+- **Put to the human at this gate (R-627; REQ-GUI-401):** TASK-M8-96's cells no script can drive, in each Safari
+  layout run an IME composition and a paste from another application, on the deployed site. The human records "works"
+  or "does not" for each, and the orchestrator enters each in systems_architecture §3; the gate does not pass until each
+  is recorded (qa review 5665189777 of R-627's port, F3, applied per R-369; counted per Safari layout run by gui review
+  5665475922, G1, applied per R-369). *Was:* "TASK-M8-96's two cells no script can drive, an IME composition and a
+  paste from another application, both in Safari, on the deployed site. The human records "works" or "does not" for
+  each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
 **Exit gate — 463 requirements** (and every earlier gate still green):
