@@ -31762,11 +31762,14 @@
     section: 1. What this is (and what it is NOT)
   verify:
     method: unit test
-    detail: "estimator at 1080p E=3 FTLE-on returns 1.194 + 0.133 = 1.327 GB; 4K E=3 FTLE-on 5.308 GB; the estimator's figure is unchanged with checkerboard on and off"
+    detail: "estimator at 1080p E=3 FTLE-on returns 1.261 + 0.133 = 1.393 GB; 4K E=3 FTLE-on 5.043 + 0.531 = 5.574 GB (payload §7 at 152 / 104 B); the estimator's figure is unchanged with checkerboard on and off"
   rulings:
   - R-40
   - R-113
+  - R-603
+  - R-605
   milestone: M5
+  note: "perf review 5662126729 of PR #293, P5, applied per R-369: payload §7's figures at 152 / 104 B (R-603, R-605). *Was (verify):* \"estimator at 1080p E=3 FTLE-on returns 1.194 + 0.133 = 1.327 GB; 4K E=3 FTLE-on 5.308 GB;\""
 - id: REQ-PERF-019
   area: PERF
   statement: "The full process memory budget (render targets, metadata, staging, transients, driver, browser/OS) must be measured, not inferred from the payload figure."
