@@ -26958,6 +26958,10 @@ which takes the number before this one and is not on `main` yet; it is recorded 
 R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
 
 ## R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*
+*Amended in part by R-631 (item 6: the high-precision initial-condition data is committed, with full citations, and
+no permission is asked first; RQ-579 is closed with option (a)).*
+*Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
+data (R-631); items 7 and 9's fetches stand, and item 7's database is committed under R-631.*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27054,3 +27058,90 @@ merged into it; RQ-583's stay.
 R-630 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-042 (rulings, note) and REQ-VAL-043 (verify, rulings, source, note).
+
+## R-631 — The high-precision initial-condition data is committed to the repo with full citations, no permission asked first: Hristov et al.'s databases, the free-fall, central-symmetry and Euler ones beside them, Simó's archive and Li & Liao's tables, each folder with a SOURCES.md; REQ-VAL-042, PL-6 and LL-5 point at the committed files, and fetch.sh stays as the provenance check *(amends R-630; closes RQ-579 with option (a))*
+*27 Oct 2026 · the human's message of that evening; applied in `docs/incoming/2026-10-27_hp_ics/` (`data/`, `SOURCES.md`,
+`.gitattributes`, dated notes in `README.md`), `docs/incoming/2026-10-27_hp_ics_freefall/` (new),
+`docs/archive/review_queue/M0.md` (RQ-579's amended ruling), `docs/design/principia_dd_replication.md`,
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` and
+`docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` (dated notes),
+REQ-VAL-042 and REQ-VAL-227 (reqio), TASK-M3-46 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> Owner's ruling, amending R-630 item 6 and closing RQ-579 differently: commit the high-precision initial-condition
+> data to the repo, with full citations. No permission request is required first; the owner will send a courtesy email
+> himself (drop the draft from #310's description, or mark it superseded).
+>
+> Reasons on record (checked 27 Oct): no database page states terms; the describing papers for the free-fall 24,582
+> (CeMDA 136, 7, 2024), central-symmetry 4,860 (CNSNS 2025), Euler 12,431 (Astron. Comput. 2024) and stable 971 (New
+> Astron. 2026) are CC BY 4.0; the data are published numerical results, credited to their authors and never claimed
+> as ours.
+>
+> 1. docs/incoming/2026-10-27_hp_ics (and a new folder for the free-fall 24,582 if it isn't there): run fetch.sh,
+>    verify each file against its recorded sha256, and commit the files themselves.
+> 2. Same for Simó's choreo3.tar.gz (345 choreographies; its README carries no terms) and the sjtu-liao/three-body
+>    tables (no LICENSE file).
+> 3. Each folder gets a SOURCES.md (or README update): authors, title, journal, DOI, arXiv id, database URL, fetch
+>    date, sha256 per file, the paper's licence where it has one, and a line "published by the authors; included as
+>    test data with citation; not ours". Correct the first author's name everywhere: Ivan Hristov (the draft said
+>    "Ivaylo").
+> 4. Update REQ-VAL-042, PL-6 and LL-5 to point at the committed files instead of fetch-only. Keep fetch.sh as the
+>    provenance check.
+> 5. If a dataset is very large (say > 20 MB), commit it compressed and say so.
+> 6. Usual docs/ commit rules, one PR, leave it for the owner.
+
+*What it decides:* RQ-579 is closed with its option (a), "commit the values with attribution", replacing R-630 item 6's
+(b) and (c). The rest of R-630 stands. Item 7's free-fall database, fetched under R-630, is committed under this ruling.
+The draft email R-630 item 6 asked for was in PR #310's description, never in the corpus; it is marked superseded there.
+
+*Applied:*
+
+- **Item 1.** `docs/incoming/2026-10-27_hp_ics/fetch.sh` was run into an empty directory: "all 599 files fetched and
+  match sources.tsv". The 599 files are committed under that folder's `data/`, at the paths `sources.tsv` gives, and
+  each committed copy was checked against its recorded sha256 again. Hristov et al. 2024's free-fall database (R-630
+  item 7) is in a new folder, `docs/incoming/2026-10-27_hp_ics_freefall/`, laid out the same way (`sources.tsv`,
+  `fetch.sh`, `data/`), with new hashes recorded: each of its files was fetched three times into empty directories,
+  with the same sha256 each time.
+- **Item 2.** `choreo3.tar.gz` and Li & Liao 2017's GitHub table are among the 599 and are committed as fetched; the
+  archive is not extracted.
+- **Item 3.** Each folder has a `SOURCES.md` with every field the item lists and its verbatim line, and the hp_ics
+  README's "Terms" carries a dated note, the old conclusion quoted as *Was*. Crossref's record of each DOI was read for
+  the paper's licence (27 Oct 2026): CC BY 4.0 for the four papers the ruling names, as its reasons say, and for
+  Hristov et al. 2022 (CEUR-WS Vol-3191, whose index states it); none open for the others. No file in the repo, or on
+  PRs #307, #309 and #310, named the first author "Ivaylo"; he is Ivan Hristov throughout.
+- **Item 4.** REQ-VAL-042's note names the committed free-fall files. REQ-VAL-227 (LL-5) names the committed copy of
+  the authors' 316-orbit table beside the atlas's CSV, and TASK-M3-46's acceptance line with it. PL-6 has no
+  requirement (RQ-577 is open), so dated notes where it is defined (PLAN.md § 3.1, the proposal's § 5 test 6) and in
+  `principia_dd_replication.md` (§ 4.2, § 5.13) point at the committed files. Every README says `fetch.sh` stays the
+  provenance check.
+- **Item 5.** No file is over 20 MB (the largest is `sol_80.txt`, 8.4 MB), so nothing is compressed.
+
+*Applied per R-369:*
+
+- **The central-symmetry and Euler databases**, which the ruling's reasons name and which are on the same site's root
+  page as the free-fall one, are fetched and committed in the new folder with it: their initial-condition files only
+  (4,860 × 2 at 100 digits; 12,431, 332, 35 and 8 at 100 digits), not their plots, stability or syzygy files, nor the
+  Euler page's later 421,562 i.c.s at 60 digits (about 109 MB), which the ruling does not name.
+- **"The sjtu-liao/three-body tables"** are read as the tables the plan uses: Li & Liao 2017's (already among the
+  599) and the authors' 316-orbit free-fall table with its word table, which LL-5 needs (new folder). The repository's
+  other tables (3D, unequal-mass, the 2017 and 2018 word tables) are not committed. That GitHub table carries initial
+  conditions, at 10 decimals, for all 316 free-fall orbits, including the 82 the SJTU website lists with words only;
+  PLAN.md § 2.1's "gives words only" is about the website, and still holds of it.
+- **Li & Liao's SJTU free-fall pages** stay recorded by URL and sha256 only, as R-630 item 8 rules; R-631 does not
+  name item 8. The 2017 SJTU page (`three-body-movies.htm`) is one of `fetch.sh`'s 599 and is committed under item 1.
+  Masson's file is committed under item 1 likewise.
+- **`.gitattributes`** in each folder marks `data/**` `-text`, so no checkout converts line endings and the committed
+  bytes keep their hashes (several Sofia files have CRLF endings).
+- `fetch.sh` in `docs/incoming/2026-10-27_hp_ics/` is left byte for byte, its README-recorded sha256 intact; its header
+  comment ("The files are not committed") predates this ruling, and the README's dated note says so. The new folder's
+  `fetch.sh` is the same script with that comment brought up to date.
+
+*R-630 item 9, done in the same PR:* Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 are all paywalled
+(OpenAlex: closed; no arXiv copy; Crossref lists only the publishers' licences), so no PDF is committed. They are listed
+for the owner, with their DOIs, in `docs/incoming/2026-10-27_hp_ics_freefall/README.md`, and TM-1 and LL-3
+(TASK-M3-49, TASK-M3-47) wait for them.
+
+R-631 is in the "process" group of `plan/rule_groups.yaml`, with R-630.
+
+Changes REQ-VAL-042 (note) and REQ-VAL-227 (verify, rulings, note).

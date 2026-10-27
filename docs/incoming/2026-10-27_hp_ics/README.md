@@ -39,10 +39,26 @@ from it are committed.
   for digit, to rows of the 971-orbit database, and are recorded as `hristov2026`: inferred by matching, since the
   atlas lists no source. Their families are the human's ten, with his counts, which sum to 97, not 99. The other 2
   (family I) are in no Hristov table: they are identical to Li & Liao 2017's published 10-digit values.
-- **No data file is committed**, because no source states terms that allow redistribution (see "Terms"). The
-  retrieval list (`sources.tsv`, `fetch.sh`), the transcription scripts and the agreement numbers are committed.
+- **The data files are committed, under `data/`** (R-631, 27 Oct 2026): all 599 files `sources.tsv` lists, byte for
+  byte, each checked against its recorded sha256, with their citations in `SOURCES.md`. *Was:* "**No data file is
+  committed**, because no source states terms that allow redistribution (see "Terms"). The retrieval list
+  (`sources.tsv`, `fetch.sh`), the transcription scripts and the agreement numbers are committed."
 
 ## Terms: why the data is not committed
+
+> **27 Oct 2026, R-631: the data is now committed.** The human's ruling of that evening amends R-630 item 6 and closes
+> RQ-579 differently: "commit the high-precision initial-condition data to the repo, with full citations. No permission
+> request is required first". Its reasons, checked 27 Oct: "no database page states terms; the describing papers for
+> the free-fall 24,582 (CeMDA 136, 7, 2024), central-symmetry 4,860 (CNSNS 2025), Euler 12,431 (Astron. Comput. 2024)
+> and stable 971 (New Astron. 2026) are CC BY 4.0; the data are published numerical results, credited to their authors
+> and never claimed as ours." So every file `fetch.sh` retrieves is committed under `data/`, at the path `sources.tsv`
+> gives it, and `SOURCES.md` cites each source with its authors, title, journal, DOI, arXiv id, database URL, fetch
+> date, sha256 per file and the paper's licence where it has one: published by the authors; included as test data
+> with citation; not ours. `fetch.sh` stays as the provenance check (its own header comment, "The files are not
+> committed", predates R-631 and is left as written, so its recorded sha256 still holds). The paragraph below is the
+> record of 27 Oct before R-631; its conclusion no longer holds. *Was (its conclusion):* "So the values stay out of the
+> repo. `fetch.sh` retrieves them byte for byte, with a sha256 for each file. Committing them would need the authors'
+> permission or a ruling."
 
 None of the sources states a licence or terms of use: the five pages of `db2.fmi.uni-sofia.bg` (its root, `3body123`,
 `3bodychor462`, `3bodychor164`, `3bodystab971`), Masson's page and site, the SJTU pages, and the
@@ -214,6 +230,14 @@ source are the catalogue's (`../2026-10-26_orbit_catalogues/threebodyorbits_cata
 | `crosscheck.py` | `7bc23fba3990c65675277c8a7e5c17e0f4216343c14fcd959748a203744d426d` | The cross-check against `atlas-params.json`, and since 27 Oct 2026 of its 99 rows with an empty source against `3bodystab971`. Prints derived numbers only |
 | `transcription.txt` | `62b53f859518acd9b9f3a1ec1fbed173530d377b72420cf3e4db0b84023bfc5b` | `compare_ab.py`'s and `liliao_routes.py`'s output |
 | `agreement.txt` | `73b23f0e7c51266ad04a83f047060459622b81af2a695078a822c6e0b219d9e7` | `crosscheck.py`'s output |
+| `data/` | per file, in `sources.tsv` and `SOURCES.md` | Since R-631 (27 Oct 2026): the 599 source files themselves, as `fetch.sh` retrieves them (6.7 MB; `choreo3.tar.gz` as served, not extracted; nothing compressed by us) |
+| `SOURCES.md` | — | Since R-631: each source's citation, its paper's licence where it has one, and every file's sha256 |
+| `.gitattributes` | — | Since R-631: `data/**` is never line-ending converted, so the committed bytes keep their hashes |
+
+> **27 Oct 2026, R-631:** the files are committed under `data/`, so the routes below can read `data/` in place of a fresh
+> download, and `cd data && tail -n +2 ../sources.tsv | awk -F'\t' '{print $3"  "$1}' | shasum -a 256 -c` checks them.
+> `fetch.sh` into an empty directory stays the provenance check. Still run nothing from either. *Was:* "keep them out of
+> the repo", below, which now applies to fresh downloads only.
 
 To reproduce (the downloads are untrusted data: run nothing from them, keep them out of the repo):
 
