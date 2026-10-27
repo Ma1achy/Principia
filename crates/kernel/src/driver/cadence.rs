@@ -2,8 +2,8 @@
 //! after every internal step, inside the occupant's march, as the callback [`WrapperCadence`] the wrapper passes in.
 //!
 //! **In order, after each `STEP`** (Part 1's loop): the COM projection ([`project`], TASK-M3-05 fills it), the
-//! invariant accumulation on the projected state ([`monitor`], TASK-M3-09), and terminal detection, which sets the
-//! `done` flag on collision or escape and never breaks ([`detect`], TASK-M3-12). Until those land each hook leaves the
+//! invariant accumulation on the projected state ([`monitor`], TASK-M3-05), and terminal detection, which sets the
+//! `done` flag on collision (TASK-M3-09) or escape (TASK-M3-12) and never breaks ([`detect`]). Until those land each hook leaves the
 //! state as it is and detects nothing, so a run ends only at its horizon.
 //!
 //! **Instrumented** (REQ-INT-009, REQ-INT-022): the cadence counts its own invocations
@@ -51,12 +51,12 @@ impl<R> Cadence<R> for WrapperCadence {
 #[inline]
 pub fn project<R>(_state: &mut State<R>, _geom: &mut Geom<R>) {}
 
-/// The invariant accumulation on the projected state (Part 1): the hook TASK-M3-09 fills.
+/// The invariant accumulation on the projected state (Part 1): the hook TASK-M3-05 fills.
 #[inline]
 pub fn monitor<R>(_state: &State<R>, _geom: &Geom<R>) {}
 
 /// Terminal detection on the projected state (Part 7; dd_integrator §3.6): whether a terminal fired, which sets the
-/// run's `done` flag. The hook TASK-M3-12 fills; until then nothing fires.
+/// run's `done` flag. The hook TASK-M3-09 fills for collision and TASK-M3-12 for escape; until then nothing fires.
 #[inline]
 pub fn detect<R>(_state: &State<R>, _geom: &Geom<R>) -> bool {
     false
