@@ -430,11 +430,6 @@ pub fn tag(out: &DecodeOut<f64>) -> u32 {
     kernel::stage::decode::tag(out.degenerate)
 }
 
-/// The tag word of `kernel::stage::decode::tag` for an f32 decode.
-pub fn tag32(out: &DecodeOut<f32>) -> u32 {
-    kernel::stage::decode::tag(out.degenerate)
-}
-
 /// A state `(m, r, p)` at f32, as a test gives it to the fragment's descriptor or encode.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct State {
@@ -495,11 +490,6 @@ pub fn values(out: &DecodeOut<f64>) -> [f64; 27] {
     crate::decode_f32_eps::values(out)
 }
 
-/// The 27 continuous values of an f32 decode, widened.
-pub fn values32(out: &DecodeOut<f32>) -> [f64; 27] {
-    crate::decode_f32_eps::values(out)
-}
-
 // ── The golden suite (`fixtures/golden/decode-preset/`; REQ-RENDER-027) ────────────────────────────────────────────
 
 /// The golden suite's name, its directory under `fixtures/golden/`, which `cargo xtask golden decode-preset` runs.
@@ -549,38 +539,28 @@ const GOLDEN_TRIES: u64 = 256;
 
 impl Scene {
     /// The chart point the fragment decodes pixel `(x, y)` (rows from the top) at, as the fragment forms it in f32:
-    /// `ctx.chart.slice_uv = c + h·(2·ctx.quad.uv − 1)` (R-394), `ctx.quad.uv` the raster's.
+    /// `ctx.chart.slice_uv = c + h·(2·ctx.quad.uv − 1)` (R-394). A scene's quads are one tile each ([`Scene::new`]),
+    /// so `ctx.quad.uv` is the raster's `ctx.tile.uv`.
     pub fn pixel_point(&self, x: u32, y: u32) -> [f32; 2] {
-        let grid = self.context.grid;
-        let cell = grid.cell(x, y);
-        let frame = self.set.quad_frame(cell.quad);
-        let (_, height) = self.size();
-        let t = grid.tile_px as f32;
-        let up = [x as f32 + 0.5, height as f32 - (y as f32 + 0.5)];
-        let column = [
-            cell.quad_xy[0] * grid.n + cell.tile_xy[0],
-            cell.quad_xy[1] * grid.n + cell.tile_xy[1],
-        ];
-        let n = grid.n as f32;
-        [0, 1].map(|k| {
-            let tile_uv = (up[k] - (column[k] * grid.tile_px) as f32) / t;
-            let quad_uv = (cell.tile_xy[k] as f32 + tile_uv) / n;
-            frame.c[k] as f32 + frame.h[k] as f32 * (2.0 * quad_uv - 1.0)
-        })
+        let frame = self.set.quad_frame(self.context.grid.cell(x, y).quad);
+        let quad_uv = self.tile_uv32(x, y);
+        [0, 1].map(|k| frame.c[k] as f32 + frame.h[k] as f32 * (2.0 * quad_uv[k] - 1.0))
     }
 
     /// The pixel's within-tile coordinate, Y-up, as the raster forms it (`ctx.tile.uv`).
     pub fn tile_uv(&self, x: u32, y: u32) -> [f64; 2] {
+        self.tile_uv32(x, y).map(f64::from)
+    }
+
+    /// [`Scene::tile_uv`] at f32, as the raster forms it: the pixel centre's offset from its tile's lower-left corner,
+    /// in tiles. A scene's quads are one tile each ([`Scene::new`]), so the tile's column and row are its quad's.
+    fn tile_uv32(&self, x: u32, y: u32) -> [f32; 2] {
         let grid = self.context.grid;
-        let cell = grid.cell(x, y);
+        let quad_xy = grid.cell(x, y).quad_xy;
         let (_, height) = self.size();
         let t = grid.tile_px as f32;
         let up = [x as f32 + 0.5, height as f32 - (y as f32 + 0.5)];
-        let column = [
-            cell.quad_xy[0] * grid.n + cell.tile_xy[0],
-            cell.quad_xy[1] * grid.n + cell.tile_xy[1],
-        ];
-        [0, 1].map(|k| f64::from((up[k] - (column[k] * grid.tile_px) as f32) / t))
+        [0, 1].map(|k| (up[k] - (quad_xy[k] * grid.tile_px) as f32) / t)
     }
 
     /// The DECODE preset's CPU twin at pixel `(x, y)`: the f64 decode at the fragment's f32 chart point, coloured by

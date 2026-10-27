@@ -250,3 +250,7 @@ justification = "they differ only at len == 0: a = cos α/√μ_ρ is never 0 (n
 [[equivalent]]
 mutant = "crates/kernel/src/stage/fragment.rs:155:29: replace + with * in decode_at"
 justification = "DECODE_Z is 2 (the generated layout, held by kernel/tests/fragment_words.rs), so DECODE_Z * 2 and DECODE_Z + 2 are the same word, 4"
+
+[[equivalent]]
+mutant = "crates/validation/src/decode_preset.rs:532:44: replace * with + in golden_cell"
+justification = "GOLDEN_QUADS[1] is 2, so 2 * GOLDEN_QUADS[1] and 2 + GOLDEN_QUADS[1] are the same divisor, 4"

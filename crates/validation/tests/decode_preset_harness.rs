@@ -223,6 +223,9 @@ fn check_cpu(swap: bool) {
     assert_eq!(v[9..11], r.out.ic.p[0]);
     assert_eq!(v[23], r.out.descriptor.K_0);
     assert_eq!(dp::tag(&r.out), 0, "a sane decode is tagged");
+    let mut degenerate = r.out;
+    degenerate.degenerate = Some(kernel::decode::degenerate::Degenerate::EnergyInfeasible);
+    assert_eq!(dp::tag(&degenerate), 2, "a degenerate decode's tag");
     assert_eq!(dp::f(0.25f32.to_bits()), 0.25);
     for chart in DecodeChart::ALL {
         assert_eq!(dp::golden_chart(&dp::golden_name(chart)), Some(chart));
