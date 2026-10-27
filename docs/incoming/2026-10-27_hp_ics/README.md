@@ -230,7 +230,7 @@ source are the catalogue's (`../2026-10-26_orbit_catalogues/threebodyorbits_cata
 | `crosscheck.py` | `7bc23fba3990c65675277c8a7e5c17e0f4216343c14fcd959748a203744d426d` | The cross-check against `atlas-params.json`, and since 27 Oct 2026 of its 99 rows with an empty source against `3bodystab971`. Prints derived numbers only |
 | `transcription.txt` | `62b53f859518acd9b9f3a1ec1fbed173530d377b72420cf3e4db0b84023bfc5b` | `compare_ab.py`'s and `liliao_routes.py`'s output |
 | `agreement.txt` | `73b23f0e7c51266ad04a83f047060459622b81af2a695078a822c6e0b219d9e7` | `crosscheck.py`'s output |
-| `data/` | per file, in `sources.tsv` and `SOURCES.md` | Since R-631 (27 Oct 2026): the 599 source files themselves, as `fetch.sh` retrieves them (6.7 MB; `choreo3.tar.gz` as served, not extracted; nothing compressed by us) |
+| `data/` | per file, in `sources.tsv` and `SOURCES.md` | Since R-631 (27 Oct 2026): the 599 source files themselves, as `fetch.sh` retrieves them (5.0 MB, 4,971,851 bytes; `choreo3.tar.gz` as served, not extracted; nothing compressed by us) |
 | `SOURCES.md` | — | Since R-631: each source's citation, its paper's licence where it has one, and every file's sha256 |
 | `.gitattributes` | — | Since R-631: `data/**` is never line-ending converted, so the committed bytes keep their hashes |
 

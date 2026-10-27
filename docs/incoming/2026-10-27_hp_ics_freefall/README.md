@@ -58,7 +58,7 @@ counts are the files' line counts (each row is one initial condition, its values
 | Li & Liao 2019 (*New Astron.* 70), the authors' table | GitHub | `liliao_github/free-fall-3b-pictures.md` | 316 orbits on nine mass sets | F_i(m₁, m₂, m₃), x, y, T at 10 decimals; bodies at (−0.5, 0), (0.5, 0), (x, y), at rest | 119 kB |
 | the same | GitHub | `liliao_github/free-fall-3b-free-group-word.md` | 316 | each orbit's free-group word | 24 kB |
 
-The total is 17 MB. No file is over 20 MB, so nothing is compressed (R-631 item 5).
+The total is 18.2 MB (18,179,212 bytes). No file is over 20 MB, so nothing is compressed (R-631 item 5).
 
 - **The 316 orbits of Li & Liao's GitHub table** are on the nine mass sets of `../2026-10-27_validation_plan/PLAN.md`
   § 2.1, with its counts: (1, 1, 1) 30, (1, 0.8, 0.8) 29, (1, 0.8, 0.6) 69, (1, 0.8, 0.4) 44, (1, 0.8, 0.2) 32,
