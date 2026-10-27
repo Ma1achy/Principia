@@ -55,7 +55,15 @@ drawn over reads the figure to the clamp, the Print graph's output included; for
 output (`principia_lines.md` §6). Was: "The lines drawn over sit after the Print graph; whether before the display
 scale, as drawn below, or after the gamut clamp, as R-476 M2 placed the line system, is RQ-395 (R-487)."*
 
-R-67's chain, with the Print graph where "style" was and the line system placed explicitly:
+R-67's chain, with the Print graph where "style" was, its screen pass after the display scale (R-618, closing
+RQ-538; §6.2), and the line system placed explicitly:
+
+```
+SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► display scale ─►
+          Print graph's screen pass ─► gamut clamp ─► [line sets drawn over] ─► colour-vision simulation ─► screen
+```
+
+*Was (before R-618, gui review 5661813927 of PR #293, G3):*
 
 ```
 SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► display scale ─► gamut clamp ─►

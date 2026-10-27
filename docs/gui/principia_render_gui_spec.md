@@ -1067,7 +1067,7 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
 
 ### Display — the last stages
 
-**Order is fixed (R-67, R-487, R-531):** SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (R-111): the lines drawn over keep the line system's place after the gamut clamp (R-476 M2; R-531, ruling RQ-395). *Was:* "SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → colour-vision simulation → screen (R-111), the lines drawn over coming after the Print graph (R-487; where exactly is RQ-395, and until it is ruled they keep the line system's place after the gamut clamp, R-476 M2)." The stain colours the data, the Print graph prints it,
+**Order is fixed (R-67, R-487, R-531, R-618):** SimState → stain → [the lines drawn through] → Print graph → display scale → Print graph's screen pass → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (R-111): the lines drawn over keep the line system's place after the gamut clamp (R-476 M2; R-531, ruling RQ-395), and the Print graph's `device_px` nodes and screen-anchored sheet run in its screen pass, after the display scale (R-618, closing RQ-538; `principia_print_graph.md` §6.2). *Was (before R-618, gui review 5661813927 of PR #293, G3):* "SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (R-111)". *Was:* "SimState → stain → [the lines drawn through] → Print graph → display scale → gamut clamp → colour-vision simulation → screen (R-111), the lines drawn over coming after the Print graph (R-487; where exactly is RQ-395, and until it is ruled they keep the line system's place after the gamut clamp, R-476 M2)." The stain colours the data, the Print graph prints it,
 the display scale and gamut clamp finish it, and colour-vision simulation shows how the finished picture is seen: the
 simulation sees the final in-gamut colours. *Was (R-67, before R-485 and R-487):* "SimState → stain → style → display
 scale → gamut clamp → colour-vision simulation → screen (R-111). The stain colours the data, the style draws it".
@@ -2280,7 +2280,7 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
 
 ## 12. Display stage — global, outside the pipeline
 
-*Order (R-67, R-487, R-531): stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.* *(Was: "Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display).")*
+*Order (R-67, R-487, R-531, R-618): stain → [the lines drawn through] → Print graph → display scale → Print graph's screen pass → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.* *(Was, before R-618, gui review 5661813927 of PR #293, G3: "stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen".)* *(Was: "Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display).")*
 
 Applied to `OUT` after the graph, as **settings, never nodes** of the stain graph (no OUT-downstream node in it):
 
