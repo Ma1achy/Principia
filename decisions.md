@@ -26812,3 +26812,147 @@ there", RQ-551's option (a), which R-620 did not take. Applied as the words read
 instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
+
+## R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*
+*Refined by R-629 (the port follows PLAN.md, which replaces the 25 Oct instruction's tier tables, sequencing and fetch list as the working plan).*
+*Still in force: all of it; its port follows PLAN.md (R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
+*25 Oct 2026 · given before R-595 and recorded here, after R-627, by R-629's port of 27 Oct 2026, the number having been
+held for it; applied in `docs/design/principia_dd_replication.md` (new), `docs/design/principia_dd_validation_orbits.md`
+(a pointer under its title), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-591 to RQ-598, new),
+REQ-VAL-201 to REQ-VAL-331 (reqio, new), REQ-VAL-042 (reqio: `rq`), TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22
+to TASK-M4-25, TASK-M6-52, TASK-M7-71 and TASK-M8-97 to TASK-M8-99 (new), `plan/tasks.yaml`,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human's message, 25 Oct 2026, verbatim:
+
+> Ruling, 25 Oct 2026 (my words): adopt the replication suite.
+>
+> Source: docs/incoming/2026-10-25_replication/ (PR #292). INSTRUCTION_replication_suite_2026-10-25.md is the plan;
+> catalogue.md is its source list; papers/ holds the PDFs. I approved the plan's tiers A–D.
+>
+> What I want:
+> 1. Merge #292 once its checks pass. It is records only.
+> 2. Port the plan into the corpus as a design doc, docs/design/principia_dd_replication.md. The source order is docs
+>    first, then the plan, then the code, as usual. It extends dd_validation_orbits.md and does not replace it: the
+>    periodic-orbit suite stays where it is.
+> 3. Turn each target into a requirement (VAL-…). For each, record:
+>    - the paper and the figure, table or number it reproduces;
+>    - the chart it needs;
+>    - the milestone;
+>    - exact or statistical, per the plan's rule 8;
+>    - its tolerance, as a calibration (R-71).
+> 4. Transcribe every published table twice and diff the copies before committing them as fixtures. Never tune to
+>    match. A disagreement is a REVIEW_QUEUE entry with both numbers, as RQ-570 was.
+> 5. Sequence the tiers by what they need, not all at once:
+>    - tier A, tier C, and tier D's integrator entries at M3;
+>    - tier B when the outcome classifier lands;
+>    - a target that needs a chart that doesn't exist waits for that chart. Do not build charts ahead of it.
+> 6. Queue for me, batched, rather than deciding:
+>    - which targets gate a milestone and which are reported only;
+>    - any target past the horizon cap (RQ-555 keeps 200);
+>    - any new chart a target needs;
+>    - any case where an old paper and our engine disagree and it isn't clear whose error it is.
+> 7. Tier D, the prototype's results: the prin-rs CLAUDE.md and its results/ are the source. Each prototype number
+>    becomes a target the new build reproduces or explains. A prototype number is not ground truth.
+>
+> Nothing here changes a ruling or a requirement already in force.
+
+*What it decides:*
+- **The replication suite is adopted**: published results of the planar three-body problem, computed by other groups
+  with other codes, become engine tests, in the 25 Oct instruction's tiers: A exact, B maps and statistics, C numerical
+  reliability, D the prototype's own results. Item 1 is done: PR #292 merged the records.
+- **One design doc, `docs/design/principia_dd_replication.md`**, which extends `principia_dd_validation_orbits.md`
+  and replaces nothing in it: the periodic-orbit suite, and every requirement it carries, stays where it is. The doc
+  is the contract; the records it transcribes stay records (R-159).
+- **Each target is a VAL requirement** carrying the five things item 3 lists, its tolerance a calibration requirement
+  (R-71), proposed by the task that measures it and confirmed by the human at the gate.
+- **Every published table committed as a fixture is transcribed twice and the copies diffed first**; nothing is tuned
+  to match, and a disagreement goes to `REVIEW_QUEUE.md` with both numbers.
+- **The tiers are sequenced by need**: A, C and D's integrator entries at M3; B when the outcome classifier lands; a
+  target needing a chart that does not exist waits for it, and the chart is not built ahead of it.
+- **Item 6's questions are queued, batched**: RQ-591 (which targets gate and which are reported), RQ-592 (targets past
+  the horizon cap), RQ-593 to RQ-597 (the new charts and diagnostics targets need, with RQ-582 and RQ-583 already
+  queued for the Šuvakov plane), and RQ-598 (data not in the repo). No old-paper disagreement has arisen yet, since
+  nothing has run; each task queues its own.
+- **Tier D**: each prototype number becomes a target the new build reproduces or explains, never ground truth.
+
+*How the port was made:* R-629 directed that it follow `docs/incoming/2026-10-27_validation_plan/PLAN.md`; the
+details of what was ported are recorded under R-629.
+
+*Flagged (item 6's horizon cap):* "RQ-555 keeps 200" was the state on 25 Oct; R-610, the same day, closed RQ-555 with
+`T_horizon ∈ [0.4, 200]`, default 50. The cap is the same number, so item 6 is applied to R-610's cap. Nothing built
+changes, so it is not asked.
+
+*Flagged (item 7's source):* the prin-rs `CLAUDE.md` and `results/` are not in this repo; the imported record is
+`docs/reference/prin-rs/` (R-159), whose `FINDINGS.md` holds the numbers the 25 Oct instruction's tier D names. Applied:
+the five numbers the instruction names are targets (`principia_dd_replication.md` § 5.11), each cited to that record;
+whether the rest are enumerated is RQ-587, queued by the human. Nothing built changes, so it is not asked.
+
+*The number:* the human gave this ruling on 25 Oct 2026, before R-595, and its number was held for this port; it is
+recorded here, after R-627, as R-196 was recorded after R-197.
+
+R-594 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
+*27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
+R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
+and TASK-M8-97 to TASK-M8-99*
+
+The human's message, 27 Oct 2026, verbatim:
+
+> Adopt PLAN.md now: §9 Q1 yes (it is the single plan, superseding the 25 Oct tier tables and sequencing), Q2 yes (port
+> DRAFT-VAL-01 to -07 as M3 requirements, tolerances as R-71 calibrations). R-594's port follows PLAN.md and starts as
+> soon as #305 merges; the six orbit-catalogue tier-A tasks go with it. Record this as a ruling. The other §9 questions
+> stay queued as RQs. Meanwhile carry on with M2-36, M5-32 and the GUI tasks.
+
+*What it decides:*
+- **PLAN.md § 9, question 1: yes.** `docs/incoming/2026-10-27_validation_plan/PLAN.md` is the single plan for
+  verifying Principia and replicating published results. As PLAN.md § 10's first row says, it supersedes, as the working
+  plan, the 25 Oct instruction's tier tables A–D, its "Sequencing" and its "Papers to fetch"; it keeps the instruction's
+  rules 1–8 verbatim and its tiers. The records stay records: the instruction, `TARGETS.md` and the other records are
+  not edited, and each keeps the dated note PR #305 added.
+- **Question 2: yes.** DRAFT-VAL-01 to DRAFT-VAL-07 (PLAN.md § 6) are M3 requirements, REQ-VAL-201 to REQ-VAL-213, each
+  tolerance an R-71 calibration requirement beside it.
+- **R-594's port follows PLAN.md**: its targets, its sequencing by milestone (§ 4), its first batch (§ 5) and its rules
+  9–18 (§ 8). The orbit catalogue's six tests (`docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md`
+  § "What to do with it (an addition to tier A)") are tasks: TASK-M3-42 (closure), TASK-M2-51 (invariants), TASK-M3-43
+  (published against refined), TASK-M8-97 (stability as structure), TASK-M3-44 (the syzygy count) and TASK-M3-45 (the
+  coverage report).
+- **PLAN.md § 9's other questions stay queued**: questions 3, 4, 7, 8, 9, 11 and 12 as RQ-582 to RQ-590 (PR #307), and
+  questions 5, 6 and 10 as lines in RQ-576, RQ-579 and RQ-577.
+- The rest of the message (carry on with TASK-M2-36, TASK-M5-32 and the GUI tasks) is direction to the orchestrator;
+  it decides nothing here.
+
+*Applied per R-369 (the port):*
+- **The doc is transcribed from PLAN.md**, which governs, and from the 25 Oct instruction where PLAN.md keeps it (rules
+  1–8, the tiers); `principia_dd_replication.md` cites each record as the source it transcribes.
+- **Each PLAN.md target not already a requirement became one**: 75 targets (the seven drafts among them) and one
+  definition, REQ-VAL-201 to REQ-VAL-331 with their 55 calibrations. Each carries R-594 item 3's five fields in its
+  note. A target with no numeric comparison (a qualitative one, a count, a report) carries no calibration, and its
+  note says why; DRAFT-VAL-07's bar is the published periods' own difference, so PLAN.md gives it no calibration and
+  none is added.
+- **The 25 ruled rows stay as they are** (doc § 5.1). Where PLAN.md folded a new number or arm into a ruled row (the
+  tier-D numbers into REQ-VAL-041, -052 and -184; the atlas markers into REQ-VAL-076; the syzygy count into
+  REQ-VAL-043), it is a new requirement, so no ruled statement changes.
+- **No requirement is added for the precision ladder** (PL-1 to PL-12, B-3, GG-2): RQ-577 records that none is added
+  from the proposal meanwhile. PL-8's first half, which PLAN.md § 4 runs at M3 on R-33's reference without any tier, is
+  REQ-VAL-250. V-5, V-10 and BZ-1 are out of scope, as PLAN.md says; D-6 waits on RQ-587.
+- **Milestones follow PLAN.md § 4**: OC-2 and AT-D6 at M2; most at M3; L-1, V-8 (a) and the map targets at M4; the
+  zooms at M6; D-3 at M7; the Result runs at M8. A target needing a chart, diagnostic or data no task provides keeps its
+  requirement in the milestone of its other needs, with `rq` naming the question it waits on.
+- **Tasks are grouped by source and need**, 34 in all, each reviewed by code, qa and physics; each task that commits a
+  published table carries R-594 item 4's rule, and each that touches the atlas runs `scripts/check_no_atlas_params.sh`.
+- **REQ-VAL-042 carries `rq: RQ-584`**: PLAN.md marks it blocked, its database not fetched. Its statement is unchanged.
+- **OC-5's counting convention is a definition requirement** (R-72), REQ-VAL-221: every Šuvakov-plane start is
+  collinear, so how an endpoint syzygy counts must be written before the counts are compared.
+- **Circle R's starts (Q-1) are injected by Path B**, with no chart: PLAN.md says circle R "has no chart" and names
+  none to build, and a statistic over random starts needs none.
+
+*Flagged (OC-1's horizon):* 667 of the 3,916 atlas rows OC-1 would test have T > 200, past R-610's cap (measured on
+the committed CSV: the longest is 886.09). Queued as RQ-592 under R-594 item 6; meanwhile they are not run. Nothing
+built changes, so it is not asked.
+
+*The number:* R-629 follows the ruling PR #303 records on the descriptor's `rho_angle` (27 Oct 2026, TASK-M2-25),
+which takes the number before this one and is not on `main` yet; it is recorded before this entry when it merges.
+
+R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.

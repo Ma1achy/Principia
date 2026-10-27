@@ -1,5 +1,8 @@
 # Known-solution validation orbits
 
+*Extended by `principia_dd_replication.md` (R-594, R-629): published results of other codes, and the periodic-orbit
+catalogues at scale, as engine tests beside this suite. Nothing here changes.*
+
 **Why these matter:** a periodic orbit **is its own reference.** Integrate one period, compare to the
 start. No second implementation, no analytic formula, no tolerance chosen by eye — the orbit closes
 or it does not. **That is a test that can fail**, which is the standard everything else in this
