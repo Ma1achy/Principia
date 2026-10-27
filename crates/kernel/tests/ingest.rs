@@ -347,6 +347,58 @@ fn check_column(x: &Ic<f64>, k: usize, scale: f64) {
     }
 }
 
+/// A mass's column at a mass within one step of zero (`mₖ ≤ hₖ`, Part 4, "The mass columns") is the three-point forward
+/// difference `(4E(x + h) − 3E(x) − E(x + 2h))/(2h)`, formed here, so no mass reaches zero; above the step it is the
+/// central difference ([`check_column`]).
+fn check_forward_column(x: &Ic<f64>, k: usize) {
+    let cols = weighted_encode_jacobian::<Defaults, f64>(x);
+    let c = components(x);
+    let w = weights(x);
+    let h = f64::EPSILON.cbrt() * c[k].abs().max(1.0);
+    let (mut near, mut far) = (c, c);
+    near[k] += h;
+    far[k] += h + h;
+    let e = |s: &Phys<f64>| encode::<Defaults, f64>(&from_components(s)).z.z;
+    let (z1, z2, z0) = (e(&near), e(&far), encode::<Defaults, f64>(x).z.z);
+    for i in 0..8 {
+        let want = (4.0 * z1[i] - 3.0 * z0[i] - z2[i]) / ((far[k] - c[k]) * w[k]);
+        assert!(
+            cols[i][k].is_finite() && cols[i][k] == want,
+            "entry ({i}, {k}) of J_E·W⁻¹ at m_{k} = {:e} is {:e}, the forward difference {want:e}",
+            c[k],
+            cols[i][k]
+        );
+    }
+}
+
+/// The light start with `m₀` set to `m` and `m₂` taking up the rest.
+fn with_light_mass(m: f64) -> Ic<f64> {
+    let (mut x, _) = light();
+    x.m = [m, 0.15, 0.85 - m];
+    x
+}
+
+#[test]
+fn ingest_outputs_mass_columns_near_zero() {
+    let h = f64::EPSILON.cbrt();
+    // Below the step, and at it (the boundary `mₖ ≤ hₖ`): forward.
+    check_forward_column(&with_light_mass(h / 3.0), 0);
+    check_forward_column(&with_light_mass(h), 0);
+    // Just above it: central, its lower point still positive.
+    check_column(&with_light_mass(2.0 * h), 0, 1.0);
+    // A position component at zero is not a mass: central even within a step of zero.
+    let mut at_zero = starts()[2].1;
+    at_zero.r[0][0] = 0.0;
+    check_column(&at_zero, 3, 1.0);
+}
+
+negative_control!(
+    ingest_outputs_mass_columns_near_zero,
+    "the central difference at a mass below the step crosses zero and is not the column",
+    expected = "the difference",
+    check_column(&with_light_mass(f64::EPSILON.cbrt() / 3.0), 0, 1.0)
+);
+
 /// `W·J_D(z)`'s column `k`, read back from [`weighted_jacobian`], is the central difference of `D` along `zₖ` at
 /// Part 4's step `hₖ = ε_R^{1/3}·max(1, |zₖ|)`, weighted by `W` at `D(z)`: checked against a difference formed here, on
 /// the Burrau start's `z` with `z_q0` set to `−3`, so `|zₖ| > 1` and the step's scale matters.

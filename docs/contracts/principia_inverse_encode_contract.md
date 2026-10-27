@@ -155,8 +155,10 @@ differentiable at `x`.
 - **It bounds the z residual, on the section and off it.** For a state `x̃` near `x`, to first order in `x̃ − x`,
   `E(x̃) − z = J_E(x)·(x̃ − x) = (J_E(x)·W⁻¹)·W(x̃ − x)`, so
   `‖E(x̃) − z‖_∞ ≤ ‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys`. The middle step is the operator norm's
-  definition and holds along every direction, a move off the section included (`Σmᵢ`, the centre of mass, the total
-  momentum, `I` or `ρ̃_y` missed, which `C` takes back at its own gain); the last holds because `‖W·δx‖₂²` sums nine
+  definition and holds along every direction, a move off the section included: a move of the centre of mass, the
+  total momentum, `I` or `ρ̃_y`, which `C`'s steps remove at their own gain, and a move of one mass alone, which
+  changes `Σmᵢ` and which encode does not take back: `C` and the block inverse read the masses as given, `R_com` and
+  `P_tot` as the mass-weighted sums with `M` taken as 1 (below, "The mass columns"). The last holds because `‖W·δx‖₂²` sums nine
   block terms, each at most `‖δx‖_phys²`. For T2 (Part 1), `x = D(z)` and `x̃` is the decode's own rounded `D(z)`,
   off the section by rounding, and encode's rounding enters the same way, so `E(D(z))` misses `z` by at most
   `3·κ(D(z))` times their physical rounding: the z-space amplification this Part warns of. The physical residual
@@ -179,6 +181,13 @@ differentiable at `x`.
   at `x` for component `k`, and `σ_max` by one-sided Jacobi rotations on the transpose's eight columns, so no Gram
   matrix is formed. Where `E` is not differentiable at `x` (a clamp or an `α`-pole within `hₖ`), the difference gives a
   large finite value for `+∞`.
+- **The mass columns** (applied per R-369, TASK-M2-20; physics review of PR #294). Moving `mₖ` alone takes the state
+  off the simplex, `Σmᵢ = 1 ± hₖ`: the one use of encode outside its precondition `Σmᵢ = 1` (canon.rs, encode). Those
+  columns differentiate encode's own formulas off the simplex, the total read as given, not renormalised: `C`'s
+  centre of mass and total momentum with `M` taken as 1, and the mass block's inverse on the masses as they stand. A
+  mass within one step of zero, `mₖ ≤ hₖ`, takes the three-point forward difference
+  `(4E(x + hₖeₖ) − 3E(x) − E(x + 2hₖeₖ))/(2hₖ)` instead, so no mass reaches zero or below, where the mass guard's
+  substitution would put a kink in the difference.
 
 ---
 

@@ -51,7 +51,8 @@ pub struct Ingested<R> {
 }
 
 /// Ingests `ic` under the selection `S`: `E(ic)`, `D(z)`, the residual `norm(C(ic), D(z))` and `κ(ic)`. `norm(x, x′)`
-/// is Part 4's `‖x′ − x‖_phys`, `x` the reference; `ic.m` is positive with `Σmᵢ = 1`, as `C` requires.
+/// is Part 4's `‖x′ − x‖_phys`, `x` the reference; `ic.m` is positive with `Σmᵢ = 1`, as `C` requires (`κ`'s mass
+/// columns move one mass off the simplex: [`weighted_encode_jacobian`]).
 pub fn ingest<S, R, N>(ic: &Ic<R>, norm: N) -> Ingested<R>
 where
     S: Selection,
@@ -133,6 +134,13 @@ where
 /// `(J_E(x)·W⁻¹)ᵀ`, as its eight columns, one per control: entry `k` of column `i` is the central difference of
 /// `E(x)ᵢ` along `x`'s component `k`, step `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry `wₖ` at `x`. `x` may be
 /// on the canonical section or off it; every component is moved, the masses included.
+///
+/// **The mass columns** (Part 4, "The mass columns"): moving `mₖ` alone puts `Σmᵢ` at `1 ± hₖ`, the one use of
+/// [`encode`] outside its precondition `Σmᵢ = 1`. They differentiate encode's own formulas off the simplex, the total
+/// read as given: `C`'s centre of mass and total momentum with `M` taken as 1, and the mass block's inverse on the
+/// masses as they stand. A mass within one step of zero (`mₖ ≤ hₖ`) takes the three-point forward difference
+/// `(4E(x + hₖ) − 3E(x) − E(x + 2hₖ))/(2hₖ)`, so no mass reaches zero or below, where [`super::blocks`]' guard
+/// substitutes the smallest normal and the difference would cross a kink.
 pub fn weighted_encode_jacobian<S, R>(x: &Ic<R>) -> [Phys<R>; 8]
 where
     S: Selection,
@@ -145,15 +153,30 @@ where
     let mut cols = [[R::zero(); 15]; 8];
     for (k, (ck, wk)) in c.iter().zip(&w).enumerate() {
         let h = step * Float::max(R::one(), Float::abs(*ck));
-        let (mut up, mut down) = (c, c);
+        let mut up = c;
         up[k] = *ck + h;
-        down[k] = *ck - h;
         let plus = encode::<S, R>(&state(&up)).z.z;
-        let minus = encode::<S, R>(&state(&down)).z.z;
-        // The step actually taken: `x ± h` rounded, so the difference quotient divides by what was added.
-        let span = (up[k] - down[k]) * *wk;
-        for (col, (a, b)) in cols.iter_mut().zip(plus.iter().zip(&minus)) {
-            col[k] = (*a - *b) / span;
+        if k < 3 && *ck <= h {
+            // A mass within one step of zero: `(4E(x + h) − 3E(x) − E(x + 2h))/(2h)`, `2h` the step actually taken.
+            let mut far = c;
+            far[k] = *ck + (h + h);
+            let beyond = encode::<S, R>(&state(&far)).z.z;
+            let here = encode::<S, R>(x).z.z;
+            let span = (far[k] - *ck) * *wk;
+            let three = R::one() + R::one() + R::one();
+            let four = three + R::one();
+            for (col, ((a, b), e)) in cols.iter_mut().zip(plus.iter().zip(&beyond).zip(&here)) {
+                col[k] = (four * *a - three * *e - *b) / span;
+            }
+        } else {
+            let mut down = c;
+            down[k] = *ck - h;
+            let minus = encode::<S, R>(&state(&down)).z.z;
+            // The step actually taken: `x ± h` rounded, so the difference quotient divides by what was added.
+            let span = (up[k] - down[k]) * *wk;
+            for (col, (a, b)) in cols.iter_mut().zip(plus.iter().zip(&minus)) {
+                col[k] = (*a - *b) / span;
+            }
         }
     }
     cols

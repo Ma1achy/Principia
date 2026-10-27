@@ -57,7 +57,9 @@ pub struct Encoded<R> {
     pub report: Report<R>,
 }
 
-/// `E(ic) = (block inverses) ∘ C (ic)` under the selection `S`. `ic.m` is positive with `Σmᵢ = 1`, as `C` requires.
+/// `E(ic) = (block inverses) ∘ C (ic)` under the selection `S`. `ic.m` is positive with `Σmᵢ = 1`, as `C` requires; the
+/// one exception is [`ingest::weighted_encode_jacobian`]'s mass columns, which differentiate these formulas off the
+/// simplex, the total read as given.
 #[inline]
 pub fn encode<S, R>(ic: &Ic<R>) -> Encoded<R>
 where
