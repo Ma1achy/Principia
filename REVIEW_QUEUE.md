@@ -449,3 +449,61 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-599: The occupant matrix census (DRAFT-VAL-08): its §11, five questions for the owner *(the human's queued questions on PR #314; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 11; R-71, R-159, R-561; RQ-577; PR #310's ruling; context: none built)*
+
+*Queued by the human (27 Oct 2026): "It is a record, not authority." and "Do not build anything: no harness, CI
+workflow or runner registration until the ruling." For the human: yes, every question changes what is built (a
+harness, CI jobs, a self-hosted runner). No option is recommended here.*
+
+- **File, section:** `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` (sha256
+  `28894031…ccacb1f260`), § "11. For the owner to rule"; its axes in § 3, its stages in § 4, its readings and verdicts
+  in § 5, its CI and runner plan in § 8. Its header: "**Status: proposed, not in force.** … Nothing here changes a
+  default, a gate or a task." Cross-referenced, as dated notes only, from
+  `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 7 and the § 3 rows it extends.
+- **The questions (verbatim, § 11):**
+  1. "Adopt the census as proposed (DRAFT-VAL-08), with stage 0 as the precondition."
+  2. "Agree the CI cadence in §8.1 and the Metal runner in §8.2."
+  3. "Agree that census verdict thresholds are R-71 calibrations, set once and stated, and never gates."
+  4. "Agree that `census/` sits outside `results/`."
+  5. "Decide whether stage-1 results feed the RQ-577 ruling, or that ruling stays after M3 regardless ([PR #310's
+     ruling])." The bracket replaces the proposal's ruling number, which is PR #310's and not yet on `main`, so
+     `plan/check_plan.py` passes on this branch; restore the number once PR #310 (carried by PR #313) has merged.
+- **Options as written:** questions 1 to 4 are each adopt or agree as proposed, or not. Question 5's two: (a)
+  "stage-1 results feed the RQ-577 ruling"; (b) "that ruling stays after M3 regardless".
+- **Found while checking the proposal against the repo (27 Oct 2026), left as questions rather than edits:**
+  6. **The stepper axis.** § 3.1 lists "RK4, KDK leapfrog" as the steppers now. In the prin-rs reference (R-159, not
+     authority) the KDK leapfrog ships only under logH: `docs/reference/prin-rs/src/integrate/logh/step.rs` :26,
+     "`Az + kdk` and `Heggie + kdk` do not exist", and its `Stepper` is `Rk4`, `Kdk`, `Gbs` (:149–157). In the
+     contract it is a general stepper: `docs/contracts/principia_integrator_contract.md` Part 2b, "the stepper (KDK,
+     Yoshida-4, Yoshida-6, RK4; Euler in the debug selection only, Part 2) are selected separately … and every pair
+     runs" (R-561), with Heggie × KDK measured bad. No stepper is built on `main` yet (M3). Does the census cross
+     the contract's steppers (adding Yoshida-4 and Yoshida-6, Euler in debug, and KDK under `none`, AZ and Heggie)
+     or the reference's? Stage 1's "2 × 2 × 4 × 6 × 6 ≈ 600 cells" counts two.
+  7. **GBS.** § 3.2: "Every shipped stepper takes a fixed step in fictitious time … there is no embedded error
+     estimate to set a tolerance on." prin-rs's logH ships `Stepper::Gbs` with `gbs_tol`, "Relative tolerance on the
+     GBS extrapolation error estimate" (`…/logh/driver.rs` :138–143), and it is not a contract occupant. Is GBS a
+     census stepper value, and if so is it in § 3.2's tolerance-ladder group?
+  8. **IAS15.** § 3.2 calls IAS15 "already the drift reference in the logH comparison". The only record of it in the
+     repo says "**IAS15 is not built.** … its only role here is a reference arm"
+     (`docs/reference/prin-rs/docs/NOTES_excerpts.md` :119–121). Is IAS15 to be built for the census, or is that
+     clause to be corrected?
+  9. **The step-limit axis.** prin-rs's `StepLimit` (`None`, `Reject`, `Predictive`, `AbGrowth`, `Global`) is AZ's
+     alone (`…/az/driver.rs` :72–93, its `f` the separate `step_limit_f`, :455); Heggie and logH carry only the
+     predictive limit, through `step_limit_f` (`…/heggie/driver.rs` :64, :364; `…/logh/driver.rs` :114, :376), and
+     the contract fixes the predictive limit at f = 0.02 (Part 2b, R-160). § 3.1 crosses the step limit "fully" and
+     omits `Reject`. Is the step-limit axis AZ-only beyond `None`/`Predictive`, and is `Reject` a value or a
+     control?
+  10. **The escape rule.** § 3.3's names, `Reference`, `Distance(r)`, `Closure`, are prin-rs's
+      `EscapeRule::{Reference, Distance(T), Closure(T)}` (`docs/reference/prin-rs/src/outcome.rs` :225–236). The
+      contract has one escape rule, the closure window with `E_rel > 0` and the total mass (Part 7; R-29), and calls
+      prin-rs's `M_pair`-only `E_rel` "a physics error that biases toward escape" (R-29). Is the escape-rule sweep a
+      harness-only axis over prin-rs's variants, and under which `E_rel`?
+  11. **Time transformations.** § 3.1's regularisation values are "none, AZ, Heggie, logH (TTL)". The contract keeps
+      one cell per pair and time transformation: Heggie's Eq. 20 and Eq. 22, logH's logH and TTL modes (Part 2b,
+      R-161, R-162, R-561). Are these separate values of the axis?
+- **Applied meanwhile:** none. Nothing is built: no harness, CI workflow or runner registration (the human, PR #314).
+  The proposal's two factual corrections made on PR #314 (the `StepLimit` variants' form; PL-7's horizon placed on
+  the precision horizon) change no question here.
+- **Waits:** the census harness, its CI jobs (§ 8.1) and the `metal` self-hosted runner (§ 8.2); DRAFT-VAL-08's
+  adoption into PLAN.md; question 5 bears on RQ-577's timing.
