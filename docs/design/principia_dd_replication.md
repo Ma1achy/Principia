@@ -191,7 +191,7 @@ docs. PLAN.md § 3 lists them as targets; this port changes none of them.
 | Free-fall reversibility | REQ-VAL-044 (+ -134) | brake orbits time-symmetric by ξ | M3 |
 | CPU/GPU decode | REQ-VAL-017 | branch tags bitwise | M2 |
 | f32 horizon | REQ-VAL-070 (+ -071, -074) | measured on the GPU | M4 |
-| Ensemble ratio | REQ-VAL-199 | median parting ratio (RQ-575) | M8 |
+| Ensemble ratio | REQ-VAL-199 | median of measured over predicted parting ratio, against 1 (R-632) | M8 |
 | Chazy f32/f64 | REQ-VAL-183 | measured, not asserted | M7 |
 | D-2's gate | REQ-VAL-052 (+ -136) | re-registration insensitivity | M3 |
 | D-3's gate | REQ-VAL-184 (+ -185 to -187) | the classifier against Fewbody | M7 |
@@ -646,7 +646,7 @@ batched, not decided.
 | Q9: fetch Tanikawa & Mikkola 2021, Standish 1970, Yasko & Orlov 2015 | RQ-586 |
 | Q10: the precision ladder, before or after M3 | RQ-577 |
 | Q11: tier D, enumerate the prototype's numbers | RQ-587 |
-| Q12: queue the corrections to ruled documents | RQ-588, RQ-589, RQ-590 |
+| Q12: queue the corrections to ruled documents | RQ-588, RQ-589, RQ-590; applied by R-632 |
 | R-594 item 6: which targets gate a milestone and which are reported only | RQ-591 |
 | R-594 item 6: targets past the horizon cap | RQ-592 |
 | R-594 item 6: the new charts and diagnostics targets need | RQ-593 to RQ-597 (and RQ-583) |
@@ -675,3 +675,9 @@ here edits a record or a document in force.
 | ATP § 3, D2; LR § 13 | 311 free-fall orbits on "one plane" | nine planes (§ 4.3); LR not edited (RQ-590) |
 | `principia_dd_validation_orbits.md` §1.1 | "Li & Liao 2018 (234 unequal-mass), Hristov–Hristova–Dmitrašinović–Tanikawa 2023 (12,409 equal-mass)" | queued, not edited: RQ-588 |
 | REQ-VAL-042 | "Hristov et al. 2023" | queued, not edited: RQ-589 |
+
+R-632 (27 Oct 2026) applies the last three rows' corrections, closing RQ-588 to RQ-590:
+`principia_dd_validation_orbits.md` §1.1 and REQ-VAL-042's statement are corrected, each with its *Was*, and the
+literature review, a record, gets a dated note in its README. It also closes RQ-570 (column 8 recorded, never
+asserted) and RQ-575, whose statistic § 5.1's ensemble ratio row now names (*was:* "median parting ratio (RQ-575)"). The
+rows above stay as PLAN.md records them.

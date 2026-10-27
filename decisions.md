@@ -25721,6 +25721,8 @@ R-591 is in the "physics" group of `plan/rule_groups.yaml`, with R-437, R-438 an
 Changes REQ-ENC-038 (statement, rulings, source, note).
 
 ## R-592 — Anosova region D: Agekyan & Anosova (1968) is the source, its near-rest starts ported as a definition and its Table 1 as a fixture; `M = η·10⁻⁴` asserted on every row and the printed `M` column on every row but `N = 16, 23, 26, 32, 34`; paper II's `η` taken only where paper I is the outlier (`N = 88`); column 8 recorded, never asserted, while RQ-570 is open *(closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open; changes REQ-VAL-019 and REQ-VAL-120)*
+*Amended by R-632 (column 8 is never asserted: "while RQ-570 is open" becomes "never"; RQ-570 is closed).*
+*Still in force: all of it; column 8 stays recorded and is never asserted (R-632).*
 *25 Oct 2026 · applied in `docs/design/principia_dd_validation_orbits.md` § "1.6 Agekyan–Anosova region D — the
 near-rest starts (R-592)" (new) and § "2. What the suite tests that the current gates do not" (the Burrau constants'
 `R` and the recorded rescale, defined per R-72), `docs/design/principia_dd_encode.md` § "4. Seams (obligations →
@@ -26022,6 +26024,9 @@ R-599 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-SCHED-062 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-397.
 
 ## R-600 — The ensemble ratio gate predicts each start's parting time from its measured initial gap, `ln(tol/δ₀)` for each precision, never from `ln ε₃₂ / ln ε₆₄`; it runs on all 256 starts, not a subset; its tolerance is a calibration for the gate *(closes RQ-557; queues RQ-575)*
+*Refined by R-632 (RQ-575: an unparted pair's `t_part` censored at `T`, the gate valid only if fewer than half the
+starts are censored; the statistic the median of each start's measured over predicted ratio, against 1).*
+*Still in force: all of it; the two questions it queued are ruled by R-632.*
 *25 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` § "6. Tests" (ensemble_ratio),
 `docs/archive/review_queue/M0.md` (RQ-557, moved with its ruling), `REVIEW_QUEUE.md` (RQ-575, new), REQ-VAL-199
 (reqio), TASK-M8-76 and `plan/rule_groups.yaml`; built by TASK-M8-76*
@@ -26958,6 +26963,10 @@ which takes the number before this one and is not on `main` yet; it is recorded 
 R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
 
 ## R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*
+*Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
+edited; RQ-577 and RQ-583 unchanged).*
+*Still in force: all of it but item 12's "Don't edit those documents", which R-632 replaces by applying the three
+corrections (R-632).*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27054,3 +27063,131 @@ merged into it; RQ-583's stay.
 R-630 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-042 (rulings, note) and REQ-VAL-043 (verify, rulings, source, note).
+
+## R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*
+*27 Oct 2026 · the human's ruling batch of that evening; applied in `docs/design/principia_deep_zoom.md` § 2 and § 4
+(iv), `docs/contracts/principia_scheduler_contract.md` Part 3 ("The absolute floor is emergent") and Part 4,
+`docs/design/principia_dd_refinement_policy.md` § 0 item 2, `docs/design/principia_honesty_precision.md` § 6
+(ensemble_ratio), `docs/design/principia_dd_simstate_payload.md` § 1 (the precision rule) and § 2 (`packed_b`),
+`docs/design/principia_dd_validation_orbits.md` § 1.1 and § 1.6, `docs/design/principia_dd_replication.md` § 5.1,
+§ 10 and § 11 (status notes), dated notes in `docs/incoming/2026-10-27_papers/TARGETS.md` (AA-6) and
+`docs/incoming/2026-10-25_lit_review/README.md`, `docs/read_first/principia_INDEX.md` (the honesty doc's line),
+`REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with
+their ruling), REQ-DEC-036, REQ-TOOL-159, REQ-VAL-199, REQ-VAL-019, REQ-VAL-209, REQ-PAY-012, REQ-PAY-041, REQ-PAY-044,
+REQ-TOOL-023, REQ-PAY-111 and REQ-VAL-042 (reqio), REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112 (reqio, new), TASK-M5-04,
+TASK-M6-07, TASK-M6-08, TASK-M8-76, TASK-M3-41, TASK-M2-20 and TASK-M3-50, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M5-04, TASK-M3-41 and TASK-M8-76*
+
+The human's words, verbatim:
+
+> Owner's ruling batch, 27 Oct (next free R-number; quote this text). Act on each and close the entry with its line.
+>
+> RQ-578: (a) with (c). On the f32 GPU path the linearised decoder's floor is restated as the measured value, quoted
+> with the coordinate magnitude |x₀| (deep zoom §1's rule), not ~50+. A gate measures the f32 GPU path's
+> distinguishable depth as integrated at stated coordinate magnitudes; the docs and gates take the measured value as an
+> R-71 calibration. Rewrite deep_zoom §2 and §4(iv), scheduler_contract Part 3/Part 4, dd_refinement_policy §0 item 2,
+> and REQ-DEC-036's verify accordingly. The linear path stays, for speed and for the f64-anchored decode; a ~50+ floor
+> needs an f64 sum and integration (CPU, or the precision ladder under RQ-577, after M3). Unblock TASK-M5-04,
+> TASK-M6-07 and TASK-M6-08 on the measured floor; their fixtures use coordinates where the measured floor admits them.
+>
+> RQ-575: Q1 (a): an unparted pair's t_part is censored at T, the ratio a bound, the median over all 256 starts, the
+> censored count reported; the gate is valid only if fewer than half are censored. Q2 (ii): the median over starts of
+> each start's measured ratio divided by its predicted ratio, against 1; the tolerance on its distance from 1 is an
+> R-71 calibration. Update REQ-VAL-199 and principia_honesty_precision.md §6.
+>
+> RQ-570: (a). Column 8 stays transcribed and recorded, never asserted. Note that the 27 Oct transcription of paper II
+> found the same discrepancy (TARGETS.md AA-6 caveat).
+>
+> RQ-581: (d). dE_max and dLz_max take the encoding TASK-M3-41 chooses for dE_reg's halves against REQ-INT-106's
+> measured drift; if M3-41 does not settle on one, (b), a log-encoded 16-bit form in the same bits. Control flow stays
+> on the live value, as the precision rule says.
+>
+> RQ-588, RQ-589, RQ-590: apply the three corrections (validation-orbits §1.1, REQ-VAL-042's citation, the lit review
+> §13 "one plane" sentence) as the plan records them.
+>
+> Unchanged: RQ-577 after M3 (R-630); RQ-583 with physics review; RQ-378, RQ-386, RQ-391 stay parked.
+>
+> Also: send me a five-line summary of the lavapipe/cloud trial proposal (what it changes, cost, how it's reversed) so I
+> can rule on it. I'll do the M8-86 installs myself and tell you.
+>
+> One PR, left for the owner.
+
+*What it decides*, item by item:
+
+- **RQ-578** takes options (a) and (c). On the f32 GPU path `x = x₀ + J_D·δ` is an absolute f32 number of order
+  `|x₀|`, and the f32 integrator starts from it, so the linearised decoder's floor there is the measured value, quoted
+  with the coordinate magnitude `|x₀|` (deep zoom § 1's rule), not "~50+". A gate measures the f32 GPU path's
+  distinguishable depth as integrated, at stated coordinate magnitudes (REQ-DEC-052), and the docs and the gates take
+  the measured value, an R-71 calibration (REQ-DEC-051). Deep zoom § 2 and § 4 (iv), the scheduler contract's Part 3
+  ("The absolute floor is emergent") and Part 4 (`DECODE_SWITCHOVER` and `AT_F32_FLOOR`), refinement policy § 0 item 2
+  and REQ-DEC-036's verify are rewritten to it, each keeping its old text as a *Was*. The linear path stays, for speed
+  and for the f64-anchored decode (deep zoom § "Couplings to the contract", c). A floor near ~50 needs the sum and the
+  integration in f64: on the CPU, or the precision ladder under RQ-577, after M3 (R-630). TASK-M5-04, TASK-M6-07 and
+  TASK-M6-08 assert the measured floor, not depth 50, and their fixtures use coordinates where the measured floor
+  admits the depths they test.
+- **RQ-575** takes Q1's option (a) and Q2's option (ii). A start a pair of which has not parted by the horizon `T` is
+  censored: that pair's `t_part` is taken as `T`, the start's ratio is a bound, the median runs over all 256 starts, and
+  the count of censored starts is reported; the gate is valid only if fewer than half of the 256 are censored. The
+  statistic is the median over the starts of each start's measured ratio divided by its predicted ratio, compared with
+  1; the tolerance on its distance from 1 is an R-71 calibration, REQ-VAL-199's. Honesty § 6 (ensemble_ratio) and
+  REQ-VAL-199 say so; REQ-VAL-199 no longer carries `rq: RQ-575`. This completes R-600, which queued both questions.
+- **RQ-570** takes option (a): paper I's column 8 stays transcribed and recorded, never asserted, and R-592's "while
+  RQ-570 is open" becomes "never". REQ-VAL-019 and REQ-VAL-209 no longer carry `rq: RQ-570`. The 27 Oct transcription of
+  paper II found the same discrepancy in its energy column (`docs/incoming/2026-10-27_papers/TARGETS.md`, AA-6's
+  caveat), and a dated note there says so; that folder is a record and is not otherwise changed.
+- **RQ-581** takes option (d), else (b). `dE_max` and `dLz_max` in `packed_b` take the 16-bit encoding TASK-M3-41
+  chooses for `dE_reg`'s halves against REQ-INT-106's measured drift (REQ-PAY-111); if TASK-M3-41 does not settle on
+  one, they take a log-encoded 16-bit form in the same bits, so `packed_b` keeps its size. Control flow stays on the live
+  value, as payload § 1's precision rule says; `d_min` stays f16. REQ-PAY-112 (new) carries it, closed by TASK-M3-41,
+  and REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 name the encoding through it.
+- **RQ-588, RQ-589 and RQ-590** apply PLAN.md § 10's three corrections, amending R-630 item 12's "not edited":
+  `principia_dd_validation_orbits.md` § 1.1 reads "Li & Liao 2018 (234 over six mass sets, 30 of them equal-mass),
+  Hristov–Hristova–Dmitrašinović–Tanikawa, *CeMDA* 136, 7 (2024), arXiv 2023", its old text a *Was*; REQ-VAL-042's
+  statement cites "Hristov et al. 2024 (*CeMDA* 136, 7)" (*was:* "Two or three free-fall (brake) periodic orbits from
+  Hristov et al. 2023 or the Three-body Gallery must be added as closure tests asserting a return to rest in the same
+  configuration, with the convergence order reported."); and the literature review § 13's "one plane" reads "nine
+  planes, one per mass set".
+- **Unchanged:** RQ-577 stays open, to be ruled after M3 (R-630 item 10); RQ-583 stays open, for the human, with
+  physics review; RQ-378, RQ-386 and RQ-391 stay parked (R-625). RQ-577 and RQ-583 each carry a dated line.
+- **"Also"** is the orchestrator's summary to the human, outside the corpus; nothing is ported from it.
+
+The high-precision data ruling PR #312 ports, numbered next after R-630, is not on this branch; when that PR merges,
+its entry sits between R-630 and this one, which is why this ruling takes the number after it.
+
+*Applied per R-369:*
+
+- RQ-578's gate and calibration are two new requirements, both closed by TASK-M5-04, which already builds `cargo
+  xtask gate linear-decode-depth` and runs after M4's GPU integration: REQ-DEC-052, the gate, and REQ-DEC-051, the
+  calibration, proposed there and confirmed by the human at the M5 gate. TASK-M6-07 and TASK-M6-08 read REQ-DEC-051
+  through their Needs.
+- The coordinate magnitudes the gate states are test inputs, not values the corpus is missing: TASK-M5-04 chooses
+  them, at least one with `|x₀|` of order 1, RQ-578's case, and the physics reviewer checks them.
+- RQ-578 put no `rq:` field or task wait on any requirement or task: its entry says the requirements "do not yet carry
+  `rq: RQ-578`". So its holds are lifted by rewriting the three tasks' acceptance lines and notes. TASK-M6-02,
+  TASK-M6-21, TASK-M6-01 and TASK-M8-57, which its entry says read the floor and do not wait, are unchanged.
+- RQ-575 adds no requirement. REQ-VAL-199 is already the R-71 calibration of the gate's tolerance (R-600), and the
+  human's "the tolerance on its distance from 1" is that tolerance, now stated against 1; a second calibration would
+  close one value twice.
+- RQ-575's "an unparted pair" is read for either pair: a start is censored when its f32 pair or its f64 pair has not
+  parted by `T`.
+- RQ-570's option (a) said "at M2, and the Anosova chart's milestone decides"; the human's words are "never asserted",
+  so no later milestone asserts column 8.
+- RQ-581's "if M3-41 does not settle on one" is read as TASK-M3-41 not choosing one 16-bit encoding for both of
+  `dE_reg`'s halves. TASK-M3-41 rewrites the f16 wording for the two latches wherever its encoding differs from linear
+  binary16: payload § 1 and § 2, § 6's accessors, the render contract's unpack layer, the debug tooling plan's rows and
+  the parity contract's f16-packed display scalars, each with a *Was*. Until it lands the latches are linear binary16,
+  as built.
+- RQ-589: PR #312 also edits REQ-VAL-042's rulings and note, so this ruling changes only its statement, and the old
+  statement is kept here rather than in the note.
+- RQ-590: the literature review is a record (`docs/incoming/2026-10-25_lit_review/`, its sha256 in its README), so the
+  correction is a dated note in that README; the `.tex` is not edited.
+- The status rows and notes in `principia_dd_replication.md` and validation-orbits § 1.6 that named these RQs as open
+  are updated, their old text kept as a *Was*. The code's and fixtures' comments that say "RQ-570, open" are code, not
+  corpus, and are not edited here.
+
+R-632 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-036 (verify, rulings, source, note), REQ-TOOL-159 (rulings, note), REQ-VAL-199 (statement, verify, rq,
+rulings, source, note), REQ-VAL-019 (verify, rq, rulings, source, note), REQ-VAL-209 (verify, rq, rulings, note),
+REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 (statement, rulings, source, note), REQ-PAY-111 (note) and
+REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
