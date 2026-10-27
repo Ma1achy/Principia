@@ -1,0 +1,3 @@
+# The committed source files are kept byte for byte, as fetched and as sources.tsv hashes them (R-631): no
+# line-ending conversion on any checkout.
+data/** -text
