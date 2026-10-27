@@ -900,8 +900,31 @@ fn finite(values: impl IntoIterator<Item = f64>) -> bool {
     values.into_iter().all(f64::is_finite)
 }
 
-/// On [`spread`]'s state at each scale, step 0 runs and leaves `I = 1` to [`RANGE_EPS`], `r`, `p` and `λ` finite; and `C`
-/// leaves `I = 1`, every output finite, `lookup_rescaled` raised and no `lookup_clamped`. The worst `I − 1`, in eps.
+/// The recorded `I_in` of [`spread`]'s state at the scale `k` (as `R` holds it) against its exact `0.75·k²`: `+∞` past
+/// `R`'s range, `+0` below half its least subnormal, and that value rounded to `R` between.
+fn check_record<R: Precision>(i_in: R, k: R, at: &str) {
+    let k: f64 = k.into();
+    let log2 = 0.75f64.log2() + 2.0 * k.abs().log2();
+    let max: f64 = R::max_value().into();
+    let least: f64 = R::min_positive_value().into();
+    let i: f64 = i_in.into();
+    if log2 > max.log2() {
+        assert!(i == f64::INFINITY, "I_in = {i:e} recorded, not +∞, at {at}");
+    } else if log2 < (least * eps::<R>()).log2() - 1.0 {
+        assert!(i.to_bits() == 0, "I_in = {i:e} recorded, not +0, at {at}");
+    } else {
+        let want: f64 = cast::<R>(0.75 * k * k).into();
+        assert!(
+            i == want || rel(i, want, eps::<R>()) <= RANGE_EPS,
+            "I_in = {i:e} recorded, not {want:e}, at {at}"
+        );
+    }
+}
+
+/// On [`spread`]'s state at each scale, step 1a's `R_com` is `(0, k/2)` exactly (every product and sum in it exact),
+/// step 0 runs and leaves `I = 1` to [`RANGE_EPS`], `r`, `p` and `λ` finite, and records `I_in` as [`check_record`]
+/// has it; and `C` leaves `I = 1`, every output finite, `lookup_rescaled` raised and no `lookup_clamped`. The worst
+/// `I − 1`, in eps.
 fn check_range<R: Precision>(step: Step<R>, scales: &[f64]) -> f64 {
     let e = eps::<R>();
     let mut worst = 0.0f64;
@@ -909,7 +932,14 @@ fn check_range<R: Precision>(step: Step<R>, scales: &[f64]) -> f64 {
         let x = spread::<R>(k);
         let at = format!("{} scale {k:e}", R::NAME);
         assert!(x.r[0] != x.r[1], "the bodies coincide at {at}");
+        let half = x.r[1][0] * cast::<R>(0.5);
+        let com = canon::centre_of_mass(x.m, x.r);
+        assert!(
+            com == [R::zero(), half],
+            "R_com = {com:?}, not (0, {half:?}), at {at}"
+        );
         let s = step(&x);
+        check_record(s.i_in, x.r[1][0], &at);
         let out = to64(&Ic {
             m: x.m,
             r: s.r,
@@ -958,18 +988,43 @@ fn check_range<R: Precision>(step: Step<R>, scales: &[f64]) -> f64 {
     worst
 }
 
+/// Coincident bodies' masses and their common position.
+type Coincident = ([f64; 3], [f64; 2]);
+
+/// Coincident bodies at about `2^23` (f32) and `2^52` (f64), where an ulp is 1: their CoM, rounded, is one ulp off them,
+/// so step 1a leaves each body at `±1` on an axis and `I_in = Σmᵢ`, within `τ_I` of 1 (found by search over masses and
+/// positions; [`check_coincident`] asserts it).
+const EDGE_F32: Coincident = ([0.1843747, 0.7421608, 0.07346449], [10329377.0, 13607172.0]);
+const EDGE_F64: Coincident = (
+    [0.1845703125, 0.7421875, 0.0732421875],
+    [5545542082084134.0, 7305294624835838.0],
+);
+
 /// The coincident bodies, at the origin and off it, with momenta: step 0 keeps the select, divisor 1 (`r` is step 1a's
 /// output, bit for bit), `λ = 1`, `p = +0`, no `lookup_rescaled`; and `C` raises `lookup_clamped` with `φ = +0`, records
-/// `λ = 1`, and forms no non-finite value.
-fn check_coincident<R: Precision>(step: Step<R>) {
-    for point in [[0.0, 0.0], [0.3, -1.7], [-2.5e-3, 7.0]] {
+/// `λ = 1`, and forms no non-finite value; that too at `edge`, far from the origin, where the rounded CoM is an ulp off
+/// the bodies, an ulp of 1, so `I_in` is within `τ_I` of 1 and the coincidence select, not the skip, decides. Two bodies
+/// coincident and the third apart, step 0 runs.
+fn check_coincident<R: Precision>(step: Step<R>, edge: Coincident) {
+    let near = [[0.0, 0.0], [0.3, -1.7], [-2.5e-3, 7.0]].map(|point| ([0.2, 0.3, 0.5], point));
+    for (k, (m, point)) in near.into_iter().chain([edge]).enumerate() {
         let x = from64::<R>(&Ic {
-            m: [0.2, 0.3, 0.5],
+            m,
             r: [point; 3],
             p: [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]],
         });
         let at = format!("{} coincident at {point:?}", R::NAME);
         let s = step(&x);
+        if k == near.len() {
+            let i: f64 = inertia(x.m, s.centred).into();
+            assert!(
+                s.centred.iter().flatten().any(|c| *c != R::zero())
+                    && (i - 1.0).abs() <= R::TAU_I.into(),
+                "the coincident state at {at} is not one ulp from its rounded CoM with I_in within τ_I of 1: \
+                 I_in = {i}, step 1a's output {:?}",
+                s.centred
+            );
+        }
         assert!(
             !s.rescaled && s.lambda == R::one(),
             "step 0 at {at}: rescaled {}, λ = {:?}",
@@ -1008,14 +1063,42 @@ fn check_coincident<R: Precision>(step: Step<R>) {
             c.ic
         );
     }
+    // A coincident pair with the third body apart is no coincidence: step 0 runs, `p` scaled, not selected to 0;
+    // `lookup_clamped` is `C`'s where the pair is the inner one, `ρ = 0`.
+    for (pair, r) in [
+        ("ρ = 0", [[0.5, 0.5], [0.5, 0.5], [-1.0, 2.0]]),
+        ("r₂ = r₀", [[0.5, 0.5], [-1.0, 2.0], [0.5, 0.5]]),
+    ] {
+        let x = from64::<R>(&Ic {
+            m: [0.2, 0.3, 0.5],
+            r,
+            p: [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]],
+        });
+        let at = format!("{} pair at {pair}", R::NAME);
+        let s = step(&x);
+        assert!(
+            s.rescaled && s.lambda != R::one() && s.p.iter().flatten().all(|q| *q != R::zero()),
+            "step 0 at {at}: rescaled {}, λ = {:?}, p = {:?}",
+            s.rescaled,
+            s.lambda,
+            s.p
+        );
+        let c = canonicalise(&x);
+        assert!(
+            c.rescaled && c.clamped == (pair == "ρ = 0"),
+            "C at {at}: lookup_rescaled {}, lookup_clamped {}",
+            c.rescaled,
+            c.clamped
+        );
+    }
 }
 
 #[test]
 fn scale_step_range() {
     let w64 = check_range::<f64>(canon::scale_step, &RANGE_F64);
     let w32 = check_range::<f32>(canon::scale_step, &RANGE_F32);
-    check_coincident::<f64>(canon::scale_step);
-    check_coincident::<f32>(canon::scale_step);
+    check_coincident::<f64>(canon::scale_step, EDGE_F64);
+    check_coincident::<f32>(canon::scale_step, EDGE_F32);
     eprintln!(
         "scale_step_range: scales {RANGE_F64:?} (f64) and {RANGE_F32:?} (f32) leave I = 1 to {w64:.2} and {w32:.2} eps \
          (tolerance {RANGE_EPS}), every output finite; the coincident bodies keep the select"
