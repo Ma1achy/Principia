@@ -10,7 +10,7 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 | Buffer | Contents | Access pattern | Size |
 |---|---|---|---|
-| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **152 B** (FTLE-on); **104 B** (FTLE-off), with R-603's and R-605's two u32s (§1) — *was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
+| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **152 B** (FTLE-on); **104 B** (FTLE-off) from TASK-M3-41 on, with R-603's and R-605's two u32s (§1); **144 / 96 B** as generated until then — *was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
 | **word buffer** (cold) | the free-group word (`vec4<u32>`) | **append on branch-cut crossing; read at resolve/inspect** — never per-step | 16 B/entry, ×(E+1) (no shadow, appended in place), sharded per-quad |
 
 **Why split.** `SimState` fields are **hot** in the sense of being *co-resident march state updated during marching* — the physics and shadow (every substep), the accumulators, the drift refs and latches, `times`/`total_substeps`/descriptor (updated as the march progresses). Not every field is literally loaded+written at every substep (`packed_a/b`, `times`, `total_substeps` are march bookkeeping updated during marching, not per-substep operands) — they belong in the hot struct because they are co-resident march state, not because each is touched every substep. The word alone is **cold**: appended only on branch-cut crossings and read only at resolve/inspect. Co-locating it inline (a) forced the struct to 16-byte alignment (the `vec4` is the sole 16-align driver), padding the tail with **12 dead bytes**; (b) dragged 16 B of unused word through every hot cache line. Moving the word to a parallel buffer drops `SimState` to **8-byte alignment**, kills the padding (→ 4 B residual), and cuts the persistent hot-state footprint 160→136 (FTLE-on) / 112→88 (FTLE-off) — a **~15% reduction in the persistent hot-state footprint**, expected to reduce storage traffic and working-set pressure (the *measured* bottleneck is unconfirmed — see §3). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths only. **Only the word moves** — splitting the hot fields further would fragment co-accessed data and hurt the prefetcher.
@@ -142,7 +142,7 @@ schema version changes with the ledger, as R-36 makes it (§2). These are R-397'
 two u32s; the current widths are the next recheck's, below (perf review 5662126729 of PR #293, the sweep).
 
 **The recheck, on R-603's and R-605's two u32s (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1,
-applied per R-369).** `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
+applied per R-369).** From TASK-M3-41 on, which builds them; until then the generated layout is the one above at every row. `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
 other u32s: the march updates both under a regularised occupant, so the word buffer's cold precedent does not apply.
 Bytes per copy, at every precision row:
 - **f32:** `SimStateFTLE` 144 → **152 B** = 19×8 and `SimStateBase` 96 → **104 B** = 13×8, both still exactly packed
@@ -228,12 +228,12 @@ which do not depend on the float type (parity_contract Tier B), so they keep the
 
 **Layout at a `Real` of `w` bytes.** Members in the order above, each at its own alignment (`Real` at its alignment,
 u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. `SimStateFTLE` stores 31 `Real`s and
-`SimStateBase` 19, then 24 B of u32s and 4 B of u16s, so they end at `31w + 28` and `19w + 28`. Rounding up to the
+`SimStateBase` 19, then 24 B of u32s and 4 B of u16s, so they end at `31w + 28` and `19w + 28` from TASK-M3-41 on (`31w + 20` and `19w + 20`, the *Was* below, as generated until then). Rounding up to the
 alignment leaves tail padding at every width but f32; it is declared, never implicit (R-86): a trailing `_tail` of
 `(size − end)/4` u32s, empty at f32. *Was:* "then 16 B of u32s and 4 B of u16s, so they end at `31w + 20` and
 `19w + 20`", before R-603's and R-605's two u32s (perf review 5661999637 of PR #293, P1).
 
-**The f64 layout** (`w` = 8, aligned to 8):
+**The f64 layout** (`w` = 8, aligned to 8), from TASK-M3-41 on (272 / 176 B, the *Was* below, as generated until then):
 - `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
   `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `budget_word` 256, `dE_reg` 260,
   `closure_min` 264, `closure_step` 272, `_reserved` 274, `_tail` 276 (one u32): **280 B**.
@@ -246,7 +246,7 @@ item 3).
 
 **The DoubleF64 stub row.** DoubleF64 is an unevaluated pair (hi, lo) of f64s: 16 B, aligned to 8. It is a precision row
 of the ledger for the width function only. It has no `Real` impl, no kernel instantiation (R-265) and no arithmetic
-(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **528 B** (524 used,
+(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **528 B** from TASK-M3-41 on (524 used,
 one u32 of `_tail`) and `SimStateBase` **336 B** (332 used, one u32 of `_tail`), aligned to 8 (*was* 520 B, 516 used,
 and 328 B, 324 used, before R-603's and R-605's two u32s; perf review 5661999637 of PR #293, P1). A new instantiation
 would be one more row, as philosophy §7.1 says, and the generator would not fork.
@@ -657,7 +657,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **Storage multiplier is `(E+1)`, NOT `2(E+1)`.** Critical distinction:
 - **The *trajectory / compute* count is `(E+1)(1 + 𝟙_FTLE)`** — per nominal sample there are `(E+1)` samples (base + E ensemble copies), each running its own trajectory *plus* a Benettin shadow **only when FTLE is enabled**. So integrations/pixel = `2(E+1)` with FTLE on, `(E+1)` with FTLE off. This is the number for the compute/probe estimate (quality-device note).
-- **`(E+1)` is the *storage* multiplier** (both tiers) — there are `(E+1)` `SimState`s per nominal sample, and **each `SimState` already contains its shadow** (the `r_sh, p_sh` fields, part of the 152 B; *was* "part of the 144 B" before R-603's and R-605's words). Multiplying storage by `2(E+1)` would **double-count the shadow** (once in the struct size, once in the multiplier). Memory = `bytes × (E+1) × live_pixels`.
+- **`(E+1)` is the *storage* multiplier** (both tiers) — there are `(E+1)` `SimState`s per nominal sample, and **each `SimState` already contains its shadow** (the `r_sh, p_sh` fields, part of the 152 B from TASK-M3-41 on, of the generated 144 B until then; *was* "part of the 144 B" before R-603's and R-605's words). Multiplying storage by `2(E+1)` would **double-count the shadow** (once in the struct size, once in the multiplier). Memory = `bytes × (E+1) × live_pixels`.
 
 **No double-buffering.** The march updates state **in place** each step (temporal note) — samples are independent (no stencil/neighbour hazard: each sample's force loop couples only its own 3 bodies), so read-modify-write of a sample's own slot is safe, no ping-pong copy.
 
@@ -665,7 +665,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 > (**+5.9%**) and `SimStateBase` 88 → 96 (**+9.1%**). Both stay 8-byte aligned, so nothing repacks. The
 > figures below were at the new widths (since recomputed at 152 / 104 B, the next note; perf review 5662126729 of PR #293, the sweep); at the old widths they were 1.261 / 0.863 / 0.431 / 5.043 / 1.725 GB.
 
-> **Recomputed at 152 / 104 B (R-603, R-605; perf review 5661999637 of PR #293, P1).** R-603's and R-605's two u32s (§1) moved
+> **Recomputed at 152 / 104 B, the widths from TASK-M3-41 on (R-603, R-605; perf review 5661999637 of PR #293, P1); until then the generated 144 / 96 B give the figures quoted at the end of this note.** R-603's and R-605's two u32s (§1) moved
 > `SimStateFTLE` 144 → 152 (**+5.6%**) and `SimStateBase` 96 → 104 (**+8.3%**), still 8-byte aligned. The figures below
 > are at 152 / 104 B; at 144 / 96 B they were 1.327 / 0.929 / 0.464 / 5.308 / 1.858 GB, with hot parts 1.194 / 0.796 /
 > 0.398 / 4.778 / 1.593 GB.
@@ -680,9 +680,9 @@ Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective as ge
 | 4K E=3 FTLE-on (High-like) | 5.043 GB | 0.531 | **5.574 GB** |
 | 4K E=1 FTLE-off | 1.725 GB | 0.265 | **1.991 GB** |
 
-Span ~96 MB (phone: FTLE-off E=0 720p, hot only) to ~5.6 GB (4K FTLE-on E=3) (*was* ~88 MB to ~5.3 GB at 144 / 96 B), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split is 5.57 GB at the 152 B width, matching the row here — R-40 / D6; *was* "5.31 GB at the 144 B width"). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
+Span ~96 MB (phone: FTLE-off E=0 720p, hot only) to ~5.6 GB (4K FTLE-on E=3) from TASK-M3-41 on (*was*, and as generated until then, ~88 MB to ~5.3 GB at 144 / 96 B), managed by the quality/device controller. **These rows are payload-only at the stated render resolution** — tier totals including render targets and each tier's `render_scale` are in `principia_memory_tiers.md` §4 (whose High@4K payload split is 5.57 GB at the 152 B width of TASK-M3-41 on, 5.31 GB until then, matching the row here — R-40 / D6; *was* "5.31 GB at the 144 B width"). Unified-memory devices (Apple Silicon) get a different budget heuristic than discrete-VRAM (build-time note).
 
-> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.8 GB" (1.74 GB at 152 B; 1.7 GB at 144 B, the *was*; 1.6 GB at 136 B) means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
+> **The payload budget is NOT the process budget.** These figures are the *logical payload only*. They exclude render targets, quad metadata, staging/readback buffers, transient allocations during export or resize, shader/driver overhead, and the browser + OS. So "1080p E=4 FTLE-on fits in 1.8 GB" (1.74 GB at 152 B, from TASK-M3-41 on; 1.7 GB at 144 B, the *was*; 1.6 GB at 136 B) means the *payload* fits — the full process budget on, e.g., a 16 GB unified-memory machine is viable but **needs measurement**, not assumed-comfortable. Do not claim large headroom from the payload figure alone.
 
 **WebGPU allocation — logical buffers are SHARDED.** WebGPU guaranteed defaults: **`maxStorageBufferBindingSize` = 128 MiB, `maxBufferSize` = 256 MiB** (adapters may expose larger, but the baseline must be assumed for reach). So "the `SimState` buffer" and "the word buffer" are **logical** entities implemented as *many* physical quad/chunk buffers — a multi-GB payload cannot be one `GPUBuffer` and cannot be bound in one binding, regardless of available memory. Sharding is per-quad (natural — quads are the compute/eviction unit already); the allocator hands out chunk buffers and the scheduler tracks which quad lives in which chunk. Hard constraint, not an optimisation.
 

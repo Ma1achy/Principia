@@ -10,7 +10,7 @@
 
 ## Goal
 One memory estimator reproduces payload §7's table and memory_tiers §4's recomputed table: payload
-`(E+1) × bytes × render_px` at the ledger's current widths (152 B FTLE-on / 104 B FTLE-off, with REQ-PAY-110's and REQ-PAY-111's two u32s; *was* 144 B / 96 B, perf review 5661999637 of PR #293, P1), the word buffer
+`(E+1) × bytes × render_px` at the ledger's current widths (152 B FTLE-on / 104 B FTLE-off from TASK-M3-41 on, which this task follows, with REQ-PAY-110's and REQ-PAY-111's two u32s; *was* 144 B / 96 B, perf review 5661999637 of PR #293, P1), the word buffer
 `16 B × (E+1) × live_pixels` when symbolic features are on, render targets `k_d × display_px × 4 + k_r × render_px × 4`
 (k_d ≈ 3, k_r ≈ 3), and the process estimate with margin (bake texture, staging, transients, overhead) used by the fit
 check.
