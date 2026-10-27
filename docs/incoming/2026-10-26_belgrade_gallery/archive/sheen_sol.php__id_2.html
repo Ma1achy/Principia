@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>3body</title>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<link rel="stylesheet" href="style.css" type="text/css" />
+
+<script type='text/javascript'>
+var index = 0;
+var text = 'NAME: Skinny pineapple \n DISCOVERED: 2016 by Matthew Sheen\n FREE GROUP ELEMENT: bAbABA \n PERIOD: 5.095054 \nX1: 0.419698802831 Y1: 1.190466261252\nX2: 0.076399621771 Y2: 0.296331688995\nX3: 0.100310663856 Y3: -0.729358656127\nVX1: 0.102294566003 VY1: 0.687248445943\nVX2: 0.148950262064 VY2: 0.240179781043\nVX3: -0.251244828060 VY3: -0.927428226977\n';
+
+
+
+
+
+// Here you can put in the text you want to make it type.
+function type()
+{
+if(text.charAt(index)=='\n') document.getElementById('screen').innerHTML += '<br><br>';
+else if(text.charAt(index)=='@') document.getElementById('screen').innerHTML += '<br>';
+else if(text.charAt(index)=='%') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[4]</a>'
+
+//else if(text.charAt(index)=='h') document.getElementById('screen').innerHTML += 'g<sub>2</sub><sup>-1</sup>';
+//else if(text.charAt(index)=='c') document.getElementById('screen').innerHTML += 'a<sup>-1</sup>';
+//else if(text.charAt(index)=='d') document.getElementById('screen').innerHTML += 'b<sup>-1</sup>';
+else document.getElementById('screen').innerHTML += text.charAt(index);
+index += 1;
+var t;
+if(index<text.length) t = setTimeout('type()',1);
+
+}
+</script>
+
+</head>
+
+<body onload="type()">
+<center>
+<table>
+<tr>
+<td class=beli width=300px>
+<center>
+<br>
+<center> <b>SHAPE SPHERE:</b> </center>
+<img border=0 src="https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/img/sheen_sphere_3.gif" />
+<center> <b>REAL SPACE:</b> </center>
+<img border=0 width=300 src="https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/img/sheen_3.gif" />
+</center>
+</td>
+<td width=700px>
+<div id="screen"></div>
+</td>
+
+</table>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try{
+var pageTracker = _gat._getTracker("UA-2441426-1");
+pageTracker._trackPageview();
+} catch(err) {}
+</script>
+
+
+</body>
+</html>

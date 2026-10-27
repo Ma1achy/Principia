@@ -14,8 +14,9 @@
 //!   two invariants swept into one sector (`(L_z, E)`, `(L_z, K)`) solve jointly, one alone does not.
 //! - `qa_m214_chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and
 //!   validates; the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system (R-544), its
-//!   exponential map's value TASK-M2-28's (REQ-CHART-075); a `ν`-axis chart is `DoubleCover` exactly when its range
-//!   straddles the leg swap's fixed point `√2 − 1` (chart_reference §4.5, R-157), the default Euclid range among them;
+//!   exponential map's cap bijective too, here one straddling the equator (R-503, R-544; REQ-CHART-075); a `ν`-axis
+//!   chart is `DoubleCover` exactly when its range straddles the leg swap's fixed point `√2 − 1` (chart_reference §4.5,
+//!   R-157), the default Euclid range among them;
 //!   feasibility, coupling and annotation are as each chart's axes say; `E` and `L_z` are `conserved_along_flow`, `K`
 //!   is not; each axis carries the metadata of its kind.
 //! - `qa_m214_physical_axis_nonlinear` (REQ-CHART-035): a physical-quantity axis makes the chart nonlinear, and the
@@ -871,7 +872,7 @@ const FULL: [f64; 2] = [1.0 / 32.0, 31.0 / 32.0];
 
 #[test]
 fn qa_m214_chart_descriptors_registered() {
-    use SystemImage::{Bijective, DoubleCover, NToOne};
+    use SystemImage::{Bijective, DoubleCover};
     check_descriptor(
         Latent {
             z0: [0.1; 8],
@@ -881,9 +882,10 @@ fn qa_m214_chart_descriptors_registered() {
         plain(Bijective, false),
     );
     // R-544: the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system. The
-    // exponential map keeps main's n-to-1 with n = 2 until TASK-M2-28 computes its value (REQ-CHART-075).
+    // exponential map's value is its cap's (R-503, R-544; REQ-CHART-075): `shape`'s n₀ = ŷ lies on the equator and
+    // e₁ = ŵ, so its cap straddles it, and with no fold each pixel is its own system: bijective.
     check_descriptor(shape(ShapeMap::Spherical), plain(Bijective, false));
-    check_descriptor(shape(ShapeMap::Exponential), plain(NToOne(2), false));
+    check_descriptor(shape(ShapeMap::Exponential), plain(Bijective, false));
     // R-27, R-157, chart_reference §4.5: a ν-axis chart is DoubleCover where its range straddles √2 − 1, the default
     // range among them; on one side, bijective.
     check_descriptor(euclid(FULL), euclid_expect(DoubleCover));
