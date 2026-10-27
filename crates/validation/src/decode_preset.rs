@@ -474,3 +474,180 @@ pub fn values(out: &DecodeOut<f64>) -> [f64; 27] {
 pub fn values32(out: &DecodeOut<f32>) -> [f64; 27] {
     crate::decode_f32_eps::values(out)
 }
+
+// ── The golden suite (`fixtures/golden/decode-preset/`; REQ-RENDER-027) ────────────────────────────────────────────
+
+/// The golden suite's name, its directory under `fixtures/golden/`, which `cargo xtask golden decode-preset` runs.
+pub const GOLDEN_SUITE: &str = "decode-preset";
+
+/// A golden scene's quads, columns × rows, one sample each.
+pub const GOLDEN_QUADS: [u32; 2] = [4, 2];
+
+/// A golden scene's tile, in pixels: six, so each of the preset's panels, thirds of the tile on `v` and on `u` in the
+/// latent panel, halves on `u` in the positions panel, holds whole pixels, no pixel centre on a panel's edge.
+pub const GOLDEN_TILE_PX: u32 = 6;
+
+/// A golden scene's quads' depth: 19, `h = 2⁻²⁰`, so a tile's pixels decode within `2⁻²⁰` of its centre and show
+/// one decode each panel, at f32 resolution of the chart point.
+pub const GOLDEN_DEPTH: u32 = 19;
+
+/// The least distance, in 8-bit steps, of any channel of a golden reference's CPU twin from a rounding tie: twice the
+/// harness cases' 0.01 (R-269, R-296), since the fragment decodes in f32 where the twin decodes in f64, within
+/// REQ-DEC-043's factor, about 2·10⁻⁶ on these values, 0.0005 of a step. Applied per R-369 (TASK-M2-25).
+pub const GOLDEN_MARGIN: f64 = 0.02;
+
+/// The golden scene's name for `chart`: `decode-preset-<section>`.
+pub fn golden_name(chart: DecodeChart) -> String {
+    format!("{GOLDEN_SUITE}-{}", chart.section())
+}
+
+/// The chart whose golden scene is `name`.
+pub fn golden_chart(name: &str) -> Option<DecodeChart> {
+    DecodeChart::ALL
+        .into_iter()
+        .find(|c| golden_name(*c) == name)
+}
+
+/// The quads' cells' nominal positions: quad `(i, j)` at the slice's `((i + ½)/4, (j + ½)/2)`, a cell of depth 19.
+fn golden_cell(q: u32) -> [u64; 2] {
+    let side = 1u64 << GOLDEN_DEPTH;
+    let [i, j] = [q % GOLDEN_QUADS[0], q / GOLDEN_QUADS[0]];
+    [
+        (2 * u64::from(i) + 1) * side / (2 * u64::from(GOLDEN_QUADS[0])),
+        (2 * u64::from(j) + 1) * side / (2 * u64::from(GOLDEN_QUADS[1])),
+    ]
+}
+
+/// The cells tried for quad `q`, nominal first, then stepped by 389 cells (`389·2⁻¹⁹ ≈ 7.4·10⁻⁴` of the slice) on
+/// each axis in turn: the first whose tile's twin keeps [`GOLDEN_MARGIN`] is the quad's.
+const GOLDEN_TRIES: u64 = 256;
+
+impl Scene {
+    /// The chart point the fragment decodes pixel `(x, y)` (rows from the top) at, as the fragment forms it in f32:
+    /// `ctx.chart.slice_uv = c + h·(2·ctx.quad.uv − 1)` (R-394), `ctx.quad.uv` the raster's.
+    pub fn pixel_point(&self, x: u32, y: u32) -> [f32; 2] {
+        let grid = self.context.grid;
+        let cell = grid.cell(x, y);
+        let frame = self.set.quad_frame(cell.quad);
+        let (_, height) = self.size();
+        let t = grid.tile_px as f32;
+        let up = [x as f32 + 0.5, height as f32 - (y as f32 + 0.5)];
+        let column = [
+            cell.quad_xy[0] * grid.n + cell.tile_xy[0],
+            cell.quad_xy[1] * grid.n + cell.tile_xy[1],
+        ];
+        let n = grid.n as f32;
+        [0, 1].map(|k| {
+            let tile_uv = (up[k] - (column[k] * grid.tile_px) as f32) / t;
+            let quad_uv = (cell.tile_xy[k] as f32 + tile_uv) / n;
+            frame.c[k] as f32 + frame.h[k] as f32 * (2.0 * quad_uv - 1.0)
+        })
+    }
+
+    /// The pixel's within-tile coordinate, Y-up, as the raster forms it (`ctx.tile.uv`).
+    fn tile_uv(&self, x: u32, y: u32) -> [f64; 2] {
+        let grid = self.context.grid;
+        let cell = grid.cell(x, y);
+        let (_, height) = self.size();
+        let t = grid.tile_px as f32;
+        let up = [x as f32 + 0.5, height as f32 - (y as f32 + 0.5)];
+        let column = [
+            cell.quad_xy[0] * grid.n + cell.tile_xy[0],
+            cell.quad_xy[1] * grid.n + cell.tile_xy[1],
+        ];
+        [0, 1].map(|k| f64::from((up[k] - (column[k] * grid.tile_px) as f32) / t))
+    }
+
+    /// The DECODE preset's CPU twin at pixel `(x, y)`: the f64 decode at the fragment's f32 chart point, coloured by
+    /// `render::presets::decode::colour`, linear RGB.
+    pub fn expected_at(&self, x: u32, y: u32) -> Result<[f64; 3], String> {
+        let r = reference(self.chart, &self.uniforms, self.pixel_point(x, y))?;
+        Ok(render::presets::decode::colour(
+            &r.shown(),
+            self.tile_uv(x, y),
+            [f64::from(x) + 0.5, f64::from(y) + 0.5],
+        ))
+    }
+
+    /// The DECODE preset's CPU twin: each pixel's linear RGB, rows from the top.
+    pub fn expected(&self) -> Result<Vec<[f64; 3]>, String> {
+        let (width, height) = self.size();
+        (0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .map(|(x, y)| self.expected_at(x, y))
+            .collect()
+    }
+
+    /// The pixels of quad `q`, `(x, y)`, rows from the top.
+    fn quad_pixels(&self, q: u32) -> Vec<(u32, u32)> {
+        let grid = self.context.grid;
+        let (width, height) = self.size();
+        (0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .filter(|&(x, y)| grid.cell(x, y).quad == q)
+            .collect()
+    }
+
+    /// The DECODE preset rendered over the scene into an `Rgba32Float` target: each pixel's RGBA, rows from the top.
+    pub fn render(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        let image = self.draw(device, queue, &render::presets::decode::preset())?;
+        let (width, height) = self.size();
+        Ok((0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .map(|(x, y)| {
+                let w = image.words(x, y);
+                [0, 1, 2, 3].map(|k| f32::from_bits(w[k]))
+            })
+            .collect())
+    }
+}
+
+/// The golden scene of `chart`: [`GOLDEN_QUADS`] quads of [`GOLDEN_TILE_PX`]-pixel tiles at depth [`GOLDEN_DEPTH`],
+/// each quad at the first cell of its tries whose tile's CPU twin keeps [`GOLDEN_MARGIN`] from every rounding tie.
+pub fn golden(chart: DecodeChart) -> Result<Scene, String> {
+    let count = GOLDEN_QUADS[0] * GOLDEN_QUADS[1];
+    let cells: Vec<[u64; 2]> = (0..count).map(golden_cell).collect();
+    let mut scene = Scene::new(chart, GOLDEN_QUADS, GOLDEN_TILE_PX, GOLDEN_DEPTH, &cells)?;
+    for q in 0..count {
+        let base = golden_cell(q);
+        let pixels = scene.quad_pixels(q);
+        let mut placed = false;
+        for k in 0..GOLDEN_TRIES {
+            let step = 389 * (k / 2 + k % 2);
+            let cell = if k % 2 == 0 {
+                [base[0] + step, base[1]]
+            } else {
+                [base[0], base[1] + step]
+            };
+            scene.set.place(q, GOLDEN_DEPTH, cell);
+            let colours = pixels
+                .iter()
+                .map(|&(x, y)| scene.expected_at(x, y))
+                .collect::<Result<Vec<_>, _>>()?;
+            if crate::golden_scene::tie_margin(&colours) >= GOLDEN_MARGIN {
+                placed = true;
+                break;
+            }
+        }
+        if !placed {
+            return Err(format!(
+                "{chart:?}: no cell of quad {q}'s {GOLDEN_TRIES} tries keeps {GOLDEN_MARGIN} of an 8-bit step from a \
+                 rounding tie"
+            ));
+        }
+    }
+    Ok(scene)
+}
+
+/// `colours`, linear RGB, quantised as the golden runner's quantise pass does: each channel clamped to `[0, 1]`,
+/// scaled to 0..255 and rounded half to even (`xtask::golden`; REQ-VAL-138).
+pub fn quantise(colours: &[[f64; 3]]) -> Vec<[u8; 3]> {
+    colours
+        .iter()
+        .map(|c| c.map(|v| (v.clamp(0.0, 1.0) * 255.0).round_ties_even() as u8))
+        .collect()
+}
