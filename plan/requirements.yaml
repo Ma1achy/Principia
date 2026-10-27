@@ -6259,7 +6259,7 @@
   - R-59
   - R-73
   milestone: M0
-  note: "R-40 / R-59 D6: payload §7 records the recomputed 144 / 96 B, and the corpus now quotes them (R-73)."
+  note: "R-40 / R-59 D6: payload §7 records the recomputed 144 / 96 B, and the corpus now quotes them (R-73). perf review 5662126729 of PR #293, P6, applied per R-369: R-603's and R-605's two u32s move the quoted widths to 152 / 104 B (payload §1), and the corpus quotes them, each old figure kept as a *was*."
 - id: REQ-PAY-004
   area: PAY
   statement: "The sample_descriptor must pack state in bits 0–2 (0 escape, 1 bounded, 2 collision, 3 running, 4 sim_failed, 5 decode_failed), detail in bits 3–4, saturated in bit 5, dmin_pair in bits 6–7 and last_symbol in bits 8–9, with bits 10–15 reserved, occupying the low 16 bits of packed_a."
