@@ -41,14 +41,26 @@ fn rows() -> Vec<Row> {
     table1(&read("fixtures/anosova/table1.csv")).expect("table1.csv parses")
 }
 
-#[test]
-fn literature_import_tolerance_is_the_register_value() {
+/// The tests' `k` is the register's `literature_import_tol`.
+fn check_tolerance(k: f64) {
     assert_eq!(
         ledger::constants::LITERATURE_IMPORT_TOL.number(),
-        TOL,
+        k,
         "the register's literature_import_tol"
     );
 }
+
+#[test]
+fn literature_import_tolerance_is_the_register_value() {
+    check_tolerance(TOL);
+}
+
+negative_control!(
+    literature_import_tolerance_is_the_register_value,
+    "a tolerance one below the register's is not the register's",
+    expected = "the register's literature_import_tol",
+    check_tolerance(TOL - 1.0)
+);
 
 // ── The fixture ───────────────────────────────────────────────────────────────────────────────────────────────────
 
