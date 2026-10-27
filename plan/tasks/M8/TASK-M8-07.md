@@ -38,7 +38,7 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 
 ## Notes
 - TASK-M6-26 also builds the lock badge and the gold reticle on mock data (applied per R-369, review 5434766412 on PR #157); this task wires them to the real engine's lock and keeps REQ-GUI-099.
-- R-390: TASK-M6-26 builds the compass and lock's re-basing on the mock engine and closes REQ-GUI-091, and TASK-M6-27 builds Time; this task depends on both, wires them to the real engine, re-runs REQ-GUI-091's acceptance there, and keeps REQ-GUI-092, REQ-GUI-099 and REQ-GUI-155.
+- R-390: TASK-M6-26 builds the compass and lock's re-basing on the mock engine and closes REQ-GUI-091, and TASK-M6-27 builds Time; this task depends on both, wires them to the real engine, re-runs REQ-GUI-091's acceptance there, and keeps REQ-GUI-092, REQ-GUI-099 and REQ-GUI-155. (R-627, a correction beside this R-390 note, which stands as its record: REQ-GUI-092 and REQ-GUI-155 are now TASK-M8-90's; this task keeps REQ-GUI-099; applied per R-369, physics approval 5664252864 of R-627's port.)
 - R-409 (10 Oct 2026): the compass has no orbit, has Tilt and Slice buttons beside its switch by the slider touched, and
   in slice mode a drag moves the slice along the plane's normal. TASK-M6-31 builds it on the mock (REQ-GUI-181,
   REQ-GUI-183), and this task reaches it through TASK-M6-27; it wires the slice-mode drag's `SetField` on `z₀` to the
