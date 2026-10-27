@@ -8192,7 +8192,7 @@
 - id: REQ-PAY-110
   area: PAY
   kind: definition
-  statement: "Where a regularised copy's sticky budget_exhausted flag (beside saturated) and its two counters (the separation-floor hits and the entry-cap hits) are stored in the payload must be defined (R-603): sample_descriptor's sixteen bits being all assigned (R-545), their place, widths and saturation written into the payload drill-down's §2 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, budget_word, placed after total_substeps (REQ-PAY-009's recheck in payload §1: with REQ-PAY-111's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B)."
+  statement: "Where a regularised copy's sticky budget_exhausted flag and its two counters (the separation-floor hits and the entry-cap hits) are stored in the payload must be defined (R-603): sample_descriptor's sixteen bits being all assigned (R-545), their place, widths and saturation written into the payload drill-down's §2 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, budget_word, placed after total_substeps (REQ-PAY-009's recheck in payload §1: with REQ-PAY-111's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B)."
   source:
   - file: decisions.md
     section: "R-603 — A regularised copy's budget exhaustion is a sticky flag bit beside `saturated`, its two counted signals counters in a payload word, `saturated` set when either fires; an undetermined-by-budget footprint is never discarded, never treated as resolved and never split, its remedy finer steps as an explicit re-run *(closes RQ-526; a schema change)*"
@@ -8209,7 +8209,7 @@
   - R-72
   - R-603
   milestone: M3
-  note: "R-603 (25 Oct 2026, RQ-526 (a)): a schema change; placement a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\")."
+  note: "R-603 (25 Oct 2026, RQ-526 (a)): a schema change; placement a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\"). code review 5662268789 of PR #293, (2), applied per R-369: \"(beside saturated)\" dropped, since saturated is descriptor bit 5 and the flag sits in budget_word. *Was (statement):* \"…sticky budget_exhausted flag (beside saturated) and…\""
 - id: REQ-PAY-111
   area: PAY
   kind: definition
