@@ -6327,7 +6327,7 @@
   milestone: M0
 - id: REQ-PAY-008
   area: PAY
-  statement: "The stored `SimState` layout must match payload §1's struct exactly — fields, order, types and bit offsets — with `SimStateFTLE` 144 B and `SimStateBase` (no `r_sh`, `p_sh`) 96 B, both 8-byte aligned with no further padding."
+  statement: "The stored `SimState` layout must match payload §1's struct exactly — fields, order, types and bit offsets — with `SimStateFTLE` 152 B and `SimStateBase` (no `r_sh`, `p_sh`) 104 B once TASK-M3-41 adds REQ-PAY-110's and REQ-PAY-111's two u32s (144 B and 96 B before), both 8-byte aligned with no further padding."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 1. `SimState` — the hot struct
@@ -6339,13 +6339,15 @@
     section: "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
   verify:
     method: unit test
-    detail: "assert size_of/align_of of both generated Rust variants (144/8, 96/8) and every field offset against the §1 table"
+    detail: "assert size_of/align_of of both generated Rust variants (152/8, 104/8 from TASK-M3-41 on; 144/8, 96/8 before) and every field offset against the §1 table"
   rulings:
   - R-40
   - R-59
   - R-73
+  - R-603
+  - R-605
   milestone: M0
-  note: "R-59 D6 / R-40 retire the 136/88 B widths; the corpus now quotes 144 / 96 B (R-73)."
+  note: "R-59 D6 / R-40 retire the 136/88 B widths; the corpus now quotes 144 / 96 B (R-73). perf review 5661999637 of PR #293, P1, applied per R-369: TASK-M3-41 moves the widths to 152 / 104 B and its asserts with them (*was:* \"with `SimStateFTLE` 144 B and `SimStateBase` (no `r_sh`, `p_sh`) 96 B, both\" and \"(144/8, 96/8)\")."
 - id: REQ-PAY-009
   area: PAY
   statement: "The closure fields must be present unconditionally in both stored variants (not tier-gated), `closure_min` must be f32 (not f16), and neither the u16 `_reserved` nor any new SimState member may be spent or added without re-checking the alignment argument, per precision row; R-397 spends `_reserved` in place on θ̃'s frozen pole reference, so at f32 `SimStateFTLE` stays 144 B and `SimStateBase` 96 B, exactly packed, and any new member costs 8 B there, while the f64 and DoubleF64 layouts keep their declared 4 B `_tail`, which takes a new u32 at no cost, a new Real costing 8 B at f64 and 16 B at DoubleF64."
@@ -6362,6 +6364,7 @@
   rulings:
   - R-397
   milestone: M0
+  note: "perf review 5661999637 of PR #293, P1: the recheck on R-603's and R-605's two u32s (REQ-PAY-110, REQ-PAY-111) is in payload §1, +8 B per copy at every row (f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B); each row's tail is as before, empty at f32 and one u32 at f64 and DoubleF64."
 - id: REQ-PAY-010
   area: PAY
   statement: "Phase state, shadow, the accumulators `S`, `theta`, `mean_y`, `C_ty` and the drift references `E_0`, `Lz_0` must be stored as f32, and bf16 must not be used anywhere in the payload."
@@ -8189,7 +8192,7 @@
 - id: REQ-PAY-110
   area: PAY
   kind: definition
-  statement: "Where a regularised copy's sticky budget_exhausted flag (beside saturated) and its two counters (the separation-floor hits and the entry-cap hits) are stored in the payload must be defined (R-603): sample_descriptor's sixteen bits being all assigned (R-545), their place, widths and saturation written into the payload drill-down's §2 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72)."
+  statement: "Where a regularised copy's sticky budget_exhausted flag (beside saturated) and its two counters (the separation-floor hits and the entry-cap hits) are stored in the payload must be defined (R-603): sample_descriptor's sixteen bits being all assigned (R-545), their place, widths and saturation written into the payload drill-down's §2 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, budget_word, placed after total_substeps (REQ-PAY-009's recheck in payload §1: with REQ-PAY-111's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B)."
   source:
   - file: decisions.md
     section: "R-603 — A regularised copy's budget exhaustion is a sticky flag bit beside `saturated`, its two counted signals counters in a payload word, `saturated` set when either fires; an undetermined-by-budget footprint is never discarded, never treated as resolved and never split, its remedy finer steps as an explicit re-run *(closes RQ-526; a schema change)*"
@@ -8197,18 +8200,20 @@
     section: 2. Bit layouts (the packed u32s)
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: Why closure is here, at this width, unconditionally
   verify:
     method: review checklist
-    detail: "payload §2 states budget_exhausted's place and the two counters' word, their widths and what a counter does at its maximum; the ledger's hash and the schema version change with them; the physics and code reviewers approved"
+    detail: "payload §2 states budget_exhausted's place and the two counters' word, their widths and what a counter does at its maximum; the ledger's hash and the schema version change with them; the physics and code reviewers approved; the flag and both counters fit budget_word's 32 bits, and a wider form carries its own REQ-PAY-009 recheck"
   rulings:
   - R-72
   - R-603
   milestone: M3
-  note: "R-603 (25 Oct 2026, RQ-526 (a)): a schema change; placement a definition, applied per R-369. Closed by TASK-M3-41."
+  note: "R-603 (25 Oct 2026, RQ-526 (a)): a schema change; placement a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\")."
 - id: REQ-PAY-111
   area: PAY
   kind: definition
-  statement: "The payload fields that store a regularised occupant's energy drift latches (final and max) beside the Cartesian ones (R-605) must be defined: their names, widths and place, written into the payload drill-down's §1 and §5 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72)."
+  statement: "The payload fields that store a regularised occupant's energy drift latches (final and max) beside the Cartesian ones (R-605) must be defined: their names, widths and place, written into the payload drill-down's §1 and §5 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, dE_reg (two f16 halves, final and max, as packed_b's Cartesian latches), placed after budget_word (REQ-PAY-009's recheck in payload §1: with REQ-PAY-110's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B)."
   source:
   - file: decisions.md
     section: "R-605 — Both energy drifts are stored: the suspect flags and the drift view read the regularised drift, the Cartesian drift being diagnostic only; an event-stopped run draws as now, its readout saying \"stopped at event\"; the energy-suspect threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate, measured first *(closes RQ-528; a schema change)*"
@@ -8218,14 +8223,16 @@
     section: 5. Derived — computed at read, NOT stored
   - file: docs/contracts/principia_integrator_contract.md
     section: COM projection and invariant monitoring
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: Why closure is here, at this width, unconditionally
   verify:
     method: review checklist
-    detail: "payload §1 and §5 name the regularised drift fields, their widths and place beside the Cartesian ones and which accessor reads which; the ledger's hash and the schema version change with them; the physics and code reviewers approved"
+    detail: "payload §1 and §5 name the regularised drift fields, their widths and place beside the Cartesian ones and which accessor reads which; the ledger's hash and the schema version change with them; the physics and code reviewers approved; both latches fit dE_reg's 32 bits, and a wider form carries its own REQ-PAY-009 recheck"
   rulings:
   - R-72
   - R-605
   milestone: M3
-  note: "R-605 (25 Oct 2026, RQ-528 (b)): a schema change; the layout a definition, applied per R-369. Closed by TASK-M3-41."
+  note: "R-605 (25 Oct 2026, RQ-528 (b)): a schema change; the layout a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\")."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -31838,7 +31845,7 @@
   note: "The depth: REQ-PERF-082 (calibration)."
 - id: REQ-PERF-025
   area: PERF
-  statement: "The memory estimate must be payload_mem = (E+1) × bytes × render_px plus reduction_mem = size_of(QuadReduction) × quads, one per quad at every N over the leaves render_px / N² and their ancestors (R-422), plus render_targets = k_d × display_px × 4 + k_r × render_px × 4 (k_d ≈ 3, k_r ≈ 3) plus fixed, using the payload's current SimState widths (144 B FTLE-on / 96 B FTLE-off), and reproduce memory_tiers §4's recomputed table, recomputed with the reduction term."
+  statement: "The memory estimate must be payload_mem = (E+1) × bytes × render_px plus reduction_mem = size_of(QuadReduction) × quads, one per quad at every N over the leaves render_px / N² and their ancestors (R-422), plus render_targets = k_d × display_px × 4 + k_r × render_px × 4 (k_d ≈ 3, k_r ≈ 3) plus fixed, using the payload's current SimState widths (152 B FTLE-on / 104 B FTLE-off, with REQ-PAY-110's and REQ-PAY-111's two u32s), and reproduce memory_tiers §4's recomputed table, recomputed with the reduction term."
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 3. Memory model — payload + render targets
@@ -31858,14 +31865,17 @@
     section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
   verify:
     method: unit test
-    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B with the reduction term; the term is counted at every N, Custom's included, and a control omitting it differs at small N (R-422); §4's totals are recomputed with it; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137)"
+    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 152/104 B with the reduction term; the term is counted at every N, Custom's included, and a control omitting it differs at small N (R-422); §4's totals are recomputed with it; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137)"
   rulings:
   - R-40
   - R-59
   - R-73
   - R-137
   - R-422
+  - R-603
+  - R-605
   milestone: M5
+  note: "perf review 5661999637 of PR #293, P1, applied per R-369: memory_tiers §4 recomputed at 152 / 104 B (*was:* \"using the payload's current SimState widths (144 B FTLE-on / 96 B FTLE-off)\" and \"equals the formula at 144/96 B\")."
 - id: REQ-PERF-026
   area: PERF
   statement: "Named tiers must populate render_scale, E, FTLE and word per the §4 table (Potato 0.25×/E 0/no FTLE/no word; Low 0.5×/0/no FTLE/word on; Medium 0.75×/1/FTLE; High 1.0×/3/FTLE; Ultra 1.0×/7/FTLE; Extreme 1.0×/15/FTLE), with N and depth indicative, and the Ultra and Extreme rows provisional until REQ-PERF-086's calibration lands (R-137)."

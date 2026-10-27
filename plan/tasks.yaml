@@ -1153,9 +1153,9 @@
   milestone: M3
   title: "The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies' reading (R-563, R-564, R-566)"
   depends_on: [TASK-M3-40]
-  needs: []
+  needs: [REQ-PAY-008, REQ-PAY-009]
   requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219]  # R-603 to R-605 (25 Oct 2026)
-  reviewers: [code, qa, physics, gui]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1)
+  reviewers: [code, qa, physics, gui, perf]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1); perf: the SimState widths (perf review 5661999637 of PR #293, P1)
   pitfalls: [PIT-3]
 - id: TASK-M4-01
   milestone: M4
@@ -1400,8 +1400,8 @@
 - id: TASK-M5-10
   milestone: M5
   title: "Memory estimator: payload, word buffer and render targets"
-  depends_on: [TASK-M5-02, TASK-M4-11]
-  needs: [REQ-PAY-003, REQ-PAY-008, REQ-PERF-005, REQ-PERF-008]
+  depends_on: [TASK-M5-02, TASK-M4-11, TASK-M3-41]  # TASK-M3-41: the 152 / 104 B widths (perf review 5661999637 of PR #293, P1)
+  needs: [REQ-PAY-003, REQ-PAY-008, REQ-PERF-005, REQ-PERF-008, REQ-PAY-110, REQ-PAY-111]
   requirements: [REQ-PERF-015, REQ-PERF-018, REQ-PERF-025, REQ-PERF-031, REQ-PERF-093]
   reviewers: [code, qa, perf]
   pitfalls: []

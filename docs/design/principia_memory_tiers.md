@@ -25,7 +25,7 @@
 
 *Grounded memory estimates and the six named quality tiers the auto-quality controller ladders between. This supersedes an earlier version that mistakenly keyed quality on viewport resolution and included per-quad pixel interpolation — both removed (see the taxonomy and the "no fabricated detail" rule below).*
 
-*Memory model verified against the payload spec: **payload = `bytes × (E+1) × render_px`** (the shadow is inside `SimState`, so `(E+1)`, not `2(E+1)` — that's the compute/trajectory count). Hot `SimState` = **144 B** (FTLE-on) / **96 B** (FTLE-off) (recomputed, R-40 / D6); word = **16 B × (E+1) × render_px** (symbolic features on). **The §4 totals add the render-target term** (the rasterised image buffers: ~3 full RGBA at **display** resolution — the swap chain / final composite are necessarily display-sized — plus ~3 at **render** resolution for backdrop/intermediates); they still exclude bake texture, staging, and driver/browser/OS overhead. `render_px = display_px × render_scale²` — see §2's two-resolution model (sample density is not a separate knob — the screen floor pins one sample per render pixel).*
+*Memory model verified against the payload spec: **payload = `bytes × (E+1) × render_px`** (the shadow is inside `SimState`, so `(E+1)`, not `2(E+1)` — that's the compute/trajectory count). Hot `SimState` = **152 B** (FTLE-on) / **104 B** (FTLE-off) (recomputed, R-40 / D6, then with R-603's and R-605's two u32s, perf review 5661999637 of PR #293, P1; *was* 144 / 96 B); word = **16 B × (E+1) × render_px** (symbolic features on). **The §4 totals add the render-target term** (the rasterised image buffers: ~3 full RGBA at **display** resolution — the swap chain / final composite are necessarily display-sized — plus ~3 at **render** resolution for backdrop/intermediates); they still exclude bake texture, staging, and driver/browser/OS overhead. `render_px = display_px × render_scale²` — see §2's two-resolution model (sample density is not a separate knob — the screen floor pins one sample per render pixel).*
 
 ---
 
@@ -91,7 +91,7 @@ total          ≈ payload_mem + reduction_mem + render_targets + fixed   (fixed
 
 > **Why the split matters:** the swap chain / final composite are *necessarily display-sized* (that's what is presented), so they do **not** shrink with `render_scale` — only the render-res intermediates do. An all-at-render-resolution model undercounts targets exactly where the term matters (low `render_scale` on big displays). Corrected here; only the sub-native tiers' totals move.
 
-- **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 144/96, `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).
+- **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 152/104 (*was* 144/96, before R-603's and R-605's two u32s, payload §1), `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).
 - **`reduction_mem`** (R-422) — one `QuadReduction` per quad, at every `N`, Custom's included: its size is dd_generation_root
   §3.7's, which TASK-M5-01 measures (R-410), and `quads` counts the leaves (`render_px / N²`) and their ancestors (at
   most 4/3 of the leaves in a full quadtree). It falls as `1/N²` per render pixel, so at a small Custom `N` it is of the
@@ -101,7 +101,7 @@ total          ≈ payload_mem + reduction_mem + render_targets + fixed   (fixed
 - **`render_scale` is the quadratic lever** — it changes `render_px`, so it cuts payload, render targets, *and* per-frame compute **all at once**. The single most effective performance knob (this is why games lean on dynamic resolution).
 
 
-**Render targets dominate at the low end.** At Potato@4K, render targets (0.11 GB — mostly the display-sized swap chain, which `render_scale` cannot shrink) are **~68%** of the 0.16 GB total — the image buffers *exceed* the payload. At Extreme@4K they're ~1% (rounding error under 21 GB). So the render-target term matters *exactly* where the payload is smallest: weak devices on big displays, the memory-constrained case the low tiers serve. This is why it can't be dropped from the model — and why the display-vs-render split above can't be either.
+**Render targets dominate at the low end.** At Potato@4K, render targets (0.11 GB — mostly the display-sized swap chain, which `render_scale` cannot shrink) are **~68%** of the 0.16 GB total — the image buffers *exceed* the payload. At Extreme@4K they're ~1% (rounding error under 22.5 GB; *was* "under 21 GB" at 144 / 96 B). So the render-target term matters *exactly* where the payload is smallest: weak devices on big displays, the memory-constrained case the low tiers serve. This is why it can't be dropped from the model — and why the display-vs-render split above can't be either.
 
 ---
 
@@ -176,15 +176,17 @@ being right.
 | Tier | 1080p display | 1440p display | 4K display |
 |---|---|---|---|
 | Potato | 0.04 | 0.07 | 0.16 |
-| Low | 0.09 | 0.16 | 0.36 |
-| Medium | 0.41 | 0.73 | 1.65 |
-| **High** | **1.38** | 2.45 | 5.51 |
-| Ultra *(provisional)* | 2.70 | 4.81 | 10.82 |
-| Extreme *(provisional)* | 5.36 | 9.53 | **21.43** |
+| Low | 0.09 | 0.17 | 0.37 |
+| Medium | 0.43 | 0.77 | 1.72 |
+| **High** | **1.44** | 2.57 | 5.77 |
+| Ultra *(provisional)* | 2.84 | 5.04 | 11.35 |
+| Extreme *(provisional)* | 5.62 | 10.00 | **22.49** |
 
-*(Figures include the render-target term (3 display-res + 3 render-res buffers), at the 144 / 96 B widths plus the 16 B word where the tier has it (R-40 / D6). Split at 4K: Potato 0.05 payload + 0.11 targets — the display-sized buffers dominate the low tiers; High 5.31 + 0.20; Extreme 21.23 + 0.20.)*
+*(Figures include the render-target term (3 display-res + 3 render-res buffers), at the 152 / 104 B widths plus the 16 B word where the tier has it (R-40 / D6; R-603 and R-605 add 8 B, payload §1). Split at 4K: Potato 0.05 payload + 0.11 targets — the display-sized buffers dominate the low tiers; High 5.57 + 0.20; Extreme 22.30 + 0.20.)*
 
-**Reading it:** *High @ 1080p ≈ 1.4 GB* is the sweet spot. *Extreme @ 4K ≈ 21 GB* (provisional, R-137) is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
+*Was, at the 144 / 96 B widths (perf review 5661999637 of PR #293, P1, applied per R-369): Potato 0.04 / 0.07 / 0.16; Low 0.09 / 0.16 / 0.36; Medium 0.41 / 0.73 / 1.65; High 1.38 / 2.45 / 5.51; Ultra 2.70 / 4.81 / 10.82; Extreme 5.36 / 9.53 / 21.43; split at 4K High 5.31 + 0.20, Extreme 21.23 + 0.20. Potato's row has no word and no FTLE and is unchanged at two decimals. The totals still predate the reduction term, which TASK-M5-10 adds (§3).*
+
+**Reading it:** *High @ 1080p ≈ 1.4 GB* is the sweet spot. *Extreme @ 4K ≈ 22.5 GB* (provisional, R-137; *was* ≈ 21 GB at 144 / 96 B) is the deliberate "melts current top-end" corner (fits a 24 GB 4090 at 4K; a later card runs it easily — the rung's already there). The low tiers are cheap because `render_scale < 1` shrinks *both* payload and render targets — Potato@1080p renders at 480×270 and lands at 0.04 GB (most of it the display-sized swap chain), genuinely a "does your potato run it" fallback. Every tier's render pixels are still real, sharp samples at the screen floor; the low tiers just render fewer of them and upscale.
 
 ---
 

@@ -3,8 +3,8 @@
 - **Milestone:** M3
 - **Closes:** REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219
 - **Depends on:** TASK-M3-40
-- **Needs (earlier milestones):** none
-- **Reviewers:** code, qa, physics, gui
+- **Needs (earlier milestones):** REQ-PAY-008, REQ-PAY-009
+- **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** PIT-3
 - **Size:** ~400 lines, the tests included
 
@@ -39,6 +39,7 @@ Under a regularised occupant the integration floor is a step budget, not a subst
 - `cargo xtask gate step-budget --propose`'s `N_min` (REQ-INT-108) and `cargo xtask gate suspect-default-occupant --propose`, the recalibrated energy-suspect threshold (REQ-INT-109).
 - *Was:* "`crates/kernel/src/regularisation/budget.rs` — the rate budget, accounted as RQ-527 rules; the exhaustion outcome and the two counters, stored as RQ-526 rules." and "The suspect predicate's energy under a regularised occupant, and the diagnostics' event filter, placed as RQ-528 rules." (R-603 to R-605)
 - `cargo xtask gate step-budget --propose` — per-copy step rates on the budget's worst targets and the control at `t = 13` and `t = 50`.
+- The `SimState` ledger, generated structs and layout table at payload §1's widths with REQ-PAY-110's `budget_word` and REQ-PAY-111's `dE_reg`, one u32 each after `total_substeps`: f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B (REQ-PAY-008, REQ-PAY-009's recheck), and the memory estimator's widths with them where it exists (REQ-PERF-025) (perf review 5661999637 of PR #293, P1).
 
 ## Acceptance tests
 - `cargo test -p kernel budget_undetermined` — REQ-INT-101's verify (REQ-INT-101).
@@ -50,9 +51,12 @@ Under a regularised occupant the integration floor is a step budget, not a subst
 - `cargo xtask gate suspect-default-occupant --propose` — REQ-INT-109's verify: the energy-suspect threshold recalibrated on REQ-INT-106's measured regularised drift, with which predicates light at it; at that value, what Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light on dd tests 2 and 7 at each precision, and whether REQ-INT-085's and REQ-VAL-031's pass conditions (Euler lighting `SUSPECT_ENERGY` on test 2) still hold, the value replacing REQ-INT-085's one threshold; the human confirms it at the M3 gate (REQ-INT-109; physics review 5644374613 of PR #293, F2).
 - `cargo test -p render drift_view_regularised` — REQ-TOOL-219's verify, the render arm: the drift view's input bitwise the regularised latch, and the event-stopped pixel carrying its stopped-at-event status for the readout (controls: a view fed the Cartesian drift receives a different input and fails, and the status dropped fails) (REQ-TOOL-219; qa review 5644700214 of PR #293, N3; *was:* "(control: the status dropped fails)").
 - `cargo test -p gui drift_readout_stopped_at_event` — REQ-TOOL-219's verify, the gui arm: the event-stopped pixel's hover readout in the energy-drift view reads "stopped at event" (control: a readout without the words fails) (REQ-TOOL-219; qa review 5644656634 of PR #293, Q1, applied per R-369: the readout is the gui crate's, so gui joins the reviewers). *Was:* "— REQ-TOOL-219's verify (REQ-TOOL-219)."
+- `cargo test -p kernel payload_layout` — REQ-PAY-008's verify at the new widths: size_of/align_of 152/8 and 104/8 and every field offset against payload §1, and the f64 and DoubleF64 rows' 280 / 184 B and 528 / 336 B (control: the 144 / 96 B layout without the two words fails) (REQ-PAY-008; perf review 5661999637 of PR #293, P1).
+- Review checklist (perf) — payload §1's recheck at every precision row for the two words, +8 B per copy, each word within one u32 (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1).
 - Review checklist (physics and code) — payload §2 places `budget_exhausted` and the two counters (REQ-PAY-110), and payload §1 and §5 the regularised drift fields (REQ-PAY-111), each with the ledger's hash and the schema version changed; approved before merge.
 
 ## Notes
+- The layout change moves `SimState` from 144 / 96 B to 152 / 104 B at f32. Existing tests that assert the old sizes or offsets change with it: the implementer's own (`crates/kernel/tests/payload_layout.rs`, `crates/ledger/tests/payload_ledger.rs`), and qa's (`crates/kernel/tests/qa_TASK-M0-09.rs`, `qa_TASK-M0-13.rs`, `qa_TASK-M0-14.rs`, `qa_TASK-M1-02.rs`, `qa_TASK-M3-15.rs`; `crates/ledger/tests/qa_TASK-M1-02.rs`, `qa_TASK-M0-13.rs`), which qa changes in its own commit, an exception R-603's and R-605's schema changes force (R-290, R-369), listed in the PR with each `M` line's reason; the implementer never edits them (perf review 5661999637 of PR #293, P1, applied per R-369; perf joins the reviewers for the widths).
 - R-603, R-604 and R-605 (25 Oct 2026) rule RQ-526, RQ-527 and RQ-528; nothing waits. *Was:* "Waits on RQ-526 (how exhaustion and the counts are stored and drive the floor), RQ-527 (how the rate is accounted) and RQ-528 (where the regularised drift is stored and how an event-stopped run is drawn). Nothing here is built before they are ruled."
 - Definitions written here (R-72; physics and code reviewers approve before merge): REQ-PAY-110, REQ-PAY-111 (schema changes, the version following from the ledger's hash, R-36). Calibrations proposed here: REQ-INT-108, REQ-INT-109 (after REQ-INT-106's measurement).
 - R-563, R-564, R-566 (21 Oct 2026). The evidence is prin-rs's `budget_horizon_probe` and `results/step_budget/` (PR #34; `docs/incoming/2026-10-21_gap_sweep_integrator/`, a record). `error_ratio` is blind to a truncated run, so the budget's outcome is read directly, never from drift.

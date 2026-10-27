@@ -218,8 +218,8 @@ of the generated WGSL struct. The bins are 128 B of it; §3.7's former u8 bins w
 tier's `N`, at the largest display, 4K's 3840 × 2160, plus their ancestors, about a third more), at memory_tiers §4's
 indicative `N` (8 for Potato and Low, 16 above), a tier holds at most 43 200 quads, 7.6 MB of reductions (Low and
 High, and Ultra and Extreme, whose rows are provisional, R-137; Potato 10 800 quads, 1.9 MB; Medium 24 300, 4.3 MB),
-against the 0.16–5.51 GB Potato's to High's totals give at 4K and the provisional 10.82 and 21.43 GB of Ultra and
-Extreme. The count follows each tier's `N`, which REQ-PERF-011 settles for WebGPU: at `N = 8` on every tier it is
+against the 0.16–5.77 GB Potato's to High's totals give at 4K and the provisional 11.35 and 22.49 GB of Ultra and
+Extreme (*was* 0.16–5.51, 10.82 and 21.43 GB at 144 / 96 B, before R-603's and R-605's two u32s; perf review 5661999637 of PR #293, P1). The count follows each tier's `N`, which REQ-PERF-011 settles for WebGPU: at `N = 8` on every tier it is
 97 200 quads, 17.1 MB for Medium and 172 800 quads, 30.4 MB for High, Ultra and Extreme, under 1.1 % of each of those
 four tiers' 4K totals. Potato and Low are at `N = 8` already, at 1.2 % and 2.1 % of theirs. The real constraint is **categorical, not numerical** —
 *reduce before evaporate*: fixed-size scalars only, never a history.
