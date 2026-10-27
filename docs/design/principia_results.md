@@ -144,8 +144,9 @@ said* "`ViewUI` gains the Result window and a result mode" (§4).
 
 ### 3.5 Compare
 
-**Where it lives** (gui review G5; applied per R-369): the header strip holds badges only (R-523) and nothing sits on
-the figure (§G1), so Compare is a section of the **Result window**, which, while a result view is open, shows that
+**Where it lives** (gui review G5; applied per R-369): the header strip holds the badges and, at its right end, R-621's
+horizon item, and nothing else (render_gui_spec §G2; *was:* "the header strip holds badges only (R-523)", gui review
+5661892857 of PR #293, H1), and nothing sits on the figure (§G1), so Compare is a section of the **Result window**, which, while a result view is open, shows that
 result's record. The section holds **Compare with live** (a toggle that flips the figure between the result and the
 live view, its label on the toggle) and **Make the f32 twin**; once the twin has run, the per-pixel difference map
 shows in the same section as an image at the grid's size, with its counts and the distribution of the differences
