@@ -478,7 +478,10 @@ until the current view's measurement has a value it reads "T 50 · f32 trust: me
 badge, since it states the horizon rather than what the figure is, so R-523's badge rule does not place it, but like
 the badges it is chrome in the strip and never draws over the shown rect. It hides with the strip (F3, present
 mode); it stays under View › Debug view, which shows the same view's systems; during a preview or a reel's play it
-hides, as the decoder badge does (§G9a), since the frames shown are not the current view.
+hides, as the decoder badge does (§G9a), since the frames shown are not the current view. It shows only over the
+live atlas figure, whose pixels are the f32 run it measures: in a result view (§G5 "Result…", f64, whose own badge
+already states its "T 50") and on the result side of Compare with live it hides (`principia_results.md` §3.4, §3.5;
+applied per R-369, gui review 5661892857 of PR #293, H2).
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample

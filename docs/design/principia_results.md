@@ -119,7 +119,9 @@ orbit kept in a live view stops counting as an atlas pixel once a result is open
 R1, applied per R-369). Stain edits stay live and undoable
 (R-69); sim-key edits are disabled, with the reason; *Explore from here* leaves for a live view with the same
 `SimConfig`. Zoom shows square pixels, one per grid cell, and the scrubber snaps to the stored times. A live view has
-no such badge.
+no such badge. R-621's horizon item (render_gui_spec §G2) hides in a result view: it states the f32 trust time of the
+live atlas, whose pixels are the f32 run it measures, and the result's badge already gives its own `T` (applied per
+R-369, gui review 5661892857 of PR #293, H2).
 
 **Zoom and pan in a result view** (gui review 5627122883 of PR #283, G1; applied per R-369) are display magnification
 of the stored result pixels, each cell a square: they are not chart construction (render_gui_spec §G1), edit no
@@ -146,11 +148,12 @@ said* "`ViewUI` gains the Result window and a result mode" (§4).
 
 **Where it lives** (gui review G5; applied per R-369): the header strip holds the badges and, at its right end, R-621's
 horizon item, and nothing else (render_gui_spec §G2; *was:* "the header strip holds badges only (R-523)", gui review
-5661892857 of PR #293, H1), and nothing sits on the figure (§G1), so Compare is a section of the **Result window**, which, while a result view is open, shows that
-result's record. The section holds **Compare with live** (a toggle that flips the figure between the result and the
-live view, its label on the toggle) and **Make the f32 twin**; once the twin has run, the per-pixel difference map
-shows in the same section as an image at the grid's size, with its counts and the distribution of the differences
-beside it.
+5661892857 of PR #293, H1), and nothing sits on the figure (§G1), so Compare is a section of the **Result window**,
+which, while a result view is open, shows that result's record. The section holds **Compare with live** (a toggle that
+flips the figure between the result and the live view, its label on the toggle; the horizon item shows on the live side
+only, render_gui_spec §G2, gui review 5661892857 of PR #293, H2) and **Make the f32 twin**; once the twin has run, the
+per-pixel difference map shows in the same section as an image at the grid's size, with its counts and the distribution
+of the differences beside it.
 
 A **flip** against the live view, labelled "visual only: different sampling", since the live view is adaptive. The
 measured comparison is **Make the f32 twin**: the same job at f32, then a per-pixel difference map with its counts and
