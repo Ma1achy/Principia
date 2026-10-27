@@ -484,8 +484,10 @@ decoder badge does (§G9a), since the frames shown are not the current view. It 
 whose pixels are the f32 run it measures: in a result view (§G5 "Result…", f64, whose own badge already states its "T
 50") and on the result side of Compare with live it hides (`principia_results.md` §3.4, §3.5; applied per R-369, gui
 review 5661892857 of PR #293, H2). **When the strip is short of room** (applied per R-369, gui review 5661892857 of PR
-#293, H3), the badges keep priority, since they say what the figure is, and the item elides first: it drops "· measured
-for this view", then "· f32 trusted to t …", leaving "T 50", and if even that does not fit it hides. It never overlaps a
+#293, H3), the badges keep priority, since they say what the figure is, and the item elides first, by one rule for all
+three forms: it first drops a trailing "· measured for this view", then everything after "T 50", and if even "T 50" does
+not fit it hides; it is never clipped mid-clause (gui review 5661938984 of PR #293, J1; *was:* "it drops "· measured for
+this view", then "· f32 trusted to t …", leaving "T 50", and if even that does not fit it hides"). It never overlaps a
 badge, a fallback note or "Picture missing…".
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
