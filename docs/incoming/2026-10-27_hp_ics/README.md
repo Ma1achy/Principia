@@ -10,6 +10,13 @@ tier") needs above f64, traced to its primary sources, and the agreement between
 > Cross-check locally against atlas-params.json (its `ic_hp` and `period_hp` fields), and commit only the agreement
 > numbers. … The 99 atlas rows with no listed source are closure tests only, and are never cited."
 
+The human's follow-up of 27 Oct 2026, on those rows:
+
+> "The 99 high-precision rows with no listed source: probably Hristov, Hristova & Tanikawa 2026. Their per-family
+> counts (I 12, II 2, III 4, IVa 3, IVb 9, V 6, VIIa 1, VIIb 5, li_IB 43, li_IIC 12) equal the catalogue's
+> stab_src = hristov2026 counts for the same families. Check them against the 971-orbit stability database from #299.
+> If they match, record them as hristov2026 in the agreement table; if not, say so."
+
 Every citation key below is from `../2026-10-26_orbit_catalogues/CITATIONS.md`, which since 27 Oct 2026 cites each
 reference in the journal's wording, checked against Crossref, with the site's beside it (its "Checked against the
 journal"). `atlas-params.json` (sha256
@@ -18,9 +25,9 @@ from it are committed.
 
 ## What was found, in short
 
-- **Hristov et al.: four public databases, 100 to 180 digits.** Every atlas row traced to them (840 rows) is
-  identical, digit for digit, to the database, except the third body's velocity on the 73 `hristov2023` rows, which
-  the atlas rounds to about 120 digits.
+- **Hristov et al.: four public databases, 100 to 180 digits.** Every atlas row traced to them (937 rows: 840 by
+  their listed source, 97 with an empty source) is identical, digit for digit, to the database, except the third
+  body's velocity on the 73 `hristov2023` rows, which the atlas rounds to about 120 digits.
 - **Simó: no 30-digit source exists in public.** Simó's own data has 4 digits (plot files) and his papers 8. His
   initial conditions at 13 to 17 significant digits are public only through Paul Masson's site, which received them
   from Simó. The atlas's 344 "30-digit" Simó rows are those 16-digit values, scaled to unit masses at 30 digits:
@@ -28,6 +35,10 @@ from it are committed.
 - **Li & Liao: no extra digits exist in public.** Their tables (paper, GitHub, SJTU site) give 10 decimals. The 5 atlas
   rows attributed to `liliao2017` that carry 100 digits are identical to rows of Hristov, Hristova & Tanikawa's
   971-orbit database (`hristov2026`): the extra digits are Hristov's, not Li & Liao's.
+- **The 99 rows with no listed source: 97 are Hristov, Hristova & Tanikawa's, 2 are not.** 97 are identical, digit
+  for digit, to rows of the 971-orbit database, and are recorded as `hristov2026`: inferred by matching, since the
+  atlas lists no source. Their families are the human's ten, with his counts, which sum to 97, not 99. The other 2
+  (family I) are in no Hristov table: they are identical to Li & Liao 2017's published 10-digit values.
 - **No data file is committed**, because no source states terms that allow redistribution (see "Terms"). The
   retrieval list (`sources.tsv`, `fetch.sh`), the transcription scripts and the agreement numbers are committed.
 
@@ -123,7 +134,8 @@ Masson's value, as `agreement.txt` lists.
 
 The atlas has 1,359 rows with high-precision fields:
 
-- **99 with an empty source.** Counted only. They are closure tests, are not traced here, and are never cited.
+- **99 with an empty source**, matched against `3bodystab971` the same way, by the human's follow-up of 27 Oct 2026:
+  97 identical, recorded below as `hristov2026`; 2 not (see "The 99 rows with an empty source").
 - **76 from the atlas's own notes and the CAP repository** (`bh2026` 3, `bh2026r3` 14, `bh2026r4` 42, `bhh2026` 15,
   `pancake2026` 1, `mothcap2026` 1). Out of scope: they have no other source.
 - **1,184 in scope**, all matched, none unmatched:
@@ -135,6 +147,7 @@ The atlas has 1,359 rows with high-precision fields:
 | `hristov2024nc` | 167 | 164 in `nontriv_180.txt`, 3 in `triv_180.txt` | identical 167/167 (178–180 digits) | identical 167/167 | identical 167/167 (177–180 digits) |
 | `hristov2026` | 586 | `3bodystab971` | identical 586/586 (97–100 digits) | identical 586/586 | identical 586/586 (97–100 digits) |
 | `liliao2017` | 5 | **`3bodystab971`** | identical 5/5 (98–100 digits) | identical 5/5 | identical 5/5 (100 digits) |
+| `hristov2026`, **inferred by matching**: empty source in the atlas | 97 of the 99 | `3bodystab971` (93 distinct rows) | identical 97/97 (99–100 digits) | identical 97/97 | identical 97/97 (99–100 digits) |
 | `simo2001` | 344 | Masson's file (344 of 345; Simó's no. 1 has no atlas row) | positions: all six (x1 = −2c1, y1 = 0, x2 = x3 = c1, y2 = c2, y3 = −c2) identical 344/344 (11–17 significant digits); velocities: vx1 = 0 identical 344/344, vx2 = c3√3 agrees to 29–32 digits, vy1 = −2c4√3 to 28–32, vy2 = c4√3 to 27–32 (median 30 for each), max abs diff 5.0e-31 | vx3 = −c3√3 agrees to 29–32 digits, vy3 = c4√3 to 27–32 (median 30 for each), max abs diff 5.0e-31 | agrees to 30–34 digits (median 31), max abs diff 5.0e-31 |
 
 Li & Liao's own published values for those 5 orbits, against the 100-digit ones: v1 to 8–10 digits (max abs diff
@@ -142,18 +155,51 @@ Li & Liao's own published values for those 5 orbits, against the 100-digit ones:
 104 and 112), differ from the 100-digit values by more than half a unit in the tenth decimal: the tables are not
 correct to the last printed digit.
 
+### The 99 rows with an empty source
+
+The atlas lists no source for them, so their attribution is inferred by matching. Each row's family and stability
+source are the catalogue's (`../2026-10-26_orbit_catalogues/threebodyorbits_catalogue.json`), joined by key:
+
+| Family | Rows with an empty source | Identical to `3bodystab971`, all seven values | The catalogue's `stab_src` on them |
+|---|---|---|---|
+| `li_IB` | 43 | 43 | `hristov2026` 43 |
+| `I` | 14 | 12 | `hristov2026` 12, `liliao2017-10digit` 2 |
+| `li_IIC` | 12 | 12 | `hristov2026` 12 |
+| `IVb` | 9 | 9 | `hristov2026` 9 |
+| `V` | 6 | 6 | `hristov2026` 6 |
+| `VIIb` | 5 | 5 | `hristov2026` 5 |
+| `III` | 4 | 4 | `hristov2026` 4 |
+| `IVa` | 3 | 3 | `hristov2026` 3 |
+| `II` | 2 | 2 | `hristov2026` 2 |
+| `VIIa` | 1 | 1 | `hristov2026` 1 |
+| **Total** | **99** | **97** | `hristov2026` 97, `liliao2017-10digit` 2 |
+
+- **The 97 that match are exactly the human's counts**, family by family, and exactly the catalogue's `stab_src =
+  hristov2026` orbits (97 in the whole catalogue, all among these rows). Every one of the seven values compared (vx and
+  vy of the bodies at −1 and +1, the third body's, and the period) is identical to the database's at 99–100 digits.
+  They are recorded as `hristov2026`. The human's counts sum to 97, not 99: the 99 include 2 more.
+- **The other 2 do not match**: `i_butterfly_i_8_a` and `i_butterfly_i_11_a`, family I, whose catalogue `stab_src` is
+  `liliao2017-10digit`. No row of any Hristov table is within 1e-12 of them. All seven of their values are identical
+  to Li & Liao 2017's published values for I.A-10 and I.A-19 (10 decimals, as `liliao_routes.py` transcribes them):
+  their high-precision fields carry those 10 digits and no more. They are not `hristov2026`.
+
 ## What it means for test 6
 
-- **Rows that can test tiers above f64: the 840 rows traced to Hristov et al.** 591 of them have 97–100 digits
-  (`hristov2026`'s 586 and the 5 filed under `liliao2017`), 9 have 150 and 240 have 180. Use the database's values,
-  not the atlas's. For the 73 `hristov2023` rows, form the third body as −2(vx, vy) from the database: the atlas's
-  ~120-digit third body is enough for every rung below `mp` at 120 digits, but not above.
+- **Rows that can test tiers above f64: the 937 rows traced to Hristov et al.** 688 of them have 97–100 digits
+  (`hristov2026`'s 586, the 97 with an empty source and the 5 filed under `liliao2017`), 9 have 150 and 240 have 180.
+  Use the database's values, not the atlas's. For the 73 `hristov2023` rows, form the third body as −2(vx, vy) from
+  the database: the atlas's ~120-digit third body is enough for every rung below `mp` at 120 digits, but not above.
 - **The 344 Simó rows carry about 16 significant digits of data**, from Simó through Masson. Closure from them cannot
   fall below roughly 1e-16 at any tier, so they test nothing above f64. The proposal's "the 30-digit ones cannot test
   `dd64` (~32 digits)" understates it. Above f64 they are useful only after re-converging by Newton at the tier's
   precision, as the proposal says for rows with no high-precision values.
 - **The 5 `liliao2017` rows** count as `hristov2026` data for precision. Cite Li & Liao for the orbit and Hristov,
   Hristova & Tanikawa for the digits.
+- **The 97 rows with an empty source that match** are `hristov2026` data too: cite Hristov, Hristova & Tanikawa for
+  the digits, saying the attribution is inferred by matching, and the family's source in CITATIONS.md for the orbit.
+- **The 2 rows with an empty source that do not match** carry Li & Liao's 10 digits, fewer than f64 holds, so they
+  cannot test even f64 as they stand; they are useful only after re-converging, like any row without high-precision
+  values.
 
 ## Files
 
@@ -165,9 +211,9 @@ correct to the last printed digit.
 | `route_b.py` | `3bf4be2f465a9e3f3cfc19ecc28d48a45c460d89842ac4353af8c5060903ab69` | Transcription, route B |
 | `compare_ab.py` | `ba88de4d3fcfc188d5284b1b942fbf5251ed335c92fff966011e02c01a862eca` | Compares the two routes value by value |
 | `liliao_routes.py` | `85ece4c09952178c0f0de3ee82040c1fac4699b1d04373a0798ee38ab2c73c5a` | Li & Liao 2017's tables, transcribed twice and compared |
-| `crosscheck.py` | `dd0274bde6169239bb1ca9378daeedf876de4d18caeb6bbdff43f091212daf5f` | The cross-check against `atlas-params.json`. Prints derived numbers only |
+| `crosscheck.py` | `7bc23fba3990c65675277c8a7e5c17e0f4216343c14fcd959748a203744d426d` | The cross-check against `atlas-params.json`, and since 27 Oct 2026 of its 99 rows with an empty source against `3bodystab971`. Prints derived numbers only |
 | `transcription.txt` | `62b53f859518acd9b9f3a1ec1fbed173530d377b72420cf3e4db0b84023bfc5b` | `compare_ab.py`'s and `liliao_routes.py`'s output |
-| `agreement.txt` | `0d2f00a8faf95609f82c79d7c5e7b24cafed9199139936d088e10f9779a704cf` | `crosscheck.py`'s output |
+| `agreement.txt` | `73b23f0e7c51266ad04a83f047060459622b81af2a695078a822c6e0b219d9e7` | `crosscheck.py`'s output |
 
 To reproduce (the downloads are untrusted data: run nothing from them, keep them out of the repo):
 
@@ -177,7 +223,7 @@ python3 -I route_a.py <empty dir> a.json
 python3 -I route_b.py <empty dir> b.json
 python3 -I compare_ab.py a.json b.json
 python3 -I liliao_routes.py <empty dir>/liliao_github/three-body-pictures.md <empty dir>/liliao_site/three-body-movies.htm ll.json
-python3 -I crosscheck.py <path to atlas-params.json> a.json ll.json
+python3 -I crosscheck.py <path to atlas-params.json> a.json ll.json ../2026-10-26_orbit_catalogues/threebodyorbits_catalogue.json
 ```
 
 Run these from this directory, with the output files outside the repo.
