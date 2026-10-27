@@ -8,7 +8,8 @@
 //! - `decode_preset_harness_render`: `Scene::render` against `Scene::expected` on one golden scene. Control: another
 //!   chart's twin.
 //! - `decode_preset_harness_cpu`: the f32 state's `Ic`, the descriptor's and encode's words in their orders, the values'
-//!   order, the tag words, a degenerate tag, the shape sphere's held momenta, and the golden names. Control: a state read with its bodies swapped.
+//!   order, the tag words, a degenerate tag, the shape sphere's held momenta, and the golden names. Control: a state
+//!   read with its bodies swapped.
 
 use render::bind::ViewOutput;
 use render::presets::DecodeChart;
