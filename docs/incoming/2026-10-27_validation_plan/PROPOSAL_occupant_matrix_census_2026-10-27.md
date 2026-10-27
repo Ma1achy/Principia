@@ -100,7 +100,7 @@ reproduces the main structures.
 | regularisation | none, AZ, Heggie, logH (TTL) | — |
 | `dtau` mode | `PerStepInterval`, `FixedPerInterval`; `PerStepRemaining` as a named control only | — |
 | landing | `clamp_final_step` on/off; `land_iterate` | — |
-| step limit | `None`, `Predictive(f)` over an `f` ladder, `Global(f)`; `AbGrowth` as a control | — |
+| step limit | `None`, `Predictive` over a ladder of its `f` (`step_limit_f`), `Global` (`f` scales `eta`); `AbGrowth` as a control | — |
 | `eta` | a six-rung ladder per stepper | — |
 | build | §6 | — |
 
@@ -124,10 +124,10 @@ error does not track its tolerance is the finding). Cost comparisons stay at mat
 **Divergence.** Each cell records a **divergence horizon**: the time at which this cell's trajectory and a reference
 separate past a threshold δ in shape-sphere chord. Three references, each its own reading:
 
-- the same cell one `eta` rung finer (resolution horizon; PL-7's per-tier horizon is this at fixed occupant);
+- the same cell one `eta` rung finer (resolution horizon);
 - the default occupant (occupant horizon);
-- the next precision up, where it exists (precision horizon; R-33's convergence reference for the Burrau pixel to
-  t ≈ 60).
+- the next precision up, where it exists (precision horizon; PL-7's per-tier horizon is this at fixed occupant; R-33's
+  convergence reference for the Burrau pixel to t ≈ 60).
 
 δ is a **ladder** (1e-12 to 1e-1, one rung per decade), never one value, because a fixed threshold fails on both
 sides of a distribution. The horizon curve over δ is the reading; its slope is a Lyapunov estimate to check against
