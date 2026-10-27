@@ -7,7 +7,7 @@ delivered them; only the filenames were changed.
 
 | Path | sha256 | What it is |
 |---|---|---|
-| `INSTRUCTION_replication_suite_2026-10-25.md` | `76fe5df348d2fe46e7b324531361b94bd7cc0de22c98cabf00f51299ee664e43` | The plan: rules, tiers A–D, what cannot be replicated, sequencing, papers to fetch |
+| `INSTRUCTION_replication_suite_2026-10-25.md` | `25a0231536b6166e68683fe116ce4ab68c3e2dec98dea4950f376d22cc07d8cd` | The plan: rules, tiers A–D, what cannot be replicated, sequencing, papers to fetch. A dated pointer to `../2026-10-27_validation_plan/PLAN.md` added 27 Oct 2026; the sha256 is the file's with it |
 | `catalogue.md` | `c0605be0f95bd80e3056a2e8a0f1d6862673c8e7355edd37db9fe1e4f2e565c7` | About 35 published maps, tables and statistics, each with its citation (checked against Crossref where marked [CR]), what it publishes and how hard it is to reproduce |
 | `papers/aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf` | `5505c8a5d90839f1cb656c85f13375864b226e8cfdf85ab37c70af9eb70c93e5` | Aarseth, Anosova, Orlov & Szebehely (1994), "Global chaoticity in the Pythagorean three-body problem", *CeMDA* 58, 1–16, doi:10.1007/BF00692114 |
 | `papers/heggie_1974_CeMech_10_217.pdf` | `3d6bd96043a715507c3bc2116df5f06e6c57925445f362738373cef6caf3a3ee` | Heggie (1974), "A global regularisation of the gravitational N-body problem", *Celest. Mech.* 10, 217–241, doi:10.1007/BF01227621 |
