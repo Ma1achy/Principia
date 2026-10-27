@@ -6,7 +6,9 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 fail=0
-names=$(git ls-files | grep -i -E 'atlas[-_]?params' || true)
+# The guard's own two files carry the name; they are excluded by exact path, so a copy under any other name is caught.
+names=$(git ls-files -- ':!:scripts/check_no_atlas_params.sh' ':!:.github/workflows/no-atlas-params.yml' \
+  | grep -i -E 'atlas[-_]?params' || true)
 if [ -n "$names" ]; then echo "atlas-params tracked by name:"; echo "$names"; fail=1; fi
 sha=a5378e2b1c099a02bce36f85b12eec6449623fdf4ebd18bbed15de0135413296
 while IFS= read -r -d '' f; do
