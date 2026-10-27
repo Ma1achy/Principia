@@ -10,15 +10,17 @@
 //!   "show which coordinates moved" asks.
 //! - **`lookup_mirrored`** ([`Report::mirrored`]) is `C`'s step 3 flag: the state was reflected, `λ̃_y < −δ_λ` (R-82),
 //!   so the user's `L_z` sign has changed frame.
-//! - **`lookup_rescaled`** carries `λ = I_in^{−1/2}` ([`Report::lambda`]), recorded at every call. When the notice is
-//!   raised, for a state already at `I = 1` to rounding included, is open (RQ-295): no raised/not-raised flag is formed
-//!   here, as `C` forms none (`crate::canon`'s note).
+//! - **`lookup_rescaled`** ([`Report::rescaled`]) is raised iff `C`'s step 0 ran, `|I_in − 1| > τ_I` with the bodies
+//!   apart (R-547), and carries `λ = I_in^{−1/2}` ([`Report::lambda`]); where step 0 was skipped or the bodies
+//!   coincide, `λ = 1` and the notice is not raised (`crate::canon`'s note). A canonical input raises none.
 
 /// What encode discarded, with the value `lookup_rescaled` carries.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Report<R> {
-    /// `λ = I_in^{−1/2}`, recorded at step 0: `lookup_rescaled`'s value (RQ-295 holds when it is raised).
+    /// `λ = I_in^{−1/2}` where step 0 ran, else 1: `lookup_rescaled`'s value.
     pub lambda: R,
+    /// `lookup_rescaled`: `C`'s step 0 ran (R-547).
+    pub rescaled: bool,
     /// `ρ = 0` exactly at `C`'s step 2 (R-13): the inner pair coincides and cannot be represented.
     pub coincident: bool,
     /// Bit `k` set iff the inverse of `z[k]`'s link clamped its argument, `z` in the latent block layout
@@ -39,5 +41,11 @@ impl<R> Report<R> {
     #[inline]
     pub fn lookup_mirrored(&self) -> bool {
         self.mirrored
+    }
+
+    /// `lookup_rescaled`.
+    #[inline]
+    pub fn lookup_rescaled(&self) -> bool {
+        self.rescaled
     }
 }

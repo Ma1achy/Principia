@@ -9,8 +9,8 @@
 //!   and the pole landmark on its own (REQ-ENC-007).
 //! - `encode_t1_gauge`: dd_encode §5 test 2, `E(g·x) = E(x)` over random `g` per §3.3, deadband states under turns,
 //!   and the mirror tie twice (REQ-ENC-003).
-//! - `encode_notices`: canonical inputs raise no notice; each operation forced alone raises exactly its own
-//!   (REQ-ENC-014; `lookup_rescaled`'s raising waits on RQ-295, so its value `λ` is checked).
+//! - `encode_notices`: canonical inputs raise no notice, `lookup_rescaled` included (step 0 skipped within `τ_I`,
+//!   R-547); each operation forced alone raises exactly its own, `lookup_rescaled` with its `λ` (REQ-ENC-014).
 //! - `stage_encode_native`: the compute entry points `kernel::stage::encode::{encode, beta}`, called natively, write
 //!   each sample's encode and `β` in their word layout, and nothing past the last sample.
 //!
@@ -1144,38 +1144,43 @@ negative_control!(
 
 // ── encode_notices (REQ-ENC-014) ────────────────────────────────────────────────────────────────────────────────
 
-/// The notices `e` raised: `(lookup_clamped, lookup_mirrored)`, and `λ`.
-fn raised<R: P>(e: &Encoded<R>) -> (bool, bool, f64) {
+/// The notices `e` raised: `(lookup_clamped, lookup_mirrored, lookup_rescaled)`, and `λ`.
+fn raised<R: P>(e: &Encoded<R>) -> ((bool, bool, bool), f64) {
     (
-        e.report.lookup_clamped(),
-        e.report.lookup_mirrored(),
+        (
+            e.report.lookup_clamped(),
+            e.report.lookup_mirrored(),
+            e.report.lookup_rescaled(),
+        ),
         e.report.lambda.f(),
     )
 }
 
-/// One forced operation's notices: `clamped` and `mirrored` as given, and `λ` within 16 eps of `lambda`.
-fn check_notice<R: P>(name: &str, x: &Ic<R>, clamped: bool, mirrored: bool, lambda: f64) {
-    let (c, m, l) = raised(&encode::<Defaults, R>(x));
+/// One forced operation's notices: `want`, `(lookup_clamped, lookup_mirrored, lookup_rescaled)`, and `λ`, exactly 1
+/// where `lookup_rescaled` is not raised (step 0 skipped, R-547), else within 16 eps of `lambda`.
+fn check_notice<R: P>(name: &str, x: &Ic<R>, want: (bool, bool, bool), lambda: f64) {
+    let (got, l) = raised(&encode::<Defaults, R>(x));
     assert_eq!(
-        (c, m),
-        (clamped, mirrored),
-        "{name}: (lookup_clamped, lookup_mirrored) = {:?}, not {:?}",
-        (c, m),
-        (clamped, mirrored)
+        got, want,
+        "{name}: (lookup_clamped, lookup_mirrored, lookup_rescaled) = {got:?}, not {want:?}"
     );
-    assert!(
-        (l - lambda).abs() <= 16.0 * R::eps() * lambda,
-        "{name}: λ = {l}, not {lambda}"
-    );
+    if want.2 {
+        assert!(
+            (l - lambda).abs() <= 16.0 * R::eps() * lambda,
+            "{name}: λ = {l}, not {lambda}"
+        );
+    } else {
+        assert!(l == 1.0, "{name}: λ = {l}, not 1, where step 0 was skipped");
+    }
 }
 
 fn notices_at<R: P>(seed: u64) {
     let mut rng = SplitMix::new(seed);
-    // Canonical inputs, the decode's own output: no notice, λ = 1 to rounding.
+    // Canonical inputs, the decode's own output: no notice, step 0 skipped, λ = 1 exactly.
     for _ in 0..2000 {
         let z: [R; 8] = random_z(&mut rng, SPAN);
         let x = decode::<Defaults, R>(&Latent::new(z)).ic;
-        check_notice("a canonical input", &x, false, false, 1.0);
+        check_notice("a canonical input", &x, (false, false, false), 1.0);
     }
     let x = interior_state(&mut rng);
     let moved = Gauge {
@@ -1186,8 +1191,7 @@ fn notices_at<R: P>(seed: u64) {
     check_notice(
         "translated, boosted and turned",
         &ic_of::<R>(&moved.act(&x)),
-        false,
-        false,
+        (false, false, false),
         1.0,
     );
     let scaled = Gauge {
@@ -1197,21 +1201,24 @@ fn notices_at<R: P>(seed: u64) {
     check_notice(
         "rescaled by 4",
         &ic_of::<R>(&scaled.act(&x)),
-        false,
-        false,
+        (false, false, true),
         0.25,
     );
     let mirrored = Gauge {
         mirror: true,
         ..Gauge::identity()
     };
-    check_notice("mirrored", &ic_of::<R>(&mirrored.act(&x)), false, true, 1.0);
+    check_notice(
+        "mirrored",
+        &ic_of::<R>(&mirrored.act(&x)),
+        (false, true, false),
+        1.0,
+    );
     let z = [R::zero(); 8];
     check_notice(
         "|q| > q_max",
         &with_p_rho(z, [R::of(2.5), R::zero()]),
-        true,
-        false,
+        (true, false, false),
         1.0,
     );
     // The coincident inner pair at `I = 1` exactly: `r₀ = r₁ = (−1, 0)`, `r₂ = (1, 0)`, masses `(¼, ¼, ½)`.
@@ -1225,7 +1232,12 @@ fn notices_at<R: P>(seed: u64) {
             [R::of(-0.2), R::of(0.1)],
         ],
     };
-    check_notice("the coincident inner pair", &coincident, true, false, 1.0);
+    check_notice(
+        "the coincident inner pair",
+        &coincident,
+        (true, false, false),
+        1.0,
+    );
     let e = encode::<Defaults, R>(&coincident);
     assert!(
         e.report.coincident,
@@ -1233,24 +1245,27 @@ fn notices_at<R: P>(seed: u64) {
     );
 }
 
-/// [`Report`]'s two notices from its fields: `lookup_clamped` iff the coincident pair or any control's bit.
+/// [`Report`]'s three notices from its fields: `lookup_clamped` iff the coincident pair or any control's bit,
+/// `lookup_mirrored` and `lookup_rescaled` their own.
 fn check_report() {
-    let report = |coincident, clamped_controls, mirrored| Report {
+    let report = |coincident, clamped_controls, mirrored, rescaled| Report {
         lambda: 1.0f64,
+        rescaled,
         coincident,
         clamped_controls,
         mirrored,
     };
-    for (r, clamped, mirrored) in [
-        (report(false, 0, false), false, false),
-        (report(true, 0, false), true, false),
-        (report(false, 1 << 7, false), true, false),
-        (report(true, 1, false), true, false),
-        (report(false, 0, true), false, true),
+    for (r, want) in [
+        (report(false, 0, false, false), (false, false, false)),
+        (report(true, 0, false, false), (true, false, false)),
+        (report(false, 1 << 7, false, false), (true, false, false)),
+        (report(true, 1, false, false), (true, false, false)),
+        (report(false, 0, true, false), (false, true, false)),
+        (report(false, 0, false, true), (false, false, true)),
     ] {
         assert_eq!(
-            (r.lookup_clamped(), r.lookup_mirrored()),
-            (clamped, mirrored),
+            (r.lookup_clamped(), r.lookup_mirrored(), r.lookup_rescaled()),
+            want,
             "the report {r:?} raises the wrong notices"
         );
     }
@@ -1266,11 +1281,11 @@ fn encode_notices() {
 negative_control!(
     encode_notices,
     "a canonical input read with a raised mirror must fail",
-    expected = "(lookup_clamped, lookup_mirrored)",
+    expected = "(lookup_clamped, lookup_mirrored, lookup_rescaled)",
     {
         let mut rng = SplitMix::new(33);
         let x = interior_state(&mut rng);
-        check_notice("a canonical input", &x, false, true, 1.0);
+        check_notice("a canonical input", &x, (false, true, false), 1.0);
     }
 );
 
@@ -1285,6 +1300,7 @@ fn out_words(o: &EncodeOut) -> Vec<u32> {
             u32::from(o.report.coincident),
             o.report.clamped_controls,
             u32::from(o.report.mirrored),
+            u32::from(o.report.rescaled),
         ])
         .collect()
 }
@@ -1333,19 +1349,24 @@ fn stage_encode_native() {
     });
     check_stage(&states);
     // The notices word's bits, and its round trip through the words.
-    for (coincident, mirrored, controls) in [
-        (true, false, 0),
-        (false, true, 0),
-        (false, false, 0xA5),
-        (true, true, 0xFF),
+    for (coincident, mirrored, rescaled, controls) in [
+        (true, false, false, 0),
+        (false, true, false, 0),
+        (false, false, true, 0),
+        (false, false, false, 0xA5),
+        (true, true, true, 0xFF),
     ] {
         let report = Report {
             lambda: 0.5f32,
+            rescaled,
             coincident,
             clamped_controls: controls,
             mirrored,
         };
-        let want = u32::from(coincident) | (u32::from(mirrored) << 1) | (controls << 8);
+        let want = u32::from(coincident)
+            | (u32::from(mirrored) << 1)
+            | (u32::from(rescaled) << 2)
+            | (controls << 8);
         assert_eq!(notices(&report), want, "the notices word of {report:?}");
         let e = Encoded {
             report,

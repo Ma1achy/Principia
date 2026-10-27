@@ -6,7 +6,7 @@
 tolerance = 4e0  # the proposed tolerance, eps
 f64_triple = 0e0  # ν = 1/2 against the (2, 1) construction, f64, eps
 f32_triple = 0e0  # ν = 1/2 against the (2, 1) construction, f32, eps
-f64_classical_normalised = 1e0  # against the normalised classical configuration through C, f64, eps
+f64_classical_normalised = 2e0  # against the normalised classical configuration through C, f64, eps
 f32_classical_normalised = 2.5e-1  # against the normalised classical configuration through C, f32, eps
 f64_classical_historical = 1e0  # against the historical classical configuration through C, f64, eps
 f32_classical_historical = 0e0  # against the historical classical configuration through C, f32, eps
