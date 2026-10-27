@@ -1,6 +1,9 @@
 //! The agreement preset `|E(fragment-decode) − E₀|` (REQ-COL-006; R-133, R-297, R-436) on the GPU: the fragment's
 //! generated decode against the kernel decode stage's descriptor, as the payload stores it.
 //!
+//! In validation, not render, since it reads the built kernel (`target/spirv/kernel.wgsl`) and runs in CI's `gpu-kernel`
+//! job (`.config/nextest.toml`), which tests validation, xtask and engine.
+//!
 //! - `agreement_preset_healthy`: on every M2 chart, an 8 × 8 lattice whose descriptors the kernel decode stage wrote,
 //!   every sample compared and within the tolerance, and `E₀` the f32 sum of the stored `K₀ + V₀`, bit for bit. Control:
 //!   a dispatch scramble, each descriptor written nine samples on, disagrees.
