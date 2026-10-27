@@ -71,12 +71,14 @@ struct SimStateFTLE {
                                   //   budget_exhausted bit. Bits, widths and saturation: TASK-M3-41, in §2
                                   //   (REQ-PAY-110). Updated by the march under a regularised occupant: hot.
     dE_reg      : u32,            // R-605's regularised energy drift latches beside packed_b's Cartesian ones:
-                                  //   dE_reg_final:f16[low] | dE_reg_max:f16[high]. The final value is stored,
+                                  //   final and max, two f16 halves, which half holding which still open
+                                  //   (REQ-PAY-111). The final value is stored,
                                   //   not derived (§5), because the stored state is Cartesian and the
                                   //   regularised energy is not recoverable from it at read. Names and halves:
                                   //   TASK-M3-41, in §1 and §5 (REQ-PAY-111). Each word's name here is a
                                   //   placeholder; its place and its 4 B are fixed (perf review 5661999637 of
-                                  //   PR #293, P1, applied per R-369).
+                                  //   PR #293, P1, applied per R-369). Was: "dE_reg_final:f16[low] |
+                                  //   dE_reg_max:f16[high]" (code review 5662268789 of PR #293, (3)).
 
     // ── CLOSURE (return-map) ────────────────────────────────  8 B
     closure_min  : f32,           // running min, once departed (R-37), of |n̂(t) − n̂(0)| — the SHAPE-sphere
