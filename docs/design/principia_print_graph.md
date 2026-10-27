@@ -55,7 +55,15 @@ drawn over reads the figure to the clamp, the Print graph's output included; for
 output (`principia_lines.md` §6). Was: "The lines drawn over sit after the Print graph; whether before the display
 scale, as drawn below, or after the gamut clamp, as R-476 M2 placed the line system, is RQ-395 (R-487)."*
 
-R-67's chain, with the Print graph where "style" was and the line system placed explicitly:
+R-67's chain, with the Print graph where "style" was, its screen pass after the display scale (R-618, closing
+RQ-538; §6.2), and the line system placed explicitly:
+
+```
+SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► display scale ─►
+          Print graph's screen pass ─► gamut clamp ─► [line sets drawn over] ─► colour-vision simulation ─► screen
+```
+
+*Was (before R-618, gui review 5661813927 of PR #293, G3):*
 
 ```
 SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► display scale ─► gamut clamp ─►
@@ -261,7 +269,15 @@ different picture: strokes a quarter as wide relative to the figure. So every le
   "pixels on a 1024-wide figure, scaled by `output_width / 1024` at render time." The export-size invariance below
   still holds: two exports of one state scale by the same rule.
 - **`device_px`**: true screen pixels. Only for effects that model the display itself: CRT scanlines, LCD subpixels,
-  LED pitch.
+  LED pitch. *Ruled (R-618, closing RQ-538, option (b)):* the nodes whose lengths are in `device_px`, and the sheet
+  anchored to the screen (§6.3), run in a **second print pass at screen resolution**, after the display scale, so a
+  scanline is exactly one screen pixel at every `render_scale`; the rest of the graph runs before the display scale
+  at render resolution, as before. Screen-anchored coordinates are the pixel's screen position. At export a display
+  pixel is an export pixel. How a graph is split into its two passes, where a `device_px` node or the sheet sits among
+  the others, is a definition (REQ-RENDER-120, R-72), written here by TASK-M7-69. With neither in the graph the screen
+  pass is not dispatched and allocates no target (render contract Part 4); with either, it runs every frame at display
+  resolution, its time recorded on the Mac (REQ-PERF-113) and its targets counted in `k_d` (REQ-PERF-069) (perf review 5661999637 of PR #293, P2,
+  applied per R-369).
 - **`fraction`**: a fraction of the figure width, for broad effects such as vignette and lighting.
 
 The acceptance test renders a preset at 512² and 2048², downsamples the second, and requires agreement within
@@ -271,6 +287,8 @@ tolerance for every `ref_px` and `fraction` node. `device_px` nodes are exempt a
 
 - **The sheet is anchored to the screen.** Paper tooth, canvas weave, grain and the ground stay fixed while the figure
   pans and zooms beneath them. The picture is redrawn each frame, but the sheet it is drawn on does not move.
+  It is drawn in the second print pass, at screen resolution, so its grain does not change while Auto moves
+  `render_scale` (R-618, §6.2).
 - **Marks are stable where the picture is.** Noise-driven marks (dither thresholds, stipple, stroke seeds) are seeded
   from screen-anchored coordinates and the graph's seed, never from the frame. Where the figure does not change
   between frames, neither do the marks: a still region of a moving playhead does not shimmer.

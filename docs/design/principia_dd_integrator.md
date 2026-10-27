@@ -35,7 +35,7 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, step_reversible, run_reversible}` read by all consumers (R-500; *was:* `{…, reversible}`); occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T` physical, default 50, raised or lowered (R-575; `∈ (0, 200]` meanwhile, RQ-555; *was:* "`T ∈ [50, 200]` physical (default 50)"), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, step_reversible, run_reversible}` read by all consumers (R-500; *was:* `{…, reversible}`); occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T` physical, default 50, raised or lowered (R-575; `∈ [0.4, 200]`, R-610, the floor one closure window and the cap 200; *was:* "`∈ (0, 200]` meanwhile, RQ-555"; *was:* "`T ∈ [50, 200]` physical (default 50)"), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
 
 From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical on identical inputs, per step (comparison-only rule, §3.3; labels on chaotic trajectories may differ across precisions — `principia_parity_contract.md` Tier L, R-84); match-integrator mode for honest inspector comparison.
 
@@ -181,7 +181,10 @@ suspect predicates (READ-TIME, over the stored drift latches — no stored suspe
 
 Under a regularised occupant the energy-suspect predicate reads the **regularised** energy, and `E` above, the
 Cartesian energy, is a diagnostic read only from runs that did not stop at an event (R-566; integrator contract Part 1,
-"Under a regularised occupant, two energies, named (R-566)"; where the regularised drift is stored is RQ-528).
+"Under a regularised occupant, two energies, named (R-566)"). Both drifts are stored (R-605, closing RQ-528): the
+regularised drift latches in payload fields of their own (REQ-PAY-111), read by the suspect predicates and the drift
+view under a regularised occupant, the Cartesian ones kept beside them for diagnostics only. *Was:* "; where the
+regularised drift is stored is RQ-528".
 
 Final *and* max are both stored because the *shape* of drift is the diagnostic: bounded oscillation ≈ fine; secular ≈ concerning; a spike that recovers = close-encounter stress (the Drift-shape cross-check view).
 
@@ -376,7 +379,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
 - **Yoshida-6 coefficients** — *settled by R-501:* the coefficients carry their citation (Yoshida 1990, Table 1, solution A; §3.2) and test 1a's convergence-order check; the paper is not added. Was: verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
-- **Reversibility replay** — bounded and deferred per the integrator contract Part 6; nothing here forecloses it. Regularisation is v1 (R-562); whether Kustaanheimo–Stiefel has a place is RQ-530. *Was:* "**Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either."
+- **Reversibility replay** — bounded and deferred per the integrator contract Part 6; nothing here forecloses it. Regularisation is v1 (R-562); Kustaanheimo–Stiefel is not built, Part 2b's four being the regularisations and a later method added by its own ruling (R-607; *was:* "whether Kustaanheimo–Stiefel has a place is RQ-530"). *Was:* "**Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either."
 <!-- /retired-terms -->
 
 ---

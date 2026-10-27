@@ -1116,6 +1116,10 @@
   section: "R-573 — \"Payload summary\" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it"
   reason: informative only
   note: "the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): \"payload summary\" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none"
+- file: decisions.md
+  section: "R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)*"
+  reason: informative only
+  note: "RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes"
 - file: docs/design/principia_results.md
   section: "Principia: Result — from a view to a full-precision batch run, and back"
   reason: informative only
@@ -1171,7 +1175,7 @@
 - file: docs/design/principia_sequence.md
   section: 4. Fit with rulings
   reason: informative only
-  note: "how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560"
+  note: "how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560, ruled by R-622 and R-623"
 - file: docs/design/principia_sequence.md
   section: 5. Decided
   reason: informative only
@@ -1315,7 +1319,7 @@
 - file: docs/design/principia_spotlight_reel.md
   section: 4. Fit with rulings
   reason: informative only
-  note: "how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561"
+  note: "how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561, ruled by R-624"
 - file: docs/design/principia_spotlight_reel.md
   section: 5. Decided
   reason: informative only

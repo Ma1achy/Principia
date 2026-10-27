@@ -756,6 +756,8 @@ Depth is a scheduler knob, not on the sim key. E changes live: copies are cached
 excludes E. The ladder has ~8–12 rungs in total.
 
 ## R-90 — The decoder switchover trigger *(closes RQ-41)*
+*Refined by R-599 (collapse is judged per in-plane axis: a quad stops at `AT_F32_FLOOR` only when every axis along which the field varies has collapsed, or at the screen floor).*
+*Still in force: all of it; the terminal stop's collapse is judged per in-plane axis, a saturated axis not counting (R-599).*
 *25 Sep 2026 · applied in step 7*
 
 Switch to the linearised decoder when the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as
@@ -1086,9 +1088,11 @@ Native: PNG frames, GIF, and MP4 through a system ffmpeg when present. Browser: 
 encoder, and MP4/WebM through WebCodecs where supported.
 
 ## R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*
+*Amended by R-610 (the horizon's range: `[0.4, 200]`, the floor one closure window, the cap 200).*
 *Amended by R-575 (the horizon: default 50, raised or lowered, not floored at 50).*
 *Still in force: all three changes, except that T is no longer floored at 50: its default stays 50 and it can be
-raised or lowered (R-575), its lowest value RQ-555; `dt_macro = max(1e-3, T/65535)` stands.*
+raised or lowered (R-575), within `[0.4, 200]` (R-610); `dt_macro = max(1e-3, T/65535)` stands.* *Was (the still-in-force
+line):* "its lowest value RQ-555".
 *25 Sep 2026 · applied in step 7*
 
 - REQ-COL-055: the invalid colour must collide with no palette entry. Propose a hatched pattern, not a flat colour.
@@ -15039,6 +15043,10 @@ link functions), REQ-GEN-041 (C4), REQ-GEN-042 (the hash), REQ-DEC-048 (A2), REQ
 renders and payloads) and REQ-CHART-074 (C3); changes REQ-DEC-009 (the constants are defaults).
 
 ## R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone
+*Amended in part by R-626 (25 Oct 2026; RQ-574 closed: C3's mass-varying chart is a latent configuration view at a
+fixed non-zero mass logit, not the mass simplex chart, which sets its masses directly).*
+*Still in force: all of it but C3's "The mass-varying chart is the mass simplex chart", which R-626 replaces; C3's
+constant-mass control, the latent view with both mass logits at 0, stands.*
 *20 Oct 2026 · applied in the verify of each requirement R-478 to R-481 add, REQ-SYS-011's (C6; reqio), `plan/tasks.yaml`
 and `plan/rule_groups.yaml`; built by the tasks those requirements name*
 
@@ -15632,9 +15640,12 @@ The lab's caption and the design doc §4.4 name different stand-ins for the four
 R-486 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*
+*Amended by R-618 (a Print graph's `device_px` nodes and the screen-anchored sheet run in a second pass at screen resolution, after the display scale).*
 *Amended in part by R-531 (20 Oct 2026; RQ-395, option (c): the lines drawn over keep R-476 M2's place, after the
 gamut clamp and before the colour-vision simulation; the design doc §2's diagram is corrected to match).*
-*Still in force: all of it but the design doc's place for the lines drawn over; K1 and K2 stand.*
+*Still in force: all of it but the design doc's place for the lines drawn over, and the Print graph's one pass: its
+`device_px` nodes and the sheet run in a second pass at screen resolution, after the display scale (R-618); K1 and K2
+stand.*
 *20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the
 pipeline)" and § "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4
 — Semantic rules" (the composite order), `docs/design/principia_lines.md` § "2. Where it sits" and § "3. The data model"
@@ -17076,8 +17087,10 @@ R-519 is in the "physics" group of `plan/rule_groups.yaml`, with R-481.
 Changes REQ-GEN-014 (rulings, source, note).
 
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
+*Amended by R-623 (at a link-parameter change a segment offers cut or interpolate, interpolating by default) and read by R-624 for a reel takeover.*
 *Amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).*
-*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576).*
+*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576); in a
+blocking export a segment set to cut cuts its link parameters, interpolating being the default (R-623).*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
 REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
@@ -17526,6 +17539,8 @@ and marks the run "mobile, best effort".
 R-530 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
 
 ## R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*
+*Amended by R-618 (the chain gains the Print graph's screen pass after the display scale).*
+*Still in force: all of it; the chain gains the Print graph's screen pass, for the `device_px` nodes and the sheet, after the display scale and before the gamut clamp (R-618).*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "2. Where it sits" (the diagram corrected, the
 delivered one kept as *Was*) and its adoption note, `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
 rules" (the Print graph stage's chain, with its earlier words kept), `docs/design/principia_colour_composition.md` § "4.3
@@ -19577,6 +19592,8 @@ Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-08
 REQ-GUI-097 (notes).
 
 ## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended by R-611 (where R-543's text and its code disagree the text wins, the code used only where the text is silent).*
+*Amended by R-612 (under a Torus base, Left its starting tile compares the Torus's own period cell).*
 *Amended in part by R-543 (21 Oct 2026; SM8's mirror-repeat and dimming past the Picture's square becomes the default of
 a wrap mode, Repeat, Mirror or Clamp, with a separate dim setting; SM6 and SM11 gain the Torus gradient, SM8 the tileable
 checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboard under Repeat, dimming off).*
@@ -19589,7 +19606,8 @@ hemisphere fold and in-square mirror pixels, SM4's hemisphere row and SM7's iden
 sphere target is the whole sphere, read by its signed n̂, and its identity holds point for point (R-544);
 and what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names, the brightness slot under a Picture
 and the fade's function the file's; Replace-L's chroma scaling an option, off by default; Chart position a named
-seam-6 exception, no longer waiting on RQ-489.*
+seam-6 exception, no longer waiting on RQ-489; and, for R-543's maps, its text winning where the code disagrees (R-611),
+and under a Torus base Left its starting tile comparing the Torus's own period cell (R-612).*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -20253,6 +20271,8 @@ R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
 
 ## R-543 — Colour maps that tile the infinite plane, as the state map follow-up gives them and its prototype's code transcribes them: a Torus gradient on the plane and the cylinder, periodic in chart units, one-to-one within a period and seamless across periods; a wrap mode past the Picture's square, Repeat, Mirror or Clamp, and a separate dim setting, Mirror and dimmed by default so every saved stain renders as before; a tileable checkerboard; the Flow preset becomes it under Repeat *(amends R-542)*
+*Amended by R-611 (its text wins over its prototype's code, the code used only where the text is silent) and R-612 (§2.1: under a Torus base, Left its starting tile compares the Torus's own period cell).*
+*Still in force: all of it; where its text and its prototype's code disagree the text wins (R-611), and Left its starting tile under a Torus base compares the period cell `(⌊X⌋, ⌊Y⌋)` (R-612).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_state_map_tiling/` (the follow-up as delivered, and R-543's check
 `checks/r543_tiling_check.py` beside it), `docs/gui/reference/state_map/state_flow.html` (version 9 in place of version
 8), `docs/design/principia_state_map.md` (the header note; § "0. My words", the follow-up's words; § "SM6. Colour maps:
@@ -20797,6 +20817,9 @@ above; neither holds on RQ-523 now.
 R-544 is in the "physics" group of `plan/rule_groups.yaml`, with R-141 and R-412.
 
 ## R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*
+*Amended by R-614 (`substep_histogram` has 17 entries, 16 equal bins and a separate cap bin).*
+*Still in force: all of it but the histogram's length: `substep_histogram` is `[u32; 17]`, sixteen equal bins and a
+separate cap bin (R-614).*
 *21 Oct 2026 · the batch recorded whole in `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`; applied in
 `docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21's sentence), § "Layout and §3.8
 entries" (the §3.8 entries' range sentence, the two one-signed rows and `alpha_energy`'s row, with their earlier words
@@ -21260,6 +21283,9 @@ statement a clause); adds REQ-ENC-035 (calibration, `τ_I`), REQ-TOOL-188 and RE
 REQ-SYS-085 (the read side's `shape()`); adds TASK-M2-47 to TASK-M2-49.
 
 ## R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
+*Corrected by R-595 (a guarded E < 0 state that passes the dispersal step's tests goes on to the hierarchy step; "falls through to …" was an incomplete list).*
+*Still in force: all of it, its "falls through to B-stable, OS-candidate or B-so-far" read as an incomplete list: a
+guarded E < 0 state that passes step 1's geometric tests goes on to the hierarchy step (R-595).*
 *21 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes" (the halves
 paragraph, with its earlier words kept), § "3.2 The rule, in order" (the order and the two differences, with their
 earlier words kept), § "4. Validation" (a sentence), § "4.3 On real charts (48 × 48)", § "5.6 `chazy_escaper` and
@@ -21998,6 +22024,7 @@ REQ-GUI-275, REQ-GUI-282 and REQ-INT-096 (rulings, source, note), REQ-GUI-269, R
 REQ-GUI-281 (notes).
 
 ## R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*
+*Settled by R-613 (the equator clause it left unapplied stays unapplied: no fold anywhere).*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (the exponential
 map's exception) and § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (undefined shares),
 `docs/design/principia_chart_reference.md` § "3.3 The chart map" (the radius paragraph, a sentence; the rank-losing
@@ -23048,6 +23075,7 @@ Changes the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062,
 REQ-COL-129 and REQ-COL-135 (the mark only); no statement or verify changes.
 
 ## R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it
+*Settled by R-606 (Heggie × RK4 at every tier).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_gap_sweep_integrator/` (the bundle's instruction and decisions as
 delivered, the source design and the three probes), `docs/contracts/principia_integrator_contract.md` § "Part 2 —
 Occupants and the capability profile" (Yoshida-4's row and a paragraph after the table) and § "Part 2b — Regularisation
@@ -23112,6 +23140,7 @@ Changes REQ-GUI-102 (statement, verify, rulings, note), REQ-INT-006 (statement, 
 REQ-INT-014 (note, rulings).
 
 ## R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured
+*Read by R-615 ("the Problems panel" is the status line and the Run window).*
 *Amended by R-567 (Heggie × the generalised leapfrog, measured bad).*
 *Still in force: all of it; the table gains Heggie × the generalised (Störmer–Verlet) leapfrog, measured bad, with
 its warning (R-567).*
@@ -23292,6 +23321,7 @@ Changes REQ-SCHED-063 (statement, verify, source, rulings, `rq: RQ-526`) and REQ
 rulings). Adds REQ-INT-101 (`rq: RQ-526`) and REQ-INT-105 (`TINY`, a calibration).
 
 ## R-564 — A regularised occupant's step budget is a rate, steps per unit physical time per copy; its value starts at about 4e4 per unit time per copy, a calibration
+*Settled by R-604 (checked every step against `max(N_min, rate · t_elapsed)`).*
 *21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns
 what)" (a row, `step_budget_rate`) and § "Part 6 — Three boundaries stated honestly (deferred work lands here)",
 REQ-INT-102 and REQ-INT-103 (new), TASK-M3-41 (new), `REVIEW_QUEUE.md` (RQ-527, new) and `plan/rule_groups.yaml`;
@@ -23321,6 +23351,7 @@ R-564 is in the "values" group of `plan/rule_groups.yaml`.
 Adds REQ-INT-102 and REQ-INT-103 (a calibration), both `rq: RQ-527`.
 
 ## R-565 — The sync grid is a fixed quantum of physical time, `Δ_sync`, the same for every run and independent of the horizon and of frame timing: steps are sized from it, the march stops only on it, the playhead reads boundary states, so live march, catch-up and re-boot reach the same state bitwise; time windows such as the closure window are stated in physical time
+*Read by R-602 (the sync grid only; the macro-step grid stays R-132's).*
 *21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2a — Widening the slot:
 `owns_time_mapping`, and the `advance` signature" (payload purity, and a subsection, "The sync grid is a fixed quantum
 of physical time (R-565)"), § "Part 3 — Parameter ownership (who owns what)" (the escape window's row and a row,
@@ -23374,6 +23405,7 @@ Changes REQ-INT-080 (statement, verify, source, rulings), REQ-EVT-017 (statement
 on it).
 
 ## R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*
+*Settled by R-605 (both drifts stored; the energy-suspect threshold recalibrated at the M3 gate).*
 *21 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "COM projection and invariant monitoring"
 (a paragraph), `docs/design/principia_dd_integrator.md` § "3.5 Invariant monitoring (per `STEP`, post-projection)",
 `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not" (the radial
@@ -23550,6 +23582,9 @@ R-568 is in the "design" group of `plan/rule_groups.yaml`, with R-510.
 Changes REQ-GUI-244 (rulings, note).
 
 ## R-569 — Trace playback and icons: a new trace while playing restarts the playhead at `t = 0`; paused at `t = 0` the whole trace is drawn dotted, not yet played, and the legend keys it; every event, start and path icon placed wholly on screen by its measured extent, the start icon pinned, repeats never moved *(amends R-538)*
+*Amended by R-617 (only the trace's own marker restarts, never the figure's playhead) and read by R-616 (only a new run restarts).*
+*Still in force: all of it but ruling 1's restart of the playhead: a new run restarts only the trace's own head, the
+figure's global playhead and the field untouched (R-617), and only a new run restarts (R-616).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_trace_playback/` (the instruction, the demos Trace Markers version
 29 and Trace Sound version 10, and the human's check and its output, as delivered, with a README giving each file's
 sha256), `docs/design/principia_lines.md` § "8. Traces" (the breaks bullet, a sentence; the off-screen icons bullet,
@@ -23761,6 +23796,7 @@ places.
 R-569 is in the "design" group of `plan/rule_groups.yaml`, with R-538.
 
 ## R-570 — Latent and flat charts have no limit on pan or zoom-out: every latent `z` decodes to a system, so a pan never stops there and R-469's stop never fires for it; zoom-out is limited only by the frame budget and the baseline cover, a frame's cost set by the screen, not by the view's extent; every pixel is a system at any pan or zoom; far out the field goes flat by the decoder's saturation, which is correct and is never clamped, rescaled, wrapped or faded; precision is never a navigation limit *(states what R-407, R-467, R-469 and RQ-409 (a) imply; carries RQ-409 (a)'s "no zoom-out limit" from periodic charts to every chart whose axes are affine)*
+*Qualified by R-597 and R-598 ("no blank" at the default links with `μ_max` ≤ 10 and η_E off; a degenerate or energy-infeasible pixel draws as not a system).*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_latent_unbounded/` (the instruction as delivered, and its README),
 `docs/contracts/principia_chart_decoder_contract.md` § "The operation table" (a paragraph added after "Pan and zoom
 past the square (R-537)"), `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type
@@ -24293,6 +24329,9 @@ requirement changes. The full-precision payload is the Result's (R-572), written
 R-573 is in the "one_off" group of `plan/rule_groups.yaml`.
 
 ## R-574 — Honesty as a measurement: the click inspector runs the clicked point four ways, f32, f64 and each nudged by one ulp, and marks "faithful until" at a shape-sphere chord of 10⁻³ and "parted at" at 0.1, both measured, shown and editable; the trust line shows in the trajectory inspector panel when a trajectory is clicked; nothing changes in the atlas; the README's Honesty line is reworded
+*Refined by R-621 (the header strip states `T` and the f32 trust time measured for the current view).*
+*Still in force: all of it; nothing changes in the atlas's colours, and the header strip states `T` and the f32 trust
+time measured for the current view (R-621).*
 *21 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` (new), `docs/design/principia_trajectory_viewing.md`
 §4 (the real-space bullet and row) and §5 (a lead bullet) and its closing line, `docs/gui/principia_render_gui_spec.md`
 §G2 (the Trajectory panel) and §G8 (the Inspector), `README.md` (the Honesty line), `docs/read_first/principia_INDEX.md`,
@@ -24489,6 +24528,8 @@ REQ-VAL-198 (the self-check's band, a calibration), REQ-VAL-199 (the ensemble ra
 REQ-GUI-369 (what the viewer shows), REQ-GUI-370 (the trust line) and REQ-GUI-371 (the atlas unchanged).
 
 ## R-575 — The horizon stays 50 by default and can be raised or lowered, not floored at 50 *(amends R-132 and the Run window's `T_horizon ∈ [50, 200]`; queues RQ-555)*
+*Amended by R-610 (`T_horizon ∈ [0.4, 200]`; RQ-555 closed).*
+*Still in force: the default 50, raised or lowered, not floored at 50, within `[0.4, 200]` (R-610).*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar",
 `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)" and § "Part 5 — Units
 and the horizon (inherited scale gauge)", `docs/design/principia_dd_integrator.md` § "2. Consolidated contract",
@@ -24624,6 +24665,9 @@ Changes REQ-TOOL-076 (statement, verify, rulings, source, note) and REQ-TOOL-175
 REQ-TOOL-197 (definition).
 
 ## R-577 — The Sequence window, as `keyframes_reel.md` gives it: whole keyframes on a timeline with read-only lanes, segments coloured by class, easing and transitions per segment, Play preview with cuts, a proof strip of exported frames, a planner whose estimate carries its basis and never guesses, and the spec saved as `.principia-seq.json` and written beside every export *(queues RQ-559 and RQ-560)*
+*Amended by R-622 (sequences are shared state under the one history) and R-623 (the link-parameter segment's choice).*
+*Still in force: all of it but the Sequence's undo, which is typed `SetField`s in the contract's one history (R-622),
+and the link-parameter segment, which offers cut or interpolate, interpolating by default (R-623).*
 *21 Oct 2026 · applied in `docs/design/principia_sequence.md` (new), `docs/gui/principia_render_gui_spec.md` § "G9a.
 Sequence · Spotlights (no artboard; R-576 to R-578)" (new), `docs/contracts/principia_gui_state_contract.md` §2 (the
 open windows), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-559, RQ-560), REQ-GUI-372 to REQ-GUI-381,
@@ -24778,6 +24822,7 @@ round 21, REQ-PERF-112 (benchmark: the live frame loop holds the no-strip baseli
 round 24).
 
 ## R-578 — The spotlight reel passes for Explore: a v2 browser product feature whose machinery is built and tested natively, its native presentation rough; the film rendered once per release, offline, by the blocking exporter, with a manifest for every frame, and only played by the app; any interaction takes over live at that exact frame and keeps playing *(amends REQ-TOOL-084; queues RQ-561)*
+*Read by R-624 (a takeover's difference from the film after its frame is accepted).*
 *21 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` (new),
 `docs/contracts/principia_export_animation_contract.md` § "Part 7 — The spotlight reel (attract mode)" (a paragraph),
 `docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)" (new),
@@ -25827,3 +25872,758 @@ view or by its projection, and (d), one re-centre per tagged pixel shown as one 
 R-593 is in the "physics" group of `plan/rule_groups.yaml`, with R-591.
 
 Changes REQ-CHART-010 (verify, rulings, source, rq, note).
+
+## R-595 — Under R-548's `E ≥ 0` guard an E < 0 state that passes the dispersal step's geometric tests goes on to the hierarchy step, where it may read HE, PE, B-stable or excursion: the guard is for dispersal (H, HP, P), and a binary plus an escaper is the ordinary E < 0 escape *(closes RQ-521; corrects R-548's "falls through to …" list)*
+*25 Oct 2026 · the batch recorded, its two Table 1 paragraphs left out, in
+`docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md`; applied in `docs/design/principia_dd_chazy_final_motion.md`
+§ "3.2 The rule, in order" and § "11.3 Open questions", R-548's forward line, `docs/archive/review_queue/M0.md`
+(RQ-521, moved with its ruling), REQ-PAY-099 (reqio), TASK-M7-35 (its notes and acceptance line) and
+`plan/rule_groups.yaml`; built by TASK-M7-35*
+
+**The batch.** The human's first message of 25 Oct 2026 rules thirty review-queue entries, keeps three parked, and
+rules two entries on Table 1's M and energy columns, which TASK-M2-20 ports. It is recorded in
+`docs/incoming/2026-10-25_rulings/rulings_2026-10-25.md` (sha256
+`6e673a76f6fca1af36b093c47361b6bf840e3726c69c3fc173c96d6caff2cc1f`, 95 lines) as given, except that the two Table 1
+paragraphs are left out, and the record says so where they stand, naming them. The thirty are ported one ruling per
+entry, in the message's order, from R-595 to R-624, and R-625 records the message's last two lines. The numbers just
+before R-595 are held by other work. The human's second message of 25 Oct 2026 rules RQ-572, RQ-574 and one other
+entry: RQ-574 is ported here, by R-626, and the others by their own task PRs (RQ-572 by R-593).
+
+The human's words on RQ-521, verbatim:
+
+> RQ-521: (a). The E ≥ 0 guard is for dispersal (H, HP, P), where all three bodies separate, which needs E ≥ 0. A binary
+> plus an escaper (HE, PE) is the ordinary E < 0 escape, so an E < 0 state must reach the hierarchy step. My "falls
+> through to …" list was incomplete.
+
+*What it decides:* RQ-521's option (a), as applied meanwhile. A guarded dispersal state, E < 0, that passes step 1's
+geometric tests goes on to step 2, the hierarchy step, as `classify`'s "Otherwise go on" reads, and may read HE, PE,
+B-stable or excursion there. R-548's words "falls through to B-stable, OS-candidate or B-so-far" are corrected as an
+incomplete list. The guard on the two-stage H in step 2 is unchanged.
+
+*Applied per R-369:* REQ-PAY-099's verify gains an arm for the case, which no ported fixture reaches: an E < 0 state
+passing step 1's geometric tests, with a bound pair in the parabolic band and the hierarchy gate passing, reads HE or
+PE from step 2, its state written by TASK-M7-35 under physics review; control: a classifier that skips step 2 for a
+guarded state reads B-so-far or OS-candidate and fails.
+
+R-595 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-PAY-099 (verify, rq removed, rulings, source, note).
+
+## R-596 — The trace fade's off-plane distance is taken in the physical mass metric pulled back through the decoder's Jacobian, `g = Jᵀ W J`, `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units *(closes RQ-522; settles R-509 (3)'s and R-550's open metric)*
+*25 Oct 2026 · applied in `docs/design/principia_lines.md` § "11. Open questions" (item 3's ruling),
+`docs/gui/principia_render_gui_spec.md` § "G2" (the Lines paragraph), `docs/archive/review_queue/M0.md` (RQ-522, moved
+with its ruling), REQ-GUI-266 and REQ-GUI-400 (reqio, the second new, a definition), TASK-M8-54 and
+`plan/rule_groups.yaml`; built by TASK-M8-54*
+
+The human's words, verbatim:
+
+> RQ-522: (b). Pull back the physical mass metric through the decoder's Jacobian: g = Jᵀ W J. W is the mass-weighted
+> (kinetic) metric on positions and its dual on momenta, in canonical units. It is the metric the shape sphere's
+> distances already come from.
+
+*What it decides:* RQ-522's option (b), with `W` the human's: not the fixed reference ranges' diagonal the option
+named, but the mass-weighted kinetic metric, `Σ mᵢ‖δrᵢ‖²` on positions and its dual `Σ ‖δpᵢ‖²/mᵢ` on momenta, in
+canonical units (`G = M = I = 1`). The trace fade's general off-plane distance is the distance in `z` from the
+trajectory's encoded point to the slice plane under `g = Jᵀ W J`. REQ-GUI-266 no longer waits.
+
+*Applied per R-369:* `J` is the decoder's own Jacobian, `J = ∂(r, p)/∂z` of the decoder's particle-frame output (after
+canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64, central difference,
+REQ-DEC-034's step rule) at the slice centre, as option (b) said of the point; it is not R-550's compass-view Jacobian,
+whose Jacobi or Shape coordinates (angles, rates, mass fractions) the human's `W` is not defined on, and which would
+make the fade change with the compass view selected (physics review 5644374613 of PR #293, F1). `W`'s masses are those
+decoded at the slice centre, so that `g` is one metric on `z` for the view, as `J` is. The distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to `span(q̂₁, q̂₂)`.
+Where `g` is singular along a direction, which the mass directions of `z` may be, the reading is a definition,
+REQ-GUI-400 (R-72), written into lines §8 by TASK-M8-54 and approved by its physics reviewer, REQ-GUI-266's verify
+checking it (code review 5644267473 of PR #293, C2).
+
+R-596 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-266 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-400.
+
+## R-597 — "No blank" on latent and flat charts holds at the default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate and draws as not a system, with the reason in the readout *(closes RQ-536; qualifies R-570 item 3; caps REQ-GEN-038's `μ_max` range)*
+*25 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Three hard requirements on any
+registered link" (Tunable parameters) and Part 4 ("Latent and flat charts: no limit on pan or zoom-out"),
+`docs/design/principia_chart_reference.md` §5.4, `docs/design/principia_dd_generation_root.md` §3.9 (Tunable
+parameters), `docs/gui/principia_render_gui_spec.md` § "G2", R-570's forward line, `docs/archive/review_queue/M0.md`
+(RQ-536, moved with its ruling), REQ-CHART-087, REQ-GUI-357 and REQ-GEN-038 (reqio), TASK-M8-55, TASK-M8-57 and
+TASK-M2-41 (notes) and `plan/rule_groups.yaml`; built by TASK-M8-57, and the cap by TASK-M2-41's proposal*
+
+The human's words, verbatim:
+
+> RQ-536: (a).
+> - "No blank" holds at the default links with μ_max inside GEN-038's range, which is capped at 10.
+> - Under the edge-reaching simplex link, a pixel with M01 < 1e-5 is genuinely degenerate. It draws as not a system,
+>   with the reason in the readout.
+
+And, in the batch's closing lines: "Keep μ_max ≤ 10 (see RQ-536)."
+
+*What it decides:* RQ-536's option (a). R-570's "every pixel is a system" holds at the decoder's default links with
+`μ_max` anywhere in its allowed range, whose top is capped at 10 by the human: at 10 the far field's `M₀₁` floor,
+`(1 + e^−10)/(1 + e^−10 + e^10) ≈ 4.5×10⁻⁵`, stays above `ε_M01 = 10⁻⁵`, so no far-field pixel is tagged. Under the
+edge-reaching simplex link a pixel whose `M₀₁ < 10⁻⁵` is tagged `DEGENERATE(M01_TINY)` and is not a system, drawn as
+R-511 draws one, with the reason in the readout (R-553: "not a system" and the check named). REQ-GEN-038's
+calibration keeps its other ends; its `μ_max` `hi` is at most 10.
+
+*Applied per R-369:* `ε_M01` is still an open calibration (REQ-DEC-039), so the guarantee is tied to it: the gap's
+upper side in REQ-DEC-039's verify and `docs/design/principia_dd_decoder.md` §3.1 is the far-field floor at the cap,
+`μ_max = 10`, `≈ 4.5×10⁻⁵`, not the value at `μ_max = 5`, and a proposed `ε_M01` at or above it fails (physics review
+5644374613 of PR #293, F4).
+
+R-597 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-087 (statement, verify, rq, rulings, source, note), REQ-GUI-357 (statement, rulings, note) and
+REQ-GEN-038 (statement, verify, rulings, note) and REQ-DEC-039 (verify, rulings, source, note).
+
+## R-598 — With energy normalisation off every latent pixel is a system; with it on, a pixel whose target energy cannot be reached has no system at that energy and draws as not a system, with the reason in the readout, never unnormalised *(closes RQ-552; qualifies R-570 item 3)*
+*25 Oct 2026 · applied with R-597 in the same texts, `docs/archive/review_queue/M0.md` (RQ-552, moved with its ruling),
+REQ-CHART-087 and REQ-GUI-357 (reqio), TASK-M8-55 and TASK-M8-57 and `plan/rule_groups.yaml`; built by TASK-M8-57*
+
+The human's words, verbatim:
+
+> RQ-552: (a). The rule holds with normalisation off. With it on, a pixel whose target energy cannot be reached has no
+> system at that energy: draw it as not a system and give the reason in the readout. Not (c): drawing it unnormalised
+> would put a different energy on the same chart.
+
+*What it decides:* RQ-552's option (a). R-570 item 3 holds with η_E off (`None`). Under `Some(E*)` a pixel tagged
+`ENERGY_INFEASIBLE` or `ENERGY_UNSCALABLE` (dd_decoder §3.7) has no system at that energy and draws as not a system
+(R-511), the readout giving the tag's reason; option (c), drawing it unnormalised, is refused, since it would put a
+different energy on the same chart. Option (b), forbidding η_E on these charts, is not taken.
+
+R-598 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-087 and REQ-GUI-357 (with R-597).
+
+## R-599 — Collapse is judged per axis: an axis along which the field is saturated and the samples are identical is genuinely flat and does not count; a quad stops only when every axis along which the field varies has collapsed, or at the screen floor; the readout names the saturated axis *(closes RQ-554; refines R-90's terminal stop)*
+*25 Oct 2026 · applied in `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" ((iv) and the band
+paragraph), `docs/archive/review_queue/M0.md` (RQ-554, moved with its ruling), REQ-SCHED-062 (reqio), REQ-GUI-397
+(reqio, new), TASK-M6-08 and TASK-M8-57 and `plan/rule_groups.yaml`; built by TASK-M6-08 and TASK-M8-57*
+
+The human's words, verbatim:
+
+> RQ-554: (c). Judge collapse per axis. An axis along which the field is saturated and the samples are identical is
+> genuinely flat, so it doesn't count. A quad stops only when every axis along which the field varies has collapsed, or
+> at the screen floor. The readout names the saturated axis.
+
+*What it decides:* `AT_F32_FLOOR`'s terminal stop judges collapse per in-plane axis. A saturated axis, its samples
+identical, is genuinely flat and does not count; a quad stops terminally only when every in-plane axis along which the
+field varies has collapsed on the linearised decoder, or at the screen floor. A band quad (chart_reference §5.4)
+keeps refining along its unsaturated axis to the screen floor, against R-108's at-rest target no longer. A quad whose
+in-plane axes are all saturated stops, the field being flat along each. The readout names the saturated axis.
+
+*Applied per R-369:* "saturated", per axis, is RQ-553's per-direction test (f64 `J_D`'s column along the axis 0 while
+the two f64 sample points are distinct; deep_zoom §4). The switchover (iii) is unchanged: the ruling is about where a
+quad stops, and a band quad switching to the linearised decoder keeps refining there along its varying axis. The
+readout is the hover readout over a pixel of such a quad (REQ-GUI-397, TASK-M8-57, where the band arises).
+
+R-599 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SCHED-062 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-397.
+
+## R-600 — The ensemble ratio gate predicts each start's parting time from its measured initial gap, `ln(tol/δ₀)` for each precision, never from `ln ε₃₂ / ln ε₆₄`; it runs on all 256 starts, not a subset; its tolerance is a calibration for the gate *(closes RQ-557; queues RQ-575)*
+*25 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` § "6. Tests" (ensemble_ratio),
+`docs/archive/review_queue/M0.md` (RQ-557, moved with its ruling), `REVIEW_QUEUE.md` (RQ-575, new), REQ-VAL-199
+(reqio), TASK-M8-76 and `plan/rule_groups.yaml`; built by TASK-M8-76*
+
+The human's words, verbatim:
+
+> RQ-557: (b). Predict each start's parting time from its measured initial gap, ln(tol/δ0) for each precision, rather
+> than from ln ε32 / ln ε64. Run it on all 256 starts, not a subset. The tolerance is a calibration for the gate.
+
+*What it decides:* RQ-557's option (b). The expected value is predicted per start from its measured starting gaps,
+`ln(tol/δ₃₂)/ln(tol/δ₆₄)`, and the draft's `≈ 0.44` is not used. The gate runs on all 256 starts. Its tolerance stays
+an R-71 calibration, confirmed at the M8 gate (REQ-VAL-199).
+
+*Read so (flagged, applied per R-369):* the human's `tol` in `ln(tol/δ0)` is option (b)'s `θ`, the parted mark (0.1,
+R-574's "parted at", the human's value, not a calibration), and "the tolerance" in the last sentence is the gate's
+tolerance on the ratio, option (b)'s "the tolerance calibrated". `δ₀` is each pair's measured chord at the first sync
+boundary, `k = 1`, `t = Δ_sync`, not `t = 0`: integrator contract Part 2a numbers the boundaries `t = k·Δ_sync`, and
+`Δ_sync` is REQ-INT-080's calibration. The probe's starting chords were measured at `t = 0.1` (RQ-557's text)
+(physics review 5644374613 of PR #293, F3).
+
+*Queued:* "all 256 starts, not a subset" replaces the options' "over the ICs where both pairs part, the count
+reported", and leaves open how a start whose pair has not parted by the horizon (`T` at most 200, R-610) enters the
+median: RQ-575. Which statistic compares the measured with the predicted ratios, the median of the measured ratios
+against the median of the predicted or the median of each start's measured over predicted, changes which ensembles
+pass, so it is RQ-575's second question, for the human (physics review 5644374613 of PR #293, F3). REQ-VAL-199 waits
+on RQ-575 for those two rules only.
+
+R-600 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-199 (statement, verify, rq, rulings, source, note).
+
+## R-601 — The viewer's four runs keep going past their first event, as measured, and the first event time is marked on the comparison *(closes RQ-558)*
+*25 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` § "3.1 Four runs of one IC" (Past a terminal
+event), `docs/archive/review_queue/M0.md` (RQ-558, moved with its ruling), REQ-VAL-196 and REQ-VAL-197 (reqio),
+TASK-M8-76 and `plan/rule_groups.yaml`; built by TASK-M8-76*
+
+The human's words, verbatim:
+
+> RQ-558: (a). Keep going, as measured. Stopping at the first event would make an early-colliding pair agree trivially:
+> maximum confidence exactly where least is known. Mark the first event time on the comparison.
+
+*What it decides:* RQ-558's option (a), as applied meanwhile: each run's fate and `t_end` are its first event, latched
+as the atlas latches it, and it carries on to the horizon for the chord; a run that fails or runs out of its budget
+ends there. New: each run's first event time is marked on the comparison, the chord plot.
+
+R-601 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-196 (statement, rq removed, rulings, source, note) and REQ-VAL-197 (statement, verify, rq removed,
+rulings, source, note).
+
+## R-602 — R-565's fixed quantum is the regularised occupants' sync grid only; the unregularised macro-step grid stays R-132's `dt_macro = max(1e-3, T/65535)` *(closes RQ-524)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 2a (the sync grid), R-565's forward
+line, `docs/archive/review_queue/M0.md` (RQ-524, moved with its ruling), REQ-INT-100 (reqio: note, source),
+TASK-M3-40 (a note) and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-524: (a).
+
+*What it decides:* RQ-524's option (a), as applied meanwhile: "R-565 is the sync grid only; the macro-step grid stays
+R-132's, unchanged." Nothing changes in REQ-INT-081.
+
+R-602 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-100 (rulings, source, note).
+
+## R-603 — A regularised copy's budget exhaustion is a sticky flag bit beside `saturated`, its two counted signals counters in a payload word, `saturated` set when either fires; an undetermined-by-budget footprint is never discarded, never treated as resolved and never split, its remedy finer steps as an explicit re-run *(closes RQ-526; a schema change)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 6 and Part 7,
+`docs/contracts/principia_scheduler_contract.md` Part 4 (the integration floor), `docs/design/principia_dd_refinement_policy.md`
+§1 and §6, `docs/design/principia_deep_zoom.md` § "Reserved: the integration floor", `docs/archive/review_queue/M0.md`
+(RQ-526, moved with its ruling), REQ-INT-101 and REQ-SCHED-063 (reqio), REQ-PAY-110 (reqio, new, a definition),
+TASK-M3-41 and TASK-M6-10 and `plan/rule_groups.yaml`; payload §1 (`budget_word`, perf review 5661999637 of PR #293, P1;
+code review 5662211284 of PR #293); built by TASK-M3-41 and TASK-M6-10*
+
+The human's words, verbatim:
+
+> RQ-526: (a), a flag bit plus counters, and the tile doesn't split.
+> - An undetermined-by-budget footprint is undetermined: never discarded and never treated as resolved. Halving the cell
+>   doesn't help it.
+> - Finer steps are its remedy, as an explicit re-run, not an automatic one.
+
+*What it decides:* RQ-526's option (a). Budget exhaustion sets a sticky descriptor flag `budget_exhausted` beside
+`saturated`, the copy's `state` latched as it stood and its footprint undetermined at read; the `saturated` bit is set
+when either counted signal (the separation floor, the entry-cap hits) fires; the two counts are kept in a payload word,
+a schema change. An undetermined-by-budget footprint takes the refinement policy's `Undetermined` decision, never a
+split. The integration-floor stop reads `saturated` and `suspect_fraction` for every occupant. Finer steps are the
+footprint's remedy, only as an explicit re-run.
+
+*Applied per R-369:* `sample_descriptor`'s sixteen bits are all assigned (R-545 spent 10–15), so where the flag and
+the two counters go is a definition, REQ-PAY-110 (R-72), written into payload §2 by TASK-M3-41 under physics and code
+review; it is a schema change, the version following from the ledger's hash (R-36). Option (b)'s new `state` value and
+option (c)'s split are not taken.
+
+*Applied per R-369 (perf review 5661999637 of PR #293, P1; code review 5662211284 of PR #293):* the flag's place moved from the descriptor, as
+the *What it decides* above reads RQ-526 (a)'s "sticky descriptor bit", to the hot payload word `budget_word`, which
+holds the two counters too (payload §1): the descriptor has no free bit (R-545), and one u32 holds the flag and both
+counts at a cost of 4 B per copy. The human's words, "a flag bit plus counters", are met; the integrator contract
+Part 6 says so.
+
+R-603 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-101 (statement, verify, rq removed, rulings, source, note) and REQ-SCHED-063 (statement, verify, rq
+removed, rulings, source, note); adds REQ-PAY-110.
+
+## R-604 — A regularised copy's step budget is checked every step: its running total against `max(N_min, rate · t_elapsed)`; `N_min` protects early close encounters and is an M3 calibration *(closes RQ-527; settles R-564's accounting)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 3 (`step_budget_rate`'s row and a new
+`N_min` row), R-564's forward line, `docs/archive/review_queue/M0.md` (RQ-527, moved with its ruling), REQ-INT-102 and
+REQ-INT-103 (reqio), REQ-INT-108 (reqio, new, a calibration), TASK-M3-41 and `plan/rule_groups.yaml`; built by
+TASK-M3-41*
+
+The human's words, verbatim:
+
+> RQ-527: (c). Check the running total every step against max(N_min, rate·t_elapsed). N_min protects early close
+> encounters and is an M3 calibration.
+
+*What it decides:* option (c), checked every step as option (d) had it: a copy is exhausted at the first step at which
+its running total of steps exceeds `max(N_min, step_budget_rate · t_elapsed)`, `t_elapsed` its physical time since
+`t = 0`. `N_min` is an R-71 calibration confirmed at the M3 gate (REQ-INT-108).
+
+R-604 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-102 (statement, verify, rq removed, rulings, source, note) and REQ-INT-103 (rq removed, rulings,
+note); adds REQ-INT-108.
+
+## R-605 — Both energy drifts are stored: the suspect flags and the drift view read the regularised drift, the Cartesian drift being diagnostic only; an event-stopped run draws as now, its readout saying "stopped at event"; the energy-suspect threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate, measured first *(closes RQ-528; a schema change)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 1, `docs/design/principia_dd_integrator.md`
+§3.5, R-566's forward line, `docs/archive/review_queue/M0.md` (RQ-528, moved with its ruling), REQ-VAL-195 and
+REQ-INT-106 (reqio), REQ-PAY-111 (reqio, new, a definition), REQ-INT-109 (reqio, new, a calibration), REQ-TOOL-219
+(reqio, new), TASK-M3-41 and `plan/rule_groups.yaml`; payload §1 and §5 (`dE_reg`, perf review 5661999637 of PR #293,
+P1; code review 5662211284 of PR #293, note (c)); built by TASK-M3-41*
+
+The human's words, verbatim:
+
+> RQ-528:
+> - Store both drifts. Flags and the drift view read the regularised drift. The Cartesian drift is diagnostic only: at a
+>   close approach it is a cancellation of two large terms, and it is wrong exactly where a run stopped at an event.
+> - An event-stopped run draws as now, with the readout saying "stopped at event".
+> - The "energy suspect" threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate. Measure first, as
+>   meanwhile.
+
+*What it decides:* option (b) for storage: under a regularised occupant the regularised energy's drift latches are
+stored in payload fields of their own, beside the Cartesian ones (a schema change). The suspect flags and the drift
+view read the regularised drift. Option (c)'s display: an event-stopped run draws as today, and its readout says
+"stopped at event". Option (d): REQ-INT-106 measures Heggie × RK4's regularised drift first, as meanwhile ((d2)), and
+the energy-suspect threshold is then recalibrated on it at the M3 gate. The recalibrated value replaces REQ-INT-085's
+one threshold, which the predicate applies at every precision and to every occupant, so it moves REQ-INT-085's
+verdicts too: its proposal also reports, at the new value, what Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light on dd
+tests 2 and 7 at each precision, and whether REQ-INT-085's pass conditions and REQ-VAL-031's (Euler lighting
+`SUSPECT_ENERGY` on test 2) still hold (physics review 5644374613 of PR #293, F2, applied per R-369).
+
+*Applied per R-369:* the new fields' layout is a definition, REQ-PAY-111 (R-72), written into payload §1 and §5 by
+TASK-M3-41. The recalibration is its own R-71 calibration, REQ-INT-109, closed by TASK-M3-41 after REQ-INT-106's
+measurement, since REQ-INT-085 is closed by TASK-M3-05 before Heggie is built. The drift view's read and its readout
+are REQ-TOOL-219, closed by TASK-M3-41.
+
+R-605 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-195 (statement, verify, rq removed, rulings, source, note) and REQ-INT-106 (verify, rq removed,
+rulings, source, note); adds REQ-PAY-111, REQ-INT-109 and REQ-TOOL-219.
+
+## R-606 — The default occupant is Heggie × RK4 at every tier: tiers trade resolution and samples, never the integrator; the tier column is the per-stepper binding with regularisation `none`; revisited as RQ-529 (c) once more pairs are measured *(closes RQ-529)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 2 (the default occupant), R-560's
+forward line, `docs/archive/review_queue/M0.md` (RQ-529, moved with its ruling), REQ-INT-014 (reqio: note, rulings),
+TASK-M3-08 (a note) and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-529: (a). Heggie × RK4 at every tier. Tiers trade resolution and samples, never the integrator: a cheaper
+> unregularised default on low tiers would change results near collisions. Revisit as (c) once more pairs are measured.
+
+*What it decides:* RQ-529's option (a), as applied meanwhile. "Revisit as (c) once more pairs are measured" is
+recorded as the human's note on when the question returns; it is no open entry, and nothing waits on it.
+
+R-606 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-014 (rulings, note).
+
+## R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 6, `docs/design/principia_dd_integrator.md`
+§6, `docs/design/principia_dd_decoder.md` § "6. Deferred / flagged", `docs/archive/review_queue/M0.md` (RQ-530, moved
+with its ruling) and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-530: (a).
+
+*What it decides:* RQ-530's option (a): "KS is not built: Part 2b's four are the regularisations, and a later method
+is added by its own ruling; dd_decoder §6's item is reworded to say so, with no version." No requirement changes.
+
+R-607 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-608 — REQ-EVT-013's re-bind test states its offsets past firing in physical time, the times the original prin-rs boundaries stood at, marched on `Δ_sync`; a count of boundaries is not a time *(closes RQ-531)*
+*25 Oct 2026 · applied in `docs/archive/review_queue/M0.md` (RQ-531, moved with its ruling), REQ-EVT-013 (reqio),
+REQ-EVT-032 (reqio, new, a calibration), TASK-M3-33 and `plan/rule_groups.yaml`; built by TASK-M3-33*
+
+The human's words, verbatim:
+
+> RQ-531: (a). The test is about physical persistence, so convert the counts to the physical times they meant. A count
+> of boundaries is not a time.
+
+*What it decides:* RQ-531's option (a). The +1, +2, +3, +4 and +8 offsets become the physical times the prin-rs
+measurement's boundaries stood at, read from its grid, and the march past firing runs on `Δ_sync` to them.
+
+*Applied per R-369:* the corpus does not hold the prin-rs measurement's grid (`t_max / n_sync`), so the five physical
+offsets are an R-71 calibration, REQ-EVT-032, read and proposed with their evidence by TASK-M3-33 and confirmed at the
+M3 gate.
+
+R-608 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-EVT-013 (verify, rulings, note); adds REQ-EVT-032.
+
+## R-609 — Neither implicit stepper is selectable: Heggie × the generalised leapfrog is recorded as measured bad for the record, and "stays allowed" means no pair of the built steppers is blocked *(closes RQ-532; reads R-567)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 2b (note 4 and the paragraph after the
+table), `docs/archive/review_queue/M0.md` (RQ-532, moved with its ruling), REQ-INT-006 and REQ-INT-098 (reqio),
+TASK-M3-39 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-532: (a).
+
+*What it decides:* RQ-532's option (a), as applied meanwhile: neither implicit stepper is selectable or built; note 4
+records the pair as measured bad; "stays allowed" means no pair of the built steppers is blocked.
+
+R-609 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-006 (rulings, note) and REQ-INT-098 (verify, rulings, note).
+
+## R-610 — The horizon's floor is one closure window, 0.4, below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost: `T_horizon ∈ [0.4, 200]`, default 50 *(closes RQ-555; amends R-575's interim range)*
+*25 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" (the field and its ends),
+`docs/contracts/principia_integrator_contract.md` Part 3 and Part 5, `docs/design/principia_dd_integrator.md` §2,
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/design/principia_honesty_precision.md` §3.6, R-132's and
+R-575's forward lines, `docs/archive/review_queue/M0.md` (RQ-555, moved with its ruling), REQ-INT-081, REQ-INT-026 and
+REQ-GUI-102 (reqio), TASK-M3-06 and TASK-M8-24 and `plan/rule_groups.yaml`; built by TASK-M3-06 and TASK-M8-24*
+
+The human's words, verbatim:
+
+> RQ-555: Floor of one closure window (0.4); below it the escape arm cannot fire, and the settings say so. The cap stays
+> at 200 until long horizons are measured for cost.
+
+*What it decides:* RQ-555's floor option (b), at one closure window, 0.4 (R-29's escape window), and its cap option
+(i). `T_horizon ∈ [0.4, 200]`, default 50; the Run window says why the floor is there.
+
+*Read so (applied per R-369):* "floor" is the lowest value accepted, as RQ-555's options use the word; "the settings say
+so" is a line beside the field. A typed value below 0.4 is refused with the reason "below one closure window (0.4) the
+escape arm cannot fire"; above 200 it clamps to 200, as before; a press of ↓ or a drag that would take `T` below 0.4
+sets it to 0.4 if it is above, and otherwise leaves it, replacing PR #283's interim (to 0.2, the Alt step, with 0 the
+limit). `dt_macro` is unchanged.
+
+*Read so (flagged, applied per R-369):* the human's "one closure window (0.4)" is R-29's escape window, the `|Δn̂|`
+window of integrator contract Part 3 (`tau`, escape window, "0.4 (provisional)"), and the floor is stated as that
+window, not as the literal: one escape window, 0.4 while the window is 0.4. If the window is recalibrated (M3), the
+floor, the refusal's reason and the line beside the field move with it, so that they keep agreeing; the 0.4 in the
+range and the tests stands while the window is 0.4 (physics review 5644374613 of PR #293, F5).
+
+R-610 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-081 (statement, verify, rulings, source, note), REQ-INT-026 (statement, rulings, note) and
+REQ-GUI-102 (statement, verify, rulings, note).
+
+## R-611 — Where R-543's text and its prototype's code disagree, the text wins, and the code is used only where the text is silent: the legend states the Torus period, the readout names the wrap mode, and the code's period counts fill what the text leaves open *(closes RQ-506; amends R-542's code-first rule for R-543)*
+*25 Oct 2026 · applied in `docs/design/principia_state_map.md` (its heading note, SM6 and SM8),
+`docs/archive/review_queue/M0.md` (RQ-506, moved with its ruling), REQ-GUI-339, REQ-GUI-340 and REQ-COL-136 (reqio: `rq`
+removed, rulings, notes), TASK-M7-48, TASK-M7-51 and TASK-M8-66 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-506: as meanwhile. My text wins; use the code only where the text is silent.
+
+*What it decides:* RQ-506's recorded meanwhile becomes the rule. It read: "**Applied meanwhile:** (a). REQ-GUI-339
+carries the legend's period and the readout (TASK-M8-66), REQ-GUI-340 the node's label (TASK-M7-51), each with `rq:
+RQ-506`; REQ-COL-136's verify uses the code's counts." Option (a): "The ruling's text where the code is silent (the
+legend states the period in chart units, the readout names the wrap mode), and the code's counts, which only fill what
+the text leaves open." For R-543, the human's text wins over the code, against R-542's rule that the code is the
+transcription source where they disagree.
+
+R-611 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-339, REQ-GUI-340 and REQ-COL-136 (rq removed, rulings, note).
+
+## R-612 — Under a Torus base, "Left its starting tile" compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods *(closes RQ-507; amends R-542's brightness and R-543 §2.1)*
+*25 Oct 2026 · applied in `docs/design/principia_state_map.md` (its heading note, SM6, SM11's brightness and its
+transcribed brightness rule, each with a line naming R-612), `docs/archive/review_queue/M0.md` (RQ-507, moved
+with its ruling), REQ-COL-128 and REQ-COL-136 (reqio), TASK-M7-48 and `plan/rule_groups.yaml`; built by TASK-M7-48*
+
+The human's words, verbatim:
+
+> RQ-507: (b). Compare the Torus's own period cell.
+
+*What it decides:* RQ-507's option (b). Under a Torus gradient base, Left its starting tile compares the period cell
+`(⌊X⌋, ⌊Y⌋)`, `X` and `Y` the Torus's coordinates in periods, at `t` and at `t = 0`, so every one-period move changes
+the compared cell (`⌊X + 1⌋ = ⌊X⌋ + 1`). Under other bases it compares the Palette's tile, as before. On the cylinder
+θ is once round, so the cell changes only along `s`.
+
+R-612 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-128 (statement, verify, rulings, source, note) and REQ-COL-136 (rq removed, note).
+
+## R-613 — R-544 wins: no fold anywhere on the shape sphere chart, no equator fold and no pixel fold on any view, tilted or not; RQ-472's ruling keeps its pole maps *(closes RQ-508; settles what R-554 left unapplied)*
+*25 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map", `docs/contracts/principia_chart_decoder_contract.md`
+(the repeats paragraph), R-554's forward line, `docs/archive/review_queue/M0.md` (RQ-508, moved with its ruling),
+REQ-CHART-062, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079 and REQ-GUI-278 (reqio), TASK-M2-36, TASK-M8-56 and
+TASK-M8-58 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-508: as meanwhile. R-544 wins: no fold anywhere.
+
+*What it decides:* RQ-508's recorded meanwhile becomes the rule. It read: "**Applied meanwhile:** (a), R-544, the
+later ruling and the one that says "of any kind". chart_reference §3.3's tilted fold is replaced by R-544's one-to-one
+tilted view." Option (a): "R-544 governs on the shape sphere chart: no equator fold and no pixel fold on any view,
+tilted or not; RQ-472's ruling keeps its pole maps, decided as it says, and its equator clause and its last sentence no
+longer apply to the shape sphere." What waited on RQ-508 no longer waits, and builds no fold.
+
+R-613 is in the "physics" group of `plan/rule_groups.yaml`, with R-544 and R-554.
+
+Changes REQ-CHART-062, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079 and REQ-GUI-278 (statement or verify where they
+named RQ-508, rq removed, rulings, note).
+
+## R-614 — The frame record's `substep_histogram` has 17 entries: 16 equal bins of width `N_max/16` over `[0, N_max)`, half-open, and a separate cap bin *(closes RQ-520; amends R-545 as to the histogram's length)*
+*25 Oct 2026 · applied in `docs/design/principia_dd_telemetry_and_tiers.md` §2 and §5, `docs/gui/principia_render_gui_spec.md`
+§ "Profiler", R-545's forward line, `docs/archive/review_queue/M0.md` (RQ-520, moved with its ruling), REQ-TOOL-187
+and REQ-TOOL-098 (reqio), TASK-M5-28, TASK-M8-28, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M5-28
+and drawn by TASK-M8-28*
+
+The human's words, verbatim:
+
+> RQ-520: (a). 17 entries: 16 equal bins and a separate cap bin.
+
+*What it decides:* RQ-520's option (a): `substep_histogram: [u32; 17]`, sixteen equal bins of width `N_max/16` over
+`[0, N_max)`, half-open, and the cap hits (`N_sub = N_max`) in the seventeenth. R-545's "`[u32; 16]`" is amended; it
+is still a schema v1 change, carried by v2, and nothing built writes it yet. The merged mock's placeholder bins
+(`crates/gui/src/mock/profile.rs`) are TASK-M8-28's to change.
+
+R-614 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-187 (statement, verify, rq removed, rulings, source, note) and REQ-TOOL-098 (verify, rulings, note).
+
+## R-615 — R-561's "Problems panel" is the status line and the Run window: a pair measured not to work shows its warning there *(closes RQ-525; reads R-561)*
+*25 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` Part 2b, `docs/gui/principia_render_gui_spec.md`
+§G1's top bar (the status) and § "Run — from the top bar", R-561's forward line, `docs/archive/review_queue/M0.md`
+(RQ-525, moved with its ruling), REQ-GUI-352 (reqio), TASK-M8-24 and `plan/rule_groups.yaml`; built by TASK-M8-24*
+
+The human's words, verbatim:
+
+> RQ-525: (c). The status line and the Run window.
+
+*What it decides:* RQ-525's option (c): the warning shows in the status line and the Run window only, "the Problems
+panel" read as those. The stain editor's Problems pane is unchanged, and no app-wide panel is made. The Run window's
+warning is REQ-GUI-351's; the status line's is REQ-GUI-352's.
+
+R-615 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-352 (statement, verify, rq removed, rulings, source, note).
+
+## R-616 — R-569's words win over its demos, and only a new run restarts: an icon larger than the view is centred on that axis, a click that pins the shown trace does not restart, the legend's key line is the words', and a hover into a repeat of the same system does not restart *(closes RQ-533)*
+*25 Oct 2026 · applied in `docs/design/principia_lines.md` § "8. Traces", `docs/gui/principia_render_gui_spec.md` §G2 and
+§G6, R-569's forward line, `docs/archive/review_queue/M0.md` (RQ-533, moved with its ruling), REQ-GUI-354, REQ-GUI-356
+and REQ-GUI-332 (reqio), TASK-M8-58 and TASK-M8-63 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-533: my words win, except one case: hovering into a repeat of the same system does not restart. Only a new run
+> restarts, as the demo's restartOnNewRun does. My "another point" meant another run.
+
+*What it decides:* option (a) in the three places, and the fourth: a hover into a repeat of the shown system does not
+restart. The trigger is a new run: a hover or click that integrates a different IC restarts; a hover into a repeat,
+or a click that pins the shown trace, integrates no new run and does not.
+
+*Flagged (as R-171 did):* "my words win, except one case" reads as an exception, but in the case it names the words,
+RQ-533's option (a) for the fourth place, already say no restart; the demos are what restart there. So the outcome is
+option (a) in all four places, and that is what is applied. "As the demo's restartOnNewRun does" is read by the
+function's name, a restart on a new run: the demos call it on every computed system pixel, the same IC or not.
+
+R-616 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-354, REQ-GUI-356 and REQ-GUI-332 (rq removed, rulings, note).
+
+## R-617 — Only the trace's own marker restarts: under "With the playhead" a new trace's head starts at 0 and runs at the transport's rate; the figure's global playhead and the field are untouched *(closes RQ-534; amends R-569 ruling 1)*
+*25 Oct 2026 · applied in `docs/design/principia_lines.md` § "8. Traces" (Animation), `docs/gui/principia_render_gui_spec.md`
+§G2, R-569's forward line, `docs/archive/review_queue/M0.md` (RQ-534, moved with its ruling), REQ-GUI-354 (reqio),
+TASK-M8-58 and `plan/rule_groups.yaml`; built by TASK-M8-58*
+
+The human's words, verbatim:
+
+> RQ-534: (b). Only the trace's own marker restarts. The figure's global playhead is untouched. I never meant hovering to
+> restart the field.
+
+*What it decides:* RQ-534's option (b): "the trace's head only: under "With the playhead" a new trace starts its own
+head at 0 and runs it at the transport's rate while the transport plays, the figure's playhead and the field
+unaffected (as the own clock does)."
+
+*Applied per R-369:* each of the Time panel's own controls that jumps its playhead (render_gui_spec §G2's Time
+panel: the scrubber dragged, the scrubber clicked to a time, a step, and the loop's wrap to 0) puts the trace's head back on the figure's
+playhead, and while the transport is paused the head does not move (`principia_lines.md` §8). The port's first
+wording, "a scrub, a seek or a restart of the Time panel", named controls the spec does not define (qa review
+5644700214 of PR #293, N2); "jumps", not "moves", so that play is not among them (qa review 5644735344,
+N5).
+
+R-617 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-354 (statement, verify, rq removed, rulings, source, note), with R-616.
+
+## R-618 — A Print graph's `device_px` effects and the screen-anchored sheet run in a second pass at screen resolution, after the display scale; at export a display pixel is an export pixel *(closes RQ-538; amends R-487's and R-531's composite order)*
+*25 Oct 2026 · applied in `docs/design/principia_print_graph.md` §6.2 and §6.3, `docs/contracts/principia_render_contract.md`
+§ "The Print graph stage", `docs/archive/review_queue/M0.md` (RQ-538, moved with its ruling), REQ-RENDER-110 (reqio),
+REQ-RENDER-120 (reqio, new, a definition), TASK-M7-69, TASK-M7-55, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
+by TASK-M7-69*
+
+The human's words, verbatim:
+
+> RQ-538: (b). A second pass at screen resolution for device_px effects.
+
+*What it decides:* RQ-538's option (b): "As (a), and nodes flagged `device_px` (and the sheet) run after the display
+scale, at display resolution, a second print pass, so a scanline is exactly one screen pixel at every `render_scale`;
+the chain gains a stage." From (a): the anchoring coordinate is the pixel's screen position, and at export a display
+pixel is an export pixel.
+
+*Flagged:* the human's gloss names "device_px effects" and not the sheet; the option's words include the sheet, and
+the option is applied as worded (as the 21 Oct batch's instruction read an option letter).
+*Applied per R-369:* how a graph is split into the two passes, where a `device_px` node or the sheet sits among other
+nodes, is a definition, REQ-RENDER-120 (R-72), written into print_graph §6.2 by TASK-M7-69; with neither in a graph the
+screen pass is the identity, so Plain stays bitwise.
+
+R-618 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-RENDER-110 (statement, verify, rq removed, rulings, source, note); adds REQ-RENDER-120.
+
+## R-619 — v1 web has two lists of crossings: the three for engine state, unchanged, and a separate, enumerated platform list, both enforced in CI *(closes RQ-550; amends REQ-SYS-059's "exactly three" for v1 web)*
+*25 Oct 2026 · applied in `docs/design/principia_systems_architecture.md` §3 and §6 invariant 10,
+`docs/contracts/principia_canonical_spec.md` §1 item 5 and §9 item 12, `docs/contracts/principia_caching_contract.md`
+Part 6a, `docs/gui/principia_render_gui_spec.md` § "v1 web", `docs/archive/review_queue/M0.md` (RQ-550, moved with its
+ruling), REQ-SYS-059, REQ-SYS-051 and REQ-SYS-086 (reqio), REQ-SYS-091 (reqio, new, a definition), TASK-M8-38 and
+TASK-M8-41 and `plan/rule_groups.yaml`; built by TASK-M8-38*
+
+The human's words, verbatim:
+
+> RQ-550: (a). Three crossings for engine state, plus a separate platform list, enforced in CI.
+
+*What it decides:* RQ-550's option (a), with its check in CI rather than review: the three crossings stay the
+engine↔GUI membrane's for engine state, its law unchanged; v1 web's platform crossings are a second, enumerated list,
+systems_architecture §3's table, each plain data, none engine state and none engine-sized; CI checks each wasm
+module's imports and exports, and the messages between the two contexts (R-620), against the two lists.
+
+*Applied per R-369:* the entry's three gaps with no native control are each crossed by its row of the platform list:
+runtime-authored colour occupants come from files the user picks or drops (row 7), there being no folder to scan, kept
+in the page's storage (row 11); persistence across reloads is row 11; `prin profile query --live` is row 14, whose
+browser transport is a definition, REQ-SYS-091 (R-72), for TASK-M8-38. None of them is absent, so REQ-SYS-086's
+disabled-control list does not grow by them.
+
+R-619 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-059 (statement, verify, rq removed, rulings, source, note), REQ-SYS-051 (rq removed, rulings, note)
+and REQ-SYS-086 (rq removed, rulings, note); adds REQ-SYS-091.
+
+## R-620 — In v1 web egui runs in its own wasm context on the main thread, and the engine stays in its worker *(closes RQ-551)*
+*25 Oct 2026 · applied in `docs/contracts/principia_caching_contract.md` Part 6a, `docs/design/principia_systems_architecture.md`
+§3, §5 seam 12 and §6 invariant 5, `docs/contracts/principia_canonical_spec.md` §1 and §6,
+`docs/contracts/principia_gui_state_contract.md` §1, `docs/design/principia_temporal_architecture_note.md`,
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (gui review 5661813927 of PR #293, G5),
+`docs/archive/review_queue/M0.md` (RQ-551, moved with its ruling), REQ-SYS-039, REQ-SYS-040, REQ-SYS-041, REQ-SYS-043,
+REQ-SYS-044, REQ-SYS-045, REQ-SYS-047, REQ-SYS-049, REQ-SYS-050 and REQ-SYS-056 (reqio), TASK-M8-37 and TASK-M8-38 and
+`plan/rule_groups.yaml`; built by TASK-M8-37 and TASK-M8-38*
+
+The human's words, verbatim:
+
+> RQ-551: (b). egui in its own wasm context on the main thread; the engine stays in its worker.
+
+*What it decides:* RQ-551's option (b): "the gui crate against the engine surface, with `set_field` and the snapshot
+posted between the two contexts as serialised data; the engine and the frame loop stay in the worker. R-113's split
+holds as natively; REQ-SYS-059's three become messages between two wasm contexts." The main thread holds the GUI's
+context, a loader and the input pump, and no engine state.
+
+*Applied per R-369:* two surfaces, the figure on the worker's `OffscreenCanvas`, transferred once, and the GUI on a
+main-thread canvas above it, with no compositing step, since WebGPU shares no texture between a worker's device and
+the main thread's. The requirements that named "a TS input pump and DOM-GUI host" or "a separate TS binary" name the
+GUI's wasm context instead; the others hold unchanged and lose their `rq`.
+
+R-620 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-039, REQ-SYS-047, REQ-SYS-049 and REQ-SYS-056 (statement, verify, rq removed, rulings, note) and
+REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-044, REQ-SYS-045 and REQ-SYS-050 (rq removed, rulings, note).
+
+## R-621 — The header strip states `T` and the f32 trust time, measured for the current view rather than a constant; the per-point trust stays in the viewer *(closes RQ-556; refines R-574's "nothing changes in the atlas" as to the header)*
+*25 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` §3.5, R-574's forward line,
+`docs/archive/review_queue/M0.md` (RQ-556, moved with its ruling), REQ-SYS-061 (reqio: `rq` removed, note),
+REQ-GUI-398 (reqio, new), REQ-VAL-200 (reqio, new, a definition), TASK-M8-76 and TASK-M8-41 and
+`plan/rule_groups.yaml`; built by TASK-M8-76*
+
+The human's words, verbatim:
+
+> RQ-556: (b). T plus the f32 trust time, measured for the current view rather than a constant. The per-point trust stays
+> in the viewer.
+
+*What it decides:* RQ-556's option (b), changed: the header strip states `T` and the f32 trust time, but the time is
+measured for the current view, not the draft's derived constant ("≈ 23"). REQ-SYS-061's statement is unchanged, as
+option (b) has it, and the header meets its "state its predictability horizon". The atlas's colours are unchanged
+(R-574).
+
+*Applied per R-369:* how the current view's trust time is measured is a definition, REQ-VAL-200 (R-72), written into
+honesty §3.5 by TASK-M8-76 under physics review; the header's text, labelled as measured for this view, is
+REQ-GUI-398, closed by TASK-M8-76, which runs the four-run machinery; TASK-M8-41 closes REQ-SYS-061 after it.
+
+R-621 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SYS-061 (rq removed, rulings, note); adds REQ-GUI-398 and REQ-VAL-200.
+
+## R-622 — Sequences become shared state under the one history: every sequence edit is a typed `SetField` in the contract's undo/redo history, Go to and sequence edits interleaved *(closes RQ-559; applies R-52 to the Sequence)*
+*25 Oct 2026 · applied in `docs/design/principia_sequence.md` (heading note, §2, §3.5, §4 and §5),
+`docs/contracts/principia_gui_state_contract.md` §2, `docs/gui/principia_render_gui_spec.md` §G9a, R-577's forward
+line, `docs/archive/review_queue/M0.md` (RQ-559, moved with its ruling), REQ-GUI-378 (reqio), REQ-GUI-399 (reqio, new,
+a definition), TASK-M8-77 and TASK-M8-78, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+built by TASK-M8-77*
+
+The human's words, verbatim:
+
+> RQ-559: (ii). Sequences become shared state under the one history.
+
+*What it decides:* RQ-559's option (ii): "the sequence becomes contract state, its edits typed `SetField`s in the one
+history, Go to and sequence edits interleaved". The draft's window history (i) and no undo (iii) are not taken.
+
+*Applied per R-369:* the sequences' place in the contract state and their `SetField` paths are a definition,
+REQ-GUI-399 (R-72), written into gui_state_contract §2 by TASK-M8-77; the sequences are neither `SimConfig` nor
+`RenderState`, so no sim key and no export's identity changes with an edit.
+
+R-622 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-378 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-399.
+
+## R-623 — At a link-parameter change a segment offers the choice, cut or interpolate (export only), interpolating by default *(closes RQ-560; amends R-520)*
+*25 Oct 2026 · applied in `docs/design/principia_sequence.md` §3.4, `docs/contracts/principia_export_animation_contract.md`
+Part 3, `docs/gui/principia_render_gui_spec.md` §G9a, R-520's forward line, `docs/archive/review_queue/M0.md` (RQ-560,
+moved with its ruling), REQ-GUI-376, REQ-TOOL-175 and REQ-TOOL-076 (reqio), TASK-M8-77 and TASK-M8-31 and
+`plan/rule_groups.yaml`; built by TASK-M8-77 and TASK-M8-31*
+
+The human's words, verbatim:
+
+> RQ-560: (b). Offer the choice; ease by default.
+
+*What it decides:* RQ-560's option (b): "a per-segment choice, cut or interpolate (export only), interpolate the
+default, the spec's segment recording it and the planner's flag naming only interpolating segments". R-520's "In a
+blocking export, link parameters interpolate across keyframes" holds by default, and a segment set to cut cuts in the
+export as in live playback; live playback always cuts (R-520 F3).
+
+R-623 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-376 (statement, verify, rulings, note), REQ-TOOL-175 (statement, verify, rulings, note) and
+REQ-TOOL-076 (statement, rulings, note).
+
+## R-624 — A takeover inside a segment the film interpolates and live playback cuts is exact at its frame, and the difference after it is accepted; after a takeover mid-way through a link-parameter ease the live player holds the takeover's value until the second keyframe, then cuts *(closes RQ-561; reads R-520 F3 for the reel)*
+*25 Oct 2026 · applied in `docs/design/principia_spotlight_reel.md` §3.3 and §4, `docs/design/principia_sequence.md`
+§3.6, `docs/contracts/principia_export_animation_contract.md` Part 3, R-578's forward line,
+`docs/archive/review_queue/M0.md` (RQ-561, moved with its ruling), REQ-GUI-383 (reqio), TASK-M8-79 and
+`plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> RQ-561: (a). Accept the difference, with the meanwhile rule for a mid-ease takeover.
+
+*What it decides:* RQ-561's option (a), and its second question's option (i), which the meanwhile applied: "in a
+dissolve the takeover loads the state live shows at that frame; after a takeover in a link-parameter ease the live
+player holds the takeover's value until the second keyframe, then cuts". The difference after the takeover frame is
+expected and not reported; option (b)'s refusal and option (c)'s live interpolation are not taken.
+
+R-624 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-383 (statement, rulings, note).
+
+## R-625 — RQ-378, RQ-386 and RQ-391 stay parked; the calibrations are taken at their gates, as planned, `μ_max` kept at most 10 *(amends nothing; R-568's, R-522's and R-527's parking stands)*
+*25 Oct 2026 · applied in `REVIEW_QUEUE.md` (a dated line in RQ-378, RQ-386 and RQ-391) and `plan/rule_groups.yaml`*
+
+The human's words, the batch's last lines, verbatim:
+
+> Parked (RQ-378, RQ-386, RQ-391): stay parked.
+> Calibrations: at the gate, as planned. Keep μ_max ≤ 10 (see RQ-536).
+
+*What it decides:* RQ-378 (R-510, R-568), RQ-386 (R-522) and RQ-391 (R-527) stay open and parked; nothing waits on
+them, and what each applies stays applied. The calibration values are proposed and confirmed at their milestone gates,
+as planned; the cap on `μ_max` is R-597's.
+
+R-625 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-626 — R-482 C3's mass-varying chart is a latent configuration view at a fixed non-zero mass logit, or a mixed chart with a mass axis, not the mass simplex chart, which sets its masses directly and cannot show `μ_max` moving them *(closes RQ-574; amends R-482 C3's choice of chart)*
+*25 Oct 2026 · the human's second message of that day; applied in R-482's forward line,
+`docs/archive/review_queue/M0.md` (RQ-574, moved with its ruling), REQ-CHART-074 (reqio), TASK-M4-21 (its goal,
+acceptance line and a note) and `plan/rule_groups.yaml`; built by TASK-M4-21*
+
+The human's words, verbatim:
+
+> RQ-574: (a). Use a latent view at a fixed non-zero mass logit, or a mixed chart with a mass axis. The mass simplex
+> chart sets its masses directly, so it cannot show μ_max moving them.
+
+*What it decides:* RQ-574's option (a). C3's first arm, "`μ_max = 4` against `5` gives different payloads on a
+mass-varying chart", is run on a chart whose masses go through the `softmax_tanh` mass link, so that `μ_max` reaches
+them: a latent view at a fixed non-zero mass logit, or a mixed chart with a mass axis. The mass simplex chart sets its
+masses directly and reads no mass link, so `μ_max` cannot move its payloads, and R-482 C3's "The mass-varying chart is
+the mass simplex chart" is replaced. The constant-mass control is unchanged: a latent configuration view with both
+mass logits at 0, the equal masses `(⅓, ⅓, ⅓)`, which `μ_max` does not move. No contract text names C3's chart; the
+choice lives in REQ-CHART-074 and TASK-M4-21.
+
+*Applied per R-369:* of the two the human allows, the test takes the latent configuration view at the fixed mass logit
+`z_μ = (0.5, −0.3)`, the option's own example, whose masses `softmax(0, μ_max·tanh z_μ)` differ between `μ_max = 4`
+and `5` (the logits `(0, 1.85, −1.17)` against `(0, 2.31, −1.46)`). The two arms then run on the same latent view and
+differ only in the mass logit, so the control isolates what makes the masses constant.
+
+R-626 is in the "process" group of `plan/rule_groups.yaml`, with R-482.
+
+Changes REQ-CHART-074 (statement, verify, rq removed, rulings, source, note).
