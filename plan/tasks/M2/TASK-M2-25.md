@@ -32,6 +32,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - `decisions.md` § "R-394 — `ctx.chart.slice_uv` is the sample's position in the slice plane, stable under pan and zoom; a screen-relative position is a separate field *(closes RQ-257)*"
 - `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 - `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+- `decisions.md` § "R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's "Each is read from the decoded `(m, r, p)` alone" for `rho_angle`; asked directly, no RQ)*"
 
 ## Deliverables
 - `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl` as snippets for the fragment assembler, emitted by the rust-gpu → SPIR-V → WGSL translation of the shared decode source (R-116); the build fails if either is edited by hand.
@@ -75,3 +76,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
   the Rust source's select of `β = π̂` where `λ̃_y` compares equal to 0 and `λ̃_x < 0` (TASK-M2-15; dd_encode §3.1),
   since WGSL may ignore a zero's sign through `atan2`; the ROUNDTRIP and agreement checks include that half-axis with
   `±0` operands, where CPU and GPU agree (REQ-COL-006).
+- **R-628 (27 Oct 2026, the human's answer on PR #303):** the descriptor's `rho_angle` is read from the configuration
+  block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the re-centred positions (dd_decoder §3.6), so the generated decode
+  takes it from them too, and the shape-pole test holds descriptor word 7 strictly, with near-pole points at `φ_f = 0`
+  and a generic phase against the CPU's f32 decode and `Φ`'s f64 angle (physics review 5669268864, P1).
