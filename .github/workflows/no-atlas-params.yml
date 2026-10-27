@@ -1,0 +1,25 @@
+# The Three Body Orbits operator's atlas-params.json is never committed (docs/incoming/2026-10-26_orbit_catalogues/,
+# "Data terms"). Seconds, no build: runs on every pull request and every push to main.
+name: no-atlas-params
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  # R-374: every workflow sets line-tables-only at its top level. This job builds nothing; it sets them so that holds
+  # for every workflow without exception (applied per R-369).
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  no-atlas-params:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: scripts/check_no_atlas_params.sh
+        run: scripts/check_no_atlas_params.sh

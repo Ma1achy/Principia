@@ -9,3 +9,9 @@ __pycache__/
 
 # Cargo build output
 /target/
+
+# The Three Body Orbits operator's atlas-params.json: sent by email, not published, never committed
+# (docs/incoming/2026-10-26_orbit_catalogues/, "Data terms"; enforced by scripts/check_no_atlas_params.sh in CI).
+atlas-params.json
+*atlas-params*.json
+*atlas_params*.json
