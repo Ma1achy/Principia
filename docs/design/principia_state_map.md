@@ -29,8 +29,10 @@ stays a line-for-line subsequence of this one (REQ-COL-112). The reference proto
 `demo/state_flow.html`; its diff against version 8 is the tiling only.
 Where R-543's text and that code disagree the code is carried and the disagreement queued, except where a queued
 entry applies R-543's text meanwhile: RQ-506 (a) carries the ruling's words where the code is silent (the legend's
-period, the readout's wrap mode) and the code's period counts. The tile that separates systems a Torus period apart is
-RQ-507.*
+period, the readout's wrap mode) and the code's period counts. RQ-506 is ruled as applied meanwhile (R-611): the
+human's text wins, and the code is used only where the text is silent. Under a Torus base the tile that separates
+systems a Torus period apart is the Torus's own period cell (R-612, closing RQ-507, option (b)). *Was:* "The tile that
+separates systems a Torus period apart is RQ-507."*
 
 ---
 
@@ -360,7 +362,9 @@ one-to-one and continuous; across periods it repeats exactly. Its shape is fixed
 above): the constants are 0 out of gamut on a 240² sweep of (θ, φ), at 0.975 of the largest scale that stays in gamut
 (`checks/torus_gam.js`). They are calibration values under R-71, confirmed at the M7 gate with the rest of SM6's. It
 spends L on position (SM11). **The honest cost:** a system exactly one period away gets the same colour; the legend
-states the period in chart units, and "Left its starting tile" brightness separates such systems (RQ-506, RQ-507). The
+states the period in chart units, and "Left its starting tile" brightness separates such systems: under a Torus base
+it compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods, now and at `t = 0`, so every one-period move changes
+the compared cell by construction (R-611, R-612; *was:* "(RQ-506, RQ-507)"). The
 table's circle × circle row is realised by it, for the plane, by making the plane periodic.
 
 *Transcribed from the prototype (R-543; `SM_TORUS`, `smTorusXY`, `smTileXY`, `smNTheta`, `smTorusLab`, `SM_GRAD`).*
@@ -446,7 +450,8 @@ odd and `− 0.07` where it is even, `(a, b) = 0.8 (R + r cos φ)(cos θ, sin θ
 built-ins, its linear channels lie in [0.035, 0.972], 0 of 64 cells at a channel limit (R-543's check). The picture's
 menu lists Checkerboard, Checkerboard, tileable, Grid, Rings and Your image…; Past its square offers "Repeat (tiles the
 plane)", "Mirror (for photos)" and "Clamp to the edge". The graph strip reads "Picture · repeat" (or mirror, clamp);
-the prototype's hovered-pixel readout does not name the wrap mode (RQ-506).
+the prototype's hovered-pixel readout does not name the wrap mode; the human's text wins and the readout names it
+(R-611, closing RQ-506; *was:* "(RQ-506)").
 
 ## SM9. Legend and the hovered pixel
 
@@ -559,6 +564,8 @@ one-to-one" warning.
 on the quotient (`e` = n̂, `(cos θ, sin θ, s)`, `(sₓ, s_y)` or the masses: a distance only, never a colour); *left its
 starting tile*, which under Chart position compares the Palette's tile now and at `t = 0`, and under Shape n̂ the
 nearest site.
+*Amended by R-612 (closing RQ-507):* under a Torus base, *left its starting tile* compares the Torus's own period cell,
+`(⌊X⌋, ⌊Y⌋)` in periods, now and at `t = 0`, not the Palette's tile.
 
 **Only the 2D and 3D gradients must be one-to-one (SM6).** Site blends, palettes and layers are classifications, many-to-one by
 design.
@@ -603,6 +610,7 @@ has the same colour, its cost (SM6).
   cylinder `2√2`, simplex `√2`, plane `2√2`); Left its starting tile: `B = 0.30` if the tile (Shape n̂: the nearest site)
   is the same at `t` and `t = 0`, else `0.78`. The `t = 0` point is the pixel's own IC through the projection, with no
   march. Replace-L then sets `L = B` and scales `(a, b)` by `min(1, B/0.75, (1 − B)/0.35)` (SM15; RQ-496).
+  *Amended by R-612:* under a Torus base the tile compared is the Torus's period cell `(⌊X⌋, ⌊Y⌋)` in periods.
 - **The Torus's Repeats** (R-543; `sm_gn`). 1, 2, 3, 4, 6 or 8 across the square, **2** by default, shown only when Torus
   is chosen; on the cylinder θ stays once round whatever it is. Its "no longer one-to-one" warning under a brightness
   node is `smSpendsL`'s, every plane Gradient but 2D and every cylinder Gradient but round θ.

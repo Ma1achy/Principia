@@ -9,22 +9,22 @@
 | DEC | 50 |
 | ENC | 38 |
 | CHART | 88 |
-| INT | 106 |
-| EVT | 31 |
-| PAY | 107 |
+| INT | 108 |
+| EVT | 32 |
+| PAY | 109 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
-| RENDER | 119 |
+| RENDER | 120 |
 | COL | 160 |
-| GUI | 380 |
-| TOOL | 217 |
-| VAL | 198 |
-| PERF | 113 |
-| SYS | 92 |
-| **total** | **1897** |
+| GUI | 384 |
+| TOOL | 218 |
+| VAL | 199 |
+| PERF | 115 |
+| SYS | 93 |
+| **total** | **1912** |
 
-Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -33,24 +33,24 @@ Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 108 |
 | M2 | 217 |
-| M3 | 221 |
+| M3 | 227 |
 | M4 | 106 |
 | M5 | 179 |
 | M6 | 223 |
-| M7 | 258 |
-| M8 | 463 |
+| M7 | 260 |
+| M8 | 470 |
 
 ## Sections
 
-1563 sections in 60 files: 1253 yield at least one requirement; 310 yield none and are listed below with the reason.
+1595 sections in 60 files: 1285 yield at least one requirement; 310 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 208 |
+| informative only | 209 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 53 |
+| parent heading (obligations are in its subsections) | 52 |
 | planned (the plan PR) | 22 |
 | rationale | 18 |
 | superseded (kept for the record) | 4 |
@@ -183,6 +183,7 @@ Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for th
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 | R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
+| R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)* | informative only | RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -373,12 +374,6 @@ Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for th
 |---|---|---|
 | Refinement policy — `Policy::Tolerance` | informative only | status, evidence base and supersession notes |
 
-### `docs/design/principia_dd_simstate_payload.md`
-
-| section | reason | note |
-|---|---|---|
-| 2. Bit layouts (the packed u32s) | parent heading (obligations are in its subsections) |  |
-
 ### `docs/design/principia_dd_telemetry_and_tiers.md`
 
 | section | reason | note |
@@ -506,7 +501,7 @@ Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for th
 | 1. What exists | informative only | the state of the corpus before R-576 and R-577; no obligation |
 | 2. The gap | rationale | why the Sequence window exists; its obligations are in §3 |
 | 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.7 |
-| 4. Fit with rulings | informative only | how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560 |
+| 4. Fit with rulings | informative only | how R-576 and R-577 sit with earlier rulings; the amendments it names are carried by REQ-TOOL-076, REQ-TOOL-175 and the new requirements, and RQ-559 and RQ-560, ruled by R-622 and R-623 |
 | 5. Decided | informative only | the human's words, quoted verbatim in R-576; the obligations they settle are in §3.4 and REQ-TOOL-076 |
 | 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-GUI-373 to REQ-GUI-381, REQ-TOOL-076, REQ-TOOL-200, REQ-PERF-110) |
 
@@ -518,7 +513,7 @@ Of these: 162 calibration, 164 definition, 1571 obligation. Retired (kept for th
 | 1. What exists | informative only | the state of the corpus before R-578; no obligation |
 | 2. The gap | rationale | why the reel needs a manifest and a takeover; its obligations are in §3 |
 | 3. The design | parent heading (obligations are in its subsections) | §3.1 to §3.5 |
-| 4. Fit with rulings | informative only | how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561 |
+| 4. Fit with rulings | informative only | how R-578 sits with earlier rulings; the amendment it names is carried by REQ-TOOL-084, and RQ-561, ruled by R-624 |
 | 5. Decided | informative only | the human's words, quoted verbatim in R-578; the obligations they settle are in §3.1, §3.3 and REQ-TOOL-199, REQ-GUI-383 |
 | 6. Tests | informative only | the draft's tests, each carried by a requirement's verify (REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382 to REQ-GUI-385) |
 

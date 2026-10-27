@@ -92,8 +92,9 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
     from its own frame, as the decoder bullet's "a cut" and R-520 F3's "a cut at the second keyframe" have it. **One
     exception, which this bullet does not decide** (fix round 8 of PR #286, physics review 5631902011, P6; applied per
     R-369): after a reel takeover inside the segment, the live player instead holds the takeover's link-parameter value
-    until `f_{k+1}`, RQ-561's interim (`principia_spotlight_reel.md` §3.3; REQ-GUI-383); which value it holds there is
-    RQ-561's second question. Live playback other than after a reel takeover (the preview included, wherever it
+    until `f_{k+1}` and cuts there (R-624, closing RQ-561: the interim is the rule, and the difference from the film
+    after the takeover frame is accepted; `principia_spotlight_reel.md` §3.3; REQ-GUI-383). *Was:* "RQ-561's interim
+    (…); which value it holds there is RQ-561's second question." Live playback other than after a reel takeover (the preview included, wherever it
     starts) is as above, so a preview started mid-segment shows keyframe `k`'s value where a takeover at that frame
     would hold the eased one (`principia_sequence.md` §3.6) (*was:* "Ordinary live playback, entering the segment at a
     keyframe's frame, is as above."; fix round 9 of PR #286, gui review 5631987230, G3). A
@@ -105,7 +106,10 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   playback and wherever a link id changes.
 - **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
   the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
-  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. The segment's own `easing` curve (R-576)
+  value (`μ_max`, `q_max`) and re-integrates every frame at its own values. **The segment chooses** (R-623, closing
+  RQ-560, amending R-520): each such segment records `interpolate` (the default) or `cut`; under `cut` the blocking
+  export cuts at the second keyframe as live playback does, and the flag (REQ-TOOL-185) names only the segments that
+  interpolate. The segment's own `easing` curve (R-576)
   gives the segment's progress `s ∈ [0, 1]` at each frame, as for every other eased field; the value is `a + s·(b − a)`, clamped
   into `[min(a, b), max(a, b)]` so that rounding never puts a frame past an end or outside the parameter's allowed
   range, and each keyframe's own frame takes that keyframe's value bit for bit, so its sim key is the keyframe's

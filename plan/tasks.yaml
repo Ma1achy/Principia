@@ -1090,7 +1090,7 @@
   title: The validation harness's post-escape march and pitfalls §2.4's checks
   depends_on: [TASK-M3-24, TASK-M3-18, TASK-M0-03]
   needs: [REQ-VAL-005, REQ-VAL-007]
-  requirements: [REQ-VAL-054, REQ-VAL-123, REQ-VAL-124, REQ-EVT-013]
+  requirements: [REQ-VAL-054, REQ-VAL-123, REQ-VAL-124, REQ-EVT-013, REQ-EVT-032]  # REQ-EVT-032: R-608's offsets
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.5, PIT-2.4, PIT-3]
 - id: TASK-M3-34
@@ -1153,9 +1153,9 @@
   milestone: M3
   title: "The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies' reading (R-563, R-564, R-566)"
   depends_on: [TASK-M3-40]
-  needs: []
-  requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106]
-  reviewers: [code, qa, physics]
+  needs: [REQ-PAY-008, REQ-PAY-009]
+  requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219]  # R-603 to R-605 (25 Oct 2026)
+  reviewers: [code, qa, physics, gui, perf]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1); perf: the SimState widths (perf review 5661999637 of PR #293, P1)
   pitfalls: [PIT-3]
 - id: TASK-M4-01
   milestone: M4
@@ -1400,8 +1400,8 @@
 - id: TASK-M5-10
   milestone: M5
   title: "Memory estimator: payload, word buffer and render targets"
-  depends_on: [TASK-M5-02, TASK-M4-11]
-  needs: [REQ-PAY-003, REQ-PAY-008, REQ-PERF-005, REQ-PERF-008]
+  depends_on: [TASK-M5-02, TASK-M4-11, TASK-M3-41]  # TASK-M3-41: the 152 / 104 B widths (perf review 5661999637 of PR #293, P1)
+  needs: [REQ-PAY-003, REQ-PAY-008, REQ-PERF-005, REQ-PERF-008, REQ-PAY-110, REQ-PAY-111]
   requirements: [REQ-PERF-015, REQ-PERF-018, REQ-PERF-025, REQ-PERF-031, REQ-PERF-093]
   reviewers: [code, qa, perf]
   pitfalls: []
@@ -1546,7 +1546,7 @@
   title: The frame record, percentiles and the bounded telemetry file
   depends_on: [TASK-M5-21]
   needs: [REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008]
-  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140, REQ-TOOL-187]  # REQ-TOOL-187: R-545 (RQ-286), applied per R-369; its bin edges wait on RQ-520
+  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140, REQ-TOOL-187]  # REQ-TOOL-187: R-545 (RQ-286), applied per R-369; 17 entries, R-614 (RQ-520 (a)); was "its bin edges wait on RQ-520"
   reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M5-29
@@ -2240,7 +2240,7 @@
 - id: TASK-M7-33
   milestone: M7
   title: Pipeline precompile at startup and the render-target counts
-  depends_on: [TASK-M7-14, TASK-M7-17, TASK-M7-21, TASK-M5-10, TASK-M5-27]
+  depends_on: [TASK-M7-14, TASK-M7-17, TASK-M7-21, TASK-M5-10, TASK-M5-27, TASK-M7-69]  # TASK-M7-69: k_d counted with the screen pass (perf review 5661999637 of PR #293, P2 (c))
   needs: [REQ-RENDER-040, REQ-RENDER-006, REQ-PERF-031]
   requirements: [REQ-PERF-068, REQ-PERF-069]
   reviewers: [code, qa, perf]
@@ -2528,10 +2528,10 @@
   pitfalls: []
 - id: TASK-M7-69
   milestone: M7
-  title: "`device_px` and the screen-anchored sheet at render_scale ≠ 1 and at export, as RQ-538 rules (R-490)"
+  title: "`device_px` and the screen-anchored sheet in a second pass at screen resolution, at every render_scale and at export (R-490, R-618)"
   depends_on: [TASK-M7-55, TASK-M7-60]
   needs: []
-  requirements: [REQ-RENDER-110]
+  requirements: [REQ-RENDER-110, REQ-RENDER-120, REQ-PERF-113]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M7-70
@@ -2834,7 +2834,7 @@
   milestone: M8
   title: "Browser build (v1 web): the wasm engine in a Web Worker on an OffscreenCanvas, the main-thread shell, coi-serviceworker"
   depends_on: [TASK-M8-02, TASK-M8-04, TASK-M7-16, TASK-M8-86]
-  needs: [REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058]
+  needs: [REQ-SYS-020, REQ-SYS-031, REQ-SYS-034, REQ-SCHED-072, REQ-RENDER-058, REQ-PERF-025]
   requirements: [REQ-SYS-039, REQ-SYS-047, REQ-SYS-049, REQ-SYS-056, REQ-SYS-045, REQ-SYS-042, REQ-COL-047, REQ-TOOL-143]
   reviewers: [code, qa, perf]
   pitfalls: []
@@ -2843,7 +2843,7 @@
   title: "v1 web's membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker"
   depends_on: [TASK-M8-37, TASK-M8-09]
   needs: [REQ-SYS-036, REQ-GUI-010, REQ-SYS-033]
-  requirements: [REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-050, REQ-SYS-051, REQ-SYS-055, REQ-SYS-059, REQ-SYS-044]
+  requirements: [REQ-SYS-040, REQ-SYS-041, REQ-SYS-043, REQ-SYS-050, REQ-SYS-051, REQ-SYS-055, REQ-SYS-059, REQ-SYS-044, REQ-SYS-091]  # REQ-SYS-091: R-619's row 14 transport
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M8-39
@@ -2865,7 +2865,7 @@
 - id: TASK-M8-41
   milestone: M8
   title: "Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages"
-  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42]
+  depends_on: [TASK-M8-40, TASK-M8-31, TASK-M8-32, TASK-M4-13, TASK-M8-42, TASK-M8-76]  # TASK-M8-76: R-621's header strip (REQ-GUI-398) before REQ-SYS-061 closes (applied per R-369)
   needs: [REQ-VAL-057, REQ-TOOL-043, REQ-SYS-026, REQ-VAL-064]
   requirements: [REQ-VAL-099, REQ-VAL-105, REQ-SYS-061, REQ-SYS-046, REQ-SYS-086]
   reviewers: [code, qa, physics, gui]
@@ -2968,10 +2968,10 @@
   pitfalls: []
 - id: TASK-M8-54
   milestone: M8
-  title: "The trace fade's general off-plane distance, as RQ-522 rules (R-509 part 3, R-550 J7) ⚑"
-  depends_on: [TASK-M8-51]  # R-509 Y3, R-550 J7: a leaf, waiting for RQ-522 (RQ-341 ruled by R-550); numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
+  title: "The trace fade's general off-plane distance in the pulled-back mass metric (R-509 part 3, R-550 J7, R-596) ⚑"
+  depends_on: [TASK-M8-51]  # R-509 Y3, R-550 J7: a leaf; RQ-522 ruled by R-596 (RQ-341 by R-550), was "waiting for RQ-522"; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
   needs: []
-  requirements: [REQ-GUI-266]
+  requirements: [REQ-GUI-266, REQ-GUI-400]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-55
@@ -2995,8 +2995,8 @@
   title: "Deep zoom in repeats and far from the root, and seams between images with a shared edge (R-537 EX8) ⚑"
   depends_on: [TASK-M8-56, TASK-M6-08]
   needs: []
-  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183, REQ-CHART-087, REQ-CHART-088]
-  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  requirements: [REQ-TOOL-182, REQ-RENDER-100, REQ-TOOL-183, REQ-CHART-087, REQ-CHART-088, REQ-GUI-397]  # REQ-GUI-397: R-599's readout, where the band arises (applied per R-369)
+  reviewers: [code, qa, physics, gui]  # ⚑ physics review required; not merged on the code reviewer's word alone; gui for REQ-GUI-397's readout (R-599, applied per R-369)
   pitfalls: []
 - id: TASK-M8-58
   milestone: M8
@@ -3146,8 +3146,8 @@
   milestone: M8
   title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
   depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75]
-  needs: [REQ-TOOL-127, REQ-TOOL-040]
-  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106]
+  needs: [REQ-TOOL-127, REQ-TOOL-040, REQ-PERF-108]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106, REQ-GUI-398, REQ-VAL-200, REQ-PERF-114]  # REQ-PERF-114: perf review 5661999637 of PR #293, P3; REQ-GUI-398, REQ-VAL-200: R-621's header
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-77
@@ -3155,7 +3155,7 @@
   title: "The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file (R-576, R-577)"
   depends_on: [TASK-M8-31, TASK-M8-87, TASK-M6-43, TASK-M8-75]  # TASK-M8-75: the result view and its view source (fix round 9 of PR #286, gui G1; applied per R-369)
   needs: [REQ-GUI-213]
-  requirements: [REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378]  # REQ-GUI-378 waits on RQ-559
+  requirements: [REQ-GUI-372, REQ-GUI-373, REQ-GUI-374, REQ-GUI-375, REQ-GUI-376, REQ-GUI-377, REQ-GUI-378, REQ-GUI-399]  # REQ-GUI-378, REQ-GUI-399: R-622 (RQ-559 (ii)); was "REQ-GUI-378 waits on RQ-559"
   reviewers: [code, qa, gui, physics]  # physics for the lane table, an R-72 definition (REQ-GUI-375)
   pitfalls: []
 - id: TASK-M8-78
@@ -3172,7 +3172,7 @@
   depends_on: [TASK-M8-78, TASK-M5-26]
   needs: [REQ-RENDER-045]
   requirements: [REQ-TOOL-084, REQ-TOOL-198, REQ-TOOL-199, REQ-GUI-382, REQ-GUI-383, REQ-GUI-384, REQ-GUI-385, REQ-GUI-386, REQ-PERF-111]  # REQ-GUI-386: fix round 1 of PR #286 (gui F4 (b)); REQ-PERF-111: fix round 12 (perf P4)
-  reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369)
+  reviewers: [code, qa, gui, physics, perf]  # physics: fix round 6 of PR #286 (physics P4), the film/live identity and RQ-561's interim (applied per R-369), ruled by R-624
   pitfalls: []
 - id: TASK-M8-80
   milestone: M8

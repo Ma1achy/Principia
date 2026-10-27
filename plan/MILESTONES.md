@@ -226,18 +226,18 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 221 requirements** (and every earlier gate still green):
+**Exit gate — 227 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
-- INT (81): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106
-- EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
-- PAY (29): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098
+- INT (83): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…109
+- EVT (25): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032
+- PAY (31): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…111
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
-- TOOL (13): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150
+- TOOL (14): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219
 - VAL (55): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
@@ -353,7 +353,8 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   Its calibrations (ε, `h_far`, `os_ratio`, settling, `I_max`'s quantisation, the palettes, the energy lightness range
   and `q`'s compaction) are confirmed at this gate, the seven-class palette staying the default (R-548, RQ-311). The
   Chazy entries are ruled (RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467, RQ-310 by R-545); RQ-521
-  stays open, holding REQ-PAY-099's one clause and so the gate until it is ruled.
+  is ruled by R-595 (a guarded E < 0 state goes on to the hierarchy step). *Was:* "RQ-521 stays open, holding
+  REQ-PAY-099's one clause and so the gate until it is ruled."
   The one-body views (R-443; TASK-M7-41, with `chazy_escaper` and `chazy_qk` in TASK-M7-36): their palettes and the
   mass tie tolerance are confirmed at this gate too; the escaping body is `chazy_escaper` (R-548, RQ-321) and the grey
   `#8A8A90` stays, near-neutral (R-548, RQ-322).
@@ -363,21 +364,23 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   TASK-M7-64); R-130's eight styles as the Poster family (TASK-M7-65); the field inputs, under physics review
   (TASK-M7-66); `through_medium` in the line renderer (TASK-M7-67); and the cost classes measured (TASK-M7-68). Its
   calibrations (the port and scale tolerances, the data-driven presets' windows, the cost-class thresholds) are
-  confirmed at this gate. RQ-538 holds REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled.
+  confirmed at this gate. R-618 rules RQ-538: `device_px` nodes and the sheet run in a
+  second pass at screen resolution (REQ-RENDER-110, REQ-RENDER-120; TASK-M7-69, a leaf). *Was:* "RQ-538 holds
+  REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 258 requirements** (and every earlier gate still green):
+**Exit gate — 260 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
 - GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
-- RENDER (44): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118
+- RENDER (45): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120
 - COL (125): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…159
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
-- PERF (4): REQ-PERF-068…069, REQ-PERF-096…097
+- PERF (5): REQ-PERF-068…069, REQ-PERF-096…097, REQ-PERF-113
 <!-- /gate:M7 -->
 
 ## M8 — The dev GUI, tooling, v1 web and the release gates
@@ -395,7 +398,9 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - The full profiler and debug tooling UI.
 - The frame budget, end to end.
 - The browser build, v1 web (R-571): the whole native app in the browser; the wasm engine worker, `OffscreenCanvas`,
-  and the two membranes, as written until RQ-550 (what v1 web crosses) and RQ-551 (where its GUI runs) are ruled.
+  and the two membranes: the three crossings for engine state plus an enumerated platform list, both checked in
+  CI (R-619), and egui in its own wasm context on the main thread, the engine in its worker (R-620). *Was:* "and the
+  two membranes, as written until RQ-550 (what v1 web crosses) and RQ-551 (where its GUI runs) are ruled."
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 - The Chazy legends (R-442; TASK-M8-45), on the generated legend.
   With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
@@ -421,7 +426,7 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 463 requirements** (and every earlier gate still green):
+**Exit gate — 470 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
@@ -431,9 +436,9 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
 - REF (1): REQ-REF-054
 - RENDER (8): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116…117, REQ-RENDER-119
 - COL (7): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135, REQ-COL-160…161
-- GUI (260): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…396, REQ-GUI-401…409
+- GUI (264): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409
 - TOOL (83): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218, REQ-TOOL-220
-- VAL (22): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…199
-- PERF (28): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-115
-- SYS (31): REQ-SYS-039…062, REQ-SYS-086…090, REQ-SYS-092…093
+- VAL (23): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200
+- PERF (29): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115
+- SYS (32): REQ-SYS-039…062, REQ-SYS-086…093
 <!-- /gate:M8 -->

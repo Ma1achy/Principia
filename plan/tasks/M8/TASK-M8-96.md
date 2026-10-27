@@ -16,8 +16,8 @@ fallback that does run, egui's own web runner on the main thread) and, for a lay
 observed and reported, not argued; whether the COOP/COEP workaround, a self-hosted `coi-serviceworker` beside
 `index.html`, makes the page cross-origin isolated, and whether SharedArrayBuffer and wasm threads then actually work;
 text input and the clipboard; and the frame rate. The results are numbers and observed outcomes, recorded in
-systems_architecture §3 under "Measured on the v1 web skeleton" and pointed at from RQ-550 and RQ-551, which stay open
-for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, F1, applied per R-369).
+systems_architecture §3 under "Measured on the v1 web skeleton" and pointed at from RQ-550 and RQ-551, which R-619 and R-620 closed; the results reopen neither (*was:* "which stay open
+for the human", before the merge with PR #293, applied per R-369) (split from TASK-M8-86 by code review 5663981956 of R-627's port, F1, applied per R-369).
 
 ## References
 - `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
@@ -52,6 +52,10 @@ for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, 
   task settles neither RQ-550 nor RQ-551 and waits on neither; where a result bears on an option of either, the report
   says which, and the human rules. Text input and the clipboard are systems_architecture §3's rows 1 and 8; the worker
   layout is RQ-551's option (a).
+- **Merged with PR #293** (applied per R-369): R-619 and R-620 ruled RQ-550 (a) and RQ-551 (b) on 25 Oct 2026, before
+  R-627; the worker layout, RQ-551's option (a), is still measured, as R-627's words ask, and v1 web itself (TASK-M8-37)
+  is built as R-620 rules, egui on the main thread. Where a result bears on an option of either, the report says which,
+  and only the human reopens a ruling.
 - **It starts from the manual deploy** (R-627): the orchestrator runs `gh workflow run pages.yml --ref main` once
   TASK-M8-86 merges, and this task is dispatched on that deploy; the PR names the deploy's workflow run and the commit it
   built. A gap in the skeleton found while measuring (something the panel lacks, or a defect that stops a measurement)
