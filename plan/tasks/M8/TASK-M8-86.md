@@ -18,7 +18,6 @@ a skeleton: no real engine, no frame loop of the engine's, no membrane design; v
 TASK-M8-38's, built on it.
 
 ## References
-## References
 - `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
 - `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
@@ -31,7 +30,6 @@ TASK-M8-38's, built on it.
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 
-## Deliverables
 ## Deliverables
 - The gui crate and the engine contract it uses build for `wasm32-unknown-unknown` with the mock engine and WebGPU
   (`eframe`'s web runner, or egui with egui-wgpu driven directly in the worker); a wasm entry in `crates/gui` behind a
@@ -57,7 +55,7 @@ TASK-M8-38's, built on it.
 ## Acceptance tests
 - `cargo test -p xtask pages_workflow_manual` — the workflow's only trigger is `workflow_dispatch`, its deploy job is conditioned on `refs/heads/main` and names `environment: github-pages`; controls: the file with a `push` trigger added, and with the ref condition removed, each fail (REQ-TOOL-220).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the native app and the conformance suite are unchanged by the `web` build (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
-- Review checklist (gui reviewer), on a local build of the site — the mock app opens with its "mock engine" tag, and the measurement panel reports each item TASK-M8-96 measures (`crossOriginIsolated`, `SharedArrayBuffer`, the wasm-threads probe, the layout, the frame rate) and the scripted pan runs; the PR names the layout the app ran in. This is not a measurement for RQ-550 or RQ-551; those are TASK-M8-96's, on the Pages URL (REQ-TOOL-220's deliverable, checked before the deploy).
+- Review checklist (gui reviewer), on a local build of the site — the mock app opens with its "mock engine" tag, and the measurement panel reports each item TASK-M8-96 measures (`crossOriginIsolated`, `SharedArrayBuffer`, the wasm-threads probe, the layout, the frame rate) and the scripted pan runs; the PR names the layout the app ran in. This is not a measurement for RQ-550 or RQ-551; those are TASK-M8-96's, on the Pages URL (this task's deliverable "A measurement page or panel in the skeleton … and a scripted pan", checked before the deploy; it closes no requirement of its own).
 
 ## Notes
 - R-627 (27 Oct 2026): a track task on the mock engine (R-390): on spare agent slots, never holding up the physics

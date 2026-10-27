@@ -20,7 +20,6 @@ systems_architecture §3 under "Measured on the v1 web skeleton" and pointed at 
 for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, F1, applied per R-369).
 
 ## References
-## References
 - `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
 - `decisions.md` § "R-571 — The browser: the native app first, then v1 web, the whole native app compiled to run in the browser on the GitHub Pages site, then v2 web, a separate product designed later *(replaces the browser item of the gap sweep's `INSTRUCTION_now.md` backlog; queues RQ-550 and RQ-551)*"
@@ -55,8 +54,13 @@ for the human (split from TASK-M8-86 by code review 5663981956 of R-627's port, 
   layout is RQ-551's option (a).
 - **It starts from the manual deploy** (R-627): the orchestrator runs `gh workflow run pages.yml --ref main` once
   TASK-M8-86 merges, and this task is dispatched on that deploy; the PR names the deploy's workflow run and the commit it
-  built. If a measurement needs something the panel lacks, that is a finding against the skeleton, fixed on `main` and
-  deployed again by hand before the measurement is taken, not a code change in this task (applied per R-369).
+  built. A gap in the skeleton found while measuring (something the panel lacks, or a defect that stops a measurement)
+  becomes a new task, split in the plan first, with its own PR and reviewers; this task then depends on it and is
+  re-dispatched on the manual deploy after it merges (applied per R-369, code review 5664094727 of R-627's port, G2;
+  `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR", § "No deferral"). This task changes no code.
+  *Was (before G2):* "If a measurement needs something the panel lacks, that is a finding against the skeleton, fixed on
+  `main` and deployed again by hand before the measurement is taken, not a code change in this task (applied per
+  R-369)."
 - Browsers run on the human's Mac (R-186); a script drives what it can (for example Playwright with WebGPU enabled), and
   the rest is by hand, each so marked.
 - **What to try.** The PR description has a "What to try" section: the Pages URL, the measurement panel, and typing and
