@@ -26812,3 +26812,101 @@ there", RQ-551's option (a), which R-620 did not take. Applied as the words read
 instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
+
+## R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*
+*27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
+RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
+and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> Ruling on PLAN.md §9 (docs/incoming/2026-10-27_validation_plan/PLAN.md, PR #305). The owner accepts every
+> recommendation as written. Record it as one ruling (next free R-number), quoting this text, and act on it once #305
+> has merged.
+>
+> 1. Adopt PLAN.md as the single verification and replication plan. It supersedes the 25 Oct instruction's tier
+>    tables, sequencing and fetch list (the instruction stays as a record).
+> 2. Port §6's drafts (DRAFT-VAL-01 to -07) into plan/requirements.yaml now, as M3 requirements, so the M3 gate
+>    carries them. Tolerances stay R-71 calibrations, measured, not chosen. R-594's port follows PLAN.md, together
+>    with the six orbit-catalogue tier-A tasks.
+> 3. Šuvakov plane labelling: the middle body as body 1 (β = 0, reached exactly, R-417), Hudomal eq. (18)'s labelling.
+>    Queue it as a chart question with the physics reviewer (§2.3).
+> 4. Queue the Šuvakov-plane chart question now.
+> 5. RQ-576: option (d): conjugacy plus the inverse and the (a, b) ↔ (A, B) exchange, each row recording which
+>    symmetry it needed; cite the atlas's word.js rule for syzygy sequences. Close RQ-576 with this.
+> 6. RQ-579: (b) ask the authors, keeping (c) meanwhile. Draft the email to the database authors for the owner to
+>    send; don't send it.
+> 7. Fetch Hristov et al. 2024's free-fall database (24,582 ICs, 80 digits) under the fetch-and-verify rule, for
+>    REQ-VAL-042.
+> 8. Li & Liao's website pages: record URL and sha256 only, as HP27 does; the 81 extra atlas rows are closure tests
+>    (LL-5).
+> 9. Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (TM-1, LL-3). If any is paywalled, list it
+>    for the owner to fetch instead.
+> 10. RQ-577 (precision ladder): rule after M3 closes. Leave it queued; PL-8's first half runs on R-33's reference at
+>    M3 without it.
+> 11. Tier D: no blanket list of prototype numbers. Promote one by name when a task needs it, re-measured under Heggie
+>    × RK4.
+> 12. Queue the §10 corrections to the three ruled documents (VO §1.1, REQ-VAL-042's citation, LR §13's "one plane"
+>    sentence) as REVIEW_QUEUE entries. Don't edit those documents.
+>
+> Also: #303's pole behaviour is option A (rho_angle from Φ's (ρ̃, λ̃)), amending dd_decoder §3.6:241-243 by ruling;
+> the test goes back to strict.
+>
+> Put the ruling and the queue entries in one PR (rulings/<date> or the next free name) and leave it for the owner.
+> Report the R-number, the RQs opened and closed, and the tasks created.
+
+*What it decides*, item by item:
+
+- **1 and 2** are §9 questions 1 and 2, which the human had already answered the same afternoon, in the same sense, by
+  the ruling PR #309 ports (PLAN.md adopted; DRAFT-VAL-01 to -07 as M3 requirements, tolerances R-71
+  calibrations; the replication port follows PLAN.md with the six orbit-catalogue tier-A tasks). This ruling restates them; it
+  adds "measured, not chosen", which R-71 already requires. Nothing differs, so nothing is re-ported here.
+- **3** closes RQ-582: on the Šuvakov plane the middle body is body 1, at `β = 0`, which the chart reaches exactly
+  (R-417), as Hudomal eq. (18) labels it, not the decoder's body 2 at the `α = 0` pole. *Applied per R-369:* "queue it
+  as a chart question with the physics reviewer" is read as the chart question of item 4: the labelling is settled here,
+  and RQ-583, the chart question, carries it, marked physics, so the chart's physics review checks the labelling against
+  Hudomal eq. (18) and PLAN.md § 2.3.
+- **4**: RQ-583 is the Šuvakov-plane chart question, queued (PR #307). It stays open for the
+  human, with item 3's labelling noted on it.
+- **5** closes RQ-576 with its option (d): the computed free-group word matches the published one when they are equal up
+  to conjugacy (cyclic rotation), inversion and the exchange `(a, b) ↔ (A, B)`; each comparison row records which of
+  those symmetries it needed; syzygy sequences follow the atlas's `word.js` rule, cited where REQ-VAL-043's comparison
+  is built (TASK-M3-30, `word_braid_class`). This is the definition R-72 asked for. REQ-VAL-043's verify carries it; its
+  statement is unchanged.
+- **6** closes RQ-579 with options (b) and (c): the authors are asked for permission to commit their values, and
+  fetch-and-verify only (`docs/incoming/2026-10-27_hp_ics/fetch.sh`) stays meanwhile, nothing committed. The human sends
+  the request; its draft is in this ruling's PR, not in the corpus, and nothing is sent from here. What the authors
+  answer comes back to the human; it is not a new corpus question.
+- **7** closes RQ-584: Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits) is fetched under the same
+  fetch-and-verify rule as `docs/incoming/2026-10-27_hp_ics/`: a source list with sha256 per file and a fetch script,
+  the values not committed (item 6). It is the reference for REQ-VAL-042.
+- **8** closes RQ-585: Li & Liao's website pages are recorded by URL and sha256 only, as
+  `docs/incoming/2026-10-27_hp_ics/` records its sources; the 81 atlas rows the paper does not contain are closure tests
+  (PLAN.md's LL-5), not published references.
+- **9** closes RQ-586: Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (targets TM-1 and LL-3) are
+  fetched; any that is paywalled is listed for the human to fetch instead, and its target waits for it.
+- **10**: RQ-577 stays open, to be ruled after M3 closes. PL-8's first half runs at M3 on R-33's reference without it.
+- **11** closes RQ-587: tier D gets no blanket list of the prototype's numbers. A prototype number becomes a target only
+  by name, when a task needs it, re-measured under Heggie × RK4 (R-560), since several were measured under AZ (PLAN.md §
+  3, D-1). the replication ruling's item 7 (PR #309) ("each prototype number becomes a target") is read through this: each number a task names
+  becomes one.
+- **12**: RQ-588, RQ-589 and RQ-590 are the three corrections, queued (PR #307). The
+  validation-orbits doc, REQ-VAL-042's statement and the literature review are not edited.
+- **"Also"** restates the ruling PR #303 ports (rho_angle from Φ's `(ρ̃, λ̃)`, amending dd_decoder
+  §3.6:241-243; the test strict), in the same sense. Nothing differs.
+
+*Flagged, not asked (nothing built changes):* this ruling and PR #309's overlap on items 1 and 2, and it and PR #303's on the
+pole; each pair agrees, so both stand and neither is amended. Those two rulings are on unmerged PRs, so this entry
+names them by PR; when they merge, their entries go before this one. Item 3's
+"queue it … with the physics reviewer" is applied as written above.
+
+*Applied per R-369:* the fetches (items 7 and 9) are records work, done in their own records PR under `docs/incoming/`,
+outside this ruling's PR. The queue entries RQ-582 to RQ-590 stay in PR #307, which PR #309 needs, and this ruling's PR
+holds the ruling and its queue changes, built on #307's commit; the human's words quote the replication ruling by
+number, which is ported by PR #309, so the order is #307, then #309, then this. RQ-582's and RQ-586's holds on PR #309's
+tasks (TASK-M4-23, TASK-M8-99; TASK-M3-47, TASK-M3-49) and RQ-584's on REQ-VAL-042 come off in this PR once #309 has
+merged into it; RQ-583's stay.
+
+R-630 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-042 (rulings, note) and REQ-VAL-043 (verify, rulings, source, note).

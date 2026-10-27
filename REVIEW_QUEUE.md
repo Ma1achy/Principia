@@ -141,100 +141,6 @@ without asserting it until this is ruled.*
     ratio, against 1, the tolerance on its distance from 1.
   - **Applied meanwhile:** none; REQ-VAL-199's `rq: RQ-575` covers this rule too.
 
-## RQ-576: Under which equivalence the computed free-group word is compared with the published one: the Belgrade gallery and the 2013 PRL write the same orbits' words with different representatives *(definition, R-72; the human's queued question on the 26 Oct incoming record; R-125; REQ-VAL-043, REQ-PAY-070; context: TASK-M3-30, TASK-M3-16, TASK-M8-35)*
-
-*Queued by the human, 27 Oct 2026, on `docs/incoming/2026-10-26_belgrade_gallery/` (PR #296): "So the reader's
-comparison must declare its equivalence: free and cyclic reduction, plus which symmetries count. That is a definition
-requirement (R-72): queue it in REVIEW_QUEUE.md with the crosscheck.txt numbers. Don't pick it yourself." The options
-are listed with no choice made.*
-
-- **File, section:**
-  - `decisions.md` § "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*": "Its
-    convention (the a/b branch-cut assignment and the crossing sign) is transcribed from the literature (Montgomery;
-    Šuvakov–Dmitrašinović) and verified by REQ-VAL-043 against the published braid classes."
-  - `plan/requirements.yaml` REQ-VAL-043: "A word-calculus test must assert the free-group word encoder reproduces the
-    published braid class of Šuvakov–Dmitrašinović orbits."; verify: "for each gallery orbit used, computed word (under
-    REQ-PAY-070's transcribed convention) equals the published class". TASK-M3-30's acceptance line:
-    "`cargo test -p validation word_braid_class` — for each gallery orbit used, the computed word, under REQ-PAY-070's
-    transcribed convention, equals the published class (REQ-VAL-043)."
-  - `docs/design/principia_dd_validation_orbits.md` § "1.4 Šuvakov–Dmitrašinović (13 families, 2013) and
-    Broucke–Hénon–Hadjidemetriou": "a known orbit has a known word, and if the encoder produces a different one, that is
-    a bug with a named right answer."
-  - `docs/incoming/2026-10-26_belgrade_gallery/crosscheck.txt` § "3. Šuvakov & Dmitrašinović 2013, Table 1", and the
-    record's `README.md` § "The cross-check (`crosscheck.txt`)", item 3: "**Their words agree only up to a symmetry, and
-    which symmetry varies by orbit**"; "So the gallery and the PRL write the same conjugacy classes with different
-    representatives. The encounter-word reader (R-125) must declare which equivalence it compares under, and a comparison
-    up to rotation alone would fail 6 of these 15 for a reason that is not an error."
-- **The numbers (`crosscheck.txt` § 3).** `crosscheck.py` freely and cyclically reduces each PRL word, then lists every
-  variant of it whose cyclic rotations contain the gallery's word: `cyclic` (the word itself), `inverse` (reversed and
-  each letter inverted), `reverse` (reversed), `a<->b`, and `(a,b)<->(A,B)`. Of the 15 orbits of the PRL's Table 1
-  (`p1`, `p2`, `T` agreeing within the PRL's printed precision, largest difference 4.1e-5):
-  - **9 match up to cyclic rotation alone:** butterfly I (`cyclic, (a,b)<->(A,B)`), butterfly II (`cyclic,
-    (a,b)<->(A,B)`), bumblebee (`cyclic, (a,b)<->(A,B)`), moth II (`cyclic, reverse, a<->b`), moth III (`cyclic,
-    reverse, a<->b`, after reduction, below), butterfly IV (`cyclic, reverse, a<->b`), yarn (`cyclic, reverse, a<->b`),
-    yin-yang 2a (`cyclic`), yin-yang 2b (`cyclic`).
-  - **6 match only under a symmetry:** moth I (`inverse, (a,b)<->(A,B)`; PRL `ba(BAB)ab(ABA)`, gallery `abaBAbabAB`),
-    butterfly III (`inverse, (a,b)<->(A,B)`; PRL `(ab)2(ABA)(ba)2(BAB)`, gallery `ABabaBABAbabAB`), goggles (`inverse,
-    (a,b)<->(A,B)`; PRL `(ab)2ABBA(ba)2BAAB`, gallery `abbaBABAbaabABAB`), dragonfly (`inverse, (a,b)<->(A,B)`; PRL
-    `(b2(ABabAB))(a2(BAbaBA))`, gallery `abABabAAbaBAbaBB`), and, under the exchange only, yin-yang 1a and yin-yang 1b
-    (`(a,b)<->(A,B)`; PRL `(ab)2(ABA)ba(BAB)` for both, gallery `AbabABABabaB` and `ABabaBAbabAB`).
-  - **Moth III's published word is not freely reduced:** `(babABA)²a(abaBAB)²b` contains `A·a`, 26 letters against the
-    gallery's 22 (`AbabABAbabABabaBABabaB`); after free and cyclic reduction it matches up to rotation.
-  - The PRL words above are as `crosscheck.py`'s table `T1` transcribes them from the PRL (a record, not checked here).
-- **The question:** REQ-VAL-043's "equals the published class" does not say under which equivalence a computed word
-  equals a published one. Which reduction is applied to each side (free reduction; cyclic reduction), and which
-  symmetries count as the same class: none (cyclic rotation only), the inverse word, the reversed word, the exchange
-  `a ↔ b`, the exchange `(a, b) ↔ (A, B)`, or a set of these. A second part: whether the encoder's own word (REQ-PAY-070's
-  transcribed convention, not yet written) is compared with the gallery's representatives or the PRL's, which differ by
-  the symmetries above, and whether the published side is the gallery, the PRL, or both.
-- **Options seen** (none chosen, as the human asked):
-  - (a) free and cyclic reduction of both words, then equality up to cyclic rotation only (the conjugacy class); 6 of
-    the 15 fail against the PRL's words, none against a source written in the encoder's own convention.
-  - (b) (a), plus the inverse word counted as the same class.
-  - (c) (a), plus the exchange `(a, b) ↔ (A, B)` counted as the same class.
-  - (d) (a), plus both the inverse and the exchange: every one of the 15 matches.
-  - (e) (a), plus every variant `crosscheck.py` lists (inverse, reverse, `a ↔ b`, `(a, b) ↔ (A, B)`) and their
-    compositions.
-  - (f) a per-orbit declaration: each reference row names the symmetry under which its published word relates to the
-    encoder's, and the comparison applies exactly that one.
-  - (g) other.
-- **Recorded, not resolved (the human: "Record, don't resolve"):**
-  - **Two periods for butterflies I and II.** The record's `README.md` § "One internal discrepancy, recorded": "the main
-    page has the PRL's 6.235641 and 7.003907, the sequence pages (I.2.A, I.2.B) have 6.234671 and 7.003707, with the same
-    `p1`, `p2` and energy. The sequence values agree with the thesis's scale-invariant `T|E|^{3/2}` (19.9325 and 19.9313,
-    Table 3) and with the Three Body Orbits atlas's refined periods (6.23489 at E = −2.170144, 7.00370 at E = −2.008195),
-    so the PRL's are the outliers, at about 1e-4." Both values are in `belgrade_gallery.csv` as the pages give them.
-  - **Five thesis labels renamed later** (`crosscheck.txt` § 4; `README.md` item 4): thesis IVa.6.A, IVa.8.A, IVa.8.B,
-    IVa.8.C and IVb.15.A are gallery IVa.14.C, IVa.8.F, IVa.8.G, IVa.8.H and IVb.15.D (matching to 1.0e-6, 1.5e-6,
-    1.7e-6, 2.0e-6 and 5.1e-7), and thesis V.4.A is gallery V.4.A.α (3.5e-6). The human: "the gallery's labels are
-    current"; the README: "The later labels are the gallery's and the 2019 table's; the thesis's are earlier."
-- **The reference, as the human named it:** "belgrade_gallery.csv is the reference for the encounter-word reader
-  (R-125), together with Hudomal 2015 and the 2013 and 2018 papers. Transcribe twice, as usual." The sources:
-  `docs/incoming/2026-10-26_belgrade_gallery/belgrade_gallery.csv` (sha256 `3558b26b…a839335b`); A. Hudomal's 2015
-  thesis; Šuvakov & Dmitrašinović, *Phys. Rev. Lett.* 110, 114301 (2013)
-  (`docs/incoming/2026-10-25_replication/papers/suvakov_dmitrasinovic_2013_PRL_110_114301_arXiv1303.0181.pdf`); and
-  Dmitrašinović, Hudomal, Shibayama & Sugita, *J. Phys. A* 51, 315101 (2018)
-  (`…/papers/dmitrasinovic_etal_2018_JPhysA_51_315101_arXiv1705.03728.pdf`). The 2019 table
-  (`archive/initial-conditions.pdf`) agrees with all 206 sequence orbits to every printed digit (`crosscheck.txt` § 1).
-  **Credit line**, from the gallery's own terms (`archive/ref.php.html`: "You may copy and use any images or data from
-  this web gallery. Please, credit us by citing this page and our paper [8]."): every use cites
-  `http://three-body.ipb.ac.rs/` and *Phys. Rev. Lett.* 110, 114301 (2013).
-- **Unclear in the records, said here, not resolved:**
-  - The "encounter-word reader" is the human's and the record's term; the corpus's are R-125's convention
-    (REQ-PAY-070, TASK-M3-16) and REQ-VAL-043's "free-group word encoder" (TASK-M3-30). This entry reads them as the
-    same comparison.
-  - The Hudomal 2015 MSc thesis is not on `main` yet: it arrives with open PR #295 (`docs/orbit-catalogues`) as
-    `docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf`. `crosscheck.txt`'s command takes it as a
-    path argument (`<Hudomal 2015 thesis>`).
-  - R-125 says the convention is "transcribed from the literature (Montgomery; Šuvakov–Dmitrašinović)"; the gallery and
-    the PRL, both Šuvakov–Dmitrašinović, already differ by the symmetries above, so which of their representatives
-    REQ-PAY-070's transcription follows is part of the question.
-- **Applied meanwhile:** none; TASK-M3-30 and TASK-M3-16 are not built. No requirement is added or changed by this
-  entry (the human's instruction for this PR is the queue only); the definition requirement R-72 asks for, and
-  REQ-VAL-043's `rq: RQ-576`, are the port's next step.
-- **Waits:** REQ-VAL-043's comparison (TASK-M3-30, `word_braid_class`). The rest of TASK-M3-30, and TASK-M3-16's
-  convention, do not wait on the equivalence.
-
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
 *Queued by the human, 27 Oct 2026, on `docs/incoming/2026-10-26_precision_ladder/` (PR #297): "A PROPOSAL. Nothing in
@@ -300,6 +206,8 @@ here.*
 - **Applied meanwhile:** none. R-265, R-572, R-90, the canonical spec, deep_zoom and the integrator contract stand as
   written; no requirement or task is added from the proposal.
 - **Waits:** nothing built waits; no task builds the ladder. RQ-578 (deep zoom §2's floor) does not wait on this entry.
+- **27 Oct 2026 (the verification and replication plan, PR #305):** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner), question 10, is this entry's question and is queued here, not as a new entry: "**RQ-577, the precision ladder: rule before or after M3 closes?** Recommended: after, as the proposal's own §6 question 1 allows; PL-8's first half runs on R-33's reference at M3 without it." The plan also corrects test 6's row count (PLAN.md § 2.2: 937 Hristov rows, not 1,260; a dated note in the proposal). Stays queued (the human, 27 Oct 2026: "The other §9 questions stay queued as RQs."). Not applied.
+- **27 Oct 2026 (R-630):** the human: "10. RQ-577 (precision ladder): rule after M3 closes. Leave it queued; PL-8's first half runs on R-33's reference at M3 without it." Stays open until M3 closes; nothing applied.
 
 ## RQ-578: Deep zoom §2's "Floor moves from ~23 to ~50+" does not hold for an f32 sum on the GPU: the ICs are absolute O(1) numbers, so the integration's precision sets the floor *(conflict: deep_zoom §2 and §4 (iv), scheduler_contract Part 3 and Part 4, dd_refinement_policy §0 against the prin-rs measurement the precision-ladder proposal reports; R-90, R-265, canonical_spec §1 item 3; REQ-DEC-036, REQ-TOOL-159, REQ-SCHED-062; context: TASK-M5-04, TASK-M6-07, TASK-M6-08, TASK-M6-02, TASK-M6-21, TASK-M6-01, TASK-M8-57)*
 
@@ -389,32 +297,6 @@ entry is where that floor sits at all on the f32 path.*
   - The proposal's §3.10 (uniform mode, the layer table) and §3.9's per-precision switchover are RQ-577's, not this
     entry's.
 
-## RQ-579: Redistribution terms for the high-precision IC databases *(found while pulling the reference data for the precision ladder's test 6, PR #299; `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed"; context: the precision-ladder proposal, §5 test 6)*
-
-*Found on 27 Oct 2026. Licensing third-party data is outside the repo, so it is the human's call. Nothing is
-committed meanwhile.*
-
-- **File, section:**
-  - `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed": "None of the sources states
-    a licence or terms of use: the five pages of `db2.fmi.uni-sofia.bg` (its root, `3body123`, `3bodychor462`,
-    `3bodychor164`, `3bodystab971`), Masson's page and site, the SJTU pages, and the `sjtu-liao/three-body` GitHub
-    repository (no licence file; the API returns 404 for it). The three Hristov arXiv papers carry arXiv's
-    non-exclusive distribution licence, which covers the papers, not the databases."
-  - The precedent: `docs/incoming/2026-10-26_orbit_catalogues/README.md`: "**The extracted initial conditions are
-    committed under the site's own terms.**"; `docs/incoming/2026-10-26_belgrade_gallery/README.md`: "**Terms.** The
-    gallery's own "Use and Copyright" page (`archive/ref.php.html`): "You may copy and use any images or data from
-    this web gallery. …"". Both folders committed third-party data only under stated terms.
-  - `docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` § 5, test 6, which
-    needs the values above f64.
-- **The question:** the Hristov et al. databases (123 solutions at 150 digits, 462 and 164 + 259 choreographies at
-  180, 971 stable i.c.s at 100), and the Simó and Li & Liao tables, state no terms. May their values be committed?
-- **Options seen:** (a) commit the values with attribution (the citations in `docs/incoming/2026-10-27_hp_ics/README.md`);
-  (b) ask the authors for permission first, and commit under whatever they grant; (c) keep fetch-and-verify only, as
-  now.
-- **Applied meanwhile:** (c). `fetch.sh` downloads all 599 files listed in `sources.tsv` and checks each against its
-  recorded sha256, so the reference data is reproducible byte for byte without being committed. Waits: the precision
-  proposal's test 6 reference data, in the repo.
-
 ## RQ-581: The Cartesian drift latches `dE_max` and `dLz_max` are linear binary16, whose floor sits above the f64 path's drift *(physics; found by physics review 5662346996 of PR #293, a non-blocking note on F1; payload §1, §2; REQ-PAY-012, REQ-PAY-041, REQ-PAY-044, REQ-TOOL-023; context: none in this PR)*
 
 *Found by physics review 5662346996 of PR #293, outside its diff. For the human: yes (physics: the encoding sets what
@@ -449,3 +331,59 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-583: Whether to build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart question comes up *(physics; the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 4; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it adds or does not add a chart.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 4.
+- **The question (verbatim):** "**Build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart
+  question comes up?**"
+- **Recommended (the plan's):** "queue the chart question now; 3,109 orbits and the strongest share-back image wait on
+  it."
+- **Applied meanwhile:** the targets stay Path A closures. Related: RQ-582.
+- **27 Oct 2026 (R-630):** the human: "3. Šuvakov plane labelling: the middle body as body 1 (β = 0, reached exactly, R-417), Hudomal eq. (18)'s labelling. Queue it as a chart question with the physics reviewer (§2.3). 4. Queue the Šuvakov-plane chart question now." RQ-582 is closed with that labelling, which this chart question now carries (physics: the chart's physics review checks it against Hudomal eq. (18) and PLAN.md § 2.3). Stays open for the human.
+
+## RQ-588: A correction to the validation-orbits doc § 1.1: Li & Liao's 234 orbits span six mass sets, 30 of them equal-mass, and Hristov et al. is *CeMDA* 136, 7 (2024) *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, and § 10; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per in-force document. Not applied.*
+
+- **File, section:**
+  - `docs/design/principia_dd_validation_orbits.md` § "1.1 Free-fall periodic orbits — the best fit for this project":
+    "Li & Liao 2018 (234 unequal-mass), Hristov–Hristova–Dmitrašinović–Tanikawa 2023 (**12,409** equal-mass)."
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the `VO` § 1.1 row: "234 over six mass sets, 30 of them equal-mass (`P27/README.md` §4 item 7); Hristov et al. is
+    *CeMDA* 136, 7 (2024), arXiv 2023".
+- **The question (§ 9, question 12, verbatim):** "**Queue the §10 corrections to ruled documents (`VO` §1.1,
+  REQ-VAL-042's citation, `LR` §13's sentence)?**" This entry is the `VO` § 1.1 correction.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the doc is not edited.
+
+## RQ-589: A correction to REQ-VAL-042's citation: "Hristov et al. 2023" is *CeMDA* 136, 7 (2024) *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, and § 10; REQ-VAL-042; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per in-force document. Not applied.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-VAL-042's statement: "Two or three free-fall (brake) periodic orbits from Hristov et
+    al. 2023 or the Three-body Gallery must be added as closure tests …".
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the REQ-VAL-042 row: "*CeMDA* 136, 7 (2024)".
+- **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is REQ-VAL-042's citation.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the requirement is not edited.
+
+## RQ-590: A correction to the literature review § 13: the atlas's 311 free-fall orbits lie on nine planes, one per mass set, not "one plane" *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, § 2.3 and § 10; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per document. Not applied; the human considers the lit-review work done
+for now.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-25_lit_review/lit_review_2026-10.tex` § 13 "Periodic-Orbit Catalogues" (lines 698–699):
+    "and 311 lie on the free-fall plane.  Under the scale quotient these are one plane, a stack of planes indexed by
+    mass, and one plane".
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the `ATP` § 3, D2; `LR` § 13 row: "nine planes, one per mass set".
+- **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is the lit review's § 13 sentence.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the lit review is not edited.

@@ -28982,14 +28982,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*"
   verify:
     method: numerical gate
     detail: "each orbit returns to rest in the same configuration after one period; order reported"
   rulings:
   - R-71
   - R-72
+  - R-630
   milestone: M3
-  note: "Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration)."
+  note: "Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration). The reference set is Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits), fetched and verified, not committed (R-630 items 6 and 7, closing RQ-584 and RQ-579). Was: \"Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration).\""
 - id: REQ-VAL-043
   area: VAL
   statement: "A word-calculus test must assert the free-group word encoder reproduces the published braid class of Šuvakov–Dmitrašinović orbits."
@@ -29000,12 +29003,16 @@
     section: "1.4 Šuvakov–Dmitrašinović (13 families, 2013) and Broucke–Hénon–Hadjidemetriou"
   - file: decisions.md
     section: "R-125 — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*"
+  - file: decisions.md
+    section: "R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*"
   verify:
     method: unit test
-    detail: "for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class"
+    detail: "for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class up to conjugacy, inversion and the (a, b) <-> (A, B) exchange, each row recording which of those it needed; syzygy sequences per the atlas's word.js rule (R-630 item 5, closing RQ-576)"
   rulings:
   - R-125
+  - R-630
   milestone: M3
+  note: "The equivalence is R-630's (closes RQ-576), the definition R-72 asks for. Was (verify): \"for each gallery orbit used, computed word (under REQ-PAY-070's transcribed convention) equals the published class\"."
 - id: REQ-VAL-044
   area: VAL
   statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162), bound through the profile's `run_reversible`, which only that occupant carries (R-500)."
