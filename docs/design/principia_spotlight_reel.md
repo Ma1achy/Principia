@@ -3,7 +3,8 @@
 *Adopted by R-578 (gap sweep PR 2b, 21 Oct 2026), from the human's designs `reel_click.md` and the reel half of
 `keyframes_reel.md` (`docs/incoming/2026-10-21_gap_sweep_keyframes_reel/designs/`), their "Decided" sections his words.
 The specs it plays are made in the Sequence window (`principia_sequence.md`, R-577). Queued from it: RQ-561 (a takeover
-inside a segment the film interpolates and live playback cuts).*
+inside a segment the film interpolates and live playback cuts), ruled (a), with the interim rule for a mid-ease
+takeover, by R-624 (25 Oct 2026).*
 
 **Scope (the human, 21 Oct 2026).** The reel is a feature of the **v2 browser product**, not of the native app or its
 first browser port: "We could build all the machinery for it and test it natively but yeah it can be kinda rough around
@@ -154,17 +155,19 @@ fix round 9 of PR #286, gui review 5631987230, G1).
   and is paused otherwise (applied per R-369)." (fix round 1 of PR #286, gui review 5631060675, F2; applied per R-369:
   R-101 covers only the clock's playhead.)
 - **Inside a segment the film interpolates and live playback cuts** (link parameters, R-520, and dissolves), live
-  cannot continue what the film showed. Which way that goes is RQ-561. Meanwhile, its option (a), made determinate (fix
-  round 6 of PR #286, physics review 5631678451, P4; applied per R-369, an interim that decides neither of RQ-561's
-  questions):
+  cannot continue what the film showed. **The difference is accepted** (R-624, closing RQ-561, option (a), with the
+  rule below for a mid-ease takeover, which was its interim): the takeover frame is exact and live continues as
+  follows (made determinate in fix round 6 of PR #286, physics review 5631678451, P4). *Was:* "Which way that goes is
+  RQ-561. Meanwhile, its option (a), made determinate (fix round 6 of PR #286, physics review 5631678451, P4; applied
+  per R-369, an interim that decides neither of RQ-561's questions):"
   - **In a dissolve** the takeover loads the state live playback shows at that frame, the one the manifest entry names
     (§3.1): the outgoing state before the segment's second keyframe's frame, the incoming from it. Its hash is compared
     with that state's; the composite is not a state, and its difference from the film frame is not a disagreement.
   - **In a link-parameter ease** the takeover loads the frame's eased value (say `μ_max` = 4.6 between 5 and 4), as
     above. The live player then **holds that value** until the segment's second keyframe's frame and cuts there to the
     keyframe's value: it never interpolates (R-520 F3) and never jumps back to the first keyframe's value, which would
-    re-integrate twice. Whether this hold, or R-520 F3's frames at the first keyframe's value, is what live does is
-    RQ-561's second question.
+    re-integrate twice. This hold is what live does (R-624; *was:* "Whether this hold, or R-520 F3's frames at the
+    first keyframe's value, is what live does is RQ-561's second question.").
   - The difference after the takeover frame is expected and not reported as a disagreement.
   *Was:* "Meanwhile, its option (a): the takeover frame is exact, as above, and live playback continues under R-520 F3,
   cutting at the segment's second keyframe; the difference after the takeover frame is expected and not reported as a
@@ -235,7 +238,8 @@ the preview badge and the provenance in the header strip (R-571; the human's sco
 - R-521 and image embedding §6: the build refuses, never substitutes. R-484: a takeover is the identity.
 - R-523 and §G1: the preview badge and the provenance sit in the header strip, never over the figure.
 - Caching Part 5's snapshot fallback is the takeover's backdrop, as it already names it.
-- R-520 F3 against "live and film disagreeing is a bug": RQ-561.
+- R-520 F3 against "live and film disagreeing is a bug": the difference after a takeover in such a segment is
+  accepted, not a bug (R-624; *was:* "RQ-561").
 - Amends `principia_gui_state_contract.md` §2's window names (adds Spotlights) and the GUI spec (§G9a).
 
 ## 5. Decided

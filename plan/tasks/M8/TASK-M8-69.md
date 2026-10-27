@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-361, REQ-GUI-362, REQ-RENDER-116
-- **Depends on:** TASK-M8-68, TASK-M8-20, TASK-M8-21
+- **Depends on:** TASK-M8-68, TASK-M8-93, TASK-M8-21
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, perf
 - **Pitfalls:** none
@@ -34,3 +34,4 @@ Edit graph… opens the Stain's node editor component on the Print graph: the sa
 - **Fix round 3 of PR #281 (perf review 5608473498, F4, applied per R-369):** REQ-RENDER-116 (new, a definition, perf-reviewed) gives a custom WGSL node its cost class and motion policy, written into print_graph §7.2 by this task. *Was:* "**Closes:** REQ-GUI-361, REQ-GUI-362".
 - **Fix round 8 of PR #281 (qa review 5608745757, finding 10, applied per R-369):** the acceptance lines follow REQ-GUI-361's new verify. *Was:* "`cargo xtask screenshot print_graph_editor` and `cargo test -p gui print_editor` — REQ-GUI-361's verify (an edit in the editor shows in the slots and the reverse; an `image` → `direction` drag is refused with the reason; moving a node adds no undo entry and leaves the serialised graph unchanged; Kuwahara and stained glass are marked unstable; controls: an editor that accepts the mismatched wire, and a node move recorded as an undo entry, each fail).".
 - **Fix round 9 of PR #281 (qa re-check 5624154623, E, applied per R-369):** the round 8 note's golden-image clause is dropped, this task having no golden verify. The dropped clause: "a golden-image verify runs under `cargo xtask golden <suite>` with its baselines in `fixtures/golden/print/` (R-146, R-110)".
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-20 by TASK-M8-93 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-68, TASK-M8-20, TASK-M8-21".

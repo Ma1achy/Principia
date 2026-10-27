@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153, REQ-COL-111
-- **Depends on:** TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27
+- **Depends on:** TASK-M8-87, TASK-M4-14, TASK-M5-05, TASK-M6-27
 - **Needs (earlier milestones):** REQ-RENDER-024, REQ-RENDER-055, REQ-TOOL-026, REQ-TOOL-045, REQ-CHART-039, REQ-SYS-013, REQ-SCHED-047
 - **Reviewers:** code, qa, physics, gui, perf
 - **Pitfalls:** none
@@ -51,3 +51,4 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
 - **R-470 (20 Oct 2026) rules RQ-374:** forbidden region stays, off by default, hatching exactly the not-a-system pixels (REQ-COL-111); NaN / invalid pixels draws only while a debug view is the figure, dimmed otherwise (option (c), applied per R-369, flagged). The two lines no longer wait.
 - **R-476 (20 Oct 2026):** the Chart group loses grid and the Stain group t_end contours, which are Lines ▾ presets (TASK-M8-50, REQ-GUI-247); REQ-GUI-079's statement is changed so.
 - **R-511 (20 Oct 2026):** Overlays › Chart › forbidden region hatches the `decode_failed` samples too (REQ-COL-111). **R-509:** the Stain group's class edges leave Overlays ▾ for Lines ▾ (TASK-M8-50).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27".

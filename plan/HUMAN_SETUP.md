@@ -43,3 +43,27 @@ when the R-168 to R-184 rulings were applied; nothing to do unless they're missi
 ## 4. Confirm the crate map (R-170): done
 
 Confirmed by R-185 (26 Sep 2026); TASK-M0-00 is done.
+
+## 5. GitHub Pages (R-627): done
+
+The human's decision of 27 Oct 2026 (R-627): GitHub Pages is enabled with source "GitHub Actions" (build type
+"workflow"), at https://ma1achy.github.io/Principia/. The `github-pages` environment's deployment branch policy is
+custom, with one branch policy, `main`. The orchestrator applied it on the human's word, and no other repository
+setting was changed. The site is deployed only by a manual (`workflow_dispatch`) run from `main` through that
+environment; there is no automatic deploy on merge until the human says v1 is ready to be found.
+
+## 6. The v1 web toolchain on the Mac (R-627, R-349): to do before TASK-M8-86 runs its local check
+
+TASK-M8-86 (the v1 web skeleton) and TASK-M8-96 (its measurements) need these on the human's Mac. Each touches
+`~/.rustup`, `~/.cargo` or the system, so the human does it or approves it (R-349); no agent runs them unasked. Until
+they are done, TASK-M8-86 cannot run its local gui check and TASK-M8-96 cannot measure (gui review 5664362471 of
+R-627's port, G3, applied per R-369).
+
+1. The wasm target: `rustup target add wasm32-unknown-unknown`.
+2. `wasm-bindgen-cli` at the version of the `wasm-bindgen` crate in `Cargo.lock` (0.2.129 today; TASK-M8-86's PR names
+   the version it pins): `cargo install wasm-bindgen-cli --version 0.2.129 --locked`.
+3. Node.js 20 or later (the floor the pinned Playwright declares) for the browser runner: `node --version`, and `brew
+   install node` if it is absent. Playwright itself is pinned in the repo and installed there by `npm ci`; it drives
+   the installed Chrome stable (`channel: "chrome"`), so no Playwright browser download is needed.
+4. Safari's WebDriver: `sudo safaridriver --enable`; then in Safari, first Settings → Advanced → "Show features for
+   web developers", and only then Develop → "Allow Remote Automation", which that setting reveals.

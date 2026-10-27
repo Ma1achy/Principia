@@ -76,6 +76,10 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
   (REQ-GUI-079 and the rest) stay TASK-M8-08's; the scrubber's re-integration (REQ-GUI-092, REQ-GUI-155) stays
   TASK-M8-07's; the legend by evaluating the stain (REQ-GUI-105, REQ-GUI-106) stays TASK-M8-22's. Each depends on this
   task.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the scrubber's re-integration
+  (REQ-GUI-092, REQ-GUI-155) is now TASK-M8-90's, the wiring task of TASK-M8-07, not TASK-M8-07's (physics review
+  5664187570 of R-627's port and its approval 5664252864, applied per R-369). TASK-M8-90 reaches this task through
+  TASK-M8-07.
 - **Legend by evaluation, on the mock** (applied per R-369, review 5434766412 on PR #157): the GUI holds no legend key
   of its own; it draws the keys the engine side sends through the contract. The mock produces them from its fake stain
   in the shape the real evaluation gives them, and TASK-M8-22 produces them on the real engine by evaluating the stain.

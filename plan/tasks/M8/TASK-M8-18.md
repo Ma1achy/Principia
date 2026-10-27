@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
-- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37
+- **Depends on:** TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37, TASK-M8-87
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -40,7 +40,8 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - R-390: TASK-M6-28 builds the Chart builder's frame on the mock engine, its previews square; this task depends on it and wires it to the real chart system, keeping every requirement it closes.
 - R-408 (10 Oct 2026): "forbidden in view" counts a visible pixel only if every axis is inside its primary range, a
   domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden. `forbidden_fraction`
-  uses TASK-M8-05's classifier (REQ-CHART-056). With the egui layer shown the view is `[0,1]²`, where nothing changes,
+  uses TASK-M8-87's classifier (REQ-CHART-056; R-627 moved it from TASK-M8-05, physics review 5664187570 of its
+  port, F2, applied per R-369; *was:* "uses TASK-M8-05's classifier"), and TASK-M8-87 is in Depends on. With the egui layer shown the view is `[0,1]²`, where nothing changes,
   so REQ-GUI-109's acceptance line stands. A physical-quantity axis is affine past `[0,1]²` (R-408's port, B1).
 - R-467 (20 Oct 2026): the Chart builder's Domain preview (R-408, §G7) stands unchanged: it is a builder tool, not a
   presentation view, and keeps its hatch and its "forbidden in view" count. Whether a Chart-builder chart can fail
@@ -49,3 +50,5 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - **R-471 (20 Oct 2026):** a physical-quantity axis of kind 3 (energy, `L_z`) is warped by default, its linear mapping an option (REQ-CHART-067, REQ-CHART-068, TASK-M2-37, a new dependency); the Domain preview's N% is 0 inside the square under the warp. R-475: saved charts share the presets' store (REQ-GUI-108's note). RQ-372 is answered for energy-type axes and stays open, narrowed (TASK-M8-47).
 - **R-506 (20 Oct 2026) rules RQ-372:** every physical-quantity axis, the virial ratio and the mass ratio included, is warped to its feasible range by default (the mass ratio through the mass link), linear an option; the warps not written are REQ-CHART-070's (TASK-M2-37).
 - R-478 W3, R-480 P3 (20 Oct 2026): the read-only links and the warp previews are TASK-M8-52's, after this task.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".
+- R-627, physics review 5664187570 (F2, applied per R-369): TASK-M8-87 is named in Depends on, since it now builds the area-statistics classifier (REQ-CHART-056) forbidden_fraction uses. *Was:* "- **Depends on:** TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".

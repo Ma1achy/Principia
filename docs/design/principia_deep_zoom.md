@@ -116,7 +116,7 @@ The refinement cap is a **sliding window**: refine to `current_depth + max_depth
 
 This sidesteps the floor question at design time — you don't need to *know* where any precision floor sits in order to stop; you just don't refine past a fixed budget below the view.
 
-**Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a deep-zoom backstop; (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
+**Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a deep-zoom backstop, collapse judged per axis: an axis along which the field is saturated and the samples are identical does not count, and the quad stops only when every axis along which the field varies has collapsed (R-599; below); (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
 
 **Precision is not a navigation limit (R-570).** None of these conditions stops a pan or a zoom: they stop refinement
 only. On a latent or flat chart, which has no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4,
@@ -128,8 +128,14 @@ differences (§2 a) are 0, and the full and the linearised decoders' samples col
 because f32 has run out; (iii) and (iv) fire at home zoom. Stopping refinement there is harmless, the field being flat,
 at a quad whose f64 `J_D` columns along the view's plane are all 0. A band quad (`principia_chart_reference.md` §5.4),
 saturated along one in-plane axis only, also collapses and then stops terminally at (iv) (REQ-SCHED-062), above the
-screen floor, while its other axis stays structured; whether it keeps refining along that axis is RQ-554, open. *Was:*
-"Stopping refinement there is harmless, the field being flat."
+screen floor, while its other axis stays structured. **Collapse is judged per axis** (R-599, closing RQ-554): an axis
+along which the field is saturated and the samples are identical is genuinely flat, so it does not count, and a quad
+stops only when every axis along which the field varies has collapsed, or at the screen floor. The band quad
+therefore keeps refining along its unsaturated axis to the screen floor, and the readout names the saturated axis.
+(iv) fires only when every in-plane axis that is not saturated has collapsed on the linearised decoder; a quad whose
+in-plane axes are all saturated stops, the field being flat along each. The switchover (iii) is unchanged. *Was:*
+"; whether it keeps refining along that axis is RQ-554, open." *Was:* "Stopping refinement there is harmless, the field
+being flat."
 **A saturation collapse raises no precision warning** (RQ-553, decided per R-369 by the orchestrator, not a human
 ruling; recorded against R-54 and R-570 item 5). The test is per direction: a collapse between adjacent samples along
 an in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
@@ -164,7 +170,9 @@ There is a second floor the decode guard doesn't catch — adjacent ICs *distinc
 unchanged. A regularised occupant (the default, Heggie × RK4, R-560) has no substep cap: its bound is a step budget, a
 rate of steps per unit physical time per copy, and a copy that runs out of it is **undetermined, never discarded**;
 the separation floor firing and steps held at the entry cap are its counted, non-terminal signals, the under-resolved
-markers there (integrator contract Part 6). How the scheduler's floor stop reads them is RQ-526.
+markers there (integrator contract Part 6). The scheduler's floor stop reads the sticky `saturated` bit, set when
+either counted signal fires, and `suspect_fraction`, for every occupant, and a budget-undetermined footprint never
+splits (R-603, closing RQ-526; *was:* "How the scheduler's floor stop reads them is RQ-526.").
 
 ---
 

@@ -49,8 +49,9 @@ quads_computed     new quads this frame
 quads_reused       cache hits
 samples            quads x N^2 x (E+1) — the actual integration work
 substeps_total     the honest cost measure; steps are not comparable across steppers
-substep_histogram  [u32; 16], substeps per pixel this frame: equal bins of width N_max/16, cap hits their own
-                   last bin (R-545, RQ-286; the bin edges are RQ-520)
+substep_histogram  [u32; 17], substeps per pixel this frame: 16 equal bins of width N_max/16 over [0, N_max),
+                   half-open, and a separate 17th bin for the cap hits, N_sub = N_max (R-545, RQ-286; R-614,
+                   closing RQ-520; was "[u32; 16] … cap hits their own last bin (…; the bin edges are RQ-520)")
 playhead_dt        how far time moved
 camera_delta       pan/zoom magnitude — 0 for a static frame
 tree_depth_max     and leaf count
@@ -252,8 +253,8 @@ form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/c
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
 key. One key is the stated exception: the frame record's `substep_histogram`, which the human's ruling adds to
 schema v1 (R-545, RQ-286), may be missing from a frame written before it; the schema and the reader both accept such a
-frame and report the histogram as not recorded, never as zeros. Where the key is present it is an array of exactly 16
-integers, never `null` (fix round 1 of PR #274, qa Q4, applied per R-369). A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+frame and report the histogram as not recorded, never as zeros. Where the key is present it is an array of exactly 17
+integers (R-614; *was:* "exactly 16"), never `null` (fix round 1 of PR #274, qa Q4, applied per R-369). A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 The typed form gives every count and size an explicit width, u32 or u64, never `usize` (R-329).
 
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores_available`, `cpu_cores_total`, `gpu_cores`,
@@ -368,7 +369,7 @@ frame's end:
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
 frame_ms        wall clock
 quads_computed  quads_reused  samples  substeps_total
-substep_histogram  [u32; 16]: §2's per-pixel substep bins (R-545, RQ-286)
+substep_histogram  [u32; 17]: §2's per-pixel substep bins, 16 equal bins then the cap bin (R-545, RQ-286; R-614)
 playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
 camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
 tree_depth_max  leaf_count

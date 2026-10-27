@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-122, REQ-GUI-150
-- **Depends on:** TASK-M8-11, TASK-M8-05, TASK-M3-30, TASK-M4-15
+- **Depends on:** TASK-M8-11, TASK-M8-87, TASK-M3-30, TASK-M4-15
 - **Needs (earlier milestones):** REQ-VAL-043, REQ-VAL-041, REQ-TOOL-044, REQ-PAY-043, REQ-SYS-017, REQ-VAL-126, REQ-INT-001
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-3
@@ -30,3 +30,4 @@ The Research window's first tool seeds periodic orbits from spiral cores where t
 ## Notes
 - R-133: the "winding number" the seeds come from is the payload's winding — the unwrapped phase θ̃ and orbit_count = ⌊|θ̃|/2π⌋ (REQ-INT-001, REQ-PAY-043); spiral cores are where it diverges.
 - Calibrations (R-71) proposed here: REQ-GUI-150. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-11, TASK-M8-05, TASK-M3-30, TASK-M4-15".

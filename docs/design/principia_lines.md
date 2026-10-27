@@ -374,8 +374,8 @@ it:
     an on-screen icon inward does not make it faint.
   - **The start icon is pinned** like the others; before R-569 it was drawn at its raw point and could sit off screen.
   - **Repeats are never moved or pinned** (below; R-538 TM7).
-  - **Larger than the view on an axis** (a tiny view): the icon is centred on that axis and not clamped (RQ-533 (a),
-    applied meanwhile).
+  - **Larger than the view on an axis** (a tiny view): the icon is centred on that axis and not clamped (R-616,
+    closing RQ-533: the human's words win; *was:* "(RQ-533 (a), applied meanwhile)").
 - **Repeats (R-538, R-537).** The trace works wherever the view goes. On an affine chart it runs on past the square
   like the field. On a periodic or pole-crossing chart (the shape sphere) it is drawn in every
   image of the chart in view, with every marker and icon (start, events, rings, ticks, arrows, head), at half strength (RQ-412 (a), R-553);
@@ -421,13 +421,23 @@ it:
     (R-538 J11). *Was:* "every trace is drawn from `t = 0` to its end" (gui review 5594407176 of PR #263, G2; applied
     per R-369).
     - **A new trace while playing restarts at `t = 0` (R-569).** With the transport playing, a hover or click that
-      integrates an IC other than the shown trace's sets the playhead to 0 and keeps playing. While paused the
-      playhead does not move. Panning, zooming or re-projecting the same trace (a tilt, a slice, a chart's repeats) is
+      integrates an IC other than the shown trace's starts the trace's head at 0 and keeps playing (R-617; *was:*
+      "sets the playhead to 0 and keeps playing"). While paused the head does not move. Panning, zooming or re-projecting the same trace (a tilt, a slice, a chart's repeats) is
       not a new trace and does not restart it; nor is a hover or click on a pixel that is not a system, which
       integrates nothing (§8 "Not a system"). The demo's `restartOnNewRun`, called from `compute` after the run is
-      integrated (`docs/incoming/2026-10-21_trace_playback/demo/`). The playhead is the Time panel's (above), so the
-      restart is that playhead's (RQ-534 (a), applied meanwhile). The own clock already restarts per trace and is
-      unchanged.
+      integrated (`docs/incoming/2026-10-21_trace_playback/demo/`). **Only a new run restarts** (R-616, closing
+      RQ-533): a hover into a repeat of the same system, or a click that pins the trace the hover already shows,
+      integrates no new run and does not restart; "another point" in R-569 meant another run. **Only the trace's own
+      marker restarts** (R-617, closing RQ-534): under "With the playhead" the new trace's head starts at 0 and runs at
+      the transport's rate while the transport plays, as the own clock does; the figure's global playhead (the Time
+      panel's) and the field's live march are untouched, so hovering never restarts the field. Each of the Time panel's
+      own controls that jumps its playhead (render_gui_spec §G2, the Time panel) puts the head back on the figure's
+      playhead (*was:* "moves", which took in play; qa review 5644735344 of PR #293, N5): the scrubber dragged (a
+      scrub), the scrubber clicked to a time, a step, and the loop's wrap to 0; while the transport is paused the head
+      does not move (applied per R-369, R-617's port; qa review 5644700214 of PR #293, N2). *Was:* "A scrub, a seek or
+      a restart of the Time panel itself puts the head back on the figure's playhead". *Was:* "The playhead is the Time
+      panel's (above), so the restart is that playhead's (RQ-534 (a), applied meanwhile)." The own clock already
+      restarts per trace and is unchanged.
     - **Paused at `t = 0`, the line is drawn dotted (R-569).** With the transport paused, the scrubber not held, and the
       playhead at exactly 0, the trace is drawn to its extent as above (TF3: the default length to its end; a `Window`
       or `LastDt` length as chosen, RQ-427 (a)), but its line is **dotted**: round dots in the trace's own colour (the
@@ -529,6 +539,17 @@ can be restyled like any contour.
 3. **Off-plane distance for the trace fade.** The general definition is the distance in z from the trajectory's encoded
    point to the slice plane, which needs the encode at every step (and the metric RQ-341 raises). The mock-up uses a
    proxy: the scale-normalised Jacobi momentum magnitude, which this shape chart holds at zero.
+   *Ruled (R-596, 25 Oct 2026, closing RQ-522, option (b)):* the metric on `z` is the physical mass metric pulled back
+   through the decoder's Jacobian, `g = Jᵀ W J`: `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame
+   output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64,
+   central difference, REQ-DEC-034's step rule) at the slice centre, not R-550's compass-view Jacobian, whose angles,
+   rates and mass fractions `W` is not defined on; and `W` the mass-weighted (kinetic) metric on positions,
+   `Σ mᵢ‖δrᵢ‖²`, with its dual on momenta, `Σ ‖δpᵢ‖²/mᵢ`, in canonical units (`G = M = I = 1`), its masses those
+   decoded at the slice centre, so that `g` is one metric on `z` for the view; the metric the shape sphere's distances
+   already come from. The
+   distance is the `g`-length of the part of `z − z₀` that is `g`-orthogonal to the slice plane `span(q̂₁, q̂₂)`
+   (REQ-GUI-266). Where `g` is singular along a direction of `z`, as a mass direction may be, the reading is a
+   definition (REQ-GUI-400, R-72), written into §8 by TASK-M8-54 and approved by its physics reviewer.
 4. **Label collisions.** Between contour labels and the trace's tick labels: which wins?
 5. **Class edges.** Should they move onto the line system as "contours of a categorical field", or stay in the stain?
 6. **Default style for new contour sets.** Screen contour (white with outline), or smart ink on by default?

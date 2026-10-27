@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054
-- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33
+- **Depends on:** TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33
 - **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -46,3 +46,4 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
   (REQ-GUI-334; PR #267's split, *was:* "the Trace, Listen and Numbers sections over them (REQ-GUI-326)"). What G4 leaves out (FTLE,
   `E₀`, the playhead, the two buttons) is kept: RQ-462 (a), ruled so by R-556.
 - R-544 (21 Oct 2026) item 8: "Show the canonical bodies" may stay as a view of the bodies, but must not fold the path; REQ-GUI-054 gains the syzygy arm (gui review 5603356729 of PR #273, G4, applied per R-369).
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33".

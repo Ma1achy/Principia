@@ -69,6 +69,9 @@ view's sub-scopes reached with Enter.
   that acceptance on the real engine. The preset names (REQ-GUI-082), the z₀ round trip through the real snapshot
   (REQ-GUI-083), the direction labels (REQ-GUI-034), the shape-sphere controls (REQ-GUI-161) and scrubbing
   (REQ-GUI-092) stay with those tasks.
+- R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: scrubbing (REQ-GUI-092) is now
+  TASK-M8-90's, the wiring task of TASK-M8-07, not TASK-M8-07's (applied per R-369, physics approval 5664252864 of
+  R-627's port).
 - The lock badge and reticle (REQ-GUI-099) and the axis labels (REQ-GUI-084) are built here on mock data, because the
   artboards this task's screenshots are compared against show them and R-390 lets content, not look, feel or behaviour,
   be placeholder (applied per R-369, review 5434766412 on PR #157). Their requirements stay closed by TASK-M8-07 and

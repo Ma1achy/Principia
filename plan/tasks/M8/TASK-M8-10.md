@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156
-- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33, TASK-M7-52
+- **Depends on:** TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33, TASK-M7-52
 - **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-2.4
@@ -46,3 +46,4 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - R-449 (16 Oct 2026): the labels are 1-based, in place of R-22's 0-based ones (was `labels_zero_based`, "labels for body 0 escape read 'body 0' … no '1–2' style collision label"); the shared `crates/gui/src/labels.rs` is replaced by TASK-M2-33's conversion function, which the render crate's legends use too (applied per R-369).
 - **R-476 M4 (20 Oct 2026):** TASK-M8-49 moves this task's trace drawing onto the line system (REQ-GUI-245); the hover label is unchanged.
 - **The one projection (R-542 H11; PR #270's code re-review, C1; applied per R-369):** this task depends on TASK-M7-52 and calls its shared projection. *Was:* "- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33".
+- R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33, TASK-M7-52".
