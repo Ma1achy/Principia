@@ -26,8 +26,10 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 // kernel layout (the kernel is Rust → SPIR-V — lowering Part 2). Bit offsets/sizes are language-agnostic.
 // TWO stored sizes — the Benettin shadow is 48 B, so FTLE-on/off are monomorphised as two Rust variants
 // to avoid paying for the shadow when FTLE is off (a MEMORY split, NOT a language limitation):
-//   SimStateBase (FTLE off): no shadow, 104 B actual / 104 B effective (was 96 B before R-603's and R-605's words).
-//   SimStateFTLE (FTLE on):  with shadow, 152 B actual / 152 B effective (was 144 B before them).
+//   SimStateBase (FTLE off): no shadow, 96 B actual / 96 B effective as generated until TASK-M3-41,
+//                            104 B from TASK-M3-41 on (R-603, R-605).
+//   SimStateFTLE (FTLE on):  with shadow, 144 B actual / 144 B effective as generated until TASK-M3-41,
+//                            152 B from TASK-M3-41 on (R-603, R-605).
 // The fragment READ side is UNIFIED (one type; absent shadow → NaN via the has_ftle const — §5, lowering
 // Part 3a), so it needs no runtime member-omission; the two sizes are handled by the baked-per-tier read shader.
 
@@ -105,8 +107,10 @@ struct SimStateFTLE {
     //   read through fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }. The stored bytes and
     //   the Rust closure_step: u16 / _reserved: u16 are as above.
 }
-// SimStateFTLE: 152 B actual / 152 B effective (8-byte aligned); was 144 B before budget_word and dE_reg
-// SimStateBase: drop r_sh,p_sh → 104 B actual / 104 B effective; was 96 B
+// SimStateFTLE: 144 B actual / 144 B effective (8-byte aligned), as generated until TASK-M3-41;
+//   152 B from TASK-M3-41 on, with budget_word and dE_reg (R-603, R-605)
+// SimStateBase: drop r_sh,p_sh → 96 B actual / 96 B effective, as generated until TASK-M3-41;
+//   104 B from TASK-M3-41 on (R-603, R-605)
 ```
 
 ### Why closure is here, at this width, unconditionally
@@ -666,7 +670,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 > are at 152 / 104 B; at 144 / 96 B they were 1.327 / 0.929 / 0.464 / 5.308 / 1.858 GB, with hot parts 1.194 / 0.796 /
 > 0.398 / 4.778 / 1.593 GB.
 
-Per-sample: hot `SimState` **152 B (FTLE-on) / 104 B (FTLE-off)** effective (*was* 144 / 96 B) + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
+Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective as generated until TASK-M3-41, **152 B / 104 B** from TASK-M3-41 on (R-603, R-605), the widths the table below uses + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|
