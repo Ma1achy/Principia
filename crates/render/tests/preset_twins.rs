@@ -183,3 +183,60 @@ negative_control!(
     expected = "is not the twin's",
     check_render(DecodeChart::Latent, DecodeChart::MassSimplex)
 );
+
+/// The DECODE twin's panels at their edges: each edge belongs to the panel above or to its right, as the view's
+/// comparisons (`t.y ≥ ⅔`, `t.y ≥ ⅓`, `t.x < ⅓`, `t.x < ⅔`, `t.x < ½`) place it; `edge` is where the `⅓` edge is
+/// tested (the control moves it off the edge).
+fn check_panel_edges(edge: f64) {
+    let d = decode::Shown {
+        z: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+        z_latent: true,
+        m: [0.2, 0.3, 0.5],
+        r: [[-0.9, 0.11], [0.7, -0.23], [0.31, 0.17]],
+    };
+    let xy = [0.5, 0.5];
+    let sq = |v: [f64; 3]| v.map(decode::squash);
+    let top = 2.0 / 3.0;
+    assert_eq!(
+        decode::colour(&d, [edge, top], xy),
+        sq([0.4, 0.5, 0.6]),
+        "the latent panel's ⅓ edge is not the middle third's"
+    );
+    assert_eq!(
+        decode::colour(&d, [2.0 / 3.0, top], xy),
+        [decode::squash(0.7), decode::squash(0.8), 0.0],
+        "the latent panel's ⅔ edge is not the last third's"
+    );
+    assert_eq!(
+        decode::colour(&d, [0.1, 1.0 / 3.0], xy),
+        d.m,
+        "the ⅓ row edge is not the masses'"
+    );
+    assert_eq!(
+        decode::colour(&d, [0.1, top - 1e-9], xy),
+        d.m,
+        "just below ⅔ is not the masses'"
+    );
+    assert_eq!(
+        decode::colour(&d, [0.5, 0.1], xy),
+        sq([0.11, -0.23, 0.17]),
+        "the positions panel's ½ edge is not y's"
+    );
+    assert_eq!(
+        decode::colour(&d, [0.5 - 1e-9, 1.0 / 3.0 - 1e-9], xy),
+        sq([-0.9, 0.7, 0.31]),
+        "just left of ½ is not x's"
+    );
+}
+
+#[test]
+fn preset_twins_decode_panel_edges() {
+    check_panel_edges(1.0 / 3.0);
+}
+
+negative_control!(
+    preset_twins_decode_panel_edges,
+    "a point left of the ⅓ edge read as the middle third must be found",
+    expected = "is not the middle third's",
+    check_panel_edges(1.0 / 3.0 - 1e-9)
+);
