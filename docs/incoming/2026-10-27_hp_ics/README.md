@@ -59,8 +59,18 @@ Notes on the table:
   Volume 125, July 2026" with the ScienceDirect link `https://www.sciencedirect.com/science/article/pii/S1384107626000114`,
   matching CITATIONS.md's `hristov2026`. The `3bodychor164` page gives `hristov2024nc`'s title as "Searching for New
   Nontrivial Choreographies for the Planar Three-Body Problem", where CITATIONS.md has "Nontrivial choreographies of
-  the planar three-body problem"; the DOI, 10.1134/S1063779624030444, is the same. **Check the title against the
-  journal before it goes in a reference list**; it was not checked against the publisher here.
+  the planar three-body problem"; the DOI, 10.1134/S1063779624030444, is the same.
+- **`hristov2024nc`'s title, checked 27 Oct 2026: CITATIONS.md's title is not the journal's.** The publisher's own
+  page for the DOI (`https://link.springer.com/article/10.1134/S1063779624030444`) could not be read from this
+  session: it answers with a bot-check page ("Client Challenge"), which was not bypassed. The publisher's own record
+  of the DOI, deposited with Crossref (`https://api.crossref.org/works/10.1134/S1063779624030444`, publisher
+  "Pleiades Publishing Ltd", fetched 27 Oct 2026, sha256 `402d7072e9df39d57cd5dd0c7df12dc6f101f9eedee04d6d8488176088617395`),
+  gives: I. Hristov, R. Hristova, I. Puzynin, T. Puzynina, Z. Sharipov, Z. Tukhliev, *Searching for New Nontrivial
+  Choreographies for the Planar Three-Body Problem*, Physics of Particles and Nuclei 55(3), 495–497 (June 2024). That
+  agrees with the authors' page and not with CITATIONS.md, whose title comes from the atlas's reference list
+  (`../2026-10-26_orbit_catalogues/threebodyorbits_sources.json`). **Cite it by the Crossref title.** CITATIONS.md is
+  the earlier batch's file and is not edited here; the discrepancy is RQ-580. The table above keeps CITATIONS.md's
+  wording, as quoted.
 - **Masson's page is not a publication.** Its title is the page's own `<title>`. Its author is from the site's footer
   ("Paul Masson — Independent Physicist — San Francisco"). The page says Simó "was able to locate the initial
   conditions for all 345 planar choreographies and kindly provided them to me". It is a secondary source: it is

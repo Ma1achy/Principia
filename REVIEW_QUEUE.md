@@ -1096,3 +1096,28 @@ committed meanwhile.*
 - **Applied meanwhile:** (c). `fetch.sh` downloads all 599 files listed in `sources.tsv` and checks each against its
   recorded sha256, so the reference data is reproducible byte for byte without being committed. Waits: the precision
   proposal's test 6 reference data, in the repo.
+
+## RQ-580: `hristov2024nc`'s title in the orbit catalogues' CITATIONS.md is not the journal's *(found while checking the citations for PR #299; `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md` § "References", `threebodyorbits_sources.json`; context: the precision-ladder proposal, §5 test 6)*
+
+*Found on 27 Oct 2026. A citation's correctness is a routine decision, but CITATIONS.md is generated from the earlier
+batch's transcription of the atlas's reference list, so the fix is that batch's, not PR #299's.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md` § "References": "`hristov2024nc`: Hristov, Hristova,
+    Puzynin, Puzynina, Sharipov & Tukhliev (2024), *Nontrivial choreographies of the planar three-body problem*,
+    Physics of Particles and Nuclei 55, 495–497, https://doi.org/10.1134/S1063779624030444."
+  - Its source, `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_sources.json`, `hristov2024nc`: "title":
+    "Nontrivial choreographies of the planar three-body problem".
+  - The publisher's record of the DOI, deposited with Crossref (`https://api.crossref.org/works/10.1134/S1063779624030444`,
+    publisher "Pleiades Publishing Ltd", fetched 27 Oct 2026): title "Searching for New Nontrivial Choreographies for
+    the Planar Three-Body Problem", Physics of Particles and Nuclei 55, issue 3, pages 495–497, June 2024. The
+    authors' page `https://db2.fmi.uni-sofia.bg/3bodychor164/` gives the same title. The publisher's article page
+    (link.springer.com) returned a bot-check page and could not be read.
+  - `docs/incoming/2026-10-27_hp_ics/README.md` § "Sources", the notes, records this.
+- **The question:** CITATIONS.md carries the atlas's wording of the title, not the journal's. Should the generator
+  correct it (and the transcribed JSON stay as the site published it), or should CITATIONS.md note the site's wording
+  beside the journal's, as it already does for Li, Jing & Liao 2018?
+- **Options seen:** (a) correct the title in `citations.py`'s output and leave `threebodyorbits_sources.json` as
+  transcribed; (b) add a note under CITATIONS.md's "Notes", as for `lijingliao2018`, giving both titles; (c) other.
+- **Applied meanwhile:** none in CITATIONS.md. `docs/incoming/2026-10-27_hp_ics/README.md` cites the Crossref title.
+  Nothing waits.
