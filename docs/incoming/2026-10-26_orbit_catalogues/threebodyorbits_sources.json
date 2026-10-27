@@ -377,5 +377,40 @@
    "label": "Sheen’s orbits",
    "source": "sheen2016"
   }
+ },
+ "_journal_about": "Added 27 Oct 2026, by the human's instruction of that day: 'journal' is an overlay on 'sources', giving the journal's own wording where the site's differs, checked against the publisher's record deposited with Crossref (and the journal's page where Crossref lacks a field). 'sources' stays as the site published it; citations.py cites the journal's wording and prints the site's beside it. Keys are unchanged, so simo2001 keeps its key although the paper is 2002.",
+ "journal": {
+  "hristov2024nc": {
+   "title": "Searching for New Nontrivial Choreographies for the Planar Three-Body Problem",
+   "checked": "Crossref, https://api.crossref.org/works/10.1134/S1063779624030444, publisher Pleiades Publishing Ltd, fetched 27 Oct 2026 (sha256 402d7072e9df39d57cd5dd0c7df12dc6f101f9eedee04d6d8488176088617395): this title, Physics of Particles and Nuclei 55(3), 495–497, June 2024. The authors’ page https://db2.fmi.uni-sofia.bg/3bodychor164/ gives the same title.",
+   "basis": "RQ-580, closed by the human's instruction of 27 Oct 2026 ('same treatment as RQ-580')"
+  },
+  "simo2001": {
+   "year": "2002",
+   "venue": "Contemporary Mathematics 292, 209–228",
+   "url": "https://doi.org/10.1090/conm/292/04926",
+   "checked": "Crossref, https://api.crossref.org/works/10.1090/conm/292/04926, publisher American Mathematical Society, fetched 27 Oct 2026 (sha256 e25df135f56a5fa580ca9624b35e0376062901cb92cebaa8cb57bde7d1ec8e8f): C. Simó, this title, Contemporary Mathematics (Celestial Mechanics), pages 209–228, issued 2002. Crossref gives no volume for the chapter; its book, Crossref, https://api.crossref.org/works/10.1090/conm/292 (sha256 7951571d5b70c8ed7b743f6a767f6beca3521ff1183234c3d8e797bb957068de), is Celestial Mechanics, ed. Chenciner, Cushman, Robinson & Xia, 2002, volume 292 by its DOI. The title is the site’s.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  },
+  "titov2012": {
+   "title": "Some periodic orbits of general three body problem with vanishing angular momentum",
+   "venue": "Nelineinaya Dinamika 8(2), 377–389",
+   "checked": "Crossref, https://api.crossref.org/works/10.20537/nd1202012, publisher Izhevsk Institute of Computer Science, fetched 27 Oct 2026 (sha256 d0467e27bc70fd12b968eded4adf7e2825a2f7bbc8101298c50287f8b32e14a4): V. B. Titov, this title (original title “Периодические орбиты общей задачи трех тел с нулевым кинетическим моментом”), Nelineinaya Dinamika, pages 377–389, 2012; Crossref gives no volume or issue. The journal’s page for the DOI, https://nd.ics.org.ru/nd1202012/, read 27 Oct 2026: “2012, Vol. 8, No. 2, pp. 377-389”.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref and the journal's page"
+  },
+  "vasiljevic2023": {
+   "title": "An island of linearly stable non-hierarchical unequal mass periodic three-body orbits — A harbinger of circumbinary exoplanets?",
+   "checked": "Crossref, https://api.crossref.org/works/10.1016/j.newast.2022.101969, publisher Elsevier BV, fetched 27 Oct 2026 (sha256 a9239a0e0881e013a1414f8878b4524b483ba1c4361d14773ab041890535aed6): this title, with the subtitle after an em dash and its “A” capitalised, New Astronomy 100, 101969, May 2023.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  },
+  "dmitrasinovic2018": {
+   "title": "Linear stability of periodic three-body orbits with zero angular momentum and topological dependence of Kepler’s third law: a numerical test",
+   "checked": "Crossref, https://api.crossref.org/works/10.1088/1751-8121/aaca41, publisher IOP Publishing, fetched 27 Oct 2026 (sha256 2ad1da3050db1e003ec41aef322485c07ef8ec3910a372cc61887f102e49c7cb), found by a Crossref bibliographic query because the site cites the arXiv preprint: this title, with the subtitle “a numerical test”, Journal of Physics A: Mathematical and Theoretical 51(31), 315101, 2018. Not in the human’s list; the same kind of correction (the human: “titles and years against Crossref”).",
+   "basis": "the human's instruction of 27 Oct 2026 (titles against Crossref); applied per R-369"
+  },
+  "lijingliao2018": {
+   "checked": "Crossref, https://api.crossref.org/works/10.1093/pasj/psy057, publisher Oxford University Press, fetched 27 Oct 2026 (sha256 89955e738892752e9e2b949a031b0acfa3559c1b53b47261ee6bf3e1563da8aa): the site’s title, Publications of the Astronomical Society of Japan 70(4), 64, 2018. Nothing to correct.",
+   "basis": "the human's instruction of 27 Oct 2026, confirmed by Crossref"
+  }
  }
 }

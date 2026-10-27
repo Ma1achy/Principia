@@ -355,6 +355,19 @@ words are not directly comparable as basepoint-free conjugacy classes are.  Seco
 letters depend on the stopping rule (escape criterion or integration horizon); nearby chaotic
 initial conditions may agree through the bulk of the word and diverge in its tail.
 
+\paragraph{Conventions are not uniform across catalogues.}
+Comparing the published words with the gallery's own shows that equal classes are written with
+different representatives.  For the fifteen orbits of \v{S}uvakov \&
+Dmitra\v{s}inovi\'{c}'s first table~\cite{suvakov2013}, the gallery's words~\cite{threebodygallery}
+agree with the published ones up to cyclic rotation for nine; the other six agree only under
+inversion of the word (time reversal) or the exchange $(a,b)\leftrightarrow(A,B)$, and the
+published word for moth~III is not freely reduced (it contains $A\,a$), matching the gallery's
+only after reduction.  The Three Body Orbits atlas~\cite{tbo2026} states its own canonical
+spelling, on the syzygy sequence rather than the $F_2$ letters: reduce, relabel the bodies by mass,
+and take the least spelling over rotations, time reversal and the relabellings the masses allow.
+A word reader validated against these catalogues therefore has to declare its equivalence ---
+which reductions and which symmetries count --- before a comparison means anything.
+
 \subsection{Heggie's encounter classification}
 
 The binary--single scattering problem has been systematically studied by Heggie~\cite{heggie1975}
@@ -552,6 +565,23 @@ each perturbed by one unit in the last place, and reports the time up to which t
 time at which they part, against thresholds taken from this literature.  The interface states the
 predictability horizon this implies, rather than assuming it away.
 
+\paragraph{High-order Taylor methods and extended precision.}
+Taylor-series integrators build each step's series by automatic differentiation, so their order
+can rise with the working precision; Jorba \& Zou~\cite{jorba2005} give the standard order and
+step rules, and TIDES~\cite{abad2012} pairs the method with arbitrary-precision arithmetic.  Clean
+numerical simulation~\cite{li2017} is this combination applied to the three-body problem.
+Anto\~{n}ana, Chartier, Makazaga \& Murua~\cite{antonana2020} bound the radius of convergence of
+the $N$-body solution and introduce global time-renormalisations under which the solution is
+holomorphic on a strip of fixed width, so fixed fictitious-time steps suffice through close
+encounters; they integrate the Pythagorean problem to $t = 63$.  Below arbitrary precision,
+double-word arithmetic represents a number as an unevaluated sum of two floating-point numbers:
+Hida, Li \& Bailey~\cite{hida2001} give double-double and quad-double algorithms, Joldes, Muller \&
+Popescu~\cite{joldes2017} their rigorous error bounds, and the same construction on single-precision
+hardware is used on GPUs~\cite{thall2006,joldes2016}.  The Three Body Orbits atlas~\cite{tbo2026}
+precomputes its orbits with a Taylor integrator in double-double arithmetic.  An extended-precision
+batch mode for Principia, with a Taylor stepper over its regularisations, is proposed but not
+built; the horizons quoted above are those of the single- and double-precision paths.
+
 % =========================================================
 \section{GPU-Accelerated Parallel Computation}
 % =========================================================
@@ -620,13 +650,67 @@ that uses the Pythagorean-triple family as an indexing scheme for three-body con
 that maps the IC space around its members.
 
 % =========================================================
+\section{Periodic-Orbit Catalogues}
+\label{sec:catalogues}
+% =========================================================
+
+Periodic orbits are the best-tabulated objects in the problem and the nearest thing it has to
+exact reference data.  The catalogues fall into a few lineages.  Broucke~\cite{broucke1975},
+Broucke \& Boggs~\cite{broucke1975b} and H\'{e}non~\cite{henon1976} computed the early families,
+H\'{e}non with their stability.  The figure-eight~\cite{moore1993,chenciner2000} was followed by
+choreographies~\cite{moore2006,simo2002}, Sim\'{o} also tabulating their stability.  \v{S}uvakov \&
+Dmitra\v{s}inovi\'{c}'s 13 families~\cite{suvakov2013} began the Belgrade lineage: the online
+gallery~\cite{threebodygallery}, the sequences of Hudomal's thesis~\cite{hudomal2015} and of
+Dmitra\v{s}inovi\'{c} et al.~\cite{dmitrasinovic2018}, and Hudomal's table of the initial conditions
+of all 206 sequence orbits~\cite{hudomal2019}.  The gallery is offline; its pages survive in the
+Internet Archive, and its own terms allow reuse of its data with credit.  Clean numerical
+simulation extended the count to more than 600 equal-mass families~\cite{li2017}, more than a
+thousand unequal-mass orbits~\cite{lijingliao2018} and the free-fall orbits~\cite{li2018}, and
+Li, Li \& Liao~\cite{lili2020} and Vasiljevi\'{c}, Raoni\'{c} \&
+Dmitra\v{s}inovi\'{c}~\cite{vasiljevic2023} mapped linearly stable unequal-mass families.  Hristov
+and collaborators computed families, trivial and non-trivial choreographies and stable orbits to
+high precision~\cite{hristov2022,hristov2023,hristov2024nc,hristov2026,hristov2024}, publishing
+databases of initial conditions to between 100 and 180 digits.  Smaller sets come from Titov~\cite{titov2012},
+Rose~\cite{rose2016} and Sheen~\cite{sheen2016}.
+
+Two compilations gather these.  Reusser~\cite{reusser2025} collected 2,386 sets of initial conditions
+from the Belgrade, Li--Liao and Hristov catalogues under an open licence.  The Three Body Orbits
+atlas~\cite{tbo2026} compiles 3,943 orbits in 41 families from about twenty-five sources,
+re-converges every one in double-double arithmetic, and publishes its measurements under CC~BY~4.0.
+Its maps arrange the orbits by a learned similarity of shape, or plot measured quantities against
+one another (period against energy, closest approach against speed).  No catalogue we have found
+places its orbits in the initial-condition space that surrounds them, and none shows the regular
+island in which a stable orbit sits or the boundary on which an unstable one lies.
+
+The structure of the catalogues makes that possible.  Classifying the atlas's published initial
+conditions, 1,759 of its orbits share \v{S}uvakov \& Dmitra\v{s}inovi\'{c}'s velocity
+slice~\cite{suvakov2013} (equal masses, collinear start, two free velocity components); 1,350 lie on
+the same slice with the third mass free; and 311 lie on the free-fall plane.  Under the scale
+quotient these are one plane, a stack of planes indexed by mass, and one plane: 87\% of the atlas
+lies on slices that a single IC map each can show.  Comparing catalogues is also not free of
+error: the gallery gives two periods for the butterflies~I and~II, the published ones differing
+from the later sequence values and from the atlas's refinement by about $10^{-4}$, and a
+compilation's family-level attribution can merge sources, as for the equal- and unequal-mass
+members of the Li--Liao families.
+
+\paragraph{Proposed contribution.}
+Principia places each catalogued orbit at its point in the symmetry-reduced chart and renders the
+slice through it, so that the catalogues' stability labels can be compared with the structure
+around each orbit: linearly stable orbits should sit inside regular islands, unstable ones on
+boundaries.  A periodic orbit is a closed loop through initial-condition space, so a slice shows it
+where the loop crosses it, and one orbit may appear more than once.
+
+% =========================================================
 \section{Validation Targets}
 % =========================================================
 
 Several published solutions serve as exact or reference tests for an instrument of this kind:
 the Lagrange and Euler analytic solutions; the figure-eight~\cite{moore1993,chenciner2000}; the
 Burrau problem as solved by Szebehely \& Peters~\cite{szebehely1967}; the periodic-orbit
-catalogues above~\cite{suvakov2013,suvakov2014,threebodygallery,li2018,hristov2024}; the
+catalogues of Section~\ref{sec:catalogues}~\cite{suvakov2013,suvakov2014,threebodygallery,hudomal2019,li2018,hristov2024,tbo2026},
+whose published initial conditions give closure tests at the integrator's order and, in Hristov et al.'s
+databases, printed to 100--180 digits~\cite{hristov2022,hristov2023,hristov2024nc,hristov2026}, above double
+precision; the
 triple-collision points tabulated inside region $D$~\cite{tanikawa2021}; the lifetime grid of~\cite{boekholt2020}
 at accuracy $10^{-70}$; and the
 Agekyan--Anosova initial conditions~\cite{agekian1967,agekian1968b}, whose tabulated angular
@@ -674,6 +758,11 @@ Mass ratios appear as a map axis only for the continuation of a periodic-orbit f
 masses otherwise only as fixed parameters or in outcome statistics.  The effect of mass variation
 on basin topology, fractal dimension, and regular-island structure is not systematically
 documented in the literature we have reviewed.
+
+\paragraph{Periodic orbits in their initial-condition context.}
+Periodic-orbit catalogues list orbits; their maps arrange them by similarity or by measured
+quantities.  We have not found one that places its orbits in the initial-condition space around
+them, or that compares their linear stability with the structure an IC map shows there.
 
 \paragraph{Structured family surveys.}
 The Pythagorean family has been integrated member by member, one trajectory each.  We are not
@@ -1058,7 +1147,8 @@ Symbol sequences and orbits of the free-fall three-body problem.
 \bibitem{threebodygallery}
 {\v{S}}uvakov, M., \& Dmitra{\v{s}}inovi{\'c}, V.
 Three-body Gallery.
-\url{http://three-body.ipb.ac.rs/} (accessed March 2026).
+\url{http://three-body.ipb.ac.rs/} (accessed March 2026; offline by October 2026, recovered from the
+Internet Archive, snapshot 6 June 2026).
 
 \bibitem{trani2024}
 Trani, A.\,A., Leigh, N.\,W.\,C., Boekholt, T.\,C.\,N., \& Portegies Zwart, S. (2024).
@@ -1102,8 +1192,9 @@ Flux-based statistical prediction of three-body outcomes.
 \textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{133}, 17.
 
 \bibitem{lili2020}
-Li, X., Li, X., \& Liao, S. (2020).
-One family of 13315 stable periodic orbits of the non-hierarchical unequal-mass triple system.
+Li, X., Li, X., \& Liao, S. (2021).
+One family of 13315 stable periodic orbits of non-hierarchical unequal-mass triple systems.
+\textit{Science China Physics, Mechanics \& Astronomy}, \textbf{64}, 219511.
 arXiv:2007.10184.
 
 \bibitem{manwadkar2020}
@@ -1151,6 +1242,144 @@ Numerical confirmation of the existence of triple collision orbits inside the do
 Valtonen, M., Myll\"{a}ri, A., Orlov, V., \& Rubinov, A. (2005).
 Dynamics of rotating triple systems: statistical escape theory versus numerical simulations.
 \textit{Monthly Notices of the Royal Astronomical Society}, \textbf{364}, 91--98.
+
+
+\bibitem{abad2012}
+Abad, A., Barrio, R., Blesa, F., \& Rodr{\'\i}guez, M. (2012).
+Algorithm 924: TIDES, a Taylor series integrator for differential equations.
+\textit{ACM Transactions on Mathematical Software}, \textbf{39}(1), 5.
+
+\bibitem{antonana2020}
+Anto{\~n}ana, M., Chartier, P., Makazaga, J., \& Murua, A. (2020).
+Global time-renormalization of the gravitational $N$-body problem.
+\textit{SIAM Journal on Applied Dynamical Systems}, \textbf{19}(4), 2658--2681.
+arXiv:2001.01221.
+
+\bibitem{broucke1975}
+Broucke, R. (1975).
+On relative periodic solutions of the planar general three-body problem.
+\textit{Celestial Mechanics}, \textbf{12}, 439--462.
+
+\bibitem{broucke1975b}
+Broucke, R., \& Boggs, D. (1975).
+Periodic orbits in the planar general three-body problem.
+\textit{Celestial Mechanics}, \textbf{11}, 13--38.
+
+\bibitem{henon1976}
+H{\'e}non, M. (1976).
+A family of periodic solutions of the planar three-body problem, and their stability.
+\textit{Celestial Mechanics}, \textbf{13}, 267--285.
+
+\bibitem{hida2001}
+Hida, Y., Li, X.\,S., \& Bailey, D.\,H. (2001).
+Algorithms for quad-double precision floating point arithmetic.
+\textit{Proceedings of the 15th IEEE Symposium on Computer Arithmetic (ARITH-15)}, 155--162.
+
+\bibitem{hristov2022}
+Hristov, I., Hristova, R., Puzynin, I., Puzynina, T., Sharipov, Z., \& Tukhliev, Z. (2022).
+New families of periodic orbits for the planar three-body problem computed with high precision.
+\textit{CEUR Workshop Proceedings}, \textbf{3191}, 45--50.
+arXiv:2205.14709.
+
+\bibitem{hristov2023}
+Hristov, I., Hristova, R., Puzynin, I., Puzynina, T., Sharipov, Z., \& Tukhliev, Z. (2023).
+A database of high precision trivial choreographies for the planar three-body problem.
+\textit{Lecture Notes in Computer Science}, \textbf{13858}, 171--180.
+arXiv:2210.00594.
+
+\bibitem{hristov2024nc}
+Hristov, I., Hristova, R., Puzynin, I., Puzynina, T., Sharipov, Z., \& Tukhliev, Z. (2024).
+Searching for new nontrivial choreographies for the planar three-body problem.
+\textit{Physics of Particles and Nuclei}, \textbf{55}, 495--497.
+
+\bibitem{hristov2026}
+Hristov, I., Hristova, R., \& Tanikawa, K. (2026).
+An extensive search for stable periodic orbits of the equal-mass zero angular momentum three-body
+problem.
+\textit{New Astronomy}, \textbf{125}, 102528.
+arXiv:2510.22802.
+
+\bibitem{hudomal2015}
+Hudomal, A. (2015).
+\textit{New Periodic Solutions to the Three-Body Problem and Gravitational Waves}.
+MSc thesis, University of Belgrade.
+
+\bibitem{hudomal2019}
+Hudomal, A. (2019).
+New periodic three-body orbits.
+Table of initial conditions, Institute of Physics Belgrade, linked from~\cite{threebodygallery}.
+
+\bibitem{joldes2016}
+Joldes, M., Muller, J.-M., Popescu, V., \& Tucker, W. (2016).
+CAMPARY: Cuda multiple precision arithmetic library and applications.
+\textit{Lecture Notes in Computer Science}, \textbf{9725}, 232--240.
+
+\bibitem{joldes2017}
+Joldes, M., Muller, J.-M., \& Popescu, V. (2017).
+Tight and rigorous error bounds for basic building blocks of double-word arithmetic.
+\textit{ACM Transactions on Mathematical Software}, \textbf{44}(2), 15.
+
+\bibitem{jorba2005}
+Jorba, {\`A}., \& Zou, M. (2005).
+A software package for the numerical integration of ODEs by means of high-order Taylor methods.
+\textit{Experimental Mathematics}, \textbf{14}(1), 99--117.
+
+\bibitem{lijingliao2018}
+Li, X., Jing, Y., \& Liao, S. (2018).
+Over a thousand new periodic orbits of a planar three-body system with unequal masses.
+\textit{Publications of the Astronomical Society of Japan}, \textbf{70}(4), 64.
+arXiv:1709.04775.
+
+\bibitem{moore2006}
+Moore, C., \& Nauenberg, M. (2006).
+New periodic orbits for the $n$-body problem.
+\textit{Journal of Computational and Nonlinear Dynamics}, \textbf{1}, 307--311.
+
+\bibitem{reusser2025}
+Reusser, R.
+Periodic three-body initial conditions.
+Observable notebook, MIT licence,
+\url{https://observablehq.com/@rreusser/periodic-three-body-initial-conditions} (version of 17 May 2025).
+
+\bibitem{rose2016}
+Rose, D. (2016).
+\textit{Geometric phase and periodic orbits of the equal-mass, planar three-body problem with
+vanishing angular momentum}.
+PhD thesis, University of Sydney.
+\url{https://hdl.handle.net/2123/14416}.
+
+\bibitem{sheen2016}
+Sheen, M. (2016).
+Periodic three-body solutions found with a root finder.
+Example code, Cornell MAE 5730, \url{https://github.com/mws262/MAE5730_examples}.
+
+\bibitem{simo2002}
+Sim{\'o}, C. (2002).
+Dynamical properties of the figure eight solution of the three-body problem.
+In \textit{Celestial Mechanics, dedicated to Donald Saari}, Contemporary Mathematics \textbf{292},
+209--228.
+
+\bibitem{tbo2026}
+Three Body Orbits.
+An atlas of periodic three-body orbits.
+\url{https://www.threebodyorbits.com} (catalogue generated 27 September 2026, accessed 26 October
+2026), CC BY 4.0.
+
+\bibitem{thall2006}
+Thall, A. (2006).
+Extended-precision floating-point numbers for GPU computation.
+\textit{ACM SIGGRAPH 2006 Research Posters}, 52.
+
+\bibitem{titov2012}
+Titov, V. (2012).
+Some periodic orbits of general three body problem with vanishing angular momentum.
+\textit{Nelineinaya Dinamika (Russian Journal of Nonlinear Dynamics)}, \textbf{8}(2), 377--389.
+
+\bibitem{vasiljevic2023}
+Vasiljevi{\'c}, I., Raoni{\'c}, M., \& Dmitra{\v{s}}inovi{\'c}, V. (2023).
+An island of linearly stable non-hierarchical unequal mass periodic three-body orbits --- a
+harbinger of circumbinary exoplanets?
+\textit{New Astronomy}, \textbf{100}, 101969.
 
 \end{thebibliography}
 

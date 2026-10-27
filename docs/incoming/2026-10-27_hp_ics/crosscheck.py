@@ -5,7 +5,11 @@
 # numbers only: row counts, digits agreed and maximum differences. It never prints a value from the file.
 # The two field names are built at run time so that no committed file carries them as keys.
 #
-# Usage: python3 -I crosscheck.py <atlas-params.json> <route_a.json> <liliao.json>
+# The atlas rows with an empty source are matched against Hristov, Hristova & Tanikawa's 971-orbit database the same
+# way, and counted per family, the family and stability source of each row being read from the catalogue
+# (../2026-10-26_orbit_catalogues/threebodyorbits_catalogue.json) by the row's key.
+#
+# Usage: python3 -I crosscheck.py <atlas-params.json> <route_a.json> <liliao.json> <threebodyorbits_catalogue.json>
 import collections
 import json
 import re
@@ -20,6 +24,7 @@ IDENT = 10**6  # marker: the two values are equal
 atlas = json.load(open(sys.argv[1], encoding='utf-8'))['configurations']
 DB = json.load(open(sys.argv[2], encoding='utf-8'))
 LL = json.load(open(sys.argv[3], encoding='utf-8'))['A']
+CAT = {o['key']: o for o in json.load(open(sys.argv[4], encoding='utf-8'))['orbits']}
 
 
 def dec(c):
@@ -58,21 +63,21 @@ SRC = {
 }
 
 rows = collections.defaultdict(list)
-empty = 0
+empty = []
 other = collections.Counter()
-for v in atlas.values():
+for key, v in atlas.items():
     if K_IC not in v:
         continue
     s = v.get('source', '')
     if not s:
-        empty += 1
+        empty.append((key, v))
     elif s in SRC:
         rows[s].append(v)
     else:
         other[s] += 1
 
-print('atlas rows with high-precision fields:', sum(map(len, rows.values())) + empty + sum(other.values()))
-print('  empty source (closure tests only; not traced, never cited):', empty)
+print('atlas rows with high-precision fields:', sum(map(len, rows.values())) + len(empty) + sum(other.values()))
+print('  empty source (matched against hristov2026_971 below):', len(empty))
 print('  sources in scope:', {s: len(r) for s, r in sorted(rows.items())})
 print('  the atlas\'s own notes and the CAP repository, not in scope:', dict(sorted(other.items())))
 
@@ -164,3 +169,75 @@ for s, rs in sorted(rows.items()):
     summary(s, st, alen, mx)
     if s == 'simo2001':
         print('  Simó numbers with no atlas row:', [i + 1 for i in range(len(tbl['masson_simo_345'])) if i not in used])
+
+
+# The rows with an empty source, against the 971-orbit database (hristov2026). The attribution is inferred by matching:
+# the atlas lists no source for them.
+fam = collections.defaultdict(collections.Counter)
+st, alen, mx = collections.defaultdict(list), collections.defaultdict(list), collections.defaultdict(Decimal)
+used, elsewhere, nolayout = collections.Counter(), collections.Counter(), 0
+ll_rows = []  # rows not in any Hristov table: (key, family, Li & Liao row, all seven identical to its published values)
+
+
+def add(f, p, q, string):
+    st[f].append(agree(p, q))
+    alen[f].append(sig(string))
+    mx[f] = max(mx[f], abs(p - q))
+
+
+for key, v in empty:
+    o = CAT.get(key)
+    f = o['family'] if o else '(not in the catalogue)'
+    fam[f]['rows'] += 1
+    fam[f]['stab_src ' + ((o or {}).get('stab_src') or '(none)')] += 1
+    ic, T = v[K_IC], v[K_T]
+    a = [dec(c) for c in ic]
+    iso = isosceles(ic)
+    if iso is None:
+        nolayout += 1
+        continue
+    i1, i2, i3 = iso
+    vx, vy = a[6 + 2 * i1], a[7 + 2 * i1]
+    i, best = min(enumerate(tbl['hristov2026_971']), key=lambda r: abs(r[1][0] - vx) + abs(r[1][1] - vy))
+    if abs(best[0] - vx) > Decimal('1e-12') or abs(best[1] - vy) > Decimal('1e-12'):
+        for k in SRC['hristov2022'] + SRC['hristov2023'] + SRC['hristov2024nc']:
+            if any(abs(r[0] - vx) <= Decimal('1e-12') and abs(r[1] - vy) <= Decimal('1e-12') for r in tbl[k]):
+                elsewhere[k] += 1
+        # Li & Liao 2017's published (v1, v2, T), 10 decimals, as liliao_routes.py transcribes them.
+        lk, L = min(LL.items(), key=lambda kv: abs(Decimal(kv[1][0]) - vx) + abs(Decimal(kv[1][1]) - vy))
+        v1, v2, lT = (Decimal(x) for x in L)
+        g = [(vx, v1), (vy, v2), (a[6 + 2 * i2], v1), (a[7 + 2 * i2], v2), (a[6 + 2 * i3], -2 * v1),
+             (a[7 + 2 * i3], -2 * v2), (dec(T), lT)]
+        ll_rows.append((key, f, lk, all(p == q for p, q in g)))
+        continue
+    fam[f]['matched'] += 1
+    used[i] += 1
+    bvx, bvy, bT, _ = best
+    g = [(vx, bvx), (vy, bvy), (a[6 + 2 * i2], bvx), (a[7 + 2 * i2], bvy), (a[6 + 2 * i3], -2 * bvx),
+         (a[7 + 2 * i3], -2 * bvy), (dec(T), bT)]
+    if all(p == q for p, q in g):
+        fam[f]['identical'] += 1
+    add('vx (body at -1)', vx, bvx, ic[6 + 2 * i1])
+    add('vy (body at -1)', vy, bvy, ic[7 + 2 * i1])
+    add('vx (body at +1) = vx', a[6 + 2 * i2], bvx, ic[6 + 2 * i2])
+    add('vy (body at +1) = vy', a[7 + 2 * i2], bvy, ic[7 + 2 * i2])
+    add('vx (body at 0) = -2 vx', a[6 + 2 * i3], -2 * bvx, ic[6 + 2 * i3])
+    add('vy (body at 0) = -2 vy', a[7 + 2 * i3], -2 * bvy, ic[7 + 2 * i3])
+    add('T', dec(T), bT, T)
+
+n = len(empty)
+m = sum(c['matched'] for c in fam.values())
+print(f'\n== empty source: {n} atlas rows; matched {m} in hristov2026_971 ({len(used)} distinct database rows); '
+      f'unmatched {n - m} ({nolayout} not in the (-1,0), (1,0), (0,0) layout; '
+      f'matched in another Hristov table instead: {dict(sorted(elsewhere.items()))})')
+summary('empty', st, alen, mx)
+for key, f, lk, same in ll_rows:
+    print(f'  not in any Hristov table: {key} (family {f}); nearest Li & Liao 2017 published row {lk}; '
+          f'all seven identical to its published values: {same}')
+print('  per family (family and stab_src from the catalogue): rows; matched in hristov2026_971; all seven identical')
+for f, c in sorted(fam.items(), key=lambda kv: (-kv[1]['rows'], kv[0])):
+    ss = ', '.join(f'{k[9:]} {x}' for k, x in sorted(c.items()) if k.startswith('stab_src '))
+    print(f'    {f}: {c["rows"]}; {c["matched"]}; {c["identical"]} (stab_src: {ss})')
+# The catalogue's own count of stab_src hristov2026 per family, over all its orbits, for comparison.
+cc = collections.Counter(o['family'] for o in CAT.values() if o.get('stab_src') == 'hristov2026')
+print('  the catalogue\'s stab_src hristov2026 per family, all orbits:', dict(sorted(cc.items())), 'total', sum(cc.values()))
