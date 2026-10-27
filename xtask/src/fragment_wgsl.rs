@@ -189,10 +189,13 @@ fn localise(
     );
     for (_, e) in f.expressions.iter_mut() {
         if let Expression::GlobalVariable(g) = *e {
+            // `lift` admits only the words and the uniform, so a global not moved is the words.
             *e = match moved.get(&g) {
                 Some(&to) => Expression::GlobalVariable(to),
-                None if g == words => Expression::LocalVariable(local),
-                None => Expression::GlobalVariable(g),
+                None => {
+                    debug_assert_eq!(g, words, "a global neither moved nor the words");
+                    Expression::LocalVariable(local)
+                }
             };
         }
     }

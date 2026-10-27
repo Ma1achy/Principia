@@ -115,3 +115,49 @@ negative_control!(
     expected = "the checked-in snippets are the translation's",
     check_snippets(|t| t.push(' '))
 );
+
+/// A kernel-shaped module: an entry point `e` whose wrapper calls a body reading `globals` (WGSL declarations).
+fn module(globals: &str, body: &str) -> naga::Module {
+    naga::front::wgsl::parse_str(&format!(
+        "{globals}\nfn body() {{ {body} }}\n@compute @workgroup_size(1) fn e() {{ body(); }}\n"
+    ))
+    .unwrap()
+}
+
+/// The lift's refusals of an export that is not one words array and at most one uniform; `globals` and `body` are
+/// the second case's module (the control gives a valid one).
+fn check_lift(globals: &str, body: &str) {
+    let ok = module(
+        "struct W { w: array<u32, 2> }\n@group(0) @binding(0) var<storage, read_write> words: W;",
+        "words.w[1] = words.w[0];",
+    );
+    let lifted = xtask::fragment_wgsl::lift(&ok, "e", "t").expect("one words array lifts");
+    assert!(
+        lifted.contains("fn t_body(") && lifted.contains("struct t_words"),
+        "{lifted}"
+    );
+    let err = xtask::fragment_wgsl::lift(&module(globals, body), "e", "t")
+        .expect_err("two storage arrays lifted");
+    assert!(err.contains("two storage arrays"), "{err}");
+    let none = xtask::fragment_wgsl::lift(&ok, "missing", "t").expect_err("a missing entry lifted");
+    assert!(none.contains("no entry point `missing`"), "{none}");
+}
+
+#[test]
+fn fragment_wgsl_lift_refuses_two_storage_arrays() {
+    check_lift(
+        "struct W { w: array<u32, 2> }\n@group(0) @binding(0) var<storage, read_write> a: W;\n\
+         @group(0) @binding(1) var<storage, read_write> b: W;",
+        "a.w[0] = b.w[0];",
+    );
+}
+
+negative_control!(
+    fragment_wgsl_lift_refuses_two_storage_arrays,
+    "a module with one storage array must not be refused as two",
+    expected = "two storage arrays lifted",
+    check_lift(
+        "struct W { w: array<u32, 2> }\n@group(0) @binding(0) var<storage, read_write> a: W;",
+        "a.w[0] = a.w[1];",
+    )
+);
