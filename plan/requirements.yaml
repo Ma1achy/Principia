@@ -28984,6 +28984,8 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*"
+  - file: decisions.md
+    section: "R-631 — The high-precision initial-condition data is committed to the repo with full citations, no permission asked first: Hristov et al.'s databases, the free-fall, central-symmetry and Euler ones beside them, Simó's archive and Li & Liao's tables, each folder with a SOURCES.md; REQ-VAL-042, PL-6 and LL-5 point at the committed files, and fetch.sh stays as the provenance check *(amends R-630; closes RQ-579 with option (a))*"
   verify:
     method: numerical gate
     detail: "each orbit returns to rest in the same configuration after one period; order reported"
@@ -28991,8 +28993,9 @@
   - R-71
   - R-72
   - R-630
+  - R-631
   milestone: M3
-  note: "Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration). The reference set is Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits), fetched and verified, not committed (R-630 items 6 and 7, closing RQ-584 and RQ-579). Was: \"Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration).\""
+  note: "Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration). The reference set is Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits), committed as docs/incoming/2026-10-27_hp_ics_freefall/data/sofia_3bodyfree/sol_80.txt (sha256 81dc1b70…) and cited in that folder's SOURCES.md (R-630 item 7; R-631, closing RQ-579 with option (a)); that folder's fetch.sh is the provenance check. Was (R-630): \"The reference set is Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits), fetched and verified, not committed (R-630 items 6 and 7, closing RQ-584 and RQ-579).\" Was: \"Which orbits: REQ-VAL-126 (definition); the closure threshold: REQ-VAL-133 (calibration).\""
 - id: REQ-VAL-043
   area: VAL
   statement: "A word-calculus test must assert the free-group word encoder reproduces the published braid class of Šuvakov–Dmitrašinović orbits."
@@ -32479,15 +32482,19 @@
     section: "R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*"
   - file: decisions.md
     section: "R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*"
+  - file: decisions.md
+    section: "R-631 — The high-precision initial-condition data is committed to the repo with full citations, no permission asked first: Hristov et al.'s databases, the free-fall, central-symmetry and Euler ones beside them, Simó's archive and Li & Liao's tables, each folder with a SOURCES.md; REQ-VAL-042, PL-6 and LL-5 point at the committed files, and fetch.sh stays as the provenance check *(amends R-630; closes RQ-579 with option (a))*"
   verify:
     method: numerical gate
-    detail: "the atlas's ref_* for those rows, by OC-1's method and within OC-1's calibrated tolerance (REQ-VAL-202); the rows are named by mass set and atlas key; no figure attributes them to the paper; the website pages are recorded by URL and sha256 only while RQ-585 is open; control: one row integrated to 0.9·T must fail"
+    detail: "the atlas's ref_* for those rows, by OC-1's method and within OC-1's calibrated tolerance (REQ-VAL-202); the rows are named by mass set and atlas key; no figure attributes them to the paper; the authors' 316-orbit list is read from its committed copy, docs/incoming/2026-10-27_hp_ics_freefall/data/liliao_github/free-fall-3b-pictures.md (R-631), and the SJTU website pages stay recorded by URL and sha256 only (R-630 item 8); control: one row integrated to 0.9·T must fail"
   rulings:
   - R-560
   - R-594
   - R-629
+  - R-630
+  - R-631
   milestone: M3
-  note: "Reproduces: the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets. Chart: MassSimplex points. Milestone: M3. Compare: exact (closure only) (rule 8). Tolerance: OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions. Row LL-5 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M3-46 (R-594, R-629)."
+  note: "Reproduces: the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets. Chart: MassSimplex points. Milestone: M3. Compare: exact (closure only) (rule 8). Tolerance: OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions. Row LL-5 of principia_dd_replication.md § \"5.3 Free-fall periodic orbits: Li & Liao 2019\"; layer verification, tier A; closed by TASK-M3-46 (R-594, R-629). R-631 (27 Oct 2026): the authors' list is committed (sjtu-liao/three-body's free-fall-3b-pictures.md, with initial conditions at 10 decimals for all 316), and LL-5 still tests closure on the atlas's rows only. *Was (verify):* \"the atlas's ref_* for those rows, by OC-1's method and within OC-1's calibrated tolerance (REQ-VAL-202); the rows are named by mass set and atlas key; no figure attributes them to the paper; the website pages are recorded by URL and sha256 only while RQ-585 is open; control: one row integrated to 0.9·T must fail\""
 - id: REQ-VAL-228
   area: VAL
   statement: "The 15 initial conditions of Šuvakov & Dmitrašinović 2013's Table 1 must close after their period T under the default occupant (SD-1)."
