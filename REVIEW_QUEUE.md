@@ -1070,3 +1070,29 @@ settle it; queued because the requirement's verify names the chart, and a test w
   `softmax(0, μ_max·tanh z_μ)` move with `μ_max`, or a mixed chart with a mass axis (`z_μ₁`), whose masses move at
   every pixel off `z_μ₁ = 0`; the constant-mass control unchanged; (b) other.
 - **Applied meanwhile:** none: TASK-M4-21 is not built. Waits: REQ-CHART-074 (TASK-M4-21).
+
+## RQ-579: Redistribution terms for the high-precision IC databases *(found while pulling the reference data for the precision ladder's test 6, PR #299; `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed"; context: the precision-ladder proposal, §5 test 6)*
+
+*Found on 27 Oct 2026. Licensing third-party data is outside the repo, so it is the human's call. Nothing is
+committed meanwhile.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed": "None of the sources states
+    a licence or terms of use: the five pages of `db2.fmi.uni-sofia.bg` (its root, `3body123`, `3bodychor462`,
+    `3bodychor164`, `3bodystab971`), Masson's page and site, the SJTU pages, and the `sjtu-liao/three-body` GitHub
+    repository (no licence file; the API returns 404 for it). The three Hristov arXiv papers carry arXiv's
+    non-exclusive distribution licence, which covers the papers, not the databases."
+  - The precedent: `docs/incoming/2026-10-26_orbit_catalogues/README.md`: "**The extracted initial conditions are
+    committed under the site's own terms.**"; `docs/incoming/2026-10-26_belgrade_gallery/README.md`: "**Terms.** The
+    gallery's own "Use and Copyright" page (`archive/ref.php.html`): "You may copy and use any images or data from
+    this web gallery. …"". Both folders committed third-party data only under stated terms.
+  - `docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` § 5, test 6, which
+    needs the values above f64.
+- **The question:** the Hristov et al. databases (123 solutions at 150 digits, 462 and 164 + 259 choreographies at
+  180, 971 stable i.c.s at 100), and the Simó and Li & Liao tables, state no terms. May their values be committed?
+- **Options seen:** (a) commit the values with attribution (the citations in `docs/incoming/2026-10-27_hp_ics/README.md`);
+  (b) ask the authors for permission first, and commit under whatever they grant; (c) keep fetch-and-verify only, as
+  now.
+- **Applied meanwhile:** (c). `fetch.sh` downloads all 599 files listed in `sources.tsv` and checks each against its
+  recorded sha256, so the reference data is reproducible byte for byte without being committed. Waits: the precision
+  proposal's test 6 reference data, in the repo.
