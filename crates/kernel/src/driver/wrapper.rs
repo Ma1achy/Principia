@@ -7,7 +7,7 @@
 //! besides its count; no `break`, no `for`, and both bounded, the outer by `horizon_steps`, the inner by `N_sub`
 //! (Part 2c rule 3).
 //!
-//! **The horizon is an integer counter** (dd_integrator §3.3; Part 5; REQ-INT-038): the completed macro-steps, compared
+//! **The horizon is an integer counter** (dd_integrator §3.3; Part 5; REQ-INT-038): the loop's macro-step counter, compared
 //! with the sim key's `horizon_steps = ⌈T/dt_macro⌉`, which the host computes and dispatch holds to at most 65535
 //! (Part 5). No float time is accumulated: `ADVANCE`'s times are the macro-step grid's indices.
 //!
@@ -24,7 +24,9 @@
 //! **What it writes** of the `SimState`: the state `(r, p)` where the march stopped; `total_substeps`; `saturated`
 //! (descriptor bit 5); `state`, `bounded` where the loop ran to the horizon (Part 7: reaching `T` without a terminal is
 //! `bounded`; there is no timeout state) and `running` where the cadence's `done` ended it, for the terminal's label to
-//! replace; and `t_end_step`, the macro-step counter as the loop left it. A terminal's label and step, `d_min` and the
+//! replace; and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
+//! macro-step counts once its `N_sub` substeps were all taken, so one that `done` cut short does not, while the loop's
+//! counter `macro`, which still advances past it, bounds the loop only. A terminal's label and step, `d_min` and the
 //! monitored fields are the cadence's hooks' (TASK-M3-05, TASK-M3-09, TASK-M3-12); `d_min` is written unset and
 //! `dmin_pair` its sentinel until then.
 
@@ -85,6 +87,7 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     let mut substep = SubstepState::default();
     let mut total_substeps: u32 = 0;
     let mut macro_step: u32 = 0;
+    let mut completed: u32 = 0;
     while macro_step < uniforms.horizon_steps && !cadence.done() {
         let n_sub =
             substep.macro_step(d2_quantised(&state.r), &uniforms.thresholds, uniforms.n_max);
@@ -96,6 +99,7 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
         state = out.state;
         geom = out.geom;
         total_substeps += out.substeps;
+        completed += u32::from(out.substeps == n_sub);
         macro_step += 1;
     }
     let outcome = if cadence.done() {
@@ -111,7 +115,7 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
         r: state.r,
         p: state.p,
         packed_a,
-        times: pack_times(macro_step, 0),
+        times: pack_times(completed, 0),
         total_substeps,
         ..SimStateBaseOf::default()
     }

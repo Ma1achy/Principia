@@ -843,7 +843,8 @@ negative_control!(
     )
 );
 
-/// Stopped at the 4th callback with `N_sub = 3`: 4 substeps reported, two macro-steps begun, where `Σ N_sub` is 6.
+/// Stopped at the 4th callback with `N_sub = 3`: 4 substeps reported, two macro-steps begun, where `Σ N_sub` is 6, and
+/// one completed, the `t_end_step` stored (integrator_contract Part 5).
 fn check_mid_macro<A: Advance>(name: &str) {
     let mut probe = Probe::stopping_at(Some(4));
     let out = integrate_with::<A, f64, Probe>(
@@ -853,8 +854,8 @@ fn check_mid_macro<A: Advance>(name: &str) {
     );
     assert_eq!(
         (out.total_substeps, tm_t_end_step(out.times)),
-        (4, 2),
-        "{name}: a run stopped at the 4th of 3-substep macro-steps does not report 4 substeps over 2 macro-steps"
+        (4, 1),
+        "{name}: a run stopped at the 4th of 3-substep macro-steps does not report 4 substeps over 1 completed macro-step"
     );
 }
 
@@ -1127,8 +1128,8 @@ fn check_horizon(h: u32, table: Table, n: u32, stop: Option<u32>) {
     );
     assert_eq!(
         tm_t_end_step(out.times),
-        begun,
-        "{what}: t_end_step is not the macro-step counter"
+        substeps / n,
+        "{what}: t_end_step is not the completed macro-steps"
     );
     assert_eq!(
         out.total_substeps, substeps,
