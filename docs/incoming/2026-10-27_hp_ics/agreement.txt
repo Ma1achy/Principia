@@ -1,5 +1,5 @@
 atlas rows with high-precision fields: 1359
-  empty source (closure tests only; not traced, never cited): 99
+  empty source (matched against hristov2026_971 below): 99
   sources in scope: {'hristov2022': 9, 'hristov2023': 73, 'hristov2024nc': 167, 'hristov2026': 586, 'liliao2017': 5, 'simo2001': 344}
   the atlas's own notes and the CAP repository, not in scope: {'bh2026': 3, 'bh2026r3': 14, 'bh2026r4': 42, 'bhh2026': 15, 'mothcap2026': 1, 'pancake2026': 1}
 
@@ -66,3 +66,26 @@ atlas rows with high-precision fields: 1359
   vy3 = c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 27-32 digits (median 30.0); max |diff| 5.0e-31
   T = sqrt3 c5: digits printed 29-32; identical 0/344; others agree to 30-34 digits (median 31.0); max |diff| 5.0e-31
   Simó numbers with no atlas row: [1]
+
+== empty source: 99 atlas rows; matched 97 in hristov2026_971 (93 distinct database rows); unmatched 2 (0 not in the (-1,0), (1,0), (0,0) layout; matched in another Hristov table instead: {})
+  vx (body at -1): digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vy (body at -1): digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vx (body at +1) = vx: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vy (body at +1) = vy: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  vx (body at 0) = -2 vx: digits printed 99-101; identical 97/97; max |diff| 0.0e+00
+  vy (body at 0) = -2 vy: digits printed 99-101; identical 97/97; max |diff| 0.0e+00
+  T: digits printed 99-100; identical 97/97; max |diff| 0.0e+00
+  not in any Hristov table: i_butterfly_i_8_a (family I); nearest Li & Liao 2017 published row I.A-10; all seven identical to its published values: True
+  not in any Hristov table: i_butterfly_i_11_a (family I); nearest Li & Liao 2017 published row I.A-19; all seven identical to its published values: True
+  per family (family and stab_src from the catalogue): rows; matched in hristov2026_971; all seven identical
+    li_IB: 43; 43; 43 (stab_src: hristov2026 43)
+    I: 14; 12; 12 (stab_src: hristov2026 12, liliao2017-10digit 2)
+    li_IIC: 12; 12; 12 (stab_src: hristov2026 12)
+    IVb: 9; 9; 9 (stab_src: hristov2026 9)
+    V: 6; 6; 6 (stab_src: hristov2026 6)
+    VIIb: 5; 5; 5 (stab_src: hristov2026 5)
+    III: 4; 4; 4 (stab_src: hristov2026 4)
+    IVa: 3; 3; 3 (stab_src: hristov2026 3)
+    II: 2; 2; 2 (stab_src: hristov2026 2)
+    VIIa: 1; 1; 1 (stab_src: hristov2026 1)
+  the catalogue's stab_src hristov2026 per family, all orbits: {'I': 12, 'II': 2, 'III': 4, 'IVa': 3, 'IVb': 9, 'V': 6, 'VIIa': 1, 'VIIb': 5, 'li_IB': 43, 'li_IIC': 12} total 97
