@@ -1,10 +1,10 @@
 # TASK-M8-90 — Lock, compass and time controls on the real engine, and the scrub that re-integrates (R-627; wires TASK-M8-07)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-404, REQ-GUI-092
+- **Closes:** REQ-GUI-404, REQ-GUI-092, REQ-GUI-155
 - **Depends on:** TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22
 - **Needs (earlier milestones):** REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016
-- **Reviewers:** code, qa, gui
+- **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~200 lines
 
@@ -30,10 +30,16 @@ TASK-M8-07 built the lock, compass and time controls on the mock engine (R-627; 
 - The lock, compass and time controls wired to the real engine: it reads the real engine's snapshot and sends its `SetField`s and requests to `StateStore` (`crates/engine/src/contract/store.rs`), in place of the mock, when the app runs without `--features mock`.
 - Each contract field TASK-M8-07 added (R-390's "Contract fields"), implemented by the real engine as far as the conformance suite reaches (R-390's "The real engine's side"), with a conformance case in `crates/engine/src/contract/conformance.rs` for any field no case covers, run on both engines.
 - The scrub on the real engine: the playhead `SetField` re-integrating from 0 with the progress indicator TASK-M8-07 shows on the mock (REQ-GUI-092).
+- The scrubber's progress percentage defined in render_gui_spec §G2 (REQ-GUI-155, R-72) from engine state the snapshot carries, and `scrub_progress_real`.
 
 ## Acceptance tests
 - `cargo test -p gui scrub_reintegrates` — scrub from t=40 to t=10: the playhead SetField triggers re-integration from 0 with a progress indicator; no frame store is read (REQ-GUI-092).
+- Definition: the scrubber's progress percentage written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-155).
+- `cargo test -p gui scrub_progress_real` — on the real engine, a scrub from t=40 to t=10 with the progress percentage sampled from the snapshot every frame: it never falls during the re-integration, and it reads 100% on the first frame the in-view figure has reached the playhead and on no frame before; controls: a recorded sequence with one fall, and one reading 100% a frame before the figure reaches the playhead, each fail (REQ-GUI-155).
 - TASK-M8-07's acceptance lines re-run on the real engine (`cargo run -p gui`, and `cargo xtask screenshot` through the headless capture on the real engine), each with its output in the PR, and `cargo test -p engine conformance` and `cargo test -p gui conformance` — the conformance suite passes on both engines, every contract field TASK-M8-07 added among its cases; control: a contract field the screen reads that no case covers fails the review (REQ-GUI-404).
 
 ## Notes
 - R-627 (27 Oct 2026): a wiring task, small by design. It is not a track task: it runs on the real engine and waits for the gates as any engine-side task does (R-415's test where it would merge early). The acceptance lines above that name an earlier task's requirement were TASK-M8-07's, moved verbatim; TASK-M8-07's Notes are their record.
+- The scrubber's "refining · N%" needs a progress fraction in the snapshot; what it is a fraction of is not stated.
+- Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).
+- R-627, physics review 5664187570 (F1, applied per R-369): REQ-GUI-155, the definition of the scrub's progress percentage, moved here from TASK-M8-07 with its acceptance line and the two notes above, since it is the real engine's re-integration; physics joins the reviewers, and `scrub_progress_real` checks the definition on the real engine. *Was:* "- **Closes:** REQ-GUI-404, REQ-GUI-092"; "- **Reviewers:** code, qa, gui".

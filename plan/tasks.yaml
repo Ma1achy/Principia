@@ -2595,7 +2595,7 @@
   title: "Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)"
   depends_on: [TASK-M8-06, TASK-M6-26, TASK-M6-27, TASK-M2-23]
   needs: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007]
-  requirements: [REQ-GUI-099, REQ-GUI-155]
+  requirements: [REQ-GUI-099]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-1.7]
 - id: TASK-M8-08
@@ -2681,7 +2681,7 @@
 - id: TASK-M8-18
   milestone: M8
   title: "Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)"
-  depends_on: [TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37]  # TASK-M6-45 defines the preset's home values a saved preset stores (R-466, REQ-GUI-224; review round 1 of PR #243); TASK-M2-37 for the energy axes' warp and linear option (R-471)
+  depends_on: [TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37, TASK-M8-87]  # TASK-M8-87 for the area-statistics classifier forbidden_fraction uses (REQ-CHART-056; physics review 5664187570 of R-627's port, F2); TASK-M6-45 defines the preset's home values a saved preset stores (R-466, REQ-GUI-224; review round 1 of PR #243); TASK-M2-37 for the energy axes' warp and linear option (R-471)
   needs: [REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027]
   requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160]
   reviewers: [code, qa, physics, gui]
@@ -3411,8 +3411,8 @@
   title: "Lock, compass and time controls on the real engine, and the scrub that re-integrates (R-627; wires TASK-M8-07)"
   depends_on: [TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22]
   needs: [REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016]
-  requirements: [REQ-GUI-404, REQ-GUI-092]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-GUI-404, REQ-GUI-092, REQ-GUI-155]
+  reviewers: [code, qa, physics, gui]  # physics for REQ-GUI-155 (physics review 5664187570 of R-627's port, F1)
   pitfalls: []
 - id: TASK-M8-91
   milestone: M8

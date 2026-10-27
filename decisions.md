@@ -25938,10 +25938,11 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   R-390's tasks do. A requirement whose check is on the real engine's own output or wiring moves to the wiring task
   with its acceptance line, as R-390's "What stays" kept such requirements with the real-engine task: REQ-GUI-070
   (egui-wgpu on the engine's device) and REQ-GUI-078 (the status line, whose `budget-bound` the mock never binds) from
-  TASK-M8-05; REQ-GUI-092 (a scrub re-integrating from 0) from TASK-M8-07; REQ-GEN-023 (the debug tags of the real
-  registry, TASK-M7-13's) from TASK-M8-19, to TASK-M8-92; REQ-GUI-351 and REQ-GUI-352 (the stepper pair's warnings,
-  from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone and rulings; its note
-  names R-627 and both tasks.
+  TASK-M8-05; REQ-GUI-092 (a scrub re-integrating from 0) and REQ-GUI-155 (the definition of the scrub's progress
+  percentage, physics-reviewed; physics review 5664187570 of this port's PR, F1) from TASK-M8-07; REQ-GEN-023 (the
+  debug tags of the real registry, TASK-M7-13's) from TASK-M8-19, to TASK-M8-92; REQ-GUI-351 and REQ-GUI-352 (the
+  stepper pair's warnings, from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone
+  and rulings; its note names R-627 and both tasks.
 - **TASK-M8-05 is split, in the plan first.** Its axis extension types, area statistics and F3 fill past `[0,1]²`
   (REQ-GUI-180, REQ-CHART-054, REQ-CHART-056 and REQ-CHART-071, reviewed by physics) are kernel physics drawn on the
   real figure, not a screen the mock can show. They move, with their acceptance lines, deliverables and notes, to
@@ -25953,7 +25954,8 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   gave up; it wires the screen to the real engine (`StateStore` and the engine side of `engine::contract::canvas`),
   re-runs every acceptance line of its track task on the real engine, and runs the conformance suite on both engines,
   every contract field its track task added among its cases. Each closes one new requirement, REQ-GUI-402 to
-  REQ-GUI-409, "this screen on the real engine", and the requirements moved to it. Its reviewers are its track task's.
+  REQ-GUI-409, "this screen on the real engine", and the requirements moved to it. Its reviewers are its track task's,
+  and physics on TASK-M8-90 for REQ-GUI-155 (physics review 5664187570 of this port's PR, F1).
   R-390 had no such tasks (its M8 tasks were the real-engine side), so these follow R-390's own pattern: the
   real-engine task depends on the track task and re-runs its acceptance there.
 - **The tasks that depended on a track task now depend on its wiring task**, which depends on it: an engine-side task
