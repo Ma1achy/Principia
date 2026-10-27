@@ -1,0 +1,14 @@
+{
+  "description": "Table 1's starts and one point outside region D, (ξ, η) = (0.432697866, 0.7311230217), N = 88 as paper I prints it: refused (dd_validation_orbits §1.6, item 5)",
+  "expected": "refused",
+  "printed": [],
+  "region_d": "fixtures/anosova/region_d.json",
+  "table1": "fixtures/anosova/table1.csv",
+  "points": [
+    [
+      0.432697866,
+      0.7311230217
+    ]
+  ],
+  "back": "recorded"
+}

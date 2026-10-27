@@ -138,6 +138,57 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   it to `ε_phys`. A control past its clamp by the same factor, `s` within `ε/2` of 0 or 1 or `|μₖ| ≥ (1 − ε_μ/2)·μ_max`,
   is clamp-adjacent and must set its `lookup_clamped` bit; a control clear of its clamp must leave its bit unset.
 
+**The conditioning number `κ`** (defined per R-72, REQ-ENC-025; TASK-M2-20; written `κ(z)` in the requirements), the
+ground-truth note's "`κ` of the encode Jacobian at the point". At a state `x`, on the canonical section or off it (a
+foreign input, or a rounded decode), with `z = E(x)`, let `J_E(x) = ∂E/∂x` be the encode's Jacobian, 8 × 15 (the eight
+controls against the three masses, the three positions and the three momenta, every component free, the masses
+included), and `W` the diagonal weight of `‖·‖_phys` at `x`: 1 on each mass, `1/R_x` on each position component and
+`1/P_x` on each momentum component, `R_x` and `P_x` as above. Then
+
+```
+κ(x)  =  ‖ J_E(x) · W⁻¹ ‖₂  =  σ_max( J_E(x) · W⁻¹ )
+```
+
+the largest singular value, encode's gain from the weighted physical norm to `z`; `κ = +∞` where `E` is not
+differentiable at `x`.
+
+- **It bounds the z residual, on the section and off it.** For a state `x̃` near `x`, to first order in `x̃ − x`,
+  `E(x̃) − z = J_E(x)·(x̃ − x) = (J_E(x)·W⁻¹)·W(x̃ − x)`, so
+  `‖E(x̃) − z‖_∞ ≤ ‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys`. The middle step is the operator norm's
+  definition and holds along every direction, a move off the section included: a move of the centre of mass, the
+  total momentum, `I` or `ρ̃_y`, which `C`'s steps remove at their own gain, and a move of one mass alone, which
+  changes `Σmᵢ` and which encode does not take back: `C` and the block inverse read the masses as given, `R_com` and
+  `P_tot` as the mass-weighted sums with `M` taken as 1 (below, "The mass columns"). The last holds because `‖W·δx‖₂²` sums nine
+  block terms, each at most `‖δx‖_phys²`. For T2 (Part 1), `x = D(z)` and `x̃` is the decode's own rounded `D(z)`,
+  off the section by rounding, and encode's rounding enters the same way, so `E(D(z))` misses `z` by at most
+  `3·κ(D(z))` times their physical rounding: the z-space amplification this Part warns of. The physical residual
+  `‖D(z) − D(E(D(z)))‖_phys` does not carry `κ`: it is asserted against `ε_phys` as above.
+- **The section's tangent is a lower bound, not the bound.** On the section `E ∘ D` is the identity, so
+  `J_E(D(z))·J_D(z) = I`, `(J_E·W⁻¹)·(W·J_D) = I` and `κ(D(z)) ≥ 1/σ_min(W·J_D(z))`, `J_D = ∂D/∂z` the decode's 15 × 8
+  Jacobian. The two agree only where encode amplifies no move off the section more than one along it; at masses
+  `(0.05, 0.15, 0.8)` with slow momenta, a move of `m₀` alone was measured at 19.9 against
+  `1/σ_min(W·J_D) = 12.5` (physics review of PR #294, P1). So `1/σ_min(W·J_D)` is not `κ`.
+- **It builds on the links' derivatives.** Encode is `C`, then the block inverse `B⁻¹`, then the links' inverses
+  `Φ⁻¹`, so `J_E = Λ⁻¹·J_{B⁻¹}·J_C`, `Λ = ∂Φ/∂z` block diagonal: one derivative `dvₖ/dzₖ` for each of `α`, `β` and
+  `q₀ … q₃`, and the mass link's 3 × 2 Jacobian for `(z_μ1, z_μ2)`. A sigmoid link onto `[a, a + w]` has
+  `dv/dz = w·s(1 − s)`, `s = σ(z)`, so `1/(dv/dz) = (1/w)·d logit/ds = 1/(w·s(1 − s))`, up to `1/(w·ε)` at the
+  clamps. Hence `κ ≤ ‖Λ⁻¹‖·‖J_{B⁻¹}·J_C·W⁻¹‖`: the link's factor, which re-encoding under another registry link changes
+  (Part 7: "link-fixable"), times the gain of canonicalisation and the block geometry, which no link changes. And by
+  the lower bound, `κ ≥ 1/‖W·J_D·eₖ‖` for each control `k`, whose column carries `dvₖ/dzₖ`: `κ` grows at least as the
+  link's `1/(w·s(1 − s))` toward a clamp, and at an `α`-pole `∂D/∂z_β = 0`, so `κ = +∞`: `β` is not defined there.
+- **How it is evaluated** (TASK-M2-20, `kernel::encode::ingest`). At the precision encode ran at: `J_E`'s column `k`
+  by the central difference `(E(x + hₖeₖ) − E(x − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry
+  at `x` for component `k`, and `σ_max` by one-sided Jacobi rotations on the transpose's eight columns, so no Gram
+  matrix is formed. Where `E` is not differentiable at `x` (a clamp or an `α`-pole within `hₖ`), the difference gives a
+  large finite value for `+∞`.
+- **The mass columns** (applied per R-369, TASK-M2-20; physics review of PR #294). Moving `mₖ` alone takes the state
+  off the simplex, `Σmᵢ = 1 ± hₖ`: the one use of encode outside its precondition `Σmᵢ = 1` (canon.rs, encode). Those
+  columns differentiate encode's own formulas off the simplex, the total read as given, not renormalised: `C`'s
+  centre of mass and total momentum with `M` taken as 1, and the mass block's inverse on the masses as they stand. A
+  mass within one step of zero, `mₖ ≤ hₖ`, takes the three-point forward difference
+  `(4E(x + hₖeₖ) − 3E(x) − E(x + 2hₖeₖ))/(2hₖ)` instead, so no mass reaches zero or below, where the mass guard's
+  substitution would put a kink in the difference.
+
 ---
 
 ## Part 5 — Inverse by axis kind (completing the four kinds)

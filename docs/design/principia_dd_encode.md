@@ -231,7 +231,7 @@ implementation.
 | **2/13** link registry | block inverses are registry inverses, never re-derived inline | swap a link → encode's inverse swaps with it; analytic vs numeric Jacobian agreement inherited from the registry tests |
 | **fibre / (L_z,E) chart** | encode reuses decode's construction — one code path | enter `(L_z, E)` numerically vs click the corresponding pixel → identical z to precision (the pending-change-3 test) |
 | **Observation** | `ROUNDTRIP` preset = `D → E → D`, physical residual, recomputed fragment-side (R-75) | residual view dark except clamps / feasibility edges / mirror tie — each *tagged expected* |
-| **validation import** | literature ICs enter through this door | Anosova region-D and Burrau rest starts encode → decode → invariants match the papers' stated values after the recorded rescale |
+| **validation import** | literature ICs enter through this door | Anosova region-D near-rest starts (dd_validation_orbits §1.6) and the Burrau rest start encode → decode → invariants match the papers' stated values after the recorded rescale (dd_validation_orbits §2; R-592). *Was:* "Anosova region-D and Burrau rest starts encode → decode → invariants match the papers' stated values after the recorded rescale" |
 
 ---
 
