@@ -46,8 +46,12 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 ## G1. Rules that hold everywhere
 
-- **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
-  onto the same surface (`principia_gui_state_contract.md` §1).
+- **egui is a toggleable debug layer (F3) over the wgpu render.** Natively, egui-wgpu shares the engine's `wgpu`
+  context and paints onto the same surface (`principia_gui_state_contract.md` §1). In v1 web egui runs in a wasm
+  context of its own on the main thread and paints its own canvas above the figure's `OffscreenCanvas`, which is
+  transferred to the engine's worker once at startup, with no shared context or surface and no compositing; `set_field`
+  and the snapshot cross between the two contexts as serialised data (R-620, closing RQ-551; gui_state_contract §1).
+  *Was:* "egui-wgpu shares the engine's `wgpu` context and paints onto the same surface" (true natively only; gui review 5661813927 of PR #293, G5).
 - **v1 web is this GUI (R-571).** In the browser the app is the same: the same windows, controls, features and stains,
   with no separate interface design. Where the browser cannot do something the native app does, the app says so where
   the native app has the feature: the control is shown disabled, with a note that the browser cannot do it, as the
