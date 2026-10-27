@@ -15,15 +15,15 @@ Digitisation method, calibration and uncertainty for each digitised figure are i
 | 1.2 | 5 (17) | Three equal bodies on a straight line (left) and in the corners of an equilateral triangle (right). | none stated | no |
 | 1.3 | 5 (17) | Trojans and Greeks are two large groups of objects that share the orbit of the planet Jupiter around the Sun. | Wikimedia Commons | `figures/fig_1_3.jpg` |
 | 1.4 | 6 (18) | Three equal bodies chase each other in a stable orbit shaped like figure eight. | none stated | no |
-| 1.5 | 10 (22) | Busts of Pythagoras of Samos (left, Capitoline Museums, Rome, Wikimedia Commons) and of Aristotle (right, a Roman copy in marble of a Greek bust by Lysippus, Wikimedia Commons) | Capitoline Museums, Rome, Wikimedia Commons (both panels) | `figures/fig_1_5.jpg` |
-| 1.6 | 12 (24) | Archimedes Thoughtful by Domenico Fetti (1620) (Wikimedia Commons) | Domenico Fetti (1620), Wikimedia Commons | `figures/fig_1_6.jpg` |
-| 1.7 | 15 (27) | Nicolaus Copernicus. 1580 portrait (artist unknown) in the Old Town City Hall, Torun´ (Wikimedia Commons) | artist unknown, Old Town City Hall, Torun, Wikimedia Commons | `figures/fig_1_7.jpg` |
-| 1.8 | 16 (28) | World according to Ptolemy and Copernicus. | Harmonia Macrocosmica, 1708, Wikimedia Commons | `figures/fig_1_8.jpg` |
-| 1.9 | 17 (29) | A 1610 portrait of Johannes Kepler by an unknown artist (Wikimedia Commons) | unknown artist, Wikimedia Commons | `figures/fig_1_9.jpg` |
+| 1.5 | 10 (22) | Busts of Pythagoras of Samos (left, Capitoline Museums, Rome, Wikimedia Commons) and of Aristotle (right, a Roman copy in marble of a Greek bust by Lysippus, Wikimedia Commons) | Capitoline Museums, Rome, Wikimedia Commons (both panels) | not committed (not a scientific figure) |
+| 1.6 | 12 (24) | Archimedes Thoughtful by Domenico Fetti (1620) (Wikimedia Commons) | Domenico Fetti (1620), Wikimedia Commons | not committed (not a scientific figure) |
+| 1.7 | 15 (27) | Nicolaus Copernicus. 1580 portrait (artist unknown) in the Old Town City Hall, Torun´ (Wikimedia Commons) | artist unknown, Old Town City Hall, Torun, Wikimedia Commons | not committed (not a scientific figure) |
+| 1.8 | 16 (28) | World according to Ptolemy and Copernicus. | Harmonia Macrocosmica, 1708, Wikimedia Commons | not committed (not a scientific figure) |
+| 1.9 | 17 (29) | A 1610 portrait of Johannes Kepler by an unknown artist (Wikimedia Commons) | unknown artist, Wikimedia Commons | not committed (not a scientific figure) |
 | 1.10 | 19 (31) | Conic sections (left to right): circle, ellipse, parabola, hyperbola | none stated | no |
 | 1.11 | 19 (31) | Ellipses of different eccentricities. | none stated | no |
-| 1.12 | 20 (32) | Galileo Galilei. | Justus Sustermans, Wikimedia Commons | `figures/fig_1_12.jpg` |
-| 1.13 | 23 (35) | The first artificial satellite to fly in orbit around the Earth was Sputnik 1 (Wikimedia Commons/U.S. Air Force photo - http://www. nationalmuseum.af.mil) | Wikimedia Commons/U.S. Air Force photo - http://www.nationalmuseum.af.mil | `figures/fig_1_13.jpg` |
+| 1.12 | 20 (32) | Galileo Galilei. | Justus Sustermans, Wikimedia Commons | not committed (not a scientific figure) |
+| 1.13 | 23 (35) | The first artificial satellite to fly in orbit around the Earth was Sputnik 1 (Wikimedia Commons/U.S. Air Force photo - http://www. nationalmuseum.af.mil) | Wikimedia Commons/U.S. Air Force photo - http://www.nationalmuseum.af.mil | not committed (not a scientific figure) |
 | 1.14 | 24 (36) | A body (P) is at some distance (r) from the attracting center (O). | none stated | no |
 | 1.15 | 24 (36) | The Earth and a satellite (left) and the Earth on the horizon of the Moon (right). | NASA | no |
 | 1.16 | 26 (38) | Kepler’s second law, the law of areas. | none stated | no |
@@ -35,10 +35,10 @@ Digitisation method, calibration and uncertainty for each digitised figure are i
 | Fig. | page | caption (first sentence) | credit (caption) | committed |
 |---|---|---|---|---|
 | 2.1 | 32 (44) | Portrait of Isaac Newton when B.A. at Trinity College, 1677 Engraved by Burnet Reading (1749/50-1838) from a head painted by Sir Peter Lely (1618–1680), published 1799 (Credit: Institute of Astronomy, | Institute of Astronomy, University of Cambridge | no |
-| 2.2 | 35 (47) | Rene´ Descartes (left, credit: Wikimedia Commons) and Edmond Halley (right, Engraving by John Faber of a portrait by Thomas Murray. | left: Wikimedia Commons; right: Institute of Astronomy, University of Cambridge | `figures/fig_2_2_left_descartes.jpg` |
-| 2.3 | 38 (50) | Pierre Louis Maupertuis (left, Wikimedia Commons), and Leonhard Euler (right, painting by Joseph Fre´de´ric Auguste Darbe`s. | left: Wikimedia Commons; right: Musee d'art et d'histoire, Geneve | `figures/fig_2_3_left_maupertuis.jpg` |
-| 2.4 | 39 (51) | William Rowan Hamilton (left, Wikimedia Commons) and Joseph Louis Lagrange (right, Wikimedia Commons) | Wikimedia Commons (both panels) | `figures/fig_2_4.jpg` |
-| 2.5 | 46 (58) | Carl Friedrich Gauss (left, credit: Wikimedia Commons) and Albert Einstein (right, Wikimedia Commons) | Wikimedia Commons (both panels) | `figures/fig_2_5.jpg` |
+| 2.2 | 35 (47) | Rene´ Descartes (left, credit: Wikimedia Commons) and Edmond Halley (right, Engraving by John Faber of a portrait by Thomas Murray. | left: Wikimedia Commons; right: Institute of Astronomy, University of Cambridge | not committed (not a scientific figure) |
+| 2.3 | 38 (50) | Pierre Louis Maupertuis (left, Wikimedia Commons), and Leonhard Euler (right, painting by Joseph Fre´de´ric Auguste Darbe`s. | left: Wikimedia Commons; right: Musee d'art et d'histoire, Geneve | not committed (not a scientific figure) |
+| 2.4 | 39 (51) | William Rowan Hamilton (left, Wikimedia Commons) and Joseph Louis Lagrange (right, Wikimedia Commons) | Wikimedia Commons (both panels) | not committed (not a scientific figure) |
+| 2.5 | 46 (58) | Carl Friedrich Gauss (left, credit: Wikimedia Commons) and Albert Einstein (right, Wikimedia Commons) | Wikimedia Commons (both panels) | not committed (not a scientific figure) |
 | 2.6 | 47 (59) | Spaces with different geometry. | none stated | no |
 | 2.7 | 47 (59) | Matter makes the surrounding space curve | none stated | no |
 
@@ -47,13 +47,13 @@ Digitisation method, calibration and uncertainty for each digitised figure are i
 | Fig. | page | what it shows; source; status | credit (caption) | licence | committed |
 |---|---|---|---|---|---|
 | 3.1 | 52 (63) | Solar System montage. Not three-body data. | NASA | not stated as free in the book | no |
-| 3.2 | 53 (64) | Alexis Claude Clairaut (left, Wikimedia Commons) and Pierre Simon Laplace (right, Wikimedia Commons) | Wikimedia Commons (both panels) | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | `figures/fig_3_2.jpg` |
-| 3.3 | 58 (69) | Report of Halley’s Comet by Chinese astronomers in 240 BC (left) and Observation of Halley’s Comet, recorded in cuneiform on a clay tablet between 22 and 28 September 164 BC, Babylon, Iraq. | Wikimedia Commons (both panels) | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | `figures/fig_3_3.jpg` |
-| 3.4 | 59 (70) | The Halley’s Comet’s appearance in 1066 was recorded on the Bayeux Tapestry (Wikimedia Commons) | Wikimedia Commons | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | `figures/fig_3_4.jpg` |
-| 3.5 | 60 (71) | The Adoration of the Magi (circa 1305) by Giotto, who purportedly modeled the star of Bethlehem on Halley’s comet, which had been sighted 4 years prior to this painting (Wikimedia Commons) | Wikimedia Commons | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | `figures/fig_3_5.jpg` |
-| 3.6 | 61 (72) | Halley’s Comet in 1986 (Wikimedia Commons/NASA/W. Liller) | Wikimedia Commons/NASA/W. Liller | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | `figures/fig_3_6.jpg` |
+| 3.2 | 53 (64) | Alexis Claude Clairaut (left, Wikimedia Commons) and Pierre Simon Laplace (right, Wikimedia Commons) | Wikimedia Commons (both panels) | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | not committed (not a scientific figure) |
+| 3.3 | 58 (69) | Report of Halley’s Comet by Chinese astronomers in 240 BC (left) and Observation of Halley’s Comet, recorded in cuneiform on a clay tablet between 22 and 28 September 164 BC, Babylon, Iraq. | Wikimedia Commons (both panels) | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | not committed (not a scientific figure) |
+| 3.4 | 59 (70) | The Halley’s Comet’s appearance in 1066 was recorded on the Bayeux Tapestry (Wikimedia Commons) | Wikimedia Commons | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | not committed (not a scientific figure) |
+| 3.5 | 60 (71) | The Adoration of the Magi (circa 1305) by Giotto, who purportedly modeled the star of Bethlehem on Halley’s comet, which had been sighted 4 years prior to this painting (Wikimedia Commons) | Wikimedia Commons | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | not committed (not a scientific figure) |
+| 3.6 | 61 (72) | Halley’s Comet in 1986 (Wikimedia Commons/NASA/W. Liller) | Wikimedia Commons/NASA/W. Liller | Wikimedia Commons (preface: GNU FDL / GNU GPLv3, credit and source required, changes to be indicated) | not committed (not a scientific figure) |
 | 3.7 | 63 (74) | William Herschel (left, Engraving by James Godby, published by Frederick Rehberg. | Institute of Astronomy, University of Cambridge; University of Turku | no free licence stated (book) | no |
-| 3.8 | 65 (76) | Urbain Le Verrier (left, Wikimedia Commons), Johann Gottfried Galle (center, Wikimedia Commons) and John Couch Adams (right, Engraving by Samuel Cousins from a painting by Thomas Mogford. | left, centre: Wikimedia Commons; right: Institute of Astronomy, University of Cambridge | left and centre free; right not | `figures/fig_3_8_left_centre_leverrier_galle.jpg` |
+| 3.8 | 65 (76) | Urbain Le Verrier (left, Wikimedia Commons), Johann Gottfried Galle (center, Wikimedia Commons) and John Couch Adams (right, Engraving by Samuel Cousins from a painting by Thomas Mogford. | left, centre: Wikimedia Commons; right: Institute of Astronomy, University of Cambridge | left and centre free; right not | not committed (not a scientific figure) |
 | 3.9 | 70 (81) | Henri Poincare´ (left, credit: Acta Mathematica, Royal Swedish Academy of Sciences, Institut MittagLeffler) and Karl Sundman (right, credit: University of Helsinki) | Acta Mathematica, Royal Swedish Academy of Sciences, Institut Mittag-Leffler; University of Helsinki | no free licence stated (book) | no |
 | 3.10 | 72 (83) | Here are some visual impressions of how the complex number (the imaginary part is represented by letter i) appears in some of the most basic algebraic equations. | none stated | not stated (book) | no |
 | 3.11 | 73 (84) | Eduard Stiefel (left, credit: ETH Zu¨rich, ETH-Bibliothek, Bildarchiv) and Paul Kustaanheimo (right, credit: University of Helsinki) | ETH Zurich, ETH-Bibliothek, Bildarchiv; University of Helsinki | no free licence stated (book) | no |
@@ -73,7 +73,7 @@ Digitisation method, calibration and uncertainty for each digitised figure are i
 | Fig. | page | what it shows; source; status | credit (caption) | licence | committed |
 |---|---|---|---|---|---|
 | 4.1 | 86 (97) | Region D (a, b at (∓1, 0); c origin; d (0, √3)) with dashed L/M, M/A and H boundaries and four example starts. **No credit; layout as Heinämäki et al. 1999, MNRAS 310, 811, Fig. 1 (in repo), but redrawn (different example points).** **Digitised** (boundaries, fits, points) and **re-plotted**. | none stated | not stated (book) | no |
-| 4.2 | 90 (101) | Arthur Eddington (left, Wikimedia Commons) and Andrei Kolmogorov (right, credit: Kvant magazine) | left: Wikimedia Commons; right: Kvant magazine | left panel free; right not | `figures/fig_4_2_left_eddington.jpg` |
+| 4.2 | 90 (101) | Arthur Eddington (left, Wikimedia Commons) and Andrei Kolmogorov (right, credit: Kvant magazine) | left: Wikimedia Commons; right: Kvant magazine | left panel free; right not | not committed (not a scientific figure) |
 | 4.3 | 92 (103) | Koch snowflake. Not three-body. | none stated | not stated (book) | no |
 | 4.4 | 92 (103) | Sierpiński gasket. Not three-body. | none stated | not stated (book) | no |
 | 4.5 | 94 (105) | Lifetime map over the full lens x ∈ [−1, 1], y ∈ [−√3, √3]; blue short-lived, yellow long-lived; two-axis mirror symmetry. **No credit; same group as Lehto et al. 2008 (MNRAS 388, 965, in repo) but not their Fig. 1 (colours reversed).** **Digitised** as a colour-class raster (not lifetimes) with a symmetry measurement; **re-plotted**. | none stated | not stated (book) | no |
@@ -95,7 +95,7 @@ Digitisation method, calibration and uncertainty for each digitised figure are i
 
 | Fig. | page | caption (first sentence) | credit (caption) | committed |
 |---|---|---|---|---|
-| 6.1 | 119 (130) | The Whirlpool galaxy, Messier 51 as observed by Lord Rosse (left, Wikimedia Commons) and in a recent photograph (right, credit: NASA and ESA) | left: Wikimedia Commons; right: NASA and ESA | `figures/fig_6_1_left_rosse.jpg` |
+| 6.1 | 119 (130) | The Whirlpool galaxy, Messier 51 as observed by Lord Rosse (left, Wikimedia Commons) and in a recent photograph (right, credit: NASA and ESA) | left: Wikimedia Commons; right: NASA and ESA | not committed (not a scientific figure) |
 | 6.2 | 119 (130) | The Andromeda Galaxy, our nearest neighbor in the Milky Way category of galaxies. | NASA/JPL-Caltech | no |
 | 6.3 | 121 (132) | The open star cluster Pleiades, showing ‘haze’ from surrounding gas (left, credit: NASA, ESA, AURA/Caltech, Palomar observatory. | NASA, ESA, AURA/Caltech, Palomar; ESO | no |
 | 6.4 | 124 (135) | The two Magellanic Clouds in the Southern sky (left, credit ESO/S. Brunier), and Centaurus A galaxy (right, credit: ESO, Image taken by the Wide Field Imager attached to the MPG/ESO 2.2 meter telescop | ESO/S. Brunier; ESO | no |

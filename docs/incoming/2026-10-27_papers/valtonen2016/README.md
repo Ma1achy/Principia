@@ -17,9 +17,11 @@ and this repository is public. So the folder is **our reference to the book, not
   stated criterion, a claim we dispute); each is in quotation marks with its page.
 - **Facts, numbers, equations, initial conditions, parameter values and statements of results** are recorded in full,
   with pages. The book has no numerical tables.
-- **Figures.** Only images whose captions credit **Wikimedia Commons or Wikipedia** are committed (23 of 78), each with
-  its credit and the licence the preface states (GNU FDL / GNU GPL v3; preface p. vi), and any change noted. Every other
-  figure stays out. For those we record the source paper where the caption or text gives one, and for quantitative
+- **Figures.** Only images whose captions credit **Wikimedia Commons or Wikipedia** may be committed (23 of 78), and of
+  those only plots and scientific diagrams are (the owner's instruction, 27 Oct 2026): **4 committed**, Figs. 1.1, 1.3,
+  1.18 and 5.3. The other 19 (portraits, artworks, historical documents, photographs) are not committed (not a
+  scientific figure). Each committed image keeps its credit and the licence the preface states (GNU FDL / GNU GPL v3;
+  preface p. vi), and any change noted. Every other figure stays out. For those we record the source paper where the caption or text gives one, and for quantitative
   plots we **digitised** what can be read reliably into CSV and drew **our own re-plots**, labelled as such.
 - A local PNG crop of **every** figure (78, at 300 dpi) was made for the owner and is **not** in the repository.
 
