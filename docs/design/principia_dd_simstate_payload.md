@@ -71,10 +71,18 @@ struct SimStateFTLE {
                                   //   budget_exhausted bit. Bits, widths and saturation: TASK-M3-41, in §2
                                   //   (REQ-PAY-110). Updated by the march under a regularised occupant: hot.
     dE_reg      : u32,            // R-605's regularised energy drift latches beside packed_b's Cartesian ones:
-                                  //   final and max, two f16 halves, which half holding which still open
-                                  //   (REQ-PAY-111). The final value is stored,
-                                  //   not derived (§5), because the stored state is Cartesian and the
-                                  //   regularised energy is not recoverable from it at read. Names and halves:
+                                  //   final and max, two 16-bit halves. Open (REQ-PAY-111): the halves'
+                                  //   encoding, linear binary16 or a log-encoded 16-bit form, and which half
+                                  //   holds which. The regularised drift stays at round-off (integrator
+                                  //   contract Part 1), where linear binary16 keeps about one digit near 6e-8
+                                  //   and flushes anything smaller to zero ("Why f32 and not f16", below), so
+                                  //   TASK-M3-41 chooses the encoding against REQ-INT-106's measured drift,
+                                  //   under physics review: the measured values and REQ-INT-109's threshold
+                                  //   sit above its floor, and final and max stay ordered. Was: "final and
+                                  //   max, two f16 halves" (physics review 5662346996 of PR #293, F1).
+                                  //   The final value is stored, not derived (§5), because the stored state
+                                  //   is Cartesian and the regularised energy is not recoverable from it at
+                                  //   read. Names and halves:
                                   //   TASK-M3-41, in §1 and §5 (REQ-PAY-111). Each word's name here is a
                                   //   placeholder; its place and its 4 B are fixed (perf review 5661999637 of
                                   //   PR #293, P1, applied per R-369). Was: "dE_reg_final:f16[low] |
@@ -545,7 +553,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | `retrograde` | `theta < 0` | winding sense |
 | current drift `ΔE` | `H(r,p) − E_0` | cancellation-tolerant (feeds thresholds/display); threshold uses live f32 |
 | current drift `ΔLz` | `L_z(r,p) − Lz_0` | ditto |
-| regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two f16 halves, final and max (§1) | under a regularised occupant the suspect flags and the drift view read it, and the Cartesian `ΔE` above is diagnostic only; the stored state is Cartesian, so the regularised energy cannot be derived here. The halves' names and the accessors that read them are TASK-M3-41's (REQ-PAY-111; code review 5662211284 of PR #293, note (c), applied per R-369) |
+| regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two 16-bit halves, final and max, their encoding open (§1; *was* "two f16 halves", physics review 5662346996 of PR #293, F1) | under a regularised occupant the suspect flags and the drift view read it, and the Cartesian `ΔE` above is diagnostic only; the stored state is Cartesian, so the regularised energy cannot be derived here. The halves' names and the accessors that read them are TASK-M3-41's (REQ-PAY-111; code review 5662211284 of PR #293, note (c), applied per R-369) |
 | reduced crossing count | `fgw_reduced_length` — **valid only if `fgw_reduced_length_valid`** | **net branch-cut crossings** (free reduction); **INVALID for truncated samples** (later cancellations untracked after the cap — §3). `fgw_retained_prefix_length` (=76 when truncated) is a debug/export quantity, NOT the reduced count; never expose `127` |
 | `total_substeps_log2` | `total_substeps` (exact u32) via `countLeadingZeros` | complexity proxy derived at read, not stored (§2) |
 | `n` (shape) | `shape(r)` or `shape(r, masses)` | current shape-sphere point (`r` mass-weighted, or pass masses); NOT `shape(r,p)` |
