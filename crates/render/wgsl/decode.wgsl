@@ -415,7 +415,8 @@ fn fd_latent_body(words_in: fd_latent_words) -> fd_latent_words {
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_latent_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -922,7 +923,8 @@ fn fd_shape_sphere_body(words_in: fd_shape_sphere_words) -> fd_shape_sphere_word
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_shape_sphere_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -1398,7 +1400,8 @@ fn fd_invariant_le_body(words_in: fd_invariant_le_words) -> fd_invariant_le_word
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_invariant_le_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -1874,7 +1877,8 @@ fn fd_invariant_lk_body(words_in: fd_invariant_lk_words) -> fd_invariant_lk_word
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_invariant_lk_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -2183,7 +2187,8 @@ fn fd_mass_simplex_body(words_in: fd_mass_simplex_words) -> fd_mass_simplex_word
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_mass_simplex_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -2489,7 +2494,8 @@ fn fd_euclid_plane_body(words_in: fd_euclid_plane_words) -> fd_euclid_plane_word
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_euclid_plane_words;
     wi.w[0] = bitcast<u32>(uv.x);
@@ -2869,7 +2875,8 @@ fn fd_burrau_theta_k_body(words_in: fd_burrau_theta_k_words) -> fd_burrau_theta_
 }
 
 
-// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).
+// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the
+// sample's tile centre for a comparison against the payload (colour_composition §3).
 fn frag_decode(uv: vec2<f32>) -> FragDecode {
     var wi: fd_burrau_theta_k_words;
     wi.w[0] = bitcast<u32>(uv.x);

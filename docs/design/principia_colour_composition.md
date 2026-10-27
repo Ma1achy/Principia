@@ -433,18 +433,24 @@ formula is unchanged, and inside [0, 1]² nothing changes. *Was:* "Where the fig
 depth-0 root (F3 off or present mode, R-406, R-407),"
 
 **The chart lane's `ctx.chart.z` on every chart (R-72; REQ-COL-057; R-116).** `ctx.chart.z` is the eight controls
-`Φ` hands the shared decoder at the sample's chart point: `ChartOut.z` of the chart's own `Chart::map`
-(`principia_chart_reference.md` §5.1), in the decoder's block layout (config `z[0:2]`, momentum `z[2:6]`, mass
-`z[6:8]`). The fragment obtains it, and the system it decodes to, by evaluating the chart's own `D ∘ Φ` in WGSL at the
-point the kernel decoded the sample: the chart's section of `decode.wgsl`, generated from the one Rust source by the
-rust-gpu → SPIR-V → WGSL translation (R-116; `kernel::stage::fragment`), with the chart's uniforms bound as the decode
-stage binds them. So every chart's `Φ` is evaluated fragment-side, each through its own generated section, chosen when
-the shader is assembled, never by a branch at run time; no chart is special-cased and no `Φ` is hand-written. Beside
-`z` the generated decode returns one flag, `z_latent`: `true` where `Φ` produces the latent of the pixel, so that
-`D(z)` is the pixel's system and `z` its coordinates; `false` on every other chart, where `z` holds only what `Φ` hands
-`D` beside its own output (the controls the chart holds fixed, 0 in the blocks it constructs) and the pixel's system is
-`D ∘ Φ`'s, not `D(z)`. `z_latent` is a property of the chart, the same on every pixel, and it is `z`'s validity: a
-view that shows `z` as the pixel's latent where `z_latent` is `false` draws the invalid hatch there (§6's DECODE does).
+`Φ` hands the shared decoder at the pixel's chart point, `ctx.chart.slice_uv` ("at this pixel", the lane table above):
+`ChartOut.z` of the chart's own `Chart::map` (`principia_chart_reference.md` §5.1), in the decoder's block layout
+(config `z[0:2]`, momentum `z[2:6]`, mass `z[6:8]`). The fragment obtains it, and the system it decodes to, by
+evaluating the chart's own `D ∘ Φ` in WGSL at the pixel's `ctx.chart.slice_uv`: the chart's section of `decode.wgsl`,
+generated from the one Rust source by the rust-gpu → SPIR-V → WGSL translation (R-116; `kernel::stage::fragment`),
+with the chart's uniforms bound as the decode stage binds them. So every chart's `Φ` is evaluated fragment-side, each
+through its own generated section, chosen when the shader is assembled, never by a branch at run time; no chart is
+special-cased and no `Φ` is hand-written. Beside `z` the generated decode returns one flag, `z_latent`: `true` where `Φ`
+produces the latent of the pixel, so that `D(z)` is the pixel's system and `z` its coordinates; `false` on every other
+chart, where `z` holds only what `Φ` hands `D` beside its own output (the controls the chart holds fixed, 0 in the
+blocks it constructs) and the pixel's system is `D ∘ Φ`'s, not `D(z)`. `z_latent` is a property of the chart, the same
+on every pixel, and it is `z`'s validity: a view that shows `z` as the pixel's latent where `z_latent` is `false` draws
+the invalid hatch there (§6's DECODE does). A preset that compares the generated decode against the payload (§6's
+agreement preset) evaluates it instead at the sample's own point, where the kernel decoded it (R-80, copy 0): its tile's
+centre, `c + h·(2·t_c − 1)` with `t_c = ctx.quad.uv + (½ − ctx.tile.uv)/N`, which is `ctx.chart.slice_uv` only at a
+pixel on the tile's centre. *Was:* "`Φ` hands the shared decoder at the sample's chart point" and "by evaluating the
+chart's own `D ∘ Φ` in WGSL at the point the kernel decoded the sample", which named the tile centre where the table and
+the DECODE preset use the pixel's `ctx.chart.slice_uv` (physics review 5666521412 P1, applied per R-369).
 Per row of lowering's appendix (`principia_lowering_contract.md`, "Appendix — worked enumeration of the current chart
 set"):
 
@@ -455,15 +461,16 @@ set"):
 | (L_z, E), (L_z, K) | the frozen config `z_cfg` and mass `z_mass`; momentum `0` (the invariant construction sets the momenta) | `false` | `ctx.chart.slice_uv` |
 | Ternary mass | `0` (the masses are the pixel's, from the triangle warp, on the chart's fixed triangle at rest) | `false` | `ctx.chart.slice_uv` |
 | Euclid ν plane, θ × K strip, and the Burrau family's other curves | `0` (the curve's embedding constructs the system) | `false` | `ctx.chart.slice_uv` |
-| Burrau int lattice | `0`, as the Burrau family | `false` | the cell's quantised point, where the per-cell dispatch decodes it |
+| Burrau int lattice | `0`, as the Burrau family | `false` | the pixel's cell's quantised point, where the per-cell dispatch decodes it |
 | Anosova physical-frame | `0` (Φ constructs `(m, r, p)`, entering at canonicalise) | `false` | `ctx.chart.slice_uv` |
 
 The last two rows' sections are added by the task that builds those charts (REQ-RENDER-082, TASK-M4-06), under the same
-rule: the chart's own `D ∘ Φ`, generated, evaluated at the point the kernel decoded. A preset that recomputes from `z`
-alone (`encode(decode(z))`) is defined only where `z_latent` is `true`; on another chart it recomputes from the
-generated decode's system, never from `z`. *Applied per R-369 (TASK-M2-25), under physics review: `z` is
-`Chart::map`'s output, not a latent recovered by encoding the pixel's system, since encode is a quotient map
-(`principia_inverse_encode_contract.md` Part 1) and the fragment would then show a latent `Φ` never produced.*
+rule: the chart's own `D ∘ Φ`, generated, evaluated at the pixel's point. *Was:* "evaluated at the point the kernel
+decoded". A preset that recomputes from `z` alone (`encode(decode(z))`) is defined only where `z_latent` is `true`; on
+another chart it recomputes from the generated decode's system, never from `z`. *Applied per R-369 (TASK-M2-25), under
+physics review: `z` is `Chart::map`'s output, not a latent recovered by encoding the pixel's system, since encode is a
+quotient map (`principia_inverse_encode_contract.md` Part 1) and the fragment would then show a latent `Φ` never
+produced.*
 
 **The validity lane's `ctx.validity.forbidden`, the sample's chart classification (R-72; REQ-COL-102; R-446).** How a
 sample's chart classification reaches the outcome view, so that it draws a forbidden chart region with the hatch from

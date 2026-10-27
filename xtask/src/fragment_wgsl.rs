@@ -407,7 +407,8 @@ struct FragDecode {
 fn decode_glue(prefix: &str) -> String {
     let l = fragment::decode();
     let mut out = format!(
-        "\n// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).\n\
+        "\n// The fragment decode at the chart point `uv`: the pixel's `ctx.chart.slice_uv` for a view of the pixel, the\n\
+         // sample's tile centre for a comparison against the payload (colour_composition §3).\n\
          fn frag_decode(uv: vec2<f32>) -> FragDecode {{\n    \
          var wi: {prefix}_words;\n    \
          wi.w[{uv}] = bitcast<u32>(uv.x);\n    \
