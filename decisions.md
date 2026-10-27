@@ -25943,7 +25943,10 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   percentage, physics-reviewed; physics review 5664187570 of this port's PR, F1) from TASK-M8-07; REQ-GEN-023 (the
   debug tags of the real registry, TASK-M7-13's) from TASK-M8-19, to TASK-M8-92; REQ-GUI-351 and REQ-GUI-352 (the
   stepper pair's warnings, from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone
-  and rulings; its note names R-627 and both tasks.
+  and rulings; its note names R-627 and both tasks. REQ-GUI-070 then moves on from TASK-M8-88 to TASK-M8-87, which
+  places the real canvas and depends on TASK-M8-88: its verify's threshold, the figure identical over the shown
+  figure's rect, runs only there, and TASK-M8-88 keeps the egui-wgpu construction as a deliverable check (applied per
+  R-369; code review 5665363835 of this port's PR, F1).
 - **TASK-M8-05 is split, in the plan first.** Its axis extension types, area statistics and F3 fill past `[0,1]²`
   (REQ-GUI-180, REQ-CHART-054, REQ-CHART-056 and REQ-CHART-071, reviewed by physics) are kernel physics drawn on the
   real figure, not a screen the mock can show. They move, with their acceptance lines, deliverables and notes, to
@@ -25978,6 +25981,8 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   they cannot be shown in the PR that builds the skeleton:
   - **TASK-M8-86, the skeleton**: the egui app and the mock engine in wasm on WebGPU, its `web/`, the Pages workflow
     and its wasm build in CI. It depends only on TASK-M6-24 (merged), so it can start now; reviewers code, qa and gui.
+    Perf joins them, since its frame statistics and delay flag touch the frame loop (applied per R-369; code review
+    5665363835 of this port's PR, F2).
     It closes REQ-TOOL-220 (the Pages workflow: `workflow_dispatch` only, `main` only, the `github-pages` environment,
     no push trigger).
   - **TASK-M8-96, the measurements**: it depends on TASK-M8-86 and starts from the first manual deploy of it from
