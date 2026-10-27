@@ -3146,8 +3146,8 @@
   milestone: M8
   title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
   depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75]
-  needs: [REQ-TOOL-127, REQ-TOOL-040]
-  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106, REQ-GUI-398, REQ-VAL-200]  # REQ-GUI-398, REQ-VAL-200: R-621's header
+  needs: [REQ-TOOL-127, REQ-TOOL-040, REQ-PERF-108]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106, REQ-GUI-398, REQ-VAL-200, REQ-PERF-114]  # REQ-PERF-114: perf review 5661999637 of PR #293, P3; REQ-GUI-398, REQ-VAL-200: R-621's header
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-77

@@ -236,6 +236,23 @@ header's text is REQ-GUI-398. The atlas's colours are
 unchanged. *Was:* "What the header strip states, against REQ-SYS-061's "The interactive atlas must state its
 predictability horizon", is RQ-556."
 
+**The measurement's work is bounded** (perf review 5661999637 of PR #293, P3, applied per R-369). It runs §3.1's machinery over several starts of
+the view, so whatever the definition chooses it is held to a budget:
+- **Starts:** at most `N_trust` starts of the current view per measurement. The corpus gives no value, so `N_trust` is
+  a calibration (R-71, REQ-PERF-114): TASK-M8-76 proposes it with its evidence and the human confirms it at the M8
+  gate.
+- **Runs:** at most §3.1's four runs per start, each dispatched as a pin's are: the f32 runs in bounded chunks that
+  carry state (REQ-TOOL-127), the f64 runs `computeIC`.
+- **Horizon:** each run to the view's `T` at most (§3.6), never past it.
+- **Latest wins.** A change of the view, as §3.4 lists it (a pan, zoom, slice, chart or sim-key edit, or a result
+  opened), cancels the measurement in flight by generation counter (render contract Part 7; trajectory_viewing §1,
+  "cancel-on-move by generation counter") and starts the new view's; a cancelled measurement's result never reaches the
+  header. A stain or playhead edit leaves the view as it is and starts none.
+- **Off the frame loop.** The f64 runs stay on the inspector worker, never the main thread or the render-loop worker;
+  where they use more than one core they keep REQ-PERF-108's limit, at least one core left free.
+- **Measured on the Mac** (R-186), in REQ-SYS-060's form: `precision-runs-frame` (REQ-PERF-106) has an arm that pans
+  `pan-nearfield` while the view is being measured, its frame times equal to the no-measurement baseline within noise.
+
 ### 3.6 The horizon
 
 The default horizon stays 50, and it can be **raised or lowered**, not floored at 50. This amends the Run window's

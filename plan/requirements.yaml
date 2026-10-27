@@ -31473,20 +31473,26 @@
 - id: REQ-VAL-200
   area: VAL
   kind: definition
-  statement: "How the current view's f32 trust time is measured, for the header strip (R-621), and what the measurement gives when it finds no parting before T (the header then reading \"f32 trusted through T\", render_gui_spec §G2), must be defined, written into honesty §3.5 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  statement: "How the current view's f32 trust time is measured, for the header strip (R-621), and what the measurement gives when it finds no parting before T (the header then reading \"f32 trusted through T\", render_gui_spec §G2), must be defined, written into honesty §3.5 by the task that needs it and approved by the physics and perf reviewers before merge (R-72), within its work bound: at most N_trust starts of the view (REQ-PERF-114), at most four runs each (§3.1), each to the view's T; cancelled by generation counter when the view changes, latest wins (render contract Part 7; trajectory_viewing §1); its f64 runs on the inspector worker within REQ-PERF-108's pool limits, at least one core left free."
   source:
   - file: decisions.md
     section: "R-621 — The header strip states `T` and the f32 trust time, measured for the current view rather than a constant; the per-point trust stays in the viewer *(closes RQ-556; refines R-574's \"nothing changes in the atlas\" as to the header)*"
   - file: docs/design/principia_honesty_precision.md
     section: 3.5 Nothing changes in the atlas
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 7 — The hover trace (per-IC trajectory overlay)
+  - file: docs/design/principia_trajectory_viewing.md
+    section: 1. The single mechanism
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.1 Four runs of one IC
   verify:
     method: review checklist
-    detail: "honesty §3.5 states which starts of the current view are run, which pair and which mark give the trust time, and how one time is read from them, and what it gives when no parting is found before T; the physics reviewer approved"
+    detail: "honesty §3.5 states which starts of the current view are run, which pair and which mark give the trust time, and how one time is read from them, and what it gives when no parting is found before T; trust_time_work: a measurement runs at most the set N_trust starts, at most four runs each, each to T and no further, its f64 runs on the inspector worker; a view change mid-measurement cancels it by generation counter and the header shows only the latest view's result (controls: a measurement left running after a view change, a stale result reaching the header, and a run past T, each fail); the physics and perf reviewers approved"
   rulings:
   - R-72
   - R-621
   milestone: M8
-  note: "R-621 (25 Oct 2026, RQ-556 (b)): measured for the current view rather than a constant; the measurement a definition, applied per R-369. Closed by TASK-M8-76. gui review 5661892857 of PR #293, H4 (applied per R-369): the no-parting-before-T case is part of the definition. *Was (statement):* \"How the current view's f32 trust time is measured, for the header strip (R-621), must be defined, written into honesty §3.5 by the task that needs it and approved by the physics reviewer before merge (R-72).\" *Was (verify):* \"honesty §3.5 states which starts of the current view are run, which pair and which mark give the trust time, and how one time is read from them; the physics reviewer approved\""
+  note: "R-621 (25 Oct 2026, RQ-556 (b)): measured for the current view rather than a constant; the measurement a definition, applied per R-369. Closed by TASK-M8-76. gui review 5661892857 of PR #293, H4 (applied per R-369): the no-parting-before-T case is part of the definition. *Was (statement):* \"How the current view's f32 trust time is measured, for the header strip (R-621), must be defined, written into honesty §3.5 by the task that needs it and approved by the physics reviewer before merge (R-72).\" *Was (verify):* \"honesty §3.5 states which starts of the current view are run, which pair and which mark give the trust time, and how one time is read from them; the physics reviewer approved\" perf review 5661999637 of PR #293, P3, applied per R-369: the work bound, the cancel and the pool limits, and perf joins the approval. *Was (statement end):* \"must be defined, written into honesty §3.5 by the task that needs it and approved by the physics reviewer before merge (R-72).\" *Was (verify end):* \"; the physics reviewer approved\"."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -33161,7 +33167,7 @@
   note: "Fix round 3 of PR #281 (perf review 5608473498, F3, applied per R-369): print_graph §8.3 and the quality device note §1 and §2 do not contradict each other here; they are silent, so a definition, not an RQ. Closed by TASK-M8-73."
 - id: REQ-PERF-106
   area: PERF
-  statement: "While a pinned or kept trajectory's four precision runs (R-574) are in flight, the frame loop must hold the no-pin baseline: the two f64 runs on the inspector worker, the two f32 traces in bounded dispatches (REQ-TOOL-127), never blocking the GPU survey, the frame loop or the main thread (REQ-SYS-060's rule, applied to these runs)."
+  statement: "While a pinned or kept trajectory's four precision runs (R-574) are in flight, the frame loop must hold the no-pin baseline: the two f64 runs on the inspector worker, the two f32 traces in bounded dispatches (REQ-TOOL-127), never blocking the GPU survey, the frame loop or the main thread (REQ-SYS-060's rule, applied to these runs); and so must it while the current view's trust time is measured (REQ-VAL-200)."
   source:
   - file: docs/design/principia_honesty_precision.md
     section: 3.1 Four runs of one IC
@@ -33173,14 +33179,17 @@
     section: 3. The suite
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: 1.1 The fixed suite — comparability across devices
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.5 Nothing changes in the atlas
   verify:
     method: benchmark
-    detail: "cargo xtask bench precision-runs-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no pin and once with a pin on a chaotic near-field IC whose four runs are re-issued each time they finish, so that four runs are in flight throughout the window, at T = 50 and at T = 200; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-pin baseline within noise (REQ-SYS-060's form; no new number); the f64 runs run on the inspector worker; the bench fails if no runs were in flight at the window's end"
+    detail: "cargo xtask bench precision-runs-frame, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the fixed suite's pan-nearfield scenario (principia_benchmark.md §3: the fixed pan across Burrau near-field, frames during motion) is run once with no pin and once with a pin on a chaotic near-field IC whose four runs are re-issued each time they finish, so that four runs are in flight throughout the window, at T = 50 and at T = 200; frame time p50/p95/p99/max and frac_frames_over_41.7ms equal the no-pin baseline within noise (REQ-SYS-060's form; no new number); the f64 runs run on the inspector worker; the bench fails if no runs were in flight at the window's end; a further arm pans pan-nearfield with no pin while the current view's trust time is being measured (REQ-VAL-200), at N_trust (REQ-PERF-114) and at T = 50 and T = 200, a measurement re-issued on each view change, its frame time p50/p95/p99/max and frac_frames_over_41.7ms equal to the no-measurement baseline within noise (REQ-SYS-060's form; no new number), its f64 runs on the inspector worker, failing if no measurement was in flight at the window's end"
   rulings:
   - R-186
   - R-574
+  - R-621
   milestone: M8
-  note: "Perf review 5627960807 of PR #283, P2 (applied per R-369). Closed by TASK-M8-76. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield with a re-issued pin; \"form and thresholds\" reads \"form\" (REQ-SYS-060 states no threshold)."
+  note: "Perf review 5627960807 of PR #283, P2 (applied per R-369). Closed by TASK-M8-76. Fix round 10 of PR #283 (perf review 5628071919, Q3; applied per R-369): the held work is pan-nearfield with a re-issued pin; \"form and thresholds\" reads \"form\" (REQ-SYS-060 states no threshold). perf review 5661999637 of PR #293, P3, applied per R-369: the trust-time measurement's arm. *Was (statement end):* \"never blocking the GPU survey, the frame loop or the main thread (REQ-SYS-060's rule, applied to these runs).\""
 - id: REQ-PERF-107
   area: PERF
   statement: "While a Result job (R-572) runs, at f64 on the CPU pool or at f32 on the GPU, the live frame loop must keep its budget (REQ-SCHED-043 applied to this job: lower priority than the frame loop, pre-emptible, yielding)."
@@ -33331,6 +33340,25 @@
   - R-618
   milestone: M7
   note: "perf review 5661999637 of PR #293, P2 (b), applied per R-369: the screen pass runs every frame at display resolution, so its cost is measured, a record only. Closed by TASK-M7-69."
+- id: REQ-PERF-114
+  area: PERF
+  kind: calibration
+  statement: "The most starts of the current view that one trust-time measurement runs, N_trust (REQ-VAL-200, R-621), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_honesty_precision.md
+    section: 3.5 Nothing changes in the atlas
+  - file: decisions.md
+    section: "R-621 — The header strip states `T` and the f32 trust time, measured for the current view rather than a constant; the per-point trust stays in the viewer *(closes RQ-556; refines R-574's \"nothing changes in the atlas\" as to the header)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench precision-runs-frame --propose, on the human's Mac (R-186), its own process, with its prin profile output in the PR: the proposed N_trust with its evidence, the trust time each fixed-suite view's measurement gives at N_trust and at twice it, and the trust-time arm of REQ-PERF-106 holding the no-measurement baseline at N_trust at T = 50 and T = 200; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-621
+  milestone: M8
+  note: "perf review 5661999637 of PR #293, P3, applied per R-369: the corpus gives no start count, so it is a calibration (R-71). Closed by TASK-M8-76."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
