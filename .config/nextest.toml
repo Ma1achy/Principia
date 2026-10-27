@@ -54,8 +54,8 @@ xtask-cargo = { max-threads = 1 }
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
 # (`engine`'s `lock_gpu`, TASK-M2-23), and the agreement preset's against the decode stage (validation's
-# `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation (xtask's `fragment_wgsl`,
-# TASK-M2-25); the xtask tests that run cargo on
+# `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
+# (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
