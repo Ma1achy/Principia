@@ -40,8 +40,8 @@ ground truth, and where they say so themselves it is noted.
 | Li & Liao 2019 | 4 (LL-1 to LL-4) |
 | Hudomal 2015 | 5 (HU-1 to HU-5) |
 | Heggie 1974 | 3 (H-1 to H-3) |
-| Valtonen et al. 2016 | 5 (V-1 to V-5) |
-| **Total** | **43** |
+| Valtonen et al. 2016 | 11 (V-1 to V-11; V-6 to V-11 added with `valtonen2016/`) |
+| **Total** | **49** |
 
 ---
 
@@ -877,8 +877,10 @@ The ICs are Aarseth & Zare 1974's Example II (`../2026-10-25_replication/papers/
 
 ## Valtonen, Anosova, Kholshevnikov, Mylläri, Orlov & Tanikawa 2016, *The Three-body Problem from Pythagoras to Hawking*
 
-Springer, doi:10.1007/978-3-319-22726-9. © Springer; **not in the repo** (README §2). Book page numbers are given (PDF
-page = book page + 11 from Chapter 1 on).
+Springer, doi:10.1007/978-3-319-22726-9. © Springer; **not in the repo** (README §2). Book page numbers are given. PDF
+page = book page + 12 in Chapters 1–2, + 11 in Chapters 3–7, + 10 in Chapter 8 (the PDF omits the blank versos book
+pp. 50 and 146; corrected 27 Oct 2026, it previously read "+ 11 from Chapter 1 on"). The working reference built
+from the book, with digitised figures, is `valtonen2016/`.
 
 The book is a popular history. It gives **no integrator, resolution, horizon or escape criterion** for any figure, and
 no numerical table. Its figures are reproductions of research maps, mostly by its authors' groups. Its replicable
@@ -917,6 +919,9 @@ chapters asked about:
   - No resolution, bins or zoom windows are given.
 - **Chart:** as L-1. The two-axis symmetry is a cheap exact property of the rest surface: a render of the full lens
   must be symmetric to the integrator's rounding.
+- **Note (27 Oct 2026):** these are **not** Lehto et al. 2008's Figs. 1–3. The colour key is reversed (book: blue
+  short-lived; Lehto: red short, dark blue long) and the zoom windows differ; the book credits no source. Windows in
+  both coordinate systems: `valtonen2016/data/fig4_5to4_9_axis_windows.csv`; see V-8.
 - **Difficulty:** E for the symmetry; Q for the morphology.
 
 ### V-3. The entropy map over the four-region partition (Fig. 4.9, p. 97; text pp. 96 and 141)
@@ -941,7 +946,8 @@ chapters asked about:
     stops at the collision (p. 76). **Its initial conditions are not given.**
 - **Chart:** the `BodyPlane` Burrau pixel. Szebehely & Peters (catalogue §3.1, in the repo) is the source to replicate,
   not the book.
-- **Difficulty:** Q, and E via the primary source. Fig. 3.16 is not replicable without Mikkola's ICs.
+- **Difficulty:** Q, and E via the primary source. Fig. 3.16 is not replicable without Mikkola's ICs; approximate ICs
+  digitised from the figure are V-6.
 
 ### V-5. Statistical statements (pp. 76, 80, 84, 98, 140–142)
 
@@ -956,6 +962,82 @@ chapters asked about:
 - **None states its set-up** (masses, velocities, horizon or criterion). Each is a pointer to the primary paper, not a
   target value.
 - **Difficulty:** S, conditional on finding the primary source.
+- **Note (27 Oct 2026):** "about 50 %" is consistent with Boekholt, Portegies Zwart & Valtonen 2020 at double
+  precision, but Lehto et al. 2008's Fig. 4 shows ≈ 65 % unrecovered at their δ = 5×10⁻⁵; the lifetime-shape claim
+  ("radioactive decay", p. 77) conflicts with Orlov et al. 2010 (V-9). Details: `valtonen2016/ch3_*.md`, `ch4_*.md`.
+
+### V-6. Mikkola's near-Pythagorean bounce orbit, from digitised starts (Fig. 3.16, p. 79; text p. 76)
+
+- **Content.** Masses 3, 4, 5. Digitised start points (±0.018 in x, ±0.014 in y;
+  `valtonen2016/data/fig3_16_mikkola_markers.csv`): m₃ (0.926, 3.021), m₄ (−1.984, −1.057), m₅ (1.034, −0.977).
+  Digitised bounce: m₄–m₅ collision at (−0.619, −0.291), m₃ at (1.841, 0.876). Both sets have their mass-weighted
+  centre at the origin within the read-off error. Text: the heavy pair collides, the light body stops at that
+  moment, and with an elastic bounce the orbit retraces itself.
+- **Assumption, ours:** the starts are a zero-velocity (brake) state; the book does not say so.
+- **Test.** From rest at the digitised starts, integrate to the first m₄–m₅ collision and measure |v₃| there and the
+  positions against the rings; then shoot on the start positions (four free numbers with the centre of mass fixed)
+  for v₃ = 0 at collision. A converged orbit within the digitisation box confirms the reading; none would be a finding.
+  Check Szebehely & Peters 1967b (AJ 72, 1187, doi:10.1086/110398; not in the repo) as a possible primary.
+- **Chart:** `BodyPlane` around the Burrau pixel, or a `Latent` slice through Burrau's masses.
+- **Difficulty:** E once shot (a periodic orbit closes or it does not); Q against the figure.
+
+### V-7. The L/M/A/H partition as drawn, and the entropy share (Figs. 4.1 and 4.9, pp. 86, 97; text pp. 96, 141)
+
+- **Content.** The book never defines the boundaries. As drawn in Fig. 4.1 (a–b = 2; digitised,
+  `valtonen2016/data/fig4_1_*.csv`): L/M is a circle about b of radius **1.3852 ± 0.0023**; the H boundary a circle
+  about b of radius **0.535 ± 0.010**; M/A the line **y = 0.4246 − 0.5026x**. Example starts 1–4 at (0.498, 0.963),
+  (0.049, 1.502), (0.075, 0.219), (0.749, 0.249). Fig. 4.9's high-entropy (brown) share of the quarter is
+  **0.66–0.83** depending on the colour threshold, against the text's "roughly one half" non-reversible.
+- **Test.** Colour region D by the partition; generate L/M/A/H sequences on free-fall runs; compute a transition
+  entropy; compare the high-entropy share with both numbers, and the map's morphology with Fig. 4.9. Our fits are
+  one explicit choice of thresholds, not Chernin et al.'s definition (V-1, V-3).
+- **Chart:** the Anosova entry, scaled ×2.
+- **Difficulty:** Q (thresholds and estimator unknown); S for the share once an estimator is fixed.
+
+### V-8. The shield's mirror symmetry and the zoom ladder (Figs. 4.5–4.7, pp. 94–95)
+
+- **Content.** The book's Fig. 4.5 is mirror-symmetric about both axes to better than a pixel (mirror correlation
+  0.909 / 0.916 against neighbour correlation 0.78 / 0.84; measured on its raster). Zoom windows (book coordinates,
+  bodies at (∓1, 0)): x 0.40–0.60 × y 0.90–1.10; x 0.500–0.520 × y 0.910–0.930; x 0.5080–0.5100 × y 0.9140–0.9160
+  (Lehto coordinates in `valtonen2016/data/fig4_5to4_9_axis_windows.csv`).
+- **Test.** (a) Full-lens render: assert the two mirror symmetries to rounding, pixel for pixel (E). (b) Render the
+  three windows and check that banded structure with speckled gaps persists at 10× and 100× (Q), alongside Lehto's
+  ε-ladder (L-3).
+- **Chart:** as L-1.
+- **Difficulty:** E for (a), Q for (b).
+
+### V-9. Lifetime distribution shape on the free-fall surface (book p. 77; Orlov, Rubinov & Shevchenko 2010)
+
+- **Content.** Book: decay "resembles radioactive decay, with a known half-life". Orlov et al. 2010 (in the repo):
+  heavy-tailed, differential power-law index about −1.7 to −1.4 depending on the virial coefficient. Manwadkar et al.
+  2020 (in the repo): exponential for ergodic interactions, power-law tail from Lévy flights.
+- **Test.** Histogram t_end over a region-D render (and over P-1's rings); fit exponential and power-law tails;
+  report which describes the tail, with the escape criterion stated.
+- **Chart:** the Anosova entry.
+- **Difficulty:** S.
+
+### V-10. Post-Newtonian Pythagorean problem and the relativistic triple (pp. 147–149; Fig. 8.1)
+
+- **Content.** Book (distance unit 1 pc): 10⁵ M☉ like Newton; ×10 qualitatively the same; ×100 escaper 900 km/s,
+  binary 300 km/s; ×1000 all three merge. Chitan, Mylläri & Haque 2022 (in the repo): mergers at 10⁵ M☉ in their
+  standard run, one merger in 2000 crossing times at 10⁹ M☉, transition 10^5.5–10^5.6 M☉ over sixteen Pythagorean
+  triangles. Valtonen 1976 (Fig. 8.1): masses 0.5, 0.5, 1.0; digitised markers at t = 1–4.56
+  (`valtonen2016/data/fig8_1_valtonen1976_positions.csv`). Momentum checks: 0.5 × 24,000 = 1.5 × 8000;
+  3 × 900 = 9 × 300.
+- **Test.** Out of scope while Principia is Newtonian. If a post-Newtonian force is ever added, the target is Chitan
+  et al. 2022, not the book; the momentum identities are cheap checks of any port.
+- **Difficulty:** S, conditional on a post-Newtonian integrator.
+
+### V-11. Hierarchical stability limits (pp. 82–84, 114, 140)
+
+- **Content.** Harrington 1972: ≥ 3.5 inner semi-major axes, "doubled" for safety (p. 84). Valtonen & Karttunen:
+  circular inner binary, coplanar eccentric outer orbit, 4.8 (prograde) and 2.6 (retrograde) units (p. 140). Bohlin
+  1923: pericentre 4.7 major axes, stable for three outer revolutions (p. 82). Innanen 1979: 70 % / 144 % of the Hill
+  radius (p. 114). **No masses or outer eccentricities are given.**
+- **Test.** A `Latent` or hierarchical slice scanning outer pericentre for prograde and retrograde outer orbits; the
+  number to compare comes from the primary (Valtonen & Karttunen 2006, doi:10.1017/CBO9780511616006; Mylläri et al.
+  2018, MNRAS 476, 830, doi:10.1093/mnras/sty237; neither in the repo), not the book.
+- **Difficulty:** S, conditional on the primary source.
 
 ---
 

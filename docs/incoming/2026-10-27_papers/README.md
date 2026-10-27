@@ -12,6 +12,7 @@ pull out the results to replicate as numbered targets. This folder holds the out
 | `agekyan_anosova_II_table3_near_rest_completed.csv` | Agekyan & Anosova II, Table 3 (p. 15): the 38 near-rest runs that paper I could not finish, all twelve columns |
 | `agekyan_anosova_I_table1_cols5to8.csv` | Agekyan & Anosova I, Table 1 (pp. 1010–1012), columns 5–8 (T, p, p_min, E): the decay times and perimeters that `fixtures/anosova/table1.csv` does not carry |
 | `transcriptions/` | The two independent readings of each table (`*_A.txt`, `*_B.txt`), `build.py`, which diffs them and writes the three CSVs, and `build_output.txt`, its output |
+| `valtonen2016/` | A working reference to the Valtonen et al. 2016 book, added 27 Oct 2026: per-chapter notes in our own words, every figure listed with its source, the 23 freely licensed images, digitised data and our re-plots, conflicts with the primary papers, and targets V-6 to V-11. See its `README.md` |
 
 The batch's PDFs are not copied here: the one new paper is in `../2026-10-25_replication/papers/`, and the rest are
 duplicates of files already in the repo, as the inventory shows.
@@ -32,7 +33,7 @@ sha256 of each file as delivered. "Duplicate" means byte-identical to the repo f
 | `BF01013153.pdf` | `7d160dafb6c2af17866e36d736007cc3155be3704481932c4e398f921e9c1368` | T. A. Agekyan & Zh. P. Anosova, "Investigation of the dynamics of triple systems by the method of statistical tests. II", *Astrophysics* 4(1), 11–16, doi:10.1007/BF01013153, from *Astrofizika* 4(1), 31–40 (1968). Springer scan with an OCR text layer | Duplicate of `../2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf` | Read in full; Tables 1 and 3 transcribed; targets AA-6 to AA-8 |
 | `Global-chaoticity-in-the-Pythagorean-three-body-problem.pdf` | `dc17a224736762f0029152a6f25aef66f6ce6113297406bdad11eaf7ce91209f` | AAOS 1994a again: an ADS image scan (bibcode `1994CeMDA..58....1A`), **no text layer** (16 words, all the bibcode stamp) | Same paper as `BF00692114.pdf`, which has a text layer | Not added |
 | `msc_ahudomal.pdf` | `b30dbad23f114b646721e65110fcffe265214765c2cdf2ac21b0ecbb7b2c1fb0` | A. Hudomal, *New Periodic Solutions to the Three-Body Problem and Gravitational Waves*, MSc thesis, Faculty of Physics, University of Belgrade, October 2015; supervisor V. Dmitrašinović | Duplicate of `../2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf` | Read the parts not already used by `../2026-10-26_belgrade_gallery/`; targets HU-1 to HU-5 |
-| `valtonen2016.pdf` | `251029ab30bd0ad4f6284d706e42a1fec88510f1b5930af8fe3a06bd6ccf99cb` | M. Valtonen, J. Anosova, K. Kholshevnikov, A. Mylläri, V. Orlov & K. Tanikawa, *The Three-body Problem from Pythagoras to Hawking*, Springer, Cham (2016), doi:10.1007/978-3-319-22726-9, ISBN 978-3-319-22725-2 (print), 978-3-319-22726-9 (eBook). 183 PDF pages; book page = PDF page − 11 from Chapter 1 on | **New, not committed** (§2) | Read chapters 3, 4, 7 and 8; targets V-1 to V-5. Cited, not quoted at length |
+| `valtonen2016.pdf` | `251029ab30bd0ad4f6284d706e42a1fec88510f1b5930af8fe3a06bd6ccf99cb` | M. Valtonen, J. Anosova, K. Kholshevnikov, A. Mylläri, V. Orlov & K. Tanikawa, *The Three-body Problem from Pythagoras to Hawking*, Springer, Cham (2016), doi:10.1007/978-3-319-22726-9, ISBN 978-3-319-22725-2 (print), 978-3-319-22726-9 (eBook). 183 PDF pages; book page = PDF page − 12 in Chapters 1–2, − 11 in Chapters 3–7, − 10 in Chapter 8 (corrected 27 Oct 2026; previously "− 11 from Chapter 1 on") | **New, not committed** (§2) | Read chapters 3, 4, 7 and 8; targets V-1 to V-5. Cited, not quoted at length |
 | `SCC-Vol.6.1-04_-Cohler-et_al.pdf` | `ada799f36625a097963da33a97650ffec32fcb0948c5a6b8fefcc104e2ffc988` | A climate-science paper, unrelated to the three-body problem | **Unrelated** | Ignored; not added |
 
 ## 2. Why two files were not added
@@ -43,7 +44,8 @@ unsearchable copy of the same paper adds nothing a reader of the repo can use.
 
 **The book** (`valtonen2016.pdf`) is © Springer International Publishing Switzerland 2016, all rights reserved (its
 copyright page, PDF p. 5), and this repository is public. It was read for this record. It is cited by chapter, section,
-page and figure, and its claims are paraphrased; none of it is copied in.
+page and figure, and its claims are paraphrased; none of it is copied in. A fuller reference built the same way, with the
+Wikimedia-credited figures only, is in `valtonen2016/`.
 
 On 27 Oct 2026 the human relayed, through the coordinating agent, an instruction to commit the book anyway ("just
 commit it idc"), as `../2026-10-25_replication/papers/valtonen_etal_2016_three_body_problem_pythagoras_to_hawking_Springer.pdf`.
