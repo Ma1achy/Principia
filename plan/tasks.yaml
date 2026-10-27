@@ -837,6 +837,14 @@
   requirements: [REQ-INT-004, REQ-INT-016, REQ-INT-036, REQ-PERF-001, REQ-PERF-002]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]
+- id: TASK-M2-51
+  milestone: M2
+  title: "The orbit atlas through encode and decode: E and L per row (OC-2), and every atlas IC in the 8D latent chart (AT-D6)"
+  depends_on: [TASK-M2-20, TASK-M2-26]
+  needs: []
+  requirements: [REQ-VAL-214, REQ-VAL-215, REQ-VAL-216, REQ-VAL-217]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M3-02
   milestone: M3
   title: Stepper occupants and the capability profile
@@ -1165,6 +1173,198 @@
   requirements: [REQ-SYS-020, REQ-SYS-023, REQ-SYS-025, REQ-INT-058, REQ-INT-060, REQ-INT-062, REQ-INT-063, REQ-INT-067]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
+- id: TASK-M3-42
+  milestone: M3
+  title: "Atlas closure at order (OC-1, the first batch's DRAFT-VAL-01)"
+  depends_on: [TASK-M3-24, TASK-M3-08, TASK-M2-51]
+  needs: []
+  requirements: [REQ-VAL-201, REQ-VAL-202]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-43
+  milestone: M3
+  title: "Published against refined: each atlas source's published initial conditions measured (OC-3)"
+  depends_on: [TASK-M3-42]
+  needs: []
+  requirements: [REQ-VAL-218, REQ-VAL-219]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-44
+  milestone: M3
+  title: "The syzygy count against the atlas's `syz` on every row (OC-5), and its counting convention"
+  depends_on: [TASK-M3-16, TASK-M3-42]
+  needs: []
+  requirements: [REQ-VAL-220, REQ-VAL-221]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-45
+  milestone: M3
+  title: "The atlas's per-family coverage report (OC-6)"
+  depends_on: [TASK-M3-42, TASK-M3-43, TASK-M3-44]
+  needs: []
+  requirements: [REQ-VAL-222]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-46
+  milestone: M3
+  title: "Li & Liao's free-fall orbits: closure, rest at T/2 and the alias pairs (LL-1, LL-2, the first batch's DRAFT-VAL-02), and the website-only rows (LL-5)"
+  depends_on: [TASK-M3-42, TASK-M2-13]
+  needs: []
+  requirements: [REQ-VAL-203, REQ-VAL-204, REQ-VAL-227]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-47
+  milestone: M3
+  title: "Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3)"
+  depends_on: [TASK-M3-46]
+  needs: []
+  requirements: [REQ-VAL-223, REQ-VAL-224]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-48
+  milestone: M3
+  title: "Heggie 1974's regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03)"
+  depends_on: [TASK-M3-24, TASK-M3-08]
+  needs: []
+  requirements: [REQ-VAL-205, REQ-VAL-206, REQ-VAL-207, REQ-VAL-208]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-49
+  milestone: M3
+  title: "Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1)"
+  depends_on: [TASK-M3-48]
+  needs: []
+  requirements: [REQ-VAL-240, REQ-VAL-241]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-50
+  milestone: M3
+  title: "Agekyan & Anosova II: decay times from exact rest (AA-6, the first batch's DRAFT-VAL-05)"
+  depends_on: [TASK-M3-34, TASK-M2-20]
+  needs: []
+  requirements: [REQ-VAL-209, REQ-VAL-210]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-51
+  milestone: M3
+  title: "The no-integration controls: Monaghan's planar eccentricity row and the random-triangle Z (Q-2's Theory row, Q-4; DRAFT-VAL-06)"
+  depends_on: [TASK-M3-12, TASK-M3-24]
+  needs: []
+  requirements: [REQ-VAL-211, REQ-VAL-212]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-52
+  milestone: M3
+  title: "The butterflies' two published periods, decided by closure (BG-4, the first batch's DRAFT-VAL-07)"
+  depends_on: [TASK-M3-24, TASK-M3-08]
+  needs: []
+  requirements: [REQ-VAL-213]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-53
+  milestone: M3
+  title: "The Belgrade orbits close: the PRL's 15, the gallery's 206 sequence orbits and 57 BHH satellites, Hudomal's 38 and his E = −0.5 periods (SD-1, BG-1, BG-2, HU-3, HU-5)"
+  depends_on: [TASK-M3-24, TASK-M3-08]
+  needs: []
+  requirements: [REQ-VAL-228, REQ-VAL-229, REQ-VAL-230, REQ-VAL-231, REQ-VAL-232, REQ-VAL-233, REQ-VAL-234, REQ-VAL-235, REQ-VAL-238, REQ-VAL-239]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-54
+  milestone: M3
+  title: "Period against word length: Li & Liao's period per letter (LL-4) and Hudomal's seven sequence fits (HU-4)"
+  depends_on: [TASK-M3-30, TASK-M3-46, TASK-M3-53]
+  needs: []
+  requirements: [REQ-VAL-225, REQ-VAL-226, REQ-VAL-236, REQ-VAL-237]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M3-55
+  milestone: M3
+  title: "The prototype's integrator and classifier numbers, reproduced or explained (tier D: D-1, D-2, D-4, D-5)"
+  depends_on: [TASK-M3-28, TASK-M3-32, TASK-M3-34, TASK-M3-01]
+  needs: []
+  requirements: [REQ-VAL-299, REQ-VAL-300, REQ-VAL-301, REQ-VAL-302, REQ-VAL-303, REQ-VAL-304, REQ-VAL-305]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-56
+  milestone: M3
+  title: "Burrau and the Pythagorean family: Chitan et al.'s sixteen triangles, Boekholt et al.'s lifetime and τ_L, Mikkola's bounce orbit and the f64 run against R-33's reference (CH-1, B-1, B-2, V-6, PL-8's first half)"
+  depends_on: [TASK-M3-27, TASK-M3-25, TASK-M3-14, TASK-M3-34, TASK-M2-13]
+  needs: []
+  requirements: [REQ-VAL-242, REQ-VAL-243, REQ-VAL-244, REQ-VAL-245, REQ-VAL-246, REQ-VAL-247, REQ-VAL-248, REQ-VAL-249, REQ-VAL-250, REQ-VAL-251]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-57
+  milestone: M3
+  title: "Aarseth et al. 1994a: the Burrau neighbourhood on six rings per body (P-1 to P-6)"
+  depends_on: [TASK-M3-27, TASK-M3-34]
+  needs: []
+  requirements: [REQ-VAL-252, REQ-VAL-253, REQ-VAL-254, REQ-VAL-255, REQ-VAL-256, REQ-VAL-257, REQ-VAL-258, REQ-VAL-259, REQ-VAL-260, REQ-VAL-261]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-58
+  milestone: M3
+  title: "Aarseth et al. 1994b: triple approaches and parameter distributions over region D, circle R and the Pythagorean escapers (Q-1 to Q-3)"
+  depends_on: [TASK-M3-51, TASK-M3-57]
+  needs: []
+  requirements: [REQ-VAL-262, REQ-VAL-263, REQ-VAL-264, REQ-VAL-265, REQ-VAL-266, REQ-VAL-267]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-59
+  milestone: M3
+  title: "Agekyan & Anosova's near-rest runs and Anosova 1969's unequal masses (AA-2 to AA-5, AA-7, AA-8, AN-1)"
+  depends_on: [TASK-M3-50, TASK-M2-13]
+  needs: []
+  requirements: [REQ-VAL-268, REQ-VAL-269, REQ-VAL-270, REQ-VAL-271, REQ-VAL-272, REQ-VAL-273, REQ-VAL-274, REQ-VAL-275, REQ-VAL-276, REQ-VAL-277, REQ-VAL-278, REQ-VAL-279, REQ-VAL-280]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-60
+  milestone: M3
+  title: "Lehto et al. 2008 at a small grid: local homogeneity, reversibility and the step-halving controls (L-3, L-4, L-5)"
+  depends_on: [TASK-M3-34, TASK-M3-08]
+  needs: []
+  requirements: [REQ-VAL-281, REQ-VAL-282, REQ-VAL-283, REQ-VAL-284, REQ-VAL-285]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-61
+  milestone: M3
+  title: "Region-D statistics: the lifetime tail and lifetime against Lyapunov time (V-9, MT-1)"
+  depends_on: [TASK-M3-34, TASK-M3-14]
+  needs: []
+  requirements: [REQ-VAL-286, REQ-VAL-287, REQ-VAL-288, REQ-VAL-289]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-62
+  milestone: M3
+  title: "Converged-code references: Boekholt et al. 2020's lifetime grid and Breen et al. 2020's Brutus runs (GG-1, BR-1)"
+  depends_on: [TASK-M3-25, TASK-M3-34]
+  needs: []
+  requirements: [REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-63
+  milestone: M3
+  title: "Binary-plus-single targets: Trani et al.'s planar row, Manwadkar et al.'s escape probabilities, Stone & Leigh's closed forms (TR-1, MK-1, SL-1)"
+  depends_on: [TASK-M3-34]
+  needs: []
+  requirements: [REQ-VAL-318, REQ-VAL-319, REQ-VAL-320, REQ-VAL-321, REQ-VAL-322]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-64
+  milestone: M3
+  title: "Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)"
+  depends_on: [TASK-M3-34]
+  needs: []
+  requirements: [REQ-VAL-323, REQ-VAL-324]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
+- id: TASK-M3-65
+  milestone: M3
+  title: "Hierarchical stability limits, prograde and retrograde (V-11)"
+  depends_on: [TASK-M3-34]
+  needs: []
+  requirements: [REQ-VAL-330, REQ-VAL-331]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-3]
 - id: TASK-M4-02
   milestone: M4
   title: "The native in-process wgpu parity harness: GPU stepOnce and decodeOnly on shared states"
@@ -1333,6 +1533,38 @@
   requirements: [REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-3, PIT-9]
+- id: TASK-M4-22
+  milestone: M4
+  title: "Lehto's lifetime map at full resolution, and the shield's mirror symmetry (L-1, V-8 (a))"
+  depends_on: [TASK-M4-17, TASK-M3-60]
+  needs: []
+  requirements: [REQ-VAL-290, REQ-VAL-291, REQ-VAL-292]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M4-23
+  milestone: M4
+  title: "Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2)"
+  depends_on: [TASK-M4-17, TASK-M3-53, TASK-M3-11]
+  needs: []
+  requirements: [REQ-VAL-314, REQ-VAL-315, REQ-VAL-316, REQ-VAL-317]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M4-24
+  milestone: M4
+  title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
+  depends_on: [TASK-M4-17, TASK-M3-16]
+  needs: []
+  requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M4-25
+  milestone: M4
+  title: "Li, Li & Liao's mass-plane contours for one periodic family (LLL-1)"
+  depends_on: [TASK-M4-17, TASK-M2-13]
+  needs: []
+  requirements: [REQ-VAL-329]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M5-02
   milestone: M5
   title: Quality tiers and the one settings struct
@@ -1989,6 +2221,14 @@
   requirements: [REQ-COL-054]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M6-52
+  milestone: M6
+  title: "Deep zooms of the shield: Lehto's 3.125×10⁻⁶ zoom and Valtonen et al.'s three windows (L-2, V-8 (b))"
+  depends_on: [TASK-M6-08, TASK-M4-22]
+  needs: []
+  requirements: [REQ-VAL-293, REQ-VAL-294]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M7-02
   milestone: M7
   title: "Colour spaces: sRGB transfer, OKLab and OKLCH, transcription-checked against Ottosson"
@@ -2550,6 +2790,14 @@
   requirements: [REQ-GUI-036, REQ-GUI-037, REQ-GUI-039, REQ-PERF-071, REQ-PERF-091]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
+- id: TASK-M7-71
+  milestone: M7
+  title: "The prototype's Chazy-classifier numbers against Fewbody, reproduced or explained (D-3)"
+  depends_on: [TASK-M7-35, TASK-M7-36]
+  needs: []
+  requirements: [REQ-VAL-306, REQ-VAL-307]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M8-02
   milestone: M8
   title: "Headless drive: the engine from a JSON state file, and the native headless survey"
@@ -3462,3 +3710,28 @@
   requirements: [REQ-SYS-092, REQ-SYS-093, REQ-GUI-401, REQ-PERF-115]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
+
+- id: TASK-M8-97
+  milestone: M8
+  title: "Stability as structure: atlas orbits off the Šuvakov plane against their published stability (OC-4, AT-D5)"
+  depends_on: [TASK-M8-74, TASK-M6-05, TASK-M3-45]
+  needs: []
+  requirements: [REQ-VAL-309, REQ-VAL-310]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M8-98
+  milestone: M8
+  title: "The atlas's free-fall orbits marked on the closure field, one plane per mass set (AT-D2)"
+  depends_on: [TASK-M8-74, TASK-M4-15, TASK-M3-46]
+  needs: []
+  requirements: [REQ-VAL-308]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M8-99
+  milestone: M8
+  title: "The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane)"
+  depends_on: [TASK-M8-97]
+  needs: []
+  requirements: [REQ-VAL-311, REQ-VAL-312, REQ-VAL-313]  # R-594, R-629 (27 Oct 2026)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]

@@ -58,6 +58,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_dd_simstate_payload.md` — the byte layout, closure, `footprint_undetermined`
 - `docs/design/principia_dd_integrator.md`, `docs/design/principia_dd_predictability_horizon.md` — *both carry a Heggie banner*
 - `docs/design/principia_dd_validation_orbits.md` — closure tests, periodic-orbit detection
+- `docs/design/principia_dd_replication.md` — the replication and verification suite: published three-body results (periodic-orbit catalogues, maps, statistics, the prototype's numbers) as engine tests, one requirement per target with its calibrated tolerance; extends `principia_dd_validation_orbits.md` (adopted by R-594 and R-629; RQ-591 to RQ-598 queued)
 - `docs/design/principia_deep_zoom.md` — quad-local coords, the linearised decoder, **switchover is not a stop**
 - `docs/design/principia_coordinate_conventions_note.md` — three spaces, one flip
 
