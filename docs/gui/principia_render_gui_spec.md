@@ -236,8 +236,12 @@ in Lines ▾ holds its settings, in this order," and "each control is in the key
 **Trace playback and icon placement (R-569).** Three rules, each in `principia_lines.md` §8 with its transcription
 from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
 - **A new trace while playing restarts at `t = 0`.** Under "With the playhead", while the Time panel plays, a hover or
-  click that integrates a different IC sets the playhead to 0 and keeps playing; paused, the playhead does not move;
-  a pan, zoom or re-projection of the same trace never restarts it. Only a new run restarts: a hover into a repeat of
+  click that integrates a different IC starts the new trace's own head at 0 and runs it at the transport's rate;
+  paused, the head does not move; a pan, zoom or re-projection of the same trace never restarts it. Each of the Time
+  panel's own controls that jumps its playhead (the scrubber dragged, the scrubber clicked to a time, a step, and the
+  loop's wrap to 0; the Time bullet below) puts the trace's head back on the playhead (R-617, applied per R-369;
+  `principia_lines.md` §8). *Was:* "a hover or click that integrates a different IC sets the playhead to 0 and keeps
+  playing; paused, the playhead does not move" (R-569 ruling 1 before R-617; gui review 5661813927 of PR #293, G1). Only a new run restarts: a hover into a repeat of
   the shown system, or a click that pins the trace the hover already shows, integrates no new run and restarts nothing
   (R-616, closing RQ-533). Only the trace's own marker restarts (R-617, closing RQ-534): the new trace's head starts at
   0 and runs at the transport's rate while the transport plays; the figure's global playhead, the Time panel's, and
