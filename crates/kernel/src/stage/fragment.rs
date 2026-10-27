@@ -230,7 +230,8 @@ pub fn decode_burrau_theta_k_defaults(
 }
 
 /// The descriptor alone, [`descriptor::describe`] at f32 on the `(m, r, p)` its words hold: the producers' pole selects
-/// (R-436), as the fragment decode forms them.
+/// (R-436), as the fragment decode forms them. With no configuration block, its `rho_angle` is read from the positions;
+/// the fragment decode reads it from the configuration block's `(ρ̃, λ̃)` (R-628).
 #[spirv(compute(threads(1)))]
 pub fn describe(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] words: &mut [u32; DESCRIBE_WORDS],

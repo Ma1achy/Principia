@@ -872,8 +872,8 @@ fn check_geometry<R: Q>(dec: DeltaMDecode<R>, u: f64, v: f64) {
     );
     assert_eq!(
         d.descriptor,
-        kernel::decode::descriptor::describe(&d.ic),
-        "the descriptor is not the decoded IC's at {at}"
+        kernel::decode::descriptor::describe_decoded(&d.ic, &d.config),
+        "the descriptor is not the decoded IC's, its rho_angle the configuration's (R-628) at {at}"
     );
     assert!(
         (lambda[0].f() + w * system.rho[0].f()).abs() <= 4.0 * eps,

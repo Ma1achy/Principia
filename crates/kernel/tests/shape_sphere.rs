@@ -852,8 +852,8 @@ fn check_shared(decode: Decode64) {
         );
         assert_eq!(
             d.descriptor,
-            descriptor::describe(&d.ic),
-            "the descriptor is not the canonical ic's"
+            descriptor::describe_decoded(&d.ic, &d.config),
+            "the descriptor is not the canonical ic's, its rho_angle Φ's (R-628)"
         );
         let total = [0, 1].map(|j| d.ic.p.iter().map(|q| q[j]).sum::<f64>());
         let com = [0, 1].map(|j| (0..3).map(|i| d.ic.m[i] * d.ic.r[i][j]).sum::<f64>());
@@ -959,8 +959,8 @@ fn check_canonical(decode: Decode64) {
         );
         assert_eq!(
             d.descriptor,
-            descriptor::describe(&want),
-            "the descriptor is not C(Φ)'s"
+            descriptor::describe_decoded(&want, &d.config),
+            "the descriptor is not C(Φ)'s, its rho_angle Φ's (R-628)"
         );
         let q = &d.descriptor;
         assert!(
@@ -1034,8 +1034,8 @@ fn check_energy_norm(decode: DecodeChart64) {
         let q = &on_.descriptor;
         assert_eq!(
             *q,
-            descriptor::describe(&on_.ic),
-            "the descriptor is not the result's"
+            descriptor::describe_decoded(&on_.ic, &on_.config),
+            "the descriptor is not the result's, its rho_angle Φ's (R-628)"
         );
         let e = q.K_0 + q.V_0;
         assert!(
