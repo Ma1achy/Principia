@@ -10,7 +10,9 @@ tier") needs above f64, traced to its primary sources, and the agreement between
 > Cross-check locally against atlas-params.json (its `ic_hp` and `period_hp` fields), and commit only the agreement
 > numbers. … The 99 atlas rows with no listed source are closure tests only, and are never cited."
 
-Every citation key below is from `../2026-10-26_orbit_catalogues/CITATIONS.md`. `atlas-params.json` (sha256
+Every citation key below is from `../2026-10-26_orbit_catalogues/CITATIONS.md`, which since 27 Oct 2026 cites each
+reference in the journal's wording, checked against Crossref, with the site's beside it (its "Checked against the
+journal"). `atlas-params.json` (sha256
 `a5378e2b…`) was read read-only where it lies and is not in the repo; nothing here quotes it. Only derived numbers
 from it are committed.
 
@@ -47,9 +49,9 @@ Retrieved 27 Oct 2026. Every file is listed in `sources.tsv` with its URL and sh
 |---|---|---|---|---|
 | `hristov2022`: Hristov et al. (2022), *New families of periodic orbits for the planar three-body problem computed with high precision*, CEUR Workshop Proceedings 3191, 45–50, arXiv:2205.14709 | https://db2.fmi.uni-sofia.bg/3body123/ (the paper's ref. 9) | 123 solutions, (vx, vy, T, T*) | 150 correct digits (148–150 significant) | `datafiles/all_150_digits_123.txt`; `datafiles/sol1.txt`…`sol123.txt` |
 | `hristov2023`: Hristov et al. (2023), *A database of high precision trivial choreographies for the planar three-body problem*, LNCS 13858, 171–180, arXiv:2210.00594 | https://db2.fmi.uni-sofia.bg/3bodychor462/ (the paper's ref. 22) | 462 trivial choreographies | 180 correct digits | `datafiles/digits180.txt`; `datafiles/sol1.txt`…`sol462.txt` |
-| `hristov2024nc`: Hristov et al. (2024), *Nontrivial choreographies of the planar three-body problem*, Physics of Particles and Nuclei 55, 495–497, doi:10.1134/S1063779624030444 | https://db2.fmi.uni-sofia.bg/3bodychor164/ | 164 nontrivial and 259 trivial choreographies | 180 correct digits | `nontriv_180.txt`, `triv_180.txt` |
+| `hristov2024nc`: Hristov et al. (2024), *Searching for New Nontrivial Choreographies for the Planar Three-Body Problem*, Physics of Particles and Nuclei 55, 495–497, doi:10.1134/S1063779624030444 | https://db2.fmi.uni-sofia.bg/3bodychor164/ | 164 nontrivial and 259 trivial choreographies | 180 correct digits | `nontriv_180.txt`, `triv_180.txt` |
 | `hristov2026`: Hristov, Hristova & Tanikawa (2026), *An extensive search for stable periodic orbits of the equal-mass zero angular momentum three-body problem*, New Astronomy 125, arXiv:2510.22802 | https://db2.fmi.uni-sofia.bg/3bodystab971/ (the paper's ref. 40) | 971 linearly stable i.c.s (685 distinct solutions) | 100 correct digits | `ics_971_100.txt`, `ics_971_100_num.txt`, and the four region files `Shubart_S_num.txt`, `Intermediate_Moth_num.txt`, `Eight_num.txt`, `Broucke_num.txt` |
-| `simo2001`: Simó (2001), *Dynamical properties of the figure eight solution of the three-body problem*, Contemporary Mathematics 292 | Simó's page http://www.maia.ub.es/dsg/3body.html and preprint http://www.maia.ub.es/dsg/2001/0104simo.ps.gz | 345 choreographies | 4 digits (`choreo3.tar.gz`: plot points, `dat.cir` and `dat.orb`); 8 digits for three orbits in the preprint's table | `choreo3.tar.gz` |
+| `simo2001`: Simó (2002), *Dynamical properties of the figure eight solution of the three-body problem*, Contemporary Mathematics 292, 209–228, doi:10.1090/conm/292/04926 | Simó's page http://www.maia.ub.es/dsg/3body.html and preprint http://www.maia.ub.es/dsg/2001/0104simo.ps.gz | 345 choreographies | 4 digits (`choreo3.tar.gz`: plot points, `dat.cir` and `dat.orb`); 8 digits for three orbits in the preprint's table | `choreo3.tar.gz` |
 | Not in CITATIONS.md: Paul Masson, *Simó's Three-Body Choreographies in Action*, Analytic Physics (web page), https://analyticphysics.com/Gravitational%20Choreographies/Sim%C3%B3's%20Three-Body%20Choreographies%20in%20Action.htm | its data file https://analyticphysics.com/www/data/simo-initial-conditions.txt | 345 rows, (c1…c5) | 13–17 significant digits | `simo-initial-conditions.txt` |
 | `liliao2017`: Li & Liao (2017), *More than six hundred new families of Newtonian periodic planar collisionless three-body orbits*, Sci. China PMA 60, 129511 | GitHub `sjtu-liao/three-body` at commit `b96b0193579a9952299d710ed616f529bb7cf898`, `three-body-pictures.md`; https://numericaltank.sjtu.edu.cn/three-body/three-body-movies.htm; the arXiv tables (1705.00527v4) | 695 equal-mass orbits, (v1, v2, T) | 10 decimals | `three-body-pictures.md`, `three-body-movies.htm` |
 
@@ -58,19 +60,19 @@ Notes on the table:
 - **The Hristov databases' own record of their papers.** The `3bodystab971` page names the journal as "New Astronomy,
   Volume 125, July 2026" with the ScienceDirect link `https://www.sciencedirect.com/science/article/pii/S1384107626000114`,
   matching CITATIONS.md's `hristov2026`. The `3bodychor164` page gives `hristov2024nc`'s title as "Searching for New
-  Nontrivial Choreographies for the Planar Three-Body Problem", where CITATIONS.md has "Nontrivial choreographies of
-  the planar three-body problem"; the DOI, 10.1134/S1063779624030444, is the same.
-- **`hristov2024nc`'s title, checked 27 Oct 2026: CITATIONS.md's title is not the journal's.** The publisher's own
+  Nontrivial Choreographies for the Planar Three-Body Problem", where the atlas's reference list has "Nontrivial
+  choreographies of the planar three-body problem"; the DOI, 10.1134/S1063779624030444, is the same.
+- **`hristov2024nc`'s title, checked 27 Oct 2026: the atlas's title is not the journal's.** The publisher's own
   page for the DOI (`https://link.springer.com/article/10.1134/S1063779624030444`) could not be read from this
   session: it answers with a bot-check page ("Client Challenge"), which was not bypassed. The publisher's own record
   of the DOI, deposited with Crossref (`https://api.crossref.org/works/10.1134/S1063779624030444`, publisher
   "Pleiades Publishing Ltd", fetched 27 Oct 2026, sha256 `402d7072e9df39d57cd5dd0c7df12dc6f101f9eedee04d6d8488176088617395`),
   gives: I. Hristov, R. Hristova, I. Puzynin, T. Puzynina, Z. Sharipov, Z. Tukhliev, *Searching for New Nontrivial
   Choreographies for the Planar Three-Body Problem*, Physics of Particles and Nuclei 55(3), 495–497 (June 2024). That
-  agrees with the authors' page and not with CITATIONS.md, whose title comes from the atlas's reference list
-  (`../2026-10-26_orbit_catalogues/threebodyorbits_sources.json`). **Cite it by the Crossref title.** CITATIONS.md is
-  the earlier batch's file and is not edited here; the discrepancy is RQ-580. The table above keeps CITATIONS.md's
-  wording, as quoted.
+  agrees with the authors' page and not with the atlas's reference list
+  (`../2026-10-26_orbit_catalogues/threebodyorbits_sources.json`). **Cite it by the Crossref title.** CITATIONS.md
+  now does, with the site's wording beside it: RQ-580, which recorded the discrepancy, was closed by the human's
+  instruction of 27 Oct 2026, and the table above quotes the corrected CITATIONS.md.
 - **Masson's page is not a publication.** Its title is the page's own `<title>`. Its author is from the site's footer
   ("Paul Masson — Independent Physicist — San Francisco"). The page says Simó "was able to locate the initial
   conditions for all 345 planar choreographies and kindly provided them to me". It is a secondary source: it is
