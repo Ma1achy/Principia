@@ -380,11 +380,13 @@ fn check_off_lattice(mirror: bool) {
         for w in scene.probe(gpu.device(), gpu.queue()).unwrap() {
             check_probe(chart, &scene, &w, mirror, f);
         }
-        // The square's centre, the depth-0 cell's: exactly (½, ½), the shape sphere's n₀ pole, where both operands of
-        // its inverse's atan2 are 0. R-437 asks the GPU to agree with the CPU there: the CPU's f32 decode of the same
-        // source, since at these parameters n₀ is a near-coincident pair (ρ̃ ~ 5·10⁻⁸), where V ∝ 1/ρ and no f32 decode
-        // can meet the f64 one within REQ-DEC-043's factor (whose domain, the golden IC and fuzzed interiors, excludes
-        // it). Both are held to the factor of the f32 CPU value.
+        // The square's centre, the depth-0 cell's: exactly (½, ½), the shape sphere's n₀ pole in exact arithmetic. In
+        // f32 the map does not land on it: n = (−1, −8.74·10⁻⁸, −4.37·10⁻⁸), so the inverse's atan2 operands are
+        // p ≈ −4.37·10⁻⁸ and q ≈ −2.19·10⁻⁸, not 0, and this is a near-pole point, not the atan2 pole itself (the
+        // generated decode's ±0 pole is not reached here). The GPU is held to the CPU there: the CPU's f32 decode of
+        // the same source, since at these parameters n is a near-coincident pair (ρ̃ ≈ 4.9·10⁻⁸), where V ∝ 1/ρ and no
+        // f32 decode can meet the f64 one within REQ-DEC-043's factor (whose domain, the golden IC and fuzzed
+        // interiors, excludes it). Both are held to the factor of the f32 CPU value.
         let centre = Scene::new(chart, [1, 1], 1, 0, &[[0, 0]]).unwrap();
         let w = centre.probe(gpu.device(), gpu.queue()).unwrap()[0];
         assert_eq!([f32::from_bits(w[37]), f32::from_bits(w[38])], [0.5, 0.5]);
