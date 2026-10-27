@@ -1,5 +1,11 @@
 # Replication suite: reproduce published three-body results as engine tests
 
+> **Note added 27 Oct 2026.** A consolidated plan, `../2026-10-27_validation_plan/PLAN.md`, is proposed for one ruling.
+> If adopted, it supersedes this file's tier tables A–D, "Sequencing" and "Papers to fetch" as the working plan,
+> without deleting them; rules 1–8 below are carried over unchanged. It also records corrections to this file in its
+> §10 (RQ-555 is closed by R-610; TASK-M2-20 is merged; the tier D figure-eight orders are AZ's). The text below is
+> left as approved.
+
 The human's instruction of 25 Oct 2026. His words:
 
 > "thought maybe the agent could replicate these results? act as good tests on the engine and stuff? what can we
@@ -153,3 +159,21 @@ overturned. When the new build disagrees, the first question is which of the two
 - Breen et al. 2020 (arXiv:1910.07291)
 - Boekholt, Moerman & Portegies Zwart 2021 (arXiv:2109.07013)
 - Li, Li & Liao 2020 (arXiv:2007.10184)
+
+## Notes added 27 Oct 2026
+
+Added after the papers named above were read in full (`../2026-10-27_papers/`). The human's words and the approved
+tables above are left as they were; these notes correct or complete them.
+
+- **Tier A, "Burrau Lyapunov time":** Boekholt, Moerman & Portegies Zwart 2021 **print no value** for the Newtonian
+  lifetime; it is only plotted (Fig. 3, bottom; the plateau reads log₁₀ T ≈ 1.8). τ_L = 4.3 ± 0.2 is a fit over runs
+  at every value of the dimensionless speed of light, relativistic ones included (Eq. 1, Fig. 5), so it is not a
+  Newtonian-only number. Targets B-1 to B-3 in `../2026-10-27_papers/TARGETS.md` state what can be compared.
+- **Tier A, "Region D Table 1":** paper II (Agekyan & Anosova, *Astrophysics* 4, 11) also gives the same 100
+  configurations **from exact rest**, with decay times, in its Table 1. Both its tables and paper I's decay-time
+  column are now transcribed, as targets AA-2 to AA-8.
+- **Tier B, "Burrau neighbourhood":** the figure details are now read. The sampling is six circles × 100 azimuths
+  around each body, not a grid, and Tables I–VIII are transcribed. A companion paper, Aarseth et al. 1994b (*CeMDA*
+  60, 131), is now in `papers/`. Targets P-1 to P-6 and Q-1 to Q-4.
+- **Papers to fetch:** Aarseth et al. 1994a and Heggie 1974 were delivered on 25 Oct 2026, and Aarseth et al. 1994b
+  on 27 Oct 2026. Li & Liao (arXiv:1805.07980) is the *New Astron.* 70, 22 paper.

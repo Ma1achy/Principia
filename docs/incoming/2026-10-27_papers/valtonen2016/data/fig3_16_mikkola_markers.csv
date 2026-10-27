@@ -1,0 +1,12 @@
+# Valtonen et al. 2016, Fig. 3.16, p. 79 (PDF p. 90). Caption credit: Seppo Mikkola. No published source is given.
+# Calibration on the embedded raster (397x365 px): frame x col 1 = -3, col 395 = 4 (56.29 px/unit);
+# y row 1 = 3.5, row 363 = -1.5 (72.40 px/unit); tick spacing checks to 0.5 px.
+# Uncertainty: +-1 px on a marker centre = +-0.018 in x, +-0.014 in y; markers are ~10 px discs.
+# Body identity: m-3 magenta point / red track, m-4 cyan point / green track, m-5 yellow point / blue track
+# (each track starts at its point). Masses 3, 4, 5 (book p. 76).
+marker,x,y
+m3_initial (magenta point),0.926,3.021
+m4_initial (cyan point),-1.984,-1.057
+m5_initial (yellow point),1.034,-0.977
+m3_at_bounce (black open circle),1.841,0.876
+m4_m5_collision (brown open circle),-0.619,-0.291

@@ -1,0 +1,7 @@
+# Valtonen et al. 2016, Fig. 3.12, p. 75 (PDF p. 86). Values are the printed labels, not digitised.
+# Credit in the caption: Szebehely & Peters 1967, AJ 72, 876 (doi:10.1086/110355), their Fig. 1.
+# Bodies start at rest (book p. 74: 'initially at rest at the corners of a Pythagorean right triangle').
+body,mass,x,y
+1,3,1,3
+2,4,-2,-1
+3,5,1,-1

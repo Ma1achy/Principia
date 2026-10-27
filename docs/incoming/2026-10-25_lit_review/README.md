@@ -6,8 +6,8 @@ The human's literature review, as a record (R-1, R-159). It is not authority. It
 | Path | sha256 | What it is |
 |---|---|---|
 | `lit_review.tex` | `8a6e9970de30422bb4b7c7fdb397f0882b14320bd3025c2076302165e6d4675c` | "Related Work — Principia: A Real-Time WebGPU Explorer of the Three-Body Initial-Condition Manifold", M. Doherty, March 2026. Byte for byte as delivered on 25 Oct 2026; only the extension was changed, from `.txt` to `.tex` |
-| `lit_review_2026-10.tex` | `807f17fd3837ba3e72c88310e72544e3a07b5a18513a6089f482e23806958057` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
-| `lit_review_2026-10.pdf` | `0b38023fb541b1fd47ac43fafb2185919c548a570bbf9731496c367b21992569` | The revision, typeset |
+| `lit_review_2026-10.tex` | `1b12a313af55bbea5bed2f7a69065e216ea8e69e7dae12e7a4ae144ac3635e35` | The same review revised on 25 Oct 2026 against the corpus and the region D papers (`../2026-10-24_anosova/`). Approved by the human, who kept the two prototype results and the Pythagorean-indexing claim |
+| `lit_review_2026-10.pdf` | `bce0cbd085f47d92a5dca8ba589549e816374128ddb54619fb4dfdff1db0bcaf` | The revision, typeset |
 
 What the revision changed:
 
@@ -78,3 +78,25 @@ Crossref or the paper itself:
 - **Also corrected, in `../2026-10-26_precision_ladder/`:** arXiv:2001.01221, cited there for the Pythagorean problem
   integrated to t = 63, is Antoñana, Chartier, Makazaga & Murua (SIAM J. Appl. Dyn. Syst. 19, 2658, 2020), not Wang,
   Nitadori & Makino, which the independent review supplied without checking.
+
+Fourth revision, 27 Oct 2026. Every sentence citing the papers delivered that day was checked against the PDFs
+(`../2026-10-27_papers/`, whose README §4 lists each correction with its source page):
+
+- **Corrected:**
+  - Boekholt et al. 2021's second author is A. (Arend) Moerman, not F.
+  - Valtonen et al. 2016 is described as the non-mathematical history its preface says it is, not as a
+    celestial-mechanics introduction.
+  - Agekyan & Anosova I tabulates the perimeter of the triple approach that led to disintegration (and of any closer
+    one), not of the closest one.
+  - Its starting velocities are along the line of the first two bodies with zero total momentum, not "equal and
+    opposite".
+  - Paper II repeated the 100 configurations from exact rest and completed the stopped runs, rather than "reprinting
+    the initial conditions".
+  - Li & Liao's 234 orbits span six mass sets, 30 of them equal-mass.
+  - Lehto et al.'s self-similarity is claimed at the scales they examined, not "every scale"; their 28.6% is at a
+    neighbour spacing of 1.25×10⁻³, not "the finest scale".
+  - Aarseth et al. 1994a's regular ring at the smallest radius is complete only around m₁.
+  - The angular-momentum sentence in Validation Targets is qualified by R-592's five exceptions.
+- **Added:** Aarseth et al. 1994b (`aarseth1994b`); DOIs or arXiv ids for nine entries; the translation issue years
+  of *Astrophysics* 4 and 5 (1969 and 1970) beside the volume years the papers print.
+- Rebuilt PDF: 22 pages, no undefined references. Its four overfull boxes predate this revision.

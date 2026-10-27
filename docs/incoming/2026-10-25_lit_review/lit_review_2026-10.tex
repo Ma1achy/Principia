@@ -78,8 +78,8 @@ basin boundaries in the IC space are what this predicts.
 A convergent power-series solution was given by Sundman~\cite{sundman1912}, but it converges too
 slowly for practical computation.  The problem must therefore be treated numerically.
 Comprehensive introductions from the celestial-mechanics perspective are given by
-Szebehely~\cite{szebehely1967book}, Valtonen et al.~\cite{valtonen2016}, and Heggie \&
-Hut~\cite{heggie2003}.
+Szebehely~\cite{szebehely1967book} and Heggie \& Hut~\cite{heggie2003}; Valtonen et
+al.~\cite{valtonen2016} give a largely non-mathematical history of the problem.
 
 Generic bound three-body systems almost always dissolve into a binary and an escaping single
 body~\cite{heggie2003}; understanding how the outcome depends on initial conditions, and charting
@@ -104,11 +104,16 @@ near the standard Pythagorean IC.  They displaced one body at a time to 100 poin
 circles of radius $5 \times 10^{-8}$ to $5 \times 10^{-3}$ about its standard position, recorded
 the escape angle and the identity of the escaper, and used time-reversed integrations to set
 aside non-predictable runs.  A small neighbourhood of the standard position of each body is a
-regular region, in which the final outcome varies continuously with the initial position; other
+regular region, in which the final outcome varies continuously with the initial position, though at
+the smallest radius the ring of regular outcomes is complete only around the lightest body and
+broken (a `horseshoe') around the other two; other
 regular regions exist, and outside them the outcome changes abruptly.  Escape follows a close
 triple approach, and close triple approaches often made the motion non-predictable even with
 regularisation---a first map of the IC-space structure near the Pythagorean point, and an early
-statement of the reliability problem taken up in \S\ref{sec:reliability}.  The Burrau problem
+statement of the reliability problem taken up in \S\ref{sec:reliability}.  A companion
+study~\cite{aarseth1994b} compared the close triple approaches preceding escape in 5000 equal-mass
+free-fall systems with those of the 831 predictable runs near the Pythagorean point, and found the
+same `fly-by' character in both.  The Burrau problem
 remains a test case: Boekholt, Moerman \& Portegies Zwart~\cite{boekholt2021} solve it to
 convergence in its Newtonian limit as the control for a relativistic study, and Chitan, Myll\"{a}ri
 \& Haque~\cite{chitan2022} integrate all sixteen Pythagorean triangles with hypotenuse below 100,
@@ -133,12 +138,15 @@ configuration is determined, up to scale and rotation, by the shape of the trian
 two bodies at $(\mp\tfrac12, 0)$ and let the third range over a region $D$ bounded by the
 positive coordinate axes and the unit circle centred on the first body,
 $(\xi+\tfrac12)^2+\eta^2 \le 1$ with $\xi,\eta \ge 0$, which contains every configuration once.
-Their 100 trajectories, with ICs drawn at random in $D$, were given small equal and opposite
-initial velocities rather than none, to avoid a collision at the first close approach; they
+Their 100 trajectories, with ICs drawn at random in $D$, were given small initial velocities
+along the line of the first two bodies, with zero total momentum, rather than none, to avoid a
+collision at the first close approach; they
 tabulated each IC with its energy, angular momentum, disintegration time and the perimeter of the
-closest triple approach.  Every completed computation ended in disintegration after a close
-triple approach.  A companion paper~\cite{agekian1968b} continued the study and reprints the initial
-conditions.  This work introduced the paradigm of treating IC space as a
+triple approach after which the system disintegrated, and of any closer one before it.  Every
+completed computation ended in disintegration after a close triple approach.  A companion
+paper~\cite{agekian1968b} repeated the same 100 configurations from exact rest, linearising the
+equations inside close binary approaches, and completed the runs the first paper had to stop.
+This work introduced the paradigm of treating IC space as a
 two-dimensional region to be surveyed by outcome, and region $D$ underpins all subsequent
 IC-manifold mapping in this tradition.  Li \& Liao~\cite{li2018} restate region $D$ at exact
 rest and use it to search for periodic free-fall orbits.
@@ -155,9 +163,11 @@ pixel-by-pixel computation over the Agekyan--Anosova domain using approximately 
 simulations, colour-coding each IC by the lifetime of the triple system before dissolution.  The
 resulting image resembles a Maasai warrior's shield: broad bands of short-lived systems flanked
 by intricate swirling structures of longer-lived systems.  Zooming in reveals the same band
-structure repeating at every scale, consistent with fractal basin boundaries; Lehto et al.\ report
+structure repeating at each finer scale they examined, down to pixels of $3.125\times10^{-6}$,
+consistent with fractal basin boundaries; Lehto et al.\ report
 a Hausdorff dimension of 1.5 for their map and find 28.6\% of positions locally
-homogeneous at its finest scale, and they map time-reversibility over the same domain.
+homogeneous at a neighbour spacing of $1.25\times10^{-3}$, falling to 8.6\% at ten times that
+spacing, and they map time-reversibility over the same domain.
 
 This study is the closest existing precedent to Principia's rendering task.  It is, however,
 subject to the same restrictions as the Agekyan--Anosova map: equal masses, zero velocities, and
@@ -626,8 +636,8 @@ The literature on periodic orbits of the three-body problem provides an importan
 point.  \v{S}uvakov \& Dmitra\v{s}inovi\'{c}~\cite{suvakov2013} reported 13 new families of planar
 equal-mass periodic orbits using a topological classification based on the shape sphere.  Li \&
 Liao~\cite{li2017} used clean numerical simulation to find more than 600 further families, and in
-the free-fall problem Li \& Liao~\cite{li2018} report 234 collisionless periodic orbits with
-unequal masses and Hristov, Hristova, Dmitra\v{s}inovi\'{c} \& Tanikawa~\cite{hristov2024}
+the free-fall problem Li \& Liao~\cite{li2018} report 234 collisionless periodic orbits over six
+mass sets, 30 of them equal-mass, and Hristov, Hristova, Dmitra\v{s}inovi\'{c} \& Tanikawa~\cite{hristov2024}
 revisit the equal-mass collisionless free-fall orbits at scale.  These catalogues matter because
 periodic orbits should appear as distinguished islands of regularity in the IC maps, and because
 their published initial conditions give exact validation targets.
@@ -714,7 +724,8 @@ precision; the
 triple-collision points tabulated inside region $D$~\cite{tanikawa2021}; the lifetime grid of~\cite{boekholt2020}
 at accuracy $10^{-70}$; and the
 Agekyan--Anosova initial conditions~\cite{agekian1967,agekian1968b}, whose tabulated angular
-momenta follow directly from their stated ICs.  The tabulated energies in~\cite{agekian1967} do
+momenta follow directly from their stated ICs on all but five rows of the first paper's table, and
+whose second paper gives a decay time for each of the 100 configurations started from exact rest.  The tabulated energies in~\cite{agekian1967} do
 not follow from the paper's own energy formula; that discrepancy is recorded rather than resolved.
 
 % =========================================================
@@ -788,9 +799,16 @@ A regularization of the three-body problem.
 \textit{Celestial Mechanics}, \textbf{10}, 185--205.
 
 \bibitem{aarseth1994}
-Aarseth, S.\,J., Anosova, J.\,P., Orlov, V.\,V., \& Szebehely, V.\,G. (1994).
+Aarseth, S.\,J., Anosova, J.\,P., Orlov, V.\,V., \& Szebehely, V.\,G. (1994a).
 Global chaoticity in the Pythagorean three-body problem.
 \textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{58}, 1--16.
+doi:10.1007/BF00692114.
+
+\bibitem{aarseth1994b}
+Aarseth, S.\,J., Anosova, J.\,P., Orlov, V.\,V., \& Szebehely, V.\,G. (1994b).
+Close triple approaches and escape in the three-body problem.
+\textit{Celestial Mechanics and Dynamical Astronomy}, \textbf{60}, 131--137.
+doi:10.1007/BF00693096.
 
 \bibitem{aarseth2003}
 Aarseth, S.\,J. (2003).
@@ -806,8 +824,9 @@ Translated from \textit{Astronomicheskii Zhurnal}, \textbf{44}(6), 1261--1273 (1
 \bibitem{agekian1968b}
 Agekyan, T.\,A., \& Anosova, Zh.\,P. (1968).
 Investigation of the dynamics of triple systems by the method of statistical tests.\ II.
-\textit{Astrophysics}, \textbf{4}(1), 11--16.
+\textit{Astrophysics}, \textbf{4}(1), 11--16 (translation issued 1969).
 Translated from \textit{Astrofizika}, \textbf{4}(1), 31--40.
+doi:10.1007/BF01013153.
 
 \bibitem{aguirre2001}
 Aguirre, J., Vallejo, J.\,C., \& Sanju\'{a}n, M.\,A.\,F. (2001).
@@ -934,6 +953,7 @@ Oxford University Press.
 Heggie, D.\,C. (1974).
 A global regularisation of the gravitational N-body problem.
 \textit{Celestial Mechanics}, \textbf{10}, 217--241.
+doi:10.1007/BF01227621.
 
 \bibitem{heggie1975}
 Heggie, D.\,C. (1975).
@@ -991,6 +1011,7 @@ Frequency analysis for multi-dimensional systems: global dynamics and diffusion.
 Lehto, H.\,J., Kotiranta, S., Valtonen, M.\,J., Heinäm\"{a}ki, P., Mikkola, S., \& Chernin, A.\,D. (2008).
 Mapping the three-body system: decay time and reversibility.
 \textit{Monthly Notices of the Royal Astronomical Society}, \textbf{388}, 965--970.
+doi:10.1111/j.1365-2966.2008.13450.x; arXiv:0805.2844.
 
 \bibitem{leimkuhler2004}
 Leimkuhler, B., \& Reich, S. (2004).
@@ -1007,7 +1028,7 @@ arXiv:1705.00527.
 Li, X., \& Liao, S. (2019).
 Collisionless periodic orbits in the free-fall three-body problem.
 \textit{New Astronomy}, \textbf{70}, 22--26.
-arXiv:1805.07980.
+doi:10.1016/j.newast.2019.01.003; arXiv:1805.07980.
 
 \bibitem{mardling2001}
 Mardling, R.\,A., \& Aarseth, S.\,J. (2001).
@@ -1160,6 +1181,7 @@ doi:10.1051/0004-6361/202449862; arXiv:2403.03247.
 Valtonen, M., Anosova, J., Kholshevnikov, K., Myll\"{a}ri, A., Orlov, V., \& Tanikawa, K. (2016).
 \textit{The Three-body Problem from Pythagoras to Hawking}.
 Springer International Publishing.
+doi:10.1007/978-3-319-22726-9.
 
 \bibitem{webgpu2024}
 W3C GPU for the Web Working Group (2024).
@@ -1174,12 +1196,14 @@ Construction of higher order symplectic integrators.
 \bibitem{anosova1969}
 Anosova, Zh.\,P. (1969).
 Investigation of the dynamics of triple systems by the Monte Carlo method.\ III. The case of components with different masses.
-\textit{Astrophysics}, \textbf{5}, 81--84.
+\textit{Astrophysics}, \textbf{5}, 81--84 (translation issued 1970).
+doi:10.1007/BF01013354.
 
 \bibitem{boekholt2021}
-Boekholt, T.\,C.\,N., Moerman, F., \& Portegies Zwart, S.\,F. (2021).
+Boekholt, T.\,C.\,N., Moerman, A., \& Portegies Zwart, S.\,F. (2021).
 Relativistic Pythagorean three-body problem.
 \textit{Physical Review D}, \textbf{104}, 083020.
+doi:10.1103/PhysRevD.104.083020; arXiv:2109.07013.
 
 \bibitem{chitan2022}
 Chitan, A.\,S., Myll\"{a}ri, A., \& Haque, S. (2022).
@@ -1302,7 +1326,7 @@ arXiv:2510.22802.
 \bibitem{hudomal2015}
 Hudomal, A. (2015).
 \textit{New Periodic Solutions to the Three-Body Problem and Gravitational Waves}.
-MSc thesis, University of Belgrade.
+MSc thesis, Faculty of Physics, University of Belgrade, October 2015.
 
 \bibitem{hudomal2019}
 Hudomal, A. (2019).

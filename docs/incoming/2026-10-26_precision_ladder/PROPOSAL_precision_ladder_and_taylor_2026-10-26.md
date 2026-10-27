@@ -392,6 +392,14 @@ Each step is useful alone.
    `qf32` near its precision. Closure after `period_hp` should fall with each rung on short-period stable orbits. Fails
    if a tier does not improve on the one below. Where no `ic_hp` exists, re-converge by Newton's method at the tier's
    precision from the f64 values.
+
+   > **Correction note, 27 Oct 2026** (`../2026-10-27_hp_ics/README.md`, `agreement.txt`; `../2026-10-27_validation_plan/PLAN.md`
+   > §2.2). "1,260 rows traced" does not hold. The rows that can test tiers above f64 are **937 traced to Hristov et al.**:
+   > 688 at 97–100 digits (`hristov2026`'s 586, the 97 atlas rows with an empty source that match it, and the 5 filed
+   > under `liliao2017`, whose digits are Hristov's), 9 at 150 and 240 at 180. The 1,260 was 1,359 less the 99
+   > empty-source rows: it counted Simó's 344, which carry about 16 digits of data and test nothing above f64, and the
+   > atlas's own 76. The reference values are the databases', fetched and hash-checked, not `atlas-params.json`'s, and
+   > are not committed (RQ-579). The text above is left as written.
 7. **Horizon per tier.** Philosophy §7.1 predicts 23, 52 and 105; `df32` about 46. Measure where two neighbouring
    rungs disagree on Burrau. The prediction is an estimate; the test records the measurement and fails only if a
    higher tier's horizon is *shorter*.
