@@ -1,7 +1,7 @@
 # TASK-M5-04 — QuadRequest: flags, per-quad uniforms and quad-local sample positions
 
 - **Milestone:** M5
-- **Closes:** REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158
+- **Closes:** REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158, REQ-DEC-051, REQ-DEC-052
 - **Depends on:** TASK-M5-03
 - **Needs (earlier milestones):** REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010, REQ-TOOL-152, REQ-TOOL-019
 - **Reviewers:** code, qa, physics
@@ -31,6 +31,11 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
 - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision"
 - `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
 - `decisions.md` § "R-90 — The decoder switchover trigger *(closes RQ-41)*"
+- `decisions.md` § "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound"
+- `docs/contracts/principia_scheduler_contract.md` § "Part 4 — Terminal vs refinable, tied to the two floors"
+- `docs/contracts/principia_scheduler_contract.md` § "The absolute floor is emergent"
 
 ## Deliverables
 - `crates/engine/src/contract/quad_request.rs`: `QuadRequest`, `QuadFlags` constants; the WGSL constants generated from
@@ -39,6 +44,7 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
 - `crates/engine/src/dispatch/request.rs`: building requests from the quadtree (f64 → f32 at the seam).
 - `crates/engine/src/deep/linearise.rs`: f64 `x₀`, `J_D` by central differences of the chart→IC composite (reusing the shared decoder's f64 instantiation) — moved here from TASK-M6-07 (R-113).
 - `cargo xtask gate linear-decode-depth`: linear vs full decode across a depth sweep.
+- `cargo xtask gate linear-decode-floor` and its `--propose`: the f32 GPU path's distinguishable depth on the linear path, as integrated, at stated coordinate magnitudes `|x₀|` (R-632).
 - `fixtures/gates/quad-local-uv/`: depth-30 quads; `cargo xtask gate quad-local-uv`.
 - `fixtures/gates/quad-local-banding/`: quads at depths 21 and 30, past ℓ_switch; `cargo xtask gate quad-local-banding`
   (R-395).
@@ -48,7 +54,9 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
 - `cargo xtask gate quad-local-uv` — at depth 30, the N samples of a quad decode to N distinct f32 positions matching the f64 reference within one f32 ulp of h; min/max bounds are not read by the kernel (REQ-DEC-031).
 - `cargo test -p engine quad_request_flags` — CPU and WGSL flag constants match the table; bits 6–7 unused by any code path (REQ-PAY-064).
 - `cargo test -p kernel per_quad_uniforms` — per-quad uniforms carry c, h, x₀, J_D; kernel computes only x₀ + J_D·δ (REQ-SCHED-024).
-- `cargo xtask gate linear-decode-depth` — x₀ and J_D computed in f64 on the CPU by central differences; over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's, TASK-M6-08); the linear path distinguishes adjacent samples to depth ≥ 50; the GPU runs no nonlinear decode on a linear-mode quad (REQ-DEC-036).
+- `cargo xtask gate linear-decode-depth` — x₀ and J_D computed in f64 on the CPU by central differences; over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's, TASK-M6-08); the linear path distinguishes adjacent samples to the measured f32 GPU floor (REQ-DEC-051), quoted with |x₀|, at fixture coordinates where that floor admits the depths swept; the GPU runs no nonlinear decode on a linear-mode quad (REQ-DEC-036; R-632). *Was:* "the linear path distinguishes adjacent samples to depth ≥ 50; the GPU runs no nonlinear decode on a linear-mode quad (REQ-DEC-036)."
+- `cargo xtask gate linear-decode-floor` — REQ-DEC-052's verify: at each stated |x₀|, one of order 1 at least, a depth sweep past ℓ_switch on the linear path, the IC each sample's f32 GPU integration starts from read back from that dispatch and compared bitwise with its neighbours', the first collapsing depth reported per |x₀| beside the full decoder's; controls: a pair of adjacent samples forced bitwise-identical at a chosen depth is reported collapsed at that depth, and a measurement that reads the f64 sum x₀ + J_D·δ in place of the f32 IC the GPU integrates misses it and fails (REQ-DEC-052).
+- `cargo xtask gate linear-decode-floor --propose` — the floor proposed per stated |x₀|, with the depth sweep as its evidence; reviewer-checked, the human confirms it at the M5 gate and it is recorded in `decisions.md` (REQ-DEC-051, calibrated).
 - `cargo xtask gate quad-local-banding` — R-395's second half: at depths 21 and 30, past ℓ_switch, the N samples' quad-local offsets δ (f32, from the per-quad uniforms) step by 2h/N within REQ-TOOL-152's criterion and c (f64) + δ matches the f64 reference positions; the linear-mode (DECODE_MODE = LIN) kernel path forms no absolute f32 u; a negative fixture that sums c + δ into an absolute f32 u fails the criterion (REQ-TOOL-158). That every quad past ℓ_switch is on this path is REQ-TOOL-159's, TASK-M6-08's.
 - `cargo test -p render uv_preset_quad_local_past_l_switch` — R-395's second half on the fragment side: at depths 21 and 30, the UV preset's quad-local reconstruction from `ctx.quad.centre` and `δ = ctx.quad.half_width·(2·ctx.quad.uv − 1)`, fed this task's per-quad uniforms, passes REQ-TOOL-152's criterion on its δ deltas, and a negative fixture reading the absolute `ctx.chart.slice_uv` fails it (REQ-TOOL-158).
 
@@ -67,3 +75,4 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
   depth-30 gate alone would not show it, since near the origin (the k = 0 quad at any N; for N = 8, any u below
   2^−10) the absolute sum is exact (REQ-DEC-031's note).
   REQ-TOOL-152's bound is the one the human confirms at the M1 gate (RQ-258, closed by R-398: N is a power of two).
+- **R-632 (27 Oct 2026, RQ-578 (a) with (c)):** on the f32 GPU path `x₀ + J_D·δ` is an absolute f32 number of order `|x₀|` that the f32 integrator starts from, so the linear path's floor is the measured value, quoted with `|x₀|` (deep zoom §1, §2), not depth 50. This task measures it (REQ-DEC-052) and proposes it as a calibration (REQ-DEC-051), and `linear-decode-depth` asserts it; its fixtures use coordinates where the measured floor admits the depths they test. The coordinate magnitudes are this task's choice, at least one with `|x₀|` of order 1, checked by the physics reviewer (applied per R-369). The linear path stays, for speed and the f64-anchored decode; a floor near ~50 needs an f64 sum and integration, on the CPU or under RQ-577's ladder after M3. RQ-578 put no hold on this task, so nothing else changes. Calibration proposed here: REQ-DEC-051.

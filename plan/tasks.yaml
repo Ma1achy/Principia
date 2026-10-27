@@ -1162,7 +1162,7 @@
   title: "The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies' reading (R-563, R-564, R-566)"
   depends_on: [TASK-M3-40]
   needs: [REQ-PAY-008, REQ-PAY-009]
-  requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219]  # R-603 to R-605 (25 Oct 2026)
+  requirements: [REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106, REQ-PAY-110, REQ-INT-108, REQ-PAY-111, REQ-INT-109, REQ-TOOL-219, REQ-PAY-112]  # R-603 to R-605 (25 Oct 2026); R-632: REQ-PAY-112 (RQ-581)
   reviewers: [code, qa, physics, gui, perf]  # gui: REQ-TOOL-219's readout arm (qa review 5644656634 of PR #293, Q1); perf: the SimState widths (perf review 5661999637 of PR #293, P1)
   pitfalls: [PIT-3]
 - id: TASK-M4-01
@@ -1586,7 +1586,7 @@
   title: "QuadRequest: flags, per-quad uniforms and quad-local sample positions"
   depends_on: [TASK-M5-03]
   needs: [REQ-TOOL-013, REQ-TOOL-015, REQ-SYS-021, REQ-SYS-023, REQ-PERF-012, REQ-INT-065, REQ-GEN-010, REQ-TOOL-152, REQ-TOOL-019]
-  requirements: [REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158]
+  requirements: [REQ-DEC-031, REQ-PAY-064, REQ-SCHED-024, REQ-DEC-036, REQ-TOOL-158, REQ-DEC-051, REQ-DEC-052]  # R-632: REQ-DEC-051, REQ-DEC-052 (RQ-578)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
 - id: TASK-M5-05
@@ -1865,7 +1865,7 @@
   milestone: M6
   title: "The linearised decoder: x₀ and J_D in f64 on the CPU, x₀ + J_D·δ on the GPU"
   depends_on: [TASK-M5-04]
-  needs: [REQ-DEC-031, REQ-DEC-032, REQ-SCHED-024, REQ-SYS-015, REQ-CHART-003, REQ-CHART-032, REQ-CHART-037, REQ-DEC-036]
+  needs: [REQ-DEC-031, REQ-DEC-032, REQ-SCHED-024, REQ-SYS-015, REQ-CHART-003, REQ-CHART-032, REQ-CHART-037, REQ-DEC-036, REQ-DEC-051]
   requirements: [REQ-DEC-034, REQ-DEC-035, REQ-DEC-042, REQ-GEN-018]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
@@ -1873,7 +1873,7 @@
   milestone: M6
   title: "The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform"
   depends_on: [TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07]
-  needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158]
+  needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158, REQ-DEC-051]
   requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]

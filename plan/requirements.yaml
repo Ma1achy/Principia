@@ -708,14 +708,17 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-154 — REQ-DEC-036 is verified over a depth sweep at M5 *(closes RQ-124)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: numerical gate
-    detail: "over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50"
+    detail: "over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to the measured f32 GPU floor (REQ-DEC-051), quoted with |x₀|, at fixture coordinates where that floor admits the depths swept (R-632)"
   rulings:
   - R-113
   - R-154
+  - R-632
   milestone: M5
-  note: "R-113 (RQ-99 M5-2, option a): moved to M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6."
+  note: "R-113 (RQ-99 M5-2, option a): moved to M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6. R-632 (27 Oct 2026, RQ-578 (a) with (c)): on the f32 GPU path the linear path's floor is the measured value, quoted with |x₀| (REQ-DEC-051, measured by REQ-DEC-052's gate), not depth 50; a floor near ~50 needs an f64 sum and integration. *Was (verify):* \"over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50\""
 - id: REQ-DEC-037
   area: DEC
   statement: "The switch to the linearised decoder must be signalled by QuadRequest DECODE_MODE and must fire once `quad.collapsed` is set (the per-quad flag set when the full decoder's adjacent samples give bitwise-identical ICs) or when depth exceeds ℓ_switch = 20 (an upper bound; lowering's SWITCH = ℓ_switch), whichever comes first, with the same SimState, reduction and render on either side."
@@ -966,6 +969,48 @@
   rulings: []
   milestone: M2
   note: "Code review 5640125368 of PR #288, C1, and physics review 5640193616, P1 (applied per R-369, the orchestrator's decision): the rule pitfalls §11 records, found by TASK-M2-43 (commit 7a600c41) and closed by it. Each test failed on Metal before its select (1.68e7 f32 eps of π/2)."
+- id: REQ-DEC-051
+  area: DEC
+  kind: calibration
+  statement: "The f32 GPU path's decode floor — the depth to which adjacent samples on the linearised decoder, x = x₀ + J_D·δ formed in f32, stay distinguishable as the f32 GPU integrator starts from them, quoted with the coordinate magnitude |x₀| at which it is measured (deep zoom §1's rule) — must be calibrated: proposed with its evidence by the task that needs it (REQ-DEC-052's gate), checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md (R-71, R-632)."
+  source:
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
+  - file: docs/design/principia_deep_zoom.md
+    section: 1. Quad-local coordinates — UV precision
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate linear-decode-floor --propose: REQ-DEC-052's measurement; the floor proposed per stated |x₀|, with the depth sweep as its evidence; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-632
+  milestone: M5
+  note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08."
+- id: REQ-DEC-052
+  area: DEC
+  statement: "A gate must measure the f32 GPU path's distinguishable depth on the linearised decoder as integrated — the depth at which adjacent samples' ICs, x = x₀ + J_D·δ formed in f32, first reach the f32 GPU integrator as bitwise-identical values — over a depth sweep past ℓ_switch at stated coordinate magnitudes |x₀|, each depth quoted with its |x₀|, so that the docs and the gates take the measured value (REQ-DEC-051) (R-632)."
+  source:
+  - file: docs/design/principia_deep_zoom.md
+    section: 2. Linearised decoder — IC precision
+  - file: docs/design/principia_deep_zoom.md
+    section: 4. Sliding depth bound
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 4 — Terminal vs refinable, tied to the two floors
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: The absolute floor is emergent
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate linear-decode-floor: at each stated |x₀|, one of order 1 at least, a depth sweep past ℓ_switch on the linear path, the IC each sample's f32 GPU integration starts from read back from that dispatch and compared bitwise with its neighbours', the first collapsing depth reported per |x₀| beside the full decoder's; controls: a pair of adjacent samples forced bitwise-identical at a chosen depth is reported collapsed at that depth, and a measurement that reads the f64 sum x₀ + J_D·δ in place of the f32 IC the GPU integrates misses it and fails"
+  rulings:
+  - R-632
+  milestone: M5
+  note: "R-632 (27 Oct 2026, RQ-578 (c)). Closed by TASK-M5-04, which builds the linear path and linear-decode-depth (applied per R-369). The coordinate magnitudes are the task's, checked by the physics reviewer (applied per R-369)."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -6408,7 +6453,7 @@
   milestone: M0
 - id: REQ-PAY-012
   area: PAY
-  statement: "`packed_a`, `packed_b` and `times` must follow payload §2's bit diagrams: descriptor in `packed_a` bits 0–15 and `d_min` f16 in 16–31; `dE_max` f16 low and `dLz_max` f16 high in `packed_b`; `t_end_step` u16 low and `t_dmin_step` u16 high in `times`."
+  statement: "`packed_a`, `packed_b` and `times` must follow payload §2's bit diagrams: descriptor in `packed_a` bits 0–15 and `d_min` f16 in 16–31; `dE_max` low and `dLz_max` high in `packed_b`, 16 bits each in the encoding REQ-PAY-112 gives (R-632); `t_end_step` u16 low and `t_dmin_step` u16 high in `times`."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: "`packed_a` (u32)"
@@ -6418,11 +6463,15 @@
     section: "`times` (u32)"
   - file: docs/design/principia_dd_generation_root.md
     section: 3.1 `sample_descriptor` (u32)
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: unit test
     detail: "pack known values and assert raw u32 bit patterns and the generated accessors (`pa_d_min`, `pb_dE_max`, `pb_dLz_max`, `tm_*`)"
-  rulings: []
+  rulings:
+  - R-632
   milestone: M0
+  note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)): the two latches take dE_reg's encoding, else a log-encoded 16-bit form (REQ-PAY-112, TASK-M3-41); linear binary16 until then, as built. *Was (statement):* \"`packed_a`, `packed_b` and `times` must follow payload §2's bit diagrams: descriptor in `packed_a` bits 0–15 and `d_min` f16 in 16–31; `dE_max` f16 low and `dLz_max` f16 high in `packed_b`; `t_end_step` u16 low and `t_dmin_step` u16 high in `times`.\""
 - id: REQ-PAY-013
   area: PAY
   statement: "The `sample_descriptor` bit layout must match payload §2's table: `state` 0–2, `detail` 3–4, `saturated` 5, `dmin_pair` 6–7, `last_symbol` 8–9, bits 10–15 reserved."
@@ -6931,16 +6980,20 @@
   milestone: M3
 - id: REQ-PAY-041
   area: PAY
-  statement: "The f16 scalars must pack d_min in the high 16 bits of packed_a and dE_max (low) / dLz_max (high) in packed_b, read with unpack2x16float, and the pack side must clamp to the binary16 finite range first, packing 0.0 in dE_max/dLz_max and f16 +inf (bits 0x7C00, d_min's unset value) in d_min for failed states (R-271)."
+  statement: "The 16-bit scalars must pack d_min (f16) in the high 16 bits of packed_a and dE_max (low) / dLz_max (high) in packed_b in the encoding REQ-PAY-112 gives (R-632), d_min read with unpack2x16float and the latches with their encoding's accessor (unpack2x16float while it is linear binary16), and the pack side must clamp to the encoding's finite range first (±65504 for binary16), packing 0.0 in dE_max/dLz_max and f16 +inf (bits 0x7C00, d_min's unset value) in d_min for failed states (R-271)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Unpack layer (generated, one accessor per named field)
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: unit test
-    detail: "pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values, 0.0 in dE_max/dLz_max, and d_min's bits are 0x7C00 (R-271)"
+    detail: "pack values beyond the encoding's finite range (±65504 for binary16) and failed-state samples; unpack yields finite clamped values, 0.0 in dE_max/dLz_max, and d_min's bits are 0x7C00 (R-271)"
   rulings:
   - R-271
+  - R-632
   milestone: M3
+  note: "R-632 (27 Oct 2026, RQ-581): the latches' encoding is REQ-PAY-112's; linear binary16 until TASK-M3-41, as built. *Was (statement):* \"The f16 scalars must pack d_min in the high 16 bits of packed_a and dE_max (low) / dLz_max (high) in packed_b, read with unpack2x16float, and the pack side must clamp to the binary16 finite range first, packing 0.0 in dE_max/dLz_max and f16 +inf (bits 0x7C00, d_min's unset value) in d_min for failed states (R-271).\" *Was (verify):* \"pack values beyond ±65504 and failed-state samples; unpack yields finite clamped values, 0.0 in dE_max/dLz_max, and d_min's bits are 0x7C00 (R-271)\""
 - id: REQ-PAY-042
   area: PAY
   statement: "The word buffer must be mutated only when a branch-cut crossing is detected (never per step) and read only at resolve and inspect."
@@ -6975,7 +7028,7 @@
   milestone: M3
 - id: REQ-PAY-044
   area: PAY
-  statement: "`d_min`, `dE_max` and `dLz_max` must be monotone latches held in a local f32 during the march and packed to f16 only when persistent state is written (semantics (a))."
+  statement: "`d_min`, `dE_max` and `dLz_max` must be monotone latches held in a local f32 during the march and packed to their 16-bit encoding (f16 for d_min, REQ-PAY-112's for dE_max and dLz_max, R-632) only when persistent state is written (semantics (a))."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: Why closure is here, at this width, unconditionally
@@ -6983,11 +7036,15 @@
     section: 8. Build-time settles (measure / specify once running)
   - file: docs/design/principia_dd_simstate_payload.md
     section: "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: unit test
-    detail: "resume a sample across many persist boundaries; assert the packed latch equals the f16 of a single f32 latch over the whole run"
-  rulings: []
+    detail: "resume a sample across many persist boundaries; assert the packed latch equals the packed encoding of a single f32 latch over the whole run"
+  rulings:
+  - R-632
   milestone: M3
+  note: "R-632 (27 Oct 2026, RQ-581). *Was (statement):* \"`d_min`, `dE_max` and `dLz_max` must be monotone latches held in a local f32 during the march and packed to f16 only when persistent state is written (semantics (a)).\" *Was (verify):* \"resume a sample across many persist boundaries; assert the packed latch equals the f16 of a single f32 latch over the whole run\""
 - id: REQ-PAY-045
   area: PAY
   statement: "Before packing to f16, valid-state values must be clamped to ±65504, and for `sim_failed`/`decode_failed` samples the `dE_max` and `dLz_max` halves must hold 0.0 and the `d_min` half f16 +inf, its unset value (R-271)."
@@ -8243,7 +8300,27 @@
   - R-72
   - R-605
   milestone: M3
-  note: "R-605 (25 Oct 2026, RQ-528 (b)): a schema change; the layout a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\"). code review 5662211284 of PR #293, note (a), applied per R-369: the statement says what is fixed (the u32, its place, two f16 halves) and what stays open (the names, which half is which, the accessors). *Was (statement):* \"The payload fields that store a regularised occupant's energy drift latches (final and max) beside the Cartesian ones (R-605) must be defined: their names, widths and place, written into the payload drill-down's §1 and §5 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, dE_reg (two f16 halves, final and max, as packed_b's Cartesian latches), placed after budget_word (REQ-PAY-009's recheck in payload §1: with REQ-PAY-110's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B).\" *Was (verify start):* \"payload §1 and §5 name the regularised drift fields, their widths and place beside the Cartesian ones and which accessor reads which;\" physics review 5662346996 of PR #293, F1, applied per R-369: the halves are 16-bit with their encoding open, since R-605's words name no f16 and linear binary16 would floor a round-off drift; no byte changes, so the widths stand (the note's earlier \"two f16 halves\" reads \"two 16-bit halves\"). *Was (statement):* \"…as two f16 halves (as packed_b's Cartesian latches),… the two halves' field names (dE_reg is a placeholder), which half holds which latch, and which accessor reads which.\" *Was (verify start):* \"payload §1 names dE_reg's two f16 halves and which holds the final and which the max latch, and §5 which accessor reads which;\" Applied per R-369 (the orchestrator, before the re-checks of PR #293): the new widths marked \"from TASK-M3-41 on\". *Was:* \"+8 B per copy at every precision row (f32\""
+  note: "R-605 (25 Oct 2026, RQ-528 (b)): a schema change; the layout a definition, applied per R-369. Closed by TASK-M3-41. perf review 5661999637 of PR #293, P1, applied per R-369: the byte cost and place, one hot u32 (*was:* the statement ending \"approved by the physics and code reviewers before merge (R-72).\" and the verify ending \"the physics and code reviewers approved\"). code review 5662211284 of PR #293, note (a), applied per R-369: the statement says what is fixed (the u32, its place, two f16 halves) and what stays open (the names, which half is which, the accessors). *Was (statement):* \"The payload fields that store a regularised occupant's energy drift latches (final and max) beside the Cartesian ones (R-605) must be defined: their names, widths and place, written into the payload drill-down's §1 and §5 by the task that needs it, a schema change whose version follows from the ledger's hash (R-36), and approved by the physics and code reviewers before merge (R-72), within one u32 of the hot SimState, dE_reg (two f16 halves, final and max, as packed_b's Cartesian latches), placed after budget_word (REQ-PAY-009's recheck in payload §1: with REQ-PAY-110's word, +8 B per copy at every precision row, f32 152 / 104 B, f64 280 / 184 B, DoubleF64 528 / 336 B).\" *Was (verify start):* \"payload §1 and §5 name the regularised drift fields, their widths and place beside the Cartesian ones and which accessor reads which;\" physics review 5662346996 of PR #293, F1, applied per R-369: the halves are 16-bit with their encoding open, since R-605's words name no f16 and linear binary16 would floor a round-off drift; no byte changes, so the widths stand (the note's earlier \"two f16 halves\" reads \"two 16-bit halves\"). *Was (statement):* \"…as two f16 halves (as packed_b's Cartesian latches),… the two halves' field names (dE_reg is a placeholder), which half holds which latch, and which accessor reads which.\" *Was (verify start):* \"payload §1 names dE_reg's two f16 halves and which holds the final and which the max latch, and §5 which accessor reads which;\" Applied per R-369 (the orchestrator, before the re-checks of PR #293): the new widths marked \"from TASK-M3-41 on\". *Was:* \"+8 B per copy at every precision row (f32\" R-632 (27 Oct 2026, RQ-581 (d)): packed_b's Cartesian latches dE_max and dLz_max take the encoding chosen here, or a log-encoded 16-bit form if none is settled for both halves (REQ-PAY-112)."
+- id: REQ-PAY-112
+  area: PAY
+  statement: "`packed_b`'s Cartesian drift latches dE_max and dLz_max must take the 16-bit encoding TASK-M3-41 chooses for dE_reg's halves against REQ-INT-106's measured drift (REQ-PAY-111), or, if it does not settle on one encoding for both halves, a log-encoded 16-bit form in the same bits, packed_b keeping its size; the failed-state 0.0 and the clamp (R-271) keep their meaning in that encoding, threshold and suspect decisions read the live f32 value, never the stored latch, and the accessors, the field views and REQ-TOOL-023's round-trip follow the encoding (R-632)."
+  source:
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 1. `SimState` — the hot struct
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`packed_b` (u32)"
+  - file: decisions.md
+    section: "R-605 — Both energy drifts are stored: the suspect flags and the drift view read the regularised drift, the Cartesian drift being diagnostic only; an event-stopped run draws as now, its readout saying \"stopped at event\"; the energy-suspect threshold is recalibrated on Heggie × RK4's regularised drift at the M3 gate, measured first *(closes RQ-528; a schema change)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel packed_b_encoding: dE_max and dLz_max pack and unpack through the encoding dE_reg's halves use (or, failing one, the log-encoded form), a drift at the encoding's stated floor reads back non-zero within its stated resolution, a failed state reads 0.0, and the suspect predicates read the live f32 value; controls: packed_b packed as linear binary16 while dE_reg's halves use another encoding fails, and a predicate fed the unpacked latch fails"
+  rulings:
+  - R-605
+  - R-632
+  milestone: M3
+  note: "R-632 (27 Oct 2026, RQ-581 (d), else (b)). Closed by TASK-M3-41 with REQ-PAY-111 (applied per R-369). Where the encoding differs from linear binary16, TASK-M3-41 rewrites the f16 wording for the two latches in payload §1, §2 and §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract, each with a *Was*; d_min stays f16."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -24856,7 +24933,7 @@
   milestone: M1
 - id: REQ-TOOL-023
   area: TOOL
-  statement: "f16-packed scalars (d_min, dE_max, dLz_max) must round-trip through unpack2x16float within f16 eps, and stored sentinels must be bit-exact and shown as their literal values on the ramp, never scaled (R-136), except d_min's unset value (f16 +inf), which is drawn in the neutral \"not yet\" grey (R-280); an invalid diffusion fit is no sentinel and reads NaN (R-245)."
+  statement: "The 16-bit packed scalars must round-trip, d_min through unpack2x16float within f16 eps and dE_max and dLz_max through their encoding's accessor within its stated resolution (REQ-PAY-112, R-632; f16 eps while it is linear binary16), and stored sentinels must be bit-exact and shown as their literal values on the ramp, never scaled (R-136), except d_min's unset value (f16 +inf), which is drawn in the neutral \"not yet\" grey (R-280); an invalid diffusion fit is no sentinel and reads NaN (R-245)."
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
@@ -24870,16 +24947,19 @@
     section: "R-245 — An invalid diffusion fit reads NaN, by a validity predicate; no −1.0 sentinel *(amends R-17, R-136; closes RQ-152)*"
   - file: decisions.md
     section: "R-280 — An unset `d_min` renders in the neutral \"not yet\" grey *(closes RQ-170)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: unit test
-    detail: "pack/unpack within f16 eps; the stored sentinels (dmin_pair 3, the word length 127) render as their literal values on the ramp (R-136); d_min's unset value renders in the running-sample grey, not on the ramp (R-280)"
+    detail: "pack/unpack within f16 eps for d_min and within the encoding's stated resolution for dE_max and dLz_max (R-632); the stored sentinels (dmin_pair 3, the word length 127) render as their literal values on the ramp (R-136); d_min's unset value renders in the running-sample grey, not on the ramp (R-280)"
   rulings:
   - R-17
   - R-136
   - R-245
   - R-280
+  - R-632
   milestone: M1
-  note: "RQ-230, decided per R-369: a mechanical consequence of R-245 (no diffusion −1 sentinel) and R-280 (d_min's unset value takes the grey); the statement no longer names diffusion's −1. R-399: the \"not yet\" grey is drawn as R-399's non-flat style, the grey with a fine dot stipple from the pixel position (debug_not_yet(frag_xy)), distinct from the hatch; REQ-TOOL-162 (TASK-M1-17) applies it, and REQ-COL-064 is the stipple's pattern."
+  note: "RQ-230, decided per R-369: a mechanical consequence of R-245 (no diffusion −1 sentinel) and R-280 (d_min's unset value takes the grey); the statement no longer names diffusion's −1. R-399: the \"not yet\" grey is drawn as R-399's non-flat style, the grey with a fine dot stipple from the pixel position (debug_not_yet(frag_xy)), distinct from the hatch; REQ-TOOL-162 (TASK-M1-17) applies it, and REQ-COL-064 is the stipple's pattern. R-632 (27 Oct 2026, RQ-581): dE_max and dLz_max take REQ-PAY-112's encoding. *Was (statement start):* \"f16-packed scalars (d_min, dE_max, dLz_max) must round-trip through unpack2x16float within f16 eps,\" *Was (verify start):* \"pack/unpack within f16 eps;\""
 - id: REQ-TOOL-024
   area: TOOL
   statement: "Derived views (orbit_count / retrograde from θ̃, the reduced crossing count, ftle = S_final/(step_count·dt) with the partial renorm finalised, current drift H(r,p) − E_0) must each be computed in the fragment and match a reference computed the same way."
@@ -27001,14 +27081,17 @@
     section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   - file: decisions.md
     section: R-90 — The decoder switchover trigger *(closes RQ-41)*
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: unit test
     detail: "quads at depths 21 and 30 with distinct adjacent ICs (no collapse) are dispatched with DECODE_MODE = LIN and their sample positions come from c and δ only; a quad forced onto the full path at depth 21 fails the check; a quad at depth 20 or shallower may take the full path and form the absolute u (REQ-TOOL-019)"
   rulings:
   - R-90
   - R-395
+  - R-632
   milestone: M6
-  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369)."
+  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369). R-632 (27 Oct 2026, RQ-578): the fixtures' quads at depths 21 and 30 with distinct adjacent ICs use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits depth 30."
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
@@ -28544,16 +28627,17 @@
     section: 2. What the suite tests that the current gates do not
   - file: decisions.md
     section: "R-592 — Anosova region D: Agekyan & Anosova (1968) is the source, its near-rest starts ported as a definition and its Table 1 as a fixture; `M = η·10⁻⁴` asserted on every row and the printed `M` column on every row but `N = 16, 23, 26, 32, 34`; paper II's `η` taken only where paper I is the outlier (`N = 88`); column 8 recorded, never asserted, while RQ-570 is open *(closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open; changes REQ-VAL-019 and REQ-VAL-120)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: numerical gate
-    detail: "import the literature ICs; compare E, L_z after multiplying back by the recorded rescale. Anosova (R-592): every Table 1 row's computed M = η·10⁻⁴; the printed M column on every row printing one but the exception list N = 16, 23, 26, 32, 34, itself asserted; E by eq. 4; the exact-rest control (L_z == 0, E == U); E, L_z and L_z²|E|/(G²M⁵) through the chart; a point outside region D refused. Column 8 recorded, not asserted (RQ-570)"
+    detail: "import the literature ICs; compare E, L_z after multiplying back by the recorded rescale. Anosova (R-592): every Table 1 row's computed M = η·10⁻⁴; the printed M column on every row printing one but the exception list N = 16, 23, 26, 32, 34, itself asserted; E by eq. 4; the exact-rest control (L_z == 0, E == U); E, L_z and L_z²|E|/(G²M⁵) through the chart; a point outside region D refused. Column 8 recorded, never asserted (R-632)"
   rulings:
   - R-71
   - R-592
+  - R-632
   milestone: M2
-  rq:
-  - RQ-570
-  note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration). Region D's reference values are computed from the definition (E by eq. 4, M = η·10⁻⁴) and Table 1's printed M column (R-592); column 8 waits on RQ-570."
+  note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration). Region D's reference values are computed from the definition (E by eq. 4, M = η·10⁻⁴) and Table 1's printed M column (R-592); column 8 is recorded and never asserted (R-632, closing RQ-570 with option (a)), and paper II's energy column shows the same discrepancy (docs/incoming/2026-10-27_papers/TARGETS.md, AA-6's caveat). *Was (note end):* \"; column 8 waits on RQ-570.\" *Was (verify end):* \"Column 8 recorded, not asserted (RQ-570)\""
 - id: REQ-VAL-020
   area: VAL
   statement: "A chart-landmark test must assert the decoder places the Lagrange equilateral configuration at `z = 0` and the Euler collinear configurations at the β edges: at `beta = 0`, reached exactly where the β link underflows (f32 and f64), and toward `beta = pi`, approached from below, the upper image staying inside π (R-417)."
@@ -28970,7 +29054,7 @@
   note: "The |dr| pass threshold and the order tolerance: REQ-VAL-133 (calibration)."
 - id: REQ-VAL-042
   area: VAL
-  statement: "Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the Three-body Gallery must be added as closure tests asserting a return to rest in the same configuration, with the convergence order reported."
+  statement: "Two or three free-fall (brake) periodic orbits from Hristov et al. 2024 (CeMDA 136, 7) or the Three-body Gallery must be added as closure tests asserting a return to rest in the same configuration, with the convergence order reported."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 3. Proposed suite
@@ -31724,7 +31808,7 @@
 - id: REQ-VAL-199
   area: VAL
   kind: calibration
-  statement: "The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory, the expected value predicted per start from its measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600) — must have its tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  statement: "The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median over the starts of each start's measured t_part(f32)/t_part(f64) at the parted mark divided by its predicted ratio, compared with 1, never read off one trajectory, the predicted ratio from the start's measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600); a pair not parted by the horizon T censored, its t_part taken as T and its start's ratio a bound kept in the median, the count of censored starts reported, and the gate valid only if fewer than half of the 256 are censored (R-632) — must have its tolerance on the median's distance from 1 calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_honesty_precision.md
     section: 6. Tests (each with what makes it fail)
@@ -31732,17 +31816,18 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-600 — The ensemble ratio gate predicts each start's parting time from its measured initial gap, `ln(tol/δ₀)` for each precision, never from `ln ε₃₂ / ln ε₆₄`; it runs on all 256 starts, not a subset; its tolerance is a calibration for the gate *(closes RQ-557; queues RQ-575)*"
+  - file: decisions.md
+    section: "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the measured ratios against the predicted by the statistic RQ-575 rules (the median of the measured against the median of the predicted, or the median of each start's measured over predicted), a start whose pair has not parted by T entering as RQ-575 rules, the tolerance proposed from the spread; recorded in decisions.md; control: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check"
+    detail: "cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the median over the starts of each start's measured ratio divided by its predicted ratio against 1, a pair not parted by T censored at T (its start's ratio a bound, kept in the median), the censored count reported and the gate reported invalid, not passed, when half or more of the 256 are censored, the tolerance on the distance from 1 proposed from the spread; recorded in decisions.md; controls: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check; 127 censored starts leave the gate valid and 128 make it invalid; on a fixture where they differ, the median of the measured ratios against the median of the predicted, or a median that drops the censored starts, gives a different statistic and fails (R-632)"
   rulings:
   - R-71
   - R-574
   - R-600
+  - R-632
   milestone: M8
-  rq:
-  - RQ-575
-  note: "R-600 (25 Oct 2026, RQ-557 (b)): the prediction per start from its measured initial gap, all 256 starts, the tolerance a calibration for the gate; the human's tol in ln(tol/δ0) read as θ, the parted mark, and δ₀ as the chord at the first sync boundary, t = Δ_sync (applied per R-369, flagged in R-600; physics review 5644374613 of PR #293, F3). How a start whose pair has not parted by the horizon enters, and which statistic compares the ratios, are RQ-575, which this requirement waits on for those two rules only. Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say. *Was (statement):* \"The ensemble ratio gate — over at least 256 chaotic ICs, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory — must have its expected value and tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md\""
+  note: "R-632 (27 Oct 2026, RQ-575 Q1 (a), Q2 (ii)): an unparted pair censored at T, the median over all 256, the censored count reported, the gate valid only if fewer than half are censored; the statistic the median of each start's measured over predicted ratio against 1, and this requirement's tolerance the one on its distance from 1, an R-71 calibration (no second requirement, applied per R-369). A start is censored when either of its pairs has not parted by T (applied per R-369). *Was (statement, R-600):* \"The ensemble ratio gate — over all 256 chaotic starts, not a subset, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory, the expected value predicted per start from its measured initial gaps, ln(θ/δ₃₂)/ln(θ/δ₆₄), θ the parted mark (0.1, R-574) and δ₀ each pair's chord at the first sync boundary, k = 1, t = Δ_sync (REQ-INT-080), never ln ε₃₂ / ln ε₆₄ (R-600) — must have its tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify, R-600):* \"cargo xtask gate parting-ratio --propose: at T = 200 over all 256 starts, each start's predicted ratio ln(θ/δ₃₂)/ln(θ/δ₆₄) from its measured chords at the first sync boundary (t = Δ_sync), the measured ratios against the predicted by the statistic RQ-575 rules (the median of the measured against the median of the predicted, or the median of each start's measured over predicted), a start whose pair has not parted by T entering as RQ-575 rules, the tolerance proposed from the spread; recorded in decisions.md; control: the draft's constant ln eps₃₂ / ln eps₆₄ ≈ 0.44 in place of the per-start prediction fails the gate's input check\" Before R-632: R-600 (25 Oct 2026, RQ-557 (b)): the prediction per start from its measured initial gap, all 256 starts, the tolerance a calibration for the gate; the human's tol in ln(tol/δ0) read as θ, the parted mark, and δ₀ as the chord at the first sync boundary, t = Δ_sync (applied per R-369, flagged in R-600; physics review 5644374613 of PR #293, F3). How a start whose pair has not parted by the horizon enters, and which statistic compares the ratios, are RQ-575, which this requirement waits on for those two rules only. Waits on RQ-557: the draft's 0.44 and the probe's deep-interior medians (12.1 / 39.4 ≈ 0.31, over the 19 % whose f64 runs parted by 50) disagree. fix round 1 of PR #283 (physics review 5627073272, F2): the rq field added, as R-574 and RQ-557 say. *Was (statement):* \"The ensemble ratio gate — over at least 256 chaotic ICs, the median t_part(f32)/t_part(f64) at the parted mark against its expected value, never read off one trajectory — must have its expected value and tolerance calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md.\" *Was (verify):* \"cargo xtask gate parting-ratio --propose: at T = 200 over the ICs where both pairs part, the count reported, the median ratio against the value RQ-557 rules (the draft's ln eps₃₂ / ln eps₆₄ ≈ 0.44, or the predicted ln(θ/δ₃₂)/ln(θ/δ₆₄)), the tolerance proposed from the spread; recorded in decisions.md\""
 - id: REQ-VAL-200
   area: VAL
   kind: definition
@@ -32013,10 +32098,9 @@
   - R-592
   - R-594
   - R-629
+  - R-632
   milestone: M3
-  rq:
-  - RQ-570
-  note: "Reproduces: Agekyan & Anosova II, Table 1 (decay time per exact-rest start; ensemble 110.1 ± 12.5 τ; Table 2's counts). Chart: the Anosova physical-frame entry at exact rest. Milestone: M3. Compare: exact on the 13 short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-210 (calibration, R-71). Row AA-6 (DRAFT-VAL-05) of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M3-50 (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05 by R-629, with its rq."
+  note: "Reproduces: Agekyan & Anosova II, Table 1 (decay time per exact-rest start; ensemble 110.1 ± 12.5 τ; Table 2's counts). Chart: the Anosova physical-frame entry at exact rest. Milestone: M3. Compare: exact on the 13 short-lived rows; statistical otherwise (rule 8). Tolerance: REQ-VAL-210 (calibration, R-71). Row AA-6 (DRAFT-VAL-05) of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier A; closed by TASK-M3-50 (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-05 by R-629, with its rq. R-632 (27 Oct 2026, RQ-570 (a)): the energy column stays recorded and is never asserted; no longer rq: RQ-570."
 - id: REQ-VAL-210
   area: VAL
   kind: calibration

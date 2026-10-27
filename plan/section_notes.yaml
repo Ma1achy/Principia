@@ -1395,4 +1395,4 @@
 - file: docs/design/principia_dd_replication.md
   section: "11. Corrections the plan records"
   reason: informative only
-  note: "PLAN.md §10's record of corrections to older records; the ones to documents in force are queued (RQ-588 to RQ-590), not applied"
+  note: "PLAN.md §10's record of corrections to older records; the ones to documents in force were queued (RQ-588 to RQ-590) and are applied by R-632, in those documents"

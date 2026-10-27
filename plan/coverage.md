@@ -6,12 +6,12 @@
 
 | area | count |
 |---|---|
-| DEC | 50 |
+| DEC | 52 |
 | ENC | 38 |
 | CHART | 88 |
 | INT | 108 |
 | EVT | 32 |
-| PAY | 109 |
+| PAY | 110 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
@@ -22,9 +22,9 @@
 | VAL | 330 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2043** |
+| **total** | **2046** |
 
-Of these: 221 calibration, 172 definition, 1650 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 222 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -33,16 +33,16 @@ Of these: 221 calibration, 172 definition, 1650 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 108 |
 | M2 | 221 |
-| M3 | 332 |
+| M3 | 333 |
 | M4 | 118 |
-| M5 | 179 |
+| M5 | 181 |
 | M6 | 225 |
 | M7 | 262 |
 | M8 | 476 |
 
 ## Sections
 
-1631 sections in 61 files: 1305 yield at least one requirement; 326 yield none and are listed below with the reason.
+1632 sections in 61 files: 1306 yield at least one requirement; 326 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -394,7 +394,7 @@ Of these: 221 calibration, 172 definition, 1650 obligation. Retired (kept for th
 | 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |
 | 9. Coverage of initial-condition space, and the gaps | informative only | which region of IC space each target exercises, and the gaps in the records; no obligation |
 | 10. Open questions | informative only | where each open question stands; each is an RQ entry |
-| 11. Corrections the plan records | informative only | PLAN.md §10's record of corrections to older records; the ones to documents in force are queued (RQ-588 to RQ-590), not applied |
+| 11. Corrections the plan records | informative only | PLAN.md §10's record of corrections to older records; the ones to documents in force were queued (RQ-588 to RQ-590) and are applied by R-632, in those documents |
 
 ### `docs/design/principia_dd_telemetry_and_tiers.md`
 

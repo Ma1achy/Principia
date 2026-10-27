@@ -39,3 +39,4 @@ The replication suite's targets AA-6 run as engine tests (`principia_dd_replicat
 - R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
 - Part of the first batch (`principia_dd_replication.md` § 6), ported from PLAN.md § 6's drafts by R-629.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
+- **R-632 (27 Oct 2026, RQ-570 (a)):** the energy column is recorded and never asserted; REQ-VAL-209 no longer carries `rq: RQ-570`.

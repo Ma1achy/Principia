@@ -3,7 +3,7 @@
 - **Milestone:** M6
 - **Closes:** REQ-DEC-034, REQ-DEC-035, REQ-DEC-042, REQ-GEN-018
 - **Depends on:** TASK-M5-04
-- **Needs (earlier milestones):** REQ-DEC-031, REQ-DEC-032, REQ-SCHED-024, REQ-SYS-015, REQ-CHART-003, REQ-CHART-032, REQ-CHART-037, REQ-DEC-036
+- **Needs (earlier milestones):** REQ-DEC-031, REQ-DEC-032, REQ-SCHED-024, REQ-SYS-015, REQ-CHART-003, REQ-CHART-032, REQ-CHART-037, REQ-DEC-036, REQ-DEC-051
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
 - **Size:** ~450 lines
@@ -23,11 +23,12 @@ Deep quads get the linearised decode (deep_zoom §2), on the x₀ and J_D TASK-M
 - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision"
 - `docs/design/principia_dd_encode.md` § "4. Seams (obligations → integration tests)"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
 
 ## Deliverables
 - `crates/engine/src/deep/linearise.rs` (built in TASK-M5-04, REQ-DEC-036): `|det J_D|` computed once per quad.
 - `crates/kernel/src/decode/linear.rs`: the f32 linear path `x₀ + J_D·δ` in the shared source, producing the same `(m, r, p)` input type as the full decode.
-- `crates/validation/src/decoder_test11.rs` + `cargo xtask gate linear-decode` (test 11, O(h²) slope across depths, affine and exponential-map shape-sphere charts, depth ≥ 50 distinguishability) and `cargo xtask gate det-jd-links`.
+- `crates/validation/src/decoder_test11.rs` + `cargo xtask gate linear-decode` (test 11, O(h²) slope across depths, affine and exponential-map shape-sphere charts, distinguishability to the measured f32 GPU floor (REQ-DEC-051) at the fixture's |x₀|, R-632; *was:* "depth ≥ 50 distinguishability") and `cargo xtask gate det-jd-links`.
 
 ## Acceptance tests
 - `cargo xtask gate linear-decode` (decoder test 11; slope tolerance: REQ-DEC-042 (calibrated)) — decoder test 11: at quad centre x₀ + J_D·0 equals the full decode exactly; at half-width the error vs full decode shrinks ∝ h² across depths; identical behaviour for an affine chart and the exponential-map shape-sphere chart (REQ-DEC-034).
@@ -40,3 +41,4 @@ Deep quads get the linearised decode (deep_zoom §2), on the x₀ and J_D TASK-M
 - PIT-10: the O(h²) agreement holds at fixed inputs; state the domain (decode only, not trajectory outcomes).
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 (x₀ and J_D by central differences) moved to M5 (TASK-M5-04); this task keeps the error-fit tests (REQ-DEC-034, REQ-DEC-042) and the |det J_D| check.
 - **The central-difference step** (physics review 5624781454 of PR #279, an observation): the corpus states none (REQ-DEC-049 refers to REQ-DEC-034's step rule, which gives no value). RQ-553's per-direction saturation test (REQ-GUI-012, TASK-M6-21) reads exact zeros of `J_D` and assumes the step is at least the quad's sample spacing; this task's physics review confirms the step it chooses meets that.
+- **R-632 (27 Oct 2026, RQ-578):** test 11's distinguishability arm asserts the measured f32 GPU floor (REQ-DEC-051, TASK-M5-04), quoted with `|x₀|`, not depth 50; its fixtures use coordinates where the measured floor admits the depths they test. The O(h²) slope (REQ-DEC-034, REQ-DEC-042) is unchanged. RQ-578 put no hold on this task.
