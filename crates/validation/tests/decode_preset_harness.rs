@@ -75,6 +75,18 @@ fn check_probe(other: bool) {
     for chart in DecodeChart::ALL {
         let scene = Scene::lattice(chart, [2, 2], 3).unwrap();
         let words = scene.probe(gpu.device(), gpu.queue()).unwrap();
+        assert_eq!(words.len(), 4, "{chart:?}: the probe's samples");
+        // The lattice's cells: sample (i, j) at cell ⌊(i + ½)·2³/2⌋, so its point is (cell + ½)/8.
+        assert_eq!(
+            scene.point(0),
+            [0.3125, 0.3125],
+            "{chart:?}: the lattice's first point"
+        );
+        assert_eq!(
+            scene.point(3),
+            [0.8125, 0.8125],
+            "{chart:?}: the lattice's last point"
+        );
         for (q, w) in (0u32..).zip(&words) {
             let point = scene.point(q);
             assert_eq!(
