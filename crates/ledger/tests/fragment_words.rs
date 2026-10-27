@@ -105,6 +105,13 @@ fn check_file(file: &str) {
 #[test]
 fn fragment_words_file_is_the_table() {
     check_file(&ledger::gen::fragment::file());
+    let emitted = ledger::gen::fragment::emit(&[], &[]);
+    assert_eq!(emitted.len(), 1, "the emitter writes one file");
+    assert_eq!(
+        emitted[0].path,
+        std::path::PathBuf::from(ledger::gen::fragment::FRAGMENT_WORDS_PATH)
+    );
+    assert_eq!(emitted[0].contents, ledger::gen::fragment::file());
 }
 
 negative_control!(
