@@ -1153,8 +1153,9 @@ are listed with no choice made.*
   - The "encounter-word reader" is the human's and the record's term; the corpus's are R-125's convention
     (REQ-PAY-070, TASK-M3-16) and REQ-VAL-043's "free-group word encoder" (TASK-M3-30). This entry reads them as the
     same comparison.
-  - The Hudomal 2015 thesis is not in the repo: `crosscheck.txt`'s command takes it as a path argument
-    (`<Hudomal 2015 thesis>`), and no copy is under `docs/`.
+  - The Hudomal 2015 MSc thesis is not on `main` yet: it arrives with open PR #295 (`docs/orbit-catalogues`) as
+    `docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf`. `crosscheck.txt`'s command takes it as a
+    path argument (`<Hudomal 2015 thesis>`).
   - R-125 says the convention is "transcribed from the literature (Montgomery; Šuvakov–Dmitrašinović)"; the gallery and
     the PRL, both Šuvakov–Dmitrašinović, already differ by the symmetries above, so which of their representatives
     REQ-PAY-070's transcription follows is part of the question.
