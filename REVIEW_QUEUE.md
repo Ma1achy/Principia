@@ -1351,3 +1351,54 @@ entry is where that floor sits at all on the f32 path.*
     REQ-TOOL-183's tolerance, the floor quoted with `|x₀|`.
   - The proposal's §3.10 (uniform mode, the layer table) and §3.9's per-precision switchover are RQ-577's, not this
     entry's.
+
+## RQ-579: Redistribution terms for the high-precision IC databases *(found while pulling the reference data for the precision ladder's test 6, PR #299; `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed"; context: the precision-ladder proposal, §5 test 6)*
+
+*Found on 27 Oct 2026. Licensing third-party data is outside the repo, so it is the human's call. Nothing is
+committed meanwhile.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-27_hp_ics/README.md` § "Terms: why the data is not committed": "None of the sources states
+    a licence or terms of use: the five pages of `db2.fmi.uni-sofia.bg` (its root, `3body123`, `3bodychor462`,
+    `3bodychor164`, `3bodystab971`), Masson's page and site, the SJTU pages, and the `sjtu-liao/three-body` GitHub
+    repository (no licence file; the API returns 404 for it). The three Hristov arXiv papers carry arXiv's
+    non-exclusive distribution licence, which covers the papers, not the databases."
+  - The precedent: `docs/incoming/2026-10-26_orbit_catalogues/README.md`: "**The extracted initial conditions are
+    committed under the site's own terms.**"; `docs/incoming/2026-10-26_belgrade_gallery/README.md`: "**Terms.** The
+    gallery's own "Use and Copyright" page (`archive/ref.php.html`): "You may copy and use any images or data from
+    this web gallery. …"". Both folders committed third-party data only under stated terms.
+  - `docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` § 5, test 6, which
+    needs the values above f64.
+- **The question:** the Hristov et al. databases (123 solutions at 150 digits, 462 and 164 + 259 choreographies at
+  180, 971 stable i.c.s at 100), and the Simó and Li & Liao tables, state no terms. May their values be committed?
+- **Options seen:** (a) commit the values with attribution (the citations in `docs/incoming/2026-10-27_hp_ics/README.md`);
+  (b) ask the authors for permission first, and commit under whatever they grant; (c) keep fetch-and-verify only, as
+  now.
+- **Applied meanwhile:** (c). `fetch.sh` downloads all 599 files listed in `sources.tsv` and checks each against its
+  recorded sha256, so the reference data is reproducible byte for byte without being committed. Waits: the precision
+  proposal's test 6 reference data, in the repo.
+
+## RQ-580: `hristov2024nc`'s title in the orbit catalogues' CITATIONS.md is not the journal's *(found while checking the citations for PR #299; `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md` § "References", `threebodyorbits_sources.json`; context: the precision-ladder proposal, §5 test 6)*
+
+*Found on 27 Oct 2026. A citation's correctness is a routine decision, but CITATIONS.md is generated from the earlier
+batch's transcription of the atlas's reference list, so the fix is that batch's, not PR #299's.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md` § "References": "`hristov2024nc`: Hristov, Hristova,
+    Puzynin, Puzynina, Sharipov & Tukhliev (2024), *Nontrivial choreographies of the planar three-body problem*,
+    Physics of Particles and Nuclei 55, 495–497, https://doi.org/10.1134/S1063779624030444."
+  - Its source, `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_sources.json`, `hristov2024nc`: "title":
+    "Nontrivial choreographies of the planar three-body problem".
+  - The publisher's record of the DOI, deposited with Crossref (`https://api.crossref.org/works/10.1134/S1063779624030444`,
+    publisher "Pleiades Publishing Ltd", fetched 27 Oct 2026): title "Searching for New Nontrivial Choreographies for
+    the Planar Three-Body Problem", Physics of Particles and Nuclei 55, issue 3, pages 495–497, June 2024. The
+    authors' page `https://db2.fmi.uni-sofia.bg/3bodychor164/` gives the same title. The publisher's article page
+    (link.springer.com) returned a bot-check page and could not be read.
+  - `docs/incoming/2026-10-27_hp_ics/README.md` § "Sources", the notes, records this.
+- **The question:** CITATIONS.md carries the atlas's wording of the title, not the journal's. Should the generator
+  correct it (and the transcribed JSON stay as the site published it), or should CITATIONS.md note the site's wording
+  beside the journal's, as it already does for Li, Jing & Liao 2018?
+- **Options seen:** (a) correct the title in `citations.py`'s output and leave `threebodyorbits_sources.json` as
+  transcribed; (b) add a note under CITATIONS.md's "Notes", as for `lijingliao2018`, giving both titles; (c) other.
+- **Applied meanwhile:** none in CITATIONS.md. `docs/incoming/2026-10-27_hp_ics/README.md` cites the Crossref title.
+  Nothing waits.
