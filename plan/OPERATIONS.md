@@ -393,9 +393,10 @@ the six.
   wiring task, TASK-M8-88 to TASK-M8-95 in the same order, which depends on it and on TASK-M6-21 and TASK-M6-22, wires
   it to the real engine and re-runs its acceptance there with the conformance suite on both engines; a wiring task is
   engine-side work, dispatched when its dependencies are merged, with no track priority of its own. TASK-M8-86, the v1
-  web skeleton (the egui app and the mock engine in wasm on WebGPU), is a track task with no wiring task: it measures
-  for RQ-550 and RQ-551 and settles neither. Its deploy is by hand only: `gh workflow run pages.yml --ref main` after it
-  merges, through the `github-pages` environment; no workflow deploys the site on a merge or a push until the human
+  web skeleton (the egui app and the mock engine in wasm on WebGPU), and TASK-M8-96, its measurements against RQ-550
+  and RQ-551, are track tasks with no wiring task; they settle neither RQ. The deploy is by hand only: once TASK-M8-86
+  merges, the orchestrator runs `gh workflow run pages.yml --ref main`, through the `github-pages` environment, and
+  then dispatches TASK-M8-96 on that deploy; no workflow deploys the site on a merge or a push until the human
   says v1 is ready to be found, and no other repository setting changes (R-627; `plan/HUMAN_SETUP.md` §5).
 - **The cloud proposal (R-627).** Whether mock-engine GUI tasks can be implemented in cloud sessions on lavapipe, the
   Mac doing only their screenshot and Metal checks, is a proposal the human asked for, written separately, and not

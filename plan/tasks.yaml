@@ -3376,11 +3376,11 @@
   pitfalls: []
 - id: TASK-M8-86
   milestone: M8
-  title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand, measured against RQ-550 and RQ-551"
+  title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
   depends_on: [TASK-M6-24]
   needs: []
-  requirements: [REQ-SYS-092, REQ-TOOL-220, REQ-SYS-093, REQ-GUI-401, REQ-PERF-115]
-  reviewers: [code, qa, gui, perf]
+  requirements: [REQ-TOOL-220]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-87
   milestone: M8
@@ -3453,4 +3453,12 @@
   needs: [REQ-INT-026, REQ-EVT-015, REQ-GUI-011, REQ-GUI-014, REQ-GUI-015, REQ-PERF-065, REQ-INT-098]
   requirements: [REQ-GUI-409, REQ-GUI-351, REQ-GUI-352]
   reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M8-96
+  milestone: M8
+  title: "The v1 web skeleton measured on Pages (R-627): the worker layout, COOP/COEP, SharedArrayBuffer and wasm threads, text input, the clipboard and the frame rate, against RQ-550 and RQ-551"
+  depends_on: [TASK-M8-86]  # split from TASK-M8-86 by code review 5663981956 of R-627's port (F1, applied per R-369)
+  needs: []
+  requirements: [REQ-SYS-092, REQ-SYS-093, REQ-GUI-401, REQ-PERF-115]
+  reviewers: [code, qa, gui, perf]
   pitfalls: []

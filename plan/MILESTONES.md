@@ -408,9 +408,10 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   that wires it to the real engine under the conformance suite. TASK-M8-87 is split from TASK-M8-05: the figure past
   `[0,1]²`, its axis extension types and area statistics, on the real engine. TASK-M8-01 is re-planned on the contract
   that exists. The physics-coupled M8 work stays behind the engine chain.
-- **The v1 web skeleton (R-627; TASK-M8-86):** the egui app and the mock engine in wasm on WebGPU, deployed to the
-  GitHub Pages site by hand only, measuring COOP/COEP and SharedArrayBuffer, wasm threads, text input, the clipboard
-  and the frame rate there against RQ-550 and RQ-551. TASK-M8-37 builds v1 web proper on it.
+- **The v1 web skeleton (R-627; TASK-M8-86, measured by TASK-M8-96):** the egui app and the mock engine in wasm on
+  WebGPU, deployed to the GitHub Pages site by hand only; TASK-M8-96 measures COOP/COEP and SharedArrayBuffer, wasm
+  threads, text input, the clipboard and the frame rate there against RQ-550 and RQ-551. TASK-M8-37 builds v1 web
+  proper on the skeleton.
 
 <!-- gate:M8 -->
 **Exit gate — 463 requirements** (and every earlier gate still green):

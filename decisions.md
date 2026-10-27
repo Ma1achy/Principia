@@ -25836,8 +25836,8 @@ Changes REQ-CHART-010 (verify, rulings, source, rq, note).
 Part 6a, `docs/design/principia_systems_architecture.md` §3 (added paragraphs), `REVIEW_QUEUE.md` (RQ-550 and RQ-551,
 an added line each), `plan/HUMAN_SETUP.md` §5 (new), `plan/WORKFLOW.md`, `plan/OPERATIONS.md` § "The GUI track
 (R-390)", `plan/MILESTONES.md` § "M8 — The dev GUI, tooling, v1 web and the release gates", `plan/reviewers/gui.md` §8,
-REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to REQ-GUI-409 and REQ-PERF-115 (reqio, new), nine requirements'
-notes (reqio), TASK-M8-86 to TASK-M8-95 (new), TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07,
+REQ-SYS-092, REQ-SYS-093, REQ-TOOL-220, REQ-GUI-401 to REQ-GUI-409 and REQ-PERF-115 (reqio, new), ten requirements'
+notes (reqio), TASK-M8-86 to TASK-M8-96 (new), TASK-M8-01 (re-planned), TASK-M8-05, TASK-M8-06, TASK-M8-07,
 TASK-M8-13, TASK-M8-19, TASK-M8-20, TASK-M8-23 and TASK-M8-24 (the track), the tasks that depended on them,
 TASK-M8-37, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
 
@@ -25927,15 +25927,21 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   The classification, with a reason for each borderline call, is in this port's PR description.
 - **A track task depends only on merged work, on R-390's track and on other M8 track tasks.** Every other dependency,
   with the `needs` it carried, moves to its wiring task. TASK-M8-05 no longer depends on TASK-M8-03, TASK-M8-04,
-  TASK-M6-20 or TASK-M7-21; TASK-M8-13 on TASK-M8-03 or TASK-M8-11; TASK-M8-19 on TASK-M8-18, TASK-M7-14 or
-  TASK-M7-22; TASK-M8-23 on TASK-M8-08; TASK-M8-24 on TASK-M3-39. Each task file keeps the old line as a *Was*.
+  TASK-M6-20 or TASK-M7-21 (to TASK-M8-88's or TASK-M8-87's), or on TASK-M2-32, TASK-M2-34 or TASK-M6-48 (to
+  TASK-M8-87's, with the split below); TASK-M8-13 on TASK-M8-03 or TASK-M8-11; TASK-M8-19 on TASK-M8-18, TASK-M7-14 or
+  TASK-M7-22; TASK-M8-23 on TASK-M8-08; TASK-M8-24 on TASK-M3-39. Each task file keeps the old line as a *Was*. Where
+  a `needs` entry a track task keeps is closed by merged work that its remaining dependencies no longer reach, that
+  merged task is named in its Depends on, so the entry stays reachable (`plan/check_plan.py`): TASK-M2-14, TASK-M2-17,
+  TASK-M2-22, TASK-M2-23 and TASK-M2-28 for TASK-M8-06, TASK-M2-23 for TASK-M8-07, TASK-M2-22 for TASK-M8-13,
+  TASK-M7-20 for TASK-M8-23 and TASK-M3-02 for TASK-M8-24; nothing waits on them.
 - **What a track task closes.** It keeps every requirement it shows in full, look, feel and behaviour, on the mock, as
   R-390's tasks do. A requirement whose check is on the real engine's own output or wiring moves to the wiring task
   with its acceptance line, as R-390's "What stays" kept such requirements with the real-engine task: REQ-GUI-070
   (egui-wgpu on the engine's device) and REQ-GUI-078 (the status line, whose `budget-bound` the mock never binds) from
-  TASK-M8-05; REQ-GUI-092 (a scrub re-integrating from 0) from TASK-M8-07; REQ-GUI-351 and REQ-GUI-352 (the stepper
-  pair's warnings, from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone and
-  rulings; its note names R-627 and both tasks.
+  TASK-M8-05; REQ-GUI-092 (a scrub re-integrating from 0) from TASK-M8-07; REQ-GEN-023 (the debug tags of the real
+  registry, TASK-M7-13's) from TASK-M8-19, to TASK-M8-92; REQ-GUI-351 and REQ-GUI-352 (the stepper pair's warnings,
+  from TASK-M3-39's pair table) from TASK-M8-24. Each keeps its statement, verify, milestone and rulings; its note
+  names R-627 and both tasks.
 - **TASK-M8-05 is split, in the plan first.** Its axis extension types, area statistics and F3 fill past `[0,1]²`
   (REQ-GUI-180, REQ-CHART-054, REQ-CHART-056 and REQ-CHART-071, reviewed by physics) are kernel physics drawn on the
   real figure, not a screen the mock can show. They move, with their acceptance lines, deliverables and notes, to
@@ -25953,26 +25959,34 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
 - **The tasks that depended on a track task now depend on its wiring task**, which depends on it: an engine-side task
   runs on the real engine, so it needs the screen wired, as it needed the whole of the old task. Those that depended on
   TASK-M8-05 depend on TASK-M8-87, which reaches TASK-M8-88 and TASK-M8-05.
-- **TASK-M8-05 goes first** among the track tasks of M8: its dependencies are merged or R-390's track's (TASK-M6-46
-  to TASK-M6-49), and `plan/OPERATIONS.md` § "The GUI track (R-390)" gives it the first track slot of M8.
+- **TASK-M8-05 goes first** among the track tasks of M8: its dependencies are merged or R-390's track's (TASK-M6-24,
+  TASK-M6-30, TASK-M6-46, TASK-M6-47 and TASK-M6-49), and `plan/OPERATIONS.md` § "The GUI track (R-390)" gives it the
+  first track slot of M8.
 - **TASK-M8-01's dependencies are unchanged.** It is the contract, engine side, not a screen: it fills the groups
   `SimConfig` and `RenderState` still leave empty from their owning contracts, among them the quality settings TASK-M6-22
   owns, and builds on M3's and M5's fields its `needs` name, so it stays behind the chain. No track task waits for it
   now. Its goal, deliverables and acceptance are re-planned on what exists (`interface.rs`, `set_field.rs`,
   `snapshot.rs`, `sim_config.rs`, `render_state.rs`, `view_ui.rs`, `canonical.rs`, `store.rs` and `conformance.rs`),
   each changed line kept as a *Was*.
-- **The v1 web skeleton is TASK-M8-86**, in M8 beside TASK-M8-37, TASK-M8-38 and TASK-M8-41, which RQ-550 and RQ-551
-  name. It depends only on TASK-M6-24 (merged), so it can start now; it is a track task (the mock engine), merging
-  without the gates of M3 to M6. Reviewers: code, qa, gui, and perf for the frame rate. It closes five new
-  requirements: REQ-SYS-092 (the skeleton runs, in a worker on an OffscreenCanvas or, where it will not run there, in
-  the fallback it does run in, measured and reported), REQ-TOOL-220 (the Pages workflow: `workflow_dispatch` only,
-  `main` only, the `github-pages` environment, no push trigger), REQ-SYS-093 (the COOP/COEP workaround on Pages, and
-  whether SharedArrayBuffer and wasm threads work there), REQ-GUI-401 (text input and the clipboard) and REQ-PERF-115
-  (the frame rate). None carries `rq`: the skeleton measures and settles nothing, so it waits on neither RQ. Its
-  results are written beside the measured crossings in systems_architecture §3 and pointed at from RQ-550 and RQ-551,
-  numbers with their browser, version and method. TASK-M8-37, which builds v1 web proper on its `web/` and its
-  workflow, depends on it. The deploy stays manual until the human says v1 is ready to be found; TASK-M8-41's release
-  check is run on a manual deploy.
+- **The v1 web skeleton is two tasks** (split in the plan first; code review 5663981956 of this port's PR, F1), in M8
+  beside TASK-M8-37, TASK-M8-38 and TASK-M8-41, which RQ-550 and RQ-551 name. Its measurements can be taken only on the
+  Pages site, which only a manual deploy from `main` reaches (the `github-pages` environment allows `main` alone), so
+  they cannot be shown in the PR that builds the skeleton:
+  - **TASK-M8-86, the skeleton**: the egui app and the mock engine in wasm on WebGPU, its `web/`, the Pages workflow
+    and its wasm build in CI. It depends only on TASK-M6-24 (merged), so it can start now; reviewers code, qa and gui.
+    It closes REQ-TOOL-220 (the Pages workflow: `workflow_dispatch` only, `main` only, the `github-pages` environment,
+    no push trigger).
+  - **TASK-M8-96, the measurements**: it depends on TASK-M8-86 and starts from the first manual deploy of it from
+    `main`; it measures on the Pages URL and writes the results into systems_architecture §3, "Measured on the v1 web
+    skeleton", against RQ-550 and RQ-551; reviewers code, qa, gui and perf (the frame rate). It closes REQ-SYS-092
+    (where the skeleton runs: a worker on an OffscreenCanvas or, where it will not run there, the fallback it does run
+    in), REQ-SYS-093 (the COOP/COEP workaround on Pages, and whether SharedArrayBuffer and wasm threads work there),
+    REQ-GUI-401 (text input and the clipboard) and REQ-PERF-115 (the frame rate).
+  Both are track tasks (the mock engine), merging without the gates of M3 to M6, with no wiring task. None of the five
+  requirements carries `rq`: the skeleton measures and settles nothing, so neither task waits on either RQ; the results
+  are numbers with their browser, version and method, pointed at from RQ-550 and RQ-551. TASK-M8-37, which builds v1
+  web proper on the skeleton's `web/` and workflow, depends on TASK-M8-86. The deploy stays manual until the human says
+  v1 is ready to be found; TASK-M8-41's release check is run on a manual deploy.
 - R-627 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
 
 *The number:* PR #293's batch of thirty-two rulings, numbered from the next free number on 25 Oct, is not merged;

@@ -8488,13 +8488,16 @@
     section: 5. The stain editor — a free, typed node graph (R-64)
   - file: docs/contracts/principia_gui_state_contract.md
     section: "7. What a replacement GUI must honour (the teardown contract)"
+  - file: decisions.md
+    section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
   verify:
     method: unit test
     detail: "debugVisible = false removes exactly the debug-tagged entries from the list"
   rulings:
   - R-571
+  - R-627
   milestone: M8
-  note: "R-571 (21 Oct 2026): the dev GUI is the native app's and v1 web's; a replacement GUI, if there ever is one, is v2 web's (gui_state_contract §3 as reworded in PR #282, gui re-check 5608439139). *Was:* \"and a polished GUI hiding them by filtering on ViewUI.debugVisible\"."
+  note: "R-571 (21 Oct 2026): the dev GUI is the native app's and v1 web's; a replacement GUI, if there ever is one, is v2 web's (gui_state_contract §3 as reworded in PR #282, gui re-check 5608439139). *Was:* \"and a polished GUI hiding them by filtering on ViewUI.debugVisible\". R-627 (27 Oct 2026): closed by TASK-M8-92, no longer TASK-M8-19, since its check reads the real registry's debug tags (TASK-M7-13); TASK-M8-19 builds its screen on the mock engine, and TASK-M8-92 wires it to the real engine (applied per R-369, code review 5663981956 of R-627's port, F2)."
 - id: REQ-GEN-024
   area: GEN
   kind: definition
@@ -23949,7 +23952,7 @@
   rulings:
   - R-627
   milestone: M8
-  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."
 - id: REQ-GUI-402
   area: GUI
   statement: "Built on the mock engine by its track task (R-627), the Explore shell (the top bar, the footer, the menus' entry points, the window registry, nothing over the figure) must behave the same on the real engine: wired to the real engine's state store and snapshot, it passes every acceptance line of its track task there, and the contract conformance suite passes on both engines."
@@ -33211,7 +33214,7 @@
   rulings:
   - R-627
   milestone: M8
-  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
@@ -34782,7 +34785,7 @@
   rulings:
   - R-627
   milestone: M8
-  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."
 - id: REQ-SYS-093
   area: SYS
   statement: "On the GitHub Pages site the v1 web skeleton must test the COOP/COEP workaround, a self-hosted, same-origin service worker such as `coi-serviceworker` beside `index.html`, and report whether the page is then cross-origin isolated and whether SharedArrayBuffer and wasm threads actually work there, against RQ-550 and RQ-551 (R-627)."
@@ -34799,4 +34802,4 @@
   rulings:
   - R-627
   milestone: M8
-  note: "R-627 (27 Oct 2026): closed by TASK-M8-86, the v1 web skeleton, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither."
+  note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\"."

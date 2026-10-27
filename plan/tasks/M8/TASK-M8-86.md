@@ -1,25 +1,23 @@
-# TASK-M8-86 — The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand, measured against RQ-550 and RQ-551
+# TASK-M8-86 — The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand
 
 - **Milestone:** M8
-- **Closes:** REQ-SYS-092, REQ-TOOL-220, REQ-SYS-093, REQ-GUI-401, REQ-PERF-115
+- **Closes:** REQ-TOOL-220
 - **Depends on:** TASK-M6-24
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa, gui, perf
+- **Reviewers:** code, qa, gui
 - **Pitfalls:** none
-- **Size:** ~450 lines
+- **Size:** ~350 lines
 
 ## Goal
 The native app's egui GUI with the mock engine (R-390), compiled to `wasm32-unknown-unknown` and running on WebGPU in the
 browser, deployed to the GitHub Pages site, https://ma1achy.github.io/Principia/, by hand only (R-627). It runs in a Web
 Worker on an OffscreenCanvas if it will run there; if it will not, it runs in the fallback that does (egui's own web
-runner on the main thread), and what stopped the worker layout is observed and reported, not argued. It measures, in
-each browser of R-110's pair (Chrome stable and Safari) on the human's Mac, from the deployed Pages URL: whether the
-COOP/COEP workaround, a self-hosted `coi-serviceworker` beside `index.html`, makes the page cross-origin isolated, and
-whether SharedArrayBuffer and wasm threads then actually work; text input and the clipboard; and the frame rate. The
-results are numbers and observed outcomes, recorded in systems_architecture §3 under "Measured on the v1 web skeleton"
-and pointed at from RQ-550 and RQ-551, which stay open for the human. It is a skeleton: no real engine, no frame loop
-of the engine's, no membrane design; v1 web proper is TASK-M8-37's and TASK-M8-38's, built on it.
+runner on the main thread). It carries the measurement panel and the scripted pan that TASK-M8-96 measures with, on the
+deployed site, against RQ-550 and RQ-551 (split by code review 5663981956 of R-627's port, F1, applied per R-369). It is
+a skeleton: no real engine, no frame loop of the engine's, no membrane design; v1 web proper is TASK-M8-37's and
+TASK-M8-38's, built on it.
 
+## References
 ## References
 - `decisions.md` § "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
 - `decisions.md` § "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
@@ -33,6 +31,7 @@ of the engine's, no membrane design; v1 web proper is TASK-M8-37's and TASK-M8-3
 - `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
 - `decisions.md` § "R-146 — The crate layout is confirmed *(closes RQ-76)*"
 
+## Deliverables
 ## Deliverables
 - The gui crate and the engine contract it uses build for `wasm32-unknown-unknown` with the mock engine and WebGPU
   (`eframe`'s web runner, or egui with egui-wgpu driven directly in the worker); a wasm entry in `crates/gui` behind a
@@ -52,36 +51,28 @@ of the engine's, no membrane design; v1 web proper is TASK-M8-37's and TASK-M8-3
   the wasm-threads probe's result (a wasm module on a shared `WebAssembly.Memory`, a second worker writing a value the
   first reads through `Atomics`), the layout the app runs in, and the frame rate over a timed window; and a scripted
   pan for the frame-rate runs.
-- The results, under "Measured on the v1 web skeleton" in `docs/design/principia_systems_architecture.md` §3, each with
-  its browser, version, machine, layout and method, and the numbers in the PR.
 - The skeleton's wasm build in CI (a build-only job in `ci.yml`), so a later change that breaks it is seen (applied per
   R-369).
 
 ## Acceptance tests
-- Review checklist (gui reviewer), on the Pages URL after a manual deploy from `main` — the mock app opens in Chrome stable and Safari on the human's Mac, with its "mock engine" tag; the report gives, per browser and version, where egui ran (a worker on an OffscreenCanvas, or the fallback) and, for a layout that did not run, the error or missing API observed (REQ-SYS-092).
 - `cargo test -p xtask pages_workflow_manual` — the workflow's only trigger is `workflow_dispatch`, its deploy job is conditioned on `refs/heads/main` and names `environment: github-pages`; controls: the file with a `push` trigger added, and with the ref condition removed, each fail (REQ-TOOL-220).
-- Review checklist (code reviewer), on the Pages URL — with the service worker active and again unregistered, in each browser: `crossOriginIsolated`, `SharedArrayBuffer`, and the wasm-threads probe, each as observed; `coi-serviceworker.js` is served from the site's own origin; control: a result taken from a local server fails the review (REQ-SYS-093).
-- Review checklist (gui reviewer) — per browser and layout: ASCII typing, a non-ASCII character, an IME composition, copy out of and paste into an egui text field, each works or does not, with the mechanism it took and any permission prompt (REQ-GUI-401).
-- Review checklist (perf reviewer) — per browser, version, layout and window size, the mean and 5th-percentile frames per second over at least 30 s of the scripted pan and of idle, beside `cargo run -p gui --features mock` on the same Mac (REQ-PERF-115).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the native app and the conformance suite are unchanged by the `web` build (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
+- Review checklist (gui reviewer), on a local build of the site — the mock app opens with its "mock engine" tag, and the measurement panel reports each item TASK-M8-96 measures (`crossOriginIsolated`, `SharedArrayBuffer`, the wasm-threads probe, the layout, the frame rate) and the scripted pan runs; the PR names the layout the app ran in. This is not a measurement for RQ-550 or RQ-551; those are TASK-M8-96's, on the Pages URL (REQ-TOOL-220's deliverable, checked before the deploy).
 
 ## Notes
 - R-627 (27 Oct 2026): a track task on the mock engine (R-390): on spare agent slots, never holding up the physics
   chain, merging once its reviews pass and CI is green without waiting for the gates of M3 to M6 (M2 and M7 by R-415's
-  test). Reviewers code, qa, gui, and perf for the frame rate (applied per R-369).
-- **Measure, don't argue.** Each result is a number or an observed outcome with its browser, version and method. The
-  task settles neither RQ-550 nor RQ-551 and waits on neither; where a result bears on an option of either, the report
-  says which, and the human rules. Text input and the clipboard are systems_architecture §3's rows 1 and 8; the worker
-  layout is RQ-551's option (a).
+  test). Reviewers code, qa and gui (applied per R-369); the frame rate is TASK-M8-96's, with perf.
 - **The deploy is manual** until the human says v1 is ready to be found (R-627): Pages is enabled with source "GitHub
-  Actions" and the `github-pages` environment allows `main` only (`plan/HUMAN_SETUP.md` §5). The first deploy is a
-  `gh workflow run pages.yml --ref main` after this task merges, and the measurements are taken on it; the PR shows them
-  from a deploy of the branch's build only if the environment allows it, and otherwise the measurement commit follows
-  the merge, reviewed as a follow-up of this task. No other repository setting changes.
-- Browsers run on the human's Mac (R-186); a script drives what it can (for example Playwright with WebGPU enabled), and
-  the rest is by hand, each so marked.
+  Actions" and the `github-pages` environment allows `main` only (`plan/HUMAN_SETUP.md` §5). After this task merges,
+  the orchestrator runs `gh workflow run pages.yml --ref main`, and TASK-M8-96 starts from that deploy. No other
+  repository setting changes.
 - REQ-SYS-042 (the coi-serviceworker in the deployment) stays TASK-M8-37's, which builds on this task's `web/` and
   workflow. The proposal on cloud sessions for mock-engine tasks (R-627's last paragraph) is separate and changes nothing
   here.
-- **What to try.** The PR description has a "What to try" section: the Pages URL, the measurement panel, and typing and
-  pasting into a text field.
+- **What to try.** The PR description has a "What to try" section: the local build command, the measurement panel, and
+  typing into a text field.
+- *Was (R-627's port, before code review 5663981956 F1):* this task also closed REQ-SYS-092, REQ-SYS-093, REQ-GUI-401
+  and REQ-PERF-115, took the measurements and wrote them up, had perf as a reviewer, and, if the environment would not
+  deploy the branch, took them in "a measurement commit [that] follows the merge, reviewed as a follow-up of this task".
+  The measurements are TASK-M8-96's, a task of their own that starts from the manual deploy.
