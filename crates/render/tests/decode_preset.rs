@@ -147,25 +147,42 @@ negative_control!(
     check_vs_decode_only(1e-3)
 );
 
-/// The preset library's DECODE and agreement presets are locked, and a fork leaves them unchanged.
-#[test]
-fn decode_preset_locked() {
-    let library = presets::library();
+/// The preset library's DECODE and agreement presets are locked, and a fork starts as the preset and leaves it
+/// unchanged when edited; `library` is the library checked.
+fn check_locked(library: &[presets::Preset]) {
     let names: Vec<&str> = library.iter().map(|p| p.name()).collect();
     assert_eq!(
         names,
         [presets::decode::NAME, presets::agreement::NAME],
         "the library's fragment-recompute presets"
     );
-    for p in &library {
+    for p in library {
         assert!(p.locked(), "{} ships unlocked", p.name());
         let before = p.clone();
         let mut fork = p.fork("mine");
+        assert_eq!(
+            (fork.view.as_str(), fork.output),
+            (p.view(), p.output()),
+            "a fork of {} is not its view",
+            p.name()
+        );
         fork.view.push_str("\n// edited\n");
         assert_eq!(p, &before, "editing a fork of {} changed it", p.name());
         assert_eq!(fork.name, "mine");
     }
 }
+
+#[test]
+fn decode_preset_locked() {
+    check_locked(&presets::library());
+}
+
+negative_control!(
+    decode_preset_locked,
+    "a library without the agreement preset must be found",
+    expected = "the library's fragment-recompute presets",
+    check_locked(&presets::library()[..1])
+);
 
 // ── The poles (R-436, R-437, R-438) ─────────────────────────────────────────────────────────────────────────────────
 

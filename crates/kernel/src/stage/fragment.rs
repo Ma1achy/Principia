@@ -6,7 +6,9 @@
 //! is written by hand: the fragment runs the same decode, encode and shape map as the kernel and the CPU.
 //!
 //! Each entry point reads its inputs from, and writes its outputs to, one sized storage array, its *words*, at the
-//! fixed offsets below; the generated glue fills and reads them. The arrays are sized, never runtime-sized, so the body
+//! fixed offsets of the ledger's layout table (`crates/ledger/src/fragment.rs`, generated here as
+//! `crate::generated::fragment_words`); the generated glue fills and reads them at the same offsets, read from the same
+//! table. The arrays are sized, never runtime-sized, so the body
 //! reads no `arrayLength` and indexes them only by constants.
 //!
 //! - The decode ([`decode_latent_defaults`] and the other charts' wrappers, [`decode_at`]): `(u, v)` at
@@ -32,43 +34,9 @@ use crate::generated::links::{Defaults, Selection};
 use crate::payload::ICDescriptorOf;
 use crate::stage::decode::{sample_with, tag, target, DecodeMode, DecodeUniforms, UniformChart};
 
-/// The decode's words: `(u, v)` at 0.
-pub const DECODE_UV: usize = 0;
-/// The decode's words: `Φ`'s `z` from 2, eight words.
-pub const DECODE_Z: usize = 2;
-/// The decode's words: 1 where `z` is the 8-D latent, 0 where the chart's `Φ` does not produce one.
-pub const DECODE_Z_LATENT: usize = 10;
-/// The decode's words: the canonical `(m, r, p)` from 11, fifteen words.
-pub const DECODE_IC: usize = 11;
-/// The decode's words: the twelve `ICDescriptor` fields from 26, in the generated struct's order.
-pub const DECODE_DESCRIPTOR: usize = 26;
-/// The decode's words: the tag word at 38.
-pub const DECODE_TAG: usize = 38;
-/// The decode's words: their number.
-pub const DECODE_WORDS: usize = 39;
-
-/// The descriptor's words: `(m, r, p)` from 0, the twelve fields from 15.
-pub const DESCRIBE_IC: usize = 0;
-/// The descriptor's words: the twelve fields from 15.
-pub const DESCRIBE_DESCRIPTOR: usize = 15;
-/// The descriptor's words: their number.
-pub const DESCRIBE_WORDS: usize = 27;
-
-/// The encode's words: `(m, r, p)` from 0.
-pub const ENCODE_IC: usize = 0;
-/// The encode's words: `z`, `α`, `β`, `λ` and the notices word from 15 (`crate::stage::encode::write_encoded`'s order).
-pub const ENCODE_OUT: usize = 15;
-/// The encode's words: their number.
-pub const ENCODE_WORDS: usize = 27;
-
-/// The shape map's words: `r` from 0 (`r₀ₓ r₀ᵧ r₁ₓ r₁ᵧ r₂ₓ r₂ᵧ`), `m` from 6, `n` from 9.
-pub const SHAPE_R: usize = 0;
-/// The shape map's words: `m` from 6.
-pub const SHAPE_M: usize = 6;
-/// The shape map's words: `n` from 9.
-pub const SHAPE_N: usize = 9;
-/// The shape map's words: their number.
-pub const SHAPE_WORDS: usize = 12;
+/// The words' offsets and sizes, generated from the ledger's layout table (`crates/ledger/src/fragment.rs`), which
+/// `cargo xtask build-kernel`'s glue reads too.
+pub use crate::generated::fragment_words::*;
 
 /// Whether a chart's `Φ` produces the 8-D latent `z` (colour_composition §3; REQ-COL-057): the latent chart's does,
 /// `z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`; every other chart's hands the decoder its own output, and its `ChartOut.z` holds

@@ -2,8 +2,8 @@
 //! decode, the descriptor, the encode and the shape map of `crates/kernel/src/stage/fragment.rs`, each compiled from the
 //! one Rust source by rust-gpu to SPIR-V and read back by naga, then lifted out of the kernel's module into a WGSL
 //! snippet the fragment assembler places. Nothing in a snippet is written by hand: its body is naga's translation of
-//! the entry point's, and its glue only moves values in and out of the body's words at the offsets the kernel module
-//! declares.
+//! the entry point's, and its glue only moves values in and out of the body's words at the offsets of the ledger's
+//! layout table (`ledger::fragment`), the table the kernel's constants are generated from.
 //!
 //! **The lift** ([`lift`]). The module is cut to the one entry point (naga's `compact`), whose wrapper calls the body;
 //! the body becomes a plain function of its words, `<prefix>_body(words_in: <prefix>_words) -> <prefix>_words`: the
@@ -21,6 +21,8 @@
 
 use std::fmt::Write as _;
 use std::path::Path;
+
+use ledger::fragment;
 
 use naga::{
     AddressSpace, Block, Expression, Function, FunctionArgument, FunctionResult, GlobalVariable,
@@ -400,29 +402,36 @@ struct FragDecode {
 
 /// A chart's decode section's glue: `frag_decode(uv)`, the body run on `uv`.
 fn decode_glue(prefix: &str) -> String {
+    let l = fragment::decode();
     let mut out = format!(
         "\n// The fragment decode at the chart point `uv` (the sample's `ctx.chart.slice_uv`).\n\
          fn frag_decode(uv: vec2<f32>) -> FragDecode {{\n    \
          var wi: {prefix}_words;\n    \
-         wi.w[0] = bitcast<u32>(uv.x);\n    \
-         wi.w[1] = bitcast<u32>(uv.y);\n    \
+         wi.w[{uv}] = bitcast<u32>(uv.x);\n    \
+         wi.w[{v}] = bitcast<u32>(uv.y);\n    \
          let wo = {prefix}_body(wi);\n    \
-         var o: FragDecode;\n"
+         var o: FragDecode;\n",
+        uv = l.at("UV"),
+        v = l.at("UV") + 1,
     );
     for k in 0..8 {
-        let _ = writeln!(out, "    o.z[{k}] = {};", f("wo", 2 + k));
+        let _ = writeln!(out, "    o.z[{k}] = {};", f("wo", l.at("Z") + k));
     }
-    out.push_str("    o.z_latent = wo.w[10] != 0u;\n");
-    read_ic(&mut out, "o", "wo", 11);
-    read_descriptor(&mut out, "o.d", "wo", 26);
-    out.push_str("    o.tag = wo.w[38];\n    return o;\n}\n");
+    let _ = writeln!(out, "    o.z_latent = wo.w[{}] != 0u;", l.at("Z_LATENT"));
+    read_ic(&mut out, "o", "wo", l.at("IC"));
+    read_descriptor(&mut out, "o.d", "wo", l.at("DESCRIPTOR"));
+    let _ = write!(
+        out,
+        "    o.tag = wo.w[{}];\n    return o;\n}}\n",
+        l.at("TAG")
+    );
     out
 }
 
 /// The opening of a glue function taking the state `(m, r, p)`: `wi`, the body's words, holding it.
-fn state_in(out: &mut String, prefix: &str) {
+fn state_in(out: &mut String, prefix: &str, ic: usize) {
     let _ = writeln!(out, "    var wi: {prefix}_words;");
-    write_ic(out, "wi", 0);
+    write_ic(out, "wi", ic);
     let _ = writeln!(out, "    let wo = {prefix}_body(wi);");
 }
 
@@ -432,9 +441,10 @@ fn describe_glue(prefix: &str) -> String {
         "\n// The fragment decode's descriptor alone on the state (m, r, p): its producers' pole selects (R-436).\n\
          fn frag_describe(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> FragDescriptor {\n",
     );
-    state_in(&mut out, prefix);
+    let l = fragment::describe();
+    state_in(&mut out, prefix, l.at("IC"));
     out.push_str("    var o: FragDescriptor;\n");
-    read_descriptor(&mut out, "o", "wo", 15);
+    read_descriptor(&mut out, "o", "wo", l.at("DESCRIPTOR"));
     out.push_str("    return o;\n}\n");
     out
 }
@@ -448,17 +458,20 @@ fn encode_glue(prefix: &str) -> String {
          // The fragment encode of the state (m, r, p).\n\
          fn frag_encode(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> FragEncoded {\n",
     );
-    state_in(&mut out, prefix);
+    let l = fragment::encode();
+    let at = l.at("OUT");
+    state_in(&mut out, prefix, l.at("IC"));
     out.push_str("    var o: FragEncoded;\n");
     for k in 0..8 {
-        let _ = writeln!(out, "    o.z[{k}] = {};", f("wo", 15 + k));
+        let _ = writeln!(out, "    o.z[{k}] = {};", f("wo", at + k));
     }
     let _ = writeln!(
         out,
-        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[26];\n    return o;\n}}",
-        f("wo", 23),
-        f("wo", 24),
-        f("wo", 25)
+        "    o.alpha = {};\n    o.beta = {};\n    o.lambda = {};\n    o.notices = wo.w[{}];\n    return o;\n}}",
+        f("wo", at + 8),
+        f("wo", at + 9),
+        f("wo", at + 10),
+        at + 11
     );
     out
 }
@@ -469,19 +482,25 @@ fn shape_glue(prefix: &str) -> String {
         "\n// The shape-sphere point n of the configuration r with masses m (the read side's shape map).\n\
          fn shape(r: array<vec2<f32>, 3>, m: vec3<f32>) -> vec3<f32> {{\n    var wi: {prefix}_words;\n"
     );
+    let l = fragment::shape();
+    let (r_at, m_at, n_at) = (l.at("R"), l.at("M"), l.at("N"));
     for b in 0..3 {
-        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(r[{b}].x);", 2 * b);
-        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(r[{b}].y);", 2 * b + 1);
+        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(r[{b}].x);", r_at + 2 * b);
+        let _ = writeln!(
+            out,
+            "    wi.w[{}] = bitcast<u32>(r[{b}].y);",
+            r_at + 2 * b + 1
+        );
     }
     for (k, c) in ["x", "y", "z"].iter().enumerate() {
-        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(m.{c});", 6 + k);
+        let _ = writeln!(out, "    wi.w[{}] = bitcast<u32>(m.{c});", m_at + k);
     }
     let _ = writeln!(
         out,
         "    let wo = {prefix}_body(wi);\n    return vec3<f32>({}, {}, {});\n}}",
-        f("wo", 9),
-        f("wo", 10),
-        f("wo", 11)
+        f("wo", n_at),
+        f("wo", n_at + 1),
+        f("wo", n_at + 2)
     );
     out
 }
