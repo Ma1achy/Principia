@@ -1,5 +1,11 @@
 # Replication suite: reproduce published three-body results as engine tests
 
+> **Note added 27 Oct 2026.** A consolidated plan, `../2026-10-27_validation_plan/PLAN.md`, is proposed for one ruling.
+> If adopted, it supersedes this file's tier tables A–D, "Sequencing" and "Papers to fetch" as the working plan,
+> without deleting them; rules 1–8 below are carried over unchanged. It also records corrections to this file in its
+> §10 (RQ-555 is closed by R-610; TASK-M2-20 is merged; the tier D figure-eight orders are AZ's). The text below is
+> left as approved.
+
 The human's instruction of 25 Oct 2026. His words:
 
 > "thought maybe the agent could replicate these results? act as good tests on the engine and stuff? what can we

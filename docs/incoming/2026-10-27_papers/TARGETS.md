@@ -1,5 +1,10 @@
 # Replication targets from the 27 Oct 2026 papers
 
+> **Note added 27 Oct 2026.** Every target below is folded, with its id kept, into the one target table of
+> `../2026-10-27_validation_plan/PLAN.md` §3, proposed for one ruling with the other records' targets. Its §5 replaces
+> "Five to do first" below as the first batch, and its §2.1 resolves README §5's "311 against 234" (LL-1). The
+> transcriptions here stay the reference; nothing below is changed.
+
 A record, not authority (R-1, R-159). Every target is read from the paper itself, and its page, table or figure is
 given. Numbers are transcribed, not paraphrased. Where a value can only be read off a plot, it says so and gives the
 reading's precision; where the paper does not state something, that is said instead of supplying a value. Rules 1–8 of
