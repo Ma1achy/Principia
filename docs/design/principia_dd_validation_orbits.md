@@ -136,6 +136,76 @@ finding a nearby periodic solution."*
 a qualitative sanity check, not a quantitative test. The *nearby periodic solution* they found is
 the more useful object.
 
+### 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
+
+*Ported from the papers by R-592 (closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open). The papers are in
+`docs/incoming/2026-10-24_anosova/`, a record and not authority (R-1, R-159): this section is the port.*
+
+**Sources.** I: T. A. Agekyan and Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical
+sampling", *Soviet Astronomy* 11(6), 1006–1014 (1968), from *Astron. Zh.* 44(6), 1261–1273 (1967), ADS
+`1968SvA....11.1006A`: the primary source. II: the same authors, "Investigation of the dynamics of triple systems by the
+method of statistical tests. II", *Astrophysics* 4(1), 11–16 (1968), doi:10.1007/BF01013153. III: X. Li and S. Liao,
+arXiv:1805.07980 (2018), §2, an open restatement of region D at exact rest with `G = 1`.
+
+**The definition** (I, pp. 1007–1008):
+
+- Equal masses `m = 1`; `A₁ = (−½, 0)`, `A₂ = (+½, 0)`, `A₃ = (ξ, η)`.
+- **Region D** (I, Fig. 1 and eq. 8): `ξ ≥ 0`, `η ≥ 0`, `(ξ + ½)² + η² ≤ 1`. A point outside it is not a region-D
+  start, and the import refuses it.
+- **Units**: length 1 = `3·10¹⁶ l` cm, mass 1 = `2·10³³ k` g, and `G = 6.67·10⁻⁸` in those units.
+- **Velocities** (eq. 3): `ẋ₁ = ẋ₂ = +5·10⁻⁵`, `ẋ₃ = −10⁻⁴`, every `ẏᵢ = 0`. The total momentum is 0 and the initial
+  kinetic energy is `K₀ = 7.5·10⁻⁹`. These are **near-rest starts, not rest starts**.
+- **Energy** (eq. 4): `E = −G(1 + 1/√((ξ + ½)² + η²) + 1/√((ξ − ½)² + η²)) + K₀`.
+- **Angular momentum**: `M = Σ m(xẏ − yẋ) = η·10⁻⁴` from eq. 3, since `A₁` and `A₂` lie on `y = 0` and only `A₃` moves
+  off it; the total momentum being 0, `M` does not depend on the origin.
+- **The scale factors** (I, p. 1008: "the pseudo-random numbers generated were multiplied by ½ and 3/2 respectively"):
+  the scan prints `3/2`, with no radical, read at 900 dpi. Region D needs `η ≤ √3/2`, so a factor `3/2` only changes how
+  many draws eq. 8 rejects, not region D; Table 1's rows are taken as printed, so the factor enters nothing here.
+- **Paper II** uses "exactly the same" 100 configurations, in the units of I, and reprints eq. 3's velocities, but its
+  own runs start at exact rest ("the initial velocities of the components were taken to be zero"). It changes none of
+  I's velocities or units. Its Table 1 reprints `ξ` and `η` of all 100 rows, and its `ξ` differs from I's on four:
+  `N = 35` (II `0.480236434`, I `0.480736434`), `N = 49` (`0.058727505`, `0.057727505`), `N = 54` (`0.077480639`,
+  `0.007748064`) and `N = 65` (`0.306897814`, `0.306397814`). Each would be another start; I's `ξ` is kept on every
+  row, and II's is recorded in the fixture's `note` on those four. *Was:* "It changes none of I's initial conditions,
+  velocities or units. Its Table 1 reprints `ξ` and `η` of all 100 rows." (code review C5 of PR #294: II's `ξ`
+  differs on four rows).
+
+**Table 1** (I, pp. 1010–1012) is the fixture `fixtures/anosova/table1.csv`: every row, the `ΔE/E > 0.05` rows and the
+rows printing "—" included, each with its page; columns `N`, `ξ`, paper I's printed `η`, paper II's `η` where it
+differs, the `η` used and why, `E·10⁻⁷` (column 8), `M·10⁻⁴` (column 11) and the outcome (column 4) as text. It was
+transcribed twice, independently, and the two diffed before it was committed: one difference, `N = 17`'s `ξ`, whose
+fifth decimal is a broken glyph (A read `1`, flagged uncertain; B `7`), settled as `7` (`0.115279340`) by the glyph's
+slant and paper II's clean print. *Was:* "the two diffed before it was committed." (code review C4 of PR #294: the
+diff was not empty). **The `η` used** is paper I's, except on
+`N = 88`, where paper II's `0.311230217` is used: I prints `0.7311230217`, outside region D (RQ-571's ruling: "this
+fixes N=88"). The papers' `η` differ on six rows; each keeps its reason in the fixture:
+
+| `N` | I's `η` | II's `η` | used | why |
+|---|---|---|---|---|
+| 26 | 0.760908567 | 0.760908565 | I | I is not the outlier: both round to `M = 0.7609`; I's column 11 prints `0.7509`, on the exception list |
+| 61 | 0.150592949 | 0.150593949 | I | both agree with I's printed `M = 0.1506` |
+| 69 | 0.238608305 | 0.238608354 | I | both agree with I's printed `M = 0.2386` |
+| 77 | 0.032869382 | 0.032869383 | I | both agree with I's printed `M = 0.0329` |
+| 88 | 0.7311230217 | 0.311230217 | II | I's lies outside region D; I prints no `M`, II's Table 3 prints `0.3112` |
+| 93 | 0.471972279 | 0.471612279 | I | I is self-consistent (`M = 0.4720`, as printed); II's is its misprint |
+
+**What is asserted at M2** (TASK-M2-20):
+
+1. **Angular momentum.** On every row the computed `M = η·10⁻⁴` from eq. 3; never skipped. The printed column 11
+   matches it to the table's printed precision on every row that prints one, except the exception list
+   `N = 16, 23, 26, 32, 34`, each carrying its printed and computed values. The list is itself asserted: a new mismatch
+   fails, and so does a listed row that starts matching. No row is dropped.
+2. **Energy, by formula**: eq. 4, computed from the definition.
+3. **The exact-rest control**, a separate fixture: the velocities exactly 0, so `L_z == 0` bitwise and `E == U`.
+4. **Through the chart**: the import canonicalises (centre of mass at the origin, `I = 1`, `G = 1`); `E` and `L_z` of
+   `D(E(x))`, multiplied back by the recorded rescale (§2), match 1 and 2 within REQ-VAL-120's tolerance, and the
+   scale-free invariant `L_z²·|E|/(G²·M⁵)` matches with no factor.
+5. **The control**: a point outside region D (eq. 8 false) is refused as outside the region.
+
+Column 8 (`E·10⁻⁷`) is not eq. 4 on columns 2 and 3 (RQ-570, open): it is transcribed and recorded beside eq. 4 on
+every row, and not asserted until RQ-570 is ruled. Nothing else is imported from the papers as a reference value
+(disintegration times, `p`, `p_min`, outcome fractions): those wait for the Anosova chart's milestone.
+
 ---
 
 ## 2. What the suite tests that the current gates do not
@@ -158,6 +228,21 @@ the more useful object.
 | energy control | `error_ratio` at `t = 13`, `near-field` | `1.0000` |
 | Burrau constants | the Burrau rest start | `M = 12`, `R = 2.2361`, `E = −12.8167` |
 | Python cross-check | against the Python reference at f64 | agreement to `~1e-10` on a small grid |
+
+**The Burrau constants' `R`** (defined per R-72 by TASK-M2-20; REQ-VAL-174) is the hyperradius `R = √(I/M)`, with
+`I = Σ mᵢ‖rᵢ − R_com‖²` and `M = Σ mᵢ`. The Burrau rest start, masses `(3, 4, 5)` at rest at `(1, 3)`, `(−2, −1)` and
+`(1, −1)` with `G = 1` (chart_reference §4.2's historical convention; the positions as `principia_listen.md` § "12. Sweep
+and known orbits" gives them), has its centre of mass at the origin, `I = 60`
+and `R = √5 = 2.2361`; `E = U = −(12/5 + 15/4 + 20/3) = −769/60 = −12.8167`.
+
+**The recorded rescale** (defined per R-72 by TASK-M2-20; REQ-VAL-019). A literature start in its paper's units, masses
+`mᵢ`, positions `rᵢ`, velocities `vᵢ` and constant `G`, enters encode in `G = 1` with `Σmᵢ = 1`: masses `mᵢ/M`, positions
+unchanged, velocities `vᵢ/√(GM)`, so its energy and angular momentum there are `E/(GM²)` and `L_z/(√G·M^{3/2})`. `C`
+then rescales to `I = 1` by `λ = I_in^{−1/2}` (inverse-encode Part 1, step 0), which divides the energy by `λ` and
+multiplies `L_z` by `√λ`, and its mirror, where it fires, negates `L_z`. Multiplying back from a state on the canonical
+section, `E = G·M²·λ·E_c`, `L_z = ±√G·M^{3/2}·λ^{−1/2}·L_{z,c}` (minus where `C` mirrored) and `R = 1/λ`. The rescale
+recorded is `(M, G, λ)` and the mirror flag. `L_z²·|E|/(G²·M⁵)` takes the same value in both, so it is compared with no
+factor.
 
 **None of them sees phase error.** §0 is the proof: energy at 1e-12 while the orbit misses by 6e-3.
 

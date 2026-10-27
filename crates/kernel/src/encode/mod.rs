@@ -11,6 +11,7 @@
 //! [`by_kind`] then encodes into the active chart, axis by axis by kind, and lands in latent `z` where the chart does
 //! not represent the state (Parts 5 and 6, step 4); [`curve`] is kind 4's, the Burrau family's closed form, its
 //! off-curve projection and the fold.
+//! [`ingest`] is the ground-truth import's (Part 7): `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
 //! **T1, constant on gauge orbits** (Part 1; dd_encode §3.3): translation and boost are removed by `C`'s 1a and 1b,
 //! rotation by step 2, scale by step 0, and the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no
@@ -30,6 +31,9 @@
 pub mod blocks;
 pub mod by_kind;
 pub mod curve;
+// The host's ingestion (`κ` via `+∞` and a swept Jacobi loop): not taken by the SPIR-V build.
+#[cfg(not(target_arch = "spirv"))]
+pub mod ingest;
 pub mod report;
 
 pub use blocks::{Inverted, Jacobi, SimplexClamp};
@@ -53,7 +57,9 @@ pub struct Encoded<R> {
     pub report: Report<R>,
 }
 
-/// `E(ic) = (block inverses) ∘ C (ic)` under the selection `S`. `ic.m` is positive with `Σmᵢ = 1`, as `C` requires.
+/// `E(ic) = (block inverses) ∘ C (ic)` under the selection `S`. `ic.m` is positive with `Σmᵢ = 1`, as `C` requires; the
+/// one exception is [`ingest::weighted_encode_jacobian`]'s mass columns, which differentiate these formulas off the
+/// simplex, the total read as given.
 #[inline]
 pub fn encode<S, R>(ic: &Ic<R>) -> Encoded<R>
 where

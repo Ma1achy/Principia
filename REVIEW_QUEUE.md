@@ -73,6 +73,39 @@ later." For the human: yes, whether there is a Frame stage at all.*
   medium (R-486).
 - **25 Oct 2026 (R-625):** the human: "Parked (RQ-378, RQ-386, RQ-391): stay parked." The entry stays open and parked (R-527); what it applies stays applied, and nothing waits.
 
+## RQ-570: Table 1's column 8 (E·10⁻⁷) of Agekyan & Anosova (1968) does not equal eq. (4) on columns 2 and 3 *(found by TASK-M2-20; REQ-VAL-019; context: TASK-M2-20, the RQ-566 ruling's item 5)*
+
+*Filed as the RQ-566 ruling's item 5 asks. Physics, for the human; not resolved here. TASK-M2-20 records column 8
+without asserting it until this is ruled.*
+
+- **File, section:** `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf`, p. 1007 eq. (4),
+  "E = −G(1 + 1/√((ξ+½)²+η²) + 1/√((ξ−½)²+η²)) + L₀", and Table 1, pp. 1010–1012, column 8 "E·10⁻⁷"; the RQ-566
+  ruling (24 Oct 2026), item 5: "Table 1's column 8 (E·1e-7) does not equal eq. (4) evaluated on columns 2–3."
+- **The comparison, all 100 rows** (G = 6.67·10⁻⁸, L₀ = K₀ = 7.5·10⁻⁹, m = 1; the 62 rows that print a value): the
+  ratio column 8 / eq. (4) runs from 0.029 (N = 24: eq. (4) −7.228, printed −0.207) to 1.571 (N = 26: −2.056,
+  printed −3.231), wider than the ruling's 0.23–1.25, which came from a sample. N = 1: −2.464 against −2.254; N = 3:
+  −2.589 against −2.041; N = 10: −3.858 against −0.887, as the ruling found. The 38 rows that print "—" have nothing to
+  compare. Every row's figures are in `fixtures/anosova/col8_comparison.csv`, committed beside the fixture.
+- **What paper II says** (`agekyan_anosova_1968_Ap_4_11_part2.pdf`, p. 11 and Table 1, pp. 12–14): the same 100
+  configurations ("exactly the same as in [1]"), units "the same as in [1]", started at exact rest; its column 6 is
+  "the total energy E (with minus sign)". Its values sit K₀ = 0.075·10⁻⁷ from paper I's column 8, not from eq. (4):
+  N = 1, II 2.329, I −2.254; N = 3, II 2.116, I −2.041 (both differ by exactly 0.075); N = 10, II 0.971, I −0.887
+  (0.084). Eq. (4) at rest gives −2.539, −2.664 and −3.933. So both papers print one energy that is not eq. (4) on the
+  printed (ξ, η): a scan or OCR error in one paper alone does not explain it. II's Table 3 gives −E·10⁻⁷ for the 38
+  rows I left at "—".
+- **Possible causes:** (a) column 8 (and II's column 6) is a different E from eq. (4): another configuration than
+  the printed (ξ, η), another normalisation, or another quantity; (b) a print error common to both tables (unlikely,
+  since II was set separately and agrees with I to K₀); (c) the printed (ξ, η) are not the configurations the
+  energies were computed from, though column 11, printed on 62 rows, matches η·10⁻⁴ on 57 (RQ-571).
+- **Also recorded here, as dispatched:** N = 17's ξ in paper I has a broken fifth decimal. Transcription A read
+  0.115219340 (a damaged "1", flagged uncertain: "it could be a '7'"), B 0.115279340: the one difference between the
+  two transcriptions. At 600 dpi the glyph is a slanted stem with no top bar, the slant of row 16's "7", while every
+  "1" in the cell is upright with a flat foot, so it is read "7"; paper II prints 0.115279340 cleanly. The fixture
+  carries 0.115279340 and both readings.
+- **Applied meanwhile:** column 8 is transcribed and recorded, never asserted.
+- **Options seen:** (a) column 8 stays recorded and unasserted at M2, and the Anosova chart's milestone decides; (b)
+  the human identifies column 8's definition and it is asserted as that.
+
 ## RQ-575: Under R-600's "all 256 starts, not a subset", how a start whose pair has not parted by the horizon enters the ensemble ratio's median *(physics; found by R-600's port; R-600, R-574, R-610; REQ-VAL-199; context: TASK-M8-76)*
 
 *Found by R-600's port. For the human: yes (physics: it changes what the gate passes).*
