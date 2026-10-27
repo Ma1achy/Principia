@@ -112,9 +112,12 @@ byte for byte from it.
 
 ## Agreement with `atlas-params.json`
 
-`crosscheck.py`, output in `agreement.txt`. Each atlas row is matched to its database row by (vx, vy) within 1e-12. Every
-field is then compared at full precision: "identical" means equal as decimals. Digits agreed is
-⌊−log₁₀(|a − b| / |b|)⌋.
+`crosscheck.py`, output in `agreement.txt`. Each atlas row is matched to its database row by (vx, vy) within 1e-12.
+All twelve initial-condition components and the period are then compared at full precision: "identical" means equal
+as decimals. Digits agreed is ⌊−log₁₀(|a − b| / |b|)⌋, or ⌊−log₁₀|a|⌋ where the reference is 0. For the Hristov and
+`liliao2017` rows the six positions are compared by the layout test: a row is matched only if its positions are
+exactly (−1, 0), (1, 0), (0, 0), and every one of them is. For the Simó rows each of the twelve is compared to
+Masson's value, as `agreement.txt` lists.
 
 The atlas has 1,359 rows with high-precision fields:
 
@@ -130,7 +133,7 @@ The atlas has 1,359 rows with high-precision fields:
 | `hristov2024nc` | 167 | 164 in `nontriv_180.txt`, 3 in `triv_180.txt` | identical 167/167 (178–180 digits) | identical 167/167 | identical 167/167 (177–180 digits) |
 | `hristov2026` | 586 | `3bodystab971` | identical 586/586 (97–100 digits) | identical 586/586 | identical 586/586 (97–100 digits) |
 | `liliao2017` | 5 | **`3bodystab971`** | identical 5/5 (98–100 digits) | identical 5/5 | identical 5/5 (100 digits) |
-| `simo2001` | 344 | Masson's file (344 of 345; Simó's no. 1 has no atlas row) | positions identical 344/344 (11–17 significant digits); velocities agree to 27–32 digits (median 30), max abs diff 5.0e-31 | (in the velocities) | agrees to 30–34 digits (median 31), max abs diff 5.0e-31 |
+| `simo2001` | 344 | Masson's file (344 of 345; Simó's no. 1 has no atlas row) | positions: all six (x1 = −2c1, y1 = 0, x2 = x3 = c1, y2 = c2, y3 = −c2) identical 344/344 (11–17 significant digits); velocities: vx1 = 0 identical 344/344, vx2 = c3√3 agrees to 29–32 digits, vy1 = −2c4√3 to 28–32, vy2 = c4√3 to 27–32 (median 30 for each), max abs diff 5.0e-31 | vx3 = −c3√3 agrees to 29–32 digits, vy3 = c4√3 to 27–32 (median 30 for each), max abs diff 5.0e-31 | agrees to 30–34 digits (median 31), max abs diff 5.0e-31 |
 
 Li & Liao's own published values for those 5 orbits, against the 100-digit ones: v1 to 8–10 digits (max abs diff
 5.4e-10), v2 to 9–10 (1.4e-10), T to 9–10 (8.7e-8). Every published T, and v1 or v2 on three of the five (I.A 85,
@@ -160,9 +163,9 @@ correct to the last printed digit.
 | `route_b.py` | `3bf4be2f465a9e3f3cfc19ecc28d48a45c460d89842ac4353af8c5060903ab69` | Transcription, route B |
 | `compare_ab.py` | `ba88de4d3fcfc188d5284b1b942fbf5251ed335c92fff966011e02c01a862eca` | Compares the two routes value by value |
 | `liliao_routes.py` | `85ece4c09952178c0f0de3ee82040c1fac4699b1d04373a0798ee38ab2c73c5a` | Li & Liao 2017's tables, transcribed twice and compared |
-| `crosscheck.py` | `a752c1bea60ff829dd8ca726f4ce5b791072d09913ffd1641ff52f11a19719b5` | The cross-check against `atlas-params.json`. Prints derived numbers only |
+| `crosscheck.py` | `dd0274bde6169239bb1ca9378daeedf876de4d18caeb6bbdff43f091212daf5f` | The cross-check against `atlas-params.json`. Prints derived numbers only |
 | `transcription.txt` | `62b53f859518acd9b9f3a1ec1fbed173530d377b72420cf3e4db0b84023bfc5b` | `compare_ab.py`'s and `liliao_routes.py`'s output |
-| `agreement.txt` | `4b92f42c670407d00d709c4f22f9bf6b4685c6683b77332dd91207d4cba20782` | `crosscheck.py`'s output |
+| `agreement.txt` | `0d2f00a8faf95609f82c79d7c5e7b24cafed9199139936d088e10f9779a704cf` | `crosscheck.py`'s output |
 
 To reproduce (the downloads are untrusted data: run nothing from them, keep them out of the repo):
 

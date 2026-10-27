@@ -36,9 +36,11 @@ def sig(s):
 
 
 def agree(a, b):
-    """Digits agreed: floor(-log10(|a - b| / |b|)); IDENT if equal."""
+    """Digits agreed: floor(-log10(|a - b| / |b|)); IDENT if equal. Where b is 0, the absolute form floor(-log10|a|)."""
     if a == b:
         return IDENT
+    if b == 0:
+        return int((-abs(a).log10()).to_integral_value(rounding='ROUND_FLOOR'))
     return int((-(abs(a - b) / abs(b)).log10()).to_integral_value(rounding='ROUND_FLOOR'))
 
 
@@ -117,12 +119,19 @@ for s, rs in sorted(rows.items()):
                 continue
             used.add(best)
             where['masson_simo_345'] += 1
+            # All twelve components: ic is (x1, y1, x2, y2, x3, y3, vx1, vy1, vx2, vy2, vx3, vy3).
             add('x1 = -2 c1', a[0], -2 * c1, ic[0])
+            add('y1 = 0', a[1], Decimal(0), ic[1])
             add('x2 = c1', a[2], c1, ic[2])
             add('y2 = c2', a[3], c2, ic[3])
+            add('x3 = c1', a[4], c1, ic[4])
+            add('y3 = -c2', a[5], -c2, ic[5])
+            add('vx1 = 0', a[6], Decimal(0), ic[6])
             add('vy1 = -2 c4 sqrt3', a[7], -2 * c4 * SQ3, ic[7])
             add('vx2 = c3 sqrt3', a[8], c3 * SQ3, ic[8])
             add('vy2 = c4 sqrt3', a[9], c4 * SQ3, ic[9])
+            add('vx3 = -c3 sqrt3', a[10], -c3 * SQ3, ic[10])
+            add('vy3 = c4 sqrt3', a[11], c4 * SQ3, ic[11])
             add('T = sqrt3 c5', dec(T), 3 * c5 / SQ3, T)
             continue
         iso = isosceles(ic)

@@ -53,10 +53,16 @@ atlas rows with high-precision fields: 1359
 
 == simo2001: 344 atlas rows; matched 344 ({'masson_simo_345': 344}); unmatched 0
   x1 = -2 c1: digits printed 12-17; identical 344/344; max |diff| 0.0e+00
+  y1 = 0: digits printed 0-0; identical 344/344; max |diff| 0.0e+00
   x2 = c1: digits printed 12-16; identical 344/344; max |diff| 0.0e+00
   y2 = c2: digits printed 11-14; identical 344/344; max |diff| 0.0e+00
+  x3 = c1: digits printed 12-16; identical 344/344; max |diff| 0.0e+00
+  y3 = -c2: digits printed 11-14; identical 344/344; max |diff| 0.0e+00
+  vx1 = 0: digits printed 0-0; identical 344/344; max |diff| 0.0e+00
   vy1 = -2 c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 28-32 digits (median 30.0); max |diff| 5.0e-31
   vx2 = c3 sqrt3: digits printed 27-31; identical 0/344; others agree to 29-32 digits (median 30.0); max |diff| 5.0e-31
   vy2 = c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 27-32 digits (median 30.0); max |diff| 5.0e-31
+  vx3 = -c3 sqrt3: digits printed 27-31; identical 0/344; others agree to 29-32 digits (median 30.0); max |diff| 5.0e-31
+  vy3 = c4 sqrt3: digits printed 27-31; identical 0/344; others agree to 27-32 digits (median 30.0); max |diff| 5.0e-31
   T = sqrt3 c5: digits printed 29-32; identical 0/344; others agree to 30-34 digits (median 31.0); max |diff| 5.0e-31
   Simó numbers with no atlas row: [1]
