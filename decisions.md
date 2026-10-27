@@ -25956,7 +25956,8 @@ task depends on TASK-M6-21 and TASK-M6-22 directly, the real ones the mock stand
   re-runs every acceptance line of its track task on the real engine, and runs the conformance suite on both engines,
   every contract field its track task added among its cases. Each closes one new requirement, REQ-GUI-402 to
   REQ-GUI-409, "this screen on the real engine", and the requirements moved to it. Its reviewers are its track task's,
-  and physics on TASK-M8-90 for REQ-GUI-155 (physics review 5664187570 of this port's PR, F1).
+  and physics on TASK-M8-90 for REQ-GUI-155 (physics review 5664187570 of this port's PR, F1) and on TASK-M8-88 for
+  REQ-GUI-176, the frame summary's definition, which its frame loop may revise (physics review 5665205331, P1).
   R-390 had no such tasks (its M8 tasks were the real-engine side), so these follow R-390's own pattern: the
   real-engine task depends on the track task and re-runs its acceptance there.
 - **The tasks that depended on a track task now depend on its wiring task**, which depends on it: an engine-side task

@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
-- **Size:** ~350 lines
+- **Size:** ~550 lines
 
 ## Goal
 The native app's egui GUI with the mock engine (R-390), compiled to `wasm32-unknown-unknown` and running on WebGPU in the
@@ -53,11 +53,31 @@ TASK-M8-38's, built on it.
   may keep it or drop it (gui review 5664362471 of R-627's port, G5, applied per R-369).
 - The skeleton's wasm build in CI (a build-only job in `ci.yml`), so a later change that breaks it is seen (applied per
   R-369).
+- **What TASK-M8-96 measures with**, all here, since TASK-M8-96 changes no code (qa review 5665189777 of R-627's port, F2 and F4, applied per
+  R-369):
+  - The browser runner: `web/skeleton/runner/package.json` and its `package-lock.json`, pinning `@playwright/test` and
+    a WebDriver client; a Chrome script (Playwright on the installed Chrome stable, `channel: "chrome"`) and a Safari
+    script (WebDriver through `safaridriver`), each loading a given URL in a given layout, running the scripted pan and
+    idle, and writing the panel's fields as JSON. `plan/HUMAN_SETUP.md` §6 and TASK-M8-96 use these scripts.
+  - The same scripted pan and frame-rate window in the native mock app (`cargo run -p gui --features mock`), in the
+    debug view, reporting the same fields, so REQ-PERF-115 compares native and web on one method.
+  - A way to force each layout: `?layout=worker` (a Web Worker on an OffscreenCanvas) and `?layout=main` (egui's web
+    runner on the main thread); when the worker layout fails, the panel records the reason (the error, or the missing
+    API) and the layout it fell back to.
+  - The frame statistics, one implementation in `crates/gui` for both builds: the display's refresh rate (the median
+    `requestAnimationFrame` interval in the browser, the monitor's rate natively); the per-frame work time in ms (from
+    the frame's start to its submit, mean and 95th percentile); the mean fps; the 5th-percentile fps, defined as the
+    5th percentile of `1000 / interval_ms` over every frame presented in the 30 s window that follows a 5 s warm-up,
+    during the scripted pan (the view panned at a constant rate of one figure width every 5 s, back and forth) or idle
+    (no input); and each fps figure marked "capped" when its mean is within 2% of the refresh rate, since it then reads
+    the display, not the work. Test `frame_window_stats`.
 
 ## Acceptance tests
-- `cargo test -p xtask pages_workflow_manual` — the workflow's only trigger is `workflow_dispatch`, its deploy job is conditioned on `refs/heads/main` and names `environment: github-pages`; controls: the file with a `push` trigger added, and with the ref condition removed, each fail (REQ-TOOL-220).
+- `cargo test -p xtask pages_workflow_manual` — the workflow's only trigger is `workflow_dispatch`, its deploy job is conditioned on `refs/heads/main` and names `environment: github-pages`; controls: the file with a `push` trigger added, with the ref condition removed, and with the deploy job's `environment:` removed and again renamed, each fail (REQ-TOOL-220).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the native app and the conformance suite are unchanged by the `web` build (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 - Review checklist (gui reviewer), on a local build of the site — the mock app opens with its "mock engine" tag, and the measurement panel reports each item TASK-M8-96 measures (`crossOriginIsolated`, `SharedArrayBuffer`, the wasm-threads probe, the layout, the frame rate) and the scripted pan runs; the PR names the layout the app ran in. This is not a measurement for RQ-550 or RQ-551; those are TASK-M8-96's, on the Pages URL (this task's deliverable "A measurement page or panel in the skeleton … and a scripted pan", checked before the deploy; it closes no requirement of its own).
+- `cargo test -p gui frame_window_stats` — on a synthetic sequence of frame intervals and work times: the mean fps, the 5th-percentile fps over the frames after the 5 s warm-up within the 30 s window, the per-frame work time's mean and 95th percentile, and the "capped" mark at 2% of a given refresh rate, each as defined in the Deliverables; controls: a percentile taken over the warm-up too, one taken over work times instead of intervals, and a capped mark at 10% each fail (this task's deliverable "the frame statistics"; qa review 5665189777 of R-627's port, F4).
+- Review checklist (gui reviewer), on a local build and on `cargo run -p gui --features mock` — the panel and the native debug view each show the refresh rate, the work time in ms, the mean and 5th-percentile fps and the "capped" mark; `?layout=worker` and `?layout=main` each give that layout, or, for the worker, the recorded reason and the fallback; `web/skeleton/runner/package.json` and `package-lock.json` exist with the pinned versions, and the Chrome and Safari scripts run against the local build on the human's Mac once `plan/HUMAN_SETUP.md` §6 is done, each writing the panel's fields; control: a missing field, a layout flag that is ignored, or a script that writes nothing fails the review (this task's deliverable "What TASK-M8-96 measures with"; qa review 5665189777 of R-627's port, F2).
 
 ## Notes
 - R-627 (27 Oct 2026): a track task on the mock engine (R-390): on spare agent slots, never holding up the physics
@@ -87,3 +107,5 @@ TASK-M8-38's, built on it.
   Safari's WebDriver, `sudo safaridriver --enable`, then in Safari Settings → Advanced → "Show features for web
   developers" first, and only then Develop → "Allow Remote Automation". Until they are done, the task cannot run its
   local gui line.
+- *Was (qa review 5665189777 of R-627's port, F1), the REQ-TOOL-220 acceptance line's end:* "controls: the file with a `push` trigger added, and with the ref condition removed, each fail (REQ-TOOL-220).". The Deliverables' "What TASK-M8-96 measures with" and the two acceptance lines after the local panel check are added by F2 and F4 (nothing removed).
+- *Was (qa review 5665189777 of R-627's port, F2 and F4, applied per R-369; the runner, the native pan, the layout flags and the frame statistics added):* "- **Size:** ~350 lines".

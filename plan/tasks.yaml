@@ -3396,7 +3396,7 @@
   depends_on: [TASK-M8-05, TASK-M6-21, TASK-M6-22, TASK-M8-03, TASK-M8-04, TASK-M6-20]
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010]
   requirements: [REQ-GUI-402, REQ-GUI-070, REQ-GUI-078]
-  reviewers: [code, qa, gui]
+  reviewers: [code, qa, physics, gui]  # physics for REQ-GUI-176's definition (physics review 5665205331 of R-627's port, P1)
   pitfalls: []
 - id: TASK-M8-89
   milestone: M8

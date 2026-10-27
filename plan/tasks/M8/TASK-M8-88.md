@@ -4,7 +4,7 @@
 - **Closes:** REQ-GUI-402, REQ-GUI-070, REQ-GUI-078
 - **Depends on:** TASK-M8-05, TASK-M6-21, TASK-M6-22, TASK-M8-03, TASK-M8-04, TASK-M6-20
 - **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010
-- **Reviewers:** code, qa, gui
+- **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~250 lines
 
@@ -39,9 +39,10 @@ TASK-M8-05 built the Explore shell on the mock engine (R-627; R-390's track). Th
 - `crates/gui/src/render_host.rs` — egui-wgpu `Renderer` constructed from the engine's `wgpu::Device` / `Queue`, painting after the engine's pass on the same surface texture.
 - The status line on the real engine's Snapshot: the frame record's summary, filled by the frame loop (the RQ-243 note of TASK-M8-05; `FrameSummary`, `None` until now), the binding axis for `budget-bound` (TASK-M6-20) and the undo depth; the footer's counts, latest message and memory from the real engine's log and frame record.
 - `xtask` screenshot case `01_main/budget_bound`, on the real engine.
+- `crates/engine/src/contract/canvas.rs`'s module comment reworded to name this task, not TASK-M8-05, as the owner of the real engine's canvas implementation (REQ-GUI-070) (qa review 5665189777 of R-627's port, nit, applied per R-369).
 
 ## Acceptance tests
-- `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field (R-406, R-407 A4); review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070).
+- `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png; review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070). The F3-off clause, the figure identical over the shown figure's rect, is run by TASK-M8-87, which places the real canvas.
 - `cargo xtask screenshot 01_main` — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code (REQ-GUI-075). Closed by TASK-M6-24 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - TASK-M8-05's acceptance lines re-run on the real engine (`cargo run -p gui`, and `cargo xtask screenshot` through the headless capture on the real engine), each with its output in the PR, and `cargo test -p engine conformance` and `cargo test -p gui conformance` — the conformance suite passes on both engines, every contract field TASK-M8-05 added among its cases; control: a contract field the screen reads that no case covers fails the review (REQ-GUI-402).
@@ -49,3 +50,5 @@ TASK-M8-05 built the Explore shell on the mock engine (R-627; R-390's track). Th
 ## Notes
 - R-627 (27 Oct 2026): a wiring task, small by design. It is not a track task: it runs on the real engine and waits for the gates as any engine-side task does (R-415's test where it would merge early). The acceptance lines above that name an earlier task's requirement were TASK-M8-05's, moved verbatim; TASK-M8-05's Notes are their record.
 - TASK-M8-87, the figure past `[0,1]²` with the axis extension types and the area statistics, depends on this task.
+- *Was (qa review 5665189777 of R-627's port, F5, applied per R-369; the F3-off clause moved verbatim to TASK-M8-87 with a control):* "- `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field (R-406, R-407 A4); review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070).".
+- physics review 5665205331 of R-627's port, P1 (applied per R-369): physics joins the reviewers, since the real frame loop fills the frame summary and may revise REQ-GUI-176's definition (`quad_count` as the leaf count, fps, GPU and heap memory), which needs physics review before merge; its owner before R-627, TASK-M8-05, had physics. *Was:* "- **Reviewers:** code, qa, gui".
