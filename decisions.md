@@ -25971,7 +25971,8 @@ Changes REQ-INT-100 (rulings, source, note).
 `docs/contracts/principia_scheduler_contract.md` Part 4 (the integration floor), `docs/design/principia_dd_refinement_policy.md`
 §1 and §6, `docs/design/principia_deep_zoom.md` § "Reserved: the integration floor", `docs/archive/review_queue/M0.md`
 (RQ-526, moved with its ruling), REQ-INT-101 and REQ-SCHED-063 (reqio), REQ-PAY-110 (reqio, new, a definition),
-TASK-M3-41 and TASK-M6-10 and `plan/rule_groups.yaml`; built by TASK-M3-41 and TASK-M6-10*
+TASK-M3-41 and TASK-M6-10 and `plan/rule_groups.yaml`; payload §1 (`budget_word`, perf review 5661999637 of PR #293, P1;
+code review 5662211284 of PR #293); built by TASK-M3-41 and TASK-M6-10*
 
 The human's words, verbatim:
 
@@ -25991,6 +25992,12 @@ footprint's remedy, only as an explicit re-run.
 the two counters go is a definition, REQ-PAY-110 (R-72), written into payload §2 by TASK-M3-41 under physics and code
 review; it is a schema change, the version following from the ledger's hash (R-36). Option (b)'s new `state` value and
 option (c)'s split are not taken.
+
+*Applied per R-369 (perf review 5661999637 of PR #293, P1; code review 5662211284 of PR #293):* the flag's place moved from the descriptor, as
+the *What it decides* above reads RQ-526 (a)'s "sticky descriptor bit", to the hot payload word `budget_word`, which
+holds the two counters too (payload §1): the descriptor has no free bit (R-545), and one u32 holds the flag and both
+counts at a cost of 4 B per copy. The human's words, "a flag bit plus counters", are met; the integrator contract
+Part 6 says so.
 
 R-603 is in the "physics" group of `plan/rule_groups.yaml`.
 
