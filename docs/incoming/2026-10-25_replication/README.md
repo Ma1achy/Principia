@@ -64,3 +64,32 @@ Downloaded by Claude at the human's request, unmodified. These are mostly arXiv 
 | `papers/fregeau_etal_2004_MNRAS_352_1_arXiv0401004.pdf` | `16e7401f42c06c9f48f78c9c87f38f60ea425611ccc7b59fac617c3834ba928d` | Fregeau, Cheung, Portegies Zwart & Rasio (2004), "Stellar collisions during binary–binary and binary–single star interactions" (Fewbody), *MNRAS* 352, 1 | arXiv:astro-ph/0401004 |
 | `papers/hernandez_hadden_makino_2020_MNRAS_493_1913_arXiv1910.08667.pdf` | `d696ec2744deaaa33c7b2191ccce9fb5842a11daddfe68cc244a8b7e2ea894e1` | Hernandez, Hadden & Makino (2020), "Are long-term N-body simulations reliable?", *MNRAS* 493, 1913 | arXiv:1910.08667 |
 | `papers/preto_tremaine_1999_AJ_118_2532_arXiv9906322.pdf` | `963a94e9761948f9c39d537afa367c38fc5486d98599605f069b6ae71d94106e` | Preto & Tremaine (1999), "A class of symplectic integrators with adaptive time step for separable Hamiltonian systems", *AJ* 118, 2532 | arXiv:astro-ph/9906322 |
+
+## Held locally, not in the repo (licence audit, 28 Oct 2026)
+
+A read-only audit of every committed PDF (cloud brief 6; posted as a comment on PR #327, 28 Oct 2026) found ten
+files in `papers/` that this public repository may not redistribute. Four carry an institutional-subscription stamp
+on every page ("Downloaded from academic.oup.com/… by King's College London user on 25 October 2026"). Six are
+all-rights-reserved publisher copies, by their own copyright lines. On the human's ruling (28 Oct 2026, option 1:
+"Do 1 and then 2 once everything merges"), they were removed from the tree in one ordinary commit. Their rows above
+are unchanged and their sha256 values still identify them.
+
+Each is held locally, gitignored, under the **same filename** at `../_local/` (the rule `/docs/incoming/_local/` is
+added by PR #327). A path `papers/<name>.pdf` cited anywhere in the docs now resolves to `../_local/<name>.pdf`. The
+citations are left as written, since they are records.
+
+| File | Audit verdict | Evidence |
+|---|---|---|
+| `chitan_myllari_haque_2022_MNRAS_509_1919.pdf` | subscription download | KCL stamp, all 10 pages |
+| `heinamaki_lehto_valtonen_chernin_1999_MNRAS_310_811.pdf` | subscription download | KCL stamp, all 12 pages |
+| `tanikawa_mikkola_2015_PASJ_67_115.pdf` | subscription download | KCL stamp, all 10 pages; "All rights reserved" (OUP) |
+| `valtonen_myllari_orlov_rubinov_2005_MNRAS_364_91.pdf` | subscription download | KCL stamp, all 8 pages |
+| `aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf` | all-rights-reserved publisher copy | "© 1994 Kluwer Academic Publishers" |
+| `aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf` | all-rights-reserved publisher copy | "© 1994 Kluwer Academic Publishers" |
+| `aarseth_zare_1974_CeMech_10_185.pdf` | all-rights-reserved publisher copy | "All Rights Reserved. Copyright © 1974 by D. Reidel" |
+| `heggie_1974_CeMech_10_217.pdf` | all-rights-reserved publisher copy | "All Rights Reserved. Copyright © 1974 by D. Reidel" |
+| `martynova_orlov_rubinov_2009_AstRep_53_710.pdf` | all-rights-reserved publisher copy | "© Pleiades Publishing, Ltd., 2009" |
+| `szebehely_peters_1967_AJ_72_876.pdf` | all-rights-reserved publisher copy | "© American Astronomical Society • Provided by the NASA Astrophysics Data System" |
+
+The files remain in the repository's history. The human's ruling scrubs them from history (option 2) once the open
+PRs have merged. That is a separate, later step and a force-push of `main`.
