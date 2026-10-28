@@ -67,6 +67,9 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
           ADDITIONAL_CONTEXT: ${{ inputs.additional_context }}
+          # The Gemini CLI (0.64.0) runs headless only in a trusted folder; the checkout is this repository's own code,
+          # read-only to the review (its shell tools are cat, echo, grep, head and tail).
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           # A GA Flash model, not Pro, not a preview: the Gemini CLI's own stable Flash, BASE_GEMINI_FLASH_MODEL.
