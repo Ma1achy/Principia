@@ -1,21 +1,25 @@
-//! The GUI's own settings, kept across sessions (R-461 I4): each window's place, by its name (TASK-M6-43 adds the panel
-//! layout). Never the contract (gui_state_contract §2): not undoable, never read by the engine.
+//! The GUI's own settings, kept across sessions (R-461 I4; R-462 J5): each window's place, by its name, and the panel
+//! layout, each splitter's place. Never the contract (gui_state_contract §2): not undoable, never read by the engine.
 //!
 //! **How they are stored** (TASK-M6-42's choice): one JSON file, `gui_settings.json`, in a `principia` directory under
 //! the platform's config directory ([`platform_path`]), written by the `serde_json` the crate already depends on and
 //! the standard library alone, so no dependency is added; eframe's own persistence would add its `persistence`
 //! feature's crates and keep egui's memory as well. The file is
-//! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}}`, each place in points. It is written each time a
-//! window's move or resize ends, through a file beside it renamed over it, so a write cut short leaves the last one.
+//! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}, "layout": {"<splitter>": …, …}}`, each place in
+//! points, each splitter a fraction of the window's width, or height (`crate::layout::Splits`); a splitter the file
+//! does not name is at its default. It is written each time a window's move or resize ends, a splitter's drag ends, a
+//! splitter is reset and the layout is reset, through a file beside it renamed over it, so a write cut short leaves
+//! the last one.
 //!
 //! A file that cannot be read is ignored, logged once to the console, and replaced on the next save; with no file,
-//! every window opens at the artboards' place. A failed save is logged once to the console; nothing else depends on it.
+//! every window opens at the artboards' place and every splitter is at 01_main.png's. A failed save is logged once to the console; nothing else depends on it.
 
 use std::path::{Path, PathBuf};
 
 use eframe::egui::{pos2, vec2, Rect};
 use serde_json::{json, Map, Value};
 
+use crate::layout::{Splits, Splitter};
 use crate::windows::{self, place::Places};
 
 /// The settings file's name.
@@ -29,6 +33,8 @@ pub const DIR: &str = "principia";
 pub struct Settings {
     /// Each window's place.
     pub places: Places,
+    /// Each splitter's place (R-462 J5).
+    pub layout: Splits,
 }
 
 impl Settings {
@@ -41,14 +47,20 @@ impl Settings {
                 json!({ "x": rect.min.x, "y": rect.min.y, "w": rect.width(), "h": rect.height() }),
             );
         }
-        let mut text = serde_json::to_string_pretty(&json!({ "windows": windows }))
-            .expect("a JSON value of finite numbers serialises");
+        let mut layout = Map::new();
+        for splitter in Splitter::ALL {
+            layout.insert(splitter.name().to_owned(), json!(self.layout.get(splitter)));
+        }
+        let mut text =
+            serde_json::to_string_pretty(&json!({ "windows": windows, "layout": layout }))
+                .expect("a JSON value of finite numbers serialises");
         text.push('\n');
         text
     }
 
-    /// The settings the file's `text` holds, or why it cannot be read: not JSON, not an object, or a place that is
-    /// not four finite numbers with a positive size. A window name the GUI does not have is skipped.
+    /// The settings the file's `text` holds, or why it cannot be read: not JSON, not an object, a place that is not
+    /// four finite numbers with a positive size, or a splitter's place that is not a number in `[0, 1]`. A window or a
+    /// splitter name the GUI does not have is skipped.
     pub fn from_json(text: &str) -> Result<Self, String> {
         let value: Value = serde_json::from_str(text).map_err(|e| e.to_string())?;
         let root = value.as_object().ok_or("not a JSON object")?;
@@ -63,8 +75,24 @@ impl Settings {
                 }
             }
         }
+        let mut layout = Splits::default();
+        if let Some(splits) = root.get("layout") {
+            let splits = splits.as_object().ok_or("`layout` is not an object")?;
+            for splitter in Splitter::ALL {
+                if let Some(at) = splits.get(splitter.name()) {
+                    let at = at
+                        .as_f64()
+                        .filter(|v| (0.0..=1.0).contains(v))
+                        .ok_or_else(|| {
+                            format!("the splitter `{}` is not in [0, 1]", splitter.name())
+                        })?;
+                    layout.set(splitter, at as f32);
+                }
+            }
+        }
         Ok(Self {
             places: Places::remembered(rects),
+            layout,
         })
     }
 }

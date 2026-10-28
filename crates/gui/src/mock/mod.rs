@@ -99,6 +99,22 @@ pub struct MockEngine {
     log: Vec<LogEntry>,
     clock: MockClock,
     stain: FakeStain,
+    integrated: Integrated,
+}
+
+/// The fake quads the mock has integrated (R-462 J4; placeholder content): those over every span the figure has shown
+/// since the sim key last changed, in the order they were integrated. A span shown integrates only the quads over it
+/// not already here; an edit of the sim key starts over, as a re-integration does (the mock models no re-addressing).
+#[derive(Clone, Debug, Default)]
+struct Integrated {
+    /// The sim key they were integrated under.
+    sim: Option<SimConfig>,
+    /// The quads.
+    quads: Vec<quads::Quad>,
+    /// The quads' bits, to look one up.
+    held: std::collections::HashSet<[u64; 4]>,
+    /// The last span shown: shown again under the same sim key, it integrates nothing.
+    span: Option<[f64; 4]>,
 }
 
 impl MockEngine {
@@ -122,7 +138,33 @@ impl MockEngine {
             log: Vec::new(),
             clock,
             stain: legend::default_stain(),
+            integrated: Integrated::default(),
         }
+    }
+
+    /// The figure shows `span` of the field, `[s₀, t₀, s₁, t₁]`: the fake quads over it ([`quads::quads_over`]) not
+    /// yet integrated under the sim key as it stands are integrated, after those kept; an edit of the sim key since the
+    /// last span discards every quad first (R-406; R-462 J4).
+    pub fn show_span(&mut self, span: [f64; 4]) {
+        if self.integrated.sim.as_ref() != Some(&self.sim) {
+            self.integrated = Integrated {
+                sim: Some(self.sim.clone()),
+                ..Integrated::default()
+            };
+        } else if self.integrated.span == Some(span) {
+            return;
+        }
+        self.integrated.span = Some(span);
+        for quad in quads::quads_over(&self.sim.plane, span) {
+            if self.integrated.held.insert(quad.map(f64::to_bits)) {
+                self.integrated.quads.push(quad);
+            }
+        }
+    }
+
+    /// The fake quads integrated, in the order they were ([`MockEngine::show_span`]).
+    pub fn integrated(&self) -> &[quads::Quad] {
+        &self.integrated.quads
     }
 
     /// The fake stain the legend is evaluated from.

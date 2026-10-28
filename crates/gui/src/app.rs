@@ -15,7 +15,11 @@
 //! the window as with F3 (R-406). Stain mode draws
 //! the node-graph editor (`crate::stain`), whose graph edits are `SetField`s as any control's. Every window but the
 //! console is moved and resized by the pointer, its place the GUI's own, saved to the GUI's settings as each drag ends
-//! and read back when the next GUI starts (R-461; `crate::settings`).
+//! and read back when the next GUI starts (R-461; `crate::settings`). Every panel boundary on the Explore page is a
+//! splitter (`crate::layout`), dragged, double-clicked to reset it, and all reset by View › reset layout; the layout is
+//! saved to the same settings as each drag ends and at each reset (R-462). The field keeps its place on the screen
+//! whatever the splitters, so a resized canvas shows more or less of it at the same scale, and the engine side is told
+//! the span shown, computing only what it newly exposes: no `SetField` (R-462 J4).
 
 use std::sync::Arc;
 
@@ -35,7 +39,7 @@ use crate::clock::{Clock, Playback};
 use crate::explore;
 use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
-use crate::layout::Layout;
+use crate::layout::{Layout, Splits, Splitter};
 use crate::settings::{Settings, Store};
 use crate::side::EngineSide;
 use crate::stain;
@@ -109,6 +113,10 @@ pub struct App<S: EngineSide> {
     pub windows: windows::State,
     /// The windows' places: each moved or resized, or remembered (R-461).
     pub places: windows::place::Places,
+    /// Where the splitters are (R-462): dragged, reset, or remembered.
+    pub splits: Splits,
+    /// The splitter a drag holds, with its edge, in points, and its place when the drag began.
+    splitting: Option<(Splitter, f32, f32)>,
     /// Where the GUI's settings are kept (R-461 I4).
     store: Store,
     /// Whether a save of the settings has failed this session: it is logged once.
@@ -158,6 +166,8 @@ pub struct Actions {
     pub overlays: Option<engine::contract::render_state::Overlays>,
     /// Keep the overlay set as the default (Overlays ▾'s save as default).
     pub save_overlays: bool,
+    /// Return every splitter to its default (View › reset layout, R-462 J3).
+    pub reset_layout: bool,
 }
 
 impl<S: EngineSide> App<S> {
@@ -175,6 +185,8 @@ impl<S: EngineSide> App<S> {
             console_open: errored,
             windows: windows::State::default(),
             places: Default::default(),
+            splits: Splits::default(),
+            splitting: None,
             store: Store::default(),
             save_failed: false,
             present: false,
@@ -196,11 +208,13 @@ impl<S: EngineSide> App<S> {
     }
 
     /// The app on `side`, as [`App::new`], its settings kept in `store` and read from it now: each window at its
-    /// remembered place; a file that cannot be read ignored, with one line in the console (R-461 I4).
+    /// remembered place, each splitter at its remembered place; a file that cannot be read ignored, with one line in the
+    /// console (R-461 I4; R-462 J5).
     pub fn with_settings(side: S, format: wgpu::TextureFormat, store: Store) -> Self {
         let mut app = Self::new(side, format);
         let loaded = store.load();
         app.places = loaded.settings.places;
+        app.splits = loaded.settings.layout;
         app.store = store;
         if let Some(line) = loaded.ignored {
             app.log_warning(line);
@@ -212,6 +226,7 @@ impl<S: EngineSide> App<S> {
     pub fn settings(&self) -> Settings {
         Settings {
             places: self.places.clone(),
+            layout: self.splits,
         }
     }
 
@@ -429,7 +444,11 @@ impl<S: EngineSide> App<S> {
         self.follow_sample();
         self.trajectory.advance(seconds, span);
         self.windows.inspector.advance(seconds);
-        let layout = Layout::new(ui.max_rect(), ctx.pixels_per_point());
+        let mut layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
+        if !self.present && self.shown && self.view.mode == Mode::Explore {
+            self.follow_splitter(&ctx, &layout);
+            layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
+        }
         if self.present {
             self.presenting(&ctx, &layout);
             return;
@@ -654,6 +673,8 @@ impl<S: EngineSide> App<S> {
         edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
         explore::place(&mut self.keyboard, layout);
+        // The figure's canvas is `layout.figure`; its points are read in `layout.field`, which no splitter moves.
+        let (canvas, field) = (layout.figure, layout.field);
         // Each panel draws in a child of its own, so how many widgets it draws (the trajectory panel's change with the
         // orbit shown) never moves the ids of the widgets drawn after it, and a click that lands as the panel changes
         // still reaches its widget.
@@ -693,7 +714,8 @@ impl<S: EngineSide> App<S> {
             .is_some_and(|f| f == explore::FIGURE);
         let pin = explore::manifold_view::navigate::figure(
             ui,
-            layout.figure,
+            canvas,
+            field,
             focused_figure,
             &self.snapshot,
             &mut self.manifold,
@@ -719,24 +741,38 @@ impl<S: EngineSide> App<S> {
             &mut self.manifold,
             out,
         );
-        explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, layout.figure, &sim.plane);
-        if let Some(at) = explore::lock::reticle_at(&sim.lock, &sim.plane, layout.figure) {
-            explore::lock::reticle(ui.ctx(), layout.figure, at);
+        let span = layout.span(true);
+        explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
+        let reticle = explore::lock::reticle_at(&sim.lock, &sim.plane, field);
+        if let Some(at) = reticle.filter(|at| canvas.contains(*at)) {
+            explore::lock::reticle(ui.ctx(), canvas, at);
+        }
+        // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
+        // one, and the layout is saved (R-462 J3, J5).
+        let resets = crate::layout::splitters(ui, layout);
+        for splitter in &resets {
+            self.splits.reset(*splitter);
+        }
+        if !resets.is_empty() {
+            self.save_settings();
         }
         let ctx = ui.ctx().clone();
         let pointer = ctx.pointer_hover_pos();
         // A pointer carrying a window, by its title bar or an edge, hovers no figure point (R-461; gui_state_contract
-        // §2's hover is the figure point under the cursor).
+        // §2's hover is the figure point under the cursor), nor one on a splitter or dragging it (R-462).
         let carrying = windows::REGISTRY
             .iter()
-            .any(|e| windows::held(&ctx, e).is_some());
+            .any(|e| windows::held(&ctx, e).is_some())
+            || self.splitting.is_some()
+            || pointer.and_then(|p| layout.splitter_at(p)).is_some();
         let over_figure = !carrying
             && pointer
                 .and_then(|p| ctx.layer_id_at(p))
                 .is_none_or(|layer| layer == ui.layer_id());
+        // The figure point is read in the field, on the canvas only.
         self.send_hover(explore::hover_label::figure_point(
-            layout.figure,
-            pointer,
+            field,
+            pointer.filter(|p| canvas.contains(*p)),
             over_figure,
         ));
         if let (Some(sample), Some(cursor), Some(_)) =
@@ -747,7 +783,34 @@ impl<S: EngineSide> App<S> {
                 self.snapshot.render.playhead.t,
                 self.snapshot.sim.horizon.t,
             );
-            explore::hover_label::show(&ctx, layout.figure, cursor, text);
+            explore::hover_label::show(&ctx, canvas, cursor, text);
+        }
+    }
+
+    /// This frame's splitter drag, read before anything is drawn, so the layout is drawn where the drag puts it, under
+    /// the pointer: the splitter at its edge when the drag began moved by the pointer's travel since its press, held to
+    /// its range, the panels on each side of it at their minimums (R-462 J1, J2); back where it began, at its place
+    /// then. When the drag ends the layout is saved (J5).
+    fn follow_splitter(&mut self, ctx: &egui::Context, layout: &Layout) {
+        match crate::layout::held(ctx) {
+            Some((splitter, delta)) => {
+                let (start, from) = match self.splitting {
+                    Some((s, start, from)) if s == splitter => (start, from),
+                    _ => (layout.edge(splitter), self.splits.get(splitter)),
+                };
+                self.splitting = Some((splitter, start, from));
+                let fraction = if delta == 0.0 {
+                    from
+                } else {
+                    layout.dragged(splitter, start, delta)
+                };
+                self.splits.set(splitter, fraction);
+            }
+            None => {
+                if self.splitting.take().is_some() {
+                    self.save_settings();
+                }
+            }
         }
     }
 
@@ -1090,16 +1153,23 @@ impl<S: EngineSide> App<S> {
         if actions.shortcuts {
             self.keyboard.shortcuts_open = true;
         }
+        if actions.reset_layout {
+            self.splits = Splits::default();
+            self.save_settings();
+        }
         if actions.quit {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
     }
 
     /// Draws the figure through the engine side's figure canvas, above the regions' frames, so nothing of theirs
-    /// reaches it. The canvas draws over the whole window, the field at the shown layout's placement, and is clipped to
-    /// the figure's rect as it stands: the shown rect with the egui layer `shown`, else the window (R-406). So over the
-    /// shown rect the two states draw the same pixels.
-    fn paint_figure(&self, ctx: &egui::Context, layout: &Layout, shown: bool) {
+    /// reaches it. The canvas draws over the whole window, the field at the default layout's placement, and is clipped
+    /// to the figure's rect as it stands: the canvas with the egui layer `shown`, else the window (R-406). So over the
+    /// canvas the two states draw the same pixels, and a splitter that resizes the canvas re-frames the figure, never
+    /// moving or scaling the field (R-462 J4). The engine side is told the span shown first, to compute only what it
+    /// does not hold.
+    fn paint_figure(&mut self, ctx: &egui::Context, layout: &Layout, shown: bool) {
+        self.side.show_span(layout.span(shown));
         let Some(canvas) = self.side.figure(layout.placement()) else {
             return;
         };

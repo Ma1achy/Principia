@@ -49,6 +49,9 @@ mod tests {
     mod mock_keyboard_nav_state;
     mod mock_keyboard_stain;
     mod mock_keyboard_windows;
+    mod mock_layout_reframe;
+    mod mock_layout_remembered;
+    mod mock_layout_splitters;
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
