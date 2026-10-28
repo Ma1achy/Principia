@@ -27693,9 +27693,9 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 
 ## R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are "not evaluated within cap", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*
 *Withdrawn in part, 28 Oct 2026, by the owner: its agent-count clause (two local agents at most) and its cloud clauses (docs agents, qa's test writing and reviews in cloud sessions; the audit as a cloud scheduled task).*
-*Still in force: all of it but those clauses; R-262, R-277, R-357 and R-391 stand as they were before it, and the
-weekly consistency audit stays adopted, report-only and never blocking, run on demand when the owner asks (the owner's
-ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in decisions.md).*
+*Still in force: all of it but its agent-count and cloud clauses; R-262, R-277, R-357 and R-391 stand as they were
+before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on demand when the owner
+asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in decisions.md).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
 session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions (the owner's ruling of
 28 Oct 2026, to be ported as a ruling of its own).*
