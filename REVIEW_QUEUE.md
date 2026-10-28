@@ -564,3 +564,29 @@ for now.*
 - **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is the lit review's § 13 sentence.
 - **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
 - **Applied meanwhile:** nothing; the lit review is not edited.
+
+## RQ-611: Whether to check the Burrau converged reference (proposed SP-2) against the journal's version of record and its supplementary snapshots, which could not be fetched *(the owner's request of 28 Oct 2026, "reconcile against the journal version, queue anything unresolved"; `docs/incoming/2026-10-29_burrau_pzb2018/README.md`; context: none built)*
+
+*Queued 28 Oct 2026 by the agent transcribing Portegies Zwart & Boekholt 2018. For the owner: yes, it is a fetch from a
+paywalled publisher, outside the repo.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-29_burrau_pzb2018/README.md` § "Sources and licences": the journal version of record
+    (doi:10.1016/j.cnsns.2018.02.002, ScienceDirect PII S1007570418300303) was not fetched: ScienceDirect answered 403 to
+    a plain request, and Crossref lists only Elsevier's TDM user licence, so it is not open access; the supplement is
+    reached only through that page.
+  - The paper, arXiv v1 § 2: "Snapshots of the converged solution are available in the online supplementary material."
+  - The owner's request (28 Oct 2026): "reconcile against the journal version, queue anything unresolved".
+- **What is settled without it:** arXiv has one version (v1); the Leiden repository's copy (hdl 1887/71686) is the same
+  PDF. Table 2 transcribed twice from v1 (text extraction, and OCR of the page image) agrees in all 48 numbers. Table 1
+  against Appendix B ("(-2, 1) for the second") is settled by the table itself: the t = 200 state returns to Table 1's
+  `(-2, -1)` within 1.9×10⁻¹³, and its energy is Table 1's to 2×10⁻²³ relative, 1.5×10⁻² from Appendix B's.
+- **What is not:** whether the version of record prints the same Table 2 digits and the same Appendix B sentence (a
+  proof correction could differ from v1), and what the supplement's snapshots hold (the t = 0 state, times between 0 and
+  200, their precision and format).
+- **Options seen:** (a) the owner fetches the journal PDF and its supplement through his own access into
+  `docs/incoming/_local/burrau_pzb2018/` (never committed: Elsevier's licence), and a task diffs them against the
+  committed transcription; (b) take arXiv v1 as the source, as it stands; (c) ask the authors for the snapshot data, for
+  example under a licence that allows committing it.
+- **Applied meanwhile:** (b). The proposed row SP-2 cites the arXiv v1 transcription; nothing waits, since SP-2 is not
+  ruled and nothing is built on it.
