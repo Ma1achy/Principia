@@ -31922,12 +31922,13 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "reference data docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv (sha256 52a67e5d…), short periods first, the smallest-rmin rows included on purpose; per row |state(T) − state(0)| at each eta and the fitted order; a row passes when its closure sits within REQ-VAL-202's tolerance of its floor and its order matches the occupant's; control: a row integrated to 0.9·T must fail; every figure carries the CC BY 4.0 credit line of CITATIONS.md; the 667 rows with T > 200 are not run while RQ-592 is open (R-610's cap)"
+    detail: "reference data docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv (sha256 52a67e5d…), short periods first, the smallest-rmin rows included on purpose; per row |state(T) − state(0)| at each eta and the fitted order; a row passes when its closure sits within REQ-VAL-202's tolerance of its floor and its order matches the occupant's; control: a row integrated to 0.9·T must fail; every figure carries the CC BY 4.0 credit line of CITATIONS.md; the 667 rows with T > 200, past R-610's cap, are recorded as \"not evaluated within cap\", counted and named, never as failures (R-636); TASK-M4-26 runs them at a raised cap (REQ-VAL-332)"
   rulings:
   - R-71
   - R-560
   - R-594
   - R-629
+  - R-636
   milestone: M3
   note: "Reproduces: the Three Body Orbits atlas's catalogued periods and refined initial conditions (`threebodyorbits_ics.csv`, 3,916 rows with refined closure < 1e-9). Chart: none (Path A). Milestone: M3. Compare: exact (rule 8). Tolerance: REQ-VAL-202 (calibration, R-71). Row OC-1 (DRAFT-VAL-01) of principia_dd_replication.md § \"5.2 The orbit atlas\"; layer verification, tier A; closed by TASK-M3-42 (R-594, R-629). The floor is the f64 rounding of ref_* (the operator: only the double-precision part of the double-double refinement is stored) amplified along the orbit, never the catalogued closure (median 1.3e-24). The hunt's orbits are not in the snapshot and stay out. Ported from PLAN.md § 6's DRAFT-VAL-01 by R-629."
 - id: REQ-VAL-202
@@ -32380,12 +32381,13 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 not run while RQ-592 is open; control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_*"
+    detail: "per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 recorded as \"not evaluated within cap\", never failed (R-636); control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_*"
   rulings:
   - R-71
   - R-560
   - R-594
   - R-629
+  - R-636
   milestone: M3
   note: "Reproduces: the atlas's `closure_published` per row; the high-precision record's comparison of Li & Liao 2017's five rows with Hristov et al.'s digits (`docs/incoming/2026-10-27_hp_ics/agreement.txt`). Chart: none (Path A). Milestone: M3. Compare: measurement (a disagreement is information) (rule 8). Tolerance: REQ-VAL-219 (calibration, R-71). Row OC-3 of principia_dd_replication.md § \"5.2 The orbit atlas\"; layer verification, tier A; closed by TASK-M3-43 (R-594, R-629)."
 - id: REQ-VAL-219
@@ -32482,10 +32484,11 @@
     section: "R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows skipped for T > 200 (RQ-592) counted and named; control: a family run with a deliberately permuted mass order must read as failing every row"
+    detail: "cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows past R-610's cap (T > 200) counted and named as \"not evaluated within cap\", never as failures (R-636); control: a family run with a deliberately permuted mass order must read as failing every row"
   rulings:
   - R-594
   - R-629
+  - R-636
   milestone: M3
   note: "Reproduces: the atlas's 41 families. Chart: none. Milestone: M3. Compare: a report (rule 8). Tolerance: none: a report. Row OC-6 of principia_dd_replication.md § \"5.2 The orbit atlas\"; layer verification, tier A; closed by TASK-M3-45 (R-594, R-629)."
 - id: REQ-VAL-223
@@ -34313,11 +34316,11 @@
   - R-594
   - R-610
   - R-629
+  - R-636
   milestone: M3
   rq:
-  - RQ-592
   - RQ-598
-  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M3. Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M3-62 (R-594, R-629)."
+  note: "Reproduces: Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach. Chart: the Anosova physical-frame entry. Milestone: M3. Compare: per point where reliable (rule 8: a converged code); KS otherwise (rule 8). Tolerance: REQ-VAL-296 (calibration, R-71). Row GG-1 (the 25 Oct tier B's converged lifetime grid) of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier B; closed by TASK-M3-62 (R-594, R-629). Systems that end past 200 are recorded as \"not evaluated within cap\", never as failures (R-636, closing RQ-592)."
 - id: REQ-VAL-296
   area: VAL
   kind: calibration
@@ -34715,9 +34718,11 @@
   - R-594
   - R-629
   - R-630
+  - R-636
   milestone: M8
   rq:
   - RQ-583
+  - RQ-608
   note: "Reproduces: as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3). Chart: new: SuvakovPlane, at equal masses and at fixed m₃. Milestone: M8. Compare: statistical (rule 8). Tolerance: OC-4's (REQ-VAL-310). Row OC-4 on the Šuvakov plane of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-312
   area: VAL
@@ -34742,9 +34747,11 @@
   - R-594
   - R-629
   - R-630
+  - R-636
   milestone: M8
   rq:
   - RQ-583
+  - RQ-608
   note: "Reproduces: the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted. Chart: new: SuvakovPlane. Milestone: M8. Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-313
   area: VAL
@@ -34769,9 +34776,11 @@
   - R-594
   - R-629
   - R-630
+  - R-636
   milestone: M8
   rq:
   - RQ-583
+  - RQ-608
   note: "Reproduces: the atlas's 1,350 m₃-free orbits on the eight values of m₃. Chart: new: SuvakovPlane at fixed m₃. Milestone: M8. Compare: qualitative (rule 8). Tolerance: none: qualitative. Row AT-D3 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M8-99 (R-594, R-629)."
 - id: REQ-VAL-314
   area: VAL
@@ -34797,9 +34806,11 @@
   - R-594
   - R-629
   - R-630
+  - R-636
   milestone: M4
   rq:
   - RQ-583
+  - RQ-608
   note: "Reproduces: Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima. Chart: new: SuvakovPlane. Milestone: M4. Compare: qualitative; exact at Table 23's minima (rule 8). Tolerance: REQ-VAL-315 (calibration, R-71). Row HU-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M4-23 (R-594, R-629)."
 - id: REQ-VAL-315
   area: VAL
@@ -34849,9 +34860,11 @@
   - R-594
   - R-629
   - R-630
+  - R-636
   milestone: M4
   rq:
   - RQ-583
+  - RQ-608
   note: "Reproduces: Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866. Chart: new: SuvakovPlane, zoomed. Milestone: M4. Compare: qualitative + one exact point (rule 8). Tolerance: REQ-VAL-317 (calibration, R-71). Row HU-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M4-23 (R-594, R-629)."
 - id: REQ-VAL-317
   area: VAL
@@ -35231,6 +35244,29 @@
   - R-629
   milestone: M3
   note: "Calibrates REQ-VAL-330 (V-11); never set from a published number to make it pass (rule 4). Closed by TASK-M3-65 (R-594, R-629)."
+- id: REQ-VAL-332
+  area: VAL
+  kind: calibration
+  statement: "The raised horizon cap for a separate validation-harness run of the targets past R-610's cap must be calibrated: proposed with its evidence (the period distribution of the rows recorded as \"not evaluated within cap\" and the run's cost) by the task that needs it, checked by a reviewer, confirmed by the human at the M4 gate and recorded in decisions.md; at it, the run must evaluate every atlas row OC-1, OC-3 and OC-6 recorded as \"not evaluated within cap\" (667 rows with T > 200), with R-610's view cap unchanged."
+  source:
+  - file: decisions.md
+    section: "R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are \"not evaluated within cap\", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 5.2 The orbit atlas
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-610 — The horizon's floor is one closure window, 0.4, below which the escape arm cannot fire, and the settings say so; the cap stays at 200 until long horizons are measured for cost: `T_horizon ∈ [0.4, 200]`, default 50 *(closes RQ-555; amends R-575's interim range)*"
+  verify:
+    method: review checklist
+    detail: "CALIBRATION (R-71): the cap proposed from the recorded rows' periods (the longest is T = 886.09) and the measured cost of the run; the run's report lists every row it evaluates with OC-1's, OC-3's and OC-6's measures, and every row still past the raised cap as \"not evaluated within cap\", never as a failure; control: a row past the raised cap must read \"not evaluated within cap\", not pass or fail"
+  rulings:
+  - R-71
+  - R-594
+  - R-610
+  - R-636
+  milestone: M4
+  note: "The raised-cap run R-636 queues as a later task (the owner: \"queue a separate raised-cap run as a later task\"); closed by TASK-M4-26. The cap is missing from every document, so it is a calibration (R-71). R-610's view cap, 200, is unchanged."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

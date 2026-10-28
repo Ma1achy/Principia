@@ -26,11 +26,11 @@ The replication suite's targets OC-6 run as engine tests (`principia_dd_replicat
 - `cargo xtask gate atlas-coverage`: the report per family from OC-1's, OC-3's and OC-5's runs, the skipped rows named.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-6` — cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows skipped for T > 200 (RQ-592) counted and named; control: a family run with a deliberately permuted mass order must read as failing every row (REQ-VAL-222).
+- `cargo xtask gate replication --target OC-6` — cargo xtask gate atlas-coverage writes the report; every one of the 41 families appears, with the rows past R-610's cap (T > 200) counted and named as "not evaluated within cap", never as failures (R-636); control: a family run with a deliberately permuted mass order must read as failing every row (REQ-VAL-222).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes
 - The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com with `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md`'s per-family credits, on every fixture, export and figure. `atlas-params.json` never enters the repo (`scripts/check_no_atlas_params.sh`); no task may commit it.
-- 667 atlas rows have T > 200, past R-610's cap; they are skipped and counted while RQ-592 is open.
+- 667 atlas rows have T > 200, past R-610's cap; they are recorded as "not evaluated within cap", counted and named, never as failures (R-636, closing RQ-592); TASK-M4-26 runs them at a raised cap (REQ-VAL-332). *Was:* "they are skipped and counted while RQ-592 is open."
 - One of the orbit catalogue's six tests (`docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md` § "What to do with it (an addition to tier A)"), folded in by R-629.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

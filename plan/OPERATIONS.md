@@ -14,7 +14,14 @@ How to read it:
 
 ## Where the build loop runs (R-357)
 
-The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions suit
+**The pace rule (R-636, 28 Oct 2026).** The Mac is kept for GPU work: the implementers, their builds and GPU tests,
+Metal steps (a gui reviewer's among them, R-634), benchmarks and every performance gate (R-186), and the merges, with
+**at most two local agents at once** (§ "Resources"). **Docs agents, qa's test writing and reviews run in cloud
+sessions**; a review step that needs Metal runs on the Mac, within the two. How a cloud session is started is
+unchanged (§ "The cloud trial (R-634)", its claim rule). *Was (before R-636):* "The build loop runs on the human's
+Mac: implementers, qa's tests, builds, benchmarks and merges."
+
+The build loop's GPU work runs on the human's Mac: implementers, builds, benchmarks and merges. **Cloud sessions suit
 read-and-think work: reviews, audits and docs; and, by R-634, a mock-engine GUI task's implementer, code and qa
 reviewers, on lavapipe, within the disk the session has (blocker 1).** Such a task's gui reviewer runs on the Mac, with
 its Metal steps (§ "Metal and perf"). Merges stay on the Mac. *Was (before R-634):* "**Cloud sessions aren't viable for
@@ -73,6 +80,24 @@ Nothing touching the kernel or physics runs in the cloud under it; every other t
   the agents to run one at a time. Repealing R-634 returns to Mac-only.
 - **To follow (R-369, approved by R-634):** a code task adding `cargo nextest run -p gui` and `cargo xtask screenshot
   --all` to the `gpu-metal` job on `macos-15`.
+
+### The weekly consistency audit (R-636)
+
+Adopted by R-636 (closing RQ-605): **report-only, never blocking, a cloud scheduled task, never on the Mac.** No merge,
+task or milestone waits on it, and no CI workflow runs it.
+- **What it reads:** `plan/` (`requirements.yaml`, `tasks.yaml`, `plan/tasks/`, `MILESTONES.md`, `WORKFLOW.md`,
+  `OPERATIONS.md`, `reviewers/`), `docs/design/`, `docs/contracts/` and `decisions.md`. Not `docs/incoming/`,
+  `docs/archive/`, `docs/reference/` or `workbench/`, which are records, not authority (R-1, R-159).
+- **What it checks:** every cross-reference resolves (a file and § heading, an R-, RQ-, REQ- or TASK- id, a contract
+  Part); contradictions between documents (two statements of one rule, value or definition that disagree, and a
+  ruling's text against the doc lines it says it was applied in); requirements with no task, and tasks with no
+  requirement. `python3 plan/check_plan.py` already checks part of this; the audit adds the contradictions and the
+  references `check_plan.py` doesn't scan.
+- **What it reports:** to the owner, once a week, as one PR holding the mechanical fixes (a stale reference, a heading
+  renamed) and a `REVIEW_QUEUE.md` entry for each contradiction, with file, section and quoted text. The PR merges as
+  any PR does, on its reviews and green CI; it blocks nothing else.
+- **Its schedule, the agent role that runs it and the reviewers its PR names** are set by the orchestrator after R-636
+  merges (R-369).
 
 ## Start here
 
@@ -478,9 +503,12 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Agents at once | at most 2 local agents at any pressure (R-636), the Mac kept for GPU work (§ "Where the build loop runs (R-357)"); at critical only the running work finishes (R-277). *Was (before R-636):* "3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262)" | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"`; a GUI task's three agents under R-634's trial need ≥ 75 GB free (three targets), else run them one at a time, which stops the trial |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
+
+**Superseded by R-636 (28 Oct 2026):** two local agents at most at every pressure, so the swap check, its daily log
+and R-391's trial end; nothing below is run. Kept as the record:
 
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
@@ -608,7 +636,7 @@ don't route around it.
 ## Logs
 
 - **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
-- **R-391's trial log (Mac only).** Each day of the trial, one line in the away-mode log: the date; the agents running
+- **R-391's trial log (Mac only); ended by R-636 (28 Oct 2026), with the trial, and kept as the record.** Each day of the trial, one line in the away-mode log: the date; the agents running
   (the peak, and how many dispatches ran at warning with 3); the page-out rises read (the lowest and highest per
   minute, and each dispatch held to 2); every timeout or flaky failure, local or in CI, with its run or PR; and whether
   the trial was reverted (§ "Resources").

@@ -256,7 +256,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 
 <!-- gate:M4 -->
-**Exit gate — 118 requirements** (and every earlier gate still green):
+**Exit gate — 119 requirements** (and every earlier gate still green):
 
 - CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
 - INT (16): REQ-INT-057…071, REQ-INT-083
@@ -265,7 +265,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
 - TOOL (8): REQ-TOOL-040…045, REQ-TOOL-126…127
-- VAL (42): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-290…292, REQ-VAL-314…317, REQ-VAL-325…329
+- VAL (43): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-290…292, REQ-VAL-314…317, REQ-VAL-325…329, REQ-VAL-332
 - PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->

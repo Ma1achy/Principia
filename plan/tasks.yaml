@@ -1573,6 +1573,14 @@
   requirements: [REQ-VAL-329]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M4-26
+  milestone: M4
+  title: "The raised-cap run: the targets recorded as \"not evaluated within cap\", evaluated at a calibrated raised horizon (R-636)"
+  depends_on: [TASK-M3-42, TASK-M3-43, TASK-M3-45]
+  needs: [REQ-VAL-201, REQ-VAL-218, REQ-VAL-222]
+  requirements: [REQ-VAL-332]  # R-636 (28 Oct 2026): the raised-cap run, a later task
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M5-02
   milestone: M5
   title: Quality tiers and the one settings struct

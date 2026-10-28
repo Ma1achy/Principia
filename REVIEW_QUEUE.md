@@ -141,20 +141,9 @@ here.*
 - **27 Oct 2026 (the verification and replication plan, PR #305):** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner), question 10, is this entry's question and is queued here, not as a new entry: "**RQ-577, the precision ladder: rule before or after M3 closes?** Recommended: after, as the proposal's own §6 question 1 allows; PL-8's first half runs on R-33's reference at M3 without it." The plan also corrects test 6's row count (PLAN.md § 2.2: 937 Hristov rows, not 1,260; a dated note in the proposal). Stays queued (the human, 27 Oct 2026: "The other §9 questions stay queued as RQs."). Not applied.
 - **27 Oct 2026 (R-630):** the human: "10. RQ-577 (precision ladder): rule after M3 closes. Leave it queued; PL-8's first half runs on R-33's reference at M3 without it." Stays open until M3 closes; nothing applied.
 - **27 Oct 2026 (R-632):** the human: "Unchanged: RQ-577 after M3 (R-630)". Unchanged (R-632); stays open until M3 closes. RQ-578, which this entry did not hold, is closed by R-632: a ~50+ floor needs an f64 sum and integration, on the CPU or under this entry's ladder, after M3.
-
-## RQ-583: Whether to build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart question comes up *(physics; the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 4; PR #305; context: none built)*
-
-*Queued by the human (27 Oct 2026). For the human: yes, it adds or does not add a chart.*
-
-- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
-  question 4.
-- **The question (verbatim):** "**Build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart
-  question comes up?**"
-- **Recommended (the plan's):** "queue the chart question now; 3,109 orbits and the strongest share-back image wait on
-  it."
-- **Applied meanwhile:** the targets stay Path A closures. Related: RQ-582.
-- **27 Oct 2026 (R-630):** the human: "3. Šuvakov plane labelling: the middle body as body 1 (β = 0, reached exactly, R-417), Hudomal eq. (18)'s labelling. Queue it as a chart question with the physics reviewer (§2.3). 4. Queue the Šuvakov-plane chart question now." RQ-582 is closed with that labelling, which this chart question now carries (physics: the chart's physics review checks it against Hudomal eq. (18) and PLAN.md § 2.3). Stays open for the human.
-- **27 Oct 2026 (R-632):** the human: "RQ-583 with physics review". Unchanged (R-632); stays open for the human.
+- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
+  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
+  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim.
 
 ## RQ-591: Which replication targets gate their milestone and which are reported only *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5, § 10; REQ-VAL-201 to REQ-VAL-331; context: every task the port adds)*
 
@@ -178,30 +167,12 @@ decided.*
   human passes each gate (R-369); a disagreement holds nothing until it is queued and ruled. Nothing is built
   differently either way: the choice decides only what a failing or disagreeing target does to its gate.
 - **Waits:** nothing; it is ruled at the gates.
-
-## RQ-592: Targets past the horizon cap: 667 atlas orbits with T > 200, and Boekholt et al. 2020's t = 10⁴ grid *(the human's queued question, R-594 item 6; R-610; `docs/design/principia_dd_replication.md` § 5.2, § 5.10, § 8.2 rule 18; REQ-VAL-201, REQ-VAL-218, REQ-VAL-222, REQ-VAL-295; context: TASK-M3-42, TASK-M3-43, TASK-M3-45, TASK-M3-62)*
-
-*Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6: "any target past the horizon
-cap".*
-
-- **File, section:**
-  - `decisions.md` § "R-610 — …": "`T_horizon ∈ [0.4, 200]`, default 50".
-  - `docs/design/principia_dd_replication.md` § "5.2 The orbit atlas": "667 of the 3,916 rows with refined closure below
-    1e-9 have T > 200, past R-610's cap" (measured on `docs/incoming/2026-10-26_orbit_catalogues/threebodyorbits_ics.csv`;
-    the longest is T = 886.09; none of the 311 free-fall rows or the gallery's 301 is past 200).
-  - The same doc, § "5.10 Converged-code references": Boekholt, Portegies Zwart & Valtonen 2020 converged their grid to
-    t = 10⁴.
-  - § "8.2 Learnt since", rule 18: "A target past 200 is compared only over the systems that end before 200".
-- **The question:** R-610 caps the view's horizon at 200. A closure test integrates one period on the validation
-  crate's CPU harness, not a view. May a closure test, or a converged-code comparison, run past 200 there, or do
-  those targets stay inside the cap?
-- **Options seen:** (a) keep the cap everywhere: the 667 long-period rows are not run, and GG-1 compares only systems
-  that end before 200 (rule 18); (b) let the validation harness integrate past 200 for closure tests and converged-code
-  comparisons only, the view's horizon unchanged; (c) (b) for closure tests only.
-- **Applied meanwhile:** (a). OC-1, OC-3 and OC-6 skip and count the 667 rows; GG-1 also waits on RQ-598 for its data.
-  The statistical targets whose systems outlive 200 (AA-2 to AA-8, AN-1, V-9, P-2, Q-1 to Q-3, CH-1, MT-1) count
-  them as censored at 200, under rule 18.
-- **Waits:** GG-1 (REQ-VAL-295, `rq`); the 667 rows of OC-1, which run once (b) or (c) is ruled.
+- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
+  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
+  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim. The five-chart
+  build, TASK-M2-36 (and TASK-M2-52 after it), is held until the owner rules on the replication batch, RQ-591 to RQ-598
+  (R-636: "Five-chart build (queue item d): hold until Malachy rules on the replication batch; do not start it.");
+  flagged in R-636: those charts come from R-633's split, not from this batch.
 
 ## RQ-593: A binary-plus-single chart, for Trani et al.'s planar row, Manwadkar et al.'s escape probabilities and Stone & Leigh's closed forms *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-318, REQ-VAL-319, REQ-VAL-321; context: TASK-M3-63)*
 
@@ -225,6 +196,10 @@ needs".*
   stated as a different experiment, or (ii) drop it.
 - **Applied meanwhile:** (c); no chart is built. The three requirements carry `rq: RQ-593`.
 - **Waits:** TASK-M3-63.
+- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
+  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
+  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
+  this batch.
 
 ## RQ-594: A side-ratio chart for Parischewsky et al.'s equilateral-triangle experiment, or a tested remap onto ShapeSphere at rest *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-323; context: TASK-M3-64)*
 
@@ -241,6 +216,10 @@ needs".*
   waits.
 - **Applied meanwhile:** (c); REQ-VAL-323 carries `rq: RQ-594`.
 - **Waits:** TASK-M3-64 (and RQ-596 for its chaotic/regular split).
+- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
+  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
+  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
+  this batch.
 
 ## RQ-595: A syzygy-symbol field, a fixed-k velocity chart and Chernin et al.'s definitions, for the symbol-sequence and partition maps *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-325, REQ-VAL-326, REQ-VAL-327; context: TASK-M4-24)*
 
@@ -261,6 +240,10 @@ needs".*
   waiting; (c) none: the three targets wait.
 - **Applied meanwhile:** (c); the three requirements carry `rq: RQ-595`.
 - **Waits:** TASK-M4-24.
+- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
+  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
+  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
+  this batch.
 
 ## RQ-596: The N_scramble and f_col diagnostics *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-318, REQ-VAL-321, REQ-VAL-323; context: TASK-M3-63, TASK-M3-64)*
 
@@ -277,6 +260,10 @@ chart does.*
   the targets' parts that need them wait.
 - **Applied meanwhile:** (c).
 - **Waits:** TASK-M3-63 and TASK-M3-64.
+- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
+  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
+  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
+  this batch.
 
 ## RQ-597: Periodic-orbit continuation over the mass plane, for Li, Li & Liao 2020's stability map *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-329; context: TASK-M4-25)*
 
@@ -291,6 +278,10 @@ chart does.*
   tests (OC-1).
 - **Applied meanwhile:** (b).
 - **Waits:** TASK-M4-25.
+- **28 Oct 2026 (R-636):** stays open. The five-chart build, TASK-M2-36 (and TASK-M2-52 after it), is held until the
+  owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
+  rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
+  this batch.
 
 ## RQ-598: Data and papers not in the repo: Breen et al. 2020's Brutus runs, Boekholt et al. 2020's per-point lifetimes, and the primaries of the hierarchical stability limits *(the human's queued question, R-594 item 6 and rule 1; `docs/design/principia_dd_replication.md` § 5.10, § 5.12; REQ-VAL-295, REQ-VAL-297, REQ-VAL-330; context: TASK-M3-62, TASK-M3-65)*
 
@@ -312,6 +303,12 @@ repo (R-369).*
   and RQ-586 (Tanikawa & Mikkola 2021, Standish 1970, Yasko & Orlov 2015).
 - **Applied meanwhile:** (c).
 - **Waits:** TASK-M3-62 and TASK-M3-65.
+- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
+  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
+  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim. The five-chart
+  build, TASK-M2-36 (and TASK-M2-52 after it), is held until the owner rules on the replication batch, RQ-591 to RQ-598
+  (R-636: "Five-chart build (queue item d): hold until Malachy rules on the replication batch; do not start it.");
+  flagged in R-636: those charts come from R-633's split, not from this batch.
 
 ## RQ-599: The occupant matrix census (DRAFT-VAL-08): its §11, five questions for the owner *(the human's queued questions on PR #314; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 11; R-71, R-159, R-561; RQ-577; R-630; context: none built)*
 
@@ -373,62 +370,29 @@ harness, CI jobs, a self-hosted runner). No option is recommended here.*
   unchanged and stays open.*
 - **Waits:** the census harness, its CI jobs (§ 8.1) and the `metal` self-hosted runner (§ 8.2); DRAFT-VAL-08's
   adoption into PLAN.md; question 5 bears on RQ-577's timing.
+- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
+  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
+  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim.
 
-## RQ-602: Missing owner — which task holds REQ-SYS-011's chart params in `SimConfig`: R-484 J9 names TASK-M2-36, TASK-M2-37 and TASK-M2-40, whose task files build them in the kernel only; and no task names the chart id or the axis warps *(process; found by physics review 5678259443 of PR #308; REQ-SYS-011; context: TASK-M2-21, TASK-M2-36, TASK-M2-37, TASK-M2-40, TASK-M8-01, TASK-M8-48)*
+## RQ-608: The Šuvakov-plane targets that need a chart, now that no chart is built: OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 *(physics; R-636, closing RQ-583; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316; context: TASK-M4-23, TASK-M8-99)*
 
-*Queued 28 Oct 2026 by the plan PR that names REQ-SYS-011's unbuilt arms in their tasks (applied per R-369). For the
-human: no, unless the placement below is vetoed; nothing waits.*
+*Queued 28 Oct 2026 by R-636's port. For the human: yes, it decides what the M4 and M8 gates hold.*
 
 - **File, section:**
-  - `plan/requirements.yaml`, REQ-SYS-011's statement: "the chart id and params (a curved chart's tilt, its angles,
-    targets and map, each energy-type axis's mapping, and a saved chart's definition included), the tilt map, the axis
-    warps"; its verify: "likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart".
-  - `decisions.md` § "R-484 — The round-trip rule: …", J9: "T2's task, TASK-M8-53, depends on the tasks that fill
-    each: X1's (TASK-M2-21), the chart params' (TASK-M2-36, TASK-M2-37, TASK-M2-40, TASK-M8-48), and the state
-    contract's, which puts every field gui_state_contract §2 names in its struct (TASK-M8-01)".
-  - `plan/tasks/M2/TASK-M2-36.md` § Deliverables: "the chart params carrying `R`, the hidden indices and scales (R-473
-    J5)"; `plan/tasks/M2/TASK-M2-37.md` § Deliverables: "The `warped | linear` chart parameter and the linear mapping
-    (H4)"; `plan/tasks/M2/TASK-M2-40.md` § Deliverables: "The saved-chart variant of the chart registry, its params and
-    its serialisation". Each is a `crates/kernel` task with `cargo test -p kernel` acceptance, names no
-    `crates/engine/src/contract/` deliverable, and does not depend on TASK-M2-21, which builds `viewstate_roundtrip`.
-  - `decisions.md` § "R-473 — …", J10, § "R-471 — …", H8, and § "R-475 — …", L10: the real-engine side of the tilt,
-    the mapping option and the saved curved chart is TASK-M8-48's.
-  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface":
-    "SimConfig    (sim key)     chart id + params"; `decisions.md` § "R-478 — …", W3: "the **axis warps** (`K = K_max
-    t^γ_K` and the like), which are per-axis chart properties". No task file names the chart id or the axis warps as
-    `SimConfig` fields; TASK-M8-01's Goal puts "every field gui_state_contract §2 lists" in its struct.
-- **The question:** J9 reads TASK-M2-36, -37 and -40 as filling `SimConfig`'s chart params; their task files build
-  the kernel's params only. Who holds each of REQ-SYS-011's unbuilt fields in `SimConfig` and extends
-  `viewstate_roundtrip` to it?
-- **Applied meanwhile (R-369, a mechanical placement):** TASK-M8-48, which reaches TASK-M2-21, TASK-M2-36, -37, -40,
-  TASK-M6-48 (`tilt_map`) and TASK-M8-01 through its dependencies, carries the tilted shape-sphere view, the linear-E
-  view, the view on a saved chart and the tilt map; TASK-M8-01 carries the chart id and the axis warps. Each task's
-  Acceptance tests gains one dated `viewstate_roundtrip` line. The kernel tasks are unchanged.
-- **Waits:** nothing.
-
-## RQ-605: A weekly whole-corpus consistency audit by our own agents, proposed and not built *(the owner's request of 28 Oct 2026, item 6; R-635; context: none built)*
-
-*Not built; for the owner. Proposed as the owner asked: "A queue entry (not built yet) proposing a weekly whole-corpus
-consistency audit by our own agents: it reads plan/, docs/design, docs/contracts, decisions.md and the requirements;
-checks cross-references resolve; finds contradictions between documents; and lists requirements with no task and tasks
-with no requirement. It reports to me as one PR of fixes or queue entries."*
-
-- **File, section:** `decisions.md` § "R-635 — …", which keeps whole-corpus consistency out of the AI reviewers'
-  brief (`AGENTS.md` § "Code Review Rules" checks only what a PR touches).
-- **What it reads:** `plan/` (`requirements.yaml`, `tasks.yaml`, `plan/tasks/`, `MILESTONES.md`, `WORKFLOW.md`,
-  `OPERATIONS.md`, `reviewers/`), `docs/design/`, `docs/contracts/` and `decisions.md`. Not `docs/incoming/`,
-  `docs/archive/`, `docs/reference/` or `workbench/`, which are records, not authority (R-1, R-159).
-- **What it checks:**
-  - every cross-reference resolves: a file and § heading, an R-, RQ-, REQ- or TASK- id, a contract Part;
-  - contradictions between documents: two statements of one rule, value or definition that disagree, and a
-    ruling's text against the doc lines it says it was applied in;
-  - requirements with no task, and tasks with no requirement.
-- **Its output:** one PR to the owner a week, holding fixes for what is mechanical (a stale reference, a heading
-  renamed) and a `REVIEW_QUEUE.md` entry for each contradiction, with file, section and quoted text, as any queue
-  entry. Nothing is merged without its reviews and green CI.
-- **The questions:** whether to build it; on what schedule and which machine (a cloud session suits read-and-think
-  work, R-357); and which agent role runs it and which reviewers its PR names.
-- **Overlap seen:** `python3 plan/check_plan.py` already fails on unresolved R- and RQ- references in the live files,
-  on references to missing files and sections in the plan, and on live requirements with no task and tasks closing
-  none. The audit would add the cross-document contradictions and the references `check_plan.py` doesn't scan.
-- **Applied meanwhile:** none; nothing is built, and nothing waits.
+  - `decisions.md` § "R-636 — …", the owner's words: "Šuvakov-plane chart: keep its targets as closures for now; no
+    chart build yet."
+  - `docs/design/principia_dd_replication.md` § "5.12 Targets that wait for a chart, a diagnostic or data": "a chart
+    over the Šuvakov plane … | HU-1, HU-2, AT-D1, AT-D3, OC-4 on the plane"; the rows: OC-4 on the plane (REQ-VAL-311,
+    statistical, M8), AT-D1 (REQ-VAL-312, qualitative, M8), AT-D3 (REQ-VAL-313, qualitative, M8), HU-1 (REQ-VAL-314,
+    "qualitative; exact at Table 23's minima", M4), HU-2 (REQ-VAL-316, "qualitative + one exact point", M4), each
+    with "new: SuvakovPlane" as its chart.
+  - `plan/MILESTONES.md`: a milestone's exit gate is every requirement whose `milestone` is that milestone.
+- **The gap:** these five targets are maps or statistics over the plane, and each names a chart that R-636 does not
+  build. They cannot be Path A closures as written, and as they stand they sit in the M4 and M8 gates with no chart to
+  run on.
+- **Options seen:** (a) they wait, in their gates, until a chart question is taken up; (b) they leave their gates
+  (reported only, or moved to a later milestone) until then; (c) each is reduced to what a closure can test (HU-1's
+  Table 23 minima and HU-2's exact point as closures), the rest waiting as in (a) or (b).
+- **Applied meanwhile:** nothing is built: no chart, and no map. Each requirement carries `rq: RQ-608` beside RQ-583,
+  and TASK-M4-23 and TASK-M8-99 wait on it.
+- **Waits:** TASK-M4-23 and TASK-M8-99.

@@ -27,13 +27,13 @@ The replication suite's targets OC-3 run as engine tests (`principia_dd_replicat
 - The calibration proposal for the agreement band.
 
 ## Acceptance tests
-- `cargo xtask gate replication --target OC-3` — per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 not run while RQ-592 is open; control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_* (REQ-VAL-218).
+- `cargo xtask gate replication --target OC-3` — per row our closure from pub_* under the default occupant at f64 beside closure_published; rows within REQ-VAL-219's band counted, every row outside it listed with both numbers, never failed (the orbit-catalogue instruction's item 3); rows with T > 200 recorded as "not evaluated within cap", never failed (R-636); control: on a row whose catalogued published closure exceeds 1e-6, the run from ref_* must close better than the run from pub_* (REQ-VAL-218).
 - `cargo xtask gate replication --target OC-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-219).
 - `scripts/check_no_atlas_params.sh` — prints `ok`: `atlas-params.json` is not committed, and nothing in this task reads it.
 
 ## Notes
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-219.
 - The atlas data are used under CC BY 4.0, credited to https://www.threebodyorbits.com with `docs/incoming/2026-10-26_orbit_catalogues/CITATIONS.md`'s per-family credits, on every fixture, export and figure. `atlas-params.json` never enters the repo (`scripts/check_no_atlas_params.sh`); no task may commit it.
-- 667 atlas rows have T > 200, past R-610's cap; they are skipped and counted while RQ-592 is open.
+- 667 atlas rows have T > 200, past R-610's cap; they are recorded as "not evaluated within cap", counted and named, never as failures (R-636, closing RQ-592); TASK-M4-26 runs them at a raised cap (REQ-VAL-332). *Was:* "they are skipped and counted while RQ-592 is open."
 - One of the orbit catalogue's six tests (`docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md` § "What to do with it (an addition to tier A)"), folded in by R-629.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

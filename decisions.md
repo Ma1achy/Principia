@@ -2565,6 +2565,9 @@ R-237). `reviews-check` implements it in TASK-M0-37.
 `reviews-check` implements it in TASK-M0-37.
 
 ## R-262 — Builds move to the internal disk, three agents at most
+*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac).*
+*Still in force: builds on the internal disk, and the disk rules (≥ 25 GB free as the target, no work started below
+15 GB); at most two agents on the Mac (R-636), where it was three.*
 *29 Sep 2026 · process*
 
 "7. Move builds to the internal disk, three agents at most. Keep the disk rules (≥25 GB target, never start work below
@@ -2806,8 +2809,11 @@ in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-run
 
 ## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 *Replaced in part by R-391 (its warning rule, as a trial).*
-*Still in force: three agents at normal pressure, and only the running work at critical; two at warning while R-391's
-trial finds the Mac swapping, and for every warning reading if the trial is reverted (R-391).*
+*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac at any pressure; R-391's trial ends).*
+*Still in force: only the running work at critical, and two at warning; at normal, two on the Mac, R-636's cap, where
+it was three, and R-391's trial has ended (R-636). Was: "three agents at normal pressure, and only the running work at
+critical; two at warning while R-391's trial finds the Mac swapping, and for every warning reading if the trial is
+reverted (R-391)."*
 *30 Sep 2026 · applied in the orchestrator's loop*
 
 "Two agents while memory pressure sits at warning; three at normal."
@@ -4712,13 +4718,16 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 *Amended by R-369 and R-373.*
 *Amended in part by R-634 (28 Oct 2026; a trial: TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a
 cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac).*
+*Amended in part by R-636 (28 Oct 2026: docs agents, qa's test writing and reviews run in cloud sessions; the Mac is
+kept for GPU work, at most two local agents).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
 I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
 place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`. The build loop stays on the Mac, but for
 R-634's trial, under which TASK-M8-07's and TASK-M8-13's implementer and code and qa reviewers run in a cloud
-session.*
+session; and but for R-636, under which docs agents, qa's test writing and reviews run in cloud sessions, the Mac
+keeping GPU work (the implementers' builds and GPU tests, Metal steps, benchmarks) and the merges.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -6509,6 +6518,8 @@ REQ-GUI-084, REQ-GUI-085, REQ-GUI-086 and REQ-GUI-099 gain R-390 and a note; REQ
 detail names TASK-M6-25's screenshot cases.
 
 ## R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
+*Superseded by R-636 (28 Oct 2026: at most two local agents on the Mac at any memory pressure; the trial, its swap
+check and its daily log end).*
 *6 Oct 2026 · applied in `CLAUDE.md` § "The main session orchestrates; it never implements or reviews", `plan/OPERATIONS.md`
 § "Resources" and § "Logs", and `plan/rule_groups.yaml`; a trial, with R-277 the fallback*
 
@@ -27337,6 +27348,10 @@ REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 (statement, rulings, sour
 REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
 
 ## R-633 — Every central-difference Jacobian of the decode takes the encode contract's step; the steer's `J⁺` drops each singular value below `c·σ₁`, `c` a calibration; a chart that holds a block by a physical construction has that construction's physical parameters as hidden coordinates, tilted and sliced by value, and TASK-M2-36 splits; an unusable copy is a bit test on `state` and `budget_word` *(closes RQ-600, RQ-601, RQ-603 and RQ-604; amends R-473; refines R-550)*
+*Refined by R-636 (28 Oct 2026: its two readings written into its text, the paragraphs marked "Added on the owner's
+update of 28 Oct 2026" in its RQ-601 and RQ-603 bullets: `J⁺` where the steer's text says `J⁻¹`, with what it does
+when `J` is singular, and "ray-degenerate" read per cell).*
+*Still in force: all of it, those two readings now part of its text (R-636).*
 *28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
 `docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
 `docs/design/principia_lines.md` § 8 (the trace fade's step), `docs/gui/principia_render_gui_spec.md` § "The compass:
@@ -27672,3 +27687,121 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 
 *The number:* the numbers after R-628 (merged by #303) and before this one are taken by rulings on open PRs, the last two on the branch
 `rulings/2026-10-28`, none yet merged; this is the next free number after them.
+
+## R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are "not evaluated within cap", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*
+*28 Oct 2026 · the owner's message of that day; applied in R-633's text (on PR #323's branch) and its forward line,
+R-391's, R-277's, R-262's and R-357's forward lines, `plan/OPERATIONS.md` § "Where the build loop runs (R-357)", §
+"The weekly consistency audit (R-636)" (new), § "Resources" and § "Logs", `REVIEW_QUEUE.md` (RQ-583, RQ-592, RQ-602 and RQ-605 closed; RQ-608 new; RQ-577, RQ-591, RQ-598 and RQ-599
+noted), `docs/archive/review_queue/M0.md` (the four closed entries, moved with their ruling),
+`docs/design/principia_dd_replication.md` (dated notes in § 4.3, § 5.2, § 5.10, § 5.12, § 7, § 8.2 and § 10; TASK-M4-26 in § 7), REQ-VAL-201,
+REQ-VAL-218, REQ-VAL-222, REQ-VAL-295, REQ-VAL-311 to REQ-VAL-314 and REQ-VAL-316 (reqio), REQ-VAL-332 (reqio, new, calibration),
+TASK-M4-26 (new), TASK-M3-42, TASK-M3-43, TASK-M3-45, TASK-M3-62, TASK-M4-23, TASK-M8-99, TASK-M2-36 and TASK-M2-52,
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M3-42, TASK-M3-43, TASK-M3-45 and TASK-M4-26, and by the
+orchestrator*
+
+The owner's words, verbatim:
+
+> Rulings from Malachy on today's update:
+> - Decisions accepted: #320 log-line check, #322 physics reviewer + mute calibration, #317 split, rulings-chain merge order, #321 permissions/reopen trigger.
+> - #323: accepted, but write both readings into the ruling text itself (pseudo-inverse where the text says inverse, with a sentence on what it does when the matrix is singular; "ray-degenerate" read per cell).
+> - #326: merge only after the Mac GPU check passes on the Mac itself, not just the renderer tests.
+> - Weekly consistency audit: yes. Report-only, never blocking, run as a cloud scheduled task, not on the Mac.
+> - Šuvakov-plane chart: keep its targets as closures for now; no chart build yet.
+> - 667 orbits past the T cap: record as "not evaluated within cap", never as failures; queue a separate raised-cap run as a later task.
+> - Five-chart build (queue item d): hold until Malachy rules on the replication batch; do not start it.
+> - Pace: move non-GPU work (docs agent, qa test writing, reviews) to cloud sessions; keep the Mac for GPU work, max two local agents.
+> - Still open, paste verbatim to Malachy: the precision-ladder proposal's seven questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report list and the missing data/papers list.
+
+*What it decides*, item by item:
+
+- **The session's R-369 decisions are accepted**, each as its PR records it:
+  - #320 (TASK-M6-38): the conformance log line is checked for its path and values only (gui_state_contract § 2), no
+    wording being defined (its qa review's F1).
+  - #322 (TASK-M7-08): physics joins TASK-M7-08's reviewers, REQ-COL-058 being an R-72 definition, and the categorical
+    filter's mute values, `L_mute` and `k_mute`, are a new calibration requirement, REQ-COL-162, closed by TASK-M7-08,
+    provisional at 0.31 and 0.25 until the M7 gate.
+  - #317: REQ-SYS-011's unbuilt arms are split between their tasks: the tilted shape-sphere view, the linear-E view, the
+    view on a saved chart and the tilt map to TASK-M8-48; the chart id and the axis warps to TASK-M8-01. That is the
+    placement RQ-602 applied meanwhile, so RQ-602 is closed by it.
+  - The rulings chain's merge order: #312 (carrying #309 and #310), then #323 (carrying #313, #314 and #316), then
+    #317, then #321, each branch merging the one before, then this ruling's PR.
+  - #321: the Gemini workflow's permissions (`contents: read` at the top; the review job `contents: read` and
+    `pull-requests: write` only, the example's `id-token: write` and `issues: write` dropped) and its `reopened` trigger
+    beside `opened`.
+- **#323 (R-633) is accepted, with its two readings written into its text.** R-633's "What it decides" now states, in
+  its RQ-601 and RQ-603 bullets, each marked as added on this update: the steer uses `J⁺`, the pseudo-inverse, where
+  the steer's text says `J⁻¹`; where `J` is singular, `J⁺` inverts only the non-zero singular values, giving the
+  minimum-norm least-squares step, which is zero along the null directions, so the steer moves only in directions the
+  chart can reach; and "ray-degenerate" is read per cell. What counts as a zero singular value is R-633's own cut, a
+  value below `c·σ₁` with `c` the calibration REQ-GUI-410, so no new value is needed.
+- **#326 merges only when** CI's `gpu-metal` job passes on its head, and the orchestrator has run that job's commands
+  on the Mac itself, on the same head, and they pass. The renderer tests alone do not suffice.
+- **The weekly consistency audit (RQ-605) is adopted:** report-only, never blocking, a cloud scheduled task, never on
+  the Mac. What it reads and checks is RQ-605's proposal: it reads `plan/` (`requirements.yaml`, `tasks.yaml`,
+  `plan/tasks/`, `MILESTONES.md`, `WORKFLOW.md`, `OPERATIONS.md`, `reviewers/`), `docs/design/`, `docs/contracts/` and
+  `decisions.md`, and not the records (`docs/incoming/`, `docs/archive/`, `docs/reference/`, `workbench/`); it checks
+  that every cross-reference resolves (a file and § heading, an R-, RQ-, REQ- or TASK- id, a contract Part), finds
+  contradictions between documents (two statements of one rule, value or definition that disagree, and a ruling's text
+  against the doc lines it says it was applied in), and lists requirements with no task and tasks with no requirement.
+  It reports to the owner. It gates nothing: no merge, task or milestone waits on it. Its schedule is set up by the
+  orchestrator after this ruling merges; no CI workflow is built for it. `plan/OPERATIONS.md` records it.
+- **RQ-583: the Šuvakov-plane targets stay Path A closures, and no chart is built yet.** The question of a chart over
+  the plane is not taken up now. RQ-608 (new) carries what this leaves open: the five targets that need the chart.
+- **RQ-592: a target past the horizon cap is recorded as "not evaluated within cap", never as a failure.** The 667 atlas
+  rows with T > 200 are counted and named under that label by OC-1, OC-3 and OC-6 (REQ-VAL-201, REQ-VAL-218 and
+  REQ-VAL-222), and GG-1 (REQ-VAL-295) compares only the systems that end before 200, as § 8.2's rule 18 says, the rest
+  under the same label; R-610's cap is unchanged. A separate raised-cap run is a later task, TASK-M4-26 (new), closing
+  REQ-VAL-332 (new).
+- **The five-chart build is held.** TASK-M2-36, the five charts that R-633's split leaves it (the latent chart, the shape
+  sphere, the invariant charts `(L_z, E)` and `(L_z, K)`, and the mixed chart), does not start until the owner rules on
+  the replication batch, RQ-591 to RQ-598. TASK-M2-52, which depends on it, waits with it.
+- **The pace rule:** the Mac is kept for GPU work, with at most two local agents at once at any memory pressure (at
+  critical, only the running work finishes, as R-277 has it). Docs agents, qa's test writing and reviews run in cloud
+  sessions. R-391's trial of three agents at warning ends; so does R-262's three at most, and R-277's three at normal,
+  on the Mac. `plan/OPERATIONS.md` § "Where the build loop runs (R-357)" and § "Resources" say so.
+- **Still open, for the owner:** RQ-577 (the precision-ladder proposal's seven questions, with the rulings each would
+  amend), RQ-599 (the census draft's five questions), RQ-591 (the replication batch's gate and report list) and RQ-598
+  (the missing data and papers). Each stays open, and the orchestrator puts each to the owner verbatim.
+
+*Flagged (the five-chart hold):* the five charts (latent, ShapeSphere, InvariantLE, InvariantLK, Mixed) come from
+R-633's split of TASK-M2-36, not from the replication batch, and no requirement of TASK-M2-36's names RQ-591 to RQ-598.
+The hold is applied as written. Nothing else waits on it but TASK-M2-52 and the tasks that depend on TASK-M2-36.
+
+*Flagged (the pace rule):* `CLAUDE.md` § "The main session orchestrates; it never implements or reviews" still states
+R-391's trial (three agents at normal and at warning). It is not edited here: the owner's message names
+`plan/OPERATIONS.md`'s rules, and a change to `CLAUDE.md` is left to the owner. Until it is changed, R-636 governs.
+
+*Applied per R-369:*
+- **RQ-583's targets:** the targets that need no chart (the rows of OC-1, OC-3 and OC-5 on the plane) are run as Path A
+  closures, as they already were. Five targets need a chart over the plane and cannot be closures: OC-4 on the plane,
+  AT-D1 and AT-D3 at M8, and HU-1 and HU-2 at M4 (REQ-VAL-311 to REQ-VAL-314 and REQ-VAL-316). With no chart built,
+  they cannot pass their gates as written; whether they wait, leave their gates or are reduced to their closure parts
+  (HU-2's exact point, HU-1's Table 23 minima) changes what the gates hold, so it is queued as RQ-608 and not decided
+  here. Each carries `rq: RQ-608`, beside RQ-583, and TASK-M4-23 and TASK-M8-99 wait on it.
+- **RQ-592's GG-1:** RQ-592 named Boekholt et al.'s `t = 10⁴` grid beside the 667 rows; the owner's line names the 667
+  rows. GG-1 already compares only the systems that end before 200 (rule 18); its other systems take the same label,
+  "not evaluated within cap". REQ-VAL-295 keeps `rq: RQ-598` for its data.
+- **The raised-cap run** needs a cap, which no document gives, so it is a calibration requirement (R-71), REQ-VAL-332:
+  the cap proposed with evidence by TASK-M4-26 and confirmed by the owner at the M4 gate, the run evaluating at it
+  every target the M3 runs recorded as "not evaluated within cap". The task is at M4, after M3's runs that record the
+  rows, and depends on TASK-M3-42, TASK-M3-43 and TASK-M3-45. Its reviewers are code, qa and physics. It is the
+  smallest form a task can take here: `plan/check_plan.py` fails a task that closes no requirement.
+- **RQ-602** is closed by the acceptance of #317's split, as its entry said ("For the human: no, unless the placement
+  below is vetoed"); the owner accepted the placement.
+- **The weekly audit's PR:** RQ-605 proposed "one PR of fixes or queue entries" a week, and the owner said
+  "report-only, never blocking". Both hold: the report is that one PR, holding the mechanical fixes and a
+  `REVIEW_QUEUE.md` entry for each contradiction, and it blocks nothing; it merges as any PR does, on its reviews and
+  green CI. Which agent role runs it and which reviewers its PR names is the orchestrator's, with the schedule.
+- **The pace rule's scope:** "GPU work" is everything that needs the Mac's GPU or Metal: the implementers' builds and
+  GPU tests, Metal checks and screenshots (a gui reviewer's Metal steps, R-634), benchmarks and every performance gate
+  (R-186), and the merges, which stay with the Mac orchestrator (R-357, R-634). Implementers, not named by the owner,
+  stay on the Mac. A review step that needs Metal runs on the Mac, within the two. How a cloud session is started is
+  unchanged (R-634's claim rule: the owner starts one by hand).
+- **The R-391 log:** its daily log and the swap check end with the trial; the page-out reading has no limit left to
+  set, since two is the cap at every level.
+- R-636 is in the "process" group of `plan/rule_groups.yaml`.
+
+*The number:* R-635 is on PR #321's branch, the highest number on any branch; this is the next.
+
+Changes REQ-VAL-201, REQ-VAL-218 and REQ-VAL-222 (verify, rulings), REQ-VAL-295 (rq, rulings, note), REQ-VAL-311 to
+REQ-VAL-314 and REQ-VAL-316 (rq, rulings); adds REQ-VAL-332.

@@ -169,6 +169,8 @@ on the labelling (Hudomal's Table 1 against his eq. (18)). Which labelling, and 
 are RQ-582 and RQ-583. Until they are ruled, Šuvakov-plane orbits are tested by Path A, which needs no chart.
 *27 Oct 2026:* R-630 rules the labelling (RQ-582 closed): the middle body is body 1, at `β = 0`, Hudomal eq. (18)'s.
 The chart, RQ-583, stays open.
+*28 Oct 2026:* R-636 closes RQ-583: the Šuvakov-plane targets stay Path A closures, and no chart is built yet. The five
+targets that need one (§ 5.12) wait on RQ-608.
 
 ---
 
@@ -227,6 +229,8 @@ centre-of-mass frame with G = 1 and masses as given, converted into the canonica
 The closure tolerance is set by the f64 rounding of `ref_*` times the orbit's instability, never by the catalogued
 closure (rule 14). 667 of the 3,916 rows with refined closure below 1e-9 have T > 200, past R-610's cap; they are not
 run while RQ-592 is open.
+*28 Oct 2026:* R-636 closes RQ-592: these rows are recorded as "not evaluated within cap", counted and named, never as
+failures. A separate raised-cap run evaluates them: TASK-M4-26, closing REQ-VAL-332, the raised cap's calibration.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -357,6 +361,8 @@ map at M4 and the zooms at M6.
 Rule 8's exception: a result computed with a converged code (Brutus) is a set of trajectories, compared per point.
 Neither data set is in the repo (RQ-598), and Boekholt et al.'s t = 10⁴ is past R-610's cap, so it is compared only
 over the systems that end before 200 (rule 18; RQ-592).
+*28 Oct 2026:* R-636 closes RQ-592: GG-1's systems that end past 200 are recorded as "not evaluated within cap", never
+as failures, and GG-1 waits on RQ-598 alone.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -393,6 +399,9 @@ Each waits, with its requirement in place and its RQ named, for what it needs. N
 | periodic-orbit continuation | LLL-1 | RQ-597 |
 | data not in the repo | V-11, GG-1, BR-1 | RQ-598 |
 | papers not in the repo: paywalled, for the owner to fetch (R-630 item 9, closing RQ-586) | LL-3, TM-1 | none (was "RQ-586") |
+
+*28 Oct 2026:* R-636 closes RQ-583 with no chart built yet. The Šuvakov-plane row's five targets, and the rows below
+that name RQ-583, wait on RQ-608.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -512,6 +521,7 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M4-23**, Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2). Targets: HU-1, HU-2. Depends on TASK-M4-17, TASK-M3-53, TASK-M3-11. Waits on RQ-583 (RQ-582 closed by R-630; was "Waits on RQ-582, RQ-583.").
 - **TASK-M4-24**, Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7). Targets: TS-1, TS-2, V-1/V-3/V-7. Depends on TASK-M4-17, TASK-M3-16. Waits on RQ-595.
 - **TASK-M4-25**, Li, Li & Liao's mass-plane contours for one periodic family (LLL-1). Targets: LLL-1. Depends on TASK-M4-17, TASK-M2-13. Waits on RQ-597.
+- **TASK-M4-26** (added by R-636, 28 Oct 2026), The raised-cap run: the atlas rows OC-1, OC-3 and OC-6 recorded as "not evaluated within cap", evaluated at a calibrated raised horizon (REQ-VAL-332). Depends on TASK-M3-42, TASK-M3-43, TASK-M3-45.
 
 **M6.**
 
@@ -526,6 +536,10 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 - **TASK-M8-97**, Stability as structure: atlas orbits off the Šuvakov plane against their published stability (OC-4, AT-D5). Targets: OC-4. Depends on TASK-M8-74, TASK-M6-05, TASK-M3-45.
 - **TASK-M8-98**, The atlas's free-fall orbits marked on the closure field, one plane per mass set (AT-D2). Targets: AT-D2. Depends on TASK-M8-74, TASK-M4-15, TASK-M3-46.
 - **TASK-M8-99**, The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane). Targets: OC-4 on the Šuvakov plane, AT-D1, AT-D3. Depends on TASK-M8-97. Waits on RQ-583 (RQ-582 closed by R-630; was "Waits on RQ-582, RQ-583.").
+
+*28 Oct 2026 (R-636):* RQ-583 and RQ-592 are closed. TASK-M4-23 and TASK-M8-99 now wait on RQ-608 (no Šuvakov-plane
+chart is built yet), and TASK-M3-62 on RQ-598 alone (GG-1's systems past 200 are recorded as "not evaluated within
+cap").
 
 ---
 
@@ -591,6 +605,8 @@ PLAN.md § 8's rules 9–18, transcribed:
     stays the provenance check. Other third-party data still needs stated terms or a ruling.
 18. **Respect the horizon cap; queue, don't raise it.** R-610: `T_horizon ∈ [0.4, 200]`, default 50. A target past 200
     is compared only over the systems that end before 200 (RQ-592 asks whether a closure test may run past it).
+    *28 Oct 2026, R-636 (closing RQ-592):* a target past the cap is recorded as "not evaluated within cap", never as
+    a failure; a separate raised-cap run, at a calibrated cap, is TASK-M4-26 (REQ-VAL-332).
 
 ### 8.3 How the tasks apply them
 
@@ -674,6 +690,10 @@ batched, not decided.
 | R-594 item 6: the new charts and diagnostics targets need | RQ-593 to RQ-597 (and RQ-583) |
 | Data and papers not in the repo | RQ-598 (and RQ-584 to RQ-586) |
 | R-594 item 6: an old paper and our engine disagree, and whose error is unclear | none yet: nothing has run. Each task queues its own, with both numbers (§ 8.3) |
+
+*28 Oct 2026:* R-636 rules Q4 (RQ-583: the targets stay closures, no chart is built yet; the five targets that need
+one are RQ-608's) and R-594 item 6's horizon cap (RQ-592: "not evaluated within cap", never a failure; the raised-cap
+run is TASK-M4-26).
 
 ---
 
