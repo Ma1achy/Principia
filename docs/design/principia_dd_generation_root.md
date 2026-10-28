@@ -445,8 +445,15 @@ is held and updated is REQ-REF-046's; the formula is indexed by `t_j` alone. *Wa
 of PR #318, F1):* "At the quad's `k`-th resolve pass (`k = 1, 2, …`), with `d_k(f)` footprint `f`'s divergence then
 and `D_k = (1/N²)·Σ_f d_k(f)` its mean over the quad's N² footprints, `running_mean_divergence = (1/k)·Σ_{j=1..k}
 D_j`, updated in place: `m_k = m_{k−1} + (D_k − m_{k−1})/k`". The in-place update
-sets `m_1 = D_1` whatever `m_0` holds, so the member needs no initial value. **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
-lies in `[0, 1]` by `spread_shape`'s chord bound (its row, below), so every mean of them does; the range does not
+sets `m_1 = D_1` whatever `m_0` holds, so the member needs no initial value. **An undetermined footprint reads 1.** Where `f`'s
+`spread_shape` is non-finite (refinement policy §1's "the footprint is undetermined (non-finite spread, or an unusable
+copy)"), `d(f, t_j) = 1`, the contributor's attainable maximum, chosen by a select on the operand's bits (an exponent
+of all ones), never by a float comparison (R-79, R-297, as for `d_min`); the footprint stays in the N² of `D_j`. A
+failure raises the spread and never vanishes from it (the uniformity invariant, "Ensemble spread" above), and one
+NaN can't poison the mean for the rest of the quad's life. **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
+lies in `[0, 1]`, a finite one by `spread_shape`'s chord bound (its row, below) and an undetermined one as 1, so every
+mean of them does; *was (physics review 5679374140 of PR #318, F2):* "each `d_k(f)` lies in `[0, 1]` by
+`spread_shape`'s chord bound (its row, below), so every mean of them does"; the range does not
 span zero, so the member is one-signed and on viridis, never on the diverging ramp (R-545, RQ-278 (d)).
 
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast

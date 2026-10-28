@@ -163,7 +163,8 @@ fn unbounded(
 /// grid `t_j = j·Δ` of the footprints' mean `spread_shape`, each in `[0, 1]`, so `[0, 1]`, one-signed.
 const RUNNING_MEAN_DIVERGENCE_3_7: &str = "dd_generation_root §3.7 \"Temporal accumulators\": \
      running_mean_divergence(t) = (1/n)·Σ D_j over the sim-time grid t_j = j·Δ (Δ = dt, or Δ_sync), \
-     D_j the mean over the quad's footprints of spread_shape at t_j, each in [0, 1], so [0, 1] \
+     D_j the mean over the quad's footprints of spread_shape at t_j, each in [0, 1], a non-finite one read as 1, \
+     so [0, 1] \
      (REQ-PAY-109; R-72, R-545)";
 
 /// `coherence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, `1 − n_unresolved / N²` with

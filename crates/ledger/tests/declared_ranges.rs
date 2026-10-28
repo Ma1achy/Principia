@@ -731,6 +731,7 @@ const REDUCTION_ONE_SIGNED: [(&str, &[&str]); 2] = [
             "running_mean_divergence(t) = (1/n)·Σ D_j",
             "sim-time grid t_j = j·Δ",
             "spread_shape",
+            "a non-finite one read as 1",
             "REQ-PAY-109",
         ],
     ),
