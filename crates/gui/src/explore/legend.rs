@@ -233,7 +233,7 @@ pub fn show(ui: &mut Ui, rect: Rect, legend: &Legend, keyboard: &mut Keyboard) {
     });
     let rects = key_rects(legend, body);
     let bottom = rects.last().map_or(body.max.y, |r| r.max.y);
-    if bottom <= body.max.y {
+    if !overflows(legend, body) {
         for (key, area) in legend.keys.iter().zip(rects) {
             draw_key(ui, area, key);
         }
@@ -254,6 +254,13 @@ pub fn show(ui: &mut Ui, rect: Rect, legend: &Legend, keyboard: &mut Keyboard) {
                 draw_key(ui, area.translate(shift), key);
             }
         });
+}
+
+/// Whether the keys of `legend` run past the bottom of `body`, so they scroll.
+pub fn overflows(legend: &Legend, body: Rect) -> bool {
+    key_rects(legend, body)
+        .last()
+        .is_some_and(|r| r.max.y > body.max.y)
 }
 
 /// Draws `key` in `area`.

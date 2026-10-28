@@ -359,8 +359,10 @@ fn mock_legend_keys_running_is_the_not_yet_stipple() {
         MockSide::new(MockEngine::frozen(), Some(canvas.clone())),
         FORMAT,
     );
-    // The outcome key has no running class since R-446; a key of another field, set first, shows it.
+    // The outcome key has no running class since R-446; a key of another field, set first, shows it. The bar is left
+    // out, so the keys fit the panel and are drawn where `key_rects` puts them, not scrolled.
     let mut stain = default_stain();
+    stain.out.pop();
     stain.out.insert(
         0,
         Dimension::Categorical {

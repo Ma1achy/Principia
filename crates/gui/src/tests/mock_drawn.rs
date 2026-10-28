@@ -718,18 +718,25 @@ fn mock_legend_keys_drawn_geometry_in_numbers() {
     assert!(one.indices.is_empty());
 }
 
-/// The texts `legend::show` paints for `legend` in `rect`, on a bare context.
+/// The texts `legend::show` paints for `legend` in `rect`, on a bare context, in the third frame, a scroll area having
+/// settled.
 fn legend_texts(legend: &engine::contract::legend::Legend, rect: Rect) -> Vec<(String, Rect)> {
     let ctx = egui::Context::default();
     let mut keyboard = crate::keyboard::Keyboard::new();
     let raw = egui::RawInput {
-        screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(1000.0, 1000.0))),
+        screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(2000.0, 2000.0))),
         ..Default::default()
     };
-    let mut out = ctx.run_ui(raw, |ui| {
-        crate::explore::legend::show(ui, rect, legend, &mut keyboard);
-    });
-    out.textures_delta.clear();
+    let mut run = || {
+        let mut out = ctx.run_ui(raw.clone(), |ui| {
+            crate::explore::legend::show(ui, rect, legend, &mut keyboard);
+        });
+        out.textures_delta.clear();
+        out
+    };
+    let _ = run();
+    let _ = run();
+    let out = run();
     let mut flat = Vec::new();
     fn flatten(shape: &Shape, out: &mut Vec<Shape>) {
         match shape {
@@ -785,4 +792,66 @@ fn mock_legend_keys_drawn_long_labels_are_cut_before_the_share() {
         label.0, long,
         "the galley holds the whole text, elided where it is cut"
     );
+}
+
+/// Keys taller than the panel scroll, held at the bottom: the last key's last entry is drawn inside the body, and the
+/// last key above where `key_rects` puts it unscrolled.
+fn check_scrolled_to_bottom(legend: &engine::contract::legend::Legend, rect: Rect) {
+    use crate::explore::legend::overflows;
+    let body = rect.shrink(MARGIN);
+    assert!(overflows(legend, body), "the keys fit");
+    let words = legend_texts(legend, rect);
+    let last = words
+        .iter()
+        .find(|(t, _)| t == "NaN / Inf")
+        .unwrap_or_else(|| panic!("the last entry drawn: {words:?}"));
+    assert!(
+        last.1.max.y <= body.max.y + 0.5,
+        "{:?} below {body:?}",
+        last.1
+    );
+    // The "Debug" key's title is drawn above where the keys, unscrolled, would put it.
+    let title = words
+        .iter()
+        .find(|(t, _)| t == "Debug")
+        .expect("the Debug key's title");
+    let unscrolled = *key_rects(legend, body).last().unwrap();
+    assert!(
+        title.1.min.y < unscrolled.min.y - 1.0,
+        "{:?} not scrolled from {unscrolled:?}",
+        title.1
+    );
+}
+
+#[test]
+fn mock_legend_keys_drawn_scroll_past_the_panel() {
+    use crate::explore::legend::{key_rects as rects, overflows};
+    use crate::mock::invalid::Flagged;
+    use crate::mock::legend::{debug_key, default_stain, evaluate};
+    let mut legend = evaluate(&default_stain());
+    legend.keys.push(debug_key(&Flagged::default()));
+    let panel = Layout::new(
+        Rect::from_min_size(pos2(0.0, 0.0), vec2(1440.0, 900.0)),
+        PIXELS_PER_POINT,
+    )
+    .legend;
+    check_scrolled_to_bottom(&legend, panel);
+    // At the edge: a body whose bottom is the last key's fits, one a point shorter overflows.
+    let body = panel.shrink(MARGIN);
+    let bottom = rects(&legend, body).last().unwrap().max.y;
+    let exact = Rect::from_min_max(body.min, pos2(body.max.x, bottom));
+    assert!(!overflows(&legend, exact));
+    assert!(overflows(
+        &legend,
+        Rect::from_min_max(body.min, pos2(body.max.x, bottom - 1.0))
+    ));
+    assert!(!overflows(
+        &engine::contract::legend::Legend::default(),
+        body
+    ));
+    // Control: a panel tall enough for every key draws them unscrolled, and fails the check.
+    let tall = Rect::from_min_size(panel.min, vec2(panel.width(), 600.0));
+    rejects("keys that fit, drawn unscrolled", || {
+        check_scrolled_to_bottom(&legend, tall)
+    });
 }
