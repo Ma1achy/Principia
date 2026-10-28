@@ -11,7 +11,10 @@
 //! (`declared_ranges_signed_fields_cite_their_sources`); `mean_y` is provisional, naming REQ-PAY-098, and on
 //! `ramp_coolwarm` (`declared_ranges_provisional_*`); `q_mass` is declared [0, 1] from its formula, citing dd_decoder
 //! §3.6 and REQ-PAY-097, and on `ramp_viridis` at the fixed range (`declared_ranges_q_mass_declared`; REQ-PAY-097,
-//! R-426, TASK-M2-03); a `lin` or `diverging` scalar whose range is
+//! R-426, TASK-M2-03); `QuadReduction`'s `running_mean_divergence` and `coherence` are one-signed, each declared
+//! `[0, 1]` citing its formula in §3.7 and REQ-PAY-109, and on `ramp_viridis`, while a `lin` fixture declared (−∞, ∞)
+//! is on `ramp_coolwarm` (`declared_ranges_one_signed_*`; REQ-PAY-109, R-545, TASK-M5-32); a `lin` or `diverging`
+//! scalar whose range is
 //! a gap fails generation naming it and R-426, and is not placed on `ramp_coolwarm`, while a gap on a cyclic field or
 //! a vector not tagged `diverging` generates, and a `diverging` vector over a gap fails naming it, R-426 and R-403
 //! (`declared_ranges_gap_*`); and the gap list names each remaining gap with the requirement that
@@ -702,20 +705,43 @@ negative_control!(
     })
 );
 
-/// `QuadReduction`'s members are declared (R-426, applied per R-369): its four (−∞, ∞) members cite §3.7's "The §3.8
-/// entries", `alpha_area` and `alpha_energy` also REQ-PAY-093's proposal, and every other member is declared by the
-/// bounds it writes; so none is a gap, and the reduction ledger generates.
+/// `QuadReduction`'s members are declared (R-426, applied per R-369): its two (−∞, ∞) members, `alpha_area` and
+/// `alpha_energy`, cite §3.7's "The §3.8 entries" and REQ-PAY-093's proposal, its two one-signed f32 members cite
+/// their formulas (REQ-PAY-109, below), and every other member is declared by the bounds it writes; so none is a gap,
+/// and the reduction ledger generates.
 #[test]
 fn declared_ranges_reduction_members_are_declared() {
     check_reduction(&ledger::reduction::ledger());
 }
 
 /// The reduction members declared (−∞, ∞), each with what its citation names.
-const REDUCTION_UNBOUNDED: [(&str, &[&str]); 4] = [
+const REDUCTION_UNBOUNDED: [(&str, &[&str]); 2] = [
     ("alpha_area", &["§3.7", "The §3.8 entries", "REQ-PAY-093"]),
     ("alpha_energy", &["§3.7", "The §3.8 entries", "REQ-PAY-093"]),
-    ("running_mean_divergence", &["§3.7", "The §3.8 entries"]),
-    ("coherence", &["§3.7", "The §3.8 entries"]),
+];
+
+/// The reduction members R-545 makes one-signed (RQ-278 (d)), each with what its citation names: §3.7's section that
+/// gives its formula, the formula, and REQ-PAY-109.
+const REDUCTION_ONE_SIGNED: [(&str, &[&str]); 2] = [
+    (
+        "running_mean_divergence",
+        &[
+            "§3.7",
+            "Temporal accumulators",
+            "running_mean_divergence = (1/k)·Σ D_j",
+            "spread_shape",
+            "REQ-PAY-109",
+        ],
+    ),
+    (
+        "coherence",
+        &[
+            "§3.7",
+            "Validity and diagnostics",
+            "coherence = 1 − n_unresolved / N²",
+            "REQ-PAY-109",
+        ],
+    ),
 ];
 
 fn check_reduction(l: &Ledger) {
@@ -741,6 +767,8 @@ fn check_reduction(l: &Ledger) {
                     );
                 }
             }
+            // Their declared [0, 1] and its citation are `check_one_signed`'s.
+            None if REDUCTION_ONE_SIGNED.iter().any(|(f, _)| *f == e.name) => {}
             None => assert_eq!(
                 citation,
                 ledger::schema::WRITTEN_BOUNDS,
@@ -759,17 +787,111 @@ fn check_reduction(l: &Ledger) {
 
 negative_control!(
     declared_ranges_reduction_members_are_declared,
-    "`coherence` with its citation dropped is a gap, and generation refuses it",
-    expected = "`coherence` has scale `lin` and no declared range",
+    "`alpha_energy` with its citation dropped is a gap, and generation refuses it",
+    expected = "`alpha_energy` has scale `lin` and no declared range",
     {
         let mut l = ledger::reduction::ledger();
         l.entries
             .iter_mut()
-            .find(|e| e.name == Some("coherence"))
-            .expect("coherence")
+            .find(|e| e.name == Some("alpha_energy"))
+            .expect("alpha_energy")
             .declaration = None;
         check_reduction(&l);
     }
+);
+
+/// Checks that each of `entries` named in [`REDUCTION_ONE_SIGNED`] is declared `[0, 1]`, citing its §3.7 formula and
+/// REQ-PAY-109, that its range does not span zero, and that the numeric template draws it `lin` on `ramp_viridis`,
+/// never on `ramp_coolwarm` (REQ-PAY-109; R-545, RQ-278 (d)).
+fn check_one_signed(entries: &[Entry]) {
+    for (field, phrases) in REDUCTION_ONE_SIGNED {
+        let e = entries
+            .iter()
+            .find(|e| e.name == field)
+            .unwrap_or_else(|| panic!("no reduction member `{field}`"));
+        let state = e.range_state();
+        let RangeState::Declared { range, citation } = state else {
+            panic!("`{field}`'s range is not declared: {state:?}");
+        };
+        assert_eq!(
+            range,
+            Range {
+                lo: Bound::Closed(0.0),
+                hi: Bound::Closed(1.0)
+            },
+            "`{field}` is not declared [0, 1]"
+        );
+        for phrase in phrases {
+            assert!(
+                citation.contains(phrase),
+                "`{field}`'s citation does not cite {phrase}: `{citation}`"
+            );
+        }
+        assert!(!state.spans_zero(), "`{field}`'s range spans zero");
+        assert_eq!(e.scale, Scale::Lin, "`{field}` is not `lin`");
+        let ramp = NumericView::of(e).expect("a numeric view").ramp();
+        assert_eq!(ramp, Ramp::Viridis, "`{field}` is drawn on {ramp:?}");
+    }
+}
+
+/// `running_mean_divergence` and `coherence` are one-signed (R-545, RQ-278 (d)): each declared `[0, 1]` from its
+/// formula in §3.7, with its citation, and both on viridis (REQ-PAY-109).
+#[test]
+fn declared_ranges_one_signed_reduction_members() {
+    check_one_signed(
+        &ledger::gen::validate(&ledger::reduction::ledger()).unwrap_or_else(|e| panic!("{e}")),
+    );
+}
+
+/// The reduction's entries with `coherence` declared (−∞, ∞), cited, as a fixture: a `lin` entry whose declared range
+/// spans zero.
+fn coherence_unbounded() -> Vec<Entry> {
+    let mut l = ledger::reduction::ledger();
+    let e = l
+        .entries
+        .iter_mut()
+        .find(|e| e.name == Some("coherence"))
+        .expect("coherence");
+    e.range = Some(Range::UNBOUNDED);
+    e.declaration = Some(Declaration::Cited("a fixture: declared (−∞, ∞)"));
+    ledger::gen::validate(&l).unwrap_or_else(|e| panic!("{e}"))
+}
+
+negative_control!(
+    declared_ranges_one_signed_reduction_members,
+    "`coherence` declared (−∞, ∞), as PR #208 built it, is not one-signed",
+    expected = "`coherence` is not declared [0, 1]",
+    check_one_signed(&coherence_unbounded())
+);
+
+/// The boundary of the placement: a `lin` entry declared (−∞, ∞) is placed on `ramp_coolwarm`, so the viridis
+/// placement above is the declared `[0, 1]`'s, not the template's for every `lin` member (REQ-PAY-109's control).
+#[test]
+fn declared_ranges_one_signed_unbounded_fixture_is_coolwarm() {
+    check_fixture_coolwarm(&coherence_unbounded());
+}
+
+fn check_fixture_coolwarm(entries: &[Entry]) {
+    let e = entries
+        .iter()
+        .find(|e| e.name == "coherence")
+        .expect("coherence");
+    assert_eq!(e.scale, Scale::Lin, "the fixture is not `lin`");
+    assert!(
+        e.range_state().spans_zero(),
+        "the fixture does not span zero"
+    );
+    let ramp = NumericView::of(e).expect("a numeric view").ramp();
+    assert_eq!(ramp, Ramp::Coolwarm, "the fixture is drawn on {ramp:?}");
+}
+
+negative_control!(
+    declared_ranges_one_signed_unbounded_fixture_is_coolwarm,
+    "`coherence` as declared, [0, 1], is not placed on cool-warm",
+    expected = "the fixture does not span zero",
+    check_fixture_coolwarm(
+        &ledger::gen::validate(&ledger::reduction::ledger()).unwrap_or_else(|e| panic!("{e}"))
+    )
 );
 
 /// The payload stays strict (R-426): every payload entry's range is cited or provisional, or the entry is one of

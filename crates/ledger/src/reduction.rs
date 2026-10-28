@@ -159,23 +159,26 @@ fn unbounded(
     member(name, packed(word, offset, 16), FieldType::F16, scale, range).overflow(overflow)
 }
 
-/// §3.7's declaration of the (−∞, ∞) members' ranges (R-426, applied per R-369): its "§3.8 entries" table gives each
-/// `(−∞, ∞)`.
-const SECTION_3_7: &str =
-    "dd_generation_root §3.7 \"The §3.8 entries\": the member's row gives it (−∞, ∞)";
+/// `running_mean_divergence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, a running mean of footprint
+/// `spread_shape`s, each in `[0, 1]`, so `[0, 1]`, one-signed.
+const RUNNING_MEAN_DIVERGENCE_3_7: &str = "dd_generation_root §3.7 \"Temporal accumulators\": \
+     running_mean_divergence = (1/k)·Σ D_j, D_j the mean over the quad's footprints of spread_shape, each in [0, 1], \
+     so [0, 1] (REQ-PAY-109; R-72, R-545)";
 
-/// [`SECTION_3_7`] for `alpha_area` and `alpha_energy`, whose range is REQ-PAY-093's proposal (R-71, R-418) until the
-/// human confirms it at the M5 gate.
+/// `coherence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, `1 − n_unresolved / N²` with
+/// `0 ≤ n_unresolved ≤ N²`, so `[0, 1]`, one-signed.
+const COHERENCE_3_7: &str = "dd_generation_root §3.7 \"Validity and diagnostics\": \
+     coherence = 1 − n_unresolved / N², 0 ≤ n_unresolved ≤ N² (R-315), so [0, 1] (REQ-PAY-109; R-72, R-545)";
+
+/// §3.7's declaration of `alpha_area`'s and `alpha_energy`'s ranges (R-426, applied per R-369): its "§3.8 entries"
+/// table gives each `(−∞, ∞)`, REQ-PAY-093's proposal (R-71, R-418) until the human confirms it at the M5 gate.
 const PROPOSED_3_7: &str =
     "dd_generation_root §3.7 \"The §3.8 entries\": the member's row gives it (−∞, ∞), \
                             proposed by REQ-PAY-093 (R-71, R-418) until the M5 gate";
 
-/// An f32 at scalar slot `slot`, from `lo`, unbounded above.
-fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
-    let range = Range {
-        lo,
-        hi: Bound::Unbounded,
-    };
+/// An f32 at scalar slot `slot`, over `lo .. hi`.
+fn f32_at(name: &'static str, slot: u32, lo: Bound, hi: Bound) -> EntryBuilder {
+    let range = Range { lo, hi };
     member(
         name,
         Location::Scalar(slot),
@@ -193,6 +196,7 @@ fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
 /// members' §3.8 entries; not register constants (REQ-SYS-082).
 fn entries() -> Vec<EntryBuilder> {
     let zero = Bound::Closed(0.0);
+    let one = Bound::Closed(1.0);
     let histogram = FieldType::Vector {
         component: Box::new(FieldType::UBits),
         k: bins(),
@@ -296,10 +300,10 @@ fn entries() -> Vec<EntryBuilder> {
             zero,
             Overflow::Saturate,
         ),
-        f32_at("running_mean_divergence", 41, Bound::Unbounded).cited(SECTION_3_7),
+        f32_at("running_mean_divergence", 41, zero, one).cited(RUNNING_MEAN_DIVERGENCE_3_7),
         // Held until the first crossing: +∞, the minimum of the empty set of crossing times (§3.7, REQ-PAY-094).
-        f32_at("first_divergence_t", 42, zero).sentinel(f64::INFINITY),
-        f32_at("coherence", 43, Bound::Unbounded).cited(SECTION_3_7),
+        f32_at("first_divergence_t", 42, zero, Bound::Unbounded).sentinel(f64::INFINITY),
+        f32_at("coherence", 43, zero, one).cited(COHERENCE_3_7),
     ]
 }
 
