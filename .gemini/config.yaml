@@ -1,0 +1,27 @@
+# Gemini Code Assist on GitHub: an advisory reviewer for a one-week trial, not a merge gate (decisions.md R-635).
+# Keys per Google's "Customize Gemini Code Assist behavior in GitHub" (docs.cloud.google.com/gemini/docs/code-review/
+# customize-repo-review). The review brief is .gemini/styleguide.md, a copy of AGENTS.md § "Code Review Rules".
+have_fun: false
+code_review:
+  disable: false
+  # HIGH posts HIGH and CRITICAL only: physics and invariant breaks (CRITICAL), correctness bugs, tests with no control
+  # arm and docs drift (HIGH). Style and naming (MEDIUM, LOW) are not posted.
+  comment_severity_threshold: HIGH
+  max_review_comments: -1
+  pull_request_opened:
+    help: false
+    summary: true
+    code_review: true
+    include_drafts: false
+ignore_patterns:
+  # The owner's list.
+  - "docs/incoming/**"
+  - "results/**"
+  - "shots/**"
+  - "**/*.png"
+  - "**/*.raw"
+  - "**/*.prnq"
+  # Vendored and third-party material, never normative (CLAUDE.md; R-159).
+  - "docs/reference/**" # the prin-rs reference set, imported and pinned at 8600d45 (R-159)
+  - "workbench/**" # working renders, prototypes and fonts (workbench/README.md)
+  - "docs/experiments/results/xp_results*/**" # the external replication reports' raw data and scripts
