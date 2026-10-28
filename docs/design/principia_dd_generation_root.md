@@ -425,7 +425,7 @@ the quad's unresolved footprints, latched ones included (policy §1's `n_unresol
 automatic return.
 
 **`running_mean_divergence`'s formula and range (REQ-PAY-109; definition, R-72; R-545).** A footprint's divergence
-at a resolve pass is the spread the latch reads, the one compared with `eps` (scheduler contract Part 6,
+at a sim time is the spread the latch reads, the one compared with `eps` (scheduler contract Part 6,
 "Split/keep/merge": `spread_shape > eps`): the footprint's `spread_shape`, `spread(n̂)/2.0` over its `E+1` copies
 (above), whose latched running maximum is `running_max_divergence` (refinement policy §1: "its latched running
 maximum of spread_shape"). It is a time average over the fixed sim-time grid, never over scheduling events: `Δ` is the
