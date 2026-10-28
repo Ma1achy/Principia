@@ -344,3 +344,79 @@ fn mock_invalid_hook_clip_measured_from_the_window() {
         });
     }
 }
+
+/// The canvas background is the colour the window is cleared to.
+fn check_clear_colour(background: [u8; 3]) {
+    let [r, g, b, _] = super::f3_fills_window_mock::clear();
+    assert_eq!(background, [r, g, b], "the window's clear colour");
+}
+
+#[test]
+fn mock_invalid_hook_background_before_the_app_sets_it() {
+    // A canvas the app has not yet told: the dark theme's clear colour, as the window is cleared to (R-467 D2).
+    let canvas = canvas();
+    check_clear_colour(canvas.background());
+    check_clear_colour(crate::mock::canvas::default_background());
+    canvas.set_background([1, 2, 3]);
+    assert_eq!(canvas.background(), [1, 2, 3], "set by the app");
+    rejects("a black background", || check_clear_colour([0; 3]));
+    rejects("the background the app set", || {
+        check_clear_colour(canvas.background())
+    });
+}
+
+/// A 4×4 figure, the whole viewport, its shown rect at `half` of it about the centre.
+fn four_by_four(half: f32) -> FigureView {
+    FigureView {
+        size: [4, 4],
+        placement: crate::layout::Placement {
+            centre: [0.0, 0.0],
+            half: [half, half],
+        },
+        clip: [0, 0, 4, 4],
+        background: [0; 3],
+    }
+}
+
+/// The region `[s₀, t₀, s₁, t₁)` flags the pixels whose centres lie in it, `s₀` and `t₀` in, `s₁` and `t₁` out.
+fn check_half_open(covered: (Vec<u32>, Vec<u32>)) {
+    // Pixel centres at s = 0.125, 0.375, 0.625, 0.875 across, and t the same up from the bottom row.
+    assert_eq!(
+        covered,
+        (vec![0, 1], vec![2, 3]),
+        "[0.125, 0.625) on each axis"
+    );
+}
+
+#[test]
+fn mock_invalid_hook_region_edges_and_the_square_edges() {
+    use crate::mock::invalid::{covered_pixels, flagged};
+    // The region's edges fall on pixel centres: its lower edges flag theirs, its upper edges do not.
+    let view = four_by_four(1.0);
+    let region = [0.125, 0.125, 0.625, 0.625];
+    check_half_open(covered_pixels(&view, region));
+    rejects("a region closed at its upper edge", || {
+        check_half_open((vec![0, 1, 2], vec![1, 2, 3]))
+    });
+    rejects("a region open at its lower edge", || {
+        check_half_open((vec![1], vec![2]))
+    });
+    // The square's edges fall on pixel centres, s = 0 and s = 1: both are inside [0,1]², so all 16 pixels are.
+    let view = four_by_four(0.75);
+    let all = flagged(&view, [-1.0, -1.0, 2.0, 2.0]);
+    assert_eq!(all.flagged, 16);
+    let inside = all.inside.expect("pixels inside the square");
+    assert_eq!(inside.count, 16, "the square's edges inside it");
+    assert_eq!(inside.pixel, [0, 0], "the bottom-left pixel first");
+    assert_eq!(inside.st, [0.0, 0.0]);
+    // The shown rect a hair to the left: the right column, at s just past 1, is outside the square.
+    let shifted = FigureView {
+        placement: crate::layout::Placement {
+            centre: [-1e-3, 0.0],
+            half: [0.75, 0.75],
+        },
+        ..view
+    };
+    let some = flagged(&shifted, [-1.0, -1.0, 2.0, 2.0]);
+    assert_eq!(some.inside.expect("pixels inside").count, 12);
+}
