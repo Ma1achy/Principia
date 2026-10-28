@@ -51,6 +51,7 @@ mod tests {
     mod mock_keyboard_windows;
     mod mock_legend_keys;
     mod mock_lock_badge;
+    mod mock_manifold_sections;
     mod mock_manifold_view;
     mod mock_reachability;
     mod mock_stain_drawn;
@@ -71,4 +72,5 @@ mod tests {
     mod scope_tab_order_mock;
     mod support;
     mod theme;
+    mod tilt_targets;
 }

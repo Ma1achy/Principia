@@ -20,11 +20,11 @@ use crate::explore::manifold_view::depth::{
 use crate::explore::manifold_view::navigate::{
     figure_coords, magnification, pan, wheel_octaves, zoom_by,
 };
-use crate::explore::manifold_view::slice_tilt::{Angles, ROTATION_RANGE, TILT_RANGE};
+use crate::explore::manifold_view::tilt::{Angles, ROTATION_RANGE, TILT_RANGE};
 use crate::explore::manifold_view::{
     self as mv, activate, add, adjust, axis, basis_edit, chart_coords, dominant, in_plane,
-    lock_edit, point, slice_axis, z0_edit, Out, Scratch, Touch, View, CENTRE_Z0, GAMMA, NAV_Z0,
-    PRESETS, SLICE_AXIS, SLIDERS, TAU1, ZOOM,
+    lock_edit, point, slice_axis, z0_edit, Out, Scratch, Touch, View, GAMMA, PRESETS, SLICE_AXIS,
+    SLICE_CENTRE, SLIDERS, TAU1, ZOOM,
 };
 use crate::explore::{COMPASS, COMPASS_VIEW, FIGURE, MANIFOLD_VIEW};
 use crate::headless::Headless;
@@ -66,7 +66,7 @@ fn one_setfield_moving(out: &Out, plane: &Plane, what: &str) {
         SimField::Basis { q1, q2 } => {
             assert_ne!((q1, q2), (&plane.q1, &plane.q2), "{what}: the basis moved")
         }
-        SimField::Lock(_) | SimField::Horizon(_) => {
+        SimField::Lock(_) | SimField::Horizon(_) | SimField::SliceFrame { .. } => {
             unreachable!("sim_field passes z₀ and the basis only")
         }
     }
@@ -100,11 +100,11 @@ fn mock_manifold_view_every_value_emits_one_setfield_on_z0_or_the_basis() {
     let _ = h.frame(&mut app, Vec::new());
     let snapshot = mock_snapshot();
     let values = values(&app);
-    // Chart's sixteen components, Navigate's u, v, zoom and eight z₀, Centre z₀'s eight, Slice & tilt's four, the
-    // figure and the compass.
+    // Chart's sixteen components, Navigate's u, v and zoom, Slice centre's eight, Tilt's three, the figure and the
+    // compass.
     assert_eq!(
         values.len(),
-        16 + 11 + 8 + 4 + 2,
+        16 + 3 + 8 + 3 + 2,
         "{:?}",
         values.iter().map(|v| v.scope).collect::<Vec<_>>()
     );
@@ -164,15 +164,13 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
         (out.edits.first().map(|e| sim_field(e).clone()), scratch)
     };
     use crate::keyboard::scopes::StepKind::{Angle, Bounded, Pan, Tilt, ZoomLog2};
-    // A z₀ value: a hundredth of its range, 2, on its own axis, in Navigate and in Centre z₀ alike.
-    for ids in [NAV_Z0, SLIDERS] {
-        for (i, id) in ids.iter().enumerate() {
-            let (edit, scratch) = run(id, Bounded, 1.0, Direction::Up);
-            let mut want = plane.z0;
-            want[i] += 0.02;
-            assert_eq!(edit, Some(SimField::Z0(want)), "{id}");
-            assert_eq!(scratch.compass.mode, Touch::Slice, "{id} shows slicing");
-        }
+    // A z₀ value: a hundredth of its range, 2, on its own axis, in Slice centre.
+    for (i, id) in SLIDERS.iter().enumerate() {
+        let (edit, scratch) = run(id, Bounded, 1.0, Direction::Up);
+        let mut want = plane.z0;
+        want[i] += 0.02;
+        assert_eq!(edit, Some(SimField::Z0(want)), "{id}");
+        assert_eq!(scratch.compass.mode, Touch::Slice, "{id} shows slicing");
     }
     // A basis component: a hundredth of its range, 2.
     let (edit, _) = run(mv::Q2_COMPONENTS[3], Bounded, -1.0, Direction::Down);
@@ -197,8 +195,8 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
         close(&q1, &MOCK_Q1.map(|v| v / 2.0), 1e-12)
             && close(&q2, &MOCK_Q2.map(|v| v / 2.0), 1e-12)
     );
-    // The slice step: z₀ along the hidden slice direction.
-    let (edit, _) = run(mv::SLICE_STEP, Bounded, 1.0, Direction::Up);
+    // The move along the slice normal: its dimension's Slice centre slider.
+    let (edit, _) = run(SLIDERS[SLICE_AXIS], Bounded, 1.0, Direction::Up);
     let mut want = plane.z0;
     want[SLICE_AXIS] += 0.02;
     assert_eq!(edit, Some(SimField::Z0(want)));
@@ -315,7 +313,7 @@ fn keys(h: &mut Headless, app: &mut App<MockSide>, keys: &[Key]) {
     }
 }
 
-/// Tab, Tab, Enter, ↓, ↓, Enter, Enter: Centre z₀'s first slider, in interaction mode (R-409).
+/// Tab, Tab, Enter, ↓, ↓, Enter, Enter: Slice centre's first slider, in interaction mode (R-409).
 fn to_first_slider(h: &mut Headless, app: &mut App<MockSide>) {
     keys(
         h,
@@ -330,7 +328,7 @@ fn to_first_slider(h: &mut Headless, app: &mut App<MockSide>) {
             Key::Enter,
         ],
     );
-    assert_eq!(focus(app), [MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[0]]);
+    assert_eq!(focus(app), [MANIFOLD_VIEW, SLICE_CENTRE, SLIDERS[0]]);
     assert_eq!(app.view.focus.mode, KeyMode::Interaction);
 }
 
@@ -393,7 +391,6 @@ fn mock_manifold_view_a_drag_on_a_slider_emits_setfields_on_z0_or_the_basis() {
     for (id, on_z0) in [
         (SLIDERS[0], true),
         (SLIDERS[7], true),
-        (mv::SLICE_STEP, true),
         (TAU1, false),
         (GAMMA, false),
         (ZOOM, false),
@@ -437,7 +434,9 @@ fn mock_manifold_view_a_typed_value_emits_a_setfield_on_z0() {
     let mut app = mock_app();
     let mut h = headless();
     let _ = h.frame(&mut app, Vec::new());
-    let field = place(&app, NAV_Z0[1]).center();
+    // Slice centre's z_β number box, at the right of its row.
+    let row = place(&app, SLIDERS[1]);
+    let field = egui::pos2(row.max.x - mv::centre::VALUE_W / 2.0, row.center().y);
     for events in crate::capture::click(field) {
         let _ = h.frame(&mut app, events);
     }
@@ -483,11 +482,11 @@ fn mock_manifold_view_locked_sliders_read_anchor_plus_offset_and_move_as_an_excu
     let texts = frame_texts(&mut h, &mut app);
     let zero = offset_text(0.0, 0.0);
     assert_eq!(zero, "+ 0.000");
-    // Centre z₀'s eight sliders and the slice step read anchor + 0.
+    // Slice centre's eight sliders read anchor + 0.
     let offsets = texts.iter().filter(|t| **t == zero).count();
-    assert_eq!(offsets, 9, "{texts:?}");
+    assert_eq!(offsets, 8, "{texts:?}");
     rejects("the sliders while free", || {
-        assert_eq!(free.iter().filter(|t| **t == zero).count(), 9)
+        assert_eq!(free.iter().filter(|t| **t == zero).count(), 8)
     });
     to_first_slider(&mut h, &mut app);
     let depth = app.snapshot().history.undo_depth;
@@ -632,22 +631,28 @@ fn mock_manifold_view_a_view_round_trips_its_basis() {
             (3.0, 0.0, 0.5, 1.4),
             (0.5, 0.4, 0.0, -1.0),
         ] {
+            let d = slice_axis(a, b);
             let view = View {
                 preset: Some(p),
                 a,
                 b,
-                d: slice_axis(a, b),
+                d,
+                x: d,
+                y: d,
                 scale,
                 tau1,
                 tau2,
                 gamma,
             };
             let (q1, q2) = view.basis();
-            let back = View::of(&Plane {
-                z0: MOCK_Z0,
-                q1,
-                q2,
-            });
+            let back = View::framed(
+                &Plane {
+                    z0: MOCK_Z0,
+                    q1,
+                    q2,
+                },
+                Some(&view.frame()),
+            );
             assert_eq!(
                 (back.preset, back.a, back.b, back.d),
                 (Some(p), a, b, view.d),
@@ -677,6 +682,8 @@ fn mock_manifold_view_a_view_round_trips_its_basis() {
             a: 0,
             b: 1,
             d: SLICE_AXIS,
+            x: SLICE_AXIS,
+            y: SLICE_AXIS,
             scale: 1.0,
             tau1: 0.0,
             tau2: 0.0,
@@ -946,6 +953,8 @@ fn mock_manifold_view_angles_turn_within_their_spans() {
         a: 0,
         b: 1,
         d: SLICE_AXIS,
+        x: SLICE_AXIS,
+        y: SLICE_AXIS,
         scale: 1.0,
         tau1: 0.0,
         tau2: 0.0,
@@ -988,7 +997,7 @@ fn click_at(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2) {
 use eframe::egui::accesskit::Role;
 
 /// The panel, its body and its row height, at the capture's size.
-fn panel_geometry(h: &Headless) -> (egui::Rect, egui::Rect, f32, [egui::Rect; 4]) {
+pub(super) fn panel_geometry(h: &Headless) -> (egui::Rect, egui::Rect, f32, [egui::Rect; 4]) {
     let panel =
         crate::layout::Layout::new(h.screen(), crate::capture::PIXELS_PER_POINT).manifold_view;
     (
@@ -999,7 +1008,7 @@ fn panel_geometry(h: &Headless) -> (egui::Rect, egui::Rect, f32, [egui::Rect; 4]
     )
 }
 
-fn in_rect(nodes: &[Node], rect: egui::Rect, role: Role) -> Vec<Node> {
+pub(super) fn in_rect(nodes: &[Node], rect: egui::Rect, role: Role) -> Vec<Node> {
     let mut found: Vec<Node> = nodes
         .iter()
         .filter(|n| n.role == role && rect.contains(n.rect.center()))
@@ -1068,10 +1077,13 @@ fn mock_manifold_view_slider_rows_fill_the_panel() {
     let mut app = mock_app();
     let mut h = headless();
     let _ = h.frame(&mut app, Vec::new());
-    let (_, body, rh, [_, _, centre, slice]) = panel_geometry(&h);
+    let (_, body, rh, [_, _, centre, tilt]) = panel_geometry(&h);
     let all = nodes(&mut h, &mut app);
     check_slider_rows(&all, centre, rh, 1..9, body, false);
-    check_slider_rows(&all, slice, rh, 1..5, body, false);
+    // Tilt: τ₁, τ₂ and γ in rows 1, 3 and 5, each target's dropdown under its angle.
+    for i in [1, 3, 5] {
+        check_slider_rows(&all, tilt, rh, i..i + 1, body, false);
+    }
     // Locked, the offset follows each field, inside the body.
     app.set_field(lock_edit(Lock {
         locked: true,
@@ -1080,10 +1092,11 @@ fn mock_manifold_view_slider_rows_fill_the_panel() {
     let _ = h.frame(&mut app, Vec::new());
     let locked = nodes(&mut h, &mut app);
     check_slider_rows(&locked, centre, rh, 1..9, body, true);
-    check_slider_rows(&locked, slice, rh, 1..2, body, true);
-    check_slider_rows(&locked, slice, rh, 2..5, body, false);
+    for i in [1, 3, 5] {
+        check_slider_rows(&locked, tilt, rh, i..i + 1, body, false);
+    }
     let offsets: Vec<&Node> = locked.iter().filter(|n| n.text == "+ 0.000").collect();
-    assert_eq!(offsets.len(), 9);
+    assert_eq!(offsets.len(), 8, "one per Slice centre slider");
     for o in offsets {
         assert!(
             o.rect.max.x <= body.max.x + 0.5,
@@ -1116,7 +1129,7 @@ fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
             n.rect
         );
     }
-    // Navigate: u and v in row 1, the zoom in row 2, z₀ in rows 3 and 4, four to a row, in order.
+    // Navigate: u and v in row 1, the zoom in row 2, and no grid of z₀ boxes below (R-457).
     let fields = |i| in_rect(&all, mv::row(navigate, rh, i), Role::SpinButton);
     assert_eq!(fields(1).len(), 2, "u and v");
     let zoom = in_rect(&all, mv::row(navigate, rh, 2), Role::Slider);
@@ -1126,16 +1139,14 @@ fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
         "the zoom slider takes its row: {:?}",
         zoom[0].rect
     );
-    let z0: Vec<f64> = fields(3)
-        .iter()
-        .chain(&fields(4))
-        .filter_map(|n| n.value)
-        .collect();
-    assert_eq!(z0, MOCK_Z0, "z₀ in order, four to a row");
-    for n in fields(1).iter().chain(&fields(3)).chain(&fields(4)) {
+    for i in 3..7 {
+        assert!(fields(i).is_empty(), "no z₀ box in Navigate's row {i}");
+    }
+    // As tall as egui's controls (18 points), inside a row of up to 22 with its 2-point gap.
+    for n in &fields(1) {
         assert!(
-            (n.rect.height() - (rh - 2.0)).abs() < 0.5,
-            "{:?} fills its row of {rh}, less 2",
+            (n.rect.height() - 18.0).abs() < 0.5 && n.rect.height() <= rh - 2.0 + 0.5,
+            "{:?} a control's height in its row of {rh}, less 2",
             n.rect
         );
     }
@@ -1165,8 +1176,8 @@ fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
     for text in [
         "Chart",
         "Navigate",
-        "Centre z₀",
-        "Slice & tilt",
+        "Slice centre",
+        "Tilt",
         mv::navigate::NOTE,
         "1.00·z_α",
         "1.00·z_β",
@@ -1264,7 +1275,7 @@ fn mock_manifold_view_the_anchor_marks_each_rails_centre() {
 }
 
 /// Clicks the field at `at`, selects its text and types `text`, then Enter.
-fn type_at(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2, text: &str) {
+pub(super) fn type_at(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2, text: &str) {
     for events in crate::capture::click(at) {
         let _ = h.frame(app, events);
     }
@@ -1306,7 +1317,7 @@ fn mock_manifold_view_a_typed_angle_sets_that_angle() {
     let _ = h.frame(&mut app, Vec::new());
     let (_, _, rh, [_, _, _, slice]) = panel_geometry(&h);
     let all = nodes(&mut h, &mut app);
-    for (i, want) in [(2, 10.0), (3, 0.0), (4, 0.0)] {
+    for (i, want) in [(1, 10.0), (3, 0.0), (5, 0.0)] {
         let field = &in_rect(&all, mv::row(slice, rh, i), Role::SpinButton)[0];
         assert!(
             (field.value.unwrap() - want).abs() < 1e-6,
@@ -1314,7 +1325,7 @@ fn mock_manifold_view_a_typed_angle_sets_that_angle() {
             field.value
         );
     }
-    let field = in_rect(&all, mv::row(slice, rh, 2), Role::SpinButton)[0]
+    let field = in_rect(&all, mv::row(slice, rh, 1), Role::SpinButton)[0]
         .rect
         .center();
     type_at(&mut h, &mut app, field, "25");
@@ -1323,7 +1334,7 @@ fn mock_manifold_view_a_typed_angle_sets_that_angle() {
     assert!((tau1 - 25.0).abs() < 1e-9, "τ₁ typed to 25: {tau1}");
     // γ typed, in its own row.
     let all = nodes(&mut h, &mut app);
-    let field = in_rect(&all, mv::row(slice, rh, 4), Role::SpinButton)[0]
+    let field = in_rect(&all, mv::row(slice, rh, 5), Role::SpinButton)[0]
         .rect
         .center();
     type_at(&mut h, &mut app, field, "-30");

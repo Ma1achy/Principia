@@ -1,17 +1,18 @@
 //! Chart (render_gui_spec §G2): the preset, named by its axes; the two basis vectors `q₁`, `q₂`, each with an edit
 //! button, which opens its eight components for drag or typing; Chart builder…, which opens its window
 //! (TASK-M6-28); and the chart's kind. A preset keeps the zoom; locked, it turns about the pin, as every basis edit does
-//! ([`super::about_the_pin`], §G4). The shape sphere's projection selector and hemisphere toggle are REQ-GUI-161's,
+//! ([`super::about_the_pin`], §G4). A preset, or a basis edit, whose plane takes the slice normal moves it off the plane
+//! by the slice-axis rule in the same edit, a target following ([`super::plane_edit`]; R-459 G4). The shape sphere's projection selector and hemisphere toggle are REQ-GUI-161's,
 //! TASK-M8-06's: the mock's charts are all affine.
 
 use eframe::egui::{
     self, Area, Button, ComboBox, DragValue, Frame, Grid, Id, Order, Rect, RichText, Ui,
 };
 use engine::contract::set_field::SetField;
-use engine::contract::sim_config::Latent;
+use engine::contract::sim_config::{Latent, SimConfig};
 
 use super::{
-    axis, basis_edit, header, row, row_ui, Panel, View, AXES, BUILDER, PRESET, PRESETS,
+    axis, header, plane_edit, row, row_ui, Panel, View, AXES, BUILDER, PRESET, PRESETS,
     Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
 };
 
@@ -22,10 +23,17 @@ pub const LABEL_W: f32 = 92.0;
 /// The width of a basis editor's field, in points (a look choice, R-390): four to a row fit the panel.
 pub const EDITOR_FIELD_W: f32 = 44.0;
 
-/// The basis edit that switches `view` to preset `preset`, keeping its scale: `q₁ = σ e_a`, `q₂ = σ e_b`.
-pub fn preset_basis(view: View, preset: usize) -> SetField {
+/// The basis of preset `preset` at `view`'s scale: `q₁ = σ e_a`, `q₂ = σ e_b`.
+pub fn preset_basis(view: View, preset: usize) -> (Latent, Latent) {
     let (a, b) = PRESETS[preset];
-    basis_edit((axis(a, view.scale), axis(b, view.scale)))
+    (axis(a, view.scale), axis(b, view.scale))
+}
+
+/// The edit that switches `sim`'s chart, read as `view`, to preset `preset`, keeping its scale: the basis
+/// [`preset_basis`], with the slice frame following the new plane in the same edit where the plane takes the normal or
+/// a target ([`plane_edit`]; R-459 G4).
+pub fn preset_edit(sim: &SimConfig, view: View, preset: usize) -> SetField {
+    plane_edit(sim, preset_basis(view, preset))
 }
 
 /// `q` as the Chart rows read it: its non-zero components, each with its axis, "1.00·z_α".
@@ -49,9 +57,9 @@ pub fn basis_text(q: &Latent) -> String {
 
 /// Draws Chart in `section`, rows `h` tall.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    header(ui, section, h, "Chart", "");
+    header(ui, section, h, super::SECTION_TITLES[0], "");
     let plane = panel.snapshot.sim.plane.clone();
-    let view = View::of(&plane);
+    let view = View::read(&panel.snapshot.sim);
     let mut row1 = row_ui(ui, row(section, h, 1));
     row1.add_sized([LABEL_W, h], egui::Label::new("preset"));
     let mut chosen = view.preset;
@@ -65,9 +73,11 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         });
     panel.place(PRESET, &combo.response, clip);
     if let Some(preset) = chosen.filter(|p| Some(*p) != view.preset) {
-        panel
-            .out
-            .edit(preset_basis(view, preset), None, panel.scratch);
+        panel.out.edit(
+            preset_edit(&panel.snapshot.sim, view, preset),
+            None,
+            panel.scratch,
+        );
     }
     for (i, (label, q, edit, components)) in [
         ("horizontal q₁", plane.q1, Q1_EDIT, Q1_COMPONENTS),
@@ -147,8 +157,10 @@ fn editor(
         });
     let _ = area;
     if changed {
-        panel
-            .out
-            .edit(basis_edit((basis[0], basis[1])), None, panel.scratch);
+        panel.out.edit(
+            plane_edit(&panel.snapshot.sim, (basis[0], basis[1])),
+            None,
+            panel.scratch,
+        );
     }
 }

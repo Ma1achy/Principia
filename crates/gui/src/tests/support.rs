@@ -7,7 +7,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice,
+    Slice, SliceFrame, Z_Q3,
 };
 
 use crate::app::App;
@@ -15,6 +15,10 @@ use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::headless::{Headless, Name};
 use crate::mock::MockEngine;
 use crate::side::{EngineSide, MockSide, RealSide};
+
+/// The mock's slice frame, the defaults on its chart `z_α × z_β`: the normal and both targets `z_q3` (gui_state_contract
+/// §2).
+pub const SLICE_FRAME: SliceFrame = SliceFrame::along(Z_Q3);
 
 /// The target format the tests' apps draw on.
 pub const FORMAT: wgpu::TextureFormat = crate::capture::FORMAT;
@@ -33,7 +37,7 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice { frame: SLICE_FRAME },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

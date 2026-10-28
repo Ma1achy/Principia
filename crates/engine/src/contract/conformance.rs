@@ -8,7 +8,7 @@ use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::{Hover, NodeKind, Occupant, Overlays, Playhead};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
-use crate::contract::sim_config::{Horizon, Latent, Lock};
+use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame};
 use crate::contract::snapshot::{History, Snapshot};
 
 /// One case: its name, and its check, which returns what failed.
@@ -52,6 +52,10 @@ pub const CASES: &[Case] = &[
     Case {
         name: "stain_graph_edit_shows_and_undoes",
         check: stain_graph_edit_shows_and_undoes,
+    },
+    Case {
+        name: "slice_frame_edit_shows_and_undoes",
+        check: slice_frame_edit_shows_and_undoes,
     },
 ];
 
@@ -403,5 +407,110 @@ fn stain_graph_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result
         "the stain graph after undo",
         engine.snapshot().render.stain_graph,
         render.stain_graph,
+    )
+}
+
+/// The frame with each index of `f` moved on by `by`, round the eight latent dimensions: from any frame, every index
+/// changes.
+fn turned(f: SliceFrame, by: u32) -> SliceFrame {
+    let next = |i: u32| (i + by) % crate::contract::sim_config::LATENT_DIM as u32;
+    SliceFrame {
+        normal: next(f.normal),
+        tilt_x: next(f.tilt_x),
+        tilt_y: next(f.tilt_y),
+    }
+}
+
+/// The slice frame's path (R-457 E3; gui_state_contract §2): an edit of the frame alone shows in the next snapshot,
+/// touches nothing else of the `SimConfig`, enters the history and logs "SetField Slice.frame before → after"; an edit
+/// of the frame with the basis writes both as one history entry; and one undo each restores them, the frame and the
+/// basis together.
+fn slice_frame_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (sim, h0) = (first.sim.clone(), first.history);
+    let frame = turned(sim.slice.frame, 1);
+    let edit = |frame, basis| SetField {
+        edit: Edit::Sim(SimField::SliceFrame { frame, basis }),
+        no_history: false,
+    };
+    engine.set_field(edit(frame, None));
+    let after = engine.snapshot();
+    expect(
+        "the slice frame after its SetField",
+        after.sim.slice.frame,
+        frame,
+    )?;
+    expect(
+        "the plane after a slice frame SetField",
+        after.sim.plane.clone(),
+        sim.plane.clone(),
+    )?;
+    expect(
+        "the lock after a slice frame SetField",
+        after.sim.lock.clone(),
+        sim.lock.clone(),
+    )?;
+    expect(
+        "the undo depth after a slice frame SetField",
+        after.history.undo_depth,
+        h0.undo_depth + 1,
+    )?;
+    let text = |f: SliceFrame| {
+        format!(
+            "(normal {}, tilt_x {}, tilt_y {})",
+            f.normal, f.tilt_x, f.tilt_y
+        )
+    };
+    let logged = format!(
+        "SetField Slice.frame {} → {}",
+        text(sim.slice.frame),
+        text(frame)
+    );
+    expect(
+        "the slice frame SetField's log line",
+        after.log.iter().any(|e| e.message == logged),
+        true,
+    )?;
+    let both = turned(sim.slice.frame, 2);
+    let (q1, q2) = (shifted(sim.plane.q1, 0.5), shifted(sim.plane.q2, 0.5));
+    engine.set_field(edit(both, Some((q1, q2))));
+    let after = engine.snapshot();
+    expect(
+        "the slice frame after a SetField with the basis",
+        after.sim.slice.frame,
+        both,
+    )?;
+    expect(
+        "the basis after a slice frame SetField with it",
+        (after.sim.plane.q1, after.sim.plane.q2),
+        (q1, q2),
+    )?;
+    expect(
+        "z₀ after a slice frame SetField with the basis",
+        after.sim.plane.z0,
+        sim.plane.z0,
+    )?;
+    expect(
+        "the undo depth after a slice frame SetField with the basis",
+        after.history.undo_depth,
+        h0.undo_depth + 2,
+    )?;
+    engine.undo();
+    let undone = engine.snapshot().sim;
+    expect(
+        "the slice frame after one undo of a SetField with the basis",
+        undone.slice.frame,
+        frame,
+    )?;
+    expect(
+        "the basis after one undo of a slice frame SetField with it",
+        (undone.plane.q1, undone.plane.q2),
+        (sim.plane.q1, sim.plane.q2),
+    )?;
+    engine.undo();
+    expect(
+        "the slice frame after undo",
+        engine.snapshot().sim.slice.frame,
+        sim.slice.frame,
     )
 }

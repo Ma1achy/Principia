@@ -38,10 +38,51 @@ fn check_same(golden: &Golden, ours: &Record) {
     );
 }
 
-/// The slice case's record: the reference's own, at +0.25.
+/// The slice case's record: the reference's own, at +0.25, its readout as R-457 E6 reads it.
 fn slice_case() -> Record {
-    record("slice_+0.25")
+    let mut r = record("slice_+0.25");
+    r.readout = compass_golden::as_r457(&r.readout);
+    r
 }
+
+/// Asserts the reference's readout `reference` reads as `want` under R-457 E6.
+fn check_r457(reference: &[&str], want: &[&str]) {
+    let lines: Vec<String> = reference.iter().map(|l| (*l).to_owned()).collect();
+    assert_eq!(
+        compass_golden::as_r457(&lines),
+        want,
+        "the readout as R-457 reads it"
+    );
+}
+
+#[test]
+fn compass_golden_the_readout_as_r457_reads_it() {
+    check_r457(
+        &["mode tilt", "q₁→z_q3 +30.0° · q₂→z_q3 +0.0°", "γ +0.0°"],
+        &["mode tilt", "τ₁ → z_q3 +30.0° · τ₂ → z_q3 0.0°", "γ +0.0°"],
+    );
+    check_r457(
+        &["mode slice · plane ⟂ z_q3", "z_q3 = +0.25 of range"],
+        &[
+            "mode slice · plane ⟂ z_q3",
+            "τ₁ → z_q3 0.0° · τ₂ → z_q3 0.0°",
+            "z_q3 = +0.25 of range",
+        ],
+    );
+    // The spec's reference is read so: the slice case's golden holds the targets line.
+    let g = golden("mock_compass_cube_slice");
+    assert_eq!(g.reference.readout[1], "τ₁ → z_q3 0.0° · τ₂ → z_q3 0.0°");
+}
+
+negative_control!(
+    compass_golden_the_readout_as_r457_reads_it,
+    "the untilted slice mode's readout without its targets line must fail",
+    expected = "the readout as R-457 reads it",
+    check_r457(
+        &["mode slice · plane ⟂ z_q3", "z_q3 = +0.25 of range"],
+        &["mode slice · plane ⟂ z_q3", "z_q3 = +0.25 of range"],
+    )
+);
 
 #[test]
 fn compass_golden_slice_case_passes_the_reference() {
@@ -416,6 +457,9 @@ fn check_scaled(
         &fs::read_to_string(dir().join("reference/slice_+0.25.json")).expect("the record"),
     )
     .expect("json");
+    // gui's readout, as R-457 E6 has it.
+    let readout: Vec<String> = serde_json::from_value(ours["readout"].clone()).expect("a readout");
+    ours["readout"] = serde_json::json!(compass_golden::as_r457(&readout));
     ours["origin"] = serde_json::json!(origin);
     ours["pixels_per_point"] = serde_json::json!(scale);
     fs::write(out.join(compass_golden::RECORD), ours.to_string()).expect("the record written");

@@ -1,12 +1,16 @@
-//! Centre z₀ (render_gui_spec §G2): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its value, dragged or
-//! typed. A free slider spans `[−1, 1]`. Locked, the sliders are re-based to the anchor, not frozen (§G4;
+//! Slice centre (render_gui_spec §G2; named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1,
+//! z_μ2`, each with its number box, dragged or typed, both editing the same component of `z₀`. The slider of the slice
+//! normal's dimension moves the slice along its normal, the step slider that did it before R-457 removed. A free slider
+//! spans `[−1, 1]`. Locked, the sliders are re-based to the anchor, not frozen (§G4;
 //! chart_decoder_contract Part 4, "Sliders are re-based"): each spans `anchor ± 1`, marks the anchor in gold at its
 //! centre, and reads anchor plus offset, `z_locked + δ`; moving one is an excursion, a `SetField` on `z₀`, the anchor
 //! kept. Touching one switches the compass to Slice, its buttons following (R-409).
 
 use eframe::egui::{self, DragValue, Rect, RichText, Slider, Stroke, Ui};
 
-use super::{header, row, row_ui, z0_edit, Panel, Touch, AXES, SLIDERS, Z0_HALF_RANGE};
+use super::{
+    header, row, row_ui, z0_edit, Panel, Touch, AXES, SECTION_TITLES, SLIDERS, Z0_HALF_RANGE,
+};
 use crate::explore::lock::GOLD;
 
 /// The width of the value field, in points (a look choice, R-390).
@@ -89,7 +93,7 @@ pub fn slider_row(
     (changed.then_some(moved), response)
 }
 
-/// Draws Centre z₀ in `section`.
+/// Draws Slice centre in `section`.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
     let lock = panel.snapshot.sim.lock.clone();
     let note = if lock.locked {
@@ -97,7 +101,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     } else {
         ""
     };
-    header(ui, section, h, "Centre z₀", note);
+    header(ui, section, h, SECTION_TITLES[2], note);
     let z0 = panel.snapshot.sim.plane.z0;
     for (i, name) in AXES.iter().enumerate() {
         let anchor = lock.locked.then_some(lock.z_locked[i]);

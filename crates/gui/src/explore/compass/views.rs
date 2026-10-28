@@ -161,14 +161,13 @@ pub fn hover_text(grid: &Grid, i: usize, j: usize) -> String {
 
 // --- the steer --------------------------------------------------------------------------------------------------------
 
-/// The steer to cell `(i, j)` of the Plücker grid on `plane` (R-452 C5): the basis `q₁ = σ e_i`, `q₂ = σ e_j`, the
-/// plane `z_i × z_j` with `τ₁ = τ₂ = γ = 0`, the scale `σ` (the zoom) kept and `z₀` unchanged, one `SetField` on the basis.
-/// `None` for a cell on or below the diagonal, which is empty.
-pub fn steer(plane: &Plane, i: usize, j: usize) -> Option<SetField> {
+/// The steer to cell `(i, j)` of the Plücker grid from a chart at scale `scale` (R-452 C5): the basis `q₁ = σ e_i`,
+/// `q₂ = σ e_j`, the plane `z_i × z_j` with `τ₁ = τ₂ = γ = 0`, the scale `σ` (the zoom) kept and `z₀` unchanged, one
+/// `SetField` on the basis. `None` for a cell on or below the diagonal, which is empty.
+pub fn steer(scale: f64, i: usize, j: usize) -> Option<SetField> {
     if i >= j || j >= LATENT_DIM {
         return None;
     }
-    let scale = View::of(plane).scale;
     Some(basis_edit((axis(i, scale), axis(j, scale))))
 }
 
@@ -323,10 +322,22 @@ pub struct PluckerDrawing {
     pub readout: String,
 }
 
-/// The Plücker view of `plane` in the cube's `square`, with the cell cursor `cursor`.
+/// The Plücker view of `plane` in the cube's `square`, with the cell cursor `cursor`, its position readout highlighting
+/// the slice axis of the slice frame's defaults ([`View::of`]).
 pub fn plucker_drawing(
     square: Rect,
     plane: &Plane,
+    cursor: Option<(usize, usize)>,
+) -> PluckerDrawing {
+    plucker_drawing_with(square, plane, View::of(plane).d, cursor)
+}
+
+/// The Plücker view of `plane` in the cube's `square`, with the cell cursor `cursor`, its position readout highlighting
+/// `slice_axis`, the slice frame's normal.
+pub fn plucker_drawing_with(
+    square: Rect,
+    plane: &Plane,
+    slice_axis: usize,
     cursor: Option<(usize, usize)>,
 ) -> PluckerDrawing {
     let grid = plucker(plane);
@@ -335,7 +346,7 @@ pub fn plucker_drawing(
         outline: dominant(&grid),
         cursor,
         bars: gauge(&plane.z0),
-        slice_axis: View::of(plane).d,
+        slice_axis,
         readout: readout(&grid),
         grid,
     }

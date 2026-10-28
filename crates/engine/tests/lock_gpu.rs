@@ -12,7 +12,7 @@ use engine::contract::fast_math::FastMath;
 use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice,
+    SimConfig, Slice, SliceFrame, Z_Q3,
 };
 use engine::decode_dispatch::{DecodeStage, Words};
 use engine::lock::{kernel_chart, set};
@@ -32,7 +32,9 @@ fn sim(plane: Plane, lock: Lock) -> SimConfig {
     SimConfig {
         chart: Chart {},
         plane,
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock,
         links: Links {},
         integrator: Integrator {},
