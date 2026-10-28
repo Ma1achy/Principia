@@ -107,11 +107,11 @@ pub const SLIDERS: [ScopeId; LATENT_DIM] = [
 ];
 /// The tilt `τ₁`.
 pub const TAU1: ScopeId = "tau1";
-/// `τ₁`'s target dropdown, "tilt τ₁ into [X]" (R-457 E5): a menu, its entries the dimensions it offers.
+/// `τ₁`'s target dropdown, "tilt τ₁ into \[X\]" (R-457 E5): a menu, its entries the dimensions it offers.
 pub const TILT_X: ScopeId = "tilt_x";
 /// The tilt `τ₂`.
 pub const TAU2: ScopeId = "tau2";
-/// `τ₂`'s target dropdown, "tilt τ₂ into [Y]".
+/// `τ₂`'s target dropdown, "tilt τ₂ into \[Y\]".
 pub const TILT_Y: ScopeId = "tilt_y";
 /// The rotation `γ`.
 pub const GAMMA: ScopeId = "gamma";
@@ -585,9 +585,9 @@ pub fn target_choices(a: usize, b: usize) -> Vec<usize> {
 /// Which tilt angle's target: `τ₁`'s, `X`, or `τ₂`'s, `Y`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
-    /// "tilt τ₁ into [X]".
+    /// "tilt τ₁ into \[X\]".
     X,
-    /// "tilt τ₂ into [Y]".
+    /// "tilt τ₂ into \[Y\]".
     Y,
 }
 

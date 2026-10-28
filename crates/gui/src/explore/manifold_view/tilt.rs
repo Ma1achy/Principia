@@ -1,4 +1,4 @@
-//! Tilt (render_gui_spec §G2; named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]",
+//! Tilt (render_gui_spec §G2; named "Slice & tilt" before R-457): "tilt `τ₁` into \[X\]" and "tilt `τ₂` into \[Y\]",
 //! each a slider with its number box and, under it, the dropdown of the dimension it tilts into, then the rotation `γ`.
 //! Each angle is one `SetField` on the basis, which turns about the centre, and, locked, about the pin: the app turns
 //! every basis edit about it ([`super::about_the_pin`], §G4). The tilts span `[−90°, 90°]` (chart_decoder_contract
