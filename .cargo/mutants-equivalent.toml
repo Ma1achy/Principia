@@ -256,6 +256,46 @@ mutant = "crates/kernel/src/encode/ingest.rs:165:39: replace * with / in weighte
 justification = "the forward branch is taken only for k < 3, a mass, whose weight weights() sets to exactly 1, so span * 1 and span / 1 are the same value"
 
 [[equivalent]]
+mutant = "crates/kernel/src/canon.rs:223:18: replace / with % in wide"
+justification = "x finite has exponent field k in -127..=127 (-1023..=1023 at f64); k % 2 takes k's sign, so 2^-(k%2) and 2^((k%2)-k) are both normal powers of two whose product is 2^-k, as k / 2's are, and x times them is the same exact scaling"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:241:28: replace > with >= in wide_add"
+justification = "at gap == 60 both select(gap > 60, 60, gap) and select(gap >= 60, 60, gap) give 60"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:269:17: replace | with ^ in wide_greater"
+justification = "a.e > b.e and a.e == b.e never hold together, so their disjuncts are exclusive and ^ is |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:312:35: replace < with <= in ldexp"
+justification = "at k == lo both clamps give lo"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:312:54: replace > with >= in ldexp"
+justification = "at k == hi both clamps give hi"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:495:29: replace > with >= in scaled_rho"
+justification = "at rho[0].e == rho[1].e both selects give that same exponent"
+
+[[equivalent]]
+mutant = "crates/kernel/src/canon.rs:498:18: replace > with >= in scaled_rho"
+justification = "at g == 60 both select(g > 60, 60, g) and select(g >= 60, 60, g) give 60"
+
+[[equivalent]]
+mutant = "crates/kernel/src/stage/encode.rs:28:16: replace | with ^ in notices"
+justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/stage/encode.rs:28:27: replace | with ^ in notices"
+justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/stage/encode.rs:28:38: replace | with ^ in notices"
+justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
+
+[[equivalent]]
 mutant = "crates/kernel/src/driver/advance.rs:119:32: replace > with >= in <impl Advance for S>::advance"
 justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
 

@@ -12,7 +12,7 @@ use engine::contract::profile::{self, percentile, SCHEMA_V1};
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice,
+    Slice, Window,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -127,7 +127,9 @@ fn fixture() -> String {
 fn skeleton() -> (SimConfig, RenderState) {
     (
         SimConfig {
-            chart: Chart {},
+            chart: Chart {
+                window: Window::SQUARE,
+            },
             plane: Plane {
                 z0: [0.0; 8],
                 q1: [0.0; 8],
@@ -138,7 +140,7 @@ fn skeleton() -> (SimConfig, RenderState) {
                 locked: false,
                 z_locked: [0.0; 8],
             },
-            links: Links {},
+            links: Links::defaults(),
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: 0.0 },
@@ -404,7 +406,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&sim).unwrap(),
         &canonical::to_string(&sim2).unwrap(),
-        r#"{"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
+        r#"{"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
     );
     check_same_text(
         &canonical::to_string(&render).unwrap(),

@@ -588,8 +588,8 @@ const R433: &str = "R-433 — ";
 /// Checks that `register` passes the gate and lists, by gate, exactly the entries still provisional after the M1
 /// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047), `k_max` and `gamma_k`
 /// (REQ-CHART-044), `burrau_nu_half_tol` (REQ-VAL-118), the acute-angle Burrau charts' `burrau_theta_min` and
-/// `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046),
-/// [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
+/// `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046), step 0's
+/// skip tolerance `tau_i` (REQ-ENC-035), [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
 /// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), the round trip's `eps_phys`
 /// (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1 `zero_class` (REQ-ENC-037), and the
 /// literature import's `literature_import_tol` (REQ-VAL-120), for
@@ -619,6 +619,7 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "burrau_theta_max",
             "burrau_theta_lz_k",
             "burrau_theta_lz_fraction",
+            "tau_i",
             UNTIL_M2[0],
             UNTIL_M2[1],
             "shape_vec_js_tol",

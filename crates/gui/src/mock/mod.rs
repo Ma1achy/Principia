@@ -25,7 +25,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::{Edit, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice,
+    SimConfig, Slice, Window,
 };
 use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
 use engine::contract::store::{set_field_message, write};
@@ -279,7 +279,9 @@ impl Default for MockEngine {
 fn state(t: f64) -> (SimConfig, RenderState) {
     (
         SimConfig {
-            chart: Chart {},
+            chart: Chart {
+                window: Window::SQUARE,
+            },
             plane: Plane {
                 z0: MOCK_Z0,
                 q1: MOCK_Q1,
@@ -290,7 +292,7 @@ fn state(t: f64) -> (SimConfig, RenderState) {
                 locked: false,
                 z_locked: [0.0; 8],
             },
-            links: Links {},
+            links: Links::defaults(),
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: MOCK_T_MAX },

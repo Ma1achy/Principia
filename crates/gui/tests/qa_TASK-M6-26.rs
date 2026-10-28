@@ -1143,7 +1143,9 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
     q1[0] = k;
     q2[1] = k;
     let sim = SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.1; 8],
             q1,
@@ -1154,7 +1156,7 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },

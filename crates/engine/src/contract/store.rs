@@ -9,15 +9,17 @@ use crate::contract::interface::EngineInterface;
 use crate::contract::legend::Legend;
 use crate::contract::log::{LogEntry, Severity, Source};
 use crate::contract::render_state::{NodeKind, Occupant, Overlays, RenderState, StainGraph};
-use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
+use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Latent, SimConfig};
 use crate::contract::snapshot::{FrameSummary, History, Precision, Snapshot, Tier};
 
-/// One undoable change: the field's value before the edit and the edit itself (R-52).
+/// One history entry (R-52): its edits in the order applied, each with the value its field held before it. Undo
+/// restores the befores last first, so each field ends at its value before the entry's first edit of it; redo
+/// reapplies the edits in order, so each ends at the last value sent. An entry made by one edit holds one; one made
+/// under a [`HistoryKey`] may hold several.
 #[derive(Clone, Debug)]
 struct Change {
-    before: Edit,
-    after: Edit,
+    edits: Vec<(Edit, Edit)>,
 }
 
 /// The real engine's state store (RQ-254).
@@ -27,6 +29,9 @@ pub struct StateStore {
     render: RenderState,
     undo: Vec<Change>,
     redo: Vec<Change>,
+    /// The key of the entry still open to edits under it: the latest undoable edit's key, `None` after an edit under
+    /// none, an undo or a redo.
+    open: Option<HistoryKey>,
     log: Vec<LogEntry>,
 }
 
@@ -38,6 +43,7 @@ impl StateStore {
             render,
             undo: Vec::new(),
             redo: Vec::new(),
+            open: None,
             log: Vec::new(),
         }
     }
@@ -45,6 +51,37 @@ impl StateStore {
     /// Writes `edit` into the state and returns the value it replaced, as an edit restoring it.
     fn write(&mut self, edit: Edit) -> Edit {
         write(&mut self.sim, &mut self.render, edit)
+    }
+
+    /// Applies `edit` under the history key `key` (gui_state_contract §2): as [`EngineInterface::set_field`], but while
+    /// the latest history entry is open under `key` the edit joins it, so one undo restores every field the edits
+    /// under one key set, each to its value before the first of them. An edit marked "no history" enters no entry and
+    /// leaves the open one open.
+    pub fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
+        self.apply(edit, Some(key));
+    }
+
+    /// Applies `edit`, logs it and, unless it is marked "no history", records it in the history under `key`.
+    fn apply(&mut self, edit: SetField, key: Option<HistoryKey>) {
+        let before = self.write(edit.edit.clone());
+        self.log.push(LogEntry {
+            severity: Severity::Info,
+            at: now_ms(),
+            source: Source::Contract,
+            message: set_field_message(&before, &edit),
+        });
+        if edit.no_history {
+            return;
+        }
+        self.redo.clear();
+        let joins = key.is_some() && key == self.open;
+        self.open = key;
+        match self.undo.last_mut() {
+            Some(entry) if joins => entry.edits.push((before, edit.edit)),
+            _ => self.undo.push(Change {
+                edits: vec![(before, edit.edit)],
+            }),
+        }
     }
 }
 
@@ -59,6 +96,9 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
             q2: replace(&mut sim.plane.q2, q2),
         }),
         Edit::Sim(SimField::Lock(lock)) => Edit::Sim(SimField::Lock(replace(&mut sim.lock, lock))),
+        Edit::Sim(SimField::Window(window)) => {
+            Edit::Sim(SimField::Window(replace(&mut sim.chart.window, window)))
+        }
         Edit::Sim(SimField::Horizon(horizon)) => {
             Edit::Sim(SimField::Horizon(replace(&mut sim.horizon, horizon)))
         }
@@ -172,6 +212,10 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
             format!("locked at {}", latent(&lock.z_locked))
         }
         Edit::Sim(SimField::Lock(_)) => "unlocked".to_owned(),
+        Edit::Sim(SimField::Window(w)) => format!(
+            "centre ({}, {}) half ({}, {})",
+            w.centre[0], w.centre[1], w.half[0], w.half[1]
+        ),
         Edit::Sim(SimField::Horizon(h)) => h.t.to_string(),
         Edit::Render(RenderField::Playhead(p)) => p.t.to_string(),
         Edit::Render(RenderField::Overlays(o)) => overlays(o),
@@ -186,6 +230,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Sim(SimField::Z0(_)) => "Plane.z0",
         Edit::Sim(SimField::Basis { .. }) => "Plane.q1 Plane.q2",
         Edit::Sim(SimField::Lock(_)) => "Lock",
+        Edit::Sim(SimField::Window(_)) => "Chart.window",
         Edit::Sim(SimField::Horizon(_)) => "Horizon.t",
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",
         Edit::Render(RenderField::Overlays(_)) => "Overlays",
@@ -202,20 +247,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
 
 impl EngineInterface for StateStore {
     fn set_field(&mut self, edit: SetField) {
-        let before = self.write(edit.edit.clone());
-        self.log.push(LogEntry {
-            severity: Severity::Info,
-            at: now_ms(),
-            source: Source::Contract,
-            message: set_field_message(&before, &edit),
-        });
-        if !edit.no_history {
-            self.undo.push(Change {
-                before,
-                after: edit.edit,
-            });
-            self.redo.clear();
-        }
+        self.apply(edit, None);
     }
 
     fn snapshot(&mut self) -> Snapshot {
@@ -244,15 +276,21 @@ impl EngineInterface for StateStore {
     }
 
     fn undo(&mut self) {
+        self.open = None;
         if let Some(change) = self.undo.pop() {
-            self.write(change.before.clone());
+            for (before, _) in change.edits.iter().rev() {
+                self.write(before.clone());
+            }
             self.redo.push(change);
         }
     }
 
     fn redo(&mut self) {
+        self.open = None;
         if let Some(change) = self.redo.pop() {
-            self.write(change.after.clone());
+            for (_, after) in &change.edits {
+                self.write(after.clone());
+            }
             self.undo.push(change);
         }
     }

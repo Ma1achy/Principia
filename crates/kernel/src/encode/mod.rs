@@ -87,6 +87,7 @@ where
         blocks,
         report: Report {
             lambda: canonical.lambda,
+            rescaled: canonical.rescaled,
             coincident: canonical.clamped,
             clamped_controls: blocks.clamped,
             mirrored: canonical.mirrored,

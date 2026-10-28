@@ -28,7 +28,7 @@ use engine::contract::profile::{
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice,
+    Slice, Window,
 };
 use engine::telemetry::session;
 use serde_json::{Map, Value};
@@ -214,7 +214,9 @@ fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
 /// the backbone alone (gui_state_contract §2).
 pub(crate) fn skeleton() -> (SimConfig, RenderState) {
     let sim = SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -225,7 +227,7 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
