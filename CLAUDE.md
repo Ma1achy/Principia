@@ -22,7 +22,9 @@ Read this first; each rule points at its source.
 - The PR shows every acceptance command the task lists, with its output. Benchmarks run on the human's Mac (R-186).
 - The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, autonomy, resources, and what a
   Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346). The build
-  loop runs on the Mac; cloud sessions suit read-and-think work only: reviews, audits and docs (R-357).
+  loop runs on the Mac; cloud sessions suit read-and-think work only: reviews, audits and docs (R-357), and
+  mock-engine GUI tasks as R-634 allows (a trial on TASK-M8-07 and TASK-M8-13; `plan/OPERATIONS.md` § "The cloud trial
+  (R-634)").
 - Never delete or modify anything outside the repo and its build and scratch directories without asking the human
   first, caches included: `~/.cargo`, `~/.rustup`, the rust-gpu cache, the Actions caches
   (R-349; the list is applied per R-204, accepted by R-352).

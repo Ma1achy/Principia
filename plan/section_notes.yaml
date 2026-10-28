@@ -1332,6 +1332,74 @@
   section: "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)"
   reason: parent heading (obligations are in its subsections)
   note: its two subsections, Sequence and Spotlights
+- file: docs/design/principia_dd_replication.md
+  section: "Principia: the replication and verification suite — published three-body results as engine tests"
+  reason: informative only
+  note: "preface: the rulings that adopted it (R-594, R-629) and the records it transcribes; obligations in §5, §6 and §8"
+- file: docs/design/principia_dd_replication.md
+  section: "1. What this extends, and what it does not change"
+  reason: informative only
+  note: "its relation to principia_dd_validation_orbits.md, which it extends and does not change (R-594); no obligation of its own"
+- file: docs/design/principia_dd_replication.md
+  section: "2. Two layers and four tiers"
+  reason: rationale
+  note: "the layers, tiers, comparison kinds and chart names each target's requirement states in its note"
+- file: docs/design/principia_dd_replication.md
+  section: "3. Sources"
+  reason: informative only
+  note: "the records' abbreviations and data terms; the terms' obligations are §8.2 rule 17 and §8.3, cited by every target"
+- file: docs/design/principia_dd_replication.md
+  section: "4. Three findings carried over from the plan"
+  reason: parent heading (obligations are in its subsections)
+  note: "its three findings; 4.1 and 4.3 are cited by the targets that depend on them"
+- file: docs/design/principia_dd_replication.md
+  section: "4.2 The high-precision rows: 937, not 1,260"
+  reason: gap (RQ-577)
+  note: "the rows serve the precision ladder's test 6, which waits on RQ-577 (§5.13); no requirement is added meanwhile"
+- file: docs/design/principia_dd_replication.md
+  section: "5. The targets"
+  reason: parent heading (obligations are in its subsections)
+  note: "its subsections hold the targets, one requirement each"
+- file: docs/design/principia_dd_replication.md
+  section: "5.1 Targets already ruled"
+  reason: informative only
+  note: "lists the requirements already in force by id; this port changes none of them (R-594)"
+- file: docs/design/principia_dd_replication.md
+  section: "5.13 The precision ladder: waiting for RQ-577"
+  reason: gap (RQ-577)
+  note: "PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250"
+- file: docs/design/principia_dd_replication.md
+  section: "5.14 Out of scope"
+  reason: informative only
+  note: "V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629)"
+- file: docs/design/principia_dd_replication.md
+  section: "5.15 Counts"
+  reason: informative only
+  note: "counts of what the port added"
+- file: docs/design/principia_dd_replication.md
+  section: "7. Sequencing by need"
+  reason: informative only
+  note: "the task order; the obligations are the tasks' (plan/tasks.yaml)"
+- file: docs/design/principia_dd_replication.md
+  section: "8. Rules"
+  reason: parent heading (obligations are in its subsections)
+  note: "its three subsections, cited by every target"
+- file: docs/design/principia_dd_replication.md
+  section: "9. Coverage of initial-condition space, and the gaps"
+  reason: informative only
+  note: "which region of IC space each target exercises, and the gaps in the records; no obligation"
+- file: docs/design/principia_dd_replication.md
+  section: "10. Open questions"
+  reason: informative only
+  note: "where each open question stands; each is an RQ entry"
+- file: docs/design/principia_dd_replication.md
+  section: "11. Corrections the plan records"
+  reason: informative only
+  note: "PLAN.md §10's record of corrections to older records; the ones to documents in force were queued (RQ-588 to RQ-590) and are applied by R-632, in those documents"
+- file: decisions.md
+  section: "R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*"
+  reason: informative only
+  note: "the owner's ruling of 28 Oct 2026, a trial: TASK-M8-07 and TASK-M8-13 built and code- and qa-reviewed in a cloud session on lavapipe, the gui review (Metal and lavapipe screenshots side by side), the launch, the owner's look and every merge on the Mac; reported in tokens, wall-clock and rounds against a comparable Mac-built GUI task; stopped by its two stop rules; a process ruling applied in plan/OPERATIONS.md and CLAUDE.md; the Mac CI job's gui tests and screenshots are a separate R-369 code task, to follow; changes no requirement"
 - file: decisions.md
   section: "R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*"
   reason: informative only

@@ -761,7 +761,17 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   (RQ-344 (a)). It is refused, with the reason logged to the console, where the smaller singular value of
   `[P e_i, P e_j]`, `P = J J⁺`, is below a calibrated tolerance (RQ-344's (a2) test, R-71): at a chart singularity (the
   Shape view's poles, a saturated link) and, on an `E*`-normalised chart, where the plane needs the direction normal to
-  the energy shell, logged "normal to the energy shell" (RQ-345 (b)). The Manifold view's sliders follow as after the
+  the energy shell, logged "normal to the energy shell" (RQ-345 (b)). **`J⁺` drops the directions `J` cannot reach
+  (R-633, ruling RQ-601 (a)):** a central-difference `J` is never exactly rank-deficient, its smallest singular value being the
+  difference's error where its exact rank is 7, so the exact pseudo-inverse makes `P = J J⁺ = I` to rounding and the
+  test would never refuse. `J⁺` is formed from `J`'s singular value decomposition, every singular value below `c·σ₁`
+  dropped, `σ₁` the largest; `c` is a second calibrated value (R-71) beside the tolerance, starting at `10⁻⁹`, the
+  geometric middle of the measured gap (on the default decoder, 500 fixed-seed `z` in `[−3, 3]⁸`, the Jacobi set over
+  R-550's ranges: `σ₈/σ₁ ≤ 1.9·10⁻¹²` with `E* = 0`, `≥ 3.9·10⁻⁶` with `E*` unset), the measurement recorded as its
+  basis. Its arms: on an `E* = 0` chart the shell-normal direction is refused at every sampled `z`; with `E*` unset none
+  is; at a saturated link the cell is refused. Where nothing is dropped `J⁺ = J⁻¹`, so the steer's `q ∝ J⁻¹ e` above
+  reads `J⁺` (applied per R-369, R-633). The analytic energy-normal projector, `P = I − n̂ n̂ᵀ` on an `E*` chart, is
+  noted for later, if the gap ever narrows (f32 or deep zoom). The Manifold view's sliders follow as after the
   Chart builder's Apply (§G7). *Was (before R-550):* "`q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and
   is refused, with the reason logged to the console, where the preimage is no 2-plane; the construction waits on RQ-344
   to RQ-346." Every steer is one `SetField` on the basis through the

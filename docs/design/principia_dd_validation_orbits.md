@@ -1,5 +1,8 @@
 # Known-solution validation orbits
 
+*Extended by `principia_dd_replication.md` (R-594, R-629): published results of other codes, and the periodic-orbit
+catalogues at scale, as engine tests beside this suite. Nothing here changes.*
+
 **Why these matter:** a periodic orbit **is its own reference.** Integrate one period, compare to the
 start. No second implementation, no analytic formula, no tolerance chosen by eye — the orbit closes
 or it does not. **That is a test that can fail**, which is the standard everything else in this
@@ -83,8 +86,10 @@ adopting it.
 
 ### 1.1 Free-fall periodic orbits — the best fit for this project
 
-Li & Liao 2018 (234 unequal-mass), Hristov–Hristova–Dmitrašinović–Tanikawa 2023 (**12,409**
-equal-mass). *"The free-fall formulation starts with all three bodies at rest… the masses do not
+Li & Liao 2018 (234 over six mass sets, 30 of them equal-mass), Hristov–Hristova–Dmitrašinović–Tanikawa,
+*CeMDA* 136, 7 (2024), arXiv 2023 (**12,409** equal-mass) (R-632, closing RQ-588, as
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10 records it; *was:* "Li & Liao 2018 (234 unequal-mass),
+Hristov–Hristova–Dmitrašinović–Tanikawa 2023 (**12,409** equal-mass)"). *"The free-fall formulation starts with all three bodies at rest… the masses do not
 orbit in a closed loop, but travel forward and backward along an open track."*
 
 **Why these are the right family here:**
@@ -138,8 +143,8 @@ the more useful object.
 
 ### 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
 
-*Ported from the papers by R-592 (closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open). The papers are in
-`docs/incoming/2026-10-24_anosova/`, a record and not authority (R-1, R-159): this section is the port.*
+*Ported from the papers by R-592 (closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open, and R-632 closes it). The
+papers are in `docs/incoming/2026-10-24_anosova/`, a record and not authority (R-1, R-159): this section is the port.*
 
 **Sources.** I: T. A. Agekyan and Zh. P. Anosova, "A study of the dynamics of triple systems by means of statistical
 sampling", *Soviet Astronomy* 11(6), 1006–1014 (1968), from *Astron. Zh.* 44(6), 1261–1273 (1967), ADS
@@ -202,8 +207,11 @@ fixes N=88"). The papers' `η` differ on six rows; each keeps its reason in the 
    scale-free invariant `L_z²·|E|/(G²·M⁵)` matches with no factor.
 5. **The control**: a point outside region D (eq. 8 false) is refused as outside the region.
 
-Column 8 (`E·10⁻⁷`) is not eq. 4 on columns 2 and 3 (RQ-570, open): it is transcribed and recorded beside eq. 4 on
-every row, and not asserted until RQ-570 is ruled. Nothing else is imported from the papers as a reference value
+Column 8 (`E·10⁻⁷`) is not eq. 4 on columns 2 and 3: it is transcribed and recorded beside eq. 4 on every row, and
+never asserted (R-632, closing RQ-570 with its option (a)). The 27 Oct 2026 transcription of paper II found the same
+discrepancy in its energy column (`docs/incoming/2026-10-27_papers/TARGETS.md`, AA-6's caveat). *Was:* "Column 8
+(`E·10⁻⁷`) is not eq. 4 on columns 2 and 3 (RQ-570, open): it is transcribed and recorded beside eq. 4 on every row,
+and not asserted until RQ-570 is ruled." Nothing else is imported from the papers as a reference value
 (disintegration times, `p`, `p_min`, outcome fractions): those wait for the Anosova chart's milestone.
 
 ---
