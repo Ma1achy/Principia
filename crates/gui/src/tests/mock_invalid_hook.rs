@@ -284,6 +284,35 @@ fn mock_invalid_hook_warns_again_for_another_region() {
     check_one(&all[1..], &warning("z_α × z_β", &inside));
 }
 
+/// A view warned of, then one with no flagged pixel inside the square, then the first again: the return is a change of
+/// view, so it is warned of again, once (R-467 D7; render_gui_spec §G12, gui review 5688782581 of PR #331, G2).
+#[test]
+fn mock_invalid_hook_warns_again_after_a_clean_view() {
+    let (mut app, mut h, canvas) = app_flagging(INSIDE);
+    assert_eq!(warnings(&app).len(), 1);
+    canvas.flag_invalid([-0.4, 0.2, -0.1, 0.8]);
+    repaint(&mut h, &mut app);
+    assert_eq!(warnings(&app).len(), 1, "the clean view warns of nothing");
+    assert!(app.side().engine().flagged().inside.is_none());
+    canvas.flag_invalid(INSIDE);
+    repaint(&mut h, &mut app);
+    let shown = FigureView::of(
+        &layout(),
+        true,
+        PIXELS_PER_POINT,
+        crate::mock::canvas::default_background(),
+    );
+    let want = warning("z_α × z_β", &expected(&shown, INSIDE).unwrap());
+    let check_returned = |all: &[LogEntry]| {
+        assert_eq!(all.len(), 2, "{all:?}");
+        check_one(&all[1..], &want);
+    };
+    let all = warnings(&app);
+    check_returned(&all);
+    // Control: the return logging nothing, as when the last warned view is kept, fails.
+    rejects("no warning on the return", || check_returned(&all[..1]));
+}
+
 #[test]
 fn mock_invalid_hook_past_the_square_warns_nothing() {
     for region in [

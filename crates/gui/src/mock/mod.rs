@@ -157,10 +157,14 @@ impl MockEngine {
     /// The figure as the app draws it, `view`, with the region `invalid` the test hook flags: the mock counts the
     /// flagged pixels for the debug view's "Debug" key, and, when some lie inside `[0,1]²` and the view is not the one
     /// last warned of, logs the decoder-bug warning, severity `warn`, source `app`, naming the mock's chart, the first
-    /// such pixel and their count (R-467 D7, D8; render_gui_spec §G12). A repaint of the same view logs nothing.
+    /// such pixel and their count (R-467 D7, D8; render_gui_spec §G12). A repaint of the same view logs nothing; a view
+    /// with none inside forgets the view last warned of.
     pub fn observe(&mut self, view: &FigureView, invalid: [f32; 4]) {
         self.flagged = invalid::flagged(view, invalid);
         let Some(inside) = self.flagged.inside else {
+            // A view with no flagged pixel inside the square is a change of view too: the last warned view is
+            // forgotten, so a return to it warns again (R-467 D7; render_gui_spec §G12).
+            self.warned = None;
             return;
         };
         let seen = WarnedView {
