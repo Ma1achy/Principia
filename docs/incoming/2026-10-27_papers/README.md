@@ -53,6 +53,10 @@ commit it idc"), as `../2026-10-25_replication/papers/valtonen_etal_2016_three_b
 public repository, which is redistribution the copyright notice forbids. The instruction is recorded here as given. The
 file and its sha256 are above if the human chooses to add it himself.
 
+*28 Oct 2026: the human's copy is held locally, gitignored, at
+`../_local/valtonen_etal_2016_three_body_problem_pythagoras_to_hawking_Springer.pdf` (sha256 above), so agents can
+read it. It is not in the repo and is never committed.*
+
 ## 3. The 1968/1969 question, and which year the docs use
 
 The English translations carry two dates, and they differ:
