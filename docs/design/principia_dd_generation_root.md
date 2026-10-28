@@ -449,13 +449,18 @@ starts from `m_0 = 0`, written before the first update, so `m_1 = D_1` exactly a
 recycled from another quad is never read; with every `D_j` in `[0, 1]`, each f32 update stays in `[0, 1]`. *Was
 (physics review 5679374140 of PR #318, F3):* "The in-place update sets `m_1 = D_1` whatever `m_0` holds, so the member
 needs no initial value", false in floating point (a non-finite `m_0` gives NaN, and a finite `m_0 ≠ 0` rounds).
-**An undetermined footprint reads 1.** Where `f`'s
-`spread_shape` is non-finite (refinement policy §1's "the footprint is undetermined (non-finite spread, or an unusable
-copy)"), `d(f, t_j) = 1`, the contributor's attainable maximum, chosen by a select on the operand's bits (an exponent
+**A non-finite spread reads 1.** Where `f`'s
+`spread_shape` is non-finite (the first of refinement policy §1's undetermined footprints), `d(f, t_j) = 1`, the
+contributor's attainable maximum, chosen by a select on the operand's bits (an exponent
 of all ones), never by a float comparison (R-79, R-297, as for `d_min`); the footprint stays in the N² of `D_j`. A
 failure raises the spread and never vanishes from it (the uniformity invariant, "Ensemble spread" above), and one
-NaN can't poison the mean for the rest of the quad's life. **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
-lies in `[0, 1]`, a finite one by `spread_shape`'s chord bound (its row, below) and an undetermined one as 1, so every
+NaN can't poison the mean for the rest of the quad's life. A footprint undetermined with a finite `spread_shape`, by
+an unusable copy (policy §1) or by a regularised copy's step budget (R-603, its state latched as it stood), contributes
+that `spread_shape`: the payload carries no predicate for an unusable copy, and R-603's `budget_exhausted` bit is
+placed by TASK-M3-41 (REQ-PAY-110), so neither is read here. *Was (physics review 5679524618 of PR #318, F4):*
+"**An undetermined footprint reads 1.** Where `f`'s `spread_shape` is non-finite (refinement policy §1's "the
+footprint is undetermined (non-finite spread, or an unusable copy)"), `d(f, t_j) = 1`". **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
+lies in `[0, 1]`, a finite one by `spread_shape`'s chord bound (its row, below) and a non-finite one as 1, so every
 mean of them does; *was (physics review 5679374140 of PR #318, F2):* "each `d_k(f)` lies in `[0, 1]` by
 `spread_shape`'s chord bound (its row, below), so every mean of them does"; the range does not
 span zero, so the member is one-signed and on viridis, never on the diverging ramp (R-545, RQ-278 (d)).
