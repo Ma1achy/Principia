@@ -116,10 +116,17 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// every backend holds the same value and no runtime `sqrt` forms it (gpu_determinism_note § "The discipline"):
     /// `crate::encode::curve::nearest`'s step.
     const INV_PHI: Self;
+
+    /// `τ_I`, step 0's skip tolerance (R-547; dd_encode §3.2; `crate::canon`): step 0 is skipped where
+    /// `|I_in − 1| ≤ τ_I`. The register's `tau_i`, in eps of the precision, times the precision's eps, which the
+    /// generator writes as each width's exact value (`TAU_I_F32`, `TAU_I_F64`). A constant, so every backend compares
+    /// against the same bits.
+    const TAU_I: Self;
 }
 
 impl IeeeBits for f32 {
     const INV_PHI: f32 = crate::generated::constants::INV_PHI as f32;
+    const TAU_I: f32 = crate::generated::constants::TAU_I_F32;
 
     #[inline]
     fn or_pos_inf(self, c: bool) -> f32 {
@@ -159,6 +166,7 @@ impl IeeeBits for f32 {
 
 impl IeeeBits for f64 {
     const INV_PHI: f64 = crate::generated::constants::INV_PHI;
+    const TAU_I: f64 = crate::generated::constants::TAU_I_F64;
 
     #[inline]
     fn or_pos_inf(self, c: bool) -> f64 {

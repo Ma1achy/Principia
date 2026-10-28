@@ -18,13 +18,14 @@ pub fn encode_words() -> usize {
     12
 }
 
-/// The notices word: bit 0 the coincident inner pair (R-13), bit 1 `lookup_mirrored`, bits 8 to 15 the clamped controls
-/// `z[0]` to `z[7]`.
+/// The notices word: bit 0 the coincident inner pair (R-13), bit 1 `lookup_mirrored`, bit 2 `lookup_rescaled`, bits 8 to
+/// 15 the clamped controls `z[0]` to `z[7]`.
 #[inline]
 pub fn notices(r: &Report<f32>) -> u32 {
     let coincident = if r.coincident { 1 } else { 0 };
     let mirrored = if r.mirrored { 2 } else { 0 };
-    coincident | mirrored | (r.clamped_controls << 8)
+    let rescaled = if r.rescaled { 4 } else { 0 };
+    coincident | mirrored | rescaled | (r.clamped_controls << 8)
 }
 
 /// What a test reads back of one sample's encode at f32: `z`, `α`, `β` and the report.
@@ -97,6 +98,7 @@ pub fn read_encoded(words: &[u32], i: usize) -> EncodeOut {
         beta: get(words, at + 9),
         report: Report {
             lambda: get(words, at + 10),
+            rescaled: flags & 4 != 0,
             coincident: flags & 1 != 0,
             clamped_controls: (flags >> 8) & 0xFF,
             mirrored: flags & 2 != 0,
