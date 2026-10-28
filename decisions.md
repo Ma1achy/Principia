@@ -27695,7 +27695,7 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 *Withdrawn in part, 28 Oct 2026, by the owner: its agent-count clause (two local agents at most) and its cloud clauses (docs agents, qa's test writing and reviews in cloud sessions; the audit as a cloud scheduled task).*
 *Still in force: all of it but those clauses; R-262, R-277, R-357 and R-391 stand as they were before it, and the
 weekly consistency audit stays adopted, report-only and never blocking, run on demand when the owner asks (the owner's
-ruling of 28 Oct 2026 on its RQ-605 clause, below).*
+ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in decisions.md).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
 session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions (the owner's ruling of
 28 Oct 2026, to be ported as a ruling of its own).*
