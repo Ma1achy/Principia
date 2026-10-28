@@ -15,3 +15,6 @@ __pycache__/
 atlas-params.json
 *atlas-params*.json
 *atlas_params*.json
+
+# README explainer GIF builds (scripts/readme_gifs); the committed copies live in docs/readme/
+/scripts/out/
