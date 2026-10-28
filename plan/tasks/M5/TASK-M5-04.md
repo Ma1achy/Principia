@@ -42,7 +42,7 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
   the same table.
 - `crates/kernel/src/quad_local.rs`: sample position from (c, h, i, N); the linear-path uniform binding.
 - `crates/engine/src/dispatch/request.rs`: building requests from the quadtree (f64 → f32 at the seam).
-- `crates/engine/src/deep/linearise.rs`: f64 `x₀`, `J_D` by central differences of the chart→IC composite (reusing the shared decoder's f64 instantiation) — moved here from TASK-M6-07 (R-113).
+- `crates/engine/src/deep/linearise.rs`: f64 `x₀`, `J_D` by central differences of the chart→IC composite (reusing the shared decoder's f64 instantiation), with deep_zoom §2's step rule, `h_k = ε^{1/3}·max(1, |x_k|)` along `u` and `v`, divided by the step actually taken (R-633) — moved here from TASK-M6-07 (R-113).
 - `cargo xtask gate linear-decode-depth`: linear vs full decode across a depth sweep.
 - `cargo xtask gate linear-decode-floor` and its `--propose`: the f32 GPU path's distinguishable depth on the linear path, as integrated, at stated coordinate magnitudes `|x₀|` (R-632).
 - `fixtures/gates/quad-local-uv/`: depth-30 quads; `cargo xtask gate quad-local-uv`.
@@ -76,3 +76,4 @@ mode a baked variant, never a flag bit). The kernel computes sample positions as
   2^−10) the absolute sum is exact (REQ-DEC-031's note).
   REQ-TOOL-152's bound is the one the human confirms at the M1 gate (RQ-258, closed by R-398: N is a power of two).
 - **R-632 (27 Oct 2026, RQ-578 (a) with (c)):** on the f32 GPU path `x₀ + J_D·δ` is an absolute f32 number of order `|x₀|` that the f32 integrator starts from, so the linear path's floor is the measured value, quoted with `|x₀|` (deep zoom §1, §2), not depth 50. This task measures it (REQ-DEC-052) and proposes it as a calibration (REQ-DEC-051), and `linear-decode-depth` asserts it; its fixtures use coordinates where the measured floor admits the depths they test. The coordinate magnitudes are this task's choice, at least one with `|x₀|` of order 1, checked by the physics reviewer (applied per R-369). The linear path stays, for speed and the f64-anchored decode; a floor near ~50 needs an f64 sum and integration, on the CPU or under RQ-577's ladder after M3. RQ-578 put no hold on this task, so nothing else changes. Calibration proposed here: REQ-DEC-051.
+- **R-633 (28 Oct 2026, RQ-600 (a)):** `J_D`'s step is the encode contract's, written into deep_zoom §2 (REQ-DEC-036's statement, applied per R-369, since this task computes `J_D`); a secant at the quad's half-width is rejected. *Was (deliverable):* "`J_D` by central differences of the chart→IC composite (reusing the shared decoder's f64 instantiation) — moved here".

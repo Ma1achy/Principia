@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 120 |
 | COL | 160 |
-| GUI | 384 |
+| GUI | 385 |
 | TOOL | 218 |
 | VAL | 330 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **2046** |
+| **total** | **2047** |
 
-Of these: 222 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 223 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -36,19 +36,19 @@ Of these: 222 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | M3 | 333 |
 | M4 | 118 |
 | M5 | 181 |
-| M6 | 225 |
+| M6 | 226 |
 | M7 | 262 |
 | M8 | 476 |
 
 ## Sections
 
-1632 sections in 61 files: 1306 yield at least one requirement; 326 yield none and are listed below with the reason.
+1634 sections in 61 files: 1307 yield at least one requirement; 327 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
-| informative only | 219 |
+| informative only | 220 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 55 |
@@ -185,6 +185,7 @@ Of these: 222 calibration, 172 definition, 1652 obligation. Retired (kept for th
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 | R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 | R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)* | informative only | RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes |
+| R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)* | informative only | the owner's ruling of 28 Oct 2026, a trial: TASK-M8-07 and TASK-M8-13 built and code- and qa-reviewed in a cloud session on lavapipe, the gui review (Metal and lavapipe screenshots side by side), the launch, the owner's look and every merge on the Mac; reported in tokens, wall-clock and rounds against a comparable Mac-built GUI task; stopped by its two stop rules; a process ruling applied in plan/OPERATIONS.md and CLAUDE.md; the Mac CI job's gui tests and screenshots are a separate R-369 code task, to follow; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
