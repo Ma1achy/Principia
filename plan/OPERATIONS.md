@@ -14,11 +14,8 @@ How to read it:
 
 ## Where the build loop runs (R-357)
 
-The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions suit
-read-and-think work: reviews, audits and docs; and, by R-634, a mock-engine GUI task's implementer, code and qa
-reviewers, on lavapipe, within the disk the session has (blocker 1).** Such a task's gui reviewer runs on the Mac, with
-its Metal steps (§ "Metal and perf"). Merges stay on the Mac. *Was (before R-634):* "**Cloud sessions aren't viable for
-the build loop; they suit read-and-think work: reviews, audits and docs.**" A cloud session failed
+The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions
+aren't viable for the build loop; they suit read-and-think work: reviews, audits and docs.** A cloud session failed
 its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204, accepted by R-363:
 1. **Disk.** The machine had ~30 GB, and one warm build reached 24 GB. It would need a larger disk (≥ 100 GB, for
    three agents' targets and the seed within § "Resources"' thresholds), or builds trimmed to fit.
@@ -45,34 +42,7 @@ its environment checks on 2 Oct 2026 on three blockers. What each would need is 
    delete head branches" removes merged PR branches server-side (§ "Merging"); any other delete, such as a `measure/`
    branch's (R-272), still needs it.
 
-The **Linux cloud** notes below, `scripts/cloud-setup.sh` among them, stand for a cloud session's read-and-think work,
-and for R-634's trial.
-
-### The cloud trial (R-634)
-
-A trial, from 28 Oct 2026, on **TASK-M8-07 and TASK-M8-13 only**: mock-engine GUI tasks reviewed by code, qa and gui.
-Nothing touching the kernel or physics runs in the cloud under it; every other task stays on the Mac.
-- **Claim.** The owner starts the cloud session by hand (the Mac orchestrator cannot dispatch into one). It pushes
-  `task/<id>` and opens the PR through REST (blocker 2's table). The Mac orchestrator never dispatches a task whose
-  branch exists on origin.
-- **Cloud.** The implementer, then the code and qa reviewers, each in its own worktree and target under
-  `$HOME/principia-work/` (R-219 holds per machine), on lavapipe (`PRIN_GPU_BACKEND=vulkan`, from
-  `scripts/cloud-setup.sh`). The cloud session runs the qa-commit checks (§ "qa commits") and pushes qa's commit. Gui
-  mutants run there under `prlimit` (R-352), which the Mac lacks.
-- **Mac, one slot.** The gui reviewer, dispatched with the head SHA after `git fetch`, `git worktree add --detach <dir>
-  <sha>`, a seed clone and its own target, runs: `PRIN_GPU_BACKEND=metal cargo nextest run -p gui`; `cargo xtask
-  screenshot --all` on Metal, each view compared side by side with CI's lavapipe screenshot of the same view; the
-  `cargo run -p gui --features mock` launch, quit after the "What to try" keys; and its checklist. It runs in parallel
-  with the cloud's code and qa reviews at the same head. The owner's look (R-390) is on the Mac.
-- **Merge.** Merging, and resolving review threads (GraphQL), stay with the Mac orchestrator alone. An approval on an
-  old head doesn't count (`reviews-check`, R-260).
-- **Report.** For both tasks: tokens, wall-clock time and review rounds, against a comparable Mac-built GUI task
-  (TASK-M8-05, kept on the Mac, unless it isn't comparable when the trial reports; the report names the one used), in
-  the summary after both merge.
-- **Stop.** Stop the trial if a Metal-only finding costs more than one extra review round per task, or if disk forces
-  the agents to run one at a time. Repealing R-634 returns to Mac-only.
-- **To follow (R-369, approved by R-634):** a code task adding `cargo nextest run -p gui` and `cargo xtask screenshot
-  --all` to the `gpu-metal` job on `macos-15`.
+The **Linux cloud** notes below, `scripts/cloud-setup.sh` among them, stand for a cloud session's read-and-think work.
 
 ## Start here
 
@@ -479,7 +449,7 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
 | Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
-| Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"`; a GUI task's three agents under R-634's trial need ≥ 75 GB free (three targets), else run them one at a time, which stops the trial |
+| Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
 
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
@@ -580,8 +550,6 @@ anything outside the repository and its build and scratch directories without as
 
 - `gpu-metal` and `metal_hosted_probe` run only on macOS: on CI's `macos-15` runner, or on the Mac. A cloud session
   runs the GPU suites on lavapipe (`PRIN_GPU_BACKEND=vulkan`, R-169), as CI's Linux jobs do, and leaves Metal to CI.
-  For a GUI task built in a cloud session, the Mac's gui reviewer runs the gui crate's tests and `cargo xtask
-  screenshot --all` on Metal and launches `cargo run -p gui --features mock` (R-634).
 - Benchmarks and performance gates run on the human's Mac via `prin profile` (R-186), never on a hosted runner or a
   cloud machine. A cloud session never reports a performance number of its own: it asks the human for the run, and its
   PR says it waits for it (`plan/WORKFLOW.md`).
