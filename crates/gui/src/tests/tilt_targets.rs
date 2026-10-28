@@ -179,6 +179,28 @@ fn tilt_targets_each_angle_tilts_into_its_own_target() {
     });
 }
 
+/// Asserts `frame` on the plane `z_α × z_β` reads as the normal and targets `want`.
+fn check_read(frame: SliceFrame, want: (usize, usize, usize)) {
+    let plane = Plane {
+        z0: [0.0; 8],
+        q1: e(0, 1.0),
+        q2: e(1, 1.0),
+    };
+    let v = View::framed(&plane, Some(&frame));
+    assert_eq!((v.d, v.x, v.y), want, "{frame:?} read");
+}
+
+#[test]
+fn tilt_targets_a_frame_index_past_the_eight_reads_as_the_slice_axis() {
+    // The last dimension, z_μ2, is a frame's own; 8 and past are no latent dimension, and read as the slice axis, as
+    // does a dimension the plane shows.
+    check_read(frame(Z_MU2, Z_MU2, Z_MU2), (Z_MU2, Z_MU2, Z_MU2));
+    check_read(frame(8, 9, 1), (Z_Q3, Z_Q3, Z_Q3));
+    rejects("index 8 read as a dimension", || {
+        check_read(frame(8, 9, 1), (8, 9, 1))
+    });
+}
+
 /// Asserts the dimensions `offered` on the plane `(a, b)` are the six not `e_a` or `e_b`, in order.
 fn check_offers(offered: &[usize], a: usize, b: usize) {
     assert_eq!(offered.len(), 6, "six: {offered:?}");

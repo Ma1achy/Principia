@@ -192,6 +192,18 @@ fn check_tilt(all: &[Node], tilt: egui::Rect, rh: f32, angles: Angles) {
             reads(all, row(tilt, rh, i), label),
             "row {i} reads {label:?}"
         );
+        // The dropdown's row starts under its angle's slider, past the angle's name.
+        let text = all
+            .iter()
+            .find(|n| n.text == label && row(tilt, rh, i).contains(n.rect.center()))
+            .expect("the label");
+        let slider = &in_row(all, tilt, rh, i - 1, Role::Slider)[0];
+        assert!(
+            (text.rect.min.x - slider.rect.min.x).abs() <= 1.0,
+            "{label:?} at {:?}, under the slider at {:?}",
+            text.rect,
+            slider.rect
+        );
     }
 }
 
@@ -255,6 +267,13 @@ fn mock_manifold_sections_slice_centre_and_tilt_rows() {
     });
     rejects("a Tilt section with a step slider", || {
         check_tilt(&stepped, tilt, rh, angles)
+    });
+    rejects("a target's row not under its angle's slider", || {
+        let mut shifted = all.clone();
+        for n in shifted.iter_mut().filter(|n| n.text == "tilt τ₁ into") {
+            n.rect = n.rect.translate(egui::vec2(-16.0, 0.0));
+        }
+        check_tilt(&shifted, tilt, rh, angles)
     });
     rejects("a Slice centre box on the wrong component", || {
         let mut z0 = app.snapshot().sim.plane.z0;
