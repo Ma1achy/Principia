@@ -159,11 +159,12 @@ fn unbounded(
     member(name, packed(word, offset, 16), FieldType::F16, scale, range).overflow(overflow)
 }
 
-/// `running_mean_divergence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, a running mean of footprint
-/// `spread_shape`s, each in `[0, 1]`, so `[0, 1]`, one-signed.
+/// `running_mean_divergence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, a mean over the fixed sim-time
+/// grid `t_j = j·Δ` of the footprints' mean `spread_shape`, each in `[0, 1]`, so `[0, 1]`, one-signed.
 const RUNNING_MEAN_DIVERGENCE_3_7: &str = "dd_generation_root §3.7 \"Temporal accumulators\": \
-     running_mean_divergence = (1/k)·Σ D_j, D_j the mean over the quad's footprints of spread_shape, each in [0, 1], \
-     so [0, 1] (REQ-PAY-109; R-72, R-545)";
+     running_mean_divergence(t) = (1/n)·Σ D_j over the sim-time grid t_j = j·Δ (Δ = dt, or Δ_sync), \
+     D_j the mean over the quad's footprints of spread_shape at t_j, each in [0, 1], so [0, 1] \
+     (REQ-PAY-109; R-72, R-545)";
 
 /// `coherence`'s declaration (REQ-PAY-109; R-72, R-545): §3.7's formula, `1 − n_unresolved / N²` with
 /// `0 ≤ n_unresolved ≤ N²`, so `[0, 1]`, one-signed.

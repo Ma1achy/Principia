@@ -427,15 +427,25 @@ automatic return.
 **`running_mean_divergence`'s formula and range (REQ-PAY-109; definition, R-72; R-545).** A footprint's divergence
 at a resolve pass is the spread the latch reads, the one compared with `eps` (scheduler contract Part 6,
 "Split/keep/merge": `spread_shape > eps`): the footprint's `spread_shape`, `spread(n̂)/2.0` over its `E+1` copies
-(above), whose latched running maximum is `running_max_divergence`. At the quad's `k`-th resolve pass (`k = 1, 2, …`),
-with `d_k(f)` footprint `f`'s divergence then and `D_k = (1/N²)·Σ_f d_k(f)` its mean over the quad's N² footprints,
+(above), whose latched running maximum is `running_max_divergence` (refinement policy §1: "its latched running
+maximum of spread_shape"). It is a time average over the fixed sim-time grid, never over scheduling events: `Δ` is the
+sim key's fixed step `dt`, or the sync quantum `Δ_sync` under a regularised occupant (scheduler contract Part 7,
+R-565), and `t_j = j·Δ`. At sim time `t = n·Δ`, with `d(f, t_j)` footprint `f`'s divergence at `t_j` and
+`D_j = (1/N²)·Σ_f d(f, t_j)` its mean over the quad's N² footprints,
 
 ```
-running_mean_divergence = (1/k)·Σ_{j=1..k} D_j          -- updated in place: m_k = m_{k−1} + (D_k − m_{k−1})/k
+running_mean_divergence(t) = (1/n)·Σ_{j=1..n} D_j       -- updated in place: m_j = m_{j−1} + (D_j − m_{j−1})/j
 ```
 
-the mean over the quad's footprints of each footprint's running mean, the two means commuting. The in-place update
-sets `m_1 = D_1` whatever `m_0` holds, so the member needs no initial value. **Range `[0, 1]`, `lin`**: each `d_k(f)`
+the mean over the quad's footprints of each footprint's time-averaged spread, the two means commuting. It is a pure
+function of the IC, the sim key and `t`: the live march, catch-up after reveal and a re-boot after eviction reach the
+same `D_j` at the same `t_j` (scheduler contract Part 1, Part 7), however many resolve passes (R-135) or frames fell
+between. A footprint whose copies have ended their march holds its state, so its `d` is its last value. Where the member
+is held and updated is REQ-REF-046's; the formula is indexed by `t_j` alone. *Was (physics review 5679374140
+of PR #318, F1):* "At the quad's `k`-th resolve pass (`k = 1, 2, …`), with `d_k(f)` footprint `f`'s divergence then
+and `D_k = (1/N²)·Σ_f d_k(f)` its mean over the quad's N² footprints, `running_mean_divergence = (1/k)·Σ_{j=1..k}
+D_j`, updated in place: `m_k = m_{k−1} + (D_k − m_{k−1})/k`". The in-place update
+sets `m_1 = D_1` whatever `m_0` holds, so the member needs no initial value. **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
 lies in `[0, 1]` by `spread_shape`'s chord bound (its row, below), so every mean of them does; the range does not
 span zero, so the member is one-signed and on viridis, never on the diverging ramp (R-545, RQ-278 (d)).
 

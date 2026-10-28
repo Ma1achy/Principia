@@ -728,7 +728,8 @@ const REDUCTION_ONE_SIGNED: [(&str, &[&str]); 2] = [
         &[
             "§3.7",
             "Temporal accumulators",
-            "running_mean_divergence = (1/k)·Σ D_j",
+            "running_mean_divergence(t) = (1/n)·Σ D_j",
+            "sim-time grid t_j = j·Δ",
             "spread_shape",
             "REQ-PAY-109",
         ],
