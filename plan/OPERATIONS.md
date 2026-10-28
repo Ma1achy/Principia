@@ -14,13 +14,6 @@ How to read it:
 
 ## Where the build loop runs (R-357)
 
-**The pace rule (R-636, 28 Oct 2026).** The Mac is kept for GPU work: the implementers, their builds and GPU tests,
-Metal steps (a gui reviewer's among them, R-634), benchmarks and every performance gate (R-186), and the merges, with
-**at most two local agents at once** (§ "Resources"). **Docs agents, qa's test writing and reviews run in cloud
-sessions**; a review step that needs Metal runs on the Mac, within the two. How a cloud session is started is
-unchanged (§ "The cloud trial (R-634)", its claim rule). *Was (before R-636):* "The build loop runs on the human's
-Mac: implementers, qa's tests, builds, benchmarks and merges."
-
 The build loop runs on the human's Mac: implementers, qa's tests, builds, benchmarks and merges. **Cloud sessions
 aren't viable for the build loop; they suit read-and-think work: reviews, audits and docs.** A cloud session failed
 its environment checks on 2 Oct 2026 on three blockers. What each would need is applied per R-204, accepted by R-363:
@@ -473,12 +466,9 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | | Mac (the human's machine) | Linux cloud |
 |---|---|---|
 | Memory pressure | `sysctl kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical (R-252); not swap, which macOS keeps allocated | `/proc/pressure/memory` (PSI) where the kernel has it, else `free -m`. R-347: read `some avg10` as normal below 10, warning from 10, critical from 40 or when `full avg10` passes 5; without PSI, read "available" below 25% of total as warning and below 10% as critical |
-| Agents at once | at most 2 local agents at any pressure (R-636), the Mac kept for GPU work (§ "Where the build loop runs (R-357)"); at critical only the running work finishes (R-277). *Was (before R-636):* "3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262)" | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
+| Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, since each builds with 4 jobs |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0` | the same |
-
-**Superseded by R-636 (28 Oct 2026):** two local agents at most at every pressure, so the swap check, its daily log
-and R-391's trial end; nothing below is run. Kept as the record:
 
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
@@ -604,7 +594,7 @@ don't route around it.
 ## Logs
 
 - **Mac only.** The running away-mode log is `/Users/malachy/principia-ssd/overnight-log.md`.
-- **R-391's trial log (Mac only); ended by R-636 (28 Oct 2026), with the trial, and kept as the record.** Each day of the trial, one line in the away-mode log: the date; the agents running
+- **R-391's trial log (Mac only).** Each day of the trial, one line in the away-mode log: the date; the agents running
   (the peak, and how many dispatches ran at warning with 3); the page-out rises read (the lowest and highest per
   minute, and each dispatch held to 2); every timeout or flaky failure, local or in CI, with its run or PR; and whether
   the trial was reverted (§ "Resources").

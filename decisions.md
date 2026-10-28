@@ -2565,9 +2565,9 @@ R-237). `reviews-check` implements it in TASK-M0-37.
 `reviews-check` implements it in TASK-M0-37.
 
 ## R-262 — Builds move to the internal disk, three agents at most
-*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac).*
-*Still in force: builds on the internal disk, and the disk rules (≥ 25 GB free as the target, no work started below
-15 GB); at most two agents on the Mac (R-636), where it was three.*
+*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac; that clause is withdrawn, 28 Oct 2026,
+before merge).*
+*Still in force: all of it; R-636's two-agent cap is withdrawn (28 Oct 2026).*
 *29 Sep 2026 · process*
 
 "7. Move builds to the internal disk, three agents at most. Keep the disk rules (≥25 GB target, never start work below
@@ -2809,11 +2809,10 @@ in HUMAN_SETUP §2, and a pull_request_review trigger so reviews-complete re-run
 
 ## R-277 — Agents: two at memory-pressure warning, three at normal *(amends R-252)*
 *Replaced in part by R-391 (its warning rule, as a trial).*
-*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac at any pressure; R-391's trial ends).*
-*Still in force: only the running work at critical, and two at warning; at normal, two on the Mac, R-636's cap, where
-it was three, and R-391's trial has ended (R-636). Was: "three agents at normal pressure, and only the running work at
-critical; two at warning while R-391's trial finds the Mac swapping, and for every warning reading if the trial is
-reverted (R-391)."*
+*Amended in part by R-636 (28 Oct 2026: at most two local agents on the Mac at any pressure; R-391's trial ends; that
+clause is withdrawn, 28 Oct 2026, before merge).*
+*Still in force: three agents at normal pressure, and only the running work at critical; two at warning while R-391's
+trial finds the Mac swapping, and for every warning reading if the trial is reverted (R-391).*
 *30 Sep 2026 · applied in the orchestrator's loop*
 
 "Two agents while memory pressure sits at warning; three at normal."
@@ -4720,14 +4719,12 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac; R-634 is
 withdrawn, 28 Oct 2026, before merge, and the build loop stays on the Mac alone).*
 *Amended in part by R-636 (28 Oct 2026: docs agents, qa's test writing and reviews run in cloud sessions; the Mac is
-kept for GPU work, at most two local agents).*
+kept for GPU work, at most two local agents; those clauses are withdrawn, 28 Oct 2026, before merge).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
 I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
-place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`. The build loop stays on the Mac, but for
-R-636, under which docs agents, qa's test writing and reviews run in cloud sessions, the Mac keeping GPU work (the
-implementers' builds and GPU tests, Metal steps, benchmarks) and the merges.*
+place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -6518,8 +6515,9 @@ REQ-GUI-084, REQ-GUI-085, REQ-GUI-086 and REQ-GUI-099 gain R-390 and a note; REQ
 detail names TASK-M6-25's screenshot cases.
 
 ## R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
-*Superseded by R-636 (28 Oct 2026: at most two local agents on the Mac at any memory pressure; the trial, its swap
-check and its daily log end).*
+*Superseded in part by R-636 (28 Oct 2026: at most two local agents on the Mac at any memory pressure; the trial, its
+swap check and its daily log end; that clause is withdrawn, 28 Oct 2026, before merge, so R-391 stands whole).*
+*Still in force: all of it; R-636's agent-count clause, which ended the trial, is withdrawn (28 Oct 2026).*
 *6 Oct 2026 · applied in `CLAUDE.md` § "The main session orchestrates; it never implements or reviews", `plan/OPERATIONS.md`
 § "Resources" and § "Logs", and `plan/rule_groups.yaml`; a trial, with R-277 the fallback*
 
@@ -27692,6 +27690,9 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 `rulings/2026-10-28`, none yet merged; this is the next free number after them.
 
 ## R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are "not evaluated within cap", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*
+*Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
+session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions (the owner's ruling of
+28 Oct 2026, to be ported as a ruling of its own).*
 *28 Oct 2026 · the owner's message of that day; applied in R-633's text (on PR #323's branch) and its forward line,
 R-391's, R-277's, R-262's and R-357's forward lines, `plan/OPERATIONS.md` § "Where the build loop runs (R-357)", §
 "The weekly consistency audit (R-636)" (new), § "Resources" and § "Logs", `REVIEW_QUEUE.md` (RQ-583, RQ-592, RQ-602 and RQ-605 closed; RQ-608 new; RQ-577, RQ-591, RQ-598 and RQ-599
