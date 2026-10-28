@@ -125,6 +125,9 @@ jobs:
   ci:
     needs: ci-archive
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -176,32 +179,25 @@ jobs:
       # ran 7–9 minutes, against about 1 minute in its sibling shards, and logged no digest and no completion; the
       # truncated archive then failed extraction ("incomplete frame", runs 40581119144 and 40504808071, `ci (4)`). So
       # the downloaded archive's size is checked against the one `ci-archive` uploaded, and a short archive is
-      # downloaded once more, then checked again: one that is still short fails the shard, named. Test infrastructure
-      # only; the tests that run are the same.
+      # downloaded once more, by `gh`, preinstalled on the runner, with this job's token (hence `actions: read`), then
+      # checked again: one that is still short fails the shard, named. Test infrastructure only; the tests that run are
+      # the same.
       - name: Check the archive downloaded whole
-        id: download
+        env:
+          WANT: ${{ needs.ci-archive.outputs.bytes }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          got=$(stat -c %s "$RUNNER_TEMP/nextest-ci.tar.zst" 2>/dev/null || echo 0)
-          want=${{ needs.ci-archive.outputs.bytes }}
-          if [ "$got" = "$want" ]; then
-            echo "whole=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::nextest-ci: downloaded $got of $want bytes; downloading it again"
-            rm -f "$RUNNER_TEMP/nextest-ci.tar.zst"
-            echo "whole=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/download-artifact@v4
-        if: steps.download.outputs.whole == 'false'
-        with:
-          name: nextest-ci
-          path: ${{ runner.temp }}
-      - name: Check the archive downloaded whole, the second time
-        if: steps.download.outputs.whole == 'false'
-        run: |
-          got=$(stat -c %s "$RUNNER_TEMP/nextest-ci.tar.zst" 2>/dev/null || echo 0)
-          want=${{ needs.ci-archive.outputs.bytes }}
-          if [ "$got" != "$want" ]; then
-            echo "::error::nextest-ci: downloaded $got of $want bytes, twice"; exit 1
+          archive="$RUNNER_TEMP/nextest-ci.tar.zst"
+          got=$(stat -c %s "$archive" 2>/dev/null || echo 0)
+          if [ "$got" != "$WANT" ]; then
+            echo "::warning::nextest-ci: downloaded $got of $WANT bytes; downloading it again"
+            rm -f "$archive"
+            gh run download "$GITHUB_RUN_ID" --name nextest-ci --dir "$RUNNER_TEMP"
+            got=$(stat -c %s "$archive" 2>/dev/null || echo 0)
+            if [ "$got" != "$WANT" ]; then
+              echo "::error::nextest-ci: downloaded $got of $WANT bytes, twice"; exit 1
+            fi
           fi
       # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
       # (R-325), and those that run cargo on the workspace's own target directory, which `ci-workspace` runs (R-372):
@@ -392,6 +388,9 @@ jobs:
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
     env:
       PRIN_GPU_BACKEND: vulkan
     strategy:
@@ -421,29 +420,21 @@ jobs:
       # The downloaded archive's size checked against the one `ci-release-archive` uploaded, with one more download of
       # a short archive, as in `ci`: a stalled download can end short and still pass its step.
       - name: Check the archive downloaded whole
-        id: download
+        env:
+          WANT: ${{ needs.ci-release-archive.outputs.bytes }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          got=$(stat -c %s "$RUNNER_TEMP/nextest-release.tar.zst" 2>/dev/null || echo 0)
-          want=${{ needs.ci-release-archive.outputs.bytes }}
-          if [ "$got" = "$want" ]; then
-            echo "whole=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::nextest-release: downloaded $got of $want bytes; downloading it again"
-            rm -f "$RUNNER_TEMP/nextest-release.tar.zst"
-            echo "whole=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/download-artifact@v4
-        if: steps.download.outputs.whole == 'false'
-        with:
-          name: nextest-release
-          path: ${{ runner.temp }}
-      - name: Check the archive downloaded whole, the second time
-        if: steps.download.outputs.whole == 'false'
-        run: |
-          got=$(stat -c %s "$RUNNER_TEMP/nextest-release.tar.zst" 2>/dev/null || echo 0)
-          want=${{ needs.ci-release-archive.outputs.bytes }}
-          if [ "$got" != "$want" ]; then
-            echo "::error::nextest-release: downloaded $got of $want bytes, twice"; exit 1
+          archive="$RUNNER_TEMP/nextest-release.tar.zst"
+          got=$(stat -c %s "$archive" 2>/dev/null || echo 0)
+          if [ "$got" != "$WANT" ]; then
+            echo "::warning::nextest-release: downloaded $got of $WANT bytes; downloading it again"
+            rm -f "$archive"
+            gh run download "$GITHUB_RUN_ID" --name nextest-release --dir "$RUNNER_TEMP"
+            got=$(stat -c %s "$archive" 2>/dev/null || echo 0)
+            if [ "$got" != "$WANT" ]; then
+              echo "::error::nextest-release: downloaded $got of $WANT bytes, twice"; exit 1
+            fi
           fi
       - name: cargo nextest run --archive-file … --partition hash:${{ matrix.shard }}/2
         env:
