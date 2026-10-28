@@ -174,3 +174,5 @@ established; the paper is not in the repository.
    p. 77) or carry a power-law tail (Orlov et al. 2010; Manwadkar et al. 2020)? → **V-9** (new).
 4. **"About 95 %" and "usually the lightest"** (p. 76): a pointer only; set-up unknown. → **V-5**.
 5. **Hierarchical stability**: Harrington's 3.5 (and "doubled"), Bohlin's 4.7 major axes. → **V-11** (new).
+
+*28 Oct 2026 (licence audit): `szebehely_peters_1967_AJ_72_876.pdf` is held locally, not in the repo, at `docs/incoming/_local/` (gitignored); the citations above stand, and `docs/incoming/2026-10-25_replication/README.md` keeps each file's row and sha256.*

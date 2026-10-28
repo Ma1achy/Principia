@@ -413,3 +413,5 @@ See §2.1: Fig. A.1 gives nine phase maps for hyperbolic binary–single encount
 ## Integrator and data availability summary
 - **Public codes:** Brutus (in AMUSE); Fewbody (Fregeau et al. 2004, public); ARC/logH (Mikkola, on request or partly public). TSUNAMI public availability is **UNVERIFIED** (described in arXiv:2206.10583).
 - **Public datasets:** The Hristov et al. free-fall periodic-IC database (80 digits); the Li & Liao periodic-orbit tables (numericaltank.sjtu.edu.cn); the Boekholt & Portegies Zwart 2015 figshare collection; the Šuvakov & Dmitrašinović orbit gallery.
+
+*28 Oct 2026 (licence audit): `aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf`, `aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf` are held locally, not in the repo, at `docs/incoming/_local/` (gitignored); the citations above stand, and `docs/incoming/2026-10-25_replication/README.md` keeps each file's row and sha256.*

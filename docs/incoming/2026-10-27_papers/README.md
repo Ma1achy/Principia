@@ -235,3 +235,5 @@ print column 8, and the CSV notes this on those rows.
 AAOS 1994a's Tables I–VIII and 1994b's Tables I–III were read from 150–300 dpi renders, and each cell was checked
 against the PDFs' own text layers. Every cell agreed, apart from the text layer's glyph errors, such as "ma" for m₁ in
 1994a's Table VIII, row 2.
+
+*28 Oct 2026 (licence audit): `aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf`, `aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf`, `heggie_1974_CeMech_10_217.pdf` are held locally, not in the repo, at `docs/incoming/_local/` (gitignored); the citations above stand, and `docs/incoming/2026-10-25_replication/README.md` keeps each file's row and sha256.*

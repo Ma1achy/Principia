@@ -1068,3 +1068,5 @@ chapters asked about:
    - A number with a stated estimator (8 neighbours, ±1.25×10⁻³, |Δt| ≤ 0.5) that any `t_end` raster of the lens
      yields directly. Its six-rung ladder (28.6 → 8.6%) tests the fractal scaling, not one value.
    - It also exercises the coordinate remap (rule 6) that every region-D map comparison will need.
+
+*28 Oct 2026 (licence audit): `aarseth_anosova_orlov_szebehely_1994_CeMDA_58_1.pdf`, `aarseth_anosova_orlov_szebehely_1994b_CeMDA_60_131.pdf`, `aarseth_zare_1974_CeMech_10_185.pdf`, `heggie_1974_CeMech_10_217.pdf` are held locally, not in the repo, at `docs/incoming/_local/` (gitignored); the citations above stand, and `docs/incoming/2026-10-25_replication/README.md` keeps each file's row and sha256.*
