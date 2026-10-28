@@ -1,0 +1,26 @@
+name: measure-disk
+on: push
+jobs:
+  disk:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: layout
+        run: |
+          df -h
+          lsblk
+          swapon --show || true
+          free -h
+          for d in /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /opt/mssql-tools /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/kotlinc /usr/local/bin /usr/local/share /usr/share /opt /usr/lib /var/lib/docker /mnt; do sudo du -sh $d 2>/dev/null; done
+          sudo docker system df || true
+      - name: current cleanup
+        run: |
+          time sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          time sudo docker image prune --all --force > /dev/null
+          df -h /
+      - name: extra cleanup
+        run: |
+          time sudo rm -rf /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/kotlinc
+          time sudo docker system prune --all --force --volumes > /dev/null
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile
+          df -h
