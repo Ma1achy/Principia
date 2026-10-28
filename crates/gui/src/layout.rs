@@ -381,7 +381,7 @@ pub fn splitters(ui: &mut Ui, layout: &Layout) -> Vec<Splitter> {
         let response = ui.interact(
             layout.handle(splitter),
             splitter.id(),
-            Sense::CLICK | Sense::DRAG,
+            Sense::CLICK.union(Sense::DRAG),
         );
         if response.hovered() || response.dragged() {
             ui.ctx().set_cursor_icon(if splitter.across() {

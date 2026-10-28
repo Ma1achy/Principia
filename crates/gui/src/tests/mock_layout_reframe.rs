@@ -276,3 +276,21 @@ fn mock_layout_reframe_the_span_shown_follows_the_canvas_and_the_layer() {
     real.side().show_span(hidden);
     assert_eq!(real.side().engine().snapshot().history, before.history);
 }
+
+#[test]
+fn mock_layout_reframe_the_axis_labels_read_the_canvas_ends() {
+    use crate::explore::axis_labels::{axes, axes_over};
+    let plane = crate::mock::MockEngine::new().plane().clone();
+    // Over [0, 1]², the ends of the default figure, exactly.
+    assert_eq!(axes_over(&plane, [0.0, 0.0, 1.0, 1.0]), axes(&plane));
+    // A canvas half as wide again each way: each end read at the canvas's edge, `z₀ + q (2s − 1)`.
+    let [h, v] = axes_over(&plane, [-0.25, -0.5, 1.25, 1.5]);
+    let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} against {b}");
+    near(h.low, plane.z0[0] - 1.5 * plane.q1[0]);
+    near(h.high, plane.z0[0] + 1.5 * plane.q1[0]);
+    near(v.low, plane.z0[1] - 2.0 * plane.q2[1]);
+    near(v.high, plane.z0[1] + 2.0 * plane.q2[1]);
+    rejects("the default figure's ends on a wider canvas", || {
+        near(h.low, axes(&plane)[0].low)
+    });
+}

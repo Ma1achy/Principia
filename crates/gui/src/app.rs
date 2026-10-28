@@ -39,7 +39,7 @@ use crate::clock::{Clock, Playback};
 use crate::explore;
 use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
-use crate::layout::{Layout, Splits, Splitter};
+use crate::layout::{Layout, Splits};
 use crate::settings::{Settings, Store};
 use crate::side::EngineSide;
 use crate::stain;
@@ -115,8 +115,9 @@ pub struct App<S: EngineSide> {
     pub places: windows::place::Places,
     /// Where the splitters are (R-462): dragged, reset, or remembered.
     pub splits: Splits,
-    /// The splitter a drag holds, with its edge, in points, and its place when the drag began.
-    splitting: Option<(Splitter, f32, f32)>,
+    /// While a drag holds a splitter: its edge, in points, and its place when the drag began. egui ends one drag, a
+    /// frame with none, before it begins another, so this is the held splitter's.
+    splitting: Option<(f32, f32)>,
     /// Where the GUI's settings are kept (R-461 I4).
     store: Store,
     /// Whether a save of the settings has failed this session: it is logged once.
@@ -444,11 +445,11 @@ impl<S: EngineSide> App<S> {
         self.follow_sample();
         self.trajectory.advance(seconds, span);
         self.windows.inspector.advance(seconds);
-        let mut layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
-        if !self.present && self.shown && self.view.mode == Mode::Explore {
-            self.follow_splitter(&ctx, &layout);
-            layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
-        }
+        // Only Explore's shown layer lays the splitters' handles, so only there can a drag take one; one that began
+        // there is followed to its end, wherever the pointer and the layer then are.
+        let held = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
+        self.follow_splitter(&ctx, &held);
+        let layout = Layout::with_splits(ui.max_rect(), ctx.pixels_per_point(), &self.splits);
         if self.present {
             self.presenting(&ctx, &layout);
             return;
@@ -794,11 +795,9 @@ impl<S: EngineSide> App<S> {
     fn follow_splitter(&mut self, ctx: &egui::Context, layout: &Layout) {
         match crate::layout::held(ctx) {
             Some((splitter, delta)) => {
-                let (start, from) = match self.splitting {
-                    Some((s, start, from)) if s == splitter => (start, from),
-                    _ => (layout.edge(splitter), self.splits.get(splitter)),
-                };
-                self.splitting = Some((splitter, start, from));
+                let (start, from) = *self
+                    .splitting
+                    .get_or_insert_with(|| (layout.edge(splitter), self.splits.get(splitter)));
                 let fraction = if delta == 0.0 {
                     from
                 } else {

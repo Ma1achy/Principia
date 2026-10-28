@@ -333,6 +333,23 @@ fn mock_layout_splitters_the_range_holds_each_neighbour_at_its_minimum() {
         l.range(Splitter::TimeLegend),
         (l.compass.max.x + MIN_TIME_W, w.max.x - MIN_LEGEND_W)
     );
+    // The fraction is of the window from its own origin: a window not at the screen's.
+    let offset = Rect::from_min_size(pos2(100.0, 50.0), l.window.size());
+    let o = Layout::with_splits(offset, crate::capture::PIXELS_PER_POINT, &Splits::default());
+    for s in Splitter::ALL {
+        let start = o.edge(s);
+        let (min, size) = if s.across() {
+            (offset.min.x, offset.width())
+        } else {
+            (offset.min.y, offset.height())
+        };
+        let f = o.dragged(s, start, 4.0);
+        assert!((f - (start + 4.0 - min) / size).abs() < 1e-6, "{s:?}: {f}");
+        assert!(
+            (f - l.dragged(s, l.edge(s), 4.0)).abs() < 1e-6,
+            "{s:?}: as at the origin"
+        );
+    }
     // Inside the range a drag lands where it is sent; at each end it stops; the fraction is of the window's width, or
     // its height down.
     for s in Splitter::ALL {
@@ -456,7 +473,29 @@ fn mock_layout_splitters_show_a_resize_cursor_and_are_no_keyboard_element() {
             (r.min.y, r.max.y)
         };
         assert!(lo < e && e < hi, "{s:?}: {r:?} across {e}");
+        assert!(
+            (hi - lo - crate::layout::HANDLE).abs() < 1e-3,
+            "{s:?}: {r:?} is the handle's width"
+        );
+        assert!(
+            ((lo + hi) / 2.0 - e).abs() < 1e-3,
+            "{s:?}: {r:?} centred on {e}"
+        );
         assert_eq!(l.splitter_at(on_handle(&l, s)), Some(s));
+    }
+    // Along its boundary, each meeting the top row's bottom where that handle begins, never overlapping it.
+    let across = l.handle(Splitter::TopBottom);
+    assert_eq!(
+        (across.min.x, across.max.x),
+        (l.window.min.x, l.window.max.x)
+    );
+    for s in [Splitter::ManifoldFigure, Splitter::FigureTrajectory] {
+        assert_eq!(l.handle(s).min.y, l.top_bar.max.y, "{s:?}");
+        assert_eq!(l.handle(s).max.y, across.min.y, "{s:?}");
+    }
+    for s in [Splitter::CompassTime, Splitter::TimeLegend] {
+        assert_eq!(l.handle(s).min.y, across.max.y, "{s:?}");
+        assert_eq!(l.handle(s).max.y, l.footer.min.y, "{s:?}");
     }
     assert_eq!(l.splitter_at(l.figure.center()), None);
     assert_eq!(l.splitter_at(l.manifold_view.center()), None);
@@ -496,4 +535,53 @@ fn mock_layout_splitters_the_ring_follows_a_resized_scope() {
     rejects("a ring left at the old rect", || {
         assert_eq!(drawn, vec![before])
     });
+}
+
+#[test]
+fn mock_layout_splitters_a_pointer_on_or_dragging_a_splitter_hovers_no_figure_point() {
+    let (mut app, mut h) = settled();
+    let hover = |h: &mut Headless, app: &mut App<MockSide>, at: Pos2| {
+        let _ = h.frame(app, vec![Event::PointerMoved(at)]);
+        let _ = h.frame(app, Vec::new());
+        app.snapshot().render.hover.at
+    };
+    let l = current(&h, &app);
+    // On the figure | Trajectory handle, its half over the canvas: no hover; a little further in, the figure's.
+    let on = on_handle(&l, Splitter::FigureTrajectory) - vec2(2.0, 0.0);
+    assert!(l.figure.contains(on) && l.splitter_at(on).is_some());
+    let on_it = hover(&mut h, &mut app, on);
+    assert_eq!(on_it, None);
+    let off = on - vec2(10.0, 0.0);
+    let figure = hover(&mut h, &mut app, off);
+    assert!(figure.is_some());
+    rejects("the figure's hover", || assert_eq!(figure, None));
+    // Dragging it past the canvas's minimum, the pointer over the canvas: still no hover, no SetField sent.
+    let _ = hover(&mut h, &mut app, l.legend.center());
+    let lines = app.console().len();
+    let from = on_handle(&l, Splitter::FigureTrajectory);
+    let into = pos2(l.figure.min.x + 100.0, l.figure.center().y);
+    let press = |pos, pressed| Event::PointerButton {
+        pos,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: NONE,
+    };
+    for events in [
+        vec![Event::PointerMoved(from)],
+        vec![press(from, true)],
+        vec![Event::PointerMoved(into)],
+        Vec::new(),
+        Vec::new(),
+    ] {
+        let _ = h.frame(&mut app, events);
+    }
+    let held = current(&h, &app);
+    assert!(
+        !held.handle(Splitter::FigureTrajectory).contains(into),
+        "the pointer off the held handle"
+    );
+    assert!(held.figure.contains(into));
+    assert_eq!(app.snapshot().render.hover.at, None);
+    assert_eq!(app.console().len(), lines, "no SetField while held");
+    let _ = h.frame(&mut app, vec![press(into, false)]);
 }
