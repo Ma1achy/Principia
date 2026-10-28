@@ -11,11 +11,11 @@
 // every class past it, and the default, every bit set, shows every class. A class not shown takes the mute transform,
 // `cat_mute` (colour_composition §1.4; REQ-COL-058, R-72).
 
-// The mute's OKLab lightness (colour_composition §1.4; REQ-COL-058): proposed (R-71, RQ-607), the midpoint, to two
+// The mute's OKLab lightness (colour_composition §1.4; REQ-COL-058): proposed (R-71, REQ-COL-162), the midpoint, to two
 // places, of the presentation views' invalid colour #141418 (L 0.193) and the "not yet" grey #4E4E4E (L 0.424).
 const CAT_MUTE_L: f32 = 0.31;
 
-// The mute's chroma factor (colour_composition §1.4; REQ-COL-058): proposed (R-71, RQ-607). A muted class keeps a
+// The mute's chroma factor (colour_composition §1.4; REQ-COL-058): proposed (R-71, REQ-COL-162). A muted class keeps a
 // quarter of its OKLab chroma, at its own hue.
 const CAT_MUTE_CHROMA: f32 = 0.25;
 

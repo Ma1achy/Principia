@@ -486,7 +486,7 @@ fn check_mute(mute: fn(Rgb) -> Rgb) -> [f64; 3] {
 #[test]
 fn categorical_filter_mute_is_the_section_1_4_transform() {
     let least = check_mute(palette::mute);
-    // colour_composition §1.4's figures (RQ-607): 0.119 from a shown class, 0.117 from #141418, 0.114 from #4E4E4E.
+    // colour_composition §1.4's figures (REQ-COL-162): 0.119 from a shown class, 0.117 from #141418, 0.114 from #4E4E4E.
     for (got, want, what) in [
         (least[0], 0.119, "a shown class"),
         (least[1], 0.117, "the invalid colour"),

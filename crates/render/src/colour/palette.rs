@@ -26,12 +26,12 @@ use ledger::schema::Scale;
 /// The palettes' WGSL, placed after the presentation layer at assembly.
 pub const WGSL: &str = include_str!("../../shaders/wgsl/lib/palette.wgsl");
 
-/// The mute's OKLab lightness (colour_composition §1.4; REQ-COL-058), `CAT_MUTE_L`: proposed (R-71, RQ-607), the
+/// The mute's OKLab lightness (colour_composition §1.4; REQ-COL-058), `CAT_MUTE_L`: proposed (R-71, REQ-COL-162), the
 /// midpoint, to two places, of the presentation views' invalid colour `#141418` (L 0.193) and the "not yet" grey
 /// `#4E4E4E` (L 0.424).
 pub const MUTE_L: f64 = 0.31;
 
-/// The mute's chroma factor (colour_composition §1.4; REQ-COL-058), `CAT_MUTE_CHROMA`: proposed (R-71, RQ-607).
+/// The mute's chroma factor (colour_composition §1.4; REQ-COL-058), `CAT_MUTE_CHROMA`: proposed (R-71, REQ-COL-162).
 pub const MUTE_CHROMA: f64 = 0.25;
 
 /// The minimum OKLab hue separation, in degrees, between consecutive golden-angle classes (dd_colouring §5 unit test

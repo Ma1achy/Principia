@@ -14917,8 +14917,6 @@
   rulings:
   - R-72
   milestone: M7
-  rq:
-  - RQ-607
 - id: REQ-COL-059
   area: COL
   kind: definition
@@ -17176,6 +17174,22 @@
   - R-585
   milestone: M8
   note: "R-585; the exact integer averaging and the app's own decode applied per R-369. Closed by TASK-M8-82. Fix round 2 of PR #287 (qa review 5638084688, Q4, applied per R-369): a downsampled fixture with exact ties and a round-half-up control; the expected hash computed independently of the code under test. *Was (verify):* \"cargo test -p render picture_ingest: a fixture PNG, a JPEG and a PNG with alpha ingest to texels whose SHA-256 equals the checked-in hash on every CI platform; a 3 × 2 source with known values gives the texels the integer formula gives; a one-pixel change in the source changes the hash; a 600 × 300 source fills the whole square, stretched; a fixture with an embedded profile records its conversion; a file over each limit is refused with a reason naming it and nothing is stored (controls: the platform's or a floating-point resampler, a fit with bars, a silent downscale of an over-limit file, and a hash that skips the texels, each fail)\""
+- id: REQ-COL-162
+  area: COL
+  kind: calibration
+  statement: "The categorical filter's mute values, the lightness L_mute and the chroma factor k_mute of the mute transform (colour_composition §1.4, REQ-COL-058), must be calibrated: proposed with their evidence by the task that needs them, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md. Provisional until then at TASK-M7-08's proposal, L_mute = 0.31 and k_mute = 0.25."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives L_mute and k_mute with their measurement: every muted class of the outcome palette, its OKLab-uniform variant, Okabe–Ito and the golden-angle palette of 96 classes at least τ = 0.101 in OKLab (R-429) from every other class of its palette, from the invalid colour #141418 and from the not-yet grey #4E4E4E (measured 0.119, 0.117 and 0.114 at 0.31 and 0.25), and in gamut; cargo test -p render categorical_filter_mute asserts the separations"
+  rulings:
+  - R-71
+  milestone: M7
+  note: "Applied per R-369 (the orchestrator's decision on TASK-M7-08's PR #322): R-71 makes a missing value a calibration requirement, and a calibration requirement is separate from a definition, so REQ-COL-058 keeps the transform's form (R-72) and this requirement its two values. Provisional at TASK-M7-08's proposal, L_mute = 0.31 (the midpoint, to two places, of #141418's OKLab L 0.193 and #4E4E4E's L 0.424) and k_mute = 0.25 (every muted colour of the measured palettes in gamut up to 0.36), until the M7 gate. Closed by TASK-M7-08."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
