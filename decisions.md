@@ -27423,6 +27423,12 @@ read:
   refuses none, and a saturated-link fixture refuses. Option (b), one value for both, is rejected; option (c), the
   analytic energy-normal projector, is noted for later, if the gap ever narrows (f32 or deep zoom), in render_gui_spec's
   steer bullet. TASK-M6-35 no longer waits for it.
+  *Added on the owner's update of 28 Oct 2026, which accepted #323 with both readings written into this text:* the
+  steer uses `J⁺`, this pseudo-inverse, where the steer's text (R-550, render_gui_spec's `q ∝ J⁻¹ e`) says `J⁻¹`; the
+  two are the same wherever the cut drops no singular value. Where `J` is singular, `J⁺` inverts only the non-zero
+  singular values, giving the minimum-norm least-squares step, which is zero along the null directions, so the steer
+  moves only in directions the chart can reach. What counts as zero is this ruling's cut: a singular value below
+  `c·σ₁`, `c` the calibration REQ-GUI-410; no other cutoff is set.
 - **RQ-603**, as revised, adds one principle to R-473 J1: where a chart holds a block by latent controls, its hidden
   coordinates are those controls; where it holds a block by a physical construction, its hidden coordinates are that
   construction's physical parameters, tilted and sliced by value as R-554 L5's `p_λ`. So (a) takes a3: the mass
@@ -27436,6 +27442,9 @@ read:
   REQ-CHART-062's and REQ-CHART-065's arms run over the whole registry. TASK-M2-36 splits: it builds the five charts
   the answer does not touch now, and TASK-M2-52 (new) builds the six on this ruling. The decoder contract's "Tilt on
   every chart" and chart_reference § 4.5 state it; R-473 carries the forward line.
+  *Added on the owner's update of 28 Oct 2026, as for RQ-601 above:* "ray-degenerate" in (c)'s "through the tilt's
+  existing ray-degenerate path" is read per cell: a cell with no momentum construction at the tilted value takes that
+  path, area weight 0 and no system, while the chart's own `system_image` (chart_decoder_contract Part 5) is unchanged.
 - **RQ-604** takes option (a). An unusable copy is `state ∈ {sim_failed, decode_failed}` or `budget_exhausted`, a bit
   test on `sample_descriptor`'s `state` and on `budget_word`, written into refinement policy § 1 and payload § 2.
   TASK-M5-32 (PR #318) applied option (a) of its physics review (5679524618, F4) meanwhile, per R-369, and can now read the
