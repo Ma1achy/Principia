@@ -27,9 +27,6 @@ ledger = { path = "../ledger" }
 # Controls reach kernel's tests through a dev-dependency on validation; they are integration tests in `tests/` (R-176,
 # R-187).
 [dev-dependencies]
-# The provenance a link swap changes is `SimConfig`'s `Links` (R-483; tests/link_swap.rs); the engine is already in
-# the test build through `validation`.
-engine = { path = "../engine" }
 validation = { path = "../validation" }
 # The read side's property tests (`tests/derived.rs`) draw their cases through the shared config, `validation::prop`.
 proptest = "1.11"

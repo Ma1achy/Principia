@@ -7,16 +7,16 @@
 //!   default selection and two others, T2 holds in physical units, `‖x − D(E(x))‖_phys ≤ ε_phys` at `x = D(z)`, and
 //!   every control encode returns is its registry entry's own inverse of the intermediate it read, bit for bit.
 //! - `link_swap_swaps_both_directions`: swapping one block's link (α's `sigmoid_alpha` for `tanh_alpha`, and every
-//!   block at once) changes the provenance in that block and no other, `SimConfig`'s `Links` (R-483: the provenance's
-//!   links) and the selection's link ids; the encode's control of that block changes and no other, bit for bit; T2
-//!   holds after the swap; and a swap of one direction only, encode under the old link and decode under the new, misses
-//!   `ε_phys`.
+//!   block at once) changes the provenance in that block and no other, as the kernel records it, the selection's link
+//!   ids (`Selection::LINK_IDS`, each its entry's `Link::NAME`); the encode's control of that block changes and no
+//!   other, bit for bit; T2 holds after the swap; and a swap of one direction only, encode under the old link and
+//!   decode under the new, misses `ε_phys`. The provenance as `SimConfig`'s `Links` records it (R-483) and its
+//!   canonical text is the other half, `crates/validation/tests/link_swap.rs`: `kernel` takes no dependency on `engine`
+//!   (systems_architecture §7, R-185, R-187).
 //!
 //! The samples are latent `z` with every control in `[−1.5, 1.5]`, clear of every link's clamp; the box is test data,
 //! not a register constant (REQ-SYS-082).
 
-use engine::contract::canonical;
-use engine::contract::sim_config::Links;
 use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::{encode, Encoded, SimplexClamp};
 use kernel::generated::links::{
@@ -122,43 +122,42 @@ negative_control!(
     }
 );
 
-/// The swap from `A` to `B` (`blocks` the `Links` blocks it changes, `controls` the latent controls they set): the
-/// provenance changes in those blocks and no other, the selection's link ids likewise, encode's controls change there
+/// The selection's link ids, each checked to be its control's entry's `Link::NAME`.
+fn link_ids<S: Selection>() -> [&'static str; 7] {
+    let names = [
+        <S::MassLink as Link<2, 3>>::NAME,
+        <S::AlphaLink as Link<1, 1>>::NAME,
+        <S::BetaLink as Link<1, 1>>::NAME,
+        <S::Q0Link as Link<1, 1>>::NAME,
+        <S::Q1Link as Link<1, 1>>::NAME,
+        <S::Q2Link as Link<1, 1>>::NAME,
+        <S::Q3Link as Link<1, 1>>::NAME,
+    ];
+    assert_eq!(
+        S::LINK_IDS,
+        names,
+        "the link ids are not the entries' names"
+    );
+    S::LINK_IDS
+}
+
+/// The swap from `A` to `B` (`slots` the selection's controls it changes, in `LINK_IDS`' order: mass, `α`, `β`, `q0` …
+/// `q3`; `controls` the latent controls they set): the provenance, the selection's link ids, changes in those slots
+/// and no other, encode's controls change there
 /// and no other at a sample where the two links differ, T2 holds under `B`, and a swap of the encode alone (encode under
 /// `A`, decode under `B`) misses `ε_phys`.
-fn check_swap<A, B>(blocks: &[&str], controls: &[usize])
+fn check_swap<A, B>(slots: &[usize], controls: &[usize])
 where
     A: Selection,
     A::MassLink: SimplexClamp,
     B: Selection,
     B::MassLink: SimplexClamp,
 {
-    let (a, b) = (
-        Links::of::<A>().expect("one momenta link"),
-        Links::of::<B>().expect("one momenta link"),
-    );
-    let changed: Vec<&str> = a
-        .blocks()
-        .into_iter()
-        .zip(b.blocks())
-        .filter(|((_, x), (_, y))| x != y)
-        .map(|((name, _), _)| name)
-        .collect();
+    let (a, b) = (link_ids::<A>(), link_ids::<B>());
+    let changed: Vec<usize> = (0..7).filter(|&k| a[k] != b[k]).collect();
     assert_eq!(
-        changed, blocks,
-        "the swap did not change the provenance in exactly its blocks"
-    );
-    assert_ne!(
-        canonical::to_string(&a).expect("a text"),
-        canonical::to_string(&b).expect("a text"),
-        "the swap did not change the provenance"
-    );
-    let ids: Vec<usize> = (0..7)
-        .filter(|&k| A::LINK_IDS[k] != B::LINK_IDS[k])
-        .collect();
-    assert!(
-        !ids.is_empty(),
-        "the swap did not change the selection's link ids"
+        changed, slots,
+        "the swap did not change the provenance in exactly its slots"
     );
     let z = [0.7, -0.4, 0.2, 0.1, -0.3, 0.5, 0.4, -0.2];
     let x = decode::<B, f64>(&Latent::new(z)).ic;
@@ -178,17 +177,14 @@ where
 
 #[test]
 fn link_swap_swaps_both_directions() {
-    check_swap::<Defaults, AlphaSwapped>(&["alpha"], &[0]);
-    check_swap::<AlphaSwapped, Defaults>(&["alpha"], &[0]);
-    check_swap::<Defaults, AllSwapped>(
-        &["mass", "alpha", "beta", "momenta"],
-        &[0, 1, 2, 3, 4, 5, 6, 7],
-    );
+    check_swap::<Defaults, AlphaSwapped>(&[1], &[0]);
+    check_swap::<AlphaSwapped, Defaults>(&[1], &[0]);
+    check_swap::<Defaults, AllSwapped>(&[0, 1, 2, 3, 4, 5, 6], &[0, 1, 2, 3, 4, 5, 6, 7]);
 }
 
 negative_control!(
     link_swap_swaps_both_directions,
     "a swap to the same links changes no provenance",
     expected = "the swap did not change the provenance",
-    check_swap::<Defaults, Defaults>(&["alpha"], &[0])
+    check_swap::<Defaults, Defaults>(&[1], &[0])
 );
