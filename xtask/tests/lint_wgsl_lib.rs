@@ -206,3 +206,46 @@ negative_control!(
     expected = "a library file calling its sibling does not lint",
     check_calls_a_sibling(&[])
 );
+
+/// A library file ending in a line comment with no newline, `a.wgsl`, before another, `b.wgsl`, whose helper
+/// `palette.wgsl` calls: `b.wgsl` must start on a line of its own, not inside `a.wgsl`'s comment.
+const A_NO_NEWLINE: &str = "fn shown(x: f32) -> f32 { return x; } // a, no newline";
+const B_TWICE: &str = "fn twice(x: f32) -> f32 { return 2.0 * x; }\n";
+const PALETTE_CALLS_BOTH: &str =
+    "// palette\nfn muted(x: f32) -> f32 {\n    return twice(shown(x));\n}\n";
+
+/// A workspace holding a clean prelude, `a.wgsl` as `a`, `b.wgsl` as `b` and `palette.wgsl` calling both lints clean.
+fn check_files_kept_apart(a: &str, b: &str) {
+    let (a_path, b_path) = (
+        format!("{LIB_DIR}/wgsl/lib/a.wgsl"),
+        format!("{LIB_DIR}/wgsl/lib/b.wgsl"),
+    );
+    let palette = palette_path();
+    let root = workspace(&[
+        (PRELUDE, PRELUDE_CLEAN),
+        (a_path.as_str(), a),
+        (b_path.as_str(), b),
+        (palette.as_str(), PALETTE_CALLS_BOTH),
+    ]);
+    let result = lint(&root);
+    let _ = std::fs::remove_dir_all(&root);
+    let reports = result.unwrap_or_else(|e| panic!("the library files ran together: {e}"));
+    assert!(
+        reports
+            .iter()
+            .any(|r| r.file == palette && r.findings.is_empty()),
+        "palette.wgsl was not linted clean: {reports:?}"
+    );
+}
+
+#[test]
+fn lint_wgsl_lib_files_kept_apart_without_a_final_newline() {
+    check_files_kept_apart(A_NO_NEWLINE, B_TWICE);
+}
+
+negative_control!(
+    lint_wgsl_lib_files_kept_apart_without_a_final_newline,
+    "the two files run together on one line, `b.wgsl`'s helper inside `a.wgsl`'s comment, fail",
+    expected = "the library files ran together",
+    check_files_kept_apart(&format!("{A_NO_NEWLINE}{B_TWICE}"), "")
+);
