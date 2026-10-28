@@ -77,12 +77,25 @@ jobs:
       # this job does not use (.NET, Android, GHC, the hosted tool cache, the docker images), logging the free space
       # before and after, as `ci.yml`'s `ci` job does. setup-python, below, fetches its Python afresh. Test
       # infrastructure only; a shard with no Rust in its diff skips it.
+      # Those left 112G free of the root disk's 145G, and PR #303's baseline still filled it (run 40581119007: every
+      # shard out of space, or a link killed by SIGBUS, with 3303 tests of kernel, ledger, render, validation and xtask
+      # to run). The runner has no second disk to move `target/` to (ubuntu-24.04: one 150G disk, `/mnt` on the root
+      # filesystem), so the rest of what this job never uses goes too: Swift, PowerShell, Chromium, the global node
+      # modules, the Azure, Google Cloud and AWS CLIs, Microsoft's and Google's /opt trees, pipx, the JVMs, Miniconda,
+      # Julia, vcpkg, Firefox and Kotlin; docker's build cache and volumes with its images; and the 3G swap file, which
+      # the job does not need with 16G of memory: 129G free after it, about 17 s more (measured on the image of 25 Oct).
       - name: Free runner disk
         if: steps.diff.outputs.rust == 'true'
         run: |
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
-          sudo docker image prune --all --force > /dev/null
+          sudo rm -rf /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules \
+            /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* \
+            /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /usr/local/aws-cli \
+            /usr/local/aws-sam-cli /usr/share/kotlinc
+          sudo docker system prune --all --force --volumes > /dev/null
+          sudo swapoff -a
+          sudo rm -f /swapfile
           df -h /
       # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
       # builds (R-169).
@@ -133,11 +146,22 @@ jobs:
       # build, until a link in a test's child build died with SIGBUS (the linker writes its output through a memory
       # map, which a full disk faults). With line tables only the baseline peaks at 46G of `target/` and passes. Every
       # cargo a test spawns inherits the variables, so the fixture and alias builds shrink alike.
+      # The linker also compresses each binary's debug sections (zlib), as `ci.yml`'s `ci-archive` does: the same line
+      # tables, in fewer bytes. PR #303's baseline, rerun on its own after the free-disk step above (run 40622137981),
+      # peaked at 130G of the disk's 145G used without it, 14G from full, and at 73G with it (`target/debug` 97G
+      # against 44G: the tests that run cargo on the workspace build into it), at about a third more wall-clock time
+      # (4536 s against 5996 s; both passed all 3303 tests).
+      # Every cargo a test spawns inherits RUSTFLAGS too. It is set on each step that builds, so no step rebuilds
+      # another's output, and never on the job: rust-cache, which computed its key in its own step, never sees it. An
+      # environment RUSTFLAGS overrides `.cargo/config.toml`'s rustflags, so it names the native build's
+      # `-Zmir-enable-passes=-GVN` itself (R-547, REQ-TOOL-188). Test infrastructure only.
       # The kernel's SPIR-V and WGSL, which the baseline's and each mutant's `toolchain_trivial_kernel` and xtask's
       # `build_kernel` tests read (TASK-M0-14): `cargo xtask build-kernel`, written as the cargo call the alias expands
       # to (.cargo/config.toml), since it is setup for the tests, like the Mesa install, not one of the gate's checks.
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo run --quiet --package xtask -- build-kernel
       # Each shard rebuilds and runs the unmutated baseline, then its share of the diff's mutants, dealt round-robin
       # so that one file's mutants, whose tests cost alike, spread over the shards. The baseline runs the tests of
@@ -154,6 +178,8 @@ jobs:
       - name: cargo mutants --in-diff --shard ${{ matrix.shard }}/8 (REQ-VAL-149 per-shard limit, R-376)
         id: run
         if: steps.diff.outputs.rust == 'true'
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         # REQ-VAL-149: 300 minutes per shard, confirmed by the human at the M0 gate (R-376; R-71, R-302): a ceiling
         # for unusually large diffs, not a target. Every PR's shards but #124's have ended in 52 minutes or less
         # (RQ-202); with each shard's setup the job stays under GitHub's 360-minute limit for a hosted job.
@@ -184,6 +210,8 @@ jobs:
           exit 1
       - name: cargo xtask mutants-check (R-202)
         if: steps.run.outputs.tested == 'true'
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
         run: cargo xtask mutants-check "$RUNNER_TEMP/mutants.out"
       - uses: actions/upload-artifact@v4
         if: always()

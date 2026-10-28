@@ -66,7 +66,7 @@ fn one_setfield_moving(out: &Out, plane: &Plane, what: &str) {
         SimField::Basis { q1, q2 } => {
             assert_ne!((q1, q2), (&plane.q1, &plane.q2), "{what}: the basis moved")
         }
-        SimField::Lock(_) | SimField::Horizon(_) => {
+        SimField::Lock(_) | SimField::Horizon(_) | SimField::Window(_) => {
             unreachable!("sim_field passes z₀ and the basis only")
         }
     }

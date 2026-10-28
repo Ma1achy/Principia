@@ -280,7 +280,9 @@ negative_control!(
 /// The sim key with the kernel variant `v`, every other group as at M0.
 fn config(v: KernelVariant) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -291,7 +293,7 @@ fn config(v: KernelVariant) -> SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: v,
         horizon: Horizon { t: 0.0 },

@@ -234,8 +234,16 @@ pub fn to_wgsl(spv: &[u8]) -> Result<String, String> {
         .map_err(|e| format!("naga could not write WGSL: {e}"))
 }
 
-/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`] and [`WGSL`] under its root.
+/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`] and [`WGSL`] under its root, and
+/// checks the fragment snippets against their translation ([`run_with`] without `bless`).
 pub fn run(manifest: &Path) -> Result<(), String> {
+    run_with(manifest, false)
+}
+
+/// [`run`], then the fragment snippets lifted from the same SPIR-V (`crate::fragment_wgsl`; R-116) checked against the
+/// checked-in files: `Err` where one differs, so a hand edit or a stale snippet fails the build; with `bless`, each that
+/// differs is written instead.
+pub fn run_with(manifest: &Path, bless: bool) -> Result<(), String> {
     let root = manifest
         .parent()
         .ok_or_else(|| format!("{}: no parent directory", manifest.display()))?;
@@ -283,6 +291,10 @@ pub fn run(manifest: &Path) -> Result<(), String> {
         }
         std::fs::write(&out, bytes).map_err(|e| format!("{}: {e}", out.display()))?;
         println!("build-kernel: wrote {path} ({} B)", bytes.len());
+    }
+    let fresh = crate::fragment_wgsl::snippets(&spv)?;
+    for path in crate::fragment_wgsl::check(root, &fresh, bless)? {
+        println!("build-kernel: re-emitted {path}");
     }
     Ok(())
 }
