@@ -246,7 +246,7 @@ impl Links {
         })
     }
 
-    /// Each block with its `Links` field's name, in [`BLOCKS`]' order.
+    /// Each block with its `Links` field's name, in `BLOCKS`' order.
     pub fn blocks(&self) -> [(&'static str, &LinkChoice); 4] {
         [
             (BLOCKS[0].0, &self.mass),
