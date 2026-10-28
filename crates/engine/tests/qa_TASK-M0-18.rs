@@ -28,7 +28,12 @@ fn sim() -> SimConfig {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice {
+            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            frame: engine::contract::sim_config::SliceFrame::along(
+                engine::contract::sim_config::Z_Q3,
+            ),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
@@ -60,7 +65,7 @@ fn render() -> RenderState {
 const SIM_TEXT: &str =
     "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
-\"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{}}";
+\"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}}}";
 const RENDER_TEXT: &str = "{\"hover\":{\"at\":null},\
 \"overlays\":{\"burrau_lattice\":false,\"class_edges\":false,\"depth_colouring\":false,\"energy_drift\":false,\
 \"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,\"priority_heatmap\":false,\
@@ -114,7 +119,7 @@ validation::negative_control!(
     "the declaration-order text must fail the canonical-text check",
     expected = "is not its groups in byte order",
     check_skeleton(
-        "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{},\
+        "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT

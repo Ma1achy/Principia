@@ -48,7 +48,12 @@ fn sim() -> SimConfig {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice {
+            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            frame: engine::contract::sim_config::SliceFrame::along(
+                engine::contract::sim_config::Z_Q3,
+            ),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
@@ -168,7 +173,8 @@ enum Rule {
 /// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
 /// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon, and, since its Stain editor
 /// (TASK-M6-29), the stain graph, and, since `SimConfig`'s chart group holds a nonlinear chart's window (TASK-M2-21), the
-/// window; each history entry is the edit restoring the value before and the edit itself.
+/// window, and, since the Tilt section's targets (TASK-M6-38, R-457 E3), the slice frame; each history entry is the edit
+/// restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
@@ -179,6 +185,7 @@ struct Broken {
     horizon: Horizon,
     stain_graph: StainGraph,
     window: engine::contract::sim_config::Window,
+    frame: engine::contract::sim_config::SliceFrame,
     undo: Vec<(Edit, Edit)>,
     redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
@@ -198,6 +205,7 @@ impl Broken {
             horizon: sim().horizon,
             stain_graph: StainGraph::new(),
             window: sim().chart.window,
+            frame: sim().slice.frame,
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -239,6 +247,16 @@ impl Broken {
             Edit::Render(RenderField::StainGraph(g)) => Edit::Render(RenderField::StainGraph(
                 std::mem::replace(&mut self.stain_graph, g.clone()),
             )),
+            // gui_state_contract §2: the slice frame, with the basis where the same pick changes it, one edit (R-457 E3).
+            Edit::Sim(SimField::SliceFrame { frame, basis }) => Edit::Sim(SimField::SliceFrame {
+                frame: std::mem::replace(&mut self.frame, *frame),
+                basis: basis.map(|(q1, q2)| {
+                    (
+                        std::mem::replace(&mut self.plane.q1, q1),
+                        std::mem::replace(&mut self.plane.q2, q2),
+                    )
+                }),
+            }),
         }
     }
 
@@ -274,6 +292,27 @@ impl Broken {
                     graph_text(b),
                     graph_text(a)
                 ),
+                // The slice frame's line as the conformance suite reads it. gui_state_contract §2 says only that the line
+                // names the path and the values before and after; the spelling of the three indices is the suite's
+                // (TASK-M6-38), which no document gives.
+                (
+                    Edit::Sim(SimField::SliceFrame {
+                        frame: b,
+                        basis: None,
+                    }),
+                    Edit::Sim(SimField::SliceFrame {
+                        frame: a,
+                        basis: None,
+                    }),
+                ) => {
+                    let text = |f: &engine::contract::sim_config::SliceFrame| {
+                        format!(
+                            "(normal {}, tilt_x {}, tilt_y {})",
+                            f.normal, f.tilt_x, f.tilt_y
+                        )
+                    };
+                    format!("SetField Slice.frame {} → {}{marker}", text(b), text(a))
+                }
                 (b, a) => format!("SetField {b:?} → {a:?}{marker}"),
             },
         }
@@ -320,6 +359,7 @@ impl EngineInterface for Broken {
                 chart: Chart {
                     window: self.window,
                 },
+                slice: Slice { frame: self.frame },
                 ..sim()
             },
             render: RenderState {

@@ -102,6 +102,9 @@ fn view(t1: f64, t2: f64, gamma: f64, sigma: f64) -> View {
         a,
         b,
         d: SLICE_AXIS,
+        // Both targets the slice axis, the slice frame's defaults (R-457 E4): the one shared target this task tested.
+        x: SLICE_AXIS,
+        y: SLICE_AXIS,
         scale: sigma,
         tau1: t1.to_radians(),
         tau2: t2.to_radians(),

@@ -2,9 +2,10 @@
 //!
 //! - REQ-GUI-095: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure ·
 //!   4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer, with Manifold view's sub-scopes (Chart, Navigate,
-//!   Centre z₀, Slice & tilt) reached with Enter"; verify: "Tab / Shift+Tab cycles the eight scopes in order, the
+//!   Slice centre, Tilt) reached with Enter"; verify: "Tab / Shift+Tab cycles the eight scopes in order, the
 //!   footer last; Enter on Manifold view enters Chart" (R-405 added the footer, big scope 8; TASK-M6-28's qa commit
-//!   changed this file from seven to eight, R-290).
+//!   changed this file from seven to eight, R-290; R-457 renamed Centre z₀ and Slice & tilt, and TASK-M6-38's qa
+//!   commit renamed them here, R-457 E9).
 //! - REQ-GUI-169: on the mock, Tab and Shift+Tab between the big scopes, Enter into a scope and Esc out of it, arrows
 //!   between siblings and on a focused value, Shift ×10 and Alt ×0.1 steps, the focus ring, the breadcrumb, `?`
 //!   showing the shortcuts over everything (Esc closes it), and each later screen joining the scope tree.
@@ -50,8 +51,8 @@ const BIG: [&str; 8] = [
     "Legend",
     "Footer",
 ];
-/// §G3's Manifold view sub-scopes, in order.
-const MANIFOLD: [&str; 4] = ["Chart", "Navigate", "Centre z₀", "Slice & tilt"];
+/// §G3's Manifold view sub-scopes, in order (R-457's names).
+const MANIFOLD: [&str; 4] = ["Chart", "Navigate", "Slice centre", "Tilt"];
 /// §G3's breadcrumb separator, from its example "Manifold view › Navigate › zoom".
 const SEP: &str = " › ";
 
@@ -295,7 +296,7 @@ fn qa_mock_keyboard_tab_from_a_sub_scope_goes_to_the_next_big_scope() {
     let path = focus_labels(&app);
     check_path(&path, &["Figure"], "Tab from Manifold view › Navigate");
     rejects("a Tab that stays among the sub-scopes", || {
-        check_path(&path, &["Manifold view", "Centre z₀"], "Tab")
+        check_path(&path, &["Manifold view", "Slice centre"], "Tab")
     });
 }
 
