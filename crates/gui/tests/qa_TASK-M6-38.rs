@@ -117,7 +117,7 @@ fn old_map(a: usize, b: usize, d: usize, t1: f64, t2: f64, g: f64, s: f64) -> (Z
 }
 
 /// The view on the plane `(a, b)` with the normal `d`, targets `x`, `y`, at `(τ₁, τ₂, γ)` in degrees and scale `σ`.
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)] // the view's nine coordinates; a struct of them would be `View` itself, built here
 fn view(
     a: usize,
     b: usize,
