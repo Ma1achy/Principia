@@ -67,9 +67,11 @@ def state(a):
     f = (1 - a[4]) + a[4] / R0
     Rm = rot(-phi)
     S = f * (P0 - c) @ Rm.T
-    Vrel = f ** -0.5 * (V0 - vcom0) @ Rm.T
-    Vc = f ** -0.5 * (vcom0 * (1 - a[1])) @ Rm.T
-    m = M0 * ((1 - a[3]) + a[3] / M0.sum())
+    # mass gauge: m -> mu*m keeps the same orbit only if v -> sqrt(mu)*v (time rescales by mu^-1/2)
+    mu = (1 - a[3]) + a[3] / M0.sum()
+    Vrel = f ** -0.5 * mu ** 0.5 * (V0 - vcom0) @ Rm.T
+    Vc = f ** -0.5 * mu ** 0.5 * (vcom0 * (1 - a[1])) @ Rm.T
+    m = M0 * mu
     comS = f * (com0 * (1 - a[0])) @ Rm.T
     oldo = f * (-c) @ Rm.T
     return dict(S=S, Vrel=Vrel, Vc=Vc, m=m, comS=comS, oldo=oldo, f=f, Rm=Rm, c=c)
