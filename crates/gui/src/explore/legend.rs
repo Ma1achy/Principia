@@ -6,8 +6,10 @@
 //! through the CPU mirror of `debug_not_yet`, never as one flat colour (R-399); the debug view's "Debug" key's entries
 //! are drawn as the hatch, through the CPU mirror of `debug_invalid`, and as the NaN / Inf style, through
 //! `debug_nan_inf`'s, each as the style, never one colour (R-136, R-467 D5; render_gui_spec §G6), and each with its
-//! pixel count beside its share. Keys taller than the panel scroll, held at the bottom so the last key, the debug view's
-//! when it is on, stays in view (applied per R-369: §G6 does not say how keys past the panel's height are shown). It is
+//! pixel count beside its share. The rows are compact enough that every key, the debug view's included, fits the
+//! band's default height (§G2: 196 px; 01_main.png's), so turning the debug view on adds its key under the others and
+//! moves nothing above it (R-467 D5; applied per R-369: §G6 gives no row heights). Only keys taller than a smaller panel
+//! scroll, from the top, the first key's title in view, with the scroll bar always shown (applied per R-369). It is
 //! called "Legend", never "Fate".
 //! It is read-only: the keyboard reaches it, and Enter on it does nothing (§G3; R-409 G3).
 
@@ -27,17 +29,21 @@ pub const TITLE: &str = "Legend";
 /// The note at the title's right, as 01_main.png's.
 pub const NOTE: &str = "generated from the stain";
 /// The panel's margin, in points (a look choice, R-390).
-pub const MARGIN: f32 = 12.0;
+pub const MARGIN: f32 = 10.0;
+/// The title row's height, "Legend" and its note, in points (a look choice, R-390).
+pub const TITLE_H: f32 = 22.0;
 /// A swatch's side, in points (a look choice, R-390).
-pub const SWATCH: f32 = 12.0;
-/// A categorical row's height, in points (a look choice, R-390).
-pub const ROW_H: f32 = 15.0;
+pub const SWATCH: f32 = 10.0;
+/// A categorical row's height, and a key title's, in points (a look choice, R-390).
+pub const ROW_H: f32 = 12.0;
+/// A key title's font size, in points, monospace (a look choice, R-390).
+pub const KEY_TITLE_SIZE: f32 = 10.0;
 /// The columns a categorical key's entries are laid out in, filled row by row (a look choice, R-390).
 pub const COLUMNS: usize = 2;
 /// The bar's height, in points (a look choice, R-390).
-pub const BAR_H: f32 = 12.0;
+pub const BAR_H: f32 = 10.0;
 /// The gap between keys, in points.
-pub const KEY_GAP: f32 = 6.0;
+pub const KEY_GAP: f32 = 4.0;
 
 /// Joins the Legend to `tree`: one big scope, read-only, nothing inside (§G3).
 pub fn register(tree: &mut ScopeTree) {
@@ -190,7 +196,7 @@ pub fn key_height(key: &LegendKey) -> f32 {
 
 /// The rects the keys of `legend` are drawn in, inside `body`, top to bottom, under the title row.
 pub fn key_rects(legend: &Legend, body: Rect) -> Vec<Rect> {
-    let mut y = body.min.y + ROW_H * 1.6;
+    let mut y = body.min.y + TITLE_H;
     legend
         .keys
         .iter()
@@ -239,19 +245,22 @@ pub fn show(ui: &mut Ui, rect: Rect, legend: &Legend, keyboard: &mut Keyboard) {
         }
         return;
     }
-    // Taller than the panel, so there is a key: the keys scroll under the title, held at the bottom.
+    // Taller than the panel, so there is a key: the keys scroll under the title, from the top, the scroll bar always
+    // drawn (thin, not egui's floating bar, which is hidden until hovered) so the person sees there is more.
     let top = rects[0].min.y;
     let view = Rect::from_min_max(pos2(body.min.x, top), body.max);
     let mut keys = ui.new_child(UiBuilder::new().max_rect(view));
+    keys.style_mut().spacing.scroll = egui::style::ScrollStyle::thin();
     egui::ScrollArea::vertical()
         .id_salt("legend keys")
-        .stick_to_bottom(true)
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysVisible)
         .show(&mut keys, |ui| {
-            let (rect, _) =
-                ui.allocate_exact_size(vec2(view.width(), bottom - top), egui::Sense::hover());
+            let width = ui.available_width();
+            let (rect, _) = ui.allocate_exact_size(vec2(width, bottom - top), egui::Sense::hover());
             let shift = rect.min - view.min;
             for (key, area) in legend.keys.iter().zip(rects) {
-                draw_key(ui, area.translate(shift), key);
+                let area = Rect::from_min_size(area.min + shift, vec2(width, area.height()));
+                draw_key(ui, area, key);
             }
         });
 }
@@ -301,7 +310,7 @@ fn key_title(ui: &mut Ui, at: Rect, text: &str) {
     put(
         ui,
         Rect::from_min_size(at.min, vec2(at.width(), ROW_H)),
-        egui::Label::new(RichText::new(text).weak().monospace()),
+        egui::Label::new(RichText::new(text).weak().monospace().size(KEY_TITLE_SIZE)),
         egui::Align::Min,
     );
 }
