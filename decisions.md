@@ -27490,7 +27490,7 @@ note), REQ-GUI-200 (statement, rulings, source, note), REQ-GUI-346 (rulings, not
 (statement, verify, rulings, source, note); adds REQ-GUI-410.
 
 ## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
-*Withdrawn in full, 28 Oct 2026, by the owner (the note below).*
+*Withdrawn in full, 28 Oct 2026, by the owner (its entry in decisions.md quotes the owner).*
 *Still in force: none of it; R-357 stands as it was before this ruling.*
 *Withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud session stuff started"; its workflow edits to
 CLAUDE.md and plan/OPERATIONS.md were reverted to main's text before merge (the owner's ruling of 28 Oct 2026, to be
