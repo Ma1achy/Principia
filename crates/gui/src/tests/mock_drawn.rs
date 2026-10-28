@@ -506,6 +506,45 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
     });
 }
 
+/// The "Debug" key drawn (R-467 D5), as View › Debug view adds it: its three entries, the hatch twice and the NaN / Inf
+/// style, each swatch its style's mesh pixel by pixel, and each value the count and the share.
+#[test]
+fn mock_legend_keys_drawn_debug_key() {
+    use crate::mock::invalid::{Flagged, Inside};
+    use crate::mock::legend::{debug_key, DEBUG};
+    let flagged = Flagged {
+        figure: 1000,
+        flagged: 250,
+        inside: Some(Inside {
+            count: 40,
+            pixel: [3, 4],
+            st: [0.5, 0.5],
+        }),
+    };
+    let legend = engine::contract::legend::Legend {
+        keys: vec![debug_key(&flagged)],
+    };
+    let rect = Rect::from_min_size(pos2(100.0, 100.0), vec2(324.0, 200.0));
+    let body = rect.shrink(MARGIN);
+    assert!(!crate::explore::legend::overflows(&legend, body));
+    let LegendKey::Categorical { title, entries } = &legend.keys[0] else {
+        panic!()
+    };
+    assert_eq!(title, DEBUG);
+    let styles: Vec<_> = entries.iter().map(|e| e.swatch).collect();
+    assert_eq!(
+        styles,
+        [SwatchStyle::Hatch, SwatchStyle::Hatch, SwatchStyle::NanInf]
+    );
+    let drawn = legend_shapes(&legend, rect, PIXELS_PER_POINT);
+    let words = texts(&drawn);
+    let area = key_rects(&legend, body)[0];
+    check_entries(&drawn, &words, area, entries);
+    rejects("the key checked a row below where it is drawn", || {
+        check_entries(&drawn, &words, area.translate(vec2(0.0, ROW_H)), entries)
+    });
+}
+
 // --- Time's ticks ----------------------------------------------------------------------------------------------------
 
 #[test]
@@ -718,10 +757,15 @@ fn mock_legend_keys_drawn_geometry_in_numbers() {
     assert!(one.indices.is_empty());
 }
 
-/// The texts `legend::show` paints for `legend` in `rect`, on a bare context, in the third frame, a scroll area having
-/// settled.
-fn legend_texts(legend: &engine::contract::legend::Legend, rect: Rect) -> Vec<(String, Rect)> {
+/// The shapes `legend::show` paints for `legend` in `rect` at `pixels_per_point`, on a bare context, in the third
+/// frame, a scroll area having settled.
+fn legend_shapes(
+    legend: &engine::contract::legend::Legend,
+    rect: Rect,
+    pixels_per_point: f32,
+) -> Vec<Shape> {
     let ctx = egui::Context::default();
+    ctx.set_pixels_per_point(pixels_per_point);
     let mut keyboard = crate::keyboard::Keyboard::new();
     let raw = egui::RawInput {
         screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(2000.0, 2000.0))),
@@ -747,7 +791,12 @@ fn legend_texts(legend: &engine::contract::legend::Legend, rect: Rect) -> Vec<(S
     for clipped in &out.shapes {
         flatten(&clipped.shape, &mut flat);
     }
-    texts(&flat)
+    flat
+}
+
+/// The texts `legend::show` paints for `legend` in `rect`, at one pixel per point ([`legend_shapes`]).
+fn legend_texts(legend: &engine::contract::legend::Legend, rect: Rect) -> Vec<(String, Rect)> {
+    texts(&legend_shapes(legend, rect, 1.0))
 }
 
 #[test]

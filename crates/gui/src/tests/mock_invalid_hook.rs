@@ -310,3 +310,37 @@ fn mock_invalid_hook_past_the_square_warns_nothing() {
         assert!(warnings(&app).is_empty())
     });
 }
+
+/// The figure's clip in its viewport's own pixels: `of` measures it from the window's corner, so a window whose
+/// corner is not the screen's origin clips the same pixels as one at the origin.
+fn check_clip_from_the_window(view: &FigureView, at_origin: &FigureView) {
+    assert_eq!(view.size, at_origin.size, "the viewport's size");
+    assert_eq!(
+        view.clip, at_origin.clip,
+        "the clip, measured from the window's corner"
+    );
+}
+
+#[test]
+fn mock_invalid_hook_clip_measured_from_the_window() {
+    use eframe::egui::{pos2, vec2, Rect};
+
+    use crate::layout::Layout;
+
+    let size = vec2(1080.0, 675.0);
+    let ppp = PIXELS_PER_POINT;
+    let background = [20, 20, 24];
+    let origin = Layout::new(Rect::from_min_size(pos2(0.0, 0.0), size), ppp);
+    let offset = Layout::new(Rect::from_min_size(pos2(40.0, 30.0), size), ppp);
+    for shown in [true, false] {
+        let at_origin = FigureView::of(&origin, shown, ppp, background);
+        let view = FigureView::of(&offset, shown, ppp, background);
+        check_clip_from_the_window(&view, &at_origin);
+        rejects("a clip measured from the screen's origin", || {
+            let mut from_screen = view;
+            from_screen.clip[0] += (40.0 * ppp) as u32;
+            from_screen.clip[1] += (30.0 * ppp) as u32;
+            check_clip_from_the_window(&from_screen, &at_origin);
+        });
+    }
+}
