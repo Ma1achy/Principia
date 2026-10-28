@@ -27692,9 +27692,18 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 `rulings/2026-10-28`, none yet merged; this is the next free number after them.
 
 ## R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are "not evaluated within cap", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*
+*Withdrawn in part, 28 Oct 2026, by the owner: its agent-count clause (two local agents at most) and its cloud clauses (docs agents, qa's test writing and reviews in cloud sessions; the audit as a cloud scheduled task).*
+*Still in force: all of it but those clauses; R-262, R-277, R-357 and R-391 stand as they were before it, and the
+weekly consistency audit stays adopted, report-only and never blocking, run on demand when the owner asks (the owner's
+ruling of 28 Oct 2026 on its RQ-605 clause, below).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
 session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions (the owner's ruling of
 28 Oct 2026, to be ported as a ruling of its own).*
+*Its RQ-605 clause (the weekly consistency audit), 28 Oct 2026, the owner's ruling, verbatim: "RQ-605 weekly audit:
+on demand only for now. No scheduled cloud task and no scheduled local job; run it when I ask (e.g. before a release or
+milestone gate). Record this against R-636's RQ-605 clause as the owner's 28 Oct ruling. If the audit can run as a
+plain GitHub Actions scheduled workflow (no Claude session, no Mac), tell me and I may switch it to that later."
+Applied in `plan/OPERATIONS.md` § "The weekly consistency audit (R-636)".*
 *28 Oct 2026 · the owner's message of that day; applied in R-633's text (on PR #323's branch) and its forward line,
 R-391's, R-277's, R-262's and R-357's forward lines, `plan/OPERATIONS.md` § "Where the build loop runs (R-357)", §
 "The weekly consistency audit (R-636)" (new), § "Resources" and § "Logs", `REVIEW_QUEUE.md` (RQ-583, RQ-592, RQ-602 and RQ-605 closed; RQ-608 new; RQ-577, RQ-591, RQ-598 and RQ-599
