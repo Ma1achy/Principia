@@ -26813,49 +26813,116 @@ instruction for the skeleton: the skeleton tries the worker layout and measures 
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
 
-## R-635 — Gemini Code Assist and Codex review PRs as advisory reviewers for a one-week trial, never merge gates; every finding is verified, fixed or answered with its traced reason; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
+## R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
 
-*28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `.gemini/styleguide.md` and
-`.gemini/config.yaml` (new), `xtask/tests/ai_review_rules.rs` (new), `REVIEW_QUEUE.md` (RQ-605, new) and
-`plan/rule_groups.yaml`; the trial is run by the orchestrator*
+*28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `GEMINI.md` and
+`.github/copilot-instructions.md` (new), `.github/workflows/gemini-dispatch.yml` and
+`.github/workflows/gemini-review.yml` (new), `xtask/tests/ai_review_rules.rs` (new), `CLAUDE.md` (new: § "Working
+with review"), `REVIEW_QUEUE.md` (RQ-605, new), `scripts/cloud-setup.sh` and `xtask/tests/cloud_setup.rs` (the
+review action installs nothing a cloud machine needs) and `plan/rule_groups.yaml`; the trial is run by the
+orchestrator*
 
-The owner's request of 28 Oct 2026 sets up two independent AI reviewers on PRs, Gemini Code Assist and Codex, whose
-apps he installs on the repository himself; its item 4, verbatim, asked to be recorded here as an R-369 note:
+The owner's instructions of 28 Oct 2026 set up three independent AI reviewers on PRs: Codex, whose automatic review he
+has turned on; Gemini through Google's Gemini CLI GitHub Action, reading the repository secret `GEMINI_API_KEY` he has
+added (the Gemini Code Assist app is not used: its free version was shut down in July 2026); and GitHub Copilot code
+review, which he has turned on (automatic on his PRs, new pushes off, drafts off, effort Balanced). The first
+request's item 5, verbatim, asked to be recorded here as an R-369 note:
 
-> 4. decisions.md, as an R-369 note:
->    - Both reviewers are advisory for a one-week trial, not merge gates.
->    - Every finding is verified as CLAUDE.md's review rules require: fixed, or answered with the traced reason. Two
->      bots agreeing is not verification.
->    - After the week, report per reviewer: findings raised, true positives our own reviewers missed, false positives,
->      noise per PR, and where the two disagreed. I then decide: keep one, keep both, or gate on one.
+> 5. decisions.md, as an R-369 note: a one-week advisory trial of Codex and Gemini CLI, as reviewers only, never merge
+> gates. Every finding is verified as CLAUDE.md's review rules require: fixed, or answered with the traced reason. Two
+> bots agreeing is not verification. After the week, report per reviewer: findings raised, true positives our own
+> reviewers missed, false positives, noise per PR, Gemini's quota use per review, and where the two disagreed. I then
+> decide: keep one, keep both, or gate on one.
 
-and its last line: "Don't change any existing CI gate or review step."
+The Copilot instruction adds the third reviewer: "The trial covers three reviewers: Codex, Gemini CLI and Copilot. The
+report gives each one's findings, true positives our reviewers missed, false positives, noise per PR, cost (Gemini's
+quota per review, and Copilot's AI credits if the billing page shows them), and where they disagreed." The bot-findings
+rule, verbatim, asked to be written here as an R-369 note and into `CLAUDE.md`:
+
+> Bot review findings (Codex, Gemini CLI) must be acted on. The bots never block, but their findings are not optional
+> reading.
+>
+> 1. Before merging any PR: check for Codex and Gemini reviews. Wait up to 15 minutes after the PR opens (or after an
+>    `@codex review` / `@gemini-cli /review` you requested) for them to arrive. If none arrives in that window, or the
+>    bot errored or is out of quota, merge without it and note "no bot review" in the PR. Never wait longer.
+>
+> 2. Every finding that arrived is handled before merge, one of three ways, with a reply on its thread:
+>    - Fixed: the commit that fixes it, then resolve the thread.
+>    - Not a defect: the traced reason (the real caller or input you checked, why the path can't happen, or the doc or
+>      ruling that makes it correct), then resolve the thread.
+>    - Not this PR's: a queue entry or a follow-up task named in the reply, then resolve the thread.
+>    No finding is left silent, and none is resolved without a reply.
+>
+> 3. Verify every finding as CLAUDE.md's review rules already require: trace it to a real caller or input before
+>    fixing. Two bots agreeing is not verification. A finding that contradicts a ruling, BRIEF.md or the physics is
+>    answered with the source, not "fixed" into a regression.
+>
+> 4. A finding that claims a physics or invariant break (P0/CRITICAL) goes to the physics reviewer for the call before
+>    merge, even if you think it is wrong. If the physics reviewer disagrees with the bot, say so on the thread with the
+>    reason, and log it for the trial report.
+>
+> 5. A review that lands after a PR merged: handle its findings the same way, as a follow-up PR or queue entry. Don't
+>    ignore it because the PR is closed.
+>
+> 6. Keep a tally per PR for the trial report: findings per bot, fixed / not a defect / not this PR's, and which ones
+>    our own reviewers had already caught.
+
+The Copilot instruction extends that rule to Copilot "exactly as it covers Codex and Gemini: the 15-minute window,
+every finding handled with a reply (fixed / not a defect / not this PR's), P0 claims to the physics reviewer, late
+reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a reviewer on the PR."
 
 *What it decides:*
-- **Advisory, for one week from the day both apps first review a PR.** Neither reviewer is a merge gate: a PR merges
-  on its named reviewers' approvals and green CI as before (R-369), whatever the AI reviewers say. `reviews-complete`
-  doesn't count them, and no workflow, gate or reviewer file changes.
-- **Every finding is verified**, as `CLAUDE.md`'s review rules require: fixed, or answered on the PR with the traced
-  reason it doesn't hold. Two bots agreeing is not verification.
+- **Advisory, for one week from the day all three reviewers first review a PR.** None is a merge gate, and none is a
+  required status check or a required review: a PR merges on its named reviewers' approvals and green CI as before
+  (R-369), whatever the AI reviewers say. `reviews-complete` doesn't count them (it reads only `VERDICT:` reviews), and
+  no existing gate, workflow or reviewer file changes. Copilot's reviews are comment-only.
+- **Waited for 15 minutes at most, never longer:** before a merge the orchestrator checks for the three bots' reviews,
+  waiting up to 15 minutes from the PR's opening (or from a re-review it asked for: `@codex review`,
+  `@gemini-cli /review`, or Copilot re-requested as a reviewer). One that doesn't arrive in that window, errors or is
+  out of quota is passed over, and the PR notes "no bot review". The Gemini job is continue-on-error, and a missing key,
+  a quota or rate-limit error or an outage never turns a PR red or holds a merge.
+- **Every finding that arrived is handled before merge,** with a reply on its thread, then the thread resolved: fixed
+  (the commit named), not a defect (the traced reason: the real caller or input checked, or the doc or ruling that
+  makes it correct), or not this PR's (a queue entry or follow-up task named). None is left silent; none is resolved
+  without a reply. Each is verified by tracing it to a real caller or input first, as `CLAUDE.md`'s review rules
+  require; two bots agreeing is not verification, and a finding that contradicts a ruling, the corpus or the physics is
+  answered with its source, never "fixed" into a regression.
+- **A P0 / CRITICAL claim goes to the physics reviewer** for the call before merge, even when the orchestrator thinks it
+  wrong; a disagreement is said on the thread with its reason and logged for the trial report.
+- **A review that lands after the merge** is handled the same way, as a follow-up PR or a queue entry.
+- **A tally per PR** for the trial report: findings per bot; fixed, not a defect or not this PR's; and which our own
+  reviewers had already caught.
 - **After the week, a report per reviewer** to the owner: findings raised, true positives our own reviewers missed,
-  false positives, noise per PR, and where the two disagreed. He then decides: keep one, keep both, or gate on one.
-- **The brief is one text.** `AGENTS.md` § "Code Review Rules" is canonical (Codex reads `AGENTS.md`);
-  `.gemini/styleguide.md` carries a copy for Gemini Code Assist, and `xtask/tests/ai_review_rules.rs` fails if the
-  copy differs from it by a byte, run by CI's existing xtask jobs.
+  false positives, noise per PR, cost (Gemini's quota per review, the request count each run logs; Copilot's AI credits
+  if the billing page shows them), and where they disagreed. He then decides: keep one, keep several, or gate on one.
+- **The brief is one text, three readers.** `AGENTS.md` § "Code Review Rules" is canonical (Codex reads `AGENTS.md`);
+  `GEMINI.md` carries a copy for the Gemini CLI and `.github/copilot-instructions.md` one for Copilot, and
+  `xtask/tests/ai_review_rules.rs` fails if either copy differs from it by a byte, run by CI's existing xtask jobs.
 
 *Applied per R-369 (the orchestrator's decisions):*
-- **The severity rule is the owner's addendum of the same day**, which replaces the request's: a physics or invariant
-  break is P0 / CRITICAL; any correctness bug (a wrong result, a crash, a panic, a NaN path, an off-by-one, a wrong
-  index, a race) is P1 / HIGH, as are a test with no control arm and the "Docs and plan consistency" checks; only
-  style and naming stay below the threshold. Gemini Code Assist's threshold is `HIGH`; Codex posts P0 and P1 only.
-- **Whole-corpus consistency is not a PR reviewer's job** (the addendum, item 3): the weekly audit by our own agents
+- **The severity rule is the request's:** a physics or invariant break is P0 / CRITICAL; a correctness bug, a test with
+  no control arm, or doc and plan drift is P1 / HIGH; style and naming stay below and are not reported.
+- **Whole-corpus consistency is not a PR reviewer's job:** the weekly audit by our own agents (the request's item 6)
   is proposed as RQ-605, not built.
 - **Where the request names something this repository doesn't have,** the nearest real thing is named, and the PR
   says so: `BRIEF.md` doesn't exist, so the authority line points at `CLAUDE.md`, at `decisions.md` over the `docs/`
-  corpus (R-1) and at `docs/read_first/principia_INDEX.md`; "the reference implementation" is prin-rs, checked
-  through the contracts that transcribe it, never through `docs/reference/` (R-159); `Decision::ALL` has no
-  counterpart yet, so the rule names the outcome enums' `State::ALL` and `Detail::ALL` (`crates/ledger/src/display.rs`)
-  and the refinement `Decision` once built.
+  corpus (R-1) and at `docs/read_first/principia_INDEX.md`, and the bot-findings rule's "BRIEF.md" is read as that
+  corpus; "the reference implementation" is prin-rs, checked through the contracts that transcribe it, never through
+  `docs/reference/` (R-159); `Decision::ALL` has no counterpart yet, so the rule names the outcome enums' `State::ALL`
+  and `Detail::ALL` (`crates/ledger/src/display.rs`) and the refinement `Decision` once built; "the three classes" of
+  the reduction rule has no definition in the corpus, so that line cites the Totality wall (canonical spec §9 item 9,
+  REQ-VAL-080) instead; no `shots/` or `results/` directory exists, and the rules naming them are kept as written.
+- **The Gemini workflow** is the example's dispatch and pr-review pair, cut to the review route, the action pinned by
+  commit (v0.1.22), the Gemini CLI pinned (the action's default is `latest`) and the model a GA Flash. Its triggers
+  are a PR opened, or reopened, from this repository, and an `@gemini-cli /review` comment on a PR from an OWNER,
+  MEMBER or COLLABORATOR. Reopened is added to the request's "PR open" so that a PR opened before the workflow existed,
+  this one among them, can be reviewed by closing and reopening it; a `/review` comment runs the workflow on `main`.
+  The action has no path filter, so a PR touching only the excluded paths skips the run (`paths-ignore`), and the
+  prompt tells it not to comment on them.
+- **`scripts/cloud-setup.sh` and `xtask/tests/cloud_setup.rs` learn the review action** (they read every workflow, and
+  stop on an action they don't know): the action installs only the Gemini CLI it runs, which nothing builds or tests
+  with, and a job that calls a workflow of this directory runs nothing itself. Without this the existing cloud-setup
+  check fails on the new workflows.
 - R-635 is in the "process" group of `plan/rule_groups.yaml`.
 
 *The number:* the numbers after R-627 and before this one are taken by rulings on open PRs, the last two on the branch

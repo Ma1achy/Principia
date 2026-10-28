@@ -1333,6 +1333,6 @@
   reason: parent heading (obligations are in its subsections)
   note: its two subsections, Sequence and Spotlights
 - file: decisions.md
-  section: "R-635 — Gemini Code Assist and Codex review PRs as advisory reviewers for a one-week trial, never merge gates; every finding is verified, fixed or answered with its traced reason; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*"
+  section: "R-635 — Codex, Gemini CLI and GitHub Copilot review PRs as advisory reviewers for a one-week trial, never merge gates; every bot finding is handled before merge with a reply on its thread; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*"
   reason: informative only
-  note: "the owner's R-369 note of 28 Oct 2026: Gemini Code Assist and Codex advisory for a one-week trial, never merge gates, every finding verified, a report per reviewer after the week; process, carried by AGENTS.md, .gemini/ and xtask/tests/ai_review_rules.rs, with the weekly audit queued as RQ-605"
+  note: "the owner's R-369 note of 28 Oct 2026: Codex, Gemini CLI and GitHub Copilot advisory for a one-week trial, never merge gates, every bot finding handled before merge with a reply on its thread, a report per reviewer after the week; process, carried by AGENTS.md, GEMINI.md, .github/copilot-instructions.md, the gemini-dispatch and gemini-review workflows, CLAUDE.md § Working with review and xtask/tests/ai_review_rules.rs, with the weekly audit queued as RQ-605"
