@@ -165,3 +165,27 @@ footnote 3 defining escape ("receding and its binding energy with respect to the
 4 dating the dissolution by a fit to δ(t): "At t ≃ 63.4 the linear behavior overtakes the exponential behavior of δ".
 
 The run's whole length is t = 200, which is R-610's cap exactly; the horizon note is in PLAN.md beside the row.
+
+## The owner's ruling on RQ-611, 28 Oct 2026, verbatim
+
+> RQ-611: (b) stands. arXiv v1 is the source for SP-2. I'll also try (a): fetching the journal version and its
+> supplementary snapshots through my own access into docs/incoming/_local/burrau_pzb2018/. When they arrive, diff Table
+> 2 against the journal and add any snapshot times as extra checkpoints. No separate author email (c); I'll ask
+> Boekholt in the existing thread if he replies. Note in SP-2 that t = 200 is the time-reversed return, so the expected
+> state there is the initial condition, and test it as a reversibility check as well as a trajectory check.
+
+So arXiv v1, as transcribed here, stays SP-2's source. t = 200 is the time-reversed return (100 forward, every velocity
+reversed, 100 more), so its expected state is the initial condition (Table 1's); SP-2 tests it both as a reversibility
+check (against t = 0) and as a trajectory check (against Table 2's t = 200 values). PLAN.md § 3.2, row SP-2 and its
+dated notes, carry the same.
+
+## When the journal files arrive
+
+The owner fetches the journal version and its supplementary snapshots into `docs/incoming/_local/burrau_pzb2018/`
+(never committed: Elsevier's licence). Then:
+
+1. **Diff Table 2 against the journal version.** Transcribe the journal's Table 2 as the passes above did, and compare
+   it cell by cell, as strings, with `table2/table2_reconciled.csv`. Put the result beside the existing diff, in
+   `table2/` next to `table2_diff.txt`. A disagreement is a REVIEW_QUEUE entry with both numbers (R-594 rule 4).
+2. **Add each snapshot time as a checkpoint.** Each time the supplement's snapshots give becomes an extra checkpoint of
+   SP-2, beside t = 100 and t = 200, recorded in this folder and in PLAN.md's SP-2 row.

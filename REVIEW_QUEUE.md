@@ -590,3 +590,11 @@ paywalled publisher, outside the repo.*
   example under a licence that allows committing it.
 - **Applied meanwhile:** (b). The proposed row SP-2 cites the arXiv v1 transcription; nothing waits, since SP-2 is not
   ruled and nothing is built on it.
+- **28 Oct 2026 (the owner's ruling, not yet in `decisions.md`):** the owner: "RQ-611: (b) stands. arXiv v1 is the source
+  for SP-2. I'll also try (a): fetching the journal version and its supplementary snapshots through my own access into
+  docs/incoming/_local/burrau_pzb2018/. When they arrive, diff Table 2 against the journal and add any snapshot times as
+  extra checkpoints. No separate author email (c); I'll ask Boekholt in the existing thread if he replies. Note in SP-2
+  that t = 200 is the time-reversed return, so the expected state there is the initial condition, and test it as a
+  reversibility check as well as a trajectory check." (b) stays applied; the reversibility note is added to SP-2's row
+  and its dated note (PLAN.md § 3.2), and the README gains "When the journal files arrive". Ruled, but stays open until
+  the ruling is recorded in `decisions.md` (a later rulings PR); it then moves to the archive.
