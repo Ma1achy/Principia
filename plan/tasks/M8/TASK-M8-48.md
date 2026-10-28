@@ -32,6 +32,7 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - `cargo test -p gui energy_axis_mapping_control` — REQ-GUI-242's verify.
 - `cargo test -p gui nav_stop_edit_path` — REQ-GUI-243's verify.
 - `cargo test -p gui saved_curved_chart` — REQ-GUI-244's verify (C8).
+- `cargo test -p engine viewstate_roundtrip` — extended with REQ-SYS-011's arms for the chart params this task holds in `SimConfig` on the real engine: a tilted shape-sphere view under Tip as sheet with one target and both angles set (where the two tilt maps differ, R-474), a view with an energy-type axis set linear (R-471 H7), and a view on a saved curved chart (R-475 L8), each exported and reloaded, asserting bitwise-identical z per pixel; control (C6): the same export with the field stripped (the tilt, `tilt_map`, read as Lean when absent, the axis's mapping, the saved chart's definition) fails to reproduce (REQ-SYS-011; R-484 J9; physics review 5678259443 of PR #308; 28 Oct 2026, applied per R-369).
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.

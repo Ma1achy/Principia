@@ -449,3 +449,35 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-602: Missing owner — which task holds REQ-SYS-011's chart params in `SimConfig`: R-484 J9 names TASK-M2-36, TASK-M2-37 and TASK-M2-40, whose task files build them in the kernel only; and no task names the chart id or the axis warps *(process; found by physics review 5678259443 of PR #308; REQ-SYS-011; context: TASK-M2-21, TASK-M2-36, TASK-M2-37, TASK-M2-40, TASK-M8-01, TASK-M8-48)*
+
+*Queued 28 Oct 2026 by the plan PR that names REQ-SYS-011's unbuilt arms in their tasks (applied per R-369). For the
+human: no, unless the placement below is vetoed; nothing waits.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-SYS-011's statement: "the chart id and params (a curved chart's tilt, its angles,
+    targets and map, each energy-type axis's mapping, and a saved chart's definition included), the tilt map, the axis
+    warps"; its verify: "likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart".
+  - `decisions.md` § "R-484 — The round-trip rule: …", J9: "T2's task, TASK-M8-53, depends on the tasks that fill
+    each: X1's (TASK-M2-21), the chart params' (TASK-M2-36, TASK-M2-37, TASK-M2-40, TASK-M8-48), and the state
+    contract's, which puts every field gui_state_contract §2 names in its struct (TASK-M8-01)".
+  - `plan/tasks/M2/TASK-M2-36.md` § Deliverables: "the chart params carrying `R`, the hidden indices and scales (R-473
+    J5)"; `plan/tasks/M2/TASK-M2-37.md` § Deliverables: "The `warped | linear` chart parameter and the linear mapping
+    (H4)"; `plan/tasks/M2/TASK-M2-40.md` § Deliverables: "The saved-chart variant of the chart registry, its params and
+    its serialisation". Each is a `crates/kernel` task with `cargo test -p kernel` acceptance, names no
+    `crates/engine/src/contract/` deliverable, and does not depend on TASK-M2-21, which builds `viewstate_roundtrip`.
+  - `decisions.md` § "R-473 — …", J10, § "R-471 — …", H8, and § "R-475 — …", L10: the real-engine side of the tilt,
+    the mapping option and the saved curved chart is TASK-M8-48's.
+  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface":
+    "SimConfig    (sim key)     chart id + params"; `decisions.md` § "R-478 — …", W3: "the **axis warps** (`K = K_max
+    t^γ_K` and the like), which are per-axis chart properties". No task file names the chart id or the axis warps as
+    `SimConfig` fields; TASK-M8-01's Goal puts "every field gui_state_contract §2 lists" in its struct.
+- **The question:** J9 reads TASK-M2-36, -37 and -40 as filling `SimConfig`'s chart params; their task files build
+  the kernel's params only. Who holds each of REQ-SYS-011's unbuilt fields in `SimConfig` and extends
+  `viewstate_roundtrip` to it?
+- **Applied meanwhile (R-369, a mechanical placement):** TASK-M8-48, which reaches TASK-M2-21, TASK-M2-36, -37, -40,
+  TASK-M6-48 (`tilt_map`) and TASK-M8-01 through its dependencies, carries the tilted shape-sphere view, the linear-E
+  view, the view on a saved chart and the tilt map; TASK-M8-01 carries the chart id and the axis warps. Each task's
+  Acceptance tests gains one dated `viewstate_roundtrip` line. The kernel tasks are unchanged.
+- **Waits:** nothing.
