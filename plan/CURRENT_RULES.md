@@ -148,6 +148,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-608** — REQ-EVT-013's re-bind test states its offsets past firing in physical time, the times the original prin-rs boundaries stood at, marched on `Δ_sync`; a count of boundaries is not a time *(closes RQ-531)*
 - **R-609** — Neither implicit stepper is selectable: Heggie × the generalised leapfrog is recorded as measured bad for the record, and "stays allowed" means no pair of the built steppers is blocked *(closes RQ-532; reads R-567)*
 - **R-613** — R-544 wins: no fold anywhere on the shape sphere chart, no equator fold and no pixel fold on any view, tilted or not; RQ-472's ruling keeps its pole maps *(closes RQ-508; settles what R-554 left unapplied)*
+- **R-628** — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's "Each is read from the decoded `(m, r, p)` alone" for `rho_angle`; asked directly, no RQ)*
 
 ## Design and architecture
 

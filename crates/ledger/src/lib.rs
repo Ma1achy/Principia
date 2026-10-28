@@ -12,6 +12,7 @@
 pub mod check;
 pub mod constants;
 pub mod display;
+pub mod fragment;
 pub mod gen;
 pub mod links;
 pub mod payload;

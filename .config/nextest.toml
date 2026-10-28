@@ -53,8 +53,10 @@ xtask-cargo = { max-threads = 1 }
 # (`engine`'s `invariant_gpu`, TASK-M2-09), the invariant charts' gradient gate's (validation's
 # `invariant_gradient_gpu`, TASK-M2-12) and encode's (`engine`'s `encode_gpu` and `qa_TASK-M2-15_gpu`, TASK-M2-15) among
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
-# (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24) and the lock's locked-against-free render
-# (`engine`'s `lock_gpu`, TASK-M2-23); the xtask tests that run cargo on
+# (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
+# (`engine`'s `lock_gpu`, TASK-M2-23), and the agreement preset's against the decode stage (validation's
+# `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
+# (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
@@ -82,8 +84,11 @@ default-filter = """
         | binary_id(=engine::lock_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
+        | binary_id(=validation::agreement_preset_gpu)
+        | binary_id(=validation::qa_TASK-M2-25_gpu)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
+        | binary_id(=xtask::fragment_wgsl)
         | binary_id(=xtask::nextest)
         | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
@@ -126,8 +131,11 @@ default-filter = """
     | binary_id(=engine::lock_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
+    | binary_id(=validation::agreement_preset_gpu)
+    | binary_id(=validation::qa_TASK-M2-25_gpu)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
+    | binary_id(=xtask::fragment_wgsl)
 """
 
 # Decoder test 12's measurements on lavapipe (TASK-M2-24, physics review F3): `decode_cross_backend_continuous` prints
