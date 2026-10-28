@@ -449,3 +449,37 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-607: The categorical filter's mute needs two values, a lightness and a chroma factor, which the corpus does not give; whether they are part of REQ-COL-058's R-72 definition or an R-71 calibration of their own *(missing value; found by TASK-M7-08; R-71, R-72; REQ-COL-058, REQ-COL-019; context: TASK-M7-08)*
+
+*Found by TASK-M7-08's implementer while writing REQ-COL-058's definition. For the orchestrator (R-369: which
+requirement carries a proposed value is plan bookkeeping), and the values themselves for the human at the M7 gate.*
+
+- **File, section:**
+  - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
+    palette": "A standalone escaper view is therefore this map **filtered to the escape classes** — a **categorical
+    filter** (`show class ∈ {…}, mute the rest`)". How a muted class is drawn is not given.
+  - `plan/requirements.yaml` REQ-COL-058 (kind: definition, R-72): "How the categorical filter's muted classes … are
+    drawn — the transform applied to a muted class's colour must be defined in colour_composition §1.4 by the task
+    that needs it and reviewed by the physics reviewer before merge."
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement": "Every value the corpus doesn't give
+    becomes a **calibration** requirement in the milestone that needs it. The task proposes the value with its
+    evidence; a reviewer checks it; the human confirms it at the milestone gate".
+  - `plan/tasks/M7/TASK-M7-08.md` § "Notes": "Calibration (R-71): REQ-COL-051." and "Gap: how a muted class is drawn
+    (grey, dimmed, desaturated) is not given".
+- **The question:** TASK-M7-08 writes the transform (R-72) as the class colour's OKLab `(L, a, b)` drawn at
+  `(L_mute, k_mute·a, k_mute·b)`. `L_mute` and `k_mute` are values the corpus does not give, so under R-71 they are a
+  calibration, but no calibration requirement carries them: the task names REQ-COL-051 only.
+- **Options seen:** (a) the two values are part of REQ-COL-058's definition, proposed with their evidence in the same
+  section and confirmed by the human at the M7 gate beside REQ-COL-051; (b) a new calibration requirement (R-71),
+  added through `plan/tools/reqio.py` and closed by TASK-M7-08, which already proposes the values; (c) another
+  carrier.
+- **Proposed values (R-71), with their evidence:** `L_mute = 0.31`, the midpoint, to two places, of the invalid colour
+  `#141418` (OKLab L 0.193) and the "not yet" grey `#4E4E4E` (L 0.424); `k_mute = 0.25`, every muted colour of the
+  measured palettes in gamut. Every muted class of the outcome palette, its OKLab-uniform variant, Okabe–Ito and the
+  golden-angle palette of 96 classes is at least 0.114 from the "not yet" grey, 0.117 from `#141418` and 0.119 from
+  every other class of its palette, above τ = 0.101 (`crates/render/tests/categorical_palette.rs`,
+  `categorical_filter_mute_is_the_section_1_4_transform`).
+- **Applied meanwhile:** the values as proposed, marked "proposed (R-71; RQ-607)" in colour_composition §1.4 and in
+  `crates/render/src/colour/palette.rs` and `shaders/wgsl/lib/palette.wgsl`, as a proposal, not a confirmed value.
+- **Waits:** TASK-M7-08's PR carries the proposal; which requirement records the values is the orchestrator's call.

@@ -14917,6 +14917,8 @@
   rulings:
   - R-72
   milestone: M7
+  rq:
+  - RQ-607
 - id: REQ-COL-059
   area: COL
   kind: definition
