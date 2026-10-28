@@ -32,7 +32,7 @@
 //!
 //! The two zero-selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
 //! section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only where `C` could not reach `I = 1`, all three
-//! bodies coinciding, whose output RQ-296 holds.
+//! bodies coinciding, which keeps `C`'s select (divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0`; R-547).
 //!
 //! **The clamp tests** (`lookup_clamped`, REQ-ENC-014; inverse-encode Parts 3 and 6). A control's bit is set iff its
 //! input lay outside what its link's inverse takes unclamped:

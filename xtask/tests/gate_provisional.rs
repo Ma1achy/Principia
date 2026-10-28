@@ -109,7 +109,7 @@ negative_control!(
 /// `shape_roundtrip_bound` (REQ-CHART-053), the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044), the
 /// Burrau ν = 1/2 gate's `burrau_nu_half_tol` (REQ-VAL-118), and the acute-angle Burrau charts' `burrau_theta_min`
 /// and `burrau_theta_max` (REQ-CHART-045) and `burrau_theta_lz_k` and `burrau_theta_lz_fraction` (REQ-CHART-046), and
-/// the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1
+/// step 0's skip tolerance `tau_i` (REQ-ENC-035), and the round trip's `eps_phys` (REQ-ENC-024), and lookup's layer-3 `decode_sanity` (REQ-ENC-027) and layer-1
 /// `zero_class` (REQ-ENC-037), and the literature import's `literature_import_tol` (REQ-VAL-120).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
@@ -126,6 +126,7 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("burrau_theta_max", "M2", "REQ-CHART-045"),
             ("burrau_theta_lz_k", "M2", "REQ-CHART-046"),
             ("burrau_theta_lz_fraction", "M2", "REQ-CHART-046"),
+            ("tau_i", "M2", "REQ-ENC-035"),
             ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
             ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
             ("shape_vec_js_tol", "M2", "REQ-CHART-049"),

@@ -6,9 +6,12 @@
 //!   `|λ̃_y| ≤ δ_λ`, a mirror just below `−δ_λ`, the same output twice, and the same branch on CPU-f64, CPU-f32 and
 //!   GPU-f32; the test reads `λ̃_y`, not `λ_y`. Turned, translated and boosted ties take the same branch on CPU-f32 and
 //!   GPU-f32, every one (REQ-DEC-017).
-//! - `canonicaliser_seam_sweep`: collinear f32 states at random angles, all at the `λ̃_y = 0` seam, some with `ρ = 0`:
-//!   CPU-f32 and GPU-f32 take the same mirror branch and raise the same `lookup_clamped` on every one (REQ-DEC-017,
-//!   REQ-ENC-016).
+//! - `canonicaliser_seam_sweep`: the guard, the mirror decision, step 0's coincidence select and its `τ_I` skip agree
+//!   bit for bit between CPU-f32 and GPU-f32 on collinear f32 states at random angles, all at the `λ̃_y = 0` seam,
+//!   some with `ρ = 0`; on states with `|I_in − 1|` at `τ_I` and one ulp either side of it, above 1 and below; on
+//!   states with normal coordinates and subnormal pair differences; and on states with the bodies apart far below and
+//!   above `I_in`'s float range, and coincident, where the GPU's output is finite and at `I = 1` (REQ-DEC-002,
+//!   REQ-DEC-017, REQ-ENC-006, REQ-ENC-016).
 //! - `canonicaliser_scale_invariance`: 2000 generic states scaled by powers of two from `2^−60` to `2^60` and by
 //!   `1e-8` to `1e18`: GPU-f32 takes CPU-f32's branch and the f64 one at every scale, and its notices at a power of
 //!   two are those at `2⁰` (REQ-DEC-017).
@@ -25,7 +28,9 @@
 //! - `canonicaliser_phi_signed_zero`: `ρ_x = −0` exactly with `ρ_y ≠ 0`: `φ` is `±π/2` on `ρ_y`'s side on CPU-f64,
 //!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `rotation_angle`'s select (pitfalls §11; REQ-ENC-016).
 //! - `canonicaliser_noop_gpu`: dd_decoder §5 test 5 on the GPU, `C` on the GPU's own canonical-frame decodes, saturated
-//!   controls included, takes no mirror, turns by 0 and moves nothing beyond rounding (REQ-DEC-018).
+//!   controls included, takes no mirror, turns by 0 and moves nothing beyond rounding (REQ-DEC-018); and on 65 536
+//!   more GPU decodes over a wider `z`, step 0 is skipped on every one, no `lookup_rescaled`, `λ = 1`, their measured
+//!   `|I_in − 1|` printed (REQ-ENC-014, REQ-ENC-035's evidence on the GPU).
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the cross-backend branch claim
 //! is for identical inputs. The backends' recorded `λ̃_y` and `φ` can differ in their last bits (WGSL's `√`, `/` and
@@ -35,6 +40,8 @@ use std::path::{Path, PathBuf};
 
 use engine::contract::fast_math::FastMath;
 use engine::decode_dispatch::{canonicalise_gpu, DecodeStage};
+#[cfg(feature = "controls")]
+use kernel::canon::mirror_decision;
 use kernel::canon::{canonicalise, inertia, Canonical};
 use kernel::chart::Latent;
 use kernel::decode::{decode, Ic};
@@ -108,6 +115,20 @@ fn state_error(a: &Ic<f64>, b: &Ic<f64>, eps: f64) -> f64 {
     worst
 }
 
+/// `c` at f64, every field converted exactly.
+fn widen_canonical(c: &Canonical<f32>) -> Canonical<f64> {
+    Canonical {
+        ic: widen(&c.ic),
+        i_in: c.i_in.into(),
+        lambda: c.lambda.into(),
+        phi: c.phi.into(),
+        lambda_t_y: c.lambda_t_y.into(),
+        rescaled: c.rescaled,
+        clamped: c.clamped,
+        mirrored: c.mirrored,
+    }
+}
+
 /// The bits of every word of `c`, notices included, so two outputs compare bit for bit.
 fn bits(c: &Canonical<f32>) -> Vec<u32> {
     let ic = &c.ic;
@@ -116,7 +137,11 @@ fn bits(c: &Canonical<f32>) -> Vec<u32> {
         .chain(ic.p.as_flattened())
         .chain(&[c.i_in, c.lambda, c.phi, c.lambda_t_y])
         .map(|x| x.to_bits())
-        .chain([u32::from(c.clamped), u32::from(c.mirrored)])
+        .chain([
+            u32::from(c.rescaled),
+            u32::from(c.clamped),
+            u32::from(c.mirrored),
+        ])
         .collect()
 }
 
@@ -296,20 +321,59 @@ fn canonicaliser_mirror_tie() {
     );
 }
 
-/// The backends' branches agree on every state: `lookup_mirrored` and `lookup_clamped` of GPU-f32's `gpu` against
-/// CPU-f32's `cpu`, the same inputs; the number mirrored.
-fn check_branches(gpu: &[Canonical<f32>], cpu: &[Canonical<f32>], what: &str) -> usize {
-    assert_eq!(gpu.len(), cpu.len());
-    for (k, (g, c)) in gpu.iter().zip(cpu).enumerate() {
+/// The branches `C` took on one state: step 2's guard (`lookup_clamped`), step 3's mirror, and step 0's skip
+/// (`lookup_rescaled` not raised) and its coincidence select (no `lookup_rescaled`, `λ = 1` and `p = 0`); and `λ`'s bits
+/// where step 0 did not run, so 1 exactly.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Branches {
+    clamped: bool,
+    mirrored: bool,
+    rescaled: bool,
+    select: bool,
+    lambda: Option<u32>,
+}
+
+/// `c`'s [`Branches`].
+fn branches(c: &Canonical<f32>) -> Branches {
+    Branches {
+        clamped: c.clamped,
+        mirrored: c.mirrored,
+        rescaled: c.rescaled,
+        select: !c.rescaled && c.lambda == 1.0 && c.ic.p.as_flattened().iter().all(|q| *q == 0.0),
+        lambda: (!c.rescaled).then_some(c.lambda.to_bits()),
+    }
+}
+
+/// The two sides' branches agree on every state, `a` (GPU-f32's) against `b` (CPU-f32's) on the same inputs.
+fn check_forks(a: &[Branches], b: &[Branches], what: &str) {
+    assert_eq!(a.len(), b.len());
+    for (k, (g, c)) in a.iter().zip(b).enumerate() {
+        for (name, x, y) in [
+            ("mirror branches", g.mirrored, c.mirrored),
+            ("lookup_clamped", g.clamped, c.clamped),
+            ("lookup_rescaled", g.rescaled, c.rescaled),
+            ("coincidence selects", g.select, c.select),
+        ] {
+            assert_eq!(
+                x, y,
+                "the backends' {name} differ at {what} {k}: GPU-f32 {g:?}, CPU-f32 {c:?}"
+            );
+        }
         assert_eq!(
-            g.mirrored, c.mirrored,
-            "the backends' mirror branches differ at {what} {k}: GPU-f32 {g:?}, CPU-f32 {c:?}"
-        );
-        assert_eq!(
-            g.clamped, c.clamped,
-            "the backends' lookup_clamped differ at {what} {k}: GPU-f32 {g:?}, CPU-f32 {c:?}"
+            g.lambda, c.lambda,
+            "the backends' λ differ where step 0 did not run, at {what} {k}"
         );
     }
+}
+
+/// The backends' branches agree on every state ([`check_forks`]), GPU-f32's `gpu` against CPU-f32's `cpu`, the same
+/// inputs; the number mirrored.
+fn check_branches(gpu: &[Canonical<f32>], cpu: &[Canonical<f32>], what: &str) -> usize {
+    let (a, b): (Vec<Branches>, Vec<Branches>) = (
+        gpu.iter().map(branches).collect(),
+        cpu.iter().map(branches).collect(),
+    );
+    check_forks(&a, &b, what);
     cpu.iter().filter(|c| c.mirrored).count()
 }
 
@@ -361,14 +425,150 @@ fn seam_states() -> Vec<Ic<f32>> {
         .collect()
 }
 
+/// `n` f32 states whose step-0 `I_in`, as `C` forms it, is `target` exactly: generic states with their positions scaled
+/// by `k`, `k` set from the f64 `I` and walked one f32 step at a time until `I_in` lands on `target`.
+fn at_inertia(target: f64, n: usize, seed: u64) -> Vec<Ic<f32>> {
+    let mut out = Vec::new();
+    for base in generic_seeded(4000, seed) {
+        if out.len() == n {
+            break;
+        }
+        let base = narrow(&base);
+        let wide = widen(&base);
+        let com = [0, 1].map(|j| (0..3).map(|i| wide.m[i] * wide.r[i][j]).sum::<f64>());
+        let i0: f64 = (0..3)
+            .map(|i| {
+                wide.m[i] * ((wide.r[i][0] - com[0]).powi(2) + (wide.r[i][1] - com[1]).powi(2))
+            })
+            .sum();
+        let mut k = (target / i0).sqrt() as f32;
+        for _ in 0..64 {
+            let x = Ic {
+                r: base.r.map(|v| v.map(|q| q * k)),
+                ..base
+            };
+            let i = f64::from(kernel::canon::scale_step(&x).i_in);
+            if i == target {
+                out.push(x);
+                break;
+            }
+            k = if i < target {
+                k.next_up()
+            } else {
+                k.next_down()
+            };
+        }
+    }
+    assert_eq!(
+        out.len(),
+        n,
+        "found {} f32 states at I_in = {target:e}, not {n}",
+        out.len()
+    );
+    out
+}
+
+/// States at step 0's skip edge: `|I_in − 1|` at `τ_I` and one ulp of `I_in` either side of it, above 1 and below,
+/// eight each.
+fn tau_states() -> Vec<Ic<f32>> {
+    let (e, tau) = (EPS32, f64::from(f32::TAU_I));
+    [
+        1.0 + tau - e,
+        1.0 + tau,
+        1.0 + tau + e,
+        1.0 - tau + e / 2.0,
+        1.0 - tau,
+        1.0 - tau - e / 2.0,
+    ]
+    .into_iter()
+    .enumerate()
+    .flat_map(|(k, t)| at_inertia(t, 8, 90 + k as u64))
+    .collect()
+}
+
+/// `x` moved `k` f32 steps away from 0 (toward `+∞` for positive `x`).
+fn ulps(x: f32, k: u32) -> f32 {
+    f32::from_bits(x.to_bits() + k)
+}
+
+/// f32 states with normal coordinates and subnormal pair differences: `r₀` near `1e-36`, the inner pair a few thousand
+/// f32 steps apart (`2⁻¹⁴³` each there, so under `1.2e-38`, subnormal) in one component or both, or `1e-37` apart in
+/// `x` and a subnormal in `y`, or coincident; the third body `1e-36` or so away, or itself a subnormal from `r₀`.
+fn subnormal_states() -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(53);
+    (0..2000)
+        .map(|n| {
+            let w = [0; 3].map(|_| f64::from(rng.uniform(0.2, 1.2)));
+            let total: f64 = w.iter().sum();
+            let r0 = [0; 2].map(|_| rng.uniform(0.5, 2.0) * 1e-36);
+            let mut k = || rng.uniform(1.0, 4000.0) as u32;
+            let (kx, ky) = (k(), k());
+            let r1 = match n % 5 {
+                0 => [ulps(r0[0], kx), r0[1]],
+                1 => [r0[0], ulps(r0[1], ky)],
+                2 => [ulps(r0[0], kx), ulps(r0[1], ky)],
+                3 => [r0[0] + 1e-37, ulps(r0[1], ky)],
+                _ => r0,
+            };
+            let r2 = if n % 7 == 0 {
+                [ulps(r0[0], k()), ulps(r0[1], k())]
+            } else {
+                [0; 2].map(|j| r0[j] + rng.uniform(0.2, 1.5) * 1e-36)
+            };
+            Ic {
+                m: w.map(|x| (x / total) as f32),
+                r: [r0, r1, r2],
+                p: [0; 3].map(|_| [rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5)]),
+            }
+        })
+        .collect()
+}
+
+/// The far and coincident states: the bodies apart at `k` from `1e-37` to `1e37`, where an f32 `I_in` underflows or
+/// overflows (`1e-19` and below where a GPU flushes subnormals); and the three bodies coincident at the origin and off
+/// it. Each with momenta.
+fn range_states() -> Vec<Ic<f32>> {
+    let p = [[0.1, 0.0], [-0.3, 0.2], [0.1, -0.1]];
+    let m = [0.25, 0.25, 0.5];
+    let far = [1e-37f32, 1e-30, 1e-25, 1e-20, 1e19, 1e20, 1e30, 1e37].map(|k| Ic {
+        m,
+        r: [[-k, 0.0], [k, 0.0], [0.0, k]],
+        p,
+    });
+    let coincident = [[0.0f32, 0.0], [0.3, -1.7], [-2.5e-3, 7.0], [1e-36, 3e-36]].map(|point| Ic {
+        m: [0.2, 0.3, 0.5],
+        r: [point; 3],
+        p,
+    });
+    far.into_iter().chain(coincident).collect()
+}
+
+/// The sweep's inputs: the seam states, then the `τ_I`, subnormal-difference and range states, with where each part
+/// begins.
+fn sweep_states() -> (Vec<Ic<f32>>, [usize; 4]) {
+    let mut states = seam_states();
+    let mut starts = [0; 4];
+    for (k, part) in [tau_states(), subnormal_states(), range_states()]
+        .into_iter()
+        .enumerate()
+    {
+        starts[k] = states.len();
+        states.extend(part);
+    }
+    starts[3] = states.len();
+    (states, starts)
+}
+
 #[test]
 fn canonicaliser_seam_sweep() {
     let h = harness();
-    let states = seam_states();
+    let (states, [tau, sub, range, end]) = sweep_states();
     let g = gpu(&h, &states);
     let c: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
     let mirrors = check_branches(&g, &c, "seam state");
-    let clamped = c.iter().filter(|x| x.clamped).count();
+    let seam = &c[..SWEEP];
+    let seam_mirrors = seam.iter().filter(|x| x.mirrored).count();
+    let clamped = seam.iter().filter(|x| x.clamped).count();
     let lambda_bits = g
         .iter()
         .zip(&c)
@@ -380,29 +580,103 @@ fn canonicaliser_seam_sweep() {
         .filter(|(a, b)| a.phi.to_bits() != b.phi.to_bits())
         .count();
     assert!(
-        mirrors > 0 && mirrors < SWEEP,
-        "the sweep reached one branch only ({mirrors} of {SWEEP} mirrored)"
+        seam_mirrors > 0 && seam_mirrors < SWEEP,
+        "the sweep reached one branch only ({seam_mirrors} of {SWEEP} mirrored)"
     );
     assert!(clamped >= SWEEP / 8, "only {clamped} states at ρ = 0");
-    eprintln!(
-        "canonicaliser_seam_sweep: {SWEEP} seam states, {mirrors} mirrored, {clamped} at ρ = 0, the same branches on \
-         CPU-f32 and GPU-f32; the recorded λ̃_y differs in {lambda_bits} and φ in {phi_bits} (not branched on)"
+    // The skip's edge: both sides reached.
+    let runs = c[tau..sub].iter().filter(|x| x.rescaled).count();
+    assert!(
+        runs == (sub - tau) / 3,
+        "{runs} of {} τ_I states ran step 0, not the third one ulp outside τ_I",
+        sub - tau
     );
+    // Subnormal differences: the lone f32 subtraction is subnormal on some, and C's guard reads the exact ρ.
+    let subnormal = states[sub..range]
+        .iter()
+        .filter(|x| {
+            let d = x.r[1][0] - x.r[0][0];
+            d != 0.0 && d.abs() < f32::MIN_POSITIVE
+        })
+        .count();
+    let guard = c[sub..range].iter().filter(|x| x.clamped).count();
+    assert!(
+        subnormal > 0 && guard == (range - sub) / 5,
+        "subnormal-difference states: {subnormal} with a subnormal ρ_x, {guard} at ρ = 0, not {}",
+        (range - sub) / 5
+    );
+    // The far and coincident states: the GPU's output finite, at I = 1 where the bodies are apart.
+    for (k, out) in g[range..end].iter().enumerate() {
+        let ic = widen(&out.ic);
+        assert!(
+            ic.r.iter().chain(&ic.p).flatten().all(|v| v.is_finite()) && out.lambda.is_finite(),
+            "GPU-f32 formed a non-finite value at range state {k}: {out:?}"
+        );
+        if out.rescaled {
+            let i = inertia(ic.m, ic.r);
+            assert!(
+                (i - 1.0).abs() <= 16.0 * EPS32,
+                "GPU-f32 left I = {i} at range state {k}"
+            );
+        }
+    }
+    let selects = c[range..end].iter().filter(|x| branches(x).select).count();
+    eprintln!(
+        "canonicaliser_seam_sweep: {SWEEP} seam states ({seam_mirrors} mirrored, {clamped} at ρ = 0), {} at the τ_I \
+         edge ({runs} run), {} with subnormal pair differences ({subnormal} with a subnormal ρ_x, {guard} at ρ = 0), {} \
+         far or coincident ({selects} coincidence selects): the same guard, mirror ({mirrors} in all), skip and \
+         select on CPU-f32 and GPU-f32; the recorded λ̃_y differs in {lambda_bits} and φ in {phi_bits} (not branched \
+         on)",
+        sub - tau,
+        range - sub,
+        end - range
+    );
+}
+
+/// The superseded forms of `C`'s branch inputs on `x` (R-547 replaces them): the CoM and `I_in` as explicit `fma`s,
+/// `fma(m₂, x₂, fma(m₁, x₁, m₀x₀))` and `fma(m₂, ‖c₂‖², fma(m₁, ‖c₁‖², m₀‖c₀‖²))` with `‖c‖² = fma(c_x, c_x, c_y²)`;
+/// the pair differences as lone f32 subtractions; the select on `I_in = 0`; and the mirror decision on those
+/// differences. Each `fma` is fused or, as CI's lavapipe evaluates it, a rounded product and an add (`fused`), and
+/// every result is flushed to zero where subnormal or not (`flush`), as Metal does.
+#[cfg(feature = "controls")]
+fn superseded(x: &Ic<f32>, fused: bool, flush_subnormals: bool) -> Branches {
+    let f = |q: f32| if flush_subnormals { flush(q) } else { q };
+    let mad = |a: f32, b: f32, c: f32| {
+        if fused {
+            f(a.mul_add(b, c))
+        } else {
+            f(f(a * b) + c)
+        }
+    };
+    let (m, r) = (x.m, x.r);
+    let com = [0, 1].map(|k| mad(m[2], r[2][k], mad(m[1], r[1][k], f(m[0] * r[0][k]))));
+    let c = r.map(|v| [f(v[0] - com[0]), f(v[1] - com[1])]);
+    let n2 = |v: [f32; 2]| mad(v[0], v[0], f(v[1] * v[1]));
+    let i = mad(m[2], n2(c[2]), mad(m[1], n2(c[1]), f(m[0] * n2(c[0]))));
+    let diff = |a: [f32; 2], b: [f32; 2]| [f(b[0] - a[0]), f(b[1] - a[1])];
+    let (rho, d02) = (diff(r[0], r[1]), diff(r[0], r[2]));
+    let select = i == 0.0;
+    let rescaled = !select && (i - 1.0).abs() > f32::TAU_I;
+    Branches {
+        clamped: rho[0] == 0.0 && rho[1] == 0.0,
+        mirrored: mirror_decision(m, [[0.0; 2], rho, d02]),
+        rescaled,
+        select,
+        lambda: None,
+    }
 }
 
 negative_control!(
     canonicaliser_seam_sweep,
-    "branching on each backend's own recorded λ̃_y, formed through √, / and the rotation, must fail",
-    expected = "the backends' mirror branches differ",
+    "the superseded forms of the branch inputs, the explicit-fma CoM and I_in and the lone float subtraction, \
+     emulated unfused and flushing subnormals, decide a branch differently from the unflushed CPU on the sweep's \
+     inputs and must fail",
+    expected = "differ at seam state",
     {
-        let h = harness();
-        let states = seam_states();
-        let mut g = gpu(&h, &states);
-        let mut c: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
-        for x in g.iter_mut().chain(c.iter_mut()) {
-            x.mirrored = x.lambda_t_y < -f32::DELTA_LAMBDA;
-        }
-        check_branches(&g, &c, "seam state");
+        let (states, _) = sweep_states();
+        let emulated: Vec<Branches> = states.iter().map(|x| superseded(x, false, true)).collect();
+        let cpu: Vec<Branches> = states.iter().map(|x| superseded(x, true, false)).collect();
+        check_forks(&emulated, &cpu, "seam state");
     }
 );
 
@@ -410,7 +684,12 @@ negative_control!(
 
 /// Generic f64 states, random masses, positions and momenta, `λ̃_y` anywhere.
 fn generic(n: usize) -> Vec<Ic<f64>> {
-    let mut rng = SplitMix::new(47);
+    generic_seeded(n, 47)
+}
+
+/// [`generic`]'s states from the seed `seed`.
+fn generic_seeded(n: usize, seed: u64) -> Vec<Ic<f64>> {
+    let mut rng = SplitMix::new(seed);
     let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
     (0..n)
         .map(|_| {
@@ -908,16 +1187,7 @@ fn canonicaliser_canonicalise_order() {
             f64::EPSILON,
             &format!("CPU-f64 {at}"),
         ));
-        let c = &gpu_out[n];
-        let wide = Canonical {
-            ic: widen(&c.ic),
-            i_in: c.i_in.into(),
-            lambda: c.lambda.into(),
-            phi: c.phi.into(),
-            lambda_t_y: c.lambda_t_y.into(),
-            clamped: c.clamped,
-            mirrored: c.mirrored,
-        };
+        let wide = widen_canonical(&gpu_out[n]);
         w32 = w32.max(check_order(g, x, &wide, EPS32, &format!("GPU-f32 {at}")));
     }
     eprintln!(
@@ -1039,15 +1309,7 @@ fn canonicaliser_coincident_inner_pair() {
         let g = &gpu_out[k];
         assert!(g.clamped, "GPU-f32 raised no lookup_clamped at {at}");
         check_pole_phi(g.phi.into(), &format!("+0 (GPU-f32, {at})"));
-        let wide = Canonical {
-            ic: widen(&g.ic),
-            i_in: g.i_in.into(),
-            lambda: g.lambda.into(),
-            phi: g.phi.into(),
-            lambda_t_y: g.lambda_t_y.into(),
-            clamped: g.clamped,
-            mirrored: g.mirrored,
-        };
+        let wide = widen_canonical(g);
         check_identity(
             &widen(&narrow_states[k]),
             &wide,
@@ -1062,18 +1324,7 @@ fn canonicaliser_coincident_inner_pair() {
     for (k, (name, x)) in poles.iter().enumerate() {
         for (backend, c) in [
             ("CPU-f64", canonicalise(x)),
-            ("CPU-f32", {
-                let c = canonicalise(&narrow_poles[k]);
-                Canonical {
-                    ic: widen(&c.ic),
-                    i_in: c.i_in.into(),
-                    lambda: c.lambda.into(),
-                    phi: c.phi.into(),
-                    lambda_t_y: c.lambda_t_y.into(),
-                    clamped: c.clamped,
-                    mirrored: c.mirrored,
-                }
-            }),
+            ("CPU-f32", widen_canonical(&canonicalise(&narrow_poles[k]))),
         ] {
             assert!(
                 c.clamped,
@@ -1286,28 +1537,75 @@ fn canonicaliser_noop_gpu() {
     let h = harness();
     let stage = DecodeStage::<LatentDefaults>::new(h.device(), &wgsl(), FastMath::default())
         .expect("the decode stage's pipeline");
-    let decodes: Vec<Ic<f32>> = noop_batches()
-        .iter()
-        .flat_map(|(chart, uv)| {
-            stage
-                .run(h.device(), h.queue(), chart, DecodeMode::Full, uv)
-                .expect("the decode dispatch")
-        })
-        .map(|o| o.ic)
-        .collect();
+    let run = |batches: &[Batch]| -> Vec<Ic<f32>> {
+        batches
+            .iter()
+            .flat_map(|(chart, uv)| {
+                stage
+                    .run(h.device(), h.queue(), chart, DecodeMode::Full, uv)
+                    .expect("the decode dispatch")
+            })
+            .map(|o| o.ic)
+            .collect()
+    };
+    let decodes = run(&noop_batches());
     let outs = gpu(&h, &decodes);
-    let (mut worst, mut seam, mut clamped) = (0.0f64, 0, 0);
+    let (mut worst, mut seam, mut clamped, mut off) = (0.0f64, 0, 0, 0.0f64);
     for (k, (x, c)) in decodes.iter().zip(&outs).enumerate() {
-        worst = worst.max(check_noop_gpu(x, c, &format!("GPU decode {k}")));
+        let at = format!("GPU decode {k}");
+        worst = worst.max(check_noop_gpu(x, c, &at));
+        off = off.max(check_skip_gpu(c, &at));
         seam += usize::from(c.lambda_t_y.abs() <= f32::DELTA_LAMBDA);
         clamped += usize::from(c.clamped);
     }
     assert!(seam > 0, "no GPU decode reached the λ̃_y = 0 seam");
+    let wider = run(&wide_batches());
+    for (k, c) in gpu(&h, &wider).iter().enumerate() {
+        off = off.max(check_skip_gpu(c, &format!("wider GPU decode {k}")));
+    }
+    let info = h.adapter_info();
     eprintln!(
         "canonicaliser_noop_gpu: {} decodes; worst state change {worst} eps (tolerance {NOOP_GPU_EPS}); {seam} at the \
-         seam; {clamped} at ρ = 0",
-        decodes.len()
+         seam; {clamped} at ρ = 0; with {} wider decodes, step 0 skipped on every one, worst |I_in − 1| = {off} eps \
+         (τ_I = {} eps) on {} ({:?})",
+        decodes.len(),
+        wider.len(),
+        f64::from(f32::TAU_I) / EPS32,
+        info.name,
+        info.backend
     );
+}
+
+/// The wider decodes for step 0's skip on the GPU: 64 latent charts, `z₀` on `[−3, 3]⁸` and the slice vectors on
+/// `[−2, 2]⁸`, 1024 points each.
+fn wide_batches() -> Vec<Batch> {
+    let mut rng = SplitMix::new(99);
+    (0..64)
+        .map(|_| {
+            let mut eight = |h: f32| core::array::from_fn(|_| rng.uniform(-h, h));
+            let chart = Latent {
+                z0: eight(3.0),
+                q1: eight(2.0),
+                q2: eight(2.0),
+            };
+            let points = (0..1024)
+                .map(|_| [rng.uniform(0.0, 1.0), rng.uniform(0.0, 1.0)])
+                .collect();
+            (chart, points)
+        })
+        .collect()
+}
+
+/// Step 0 skipped by the GPU's `C` on a canonical-frame decode: no `lookup_rescaled`, `λ = 1` exactly (R-547). The
+/// decode's `|I_in − 1|`, in f32 eps.
+fn check_skip_gpu(c: &Canonical<f32>, at: &str) -> f64 {
+    assert!(
+        !c.rescaled && c.lambda == 1.0,
+        "step 0 ran on a canonical input at {at}: λ = {}, I_in = {}",
+        c.lambda,
+        c.i_in
+    );
+    (f64::from(c.i_in) - 1.0).abs() / EPS32
 }
 
 negative_control!(
