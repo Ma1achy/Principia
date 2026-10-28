@@ -405,3 +405,38 @@ fn mock_debug_view_mass_simplex_analogue() {
         check_exactly(&presented.rgba, &debugged.rgba, (&shifted, &rows))
     });
 }
+
+/// Every share in the "Debug" key is `want`.
+fn check_shares(key: &LegendKey, want: f64) {
+    let LegendKey::Categorical { entries, .. } = key else {
+        panic!("a categorical key")
+    };
+    for e in entries.iter().take(1) {
+        assert_eq!(e.share, want, "{}'s share", e.label);
+    }
+    for e in entries.iter().skip(1) {
+        assert_eq!(e.share, 0.0, "{}'s share", e.label);
+    }
+}
+
+#[test]
+fn mock_debug_view_shares_of_an_empty_figure() {
+    use crate::mock::invalid::Flagged;
+    use crate::mock::legend::debug_key;
+    // No figure, before the first frame: every share 0, not 0 / 0.
+    check_shares(&debug_key(&Flagged::default()), 0.0);
+    // A figure of one pixel, flagged: its whole.
+    let one = Flagged {
+        figure: 1,
+        flagged: 1,
+        inside: None,
+    };
+    check_shares(&debug_key(&one), 100.0);
+    rejects("an empty figure's share as 0 / 0", || {
+        let mut key = debug_key(&Flagged::default());
+        if let LegendKey::Categorical { entries, .. } = &mut key {
+            entries[0].share = f64::NAN;
+        }
+        check_shares(&key, 0.0);
+    });
+}

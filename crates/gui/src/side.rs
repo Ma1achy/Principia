@@ -41,9 +41,7 @@ pub trait EngineSide {
     /// The figure as the app draws it this frame, told before [`EngineSide::figure`]: its viewport in pixels, the
     /// pixels it is clipped to and the canvas background (R-406; R-467 D2). Nothing by default: the real engine's
     /// frame loop is TASK-M8-05's.
-    fn figure_view(&mut self, view: FigureView) {
-        let _ = view;
-    }
+    fn figure_view(&mut self, _view: FigureView) {}
 
     /// The time source the app's clock reads; `None` holds the clock.
     fn time_source(&mut self) -> Option<&mut dyn TimeSource>;
