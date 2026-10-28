@@ -567,3 +567,44 @@ charts decodes to changes their pixels; and part (c) is a requirement that canno
   shape-sphere, invariant and mixed charts (REQ-CHART-063, REQ-CHART-064, REQ-CHART-066 and those charts' arms of
   REQ-CHART-062 and REQ-CHART-065), does not turn on the answer; the task stopped whole, per the escalation rule,
   for the orchestrator to say whether that part proceeds.
+
+## RQ-604: Refinement policy §1's "an unusable copy" has no payload predicate, so no reduction can tell an undetermined footprint whose spread is finite *(definition, R-72; found by physics review 5679524618 of PR #318, F4; dd_refinement_policy §1, dd_simstate_payload §1 and "VERTICAL-SLICE ADDITIONS", dd_generation_root §3.7; R-603, REQ-PAY-110, REQ-PAY-109; context: TASK-M5-32, TASK-M3-41)*
+
+*Found while fixing physics review 5679524618 of PR #318 (TASK-M5-32), F4. A missing definition, so it becomes a
+definition requirement (R-72) written by the task that needs it. For the human: no; the orchestrator and the physics
+reviewer decide it (R-369), unless the definition changes what a footprint's state means physically.*
+
+- **File, section:**
+  - `docs/design/principia_dd_refinement_policy.md` § "1. The split rule — no exponent in the split test" (:91):
+    "∨  the footprint is undetermined  (non-finite spread, or an unusable copy)"; and (:99): "The other undetermined
+    footprints (a non-finite spread, an unusable copy of another kind) split as above."
+  - `docs/design/principia_dd_simstate_payload.md` § "VERTICAL-SLICE ADDITIONS" (:736): "A quad with **every
+    footprint budget-exhausted and all 512 copies flagged unusable** reads `ensemble_spread` **finite on every one**."
+    This reports a prin-rs measurement and defines no payload flag.
+  - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct" (:71-73): "`budget_word : u32,
+    // R-603's two counters (separation-floor hits, entry-cap hits) and, since sample_descriptor's 16 bits are all
+    assigned (R-545), the sticky budget_exhausted bit. Bits, widths and saturation: TASK-M3-41, in §2 (REQ-PAY-110).`"
+  - `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)", the
+    `running_mean_divergence` definition (TASK-M5-32, PR #318): "A footprint undetermined with a finite
+    `spread_shape`, by an unusable copy (policy §1) or by a regularised copy's step budget (R-603 …), contributes
+    that `spread_shape`: the payload carries no predicate for an unusable copy, and R-603's `budget_exhausted` bit is
+    placed by TASK-M3-41 (REQ-PAY-110), so neither is read here."
+- **The gap:**
+  - No ledger entry, payload bit or `state` code is defined as "unusable copy", so neither the resolve pass nor a
+    reduction can evaluate policy §1's second undetermined case by a bit test.
+  - Reading it as `state ∈ {sim_failed, decode_failed}` (payload §2, :271, :286) is plausible, but the corpus doesn't
+    say so, and policy §1 :99's "an unusable copy of another kind" suggests the budget-exhausted copy is one kind
+    among several.
+- **R-603's case is not part of this gap:** its sticky `budget_exhausted` bit arrives with TASK-M3-41 (REQ-PAY-110),
+  which places it in `budget_word`. Once that merges, the bit is readable.
+- **Options seen:**
+  - (a) Define "unusable copy" as `state ∈ {sim_failed, decode_failed}` or `budget_exhausted`, a bit test on
+    `sample_descriptor`'s `state` and `budget_word`, written into refinement policy §1 and payload §2.
+  - (b) Define a dedicated per-copy flag. A schema change: `sample_descriptor`'s 16 bits are all assigned (R-545), so
+    it would go in `budget_word` or a new word.
+  - (c) Drop "unusable copy" from policy §1, keeping only the non-finite spread and R-603's budget case.
+- **What waits on it:** policy §1's `unresolved(f)` as built (whichever task builds the resolve pass's undetermined
+  test), and any widening of `running_mean_divergence`'s `d = 1` from a non-finite spread to every undetermined
+  footprint (physics review 5679524618's option (b)).
+- **Applied meanwhile:** TASK-M5-32 applies option (a) of that review, per R-369. `d = 1` applies only to a
+  non-finite `spread_shape`, and a finite undetermined footprint contributes its `spread_shape`. Nothing else waits.
