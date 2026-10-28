@@ -13,7 +13,7 @@ use crate::capture::{hover_point, FORMAT, PIXELS_PER_POINT};
 use crate::explore::hover_label::{self, placed, BACKING, PADDING};
 use crate::explore::legend::{
     colour, entry_rect, hatch_at, hatch_mesh, key_rects, nan_inf_at, nan_inf_mesh, ramp_mesh,
-    MARGIN, ROW_H, SWATCH,
+    GUTTER, MARGIN, ROW_H, SWATCH,
 };
 use crate::explore::time::{self, SCRUBBER};
 use crate::explore::trajectory::{
@@ -448,7 +448,7 @@ fn check_entries(drawn: &[Shape], words: &[(String, Rect)], area: Rect, entries:
             .find(|(t, r)| *t == share && cell.contains(r.center()))
             .unwrap_or_else(|| panic!("{}'s share", entry.label));
         assert!(
-            (value.1.max.x - (cell.max.x - 8.0)).abs() < 0.5,
+            (value.1.max.x - (cell.max.x - GUTTER)).abs() < 0.5,
             "{share} at {:?}",
             value.1
         );
@@ -823,19 +823,19 @@ fn mock_legend_keys_drawn_long_labels_are_cut_before_the_share() {
         .find(|(t, _)| t.starts_with("a class"))
         .expect("the label");
     assert!(
-        label.1.max.x <= cell.max.x - 44.0 + 0.5,
+        label.1.max.x <= cell.max.x - 56.0 + 0.5,
         "{:?} before the share's room",
         label.1
     );
     assert!((label.1.min.x - (cell.min.x + SWATCH + 6.0)).abs() < 0.5);
     let share = words.iter().find(|(t, _)| t == "12.3").expect("the share");
     assert!(
-        (share.1.max.x - (cell.max.x - 8.0)).abs() < 0.5,
+        (share.1.max.x - (cell.max.x - GUTTER)).abs() < 0.5,
         "{:?}",
         share.1
     );
     rejects("a label running into the share", || {
-        assert!(label.1.max.x <= cell.max.x - 50.0, "{:?}", label.1)
+        assert!(label.1.max.x <= cell.max.x - 62.0, "{:?}", label.1)
     });
     assert_eq!(
         label.0, long,

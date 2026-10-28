@@ -44,6 +44,10 @@ pub const COLUMNS: usize = 2;
 pub const BAR_H: f32 = 10.0;
 /// The gap between keys, in points.
 pub const KEY_GAP: f32 = 4.0;
+/// The gutter between an entry's value and its cell's right edge, so between a column's values and the next column's
+/// swatches, in points: wider than four label heights, so a swatch's neighbourhood holds no other column's text (a
+/// look choice, R-390; applied per R-369).
+pub const GUTTER: f32 = 20.0;
 
 /// Joins the Legend to `tree`: one big scope, read-only, nothing inside (§G3).
 pub fn register(tree: &mut ScopeTree) {
@@ -174,13 +178,13 @@ pub fn value_text(entry: &LegendEntry) -> String {
     }
 }
 
-/// The room an entry's value takes at the right of its cell, in points: a share's, or a count's and a share's (a look
-/// choice, R-390).
+/// The room an entry's value takes at the right of its cell, in points, the [`GUTTER`] included: a share's, or a
+/// count's and a share's (a look choice, R-390).
 pub fn value_width(entry: &LegendEntry) -> f32 {
     if entry.count.is_some() {
         104.0
     } else {
-        44.0
+        56.0
     }
 }
 
@@ -335,10 +339,10 @@ fn categorical(ui: &mut Ui, area: Rect, title: &str, entries: &[LegendEntry]) {
             egui::Label::new(RichText::new(&entry.label).small()),
             egui::Align::Min,
         );
-        // The share takes the room right of the label's, ending 8 points short of the cell.
+        // The share takes the room right of the label's, ending the gutter short of the cell.
         let value = Rect::from_min_max(
             pos2(text.max.x, cell.min.y),
-            pos2(cell.max.x - 8.0, cell.max.y),
+            pos2(cell.max.x - GUTTER, cell.max.y),
         );
         put(
             ui,
