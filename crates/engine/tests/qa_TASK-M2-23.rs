@@ -79,14 +79,16 @@ impl Rng {
 
 fn sim(plane: Plane) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane,
         slice: Slice {},
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },
@@ -167,6 +169,17 @@ fn lock_pair(edits: &[SetField; 2]) -> (Latent, Lock) {
         other => {
             panic!("the lock's edits are not the recentring on z₀ then the lock group: {other:?}")
         }
+    }
+}
+
+/// A nonlinear chart's lock command as `(z₀, lock group, window)`, asserting it is the recentring on `z₀`, the lock
+/// group's edit, then the `SetField` on `Chart.window` (TASK-M2-21: the window is chart construction in `SimConfig`'s
+/// chart group, R-69, and joins the lock's one command, R-466).
+fn chart_command(edits: &[SetField; 3]) -> (Latent, Lock, Window) {
+    let (z0, group) = lock_pair(&[edits[0].clone(), edits[1].clone()]);
+    match &edits[2].edit {
+        Edit::Sim(SimField::Window(w)) => (z0, group, *w),
+        other => panic!("the lock's third edit is not the window's: {other:?}"),
     }
 }
 
@@ -274,8 +287,12 @@ fn check_chart<C>(
         ic_bits(&lock.ic) == ic_bits(&clicked),
         "the lock's state is not the clicked one"
     );
-    let (z0, group) = lock_pair(&lock.edits);
+    let (z0, group, recentred) = chart_command(&lock.edits);
     assert!(group.locked && latent_bits(&z0) == latent_bits(&group.z_locked));
+    assert_eq!(
+        recentred, lock.window,
+        "the lock's window edit is not the re-centred window"
+    );
     let d = phys(&clicked, &latent_ic(&group.z_locked));
     assert!(
         d <= tol().eps_phys,
@@ -290,6 +307,10 @@ fn check_chart<C>(
     }));
     apply(&mut st, lock.edits);
     let after = sim_of(&mut st);
+    assert_eq!(
+        after.chart.window, lock.window,
+        "the store's window after the lock is not the re-centred one"
+    );
     let centre = LatentChart {
         z0: after.plane.z0,
         q1: after.plane.q1,
@@ -770,12 +791,15 @@ negative_control!(
 
 // ---- REQ-GUI-007: SimConfig fields and SetFields, never ViewUI ----
 
-/// Each edit is an undoable `SimConfig` edit of `z₀` or the lock group: none is a render-state (ViewUI) edit.
+/// Each edit is an undoable `SimConfig` edit of `z₀`, the lock group or, on a nonlinear chart, the chart group's window
+/// (TASK-M2-21): none is a render-state (ViewUI) edit.
 fn check_sim_only(edits: &[SetField]) {
     for e in edits {
         assert!(!e.no_history, "{e:?} skips the history");
         match &e.edit {
-            Edit::Sim(SimField::Z0(_)) | Edit::Sim(SimField::Lock(_)) => {}
+            Edit::Sim(SimField::Z0(_))
+            | Edit::Sim(SimField::Lock(_))
+            | Edit::Sim(SimField::Window(_)) => {}
             other => panic!("the lock edit {other:?} is not a SimConfig z₀ or lock edit"),
         }
     }

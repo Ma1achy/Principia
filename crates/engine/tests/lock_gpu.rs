@@ -12,7 +12,7 @@ use engine::contract::fast_math::FastMath;
 use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice,
+    SimConfig, Slice, Window,
 };
 use engine::decode_dispatch::{DecodeStage, Words};
 use engine::lock::{kernel_chart, set};
@@ -30,11 +30,13 @@ fn wgsl() -> String {
 
 fn sim(plane: Plane, lock: Lock) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane,
         slice: Slice {},
         lock,
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },
