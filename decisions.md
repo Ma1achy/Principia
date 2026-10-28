@@ -27345,9 +27345,9 @@ read:
 
 R-633 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 (statement, rulings, note), REQ-GUI-266 (statement, rulings, note),
-REQ-GUI-200 (statement, rulings, note), REQ-GUI-346 (note), REQ-CHART-062 and REQ-CHART-065 (statement, verify, rulings,
-note); adds REQ-GUI-410.
+Changes REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 (statement, rulings, source, note), REQ-GUI-266 (statement, rulings,
+note), REQ-GUI-200 (statement, rulings, source, note), REQ-GUI-346 (rulings, note), REQ-CHART-062 and REQ-CHART-065
+(statement, verify, rulings, source, note); adds REQ-GUI-410.
 
 ## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
 *28 Oct 2026 · the owner's ruling on the cloud trial proposal, sent with R-633's revised RQ-603; applied in
