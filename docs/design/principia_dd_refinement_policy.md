@@ -100,6 +100,12 @@ it: it takes §6's `Undetermined` decision, never `Split`, and is never discarde
 remedy is finer steps, as an explicit re-run, never an automatic one. The other undetermined footprints (a non-finite
 spread, an unusable copy of another kind) split as above.
 
+**An unusable copy (R-633, closing RQ-604).** A copy is unusable iff its `state ∈ {sim_failed, decode_failed}` or its
+`budget_exhausted` bit is set: a bit test on the copy's `sample_descriptor` `state` (payload §2) and its `budget_word`
+(R-603, placed by TASK-M3-41, REQ-PAY-110). So the second undetermined case of `unresolved(f)` above is "some copy of
+`f` is unusable", and "an unusable copy of another kind" is a copy whose `state` is `sim_failed` or `decode_failed`;
+a budget-exhausted copy is the kind the paragraph above takes out of the split.
+
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous
 policy's threshold had to sit *inside a distribution whose median moves six orders between regions*,
 which is why it needed per-region tuning and never got it right.

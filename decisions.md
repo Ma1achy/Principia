@@ -4710,11 +4710,15 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 *Amended by R-369 and R-373.*
+*Amended in part by R-634 (28 Oct 2026; a trial: TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a
+cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
 I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
-place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`.*
+place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`. The build loop stays on the Mac, but for
+R-634's trial, under which TASK-M8-07's and TASK-M8-13's implementer and code and qa reviewers run in a cloud
+session.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -13963,9 +13967,13 @@ decoder's basis edit; J3's meanwhile no longer applies).*
 own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`).*
 *Amended in part by R-554 (21 Oct 2026; J1 and J2: the shape sphere's tilt targets gain the physical `p_λ`
 components, tilted by their physical value; RQ-474 closed).*
+*Amended in part by R-633 (28 Oct 2026; J1 gains one principle, RQ-603 closed: where a chart holds a block by a
+physical construction, its hidden coordinates are that construction's physical parameters, tilted and sliced by value
+as R-554 L5's `p_λ`: the mass simplex's `ν₀`, a rest start's four momentum controls from 0, and the held `L_z` or
+`K` of the `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z`; T1's "every chart" holds as written).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
-composition runs into the saved target; R-554 adds the physical `p_λ` targets, J2's latent-control rule holding for
-every other target.*
+composition runs into the saved target; R-554 adds the physical `p_λ` targets, and R-633 adds J1's principle for the
+charts that hold a block by a physical construction, J2's latent-control rule holding for every other target.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -21574,6 +21582,10 @@ REQ-GUI-054 and REQ-GUI-087 (statement, verify, rulings, note) and REQ-GUI-188, 
 REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-345.
 
 ## R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
+*Refined by R-633 (28 Oct 2026; RQ-601: the steer's `J⁺` is formed from `J`'s singular value decomposition, every
+singular value below `c·σ₁` dropped, `c` a calibration (REQ-GUI-410), so `J⁺ = J⁻¹` only where nothing is dropped;
+RQ-600: J1's central-difference step is `J_D`'s, written in deep zoom § 2).*
+*Still in force: all of it; the steer's `J⁻¹` is R-633's `J⁺` wherever the cut drops a singular value.*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
 Jacobi and Shape bullet and the steer bullet reworded, with their earlier words kept) and § "G2. Explore — the everyday
 view (`01_main.png`)" (the line system's fade clause), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder —
@@ -27191,3 +27203,216 @@ Changes REQ-DEC-036 (verify, rulings, source, note), REQ-TOOL-159 (rulings, note
 rulings, source, note), REQ-VAL-019 (verify, rq, rulings, source, note), REQ-VAL-209 (verify, rq, rulings, note),
 REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 (statement, rulings, source, note), REQ-PAY-111 (note) and
 REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
+
+## R-633 — Every central-difference Jacobian of the decode takes the encode contract's step; the steer's `J⁺` drops each singular value below `c·σ₁`, `c` a calibration; a chart that holds a block by a physical construction has that construction's physical parameters as hidden coordinates, tilted and sliced by value, and TASK-M2-36 splits; an unusable copy is a bit test on `state` and `budget_word` *(closes RQ-600, RQ-601, RQ-603 and RQ-604; amends R-473; refines R-550)*
+*28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
+`docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
+`docs/design/principia_lines.md` § 8 (the trace fade's step), `docs/gui/principia_render_gui_spec.md` § "The compass:
+look and views (R-451, R-452)" (the steer bullet: `J⁺`'s cut), `docs/contracts/principia_chart_decoder_contract.md` §
+"Tilt (basis edit)" ("Tilt on every chart": the charts that hold a block by a construction),
+`docs/design/principia_chart_reference.md` § 4.5 (a table of their hidden coordinates),
+`docs/design/principia_dd_refinement_policy.md` § 1 and `docs/design/principia_dd_simstate_payload.md` § 2 (an unusable
+copy), a dated note on `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.1's PL-7 row, `plan/OPERATIONS.md` §
+"Merging" (re-running CI), R-473's and R-550's forward lines, `REVIEW_QUEUE.md` (RQ-599 noted),
+`docs/archive/review_queue/M0.md` (the four closed entries, moved with their ruling), REQ-DEC-034, REQ-DEC-036,
+REQ-DEC-049, REQ-GUI-266, REQ-GUI-200, REQ-GUI-346, REQ-CHART-062 and REQ-CHART-065 (reqio), REQ-GUI-410 (reqio, new,
+calibration), TASK-M6-35, TASK-M5-04, TASK-M6-07, TASK-M8-54, TASK-M2-36, TASK-M2-52 (new), TASK-M2-38 and TASK-M8-48,
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-35, TASK-M5-04, TASK-M2-36 and TASK-M2-52*
+
+The human's words, verbatim:
+
+> Owner's ruling batch, 28 Oct (next free R-number; quote this text). Close each entry with its line.
+>
+> RQ-600: (a). The step for every central-difference Jacobian of the decode, J_D, the latent Jacobian and R-596's trace
+> fade, is the encode contract's: h_k = ε^{1/3}·max(1, |x_k|) in f64, dividing by the step actually taken, (x+h) −
+> (x−h). Write it into deep_zoom §2 as J_D's step rule. (b) is rejected: a secant at the quad's half-width is the
+> cell-width collapse recorded in the prototype (CLAUDE.md, §12: "the fix §12 needs is a Jacobian not built by a secant
+> at the cell width"). Unblocks TASK-M6-35.
+>
+> RQ-601: (a). J⁺ is formed from J's SVD, dropping every singular value below c·σ₁. c is a second R-71 calibration
+> beside REQ-GUI-346, starting at 1e-9: the geometric middle of the measured gap (σ₈/σ₁ ≤ 1.9e-12 at E* = 0, ≥ 3.9e-6
+> with E* unset). Record the measurement as its basis. Gate arms: the E* = 0 fixture refuses the shell-normal direction
+> on every sampled z; the E*-unset fixture refuses none; a saturated-link fixture refuses. (b) is rejected: it couples
+> two different quantities to one value. (c), the analytic energy-normal projector, is noted for later, if the gap ever
+> narrows (f32 or deep zoom). Unblocks TASK-M6-35.
+>
+> RQ-603: One principle, added to R-473 J1: where a chart holds a block by latent controls, its hidden coordinates are
+> those controls; where it holds a block by a physical construction, its hidden coordinates are that construction's
+> physical parameters, tilted and sliced by value as R-554 L5's p_λ. So: (a) a3: the mass simplex's configuration hidden
+> coordinate is ν₀ (the held Burrau-family shape), and d = 0 reproduces the untilted chart exactly; a1 and a2 are
+> rejected. (b) b1: a rest start is z_mom = 0, and each momentum control is a hidden coordinate from 0 (every registered
+> link maps 0 to 0). (c) c2: the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains the held K, as physical
+> hidden coordinates. Cells with no momentum construction at the tilted value (K < L_z²/2I) read as refused, through the
+> tilt's existing ray-degenerate path. If §2.2's construction cannot take a nonzero held value, fall back to c1 for
+> those three charts and queue it. T1's "every chart" then holds as written, and REQ-CHART-062/-065 run over the whole
+> registry. Split TASK-M2-36: build the five unaffected charts now; the six follow on this ruling.
+>
+> RQ-604: (a). "Unusable copy" = state ∈ {sim_failed, decode_failed} or budget_exhausted, as a bit test on
+> sample_descriptor's state and budget_word. Write it into refinement policy §1 and payload §2.
+>
+> #314: keep the PL-7 edit; it is correct (PL-7 is the precision horizon).
+>
+> R-369 list from this session: all stand. One note: to re-run CI, prefer re-running the failed jobs over closing and
+> reopening the PR.
+>
+> Still owed to me: a five-line summary of the lavapipe/cloud trial proposal (what it changes, cost, how it is
+> reversed), so I can rule on it.
+>
+> One PR, left for the owner. Merge order after it: as you have it.
+
+*The revised RQ-603.* The RQ-603 paragraph above is the owner's revised text, sent after the batch "(use in place of
+the a2 version in this morning's batch)". With the cloud trial's ruling (R-634) the owner added: "Check: RQ-603 in
+today's ruling uses the revised "one principle" text (ν₀ as the mass simplex's hidden coordinate, a3), not the earlier
+a2 version." It does: a3 is applied, and the batch's first RQ-603 paragraph, kept here as the record and not applied,
+read:
+
+> RQ-603: (b) b1: a rest start is z_mom = 0, and each momentum control is a hidden coordinate from 0 (every registered
+> link maps 0 to 0). (a) a2: the mass simplex offers only the momentum controls; its configuration is held by ν₀ as the
+> Burrau embed holds it (J1 read literally); a3 (ν₀ as a physical hidden coordinate) is recorded as a possible later
+> extension. (c) c2: the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains the held K, as a physical hidden
+> coordinate tilted by its value, as R-554 L5's p_λ. Cells with no momentum construction at the tilted value (K <
+> L_z²/2I) read as refused, through the tilt's existing ray-degenerate path. If §2.2's construction cannot take a
+> nonzero held value, fall back to c1 for those three charts and queue it. Split TASK-M2-36: build the five unaffected
+> charts now; the six follow on these answers.
+
+*What it decides*, item by item:
+
+- **RQ-600** takes option (a). Every central-difference Jacobian of the decode takes the encode contract's step
+  (`principia_inverse_encode_contract.md` Part 4, "How it is evaluated"): `h_k = ε^{1/3}·max(1, |x_k|)` in f64,
+  the difference divided by the step actually taken, `(x + h) − (x − h)`. It is written into deep zoom § 2 as `J_D`'s
+  step rule, and it is the latent Jacobian's (R-550 J1, REQ-DEC-049) and R-596's trace fade's (REQ-GUI-266, lines § 8).
+  REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 state it, REQ-GUI-266 cites it, and TASK-M6-35 no longer waits for it.
+  Option (b), a secant at the quad's half-width, is rejected: it is the cell-width collapse the prototype records.
+- **RQ-601** takes option (a). `J⁺` is formed from `J`'s singular value decomposition, every singular value below
+  `c·σ₁` dropped. `c` is a second R-71 calibration beside REQ-GUI-346, REQ-GUI-410 (new, closed by TASK-M6-35 and
+  confirmed at the M6 gate), starting at `10⁻⁹`, the geometric middle of the measured gap (`σ₈/σ₁ ≤ 1.9·10⁻¹²` at
+  `E* = 0`, `≥ 3.9·10⁻⁶` with `E*` unset), that measurement (RQ-601's, recorded in its archived entry) its basis. Its
+  gate arms: the `E* = 0` fixture refuses the shell-normal direction on every sampled `z`, the `E*`-unset fixture
+  refuses none, and a saturated-link fixture refuses. Option (b), one value for both, is rejected; option (c), the
+  analytic energy-normal projector, is noted for later, if the gap ever narrows (f32 or deep zoom), in render_gui_spec's
+  steer bullet. TASK-M6-35 no longer waits for it.
+- **RQ-603**, as revised, adds one principle to R-473 J1: where a chart holds a block by latent controls, its hidden
+  coordinates are those controls; where it holds a block by a physical construction, its hidden coordinates are that
+  construction's physical parameters, tilted and sliced by value as R-554 L5's `p_λ`. So (a) takes a3: the mass
+  simplex's configuration hidden coordinate is `ν₀`, the held Burrau-family shape, and `d = 0` reproduces the untilted
+  chart exactly; a1 and a2 are rejected. (b) takes b1: a rest start (the mass simplex, the Euclid plane, the δm strip)
+  is `z_mom = 0`, and each momentum control is a hidden coordinate from 0. (c) takes c2: the `(ν, K)` chart and
+  `Φ_θ,K` gain the held `L_z`, and `Φ_θ,L_z` the held `K`, as physical hidden coordinates; a cell with no momentum
+  construction at the tilted value (`K < L_z²/2I`) reads as refused. c1 is the fallback only if § 2.2's construction
+  cannot take a nonzero held value; it can (chart_reference § 2.2 takes any `L_z` and `K*` with `K* ≥ L_z²/2I`, and
+  is terminal below it), so c2 applies and nothing is queued. T1's "every chart" then holds as written, and
+  REQ-CHART-062's and REQ-CHART-065's arms run over the whole registry. TASK-M2-36 splits: it builds the five charts
+  the answer does not touch now, and TASK-M2-52 (new) builds the six on this ruling. The decoder contract's "Tilt on
+  every chart" and chart_reference § 4.5 state it; R-473 carries the forward line.
+- **RQ-604** takes option (a). An unusable copy is `state ∈ {sim_failed, decode_failed}` or `budget_exhausted`, a bit
+  test on `sample_descriptor`'s `state` and on `budget_word`, written into refinement policy § 1 and payload § 2.
+  TASK-M5-32 (PR #318) applied option (a) of its physics review (5679524618, F4) meanwhile, per R-369, and can now read the
+  definition; this PR does not edit that branch.
+- **#314:** the PL-7 edit to the census proposal's § 3.2 is kept; it is correct, PL-7 being the precision horizon. The
+  proposal is a record pinned by its sha256 in RQ-599, so the dated note sits on PLAN.md § 3.1's PL-7 row, and RQ-599
+  carries a dated line; RQ-599 stays open.
+- **The R-369 list** from the session all stands. The note on CI is applied in `plan/OPERATIONS.md` § "Merging": to
+  re-run CI, prefer re-running the failed jobs over closing and reopening the PR.
+- **"Still owed to me"** was the orchestrator's summary of the cloud trial proposal, outside the corpus; the owner's
+  ruling on it is R-634.
+- **"One PR, left for the owner"**: this PR, which merges after PR #313, PR #314 and PR #316, whose commits it carries.
+
+*Applied per R-369:*
+
+- RQ-600's `x_k` is the input coordinate stepped: `u` or `v` for `J_D`, `z_k` for the latent Jacobian and the trace
+  fade's. REQ-DEC-036, which TASK-M5-04 closes by computing `J_D`, states the step too, beside REQ-DEC-034.
+  TASK-M6-07's note on the step (physics review 5624781454 of PR #279) is answered: its physics review confirms that
+  RQ-553's per-direction saturation test holds with the written step, and that test 11's `O(h²)` fit runs over depths
+  where the linearisation error, not `J_D`'s own truncation error (of order `ε^{2/3}`), dominates.
+- RQ-601: with the cut, `J⁺ = J⁻¹` only where no singular value is dropped, so the steer's `q ∝ J⁻¹ e` reads `J⁺`
+  wherever the cut drops one (an accepted cell on an `E*` chart would otherwise take the dropped direction's `1/σ₈`).
+  REQ-GUI-200 says so; the physics reviewer of TASK-M6-35 checks it, and the owner may veto it. The test is
+  `mock_compass_steer_cut`, an acceptance line of TASK-M6-35.
+- RQ-603 (c)'s "through the tilt's existing ray-degenerate path" is read per cell: the corpus's `ray-degenerate` is a
+  chart's `system_image` (chart_decoder_contract Part 5), so a refused cell takes that path's area weight 0 and is no
+  system, drawn as validation layer 2 draws `K < L_z²/2I` (chart_reference § 5.4), and the chart's `system_image`
+  stays its own. Flagged for the owner's veto.
+- The split: TASK-M2-36 closes REQ-CHART-063, REQ-CHART-064 and REQ-CHART-066 and builds REQ-CHART-062's and
+  REQ-CHART-065's arms on its five charts (latent, shape sphere, the two invariant charts, mixed). TASK-M2-52 depends
+  on it, takes the six construction charts (the mass simplex, the Euclid plane, the δm strip, `(ν, K)`, `Φ_θ,K` and
+  `Φ_θ,L_z`), and closes REQ-CHART-062 and REQ-CHART-065, which only it can close once every chart tilts; reviewers
+  code, qa and physics.
+- The dependents: TASK-M8-48 (the real engine's tilt and slice on every chart, needing REQ-CHART-062) and TASK-M2-38
+  (REQ-CHART-060's slice on the mass simplex; REQ-CHART-061's fuzz over every gallery chart, the Burrau `K` charts
+  tilted) gain TASK-M2-52. TASK-M2-37 (its tilted arms on the invariant charts), TASK-M2-39 (on `(L_z, K)`, and after
+  TASK-M2-38), TASK-M2-40 (latent and shape-sphere saved charts), TASK-M8-53 (after TASK-M8-48) and TASK-M8-56 (the
+  shape sphere) keep TASK-M2-36 alone.
+
+R-633 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 (statement, rulings, note), REQ-GUI-266 (statement, rulings, note),
+REQ-GUI-200 (statement, rulings, note), REQ-GUI-346 (note), REQ-CHART-062 and REQ-CHART-065 (statement, verify, rulings,
+note); adds REQ-GUI-410.
+
+## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
+*28 Oct 2026 · the owner's ruling on the cloud trial proposal, sent with R-633's revised RQ-603; applied in
+`plan/OPERATIONS.md` § "Where the build loop runs (R-357)" (the cloud sentence reworded, and "The cloud trial (R-634)"
+added), § "Resources" (the cloud's disk for a GUI task) and § "Metal and perf (Mac only)" (the Mac's gui review),
+CLAUDE.md § "How work runs (`plan/WORKFLOW.md`)", R-357's forward line and `plan/rule_groups.yaml`; run by the
+orchestrator and the owner on TASK-M8-07 and TASK-M8-13*
+
+The human's words, verbatim:
+
+> Cloud trial: approved as summarised (R-number with this batch). Trial scope: TASK-M8-07 and TASK-M8-13 only, built and
+> code/qa-reviewed in a cloud session on lavapipe; the Mac keeps the GUI review, the app launch, my look, and all
+> merging. Nothing touching the kernel or physics runs in the cloud under this trial. Conditions: (1) report tokens,
+> wall-clock time and review rounds for both tasks against a comparable Mac-built GUI task; (2) the Mac GUI review
+> compares lavapipe and Metal screenshots of the same views side by side; (3) the stop rules stand as summarised (a
+> Metal-only finding costing more than one extra round per task, or disk forcing the agents to run one at a time).
+> Adding the GUI tests and screenshots to the Mac CI job: fine, per R-369.
+
+The message's last paragraph, "Check: RQ-603 in today's ruling uses the revised …", is about R-633 and is quoted in
+R-633's note.
+
+The proposal it approves is the orchestrator's (R-627's question, kept outside the repository, not applied until now),
+and the summary the owner approved, "as summarised", read:
+
+1. TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a cloud session the owner starts, on lavapipe;
+   the Mac keeps the GUI review (Metal screenshots, the app launch, the owner's look) and all merging.
+2. A GUI round goes from three Mac slots to one for about 10–15 min, and gui mutants run under `prlimit`.
+3. Cost: free CI minutes, a cold build of about 10 min, about 75 GB for three agents, each session started by hand,
+   and the token overhead measured by the trial.
+4. Risk: a Metal-only difference is found at review, costing at most one extra round each.
+5. It is reversible. Stop if a Metal-only finding costs more than one extra round per task, or disk forces serial
+   agents; repealing the ruling returns to Mac-only.
+
+*What it decides:*
+
+- **The trial's scope.** TASK-M8-07 and TASK-M8-13 only, both on the mock engine and reviewed by code, qa and gui. Each
+  is built, and code- and qa-reviewed, in a cloud session the owner starts, on lavapipe (`PRIN_GPU_BACKEND=vulkan`).
+  The Mac keeps the gui review, the `cargo run -p gui --features mock` launch, the owner's look (R-390's "What to try")
+  and all merging. Nothing touching the kernel or physics runs in the cloud under this trial; every other task, and
+  every physics-reviewed one, stays on the Mac as R-357 has it.
+- **Its conditions.** (1) The trial reports tokens, wall-clock time and review rounds for both tasks against a
+  comparable Mac-built GUI task. (2) The Mac's gui review compares lavapipe and Metal screenshots of the same views
+  side by side. (3) It stops if a Metal-only finding costs more than one extra review round per task, or if disk forces
+  the agents to run one at a time. Repealing this ruling returns to Mac-only.
+- **CI.** Adding the gui crate's tests and `cargo xtask screenshot --all` to the Mac CI job (`gpu-metal` on
+  `macos-15`) is approved per R-369. It is a separate code task, to follow; this ruling's port does not make it.
+- **R-357** is amended in part: its "cloud sessions aren't viable for the build loop" gives way, for these two tasks
+  only, to the trial.
+
+*Applied per R-369:*
+
+- The proposal's § 3 changes are applied as written, with "R-6xx" read as R-634: `plan/OPERATIONS.md` § "Where the
+  build loop runs (R-357)" (its cloud sentence, the old one kept as a *Was*) and § "Metal and perf (Mac only)" (a
+  sentence added), the cloud's disk in § "Resources", and CLAUDE.md's cloud clause (a clause added).
+- The split of the proposal's § 2 is written as § "The cloud trial (R-634)": the cloud session claims the task by
+  pushing `task/<id>` and opening its PR through REST, and the Mac never dispatches a task whose branch is on origin;
+  the cloud's agents keep R-219's own worktree and target each, under `$HOME/principia-work/`; the cloud session runs
+  the qa-commit checks and pushes qa's commit; the Mac's gui reviewer is dispatched at the head SHA, runs the gui
+  crate's tests and `cargo xtask screenshot --all` on Metal beside CI's lavapipe artifact of the same views, launches
+  the app, and works its checklist; merges, and resolving threads (GraphQL), stay on the Mac. Gui mutants for these
+  tasks run in the cloud under `prlimit` (R-352).
+- The comparable Mac-built GUI task for condition (1) is TASK-M8-05, which the proposal keeps on the Mac, or, if it is
+  not comparable when the trial reports, another mock-engine task reviewed by code, qa and gui of like size; the
+  report names it. The report goes in the summary after both tasks merge.
+
+R-634 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement or task.

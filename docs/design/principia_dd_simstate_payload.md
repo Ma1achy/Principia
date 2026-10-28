@@ -286,6 +286,10 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
+- **An unusable copy (R-633, closing RQ-604).** "Unusable copy" (`principia_dd_refinement_policy.md` §1) is
+  `state ∈ {sim_failed, decode_failed}` (codes 4 and 5) or `budget_exhausted`: a bit test on `sample_descriptor`'s
+  `state` and on `budget_word`'s sticky `budget_exhausted` bit (§1; R-603, its bit placed by TASK-M3-41, REQ-PAY-110).
+  No other flag or code means it, and no new field carries it.
 - **Which `DEGENERATE` reason writes which `decode_failed` code** (R-72; REQ-DEC-038): `principia_dd_decoder.md` §2's
   closed cause set maps `M01_TINY` to `2`; `NO_QUALIFYING_SEED` to `1`; `INVARIANT_INFEASIBLE`, `ENERGY_INFEASIBLE`
   and `ENERGY_UNSCALABLE` to `3`. No reason writes `0`: it is a non-finite decode output, which is not a reason.
