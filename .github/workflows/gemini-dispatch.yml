@@ -1,0 +1,80 @@
+# Gemini, an advisory PR reviewer for a one-week trial, never a merge gate (decisions.md R-635). Taken from
+# google-github-actions/run-gemini-cli v0.1.22's examples/workflows/gemini-dispatch/gemini-dispatch.yml, cut to its
+# review route only: no triage, invoke, plan-execute or issue workflows, no acknowledgement or failure comments.
+#
+# Triggers: a PR opened (or reopened) from this repository, and a comment starting `@gemini-cli /review` on a PR from
+# an OWNER, MEMBER or COLLABORATOR only, so an outsider cannot spend the key. A fork PR's `pull_request` run gets no
+# secrets, and the `if` below skips it as the example does. A comment-triggered run uses the workflow on `main`.
+#
+# Never blocking: no job here is a required check; `gemini-review.yml` skips green when the key is missing and is
+# continue-on-error throughout, so a quota or rate-limit error or an outage never turns a PR red.
+name: gemini-dispatch
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    # The review is skipped when every changed file is one the brief excludes: run inputs, outputs and binary data.
+    paths-ignore:
+      - "docs/incoming/**"
+      - "results/**"
+      - "shots/**"
+      - "**/*.png"
+      - "**/*.raw"
+      - "**/*.prnq"
+      - "**/*.npy"
+      - "**/*.csv"
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dispatch:
+    if: |-
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.fork == false
+      ) || (
+        github.event_name != 'pull_request' &&
+        github.event.sender.type == 'User' &&
+        (github.event_name == 'pull_request_review_comment' || github.event.issue.pull_request) &&
+        startsWith(github.event.comment.body, '@gemini-cli /review') &&
+        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      additional_context: ${{ steps.extract.outputs.additional_context }}
+    steps:
+      - name: Extract the request's extra instructions
+        id: extract
+        env:
+          REQUEST: ${{ github.event.comment.body }}
+        run: |-
+          set -euo pipefail
+          extra="${REQUEST#@gemini-cli /review}"
+          delim="GEMINI_EOF_$(openssl rand -hex 16)"
+          {
+            echo "additional_context<<${delim}"
+            printf '%s\n' "${extra}"
+            echo "${delim}"
+          } >> "${GITHUB_OUTPUT}"
+
+  review:
+    needs: dispatch
+    uses: ./.github/workflows/gemini-review.yml
+    permissions:
+      contents: read
+      pull-requests: write
+    with:
+      additional_context: ${{ needs.dispatch.outputs.additional_context }}
+    secrets:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

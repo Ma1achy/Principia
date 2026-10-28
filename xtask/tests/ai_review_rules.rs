@@ -1,10 +1,12 @@
-//! The advisory AI reviewers' brief cannot drift (decisions.md R-635): `.gemini/styleguide.md` carries a copy of
-//! `AGENTS.md` § "Code Review Rules", and the two sections must be byte-identical. Codex reads `AGENTS.md`; Gemini Code
-//! Assist reads the style guide.
+//! The advisory AI reviewers' brief cannot drift (decisions.md R-635): `GEMINI.md` and
+//! `.github/copilot-instructions.md` each carry a copy of `AGENTS.md` § "Code Review Rules", and each copy must be
+//! byte-identical to it. Codex reads `AGENTS.md`; the Gemini CLI action loads `GEMINI.md` as its context file; GitHub
+//! Copilot's code review reads `.github/copilot-instructions.md`. One brief, three readers.
 //!
-//! One delimiting rule on both sides: the section starts at the line that is exactly `## Code Review Rules` and runs
+//! One delimiting rule on every side: the section starts at the line that is exactly `## Code Review Rules` and runs
 //! up to, not including, the next line that starts with `## ` (a level-2 heading, not `### `), or to the end of the
-//! file. Each test has a registered negative control (R-176).
+//! file. Each test has its registered negative controls (R-176): one byte of the copy changed, a line appended past
+//! the section's end, and the copy cut short by a level-2 heading inside it.
 
 use std::path::{Path, PathBuf};
 
@@ -43,59 +45,98 @@ fn section<'a>(text: &'a str, file: &str) -> &'a str {
     }
 }
 
-/// Fails unless the two files' sections are byte-identical, naming the first line that differs.
-fn check_same(agents: &str, styleguide: &str) {
+/// Fails unless `copy`'s section is byte-identical to `agents`'s, naming `file` and the first line that differs.
+fn check_same(agents: &str, copy: &str, file: &str) {
     let a = section(agents, "AGENTS.md");
-    let g = section(styleguide, ".gemini/styleguide.md");
-    if a != g {
+    let c = section(copy, file);
+    if a != c {
         let line = a
             .lines()
-            .zip(g.lines())
+            .zip(c.lines())
             .position(|(x, y)| x != y)
-            .unwrap_or_else(|| a.lines().count().min(g.lines().count()));
+            .unwrap_or_else(|| a.lines().count().min(c.lines().count()));
         panic!(
-            "ai_review_rules: .gemini/styleguide.md's copy differs from AGENTS.md § \"Code Review Rules\", first at \
-             line {} of the section; copy the section from AGENTS.md",
+            "ai_review_rules: {file}'s copy differs from AGENTS.md § \"Code Review Rules\", first at line {} of the \
+             section; copy the section from AGENTS.md",
             line + 1
         );
     }
 }
 
+/// `file`'s text with `from` replaced by `to` once, failing if `from` is gone, so a control cannot pass vacuously.
+fn edited(file: &str, from: &str, to: &str) -> String {
+    let text = read(file);
+    assert!(
+        text.contains(from),
+        "ai_review_rules: the control's edit target is gone"
+    );
+    text.replacen(from, to, 1)
+}
+
+const GEMINI: &str = "GEMINI.md";
+const COPILOT: &str = ".github/copilot-instructions.md";
+
+/// The controls' edits: one byte of a severity; a `### ` heading raised to `## `, which cuts the copy short; and a
+/// line appended past the section's end.
+const SEVERITY: (&str, &str) = (
+    "| A correctness bug | P1 / HIGH |",
+    "| A correctness bug | P2 / HIGH |",
+);
+const HEADING_RAISED: (&str, &str) = ("\n### Severity\n", "\n## Severity\n");
+const APPENDED: &str = "- Also flag long functions.\n";
+
 #[test]
-fn ai_review_rules_styleguide_copy_matches_agents_md() {
-    check_same(&read("AGENTS.md"), &read(".gemini/styleguide.md"));
+fn ai_review_rules_gemini_md_copy_matches_agents_md() {
+    check_same(&read("AGENTS.md"), &read(GEMINI), GEMINI);
 }
 
 negative_control!(
-    ai_review_rules_styleguide_copy_matches_agents_md,
-    "one byte of the style guide's copy changed: a severity moved from P1 to P2",
-    expected = "ai_review_rules: .gemini/styleguide.md's copy differs from AGENTS.md",
-    check_same(&read("AGENTS.md"), &{
-        let guide = read(".gemini/styleguide.md");
-        assert!(
-            guide.contains("- P1 / HIGH: any correctness bug"),
-            "ai_review_rules: the control's edit target is gone"
-        );
-        guide.replacen(
-            "- P1 / HIGH: any correctness bug",
-            "- P2 / HIGH: any correctness bug",
-            1,
-        )
-    })
+    ai_review_rules_gemini_md_copy_matches_agents_md,
+    "one byte of GEMINI.md's copy changed: a severity moved from P1 to P2",
+    expected = "ai_review_rules: GEMINI.md's copy differs from AGENTS.md",
+    check_same(
+        &read("AGENTS.md"),
+        &edited(GEMINI, SEVERITY.0, SEVERITY.1),
+        GEMINI
+    )
+);
+
+#[test]
+fn ai_review_rules_copilot_instructions_copy_matches_agents_md() {
+    check_same(&read("AGENTS.md"), &read(COPILOT), COPILOT);
+}
+
+negative_control!(
+    ai_review_rules_copilot_instructions_copy_matches_agents_md,
+    "one byte of .github/copilot-instructions.md's copy changed: a severity moved from P1 to P2",
+    expected = "ai_review_rules: .github/copilot-instructions.md's copy differs from AGENTS.md",
+    check_same(
+        &read("AGENTS.md"),
+        &edited(COPILOT, SEVERITY.0, SEVERITY.1),
+        COPILOT
+    )
 );
 
 mod trailing {
     use super::*;
     negative_control!(
-        ai_review_rules_styleguide_copy_matches_agents_md,
-        "a line appended to the style guide's copy, past the end of AGENTS.md's section",
-        expected = "ai_review_rules: .gemini/styleguide.md's copy differs from AGENTS.md",
+        ai_review_rules_gemini_md_copy_matches_agents_md,
+        "a line appended to GEMINI.md's copy, past the end of AGENTS.md's section",
+        expected = "ai_review_rules: GEMINI.md's copy differs from AGENTS.md",
         check_same(
             &read("AGENTS.md"),
-            &format!(
-                "{}- Also flag long functions.\n",
-                read(".gemini/styleguide.md")
-            )
+            &format!("{}{APPENDED}", read(GEMINI)),
+            GEMINI
+        )
+    );
+    negative_control!(
+        ai_review_rules_copilot_instructions_copy_matches_agents_md,
+        "a line appended to .github/copilot-instructions.md's copy, past the end of AGENTS.md's section",
+        expected = "ai_review_rules: .github/copilot-instructions.md's copy differs from AGENTS.md",
+        check_same(
+            &read("AGENTS.md"),
+            &format!("{}{APPENDED}", read(COPILOT)),
+            COPILOT
         )
     );
 }
@@ -103,16 +144,23 @@ mod trailing {
 mod truncated {
     use super::*;
     negative_control!(
-        ai_review_rules_styleguide_copy_matches_agents_md,
-        "the style guide's copy cut short by a level-2 heading inside it",
-        expected = "ai_review_rules: .gemini/styleguide.md's copy differs from AGENTS.md",
-        check_same(&read("AGENTS.md"), &{
-            let guide = read(".gemini/styleguide.md");
-            assert!(
-                guide.contains("\n### Severity\n"),
-                "ai_review_rules: the control's edit target is gone"
-            );
-            guide.replacen("\n### Severity\n", "\n## Severity\n", 1)
-        })
+        ai_review_rules_gemini_md_copy_matches_agents_md,
+        "GEMINI.md's copy cut short by a level-2 heading inside it",
+        expected = "ai_review_rules: GEMINI.md's copy differs from AGENTS.md",
+        check_same(
+            &read("AGENTS.md"),
+            &edited(GEMINI, HEADING_RAISED.0, HEADING_RAISED.1),
+            GEMINI
+        )
+    );
+    negative_control!(
+        ai_review_rules_copilot_instructions_copy_matches_agents_md,
+        ".github/copilot-instructions.md's copy cut short by a level-2 heading inside it",
+        expected = "ai_review_rules: .github/copilot-instructions.md's copy differs from AGENTS.md",
+        check_same(
+            &read("AGENTS.md"),
+            &edited(COPILOT, HEADING_RAISED.0, HEADING_RAISED.1),
+            COPILOT
+        )
     );
 }
