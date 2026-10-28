@@ -333,6 +333,58 @@ validation::negative_control!(
     })
 );
 
+/// Asserts the slice frame case reads `message` as naming the edit from `(5, 5, 5)` to `(0, 4, 6)`.
+fn check_frame_line(message: &str) {
+    let (before, after) = (
+        SliceFrame::along(Z_Q3),
+        SliceFrame {
+            normal: 0,
+            tilt_x: 4,
+            tilt_y: 6,
+        },
+    );
+    assert!(
+        crate::contract::conformance::names_frames(message, before, after),
+        "the line {message:?} does not name Slice.frame from (5, 5, 5) to (0, 4, 6)"
+    );
+}
+
+/// The case checks a slice frame line for its path and both frames' values, in any wording (gui_state_contract §2
+/// gives none): the store's own line, and another engine's.
+#[test]
+fn conformance_slice_frame_line_any_wording() {
+    check_frame_line(
+        "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 4, tilt_y 6)",
+    );
+    check_frame_line("SetField Slice.frame: was [5 5 5], now [0 4 6]");
+    check_frame_line("SetField Slice.frame Plane.q1 Plane.q2 5,5,5 -> 0,4,6 and the basis 1, 2");
+    for wrong in [
+        "SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6)",
+        "SetField Plane.q1 5 5 5 0 4 6",
+        "SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6) → (normal 5, tilt_x 5, tilt_y 5)",
+    ] {
+        assert!(
+            !crate::contract::conformance::names_frames(
+                wrong,
+                SliceFrame::along(Z_Q3),
+                SliceFrame {
+                    normal: 0,
+                    tilt_x: 4,
+                    tilt_y: 6
+                }
+            ),
+            "{wrong:?} read as the edit"
+        );
+    }
+}
+
+validation::negative_control!(
+    conformance_slice_frame_line_any_wording,
+    "a line with the after frame alone must fail",
+    expected = "does not name Slice.frame",
+    check_frame_line("SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6)")
+);
+
 /// The store logs a slice frame edit with the frame before and after, and the basis when the edit carries it
 /// (gui_state_contract §2), and one undo restores the frame and the basis together.
 #[test]
