@@ -593,6 +593,11 @@ const SUBSTEP: [&str; 5] = [
 /// stored bit means, so they are not hashed.
 const CURVE_SEARCH: [&str; 3] = ["curve_grid_log2", "curve_golden_steps", "inv_phi"];
 
+/// The view window's square (TASK-M2-21; chart_decoder_contract Part 3): the centre and half-width of the window over a
+/// chart's whole `[0,1]²`, the view's default placement, which decides which chart point a pixel shows, never what a
+/// stored bit means, so they are not hashed.
+const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -607,7 +612,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
-    // (TASK-M2-18), or the substep law's (TASK-M3-03).
+    // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -620,7 +625,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || MARCH.contains(&k.name)
                 || STEPPERS.contains(&k.name)
                 || CURVE_SEARCH.contains(&k.name)
-                || SUBSTEP.contains(&k.name),
+                || SUBSTEP.contains(&k.name)
+                || WINDOW.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -671,6 +677,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the substep law's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WINDOW {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the window's entry `{name}` is not an unhashed register entry"
         );
     }
 }

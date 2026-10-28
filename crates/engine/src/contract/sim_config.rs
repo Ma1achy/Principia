@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use kernel::generated::links::{LinkParams, Selection};
-use ledger::constants::{MU_MAX, Q_MAX};
+use ledger::constants::{MU_MAX, Q_MAX, WINDOW_SQUARE_CENTRE, WINDOW_SQUARE_HALF};
 use ledger::links::{self as registry, Slot};
 use serde::{Deserialize, Serialize};
 
@@ -67,10 +67,10 @@ pub struct Window {
 
 impl Window {
     /// The window over the chart's whole square `[0,1]²`, where the chart point of the pixel `(s, t)` is `(s, t)`: `Φ`'s
-    /// own domain (chart_decoder_contract Part 3), a structural placement, not a register value.
+    /// own domain (chart_decoder_contract Part 3), read from the register.
     pub const SQUARE: Window = Window {
-        centre: [0.5, 0.5],
-        half: [0.5, 0.5],
+        centre: [WINDOW_SQUARE_CENTRE.number(), WINDOW_SQUARE_CENTRE.number()],
+        half: [WINDOW_SQUARE_HALF.number(), WINDOW_SQUARE_HALF.number()],
     };
 
     /// The chart point of the pixel `(s, t)`.
