@@ -240,6 +240,7 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
         palette: Palette {},
         playhead: Playhead { t: 0.0 },
         hover: Hover::default(),
+        debug_view: false,
     };
     (sim, render)
 }

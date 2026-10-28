@@ -53,6 +53,7 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
         palette: Palette {},
         playhead: Playhead { t },
         hover: Hover::default(),
+        debug_view: false,
     };
     (sim, render)
 }

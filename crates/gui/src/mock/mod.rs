@@ -8,11 +8,13 @@
 //! the hover names (`sample`), and draws into its stand-in the hover path and, with tile bounds on, its fake quads'
 //! bounds (`quads`), and gives the Profiler window a canned trace in profiler schema v1's shape (`profile`). It holds
 //! 02_stain.png's stain graph, serves the Stain editor's library, code and Problems, and draws its preview in a look
-//! taken from the graph, so an edit of the graph shows there (`stain`). Its values are placeholder content, not
-//! corpus values.
+//! taken from the graph, so an edit of the graph shows there (`stain`). It counts the pixels its invalid-pixel test
+//! hook flags for the debug view's "Debug" key, and warns of those inside `[0,1]²` as a decoder bug, once per view
+//! (`invalid`; R-467 D5, D7, D8). Its values are placeholder content, not corpus values.
 
 pub mod canvas;
 pub mod clock;
+pub mod invalid;
 pub mod legend;
 pub mod profile;
 pub mod quads;
@@ -27,6 +29,8 @@ use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice, Window,
 };
+
+use crate::side::FigureView;
 use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
 use engine::contract::store::{set_field_message, write};
 
@@ -99,6 +103,19 @@ pub struct MockEngine {
     log: Vec<LogEntry>,
     clock: MockClock,
     stain: FakeStain,
+    /// What the test hook flags in the figure as last drawn.
+    flagged: invalid::Flagged,
+    /// The view the decoder-bug warning was last logged for.
+    warned: Option<WarnedView>,
+}
+
+/// A view as the decoder-bug warning tells views apart (R-467 D7): `z₀` and the basis, the chart's window, and the
+/// region the test hook flags, the mock's stand-in for the chart's validity.
+#[derive(Clone, Debug, PartialEq)]
+struct WarnedView {
+    plane: Plane,
+    window: Window,
+    invalid: [f32; 4],
 }
 
 impl MockEngine {
@@ -122,6 +139,43 @@ impl MockEngine {
             log: Vec::new(),
             clock,
             stain: legend::default_stain(),
+            flagged: invalid::Flagged::default(),
+            warned: None,
+        }
+    }
+
+    /// Whether View › Debug view is on (`RenderState`'s `debug_view`).
+    pub fn debug_view(&self) -> bool {
+        self.render.debug_view
+    }
+
+    /// What the test hook flags in the figure as last drawn.
+    pub fn flagged(&self) -> invalid::Flagged {
+        self.flagged
+    }
+
+    /// The figure as the app draws it, `view`, with the region `invalid` the test hook flags: the mock counts the
+    /// flagged pixels for the debug view's "Debug" key, and, when some lie inside `[0,1]²` and the view is not the one
+    /// last warned of, logs the decoder-bug warning, severity `warn`, source `app`, naming the mock's chart, the first
+    /// such pixel and their count (R-467 D7, D8; render_gui_spec §G12). A repaint of the same view logs nothing.
+    pub fn observe(&mut self, view: &FigureView, invalid: [f32; 4]) {
+        self.flagged = invalid::flagged(view, invalid);
+        let Some(inside) = self.flagged.inside else {
+            return;
+        };
+        let seen = WarnedView {
+            plane: self.sim.plane.clone(),
+            window: self.sim.chart.window,
+            invalid,
+        };
+        if self.warned.as_ref() != Some(&seen) {
+            let chart = crate::explore::manifold_view::View::of(&self.sim.plane).name();
+            self.push(
+                Severity::Warn,
+                Source::App,
+                invalid::warning(&chart, &inside),
+            );
+            self.warned = Some(seen);
         }
     }
 
@@ -263,6 +317,7 @@ fn state(t: f64) -> (SimConfig, RenderState) {
             palette: Palette {},
             playhead: Playhead { t },
             hover: Hover::default(),
+            debug_view: false,
         },
     )
 }
@@ -300,7 +355,13 @@ impl EngineInterface for MockEngine {
             },
             frame: MOCK_FRAME,
             log: std::mem::take(&mut self.log),
-            legend: legend::evaluate(&self.stain),
+            legend: {
+                let mut legend = legend::evaluate(&self.stain);
+                if self.render.debug_view {
+                    legend.keys.push(legend::debug_key(&self.flagged));
+                }
+                legend
+            },
             sample: self.render.hover.at.map(|at| {
                 sample::sample(
                     &self.sim.plane,

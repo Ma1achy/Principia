@@ -25,6 +25,8 @@
 //! spawns validation's binary (no crate depends on `gui`, systems_architecture §7.1), which runs the app on the mock
 //! engine, and reads back its `capture.png` and `names.json`, each accessible name with its rect in pixels. A layout
 //! case keeps the capture beside its artboard; a presence-only case checks the names as for a `data` surface (R-275).
+//! A `gui` case may name `mock_invalid`, the region the mock's invalid-pixel test hook flags, which the runner hands
+//! the capture mode as `PRIN_MOCK_INVALID` (R-467 D8); a case that names none runs with it unset.
 //!
 //! Not in the per-commit `cargo xtask ci`: `.github/workflows/screenshot.yml` runs `--all` on GUI PRs (R-177), and the
 //! gate workflow at the gates (R-110). The backend is `PRIN_GPU_BACKEND`'s, or the platform's when unset (R-169, R-206).
@@ -46,6 +48,8 @@ pub const OUT: &str = "target/screenshot";
 pub const CAPTURE: &str = "capture.png";
 /// The environment variable naming the backend (R-169).
 pub const BACKEND_VAR: &str = "PRIN_GPU_BACKEND";
+/// The environment variable that turns the mock's invalid-pixel test hook on (R-467 D8), as gui's capture mode reads it.
+pub const MOCK_INVALID_VAR: &str = "PRIN_MOCK_INVALID";
 
 /// Which suites to run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,6 +222,10 @@ pub struct Case {
     pub controls: Option<Vec<String>>,
     #[serde(default)]
     pub compass: Option<String>,
+    /// For a `gui` case, the region `s₀,t₀,s₁,t₁` the mock's test hook flags, handed to the capture mode as
+    /// [`MOCK_INVALID_VAR`] (R-467 D8).
+    #[serde(default)]
+    pub mock_invalid: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -369,6 +377,9 @@ fn run_case(
             "a `compass` spec belongs to a layout case, which names an artboard".to_owned(),
         );
     }
+    if case.mock_invalid.is_some() && !matches!(case.surface, SurfaceRef::Gui(_)) {
+        return Err("a `mock_invalid` region belongs to a `gui` case, run on the mock".to_owned());
+    }
     let shot = match &case.surface {
         SurfaceRef::Data(path) => {
             let surface_path = dir.join(path);
@@ -378,7 +389,7 @@ fn run_case(
                 .map_err(|e| format!("surface {}: {e}", surface_path.display()))?;
             Shot::Data(lay_out(&surface))
         }
-        SurfaceRef::Gui(gui) => Shot::Gui(capture_gui(gui, &out)?),
+        SurfaceRef::Gui(gui) => Shot::Gui(capture_gui(gui, case.mock_invalid.as_deref(), &out)?),
     };
     let (names, clipped, size) = match &shot {
         Shot::Data(frame) => (frame.names.clone(), frame.clipped.clone(), frame.size),
@@ -509,9 +520,29 @@ pub fn capture_command(gui: &GuiSurface, out: &Path) -> Command {
     command
 }
 
-/// Runs gui's capture mode for `gui` into `out` and reads back its capture and names.
-fn capture_gui(gui: &GuiSurface, out: &Path) -> Result<GuiCapture, String> {
-    let status = capture_command(gui, out)
+/// [`capture_command`], the mock's test hook flagging `mock_invalid` ([`MOCK_INVALID_VAR`]), or nothing: the variable is
+/// removed, so the runner's own environment never reaches a case that names no region.
+pub fn capture_command_flagging(
+    gui: &GuiSurface,
+    mock_invalid: Option<&str>,
+    out: &Path,
+) -> Command {
+    let mut command = capture_command(gui, out);
+    match mock_invalid {
+        Some(region) => command.env(MOCK_INVALID_VAR, region),
+        None => command.env_remove(MOCK_INVALID_VAR),
+    };
+    command
+}
+
+/// Runs gui's capture mode for `gui` into `out`, the mock's test hook flagging `mock_invalid`, and reads back its
+/// capture and names.
+fn capture_gui(
+    gui: &GuiSurface,
+    mock_invalid: Option<&str>,
+    out: &Path,
+) -> Result<GuiCapture, String> {
+    let status = capture_command_flagging(gui, mock_invalid, out)
         .status()
         .map_err(|e| format!("cannot run gui's capture mode: {e}"))?;
     if !status.success() {

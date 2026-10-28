@@ -39,11 +39,13 @@ mod tests {
     mod mock_compass_views;
     mod mock_console_keys;
     mod mock_content;
+    mod mock_debug_view;
     mod mock_drawn;
     mod mock_engine;
     mod mock_figure_navigation;
     mod mock_geometry;
     mod mock_hover;
+    mod mock_invalid_hook;
     mod mock_keyboard;
     mod mock_keyboard_modes;
     mod mock_keyboard_nav_state;

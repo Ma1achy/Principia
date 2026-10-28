@@ -4,31 +4,32 @@
 //! then a bar for what brightness encodes. The GUI draws exactly the keys it receives and holds none of its own. The
 //! real evaluation is TASK-M8-22's. The shares and the brightness field are placeholder content.
 //!
-//! The outcome key is render_gui_spec §G6's (R-444, R-446): the nine classes, physical outcomes only, each a flat swatch
-//! from `SWATCHES` in colour_composition §1.4's order, the black one "bounded / nothing yet", then the "forbidden
-//! region" key in the hatch style; no "degenerate", "collision @ t=0", `running` or `sim_failed` key and no "not yet"
-//! swatch. The "not yet" style stays a class a key of another field may show (R-399). Every key's label is the one
+//! The outcome key is render_gui_spec §G6's (R-444, R-446, R-467): the nine classes, physical outcomes only, each a flat
+//! swatch from `SWATCHES` in colour_composition §1.4's order, the black one "bounded / nothing yet", and no "forbidden
+//! region" key, a pixel that is not part of the chart drawing the canvas background, unkeyed; no "degenerate",
+//! "collision @ t=0", `running` or `sim_failed` key and no "not yet" swatch. With View › Debug view on, the mock adds
+//! the "Debug" key after the stain's ([`debug_key`]; R-467 D5). The "not yet" style stays a class a key of another field may show (R-399). Every key's label is the one
 //! conversion module's name (R-449; REQ-GUI-188): a swatch's its class name, 1-based, through `SWATCHES`, and the
 //! running class's the display name of `running`.
 
 use engine::contract::display;
 use engine::contract::legend::{Legend, LegendEntry, LegendKey, SwatchStyle, SWATCHES};
 
-/// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, the running samples'
-/// "not yet" style of a field that holds no value for them (R-399), or the outcome legend's forbidden chart regions,
-/// drawn as the hatch (R-446).
+/// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, or the running
+/// samples' "not yet" style of a field that holds no value for them (R-399).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Class {
     /// The swatch whose param this is (colour_composition §1.4).
     Swatch(&'static str),
     /// The running samples, drawn as the "not yet" style.
     Running,
-    /// The forbidden chart regions, "forbidden region", drawn as the hatch (render_gui_spec §G6).
-    Forbidden,
 }
 
-/// The outcome legend's forbidden-region key's label (render_gui_spec §G6).
-pub const FORBIDDEN: &str = "forbidden region";
+/// The debug view's key's title (render_gui_spec §G6; R-467 D5).
+pub const DEBUG: &str = "Debug";
+/// Its entries' labels, in order: the pixels the chart classifies as not a system, the decode or sim failures, and the
+/// non-finite samples.
+pub const DEBUG_ENTRIES: [&str; 3] = ["forbidden (chart)", "decode or sim failure", "NaN / Inf"];
 
 /// One dimension of the fake stain feeding OUT.
 #[derive(Clone, Debug, PartialEq)]
@@ -63,11 +64,11 @@ pub const DARKEST: f64 = 0.12;
 /// How many samples the brightness bar is drawn from, at equal steps over its domain.
 pub const RAMP_SAMPLES: usize = 16;
 
-/// The mock's default stain: the outcome class, its nine classes in colour_composition §1.4's order and the forbidden
-/// region (R-444, R-446; render_gui_spec §G6), then brightness by `t_end` with a late fade, as 01_main.png's Legend
+/// The mock's default stain: the outcome class, its nine classes in colour_composition §1.4's order (R-444, R-446,
+/// R-467; render_gui_spec §G6), then brightness by `t_end` with a late fade, as 01_main.png's Legend
 /// shows them, its shares placeholder content.
 pub fn default_stain() -> FakeStain {
-    use Class::{Forbidden, Swatch};
+    use Class::Swatch;
     FakeStain {
         out: vec![
             Dimension::Categorical {
@@ -82,7 +83,6 @@ pub fn default_stain() -> FakeStain {
                     (Swatch("escape_body_1"), 24.8),
                     (Swatch("escape_body_2"), 12.1),
                     (Swatch("triple_ejection"), 1.4),
-                    (Forbidden, 0.6),
                 ],
             },
             Dimension::Brightness {
@@ -130,13 +130,13 @@ pub fn evaluate(stain: &FakeStain) -> Legend {
                                     .to_owned(),
                                 SwatchStyle::NotYet,
                             ),
-                            Class::Forbidden => (FORBIDDEN.to_owned(), SwatchStyle::Hatch),
                         };
                         let share = if total > 0.0 { 100.0 * w / total } else { 0.0 };
                         LegendEntry {
                             label,
                             swatch,
                             share,
+                            count: None,
                         }
                     })
                     .collect();
@@ -161,4 +161,36 @@ pub fn evaluate(stain: &FakeStain) -> Legend {
         })
         .collect();
     Legend { keys }
+}
+
+/// The debug view's key (render_gui_spec §G6; R-467 D5): "Debug", its three entries each drawn always, with its count
+/// of the figure's pixels and its share of them: "forbidden (chart)" in the hatch, the pixels the test hook flags in
+/// `flagged`; "decode or sim failure" in `debug_invalid`'s style, the hatch too (F1), and "NaN / Inf" in its own style
+/// (REQ-COL-110 as proposed, a placeholder until confirmed), both 0 on the mock, which fails and overflows nowhere.
+pub fn debug_key(flagged: &super::invalid::Flagged) -> LegendKey {
+    let share = |count: u64| {
+        if flagged.figure > 0 {
+            100.0 * count as f64 / flagged.figure as f64
+        } else {
+            0.0
+        }
+    };
+    let entries = DEBUG_ENTRIES
+        .into_iter()
+        .zip([
+            (SwatchStyle::Hatch, flagged.flagged),
+            (SwatchStyle::Hatch, 0),
+            (SwatchStyle::NanInf, 0),
+        ])
+        .map(|(label, (swatch, count))| LegendEntry {
+            label: label.to_owned(),
+            swatch,
+            share: share(count),
+            count: Some(count),
+        })
+        .collect();
+    LegendKey::Categorical {
+        title: DEBUG.to_owned(),
+        entries,
+    }
 }

@@ -4,7 +4,7 @@
 //! through `rejects`).
 
 use eframe::egui::{self, pos2, vec2, Color32, Pos2, Rect, Shape};
-use engine::contract::legend::{LegendKey, SwatchStyle};
+use engine::contract::legend::{LegendEntry, LegendKey, SwatchStyle};
 use engine::contract::sample::Sample;
 
 use super::support::{headless, rejects, shapes};
@@ -12,7 +12,8 @@ use crate::app::App;
 use crate::capture::{hover_point, FORMAT, PIXELS_PER_POINT};
 use crate::explore::hover_label::{self, placed, BACKING, PADDING};
 use crate::explore::legend::{
-    colour, entry_rect, hatch_at, hatch_mesh, key_rects, ramp_mesh, MARGIN, ROW_H, SWATCH,
+    colour, entry_rect, hatch_at, hatch_mesh, key_rects, nan_inf_at, nan_inf_mesh, ramp_mesh,
+    MARGIN, ROW_H, SWATCH,
 };
 use crate::explore::time::{self, SCRUBBER};
 use crate::explore::trajectory::{
@@ -337,7 +338,8 @@ fn painted(mesh: &egui::Mesh, p: Pos2) -> Option<Color32> {
     })
 }
 
-/// The mesh `drawn` holds over the swatch square `square`, from its corner: the hatch key's, as a mesh, not a flat rect.
+/// The mesh `drawn` holds over the swatch square `square`, from its corner: a patterned key's, the hatch's or the NaN /
+/// Inf style's, as a mesh, not a flat rect.
 fn hatch_drawn(drawn: &[Shape], square: Rect) -> egui::Mesh {
     drawn
         .iter()
@@ -350,46 +352,40 @@ fn hatch_drawn(drawn: &[Shape], square: Rect) -> egui::Mesh {
             }
             _ => None,
         })
-        .expect("the forbidden region's swatch, a mesh")
+        .expect("a patterned swatch, a mesh")
 }
 
-/// Checks that `mesh` draws the hatch over `square` as the style (render_gui_spec §G6, "compared as the style";
-/// R-136): each physical pixel of the square at [`PIXELS_PER_POINT`] painted, at its centre, the colour `debug_invalid`
-/// gives at its position `[x + 0.5, y + 0.5]` ([`hatch_at`]), and so the hatch's two colours, never one.
-fn check_hatch(mesh: &egui::Mesh, square: Rect) {
+/// Checks that `mesh` draws the pattern `at` gives over `square` as the style (render_gui_spec §G6, "compared as the
+/// style"; R-136), the hatch's ([`hatch_at`], `debug_invalid`'s) or the NaN / Inf style's ([`nan_inf_at`],
+/// `debug_nan_inf`'s): each physical pixel of the square at [`PIXELS_PER_POINT`] painted, at its centre, the colour `at`
+/// gives at its position `[x + 0.5, y + 0.5]`, and so the pattern's two colours, never one.
+fn check_pattern(mesh: &egui::Mesh, square: Rect, at: fn([f64; 2]) -> [u8; 3]) {
     let px = |v: f32| (v * PIXELS_PER_POINT).round() as i64;
     let mut seen = std::collections::BTreeSet::new();
     for y in px(square.min.y)..px(square.max.y) {
         for x in px(square.min.x)..px(square.max.x) {
             let frag = [x as f64 + 0.5, y as f64 + 0.5];
             let centre = pos2(frag[0] as f32, frag[1] as f32) / PIXELS_PER_POINT;
-            let want = colour(hatch_at(frag));
+            let want = colour(at(frag));
             assert_eq!(
                 painted(mesh, centre),
                 Some(want),
-                "the hatch's pixel ({x}, {y})"
+                "the pattern's pixel ({x}, {y})"
             );
-            seen.insert(hatch_at(frag));
+            seen.insert(at(frag));
         }
     }
-    assert_eq!(seen.len(), 2, "the hatch's two colours");
+    assert_eq!(seen.len(), 2, "the pattern's two colours");
 }
 
-#[test]
-fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
-    let mut app = App::new(MockSide::new(MockEngine::frozen(), None), FORMAT);
-    let mut h = headless();
-    let layout = Layout::new(h.screen(), PIXELS_PER_POINT);
-    let _ = h.frame(&mut app, Vec::new());
-    let drawn = shapes(&mut h, &mut app);
-    let legend = app.snapshot().legend.clone();
-    let body = layout.legend.shrink(MARGIN);
-    let rects = key_rects(&legend, body);
-    let LegendKey::Categorical { entries, .. } = &legend.keys[0] else {
-        panic!()
-    };
-    let words = texts(&drawn);
-    let area = rects[0];
+/// A pattern's colour at a pixel centre: the hatch's or the NaN / Inf style's.
+type Pattern = fn([f64; 2]) -> [u8; 3];
+
+/// Checks that `drawn`, whose texts are `words`, paints the entries `entries` of a categorical key in `area` as
+/// `legend::show` lays them out: each swatch in its style (a flat colour, the stipple, the hatch or the NaN / Inf
+/// style, each pattern as the style, pixel by pixel), its label beside it and its value, the share or the count and the
+/// share, right, before the cell's end.
+fn check_entries(drawn: &[Shape], words: &[(String, Rect)], area: Rect, entries: &[LegendEntry]) {
     for (i, entry) in entries.iter().enumerate() {
         let cell = entry_rect(area.width(), area.min + vec2(0.0, ROW_H), i);
         let square = Rect::from_center_size(
@@ -406,9 +402,12 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
                 drawn.iter().any(|s| matches!(s, Shape::Mesh(m) if m.vertices.len() > 4 && (m.vertices[0].pos - square.min).length() < 1.0 / PIXELS_PER_POINT)),
                 "running's stipple"
             ),
-            SwatchStyle::Hatch => {
-                let mesh = hatch_drawn(&drawn, square);
-                let want = hatch_mesh(square, PIXELS_PER_POINT);
+            SwatchStyle::Hatch | SwatchStyle::NanInf => {
+                let (at, want): (Pattern, _) = match entry.swatch {
+                    SwatchStyle::Hatch => (hatch_at, hatch_mesh(square, PIXELS_PER_POINT)),
+                    _ => (nan_inf_at, nan_inf_mesh(square, PIXELS_PER_POINT)),
+                };
+                let mesh = hatch_drawn(drawn, square);
                 assert!(
                     mesh.vertices.len() == want.vertices.len()
                         && mesh
@@ -416,18 +415,18 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
                             .iter()
                             .zip(&want.vertices)
                             .all(|(a, b)| near(a.pos, b.pos) && a.color == b.color),
-                    "{}'s swatch is not hatch_mesh",
+                    "{}'s swatch is not its style's mesh",
                     entry.label
                 );
-                check_hatch(&mesh, square);
-                let flat = colour(hatch_at([0.5, 0.5]));
-                rejects("a hatch key drawn as a flat rect", || {
+                check_pattern(&mesh, square, at);
+                let flat = colour(at([0.5, 0.5]));
+                rejects("a patterned key drawn as a flat rect", || {
                     hatch_drawn(&[Shape::rect_filled(square, 0.0, flat)], square);
                 });
-                rejects("a hatch key drawn as a mesh of one colour", || {
+                rejects("a patterned key drawn as a mesh of one colour", || {
                     let mut one = egui::Mesh::default();
                     one.add_colored_rect(square, flat);
-                    check_hatch(&one, square);
+                    check_pattern(&one, square, at);
                 });
             }
         }
@@ -443,7 +442,7 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
             label.1
         );
         assert!((label.1.center().y - cell.center().y).abs() < 1.5);
-        let share = crate::explore::legend::share(entry.share);
+        let share = crate::explore::legend::value_text(entry);
         let value = words
             .iter()
             .find(|(t, r)| *t == share && cell.contains(r.center()))
@@ -454,6 +453,23 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
             value.1
         );
     }
+}
+
+#[test]
+fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
+    let mut app = App::new(MockSide::new(MockEngine::frozen(), None), FORMAT);
+    let mut h = headless();
+    let layout = Layout::new(h.screen(), PIXELS_PER_POINT);
+    let _ = h.frame(&mut app, Vec::new());
+    let drawn = shapes(&mut h, &mut app);
+    let legend = app.snapshot().legend.clone();
+    let body = layout.legend.shrink(MARGIN);
+    let rects = key_rects(&legend, body);
+    let LegendKey::Categorical { entries, .. } = &legend.keys[0] else {
+        panic!()
+    };
+    let words = texts(&drawn);
+    check_entries(&drawn, &words, rects[0], entries);
     // The bar: its mesh across the key, and its ends and middle marked under it.
     let LegendKey::Ramp {
         samples, lo, hi, ..
@@ -729,7 +745,7 @@ fn legend_texts(legend: &engine::contract::legend::Legend, rect: Rect) -> Vec<(S
 
 #[test]
 fn mock_legend_keys_drawn_long_labels_are_cut_before_the_share() {
-    use engine::contract::legend::{Legend, LegendEntry};
+    use engine::contract::legend::Legend;
     let long = "a class whose label runs on far past its cell".to_owned();
     let legend = Legend {
         keys: vec![LegendKey::Categorical {
@@ -738,6 +754,7 @@ fn mock_legend_keys_drawn_long_labels_are_cut_before_the_share() {
                 label: long.clone(),
                 swatch: SwatchStyle::Flat([10, 20, 30]),
                 share: 12.3,
+                count: None,
             }],
         }],
     };

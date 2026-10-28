@@ -17,7 +17,7 @@ use engine::contract::sim_config::{Latent, SimConfig};
 use engine::contract::store::StateStore;
 
 use crate::clock::TimeSource;
-use crate::layout::Placement;
+use crate::layout::{Layout, Placement};
 
 /// What the app needs from the engine side.
 pub trait EngineSide {
@@ -37,6 +37,13 @@ pub trait EngineSide {
     /// The canvas the figure is drawn through, the field at `placement` in its viewport (R-406); `None` draws no
     /// figure.
     fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>>;
+
+    /// The figure as the app draws it this frame, told before [`EngineSide::figure`]: its viewport in pixels, the
+    /// pixels it is clipped to and the canvas background (R-406; R-467 D2). Nothing by default: the real engine's
+    /// frame loop is TASK-M8-05's.
+    fn figure_view(&mut self, view: FigureView) {
+        let _ = view;
+    }
 
     /// The time source the app's clock reads; `None` holds the clock.
     fn time_source(&mut self) -> Option<&mut dyn TimeSource>;
@@ -59,6 +66,45 @@ pub trait EngineSide {
     /// under the sim key as it stands and read at the playhead, as the hover's sample is: what the Trajectory panel's
     /// pin re-integrates (R-453 D1, D5). `None` when the engine side has none.
     fn compute_ic(&mut self, ic: &Latent, at: [f64; 2]) -> Option<Sample>;
+}
+
+/// The figure as the app draws it (R-406; R-467 D2): its viewport's size in physical pixels, the shown rect's placement
+/// in it, the pixels the draw is clipped to (`[x₀, y₀, x₁, y₁)`, rows from the top, as egui-wgpu's scissor rounds the
+/// clip rect), and the canvas background, the colour the window is cleared to, which a pixel that is not part of the
+/// chart draws in a presentation view.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FigureView {
+    /// The viewport's size, in pixels.
+    pub size: [u32; 2],
+    /// The shown rect's placement in the viewport.
+    pub placement: Placement,
+    /// The pixels the figure is drawn on.
+    pub clip: [u32; 4],
+    /// The canvas background, 8-bit sRGB.
+    pub background: [u8; 3],
+}
+
+impl FigureView {
+    /// The figure of `layout` at `pixels_per_point`, the egui layer `shown` or hidden, over `background`: the viewport
+    /// the window, clipped to the figure's rect as it stands (`Layout::figure_rect`).
+    pub fn of(layout: &Layout, shown: bool, pixels_per_point: f32, background: [u8; 3]) -> Self {
+        let px = |v: f32| (v * pixels_per_point).round().max(0.0) as u32;
+        let window = layout.window;
+        let [w, h] = [px(window.width()), px(window.height())];
+        let clip = layout.figure_rect(shown);
+        let at = |v: f32, min: f32, max: u32| px(v - min).min(max);
+        Self {
+            size: [w, h],
+            placement: layout.placement(),
+            clip: [
+                at(clip.min.x, window.min.x, w),
+                at(clip.min.y, window.min.y, h),
+                at(clip.max.x, window.min.x, w),
+                at(clip.max.y, window.min.y, h),
+            ],
+            background,
+        }
+    }
 }
 
 /// The real engine's data contract, with no figure, no time source and no trace: its frame loop and canvas are
@@ -169,8 +215,22 @@ impl EngineSide for MockSide {
     fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>> {
         let canvas = self.canvas.clone()?;
         canvas.set_chart(self.engine.plane());
+        canvas.set_debug_view(self.engine.debug_view());
         canvas.set_placement(placement, self.engine.marks_over(placement.span()));
         Some(Arc::new(crate::mock::canvas::FigureCanvas(canvas)) as Arc<dyn Canvas>)
+    }
+
+    /// The canvas told the background and the debug view, and the mock told the figure's pixels and the region its
+    /// test hook flags, which it counts for the legend's "Debug" key and warns of inside `[0,1]²` (R-467 D5, D7, D8).
+    fn figure_view(&mut self, view: FigureView) {
+        let invalid = self
+            .canvas
+            .as_ref()
+            .map_or(crate::mock::canvas::NO_INVALID, |c| {
+                c.set_background(view.background);
+                c.invalid()
+            });
+        self.engine.observe(&view, invalid);
     }
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {

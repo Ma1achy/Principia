@@ -22,6 +22,12 @@ pub struct RenderState {
     /// The cursor over the figure, which the hover trace is drawn from (render_gui_spec §G2; trajectory_viewing §3):
     /// written through a `SetField` marked "no history", as the playhead's advance is (R-101).
     pub hover: Hover,
+    /// View › Debug view (gui_state_contract §2; render_gui_spec §G2; R-467 D5): on, the figure draws its pixels that
+    /// are not a system, its failures and its non-finite values in the debug styles, and the legend counts them under
+    /// its "Debug" key. Its `SetField` path is
+    /// [`RenderField::DebugView`](crate::contract::set_field::RenderField::DebugView), undoable as an Overlays ▾ toggle
+    /// is (R-69), a render key that re-integrates nothing; off at launch.
+    pub debug_view: bool,
 }
 
 /// The stain graph: nodes, wires, per-node params (gui_state_contract §2, §5): the free, typed node graph of

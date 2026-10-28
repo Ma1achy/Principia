@@ -94,6 +94,7 @@ fn store(plane: Plane) -> StateStore {
             hover: Hover::default(),
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
+            debug_view: false,
         },
     )
 }

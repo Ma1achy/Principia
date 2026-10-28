@@ -158,6 +158,8 @@ pub struct Actions {
     pub overlays: Option<engine::contract::render_state::Overlays>,
     /// Keep the overlay set as the default (Overlays ▾'s save as default).
     pub save_overlays: bool,
+    /// Toggle the debug view, one `SetField` (View › Debug view, R-467 D5).
+    pub debug_view: bool,
 }
 
 impl<S: EngineSide> App<S> {
@@ -602,6 +604,11 @@ impl<S: EngineSide> App<S> {
                 edit: Edit::Render(RenderField::Overlays(overlays)),
                 no_history: false,
             });
+        }
+        if std::mem::take(&mut actions.debug_view) {
+            edits.push(explore::top_bar::debug_view_edit(
+                !self.snapshot.render.debug_view,
+            ));
         }
         if std::mem::take(&mut actions.save_overlays) {
             self.overlay_default = self.snapshot.render.overlays.clone();
@@ -1099,7 +1106,11 @@ impl<S: EngineSide> App<S> {
     /// reaches it. The canvas draws over the whole window, the field at the shown layout's placement, and is clipped to
     /// the figure's rect as it stands: the shown rect with the egui layer `shown`, else the window (R-406). So over the
     /// shown rect the two states draw the same pixels.
-    fn paint_figure(&self, ctx: &egui::Context, layout: &Layout, shown: bool) {
+    fn paint_figure(&mut self, ctx: &egui::Context, layout: &Layout, shown: bool) {
+        let background = clear_colour(&ctx.global_style().visuals).to_array();
+        let [r, g, b, _] = background;
+        let view = crate::side::FigureView::of(layout, shown, ctx.pixels_per_point(), [r, g, b]);
+        self.side.figure_view(view);
         let Some(canvas) = self.side.figure(layout.placement()) else {
             return;
         };
