@@ -525,6 +525,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-482** — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone. Still in force: all of it but C3's "The mass-varying chart is the mass simplex chart", which R-626 replaces; C3's constant-mass control, the latent view with both mass logits at 0, stands. Amended in part by R-626.
 - **R-492** — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail
 - **R-626** — R-482 C3's mass-varying chart is a latent configuration view at a fixed non-zero mass logit, or a mixed chart with a mass axis, not the mass simplex chart, which sets its masses directly and cannot show `μ_max` moving them *(closes RQ-574; amends R-482 C3's choice of chart)*
+- **R-635** — Gemini Code Assist and Codex review PRs as advisory reviewers for a one-week trial, never merge gates; every finding is verified, fixed or answered with its traced reason; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
 
 ## CI
 

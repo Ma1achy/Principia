@@ -449,3 +449,31 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-605: A weekly whole-corpus consistency audit by our own agents, proposed and not built *(the owner's addendum of 28 Oct 2026, item 3; R-635; context: none built)*
+
+*Not built; for the owner. Proposed as the owner asked: "Whole-corpus consistency is not a PR reviewer's job. Propose
+(as a queue entry, not built yet) a scheduled weekly audit run by our own agents. It reads plan/, docs/design,
+docs/contracts, decisions.md and the requirements; checks cross-references resolve; finds contradictions between
+documents; and lists requirements with no task and tasks with no requirement. It reports to me as one PR of fixes or
+queue entries."*
+
+- **File, section:** `decisions.md` § "R-635 — …", which keeps whole-corpus consistency out of the AI reviewers'
+  brief (`AGENTS.md` § "Code Review Rules" checks only what a PR touches).
+- **What it reads:** `plan/` (`requirements.yaml`, `tasks.yaml`, `plan/tasks/`, `MILESTONES.md`, `WORKFLOW.md`,
+  `OPERATIONS.md`, `reviewers/`), `docs/design/`, `docs/contracts/` and `decisions.md`. Not `docs/incoming/`,
+  `docs/archive/`, `docs/reference/` or `workbench/`, which are records, not authority (R-1, R-159).
+- **What it checks:**
+  - every cross-reference resolves: a file and § heading, an R-, RQ-, REQ- or TASK- id, a contract Part;
+  - contradictions between documents: two statements of one rule, value or definition that disagree, and a
+    ruling's text against the doc lines it says it was applied in;
+  - requirements with no task, and tasks with no requirement.
+- **Its output:** one PR to the owner a week, holding fixes for what is mechanical (a stale reference, a heading
+  renamed) and a `REVIEW_QUEUE.md` entry for each contradiction, with file, section and quoted text, as any queue
+  entry. Nothing is merged without its reviews and green CI.
+- **The questions:** whether to build it; on what schedule and which machine (a cloud session suits read-and-think
+  work, R-357); and which agent role runs it and which reviewers its PR names.
+- **Overlap seen:** `python3 plan/check_plan.py` already fails on unresolved R- and RQ- references in the live files,
+  on references to missing files and sections in the plan, and on live requirements with no task and tasks closing
+  none. The audit would add the cross-document contradictions and the references `check_plan.py` doesn't scan.
+- **Applied meanwhile:** none; nothing is built, and nothing waits.

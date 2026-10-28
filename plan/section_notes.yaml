@@ -1332,3 +1332,7 @@
   section: "G9a. Sequence · Spotlights (no artboard; R-576 to R-578)"
   reason: parent heading (obligations are in its subsections)
   note: its two subsections, Sequence and Spotlights
+- file: decisions.md
+  section: "R-635 — Gemini Code Assist and Codex review PRs as advisory reviewers for a one-week trial, never merge gates; every finding is verified, fixed or answered with its traced reason; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*"
+  reason: informative only
+  note: "the owner's R-369 note of 28 Oct 2026: Gemini Code Assist and Codex advisory for a one-week trial, never merge gates, every finding verified, a report per reviewer after the week; process, carried by AGENTS.md, .gemini/ and xtask/tests/ai_review_rules.rs, with the weekly audit queued as RQ-605"

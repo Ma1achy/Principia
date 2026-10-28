@@ -26812,3 +26812,51 @@ there", RQ-551's option (a), which R-620 did not take. Applied as the words read
 instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
+
+## R-635 — Gemini Code Assist and Codex review PRs as advisory reviewers for a one-week trial, never merge gates; every finding is verified, fixed or answered with its traced reason; after the week, a report per reviewer *(an R-369 note; no CI gate or review step changes)*
+
+*28 Oct 2026 · applied in `AGENTS.md` (new: its authority line and § "Code Review Rules"), `.gemini/styleguide.md` and
+`.gemini/config.yaml` (new), `xtask/tests/ai_review_rules.rs` (new), `REVIEW_QUEUE.md` (RQ-605, new) and
+`plan/rule_groups.yaml`; the trial is run by the orchestrator*
+
+The owner's request of 28 Oct 2026 sets up two independent AI reviewers on PRs, Gemini Code Assist and Codex, whose
+apps he installs on the repository himself; its item 4, verbatim, asked to be recorded here as an R-369 note:
+
+> 4. decisions.md, as an R-369 note:
+>    - Both reviewers are advisory for a one-week trial, not merge gates.
+>    - Every finding is verified as CLAUDE.md's review rules require: fixed, or answered with the traced reason. Two
+>      bots agreeing is not verification.
+>    - After the week, report per reviewer: findings raised, true positives our own reviewers missed, false positives,
+>      noise per PR, and where the two disagreed. I then decide: keep one, keep both, or gate on one.
+
+and its last line: "Don't change any existing CI gate or review step."
+
+*What it decides:*
+- **Advisory, for one week from the day both apps first review a PR.** Neither reviewer is a merge gate: a PR merges
+  on its named reviewers' approvals and green CI as before (R-369), whatever the AI reviewers say. `reviews-complete`
+  doesn't count them, and no workflow, gate or reviewer file changes.
+- **Every finding is verified**, as `CLAUDE.md`'s review rules require: fixed, or answered on the PR with the traced
+  reason it doesn't hold. Two bots agreeing is not verification.
+- **After the week, a report per reviewer** to the owner: findings raised, true positives our own reviewers missed,
+  false positives, noise per PR, and where the two disagreed. He then decides: keep one, keep both, or gate on one.
+- **The brief is one text.** `AGENTS.md` § "Code Review Rules" is canonical (Codex reads `AGENTS.md`);
+  `.gemini/styleguide.md` carries a copy for Gemini Code Assist, and `xtask/tests/ai_review_rules.rs` fails if the
+  copy differs from it by a byte, run by CI's existing xtask jobs.
+
+*Applied per R-369 (the orchestrator's decisions):*
+- **The severity rule is the owner's addendum of the same day**, which replaces the request's: a physics or invariant
+  break is P0 / CRITICAL; any correctness bug (a wrong result, a crash, a panic, a NaN path, an off-by-one, a wrong
+  index, a race) is P1 / HIGH, as are a test with no control arm and the "Docs and plan consistency" checks; only
+  style and naming stay below the threshold. Gemini Code Assist's threshold is `HIGH`; Codex posts P0 and P1 only.
+- **Whole-corpus consistency is not a PR reviewer's job** (the addendum, item 3): the weekly audit by our own agents
+  is proposed as RQ-605, not built.
+- **Where the request names something this repository doesn't have,** the nearest real thing is named, and the PR
+  says so: `BRIEF.md` doesn't exist, so the authority line points at `CLAUDE.md`, at `decisions.md` over the `docs/`
+  corpus (R-1) and at `docs/read_first/principia_INDEX.md`; "the reference implementation" is prin-rs, checked
+  through the contracts that transcribe it, never through `docs/reference/` (R-159); `Decision::ALL` has no
+  counterpart yet, so the rule names the outcome enums' `State::ALL` and `Detail::ALL` (`crates/ledger/src/display.rs`)
+  and the refinement `Decision` once built.
+- R-635 is in the "process" group of `plan/rule_groups.yaml`.
+
+*The number:* the numbers after R-627 and before this one are taken by rulings on open PRs, the last two on the branch
+`rulings/2026-10-28`, none yet merged; this is the next free number after them.
