@@ -294,3 +294,11 @@ justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clam
 [[equivalent]]
 mutant = "crates/kernel/src/stage/encode.rs:28:38: replace | with ^ in notices"
 justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/driver/advance.rs:119:32: replace > with >= in <impl Advance for S>::advance"
+justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
+
+[[equivalent]]
+mutant = "crates/kernel/src/driver/cadence.rs:45:9: replace <impl Cadence<R> for WrapperCadence>::done -> bool with false"
+justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
