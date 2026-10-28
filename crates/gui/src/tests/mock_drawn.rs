@@ -764,6 +764,17 @@ fn legend_shapes(
     rect: Rect,
     pixels_per_point: f32,
 ) -> Vec<Shape> {
+    legend_shapes_after(legend, rect, pixels_per_point, &[])
+}
+
+/// The shapes `legend::show` paints for `legend` in `rect` at `pixels_per_point`, on a bare context, after a frame
+/// for each of `inputs`' event lists and three more, a scroll area having settled.
+fn legend_shapes_after(
+    legend: &engine::contract::legend::Legend,
+    rect: Rect,
+    pixels_per_point: f32,
+    inputs: &[Vec<egui::Event>],
+) -> Vec<Shape> {
     let ctx = egui::Context::default();
     ctx.set_pixels_per_point(pixels_per_point);
     let mut keyboard = crate::keyboard::Keyboard::new();
@@ -771,16 +782,25 @@ fn legend_shapes(
         screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(2000.0, 2000.0))),
         ..Default::default()
     };
-    let mut run = || {
-        let mut out = ctx.run_ui(raw.clone(), |ui| {
-            crate::explore::legend::show(ui, rect, legend, &mut keyboard);
-        });
+    let mut run = |events: Vec<egui::Event>| {
+        let mut out = ctx.run_ui(
+            egui::RawInput {
+                events,
+                ..raw.clone()
+            },
+            |ui| {
+                crate::explore::legend::show(ui, rect, legend, &mut keyboard);
+            },
+        );
         out.textures_delta.clear();
         out
     };
-    let _ = run();
-    let _ = run();
-    let out = run();
+    for events in inputs {
+        let _ = run(events.clone());
+    }
+    let _ = run(Vec::new());
+    let _ = run(Vec::new());
+    let out = run(Vec::new());
     let mut flat = Vec::new();
     fn flatten(shape: &Shape, out: &mut Vec<Shape>) {
         match shape {
@@ -982,6 +1002,32 @@ fn mock_legend_keys_drawn_scroll_past_the_panel() {
         &engine::contract::legend::Legend::default(),
         body
     ));
+    // Scrolled to the end, the last entry sits at the body's bottom: the scrolled content is the keys' own height,
+    // and the keys move up with the scroll.
+    let check_scrolled_to_end = |drawn: &[Shape]| {
+        let words = texts(drawn);
+        let last = words
+            .iter()
+            .find(|(t, _)| t == "NaN / Inf")
+            .unwrap_or_else(|| panic!("the last entry drawn: {words:?}"));
+        assert!(
+            last.1.max.y <= body.max.y + 0.5 && last.1.max.y >= body.max.y - ROW_H,
+            "{:?} not at the bottom of {body:?}",
+            last.1
+        );
+    };
+    let mut wheel = vec![vec![egui::Event::PointerMoved(panel.center())]];
+    wheel.push(vec![egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Point,
+        delta: vec2(0.0, -2000.0),
+        phase: egui::TouchPhase::Move,
+        modifiers: egui::Modifiers::NONE,
+    }]);
+    wheel.extend(std::iter::repeat_n(Vec::new(), 60));
+    check_scrolled_to_end(&legend_shapes_after(&legend, panel, 1.0, &wheel));
+    rejects("the keys drawn unscrolled", || {
+        check_scrolled_to_end(&legend_shapes(&legend, panel, 1.0))
+    });
     // Control: a panel tall enough for every key draws them unscrolled, with no bar, and fails the check.
     let tall = Rect::from_min_size(panel.min, vec2(panel.width(), 600.0));
     rejects("keys that fit, drawn unscrolled", || {
