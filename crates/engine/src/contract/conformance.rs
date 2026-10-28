@@ -429,6 +429,16 @@ fn slice_frame_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result
     let first = engine.snapshot();
     let (sim, h0) = (first.sim.clone(), first.history);
     let frame = turned(sim.slice.frame, 1);
+    let dims = crate::contract::sim_config::LATENT_DIM as u32;
+    let indices = |f: SliceFrame| [f.normal, f.tilt_x, f.tilt_y];
+    expect(
+        "the edited frame: each index a latent dimension, and each changed",
+        indices(frame)
+            .iter()
+            .zip(indices(sim.slice.frame))
+            .all(|(&i, was)| i < dims && i != was),
+        true,
+    )?;
     let edit = |frame, basis| SetField {
         edit: Edit::Sim(SimField::SliceFrame { frame, basis }),
         no_history: false,
