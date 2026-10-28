@@ -505,3 +505,65 @@ decides which clicks the steer refuses, on an `E*` chart and at a saturated link
   energy's gradient in the view's scaled coordinates (the shell's normal, which is `J`'s left null direction), with
   (a)'s cut only for saturation and poles.
 - **Applied meanwhile:** none. TASK-M6-35 waits.
+
+## RQ-603: The hidden coordinates of the charts that hold a block by a construction, not by latent controls: the mass simplex's configuration, the rest start's momenta, and the Burrau charts with no free control *(physics and definition, R-72; found by TASK-M2-36's implementer; R-473 T1, J1, J2; R-554 L2; REQ-CHART-062, REQ-CHART-065; context: TASK-M2-36)*
+
+*Found by TASK-M2-36's implementer, before any code. For the human: yes (physics: what a tilt or a slice of these
+charts decodes to changes their pixels; and part (c) is a requirement that cannot be met as written).*
+
+- **File, section:**
+  - `decisions.md` § R-473, J1: "A chart's hidden coordinates are the latent controls of the blocks its axes do not
+    write (its block-touch sets, chart_decoder_contract Part 5): … on the mass simplex the configuration's two and the
+    four momentum controls; on a Burrau-family chart whatever its embed leaves free; … A chart with no free control in
+    a block offers none from it."
+  - The same, J2: "every hidden coordinate is set and tilted through its latent control (a mass through its logit)";
+    T2: "`d` is added to the hidden coordinate's value at the slice centre"; T1: "Tilt and slice are available on
+    every chart: latent, shape sphere, mass simplex, Burrau family, invariant charts, and custom and saved charts."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart": "A chart's
+    hidden coordinates are the latent controls its axes do not write (Part 5's block-touch sets)".
+  - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", "Ternary mass plot": "Fix the
+    geometry at $\nu_0$. … $\Phi_{\mathrm{mass}}(u,v) = (\nu_0,\ (m_0, m_1, m_2),\ \mathrm{rest})$"; the same section
+    gives the Euclid plane and the δm strip a rest start, and the `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z` their momenta
+    from §2.2's construction at a held `L_z = 0` or `K`.
+  - `plan/requirements.yaml` REQ-CHART-062, verify: "over every chart of kernel::chart::REGISTRY (the registry's own
+    enumeration), under Lean each axis with one target at τ₁ = τ₂ = 90° and at τ₁ = −90°, τ₂ = 90°, … each chart
+    reports ray-degenerate"; REQ-CHART-065, verify: "per gallery chart and per hidden coordinate, a slice edit moves
+    only that latent control of z₀".
+- **What the code holds** (`crates/kernel/src/chart/`): the latent chart, the shape sphere (`z_mass`, `z_mom`), the
+  invariant charts (`z_cfg`, `z_mass`) and the mixed charts (`frozen`) hold their unwritten blocks as latent controls,
+  so J1's hidden coordinates are well defined there. The mass simplex holds no latent control: its configuration is
+  the Burrau triangle's *positions* at `ν₀`, held while the masses vary, and its momenta are a rest start set to 0
+  directly. The Euclid plane and the δm strip hold a rest start likewise. The `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z`
+  have every block written: the embed ties the configuration and masses, and the `K` or `L_z` axis with the held
+  invariant and R-82's seed writes the momentum block.
+- **The questions:**
+  - **(a) The mass simplex's configuration.** Its latent configuration controls `(z_α, z_β)` are not constants of the
+    chart: the held triangle's mass-weighted Jacobi angles change with each pixel's masses. So "the hidden
+    coordinate's value at the slice centre" is not one number, and a tilt that adds `d` to the centre's `z_α` and
+    holds it across the window would not reduce to the untilted chart as `d → 0` (every pixel but the centre would
+    leave the triangle). What does a tilt or a slice into `z_α` or `z_β` decode to on the mass simplex?
+  - **(b) The rest start's momenta** (the mass simplex, the Euclid plane, the δm strip). Is the rest start the four
+    momentum controls at 0, so that a tilt or slice adds `d` to a control from 0 and the momenta are `D_mom` of it
+    under the pixel's masses? (Every registered momentum link maps 0 to 0: `q_max·(2σ(0) − 1)`, `q_max·tanh 0`,
+    `q_max·0/(1 + 0)`.)
+  - **(c) The charts with no free control.** By J1's own rule the `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z` offer no hidden
+    coordinate, so they cannot be tilted or sliced, against T1's "every chart … Burrau family" and REQ-CHART-062's
+    corner arm "over every chart of kernel::chart::REGISTRY", which needs each chart tilted with one target.
+- **Options seen:**
+  - (a1) Per pixel: the tilt adds `d` to the pixel's own pre-image of the held triangle at its masses (an encode per
+    pixel), so `d = 0` is the untilted chart to rounding; a slice sets the centre's control and the chart then holds
+    `(z_α, z_β)` in place of the triangle, a different chart. (a2) The mass simplex offers only the momentum controls,
+    its configuration being held by `ν₀`, as the Burrau family's is by its embed (J1's "a chart with no free control in
+    a block offers none from it" read for the configuration). (a3) The configuration's hidden coordinate is `ν₀`
+    itself, a physical value, as R-554 L5 makes the shape sphere's `p_λ` targets.
+  - (b1) Yes: the rest start is `z_mom = 0`, and each momentum control is a hidden coordinate from 0. (b2) No momentum
+    target on a rest-start chart.
+  - (c1) Those three charts offer no tilt and no slice, and REQ-CHART-062's corner arm and REQ-CHART-065 run over the
+    registry's charts that offer a hidden coordinate. (c2) They gain a hidden coordinate that is a physical value, the
+    held `L_z` (on `(ν, K)` and `Φ_θ,K`) or `K` (on `Φ_θ,L_z`), tilted by its value as R-554 L5's `p_λ`.
+- **Applied meanwhile:** none; nothing is built.
+- **Waits:** TASK-M2-36, on these six charts: REQ-CHART-062's every-chart arms (C2, the 30° tilt, the anchor, the
+  corner over the registry) and REQ-CHART-065's per-chart slice. The rest of the task's tilt path, on the latent,
+  shape-sphere, invariant and mixed charts (REQ-CHART-063, REQ-CHART-064, REQ-CHART-066 and those charts' arms of
+  REQ-CHART-062 and REQ-CHART-065), does not turn on the answer; the task stopped whole, per the escalation rule,
+  for the orchestrator to say whether that part proceeds.
