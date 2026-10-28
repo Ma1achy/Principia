@@ -1,9 +1,10 @@
 //! Chart (render_gui_spec §G2): the preset, named by its axes; the two basis vectors `q₁`, `q₂`, each with an edit
-//! button, which opens its eight components for drag or typing; Chart builder…, which opens its window
-//! (TASK-M6-28); and the chart's kind. A preset keeps the zoom; locked, it turns about the pin, as every basis edit does
-//! ([`super::about_the_pin`], §G4). A preset, or a basis edit, whose plane takes the slice normal moves it off the plane
-//! by the slice-axis rule in the same edit, a target following ([`super::plane_edit`]; R-459 G4). The shape sphere's projection selector and hemisphere toggle are REQ-GUI-161's,
-//! TASK-M8-06's: the mock's charts are all affine.
+//! button, which opens its eight components for drag or typing; Chart builder…, which opens its window (TASK-M6-28);
+//! and the chart's kind. A preset keeps the zoom; locked, it turns about the pin, as every basis edit does
+//! ([`super::about_the_pin`], §G4). A preset, or a basis edit, whose plane takes the slice normal moves it off the
+//! plane by the slice-axis rule in the same edit, a target following ([`super::plane_edit`]; R-459 G4). The shape
+//! sphere's projection selector and hemisphere toggle are REQ-GUI-161's, TASK-M8-06's: the mock's charts are all
+//! affine.
 
 use eframe::egui::{
     self, Area, Button, ComboBox, DragValue, Frame, Grid, Id, Order, Rect, RichText, Ui,
