@@ -334,6 +334,24 @@ Merged rows list every source. Where one target arises from several records, it 
 | SL-1 | R | B | `R25` tier B "Ergodic outcome distributions"; `R25/catalogue.md` §5.1 | Binned binary energy and eccentricity against Stone & Leigh's planar closed forms, with N_scramble ≥ 2 | the paper's closed forms | new: BinaryPlusSingle | outcome classifier; N_scramble | distribution | blocked: chart and classifier not planned |
 | BZ-1 | R | C | `R25` tier C "Ensemble statistics survive trajectory error"; `R25/catalogue.md` §6.1 | Individual double-precision runs diverge while ensemble statistics agree | figshare (not fetched) | — | — | distribution | out of scope as a replication: 3D Plummer ICs. Its method is what REQ-VAL-199 and "never discard a copy" already apply |
 | BR-1 | R | C | `R25` tier C "Converged short trajectories"; `R25/catalogue.md` §1.10 | Per-trajectory agreement with Brutus to t = 10 | not released | Anosova entry (Breen's frame) | M3 | exact | blocked: the data is not available |
+| SP-2 (proposed, 28 Oct 2026) | R | A | Portegies Zwart & Boekholt 2018 (CNSNS 61, 160; arXiv:1802.00970v1), Table 2, § 2, Appendix B: `../2026-10-29_burrau_pzb2018/README.md`; cross-references SP-1, PL-8 | **Burrau converged reference.** Brutus at ε = 10⁻²⁴, L_w = 136 bits, from Table 1's start (= SP-1's): the state at t = 100 agrees pointwise with Table 2's, for the unperturbed run and the perturbed one (δx = 10⁻¹⁰ on mass 3); after every velocity is reversed at t = 100, the state at t = 200 agrees pointwise with Table 2's (the start recovered, to ≤ 3.2×10⁻¹³); one body escapes at t ≈ 63.4 (§ 2, footnotes 3 and 4; the paper does not name it, SP-1 says mass 3) | `../2026-10-29_burrau_pzb2018/table2/table2_reconciled.csv` (transcribed twice, 0 disagreements) | BodyPlane Burrau pixel | R-33's convergence reference (pointwise past f64's ~52 horizon, `VO` §1.5); outcome classifier for the escape; a run of 200 (100 forward, 100 reversed), at R-610's cap (note below) | exact against a convergence reference, the agreement in digits a calibration (R-71); escape as a timing window | data transcribed · proposed |
+
+*Note added 28 Oct 2026 (row SP-2, proposed; not ruled, not counted in § 3.3).* The owner asked on 28 Oct for Portegies
+Zwart & Boekholt 2018 to be proposed as a new target, "Burrau converged reference", noting "its horizon t = 200 vs
+R-610's cap of 200". Its record is `../2026-10-29_burrau_pzb2018/`: the sources and licences (the arXiv PDF is kept
+local, its licence not CC; the journal version and its supplement could not be fetched, RQ-611), Table 2 transcribed
+twice, the initial positions (Table 1's, which are SP-1's; Appendix B's `(-2, 1)` is a slip in the text) and the
+conservation check. It cross-references SP-1 (= REQ-VAL-034: the same start, judged structurally because f64's horizon
+is ~52) and PL-8 (whose first half runs the nominal Burrau pixel against R-33's reference to t ≈ 60): SP-2 is a
+published converged state to check that reference against, pointwise, at t = 100 and, after the reversal, at t = 200.
+
+*The horizon.* R-610, the human's words: "The cap stays at 200 until long horizons are measured for cost." Its range is
+`T_horizon ∈ [0.4, 200]`, default 50. SP-2's run is 200 time units long, exactly the cap, so it sits at the cap's edge,
+not past it: R-594 item 6 queues targets *past* the cap, and this one is not, on that ground. What follows, without a
+ruling: at the default horizon of 50 neither checkpoint (t = 100, t = 200) nor the escape (t ≈ 63.4) is reached; the t =
+100 state and the escape need a horizon of at least 100 and about 64; the t = 200 state needs the full 200, or a second
+run of 100 from the reversed t = 100 state, and which of the two a test would do is not settled here; any lowering of
+the cap below 200 would remove the t = 200 half, and below 100 both checkpoints.
 
 ### 3.3 Counts
 
