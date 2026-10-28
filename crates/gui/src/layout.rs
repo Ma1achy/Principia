@@ -322,6 +322,19 @@ impl Layout {
         }
     }
 
+    /// `splitter` reset in `splits` (R-462 J3): to its default, `default`'s edge, when that is inside
+    /// [`Layout::range`]; else as far toward it as the range allows, so the panel between it and a neighbour dragged
+    /// into the default's space stops at its minimum (J2). Only that splitter moves.
+    pub fn reset(&self, default: &Layout, splitter: Splitter, splits: &mut Splits) {
+        let (lo, hi) = self.range(splitter);
+        let edge = default.edge(splitter);
+        if (lo..=hi).contains(&edge) {
+            splits.reset(splitter);
+        } else {
+            splits.set(splitter, self.dragged(splitter, edge, 0.0));
+        }
+    }
+
     /// `splitter` dragged from `start`, its edge when the drag began, by `delta` points along it: the fraction of the
     /// window it then stands at, the edge held to [`Layout::range`].
     pub fn dragged(&self, splitter: Splitter, start: f32, delta: f32) -> f32 {

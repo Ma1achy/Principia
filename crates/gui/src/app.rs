@@ -751,8 +751,9 @@ impl<S: EngineSide> App<S> {
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
         let resets = crate::layout::splitters(ui, layout);
+        let default = Layout::new(layout.window, ui.ctx().pixels_per_point());
         for splitter in &resets {
-            self.splits.reset(*splitter);
+            layout.reset(&default, *splitter, &mut self.splits);
         }
         if !resets.is_empty() {
             self.save_settings();

@@ -585,3 +585,109 @@ fn mock_layout_splitters_a_pointer_on_or_dragging_a_splitter_hovers_no_figure_po
     assert_eq!(app.console().len(), lines, "no SetField while held");
     let _ = h.frame(&mut app, vec![press(into, false)]);
 }
+
+#[test]
+fn mock_layout_splitters_a_reset_stops_where_a_neighbour_leaves_the_minimum() {
+    // On the app: Figure | Trajectory dragged right to its end, Manifold | Figure right to its end, then Figure |
+    // Trajectory double-clicked: it moves toward its default and stops with the canvas at its minimum.
+    let (mut app, mut h) = settled();
+    let screen = h.screen();
+    for s in [Splitter::FigureTrajectory, Splitter::ManifoldFigure] {
+        let from = on_handle(&current(&h, &app), s);
+        drag(&mut h, &mut app, from, pos2(screen.max.x - 1.0, from.y));
+    }
+    let before = app.splits;
+    let at = on_handle(&current(&h, &app), Splitter::FigureTrajectory);
+    double_click(&mut h, &mut app, at);
+    let l = current(&h, &app);
+    assert!(
+        (l.figure.width() - MIN_CANVAS_W).abs() < 1e-3,
+        "canvas {}",
+        l.figure.width()
+    );
+    check_minimums(&l);
+    assert_eq!(
+        app.splits.get(Splitter::ManifoldFigure),
+        before.get(Splitter::ManifoldFigure)
+    );
+    let default = Layout::new(screen, h.pixels_per_point());
+    // Toward the default as far as the canvas allows: at its range's low end, short of the default.
+    let (lo, _) = l.range(Splitter::FigureTrajectory);
+    assert!((l.edge(Splitter::FigureTrajectory) - lo).abs() < 1e-3);
+    assert!(l.edge(Splitter::FigureTrajectory) > default.edge(Splitter::FigureTrajectory));
+    // A reset to the raw default leaves the canvas under its minimum.
+    let mut raw = before;
+    raw.reset(Splitter::FigureTrajectory);
+    let raw = Layout::with_splits(screen, h.pixels_per_point(), &raw);
+    rejects("a reset to the raw default", || check_minimums(&raw));
+}
+
+#[test]
+fn mock_layout_splitters_reset_holds_the_default_to_the_range() {
+    let screen = headless().screen();
+    let ppp = crate::capture::PIXELS_PER_POINT;
+    let default = Layout::new(screen, ppp);
+    for s in Splitter::ALL {
+        let d = default.edge(s);
+        // Inside the range: the default itself, bit for bit.
+        let mut splits = Splits::default();
+        splits.set(s, 0.5);
+        default.reset(&default, s, &mut splits);
+        assert_eq!(splits, Splits::default(), "{s:?}");
+        // A layout whose range for `s` ends exactly at the default (inclusive), and one ending short of it: its high
+        // end below the default for a splitter whose neighbour is to its right, its low end above it otherwise.
+        let short = if matches!(s, Splitter::ManifoldFigure | Splitter::CompassTime) {
+            -2.0
+        } else {
+            2.0
+        };
+        for (lo_at, want_default) in [(d, true), (d + short, false)] {
+            let mut moved = Splits::default();
+            let neighbour = match s {
+                Splitter::ManifoldFigure => Splitter::FigureTrajectory,
+                Splitter::FigureTrajectory => Splitter::ManifoldFigure,
+                Splitter::CompassTime => Splitter::TimeLegend,
+                Splitter::TimeLegend => Splitter::CompassTime,
+                Splitter::TopBottom => continue,
+            };
+            // Put the neighbour so that `s`'s range ends at `lo_at` on the default's side.
+            let gap = match s {
+                Splitter::ManifoldFigure => MIN_CANVAS_W + default.axis_y.width(),
+                Splitter::FigureTrajectory => -(MIN_CANVAS_W + default.axis_y.width()),
+                Splitter::CompassTime => MIN_TIME_W,
+                _ => -MIN_TIME_W,
+            };
+            moved.set(neighbour, (lo_at + gap) / screen.width());
+            moved.set(s, 0.5);
+            let l = Layout::with_splits(screen, ppp, &moved);
+            let mut got = moved;
+            l.reset(&default, s, &mut got);
+            if want_default {
+                assert_eq!(
+                    got.get(s),
+                    Splits::default().get(s),
+                    "{s:?} at the range's end"
+                );
+            } else {
+                let edge = Layout::with_splits(screen, ppp, &got).edge(s);
+                assert!((edge - lo_at).abs() < 1e-3, "{s:?}: {edge}, want {lo_at}");
+            }
+            assert_eq!(
+                got.get(neighbour),
+                moved.get(neighbour),
+                "{s:?}: only it moves"
+            );
+        }
+    }
+    // The top row's bottom, held by the top row's minimum: a window 806 points high, where the default leaves the top row under it.
+    let short = Rect::from_min_size(pos2(0.0, 0.0), vec2(screen.width(), 806.0));
+    let l = Layout::new(short, ppp);
+    let mut splits = Splits::default();
+    splits.set(Splitter::TopBottom, 0.6);
+    let lay = Layout::with_splits(short, ppp, &splits);
+    lay.reset(&l, Splitter::TopBottom, &mut splits);
+    let (lo, hi) = lay.range(Splitter::TopBottom);
+    let edge = Layout::with_splits(short, ppp, &splits).edge(Splitter::TopBottom);
+    assert!(l.edge(Splitter::TopBottom) > hi || l.edge(Splitter::TopBottom) < lo);
+    assert!((lo..=hi + 1.0).contains(&edge), "{edge} in {lo}..{hi}");
+}
