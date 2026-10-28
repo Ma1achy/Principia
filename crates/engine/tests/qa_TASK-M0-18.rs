@@ -20,7 +20,9 @@ use serde::Serialize;
 
 fn sim() -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -31,7 +33,7 @@ fn sim() -> SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
@@ -56,7 +58,7 @@ fn render() -> RenderState {
 /// and, since TASK-M6-29, the stain graph's default, the backbone alone, the combiner (M1's pass-through) wired to
 /// OUT's port 0, as `{ nodes, wires }` in id order, each member in byte order (gui_state_contract §2).
 const SIM_TEXT: &str =
-    "{\"chart\":{},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
+    "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
 \"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{}}";
 const RENDER_TEXT: &str = "{\"hover\":{\"at\":null},\
@@ -112,8 +114,8 @@ validation::negative_control!(
     "the declaration-order text must fail the canonical-text check",
     expected = "is not its groups in byte order",
     check_skeleton(
-        "{\"chart\":{},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{},\
-\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{},\"integrator\":{},\
+        "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{},\
+\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT
     )

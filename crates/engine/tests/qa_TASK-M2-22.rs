@@ -101,14 +101,16 @@ fn same_span(p: &Plane, q: &Plane, tol: f64) -> bool {
 
 fn sim(plane: Plane) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane,
         slice: Slice {},
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },

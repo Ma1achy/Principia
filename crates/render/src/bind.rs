@@ -88,6 +88,13 @@ pub const FRAME_BINDING: u32 = 1;
 /// (R-26).
 pub const CHART_BINDING: u32 = 2;
 
+/// The fragment decode's uniform's binding, in the context's group (R-116; TASK-M2-25): the decode stage's
+/// `DecodeUniforms` (the chart's parameters, the flags word and the energy target, 128 B), which the generated decode
+/// snippets (`crate::presets::DECODE_WGSL`) read as the kernel's decode stage reads them, so the fragment decodes a
+/// pixel as the stage decoded its sample. Applied per R-369, as [`FRAME_BINDING`] is: a harness binding in the
+/// harness's own group. `cargo xtask build-kernel` rebinds the snippets' uniform here (`xtask::fragment_wgsl`).
+pub const DECODE_BINDING: u32 = 3;
+
 /// The words [`CHART_BINDING`] holds for the samples' classification `forbidden`, in sample order: bit `i mod 32` of
 /// word `i / 32` set where `forbidden[i]`; at least one word, as a storage binding holds.
 pub fn chart_words(forbidden: &[bool]) -> Vec<u32> {
@@ -725,6 +732,34 @@ pub fn upload_with(
     context: &Context,
     usage: wgpu::BufferUsages,
 ) -> Bound {
+    upload_all(device, payload, context, usage, None)
+}
+
+/// [`upload`], and the fragment decode's uniform `decode`, the decode stage's `DecodeUniforms` as bytes, bound at
+/// [`DECODE_BINDING`] in the context's group, for a module that places the generated decode (`crate::presets`).
+pub fn upload_decode(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    decode: &[u8],
+) -> Bound {
+    upload_all(
+        device,
+        payload,
+        context,
+        wgpu::BufferUsages::empty(),
+        Some(decode),
+    )
+}
+
+/// [`upload_with`], with the fragment decode's uniform at [`DECODE_BINDING`] where `decode` is given.
+fn upload_all(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    usage: wgpu::BufferUsages,
+    decode: Option<&[u8]>,
+) -> Bound {
     use wgpu::util::DeviceExt;
     let buffer = |label: &str, bytes: &[u8], usage| {
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -761,6 +796,7 @@ pub fn upload_with(
         buffer("ic", payload.ic, stored_usage),
         buffer("quad", payload.quad, stored_usage),
     ];
+    let decode_block = decode.map(|d| buffer("decode uniforms", d, uniform));
     let read_only = wgpu::BufferBindingType::Storage { read_only: true };
     let layout = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -781,14 +817,17 @@ pub fn upload_with(
             )],
         ),
         layout("harness buffers", &group1),
-        layout(
-            "harness context",
-            &[
+        layout("harness context", &{
+            let mut entries = vec![
                 entry(CONTEXT_BINDING, wgpu::BufferBindingType::Uniform),
                 entry(FRAME_BINDING, read_only),
                 entry(CHART_BINDING, read_only),
-            ],
-        ),
+            ];
+            if decode_block.is_some() {
+                entries.push(entry(DECODE_BINDING, wgpu::BufferBindingType::Uniform));
+            }
+            entries
+        }),
     ];
     let group = |label: &str, layout: &wgpu::BindGroupLayout, entries: &[wgpu::BindGroupEntry]| {
         device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -815,10 +854,8 @@ pub fn upload_with(
             }],
         ),
         group("harness buffers", &layouts[1], &group1),
-        group(
-            "harness context",
-            &layouts[2],
-            &[
+        group("harness context", &layouts[2], &{
+            let mut entries = vec![
                 wgpu::BindGroupEntry {
                     binding: CONTEXT_BINDING,
                     resource: context_block.as_entire_binding(),
@@ -831,8 +868,15 @@ pub fn upload_with(
                     binding: CHART_BINDING,
                     resource: chart.as_entire_binding(),
                 },
-            ],
-        ),
+            ];
+            if let Some(d) = &decode_block {
+                entries.push(wgpu::BindGroupEntry {
+                    binding: DECODE_BINDING,
+                    resource: d.as_entire_binding(),
+                });
+            }
+            entries
+        }),
     ];
     Bound {
         layouts,

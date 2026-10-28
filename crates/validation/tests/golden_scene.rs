@@ -401,9 +401,11 @@ fn golden_scene_binary_writes_the_render() {
     want.extend(debug.iter().map(|c| c.name.clone()));
     want.extend(validation::structural_scene::NAMES.map(str::to_owned));
     want.extend(validation::shape_scene::NAMES.map(str::to_owned));
+    want.extend(render::presets::DecodeChart::ALL.map(validation::decode_preset::golden_name));
     assert_eq!(
         names, want,
-        "--list prints the scenes, the debug views' after, the structural ones, the shape sphere's last"
+        "--list prints the scenes, the debug views' after, the structural ones, the shape sphere's, the DECODE \
+         preset's last"
     );
     for (args, why) in [
         (

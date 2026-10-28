@@ -1,6 +1,7 @@
 //! The `ICDescriptor`, what the IC *is* (dd_decoder §3.6; dd_generation_root §3.6; REQ-PAY-034): filled at the decode
-//! stage, post-decode and pre-integration, from the decoded `(m, r, p)` alone, so every chart's IC is described alike
-//! (dd_decoder §2: the canonical `(m, r, p)` is the one seam). Its twelve fields, in the generated struct's order:
+//! stage, post-decode and pre-integration, from the decoded `(m, r, p)` and, for `rho_angle`, the configuration block's
+//! own `(ρ̃, λ̃)` (R-628), so every chart's IC is described alike (dd_decoder §2: the canonical `(m, r, p)` is the one
+//! seam). Its twelve fields, in the generated struct's order:
 //!
 //! ```text
 //! m0 m1 m2       the masses
@@ -8,7 +9,7 @@
 //! rho_mag        ‖ρ̃‖ = √μ_ρ·‖ρ‖,  ρ = r₁ − r₀,                       μ_ρ = m₀m₁/M₀₁
 //! lambda_mag     ‖λ̃‖ = √μ_λ·‖λ‖,  λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁,        μ_λ = m₂M₀₁
 //! rho_ratio      ‖ρ̃‖/‖λ̃‖
-//! rho_angle      atan2(ρ × λ, ρ · λ), radians on (−π, π]
+//! rho_angle      atan2(ρ̃ × λ̃, ρ̃ · λ̃) of the configuration block's ρ̃, λ̃ (R-628), radians on (−π, π]
 //! K_0            Σᵢ ‖pᵢ‖²/2mᵢ
 //! V_0            −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖                 (G = 1)
 //! virial_ratio   2K₀/|V₀|
@@ -39,6 +40,7 @@
 
 use spirv_std::num_traits::Float;
 
+use crate::decode::config::Config;
 use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::payload::{ICDescriptorOf, PayloadReal};
@@ -145,22 +147,37 @@ pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
     select(cross == zero, on_axis, off_axis)
 }
 
-/// The `ICDescriptor` of the decoded IC `ic` (dd_decoder §3.6).
+/// `ρ̃ × λ̃` and `ρ̃ · λ̃` of `rho` and `lambda`: `rho_angle`'s operands ([`angle`]).
 #[inline]
-pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
+fn cross_dot<R: LinkReal>(rho: [R; 2], lambda: [R; 2]) -> (R, R) {
+    (
+        rho[0] * lambda[1] - rho[1] * lambda[0],
+        rho[0] * lambda[0] + rho[1] * lambda[1],
+    )
+}
+
+/// `rho_angle` of the configuration block's own `ρ̃` and `λ̃`, `Φ`'s vectors (R-628; dd_decoder §3.6): [`angle`] of
+/// their cross and dot products. At the `α = 0` pole `Φ`'s `λ̃` is `±0`, so the pole's case gives 0 on every backend,
+/// where the positions' `λ` would be `C`'s rounding residue. No decode mirrors (the shape sphere's `C` does not take
+/// step 3, R-544; every other chart's configuration is canonical by construction), so no sign is turned.
+#[inline]
+pub fn config_angle<R: LinkReal>(config: &Config<R>) -> R {
+    let (cross, dot) = cross_dot(config.rho_t, config.lambda_t);
+    angle(cross, dot)
+}
+
+/// The `ICDescriptor` of the decoded IC `ic` with `rho_angle` already formed (dd_decoder §3.6).
+#[inline]
+fn fields<R: LinkReal + PayloadReal>(
+    ic: &Ic<R>,
+    rho: [R; 2],
+    lambda: [R; 2],
+    rho_angle: R,
+) -> ICDescriptorOf<R> {
     let [m0, m1, m2] = ic.m;
-    let [r0, r1, r2] = ic.r;
     let m01 = m0 + m1;
-    let rho = sub(r1, r0);
-    let inner = [
-        (m0 * r0[0] + m1 * r1[0]) / m01,
-        (m0 * r0[1] + m1 * r1[1]) / m01,
-    ];
-    let lambda = sub(r2, inner);
     let rho_mag = Float::sqrt(m0 * m1 / m01) * norm(rho);
     let lambda_mag = Float::sqrt(m2 * m01) * norm(lambda);
-    let cross = rho[0] * lambda[1] - rho[1] * lambda[0];
-    let dot = rho[0] * lambda[0] + rho[1] * lambda[1];
     let k = kinetic(ic);
     let d = separations(ic.r);
     let r_min = closest(d);
@@ -173,7 +190,7 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
         rho_mag,
         lambda_mag,
         rho_ratio: ratio(rho_mag, lambda_mag),
-        rho_angle: angle(cross, dot),
+        rho_angle,
         K_0: k,
         V_0: v,
         virial_ratio: virial(k, v),
@@ -181,4 +198,38 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
         _pad: Default::default(),
         _tail: Default::default(),
     }
+}
+
+/// The unweighted Jacobi vectors of `ic`'s positions: `ρ = r₁ − r₀` and `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`.
+#[inline]
+fn jacobi<R: LinkReal>(ic: &Ic<R>) -> ([R; 2], [R; 2]) {
+    let [m0, m1, _] = ic.m;
+    let [r0, r1, r2] = ic.r;
+    let m01 = m0 + m1;
+    let inner = [
+        (m0 * r0[0] + m1 * r1[0]) / m01,
+        (m0 * r0[1] + m1 * r1[1]) / m01,
+    ];
+    (sub(r1, r0), sub(r2, inner))
+}
+
+/// The `ICDescriptor` of an `(m, r, p)` given with no configuration block (dd_decoder §3.6): every field from the
+/// positions, `rho_angle` too. The descriptor-alone entries take it, which serve tests; a decode takes
+/// [`describe_decoded`].
+#[inline]
+pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
+    let (rho, lambda) = jacobi(ic);
+    let (cross, dot) = cross_dot(rho, lambda);
+    fields(ic, rho, lambda, angle(cross, dot))
+}
+
+/// The `ICDescriptor` of the decoded IC `ic` whose configuration block gave `config` (dd_decoder §3.6): every field
+/// from `ic`'s positions and momenta but `rho_angle`, which is [`config_angle`], `Φ`'s (R-628).
+#[inline]
+pub fn describe_decoded<R: LinkReal + PayloadReal>(
+    ic: &Ic<R>,
+    config: &Config<R>,
+) -> ICDescriptorOf<R> {
+    let (rho, lambda) = jacobi(ic);
+    fields(ic, rho, lambda, config_angle(config))
 }

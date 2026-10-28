@@ -280,8 +280,10 @@ enum Stand {
 /// `step_reversal_edge_f32` and `step_reversal_edge_max`, proposed by TASK-M3-02 and provisional until the M3 gate,
 /// citing REQ-VAL-191; and the `N_sub` threshold table's maximum length `nsub_table_max`, proposed by TASK-M3-03 and
 /// provisional until the M3 gate, citing REQ-INT-094 (R-502); and the literature import's tolerance
-/// `literature_import_tol`, proposed by TASK-M2-20 and provisional until the M2 gate, citing REQ-VAL-120 (R-592).
-const TABLE: [(&str, Stand); 32] = [
+/// `literature_import_tol`, proposed by TASK-M2-20 and provisional until the M2 gate, citing REQ-VAL-120 (R-592); and
+/// step 0's skip tolerance `tau_i` (`τ_I`), proposed by TASK-M2-47 and provisional until the M2 gate, citing
+/// REQ-ENC-035 (R-547, R-71).
+const TABLE: [(&str, Stand); 33] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -317,6 +319,7 @@ const TABLE: [(&str, Stand); 32] = [
     ("step_reversal_edge_f32", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_max", Stand::Until("M3", "REQ-VAL-191")),
     ("nsub_table_max", Stand::Until("M3", "REQ-INT-094")),
+    ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.

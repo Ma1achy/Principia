@@ -87,7 +87,8 @@ The abbreviations PLAN.md uses, with the paths they stand for. Every one is a re
 | AN24 | `docs/incoming/2026-10-24_anosova/` | the Agekyan & Anosova papers I and II, and Li & Liao's arXiv:1805.07980 |
 | OC26 | `docs/incoming/2026-10-26_orbit_catalogues/` | the Three Body Orbits snapshot: `threebodyorbits_catalogue.json` (3,943 orbits, 41 families), `threebodyorbits_ics.csv`, `CITATIONS.md`, the instruction and Hudomal's 2015 thesis |
 | BG26 | `docs/incoming/2026-10-26_belgrade_gallery/` | the recovered Belgrade gallery: `belgrade_gallery.csv` (301 rows), `crosscheck.txt`, Hudomal 2019's 206 sequence orbits |
-| HP27 | `docs/incoming/2026-10-27_hp_ics/` | high-precision initial conditions: `agreement.txt`, `sources.tsv`, `fetch.sh` (values fetched and hash-checked, not committed: RQ-579) |
+| HP27 | `docs/incoming/2026-10-27_hp_ics/` | high-precision initial conditions: `agreement.txt`, `sources.tsv`, `fetch.sh`, and since R-631 the 599 source files under `data/`, cited in `SOURCES.md`; `fetch.sh` stays the provenance check. *Was:* "(values fetched and hash-checked, not committed: RQ-579)" |
+| FF27 | `docs/incoming/2026-10-27_hp_ics_freefall/` | since R-631: Hristov et al. 2024's free-fall database (24,582 i.c.s at 80 digits, R-630 item 7), the central-symmetry (4,860) and Euler (12,431) databases at 100 digits, and Li & Liao's own 316-orbit free-fall table with initial conditions; committed under `data/`, cited in `SOURCES.md`, `fetch.sh` the provenance check |
 | PL26 | `docs/incoming/2026-10-26_precision_ladder/` | the precision-ladder proposal; its §5 has twelve tests; queued as RQ-577, nothing in it in force |
 | LR | `docs/incoming/2026-10-25_lit_review/` | the literature review, fourth revision: §13 periodic-orbit catalogues, §14 validation targets, §15 gaps |
 | ATP | outside the repo | "Mapping the Three Body Orbits atlas into Principia: a plan" (26 Oct 2026), deliverables D1–D7, as PLAN.md reports them; not a source of any reference value |
@@ -97,8 +98,10 @@ The abbreviations PLAN.md uses, with the paths they stand for. Every one is a re
 `https://www.threebodyorbits.com`, with the per-family credits of `OC26/CITATIONS.md`; every figure that uses them
 carries that credit line. The gallery's own page grants use of its data. The operator's `atlas-params.json` is not
 committed and never enters the repo (`scripts/check_no_atlas_params.sh`); nothing in this suite reads it. Hristov et
-al.'s databases, Simó's and Li & Liao's tables state no terms, so they are fetched and hash-checked, not committed,
-while RQ-579 is open. The atlas's hunt orbits are not in the snapshot and stay out until the operator publishes them.
+al.'s databases, Simó's archive and Li & Liao's tables state no terms; they are committed with full citations (R-631,
+27 Oct 2026, closing RQ-579 with option (a)), in HP27 and FF27, each with a `SOURCES.md`, and each folder's `fetch.sh`
+stays the provenance check. *Was:* "Hristov et al.'s databases, Simó's and Li & Liao's tables state no terms, so they
+are fetched and hash-checked, not committed, while RQ-579 is open." The atlas's hunt orbits are not in the snapshot and stay out until the operator publishes them.
 
 ---
 
@@ -127,6 +130,10 @@ The atlas attributes 311 free-fall orbits to Li & Liao 2019; the paper reports 2
 - The extra orbits are the authors' own, published on their website (316 orbits, 82 on three mass sets the paper does
   not have), not in the paper. The website gives words only, no initial conditions. Its pages are recorded by URL and
   sha256 prefix in PLAN.md § 2.1 and not committed (RQ-585).
+  *27 Oct 2026, R-631:* the authors' GitHub repository has a second copy of the list,
+  `FF27/data/liliao_github/free-fall-3b-pictures.md`, committed under R-631, and it gives the initial conditions,
+  (x, y, T) at 10 decimals, for all 316, the 82 website-only orbits included. The website pages stay recorded only
+  (R-630 item 8). LL-5 still tests closure on the atlas's rows only (rule 13).
 - The atlas holds 311 = 316 − 5: five rows carry aliases folding one listed orbit into another (F2 into F1, F13 into
   F12 and F24 into F23 at (1, 1, 1); F16 into F11 at (1, 0.8, 0.6); F47 into F45 at (1, 0.1, 0.01)). So the atlas
   carries 230 of the paper's 234 and 81 of the website's 82 extra.
@@ -141,8 +148,10 @@ The atlas attributes 311 free-fall orbits to Li & Liao 2019; the paper reports 2
 The precision-ladder proposal's test 6 counted "1,260 rows traced to their source paper". Verified against
 `HP27/agreement.txt`: 1,359 atlas rows carry high-precision fields; **937 are traced to Hristov et al.** (9 at 150
 digits, 240 at 180, 688 at 97–100), and only those can test arithmetic above f64. Simó's 344 rows carry about 16
-significant digits of data and test nothing above f64. The reference values are the databases', fetched and
-hash-checked by `HP27/fetch.sh` (RQ-579). These rows serve the precision ladder (§ 5.13), which waits for RQ-577.
+significant digits of data and test nothing above f64. The reference values are the databases', committed
+under `HP27/data/` (R-631; cited in `HP27/SOURCES.md`), with `HP27/fetch.sh` as the provenance check. These rows serve
+the precision ladder (§ 5.13, PL-6), which waits for RQ-577. *Was:* "The reference values are the databases', fetched
+and hash-checked by `HP27/fetch.sh` (RQ-579)."
 
 ### 4.3 The atlas's slice families
 
@@ -158,6 +167,8 @@ Every Šuvakov-plane start is collinear, so in the chart reference's coordinates
 boundary: on `β = 0` or `β = π` (the Euler edges), or at the `α = 0` pole where `λ̃ = 0` and `β` is undefined, depending
 on the labelling (Hudomal's Table 1 against his eq. (18)). Which labelling, and whether a chart over the plane is built,
 are RQ-582 and RQ-583. Until they are ruled, Šuvakov-plane orbits are tested by Path A, which needs no chart.
+*27 Oct 2026:* R-630 rules the labelling (RQ-582 closed): the middle body is body 1, at `β = 0`, Hudomal eq. (18)'s.
+The chart, RQ-583, stays open.
 
 ---
 
@@ -201,7 +212,9 @@ docs. PLAN.md § 3 lists them as targets; this port changes none of them.
 | SP-1 (V-4) | REQ-VAL-034 (+ -127, -132) | Burrau: binary plus escaper, structurally | M3 |
 
 Two of these now carry a record of what blocks them. REQ-VAL-042's source, Hristov et al. 2024's free-fall database,
-is not fetched (RQ-584), so it carries `rq: RQ-584`; its citation is RQ-589's question. REQ-VAL-043 already carries
+is fetched (R-630 item 7, closing RQ-584) and committed (R-631) as `FF27/data/sofia_3bodyfree/sol_80.txt`, so its
+`rq: RQ-584` is lifted; its citation is RQ-589's question. *Was:* "REQ-VAL-042's source, Hristov et al. 2024's
+free-fall database, is not fetched (RQ-584), so it carries `rq: RQ-584`; its citation is RQ-589's question." REQ-VAL-043 already carries
 RQ-576. Where PLAN.md folds a tier-D number into one of these rows (D-1, D-2, D-3) or adds an arm to it (AT-D2, OC-5's
 count), the number or the arm is a new requirement below, and the ruled requirement is unchanged.
 
@@ -237,7 +250,7 @@ atlas's rows (§ 4.1).
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
 | LL-1, LL-2 (DRAFT-VAL-02) | REQ-VAL-203 | V / A | Li & Liao 2019, Tables A1–A5 (234 initial conditions and periods, 10 decimals) | the Anosova physical-frame entry; a MassSimplex point for the five unequal mass sets | M3 | exact | REQ-VAL-204 (calibration, R-71) | TASK-M3-46 |
-| LL-3 | REQ-VAL-223 (waits: RQ-586) | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M3 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M3-47 |
+| LL-3 | REQ-VAL-223 (waits: the owner's copies of the two papers, paywalled, R-630 item 9; was "waits: RQ-586") | V / A | Li & Liao 2019 p. 3: F1 at (0.6, 0.8, 1) is Standish's 1970 orbit; F1 and F2 at (1, 1, 1) are Yasko & Orlov's 2015 Orbits 16 and 17 | the Anosova physical-frame entry; a MassSimplex point | M3 | exact | REQ-VAL-224 (calibration, R-71) | TASK-M3-47 |
 | LL-4 | REQ-VAL-225 | V / A | Li & Liao 2019 p. 3 and Fig. 3: T̄* ≈ 2.363 at equal masses; 1.663, 1.191, 0.776, 0.527 at m₃ = 0.8 … 0.2; fit 1.912 m₃ + 0.084 | none | M3 | exact per orbit; the fit statistical | REQ-VAL-226 (calibration, R-71) | TASK-M3-54 |
 | LL-5 | REQ-VAL-227 | V / A | the authors' website list of 316 free-fall orbits (82 beyond the paper's 234), carried by the atlas as 81 rows on three further mass sets | MassSimplex points | M3 | exact (closure only) | OC-1's (REQ-VAL-202): the same form, the same f64 refined initial conditions | TASK-M3-46 |
 
@@ -267,7 +280,7 @@ RK4 (R-560).
 |---|---|---|---|---|---|---|---|---|
 | H-3 (DRAFT-VAL-03) | REQ-VAL-205 | R / A | Heggie 1974, Table III (C/3 against Δ toward the Lagrange triple collision) | ShapeSphere at rest through Lagrange; Latent | M3 | exact (scaling) | REQ-VAL-206 (calibration, R-71) | TASK-M3-48 |
 | H-1, H-2 (DRAFT-VAL-04) | REQ-VAL-207 | R / C | Heggie 1974, Tables I and II (steps and \|δE/E\|; step ratios 147/129, 257/225, 455/397; 48/42, 83/70, 149/124) | BodyPlane Burrau pixel (H-1); none, Path A (H-2) | M3 | ratio, recorded both ways | REQ-VAL-208 (calibration, R-71) | TASK-M3-48 |
-| TM-1 | REQ-VAL-240 (waits: RQ-586) | R / A | Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5) | the Anosova physical-frame entry, after the D11 mirror remap | M3 | exact (scaling) | REQ-VAL-241 (calibration, R-71) | TASK-M3-49 |
+| TM-1 | REQ-VAL-240 (waits: the owner's copy of the paper, paywalled, R-630 item 9; was "waits: RQ-586") | R / A | Tanikawa & Mikkola 2021, Tables 1, 2 and 4 (eleven triple-collision points, e.g. (0.19208270, 0.30936018); approach ICs at radii 1e-3 to 1e-5) | the Anosova physical-frame entry, after the D11 mirror remap | M3 | exact (scaling) | REQ-VAL-241 (calibration, R-71) | TASK-M3-49 |
 
 ### 5.6 Burrau and the Pythagorean family
 
@@ -372,22 +385,22 @@ Each waits, with its requirement in place and its RQ named, for what it needs. N
 
 | Waits for | Targets | RQ |
 |---|---|---|
-| a chart over the Šuvakov plane, and its labelling | HU-1, HU-2, AT-D1, AT-D3, OC-4 on the plane | RQ-583, RQ-582 |
+| a chart over the Šuvakov plane (its labelling ruled by R-630, closing RQ-582) | HU-1, HU-2, AT-D1, AT-D3, OC-4 on the plane | RQ-583 (was "RQ-583, RQ-582") |
 | a binary-plus-single chart | TR-1, MK-1, SL-1 | RQ-593 |
 | a side-ratio chart, or a remap onto ShapeSphere at rest | PA-1 | RQ-594 |
 | a syzygy-symbol field and a fixed-k velocity chart | TS-1, TS-2, V-7 | RQ-595 |
 | the N_scramble and f_col diagnostics | PA-1's split, SL-1, TR-1's colouring | RQ-596 |
 | periodic-orbit continuation | LLL-1 | RQ-597 |
 | data not in the repo | V-11, GG-1, BR-1 | RQ-598 |
-| papers not in the repo | LL-3, TM-1 | RQ-586 |
+| papers not in the repo: paywalled, for the owner to fetch (R-630 item 9, closing RQ-586) | LL-3, TM-1 | none (was "RQ-586") |
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
-| OC-4 on the Šuvakov plane | REQ-VAL-311 (waits: RQ-582, RQ-583) | R / B | as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3) | new: SuvakovPlane, at equal masses and at fixed m₃ | M8 | statistical | OC-4's (REQ-VAL-310) | TASK-M8-99 |
-| AT-D1 | REQ-VAL-312 (waits: RQ-582, RQ-583) | R / B | the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted | new: SuvakovPlane | M8 | qualitative | none: qualitative | TASK-M8-99 |
-| AT-D3 | REQ-VAL-313 (waits: RQ-582, RQ-583) | R / B | the atlas's 1,350 m₃-free orbits on the eight values of m₃ | new: SuvakovPlane at fixed m₃ | M8 | qualitative | none: qualitative | TASK-M8-99 |
-| HU-1 | REQ-VAL-314 (waits: RQ-582, RQ-583) | R / B | Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima | new: SuvakovPlane | M4 | qualitative; exact at Table 23's minima | REQ-VAL-315 (calibration, R-71) | TASK-M4-23 |
-| HU-2 | REQ-VAL-316 (waits: RQ-582, RQ-583) | R / B | Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866 | new: SuvakovPlane, zoomed | M4 | qualitative + one exact point | REQ-VAL-317 (calibration, R-71) | TASK-M4-23 |
+| OC-4 on the Šuvakov plane | REQ-VAL-311 (waits: RQ-583) | R / B | as OC-4, for the 1,759 equal-mass and 1,350 m₃-free rows on the Šuvakov plane (§ 4.3) | new: SuvakovPlane, at equal masses and at fixed m₃ | M8 | statistical | OC-4's (REQ-VAL-310) | TASK-M8-99 |
+| AT-D1 | REQ-VAL-312 (waits: RQ-583) | R / B | the atlas's 1,759 equal-mass orbits on the Šuvakov plane, the stable ones highlighted | new: SuvakovPlane | M8 | qualitative | none: qualitative | TASK-M8-99 |
+| AT-D3 | REQ-VAL-313 (waits: RQ-583) | R / B | the atlas's 1,350 m₃-free orbits on the eight values of m₃ | new: SuvakovPlane at fixed m₃ | M8 | qualitative | none: qualitative | TASK-M8-99 |
+| HU-1 | REQ-VAL-314 (waits: RQ-583) | R / B | Hudomal 2015 Fig. 8: the return-proximity map over (p₁, p₂) ∈ [0.3, 0.5] × [0.1, 0.5]; Table 23's minima | new: SuvakovPlane | M4 | qualitative; exact at Table 23's minima | REQ-VAL-315 (calibration, R-71) | TASK-M4-23 |
+| HU-2 | REQ-VAL-316 (waits: RQ-583) | R / B | Hudomal 2015 Fig. 34 and Table 23: the butterfly III zoom, three candidates, the middle one at (0.405916, 0.230163), T = 13.866 | new: SuvakovPlane, zoomed | M4 | qualitative + one exact point | REQ-VAL-317 (calibration, R-71) | TASK-M4-23 |
 | TR-1 | REQ-VAL-318 (waits: RQ-593, RQ-596) | R / B | Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3) | new: BinaryPlusSingle | M3 | qualitative | none: qualitative | TASK-M3-63 |
 | MK-1 | REQ-VAL-319 (waits: RQ-593) | R / B | Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 1) | new: BinaryPlusSingle at a mass point | M3 | statistical | REQ-VAL-320 (calibration, R-71) | TASK-M3-63 |
 | SL-1 | REQ-VAL-321 (waits: RQ-593, RQ-596) | R / B | Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity | new: BinaryPlusSingle | M3 | statistical | REQ-VAL-322 (calibration, R-71) | TASK-M3-63 |
@@ -405,6 +418,11 @@ B-3 (a clean forward–backward Burrau run to t = 100 needs ε = 1e-24 and 128-b
 irreversible at ε = 10⁻⁷⁰), wait for RQ-577. RQ-577 records that no requirement or task is added from the proposal
 meanwhile, and none is. The one exception is PL-8's first half, the nominal Burrau pixel at f64 against R-33's
 reference, which needs no tier and runs at M3 (REQ-VAL-250). PL-6's rows are § 4.2's 937.
+
+*27 Oct 2026, R-631:* PL-6's reference values, the Hristov databases' digits for those 937 rows, are committed under
+`HP27/data/` (`sofia_3body123/`, `sofia_3bodychor462/`, `sofia_3bodychor164/`, `sofia_3bodystab971/`), cited in
+`HP27/SOURCES.md`; PL-6 reads them there, not from a fetch. `HP27/fetch.sh` stays the provenance check. PL-6 still has
+no requirement while RQ-577 is open.
 
 ### 5.14 Out of scope
 
@@ -454,7 +472,8 @@ that needs a chart that does not exist waits for that chart. Nothing below asks 
 reviewed by code, qa and physics.
 
 **Before engine work** (rules 1 and 2): each task that commits a published table transcribes it twice first. The
-fetches PLAN.md lists are the human's (RQ-584, RQ-585, RQ-586, RQ-598).
+fetches PLAN.md lists are the human's (RQ-584, RQ-585, RQ-586, RQ-598). *27 Oct 2026:* R-630 closes RQ-584 to RQ-586;
+R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled and wait for the owner's copies.
 
 **M2.**
 
@@ -467,9 +486,9 @@ fetches PLAN.md lists are the human's (RQ-584, RQ-585, RQ-586, RQ-598).
 - **TASK-M3-44**, The syzygy count against the atlas's `syz` on every row (OC-5), and its counting convention. Targets: OC-5, OC-5's counting convention. Depends on TASK-M3-16, TASK-M3-42.
 - **TASK-M3-45**, The atlas's per-family coverage report (OC-6). Targets: OC-6. Depends on TASK-M3-42, TASK-M3-43, TASK-M3-44.
 - **TASK-M3-46**, Li & Liao's free-fall orbits: closure, rest at T/2 and the alias pairs (LL-1, LL-2, the first batch's DRAFT-VAL-02), and the website-only rows (LL-5). Targets: LL-1, LL-2, LL-5. Depends on TASK-M3-42, TASK-M2-13.
-- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Waits on RQ-586.
+- **TASK-M3-47**, Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3). Targets: LL-3. Depends on TASK-M3-46. Waits on the owner's copies of Standish 1970 and Yasko & Orlov 2015 (paywalled, R-630 item 9; was "Waits on RQ-586.").
 - **TASK-M3-48**, Heggie 1974's regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03). Targets: H-3, H-1, H-2. Depends on TASK-M3-24, TASK-M3-08.
-- **TASK-M3-49**, Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1). Targets: TM-1. Depends on TASK-M3-48. Waits on RQ-586.
+- **TASK-M3-49**, Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1). Targets: TM-1. Depends on TASK-M3-48. Waits on the owner's copy of Tanikawa & Mikkola 2021 (paywalled, R-630 item 9; was "Waits on RQ-586.").
 - **TASK-M3-50**, Agekyan & Anosova II: decay times from exact rest (AA-6, the first batch's DRAFT-VAL-05). Targets: AA-6. Depends on TASK-M3-34, TASK-M2-20.
 - **TASK-M3-51**, The no-integration controls: Monaghan's planar eccentricity row and the random-triangle Z (Q-2's Theory row, Q-4; DRAFT-VAL-06). Targets: Q-2's Theory row, Q-4. Depends on TASK-M3-12, TASK-M3-24.
 - **TASK-M3-52**, The butterflies' two published periods, decided by closure (BG-4, the first batch's DRAFT-VAL-07). Targets: BG-4. Depends on TASK-M3-24, TASK-M3-08.
@@ -490,7 +509,7 @@ fetches PLAN.md lists are the human's (RQ-584, RQ-585, RQ-586, RQ-598).
 **M4.**
 
 - **TASK-M4-22**, Lehto's lifetime map at full resolution, and the shield's mirror symmetry (L-1, V-8 (a)). Targets: L-1, V-2/V-8 (a). Depends on TASK-M4-17, TASK-M3-60.
-- **TASK-M4-23**, Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2). Targets: HU-1, HU-2. Depends on TASK-M4-17, TASK-M3-53, TASK-M3-11. Waits on RQ-582, RQ-583.
+- **TASK-M4-23**, Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2). Targets: HU-1, HU-2. Depends on TASK-M4-17, TASK-M3-53, TASK-M3-11. Waits on RQ-583 (RQ-582 closed by R-630; was "Waits on RQ-582, RQ-583.").
 - **TASK-M4-24**, Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7). Targets: TS-1, TS-2, V-1/V-3/V-7. Depends on TASK-M4-17, TASK-M3-16. Waits on RQ-595.
 - **TASK-M4-25**, Li, Li & Liao's mass-plane contours for one periodic family (LLL-1). Targets: LLL-1. Depends on TASK-M4-17, TASK-M2-13. Waits on RQ-597.
 
@@ -506,7 +525,7 @@ fetches PLAN.md lists are the human's (RQ-584, RQ-585, RQ-586, RQ-598).
 
 - **TASK-M8-97**, Stability as structure: atlas orbits off the Šuvakov plane against their published stability (OC-4, AT-D5). Targets: OC-4. Depends on TASK-M8-74, TASK-M6-05, TASK-M3-45.
 - **TASK-M8-98**, The atlas's free-fall orbits marked on the closure field, one plane per mass set (AT-D2). Targets: AT-D2. Depends on TASK-M8-74, TASK-M4-15, TASK-M3-46.
-- **TASK-M8-99**, The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane). Targets: OC-4 on the Šuvakov plane, AT-D1, AT-D3. Depends on TASK-M8-97. Waits on RQ-582, RQ-583.
+- **TASK-M8-99**, The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane). Targets: OC-4 on the Šuvakov plane, AT-D1, AT-D3. Depends on TASK-M8-97. Waits on RQ-583 (RQ-582 closed by R-630; was "Waits on RQ-582, RQ-583.").
 
 ---
 
@@ -566,7 +585,10 @@ PLAN.md § 8's rules 9–18, transcribed:
     control for an exact test, a shuffled or perturbed control for a distribution.
 17. **Commit third-party data only under stated terms.** The atlas and the gallery state theirs; Hristov's databases,
     Simó and Li & Liao do not (RQ-579), so they are fetched and hash-checked, not committed; the Valtonen book is not
-    committed.
+    committed. *27 Oct 2026, R-631 (closing RQ-579 with option (a)):* Hristov et al.'s databases, Simó's archive and
+    Li & Liao's tables are committed, with full citations and no permission asked first, as published numerical
+    results credited to their authors and never claimed as ours (HP27, FF27, each with a `SOURCES.md`); `fetch.sh`
+    stays the provenance check. Other third-party data still needs stated terms or a ruling.
 18. **Respect the horizon cap; queue, don't raise it.** R-610: `T_horizon ∈ [0.4, 200]`, default 50. A target past 200
     is compared only over the systems that end before 200 (RQ-592 asks whether a closure test may run past it).
 

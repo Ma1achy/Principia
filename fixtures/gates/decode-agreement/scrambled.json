@@ -1,0 +1,7 @@
+{
+  "description": "A dispatch scramble: each sample's descriptor written 17 samples on (one row up, one column right), so every sample compares its own decode with another point's; the disagreement is spatial and the gate fails.",
+  "side": [16, 16],
+  "depth": 4,
+  "shift": 17,
+  "expected": "fail"
+}

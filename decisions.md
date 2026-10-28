@@ -26910,6 +26910,48 @@ recorded here, after R-627, as R-196 was recorded after R-197.
 
 R-594 is in the "process" group of `plan/rule_groups.yaml`.
 
+## R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's "Each is read from the decoded `(m, r, p)` alone" for `rho_angle`; asked directly, no RQ)*
+*27 Oct 2026 · the human's answer to the question put on PR #303 (TASK-M2-25); applied in
+`docs/design/principia_dd_decoder.md` §3.6 and `plan/rule_groups.yaml`; built by TASK-M2-25*
+
+The question: `rho_angle` near `Φ`'s `λ̃ = 0` pole (physics review 5669268864 of PR #303, head 2ffc058b, and the
+measurement in its comment 6445018858). At the `α = 0` pole `Φ`'s `λ̃` is 0, but the descriptor re-forms
+`λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁` from the positions, after `C`'s re-centring, so its `λ` is that re-centring's rounding
+residue, whose size and sign each backend rounds its own way (measured 1.5 to 3.8·10⁻⁹ at f32 at the exact pole, 0 on
+lavapipe). The angle read from it is conditioned as residue/`‖λ̃‖`: backends disagreed beyond REQ-DEC-043's factor out
+to `‖λ̃‖ ≈ 2.8·10⁻⁵`, and at the exact pole read 0 on one and `π̂` on another. Physics offered three options: (A) the
+angle from `Φ`'s vectors, (B) an explicit pole snap with a calibrated tolerance, (C) accept the backend-dependent value.
+
+The human's words, verbatim:
+
+> A: angle from Φ's vectors (Recommended)
+
+The option the human chose, verbatim:
+
+> Take rho_angle from the configuration block's own (ρ̃, λ̃) instead of the re-centred positions. Physics measured a
+> worst error of 1.6e-7 rad against f64 (CPU f32), exactly 0 at the pole, with no tolerance or calibration. It amends
+> dd_decoder §3.6:241-243 ('read from the decoded (m, r, p) alone'). The test goes back to strict.
+
+*What it decides:* option A. Every decode's `rho_angle` is `atan2(ρ̃ × λ̃, ρ̃ · λ̃)` of the configuration block's
+`ρ̃` and `λ̃` (`kernel::decode::config::Config`'s `rho_t` and `lambda_t`, the vectors the reconstruction unweights),
+through §3.6's existing cases, so at the pole, where those operands are `±0`, "Parallel, or the pole" gives 0 on every
+backend. The CPU and the generated fragment and kernel WGSL run the one source (R-116), so they take the same
+operands. No tolerance and no calibration are added. `rho_mag`, `lambda_mag`, `rho_ratio`, `K_0`, `V_0`,
+`virial_ratio` and `r_min_pair_0` keep their positional forms: they describe the integrated IC, and `rho_ratio`'s
+rule at the `α = 0` pole (§3.6, "It reads `+∞` only where `‖λ̃‖` is exactly 0") is unchanged. The shape-pole test of
+TASK-M2-25 holds descriptor word 7 strictly again, with the sweep's near-pole points at `φ_f = 0` and a generic
+phase, against the CPU's f32 decode and `Φ`'s f64 angle.
+
+*Applied per R-369:*
+- The mirror: where `C`'s step 3 mirrors, `rho_angle`'s sign would be negated. No decode mirrors: the shape sphere's
+  `C` does not take step 3 (R-544), and every other chart's configuration is canonical by construction, so `Φ`'s
+  angle is the emitted state's.
+- The descriptor-alone entries (`kernel::stage::fragment::describe`, `kernel::stage::decode::describe`), which take an
+  `(m, r, p)` with no configuration block and serve tests only, keep the positional form: there is no `Φ` to read.
+- An `η_E` rescale moves only the momenta, so the rescaled descriptor reads the same configuration block.
+
+R-628 is in the "physics" group of `plan/rule_groups.yaml`.
+
 ## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
 *27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
 R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
@@ -26975,10 +27017,13 @@ which takes the number before this one and is not on `main` yet; it is recorded 
 R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
 
 ## R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*
+*Amended in part by R-631 (item 6: the high-precision initial-condition data is committed, with full citations, and
+no permission is asked first; RQ-579 is closed with option (a)).*
 *Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
 edited; RQ-577 and RQ-583 unchanged).*
-*Still in force: all of it but item 12's "Don't edit those documents", which R-632 replaces by applying the three
-corrections (R-632).*
+*Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
+data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631.*
 *27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
 RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
 and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
@@ -27075,6 +27120,93 @@ merged into it; RQ-583's stay.
 R-630 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-042 (rulings, note) and REQ-VAL-043 (verify, rulings, source, note).
+
+## R-631 — The high-precision initial-condition data is committed to the repo with full citations, no permission asked first: Hristov et al.'s databases, the free-fall, central-symmetry and Euler ones beside them, Simó's archive and Li & Liao's tables, each folder with a SOURCES.md; REQ-VAL-042, PL-6 and LL-5 point at the committed files, and fetch.sh stays as the provenance check *(amends R-630; closes RQ-579 with option (a))*
+*27 Oct 2026 · the human's message of that evening; applied in `docs/incoming/2026-10-27_hp_ics/` (`data/`, `SOURCES.md`,
+`.gitattributes`, dated notes in `README.md`), `docs/incoming/2026-10-27_hp_ics_freefall/` (new),
+`docs/archive/review_queue/M0.md` (RQ-579's amended ruling), `docs/design/principia_dd_replication.md`,
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` and
+`docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` (dated notes),
+REQ-VAL-042 and REQ-VAL-227 (reqio), TASK-M3-46 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> Owner's ruling, amending R-630 item 6 and closing RQ-579 differently: commit the high-precision initial-condition
+> data to the repo, with full citations. No permission request is required first; the owner will send a courtesy email
+> himself (drop the draft from #310's description, or mark it superseded).
+>
+> Reasons on record (checked 27 Oct): no database page states terms; the describing papers for the free-fall 24,582
+> (CeMDA 136, 7, 2024), central-symmetry 4,860 (CNSNS 2025), Euler 12,431 (Astron. Comput. 2024) and stable 971 (New
+> Astron. 2026) are CC BY 4.0; the data are published numerical results, credited to their authors and never claimed
+> as ours.
+>
+> 1. docs/incoming/2026-10-27_hp_ics (and a new folder for the free-fall 24,582 if it isn't there): run fetch.sh,
+>    verify each file against its recorded sha256, and commit the files themselves.
+> 2. Same for Simó's choreo3.tar.gz (345 choreographies; its README carries no terms) and the sjtu-liao/three-body
+>    tables (no LICENSE file).
+> 3. Each folder gets a SOURCES.md (or README update): authors, title, journal, DOI, arXiv id, database URL, fetch
+>    date, sha256 per file, the paper's licence where it has one, and a line "published by the authors; included as
+>    test data with citation; not ours". Correct the first author's name everywhere: Ivan Hristov (the draft said
+>    "Ivaylo").
+> 4. Update REQ-VAL-042, PL-6 and LL-5 to point at the committed files instead of fetch-only. Keep fetch.sh as the
+>    provenance check.
+> 5. If a dataset is very large (say > 20 MB), commit it compressed and say so.
+> 6. Usual docs/ commit rules, one PR, leave it for the owner.
+
+*What it decides:* RQ-579 is closed with its option (a), "commit the values with attribution", replacing R-630 item 6's
+(b) and (c). The rest of R-630 stands. Item 7's free-fall database, fetched under R-630, is committed under this ruling.
+The draft email R-630 item 6 asked for was in PR #310's description, never in the corpus; it is marked superseded there.
+
+*Applied:*
+
+- **Item 1.** `docs/incoming/2026-10-27_hp_ics/fetch.sh` was run into an empty directory: "all 599 files fetched and
+  match sources.tsv". The 599 files are committed under that folder's `data/`, at the paths `sources.tsv` gives, and
+  each committed copy was checked against its recorded sha256 again. Hristov et al. 2024's free-fall database (R-630
+  item 7) is in a new folder, `docs/incoming/2026-10-27_hp_ics_freefall/`, laid out the same way (`sources.tsv`,
+  `fetch.sh`, `data/`), with new hashes recorded: each of its files was fetched three times into empty directories,
+  with the same sha256 each time.
+- **Item 2.** `choreo3.tar.gz` and Li & Liao 2017's GitHub table are among the 599 and are committed as fetched; the
+  archive is not extracted.
+- **Item 3.** Each folder has a `SOURCES.md` with every field the item lists and its verbatim line, and the hp_ics
+  README's "Terms" carries a dated note, the old conclusion quoted as *Was*. Crossref's record of each DOI was read for
+  the paper's licence (27 Oct 2026): CC BY 4.0 for the four papers the ruling names, as its reasons say, and for
+  Hristov et al. 2022 (CEUR-WS Vol-3191, whose index states it); none open for the others. No file in the repo, or on
+  PRs #307, #309 and #310, named the first author "Ivaylo"; he is Ivan Hristov throughout.
+- **Item 4.** REQ-VAL-042's note names the committed free-fall files. REQ-VAL-227 (LL-5) names the committed copy of
+  the authors' 316-orbit table beside the atlas's CSV, and TASK-M3-46's acceptance line with it. PL-6 has no
+  requirement (RQ-577 is open), so dated notes where it is defined (PLAN.md § 3.1, the proposal's § 5 test 6) and in
+  `principia_dd_replication.md` (§ 4.2, § 5.13) point at the committed files. Every README says `fetch.sh` stays the
+  provenance check.
+- **Item 5.** No file is over 20 MB (the largest is `sol_80.txt`, 8.4 MB), so nothing is compressed.
+
+*Applied per R-369:*
+
+- **The central-symmetry and Euler databases**, which the ruling's reasons name and which are on the same site's root
+  page as the free-fall one, are fetched and committed in the new folder with it: their initial-condition files only
+  (4,860 × 2 at 100 digits; 12,431, 332, 35 and 8 at 100 digits), not their plots, stability or syzygy files, nor the
+  Euler page's later 421,562 i.c.s at 60 digits (about 109 MB), which the ruling does not name.
+- **"The sjtu-liao/three-body tables"** are read as the tables the plan uses: Li & Liao 2017's (already among the
+  599) and the authors' 316-orbit free-fall table with its word table, which LL-5 needs (new folder). The repository's
+  other tables (3D, unequal-mass, the 2017 and 2018 word tables) are not committed. That GitHub table carries initial
+  conditions, at 10 decimals, for all 316 free-fall orbits, including the 82 the SJTU website lists with words only;
+  PLAN.md § 2.1's "gives words only" is about the website, and still holds of it.
+- **Li & Liao's SJTU free-fall pages** stay recorded by URL and sha256 only, as R-630 item 8 rules; R-631 does not
+  name item 8. The 2017 SJTU page (`three-body-movies.htm`) is one of `fetch.sh`'s 599 and is committed under item 1.
+  Masson's file is committed under item 1 likewise.
+- **`.gitattributes`** in each folder marks `data/**` `-text`, so no checkout converts line endings and the committed
+  bytes keep their hashes (several Sofia files have CRLF endings).
+- `fetch.sh` in `docs/incoming/2026-10-27_hp_ics/` is left byte for byte, its README-recorded sha256 intact; its header
+  comment ("The files are not committed") predates this ruling, and the README's dated note says so. The new folder's
+  `fetch.sh` is the same script with that comment brought up to date.
+
+*R-630 item 9, done in the same PR:* Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 are all paywalled
+(OpenAlex: closed; no arXiv copy; Crossref lists only the publishers' licences), so no PDF is committed. They are listed
+for the owner, with their DOIs, in `docs/incoming/2026-10-27_hp_ics_freefall/README.md`, and TM-1 and LL-3
+(TASK-M3-49, TASK-M3-47) wait for them.
+
+R-631 is in the "process" group of `plan/rule_groups.yaml`, with R-630.
+
+Changes REQ-VAL-042 (note) and REQ-VAL-227 (verify, rulings, note).
 
 ## R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*
 *27 Oct 2026 · the human's ruling batch of that evening; applied in `docs/design/principia_deep_zoom.md` § 2 and § 4

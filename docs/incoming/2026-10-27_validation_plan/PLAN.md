@@ -274,6 +274,16 @@ Merged rows list every source. Where one target arises from several records, it 
 | PL-11 | V | C | `PL26` §5 test 11 | Decoder switchover per precision, on a deep box at O(1) coordinates; the origin box as control | none | Latent (deep zoom) | precision tier; deep zoom (M6) | exact | blocked: RQ-577 |
 | PL-12 | V | C | `PL26` §5 test 12 | Integration floor per tier; f32 with the linearised decoder must collapse at depth 16–23 | none | Latent (deep zoom) | precision tier; deep zoom (M6) | measurement | blocked: RQ-577 |
 
+> **Note, 27 Oct 2026 (R-631).** The data PL-6, LL-5 and FF-H (REQ-VAL-042) read is now committed, no longer fetch-only:
+> R-631 closes RQ-579 with option (a). PL-6's reference values, the Hristov databases' digits for the 937 rows, are in
+> `HP27/data/` (`sofia_3body123/`, `sofia_3bodychor462/`, `sofia_3bodychor164/`, `sofia_3bodystab971/`), cited in
+> `HP27/SOURCES.md`. FF-H's, Hristov et al. 2024's 24,582 free-fall i.c.s, are in
+> `docs/incoming/2026-10-27_hp_ics_freefall/data/sofia_3bodyfree/sol_80.txt`. LL-5's source list, the authors' own
+> 316-orbit table (`free-fall-3b-pictures.md`, with initial conditions at 10 decimals), is in that folder's
+> `data/liliao_github/`; LL-5 stays a closure test on the `OC26` rows. Each folder's `fetch.sh` stays the provenance
+> check. The table above is left as written: PL-6's "`HP27/sources.tsv` + `fetch.sh` (values hash-checked, not
+> committed)" and LL-5's "source page not committed (§9)" predate R-631.
+
 ### 3.2 Replication
 
 | Id | L | T | Source | Asserted | Ref. data | Chart | Needs | Compare | Status |
@@ -708,6 +718,8 @@ The 25 Oct instruction's rules 1–8, "the ones that worked for Anosova, RQ-566 
 17. **Commit third-party data only under stated terms.** The atlas and the gallery state theirs; Hristov's databases,
     Simó and Li & Liao do not (RQ-579), so they are fetched and hash-checked, not committed; the Valtonen book is not
     committed (`P27/README.md` §2).
+    *Note, 27 Oct 2026:* R-631 commits Hristov's databases, Simó's archive and Li & Liao's tables with full citations
+    (HP27 and `docs/incoming/2026-10-27_hp_ics_freefall/`, each with a `SOURCES.md`); the rule above is left as written.
 18. **Respect the horizon cap; queue, don't raise it.** R-610 (closing RQ-555): `T_horizon ∈ [0.4, 200]`, default 50.
     A target past 200 (Boekholt et al. 2020's t = 10⁴) is compared only over the systems that end before 200.
 

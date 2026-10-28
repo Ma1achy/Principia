@@ -38,7 +38,9 @@ const ZERO: Latent = [0.0; 8];
 
 fn sim() -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: ZERO,
             q1: ZERO,
@@ -49,7 +51,7 @@ fn sim() -> SimConfig {
             locked: false,
             z_locked: ZERO,
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
