@@ -1,23 +1,24 @@
 //! The link-variation diagnostic (REQ-VAL-024; validation ground-truth note § "Link variation as a conditioning
 //! diagnostic (not a default change)"; inverse-encode contract Part 7): for each registry link `L`, a foreign IC is
 //! canonicalised and inverted under `L` (`kernel::encode::ingest`), and the diagnostic reports Part 7's two outputs,
-//! the physical residual `residual_L = ‖D_L(z_L) − C(x)‖_phys` and the conditioning number `κ_L`, so a reader can tell
-//! an IC that is hard only under the default link (clean under some `L`, a conditioning difficulty) from one that is
-//! hard under every link (fundamental).
+//! the physical residual `residual_L = ‖D_L(z_L) − C(x)‖_phys` and the conditioning number `κ_L`.
 //!
-//! **"Each registry link"** is each entry a block can select (REQ-GEN-013): the block's slot codomain names which. One
-//! row per block and entry: the selection is the default one with that block's link replaced by `L`, the four momentum
-//! controls sharing one (R-479 E1), so a row varies one block and holds the rest at the defaults. A block's own default
-//! entry gives the default selection's row. Entries no block can select (`softplus`, `exp`, `identity`) have no row.
+//! **"Each registry link"** is each selection of the entries the blocks can select (REQ-GEN-013): a block's slot
+//! codomain names its entries, and a row's selection takes one per block, the four momentum controls sharing one
+//! (R-479 E1). The rows are the whole product, 2 mass × 3 `α` × 3 `β` × 3 momenta = 54 selections, not the default
+//! with one block replaced: `residual_L` is the whole state's, so an IC whose difficulty sits in two blocks at once
+//! clamps in every selection off the default in one block alone, and only a selection off it in both reaches it. Over
+//! the product, an IC no row reaches is hard under every selection the registry offers; one some row reaches is a
+//! conditioning difficulty that selection fixes. Entries no block can select (`softplus`, `exp`, `identity`) have no
+//! row.
 //!
-//! **Provenance.** Each row carries the `SimConfig` `Links` of its selection ([`Row::links`]): a per-validation link
-//! choice, encoding an IC under the link that reaches it best and forward-checking under that link, records that row's
-//! `links` as the IC's provenance (R-483: the links live in `Links`, the one place).
+//! **Provenance.** Each row carries the `SimConfig` `Links` of its whole selection ([`Row::links`]): a per-validation
+//! link choice, encoding an IC under the selection that reaches it best and forward-checking under that selection,
+//! records that row's `links` as the IC's provenance (R-483: the links live in `Links`, the one place).
 //!
-//! **The firewall.** The diagnostic is pure: it reads the registry and the default selection and writes neither, so it
-//! never changes the default link, which is chosen for the sampling measure, never for validation reachability. The
-//! rows' selections are the default one (`kernel::generated::links::Defaults`) with one block replaced; nothing here
-//! defines a default.
+//! **The firewall.** The diagnostic is pure: it reads the registry and writes neither it nor the default selection
+//! (`kernel::generated::links::Defaults`), so it never changes the default link, which is chosen for the sampling
+//! measure, never for validation reachability. Nothing here defines a default.
 //!
 //! **What it does not do.** It classifies nothing: the note's "clean" and "bad" would need a threshold on `κ` that the
 //! corpus does not give; the rows report `residual_L` and `κ_L` and the reader judges.
@@ -27,63 +28,17 @@ use kernel::decode::Ic;
 use kernel::encode::ingest::ingest;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
-    Defaults, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh, SoftsignAlpha,
-    SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Alpha, Beta, Link, Mass, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
+    SoftsignAlpha, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ,
 };
 
 use crate::roundtrip::phys;
 
-/// The default selection with the mass block's link `M`.
-type WithMass<M> = Select<
-    M,
-    <Defaults as Selection>::AlphaLink,
-    <Defaults as Selection>::BetaLink,
-    <Defaults as Selection>::Q0Link,
-    <Defaults as Selection>::Q1Link,
-    <Defaults as Selection>::Q2Link,
-    <Defaults as Selection>::Q3Link,
->;
-
-/// The default selection with `α`'s link `A`.
-type WithAlpha<A> = Select<
-    <Defaults as Selection>::MassLink,
-    A,
-    <Defaults as Selection>::BetaLink,
-    <Defaults as Selection>::Q0Link,
-    <Defaults as Selection>::Q1Link,
-    <Defaults as Selection>::Q2Link,
-    <Defaults as Selection>::Q3Link,
->;
-
-/// The default selection with `β`'s link `B`.
-type WithBeta<B> = Select<
-    <Defaults as Selection>::MassLink,
-    <Defaults as Selection>::AlphaLink,
-    B,
-    <Defaults as Selection>::Q0Link,
-    <Defaults as Selection>::Q1Link,
-    <Defaults as Selection>::Q2Link,
-    <Defaults as Selection>::Q3Link,
->;
-
-/// The default selection with every momentum control's link `Q`.
-type WithMomenta<Q> = Select<
-    <Defaults as Selection>::MassLink,
-    <Defaults as Selection>::AlphaLink,
-    <Defaults as Selection>::BetaLink,
-    Q,
-    Q,
-    Q,
-    Q,
->;
-
-/// One registry link's row: the IC inverted under the default selection with `block`'s link replaced by `link`.
+/// One selection's row: the IC inverted under it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Row {
-    /// The block whose link the row varies, by its `Links` field: `mass`, `alpha`, `beta` or `momenta`.
-    pub block: &'static str,
-    /// The selection's links, at their parameters' defaults, the block's the registry entry `L` ([`Row::link`]): what a
-    /// per-validation choice of this row records as the IC's provenance.
+    /// The selection's links, at their parameters' defaults: what a per-validation choice of this row records as the
+    /// IC's provenance.
     pub links: Links,
     /// `z_L`, the IC encoded under the selection.
     pub z: [f64; 8],
@@ -95,28 +50,14 @@ pub struct Row {
     pub clamped: bool,
 }
 
-impl Row {
-    /// The registry entry `L` the row's block takes, read from its links, the one place it lives.
-    pub fn link(&self) -> &str {
-        let (_, choice) = self
-            .links
-            .blocks()
-            .into_iter()
-            .find(|(name, _)| *name == self.block)
-            .expect("each row's block is a block of Links");
-        &choice.id
-    }
-}
-
-/// `ic` inverted under the selection `S`, the row of `block`'s link.
-fn row<S>(block: &'static str, ic: &Ic<f64>) -> Row
+/// `ic` inverted under the selection `S`.
+fn row<S>(ic: &Ic<f64>) -> Row
 where
     S: Selection,
     S::MassLink: SimplexClamp,
 {
     let got = ingest::<S, f64, _>(ic, phys);
     Row {
-        block,
         links: Links::of::<S>().expect("each row's momentum controls share one link"),
         z: got.encoded.z.z,
         residual: got.residual,
@@ -125,21 +66,47 @@ where
     }
 }
 
+/// The rows of the mass link `M`, `α`'s `A` and `β`'s `B`: one per momentum link, in registry order.
+fn momenta<M, A, B>(ic: &Ic<f64>, rows: &mut Vec<Row>)
+where
+    M: Link<2, 3, Codomain = Mass> + SimplexClamp,
+    A: Link<1, 1, Codomain = Alpha>,
+    B: Link<1, 1, Codomain = Beta>,
+{
+    rows.push(row::<Select<M, A, B, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>>(ic));
+    rows.push(row::<Select<M, A, B, TanhQ, TanhQ, TanhQ, TanhQ>>(ic));
+    rows.push(row::<
+        Select<M, A, B, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>,
+    >(ic));
+}
+
+/// The rows of the mass link `M` and `α`'s `A`: one run of [`momenta`] per `β` link, in registry order.
+fn beta<M, A>(ic: &Ic<f64>, rows: &mut Vec<Row>)
+where
+    M: Link<2, 3, Codomain = Mass> + SimplexClamp,
+    A: Link<1, 1, Codomain = Alpha>,
+{
+    momenta::<M, A, SigmoidBeta>(ic, rows);
+    momenta::<M, A, TanhBeta>(ic, rows);
+    momenta::<M, A, SoftsignBeta>(ic, rows);
+}
+
+/// The rows of the mass link `M`: one run of [`beta`] per `α` link, in registry order.
+fn alpha<M>(ic: &Ic<f64>, rows: &mut Vec<Row>)
+where
+    M: Link<2, 3, Codomain = Mass> + SimplexClamp,
+{
+    beta::<M, SigmoidAlpha>(ic, rows);
+    beta::<M, TanhAlpha>(ic, rows);
+    beta::<M, SoftsignAlpha>(ic, rows);
+}
+
 /// The diagnostic of `ic`, a physical IC in any frame (positive masses summing to 1, as `C` requires): one [`Row`] per
-/// block and registry link that block can select, in the order mass, `α`, `β`, momenta, each block's links in registry
-/// order.
+/// selection of the registry's entries, mass outermost, then `α`, `β` and the momenta, each block's entries in registry
+/// order, so the first row is the default selection's.
 pub fn diagnose(ic: &Ic<f64>) -> Vec<Row> {
-    vec![
-        row::<WithMass<SoftmaxTanh>>("mass", ic),
-        row::<WithMass<StickBreaking>>("mass", ic),
-        row::<WithAlpha<SigmoidAlpha>>("alpha", ic),
-        row::<WithAlpha<TanhAlpha>>("alpha", ic),
-        row::<WithAlpha<SoftsignAlpha>>("alpha", ic),
-        row::<WithBeta<SigmoidBeta>>("beta", ic),
-        row::<WithBeta<TanhBeta>>("beta", ic),
-        row::<WithBeta<SoftsignBeta>>("beta", ic),
-        row::<WithMomenta<SigmoidQ>>("momenta", ic),
-        row::<WithMomenta<TanhQ>>("momenta", ic),
-        row::<WithMomenta<SoftsignQ>>("momenta", ic),
-    ]
+    let mut rows = Vec::new();
+    alpha::<SoftmaxTanh>(ic, &mut rows);
+    alpha::<StickBreaking>(ic, &mut rows);
+    rows
 }
