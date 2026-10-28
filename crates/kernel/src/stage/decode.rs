@@ -947,6 +947,8 @@ pub fn shape_sphere_defaults(
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,
 /// and writes its `ICDescriptor`, [`descriptor::describe`] at f32, at sample `i` of `descriptors`: the decode stage's
 /// own producer, on inputs the f32 decode need not reach, so that a test can read the pole values the GPU stores (R-436).
+/// With no configuration block, its `rho_angle` is read from the positions; a decode reads it from the configuration
+/// block's `(ρ̃, λ̃)` (R-628).
 /// A pair separation of exactly 0 is one: dd_decoder §3.6 measured the collision pole at f64, where `cos α` at the image
 /// of π/2 falls under the rounding of `r₀₁`; at f32, a sweep of the defaults at saturated `α` (`z_α` from 17 to 200,
 /// `z_β` on `[−12, 12]`, both mass controls on `[−3, 3]`) found no pair separation of 0.

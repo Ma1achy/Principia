@@ -8,6 +8,7 @@ pub mod codegen;
 pub mod compass_golden;
 pub mod controls;
 pub mod deps;
+pub mod fragment_wgsl;
 pub mod gate;
 pub mod gate_report;
 pub mod golden;

@@ -58,6 +58,7 @@ pub mod headless;
 pub mod hot_reload;
 pub mod pipeline_cache;
 pub mod present;
+pub mod presets;
 pub mod raster;
 pub mod registry;
 pub mod structural;

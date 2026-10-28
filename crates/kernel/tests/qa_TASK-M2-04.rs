@@ -7,7 +7,7 @@
 //!   `E* ∈ [U, U + 4|U|]`, and every `E* ≥ 0`, the rescaled IC's energy, evaluated here in f64 from its `(m, r, p)`,
 //!   and the descriptor's `K_0 + V_0` both equal `E*`; the momenta are one common factor `η_E ≥ 0` times the decoded
 //!   ones (`pᵢ ← η_E·pᵢ`), with `η_E = √((E* − U)/K₀)`; masses and positions untouched; the descriptor describes the
-//!   rescaled IC.
+//!   rescaled IC, its `rho_angle` the decode's (R-628: read from the configuration block, which `η_E` does not move).
 //! - REQ-DEC-024, "with the option None, momenta are untouched": `None` gives the plain decode bit for bit; a chart
 //!   whose `forbids_energy_normalisation` is set gives the same under any `Some(E*)` (chart_reference §0.6).
 //! - REQ-DEC-024, "E* = 0 is a real target, not off": `Some(0)` sets the energy to 0; `Some(−0.0)` is the same target
@@ -40,7 +40,7 @@ use kernel::decode::descriptor::describe;
 use kernel::decode::energy_norm::{self, Normalised, Outcome};
 use kernel::decode::{decode, Decoded, Free, Ic, Latent};
 use kernel::generated::links::{Defaults, LinkReal};
-use kernel::payload::PayloadReal;
+use kernel::payload::{ICDescriptorOf, PayloadReal};
 use proptest::prelude::*;
 use validation::negative_control;
 
@@ -182,10 +182,12 @@ fn at_rest<R: Fp>(p: &[[R; 2]; 3]) -> bool {
     p.iter().flatten().all(|x| x.f() == 0.0)
 }
 
-/// Asserts the rescaled IC `after` of `before` reaches `e`: energy within [`ENERGY_ULPS`] from the IC and from the
-/// descriptor, the momenta `η·pᵢ` along the decoded ones, masses and positions untouched, the descriptor that of the
-/// rescaled IC.
-fn assert_reaches<R: Fp>(before: &Ic<R>, after: &Decoded<R>, e: R, ctx: &str) {
+/// Asserts the rescaled IC `after` of the decode `before` reaches `e`: energy within [`ENERGY_ULPS`] from the IC and
+/// from the descriptor, the momenta `η·pᵢ` along the decoded ones, masses and positions untouched, the descriptor that
+/// of the rescaled IC, its `rho_angle` the decode's (R-628: read from the configuration block's own `(ρ̃, λ̃)`, which
+/// `η_E` does not move).
+fn assert_reaches<R: Fp>(decode: &Decoded<R>, after: &Decoded<R>, e: R, ctx: &str) {
+    let before = &decode.ic;
     assert_eq!(
         (before.m, before.r),
         (after.ic.m, after.ic.r),
@@ -210,9 +212,14 @@ fn assert_reaches<R: Fp>(before: &Ic<R>, after: &Decoded<R>, e: R, ctx: &str) {
         after.descriptor.K_0.f() + after.descriptor.V_0.f(),
         e
     );
+    // R-628: every field but rho_angle is read from the rescaled (m, r, p); rho_angle is read from the configuration
+    // block, which η_E does not move, so it is the decode's, bit for bit (dd_decoder §3.6).
     assert_eq!(
         fingerprint(&Decoded {
-            descriptor: describe(&after.ic),
+            descriptor: ICDescriptorOf {
+                rho_angle: decode.descriptor.rho_angle,
+                ..describe(&after.ic)
+            },
             ..*after
         }),
         fingerprint(after),
@@ -270,7 +277,7 @@ fn check_target<R: Fp>(apply: Apply<R>, z: [f64; 8], t: f64) {
             after.degenerate, None,
             "a feasible E* tagged the decode ({ctx})"
         );
-        assert_reaches(&before.ic, &after, e, &ctx);
+        assert_reaches(&before, &after, e, &ctx);
     }
 }
 
@@ -438,7 +445,7 @@ fn check_chart_flag<R: Fp>(entry: ChartEntry<R>) {
             "an allowing chart did not apply η_E ({})",
             R::LABEL
         );
-        assert_reaches(&none.0.ic, &on, e, R::LABEL);
+        assert_reaches(&none.0, &on, e, R::LABEL);
         let (off, outcome) = entry(&banned, u, v, Some(e));
         assert_eq!(
             outcome,
@@ -498,7 +505,7 @@ fn check_zero<R: Fp>(apply: Apply<R>, z: [f64; 8]) {
             Outcome::Scaled,
             "E* = 0 on a bound IC was not applied ({ctx})"
         );
-        assert_reaches(&before.ic, &after, e, &ctx);
+        assert_reaches(&before, &after, e, &ctx);
         let (k0, u0) = (kinetic64(&before.ic), before.descriptor.V_0.f());
         if (k0 + u0).abs() > 1e3 * R::EPS * (k0 + u0.abs()) {
             assert_ne!(
@@ -634,7 +641,7 @@ fn check_boundary<R: Fp>(apply: Apply<R>, z: [f64; 8]) {
         !at_rest(&above.ic.p),
         "E* one ulp above U gave rest ({ctx})"
     );
-    assert_reaches(&before.ic, &above, u.up(), &ctx);
+    assert_reaches(&before, &above, u.up(), &ctx);
 
     // The rest start.
     let still = plain::<R>(rest(z));

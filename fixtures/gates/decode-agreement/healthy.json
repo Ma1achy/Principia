@@ -1,0 +1,6 @@
+{
+  "description": "A healthy survey: every M2 chart at its fixed parameters, a 16 x 16 lattice of one-pixel samples at depth 4's cells, each sample's descriptor written by the kernel decode stage at its own point.",
+  "side": [16, 16],
+  "depth": 4,
+  "expected": "pass"
+}

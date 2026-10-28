@@ -242,9 +242,11 @@ The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_r
 
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
-**The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read from the decoded
-`(m, r, p)` alone, after the blocks and before integration, so it is the same for every chart (§2: the integrator's
-input is `(m, r, p)` and nothing else). With §3.2's reduced masses and Jacobi vectors, written from the positions:
+**The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read after the blocks and
+before integration, so it is the same for every chart. Each but `rho_angle` is read from the decoded `(m, r, p)` alone
+(§2: the integrator's input is `(m, r, p)` and nothing else); `rho_angle` is read from the configuration block's own
+`(ρ̃, λ̃)`, `Φ`'s vectors (R-628; its bullet below). With §3.2's reduced masses and Jacobi vectors, written from the
+positions:
 
 ```
 M₀₁ = m₀ + m₁        μ_ρ = m₀m₁ / M₀₁        μ_λ = m₂ · M₀₁
@@ -254,7 +256,7 @@ q_mass       = min(m₀, m₁) / max(m₀, m₁)                      ∈ (0, 1]
 rho_mag      = ‖ρ̃‖ = √μ_ρ · ‖ρ‖                               ∈ [0, 1]
 lambda_mag   = ‖λ̃‖ = √μ_λ · ‖λ‖                               ∈ [0, 1]
 rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ [0, ∞]
-rho_angle    = atan2(ρ × λ, ρ · λ)                             ∈ (−π, π]
+rho_angle    = atan2(ρ̃ × λ̃, ρ̃ · λ̃),  ρ̃, λ̃ D_cfg's (R-628)          ∈ (−π, π]
 r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ [0, ∞)
 ```
 
@@ -270,7 +272,16 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0` on the decode's output; after the encode's
   canonicalisation `λ̃_y ≥ −δ_λ`, R-82's deadband, which is why the encode's `β` reads `|λ̃_y|`, R-438) it is `β ∈ [0, π]`. Its value is defined case by case,
   not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
-  value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision:
+  value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision. **Its operands are `Φ`'s (R-628):** `ρ̃` and
+  `λ̃` are the configuration block's own (§3.2's, or a chart's `Φ` output, before unweighting), not the Jacobi vectors
+  re-formed from the positions. At the `α = 0` pole `Φ`'s `λ̃` is 0, while the positions' `λ` is the rounding residue of
+  the reconstruction and `C`'s re-centring, whose size and sign each backend rounds its own way; an angle read from it
+  is conditioned as residue/`‖λ̃‖` and differs between backends (measured on PR #303 out to `‖λ̃‖ ≈ 3·10⁻⁵` at f32).
+  Read from `Φ`'s vectors its error against f64 is at most `1.6·10⁻⁷` rad at f32, and at the pole the operands are `±0`,
+  so the case below gives 0 on every backend. Where `C`'s step 3 mirrors, the sign is negated; no decode mirrors (the
+  shape sphere's `C` does not take step 3, R-544; every other chart's configuration is canonical by construction). An
+  `(m, r, p)` given with no configuration block (the descriptor-alone entries, which serve tests) reads `ρ` and `λ` from
+  its positions, as above. The cases:
   - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`
     are exact zeros give `ρ × λ = −0`, and `atan2(−0, x < 0) = −π`, outside the range.
   - **Parallel, or the pole** (`ρ × λ = 0`, `ρ · λ ≥ 0`): 0. At the pole, `ρ × λ = ρ · λ = 0`, GLSL.std.450 `Atan2`
