@@ -418,7 +418,9 @@ pub fn decode_native_f32(batches: &[Batch]) -> Vec<DecodeOut<f32>> {
 pub fn physics_key() -> engine::contract::sim_config::SimConfig {
     use engine::contract::sim_config::*;
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -431,7 +433,7 @@ pub fn physics_key() -> engine::contract::sim_config::SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },

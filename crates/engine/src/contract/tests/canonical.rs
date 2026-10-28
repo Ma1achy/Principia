@@ -15,7 +15,7 @@ use crate::contract::canonical::{self, format_f64, json_to_string};
 use crate::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, SliceFrame, Z_Q3,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 
 // ----- RFC 8785's published test vectors -----
@@ -420,7 +420,9 @@ fn err<T: Serialize + ?Sized>(value: &T) -> String {
 fn skeleton() -> (SimConfig, RenderState) {
     (
         SimConfig {
-            chart: Chart {},
+            chart: Chart {
+                window: Window::SQUARE,
+            },
             plane: Plane {
                 z0: [0.0; 8],
                 q1: [0.0; 8],
@@ -433,7 +435,7 @@ fn skeleton() -> (SimConfig, RenderState) {
                 locked: false,
                 z_locked: [0.0; 8],
             },
-            links: Links {},
+            links: Links::defaults(),
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: 0.0 },
@@ -530,7 +532,7 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&sim),
-            r#"{"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}}}"#,
+            r#"{"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}}}"#,
         ),
         (
             to(&render),
@@ -671,7 +673,7 @@ validation::negative_control!(
     "a text in another key order must fail the round trip",
     expected = "the text does not round-trip",
     check_round_trip(
-        r#"{"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}},"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
+        r#"{"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}},"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
         r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#
     )
 );

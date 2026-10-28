@@ -18,7 +18,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice, SliceFrame, Z_Q3,
+    SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::contract::store::StateStore;
 use engine::nav::directions::{
@@ -67,7 +67,9 @@ fn close(a: &Latent, b: &Latent, tol: f64) -> bool {
 
 fn sim(plane: Plane) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane,
         slice: Slice {
             frame: SliceFrame::along(Z_Q3),
@@ -76,7 +78,7 @@ fn sim(plane: Plane) -> SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },

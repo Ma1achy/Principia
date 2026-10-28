@@ -691,8 +691,13 @@ pub fn about_the_pin(
                 }
                 (plane.q1, plane.q2) = (*q1, *q2);
             }
-            // The horizon, the slice frame alone and the render fields leave the plane and the lock as they are.
-            Edit::Sim(SimField::Horizon(_) | SimField::SliceFrame { basis: None, .. })
+            // The horizon, the window, the slice frame alone and the render fields leave the plane and the lock as they
+            // are.
+            Edit::Sim(
+                SimField::Horizon(_)
+                | SimField::Window(_)
+                | SimField::SliceFrame { basis: None, .. },
+            )
             | Edit::Render(_) => {}
         }
         out.push(edit);

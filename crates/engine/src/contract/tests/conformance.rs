@@ -10,10 +10,10 @@ use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::{
     Hover, NodeId, NodeKind, Occupant, Overlays, Palette, Playhead, RenderState, StainGraph,
 };
-use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
+use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, SliceFrame, Z_Q3,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use crate::contract::snapshot::{FrameSummary, Snapshot};
 use crate::contract::store::{set_field_message, StateStore};
@@ -22,7 +22,9 @@ use crate::contract::store::{set_field_message, StateStore};
 fn store(t: f64) -> StateStore {
     StateStore::new(
         SimConfig {
-            chart: Chart {},
+            chart: Chart {
+                window: Window::SQUARE,
+            },
             plane: Plane {
                 z0: [0.0; 8],
                 q1: [0.0; 8],
@@ -35,7 +37,7 @@ fn store(t: f64) -> StateStore {
                 locked: false,
                 z_locked: [0.0; 8],
             },
-            links: Links {},
+            links: Links::defaults(),
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: 0.0 },
@@ -728,6 +730,17 @@ fn store_message_names_the_navigation_paths() {
         set_field_message(&Edit::Sim(SimField::Lock(off)), &sim(SimField::Lock(on))),
         "SetField Lock unlocked → locked at (0.5, -1, 0, 0, 0, 0, 0, 0.25)"
     );
+    let moved = Window {
+        centre: [0.25, -1.5],
+        half: [0.125, 2.0],
+    };
+    assert_eq!(
+        set_field_message(
+            &Edit::Sim(SimField::Window(Window::SQUARE)),
+            &sim(SimField::Window(moved))
+        ),
+        "SetField Chart.window centre (0.5, 0.5) half (0.5, 0.5) → centre (0.25, -1.5) half (0.125, 2)"
+    );
 }
 
 validation::negative_control!(
@@ -928,4 +941,119 @@ validation::negative_control!(
     "another cursor must not log as (0.5700, 0.5500)",
     expected = "assertion",
     check_hover_at_four_decimals([0.57, 0.56])
+);
+
+// ----- History keys (gui_state_contract §2, "A drag coalesces into one history entry", "A command of several edits is
+// one history entry"; R-96, R-466) -----
+
+/// A `z₀` edit with the first control at `x`, undoable.
+fn z0_at(x: f64) -> SetField {
+    let mut z = [0.0; 8];
+    z[0] = x;
+    SetField {
+        edit: Edit::Sim(SimField::Z0(z)),
+        no_history: false,
+    }
+}
+
+/// The window centred at `(u, 0.5)`, undoable.
+fn window_at(u: f64) -> SetField {
+    SetField {
+        edit: Edit::Sim(SimField::Window(Window {
+            centre: [u, 0.5],
+            half: [0.5, 0.5],
+        })),
+        no_history: false,
+    }
+}
+
+/// `z₀`'s first control and the window's `u` in `store`.
+fn state_of(store: &mut StateStore) -> (f64, f64, u32) {
+    let snap = store.snapshot();
+    (
+        snap.sim.plane.z0[0],
+        snap.sim.chart.window.centre[0],
+        snap.history.undo_depth,
+    )
+}
+
+/// Each history rule, sending each edit with `send` (`None`, no key): edits under one key are one entry, its before each
+/// field's value at the first and its after the last; another key, none, an undo or a redo closes it; a no-history edit
+/// leaves it open; a new entry clears redo.
+fn check_keys(send: fn(&mut StateStore, SetField, Option<HistoryKey>)) {
+    let (k1, k2) = (Some(HistoryKey(1)), Some(HistoryKey(2)));
+    // A drag of z₀ and a window edit under one key: one entry; one undo restores both to before the first.
+    let mut st = store(0.0);
+    send(&mut st, z0_at(1.0), k1);
+    send(&mut st, z0_at(2.0), k1);
+    send(&mut st, window_at(0.25), k1);
+    send(&mut st, playhead(0.5, true), None);
+    send(&mut st, z0_at(3.0), k1);
+    assert_eq!(
+        state_of(&mut st),
+        (3.0, 0.25, 1),
+        "one key is not one entry"
+    );
+    st.undo();
+    assert_eq!(
+        state_of(&mut st),
+        (0.0, 0.5, 0),
+        "one undo did not restore the entry"
+    );
+    st.redo();
+    assert_eq!(
+        state_of(&mut st),
+        (3.0, 0.25, 1),
+        "one redo did not set the entry's last values"
+    );
+    // After a redo the key no longer joins: a new entry, which clears nothing left to redo.
+    send(&mut st, z0_at(4.0), k1);
+    assert_eq!(
+        state_of(&mut st),
+        (4.0, 0.25, 2),
+        "a redo did not close the entry"
+    );
+    // Another key, and no key, each close the entry.
+    send(&mut st, z0_at(5.0), k2);
+    send(&mut st, z0_at(6.0), None);
+    send(&mut st, z0_at(7.0), k2);
+    assert_eq!(
+        state_of(&mut st).2,
+        5,
+        "another key or none did not close the entry"
+    );
+    // An undo closes it too, and the new entry clears redo.
+    st.undo();
+    send(&mut st, z0_at(8.0), k2);
+    assert_eq!(
+        state_of(&mut st),
+        (8.0, 0.25, 5),
+        "an undo did not close the entry"
+    );
+    st.redo();
+    assert_eq!(
+        state_of(&mut st),
+        (8.0, 0.25, 5),
+        "a new entry did not clear redo"
+    );
+}
+
+/// Sends `edit` under `key`, or with `set_field` when there is none.
+fn keyed(st: &mut StateStore, edit: SetField, key: Option<HistoryKey>) {
+    match key {
+        Some(key) => st.set_field_under(edit, key),
+        None => st.set_field(edit),
+    }
+}
+
+#[test]
+fn store_history_key_is_one_entry() {
+    check_keys(keyed);
+}
+
+validation::negative_control!(
+    store_history_key_is_one_entry,
+    "a store that ignores the key makes an entry per edit",
+    expected = "one key is not one entry",
+    check_keys(|st, edit, _| st.set_field(edit))
 );

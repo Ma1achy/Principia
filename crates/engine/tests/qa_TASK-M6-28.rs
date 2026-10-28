@@ -31,7 +31,9 @@ use validation::negative_control;
 /// zero so an edit that touches another field shows.
 fn sim() -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.25; 8],
             q1: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -42,7 +44,7 @@ fn sim() -> SimConfig {
             locked: true,
             z_locked: [0.5; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 50.0 },

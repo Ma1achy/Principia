@@ -17,7 +17,7 @@ use engine::contract::canonical;
 use engine::contract::fast_math::FastMath;
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, SliceFrame, Z_Q3,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::synthetic::{simstate_from_words, simstate_words, Synthetic};
 use kernel::bringup::{max_samples, pattern, words_per_sample, BringUp, Variant};
@@ -30,7 +30,9 @@ use validation::negative_control;
 /// The sim key with the kernel variant `kernel_variant`, every other group as at M0.
 fn config(kernel_variant: KernelVariant) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -43,7 +45,7 @@ fn config(kernel_variant: KernelVariant) -> SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant,
         horizon: Horizon { t: 0.0 },

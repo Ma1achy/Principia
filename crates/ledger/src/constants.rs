@@ -1197,6 +1197,21 @@ pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+/// The section that places the chart's addressing space: `Φ : [0,1]² → Y`, `(s, t) ∈ [0,1]²` (chart_decoder_contract
+/// Part 3).
+const ADDRESSING: Citation = Citation::Corpus {
+    file: "docs/contracts/principia_chart_decoder_contract.md",
+    section: "Part 3 — Charts",
+};
+
+/// The centre of the view's window over a chart's whole square `[0,1]²`, `Φ`'s own domain, on each axis
+/// (chart_decoder_contract Part 3; engine's `Window::SQUARE`, TASK-M2-21).
+pub const WINDOW_SQUARE_CENTRE: ConstantBuilder = chart("window_square_centre", 0.5, ADDRESSING);
+
+/// The half-width of the view's window over a chart's whole square `[0,1]²` on each axis (chart_decoder_contract
+/// Part 3; engine's `Window::SQUARE`, TASK-M2-21).
+pub const WINDOW_SQUARE_HALF: ConstantBuilder = chart("window_square_half", 0.5, ADDRESSING);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1207,7 +1222,7 @@ pub const NSUB_THRESHOLD_LEAST: ConstantBuilder = ConstantBuilder {
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
-/// REQ-INT-094).
+/// REQ-INT-094), and the view window's square (TASK-M2-21).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1274,4 +1289,6 @@ pub const REGISTER: &[ConstantBuilder] = &[
     N_MAX,
     NSUB_TABLE_MAX,
     NSUB_THRESHOLD_LEAST,
+    WINDOW_SQUARE_CENTRE,
+    WINDOW_SQUARE_HALF,
 ];
