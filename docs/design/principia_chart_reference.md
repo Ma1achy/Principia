@@ -791,6 +791,22 @@ show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1
 asymmetric target they are new systems. On both sides the acute angle is bounded anyway (§5.4): one type per axis, and
 the twins side decides it.
 
+**Hidden coordinates under tilt and slice (R-633, ruling RQ-603).** These charts hold their blocks by a construction,
+not by latent controls, so their hidden coordinates are the construction's physical parameters, tilted and sliced by
+value as R-554 L5's `p_λ` (`principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Tilt on every chart"):
+
+| Chart | Hidden coordinates | At `d = 0` |
+|---|---|---|
+| Ternary mass plot | `ν₀`, the held shape (a physical value); the four momentum controls from 0 (the rest start, `z_mom = 0`) | the untilted chart, exactly |
+| The Euclid plane, the δm strip `Φ_strip,δm` | the four momentum controls from 0 (the rest start) | the untilted chart |
+| `(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map) | the held `L_z` (0 untilted), a physical value | the untilted chart |
+| `Φ_θ,L_z` | the held `K`, a physical value | the untilted chart |
+
+A momentum control is tilted from 0 and its momenta are `D_mom` of it under the pixel's masses, every registered
+momentum link mapping 0 to 0. With a held `L_z` or `K` tilted, the momenta are §2.2's construction at the tilted value
+(§2.2 takes any `L_z` with `K ≥ L_z²/2I`), and a cell with no construction there (`K < L_z²/2I`) reads as refused:
+no system, area weight 0. Built by TASK-M2-52 on TASK-M2-36's tilt path.
+
 ### 4.6 The central hypothesis
 
 **Hypothesis.** The fractal basin structures seen in the Burrau–Pythagorean family are cross-sections of

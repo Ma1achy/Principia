@@ -40,7 +40,9 @@ use validation::negative_control;
 
 fn sim() -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: engine::contract::sim_config::Window::SQUARE,
+        },
         plane: Plane {
             z0: [0.0; 8],
             q1: [0.0; 8],
@@ -51,7 +53,7 @@ fn sim() -> SimConfig {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
@@ -165,7 +167,8 @@ enum Rule {
 /// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
 /// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
 /// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon, and, since its Stain editor
-/// (TASK-M6-29), the stain graph; each history entry is the edit restoring the value before and the edit itself.
+/// (TASK-M6-29), the stain graph, and, since `SimConfig`'s chart group holds a nonlinear chart's window (TASK-M2-21), the
+/// window; each history entry is the edit restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
@@ -175,6 +178,7 @@ struct Broken {
     hover: Hover,
     horizon: Horizon,
     stain_graph: StainGraph,
+    window: engine::contract::sim_config::Window,
     undo: Vec<(Edit, Edit)>,
     redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
@@ -193,6 +197,7 @@ impl Broken {
             hover: Hover::default(),
             horizon: sim().horizon,
             stain_graph: StainGraph::new(),
+            window: sim().chart.window,
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -218,6 +223,9 @@ impl Broken {
                 &mut self.lock,
                 lock.clone(),
             ))),
+            Edit::Sim(SimField::Window(w)) => {
+                Edit::Sim(SimField::Window(std::mem::replace(&mut self.window, *w)))
+            }
             Edit::Render(RenderField::Overlays(o)) => Edit::Render(RenderField::Overlays(
                 std::mem::replace(&mut self.overlays, o.clone()),
             )),
@@ -309,6 +317,9 @@ impl EngineInterface for Broken {
                 plane: self.plane.clone(),
                 lock: self.lock.clone(),
                 horizon: self.horizon.clone(),
+                chart: Chart {
+                    window: self.window,
+                },
                 ..sim()
             },
             render: RenderState {

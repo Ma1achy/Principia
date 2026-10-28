@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244
-- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18
+- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52
 - **Needs (earlier milestones):** REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -42,3 +42,4 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - **R-537 EX3 (20 Oct 2026):** the stop is judged on the centre after the axes' types fold it, so a pan across a seam or a pole never stops; with the controls shown the view may sit past the chart's square (TASK-M8-55, REQ-GUI-267). The stop itself is unchanged.
 - R-484 J9 (20 Oct 2026): filling the chart params clears T2's `Chart {}`; T2 is TASK-M8-53's.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".
+- **R-633 (28 Oct 2026, RQ-603):** TASK-M2-36 is split, and TASK-M2-52 builds tilt and slice on the six construction charts and closes REQ-CHART-062, which this task needs; so this task, which tilts and slices every chart on the real engine, depends on it (applied per R-369). *Was:* "- **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18".

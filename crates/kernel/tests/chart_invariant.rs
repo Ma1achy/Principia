@@ -337,8 +337,8 @@ fn check_decode_point<R: Q>(decode: ChartDecodeFn<R>, z: [f64; 4], u: R, v: R, w
     check_jacobi(&got, &ctx);
     assert_eq!(
         got.descriptor,
-        kernel::decode::descriptor::describe(&got.ic),
-        "the descriptor is not the decoded IC's {ctx}"
+        kernel::decode::descriptor::describe_decoded(&got.ic, &got.config),
+        "the descriptor is not the decoded IC's, its rho_angle the configuration's (R-628) {ctx}"
     );
     let lk = invariant::decode::<Defaults, R, _>(&InvariantLK(c), u, v);
     assert_eq!(lk.0, got, "(L_z, K) and (L_z, E) decode differently {ctx}");

@@ -9,7 +9,7 @@
 - **Size:** ~250 lines, the tests included
 
 ## Goal
-On a chart with no proxy, a trace fades off the plane by the general distance, the distance in `z` from the trajectory's encoded point to the slice plane, encoded per step, in the metric `g = Jᵀ W J` on `z` (R-596, RQ-522 (b)): `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64, central difference, REQ-DEC-034's step rule)
+On a chart with no proxy, a trace fades off the plane by the general distance, the distance in `z` from the trajectory's encoded point to the slice plane, encoded per step, in the metric `g = Jᵀ W J` on `z` (R-596, RQ-522 (b)): `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64, central difference, REQ-DEC-034's step rule, `J_D`'s as deep_zoom §2 writes it, R-633)
 at the slice centre, not R-550's compass-view Jacobian; `W` the mass-weighted (kinetic) metric on positions and its dual on momenta, in canonical units, its masses those decoded at the slice centre
 (physics review 5644374613 of PR #293, F1; *was:* "`J` R-550's eight-column f64 central-difference Jacobian `∂x/∂z` at the slice centre");
 the distance is the `g`-length of the part of `z − z₀` `g`-orthogonal to the slice plane (applied per R-369). Where `g`

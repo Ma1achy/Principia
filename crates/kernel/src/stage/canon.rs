@@ -16,12 +16,13 @@ pub fn canon_words() -> usize {
     ic_words() + 5
 }
 
-/// The notices word: bit 0 `lookup_clamped`, bit 1 `lookup_mirrored`.
+/// The notices word: bit 0 `lookup_clamped`, bit 1 `lookup_mirrored`, bit 2 `lookup_rescaled`.
 #[inline]
 pub fn notices(c: &Canonical<f32>) -> u32 {
     let clamped = if c.clamped { 1 } else { 0 };
     let mirrored = if c.mirrored { 2 } else { 0 };
-    clamped + mirrored
+    let rescaled = if c.rescaled { 4 } else { 0 };
+    clamped + mirrored + rescaled
 }
 
 /// Writes `c` as sample `i`'s words in `out`, in [`canon_words`]' order.
@@ -49,6 +50,7 @@ pub fn read_canonical(words: &[u32], i: usize) -> Canonical<f32> {
         lambda: f32::from_bits(words[tail + 1]),
         phi: f32::from_bits(words[tail + 2]),
         lambda_t_y: f32::from_bits(words[tail + 3]),
+        rescaled: flags & 4 != 0,
         clamped: flags & 1 != 0,
         mirrored: flags & 2 != 0,
     }

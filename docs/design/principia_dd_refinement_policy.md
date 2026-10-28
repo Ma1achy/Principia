@@ -22,8 +22,10 @@ This was misread for a long stretch, including in this corpus. The quadtree's va
    slice immediately and it sharpens. That is what makes tilting and slicing feel responsive, and it
    is **independent of what the total saving turns out to be**.
 2. **Arbitrary zoom.** A uniform grid cannot zoom past its own resolution. The adaptive tree plus the
-   linearised decoder (`principia_deep_zoom.md`) reaches depth ~50. **This is the feature; the tree
-   exists for it.**
+   linearised decoder (`principia_deep_zoom.md`) reaches, on the f32 GPU path, its measured floor, quoted
+   with the coordinate magnitude `|x₀|` (deep zoom §1 and §2; REQ-DEC-051); a floor near ~50 needs the sum
+   and the integration in f64 (R-632, closing RQ-578). **This is the feature; the tree exists for it.**
+   *Was:* "The adaptive tree plus the linearised decoder (`principia_deep_zoom.md`) reaches depth ~50."
 3. **Total compute**, which varies enormously by slice and is the subject of §5.
 
 > A frame does not have to converge within the frame budget. **The application has to stay
@@ -97,6 +99,12 @@ out of its budget (the sticky `budget_exhausted` flag, integrator contract Part 
 it: it takes §6's `Undetermined` decision, never `Split`, and is never discarded and never treated as resolved. Its
 remedy is finer steps, as an explicit re-run, never an automatic one. The other undetermined footprints (a non-finite
 spread, an unusable copy of another kind) split as above.
+
+**An unusable copy (R-633, closing RQ-604).** A copy is unusable iff its `state ∈ {sim_failed, decode_failed}` or its
+`budget_exhausted` bit is set: a bit test on the copy's `sample_descriptor` `state` (payload §2) and its `budget_word`
+(R-603, placed by TASK-M3-41, REQ-PAY-110). So the second undetermined case of `unresolved(f)` above is "some copy of
+`f` is unusable", and "an unusable copy of another kind" is a copy whose `state` is `sim_failed` or `decode_failed`;
+a budget-exhausted copy is the kind the paragraph above takes out of the split.
 
 **`eps` is a tolerance in `spread_shape`'s own units** — the same units in every region. The previous
 policy's threshold had to sit *inside a distribution whose median moves six orders between regions*,

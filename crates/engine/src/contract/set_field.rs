@@ -6,7 +6,7 @@
 //! hover label, the horizon with its Run window, and the stain graph with its Stain editor (R-390, "Contract fields").
 
 use crate::contract::render_state::{Hover, Overlays, Playhead, StainGraph};
-use crate::contract::sim_config::{Horizon, Latent, Lock};
+use crate::contract::sim_config::{Horizon, Latent, Lock, Window};
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
@@ -16,6 +16,14 @@ pub struct SetField {
     /// Marked "no history": the edit does not enter undo, as the playback clock's playhead advance (R-101).
     pub no_history: bool,
 }
+
+/// A history key (gui_state_contract §2, "A drag coalesces into one history entry" and "A command of several edits is
+/// one history entry"; R-96, R-466): the edits sent under one key, one after another, are one history entry, its before
+/// each field's value at the first of them and its after the last value sent; an edit under another key, or under
+/// none, closes the entry. A drag sends every frame's edit under its own key; a command of several edits (a lock, a
+/// section reset, Home) sends them in one frame under one fresh key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HistoryKey(pub u64);
 
 /// The field path, by surface, carrying its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +49,10 @@ pub enum SimField {
     },
     /// The lock group: locking and unlocking, undoable (R-69).
     Lock(Lock),
+    /// `Chart.window`, a nonlinear chart's view window: chart construction, undoable (R-69); a lock on a nonlinear
+    /// chart re-centres it in the lock's one command (chart_decoder_contract Part 4, "The lock's construction,
+    /// defined"; R-466).
+    Window(Window),
     /// The horizon `T`, a sim key, undoable (R-69): the Run window's `T_horizon`, in `[50, 200]` (render_gui_spec §G5,
     /// R-132; gui_state_contract §2).
     Horizon(Horizon),

@@ -1,0 +1,49 @@
+# TASK-M3-59 — Agekyan & Anosova's near-rest runs and Anosova 1969's unequal masses (AA-2 to AA-5, AA-7, AA-8, AN-1)
+
+- **Milestone:** M3
+- **Closes:** REQ-VAL-268, REQ-VAL-269, REQ-VAL-270, REQ-VAL-271, REQ-VAL-272, REQ-VAL-273, REQ-VAL-274, REQ-VAL-275, REQ-VAL-276, REQ-VAL-277, REQ-VAL-278, REQ-VAL-279, REQ-VAL-280
+- **Depends on:** TASK-M3-50, TASK-M2-13
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** PIT-2, PIT-3
+- **Size:** ~450 lines
+
+## Goal
+The replication suite's targets AA-2, AA-3, AA-4, AA-5, AA-7, AA-8, AN-1 run as engine tests (`principia_dd_replication.md`; R-594, R-629). Paper I's decay time per near-rest start (Table 1, 59 rows, each in its own τ) must be measured and compared per row on the short-lived rows and as a distribution otherwise (AA-2). Paper I's mean decay time over the same 59 rows and Fig. 4's 62 labelled points must be compared as distributions, the printed mean 61.6 recorded beside the column's own mean 64.63 (rule 10) (AA-3). The N = 3 trajectory of paper I must be integrated and compared with its Figs. 2a–2h (AA-4). Our classifier's run accounting over paper I's 100 near-rest starts (decays, conditional decays, runs lost) must be compared with the paper's own (AA-5). Paper II's 38 completed near-rest runs (Table 3) and its pooled means 80.7τ and 95.4τ must be reproduced as distributions (AA-7). Decay time at exact rest against near rest, per row, from paper I's Table 1 and paper II's Tables 1 and 3, must be compared as a distribution: a published measure of sensitivity to a 10⁻⁴ velocity perturbation (AA-8). Anosova 1969's 300 rest starts over the mass sets (9, 3, 1), (3, 3, 1) and (3, 1, 1) must give a mean decay time compared with (27.8 ± 3.5)τ and the lightest body's escape share, as distributions (AN-1). Each tolerance is a calibration, proposed here with its evidence and confirmed by the human at the M3 gate (R-71).
+
+## References
+- `docs/design/principia_dd_replication.md` § "5.8 Region D: Agekyan & Anosova, and Anosova 1969"
+- `docs/design/principia_dd_replication.md` § "8.1 Carried over from the 25 Oct instruction"
+- `docs/design/principia_dd_replication.md` § "8.2 Learnt since"
+- `docs/design/principia_dd_replication.md` § "8.3 How the tasks apply them"
+- `decisions.md` § "R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*"
+- `decisions.md` § "R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `docs/design/principia_dd_validation_orbits.md` § "1.6 Agekyan–Anosova region D — the near-rest starts (R-592)"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Four tiers of ground truth (increasing in what they prove)"
+- `docs/notes/principia_validation_ground_truth_note.md` § "Chaos forbids pointwise comparison (exact vs structural)"
+
+## Deliverables
+- `fixtures/anosova/i_table1_cols5to8.csv` and `fixtures/anosova/ii_table3_near_rest.csv`, copied from the record's twice-transcribed CSVs with their sha256s; Anosova 1969's tables transcribed twice.
+- `crates/validation/src/gates/anosova_ensemble.rs`; the calibration proposals.
+
+## Acceptance tests
+- `cargo xtask gate replication --target AA-2` — docs/incoming/2026-10-27_papers/agekyan_anosova_I_table1_cols5to8.csv (twice-transcribed); the remap of AA-6 reused; per short-lived row within REQ-VAL-269; the rest by a statistic at its level; control: the τ remap omitted must fail (REQ-VAL-268).
+- `cargo xtask gate replication --target AA-2 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-269).
+- `cargo xtask gate replication --target AA-3` — a statistic at REQ-VAL-271's level; the two means recorded, neither chosen; control: the near-rest velocities set to zero must move the mean (REQ-VAL-270).
+- `cargo xtask gate replication --target AA-3 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-271).
+- `cargo xtask gate replication --target AA-4 --render` — the figure beside the paper's; the trajectory's frames rendered beside the figures and reviewed by the physics reviewer; control: N = 4's trajectory must differ; the physics reviewer compares them (REQ-VAL-272).
+- `cargo xtask gate replication --target AA-5` — the rates beside the paper's (they lost 21 of 100 runs to energy error, and say so); a statistic at REQ-VAL-274's level; control: a classifier with the escape window halved must change the rates (REQ-VAL-273).
+- `cargo xtask gate replication --target AA-5 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-274).
+- `cargo xtask gate replication --target AA-7` — docs/incoming/2026-10-27_papers/agekyan_anosova_II_table3_near_rest_completed.csv (twice-transcribed); a statistic at REQ-VAL-276's level; control: the rows' τ swapped must fail (REQ-VAL-275).
+- `cargo xtask gate replication --target AA-7 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-276).
+- `cargo xtask gate replication --target AA-8` — the three CSVs; two runs per start, at rest and near rest; a statistic at REQ-VAL-278's level; control: the same run twice must show no sensitivity (REQ-VAL-277).
+- `cargo xtask gate replication --target AA-8 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-278).
+- `cargo xtask gate replication --target AN-1` — the paper's tables transcribed twice (rule 2); a statistic at REQ-VAL-280's level; control: the masses relabelled so the lightest is not body 3 must move the escaper share to the relabelled body (REQ-VAL-279).
+- `cargo xtask gate replication --target AN-1 --propose` — the proposal measures what sets the tolerance and states it, with its evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in `decisions.md` (REQ-VAL-280).
+- `git diff --no-index` of each fixture table's two transcriptions — empty, or each difference settled against the page and recorded beside the fixture, before the fixture is committed (R-594 item 4).
+
+## Notes
+- Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-269, REQ-VAL-271, REQ-VAL-274, REQ-VAL-276, REQ-VAL-278, REQ-VAL-280.
+- R-594 item 4: every published table this task commits as a fixture is transcribed twice, independently, and the two copies are diffed before the commit, each row recording its page; both copies and the diff stay beside the fixture. A table a record has already transcribed twice and diffed is copied with its sha256 and the record's diff cited. Never tune to match: a disagreement with the paper goes to `REVIEW_QUEUE.md` with both numbers, as RQ-570 did, and the fixture is not edited.
+- Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.

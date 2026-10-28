@@ -4710,11 +4710,15 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 *Amended by R-369 and R-373.*
+*Amended in part by R-634 (28 Oct 2026; a trial: TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a
+cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
 I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
-place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`.*
+place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`. The build loop stays on the Mac, but for
+R-634's trial, under which TASK-M8-07's and TASK-M8-13's implementer and code and qa reviewers run in a cloud
+session.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -13963,9 +13967,13 @@ decoder's basis edit; J3's meanwhile no longer applies).*
 own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`).*
 *Amended in part by R-554 (21 Oct 2026; J1 and J2: the shape sphere's tilt targets gain the physical `p_λ`
 components, tilted by their physical value; RQ-474 closed).*
+*Amended in part by R-633 (28 Oct 2026; J1 gains one principle, RQ-603 closed: where a chart holds a block by a
+physical construction, its hidden coordinates are that construction's physical parameters, tilted and sliced by value
+as R-554 L5's `p_λ`: the mass simplex's `ν₀`, a rest start's four momentum controls from 0, and the held `L_z` or
+`K` of the `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z`; T1's "every chart" holds as written).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
-composition runs into the saved target; R-554 adds the physical `p_λ` targets, J2's latent-control rule holding for
-every other target.*
+composition runs into the saved target; R-554 adds the physical `p_λ` targets, and R-633 adds J1's principle for the
+charts that hold a block by a physical construction, J2's latent-control rule holding for every other target.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -21574,6 +21582,10 @@ REQ-GUI-054 and REQ-GUI-087 (statement, verify, rulings, note) and REQ-GUI-188, 
 REQ-CHART-048 and REQ-CHART-017 (notes, rulings); adds REQ-GUI-345.
 
 ## R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
+*Refined by R-633 (28 Oct 2026; RQ-601: the steer's `J⁺` is formed from `J`'s singular value decomposition, every
+singular value below `c·σ₁` dropped, `c` a calibration (REQ-GUI-410), so `J⁺ = J⁻¹` only where nothing is dropped;
+RQ-600: J1's central-difference step is `J_D`'s, written in deep zoom § 2).*
+*Still in force: all of it; the steer's `J⁻¹` is R-633's `J⁺` wherever the cut drops a singular value.*
 *21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
 Jacobi and Shape bullet and the steer bullet reworded, with their earlier words kept) and § "G2. Explore — the everyday
 view (`01_main.png`)" (the line system's fade clause), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder —
@@ -25721,6 +25733,8 @@ R-591 is in the "physics" group of `plan/rule_groups.yaml`, with R-437, R-438 an
 Changes REQ-ENC-038 (statement, rulings, source, note).
 
 ## R-592 — Anosova region D: Agekyan & Anosova (1968) is the source, its near-rest starts ported as a definition and its Table 1 as a fixture; `M = η·10⁻⁴` asserted on every row and the printed `M` column on every row but `N = 16, 23, 26, 32, 34`; paper II's `η` taken only where paper I is the outlier (`N = 88`); column 8 recorded, never asserted, while RQ-570 is open *(closes RQ-566, RQ-571 and RQ-573; RQ-570 stays open; changes REQ-VAL-019 and REQ-VAL-120)*
+*Amended by R-632 (column 8 is never asserted: "while RQ-570 is open" becomes "never"; RQ-570 is closed).*
+*Still in force: all of it; column 8 stays recorded and is never asserted (R-632).*
 *25 Oct 2026 · applied in `docs/design/principia_dd_validation_orbits.md` § "1.6 Agekyan–Anosova region D — the
 near-rest starts (R-592)" (new) and § "2. What the suite tests that the current gates do not" (the Burrau constants'
 `R` and the recorded rescale, defined per R-72), `docs/design/principia_dd_encode.md` § "4. Seams (obligations →
@@ -26022,6 +26036,9 @@ R-599 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-SCHED-062 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-397.
 
 ## R-600 — The ensemble ratio gate predicts each start's parting time from its measured initial gap, `ln(tol/δ₀)` for each precision, never from `ln ε₃₂ / ln ε₆₄`; it runs on all 256 starts, not a subset; its tolerance is a calibration for the gate *(closes RQ-557; queues RQ-575)*
+*Refined by R-632 (RQ-575: an unparted pair's `t_part` censored at `T`, the gate valid only if fewer than half the
+starts are censored; the statistic the median of each start's measured over predicted ratio, against 1).*
+*Still in force: all of it; the two questions it queued are ruled by R-632.*
 *25 Oct 2026 · applied in `docs/design/principia_honesty_precision.md` § "6. Tests" (ensemble_ratio),
 `docs/archive/review_queue/M0.md` (RQ-557, moved with its ruling), `REVIEW_QUEUE.md` (RQ-575, new), REQ-VAL-199
 (reqio), TASK-M8-76 and `plan/rule_groups.yaml`; built by TASK-M8-76*
@@ -26812,3 +26829,731 @@ there", RQ-551's option (a), which R-620 did not take. Applied as the words read
 instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
+
+## R-594 — The replication suite is adopted: published three-body results reproduced as engine tests in tiers A–D, ported as a design doc that extends the validation-orbits doc; each target a VAL requirement with its tolerance a calibration; every published table transcribed twice and never tuned to; sequenced by need; the questions it lists queued *(changes no ruling or requirement in force; recorded with R-629's port)*
+*Refined by R-629 (the port follows PLAN.md, which replaces the 25 Oct instruction's tier tables, sequencing and fetch list as the working plan).*
+*Still in force: all of it; its port follows PLAN.md (R-629), which keeps the tiers, rules 1–8 and item 5's order by need.*
+*25 Oct 2026 · given before R-595 and recorded here, after R-627, by R-629's port of 27 Oct 2026, the number having been
+held for it; applied in `docs/design/principia_dd_replication.md` (new), `docs/design/principia_dd_validation_orbits.md`
+(a pointer under its title), `docs/read_first/principia_INDEX.md`, `REVIEW_QUEUE.md` (RQ-591 to RQ-598, new),
+REQ-VAL-201 to REQ-VAL-331 (reqio, new), REQ-VAL-042 (reqio: `rq`), TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22
+to TASK-M4-25, TASK-M6-52, TASK-M7-71 and TASK-M8-97 to TASK-M8-99 (new), `plan/tasks.yaml`,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human's message, 25 Oct 2026, verbatim:
+
+> Ruling, 25 Oct 2026 (my words): adopt the replication suite.
+>
+> Source: docs/incoming/2026-10-25_replication/ (PR #292). INSTRUCTION_replication_suite_2026-10-25.md is the plan;
+> catalogue.md is its source list; papers/ holds the PDFs. I approved the plan's tiers A–D.
+>
+> What I want:
+> 1. Merge #292 once its checks pass. It is records only.
+> 2. Port the plan into the corpus as a design doc, docs/design/principia_dd_replication.md. The source order is docs
+>    first, then the plan, then the code, as usual. It extends dd_validation_orbits.md and does not replace it: the
+>    periodic-orbit suite stays where it is.
+> 3. Turn each target into a requirement (VAL-…). For each, record:
+>    - the paper and the figure, table or number it reproduces;
+>    - the chart it needs;
+>    - the milestone;
+>    - exact or statistical, per the plan's rule 8;
+>    - its tolerance, as a calibration (R-71).
+> 4. Transcribe every published table twice and diff the copies before committing them as fixtures. Never tune to
+>    match. A disagreement is a REVIEW_QUEUE entry with both numbers, as RQ-570 was.
+> 5. Sequence the tiers by what they need, not all at once:
+>    - tier A, tier C, and tier D's integrator entries at M3;
+>    - tier B when the outcome classifier lands;
+>    - a target that needs a chart that doesn't exist waits for that chart. Do not build charts ahead of it.
+> 6. Queue for me, batched, rather than deciding:
+>    - which targets gate a milestone and which are reported only;
+>    - any target past the horizon cap (RQ-555 keeps 200);
+>    - any new chart a target needs;
+>    - any case where an old paper and our engine disagree and it isn't clear whose error it is.
+> 7. Tier D, the prototype's results: the prin-rs CLAUDE.md and its results/ are the source. Each prototype number
+>    becomes a target the new build reproduces or explains. A prototype number is not ground truth.
+>
+> Nothing here changes a ruling or a requirement already in force.
+
+*What it decides:*
+- **The replication suite is adopted**: published results of the planar three-body problem, computed by other groups
+  with other codes, become engine tests, in the 25 Oct instruction's tiers: A exact, B maps and statistics, C numerical
+  reliability, D the prototype's own results. Item 1 is done: PR #292 merged the records.
+- **One design doc, `docs/design/principia_dd_replication.md`**, which extends `principia_dd_validation_orbits.md`
+  and replaces nothing in it: the periodic-orbit suite, and every requirement it carries, stays where it is. The doc
+  is the contract; the records it transcribes stay records (R-159).
+- **Each target is a VAL requirement** carrying the five things item 3 lists, its tolerance a calibration requirement
+  (R-71), proposed by the task that measures it and confirmed by the human at the gate.
+- **Every published table committed as a fixture is transcribed twice and the copies diffed first**; nothing is tuned
+  to match, and a disagreement goes to `REVIEW_QUEUE.md` with both numbers.
+- **The tiers are sequenced by need**: A, C and D's integrator entries at M3; B when the outcome classifier lands; a
+  target needing a chart that does not exist waits for it, and the chart is not built ahead of it.
+- **Item 6's questions are queued, batched**: RQ-591 (which targets gate and which are reported), RQ-592 (targets past
+  the horizon cap), RQ-593 to RQ-597 (the new charts and diagnostics targets need, with RQ-582 and RQ-583 already
+  queued for the Šuvakov plane), and RQ-598 (data not in the repo). No old-paper disagreement has arisen yet, since
+  nothing has run; each task queues its own.
+- **Tier D**: each prototype number becomes a target the new build reproduces or explains, never ground truth.
+
+*How the port was made:* R-629 directed that it follow `docs/incoming/2026-10-27_validation_plan/PLAN.md`; the
+details of what was ported are recorded under R-629.
+
+*Flagged (item 6's horizon cap):* "RQ-555 keeps 200" was the state on 25 Oct; R-610, the same day, closed RQ-555 with
+`T_horizon ∈ [0.4, 200]`, default 50. The cap is the same number, so item 6 is applied to R-610's cap. Nothing built
+changes, so it is not asked.
+
+*Flagged (item 7's source):* the prin-rs `CLAUDE.md` and `results/` are not in this repo; the imported record is
+`docs/reference/prin-rs/` (R-159), whose `FINDINGS.md` holds the numbers the 25 Oct instruction's tier D names. Applied:
+the five numbers the instruction names are targets (`principia_dd_replication.md` § 5.11), each cited to that record;
+whether the rest are enumerated is RQ-587, queued by the human. Nothing built changes, so it is not asked.
+
+*The number:* the human gave this ruling on 25 Oct 2026, before R-595, and its number was held for this port; it is
+recorded here, after R-627, as R-196 was recorded after R-197.
+
+R-594 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's "Each is read from the decoded `(m, r, p)` alone" for `rho_angle`; asked directly, no RQ)*
+*27 Oct 2026 · the human's answer to the question put on PR #303 (TASK-M2-25); applied in
+`docs/design/principia_dd_decoder.md` §3.6 and `plan/rule_groups.yaml`; built by TASK-M2-25*
+
+The question: `rho_angle` near `Φ`'s `λ̃ = 0` pole (physics review 5669268864 of PR #303, head 2ffc058b, and the
+measurement in its comment 6445018858). At the `α = 0` pole `Φ`'s `λ̃` is 0, but the descriptor re-forms
+`λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁` from the positions, after `C`'s re-centring, so its `λ` is that re-centring's rounding
+residue, whose size and sign each backend rounds its own way (measured 1.5 to 3.8·10⁻⁹ at f32 at the exact pole, 0 on
+lavapipe). The angle read from it is conditioned as residue/`‖λ̃‖`: backends disagreed beyond REQ-DEC-043's factor out
+to `‖λ̃‖ ≈ 2.8·10⁻⁵`, and at the exact pole read 0 on one and `π̂` on another. Physics offered three options: (A) the
+angle from `Φ`'s vectors, (B) an explicit pole snap with a calibrated tolerance, (C) accept the backend-dependent value.
+
+The human's words, verbatim:
+
+> A: angle from Φ's vectors (Recommended)
+
+The option the human chose, verbatim:
+
+> Take rho_angle from the configuration block's own (ρ̃, λ̃) instead of the re-centred positions. Physics measured a
+> worst error of 1.6e-7 rad against f64 (CPU f32), exactly 0 at the pole, with no tolerance or calibration. It amends
+> dd_decoder §3.6:241-243 ('read from the decoded (m, r, p) alone'). The test goes back to strict.
+
+*What it decides:* option A. Every decode's `rho_angle` is `atan2(ρ̃ × λ̃, ρ̃ · λ̃)` of the configuration block's
+`ρ̃` and `λ̃` (`kernel::decode::config::Config`'s `rho_t` and `lambda_t`, the vectors the reconstruction unweights),
+through §3.6's existing cases, so at the pole, where those operands are `±0`, "Parallel, or the pole" gives 0 on every
+backend. The CPU and the generated fragment and kernel WGSL run the one source (R-116), so they take the same
+operands. No tolerance and no calibration are added. `rho_mag`, `lambda_mag`, `rho_ratio`, `K_0`, `V_0`,
+`virial_ratio` and `r_min_pair_0` keep their positional forms: they describe the integrated IC, and `rho_ratio`'s
+rule at the `α = 0` pole (§3.6, "It reads `+∞` only where `‖λ̃‖` is exactly 0") is unchanged. The shape-pole test of
+TASK-M2-25 holds descriptor word 7 strictly again, with the sweep's near-pole points at `φ_f = 0` and a generic
+phase, against the CPU's f32 decode and `Φ`'s f64 angle.
+
+*Applied per R-369:*
+- The mirror: where `C`'s step 3 mirrors, `rho_angle`'s sign would be negated. No decode mirrors: the shape sphere's
+  `C` does not take step 3 (R-544), and every other chart's configuration is canonical by construction, so `Φ`'s
+  angle is the emitted state's.
+- The descriptor-alone entries (`kernel::stage::fragment::describe`, `kernel::stage::decode::describe`), which take an
+  `(m, r, p)` with no configuration block and serve tests only, keep the positional form: there is no `Φ` to read.
+- An `η_E` rescale moves only the momenta, so the rescaled descriptor reads the same configuration block.
+
+R-628 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-629 — PLAN.md is adopted as the single plan for verification and replication, superseding as the working plan the 25 Oct instruction's tier tables, sequencing and fetch list; its seven draft requirements are ported as M3 requirements with their tolerances as calibrations; R-594's port follows it, with the orbit catalogue's six tests as tasks; the plan's other questions stay queued *(refines R-594; answers PLAN.md § 9 questions 1 and 2)*
+*27 Oct 2026 · the human's answer to whether R-594's port should follow the 27 Oct plan; applied with R-594, in the files
+R-594's line lists; built by TASK-M2-51, TASK-M3-42 to TASK-M3-65, TASK-M4-22 to TASK-M4-25, TASK-M6-52, TASK-M7-71
+and TASK-M8-97 to TASK-M8-99*
+
+The human's message, 27 Oct 2026, verbatim:
+
+> Adopt PLAN.md now: §9 Q1 yes (it is the single plan, superseding the 25 Oct tier tables and sequencing), Q2 yes (port
+> DRAFT-VAL-01 to -07 as M3 requirements, tolerances as R-71 calibrations). R-594's port follows PLAN.md and starts as
+> soon as #305 merges; the six orbit-catalogue tier-A tasks go with it. Record this as a ruling. The other §9 questions
+> stay queued as RQs. Meanwhile carry on with M2-36, M5-32 and the GUI tasks.
+
+*What it decides:*
+- **PLAN.md § 9, question 1: yes.** `docs/incoming/2026-10-27_validation_plan/PLAN.md` is the single plan for
+  verifying Principia and replicating published results. As PLAN.md § 10's first row says, it supersedes, as the working
+  plan, the 25 Oct instruction's tier tables A–D, its "Sequencing" and its "Papers to fetch"; it keeps the instruction's
+  rules 1–8 verbatim and its tiers. The records stay records: the instruction, `TARGETS.md` and the other records are
+  not edited, and each keeps the dated note PR #305 added.
+- **Question 2: yes.** DRAFT-VAL-01 to DRAFT-VAL-07 (PLAN.md § 6) are M3 requirements, REQ-VAL-201 to REQ-VAL-213, each
+  tolerance an R-71 calibration requirement beside it.
+- **R-594's port follows PLAN.md**: its targets, its sequencing by milestone (§ 4), its first batch (§ 5) and its rules
+  9–18 (§ 8). The orbit catalogue's six tests (`docs/incoming/2026-10-26_orbit_catalogues/INSTRUCTION_orbit_catalogues_2026-10-26.md`
+  § "What to do with it (an addition to tier A)") are tasks: TASK-M3-42 (closure), TASK-M2-51 (invariants), TASK-M3-43
+  (published against refined), TASK-M8-97 (stability as structure), TASK-M3-44 (the syzygy count) and TASK-M3-45 (the
+  coverage report).
+- **PLAN.md § 9's other questions stay queued**: questions 3, 4, 7, 8, 9, 11 and 12 as RQ-582 to RQ-590 (PR #307), and
+  questions 5, 6 and 10 as lines in RQ-576, RQ-579 and RQ-577.
+- The rest of the message (carry on with TASK-M2-36, TASK-M5-32 and the GUI tasks) is direction to the orchestrator;
+  it decides nothing here.
+
+*Applied per R-369 (the port):*
+- **The doc is transcribed from PLAN.md**, which governs, and from the 25 Oct instruction where PLAN.md keeps it (rules
+  1–8, the tiers); `principia_dd_replication.md` cites each record as the source it transcribes.
+- **Each PLAN.md target not already a requirement became one**: 75 targets (the seven drafts among them) and one
+  definition, REQ-VAL-201 to REQ-VAL-331 with their 55 calibrations. Each carries R-594 item 3's five fields in its
+  note. A target with no numeric comparison (a qualitative one, a count, a report) carries no calibration, and its
+  note says why; DRAFT-VAL-07's bar is the published periods' own difference, so PLAN.md gives it no calibration and
+  none is added.
+- **The 25 ruled rows stay as they are** (doc § 5.1). Where PLAN.md folded a new number or arm into a ruled row (the
+  tier-D numbers into REQ-VAL-041, -052 and -184; the atlas markers into REQ-VAL-076; the syzygy count into
+  REQ-VAL-043), it is a new requirement, so no ruled statement changes.
+- **No requirement is added for the precision ladder** (PL-1 to PL-12, B-3, GG-2): RQ-577 records that none is added
+  from the proposal meanwhile. PL-8's first half, which PLAN.md § 4 runs at M3 on R-33's reference without any tier, is
+  REQ-VAL-250. V-5, V-10 and BZ-1 are out of scope, as PLAN.md says; D-6 waits on RQ-587.
+- **Milestones follow PLAN.md § 4**: OC-2 and AT-D6 at M2; most at M3; L-1, V-8 (a) and the map targets at M4; the
+  zooms at M6; D-3 at M7; the Result runs at M8. A target needing a chart, diagnostic or data no task provides keeps its
+  requirement in the milestone of its other needs, with `rq` naming the question it waits on.
+- **Tasks are grouped by source and need**, 34 in all, each reviewed by code, qa and physics; each task that commits a
+  published table carries R-594 item 4's rule, and each that touches the atlas runs `scripts/check_no_atlas_params.sh`.
+- **REQ-VAL-042 carries `rq: RQ-584`**: PLAN.md marks it blocked, its database not fetched. Its statement is unchanged.
+- **OC-5's counting convention is a definition requirement** (R-72), REQ-VAL-221: every Šuvakov-plane start is
+  collinear, so how an endpoint syzygy counts must be written before the counts are compared.
+- **Circle R's starts (Q-1) are injected by Path B**, with no chart: PLAN.md says circle R "has no chart" and names
+  none to build, and a statistic over random starts needs none.
+
+*Flagged (OC-1's horizon):* 667 of the 3,916 atlas rows OC-1 would test have T > 200, past R-610's cap (measured on
+the committed CSV: the longest is 886.09). Queued as RQ-592 under R-594 item 6; meanwhile they are not run. Nothing
+built changes, so it is not asked.
+
+*The number:* R-629 follows the ruling PR #303 records on the descriptor's `rho_angle` (27 Oct 2026, TASK-M2-25),
+which takes the number before this one and is not on `main` yet; it is recorded before this entry when it merges.
+
+R-629 is in the "process" group of `plan/rule_groups.yaml`, with R-594.
+
+## R-630 — The verification plan's §9, every recommendation accepted: PLAN.md is the single plan, its drafts are M3 requirements, the Šuvakov plane labels its middle body body 1, RQ-576 takes option (d), RQ-579 asks the authors, the three fetches go ahead, Li & Liao's pages are recorded only, tier D promotes by name, and RQ-577 is ruled after M3 *(closes RQ-576, RQ-579, RQ-582, RQ-584, RQ-585, RQ-586 and RQ-587; restates PR #309's and PR #303's rulings)*
+*Amended in part by R-631 (item 6: the high-precision initial-condition data is committed, with full citations, and
+no permission is asked first; RQ-579 is closed with option (a)).*
+*Amended in part by R-632 (item 12: the three corrections RQ-588 to RQ-590 queue are applied, and the documents are
+edited; RQ-577 and RQ-583 unchanged).*
+*Still in force: all of it but item 6, whose "ask the authors, keeping (c) meanwhile" R-631 replaces by committing the
+data (R-631), and item 12's "Don't edit those documents", which R-632 replaces by applying the three
+corrections (R-632); items 7 and 9's fetches stand, and item 7's database is committed under R-631.*
+*27 Oct 2026 · the human's message of that evening; applied in `REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted, RQ-588 to
+RQ-590 stay open), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with their ruling), REQ-VAL-042
+and REQ-VAL-043 (reqio) and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> Ruling on PLAN.md §9 (docs/incoming/2026-10-27_validation_plan/PLAN.md, PR #305). The owner accepts every
+> recommendation as written. Record it as one ruling (next free R-number), quoting this text, and act on it once #305
+> has merged.
+>
+> 1. Adopt PLAN.md as the single verification and replication plan. It supersedes the 25 Oct instruction's tier
+>    tables, sequencing and fetch list (the instruction stays as a record).
+> 2. Port §6's drafts (DRAFT-VAL-01 to -07) into plan/requirements.yaml now, as M3 requirements, so the M3 gate
+>    carries them. Tolerances stay R-71 calibrations, measured, not chosen. R-594's port follows PLAN.md, together
+>    with the six orbit-catalogue tier-A tasks.
+> 3. Šuvakov plane labelling: the middle body as body 1 (β = 0, reached exactly, R-417), Hudomal eq. (18)'s labelling.
+>    Queue it as a chart question with the physics reviewer (§2.3).
+> 4. Queue the Šuvakov-plane chart question now.
+> 5. RQ-576: option (d): conjugacy plus the inverse and the (a, b) ↔ (A, B) exchange, each row recording which
+>    symmetry it needed; cite the atlas's word.js rule for syzygy sequences. Close RQ-576 with this.
+> 6. RQ-579: (b) ask the authors, keeping (c) meanwhile. Draft the email to the database authors for the owner to
+>    send; don't send it.
+> 7. Fetch Hristov et al. 2024's free-fall database (24,582 ICs, 80 digits) under the fetch-and-verify rule, for
+>    REQ-VAL-042.
+> 8. Li & Liao's website pages: record URL and sha256 only, as HP27 does; the 81 extra atlas rows are closure tests
+>    (LL-5).
+> 9. Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (TM-1, LL-3). If any is paywalled, list it
+>    for the owner to fetch instead.
+> 10. RQ-577 (precision ladder): rule after M3 closes. Leave it queued; PL-8's first half runs on R-33's reference at
+>    M3 without it.
+> 11. Tier D: no blanket list of prototype numbers. Promote one by name when a task needs it, re-measured under Heggie
+>    × RK4.
+> 12. Queue the §10 corrections to the three ruled documents (VO §1.1, REQ-VAL-042's citation, LR §13's "one plane"
+>    sentence) as REVIEW_QUEUE entries. Don't edit those documents.
+>
+> Also: #303's pole behaviour is option A (rho_angle from Φ's (ρ̃, λ̃)), amending dd_decoder §3.6:241-243 by ruling;
+> the test goes back to strict.
+>
+> Put the ruling and the queue entries in one PR (rulings/<date> or the next free name) and leave it for the owner.
+> Report the R-number, the RQs opened and closed, and the tasks created.
+
+*What it decides*, item by item:
+
+- **1 and 2** are §9 questions 1 and 2, which the human had already answered the same afternoon, in the same sense, by
+  the ruling PR #309 ports (PLAN.md adopted; DRAFT-VAL-01 to -07 as M3 requirements, tolerances R-71
+  calibrations; the replication port follows PLAN.md with the six orbit-catalogue tier-A tasks). This ruling restates them; it
+  adds "measured, not chosen", which R-71 already requires. Nothing differs, so nothing is re-ported here.
+- **3** closes RQ-582: on the Šuvakov plane the middle body is body 1, at `β = 0`, which the chart reaches exactly
+  (R-417), as Hudomal eq. (18) labels it, not the decoder's body 2 at the `α = 0` pole. *Applied per R-369:* "queue it
+  as a chart question with the physics reviewer" is read as the chart question of item 4: the labelling is settled here,
+  and RQ-583, the chart question, carries it, marked physics, so the chart's physics review checks the labelling against
+  Hudomal eq. (18) and PLAN.md § 2.3.
+- **4**: RQ-583 is the Šuvakov-plane chart question, queued (PR #307). It stays open for the
+  human, with item 3's labelling noted on it.
+- **5** closes RQ-576 with its option (d): the computed free-group word matches the published one when they are equal up
+  to conjugacy (cyclic rotation), inversion and the exchange `(a, b) ↔ (A, B)`; each comparison row records which of
+  those symmetries it needed; syzygy sequences follow the atlas's `word.js` rule, cited where REQ-VAL-043's comparison
+  is built (TASK-M3-30, `word_braid_class`). This is the definition R-72 asked for. REQ-VAL-043's verify carries it; its
+  statement is unchanged.
+- **6** closes RQ-579 with options (b) and (c): the authors are asked for permission to commit their values, and
+  fetch-and-verify only (`docs/incoming/2026-10-27_hp_ics/fetch.sh`) stays meanwhile, nothing committed. The human sends
+  the request; its draft is in this ruling's PR, not in the corpus, and nothing is sent from here. What the authors
+  answer comes back to the human; it is not a new corpus question.
+- **7** closes RQ-584: Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits) is fetched under the same
+  fetch-and-verify rule as `docs/incoming/2026-10-27_hp_ics/`: a source list with sha256 per file and a fetch script,
+  the values not committed (item 6). It is the reference for REQ-VAL-042.
+- **8** closes RQ-585: Li & Liao's website pages are recorded by URL and sha256 only, as
+  `docs/incoming/2026-10-27_hp_ics/` records its sources; the 81 atlas rows the paper does not contain are closure tests
+  (PLAN.md's LL-5), not published references.
+- **9** closes RQ-586: Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (targets TM-1 and LL-3) are
+  fetched; any that is paywalled is listed for the human to fetch instead, and its target waits for it.
+- **10**: RQ-577 stays open, to be ruled after M3 closes. PL-8's first half runs at M3 on R-33's reference without it.
+- **11** closes RQ-587: tier D gets no blanket list of the prototype's numbers. A prototype number becomes a target only
+  by name, when a task needs it, re-measured under Heggie × RK4 (R-560), since several were measured under AZ (PLAN.md §
+  3, D-1). the replication ruling's item 7 (PR #309) ("each prototype number becomes a target") is read through this: each number a task names
+  becomes one.
+- **12**: RQ-588, RQ-589 and RQ-590 are the three corrections, queued (PR #307). The
+  validation-orbits doc, REQ-VAL-042's statement and the literature review are not edited.
+- **"Also"** restates the ruling PR #303 ports (rho_angle from Φ's `(ρ̃, λ̃)`, amending dd_decoder
+  §3.6:241-243; the test strict), in the same sense. Nothing differs.
+
+*Flagged, not asked (nothing built changes):* this ruling and PR #309's overlap on items 1 and 2, and it and PR #303's on the
+pole; each pair agrees, so both stand and neither is amended. Those two rulings are on unmerged PRs, so this entry
+names them by PR; when they merge, their entries go before this one. Item 3's
+"queue it … with the physics reviewer" is applied as written above.
+
+*Applied per R-369:* the fetches (items 7 and 9) are records work, done in their own records PR under `docs/incoming/`,
+outside this ruling's PR. The queue entries RQ-582 to RQ-590 stay in PR #307, which PR #309 needs, and this ruling's PR
+holds the ruling and its queue changes, built on #307's commit; the human's words quote the replication ruling by
+number, which is ported by PR #309, so the order is #307, then #309, then this. RQ-582's and RQ-586's holds on PR #309's
+tasks (TASK-M4-23, TASK-M8-99; TASK-M3-47, TASK-M3-49) and RQ-584's on REQ-VAL-042 come off in this PR once #309 has
+merged into it; RQ-583's stay.
+
+R-630 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-042 (rulings, note) and REQ-VAL-043 (verify, rulings, source, note).
+
+## R-631 — The high-precision initial-condition data is committed to the repo with full citations, no permission asked first: Hristov et al.'s databases, the free-fall, central-symmetry and Euler ones beside them, Simó's archive and Li & Liao's tables, each folder with a SOURCES.md; REQ-VAL-042, PL-6 and LL-5 point at the committed files, and fetch.sh stays as the provenance check *(amends R-630; closes RQ-579 with option (a))*
+*27 Oct 2026 · the human's message of that evening; applied in `docs/incoming/2026-10-27_hp_ics/` (`data/`, `SOURCES.md`,
+`.gitattributes`, dated notes in `README.md`), `docs/incoming/2026-10-27_hp_ics_freefall/` (new),
+`docs/archive/review_queue/M0.md` (RQ-579's amended ruling), `docs/design/principia_dd_replication.md`,
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` and
+`docs/incoming/2026-10-26_precision_ladder/PROPOSAL_precision_ladder_and_taylor_2026-10-26.md` (dated notes),
+REQ-VAL-042 and REQ-VAL-227 (reqio), TASK-M3-46 and `plan/rule_groups.yaml`*
+
+The human's words, verbatim:
+
+> Owner's ruling, amending R-630 item 6 and closing RQ-579 differently: commit the high-precision initial-condition
+> data to the repo, with full citations. No permission request is required first; the owner will send a courtesy email
+> himself (drop the draft from #310's description, or mark it superseded).
+>
+> Reasons on record (checked 27 Oct): no database page states terms; the describing papers for the free-fall 24,582
+> (CeMDA 136, 7, 2024), central-symmetry 4,860 (CNSNS 2025), Euler 12,431 (Astron. Comput. 2024) and stable 971 (New
+> Astron. 2026) are CC BY 4.0; the data are published numerical results, credited to their authors and never claimed
+> as ours.
+>
+> 1. docs/incoming/2026-10-27_hp_ics (and a new folder for the free-fall 24,582 if it isn't there): run fetch.sh,
+>    verify each file against its recorded sha256, and commit the files themselves.
+> 2. Same for Simó's choreo3.tar.gz (345 choreographies; its README carries no terms) and the sjtu-liao/three-body
+>    tables (no LICENSE file).
+> 3. Each folder gets a SOURCES.md (or README update): authors, title, journal, DOI, arXiv id, database URL, fetch
+>    date, sha256 per file, the paper's licence where it has one, and a line "published by the authors; included as
+>    test data with citation; not ours". Correct the first author's name everywhere: Ivan Hristov (the draft said
+>    "Ivaylo").
+> 4. Update REQ-VAL-042, PL-6 and LL-5 to point at the committed files instead of fetch-only. Keep fetch.sh as the
+>    provenance check.
+> 5. If a dataset is very large (say > 20 MB), commit it compressed and say so.
+> 6. Usual docs/ commit rules, one PR, leave it for the owner.
+
+*What it decides:* RQ-579 is closed with its option (a), "commit the values with attribution", replacing R-630 item 6's
+(b) and (c). The rest of R-630 stands. Item 7's free-fall database, fetched under R-630, is committed under this ruling.
+The draft email R-630 item 6 asked for was in PR #310's description, never in the corpus; it is marked superseded there.
+
+*Applied:*
+
+- **Item 1.** `docs/incoming/2026-10-27_hp_ics/fetch.sh` was run into an empty directory: "all 599 files fetched and
+  match sources.tsv". The 599 files are committed under that folder's `data/`, at the paths `sources.tsv` gives, and
+  each committed copy was checked against its recorded sha256 again. Hristov et al. 2024's free-fall database (R-630
+  item 7) is in a new folder, `docs/incoming/2026-10-27_hp_ics_freefall/`, laid out the same way (`sources.tsv`,
+  `fetch.sh`, `data/`), with new hashes recorded: each of its files was fetched three times into empty directories,
+  with the same sha256 each time.
+- **Item 2.** `choreo3.tar.gz` and Li & Liao 2017's GitHub table are among the 599 and are committed as fetched; the
+  archive is not extracted.
+- **Item 3.** Each folder has a `SOURCES.md` with every field the item lists and its verbatim line, and the hp_ics
+  README's "Terms" carries a dated note, the old conclusion quoted as *Was*. Crossref's record of each DOI was read for
+  the paper's licence (27 Oct 2026): CC BY 4.0 for the four papers the ruling names, as its reasons say, and for
+  Hristov et al. 2022 (CEUR-WS Vol-3191, whose index states it); none open for the others. No file in the repo, or on
+  PRs #307, #309 and #310, named the first author "Ivaylo"; he is Ivan Hristov throughout.
+- **Item 4.** REQ-VAL-042's note names the committed free-fall files. REQ-VAL-227 (LL-5) names the committed copy of
+  the authors' 316-orbit table beside the atlas's CSV, and TASK-M3-46's acceptance line with it. PL-6 has no
+  requirement (RQ-577 is open), so dated notes where it is defined (PLAN.md § 3.1, the proposal's § 5 test 6) and in
+  `principia_dd_replication.md` (§ 4.2, § 5.13) point at the committed files. Every README says `fetch.sh` stays the
+  provenance check.
+- **Item 5.** No file is over 20 MB (the largest is `sol_80.txt`, 8.4 MB), so nothing is compressed.
+
+*Applied per R-369:*
+
+- **The central-symmetry and Euler databases**, which the ruling's reasons name and which are on the same site's root
+  page as the free-fall one, are fetched and committed in the new folder with it: their initial-condition files only
+  (4,860 × 2 at 100 digits; 12,431, 332, 35 and 8 at 100 digits), not their plots, stability or syzygy files, nor the
+  Euler page's later 421,562 i.c.s at 60 digits (about 109 MB), which the ruling does not name.
+- **"The sjtu-liao/three-body tables"** are read as the tables the plan uses: Li & Liao 2017's (already among the
+  599) and the authors' 316-orbit free-fall table with its word table, which LL-5 needs (new folder). The repository's
+  other tables (3D, unequal-mass, the 2017 and 2018 word tables) are not committed. That GitHub table carries initial
+  conditions, at 10 decimals, for all 316 free-fall orbits, including the 82 the SJTU website lists with words only;
+  PLAN.md § 2.1's "gives words only" is about the website, and still holds of it.
+- **Li & Liao's SJTU free-fall pages** stay recorded by URL and sha256 only, as R-630 item 8 rules; R-631 does not
+  name item 8. The 2017 SJTU page (`three-body-movies.htm`) is one of `fetch.sh`'s 599 and is committed under item 1.
+  Masson's file is committed under item 1 likewise.
+- **`.gitattributes`** in each folder marks `data/**` `-text`, so no checkout converts line endings and the committed
+  bytes keep their hashes (several Sofia files have CRLF endings).
+- `fetch.sh` in `docs/incoming/2026-10-27_hp_ics/` is left byte for byte, its README-recorded sha256 intact; its header
+  comment ("The files are not committed") predates this ruling, and the README's dated note says so. The new folder's
+  `fetch.sh` is the same script with that comment brought up to date.
+
+*R-630 item 9, done in the same PR:* Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 are all paywalled
+(OpenAlex: closed; no arXiv copy; Crossref lists only the publishers' licences), so no PDF is committed. They are listed
+for the owner, with their DOIs, in `docs/incoming/2026-10-27_hp_ics_freefall/README.md`, and TM-1 and LL-3
+(TASK-M3-49, TASK-M3-47) wait for them.
+
+R-631 is in the "process" group of `plan/rule_groups.yaml`, with R-630.
+
+Changes REQ-VAL-042 (note) and REQ-VAL-227 (verify, rulings, note).
+
+## R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*
+*27 Oct 2026 · the human's ruling batch of that evening; applied in `docs/design/principia_deep_zoom.md` § 2 and § 4
+(iv), `docs/contracts/principia_scheduler_contract.md` Part 3 ("The absolute floor is emergent") and Part 4,
+`docs/design/principia_dd_refinement_policy.md` § 0 item 2, `docs/design/principia_honesty_precision.md` § 6
+(ensemble_ratio), `docs/design/principia_dd_simstate_payload.md` § 1 (the precision rule) and § 2 (`packed_b`),
+`docs/design/principia_dd_validation_orbits.md` § 1.1 and § 1.6, `docs/design/principia_dd_replication.md` § 5.1,
+§ 10 and § 11 (status notes), dated notes in `docs/incoming/2026-10-27_papers/TARGETS.md` (AA-6) and
+`docs/incoming/2026-10-25_lit_review/README.md`, `docs/read_first/principia_INDEX.md` (the honesty doc's line),
+`REVIEW_QUEUE.md` (RQ-577 and RQ-583 noted), `docs/archive/review_queue/M0.md` (the seven closed entries, moved with
+their ruling), REQ-DEC-036, REQ-TOOL-159, REQ-VAL-199, REQ-VAL-019, REQ-VAL-209, REQ-PAY-012, REQ-PAY-041, REQ-PAY-044,
+REQ-TOOL-023, REQ-PAY-111 and REQ-VAL-042 (reqio), REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112 (reqio, new), TASK-M5-04,
+TASK-M6-07, TASK-M6-08, TASK-M8-76, TASK-M3-41, TASK-M2-20 and TASK-M3-50, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M5-04, TASK-M3-41 and TASK-M8-76*
+
+The human's words, verbatim:
+
+> Owner's ruling batch, 27 Oct (next free R-number; quote this text). Act on each and close the entry with its line.
+>
+> RQ-578: (a) with (c). On the f32 GPU path the linearised decoder's floor is restated as the measured value, quoted
+> with the coordinate magnitude |x₀| (deep zoom §1's rule), not ~50+. A gate measures the f32 GPU path's
+> distinguishable depth as integrated at stated coordinate magnitudes; the docs and gates take the measured value as an
+> R-71 calibration. Rewrite deep_zoom §2 and §4(iv), scheduler_contract Part 3/Part 4, dd_refinement_policy §0 item 2,
+> and REQ-DEC-036's verify accordingly. The linear path stays, for speed and for the f64-anchored decode; a ~50+ floor
+> needs an f64 sum and integration (CPU, or the precision ladder under RQ-577, after M3). Unblock TASK-M5-04,
+> TASK-M6-07 and TASK-M6-08 on the measured floor; their fixtures use coordinates where the measured floor admits them.
+>
+> RQ-575: Q1 (a): an unparted pair's t_part is censored at T, the ratio a bound, the median over all 256 starts, the
+> censored count reported; the gate is valid only if fewer than half are censored. Q2 (ii): the median over starts of
+> each start's measured ratio divided by its predicted ratio, against 1; the tolerance on its distance from 1 is an
+> R-71 calibration. Update REQ-VAL-199 and principia_honesty_precision.md §6.
+>
+> RQ-570: (a). Column 8 stays transcribed and recorded, never asserted. Note that the 27 Oct transcription of paper II
+> found the same discrepancy (TARGETS.md AA-6 caveat).
+>
+> RQ-581: (d). dE_max and dLz_max take the encoding TASK-M3-41 chooses for dE_reg's halves against REQ-INT-106's
+> measured drift; if M3-41 does not settle on one, (b), a log-encoded 16-bit form in the same bits. Control flow stays
+> on the live value, as the precision rule says.
+>
+> RQ-588, RQ-589, RQ-590: apply the three corrections (validation-orbits §1.1, REQ-VAL-042's citation, the lit review
+> §13 "one plane" sentence) as the plan records them.
+>
+> Unchanged: RQ-577 after M3 (R-630); RQ-583 with physics review; RQ-378, RQ-386, RQ-391 stay parked.
+>
+> Also: send me a five-line summary of the lavapipe/cloud trial proposal (what it changes, cost, how it's reversed) so I
+> can rule on it. I'll do the M8-86 installs myself and tell you.
+>
+> One PR, left for the owner.
+
+*What it decides*, item by item:
+
+- **RQ-578** takes options (a) and (c). On the f32 GPU path `x = x₀ + J_D·δ` is an absolute f32 number of order
+  `|x₀|`, and the f32 integrator starts from it, so the linearised decoder's floor there is the measured value, quoted
+  with the coordinate magnitude `|x₀|` (deep zoom § 1's rule), not "~50+". A gate measures the f32 GPU path's
+  distinguishable depth as integrated, at stated coordinate magnitudes (REQ-DEC-052), and the docs and the gates take
+  the measured value, an R-71 calibration (REQ-DEC-051). Deep zoom § 2 and § 4 (iv), the scheduler contract's Part 3
+  ("The absolute floor is emergent") and Part 4 (`DECODE_SWITCHOVER` and `AT_F32_FLOOR`), refinement policy § 0 item 2
+  and REQ-DEC-036's verify are rewritten to it, each keeping its old text as a *Was*. The linear path stays, for speed
+  and for the f64-anchored decode (deep zoom § "Couplings to the contract", c). A floor near ~50 needs the sum and the
+  integration in f64: on the CPU, or the precision ladder under RQ-577, after M3 (R-630). TASK-M5-04, TASK-M6-07 and
+  TASK-M6-08 assert the measured floor, not depth 50, and their fixtures use coordinates where the measured floor
+  admits the depths they test.
+- **RQ-575** takes Q1's option (a) and Q2's option (ii). A start a pair of which has not parted by the horizon `T` is
+  censored: that pair's `t_part` is taken as `T`, the start's ratio is a bound, the median runs over all 256 starts, and
+  the count of censored starts is reported; the gate is valid only if fewer than half of the 256 are censored. The
+  statistic is the median over the starts of each start's measured ratio divided by its predicted ratio, compared with
+  1; the tolerance on its distance from 1 is an R-71 calibration, REQ-VAL-199's. Honesty § 6 (ensemble_ratio) and
+  REQ-VAL-199 say so; REQ-VAL-199 no longer carries `rq: RQ-575`. This completes R-600, which queued both questions.
+- **RQ-570** takes option (a): paper I's column 8 stays transcribed and recorded, never asserted, and R-592's "while
+  RQ-570 is open" becomes "never". REQ-VAL-019 and REQ-VAL-209 no longer carry `rq: RQ-570`. The 27 Oct transcription of
+  paper II found the same discrepancy in its energy column (`docs/incoming/2026-10-27_papers/TARGETS.md`, AA-6's
+  caveat), and a dated note there says so; that folder is a record and is not otherwise changed.
+- **RQ-581** takes option (d), else (b). `dE_max` and `dLz_max` in `packed_b` take the 16-bit encoding TASK-M3-41
+  chooses for `dE_reg`'s halves against REQ-INT-106's measured drift (REQ-PAY-111); if TASK-M3-41 does not settle on
+  one, they take a log-encoded 16-bit form in the same bits, so `packed_b` keeps its size. Control flow stays on the live
+  value, as payload § 1's precision rule says; `d_min` stays f16. REQ-PAY-112 (new) carries it, closed by TASK-M3-41,
+  and REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 name the encoding through it.
+- **RQ-588, RQ-589 and RQ-590** apply PLAN.md § 10's three corrections, amending R-630 item 12's "not edited":
+  `principia_dd_validation_orbits.md` § 1.1 reads "Li & Liao 2018 (234 over six mass sets, 30 of them equal-mass),
+  Hristov–Hristova–Dmitrašinović–Tanikawa, *CeMDA* 136, 7 (2024), arXiv 2023", its old text a *Was*; REQ-VAL-042's
+  statement cites "Hristov et al. 2024 (*CeMDA* 136, 7)" (*was:* "Two or three free-fall (brake) periodic orbits from
+  Hristov et al. 2023 or the Three-body Gallery must be added as closure tests asserting a return to rest in the same
+  configuration, with the convergence order reported."); and the literature review § 13's "one plane" reads "nine
+  planes, one per mass set".
+- **Unchanged:** RQ-577 stays open, to be ruled after M3 (R-630 item 10); RQ-583 stays open, for the human, with
+  physics review; RQ-378, RQ-386 and RQ-391 stay parked (R-625). RQ-577 and RQ-583 each carry a dated line.
+- **"Also"** is the orchestrator's summary to the human, outside the corpus; nothing is ported from it.
+
+The high-precision data ruling PR #312 ports, numbered next after R-630, is not on this branch; when that PR merges,
+its entry sits between R-630 and this one, which is why this ruling takes the number after it.
+
+*Applied per R-369:*
+
+- RQ-578's gate and calibration are two new requirements, both closed by TASK-M5-04, which already builds `cargo
+  xtask gate linear-decode-depth` and runs after M4's GPU integration: REQ-DEC-052, the gate, and REQ-DEC-051, the
+  calibration, proposed there and confirmed by the human at the M5 gate. TASK-M6-07 and TASK-M6-08 read REQ-DEC-051
+  through their Needs.
+- The coordinate magnitudes the gate states are test inputs, not values the corpus is missing: TASK-M5-04 chooses
+  them, at least one with `|x₀|` of order 1, RQ-578's case, and the physics reviewer checks them.
+- RQ-578 put no `rq:` field or task wait on any requirement or task: its entry says the requirements "do not yet carry
+  `rq: RQ-578`". So its holds are lifted by rewriting the three tasks' acceptance lines and notes. TASK-M6-02,
+  TASK-M6-21, TASK-M6-01 and TASK-M8-57, which its entry says read the floor and do not wait, are unchanged.
+- RQ-575 adds no requirement. REQ-VAL-199 is already the R-71 calibration of the gate's tolerance (R-600), and the
+  human's "the tolerance on its distance from 1" is that tolerance, now stated against 1; a second calibration would
+  close one value twice.
+- RQ-575's "an unparted pair" is read for either pair: a start is censored when its f32 pair or its f64 pair has not
+  parted by `T`.
+- RQ-570's option (a) said "at M2, and the Anosova chart's milestone decides"; the human's words are "never asserted",
+  so no later milestone asserts column 8.
+- RQ-581's "if M3-41 does not settle on one" is read as TASK-M3-41 not choosing one 16-bit encoding for both of
+  `dE_reg`'s halves. TASK-M3-41 rewrites the f16 wording for the two latches wherever its encoding differs from linear
+  binary16: payload § 1 and § 2, § 6's accessors, the render contract's unpack layer, the debug tooling plan's rows and
+  the parity contract's f16-packed display scalars, each with a *Was*. Until it lands the latches are linear binary16,
+  as built.
+- RQ-589: PR #312 also edits REQ-VAL-042's rulings and note, so this ruling changes only its statement, and the old
+  statement is kept here rather than in the note.
+- RQ-590: the literature review is a record (`docs/incoming/2026-10-25_lit_review/`, its sha256 in its README), so the
+  correction is a dated note in that README; the `.tex` is not edited.
+- The status rows and notes in `principia_dd_replication.md` and validation-orbits § 1.6 that named these RQs as open
+  are updated, their old text kept as a *Was*. The code's and fixtures' comments that say "RQ-570, open" are code, not
+  corpus, and are not edited here.
+
+R-632 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-036 (verify, rulings, source, note), REQ-TOOL-159 (rulings, note), REQ-VAL-199 (statement, verify, rq,
+rulings, source, note), REQ-VAL-019 (verify, rq, rulings, source, note), REQ-VAL-209 (verify, rq, rulings, note),
+REQ-PAY-012, REQ-PAY-041, REQ-PAY-044 and REQ-TOOL-023 (statement, rulings, source, note), REQ-PAY-111 (note) and
+REQ-VAL-042 (statement); adds REQ-DEC-051, REQ-DEC-052 and REQ-PAY-112.
+
+## R-633 — Every central-difference Jacobian of the decode takes the encode contract's step; the steer's `J⁺` drops each singular value below `c·σ₁`, `c` a calibration; a chart that holds a block by a physical construction has that construction's physical parameters as hidden coordinates, tilted and sliced by value, and TASK-M2-36 splits; an unusable copy is a bit test on `state` and `budget_word` *(closes RQ-600, RQ-601, RQ-603 and RQ-604; amends R-473; refines R-550)*
+*28 Oct 2026 · the owner's ruling batch of that morning, with the revised RQ-603 text sent after it; applied in
+`docs/design/principia_deep_zoom.md` § 2 ("`J_D`'s step rule", a paragraph added, and the latent Jacobian's step),
+`docs/design/principia_lines.md` § 8 (the trace fade's step), `docs/gui/principia_render_gui_spec.md` § "The compass:
+look and views (R-451, R-452)" (the steer bullet: `J⁺`'s cut), `docs/contracts/principia_chart_decoder_contract.md` §
+"Tilt (basis edit)" ("Tilt on every chart": the charts that hold a block by a construction),
+`docs/design/principia_chart_reference.md` § 4.5 (a table of their hidden coordinates),
+`docs/design/principia_dd_refinement_policy.md` § 1 and `docs/design/principia_dd_simstate_payload.md` § 2 (an unusable
+copy), a dated note on `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.1's PL-7 row, `plan/OPERATIONS.md` §
+"Merging" (re-running CI), R-473's and R-550's forward lines, `REVIEW_QUEUE.md` (RQ-599 noted),
+`docs/archive/review_queue/M0.md` (the four closed entries, moved with their ruling), REQ-DEC-034, REQ-DEC-036,
+REQ-DEC-049, REQ-GUI-266, REQ-GUI-200, REQ-GUI-346, REQ-CHART-062 and REQ-CHART-065 (reqio), REQ-GUI-410 (reqio, new,
+calibration), TASK-M6-35, TASK-M5-04, TASK-M6-07, TASK-M8-54, TASK-M2-36, TASK-M2-52 (new), TASK-M2-38 and TASK-M8-48,
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-35, TASK-M5-04, TASK-M2-36 and TASK-M2-52*
+
+The human's words, verbatim:
+
+> Owner's ruling batch, 28 Oct (next free R-number; quote this text). Close each entry with its line.
+>
+> RQ-600: (a). The step for every central-difference Jacobian of the decode, J_D, the latent Jacobian and R-596's trace
+> fade, is the encode contract's: h_k = ε^{1/3}·max(1, |x_k|) in f64, dividing by the step actually taken, (x+h) −
+> (x−h). Write it into deep_zoom §2 as J_D's step rule. (b) is rejected: a secant at the quad's half-width is the
+> cell-width collapse recorded in the prototype (CLAUDE.md, §12: "the fix §12 needs is a Jacobian not built by a secant
+> at the cell width"). Unblocks TASK-M6-35.
+>
+> RQ-601: (a). J⁺ is formed from J's SVD, dropping every singular value below c·σ₁. c is a second R-71 calibration
+> beside REQ-GUI-346, starting at 1e-9: the geometric middle of the measured gap (σ₈/σ₁ ≤ 1.9e-12 at E* = 0, ≥ 3.9e-6
+> with E* unset). Record the measurement as its basis. Gate arms: the E* = 0 fixture refuses the shell-normal direction
+> on every sampled z; the E*-unset fixture refuses none; a saturated-link fixture refuses. (b) is rejected: it couples
+> two different quantities to one value. (c), the analytic energy-normal projector, is noted for later, if the gap ever
+> narrows (f32 or deep zoom). Unblocks TASK-M6-35.
+>
+> RQ-603: One principle, added to R-473 J1: where a chart holds a block by latent controls, its hidden coordinates are
+> those controls; where it holds a block by a physical construction, its hidden coordinates are that construction's
+> physical parameters, tilted and sliced by value as R-554 L5's p_λ. So: (a) a3: the mass simplex's configuration hidden
+> coordinate is ν₀ (the held Burrau-family shape), and d = 0 reproduces the untilted chart exactly; a1 and a2 are
+> rejected. (b) b1: a rest start is z_mom = 0, and each momentum control is a hidden coordinate from 0 (every registered
+> link maps 0 to 0). (c) c2: the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains the held K, as physical
+> hidden coordinates. Cells with no momentum construction at the tilted value (K < L_z²/2I) read as refused, through the
+> tilt's existing ray-degenerate path. If §2.2's construction cannot take a nonzero held value, fall back to c1 for
+> those three charts and queue it. T1's "every chart" then holds as written, and REQ-CHART-062/-065 run over the whole
+> registry. Split TASK-M2-36: build the five unaffected charts now; the six follow on this ruling.
+>
+> RQ-604: (a). "Unusable copy" = state ∈ {sim_failed, decode_failed} or budget_exhausted, as a bit test on
+> sample_descriptor's state and budget_word. Write it into refinement policy §1 and payload §2.
+>
+> #314: keep the PL-7 edit; it is correct (PL-7 is the precision horizon).
+>
+> R-369 list from this session: all stand. One note: to re-run CI, prefer re-running the failed jobs over closing and
+> reopening the PR.
+>
+> Still owed to me: a five-line summary of the lavapipe/cloud trial proposal (what it changes, cost, how it is
+> reversed), so I can rule on it.
+>
+> One PR, left for the owner. Merge order after it: as you have it.
+
+*The revised RQ-603.* The RQ-603 paragraph above is the owner's revised text, sent after the batch "(use in place of
+the a2 version in this morning's batch)". With the cloud trial's ruling (R-634) the owner added: "Check: RQ-603 in
+today's ruling uses the revised "one principle" text (ν₀ as the mass simplex's hidden coordinate, a3), not the earlier
+a2 version." It does: a3 is applied, and the batch's first RQ-603 paragraph, kept here as the record and not applied,
+read:
+
+> RQ-603: (b) b1: a rest start is z_mom = 0, and each momentum control is a hidden coordinate from 0 (every registered
+> link maps 0 to 0). (a) a2: the mass simplex offers only the momentum controls; its configuration is held by ν₀ as the
+> Burrau embed holds it (J1 read literally); a3 (ν₀ as a physical hidden coordinate) is recorded as a possible later
+> extension. (c) c2: the (ν, K) chart and Φ_θ,K gain the held L_z, and Φ_θ,L_z gains the held K, as a physical hidden
+> coordinate tilted by its value, as R-554 L5's p_λ. Cells with no momentum construction at the tilted value (K <
+> L_z²/2I) read as refused, through the tilt's existing ray-degenerate path. If §2.2's construction cannot take a
+> nonzero held value, fall back to c1 for those three charts and queue it. Split TASK-M2-36: build the five unaffected
+> charts now; the six follow on these answers.
+
+*What it decides*, item by item:
+
+- **RQ-600** takes option (a). Every central-difference Jacobian of the decode takes the encode contract's step
+  (`principia_inverse_encode_contract.md` Part 4, "How it is evaluated"): `h_k = ε^{1/3}·max(1, |x_k|)` in f64,
+  the difference divided by the step actually taken, `(x + h) − (x − h)`. It is written into deep zoom § 2 as `J_D`'s
+  step rule, and it is the latent Jacobian's (R-550 J1, REQ-DEC-049) and R-596's trace fade's (REQ-GUI-266, lines § 8).
+  REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 state it, REQ-GUI-266 cites it, and TASK-M6-35 no longer waits for it.
+  Option (b), a secant at the quad's half-width, is rejected: it is the cell-width collapse the prototype records.
+- **RQ-601** takes option (a). `J⁺` is formed from `J`'s singular value decomposition, every singular value below
+  `c·σ₁` dropped. `c` is a second R-71 calibration beside REQ-GUI-346, REQ-GUI-410 (new, closed by TASK-M6-35 and
+  confirmed at the M6 gate), starting at `10⁻⁹`, the geometric middle of the measured gap (`σ₈/σ₁ ≤ 1.9·10⁻¹²` at
+  `E* = 0`, `≥ 3.9·10⁻⁶` with `E*` unset), that measurement (RQ-601's, recorded in its archived entry) its basis. Its
+  gate arms: the `E* = 0` fixture refuses the shell-normal direction on every sampled `z`, the `E*`-unset fixture
+  refuses none, and a saturated-link fixture refuses. Option (b), one value for both, is rejected; option (c), the
+  analytic energy-normal projector, is noted for later, if the gap ever narrows (f32 or deep zoom), in render_gui_spec's
+  steer bullet. TASK-M6-35 no longer waits for it.
+  *Added on the owner's update of 28 Oct 2026, which accepted #323 with both readings written into this text:* the
+  steer uses `J⁺`, this pseudo-inverse, where the steer's text (R-550, render_gui_spec's `q ∝ J⁻¹ e`) says `J⁻¹`; the
+  two are the same wherever the cut drops no singular value. Where `J` is singular, `J⁺` inverts only the non-zero
+  singular values, giving the minimum-norm least-squares step, which is zero along the null directions, so the steer
+  moves only in directions the chart can reach. What counts as zero is this ruling's cut: a singular value below
+  `c·σ₁`, `c` the calibration REQ-GUI-410; no other cutoff is set.
+- **RQ-603**, as revised, adds one principle to R-473 J1: where a chart holds a block by latent controls, its hidden
+  coordinates are those controls; where it holds a block by a physical construction, its hidden coordinates are that
+  construction's physical parameters, tilted and sliced by value as R-554 L5's `p_λ`. So (a) takes a3: the mass
+  simplex's configuration hidden coordinate is `ν₀`, the held Burrau-family shape, and `d = 0` reproduces the untilted
+  chart exactly; a1 and a2 are rejected. (b) takes b1: a rest start (the mass simplex, the Euclid plane, the δm strip)
+  is `z_mom = 0`, and each momentum control is a hidden coordinate from 0. (c) takes c2: the `(ν, K)` chart and
+  `Φ_θ,K` gain the held `L_z`, and `Φ_θ,L_z` the held `K`, as physical hidden coordinates; a cell with no momentum
+  construction at the tilted value (`K < L_z²/2I`) reads as refused. c1 is the fallback only if § 2.2's construction
+  cannot take a nonzero held value; it can (chart_reference § 2.2 takes any `L_z` and `K*` with `K* ≥ L_z²/2I`, and
+  is terminal below it), so c2 applies and nothing is queued. T1's "every chart" then holds as written, and
+  REQ-CHART-062's and REQ-CHART-065's arms run over the whole registry. TASK-M2-36 splits: it builds the five charts
+  the answer does not touch now, and TASK-M2-52 (new) builds the six on this ruling. The decoder contract's "Tilt on
+  every chart" and chart_reference § 4.5 state it; R-473 carries the forward line.
+  *Added on the owner's update of 28 Oct 2026, as for RQ-601 above:* "ray-degenerate" in (c)'s "through the tilt's
+  existing ray-degenerate path" is read per cell: a cell with no momentum construction at the tilted value takes that
+  path, area weight 0 and no system, while the chart's own `system_image` (chart_decoder_contract Part 5) is unchanged.
+- **RQ-604** takes option (a). An unusable copy is `state ∈ {sim_failed, decode_failed}` or `budget_exhausted`, a bit
+  test on `sample_descriptor`'s `state` and on `budget_word`, written into refinement policy § 1 and payload § 2.
+  TASK-M5-32 (PR #318) applied option (a) of its physics review (5679524618, F4) meanwhile, per R-369, and can now read the
+  definition; this PR does not edit that branch.
+- **#314:** the PL-7 edit to the census proposal's § 3.2 is kept; it is correct, PL-7 being the precision horizon. The
+  proposal is a record pinned by its sha256 in RQ-599, so the dated note sits on PLAN.md § 3.1's PL-7 row, and RQ-599
+  carries a dated line; RQ-599 stays open.
+- **The R-369 list** from the session all stands. The note on CI is applied in `plan/OPERATIONS.md` § "Merging": to
+  re-run CI, prefer re-running the failed jobs over closing and reopening the PR.
+- **"Still owed to me"** was the orchestrator's summary of the cloud trial proposal, outside the corpus; the owner's
+  ruling on it is R-634.
+- **"One PR, left for the owner"**: this PR, which merges after PR #313, PR #314 and PR #316, whose commits it carries.
+
+*Applied per R-369:*
+
+- RQ-600's `x_k` is the input coordinate stepped: `u` or `v` for `J_D`, `z_k` for the latent Jacobian and the trace
+  fade's. REQ-DEC-036, which TASK-M5-04 closes by computing `J_D`, states the step too, beside REQ-DEC-034.
+  TASK-M6-07's note on the step (physics review 5624781454 of PR #279) is answered: its physics review confirms that
+  RQ-553's per-direction saturation test holds with the written step, and that test 11's `O(h²)` fit runs over depths
+  where the linearisation error, not `J_D`'s own truncation error (of order `ε^{2/3}`), dominates.
+- RQ-601: with the cut, `J⁺ = J⁻¹` only where no singular value is dropped, so the steer's `q ∝ J⁻¹ e` reads `J⁺`
+  wherever the cut drops one (an accepted cell on an `E*` chart would otherwise take the dropped direction's `1/σ₈`).
+  REQ-GUI-200 says so; the physics reviewer of TASK-M6-35 checks it, and the owner may veto it. The test is
+  `mock_compass_steer_cut`, an acceptance line of TASK-M6-35.
+- RQ-603 (c)'s "through the tilt's existing ray-degenerate path" is read per cell: the corpus's `ray-degenerate` is a
+  chart's `system_image` (chart_decoder_contract Part 5), so a refused cell takes that path's area weight 0 and is no
+  system, drawn as validation layer 2 draws `K < L_z²/2I` (chart_reference § 5.4), and the chart's `system_image`
+  stays its own. Flagged for the owner's veto.
+- The split: TASK-M2-36 closes REQ-CHART-063, REQ-CHART-064 and REQ-CHART-066 and builds REQ-CHART-062's and
+  REQ-CHART-065's arms on its five charts (latent, shape sphere, the two invariant charts, mixed). TASK-M2-52 depends
+  on it, takes the six construction charts (the mass simplex, the Euclid plane, the δm strip, `(ν, K)`, `Φ_θ,K` and
+  `Φ_θ,L_z`), and closes REQ-CHART-062 and REQ-CHART-065, which only it can close once every chart tilts; reviewers
+  code, qa and physics.
+- The dependents: TASK-M8-48 (the real engine's tilt and slice on every chart, needing REQ-CHART-062) and TASK-M2-38
+  (REQ-CHART-060's slice on the mass simplex; REQ-CHART-061's fuzz over every gallery chart, the Burrau `K` charts
+  tilted) gain TASK-M2-52. TASK-M2-37 (its tilted arms on the invariant charts), TASK-M2-39 (on `(L_z, K)`, and after
+  TASK-M2-38), TASK-M2-40 (latent and shape-sphere saved charts), TASK-M8-53 (after TASK-M8-48) and TASK-M8-56 (the
+  shape sphere) keep TASK-M2-36 alone.
+
+R-633 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-034, REQ-DEC-036 and REQ-DEC-049 (statement, rulings, source, note), REQ-GUI-266 (statement, rulings,
+note), REQ-GUI-200 (statement, rulings, source, note), REQ-GUI-346 (rulings, note), REQ-CHART-062 and REQ-CHART-065
+(statement, verify, rulings, source, note); adds REQ-GUI-410.
+
+## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
+*28 Oct 2026 · the owner's ruling on the cloud trial proposal, sent with R-633's revised RQ-603; applied in
+`plan/OPERATIONS.md` § "Where the build loop runs (R-357)" (the cloud sentence reworded, and "The cloud trial (R-634)"
+added), § "Resources" (the cloud's disk for a GUI task) and § "Metal and perf (Mac only)" (the Mac's gui review),
+CLAUDE.md § "How work runs (`plan/WORKFLOW.md`)", R-357's forward line and `plan/rule_groups.yaml`; run by the
+orchestrator and the owner on TASK-M8-07 and TASK-M8-13*
+
+The human's words, verbatim:
+
+> Cloud trial: approved as summarised (R-number with this batch). Trial scope: TASK-M8-07 and TASK-M8-13 only, built and
+> code/qa-reviewed in a cloud session on lavapipe; the Mac keeps the GUI review, the app launch, my look, and all
+> merging. Nothing touching the kernel or physics runs in the cloud under this trial. Conditions: (1) report tokens,
+> wall-clock time and review rounds for both tasks against a comparable Mac-built GUI task; (2) the Mac GUI review
+> compares lavapipe and Metal screenshots of the same views side by side; (3) the stop rules stand as summarised (a
+> Metal-only finding costing more than one extra round per task, or disk forcing the agents to run one at a time).
+> Adding the GUI tests and screenshots to the Mac CI job: fine, per R-369.
+
+The message's last paragraph, "Check: RQ-603 in today's ruling uses the revised …", is about R-633 and is quoted in
+R-633's note.
+
+The proposal it approves is the orchestrator's (R-627's question, kept outside the repository, not applied until now),
+and the summary the owner approved, "as summarised", read:
+
+1. TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a cloud session the owner starts, on lavapipe;
+   the Mac keeps the GUI review (Metal screenshots, the app launch, the owner's look) and all merging.
+2. A GUI round goes from three Mac slots to one for about 10–15 min, and gui mutants run under `prlimit`.
+3. Cost: free CI minutes, a cold build of about 10 min, about 75 GB for three agents, each session started by hand,
+   and the token overhead measured by the trial.
+4. Risk: a Metal-only difference is found at review, costing at most one extra round each.
+5. It is reversible. Stop if a Metal-only finding costs more than one extra round per task, or disk forces serial
+   agents; repealing the ruling returns to Mac-only.
+
+*What it decides:*
+
+- **The trial's scope.** TASK-M8-07 and TASK-M8-13 only, both on the mock engine and reviewed by code, qa and gui. Each
+  is built, and code- and qa-reviewed, in a cloud session the owner starts, on lavapipe (`PRIN_GPU_BACKEND=vulkan`).
+  The Mac keeps the gui review, the `cargo run -p gui --features mock` launch, the owner's look (R-390's "What to try")
+  and all merging. Nothing touching the kernel or physics runs in the cloud under this trial; every other task, and
+  every physics-reviewed one, stays on the Mac as R-357 has it.
+- **Its conditions.** (1) The trial reports tokens, wall-clock time and review rounds for both tasks against a
+  comparable Mac-built GUI task. (2) The Mac's gui review compares lavapipe and Metal screenshots of the same views
+  side by side. (3) It stops if a Metal-only finding costs more than one extra review round per task, or if disk forces
+  the agents to run one at a time. Repealing this ruling returns to Mac-only.
+- **CI.** Adding the gui crate's tests and `cargo xtask screenshot --all` to the Mac CI job (`gpu-metal` on
+  `macos-15`) is approved per R-369. It is a separate code task, to follow; this ruling's port does not make it.
+- **R-357** is amended in part: its "cloud sessions aren't viable for the build loop" gives way, for these two tasks
+  only, to the trial.
+
+*Applied per R-369:*
+
+- The proposal's § 3 changes are applied as written, with "R-6xx" read as R-634: `plan/OPERATIONS.md` § "Where the
+  build loop runs (R-357)" (its cloud sentence, the old one kept as a *Was*) and § "Metal and perf (Mac only)" (a
+  sentence added), the cloud's disk in § "Resources", and CLAUDE.md's cloud clause (a clause added).
+- The split of the proposal's § 2 is written as § "The cloud trial (R-634)": the cloud session claims the task by
+  pushing `task/<id>` and opening its PR through REST, and the Mac never dispatches a task whose branch is on origin;
+  the cloud's agents keep R-219's own worktree and target each, under `$HOME/principia-work/`; the cloud session runs
+  the qa-commit checks and pushes qa's commit; the Mac's gui reviewer is dispatched at the head SHA, runs the gui
+  crate's tests and `cargo xtask screenshot --all` on Metal beside CI's lavapipe artifact of the same views, launches
+  the app, and works its checklist; merges, and resolving threads (GraphQL), stay on the Mac. Gui mutants for these
+  tasks run in the cloud under `prlimit` (R-352).
+- The comparable Mac-built GUI task for condition (1) is TASK-M8-05, which the proposal keeps on the Mac, or, if it is
+  not comparable when the trial reports, another mock-engine task reviewed by code, qa and gui of like size; the
+  report names it. The report goes in the summary after both tasks merge.
+
+R-634 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement or task.

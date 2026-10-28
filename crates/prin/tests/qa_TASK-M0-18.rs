@@ -176,8 +176,8 @@ fn expected_config_text(frames: u64) -> String {
             "{{\"id\":1,\"kind\":\"out\",\"occupant\":\"none\",\"params\":{{}}}}],",
             "\"wires\":[{{\"from\":0,\"port\":0,\"to\":1}}]}}}},",
             "\"scenario\":\"synthetic_frames\",",
-            "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{\"t\":0}},\"integrator\":{{}},",
-            "\"kernel_variant\":\"physics\",\"links\":{{}},",
+            "\"sim\":{{\"chart\":{{\"window\":{{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}}}},\"collision\":{{}},\"horizon\":{{\"t\":0}},\"integrator\":{{}},",
+            "\"kernel_variant\":\"physics\",\"links\":{{\"alpha\":{{\"id\":\"sigmoid_alpha\",\"params\":{{}}}},\"beta\":{{\"id\":\"sigmoid_beta\",\"params\":{{}}}},\"mass\":{{\"id\":\"softmax_tanh\",\"params\":{{\"mu_max\":5}}}},\"momenta\":{{\"id\":\"sigmoid_q\",\"params\":{{\"q_max\":2}}}}}},",
             "\"lock\":{{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]}},",
             "\"plane\":{{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]}},",
             "\"quality\":{{}},\"slice\":{{}}}}}}"

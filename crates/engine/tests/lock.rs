@@ -10,7 +10,8 @@
 //!   restores the stored anchor bitwise.
 //! - `lock_sliders` (REQ-GUI-006): a slider moved while locked is an excursion along its control, re-based on the
 //!   anchor; unlock leaves the free state the last locked one.
-//! - `lock_setfields` (REQ-GUI-007): every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`.
+//! - `lock_setfields` (REQ-GUI-007): every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`,
+//!   and on a nonlinear chart its window.
 //! - `lock_kernel_uniform_identical` (REQ-SYS-012): the kernel's uniform has no lock field, and a locked and a free
 //!   view of one plane give it bitwise; the GPU half is `lock_gpu.rs`.
 //! - `lock_infeasible_tilt` (REQ-CHART-010): a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
@@ -18,12 +19,15 @@
 //!   centre's own nearest feasible point only where an excursion carried the centre out (R-593).
 //! - `curve_tilt_requires_lock` (REQ-CHART-007): a curve axis's tangent tilt is refused free, and locked it reads
 //!   `γ′(ν₀)` pulled back to the latent controls; it is refused, naming the controls, where a link's inverse clamps.
+//! - `lock_window_undo` (REQ-SYS-011; R-69, R-466; TASK-M2-21): a nonlinear chart's window is held in `SimConfig`'s
+//!   chart group, and the lock's command, `z₀`, the lock group and the re-centred window sent under one history key, is
+//!   one history entry: one undo restores all three, and one redo sets them again.
 
 use engine::chart_authoring::charts::{nu_embed, NU_CURVE};
 use engine::chart_authoring::CurvePoint;
 use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
-use engine::contract::set_field::{Edit, SetField, SimField};
+use engine::contract::set_field::{Edit, HistoryKey, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice,
@@ -63,14 +67,16 @@ type Sticks =
 
 fn sim(plane: Plane) -> SimConfig {
     SimConfig {
-        chart: Chart {},
+        chart: Chart {
+            window: Window::SQUARE,
+        },
         plane,
         slice: Slice {},
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
         },
-        links: Links {},
+        links: Links::defaults(),
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },
@@ -270,32 +276,35 @@ impl Rebuild for InvariantLE<f64> {
 }
 
 /// The lock's own edits.
-fn own_edits(lock: &ChartLock) -> [SetField; 2] {
-    lock.edits.clone()
+fn own_edits(lock: &ChartLock) -> Vec<SetField> {
+    lock.edits.to_vec()
 }
 
 /// Locks `chart` at the pixel `(s, t)` of `window`, applies the edits `edits` gives through the store, and checks that
 /// the chart rebuilt on the post-lock `z₀` decodes the clicked pixel's state bit for bit at the re-centred window's
 /// centre, that `z_locked` keeps the chart's frozen controls bit for bit and decodes to the clicked state within the
-/// encode's tolerance, and that the edits are the recentring on `z₀ = z_locked` and the lock group's. `centred` is the
-/// window the check reads the centre in.
+/// encode's tolerance, and that the edits are the recentring on `z₀ = z_locked`, the lock group's and the window's.
+/// `centred` is the window the check reads the centre in, given the window before the lock and the store's after it.
 fn check_chart_lock<C>(
     chart: &C,
     window: &Window,
     s: f64,
     t: f64,
     centred: fn(&Window, &Window) -> Window,
-    edits: fn(&ChartLock) -> [SetField; 2],
+    edits: fn(&ChartLock) -> Vec<SetField>,
 ) where
     C: kernel::encode::by_kind::ByKind<Param = f64> + FrozenControls + Rebuild,
 {
     let [u, v] = window.at(s, t);
     let clicked = chart.decode_at::<Defaults, f64>(u, v).ic;
     let lock = set_on_chart::<Defaults, C, _>(chart, window, s, t, phys, &tol()).expect("a lock");
-    let mut st = store(sim(oblique_plane()));
+    let mut before = sim(oblique_plane());
+    before.chart.window = *window;
+    let mut st = store(before);
     apply(&mut st, edits(&lock));
-    let rebuilt = chart.on(&now(&mut st).plane.z0);
-    let w = centred(window, &lock.window);
+    let after = now(&mut st);
+    let rebuilt = chart.on(&after.plane.z0);
+    let w = centred(window, &after.chart.window);
     let [cu, cv] = w.at(0.5, 0.5);
     let centre_ic = rebuilt.decode_at::<Defaults, f64>(cu, cv).ic;
     assert!(
@@ -308,12 +317,20 @@ fn check_chart_lock<C>(
         "the lock's state is not the clicked one"
     );
     assert_eq!(lock.window.half, window.half, "the lock changed the zoom");
-    let [z0, l] = &lock.edits;
-    let z_locked = match (&z0.edit, &l.edit) {
-        (Edit::Sim(SimField::Z0(z)), Edit::Sim(SimField::Lock(k))) => {
+    let [z0, l, re] = &lock.edits;
+    let z_locked = match (&z0.edit, &l.edit, &re.edit) {
+        (
+            Edit::Sim(SimField::Z0(z)),
+            Edit::Sim(SimField::Lock(k)),
+            Edit::Sim(SimField::Window(w)),
+        ) => {
             assert!(
                 k.locked && same_bits(&k.z_locked, z),
                 "the lock's anchor is not z₀"
+            );
+            assert_eq!(
+                *w, lock.window,
+                "the window edit is not the re-centred window"
             );
             *z
         }
@@ -381,7 +398,7 @@ negative_control!(
         )
         .expect("a lookup")
         .z;
-        [
+        vec![
             SetField {
                 edit: Edit::Sim(SimField::Z0(z)),
                 no_history: false,
@@ -393,6 +410,7 @@ negative_control!(
                 })),
                 no_history: false,
             },
+            lock.edits[2].clone(),
         ]
     })
 );
@@ -721,7 +739,8 @@ negative_control!(
 
 // ---- lock_setfields (REQ-GUI-007) ----
 
-/// Each edit is an undoable `SimConfig` edit of `z₀` or the lock group, and the store records it.
+/// Each edit is an undoable `SimConfig` edit of `z₀`, the lock group or, on a nonlinear chart, the window, and the
+/// store records it.
 fn check_setfields(edits: &[SetField]) {
     for e in edits {
         assert!(
@@ -731,9 +750,9 @@ fn check_setfields(edits: &[SetField]) {
         assert!(
             matches!(
                 e.edit,
-                Edit::Sim(SimField::Z0(_)) | Edit::Sim(SimField::Lock(_))
+                Edit::Sim(SimField::Z0(_) | SimField::Lock(_) | SimField::Window(_))
             ),
-            "the lock edit {e:?} is not on z₀ or the lock group"
+            "the lock edit {e:?} is not on z₀, the lock group or the window"
         );
     }
 }
@@ -768,8 +787,8 @@ fn lock_setfields() {
     };
     check_setfields(&recentre(&nearest));
     // Undoable (R-69). The lock is one command, sent under one history key as one undo entry (gui_state_contract §2,
-    // R-466); this store has no history key yet (TASK-M6-39, TASK-M6-45), so it undoes the pair edit by edit, and
-    // under a key the second undo finds nothing left of the lock.
+    // R-466; `lock_window_undo`); sent here under none, it undoes edit by edit, and under a key the second undo finds
+    // nothing left of the lock.
     st.undo();
     st.undo();
     assert_eq!(now(&mut st), free, "undo did not restore the free state");
@@ -794,7 +813,7 @@ negative_control!(
 negative_control!(
     lock_setfields_basis,
     "a lock that edits the basis is not a lock edit",
-    expected = "is not on z₀ or the lock group",
+    expected = "is not on z₀, the lock group or the window",
     check_setfields(&[SetField {
         edit: Edit::Sim(SimField::Basis { q1: e(0), q2: e(1) }),
         no_history: false,
@@ -1584,5 +1603,98 @@ negative_control!(
     expected = "is not refused",
     check_both_steps_clamp(<StickBreaking as SimplexClamp>::clamps::<f64>, |mu| {
         curve_tangent::<Sticks>(&ACROSS, mu - 1.0)
+    })
+);
+
+// ---- lock_window_undo (REQ-SYS-011; TASK-M2-21) ----
+
+/// How a lock's command reaches the store.
+type Send = fn(&mut StateStore, [SetField; 3]);
+
+/// The command as the binding sends it: every edit in one frame under one fresh history key (gui_state_contract §2,
+/// R-466).
+fn one_key(st: &mut StateStore, edits: [SetField; 3]) {
+    for e in edits {
+        st.set_field_under(e, HistoryKey(1));
+    }
+}
+
+/// Locks the mixed chart at `(0.3, 0.8)` of a zoomed window held in the store, sends the lock's command with `send`, and
+/// checks: the store's window is the re-centred one; one undo restores `z₀`, the lock group and the window, leaving no
+/// entry; one redo sets all three again.
+fn check_window_undo(send: Send) {
+    let window = Window {
+        centre: [0.375, 0.625],
+        half: [0.125, 0.25],
+    };
+    let mut free = sim(oblique_plane());
+    free.chart.window = window;
+    let mut st = store(free.clone());
+    let lock =
+        set_on_chart::<Defaults, _, _>(&mixed(), &window, 0.3, 0.8, phys, &tol()).expect("a lock");
+    assert_ne!(lock.window, window, "the lock did not move the window");
+    send(&mut st, lock.edits.clone());
+    let locked = now(&mut st);
+    assert_eq!(
+        locked.chart.window, lock.window,
+        "the store's window is not the re-centred one"
+    );
+    assert!(locked.lock.locked, "the store is not locked");
+    st.undo();
+    let undone = st.snapshot();
+    assert_eq!(
+        undone.sim.chart.window, free.chart.window,
+        "one undo did not restore the window"
+    );
+    assert!(
+        same_bits(&undone.sim.plane.z0, &free.plane.z0),
+        "one undo did not restore z₀"
+    );
+    assert_eq!(
+        undone.sim.lock, free.lock,
+        "one undo did not restore the lock group"
+    );
+    assert_eq!(
+        undone.history.undo_depth, 0,
+        "the lock's command is not one history entry"
+    );
+    st.redo();
+    assert_eq!(now(&mut st), locked, "one redo did not set the lock again");
+}
+
+#[test]
+fn lock_window_undo() {
+    check_window_undo(one_key);
+}
+
+negative_control!(
+    lock_window_undo,
+    "the window edit sent under a second key is a second history entry, so one undo leaves z₀ and the lock set",
+    expected = "one undo did not restore z₀",
+    check_window_undo(|st, [z0, lock, window]| {
+        st.set_field_under(z0, HistoryKey(1));
+        st.set_field_under(lock, HistoryKey(1));
+        st.set_field_under(window, HistoryKey(2));
+    })
+);
+
+negative_control!(
+    lock_window_undo_left_out,
+    "the window edit left out of the command, sent alone after it, is undone alone",
+    expected = "one undo did not restore z₀",
+    check_window_undo(|st, [z0, lock, window]| {
+        st.set_field_under(z0, HistoryKey(1));
+        st.set_field_under(lock, HistoryKey(1));
+        st.set_field(window);
+    })
+);
+
+negative_control!(
+    lock_window_undo_dropped,
+    "a lock whose command drops the window edit leaves the window where it was",
+    expected = "the store's window is not the re-centred one",
+    check_window_undo(|st, [z0, lock, _]| {
+        st.set_field_under(z0, HistoryKey(1));
+        st.set_field_under(lock, HistoryKey(1));
     })
 );

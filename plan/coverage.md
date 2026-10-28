@@ -6,25 +6,25 @@
 
 | area | count |
 |---|---|
-| DEC | 50 |
+| DEC | 52 |
 | ENC | 38 |
 | CHART | 88 |
 | INT | 108 |
 | EVT | 32 |
-| PAY | 109 |
+| PAY | 110 |
 | GEN | 43 |
 | SCHED | 103 |
 | REF | 52 |
 | RENDER | 120 |
 | COL | 160 |
-| GUI | 384 |
+| GUI | 385 |
 | TOOL | 218 |
-| VAL | 199 |
+| VAL | 330 |
 | PERF | 115 |
 | SYS | 93 |
-| **total** | **1912** |
+| **total** | **2047** |
 
-Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 223 calibration, 172 definition, 1652 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,27 +32,28 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 217 |
-| M3 | 227 |
-| M4 | 106 |
-| M5 | 179 |
-| M6 | 223 |
-| M7 | 260 |
-| M8 | 470 |
+| M2 | 221 |
+| M3 | 333 |
+| M4 | 118 |
+| M5 | 181 |
+| M6 | 226 |
+| M7 | 262 |
+| M8 | 476 |
 
 ## Sections
 
-1595 sections in 60 files: 1285 yield at least one requirement; 310 yield none and are listed below with the reason.
+1636 sections in 61 files: 1309 yield at least one requirement; 327 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 209 |
+| gap (RQ-577) | 2 |
+| informative only | 220 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 52 |
+| parent heading (obligations are in its subsections) | 55 |
 | planned (the plan PR) | 22 |
-| rationale | 18 |
+| rationale | 19 |
 | superseded (kept for the record) | 4 |
 
 
@@ -184,6 +185,7 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | informative only | the human's line of 21 Oct 2026 (the batch R-545 quotes): the thirteen decisions applied per R-369 since 20 Oct stand; each is marked "accepted by R-559" where the repo records it, the rest listed in the ruling; an act, recorded only; changes no requirement but the marks in eight requirement notes |
 | R-573 — "Payload summary" is deleted from TASK-M8-02: it is defined nowhere, used nowhere, and no test asks for it | informative only | the human's decision of 21 Oct 2026 (the gap sweep, PR 2a): "payload summary" struck from TASK-M8-02's deliverable; an act, recorded only; no requirement named it, so it changes none |
 | R-607 — Kustaanheimo–Stiefel regularisation is not built: Part 2b's four are the regularisations, and a later method is added by its own ruling *(closes RQ-530)* | informative only | RQ-530 (a): Kustaanheimo–Stiefel regularisation is not built; Part 2b's four are the regularisations, a later method added by its own ruling; applied in integrator contract Part 6, dd_integrator §6 and dd_decoder §6, and no requirement changes |
+| R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)* | informative only | the owner's ruling of 28 Oct 2026, a trial: TASK-M8-07 and TASK-M8-13 built and code- and qa-reviewed in a cloud session on lavapipe, the gui review (Metal and lavapipe screenshots side by side), the launch, the owner's look and every merge on the Mac; reported in tokens, wall-clock and rounds against a comparable Mac-built GUI task; stopped by its two stop rules; a process ruling applied in plan/OPERATIONS.md and CLAUDE.md; the Mac CI job's gui tests and screenshots are a separate R-369 code task, to follow; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -373,6 +375,27 @@ Of these: 166 calibration, 171 definition, 1575 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Refinement policy — `Policy::Tolerance` | informative only | status, evidence base and supersession notes |
+
+### `docs/design/principia_dd_replication.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia: the replication and verification suite — published three-body results as engine tests | informative only | preface: the rulings that adopted it (R-594, R-629) and the records it transcribes; obligations in §5, §6 and §8 |
+| 1. What this extends, and what it does not change | informative only | its relation to principia_dd_validation_orbits.md, which it extends and does not change (R-594); no obligation of its own |
+| 2. Two layers and four tiers | rationale | the layers, tiers, comparison kinds and chart names each target's requirement states in its note |
+| 3. Sources | informative only | the records' abbreviations and data terms; the terms' obligations are §8.2 rule 17 and §8.3, cited by every target |
+| 4. Three findings carried over from the plan | parent heading (obligations are in its subsections) | its three findings; 4.1 and 4.3 are cited by the targets that depend on them |
+| 4.2 The high-precision rows: 937, not 1,260 | gap (RQ-577) | the rows serve the precision ladder's test 6, which waits on RQ-577 (§5.13); no requirement is added meanwhile |
+| 5. The targets | parent heading (obligations are in its subsections) | its subsections hold the targets, one requirement each |
+| 5.1 Targets already ruled | informative only | lists the requirements already in force by id; this port changes none of them (R-594) |
+| 5.13 The precision ladder: waiting for RQ-577 | gap (RQ-577) | PL-1 to PL-12, B-3 and GG-2 wait on RQ-577, which records that no requirement is added from the proposal meanwhile; PL-8's first half is REQ-VAL-250 |
+| 5.14 Out of scope | informative only | V-5, V-10 and BZ-1 are out of scope as PLAN.md says, and D-6 waits on RQ-587; no requirement (R-629) |
+| 5.15 Counts | informative only | counts of what the port added |
+| 7. Sequencing by need | informative only | the task order; the obligations are the tasks' (plan/tasks.yaml) |
+| 8. Rules | parent heading (obligations are in its subsections) | its three subsections, cited by every target |
+| 9. Coverage of initial-condition space, and the gaps | informative only | which region of IC space each target exercises, and the gaps in the records; no obligation |
+| 10. Open questions | informative only | where each open question stands; each is an RQ entry |
+| 11. Corrections the plan records | informative only | PLAN.md §10's record of corrections to older records; the ones to documents in force were queued (RQ-588 to RQ-590) and are applied by R-632, in those documents |
 
 ### `docs/design/principia_dd_telemetry_and_tiers.md`
 

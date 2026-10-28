@@ -336,11 +336,17 @@ the nominal copy, as the f32 run must be to equal the atlas pixel's.
   chord series. *Fails if* the mark is a constant.
 - **ensemble_ratio**: over 256 chaotic starts, all of them, not a subset (R-600, closing RQ-557, option (b)), each
   start's parting time predicted from its measured initial gap, `ln(tol/δ₀)` for each precision (`δ₀` the pair's chord
-  at the first sync boundary, `k = 1`, `t = Δ_sync`, `tol` the parted mark, 0.1; *was:* "at the first boundary"), so its predicted ratio is `ln(tol/δ₃₂)/ln(tol/δ₆₄)`, and the
+  at the first sync boundary, `k = 1`, `t = Δ_sync`, `tol` the parted mark, 0.1; *was:* "at the first boundary"), so its predicted ratio is `ln(tol/δ₃₂)/ln(tol/δ₆₄)`. The gate's
+  statistic is the median, over all 256 starts, of each start's measured ratio `t_part(f32)/t_part(f64)` divided by
+  its predicted ratio, compared with 1, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`. Never read off one trajectory. A
+  start a pair of which has not parted by the horizon `T` is censored: that pair's `t_part` is taken as `T`, the
+  start's ratio is a bound, it stays in the median over all 256, and the count of censored starts is reported; the
+  gate is valid only if fewer than half of the 256 are censored (R-632, closing RQ-575: Q1 (a), Q2 (ii)). The
+  tolerance on the median's distance from 1 is a calibration for the gate (REQ-VAL-199). *Was (R-600):* "the
   median measured `t_part(f32)/t_part(f64)` compared with the predicted one, never with `ln eps₃₂ / ln eps₆₄ ≈ 0.44`.
   Never read off one trajectory. The tolerance is a calibration for the gate (REQ-VAL-199). How a start whose pair
   has not parted by the horizon enters the median, and which statistic compares the measured with the predicted
-  ratios, are RQ-575. *Was:* "over ≥ 256 chaotic ICs, the median
+  ratios, are RQ-575." *Was:* "over ≥ 256 chaotic ICs, the median
   `t_part(f32)/t_part(f64)` near `ln eps₃₂ / ln eps₆₄ ≈ 0.44`. … Its expected value and tolerance are RQ-557 and
   REQ-VAL-199."
 - **agreement_wording**: the same fate latched after parting reads "not evidence". Mutation: drop the before/after

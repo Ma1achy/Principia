@@ -542,7 +542,8 @@ can be restyled like any contour.
    *Ruled (R-596, 25 Oct 2026, closing RQ-522, option (b)):* the metric on `z` is the physical mass metric pulled back
    through the decoder's Jacobian, `g = Jᵀ W J`: `J` the decoder's own Jacobian `∂(r, p)/∂z` of its particle-frame
    output (after canonicalisation, the scale gauge and `η_E`), eight columns, computed by REQ-DEC-049's method (f64,
-   central difference, REQ-DEC-034's step rule) at the slice centre, not R-550's compass-view Jacobian, whose angles,
+   central difference, REQ-DEC-034's step rule, `J_D`'s as `principia_deep_zoom.md` §2 writes it, R-633) at the slice
+   centre, not R-550's compass-view Jacobian, whose angles,
    rates and mass fractions `W` is not defined on; and `W` the mass-weighted (kinetic) metric on positions,
    `Σ mᵢ‖δrᵢ‖²`, with its dual on momenta, `Σ ‖δpᵢ‖²/mᵢ`, in canonical units (`G = M = I = 1`), its masses those
    decoded at the slice centre, so that `g` is one metric on `z` for the view; the metric the shape sphere's distances

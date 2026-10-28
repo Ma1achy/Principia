@@ -15,10 +15,13 @@ Commands:
                                   fixtures/bench/<bench>/baseline.json through `prin profile diff`, every rise in a
                                   scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
                                   Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
-  build-kernel                    compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
+  build-kernel [--bless]          compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
-                                  (canonical_spec §1 item 2)
+                                  (canonical_spec §1 item 2); fails when a fragment snippet lifted from the
+                                  translation (crates/render/wgsl/decode.wgsl, encode.wgsl,
+                                  crates/ledger/wgsl/shape.wgsl) differs from the checked-in file; --bless writes
+                                  them (R-116)
   ci [--list | --partition <k>/<n>]
                                   run every registered per-push runner, in order (R-177); --list runs each
                                   runner's listing-only form, which runs no control (R-235); --partition runs
@@ -144,6 +147,7 @@ fn main() -> ExitCode {
             xtask::gate_report::run_provisional(&workspace_root(), milestone)
         }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
+        ["build-kernel", "--bless"] => xtask::build_kernel::run_with(&workspace_manifest(), true),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
         ["ci", "--partition", slice] => Partition::parse(slice)
