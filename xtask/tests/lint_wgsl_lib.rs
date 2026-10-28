@@ -1,7 +1,8 @@
 //! `cargo xtask lint wgsl` over the fragment stage's shared library, `crates/render/shaders/` (render_gui_spec §10.1;
 //! TASK-M1-03): the float rules (R-351, R-352) hold there as under `crates/render/frag/`. The generated prelude is
 //! linted alone, and every other library file, which follows it at assembly and calls it, as its continuation, its
-//! findings at its own lines. Each scratch workspace holds a clean generated layer, as `lint` requires. Each test has a
+//! findings at its own lines; a file of `wgsl/lib/` after the library's other files too, whose helpers it may call
+//! (TASK-M7-08). Each scratch workspace holds a clean generated layer, as `lint` requires. Each test has a
 //! registered negative control (R-176).
 
 use std::path::{Path, PathBuf};
@@ -152,4 +153,56 @@ negative_control!(
     "a library with its prelude lints",
     expected = "was not refused naming it",
     check_lib_dir_rules(&[(PRELUDE, PRELUDE_CLEAN), (&present_path(), PRESENT_CLEAN)])
+);
+
+/// A library file calling another library file's helper, as `palette.wgsl` calls `present.wgsl`'s (TASK-M7-08).
+const PALETTE_CALLS_PRESENT: &str =
+    "// palette\nfn muted(x: f32) -> f32 {\n    return shown(x) * 0.5;\n}\n";
+
+fn palette_path() -> String {
+    format!("{LIB_DIR}/wgsl/lib/palette.wgsl")
+}
+
+/// A workspace holding a clean prelude, `palette.wgsl` calling `shown` and the library files `others` lints, both
+/// library files reported, none with a finding.
+fn check_calls_a_sibling(others: &[(&str, &str)]) {
+    let present = present_path();
+    let palette = palette_path();
+    let mut files = vec![
+        (PRELUDE, PRELUDE_CLEAN),
+        (palette.as_str(), PALETTE_CALLS_PRESENT),
+    ];
+    files.extend(others.iter().map(|&(rel, text)| {
+        (
+            if rel == "present" {
+                present.as_str()
+            } else {
+                rel
+            },
+            text,
+        )
+    }));
+    let root = workspace(&files);
+    let result = lint(&root);
+    let _ = std::fs::remove_dir_all(&root);
+    let reports =
+        result.unwrap_or_else(|e| panic!("a library file calling its sibling does not lint: {e}"));
+    assert!(
+        reports
+            .iter()
+            .any(|r| r.file == palette && r.findings.is_empty()),
+        "palette.wgsl was not linted clean: {reports:?}"
+    );
+}
+
+#[test]
+fn lint_wgsl_lib_file_calls_a_sibling_library_file() {
+    check_calls_a_sibling(&[("present", PRESENT_CLEAN)]);
+}
+
+negative_control!(
+    lint_wgsl_lib_file_calls_a_sibling_library_file,
+    "a library file calling a helper no library file defines fails",
+    expected = "a library file calling its sibling does not lint",
+    check_calls_a_sibling(&[])
 );
