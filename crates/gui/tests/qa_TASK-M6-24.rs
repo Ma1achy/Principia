@@ -77,7 +77,9 @@ fn depths(s: &Snapshot) -> (u32, u32) {
 fn state() -> (SimConfig, RenderState) {
     (
         SimConfig {
-            chart: Chart {},
+            chart: Chart {
+                window: engine::contract::sim_config::Window::SQUARE,
+            },
             plane: Plane {
                 z0: [0.0; 8],
                 q1: [0.0; 8],
@@ -88,7 +90,7 @@ fn state() -> (SimConfig, RenderState) {
                 locked: false,
                 z_locked: [0.0; 8],
             },
-            links: Links {},
+            links: Links::defaults(),
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: 0.0 },
