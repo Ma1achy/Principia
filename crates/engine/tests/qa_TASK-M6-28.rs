@@ -60,6 +60,7 @@ fn render() -> RenderState {
         hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t: 3.5 },
+        debug_view: false,
     }
 }
 

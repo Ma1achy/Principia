@@ -1169,6 +1169,7 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
         hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t: 0.0 },
+        debug_view: false,
     };
     Rig::new(App::new(RealSide::new(sim, render), FORMAT))
 }
