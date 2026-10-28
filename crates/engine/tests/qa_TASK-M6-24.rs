@@ -292,9 +292,9 @@ impl Broken {
                     graph_text(b),
                     graph_text(a)
                 ),
-                // The slice frame's line as the conformance suite reads it. gui_state_contract §2 says only that the line
-                // names the path and the values before and after; the spelling of the three indices is the suite's
-                // (TASK-M6-38), which no document gives.
+                // The slice frame's line. gui_state_contract §2 says only that the line names the path and the values
+                // before and after, and gives no wording; the double words it unlike the store, so the suite's case
+                // must accept any wording that names Slice.frame and both frames' indices.
                 (
                     Edit::Sim(SimField::SliceFrame {
                         frame: b,
@@ -306,12 +306,13 @@ impl Broken {
                     }),
                 ) => {
                     let text = |f: &engine::contract::sim_config::SliceFrame| {
-                        format!(
-                            "(normal {}, tilt_x {}, tilt_y {})",
-                            f.normal, f.tilt_x, f.tilt_y
-                        )
+                        format!("[{} {} {}]", f.normal, f.tilt_x, f.tilt_y)
                     };
-                    format!("SetField Slice.frame {} → {}{marker}", text(b), text(a))
+                    format!(
+                        "SetField Slice.frame: was {}, now {}{marker}",
+                        text(b),
+                        text(a)
+                    )
                 }
                 (b, a) => format!("SetField {b:?} → {a:?}{marker}"),
             },
