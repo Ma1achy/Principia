@@ -1,26 +1,81 @@
 name: measure-disk
 on: push
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 jobs:
-  disk:
+  baseline:
     runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [plain, compress]
     steps:
-      - name: layout
+      - uses: actions/checkout@v4
+        with:
+          ref: a036530ae32c399cf15d080bf1aa31296d80c493
+          fetch-depth: 0
+      - name: Free runner disk (extended)
         run: |
-          df -h
-          lsblk
-          swapon --show || true
-          free -h
-          for d in /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /opt/mssql-tools /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/kotlinc /usr/local/bin /usr/local/share /usr/share /opt /usr/lib /var/lib/docker /mnt; do sudo du -sh $d 2>/dev/null || true; done
-          sudo docker system df || true
-      - name: current cleanup
-        run: |
-          time sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
-          time sudo docker image prune --all --force > /dev/null
           df -h /
-      - name: extra cleanup
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache \
+            /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules \
+            /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* \
+            /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /usr/local/aws-cli \
+            /usr/local/aws-sam-cli /usr/share/kotlinc
+          sudo docker system prune --all --force --volumes > /dev/null
+          sudo swapoff -a && sudo rm -f /swapfile
+          df -h /
+      - name: rustup toolchain install
+        id: toolchain
         run: |
-          time sudo rm -rf /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium /usr/local/lib/node_modules /opt/az /opt/microsoft /opt/google /opt/pipx /usr/lib/jvm /usr/share/miniconda /usr/local/julia* /usr/local/share/vcpkg /usr/lib/google-cloud-sdk /usr/lib/firefox /usr/share/az_* /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/kotlinc
-          time sudo docker system prune --all --force --volumes > /dev/null
-          sudo swapoff -a || true
-          sudo rm -f /mnt/swapfile /swapfile
-          df -h
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: "false"
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install pyyaml
+      - run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - name: sampler
+        run: |
+          nohup bash -c 'peak=0; while true; do u=$(df -B1M --output=used / | tail -1 | tr -d " "); echo "$(date +%T) used_MiB=$u" >> "$RUNNER_TEMP/df.log"; if [ "$u" -gt "$peak" ]; then peak=$u; (echo "peak used_MiB=$u at $(date +%T)"; du -s -BM target/* target/tmp/* ~/.cache/rust-gpu ~/.rustup ~/.cargo 2>/dev/null | sort -h | tail -15) > "$RUNNER_TEMP/peak.txt"; fi; sleep 45; done' > /dev/null 2>&1 &
+          df -h /
+      - name: build-kernel
+        run: |
+          if [ "${{ matrix.variant }}" = compress ]; then export RUSTFLAGS="-C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN"; fi
+          cargo run --quiet --package xtask -- build-kernel
+          df -h /
+      - name: baseline (as cargo-mutants runs it, no fail-fast)
+        run: |
+          if [ "${{ matrix.variant }}" = compress ]; then export RUSTFLAGS="-C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN"; fi
+          set +e
+          start=$(date +%s)
+          cargo nextest run --no-run --package=kernel@0.1.0 --package=ledger@0.1.0 --package=render@0.1.0 --package=validation@0.1.0 --package=xtask@0.1.0
+          echo "after --no-run: $(df -h / | tail -1)"; du -s -BM target/* | sort -h | tail -5
+          cargo nextest run --package=kernel@0.1.0 --package=ledger@0.1.0 --package=render@0.1.0 --package=validation@0.1.0 --package=xtask@0.1.0 --no-tests=warn --retries=2 --no-fail-fast --config "target.'cfg(target_os = \"linux\")'.runner = ['prlimit', '--as=8589934592', '--core=1']" 2>&1 | tail -60
+          echo "exit ${PIPESTATUS[0]} wall $(( $(date +%s) - start )) s"
+      - name: report
+        if: always()
+        run: |
+          df -h /
+          cat "$RUNNER_TEMP/peak.txt" || true
+          sort -t= -k2 -n "$RUNNER_TEMP/df.log" | tail -3 || true
+          du -s -BM target/* target/tmp/* 2>/dev/null | sort -h | tail -15
