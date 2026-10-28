@@ -4717,7 +4717,8 @@ Changes REQ-TOOL-008's statement and adds REQ-TOOL-148; changes no other require
 ## R-357 — The build loop stays on the Mac; reviews post through REST; merged branches auto-delete *(amends R-345, R-346, R-347, R-355 and R-356)*
 *Amended by R-369 and R-373.*
 *Amended in part by R-634 (28 Oct 2026; a trial: TASK-M8-07 and TASK-M8-13 are built, and code- and qa-reviewed, in a
-cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac).*
+cloud session on lavapipe; the gui review, the app launch, the owner's look and every merge stay on the Mac; R-634 is
+withdrawn, 28 Oct 2026, before merge, and the build loop stays on the Mac alone).*
 *Amended in part by R-636 (28 Oct 2026: docs agents, qa's test writing and reviews run in cloud sessions; the Mac is
 kept for GPU work, at most two local agents).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
@@ -4725,9 +4726,8 @@ I'm away" gives way to R-369's, under which a PR merges once its reviews pass an
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
 place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`. The build loop stays on the Mac, but for
-R-634's trial, under which TASK-M8-07's and TASK-M8-13's implementer and code and qa reviewers run in a cloud
-session; and but for R-636, under which docs agents, qa's test writing and reviews run in cloud sessions, the Mac
-keeping GPU work (the implementers' builds and GPU tests, Metal steps, benchmarks) and the merges.*
+R-636, under which docs agents, qa's test writing and reviews run in cloud sessions, the Mac keeping GPU work (the
+implementers' builds and GPU tests, Metal steps, benchmarks) and the merges.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -27506,6 +27506,9 @@ note), REQ-GUI-200 (statement, rulings, source, note), REQ-GUI-346 (rulings, not
 (statement, verify, rulings, source, note); adds REQ-GUI-410.
 
 ## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
+*Withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud session stuff started"; its workflow edits to
+CLAUDE.md and plan/OPERATIONS.md were reverted to main's text before merge (the owner's ruling of 28 Oct 2026, to be
+ported as a ruling of its own).*
 *28 Oct 2026 · the owner's ruling on the cloud trial proposal, sent with R-633's revised RQ-603; applied in
 `plan/OPERATIONS.md` § "Where the build loop runs (R-357)" (the cloud sentence reworded, and "The cloud trial (R-634)"
 added), § "Resources" (the cloud's disk for a GUI task) and § "Metal and perf (Mac only)" (the Mac's gui review),
