@@ -547,7 +547,10 @@ pub const MASS_SIMPLEX_EPS_M: ConstantBuilder = chart("mass_simplex_eps_m", 1e-4
 /// proposal (R-71), provisional until the M2 gate (R-427). Its evidence, `fixtures/gates/burrau_nu_half/` (TASK-M2-10):
 /// at f64 and f32 the `ν = 1/2` decode equals the `(m, n) = (2, 1)` construction bit for bit, every intermediate an
 /// exact operation or one rounding of the same rational; the classical configuration, normalised and historical,
-/// brought to the canonical section by `C`, differs from it by at most 1 `eps` (4 leaves a margin for a platform's `sqrt`).
+/// brought to the canonical section by `C`, differs from it by at most 2 `eps` (4 leaves a margin for a platform's
+/// `sqrt`; 1 `eps` before R-547: the classical configuration's `I_in` is 0.2, so step 0 runs on it, and the unfused
+/// `Wide` CoM and `I_in` R-547 requires round `I_in` one ulp above the former explicit-`fma` form, `0x1.999999999999cp-3`
+/// against `0x1.999999999999bp-3` at f64, which moves the outputs by 1 `eps`).
 pub const BURRAU_NU_HALF_TOL: ConstantBuilder = proposed(
     "burrau_nu_half_tol",
     4.0,
@@ -604,6 +607,24 @@ pub const BURRAU_THETA_LZ_FRACTION: ConstantBuilder = proposed(
     1.0,
     Admissibility::CanonicalUnits,
     "REQ-CHART-046",
+    "M2",
+);
+
+/// `τ_I`, step 0's skip tolerance, in eps of the precision (dd_encode §3.2; inverse-encode contract Parts 2 and 6;
+/// R-547): step 0 is skipped, `λ = 1` and the state unchanged, where `|I_in − 1| ≤ τ_I = tau_i·ε`, `ε` the precision's
+/// machine epsilon (`2⁻²³` at f32, `2⁻⁵²` at f64), so a canonical input, at `I = 1` only to rounding, raises no
+/// `lookup_rescaled`. REQ-ENC-035's proposal (R-71), provisional until the M2 gate (R-427): 16 at both precisions, from
+/// the measured `|I_in − 1|` of canonical-frame decodes of fuzzed `z`, as step 0 forms it (TASK-M2-47): at most 4 eps at
+/// f64 and at f32 on the CPU over 64 144 decodes (`kernel/tests/canon.rs`, `scale_step_skip`; 4.5 at f32 over 200 000
+/// in a longer run), and at most 6 f32 eps on Metal over 66 608 GPU decodes (`engine/tests/canon_gpu.rs`,
+/// `canonicaliser_noop_gpu`, which CI runs on lavapipe too, printing its own); TASK-M2-07 measured up to 3. 16 leaves a
+/// margin of 4 over the CPU and of 2.7 over Metal. A skipped state keeps its `|I_in − 1|`, so `C`'s output is at
+/// `I = 1` to within `τ_I`, its positions within `τ_I/2`.
+pub const TAU_I: ConstantBuilder = proposed(
+    "tau_i",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-ENC-035",
     "M2",
 );
 
@@ -1215,8 +1236,8 @@ pub const WINDOW_SQUARE_HALF: ConstantBuilder = chart("window_square_half", 0.5,
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
-/// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
-/// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
+/// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), step
+/// 0's skip tolerance `τ_I` (TASK-M2-47; REQ-ENC-035), the presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
 /// (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances
 /// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), the curve projection's search (TASK-M2-18; REQ-ENC-020), and the
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
@@ -1252,6 +1273,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     BURRAU_THETA_MAX,
     BURRAU_THETA_LZ_K,
     BURRAU_THETA_LZ_FRACTION,
+    TAU_I,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,

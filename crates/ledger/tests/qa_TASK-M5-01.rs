@@ -304,8 +304,8 @@ fn table() -> Vec<Row> {
             S(41),
             F32,
             Lin,
-            Unbounded,
-            Unbounded,
+            Closed(0.0),
+            Closed(1.0),
             X::None,
         ),
         (
@@ -317,7 +317,15 @@ fn table() -> Vec<Row> {
             Unbounded,
             X::SentinelPosInf,
         ),
-        ("coherence", S(43), F32, Lin, Unbounded, Unbounded, X::None),
+        (
+            "coherence",
+            S(43),
+            F32,
+            Lin,
+            Closed(0.0),
+            Closed(1.0),
+            X::None,
+        ),
     ]
 }
 

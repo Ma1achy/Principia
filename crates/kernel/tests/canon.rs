@@ -7,7 +7,16 @@
 //! - `scale_gauge`: dd_decoder §5 test 10, the identity on canonical output; on a scaled input, `I = 1` and `E`, `L_z`
 //!   transformed per the inverse-encode contract's table (REQ-DEC-023).
 //! - `scale_step`: dd_encode §5 test 4 on `fixtures/states/burrau_2x.json`: `I_in = 4·I_canon`, `λ = 1/2`,
-//!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
+//!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}`, `lookup_rescaled` raised
+//!   (REQ-ENC-006).
+//! - `scale_step_skip`: step 0 on canonical-frame decodes of fuzzed and saturated `z` is skipped, `λ = 1` and `r`, `p`
+//!   bit for bit as they entered it, no `lookup_rescaled`, its measured `|I_in − 1|` printed (REQ-ENC-035's evidence);
+//!   at `|I_in − 1| = τ_I` and one ulp inside it, on either side of 1, skipped, and one ulp outside it run, with
+//!   `lookup_rescaled` (REQ-ENC-006, R-547).
+//! - `scale_step_range`: states with the bodies apart from far below to far above `I_in`'s float range at each
+//!   precision leave step 0 and `C` at `I = 1` to rounding, every output finite, `lookup_rescaled` and no
+//!   `lookup_clamped`; the coincident bodies, at the origin and off it, keep the select: divisor 1, `λ = 1`, `p = 0`,
+//!   `lookup_clamped`, `φ = +0` (REQ-ENC-006, R-547).
 //! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
 //!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
 //! - `canon_mirror_decision_edges`: `C`'s decision ([`mirror_decision`], R-82's test without `fma`, `√`, division or
@@ -28,8 +37,6 @@
 //!   apart, is the one their exact `c` gives (REQ-DEC-017).
 //! - `canon_mirror_subnormal_difference`: the decision on an inner pair a subnormal apart is the exact one at f32 and
 //!   f64, where subnormals are kept (REQ-DEC-017).
-//! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
-//!   (RQ-296 holds the outputs).
 //! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`
 //!   for every sign of the zeros (R-437), and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it
 //!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
@@ -37,7 +44,7 @@
 //!   on random `ρ`, `±π/2` where `ρ_x` is either zero and `ρ_y ≠ 0`, `+0` at the pole, and `C`'s recorded `φ`, at
 //!   each precision (REQ-ENC-016; R-437, pitfalls §11).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
-//!   state's `C` in its word layout, notices included, and nothing past the last state.
+//!   state's `C` in its word layout, notices included (`lookup_rescaled` among them), and nothing past the last state.
 //! - `gvn_reproducer`: RQ-299's standalone reproducer (`fixtures/gvn_repro`), built under cargo with the workspace's
 //!   host flags, `-Zmir-enable-passes=-GVN` among them, prints 0.5 at opt-level 1, 2 and 3; its control, built on the
 //!   pin with no flags, prints −0.5 (R-547, REQ-TOOL-188). With `stage_canon_native` at `--release`, the native build
@@ -51,7 +58,7 @@
 use std::path::Path;
 
 use kernel::canon::{
-    self, canonicalise, inertia, lambda_t_y, mirror_decision, mirror_taken, Canonical,
+    self, canonicalise, inertia, lambda_t_y, mirror_decision, mirror_taken, Canonical, Scaled,
 };
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::{decode, Ic, Latent};
@@ -70,9 +77,30 @@ use validation::decode_f32_eps::SplitMix;
 use validation::{negative_control, prop};
 
 /// A float the tests run at: f32 or f64.
-trait Precision: LinkReal + PayloadReal + IeeeBits + Into<f64> {}
-impl Precision for f32 {}
-impl Precision for f64 {}
+trait Precision: LinkReal + PayloadReal + IeeeBits + Into<f64> {
+    /// The next value toward `+∞` where `up`, else toward `−∞`.
+    fn step(self, up: bool) -> Self;
+}
+
+impl Precision for f32 {
+    fn step(self, up: bool) -> f32 {
+        if up {
+            self.next_up()
+        } else {
+            self.next_down()
+        }
+    }
+}
+
+impl Precision for f64 {
+    fn step(self, up: bool) -> f64 {
+        if up {
+            self.next_up()
+        } else {
+            self.next_down()
+        }
+    }
+}
 
 fn eps<R: Precision>() -> f64 {
     R::epsilon().into()
@@ -637,6 +665,7 @@ fn step_at<R: Precision>() {
         let c = canonicalise(&xr);
         let at = format!("{} {what}", R::NAME);
         assert!(!c.mirrored && !c.clamped, "a notice besides λ at {at}");
+        assert!(c.rescaled, "no lookup_rescaled at I_in = 4, {at}");
         let worst = check_row(&xr, &c, &at);
         eprintln!("scale_step {at}: λ = {:?}, I_in = {:?}; worst row error {worst} eps (tolerance {STEP_EPS})", c.lambda, c.i_in);
     }
@@ -663,14 +692,462 @@ negative_control!(
     }
 );
 
+// ── scale_step_skip (REQ-ENC-006, REQ-ENC-035) ──────────────────────────────────────────────────────────────────
+
+/// Steps 1a and 0 as a function of the state: [`scale_step`], or a control's.
+type Step<R> = fn(&Ic<R>) -> Scaled<R>;
+
+/// The bits of `v`'s components, for a bitwise comparison.
+fn bits_of<R: Precision>(v: &[[R; 2]; 3]) -> Vec<u64> {
+    v.as_flattened()
+        .iter()
+        .map(|q| Into::<f64>::into(*q).to_bits())
+        .collect()
+}
+
+/// Step 0 skipped on `x`: no `lookup_rescaled`, `λ = 1` exactly, `r` step 1a's output and `p` the input's, bit for bit;
+/// and `C` on `x` raises no `lookup_rescaled` and records `λ = 1`. Returns `|I_in − 1|`, in eps.
+fn check_skipped<R: Precision>(step: Step<R>, x: &Ic<R>, at: &str) -> f64 {
+    let s = step(x);
+    assert!(!s.rescaled, "step 0 ran on a canonical input, {at}");
+    assert!(s.lambda == R::one(), "λ = {:?}, not 1, at {at}", s.lambda);
+    assert_eq!(bits_of(&s.r), bits_of(&s.centred), "step 0 moved r at {at}");
+    assert_eq!(bits_of(&s.p), bits_of(&x.p), "step 0 moved p at {at}");
+    let c = canonicalise(x);
+    assert!(
+        !c.rescaled && c.lambda == R::one(),
+        "C raised lookup_rescaled (λ = {:?}) at {at}",
+        c.lambda
+    );
+    (Into::<f64>::into(s.i_in) - 1.0).abs() / eps::<R>()
+}
+
+/// A generic f64 state: masses on the simplex, each at least about 0.14, positions in `[−1, 1]`, momenta in `[−½, ½]`.
+fn generic_state(rng: &mut SplitMix) -> Ic<f64> {
+    let mut u = |lo: f32, hi: f32| rng.uniform(lo, hi) as f64;
+    let w = [u(0.2, 1.2), u(0.2, 1.2), u(0.2, 1.2)];
+    let total: f64 = w.iter().sum();
+    Ic {
+        m: w.map(|x| x / total),
+        r: [0; 3].map(|_| [u(-1.0, 1.0), u(-1.0, 1.0)]),
+        p: [0; 3].map(|_| [u(-0.5, 0.5), u(-0.5, 0.5)]),
+    }
+}
+
+/// `n` states at `R` whose step-0 `I_in`, as `C` forms it, is `target` exactly: generic states with their positions
+/// scaled by `k`, `k` set from the f64 `I` and walked a step at a time at `R` until `I_in` lands on `target`.
+fn at_inertia<R: Precision>(target: f64, n: usize, seed: u64) -> Vec<Ic<R>> {
+    let mut rng = SplitMix::new(seed);
+    let mut out = Vec::new();
+    for _ in 0..4000 {
+        if out.len() == n {
+            break;
+        }
+        let base = from64::<R>(&generic_state(&mut rng));
+        let wide = to64(&base);
+        let com = [0, 1].map(|j| (0..3).map(|i| wide.m[i] * wide.r[i][j]).sum::<f64>());
+        let i0: f64 = (0..3)
+            .map(|i| {
+                wide.m[i] * ((wide.r[i][0] - com[0]).powi(2) + (wide.r[i][1] - com[1]).powi(2))
+            })
+            .sum();
+        let mut k = cast::<R>((target / i0).sqrt());
+        for _ in 0..64 {
+            let x = Ic {
+                r: base.r.map(|v| v.map(|q| q * k)),
+                ..base
+            };
+            let i: f64 = canon::scale_step(&x).i_in.into();
+            if i == target {
+                out.push(x);
+                break;
+            }
+            k = k.step(i < target);
+        }
+    }
+    assert_eq!(
+        out.len(),
+        n,
+        "{}: found {} states at I_in = {target:e}, not {n}",
+        R::NAME,
+        out.len()
+    );
+    out
+}
+
+/// The skip's edge: `|I_in − 1|` at `τ_I`, one ulp of `I_in` inside it and one outside, above 1 and below it; four
+/// states each. Skipped at and inside `τ_I` ([`check_skipped`]); run outside it, `lookup_rescaled` raised by step 0
+/// and `C` and `λ ≠ 1`. The number of states.
+fn check_edges<R: Precision>(step: Step<R>) -> usize {
+    let (e, tau) = (eps::<R>(), Into::<f64>::into(R::TAU_I));
+    let mut n = 0;
+    for (k, (target, run)) in [
+        (1.0 + tau - e, false),
+        (1.0 + tau, false),
+        (1.0 + tau + e, true),
+        (1.0 - tau + e / 2.0, false),
+        (1.0 - tau, false),
+        (1.0 - tau - e / 2.0, true),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for (j, x) in at_inertia::<R>(target, 4, 70 + k as u64).iter().enumerate() {
+            let at = format!(
+                "{} I_in = 1 {:+} eps, state {j}",
+                R::NAME,
+                (target - 1.0) / e
+            );
+            if run {
+                let s = step(x);
+                let c = canonicalise(x);
+                assert!(
+                    s.rescaled && c.rescaled && s.lambda != R::one(),
+                    "step 0 did not run at {at}: rescaled {} (C {}), λ = {:?}",
+                    s.rescaled,
+                    c.rescaled,
+                    s.lambda
+                );
+            } else {
+                check_skipped(step, x, &at);
+            }
+            n += 1;
+        }
+    }
+    n
+}
+
+/// Step 0 on canonical-frame decodes at `R`: [`noop_z`]'s 4096 fuzzed and 48 saturated `z`, and 60 000 more fuzzed on
+/// `[−4, 4]⁸`, each skipped; then the skip's edge. The worst `|I_in − 1|` of the decodes, in eps.
+fn skip_at<R: Precision>(step: Step<R>) -> f64 {
+    let mut rng = SplitMix::new(19);
+    let fuzzed = (0..60_000).map(|_| core::array::from_fn(|_| rng.uniform(-4.0, 4.0)));
+    let zs: Vec<[f32; 8]> = noop_z().into_iter().chain(fuzzed).collect();
+    let mut worst = 0.0f64;
+    for (j, z) in zs.iter().enumerate() {
+        let x = decode::<Defaults, R>(&Latent::new(z.map(|v| cast::<R>(v as f64)))).ic;
+        worst = worst.max(check_skipped(
+            step,
+            &x,
+            &format!("{} z = {z:?} (sample {j})", R::NAME),
+        ));
+    }
+    let edges = check_edges(step);
+    eprintln!(
+        "scale_step_skip {}: {} canonical-frame decodes, worst |I_in − 1| = {worst} eps (τ_I = {} eps), each skipped \
+         bit for bit; {edges} states at the skip's edge",
+        R::NAME,
+        zs.len(),
+        Into::<f64>::into(R::TAU_I) / eps::<R>()
+    );
+    worst
+}
+
+#[test]
+fn scale_step_skip() {
+    skip_at::<f64>(canon::scale_step);
+    skip_at::<f32>(canon::scale_step);
+}
+
+negative_control!(
+    scale_step_skip,
+    "a step 0 that always runs, rescaling a canonical input by λ = 1 to rounding, must fail",
+    expected = "step 0 ran on a canonical input",
+    {
+        skip_at::<f64>(|x| {
+            let s = canon::scale_step(x);
+            let (r, p, lambda) = canon::similarity(s.centred, x.p, s.i_in);
+            Scaled {
+                r,
+                p,
+                lambda,
+                rescaled: true,
+                ..s
+            }
+        });
+    }
+);
+
+// ── scale_step_range (REQ-ENC-006) ──────────────────────────────────────────────────────────────────────────────
+
+/// Bodies apart at the scale `k`, masses `(¼, ¼, ½)`, with momenta, one of them zero in `x`.
+fn spread<R: Precision>(k: f64) -> Ic<R> {
+    from64(&Ic {
+        m: [0.25, 0.25, 0.5],
+        r: [[-k, 0.0], [k, 0.0], [0.0, k]],
+        p: [[0.1, 0.0], [-0.3, 0.2], [0.1, -0.1]],
+    })
+}
+
+/// The scales of [`spread`]'s states: at f64 below about `1e-162` and above about `1e154` per coordinate, where a
+/// float `I_in` underflows or overflows, and at f32 below about `4e-23` (`1e-19` where a GPU flushes subnormals) and
+/// above about `1e19`, to the ends of the normal range.
+const RANGE_F64: [f64; 8] = [1e-300, 1e-200, 1e-170, 1e-163, 1e155, 1e160, 1e200, 1e300];
+const RANGE_F32: [f64; 8] = [1e-37, 1e-30, 1e-25, 4e-23, 1e19, 1e20, 1e30, 1e37];
+
+/// The tolerance on `I − 1` after step 0 and `C` on the far states, in eps.
+const RANGE_EPS: f64 = 8.0;
+
+/// `Σ mᵢ‖rᵢ‖²` at f64.
+fn inertia64(ic: &Ic<f64>) -> f64 {
+    (0..3)
+        .map(|i| ic.m[i] * (ic.r[i][0].powi(2) + ic.r[i][1].powi(2)))
+        .sum()
+}
+
+/// Whether every value is finite.
+fn finite(values: impl IntoIterator<Item = f64>) -> bool {
+    values.into_iter().all(f64::is_finite)
+}
+
+/// The recorded `I_in` of [`spread`]'s state at the scale `k` (as `R` holds it) against its exact `0.75·k²`: `+∞` past
+/// `R`'s range, `+0` below half its least subnormal, and that value rounded to `R` between.
+fn check_record<R: Precision>(i_in: R, k: R, at: &str) {
+    let k: f64 = k.into();
+    let log2 = 0.75f64.log2() + 2.0 * k.abs().log2();
+    let max: f64 = R::max_value().into();
+    let least: f64 = R::min_positive_value().into();
+    let i: f64 = i_in.into();
+    if log2 > max.log2() {
+        assert!(i == f64::INFINITY, "I_in = {i:e} recorded, not +∞, at {at}");
+    } else if log2 < (least * eps::<R>()).log2() - 1.0 {
+        assert!(i.to_bits() == 0, "I_in = {i:e} recorded, not +0, at {at}");
+    } else {
+        let want: f64 = cast::<R>(0.75 * k * k).into();
+        assert!(
+            i == want || rel(i, want, eps::<R>()) <= RANGE_EPS,
+            "I_in = {i:e} recorded, not {want:e}, at {at}"
+        );
+    }
+}
+
+/// On [`spread`]'s state at each scale, step 1a's `R_com` is `(0, k/2)` exactly (every product and sum in it exact),
+/// step 0 runs and leaves `I = 1` to [`RANGE_EPS`], `r`, `p` and `λ` finite, and records `I_in` as [`check_record`]
+/// has it; and `C` leaves `I = 1`, every output finite, `lookup_rescaled` raised and no `lookup_clamped`. The worst
+/// `I − 1`, in eps.
+fn check_range<R: Precision>(step: Step<R>, scales: &[f64]) -> f64 {
+    let e = eps::<R>();
+    let mut worst = 0.0f64;
+    for &k in scales {
+        let x = spread::<R>(k);
+        let at = format!("{} scale {k:e}", R::NAME);
+        assert!(x.r[0] != x.r[1], "the bodies coincide at {at}");
+        let half = x.r[1][0] * cast::<R>(0.5);
+        let com = canon::centre_of_mass(x.m, x.r);
+        assert!(
+            com == [R::zero(), half],
+            "R_com = {com:?}, not (0, {half:?}), at {at}"
+        );
+        let s = step(&x);
+        check_record(s.i_in, x.r[1][0], &at);
+        let out = to64(&Ic {
+            m: x.m,
+            r: s.r,
+            p: s.p,
+        });
+        let lambda: f64 = s.lambda.into();
+        assert!(
+            finite(
+                out.r
+                    .iter()
+                    .chain(&out.p)
+                    .flatten()
+                    .copied()
+                    .chain([lambda])
+            ),
+            "a non-finite value from step 0 at {at}: {s:?}"
+        );
+        let di = (inertia64(&out) - 1.0).abs() / e;
+        assert!(
+            di <= RANGE_EPS,
+            "step 0 left I = {}, not 1, at {at}",
+            inertia64(&out)
+        );
+        assert!(s.rescaled, "step 0 did not run at {at}");
+        let c = canonicalise(&x);
+        let ic = to64(&c.ic);
+        let record = [c.lambda, c.phi, c.lambda_t_y].map(Into::<f64>::into);
+        assert!(
+            finite(ic.r.iter().chain(&ic.p).flatten().copied().chain(record)),
+            "a non-finite output of C at {at}: {c:?}"
+        );
+        let dc = (inertia64(&ic) - 1.0).abs() / e;
+        assert!(
+            dc <= RANGE_EPS,
+            "C left I = {}, not 1, at {at}",
+            inertia64(&ic)
+        );
+        assert!(
+            c.rescaled && !c.clamped,
+            "C's notices at {at}: lookup_rescaled {}, lookup_clamped {}",
+            c.rescaled,
+            c.clamped
+        );
+        worst = worst.max(di).max(dc);
+    }
+    worst
+}
+
+/// Coincident bodies' masses and their common position.
+type Coincident = ([f64; 3], [f64; 2]);
+
+/// Coincident bodies at about `2^23` (f32) and `2^52` (f64), where an ulp is 1: their CoM, rounded, is one ulp off them,
+/// so step 1a leaves each body at `±1` on an axis and `I_in = Σmᵢ`, within `τ_I` of 1 (found by search over masses and
+/// positions; [`check_coincident`] asserts it).
+const EDGE_F32: Coincident = ([0.1843747, 0.7421608, 0.07346449], [10329377.0, 13607172.0]);
+const EDGE_F64: Coincident = (
+    [0.1845703125, 0.7421875, 0.0732421875],
+    [5545542082084134.0, 7305294624835838.0],
+);
+
+/// The coincident bodies, at the origin and off it, with momenta: step 0 keeps the select, divisor 1 (`r` is step 1a's
+/// output, bit for bit), `λ = 1`, `p = +0`, no `lookup_rescaled`; and `C` raises `lookup_clamped` with `φ = +0`, records
+/// `λ = 1`, and forms no non-finite value; that too at `edge`, far from the origin, where the rounded CoM is an ulp off
+/// the bodies, an ulp of 1, so `I_in` is within `τ_I` of 1 and the coincidence select, not the skip, decides. Two bodies
+/// coincident and the third apart, step 0 runs.
+fn check_coincident<R: Precision>(step: Step<R>, edge: Coincident) {
+    let near = [[0.0, 0.0], [0.3, -1.7], [-2.5e-3, 7.0]].map(|point| ([0.2, 0.3, 0.5], point));
+    for (k, (m, point)) in near.into_iter().chain([edge]).enumerate() {
+        let x = from64::<R>(&Ic {
+            m,
+            r: [point; 3],
+            p: [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]],
+        });
+        let at = format!("{} coincident at {point:?}", R::NAME);
+        let s = step(&x);
+        if k == near.len() {
+            let i: f64 = inertia(x.m, s.centred).into();
+            assert!(
+                s.centred.iter().flatten().any(|c| *c != R::zero())
+                    && (i - 1.0).abs() <= R::TAU_I.into(),
+                "the coincident state at {at} is not one ulp from its rounded CoM with I_in within τ_I of 1: \
+                 I_in = {i}, step 1a's output {:?}",
+                s.centred
+            );
+        }
+        assert!(
+            !s.rescaled && s.lambda == R::one(),
+            "step 0 at {at}: rescaled {}, λ = {:?}",
+            s.rescaled,
+            s.lambda
+        );
+        assert_eq!(
+            bits_of(&s.r),
+            bits_of(&s.centred),
+            "step 0's divisor is not 1 at {at}"
+        );
+        assert!(
+            bits_of(&s.p).iter().all(|b| *b == 0),
+            "p = {:?}, not +0, at {at}",
+            s.p
+        );
+        let c = canonicalise(&x);
+        assert!(
+            c.clamped && !c.rescaled && c.lambda == R::one(),
+            "C at {at}: lookup_clamped {}, lookup_rescaled {}, λ = {:?}",
+            c.clamped,
+            c.rescaled,
+            c.lambda
+        );
+        assert_eq!(
+            Into::<f64>::into(c.phi).to_bits(),
+            0,
+            "φ = {:?}, not +0, at {at}",
+            c.phi
+        );
+        let ic = to64(&c.ic);
+        assert!(
+            finite(ic.r.iter().chain(&ic.p).flatten().copied())
+                && ic.p.iter().flatten().all(|q| *q == 0.0),
+            "C's state at {at}: {:?}",
+            c.ic
+        );
+    }
+    // A coincident pair with the third body apart is no coincidence: step 0 runs, `p` scaled, not selected to 0;
+    // `lookup_clamped` is `C`'s where the pair is the inner one, `ρ = 0`.
+    for (pair, r) in [
+        ("ρ = 0", [[0.5, 0.5], [0.5, 0.5], [-1.0, 2.0]]),
+        ("r₂ = r₀", [[0.5, 0.5], [-1.0, 2.0], [0.5, 0.5]]),
+    ] {
+        let x = from64::<R>(&Ic {
+            m: [0.2, 0.3, 0.5],
+            r,
+            p: [[0.1, -0.2], [0.3, 0.05], [-0.4, 0.15]],
+        });
+        let at = format!("{} pair at {pair}", R::NAME);
+        let s = step(&x);
+        assert!(
+            s.rescaled && s.lambda != R::one() && s.p.iter().flatten().all(|q| *q != R::zero()),
+            "step 0 at {at}: rescaled {}, λ = {:?}, p = {:?}",
+            s.rescaled,
+            s.lambda,
+            s.p
+        );
+        let c = canonicalise(&x);
+        assert!(
+            c.rescaled && c.clamped == (pair == "ρ = 0"),
+            "C at {at}: lookup_rescaled {}, lookup_clamped {}",
+            c.rescaled,
+            c.clamped
+        );
+    }
+}
+
+#[test]
+fn scale_step_range() {
+    let w64 = check_range::<f64>(canon::scale_step, &RANGE_F64);
+    let w32 = check_range::<f32>(canon::scale_step, &RANGE_F32);
+    check_coincident::<f64>(canon::scale_step, EDGE_F64);
+    check_coincident::<f32>(canon::scale_step, EDGE_F32);
+    eprintln!(
+        "scale_step_range: scales {RANGE_F64:?} (f64) and {RANGE_F32:?} (f32) leave I = 1 to {w64:.2} and {w32:.2} eps \
+         (tolerance {RANGE_EPS}), every output finite; the coincident bodies keep the select"
+    );
+}
+
+negative_control!(
+    scale_step_range,
+    "a one-step rescale, I_in formed as a float, underflows at f64 1e-300 and must fail",
+    expected = "not 1, at f64 scale 1e-300",
+    {
+        check_range::<f64>(
+            |x| {
+                let s = canon::scale_step(x);
+                let c = s.centred;
+                let i: f64 = (0..3)
+                    .map(|n| x.m[n] * (c[n][0] * c[n][0] + c[n][1] * c[n][1]))
+                    .sum();
+                let (r, p, lambda) = canon::similarity(c, x.p, i);
+                Scaled {
+                    r,
+                    p,
+                    lambda,
+                    i_in: i,
+                    rescaled: true,
+                    ..s
+                }
+            },
+            &RANGE_F64,
+        );
+    }
+);
+
 // ── stage_canon_native ──────────────────────────────────────────────────────────────────────────────────────────
 
-/// States reaching each pair of notices: none, `lookup_mirrored`, `lookup_clamped`, and both.
-fn notice_states() -> [Ic<f32>; 4] {
+/// States reaching the notices: at `I_in = 0.75`, so `lookup_rescaled`, alone, with `lookup_mirrored`, with
+/// `lookup_clamped`, and with both; and at `I = 1` to under an eps, so no `lookup_rescaled`, alone and with
+/// `lookup_mirrored`.
+fn notice_states() -> [Ic<f32>; 6] {
     let plain = Ic {
         m: [0.25f32, 0.25, 0.5],
         r: [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]],
         p: [[0.1, 0.2], [-0.3, 0.1], [0.1, -0.15]],
+    };
+    // `I = ½ + a²`, `a` f32's nearest to `1/√2`.
+    let a = std::f32::consts::FRAC_1_SQRT_2;
+    let unit = Ic {
+        r: [[-1.0, -a], [1.0, -a], [0.0, a]],
+        ..plain
     };
     let flip = |mut x: Ic<f32>| {
         for v in x.r.iter_mut() {
@@ -682,7 +1159,14 @@ fn notice_states() -> [Ic<f32>; 4] {
         x.r[1] = x.r[0];
         x
     };
-    [plain, flip(plain), pair(plain), pair(flip(plain))]
+    [
+        plain,
+        flip(plain),
+        pair(plain),
+        pair(flip(plain)),
+        unit,
+        flip(unit),
+    ]
 }
 
 /// The entry point over `states`, invoked once more than there are states, into a buffer of `u32::MAX`; each state's
@@ -717,22 +1201,29 @@ fn check_stage(states: &[Ic<f32>], entry: fn(UVec3, &[u32], &mut [u32])) {
 fn stage_canon_native() {
     assert_eq!(canon_words(), ic_words() + 5, "the words of a Canonical");
     let states = notice_states();
-    let flags: Vec<(bool, bool)> = states
+    let flags: Vec<(bool, bool, bool)> = states
         .iter()
         .map(|x| {
             let c = canonicalise(x);
-            (c.clamped, c.mirrored)
+            (c.clamped, c.mirrored, c.rescaled)
         })
         .collect();
     assert_eq!(
         flags,
-        [(false, false), (false, true), (true, false), (true, true)],
-        "the states do not reach each pair of notices"
+        [
+            (false, false, true),
+            (false, true, true),
+            (true, false, true),
+            (true, true, true),
+            (false, false, false),
+            (false, true, false),
+        ],
+        "the states do not reach each set of notices"
     );
     assert_eq!(
         states.map(|x| notices(&canonicalise(&x))),
-        [0, 2, 1, 3],
-        "the notices word: bit 0 clamped, bit 1 mirrored"
+        [4, 6, 5, 7, 0, 2],
+        "the notices word: bit 0 clamped, bit 1 mirrored, bit 2 rescaled"
     );
     check_stage(&states, canonicalise_entry);
     // A Canonical written at sample 1 of three reads back there, its neighbours untouched.
@@ -1403,67 +1894,6 @@ negative_control!(
     "the decision on the input with its subnormals flushed reads the pole and must fail",
     expected = "f32: the decision on subnormal pair 1",
     check_subnormal::<f32>(flushed_input, f32::from_bits(0x201))
-);
-
-// ── canon_inertia_extremes (RQ-296) ─────────────────────────────────────────────────────────────────────────────
-
-/// Bodies apart at the scale `k`, masses `(¼, ¼, ½)`, with momenta, one of them zero in `x`.
-fn spread<R: Precision>(k: f64) -> Ic<R> {
-    from64(&Ic {
-        m: [0.25, 0.25, 0.5],
-        r: [[-k, 0.0], [k, 0.0], [0.0, k]],
-        p: [[0.1, 0.0], [-0.3, 0.2], [0.1, -0.1]],
-    })
-}
-
-/// No `1/0` was formed: `λ` and every component of the state are finite. Says nothing about which values they are
-/// (RQ-296 holds them).
-fn check_no_division_by_zero<R: Precision>(c: &Canonical<R>, at: &str) {
-    let ic = to64(&c.ic);
-    let all = ic.r.iter().chain(&ic.p).flatten().copied();
-    let lambda: f64 = c.lambda.into();
-    assert!(
-        all.chain([lambda]).all(f64::is_finite),
-        "a non-finite value at {at}: {c:?}"
-    );
-}
-
-/// `I_in` rounds to 0 with the bodies apart, and to `+∞`: each case is reached (RQ-296's underflow and overflow), and at
-/// underflow no `1/0` is formed. The outputs themselves are RQ-296's and are not asserted.
-fn extremes_at<R: Precision>(under: f64, over: f64) {
-    let x = spread::<R>(under);
-    let c = canonicalise(&x);
-    let at = format!("{} at scale {under:e}", R::NAME);
-    assert!(x.r[0] != x.r[1], "the bodies coincide at {at}");
-    assert!(c.i_in == R::zero(), "I_in = {:?}, not 0, at {at}", c.i_in);
-    check_no_division_by_zero(&c, &at);
-    let c = canonicalise(&spread::<R>(over));
-    assert!(
-        c.i_in.non_finite_bits(),
-        "I_in = {:?} is finite at {} scale {over:e}",
-        c.i_in,
-        R::NAME
-    );
-}
-
-#[test]
-fn canon_inertia_extremes() {
-    extremes_at::<f64>(1e-170, 1e160);
-    extremes_at::<f32>(1e-25, 1e20);
-}
-
-negative_control!(
-    canon_inertia_extremes,
-    "a step 0 that divides by √I_in unguarded forms r/0 at underflow and must fail",
-    expected = "a non-finite value",
-    {
-        let x = spread::<f64>(1e-170);
-        let mut c = canonicalise(&x);
-        for v in c.ic.r.iter_mut() {
-            *v = v.map(|q| q / c.i_in.sqrt());
-        }
-        check_no_division_by_zero(&c, "an unguarded divisor");
-    }
 );
 
 // ── canon_rotation (REQ-DEC-002) ────────────────────────────────────────────────────────────────────────────────
