@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use kernel::generated::links::{LinkParams, Selection};
-use ledger::constants::{MU_MAX, Q_MAX, WINDOW_SQUARE_CENTRE, WINDOW_SQUARE_HALF};
+use ledger::constants::{MU_MAX, Q_MAX, SLICE_AXIS_Z_Q3, WINDOW_SQUARE_CENTRE, WINDOW_SQUARE_HALF};
 use ledger::links::{self as registry, Slot};
 use serde::{Deserialize, Serialize};
 
@@ -130,8 +130,9 @@ pub struct SliceFrame {
 }
 
 /// `z_q3`'s index, the GUI's slice axis before R-459 and the slice frame's default for a plane that does not show it
-/// (gui_state_contract §2; chart_decoder_contract Part 2: `z[2:6]` is the momentum block, `z_q3` its last).
-pub const Z_Q3: u32 = 5;
+/// (gui_state_contract §2; chart_decoder_contract Part 2: `z[2:6]` is the momentum block, `z_q3` its last), read from
+/// the register.
+pub const Z_Q3: u32 = SLICE_AXIS_Z_Q3.number() as u32;
 
 impl SliceFrame {
     /// The frame with the normal and both targets along `axis`: gui_state_contract §2's defaults, all three the slice

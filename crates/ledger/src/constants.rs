@@ -1233,6 +1233,19 @@ pub const WINDOW_SQUARE_CENTRE: ConstantBuilder = chart("window_square_centre", 
 /// Part 3; engine's `Window::SQUARE`, TASK-M2-21).
 pub const WINDOW_SQUARE_HALF: ConstantBuilder = chart("window_square_half", 0.5, ADDRESSING);
 
+/// `z_q3`'s index in the latent `z ∈ ℝ⁸`, 5: chart_decoder_contract Part 2's block order puts the momentum block at
+/// `z[2:6]`, its controls `z_q0 … z_q3` in turn, so `z_q3` is its last (the order `z_α, z_β, z_q0, z_q1, z_q2, z_q3,
+/// z_μ1, z_μ2`, R-457). The slice frame's default, the GUI's slice axis before R-459 (gui_state_contract §2; engine's
+/// `Z_Q3`, TASK-M6-38). Admissible as expressed in canonical units: a dimension index, no unit.
+pub const SLICE_AXIS_Z_Q3: ConstantBuilder = chart(
+    "slice_axis_z_q3",
+    5.0,
+    Citation::Corpus {
+        file: "docs/contracts/principia_chart_decoder_contract.md",
+        section: "Part 2 — The decoder",
+    },
+);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1243,7 +1256,7 @@ pub const WINDOW_SQUARE_HALF: ConstantBuilder = chart("window_square_half", 0.5,
 /// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
-/// REQ-INT-094), and the view window's square (TASK-M2-21).
+/// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1313,4 +1326,5 @@ pub const REGISTER: &[ConstantBuilder] = &[
     NSUB_THRESHOLD_LEAST,
     WINDOW_SQUARE_CENTRE,
     WINDOW_SQUARE_HALF,
+    SLICE_AXIS_Z_Q3,
 ];
