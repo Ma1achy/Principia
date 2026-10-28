@@ -449,3 +449,59 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-600: The latent Jacobian's central-difference step: "`J_D`'s step rule" is cited, but no step rule for `J_D` is written *(missing value; found by TASK-M6-35; R-550 J1; REQ-DEC-049, REQ-DEC-034, REQ-GUI-400; context: TASK-M6-35, TASK-M6-07, TASK-M8-54)*
+
+*Found by TASK-M6-35's implementer before building. The orchestrator may decide it (R-369: a numerical method's
+parameter, not physics) or treat it as a calibration (R-71).*
+
+- **File, section:**
+  - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision", "The latent Jacobian (R-550,
+    RQ-341 (a))": "a CPU, f64, central-difference Jacobian `∂x/∂z` of the decoder with **8 columns**, one per latent
+    direction (two decode evaluations per direction, the step rule `J_D`'s)".
+  - The same section, `J_D` itself: "compute `J_D = ∂D/∂(u,v)` at the centre by **central differences in f64** (two
+    decode evals per axis)". No step is given.
+  - `plan/requirements.yaml` REQ-DEC-049: "with the step rule of REQ-DEC-034's J_D"; REQ-DEC-034: "J_D is central
+    differences of the full chart→IC composite in f64", with no step either.
+  - `decisions.md` § "R-550 — …", J1: "with the central-difference rule REQ-DEC-034's `J_D` uses (two decode
+    evaluations per direction, deep_zoom §2)"; § "R-596 — …" and `docs/design/principia_lines.md` (item 3's ruling):
+    "REQ-DEC-034's step rule", for the trace fade's Jacobian.
+  - The corpus's only written step for a central-difference Jacobian is the encode's:
+    `docs/contracts/principia_inverse_encode_contract.md` Part 4, "How it is evaluated": "`hₖ = ε_R^{1/3}·max(1,
+    |xₖ|)`" (built as `kernel::encode::ingest`, whose `weighted_jacobian`, `W·∂D/∂z`, uses it on the decode too).
+- **The question:** which step `hₖ` the latent Jacobian (and `J_D`, which TASK-M6-07 has not built) takes along each
+  direction. REQ-DEC-049's verify ("agree with it to the method's truncation bound"; "a one-sided difference fails the
+  fixture's bound") needs a stated step to state that bound.
+- **Options seen:** (a) `hₖ = ε^{1/3}·max(1, |zₖ|)` in f64, the encode contract's rule, written into deep_zoom §2 as
+  `J_D`'s step rule and so the latent Jacobian's and R-596's (the step actually taken, `(z + h) − (z − h)`, as the
+  divisor, as `kernel::encode::ingest` does); (b) (a) for the latent Jacobian only, `J_D`'s step left to TASK-M6-07
+  with the quad's half-width (the precision-ladder proposal's concern, RQ-577); (c) another rule.
+- **Applied meanwhile:** none. TASK-M6-35 waits.
+
+## RQ-601: How `J⁺` is formed in the physical steer's projector test `P = J J⁺`, when the central-difference `J` is never exactly rank-deficient *(missing value; found by TASK-M6-35; R-550 RQ-344 (a2), RQ-345 (b); REQ-GUI-200, REQ-GUI-346; context: TASK-M6-35)*
+
+*Found by TASK-M6-35's implementer before building, with a measurement. For the human or the physics reviewer: it
+decides which clicks the steer refuses, on an `E*` chart and at a saturated link or a pole.*
+
+- **File, section:**
+  - `decisions.md` § "R-550 — …", RQ-344: "A click is refused, with the reason logged, where the smaller singular value
+    of `[P e_i, P e_j]` (`P = J J⁺`) is below a stated tolerance"; RQ-345: "On an `E*`-normalised chart the steer
+    refuses a cell whose plane needs the direction normal to the energy shell … RQ-344's (a2) test detects it (`P e`
+    loses that direction)".
+  - `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)", Jacobi and Shape: "with
+    `E*` set every physical Jacobian has rank 7, the direction normal to the energy shell out of reach".
+  - `plan/requirements.yaml` REQ-GUI-346: "the bound below which the smaller singular value of [P e_i, P e_j] (P =
+    J J⁺) refuses a click", the one calibrated value; nothing states how `J⁺` drops a direction.
+- **The question:** `J` is 8 × 8 and taken by central differences, so in floating point its smallest singular value is
+  the difference's error, not 0, where its exact rank is 7. Measured on the default decoder (500 fixed-seed `z` in
+  `[−3, 3]⁸`, the Jacobi set over R-550's ranges, step as RQ-600's (a)): `σ₈/σ₁` from 3.9e-6 to 0.46 (median 1.6e-3)
+  with `E*` unset, and from 1.1e-17 to 1.9e-12 (median 2.8e-14) with `E* = 0`. With `J⁺` the exact pseudo-inverse of
+  the computed `J`, `P = J J⁺ = I` to rounding, `σ_min[P e_i, P e_j] = 1` for every cell, and the test never refuses,
+  on an `E*` chart included. A rule for dropping a direction from `J⁺` is needed and is not written; the same holds
+  for a saturated link (a column exactly or nearly 0) and the Shape view's poles.
+- **Options seen:** (a) `J⁺` from `J`'s SVD with each singular value below `c·σ₁` dropped, `c` a second calibration
+  value (R-71) proposed beside REQ-GUI-346 from the measured gap; (b) one value: the same relative cut as
+  REQ-GUI-346's tolerance, so a single calibration serves both; (c) on an `E*` chart, `P = I − n̂ n̂ᵀ` exactly, `n̂` the
+  energy's gradient in the view's scaled coordinates (the shell's normal, which is `J`'s left null direction), with
+  (a)'s cut only for saturation and poles.
+- **Applied meanwhile:** none. TASK-M6-35 waits.
