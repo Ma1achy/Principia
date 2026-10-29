@@ -1,0 +1,6 @@
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -c Star.cpp 
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -c Cluster.cpp 
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -c Bulirsch_Stoer.cpp 
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -c Brutus.cpp
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -c main.cpp
+g++ -O1 -DMPFR_USE_NO_MACRO -Wl,--no-as-needed -w -std=gnu++11  -lmpfr -lgmp -L/home/breen/mpfr-4.0.2/src/.libs/ -o main.exe main.o Brutus.o Bulirsch_Stoer.o Cluster.o Star.o  

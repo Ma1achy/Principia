@@ -1,0 +1,2 @@
+kind,i,j,x,y,eps,Lw,status,t_reached,T,t_escape,steps_fwd,wall_fwd_s,cpu_fwd_s,reversal,log10_delta,steps_rev,wall_rev_s,cpu_rev_s,energy_relerr,single,mu_g,T_hist,R_hist_min
+gg1,1,54,0.015625,0.84375,1e-8,1024,escaped,2.38279283,0.632935949,2.38279,1290,27.193,26.666,fail,-2.4038,1285,26.935,26.552,1.589e-05,0,3,0.632343334,0.00329906

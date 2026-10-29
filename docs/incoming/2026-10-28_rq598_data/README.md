@@ -124,3 +124,48 @@ Sources for §2: [arXiv:1910.07291](https://arxiv.org/abs/1910.07291),
 [Turku repository, Part I](https://www.utupub.fi/items/e9258b49-d38c-4b0b-99ec-dbb4316997da/full),
 [Turku repository, Part II](https://www.utupub.fi/items/c3516cb3-aa7c-4600-9bf6-712ee29c16d1/full),
 [TIB LDM (404)](https://service.tib.eu/ldmservice/dataset/three-body-problem-dataset).
+
+## 5. Outcome of § 4's tasks, 29 Oct 2026 (appended; nothing above is changed)
+
+This section supersedes the record proposed on PR #334, which is not merged. Its work is carried here with every value from the authors'
+unlicensed NVM files removed, and with the physics review of #334 applied.
+
+1. **Rulings recorded; the search.**
+   - No ruling is added to `decisions.md`. The instructions that drove the pilot are recorded below as quoted, not as rulings. The open
+     questions are RQ-612 to RQ-616 in `REVIEW_QUEUE.md`. RQ-598 itself is on PR #309 and not on `main`; the entries refer to it there.
+   - The repo-scoped search, as the pilot recorded it: two public repositories were named in the instructions quoted below,
+     `github.com/pgbreen/NvMgeneration` (Brutus as used in the BR-1 paper, GPL-3.0) and `github.com/pgbreen/NVM` (BR-1 trajectories and a
+     trained network, no licence). No Boekholt et al. GG-1 data was found. The search was not exhaustive: GitHub's search API was not
+     reachable from the machine that ran it, and a web search for the lifetime maps found nothing.
+   - **Correction to § 2 above** ("BR-1 … No data statement and no code or data release"): some of BR-1's trajectories are public, in
+     `pgbreen/NVM` @ `a35c378`, with no licence. The pilot counted 180 files (136 with the full 2561 rows, 44 truncated), under 2% of the
+     paper's 10,000; the count is not verified from committed material. No value from these files is committed; any copy stays in
+     `docs/incoming/_local/`. RQ-615 asks how they may be used.
+2. **GG-1 route 2** is `transcriptions/gg1_fig1/`: Fig. 1 read from its vector paths, 1212 points per panel, reconciled. It is the one
+   record of Fig. 1 in the repo; the pilot's comparison cites it.
+3. **GG-1 route 3** (cost pilot, ε = 10⁻⁶ at L_w = 1024, plus one point at 10⁻⁸ and 10⁻¹⁰): `brutus_run_here/REPORT.md`. Its times are
+   converted to the paper's Heggie–Mathieu units there. Open: the lifetime definition and the (3, 43) cell (RQ-612); `p_max`, the word length
+   and the ε = 10⁻⁷⁰ cost (RQ-613).
+4. **BR-1**, 12 runs at ε = 10⁻⁶ from the authors' own initial conditions, not from a seeded draw as § 4 task 4 says:
+   `brutus_run_here/REPORT.md` § 3. Whether that use of the authors' files stands is RQ-615; the convergence criterion's reading is RQ-616;
+   whether a self-computed ensemble may score is RQ-614.
+5. **V-11**: what Part II gives is in `transcriptions/v11_partII/`. Part I is held locally (§ 1) and was not read here; **V-11 proceeds
+   from Part I in a later local task.** Part II's closed-form Q does not follow from its own equations (coefficient 1.70, not the printed
+   3.7) and is not V-11's comparison number.
+
+**Instructions as quoted in #334 (unverified as the owner's words); not ported as a ruling.** #334 quoted two messages as the owner's,
+verbatim. The committed material cannot confirm that; both read as working briefs (they name files, sections and tasks), and the owner's
+28 Oct words already on `main` (§ 3) differ from the first. They are recorded here as what the pilot was told, and nothing here rests on
+them as a ruling:
+
+> PR #327 (incoming/2026-10-28-rq598-data) carries the RQ-598 papers and my rulings; read docs/incoming/2026-10-28_rq598_data/README.md in full, then do §4 tasks 1–5. Merge #327 through the normal review. Rulings: GG-1 routes 2 (extract Fig. 1 from the vector paths) and 3 (recompute with Brutus) now; BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed; I'm emailing Breen and Boekholt in parallel. Gates: stop and queue if Fig. 1 doesn't reconcile to exactly 1212 points per panel; report measured cost per point before scaling any Brutus run or going below eps=1e-6. Label all self-computed results as ours, not the papers'. Open question for me: may a self-computed ensemble score a target, or is it cross-check only?
+
+> 1. Build Brutus from github.com/pgbreen/NvMgeneration @ 98906f4 (Breen's own README: "Brutus: version used in Newton vs the Machine"; GPL-3.0, license.txt), not AMUSE's copy. Record the build exactly.
+> 2. For BR-1, do not draw random starting points. Use the authors' own: github.com/pgbreen/NVM @ a35c378, trainex/data/run10–99.dat and validex/data/run9910–9999.dat (row 1 = x1, y1, x2, y2; body 3 from the centre of mass; 2^-8 cadence). Run a small stated sample of them at eps = 1e-6 and compare your trajectory to theirs point by point. That both measures cost and checks your build reproduces theirs. Keep any copy of the NVM files in docs/incoming/_local/ (no licence; never commit). Their eps 1e-11/1e-10 pairs stay estimate-only, as before.
+
+The one line #334 quotes that reads as the owner's own, given on seeing the pilot's cost report:
+
+> Go ahead with ε = 1e-8 and 1e-10 on one point each, do v-11 and review queue book keeping. also open a pr
+
+The probes below ε = 10⁻⁶ in `brutus_run_here/REPORT.md` § 2b are the ones that line approves. Anything further below ε = 10⁻⁶, any
+further probe (such as p_max 8 and 16 at 10⁻²⁰ and 10⁻³⁰), and any scaling of GG-1 or BR-1 waits for the owner's go-ahead.
