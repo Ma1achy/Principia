@@ -16,5 +16,9 @@ atlas-params.json
 *atlas-params*.json
 *atlas_params*.json
 
+# All-rights-reserved PDFs the human holds, kept here so agents can read them; never committed, the repo being public
+# (docs/incoming/2026-10-28_rq598_data/README.md §1; docs/incoming/2026-10-27_papers/README.md §2).
+/docs/incoming/_local/
+
 # README explainer GIF builds (scripts/readme_gifs); the committed copies live in docs/readme/
 /scripts/out/

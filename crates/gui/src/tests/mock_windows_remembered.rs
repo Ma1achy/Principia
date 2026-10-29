@@ -105,6 +105,7 @@ fn mock_windows_remembered_a_place_off_a_smaller_screen_is_clamped() {
     let far = Rect::from_min_size(pos2(1300.0, 820.0), vec2(320.0, 300.0));
     let settings = Settings {
         places: Places::remembered([(Window::Display, far)]),
+        ..Settings::default()
     };
     Store::at(&path).save(&settings).expect("saved");
     let mut app = gui(&path);
@@ -220,6 +221,7 @@ fn mock_windows_remembered_the_file_reads_back_what_it_wrote() {
     let b = Rect::from_min_size(pos2(900.0, 80.25), vec2(376.0, 500.0));
     let settings = Settings {
         places: Places::remembered([(Window::Inspector, a), (Window::Export, b)]),
+        ..Settings::default()
     };
     let text = settings.to_json();
     assert!(
@@ -308,6 +310,7 @@ fn mock_windows_remembered_the_store_loads_and_saves() {
             Window::Run,
             Rect::from_min_size(pos2(1.0, 2.0), vec2(300.0, 200.0)),
         )]),
+        ..Settings::default()
     };
     store.save(&settings).expect("saved");
     assert_eq!(store.load().settings, settings);
