@@ -52,7 +52,7 @@ pub const UNIT: [f64; 4] = [0.0, 0.0, 1.0, 1.0];
 /// The span `[s₀, t₀, s₁, t₁]` of the figure in `(u, v)`: the shown figure, [`UNIT`], is the visible square, centre
 /// `z₀`'s in-plane point and half-width `|q₁|`; a wider span, the window with the egui layer hidden (R-406), is more of
 /// the plane at the same scale.
-fn view_of(plane: &Plane, span: [f64; 4]) -> Option<Quad> {
+pub fn view_of(plane: &Plane, span: [f64; 4]) -> Option<Quad> {
     let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
     // `in_plane` gives `None` for a degenerate basis.
     let (u, v) = crate::explore::manifold_view::in_plane(plane, &plane.z0)?;
