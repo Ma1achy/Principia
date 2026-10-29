@@ -385,6 +385,45 @@ validation::negative_control!(
     check_frame_line("SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6)")
 );
 
+/// Asserts `turned(f, by)`, for every frame `f` of indices in the eight latent dimensions, keeps each index a latent
+/// dimension and changes it.
+fn check_turned(by: u32) {
+    let dims = crate::contract::sim_config::LATENT_DIM as u32;
+    for normal in 0..dims {
+        for tilt_x in 0..dims {
+            for tilt_y in 0..dims {
+                let f = SliceFrame {
+                    normal,
+                    tilt_x,
+                    tilt_y,
+                };
+                let t = conformance::turned(f, by);
+                for (i, was) in [(t.normal, normal), (t.tilt_x, tilt_x), (t.tilt_y, tilt_y)] {
+                    assert!(
+                        i < dims && i != was,
+                        "turned({f:?}, {by}) = {t:?}: an index is not a changed latent dimension"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// The slice frame case edits to `turned(frame, 1)` and then `turned(frame, 2)`: from any frame, each is a frame of
+/// latent dimensions differing from it in every index, so each edit is a real change (R-457 E3).
+#[test]
+fn conformance_turned_changes_every_index() {
+    check_turned(1);
+    check_turned(2);
+}
+
+validation::negative_control!(
+    conformance_turned_changes_every_index,
+    "a turn by the eight dimensions changes no index and must fail",
+    expected = "an index is not a changed latent dimension",
+    check_turned(8)
+);
+
 /// The store logs a slice frame edit with the frame before and after, and the basis when the edit carries it
 /// (gui_state_contract §2), and one undo restores the frame and the basis together.
 #[test]
