@@ -13,7 +13,7 @@ use crate::contract::render_state::{
 use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, Window,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use crate::contract::snapshot::{FrameSummary, Snapshot};
 use crate::contract::store::{set_field_message, StateStore};
@@ -30,7 +30,9 @@ fn store(t: f64) -> StateStore {
                 q1: [0.0; 8],
                 q2: [0.0; 8],
             },
-            slice: Slice {},
+            slice: Slice {
+                frame: SliceFrame::along(Z_Q3),
+            },
             lock: Lock {
                 locked: false,
                 z_locked: [0.0; 8],
@@ -71,9 +73,9 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        8,
+        9,
         "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, the \
-         horizon's and the stain graph's (R-390)"
+         horizon's, the stain graph's (R-390) and the slice frame's (R-457)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
@@ -127,6 +129,13 @@ enum Rule {
     DropHorizon,
     /// A SetField on the stain graph is dropped.
     DropStainGraph,
+    /// A SetField on the slice frame is dropped.
+    DropSliceFrame,
+    /// A SetField on the slice frame with the basis writes the frame alone.
+    FrameWithoutBasis,
+    /// A SetField on the slice frame with the basis is applied as two edits, the basis then the frame: two history
+    /// entries.
+    SplitFrame,
 }
 
 impl EngineInterface for Broken {
@@ -142,6 +151,29 @@ impl EngineInterface for Broken {
         {
             *o = Overlays::default();
         }
+        if let (Rule::FrameWithoutBasis, Edit::Sim(SimField::SliceFrame { basis, .. })) =
+            (self.rule, &mut edit.edit)
+        {
+            *basis = None;
+        }
+        if let (Rule::SplitFrame, Edit::Sim(SimField::SliceFrame { frame, basis })) =
+            (self.rule, &mut edit.edit)
+        {
+            if let Some((q1, q2)) = basis.take() {
+                self.store.set_field(SetField {
+                    edit: Edit::Sim(SimField::Basis { q1, q2 }),
+                    no_history: edit.no_history,
+                });
+                self.store.set_field(SetField {
+                    edit: Edit::Sim(SimField::SliceFrame {
+                        frame: *frame,
+                        basis: None,
+                    }),
+                    no_history: edit.no_history,
+                });
+                return;
+            }
+        }
         let dropped = matches!(
             (self.rule, &edit.edit),
             (Rule::Drop, _)
@@ -149,6 +181,7 @@ impl EngineInterface for Broken {
                 | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
                 | (Rule::DropOverlays, Edit::Render(RenderField::Overlays(_)))
                 | (Rule::DropHorizon, Edit::Sim(SimField::Horizon(_)))
+                | (Rule::DropSliceFrame, Edit::Sim(SimField::SliceFrame { .. }))
                 | (
                     Rule::DropStainGraph,
                     Edit::Render(RenderField::StainGraph(_))
@@ -240,7 +273,222 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
     for rule in [Rule::DropStainGraph, Rule::NoLog, Rule::Undo] {
         check_names(rule, STAIN_GRAPH);
     }
+    for rule in [
+        Rule::DropSliceFrame,
+        Rule::FrameWithoutBasis,
+        Rule::SplitFrame,
+        Rule::NoLog,
+        Rule::Undo,
+    ] {
+        check_names(rule, SLICE_FRAME);
+    }
 }
+
+/// The slice frame's case.
+const SLICE_FRAME: &str = "slice_frame_edit_shows_and_undoes";
+
+/// A store whose slice frame is not the default and whose basis is not zero: the slice frame case holds from any
+/// frame, every index moved round from it.
+fn framed_store() -> StateStore {
+    let mut store = navigated_store();
+    store.set_field(SetField {
+        edit: Edit::Sim(SimField::SliceFrame {
+            frame: SliceFrame {
+                normal: 7,
+                tilt_x: 0,
+                tilt_y: 6,
+            },
+            basis: None,
+        }),
+        no_history: true,
+    });
+    let _ = store.snapshot();
+    store
+}
+
+#[test]
+fn conformance_slice_frame_case_holds_from_any_frame() {
+    check_conforms(framed_store);
+    for rule in [
+        Rule::DropSliceFrame,
+        Rule::FrameWithoutBasis,
+        Rule::SplitFrame,
+    ] {
+        check_names_with(
+            || Broken {
+                store: framed_store(),
+                rule,
+            },
+            SLICE_FRAME,
+        );
+    }
+}
+
+validation::negative_control!(
+    conformance_slice_frame_case_holds_from_any_frame,
+    "a double applying a frame-and-basis pick as two history entries must fail the slice frame case",
+    expected = "conformance case `slice_frame_edit_shows_and_undoes` failed",
+    check_conforms(|| Broken {
+        store: framed_store(),
+        rule: Rule::SplitFrame,
+    })
+);
+
+/// Asserts the slice frame case reads `message` as naming the edit from `(5, 5, 5)` to `(0, 4, 6)`.
+fn check_frame_line(message: &str) {
+    let (before, after) = (
+        SliceFrame::along(Z_Q3),
+        SliceFrame {
+            normal: 0,
+            tilt_x: 4,
+            tilt_y: 6,
+        },
+    );
+    assert!(
+        crate::contract::conformance::names_frames(message, before, after),
+        "the line {message:?} does not name Slice.frame from (5, 5, 5) to (0, 4, 6)"
+    );
+}
+
+/// The case checks a slice frame line for its path and both frames' values, in any wording (gui_state_contract §2
+/// gives none): the store's own line, and another engine's.
+#[test]
+fn conformance_slice_frame_line_any_wording() {
+    check_frame_line(
+        "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 4, tilt_y 6)",
+    );
+    check_frame_line("SetField Slice.frame: was [5 5 5], now [0 4 6]");
+    check_frame_line("SetField Slice.frame Plane.q1 Plane.q2 5,5,5 -> 0,4,6 and the basis 1, 2");
+    for wrong in [
+        "SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6)",
+        "SetField Plane.q1 5 5 5 0 4 6",
+        "SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6) → (normal 5, tilt_x 5, tilt_y 5)",
+    ] {
+        assert!(
+            !crate::contract::conformance::names_frames(
+                wrong,
+                SliceFrame::along(Z_Q3),
+                SliceFrame {
+                    normal: 0,
+                    tilt_x: 4,
+                    tilt_y: 6
+                }
+            ),
+            "{wrong:?} read as the edit"
+        );
+    }
+}
+
+validation::negative_control!(
+    conformance_slice_frame_line_any_wording,
+    "a line with the after frame alone must fail",
+    expected = "does not name Slice.frame",
+    check_frame_line("SetField Slice.frame (normal 0, tilt_x 4, tilt_y 6)")
+);
+
+/// Asserts `turned(f, by)`, for every frame `f` of indices in the eight latent dimensions, keeps each index a latent
+/// dimension and changes it.
+fn check_turned(by: u32) {
+    let dims = crate::contract::sim_config::LATENT_DIM as u32;
+    for normal in 0..dims {
+        for tilt_x in 0..dims {
+            for tilt_y in 0..dims {
+                let f = SliceFrame {
+                    normal,
+                    tilt_x,
+                    tilt_y,
+                };
+                let t = conformance::turned(f, by);
+                for (i, was) in [(t.normal, normal), (t.tilt_x, tilt_x), (t.tilt_y, tilt_y)] {
+                    assert!(
+                        i < dims && i != was,
+                        "turned({f:?}, {by}) = {t:?}: an index is not a changed latent dimension"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// The slice frame case edits to `turned(frame, 1)` and then `turned(frame, 2)`: from any frame, each is a frame of
+/// latent dimensions differing from it in every index, so each edit is a real change (R-457 E3).
+#[test]
+fn conformance_turned_changes_every_index() {
+    check_turned(1);
+    check_turned(2);
+}
+
+validation::negative_control!(
+    conformance_turned_changes_every_index,
+    "a turn by the eight dimensions changes no index and must fail",
+    expected = "an index is not a changed latent dimension",
+    check_turned(8)
+);
+
+/// The store logs a slice frame edit with the frame before and after, and the basis when the edit carries it
+/// (gui_state_contract §2), and one undo restores the frame and the basis together.
+#[test]
+fn store_logs_and_undoes_a_slice_frame_edit() {
+    let mut store = store(0.0);
+    let frame = SliceFrame {
+        normal: 0,
+        tilt_x: 4,
+        tilt_y: 6,
+    };
+    let (q1, q2) = ([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0; 8]);
+    store.set_field(SetField {
+        edit: Edit::Sim(SimField::SliceFrame { frame, basis: None }),
+        no_history: false,
+    });
+    store.set_field(SetField {
+        edit: Edit::Sim(SimField::SliceFrame {
+            frame: SliceFrame::along(Z_Q3),
+            basis: Some((q1, q2)),
+        }),
+        no_history: false,
+    });
+    let snapshot = store.snapshot();
+    let messages: Vec<&str> = snapshot.log.iter().map(|e| e.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 4, tilt_y 6)",
+            "SetField Slice.frame Plane.q1 Plane.q2 (normal 0, tilt_x 4, tilt_y 6) (0, 0, 0, 0, 0, 0, 0, 0) \
+             (0, 0, 0, 0, 0, 0, 0, 0) → (normal 5, tilt_x 5, tilt_y 5) (1, 0, 0, 0, 0, 0, 0, 0) \
+             (0, 0, 0, 0, 0, 0, 0, 0)",
+        ]
+    );
+    assert_eq!(snapshot.history.undo_depth, 2);
+    store.undo();
+    let undone = store.snapshot().sim;
+    assert_eq!(
+        (undone.slice.frame, undone.plane.q1, undone.plane.q2),
+        (frame, [0.0; 8], [0.0; 8]),
+        "one undo restores the frame and the basis"
+    );
+}
+
+validation::negative_control!(
+    store_logs_and_undoes_a_slice_frame_edit,
+    "a frame logged with another index must be rejected",
+    expected = "assertion `left == right` failed",
+    assert_eq!(
+        crate::contract::store::set_field_message(
+            &Edit::Sim(SimField::SliceFrame {
+                frame: SliceFrame::along(Z_Q3),
+                basis: None,
+            }),
+            &SetField {
+                edit: Edit::Sim(SimField::SliceFrame {
+                    frame: SliceFrame::along(0),
+                    basis: None,
+                }),
+                no_history: false,
+            },
+        ),
+        "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 0, tilt_y 6)"
+    )
+);
 
 /// The stain graph's case.
 const STAIN_GRAPH: &str = "stain_graph_edit_shows_and_undoes";

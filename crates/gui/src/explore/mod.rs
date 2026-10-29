@@ -25,12 +25,16 @@ use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
 use crate::keyboard::Keyboard;
 use crate::layout::Layout;
 
-/// The Manifold view's sub-scopes, in order (§G3): Chart, Navigate, Centre z₀, Slice & tilt.
+/// The Manifold view's sub-scopes, in order (§G3): Chart, Navigate, Slice centre, Tilt (named Centre z₀ and Slice &
+/// tilt before R-457).
 pub const MANIFOLD_SECTIONS: [(ScopeId, &str); 4] = [
-    ("chart", "Chart"),
-    ("navigate", "Navigate"),
-    ("centre_z0", "Centre z₀"),
-    ("slice_tilt", "Slice & tilt"),
+    (manifold_view::CHART, manifold_view::SECTION_TITLES[0]),
+    (manifold_view::NAVIGATE, manifold_view::SECTION_TITLES[1]),
+    (
+        manifold_view::SLICE_CENTRE,
+        manifold_view::SECTION_TITLES[2],
+    ),
+    (manifold_view::TILT, manifold_view::SECTION_TITLES[3]),
 ];
 
 /// The Manifold view's scope.

@@ -80,12 +80,16 @@ mutant = "crates/gui/src/explore/compass.rs:292:59: replace | with ^ in draw"
 justification = "the guard above has just checked i & (1 << b) == 0, and with that bit clear i ^ (1 << b) equals i | (1 << b)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:551:20: replace * with / in adjust"
-justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:795:20: replace * with / in adjust"
+justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0 (TASK-M6-38 moved the line from 551)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:562:57: replace * with / in adjust"
-justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:805:57: replace * with / in adjust"
+justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value (TASK-M6-38 moved the line from 562)"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:1104:41: replace * with / in adjust"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:56), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x (TASK-M6-38 moved the line from 1052)"
 
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:183:41: replace * with / in slice_by_drag"
@@ -145,10 +149,6 @@ justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.
 
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:985:38: replace * with / in Shown::plane"
-justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
-
-[[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:1052:41: replace * with / in adjust"
 justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
 
 [[equivalent]]

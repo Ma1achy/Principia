@@ -275,30 +275,52 @@ fn mock_reachability_every_big_scope_reaches_every_drawn_control() {
     check_bigs("a kept orbit", &mut app, &mut h);
 }
 
+/// The keys that open `menu` from nothing focused, and the big scope it is under: a top bar control by Tab, Enter, →
+/// to it and Enter; a Manifold view control (the Tilt section's targets, R-457 E5) by Tab, Tab, Enter, ↓ to its
+/// section, Enter, ↓ to it and Enter.
+fn opening(tree: &ScopeTree, menu: &str) -> (Vec<Key>, &'static str) {
+    let index = |list: Vec<&str>, id: &str| list.iter().position(|c| *c == id);
+    if let Some(k) = index(tree.children(Some("top_bar")), menu) {
+        let mut keys = vec![Key::Tab, Key::Enter];
+        keys.extend(std::iter::repeat_n(Key::ArrowRight, k));
+        keys.push(Key::Enter);
+        return (keys, "top_bar");
+    }
+    let sections = tree.children(Some("manifold_view"));
+    let (s, k) = sections
+        .iter()
+        .enumerate()
+        .find_map(|(s, section)| index(tree.children(Some(section)), menu).map(|k| (s, k)))
+        .unwrap_or_else(|| panic!("{menu}: neither a top bar nor a Manifold view control"));
+    let mut keys = vec![Key::Tab, Key::Tab, Key::Enter];
+    keys.extend(std::iter::repeat_n(Key::ArrowDown, s));
+    keys.push(Key::Enter);
+    keys.extend(std::iter::repeat_n(Key::ArrowDown, k));
+    keys.push(Key::Enter);
+    (keys, "manifold_view")
+}
+
 #[test]
 fn mock_reachability_every_menu_reaches_its_entries() {
     let (app, _) = fresh();
-    let controls = app.keyboard.tree(Mode::Explore).children(Some("top_bar"));
     let menus = app.keyboard.tree(Mode::Explore).menus();
     assert!(menus.len() > 3, "{menus:?}");
+    for menu in ["tilt_x", "tilt_y"] {
+        assert!(menus.contains(&menu), "{menu} a menu: {menus:?}");
+    }
     for menu in menus {
-        // Opened by the keys: Tab to the top bar, Enter, → to the menu, Enter.
+        let (keys, within) = opening(app.keyboard.tree(Mode::Explore), menu);
         let (mut app, mut h) = fresh();
         let before = nodes(&mut h, &mut app);
-        press(&mut h, &mut app, Key::Tab, eframe::egui::Modifiers::NONE);
-        presses(&mut h, &mut app, Key::Enter, 1);
-        let k = controls
-            .iter()
-            .position(|c| *c == menu)
-            .expect("a top bar control");
-        presses(&mut h, &mut app, Key::ArrowRight, k);
-        presses(&mut h, &mut app, Key::Enter, 1);
+        for key in keys {
+            press(&mut h, &mut app, key, eframe::egui::Modifiers::NONE);
+        }
         assert_eq!(app.keyboard.open_menu(), Some(menu), "{menu} opened");
         let after = nodes(&mut h, &mut app);
         let entries = new_controls(&before, &after);
         assert!(!entries.is_empty(), "{menu}: no entry drawn");
         let tree = app.keyboard.tree(Mode::Explore);
-        let reached = walk(tree, &nav(vec!["top_bar".to_owned()]), "top_bar");
+        let reached = walk(tree, &nav(vec![within.to_owned()]), within);
         check_reached(
             menu,
             tree,
@@ -307,6 +329,12 @@ fn mock_reachability_every_menu_reaches_its_entries() {
             &entries,
         );
     }
+    rejects(
+        "a menu neither in the top bar nor in the Manifold view",
+        || {
+            let _ = opening(app.keyboard.tree(Mode::Explore), "no_such_menu");
+        },
+    );
 }
 
 // --- The negative arm: fixtures the check must reject ----------------------------------------------------------------

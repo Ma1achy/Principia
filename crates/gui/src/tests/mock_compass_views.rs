@@ -9,7 +9,7 @@ use eframe::egui::{self, Key, Modifiers, Shape};
 use super::compass_support::{
     compass_rect, compass_shapes, drag, painted_edges, plane, setfields, settle, square, view,
 };
-use super::support::{click_scope, headless, mock_app, press, rejects};
+use super::support::{click_scope, headless, mock_app, press, rejects, SLICE_FRAME};
 use crate::app::App;
 use crate::explore::compass::views::{self, CompassView, GridPlace, VIEWS, WAITS};
 use crate::explore::compass::{self, SLICE_BUTTON, TILT_BUTTON};
@@ -141,8 +141,12 @@ fn mock_compass_views_tilt_and_slice_leave_the_view() {
     let (mut app, mut h) = tilted_app();
     for (view, id, _) in VIEWS {
         click_scope(&mut h, &mut app, id);
-        for (button, mode) in [(SLICE_BUTTON, Touch::Slice), (TILT_BUTTON, Touch::Tilt)] {
-            super::support::click(&mut h, &mut app, button);
+        for (button, scope, mode) in [
+            (SLICE_BUTTON, crate::explore::COMPASS_SLICE, Touch::Slice),
+            (TILT_BUTTON, crate::explore::COMPASS_TILT, Touch::Tilt),
+        ] {
+            // By its scope: the Manifold view's section heading "Tilt" reads as the Tilt button does (R-457).
+            click_scope(&mut h, &mut app, scope);
             let _ = h.frame(&mut app, Vec::new());
             check_shows(&mut h, &mut app, view, mode, button);
         }
@@ -163,7 +167,7 @@ fn mock_compass_views_a_slice_slider_in_plucker_sets_slice_and_keeps_plucker() {
     click_scope(&mut h, &mut app, crate::explore::COMPASS_PLUCKER);
     assert_eq!(app.manifold.compass.mode, Touch::Tilt);
     let rows = app.console().len();
-    // Tab to the Manifold view, Enter into Chart, ↓ ↓ to Centre z₀, Enter onto its first slider, Enter to interact,
+    // Tab to the Manifold view, Enter into Chart, ↓ ↓ to Slice centre, Enter onto its first slider, Enter to interact,
     // → to raise it.
     for key in [
         Key::Tab,
@@ -300,11 +304,11 @@ fn mock_compass_views_jacobi_and_shape_wait_on_physics_review() {
 fn mock_compass_views_a_grid_view_drops_a_drag_in_progress() {
     let (mut app, mut h) = tilted_app();
     let p = app.snapshot().sim.plane.clone();
-    app.manifold.compass.drag = Some(compass::Drag::start(Touch::Tilt, &p));
+    app.manifold.compass.drag = Some(compass::Drag::start(Touch::Tilt, &p, &SLICE_FRAME));
     app.manifold.compass.view = CompassView::Plucker;
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(app.manifold.compass.drag, None, "the drag dropped");
-    app.manifold.compass.drag = Some(compass::Drag::start(Touch::Tilt, &p));
+    app.manifold.compass.drag = Some(compass::Drag::start(Touch::Tilt, &p, &SLICE_FRAME));
     app.manifold.compass.view = CompassView::Cube;
     let _ = h.frame(&mut app, Vec::new());
     let kept = app.manifold.compass.drag;

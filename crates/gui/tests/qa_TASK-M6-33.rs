@@ -1455,7 +1455,9 @@ fn qa_mock_compass_cube_readouts_per_mode() {
     let r = readout(30.0, -15.0, 0.0, 0.25, Touch::Slice);
     assert!(!r.iter().any(|l| l.contains("plane ⟂")), "{r:?}");
     check_tilt_line(&r, 30.0, -15.0);
-    // Tilt mode: q₁'s and q₂'s target, the slice axis, and their angles in degrees, one decimal.
+    // Tilt mode: τ₁'s and τ₂'s target, the slice axis (the slice frame's defaults), and their angles in degrees, one
+    // decimal (R-457 E6 names the angles' targets "τ₁ → z_q3", where R-451 B5 read "q₁→z_q3"; TASK-M6-38's qa commit,
+    // R-457 E9).
     let r = readout(30.0, -15.0, 0.0, 0.0, Touch::Tilt);
     check_tilt_line(&r, 30.0, -15.0);
     let r = readout(-72.5, 45.0, 10.0, 0.0, Touch::Tilt);
@@ -1474,7 +1476,9 @@ fn qa_mock_compass_cube_readouts_per_mode() {
 fn tilt_angle(lines: &[String], q: &str) -> Option<(f64, usize)> {
     for l in lines {
         let l = l.replace('−', "-");
-        let Some(i) = l.find(q) else { continue };
+        let Some(i) = l.find(&format!("{q} →")) else {
+            continue;
+        };
         let after = l[i + q.len()..].trim_start();
         let after = after.strip_prefix('→')?.trim_start();
         let after = after.strip_prefix(DEPTH_NAME)?.trim_start();
@@ -1496,7 +1500,7 @@ fn tilt_angle(lines: &[String], q: &str) -> Option<(f64, usize)> {
 }
 
 fn check_tilt_line(lines: &[String], t1: f64, t2: f64) {
-    for (q, want) in [("q₁", t1), ("q₂", t2)] {
+    for (q, want) in [("τ₁", t1), ("τ₂", t2)] {
         let (got, decimals) = tilt_angle(lines, q)
             .unwrap_or_else(|| panic!("no {q}→{DEPTH_NAME} angle in {lines:?}"));
         assert!((got - want).abs() < 0.051, "{q} reads {got}°, not {want}°");

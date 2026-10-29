@@ -1,6 +1,6 @@
 //! The top bar (render_gui_spec §G2; 01_main.png; RQ-249, RQ-255): the "principia · dev" wordmark; the menus File,
 //! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, each opening its window (§G5); the
-//! Windows menu listing the registry's seven windows (`crate::windows`);
+//! View menu's F3 hide and reset layout (R-462); the Windows menu listing the registry's seven windows (`crate::windows`);
 //! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
@@ -46,6 +46,8 @@ pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
 pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
 /// View's check entry that switches the figure to the debug view (R-467 D5), after F3 hide.
 pub const DEBUG_VIEW: (ScopeId, &str) = ("view_debug", "Debug view");
+/// View's entry that returns every splitter to 01_main.png's layout, after F3 hide (R-462 J3; §G2's View menu).
+pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
 /// Help's entry that opens the `?` shortcuts (RQ-250).
 pub const KEYS: (ScopeId, &str) = ("help_keys", KEYS_ENTRY);
 /// The Windows menu's entries' scopes, one per [`WINDOWS`] name: the registry's, in its order.
@@ -74,6 +76,7 @@ pub fn register(tree: &mut ScopeTree) {
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
     tree.register(Some("view"), Scope::control(DEBUG_VIEW.0, DEBUG_VIEW.1));
+    tree.register(Some("view"), Scope::control(RESET_LAYOUT.0, RESET_LAYOUT.1));
     for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
         tree.register(Some("windows"), Scope::control(id, name));
     }
@@ -90,6 +93,7 @@ pub fn activate(id: &str, actions: &mut Actions) {
         id if id == QUIT.0 => actions.quit = true,
         id if id == HIDE.0 => actions.toggle_layer = true,
         id if id == DEBUG_VIEW.0 => actions.debug_view = true,
+        id if id == RESET_LAYOUT.0 => actions.reset_layout = true,
         id if id == KEYS.0 => actions.shortcuts = true,
         _ => {}
     }
@@ -207,6 +211,12 @@ pub fn show(
             actions.debug_view = true;
         }
         keyboard.place_widget(DEBUG_VIEW.0, &debug);
+        let reset = ui.button(RESET_LAYOUT.1);
+        if reset.clicked() {
+            actions.reset_layout = true;
+            ui.close();
+        }
+        keyboard.place_widget(RESET_LAYOUT.0, &reset);
     });
     keyboard.place_widget("view", &view);
     let windows = menu(&mut bar, "Windows", &mut |ui| {

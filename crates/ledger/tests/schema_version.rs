@@ -600,6 +600,11 @@ const CURVE_SEARCH: [&str; 3] = ["curve_grid_log2", "curve_golden_steps", "inv_p
 /// stored bit means, so they are not hashed.
 const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 
+/// The slice frame's default axis (TASK-M6-38; chart_decoder_contract Part 2): `z_q3`'s index, the GUI's slice axis
+/// before R-459, which decides which dimension the view slices through, never what a stored bit means, so it is not
+/// hashed.
+const SLICE: [&str; 1] = ["slice_axis_z_q3"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -614,7 +619,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
-    // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21).
+    // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
+    // frame's default axis (TASK-M6-38).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -628,7 +634,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || STEPPERS.contains(&k.name)
                 || CURVE_SEARCH.contains(&k.name)
                 || SUBSTEP.contains(&k.name)
-                || WINDOW.contains(&k.name),
+                || WINDOW.contains(&k.name)
+                || SLICE.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -685,6 +692,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the window's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SLICE {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the slice frame's entry `{name}` is not an unhashed register entry"
         );
     }
 }

@@ -151,6 +151,27 @@ fn read<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, String> {
     serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
 }
 
+/// The reference's readout as R-457 E6 reads it, both targets named with their angles in every mode: "τ₁ → z_q3 +30.0°"
+/// for the reference's "q₁→z_q3 +30.0°", a zero angle "0.0°", and the untilted slice mode's targets line, both on the
+/// normal at 0, after its first line. The reference has one shared target, the normal, so its angles' targets are it.
+pub fn as_r457(reference: &[String]) -> Vec<String> {
+    let mut lines = Vec::new();
+    for line in reference {
+        let mut line = line.replace("q₁→", "τ₁ → ").replace("q₂→", "τ₂ → ");
+        if line.contains("τ₁ → ") {
+            line = line.replace(" +0.0°", " 0.0°");
+        }
+        let normal = line
+            .strip_prefix("mode slice · plane ⟂ ")
+            .map(str::to_owned);
+        lines.push(line);
+        if let Some(axis) = normal {
+            lines.push(format!("τ₁ → {axis} 0.0° · τ₂ → {axis} 0.0°"));
+        }
+    }
+    lines
+}
+
 /// The tolerance a polygon's vertices are compared within, in the cube's units.
 pub const VERTEX_TOLERANCE: f64 = 1e-9;
 /// The tolerance on an edge's width, in points.
@@ -172,7 +193,8 @@ impl Golden {
     pub fn read(path: &Path) -> Result<Self, String> {
         let spec: Spec = read(path)?;
         let dir = path.parent().unwrap_or(Path::new("."));
-        let reference: Record = read(&dir.join(&spec.reference))?;
+        let mut reference: Record = read(&dir.join(&spec.reference))?;
+        reference.readout = as_r457(&reference.readout);
         let polygon = match &spec.polygon {
             None => None,
             Some(PolygonSpec::Reference { record }) => {

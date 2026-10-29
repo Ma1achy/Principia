@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 
 use kernel::generated::links::{LinkParams, Selection};
-use ledger::constants::{MU_MAX, Q_MAX, WINDOW_SQUARE_CENTRE, WINDOW_SQUARE_HALF};
+use ledger::constants::{MU_MAX, Q_MAX, SLICE_AXIS_Z_Q3, WINDOW_SQUARE_CENTRE, WINDOW_SQUARE_HALF};
 use ledger::links::{self as registry, Slot};
 use serde::{Deserialize, Serialize};
 
@@ -105,10 +105,46 @@ pub struct Plane {
     pub q2: Latent,
 }
 
-/// Slice values (gui_state_contract §2).
+/// Slice values (gui_state_contract §2): the slice frame, added for the dev GUI's Tilt section (R-457).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Slice {}
+pub struct Slice {
+    /// The slice frame: the slice normal and the two tilt targets.
+    pub frame: SliceFrame,
+}
+
+/// The slice frame (gui_state_contract §2; R-457 E3, R-459): three latent dimension indices, in
+/// chart_decoder_contract Part 2's block order. `normal` is the slice normal, the compass cube's D axis, the dimension
+/// the slice moves through; `tilt_x` and `tilt_y` are the dimensions `τ₁` and `τ₂` tilt into. Like the lock it is chart
+/// construction, so it is undoable (R-69); no kernel reads it (the kernel reads `z₀`, `q₁`, `q₂`), so an edit of it
+/// alone re-integrates nothing. Each index is a `u32`, as every serialised index is (R-329).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SliceFrame {
+    /// The slice normal.
+    pub normal: u32,
+    /// The dimension `τ₁` tilts the horizontal axis `q₁` into.
+    pub tilt_x: u32,
+    /// The dimension `τ₂` tilts the vertical axis `q₂` into.
+    pub tilt_y: u32,
+}
+
+/// `z_q3`'s index, the GUI's slice axis before R-459 and the slice frame's default for a plane that does not show it
+/// (gui_state_contract §2; chart_decoder_contract Part 2: `z[2:6]` is the momentum block, `z_q3` its last), read from
+/// the register.
+pub const Z_Q3: u32 = SLICE_AXIS_Z_Q3.number() as u32;
+
+impl SliceFrame {
+    /// The frame with the normal and both targets along `axis`: gui_state_contract §2's defaults, all three the slice
+    /// axis, so the targets give the one shared target the GUI tilted into before R-457.
+    pub const fn along(axis: u32) -> Self {
+        Self {
+            normal: axis,
+            tilt_x: axis,
+            tilt_y: axis,
+        }
+    }
+}
 
 /// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69): the lock is CPU-side chart
 /// construction (chart_decoder_contract Part 4, "The lock"). The flag and the anchor are added for the dev GUI's lock

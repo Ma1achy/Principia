@@ -25,6 +25,11 @@
 //!   TASK-M6-31's qa commit: every landing is in navigation mode, where the arrows move between siblings; the arrows
 //!   adjust a value only after Enter on it, interaction mode (point 4, F1); + / − act in either mode.)*
 //!
+//! R-457 (TASK-M6-38's qa commit, R-457 E9) renames Centre z₀ to Slice centre and Slice & tilt to Tilt, removes
+//! Navigate's eight z₀ boxes and the slice step, and names each tilt angle's target in the compass's readout
+//! ("τ₁ → z_q3 +12.0°"): the checks below read the new names, the slice step's place in a check taken by the Slice
+//! centre slider of the slice normal's dimension, which moves the slice along its normal (R-457).
+//!
 //! The SetFields a gesture emits are counted from the contract's own log (gui_state_contract §2: every engine logs each
 //! SetField it applies as one `info` entry from `contract`), and what they edited is read from the snapshots before and
 //! after. gui takes no dependency on validation (R-187), so each check runs its own control (R-176) through
@@ -63,8 +68,8 @@ const UNBOUND: Key = Key::F12;
 
 /// §G2's eight `z₀` names, in chart_decoder_contract Part 2's block order.
 const AXES: [&str; 8] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z_q3", "z_μ1", "z_μ2"];
-/// §G3's sub-scopes of Manifold view, in order.
-const SECTIONS: [&str; 4] = ["Chart", "Navigate", "Centre z₀", "Slice & tilt"];
+/// §G3's sub-scopes of Manifold view, in order (R-457's names).
+const SECTIONS: [&str; 4] = ["Chart", "Navigate", "Slice centre", "Tilt"];
 /// The lock badge's text, render_gui_spec §G2 and §G4.
 const BADGE: &str = "● locked at z_locked";
 
@@ -384,20 +389,44 @@ fn qa_mock_manifold_view_every_value_emits_one_set_field_on_z0_or_basis() {
         .filter(|id| matches!(tree.get(id).unwrap().arrows, Arrows::Adjust(_)))
         .map(|id| (id, tree.get(id).unwrap().label))
         .collect();
-    // §G2's values: the centre (u, v), the zoom, eight z₀ in Navigate and eight in Centre z₀, the slice step, τ₁, τ₂, γ.
+    // §G2's values, read with R-457: the centre (u, v), the zoom, eight z₀ in Slice centre (none in Navigate), τ₁, τ₂,
+    // γ, and no slice step.
     let labels: Vec<&str> = values.iter().map(|(_, l)| *l).collect();
+    let section_values = |title: &str| -> Vec<&str> {
+        let section = tree
+            .children(Some(mv))
+            .into_iter()
+            .find(|id| tree.get(id).unwrap().label == title)
+            .unwrap_or_else(|| panic!("no {title}"));
+        scopes_under(&probe, section)
+            .into_iter()
+            .filter(|id| matches!(tree.get(id).unwrap().arrows, Arrows::Adjust(_)))
+            .map(|id| tree.get(id).unwrap().label)
+            .collect()
+    };
+    let centre = section_values("Slice centre");
+    let navigate = section_values("Navigate");
     for name in AXES {
+        assert_eq!(
+            centre.iter().filter(|l| **l == name).count(),
+            1,
+            "{name}: Slice centre's slider: {centre:?}"
+        );
         assert!(
-            labels.iter().filter(|l| **l == name).count() >= 2,
-            "{name}: Navigate's field and Centre z₀'s slider: {labels:?}"
+            !navigate.contains(&name),
+            "{name}: a z₀ box under Navigate (R-457): {navigate:?}"
         );
     }
-    for want in ["zoom", "slice step", "τ₁", "τ₂", "γ"] {
+    for want in ["zoom", "τ₁", "τ₂", "γ"] {
         assert!(
             labels.iter().any(|l| l.contains(want)),
             "no {want} value: {labels:?}"
         );
     }
+    assert!(
+        !labels.iter().any(|l| l.contains("step")),
+        "a slice step value (R-457): {labels:?}"
+    );
     for (id, label) in &values {
         for (key, modifiers) in [(Key::ArrowUp, NONE), (Key::ArrowDown, SHIFT)] {
             let mut rig = mock();
@@ -567,7 +596,7 @@ fn decimals(text: &str) -> i32 {
     })
 }
 
-/// The rows of Centre z₀: each axis label's rect, below the section's title and above Slice & tilt's.
+/// The rows of Slice centre: each axis label's rect, below the section's title and above Tilt's.
 fn centre_rows(texts: &[(String, Rect)], panel: Rect) -> Vec<(usize, Rect)> {
     let title_y = |t: &str| {
         texts
@@ -576,21 +605,21 @@ fn centre_rows(texts: &[(String, Rect)], panel: Rect) -> Vec<(usize, Rect)> {
             .map(|(_, r)| r.center().y)
             .unwrap_or_else(|| panic!("no `{t}` in the panel"))
     };
-    let (top, bottom) = (title_y("Centre z₀"), title_y("Slice & tilt"));
+    let (top, bottom) = (title_y("Slice centre"), title_y("Tilt"));
     AXES.iter()
         .enumerate()
         .map(|(i, name)| {
             let r = texts
                 .iter()
                 .find(|(s, r)| s == name && r.center().y > top && r.center().y < bottom)
-                .unwrap_or_else(|| panic!("no Centre z₀ row {name}"))
+                .unwrap_or_else(|| panic!("no Slice centre row {name}"))
                 .1;
             (i, r)
         })
         .collect()
 }
 
-/// Each Centre z₀ row shows the offset `δ = z₀ − z_locked` of its axis.
+/// Each Slice centre row shows the offset `δ = z₀ − z_locked` of its axis.
 fn check_offsets(texts: &[(String, Rect)], panel: Rect, z0: &Z, anchor: &Z) {
     for (i, row) in centre_rows(texts, panel) {
         let want = z0[i] - anchor[i];
@@ -621,8 +650,8 @@ fn qa_mock_manifold_view_locked_sliders_read_anchor_plus_offset_and_move_by_excu
     let centre = tree
         .children(Some(manifold_view_id(&rig)))
         .into_iter()
-        .find(|id| tree.get(id).unwrap().label == "Centre z₀")
-        .expect("Centre z₀");
+        .find(|id| tree.get(id).unwrap().label == "Slice centre")
+        .expect("Slice centre");
     let sliders = tree.children(Some(centre));
     assert_eq!(sliders.len(), 8, "eight sliders");
     for (i, slider) in sliders.into_iter().enumerate() {
@@ -1069,12 +1098,12 @@ fn check_order(texts: &[(String, Rect)], panel: Rect) {
         y_of(texts, panel, "Navigate", false),
         y_of(texts, panel, "depth", true),
         y_of(texts, panel, "locked", true),
-        y_of(texts, panel, "Centre z₀", false),
-        y_of(texts, panel, "Slice & tilt", false),
+        y_of(texts, panel, "Slice centre", false),
+        y_of(texts, panel, "Tilt", false),
     ];
     assert!(
         ys.iter().all(|y| y.is_finite()) && ys.windows(2).all(|w| w[0] < w[1]),
-        "the left panel's parts are not Manifold view, Chart, Navigate, depth, Lock, Centre z₀, Slice & tilt, top \
+        "the left panel's parts are not Manifold view, Chart, Navigate, depth, Lock, Slice centre, Tilt, top \
          to bottom: {ys:?}"
     );
 }
@@ -1095,22 +1124,28 @@ fn qa_mock_manifold_view_one_group_sections_in_order() {
             "no `{want}` in the Manifold view"
         );
     }
-    // Centre z₀: the eight named sliders, in order, top to bottom.
+    // Slice centre: the eight named sliders, in order, top to bottom.
     let rows = centre_rows(&texts, panel);
     assert!(
         rows.windows(2).all(|w| w[0].1.min.y < w[1].1.min.y),
         "the sliders out of order"
     );
-    // Slice & tilt: the slice step (its row's "step", under the section's title), τ₁, τ₂ and γ.
-    let slice_top = y_of(&texts, panel, "Slice & tilt", false);
-    for want in ["step", "τ₁", "τ₂", "γ"] {
+    // Tilt: τ₁, τ₂ and γ, under the section's title, and no slice step (R-457).
+    let slice_top = y_of(&texts, panel, "Tilt", false);
+    for want in ["τ₁", "τ₂", "γ"] {
         assert!(
             texts
                 .iter()
                 .any(|(t, r)| panel.contains_rect(*r) && r.min.y > slice_top && t.contains(want)),
-            "no `{want}` in Slice & tilt"
+            "no `{want}` in Tilt"
         );
     }
+    assert!(
+        !texts
+            .iter()
+            .any(|(t, r)| panel.contains_rect(*r) && r.min.y > slice_top && t.contains("step")),
+        "a step in Tilt (R-457)"
+    );
     // §G3's sub-scopes, in order.
     let tree = rig.app.keyboard.tree(Mode::Explore);
     let subs: Vec<&str> = tree
@@ -1119,13 +1154,13 @@ fn qa_mock_manifold_view_one_group_sections_in_order() {
         .map(|id| tree.get(id).unwrap().label)
         .collect();
     assert_eq!(subs, SECTIONS);
-    // Control: Centre z₀ taken for Slice & tilt.
+    // Control: Slice centre taken for Tilt.
     let swapped: Vec<(String, Rect)> = texts
         .iter()
         .map(|(t, r)| {
             let t = match t.as_str() {
-                "Centre z₀" => "Slice & tilt".to_owned(),
-                "Slice & tilt" => "Centre z₀".to_owned(),
+                "Slice centre" => "Tilt".to_owned(),
+                "Tilt" => "Slice centre".to_owned(),
                 _ => t.clone(),
             };
             (t, *r)
@@ -1151,7 +1186,12 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
             q1,
             q2,
         },
-        slice: Slice {},
+        slice: Slice {
+            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            frame: engine::contract::sim_config::SliceFrame::along(
+                engine::contract::sim_config::Z_Q3,
+            ),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],
@@ -1280,15 +1320,17 @@ fn qa_mock_compass_switches_mode_by_the_slider_touched() {
     let mut rig = mock();
     let tau1 = scope_by_label(&rig, "τ₁");
     let tau2 = scope_by_label(&rig, "τ₂");
-    let step = scope_by_label(&rig, "slice step");
     let mv = manifold_view_id(&rig);
     let tree = rig.app.keyboard.tree(Mode::Explore);
     let centre = tree
         .children(Some(mv))
         .into_iter()
-        .find(|id| tree.get(id).unwrap().label == "Centre z₀")
+        .find(|id| tree.get(id).unwrap().label == "Slice centre")
         .unwrap();
     let slider = tree.children(Some(centre))[3];
+    // The slice step's place: the Slice centre slider of the slice normal's dimension, z_q3 on the mock's chart, which
+    // moves the slice along its normal (R-457).
+    let step = tree.children(Some(centre))[5];
     let mut seen = Vec::new();
     // Tilt is the default (R-409 point 2), so a slice slider comes first.
     for (id, want) in [
@@ -1308,8 +1350,9 @@ fn qa_mock_compass_switches_mode_by_the_slider_touched() {
     });
 }
 
-/// The angle after `name` in the compass's readout, in degrees. Since R-451 B1 and B5 tilt mode reads q₁'s and q₂'s
-/// target and angle, "q₁→<axis> +30.0°", and the rotation "γ +0.0°", signed: a target after `name` is skipped.
+/// The angle after `name` in the compass's readout, in degrees. Since R-457 E6 the readout reads each tilt angle's
+/// target and angle, "τ₁ → <axis> +30.0°" (R-451 B5's "q₁→<axis>" before), and the rotation "γ +0.0°", signed: a target
+/// after `name` is skipped.
 fn readout(texts: &[(String, Rect)], compass: Rect, name: &str) -> f64 {
     let line = texts
         .iter()
@@ -1318,8 +1361,10 @@ fn readout(texts: &[(String, Rect)], compass: Rect, name: &str) -> f64 {
         .0
         .clone();
     let mut after = &line[line.find(name).unwrap() + name.len()..];
-    if let Some(target) = after.strip_prefix('→') {
-        after = target.trim_start_matches(|c: char| !c.is_whitespace());
+    if let Some(target) = after.trim_start().strip_prefix('→') {
+        after = target
+            .trim_start()
+            .trim_start_matches(|c: char| !c.is_whitespace());
     }
     let digits: String = after
         .trim_start()
@@ -1351,8 +1396,8 @@ fn tilt_of(v: &Z) -> f64 {
 #[test]
 fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     let compass = layout().compass;
-    // τ₁ turned by ten base steps, Shift: the compass reads q₁'s tilt out of the chart's plane (since R-451 B5, as
-    // "q₁→<target> <angle>°").
+    // τ₁ turned by ten base steps, Shift: the compass reads q₁'s tilt out of the chart's plane (since R-457 E6, as
+    // "τ₁ → <target> <angle>°").
     let mut rig = mock();
     let tau1 = scope_by_label(&rig, "τ₁");
     rig.interact(tau1);
@@ -1362,7 +1407,7 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     assert!(want > 1.0, "τ₁ did not tilt q₁: {q1:?}");
     settle(&mut rig);
     let texts = rig.texts();
-    let got = readout(&texts, compass, "q₁");
+    let got = readout(&texts, compass, "τ₁");
     assert!(
         (got.abs() - want).abs() < 0.06,
         "the compass reads τ₁ {got}°, q₁ is tilted {want}°"
@@ -1383,7 +1428,7 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
         "the compass reads γ {got}°, q₁ is turned {want}°"
     );
     rejects("the τ₁ readout taken for γ's angle", || {
-        assert!((readout(&texts, compass, "q₁").abs() - want).abs() < 0.06)
+        assert!((readout(&texts, compass, "τ₁").abs() - want).abs() < 0.06)
     });
 }
 
@@ -1542,9 +1587,9 @@ fn qa_mock_keyboard_enter_reaches_every_control_of_each_section() {
             "Esc from a control of {section}"
         );
     }
-    // Centre z₀'s eight are §G2's eight names.
+    // Slice centre's eight are §G2's eight names.
     let mut rig = mock();
-    let seen = walk(&mut rig, "Centre z₀");
+    let seen = walk(&mut rig, "Slice centre");
     assert_eq!(seen, AXES);
     rejects("the sliders out of order", || {
         let mut swapped = AXES;
@@ -1555,8 +1600,8 @@ fn qa_mock_keyboard_enter_reaches_every_control_of_each_section() {
 
 #[test]
 fn qa_mock_keyboard_shift_and_alt_steps_on_this_screen() {
-    // A z₀ slider, the slice step, τ₁, τ₂ and γ: Shift is ten steps, Alt a tenth.
-    for label in ["z_q1", "slice step", "τ₁", "τ₂", "γ"] {
+    // A z₀ slider, τ₁, τ₂ and γ: Shift is ten steps, Alt a tenth (the slice step removed by R-457).
+    for label in ["z_q1", "τ₁", "τ₂", "γ"] {
         let step = |modifiers: Modifiers| -> f64 {
             let mut rig = mock();
             let id = if label == "z_q1" {
@@ -1565,7 +1610,7 @@ fn qa_mock_keyboard_shift_and_alt_steps_on_this_screen() {
                 let centre = tree
                     .children(Some(mv))
                     .into_iter()
-                    .find(|id| tree.get(id).unwrap().label == "Centre z₀")
+                    .find(|id| tree.get(id).unwrap().label == "Slice centre")
                     .unwrap();
                 tree.children(Some(centre))[3]
             } else {
@@ -1575,7 +1620,7 @@ fn qa_mock_keyboard_shift_and_alt_steps_on_this_screen() {
             let before = rig.snap().sim.plane;
             rig.key(Key::ArrowUp, modifiers);
             let after = rig.snap().sim.plane;
-            if label == "z_q1" || label == "slice step" {
+            if label == "z_q1" {
                 norm(&add(&after.z0, -1.0, &before.z0))
             } else if label == "γ" {
                 let a = |q: &Z| q[1].atan2(q[0]).to_degrees();

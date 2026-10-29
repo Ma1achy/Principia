@@ -1,16 +1,19 @@
 //! The left panel, "Manifold view": ONE group (render_gui_spec §G2; GUI_DESIGN_NOTES § "01 Explore"; 01_main.png;
-//! R-390, ORDER item 3). Chart, Navigate with the depth readout, its precision warning and the lock, Centre z₀ and
-//! Slice & tilt, top to bottom, are one thing: how you view the manifold. Every edit is a `SetField` on `z₀`, on the
-//! basis `q₁, q₂` or on the lock: navigation is chart construction, with no camera (§G1; chart_decoder_contract
-//! Part 4). The panel reads the snapshot and keeps nothing of the state itself.
+//! R-390, ORDER item 3). Chart, Navigate with the depth readout, its precision warning and the lock, Slice centre and
+//! Tilt, top to bottom, are one thing: how you view the manifold (named "Centre z₀" and "Slice & tilt" before R-457).
+//! Every edit is a `SetField` on `z₀`, on the basis `q₁, q₂`, on the slice frame or on the lock: navigation is chart
+//! construction, with no camera (§G1; chart_decoder_contract Part 4). The panel reads the snapshot and keeps nothing of
+//! the state itself.
 //!
 //! The chart is the affine slice `z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂` (chart_decoder_contract Part 3). The panel reads
-//! it in a preset's frame: the two axes the preset is named by, `e_a` and `e_b`, and a hidden slice direction `e_d`.
-//! In that frame `q₁ = σ (cos γ u₁ + sin γ u₂)` and `q₂ = σ (−sin γ u₁ + cos γ u₂)`, with `u₁ = cos τ₁ e_a + sin τ₁ e_d`
-//! and `u₂ = cos τ₂ e_b + sin τ₂ e_d`: the scale `σ` (the zoom is `−log₂ σ`), the tilts `τ₁`, `τ₂` toward the slice
-//! direction (Part 4, "Tilt") and the in-plane rotation `γ`. The slice step is `z₀`'s component along `e_d`
-//! (Part 4, "Slice"). [`View::of`] reads them off the basis and [`View::basis`] writes them back, so each slider is
-//! one basis edit.
+//! it in a preset's frame: the two axes the preset is named by, `e_a` and `e_b`, and the slice frame's three hidden
+//! dimensions (gui_state_contract §2; R-457): the slice normal `e_d`, the dimension the slice moves through, and the
+//! targets `e_X` and `e_Y` the tilts turn into. In that frame `q₁ = σ (cos γ u₁ + sin γ u₂)` and
+//! `q₂ = σ (−sin γ u₁ + cos γ u₂)`, with `u₁ = cos τ₁ e_a + sin τ₁ e_X` and `u₂ = cos τ₂ e_b + sin τ₂ e_Y`: the scale `σ`
+//! (the zoom is `−log₂ σ`), the tilts `τ₁`, `τ₂`, each toward its own target (Part 4, "Tilt"), and the in-plane
+//! rotation `γ`. With `X = Y = d`, the frame's defaults, it is the map the panel had before R-457 exactly. The move
+//! along the normal is `z₀`'s component on `e_d`, the Slice centre slider of that dimension (Part 4, "Slice").
+//! [`View::read`] reads them off the basis and [`View::basis`] writes them back, so each slider is one basis edit.
 //!
 //! The panel's layout is fixed: each section takes a share of the panel by its rows ([`sections`]), so the keyboard's
 //! ring on a section (TASK-M6-25) and the controls inside it agree at any window size.
@@ -20,13 +23,13 @@ pub mod chart;
 pub mod depth;
 pub mod lock;
 pub mod navigate;
-pub mod slice_tilt;
+pub mod tilt;
 
 use eframe::egui::{
     self, pos2, vec2, Align, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, LATENT_DIM};
+use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::Window;
 
@@ -34,21 +37,22 @@ use crate::explore::compass::{self, Compass};
 use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree};
 use crate::keyboard::Keyboard;
 
-/// The eight controls' short names, in chart_decoder_contract Part 2's block order (render_gui_spec §G2's "Centre
-/// z₀: eight sliders").
+/// The eight controls' short names, in chart_decoder_contract Part 2's block order (render_gui_spec §G2's "Slice
+/// centre: eight sliders").
 pub const AXES: [&str; LATENT_DIM] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z_q3", "z_μ1", "z_μ2"];
 
 /// The affine presets, each the pair of axes it is named by (§G2: "named by its axes, never a nickname"). Placeholder
-/// content on the mock (R-390): the preset names on the real engine are REQ-GUI-082's, TASK-M8-06's.
-pub const PRESETS: [(usize, usize); 5] = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 6)];
+/// content on the mock (R-390): the preset names on the real engine are REQ-GUI-082's, TASK-M8-06's. The last,
+/// `z_q3 × z_μ1`, holds the default slice normal `z_q3`, as `tilt_targets` needs one (applied per R-369, REQ-GUI-205).
+pub const PRESETS: [(usize, usize); 6] = [(0, 1), (2, 3), (4, 5), (6, 7), (0, 6), (5, 6)];
 
-/// The hidden direction slicing and tilting move along: `z_q3`, as 01_main.png's compass names its depth axis
+/// The default slice normal and tilt target, the slice axis: `z_q3`, as 01_main.png's compass names its depth axis
 /// (applied per R-369: the direction library is TASK-M8-07's), or the first axis the preset leaves hidden when the
-/// preset shows `z_q3`.
-pub const SLICE_AXIS: usize = 5;
+/// preset shows `z_q3` (gui_state_contract §2's default for the slice frame).
+pub const SLICE_AXIS: usize = engine::contract::sim_config::Z_Q3 as usize;
 
-/// The span of a `z₀` slider and of the slice step: `[−1, 1]`, the signed, centred plane of Part 3; locked, the span
-/// is re-based to the anchor, `anchor ± 1` (a look choice, R-390).
+/// The span of a `z₀` slider: `[−1, 1]`, the signed, centred plane of Part 3; locked, the span is re-based to the
+/// anchor, `anchor ± 1` (a look choice, R-390).
 pub const Z0_HALF_RANGE: f64 = 1.0;
 /// The span a basis component's field is stepped across by the keyboard's bounded step (a look choice, R-390).
 pub const Q_HALF_RANGE: f64 = 1.0;
@@ -59,10 +63,10 @@ pub const ZOOM_RANGE: (f64, f64) = (-4.0, 48.0);
 pub const CHART: ScopeId = "chart";
 /// Navigate.
 pub const NAVIGATE: ScopeId = "navigate";
-/// Centre z₀.
-pub const CENTRE_Z0: ScopeId = "centre_z0";
-/// Slice & tilt.
-pub const SLICE_TILT: ScopeId = "slice_tilt";
+/// Slice centre (named "Centre z₀" before R-457).
+pub const SLICE_CENTRE: ScopeId = "slice_centre";
+/// Tilt (named "Slice & tilt" before R-457).
+pub const TILT: ScopeId = "tilt";
 
 /// The preset selector.
 pub const PRESET: ScopeId = "chart_preset";
@@ -86,37 +90,43 @@ pub const CENTRE_U: ScopeId = "centre_u";
 pub const CENTRE_V: ScopeId = "centre_v";
 /// The zoom, in log₂.
 pub const ZOOM: ScopeId = "zoom";
-/// Navigate's eight `z₀` fields.
-pub const NAV_Z0: [ScopeId; LATENT_DIM] = [
-    "nav_z0_0", "nav_z0_1", "nav_z0_2", "nav_z0_3", "nav_z0_4", "nav_z0_5", "nav_z0_6", "nav_z0_7",
-];
 /// The lock badge's unlock.
 pub const UNLOCK: ScopeId = "lock_unlock";
 /// The lock badge's open in Inspector.
 pub const OPEN_INSPECTOR: ScopeId = "lock_inspector";
-/// Centre z₀'s eight sliders.
+/// Slice centre's eight sliders.
 pub const SLIDERS: [ScopeId; LATENT_DIM] = [
-    "centre_z0_0",
-    "centre_z0_1",
-    "centre_z0_2",
-    "centre_z0_3",
-    "centre_z0_4",
-    "centre_z0_5",
-    "centre_z0_6",
-    "centre_z0_7",
+    "slice_centre_0",
+    "slice_centre_1",
+    "slice_centre_2",
+    "slice_centre_3",
+    "slice_centre_4",
+    "slice_centre_5",
+    "slice_centre_6",
+    "slice_centre_7",
 ];
-/// The slice step.
-pub const SLICE_STEP: ScopeId = "slice_step";
 /// The tilt `τ₁`.
 pub const TAU1: ScopeId = "tau1";
+/// `τ₁`'s target dropdown, "tilt τ₁ into \[X\]" (R-457 E5): a menu, its entries the dimensions it offers.
+pub const TILT_X: ScopeId = "tilt_x";
 /// The tilt `τ₂`.
 pub const TAU2: ScopeId = "tau2";
+/// `τ₂`'s target dropdown, "tilt τ₂ into \[Y\]".
+pub const TILT_Y: ScopeId = "tilt_y";
 /// The rotation `γ`.
 pub const GAMMA: ScopeId = "gamma";
+/// `τ₁`'s dropdown's entries, one per latent dimension; it holds the six [`target_choices`] offers.
+pub const TILT_X_ENTRIES: [ScopeId; LATENT_DIM] = [
+    "tilt_x_0", "tilt_x_1", "tilt_x_2", "tilt_x_3", "tilt_x_4", "tilt_x_5", "tilt_x_6", "tilt_x_7",
+];
+/// `τ₂`'s dropdown's entries.
+pub const TILT_Y_ENTRIES: [ScopeId; LATENT_DIM] = [
+    "tilt_y_0", "tilt_y_1", "tilt_y_2", "tilt_y_3", "tilt_y_4", "tilt_y_5", "tilt_y_6", "tilt_y_7",
+];
 
-/// The rows each section takes, header included: Chart 5; Navigate 9 (centre, zoom, two of `z₀`, depth, precision,
-/// the lock badge and its anchor); Centre z₀ 9; Slice & tilt 5.
-pub const SECTION_ROWS: [usize; 4] = [5, 9, 9, 5];
+/// The rows each section takes, header included: Chart 5; Navigate 7 (centre, zoom, depth, precision, the lock badge
+/// and its anchor); Slice centre 9; Tilt 6 (`τ₁` and its target, `τ₂` and its target, `γ`).
+pub const SECTION_ROWS: [usize; 4] = [5, 7, 9, 6];
 /// The height the Manifold view's title and subtitle take above its sections, in points.
 pub const TITLE_H: f32 = 40.0;
 /// The gap between the sections, in points.
@@ -134,7 +144,7 @@ pub fn row_height(panel: Rect) -> f32 {
     (free / rows as f32).clamp(0.0, MAX_ROW_H)
 }
 
-/// The sections' rects in `panel`, top to bottom: Chart, Navigate, Centre z₀, Slice & tilt, each as tall as its rows.
+/// The sections' rects in `panel`, top to bottom: Chart, Navigate, Slice centre, Tilt, each as tall as its rows.
 pub fn sections(panel: Rect) -> [Rect; 4] {
     let body = panel.shrink(MARGIN);
     let h = row_height(panel);
@@ -187,35 +197,49 @@ pub fn join(tree: &mut ScopeTree) {
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_U, "centre u", Pan));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_V, "centre v", Pan));
     tree.register(Some(NAVIGATE), Scope::value(ZOOM, "zoom", ZoomLog2));
-    for (id, name) in NAV_Z0.into_iter().zip(AXES) {
-        tree.register(Some(NAVIGATE), Scope::value(id, name, Bounded));
-    }
     tree.register(Some(NAVIGATE), Scope::control(UNLOCK, "unlock"));
     tree.register(
         Some(NAVIGATE),
         Scope::control(OPEN_INSPECTOR, "open in Inspector"),
     );
     for (id, name) in SLIDERS.into_iter().zip(AXES) {
-        tree.register(Some(CENTRE_Z0), Scope::value(id, name, Bounded));
+        tree.register(Some(SLICE_CENTRE), Scope::value(id, name, Bounded));
     }
-    tree.register(
-        Some(SLICE_TILT),
-        Scope::value(SLICE_STEP, "slice step", Bounded),
-    );
-    tree.register(Some(SLICE_TILT), Scope::value(TAU1, "τ₁", Angle));
-    tree.register(Some(SLICE_TILT), Scope::value(TAU2, "τ₂", Angle));
-    tree.register(Some(SLICE_TILT), Scope::value(GAMMA, "γ", Angle));
+    tree.register(Some(TILT), Scope::value(TAU1, "τ₁", Angle));
+    tree.register(Some(TILT), Scope::menu(TILT_X, "tilt τ₁ into"));
+    tree.register(Some(TILT), Scope::value(TAU2, "τ₂", Angle));
+    tree.register(Some(TILT), Scope::menu(TILT_Y, "tilt τ₂ into"));
+    tree.register(Some(TILT), Scope::value(GAMMA, "γ", Angle));
     for (key, action) in SHORTCUTS {
         tree.register_shortcut(key, action);
     }
 }
 
+/// Keeps the target dropdowns' entries those [`target_choices`] offers on `view`'s plane, in order, each named by its
+/// axis (R-457 E5): re-registered only when the plane's axes change, so a menu the focus is in keeps its entries.
+pub fn join_targets(tree: &mut ScopeTree, view: &View) {
+    let choices = target_choices(view.a, view.b);
+    for (menu, entries) in [(TILT_X, TILT_X_ENTRIES), (TILT_Y, TILT_Y_ENTRIES)] {
+        let want: Vec<ScopeId> = choices.iter().map(|&i| entries[i]).collect();
+        if tree.children(Some(menu)) != want {
+            tree.remove_children(menu);
+            for &i in &choices {
+                tree.register(Some(menu), Scope::control(entries[i], AXES[i]));
+            }
+        }
+    }
+}
+
 /// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope",
 /// read with R-409: the arrows need Enter; the letter shortcuts act in either mode).
-pub const SHORTCUTS: [(&str, &str); 8] = [
+pub const SHORTCUTS: [(&str, &str); 9] = [
     (
         "Enter on a value",
         "interact: the arrows adjust it; Enter or Esc, back to navigating",
+    ),
+    (
+        "Enter on a tilt target",
+        "open it: ↑ ↓ choose, Enter picks, Esc closes it unchanged",
     ),
     ("Figure: arrows", "pan, after Enter"),
     ("Figure: + / −", "zoom, in either mode"),
@@ -257,7 +281,8 @@ pub fn axis(i: usize, k: f64) -> Latent {
     std::array::from_fn(|j| if j == i { k } else { 0.0 })
 }
 
-/// The hidden slice direction of the preset `(a, b)`: [`SLICE_AXIS`], or the first axis neither shows.
+/// The slice axis of the preset `(a, b)`: [`SLICE_AXIS`], or the first axis neither shows. The slice frame's defaults
+/// for a plane along `(a, b)`, and where the normal goes when the plane takes it (R-459 G4).
 pub fn slice_axis(a: usize, b: usize) -> usize {
     if a != SLICE_AXIS && b != SLICE_AXIS {
         return SLICE_AXIS;
@@ -289,7 +314,7 @@ pub fn axis_pair(q1: &Latent, q2: &Latent) -> Option<(usize, usize)> {
     (a < b).then_some((a, b))
 }
 
-/// The chart, as the panel reads it in a preset's frame.
+/// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct View {
     /// The preset whose frame holds the basis, by its index in [`PRESETS`]; `None` for a basis edited out of every
@@ -299,8 +324,12 @@ pub struct View {
     pub a: usize,
     /// The axis `q₂` is named by.
     pub b: usize,
-    /// The hidden slice and tilt direction.
+    /// The slice normal, the dimension the slice moves through: the compass cube's depth axis.
     pub d: usize,
+    /// The target `τ₁` tilts `q₁` into, `e_X` (R-457).
+    pub x: usize,
+    /// The target `τ₂` tilts `q₂` into, `e_Y`.
+    pub y: usize,
     /// The scale `σ`.
     pub scale: f64,
     /// The tilt `τ₁`, in radians.
@@ -312,25 +341,63 @@ pub struct View {
 }
 
 impl View {
-    /// The view of `plane`'s basis: the first preset whose frame holds it, or its dominant axes' frame. A basis along
-    /// two axes alone, `q₁` along `e_a` and `q₂` along `e_b`, `a < b`, reads as that pair untilted, the plane a steer on
-    /// the compass's Plücker grid sets (R-452 C5); a preset's pair reads as before.
+    /// The view of `plane`'s basis with the slice frame's defaults, each hidden dimension the slice axis of the axes
+    /// it is read on ([`slice_axis`]): the frame a plane had before R-457, and has until a target is picked.
     pub fn of(plane: &Plane) -> Self {
+        Self::framed(plane, None)
+    }
+
+    /// The view of `sim`'s chart: its basis read with its slice frame (gui_state_contract §2).
+    pub fn read(sim: &SimConfig) -> Self {
+        Self::framed(&sim.plane, Some(&sim.slice.frame))
+    }
+
+    /// The view of `plane`'s basis with the slice frame `frame`, or its defaults: the first preset whose frame holds
+    /// it, or its dominant axes' frame. A basis along two axes alone, `q₁` along `e_a` and `q₂` along `e_b`, `a < b`,
+    /// reads as that pair untilted, the plane a steer on the compass's Plücker grid sets (R-452 C5); a preset's pair
+    /// reads as before. On the axes `(a, b)` each of the frame's three is read as the frame holds it, or as the slice
+    /// axis where it is one of `a`, `b`, which no frame holds for its own plane (R-459 G4), or no latent dimension; a
+    /// preset is found only where the frame holds none of its axes.
+    pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
-        let outside = |a: usize, b: usize, d: usize| -> f64 {
+        let hidden = |a: usize, b: usize| -> [usize; 3] {
+            let axis = slice_axis(a, b);
+            let on = |i: Option<u32>| {
+                i.and_then(|i| usize::try_from(i).ok())
+                    .filter(|&i| i < LATENT_DIM && i != a && i != b)
+                    .unwrap_or(axis)
+            };
+            [
+                on(frame.map(|f| f.normal)),
+                on(frame.map(|f| f.tilt_x)),
+                on(frame.map(|f| f.tilt_y)),
+            ]
+        };
+        let outside = |a: usize, b: usize| -> f64 {
+            let [_, x, y] = hidden(a, b);
             (0..LATENT_DIM)
-                .filter(|i| ![a, b, d].contains(i))
+                .filter(|i| ![a, b, x, y].contains(i))
                 .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
                 .sum()
         };
-        let found = PRESETS.iter().position(|&(a, b)| {
-            outside(a, b, slice_axis(a, b)) <= 1e-18 * total.max(f64::MIN_POSITIVE)
-        });
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
-            return Self::in_frame(preset, a, b, slice_axis(a, b), q1, q2);
+            return Self::in_frame(preset, a, b, hidden(a, b), q1, q2);
         }
+        // A frame holding one of a preset's axes is not that preset's (R-459 G4), so a plane tilted within a 3-space
+        // two presets share is read in the preset the frame fits: `z_q3 × z_μ1` into `z_α` is not `z_α × z_μ1` into
+        // `z_q3` while the normal is `z_α`.
+        let fits = |a: usize, b: usize| {
+            frame.is_none_or(|f| {
+                [f.normal, f.tilt_x, f.tilt_y]
+                    .into_iter()
+                    .all(|i| usize::try_from(i).is_ok_and(|i| i != a && i != b))
+            })
+        };
+        let found = PRESETS.iter().position(|&(a, b)| {
+            fits(a, b) && outside(a, b) <= 1e-18 * total.max(f64::MIN_POSITIVE)
+        });
         let (a, b) = match found {
             Some(p) => PRESETS[p],
             None => {
@@ -340,15 +407,15 @@ impl View {
                 (a, dominant(&q2_rest))
             }
         };
-        Self::in_frame(found, a, b, slice_axis(a, b), q1, q2)
+        Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
 
-    /// The scale, tilts and rotation of `q1`, `q2` in the frame `(a, b, d)`.
+    /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`.
     fn in_frame(
         preset: Option<usize>,
         a: usize,
         b: usize,
-        d: usize,
+        [d, x, y]: [usize; 3],
         q1: &Latent,
         q2: &Latent,
     ) -> Self {
@@ -360,14 +427,16 @@ impl View {
             q1[b].atan2(q2[b])
         };
         let (sin_g, cos_g) = gamma.sin_cos();
-        let sin1 = cos_g * q1[d] - sin_g * q2[d];
-        let sin2 = sin_g * q1[d] + cos_g * q2[d];
+        let sin1 = cos_g * q1[x] - sin_g * q2[x];
+        let sin2 = sin_g * q1[y] + cos_g * q2[y];
         // `+ 0.0` reads a −0 angle as 0, as the readouts show it.
         Self {
             preset,
             a,
             b,
             d,
+            x,
+            y,
             scale: cos1.hypot(sin1),
             tau1: sin1.atan2(cos1) + 0.0,
             tau2: sin2.atan2(cos2) + 0.0,
@@ -375,16 +444,27 @@ impl View {
         }
     }
 
-    /// The basis `(q₁, q₂)` of this view.
+    /// The basis `(q₁, q₂)` of this view: `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_Y`, turned by `γ`
+    /// and scaled by `σ` (R-457 E1).
     pub fn basis(&self) -> (Latent, Latent) {
         let (s1, c1) = self.tau1.sin_cos();
         let (s2, c2) = self.tau2.sin_cos();
         let (sg, cg) = self.gamma.sin_cos();
-        let u1 = add(&axis(self.a, c1), s1, &axis(self.d, 1.0));
-        let u2 = add(&axis(self.b, c2), s2, &axis(self.d, 1.0));
+        let u1 = add(&axis(self.a, c1), s1, &axis(self.x, 1.0));
+        let u2 = add(&axis(self.b, c2), s2, &axis(self.y, 1.0));
         let q1 = add(&u1.map(|x| x * cg * self.scale), sg * self.scale, &u2);
         let q2 = add(&u2.map(|x| x * cg * self.scale), -sg * self.scale, &u1);
         (q1, q2)
+    }
+
+    /// The slice frame this view is read with.
+    pub fn frame(&self) -> SliceFrame {
+        let index = |i: usize| u32::try_from(i).expect("a latent index");
+        SliceFrame {
+            normal: index(self.d),
+            tilt_x: index(self.x),
+            tilt_y: index(self.y),
+        }
     }
 
     /// The zoom, in log₂: `−log₂ σ`.
@@ -491,6 +571,86 @@ pub fn basis_edit((q1, q2): (Latent, Latent)) -> SetField {
     sim(SimField::Basis { q1, q2 })
 }
 
+/// A `SetField` on the slice frame, with the basis where the same pick changes it: one history entry (R-457 E3).
+pub fn frame_edit(frame: SliceFrame, basis: Option<(Latent, Latent)>) -> SetField {
+    sim(SimField::SliceFrame { frame, basis })
+}
+
+/// The dimensions a target dropdown offers on the plane `(a, b)`: the six not `e_a` or `e_b`, the slice normal among
+/// them, in [`AXES`]'s order (R-457 E5).
+pub fn target_choices(a: usize, b: usize) -> Vec<usize> {
+    (0..LATENT_DIM).filter(|&i| i != a && i != b).collect()
+}
+
+/// Which tilt angle's target: `τ₁`'s, `X`, or `τ₂`'s, `Y`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Target {
+    /// "tilt τ₁ into \[X\]".
+    X,
+    /// "tilt τ₂ into \[Y\]".
+    Y,
+}
+
+/// The pick of `to` as `which`'s target on `view` (R-457): one `SetField` on the slice frame, carrying the basis
+/// re-tilted into `e_to` where that target's angle is not 0, and the slice frame alone where it is. `None` for the
+/// target it already is, or a dimension the dropdown does not offer.
+pub fn target_edit(view: &View, which: Target, to: usize) -> Option<SetField> {
+    if !target_choices(view.a, view.b).contains(&to) {
+        return None;
+    }
+    let (now, angle, picked) = match which {
+        Target::X => (view.x, view.tau1, View { x: to, ..*view }),
+        Target::Y => (view.y, view.tau2, View { y: to, ..*view }),
+    };
+    if to == now {
+        return None;
+    }
+    let basis = (angle != 0.0).then(|| picked.basis());
+    Some(frame_edit(picked.frame(), basis))
+}
+
+/// The slice frame `frame` once the plane's axes are `(a, b)` (R-459 G4, R-457 E4): a normal the plane takes moves by
+/// the slice-axis rule ([`slice_axis`]); a target equal to the old normal follows it, and one the plane takes resets to
+/// the normal, moved first; the rest keep their own.
+pub fn frame_on(frame: SliceFrame, a: usize, b: usize) -> SliceFrame {
+    let taken = |i: u32| usize::try_from(i).map_or(true, |i| i >= LATENT_DIM || i == a || i == b);
+    let normal = if taken(frame.normal) {
+        u32::try_from(slice_axis(a, b)).expect("a latent index")
+    } else {
+        frame.normal
+    };
+    let target = |t: u32| {
+        if t == frame.normal || taken(t) {
+            normal
+        } else {
+            t
+        }
+    };
+    SliceFrame {
+        normal,
+        tilt_x: target(frame.tilt_x),
+        tilt_y: target(frame.tilt_y),
+    }
+}
+
+/// The edit moving `sim`'s basis to `basis`, a preset or Chart's basis editor: a `SetField` on the basis where the
+/// slice frame still fits the new plane, else one on the slice frame [`frame_on`] the new plane's axes, carrying the
+/// basis, so the normal leaves the plane in the same history entry (R-459 G4, REQ-GUI-205).
+pub fn plane_edit(sim: &SimConfig, basis: (Latent, Latent)) -> SetField {
+    let plane = Plane {
+        z0: sim.plane.z0,
+        q1: basis.0,
+        q2: basis.1,
+    };
+    let view = View::framed(&plane, Some(&sim.slice.frame));
+    let frame = frame_on(sim.slice.frame, view.a, view.b);
+    if frame == sim.slice.frame {
+        basis_edit(basis)
+    } else {
+        frame_edit(frame, Some(basis))
+    }
+}
+
 /// The edits `edits`, made against `sim`, with each basis edit turned about the pin while locked (render_gui_spec §G4:
 /// tilt, rotation, zoom and chart changes "all turn about the pin"): the anchor's chart point `(s, t)` is kept, so the
 /// basis edit `(q₁, q₂) → (q₁', q₂')` is preceded by the `SetField` on `z₀` that moves the centre to
@@ -507,7 +667,13 @@ pub fn about_the_pin(
         match &edit.edit {
             Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
             Edit::Sim(SimField::Lock(l)) => lock = l.clone(),
-            Edit::Sim(SimField::Basis { q1, q2 }) => {
+            Edit::Sim(
+                SimField::Basis { q1, q2 }
+                | SimField::SliceFrame {
+                    basis: Some((q1, q2)),
+                    ..
+                },
+            ) => {
                 let pivot = lock
                     .locked
                     .then(|| chart_coords(&plane, &lock.z_locked))
@@ -525,8 +691,14 @@ pub fn about_the_pin(
                 }
                 (plane.q1, plane.q2) = (*q1, *q2);
             }
-            // The horizon, the window and the render fields leave the plane and the lock as they are.
-            Edit::Sim(SimField::Horizon(_) | SimField::Window(_)) | Edit::Render(_) => {}
+            // The horizon, the window, the slice frame alone and the render fields leave the plane and the lock as they
+            // are.
+            Edit::Sim(
+                SimField::Horizon(_)
+                | SimField::Window(_)
+                | SimField::SliceFrame { basis: None, .. },
+            )
+            | Edit::Render(_) => {}
         }
         out.push(edit);
     }
@@ -551,7 +723,7 @@ pub enum Touch {
     /// Tilt, the default: the Tilt button, or a tilt touched last: `τ₁`, `τ₂`, `γ`, or a tilt on the compass.
     #[default]
     Tilt,
-    /// Slice: the Slice button, or a slice slider touched last: `z₀`, the slice step, or a slice on the compass.
+    /// Slice: the Slice button, or a slice slider touched last: a Slice centre slider, or a slice on the compass.
     Slice,
 }
 
@@ -585,13 +757,22 @@ impl Out {
     }
 }
 
-/// Enter on control `id`, as its click: the panel's, and the compass's Tilt and Slice.
+/// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
+/// compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
+    let view = View::read(&snapshot.sim);
+    for (which, entries) in [(Target::X, TILT_X_ENTRIES), (Target::Y, TILT_Y_ENTRIES)] {
+        if let Some(to) = entries.iter().position(|e| *e == id) {
+            if let Some(edit) = target_edit(&view, which, to) {
+                out.edit(edit, None, scratch);
+            }
+            return;
+        }
+    }
     match id {
         PRESET => {
-            let view = View::of(&snapshot.sim.plane);
             let next = view.preset.map_or(0, |p| (p + 1) % PRESETS.len());
-            out.edit(chart::preset_basis(view, next), None, scratch);
+            out.edit(chart::preset_edit(&snapshot.sim, view, next), None, scratch);
         }
         UNLOCK => lock::unlock(&snapshot.sim.lock, out),
         OPEN_INSPECTOR => lock::open_inspector(&snapshot.sim.lock, out),
@@ -612,8 +793,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
     };
     let id = adjust.scope;
     let span = 2.0 * Z0_HALF_RANGE;
-    if let Some(i) = NAV_Z0.iter().chain(&SLIDERS).position(|s| *s == id) {
-        let i = i % LATENT_DIM;
+    if let Some(i) = SLIDERS.iter().position(|s| *s == id) {
         let mut z0 = plane.z0;
         z0[i] += range * span;
         out.edit(z0_edit(z0), Some(Touch::Slice), scratch);
@@ -623,11 +803,11 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
         if let Some(i) = components.iter().position(|s| *s == id) {
             let (mut q1, mut q2) = (plane.q1, plane.q2);
             [&mut q1, &mut q2][which][i] += range * 2.0 * Q_HALF_RANGE;
-            out.edit(basis_edit((q1, q2)), None, scratch);
+            out.edit(plane_edit(&snapshot.sim, (q1, q2)), None, scratch);
             return;
         }
     }
-    let view = View::of(plane);
+    let view = View::read(&snapshot.sim);
     match id {
         CENTRE_U => out.edit(
             z0_edit(add(&plane.z0, 2.0 * view_fraction, &plane.q1)),
@@ -644,13 +824,8 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             None,
             scratch,
         ),
-        SLICE_STEP => {
-            let mut z0 = plane.z0;
-            z0[view.d] += range * span;
-            out.edit(z0_edit(z0), Some(Touch::Slice), scratch);
-        }
         TAU1 | TAU2 | GAMMA => {
-            let mut angles = slice_tilt::Angles::of(&view);
+            let mut angles = tilt::Angles::of(&view);
             angles.turn(id, degrees);
             out.edit(
                 basis_edit(angles.apply(view).basis()),
@@ -659,7 +834,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             );
         }
         crate::explore::FIGURE => navigate::pan_by_keys(adjust, plane, view_fraction, scratch, out),
-        crate::explore::COMPASS_VIEW => compass::adjust(adjust, plane, scratch, out),
+        crate::explore::COMPASS_VIEW => compass::adjust(adjust, &snapshot.sim, scratch, out),
         _ => {}
     }
 }
@@ -697,7 +872,7 @@ pub const TITLE: &str = "Manifold view";
 /// Under the title, as 01_main.png reads.
 pub const SUBTITLE: &str = "chart · navigate · slice · tilt · rotation";
 /// The sections' titles, in order.
-pub const SECTION_TITLES: [&str; 4] = ["Chart", "Navigate", "Centre z₀", "Slice & tilt"];
+pub const SECTION_TITLES: [&str; 4] = ["Chart", "Navigate", "Slice centre", "Tilt"];
 
 /// Draws the panel in `rect`.
 pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
@@ -724,7 +899,7 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
     chart::show(ui, chart_rect, h, clip, panel);
     navigate::show(ui, navigate_rect, h, clip, panel);
     centre::show(ui, centre_rect, h, clip, panel);
-    slice_tilt::show(ui, slice_rect, h, clip, panel);
+    tilt::show(ui, slice_rect, h, clip, panel);
 }
 
 /// Draws a section's header in row 0 of `section`: its title, and a weak note beside it.

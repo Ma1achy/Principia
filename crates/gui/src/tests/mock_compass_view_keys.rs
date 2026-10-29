@@ -16,7 +16,7 @@ use crate::explore::compass;
 use crate::explore::compass::views::{
     cursor_moved, cursor_start, dominant, plucker, upper, CompassView, VIEWS,
 };
-use crate::explore::manifold_view::slice_tilt::Angles;
+use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::View;
 use crate::explore::{
     COMPASS, COMPASS_CUBE, COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE, COMPASS_SLICE,
@@ -306,15 +306,15 @@ fn mock_compass_view_keys_space_steers_to_the_cursor_and_esc_returns() {
         path: vec![COMPASS.to_owned(), COMPASS_VIEW.to_owned()],
         mode: KeyMode::Navigation,
     };
-    let plane = app.snapshot().sim.plane.clone();
+    let sim = app.snapshot().sim.clone();
     let mut out = crate::explore::manifold_view::Out::default();
-    compass::space(&navigating, &plane, &mut scratch, &mut out);
+    compass::space(&navigating, &sim, &mut scratch, &mut out);
     assert!(out.edits.is_empty(), "space() in navigation mode");
     let interacting = Focus {
         mode: KeyMode::Interaction,
         ..navigating
     };
-    compass::space(&interacting, &plane, &mut scratch, &mut out);
+    compass::space(&interacting, &sim, &mut scratch, &mut out);
     let steered = out.edits.len();
     rejects("a Space that steers in navigation mode", || {
         assert_eq!(steered, 0)

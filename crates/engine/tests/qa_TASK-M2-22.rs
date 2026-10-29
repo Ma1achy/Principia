@@ -105,7 +105,12 @@ fn sim(plane: Plane) -> SimConfig {
             window: engine::contract::sim_config::Window::SQUARE,
         },
         plane,
-        slice: Slice {},
+        slice: Slice {
+            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            frame: engine::contract::sim_config::SliceFrame::along(
+                engine::contract::sim_config::Z_Q3,
+            ),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

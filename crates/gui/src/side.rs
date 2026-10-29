@@ -42,6 +42,11 @@ pub trait EngineSide {
     /// pixels it is clipped to and the canvas background (R-406; R-467 D2). Nothing by default: the real engine's
     /// frame loop is TASK-M8-05's.
     fn figure_view(&mut self, _view: FigureView) {}
+    /// The span of the field the figure shows this frame, `[s₀, t₀, s₁, t₁]` of the field's `[0, 1]²`, `t` Y-up: the
+    /// engine side computes only what of it it does not already hold, keeping what it has, so a canvas resized by a
+    /// splitter or by F3 is re-framed, never re-integrated (R-406; R-462 J4). It is no `SetField`: the contract has no
+    /// viewport field.
+    fn show_span(&mut self, span: [f64; 4]);
 
     /// The time source the app's clock reads; `None` holds the clock.
     fn time_source(&mut self) -> Option<&mut dyn TimeSource>;
@@ -140,6 +145,9 @@ impl EngineSide for RealSide {
         None
     }
 
+    /// Nothing: the real engine's figure, and its quads, are TASK-M8-05's, which follows R-462 J4.
+    fn show_span(&mut self, _span: [f64; 4]) {}
+
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {
         None
     }
@@ -229,6 +237,11 @@ impl EngineSide for MockSide {
                 c.invalid()
             });
         self.engine.observe(&view, invalid);
+    }
+
+    /// The mock integrates the fake quads over `span` it does not hold yet ([`crate::mock::MockEngine::show_span`]).
+    fn show_span(&mut self, span: [f64; 4]) {
+        self.engine.show_span(span);
     }
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {

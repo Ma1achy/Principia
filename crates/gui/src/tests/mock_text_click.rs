@@ -238,7 +238,7 @@ fn at_focus(app: &App<MockSide>) -> (Vec<String>, KeyMode) {
 /// B6).
 #[test]
 fn mock_reachability_text_click_a_click_off_a_text_input_ends_interaction_on_a_value() {
-    let id = manifold_view::NAV_Z0[0];
+    let id = manifold_view::SLIDERS[0];
     let (mut app, mut h, path) = interacting_on(id);
     let figure = app
         .keyboard
@@ -255,7 +255,7 @@ fn mock_reachability_text_click_a_click_off_a_text_input_ends_interaction_on_a_v
     });
 }
 
-/// A drag on a Centre z₀ slider while another scope (τ₁) is in interaction mode: navigation mode, the focus still on
+/// A drag on a Slice centre slider while another scope (τ₁) is in interaction mode: navigation mode, the focus still on
 /// τ₁ (R-456; B6).
 #[test]
 fn mock_reachability_text_click_a_drag_on_a_slider_ends_interaction_elsewhere() {

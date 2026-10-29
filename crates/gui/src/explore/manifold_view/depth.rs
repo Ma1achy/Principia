@@ -58,7 +58,7 @@ pub fn warning(precision: &Precision, zoom: f64) -> Option<String> {
 
 /// Draws the depth in row `depth` and the precision warning in row `precision`.
 pub fn show(ui: &mut Ui, depth: Rect, precision: Rect, panel: &mut Panel<'_>) {
-    let zoom = View::of(&panel.snapshot.sim.plane).zoom();
+    let zoom = View::read(&panel.snapshot.sim).zoom();
     let label_w = super::chart::LABEL_W;
     let mut line = row_ui(ui, depth);
     line.add_sized([label_w, depth.height()], egui::Label::new("depth"));

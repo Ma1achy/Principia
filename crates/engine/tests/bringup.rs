@@ -17,7 +17,7 @@ use engine::contract::canonical;
 use engine::contract::fast_math::FastMath;
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, Window,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::synthetic::{simstate_from_words, simstate_words, Synthetic};
 use kernel::bringup::{max_samples, pattern, words_per_sample, BringUp, Variant};
@@ -38,7 +38,9 @@ fn config(kernel_variant: KernelVariant) -> SimConfig {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

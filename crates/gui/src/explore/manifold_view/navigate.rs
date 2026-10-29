@@ -1,5 +1,6 @@
-//! Navigate (render_gui_spec §G2): the centre `(u, v)`, the zoom in log₂, and all eight `z₀` values, editable by drag
-//! or by typing; under them the depth readout and the lock (`depth`, `lock`). And the figure's own gestures, which are
+//! Navigate (render_gui_spec §G2): the centre `(u, v)` and the zoom in log₂, editable by drag or by typing; under them
+//! the depth readout, the precision warning and the lock (`depth`, `lock`), and nothing more: no grid of `z₀` values,
+//! which repeated the Slice centre sliders (R-457). And the figure's own gestures, which are
 //! navigation too: a drag pans, the wheel zooms, and with the Figure scope focused the arrows pan and + / − zoom (§G3).
 //! Each is one `SetField`: a pan on `z₀` (`Δz₀ ∈ span(q₁, q₂)`), a zoom on the basis, scaled about the centre, and,
 //! locked, about the pin ([`super::about_the_pin`]; chart_decoder_contract Part 4). A primary click with no drag, or
@@ -10,8 +11,8 @@ use eframe::egui::{self, DragValue, Key, Rect, Response, RichText, Sense, Slider
 use engine::contract::sim_config::Plane;
 
 use super::{
-    add, basis_edit, header, in_plane, row, row_ui, z0_edit, Out, Panel, Scratch, Touch, View,
-    AXES, CENTRE_U, CENTRE_V, NAV_Z0, ZOOM, ZOOM_RANGE,
+    add, basis_edit, header, in_plane, row, row_ui, z0_edit, Out, Panel, Scratch, View, CENTRE_U,
+    CENTRE_V, SECTION_TITLES, ZOOM, ZOOM_RANGE,
 };
 use crate::keyboard::keymap::{multiplier, Direction};
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
@@ -40,10 +41,6 @@ pub fn wheel_octaves(events: &[egui::Event]) -> f64 {
         })
         .sum()
 }
-/// A `z₀` field's width, in points (a look choice, R-390).
-pub const FIELD_W: f32 = 40.0;
-/// The width of a `z₀` field's axis name, in points (a look choice, R-390).
-pub const AXIS_LABEL_W: f32 = 26.0;
 
 /// The magnification `2^zoom`, as the zoom row reads it: "× 1.00".
 pub fn magnification(zoom: f64) -> String {
@@ -52,9 +49,9 @@ pub fn magnification(zoom: f64) -> String {
 
 /// Draws Navigate's own rows in `section`, then the depth readout and the lock under them.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    header(ui, section, h, "Navigate", NOTE);
+    header(ui, section, h, SECTION_TITLES[1], NOTE);
     let plane = panel.snapshot.sim.plane.clone();
-    let view = View::of(&plane);
+    let view = View::read(&panel.snapshot.sim);
     let label_w = super::chart::LABEL_W;
     let mut centre = row_ui(ui, row(section, h, 1));
     centre.add_sized([label_w, h], egui::Label::new("centre u, v"));
@@ -95,34 +92,8 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
             panel.scratch,
         );
     }
-    for half in 0..2 {
-        let mut fields = row_ui(ui, row(section, h, 3 + half));
-        for i in half * 4..half * 4 + 4 {
-            fields.add_sized(
-                [AXIS_LABEL_W, h],
-                egui::Label::new(RichText::new(AXES[i]).weak()),
-            );
-            let mut value = plane.z0[i];
-            let field_h = fields.spacing().interact_size.y;
-            let field = fields.add_sized(
-                [FIELD_W, field_h],
-                DragValue::new(&mut value)
-                    .speed(0.002)
-                    .min_decimals(3)
-                    .max_decimals(6),
-            );
-            panel.place(NAV_Z0[i], &field, clip);
-            if field.changed() {
-                let mut z0 = plane.z0;
-                z0[i] = value;
-                panel
-                    .out
-                    .edit(z0_edit(z0), Some(Touch::Slice), panel.scratch);
-            }
-        }
-    }
-    super::depth::show(ui, row(section, h, 5), row(section, h, 6), panel);
-    super::lock::show(ui, row(section, h, 7), row(section, h, 8), clip, panel);
+    super::depth::show(ui, row(section, h, 3), row(section, h, 4), panel);
+    super::lock::show(ui, row(section, h, 5), row(section, h, 6), clip, panel);
 }
 
 /// The pan of a drag by `delta` points over a figure `size` points in size: the picture follows the pointer, `t`
@@ -173,14 +144,17 @@ pub fn figure_coords(figure: Rect, pos: egui::Pos2) -> (f64, f64) {
     (s, t)
 }
 
-/// The figure's gestures in `figure`: drag to pan, the wheel to zoom, K over a point or right-click › lock here to
-/// lock there, and, with the Figure scope focused, + / − to zoom. Takes no key while a text field holds the keyboard.
+/// The figure's gestures on its canvas `figure`: drag to pan, the wheel to zoom, K over a point or right-click › lock
+/// here to lock there, and, with the Figure scope focused, + / − to zoom. Each point is read in `field`, where the
+/// field's `[0, 1]²` is (`crate::layout::Layout::field`), so a pan follows the pointer at the field's scale whatever
+/// the canvas's size (R-462 J4). Takes no key while a text field holds the keyboard.
 /// Returns the figure point `(s, t)` to pin in the Trajectory panel, if any: a primary click's with no drag past egui's
 /// click threshold, or the pointer's when P is pressed over the figure, as K locks, in either keyboard mode (R-453 D1,
 /// D6).
 pub fn figure(
     ui: &mut Ui,
     figure: Rect,
+    field: Rect,
     focused: bool,
     snapshot: &engine::contract::snapshot::Snapshot,
     scratch: &mut Scratch,
@@ -195,7 +169,7 @@ pub fn figure(
     if response.dragged_by(egui::PointerButton::Primary) {
         let delta = response.drag_delta();
         if delta != egui::Vec2::ZERO {
-            out.edit(pan(plane, delta, figure.size()), None, scratch);
+            out.edit(pan(plane, delta, field.size()), None, scratch);
         }
     }
     let typing = ui.ctx().text_edit_focused();
@@ -210,7 +184,7 @@ pub fn figure(
         }
         if !typing && ui.input(|i| i.key_pressed(Key::K)) {
             if let Some(pos) = response.hover_pos() {
-                super::lock::lock_at(plane, figure_coords(figure, pos), scratch, out);
+                super::lock::lock_at(plane, figure_coords(field, pos), scratch, out);
             }
         }
         if !typing && ui.input(|i| i.key_pressed(Key::P)) {
@@ -220,7 +194,7 @@ pub fn figure(
     if response.secondary_clicked() {
         scratch.menu_at = response
             .interact_pointer_pos()
-            .map(|p| figure_coords(figure, p));
+            .map(|p| figure_coords(field, p));
     }
     response.context_menu(|ui| {
         if ui.button(super::lock::LOCK_HERE).clicked() {
@@ -265,7 +239,7 @@ pub fn figure(
         }
     }
     pin.map(|pos| {
-        let (s, t) = figure_coords(figure, pos);
+        let (s, t) = figure_coords(field, pos);
         [s, t]
     })
 }

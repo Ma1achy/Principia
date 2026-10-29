@@ -13,7 +13,7 @@ use engine::contract::view_ui::{Focus, KeyMode, Mode};
 use super::support::{focus, frame_texts, headless, mock_app, press, rejects, shapes, UNBOUND};
 use crate::app::App;
 use crate::explore::breadcrumb::{self, NAVIGATION, RING_WIDTH};
-use crate::explore::manifold_view::{CENTRE_Z0, SLIDERS};
+use crate::explore::manifold_view::{SLICE_CENTRE, SLIDERS};
 use crate::explore::{COMPASS, COMPASS_TILT, COMPASS_VIEW, FIGURE, MANIFOLD_VIEW};
 use crate::headless::Headless;
 use crate::keyboard::keymap::{Command, Direction};
@@ -111,7 +111,7 @@ fn mock_keyboard_modes_a_tab_lands_on_the_big_scope_and_enter_on_its_first_eleme
     );
 }
 
-/// The value of Centre z₀'s slider `i`.
+/// The value of Slice centre's slider `i`.
 fn slider(app: &App<MockSide>, i: usize) -> f64 {
     app.snapshot().sim.plane.z0[i]
 }
@@ -131,9 +131,9 @@ fn mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
             Key::Enter,
         ],
     );
-    let first = [MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[0]];
-    let second = [MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[1]];
-    check_at(at(&app), &first, NAV, "Enter on Centre z₀");
+    let first = [MANIFOLD_VIEW, SLICE_CENTRE, SLIDERS[0]];
+    let second = [MANIFOLD_VIEW, SLICE_CENTRE, SLIDERS[1]];
+    check_at(at(&app), &first, NAV, "Enter on Slice centre");
     let values = (slider(&app, 0), slider(&app, 1));
     press(&mut h, &mut app, Key::ArrowDown, NONE);
     let _ = h.frame(&mut app, Vec::new());
@@ -171,12 +171,12 @@ fn mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
         "Esc back to navigation on the slider",
     );
     rejects("an Esc in interaction mode that goes up a scope", || {
-        check_at(st(&[MANIFOLD_VIEW, CENTRE_Z0], NAV), &second, NAV, "Esc")
+        check_at(st(&[MANIFOLD_VIEW, SLICE_CENTRE], NAV), &second, NAV, "Esc")
     });
     press(&mut h, &mut app, Key::Escape, NONE);
     check_at(
         at(&app),
-        &[MANIFOLD_VIEW, CENTRE_Z0],
+        &[MANIFOLD_VIEW, SLICE_CENTRE],
         NAV,
         "a second Esc goes up",
     );
@@ -191,7 +191,7 @@ fn mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     });
 }
 
-/// What `Ctrl+Z` and `?` do with the focus on Centre z₀'s first slider in `mode`: the focus and mode after Ctrl+Z,
+/// What `Ctrl+Z` and `?` do with the focus on Slice centre's first slider in `mode`: the focus and mode after Ctrl+Z,
 /// the undo depth's change, whether `?` opened the overlay, and the focus and mode after Esc closes it.
 type GlobalKeys = ((Vec<String>, KeyMode), u32, bool, (Vec<String>, KeyMode));
 
@@ -235,7 +235,7 @@ fn global_keys(mode: KeyMode) -> GlobalKeys {
 fn mock_keyboard_modes_tab_ctrl_z_and_question_keep_their_meaning_in_interaction_mode() {
     let navigating = global_keys(NAV);
     let interacting = global_keys(INTERACT);
-    let path: Vec<String> = [MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[0]]
+    let path: Vec<String> = [MANIFOLD_VIEW, SLICE_CENTRE, SLIDERS[0]]
         .iter()
         .map(|s| (*s).to_owned())
         .collect();
@@ -276,7 +276,7 @@ fn mock_keyboard_modes_tab_ctrl_z_and_question_keep_their_meaning_in_interaction
     assert_eq!(slider(&app, 0), value, "the Tab adjusted nothing");
     rejects("a Tab in interaction mode captured by the element", || {
         check_at(
-            st(&[MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[0]], INTERACT),
+            st(&[MANIFOLD_VIEW, SLICE_CENTRE, SLIDERS[0]], INTERACT),
             &[FIGURE],
             NAV,
             "Tab",
@@ -476,7 +476,9 @@ fn mock_keyboard_modes_the_ring_is_orange_navigating_and_blue_interacting() {
         );
     }
     // The breadcrumb names the slider in both.
-    assert!(frame_texts(&mut h, &mut app).contains(&"Manifold view › Centre z₀ › z_α".to_owned()));
+    assert!(
+        frame_texts(&mut h, &mut app).contains(&"Manifold view › Slice centre › z_α".to_owned())
+    );
 }
 
 // --- The state machine itself (`ScopeTree::navigate`) ----------------------------------------------------------------
