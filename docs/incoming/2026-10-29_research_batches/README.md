@@ -3,8 +3,8 @@
 29 Oct 2026. Ingest and transcription only. Nothing here was scored against Principia's engine and no engine code ran;
 every number is a transcription, or arithmetic on transcribed numbers by the scripts in `scripts/`. Every proposed
 target is a measurement, not a gate (R-649, R-650 — the owner's 29 Oct rulings, quoted in § 10), and is written out
-in § 10 as exact text for PLAN.md and REVIEW_QUEUE.md, to be applied once #328 and #335 merge. This directory changes
-no requirement, ruling, task or existing row.
+in § 10 as exact text for PLAN.md and REVIEW_QUEUE.md, to be applied after R-649 and R-650 are ported (task 4b). This
+directory changes no requirement, ruling, task or existing row.
 
 ## 1. The request
 
@@ -356,10 +356,11 @@ Each is local only; citation and DOI verified (Crossref), licence as in `sources
 - Not transcribed, as the owner ranks them context: Broucke & Walker 1980's Table I; Tanikawa & Mikkola 2023's Table 1
   (recap of seeds).
 
-## 10. To apply once #328 and #335 merge
+## 10. To apply after R-649 and R-650 are ported (task 4b)
 
-#328 merged on 29 Oct 2026 (20:10 UTC); #335 is open and touches REVIEW_QUEUE.md. Apply these after #335 merges, in
-this order: PLAN.md, then REVIEW_QUEUE.md. RQ numbers start at RQ-640 as assigned. Every row below is a proposal. Each
+#328 merged on 29 Oct 2026 (20:10 UTC) and #335 at 21:51 UTC. A porter applies these after R-649 and R-650 are ported
+into decisions.md (task 4b), in this order: PLAN.md, then REVIEW_QUEUE.md, renumbering where needed. RQ numbers start
+at RQ-640 as assigned. Every row below is a proposal. Each
 follows the owner's 29 Oct rulings (R-649 and R-650 in this task's dispatch; verbatim: "A target is a MEASUREMENT, not
 a gate. Failing one never blocks building"; "(a) GPU explorer … expected to agree statistically or qualitatively only
 …; (b) CPU IC inspector: f64/high precision; exact targets (collision points, periods, converged states) bind here";
