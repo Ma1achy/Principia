@@ -97,7 +97,8 @@ def draw(stage, p, counter):
     final = stage >= 5
     cap = ("Everything that cannot change the physics is quotiented out. The triangle's shape never moves."
            if not final else
-           "Energy and angular momentum stay free coordinates of the manifold. They are not constraints.")
+           "Energy and angular momentum are not fixed by the reduction: they vary across the manifold "
+           "and can be chosen as chart axes.")
     fig = new_fig(1, "Symmetry reduction: 15 numbers to 8", cap)
 
     ax = fig.add_axes([0.04, 0.10, 0.56, 0.69])
