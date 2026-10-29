@@ -1175,6 +1175,24 @@ fn stain_custom_stop_ramp() {
         Ramp::new(vec![stop(0.0, a), stop(0.0, b), stop(1.0, a)], cyclic).expect("a ramp")
     };
     assert_eq!(shared(false).oklab_at(0.0), Some(b));
+    // Every stop at one position: there, the last stop's colour, cyclic or not.
+    for cyclic in [false, true] {
+        let one = Ramp::new(
+            vec![
+                Stop {
+                    position: 0.5,
+                    oklab: a,
+                },
+                Stop {
+                    position: 0.5,
+                    oklab: b,
+                },
+            ],
+            cyclic,
+        )
+        .expect("a ramp");
+        assert_eq!(one.oklab_at(0.5), Some(b), "cyclic: {cyclic}");
+    }
     assert_eq!(shared(true).oklab_at(-1e-20), Some(b));
     assert_eq!(shared(true).oklab_at(1.0), Some(b));
     // The conversion to linear sRGB is OKLab's: its published primaries (Ottosson, "A perceptual color space for
