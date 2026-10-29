@@ -10,6 +10,10 @@ Read this first; each rule points at its source.
 - For the rules in force, read `plan/CURRENT_RULES.md`, which is generated from `decisions.md`. Read `decisions.md` for
   their history and why they were made (R-292).
 
+## Papers and licences (`decisions.md` § R-643)
+- No publisher PDF is committed unless its licence allows redistribution, checked before commit (R-643). A file that
+  may not be committed is held in `docs/incoming/_local/`, which is gitignored; nothing under it is ever committed.
+
 ## How work runs (`plan/WORKFLOW.md`)
 - One task, one branch (`task/<TASK-id>`), one PR titled `<TASK-id>: <title>`. A task starts only when everything in
   its Depends on is merged, or early off the approved head of its one unmerged dependency, every other dependency
@@ -23,6 +27,9 @@ Read this first; each rule points at its source.
 - The orchestrator's operating manual is `plan/OPERATIONS.md`: dispatch, merging, autonomy, resources, and what a
   Linux cloud machine does in place of the Mac. A cloud session runs `scripts/cloud-setup.sh` first (R-346). The build
   loop runs on the Mac; cloud sessions suit read-and-think work only: reviews, audits and docs (R-357).
+- No cloud sessions, and no briefs or instructions addressed to the owner; the orchestrator dispatches every agent
+  locally itself; written instructions for an agent are internal task files (R-645, R-647, R-648). The cloud notes above
+  and in `plan/OPERATIONS.md` are dormant reference.
 - Never delete or modify anything outside the repo and its build and scratch directories without asking the human
   first, caches included: `~/.cargo`, `~/.rustup`, the rust-gpu cache, the Actions caches
   (R-349; the list is applied per R-204, accepted by R-352).
