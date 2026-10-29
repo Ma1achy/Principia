@@ -100,3 +100,10 @@ Fourth revision, 27 Oct 2026. Every sentence citing the papers delivered that da
 - **Added:** Aarseth et al. 1994b (`aarseth1994b`); DOIs or arXiv ids for nine entries; the translation issue years
   of *Astrophysics* 4 and 5 (1969 and 1970) beside the volume years the papers print.
 - Rebuilt PDF: 22 pages, no undefined references. Its four overfull boxes predate this revision.
+
+**Note added 27 Oct 2026 (R-632, closing RQ-590).** A correction to `lit_review_2026-10.tex` § 13 "Periodic-Orbit
+Catalogues" (lines 698–699), as `../2026-10-27_validation_plan/PLAN.md` § 10 records it: the atlas's 311 free-fall
+orbits lie on nine planes, one per mass set, not "one plane". The sentence "Under the scale quotient these are one
+plane, a stack of planes indexed by mass, and one plane" is read with its last "one plane" as "nine planes, one per
+mass set" (PLAN.md § 2.3). The review is a record, so the text and its sha256 above are not changed; this note is the
+correction.

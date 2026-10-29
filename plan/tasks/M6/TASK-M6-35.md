@@ -1,7 +1,7 @@
 # TASK-M6-35 — The compass's Jacobi and Shape views and the physical steer (R-452)
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347
+- **Closes:** REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347, REQ-GUI-410
 - **Depends on:** TASK-M6-34
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -38,14 +38,17 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
 - The latent Jacobian (REQ-DEC-049, a definition, R-72): a CPU, f64, central-difference `∂x/∂z` with 8 columns of
   the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and `η_E`, with `J_D`'s step
   rule (deep_zoom §2), evaluated at `z₀`, or at the hovered pixel's latent point on an affine chart while the pointer is
-  over the figure (R-452 C4; R-550 J2).
+  over the figure (R-452 C4; R-550 J2). The step is `J_D`'s as R-633 writes it into deep_zoom §2:
+  `h_k = ε^{1/3}·max(1, |z_k|)` in f64, the difference divided by the step actually taken, `(z + h) − (z − h)`.
 - The Jacobi and Shape views on TASK-M6-34's grid — `u₁ = J q̂₁`, `u₂ = J q̂₂`, the grid over Jacobi's
   `α, β, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, m₀/M, m₁/M` and Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ, m₀/M, m₁/M` (R-550), each divided by
   its fixed reference range (angles by their domain, masses by 1, momenta by `q_max`, Shape's rates and `L_z` by the
   ranges this task writes, REQ-GUI-347, a definition under physics review), the readout's dominant pair and the
   area stretch on the orthonormalised pair; a degenerate pushforward (`J q̂₁ ∧ J q̂₂ = 0`) said, not drawn; the help
   text (the physical views change as the slice moves, the latent one does not; the metric named).
-- The physical steer — `q₁ ∝ J⁻¹ e_i`, `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised; refused, its reason logged, where
+- The physical steer — `q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, `J⁺` formed from `J`'s SVD with
+  every singular value below `c·σ₁` dropped (R-633; `c` REQ-GUI-410's calibration, starting at `1e-9`, proposed here
+  with the measured gap as its basis), so `J⁺ = J⁻¹` where nothing is dropped; refused, its reason logged, where
   the smaller singular value of `[P e_i, P e_j]` (`P = J J⁺`) is below the tolerance this task proposes
   (REQ-GUI-346, a calibration confirmed at the M6 gate), "normal to the energy shell" on an `E*`-normalised chart;
   the Manifold view's sliders following as after the Chart builder's Apply (§G7); an accepted steer a single
@@ -53,13 +56,14 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
 - *Was (before R-550):* the deliverables read the Jacobian, the coordinate sets, the stage and the metric "as RQ-341's
   … RQ-346's rulings give", with `u₁ = J q₁`, `u₂ = J q₂` orthonormalised and the steer by `J⁺` "by RQ-344's
   construction".
-- A linear-decoder fixture (a known `J`) for the tests, and tests `compass_physical_views` and
-  `mock_compass_steer_physical`; screenshot cases `01_main/mock_compass_jacobi` and `01_main/mock_compass_shape`.
+- A linear-decoder fixture (a known `J`) for the tests, `E* = 0`, `E*`-unset and saturated-link fixtures for the cut,
+  and tests `compass_physical_views`, `mock_compass_steer_physical` and `mock_compass_steer_cut`; screenshot cases `01_main/mock_compass_jacobi` and `01_main/mock_compass_shape`.
 
 ## Acceptance tests
 - `cargo test -p gui compass_physical_views` and `cargo xtask screenshot 01_main` (mock_compass_jacobi, mock_compass_shape) — on the linear-decoder fixture the grid equals the normalised bivector of J q₁ ∧ J q₂ within 1e-12 and the stretch the Gram factor; on the decoder a slice edit changes the physical grid where J depends on z₀ and leaves the Plücker grid unchanged; the hovered pixel's J is used while the pointer is over the figure; a degenerate pushforward shows its message; controls: the reference's synthetic Jacobian and un-orthonormalised u₁, u₂ each fail; review checklist (physics reviewer): the Jacobian, the coordinate sets, the stage read and the physical metric are R-550's (REQ-GUI-199).
 - `cargo test -p gui compass_latent_jacobian` — REQ-DEC-049's verify (the eight columns, the stage after `η_E`, the stretch on the orthonormalised pair).
 - The reference ranges (REQ-GUI-347) and the steer's tolerance (REQ-GUI-346): written into render_gui_spec's compass section and the PR's calibration record; review checklist (physics reviewer).
+- `cargo test -p gui mock_compass_steer_cut` — REQ-GUI-410's verify: at `c = 1e-9`, the `E* = 0` fixture refuses the shell-normal direction at every sampled `z`, the `E*`-unset fixture refuses none, a saturated-link fixture refuses; controls: no cut, and a cut at `1e-3`, each fail; the cut and its measured gap in the PR's calibration record; review checklist (physics reviewer) (R-633).
 - `cargo test -p gui mock_compass_steer_physical` — on the fixture a click on a physical cell with e_i, e_j in J's range steers to a plane whose pushforward lights (i, j) at ±1 within REQ-GUI-346's tolerance; a cell needing the energy shell's normal on an `E*` chart is refused with "normal to the energy shell" and no SetField; each steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a refused case and one without Gram–Schmidt each fail; review checklist (physics reviewer): the construction is R-550's (REQ-GUI-200).
 
 ## Notes
@@ -75,3 +79,10 @@ state after `η_E`, the fixed-range metric, and the steer by `J⁻¹` with the p
   ruled; their rulings may change this file's deliverables and acceptance (a port of the ruling does so first)."
 - **The physics reviewer** checks the Jacobian, the coordinate sets and the steer's construction against the
   rulings, as R-452 asks.
+- **R-633 (28 Oct 2026; RQ-600 (a), RQ-601 (a)):** the task no longer waits on RQ-600 or RQ-601. The latent Jacobian's
+  step is `J_D`'s, written into deep_zoom §2, so REQ-DEC-049's truncation bound is stated against it. `J⁺` drops each
+  singular value below `c·σ₁`, `c` a second calibration (REQ-GUI-410, added to Closes), starting at `1e-9` on the
+  measured gap; the steer reads `J⁺` where the cut drops one (applied per R-369; the physics reviewer checks it). The
+  analytic energy-normal projector (RQ-601 (c)) is noted for later and not built. *Was (deliverables):* "The physical
+  steer — `q₁ ∝ J⁻¹ e_i`, `q₂ ∝ J⁻¹ e_j`, Gram–Schmidt orthonormalised;" and "tests `compass_physical_views` and
+  `mock_compass_steer_physical`".

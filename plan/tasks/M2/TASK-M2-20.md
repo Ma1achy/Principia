@@ -42,3 +42,4 @@ Encode serves the validation programme's harder demand: foreign physical ICs are
 - Gap G15 (‖·‖_phys) applies to the residual.
 - The papers' values are not in the corpus; they enter through REQ-VAL-120's proposal, with citations.
 - R-257 (closes RQ-157) ported the Burrau constants into dd_validation_orbits §2 (REQ-VAL-174); the other papers' values still enter through REQ-VAL-120's proposal.
+- **R-632 (27 Oct 2026, RQ-570 (a)):** Table 1's column 8 stays transcribed and recorded beside eq. 4, never asserted, as `fixtures/anosova/col8_comparison.csv` records it; REQ-VAL-019 no longer carries `rq: RQ-570`. Paper II's energy column shows the same discrepancy (`docs/incoming/2026-10-27_papers/TARGETS.md`, AA-6's caveat).

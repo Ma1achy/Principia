@@ -16,7 +16,7 @@ Fails if:
   - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines, extends or withdraws it), and
     R-n lacks the matching forward line under its heading (R-292), or "Superseded by" it;
   - a ruling amended in part has no "Still in force: …" line under its heading, or one superseded outright has one,
-    or plan/CURRENT_RULES.md lists a ruling superseded outright (R-293);
+    or plan/CURRENT_RULES.md lists a ruling superseded or withdrawn outright (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
   - a still-open item in open-questions.md (a paragraph or list item with a bold run starting "Open" or "Still open")
@@ -41,6 +41,7 @@ ROOT = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, os.path.join(ROOT, "plan", "tools"))
 from sections import citable_index, sections  # noqa: E402
 from rulings import QUEUE, RQ_HEAD, missing_forward_lines, still_in_force_errors, superseded_listed, unresolved_refs  # noqa: E402
+from rulings import self_test as rulings_self_test  # noqa: E402
 from veto_marks import errors as veto_mark_errors, self_test as veto_self_test  # noqa: E402
 
 REQS = "plan/requirements.yaml"
@@ -322,7 +323,8 @@ def main():
         if not os.path.exists(f"plan/reviewers/{rv}.md"):
             errors.append(f"plan/reviewers/{rv}.md: missing")
 
-    # decisions.md and the review queue (R-292)
+    # decisions.md and the review queue (R-292); the digest check's negative controls first
+    errors += rulings_self_test()
     errors += missing_forward_lines()
     errors += still_in_force_errors()
     errors += superseded_listed()

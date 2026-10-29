@@ -44,6 +44,25 @@ its environment checks on 2 Oct 2026 on three blockers. What each would need is 
 
 The **Linux cloud** notes below, `scripts/cloud-setup.sh` among them, stand for a cloud session's read-and-think work.
 
+### The weekly consistency audit (R-636)
+
+Adopted by R-636 (closing RQ-605): **report-only, never blocking, run on demand when the owner asks (for example
+before a release or a milestone gate), with no scheduled task or job** (the owner, 28 Oct 2026). No merge, task or
+milestone waits on it, and no CI workflow runs it.
+- **What it reads:** `plan/` (`requirements.yaml`, `tasks.yaml`, `plan/tasks/`, `MILESTONES.md`, `WORKFLOW.md`,
+  `OPERATIONS.md`, `reviewers/`), `docs/design/`, `docs/contracts/` and `decisions.md`. Not `docs/incoming/`,
+  `docs/archive/`, `docs/reference/` or `workbench/`, which are records, not authority (R-1, R-159).
+- **What it checks:** every cross-reference resolves (a file and § heading, an R-, RQ-, REQ- or TASK- id, a contract
+  Part); contradictions between documents (two statements of one rule, value or definition that disagree, and a
+  ruling's text against the doc lines it says it was applied in); requirements with no task, and tasks with no
+  requirement. `python3 plan/check_plan.py` already checks part of this; the audit adds the contradictions and the
+  references `check_plan.py` doesn't scan.
+- **What it reports:** to the owner, each time it runs, as one PR holding the mechanical fixes (a stale reference, a
+  heading renamed) and a `REVIEW_QUEUE.md` entry for each contradiction, with file, section and quoted text. The PR
+  merges as any PR does, on its reviews and green CI; it blocks nothing else.
+- **Who runs it:** there is no schedule. When the owner asks, the orchestrator runs it as a local agent, and names
+  the reviewers of its PR then (R-369).
+
 ## Start here
 
 1. **A cloud session runs `scripts/cloud-setup.sh` first**, from the repository root. It installs exactly what CI's
@@ -244,6 +263,8 @@ merge:
    worktree.
 5. If `reviews-complete` stays red only from the `pull_request`-event run, which fails before any review and stays a
    separate check suite, re-run it: `gh run rerun <id>` (R-266, R-276).
+6. To re-run CI, prefer re-running the failed jobs (`gh run rerun <id> --failed`) over closing and reopening the PR
+   (the owner's note, R-633).
 
 **Merge order for stacked PRs.** Don't stack (R-362, § "Roles and the loop"). Deleting a base branch closes the PR
 stacked on it rather than retargeting it (PR #2, 25 Sep 2026), and with auto-delete on (R-357), merging a PR deletes

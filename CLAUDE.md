@@ -59,6 +59,25 @@ Read this first; each rule points at its source.
   lists each `M` or `D` with its reason, and the code reviewer confirms that no assertion was weakened, except where a
   ruling changed the behaviour it tests. The implementer never edits qa's files (R-290).
 
+## Working with review (`decisions.md` § R-635)
+- Codex, Gemini CLI and GitHub Copilot review PRs as advisory bots, never merge gates. Their findings are not optional
+  reading. Their brief is `AGENTS.md` § "Code Review Rules"; `GEMINI.md` and `.github/copilot-instructions.md` are
+  copies, checked by `xtask/tests/ai_review_rules.rs`.
+- Before a merge, check for the bots' reviews. Wait up to 15 minutes after the PR opens, or after a re-review you asked
+  for (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer). If none arrives in that window, or
+  the bot errored or is out of quota, merge without it and note "no bot review" in the PR. Never wait longer.
+- Handle every finding that arrived before the merge, with a reply on its thread, then resolve the thread
+  (`gh api graphql`, `resolveReviewThread`): fixed (name the commit); not a defect (the traced reason: the real caller
+  or input checked, or the doc or ruling that makes it correct); or not this PR's (name the queue entry or follow-up
+  task). None is left silent; none is resolved without a reply.
+- Trace a finding to a real caller or input before fixing it. Two bots agreeing is not verification. A finding that
+  contradicts a ruling, the corpus or the physics is answered with the source, not "fixed" into a regression.
+- A P0 / CRITICAL claim (a physics or invariant break) goes to the physics reviewer for the call before merge, even if
+  you think it wrong. If the physics reviewer disagrees with the bot, say so on the thread with the reason.
+- A review that lands after the merge is handled the same way, as a follow-up PR or a queue entry.
+- Keep a tally per PR for the trial report: findings per bot; fixed, not a defect or not this PR's; and which ones our
+  own reviewers had already caught.
+
 ## Never guess, never defer (`plan/WORKFLOW.md` § "Escalation", § "No deferral")
 - A conflict, silence or missing value in the corpus goes to `REVIEW_QUEUE.md`, with file, section and quoted text.
   The affected task waits.

@@ -67,7 +67,9 @@ fn unquote(value: &str) -> &str {
 }
 
 /// The jobs of `workflow` that run on Linux, each as its lines. A job on a runner that is neither Linux, macOS nor
-/// Windows fails the check, since it can't tell what that job is.
+/// Windows fails the check, since it can't tell what that job is. A job that calls a workflow of this directory
+/// (`uses: ./.github/workflows/…`, no `runs-on:`) runs nothing itself: the called workflow's jobs are read in its own
+/// file.
 fn linux_jobs(file: &str, workflow: &str) -> Vec<Vec<String>> {
     let mut jobs: Vec<Vec<String>> = Vec::new();
     let mut in_jobs = false;
@@ -84,6 +86,14 @@ fn linux_jobs(file: &str, workflow: &str) -> Vec<Vec<String>> {
         }
     }
     jobs.into_iter()
+        .filter(|job| {
+            !job.iter().any(|l| {
+                indent(l) == 4
+                    && l.trim()
+                        .strip_prefix("uses:")
+                        .is_some_and(|w| unquote(w).starts_with("./.github/workflows/"))
+            })
+        })
         .filter(|job| {
             let runner = job
                 .iter()
@@ -137,7 +147,9 @@ fn installed_after(command: &str, key: &str) -> Vec<String> {
         .collect()
 }
 
-/// The actions CI uses that install nothing a cloud machine needs: checkout, caches and artifacts.
+/// The actions CI uses that install nothing a cloud machine needs: checkout, caches and artifacts, and the advisory
+/// Gemini review's action, which installs only the Gemini CLI that review runs; nothing builds or tests with it
+/// (decisions.md R-635).
 const NO_INSTALL: &[&str] = &[
     "actions/checkout@",
     "actions/cache@",
@@ -146,6 +158,7 @@ const NO_INSTALL: &[&str] = &[
     "actions/upload-artifact@",
     "actions/download-artifact@",
     "Swatinem/rust-cache@",
+    "google-github-actions/run-gemini-cli@",
 ];
 
 /// What a shell command in a Linux job installs, into `plan`. A command that installs by a means the check doesn't

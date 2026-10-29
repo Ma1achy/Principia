@@ -3,7 +3,7 @@
 - **Milestone:** M6
 - **Closes:** REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159
 - **Depends on:** TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07
-- **Needs (earlier milestones):** REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158
+- **Needs (earlier milestones):** REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158, REQ-DEC-051
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-9
 - **Size:** ~430 lines
@@ -23,6 +23,7 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
 - `decisions.md` § "R-599 — Collapse is judged per axis: an axis along which the field is saturated and the samples are identical is genuinely flat and does not count; a quad stops only when every axis along which the field varies has collapsed, or at the screen floor; the readout names the saturated axis *(closes RQ-554; refines R-90's terminal stop)*"
+- `decisions.md` § "R-632 — On the f32 GPU path the linearised decoder's floor is the measured value, quoted with `|x₀|`, measured by a gate and taken as a calibration; the ensemble ratio censors an unparted start at `T` and compares the median of measured over predicted with 1; column 8 is never asserted; the Cartesian drift latches take `dE_reg`'s encoding; the plan's three corrections are applied *(closes RQ-570, RQ-575, RQ-578, RQ-581, RQ-588, RQ-589 and RQ-590)*"
 
 ## Deliverables
 - `crates/engine/src/deep/switchover.rs`: bitwise IC comparison of adjacent samples (not the energy-drift diagnostic), `quad.collapsed`, the `ℓ_switch = 20` bound shared with lowering's `SWITCH` constant, the switch/stop response keyed off `DECODE_MODE`.
@@ -50,3 +51,4 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
   ℓ_switch is routed onto it (REQ-TOOL-159; the human's "M5/M6", applied per R-369).
 - **R-537 EX8 (20 Oct 2026):** in a repeat the zoom is on the canonical quad, and far from the root the f32 centre is taken relative to the root cell's own origin; TASK-M8-57 builds that on this task's path (REQ-TOOL-182).
 - **R-599 (25 Oct 2026, RQ-554 (c)):** collapse is judged per in-plane axis: a saturated axis, its samples identical, is genuinely flat and does not count, so a band quad keeps refining along its unsaturated axis to the screen floor, and a quad stops at `AT_F32_FLOOR` only when every axis along which the field varies has collapsed; the switchover is unchanged; the readout's naming of the saturated axis is TASK-M8-57's (REQ-GUI-397). *Was:* "**RQ-554 (R-570's port, perf review 5624936602 of PR #279, P2):** a band quad on a latent or flat chart, saturated along one in-plane axis only, collapses, switches and stops terminally at `AT_F32_FLOOR` above the screen floor while its other axis stays structured; whether it keeps refining along that axis is open. REQ-SCHED-062's terminal stop is built as written meanwhile; only its behaviour on band quads waits (`rq: RQ-554`)."
+- **R-632 (27 Oct 2026, RQ-578):** on the f32 GPU path the linear path's collapse, where `AT_F32_FLOOR` fires, is at the measured floor (REQ-DEC-051, TASK-M5-04), quoted with `|x₀|`, not ~depth 50. `past_switch_routing`'s quads at depths 21 and 30 with distinct adjacent ICs, and every fixture here that needs distinct ICs past the switchover, use coordinates where the measured floor admits them (REQ-TOOL-159). RQ-578 put no hold on this task.

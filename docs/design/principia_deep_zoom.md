@@ -72,10 +72,19 @@ ulp, and the criterion holds while the step spans at least 16 ulps.
 
 **Fix.** Linearise the decode about the quad centre. Error is `O(h²)` — at depth 30, `h ~ 10⁻⁹`, so error `~ 10⁻¹⁸`, far below anything representable.
 
-- **CPU precompute (f64), per deep quad:** evaluate the full decode at the centre, `x₀ = D(c_u, c_v)` in f64 (the reference IC); compute `J_D = ∂D/∂(u,v)` at the centre by **central differences in f64** (two decode evals per axis). Pass `x₀` (→f32) and `J_D` (→f32) as uniforms.
+- **CPU precompute (f64), per deep quad:** evaluate the full decode at the centre, `x₀ = D(c_u, c_v)` in f64 (the reference IC); compute `J_D = ∂D/∂(u,v)` at the centre by **central differences in f64** (two decode evals per axis, the step rule below). Pass `x₀` (→f32) and `J_D` (→f32) as uniforms.
 - **GPU kernel (f32):** `x = x₀ + J_D · δ`, where `δ` is the quad-local UV offset. A few fused multiply-adds (continuous — the decode is not a branch input, so FMA latitude here is honest divergence, not a determinism concern); the nonlinear pipeline never runs on the GPU.
 
-**Why the precision survives.** The nonlinear precision lives in `x₀` (computed in f64, so its f32 cast is the best possible representation of the true centre IC). `J_D` is *rates of change* — `O(1)`, no precision lost in f32. Floor moves from ~23 to **~50+**.
+**`J_D`'s step rule (R-633, closing RQ-600).** Every central-difference Jacobian of the decode takes the encode
+contract's step (`principia_inverse_encode_contract.md` Part 4, "How it is evaluated"): along input coordinate `k`,
+`h_k = ε^{1/3}·max(1, |x_k|)` in f64, `ε` f64's machine epsilon and `x_k` the coordinate stepped (`u` or `v` for
+`J_D`, `z_k` for the latent Jacobian), the difference divided by the step actually taken, `(x + h) − (x − h)` as
+rounded in f64, not by `2h`. It is `J_D`'s step, the latent Jacobian's (below) and the trace fade's Jacobian's (R-596,
+`principia_lines.md` §8). A secant at the quad's half-width is not this rule: that is the cell-width collapse the
+prototype records, and the fix it needs is a Jacobian not built by a secant at the cell width (R-633, RQ-600's option
+(b) rejected).
+
+**What the precision buys, and where the floor sits (R-632, closing RQ-578).** The nonlinear precision lives in `x₀` (computed in f64, so its f32 cast is the best possible representation of the true centre IC). `J_D` is *rates of change* — `O(1)`, no precision lost in f32. But `x = x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, and the f32 integrator on the GPU starts from it: adjacent ICs closer than f32's ulp at `|x₀|` are one IC to it, whichever decoder produced them. So on the f32 GPU path the linearised decoder's floor is the **measured value, quoted with the coordinate magnitude `|x₀|`** (§1's rule), not a fixed depth: a gate measures the f32 GPU path's distinguishable depth as integrated, at stated coordinate magnitudes (REQ-DEC-052), and the docs and the gates take the measured value, an R-71 calibration (REQ-DEC-051). The linear path stays, for speed (below) and for the f64-anchored decode (§ "Couplings to the contract", c). A floor near ~50 needs the sum and the integration in f64: on the CPU, or the precision ladder under RQ-577, ruled after M3 (R-630). *Was:* "**Why the precision survives.** The nonlinear precision lives in `x₀` (computed in f64, so its f32 cast is the best possible representation of the true centre IC). `J_D` is *rates of change* — `O(1)`, no precision lost in f32. Floor moves from ~23 to **~50+**."
 
 **Also faster.** The linear path is cheaper than the full decode, and deep zoom is exactly where quad count and compute pressure peak. Smooth interior quads are coarsened early and never reach this regime; the linear path targets the expensive boundary quads.
 
@@ -85,7 +94,8 @@ Jacobian cost: microseconds per quad on the CPU, amortised over `N²` samples. N
 
 **The latent Jacobian (R-550, RQ-341 (a)).** A second Jacobian shares this method and is not `J_D`: a CPU, f64,
 central-difference Jacobian `∂x/∂z` of the decoder with **8 columns**, one per latent direction (two decode evaluations
-per direction, the step rule `J_D`'s), at a latent point (`z₀`, or the hovered pixel's on an affine chart). It is taken
+per direction, the step rule `J_D`'s, above, with `x_k = z_k`), at a latent point (`z₀`, or the hovered pixel's on an
+affine chart). It is taken
 of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and `η_E` (RQ-345 (b)), so
 it differentiates the state the integrator starts from. The compass's Jacobi and Shape views and their steer read it
 (render_gui_spec § "The compass: look and views (R-451, R-452)"): `J q̂₁`, `J q̂₂` on the slice plane's orthonormalised
@@ -116,7 +126,7 @@ The refinement cap is a **sliding window**: refine to `current_depth + max_depth
 
 This sidesteps the floor question at design time — you don't need to *know* where any precision floor sits in order to stop; you just don't refine past a fixed budget below the view.
 
-**Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (~depth 50+), genuinely terminal, a deep-zoom backstop, collapse judged per axis: an axis along which the field is saturated and the samples are identical does not count, and the quad stops only when every axis along which the field varies has collapsed (R-599; below); (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
+**Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (on the f32 GPU path at the measured floor, quoted with the coordinate magnitude `|x₀|`, §2, REQ-DEC-051; R-632; *was:* "(~depth 50+)"), genuinely terminal, a deep-zoom backstop, collapse judged per axis: an axis along which the field is saturated and the samples are identical does not count, and the quad stops only when every axis along which the field varies has collapsed (R-599; below); (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
 
 **Precision is not a navigation limit (R-570).** None of these conditions stops a pan or a zoom: they stop refinement
 only. On a latent or flat chart, which has no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4,

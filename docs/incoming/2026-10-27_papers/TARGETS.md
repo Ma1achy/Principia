@@ -566,6 +566,9 @@ near-rest starts are already ported (R-592, `dd_validation_orbits.md` §1.6, `fi
   |ΔE/E| reaches 0.019.
 - **Caveat:** the energy column has the same discrepancy as RQ-570. II's −E is not I's eq. (4) on the printed (ξ, η)
   either, so record it and do not assert it.
+- *Note added 27 Oct 2026 (R-632).* RQ-570 is ruled with its option (a): paper I's column 8 stays transcribed and
+  recorded, never asserted. The human's ruling notes that this transcription of paper II found the same discrepancy,
+  the caveat above. Nothing above is changed.
 
 ### AA-7. Paper II, the 38 completed near-rest starts (Table 3, p. 15; `agekyan_anosova_II_table3_near_rest_completed.csv`)
 

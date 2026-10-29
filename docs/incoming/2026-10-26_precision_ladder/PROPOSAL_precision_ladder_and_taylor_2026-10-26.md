@@ -400,6 +400,11 @@ Each step is useful alone.
    > empty-source rows: it counted Simó's 344, which carry about 16 digits of data and test nothing above f64, and the
    > atlas's own 76. The reference values are the databases', fetched and hash-checked, not `atlas-params.json`'s, and
    > are not committed (RQ-579). The text above is left as written.
+
+   > **Note, 27 Oct 2026 (R-631).** The reference values are now committed: R-631 closes RQ-579 with option (a). The
+   > Hristov databases' files for the 937 rows are in `../2026-10-27_hp_ics/data/` (`sofia_3body123/`,
+   > `sofia_3bodychor462/`, `sofia_3bodychor164/`, `sofia_3bodystab971/`), cited in `../2026-10-27_hp_ics/SOURCES.md`;
+   > `../2026-10-27_hp_ics/fetch.sh` stays the provenance check. The correction note above is left as written.
 7. **Horizon per tier.** Philosophy §7.1 predicts 23, 52 and 105; `df32` about 46. Measure where two neighbouring
    rungs disagree on Burrau. The prediction is an estimate; the test records the measurement and fails only if a
    higher tier's horizon is *shorter*.
