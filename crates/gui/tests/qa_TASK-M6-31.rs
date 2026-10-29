@@ -18,6 +18,10 @@
 //! - REQ-GUI-184 (calibration, proposed, pending the human at the M8 gate, R-71 / R-182): the tests check that the code
 //!   honours the declared step, whatever it is, not the value.
 //!
+//! R-457 (TASK-M6-38's qa commit, R-457 E9) renames Centre z₀ to Slice centre and removes the slice step: moving along
+//! the normal is the Slice centre slider of the slice normal's dimension, which takes the slice step's place below, and
+//! the hidden slice direction is the slice frame's normal (gui_state_contract §2).
+//!
 //! The SetFields a gesture emits are counted from the contract's own log (every engine logs each SetField it applies as
 //! one `info` entry from `contract`, gui_state_contract §2); what they edited is read from the snapshots. The plane's
 //! in-plane directions are its basis `q₁`, `q₂` (chart_decoder_contract Part 3); its normal in the compass's frame is
@@ -509,13 +513,24 @@ fn check_along_normal(before: &Snapshot, after: &Snapshot, frame: &[Z], what: &s
     d
 }
 
-/// The hidden slice direction of the default chart, read from the slice step: ↑ on it moves `z₀` along that direction.
+/// §G2's eight `z₀` names, in chart_decoder_contract Part 2's block order: the Slice centre sliders' labels.
+const AXES: [&str; 8] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z_q3", "z_μ1", "z_μ2"];
+
+/// The hidden slice direction of the default chart: the slice frame's normal (gui_state_contract §2; R-457), read from
+/// the snapshot, and checked against its Slice centre slider, whose ↑ moves `z₀` along that direction alone.
 fn slice_direction() -> Z {
     let mut rig = mock();
-    rig.interact("slice step");
+    let normal = rig.snap().sim.slice.frame.normal as usize;
+    let e: Z = std::array::from_fn(|i| if i == normal { 1.0 } else { 0.0 });
+    rig.interact(AXES[normal]);
     let before = rig.snap().sim.plane.z0;
     rig.key(Key::ArrowUp, NONE);
-    unit(&add(&rig.snap().sim.plane.z0, -1.0, &before))
+    let moved = unit(&add(&rig.snap().sim.plane.z0, -1.0, &before));
+    assert!(
+        norm(&add(&moved, -1.0, &e)) < 1e-12,
+        "the normal's Slice centre slider moved z₀ along {moved:?}, not the normal {e:?}"
+    );
+    e
 }
 
 /// The compass's frame for the default chart: the preset's two axes (the free chart's `q₁`, `q₂`) and the hidden slice
@@ -587,7 +602,8 @@ fn qa_mock_compass_modes_the_buttons_follow_the_slider_touched() {
     for (label, want) in [
         ("z_q1", "Slice"),
         ("τ₁", "Tilt"),
-        ("slice step", "Slice"),
+        // The slice step's place: the Slice centre slider of the slice normal's dimension (R-457).
+        ("z_q3", "Slice"),
         ("τ₂", "Tilt"),
         ("z_α", "Slice"),
         ("γ", "Tilt"),
@@ -668,7 +684,8 @@ fn qa_mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
             check_along_normal(&tilt_drag.0, &tilt_drag.1, &frame, "a tilt");
         });
     }
-    // Untilted, the normal is the hidden slice direction: the drag moves the slice step (R-409 A3).
+    // Untilted, the normal is the hidden slice direction: the drag moves z₀ along the slice normal (R-409 A3, read with
+    // R-457).
     let mut rig = mock();
     let shapes = rig.shapes();
     rig.click(button_at(&shapes, "Slice"));
@@ -885,20 +902,20 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     };
     let step = fraction * 2.0 * gui::explore::manifold_view::Z0_HALF_RANGE;
     let mut rig = mock();
-    rig.focus("Centre z₀");
+    rig.focus("Slice centre");
     rig.key(Key::Enter, NONE);
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀", "z_α"],
+        &["Manifold view", "Slice centre", "z_α"],
         NAV,
-        "Enter on Centre z₀",
+        "Enter on Slice centre",
     );
     let (start, n0) = (rig.snap().sim.plane.z0, rig.applied());
     rig.key(Key::ArrowDown, NONE);
     let after_down = rig.at();
     check_at(
         &after_down,
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         NAV,
         "↓ on z_α",
     );
@@ -920,7 +937,7 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     rig.key(Key::Enter, NONE);
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         INTERACT,
         "Enter on z_β",
     );
@@ -939,7 +956,7 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     );
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         INTERACT,
         "↓ in interaction mode",
     );
@@ -947,14 +964,14 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     let esc = rig.at();
     check_at(
         &esc,
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         NAV,
         "Esc in interaction mode",
     );
     rejects("an Esc in interaction mode that goes up a scope", || {
         check_at(
-            &(path(&["Manifold view", "Centre z₀"]), NAV),
-            &["Manifold view", "Centre z₀", "z_β"],
+            &(path(&["Manifold view", "Slice centre"]), NAV),
+            &["Manifold view", "Slice centre", "z_β"],
             NAV,
             "Esc",
         )
@@ -962,7 +979,7 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     rig.key(Key::Escape, NONE);
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀"],
+        &["Manifold view", "Slice centre"],
         NAV,
         "Esc in navigation mode",
     );
@@ -970,7 +987,7 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     rig.keys(&[Key::Enter, Key::ArrowDown, Key::Enter]);
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         INTERACT,
         "Enter on z_β again",
     );
@@ -978,14 +995,14 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     let enter = rig.at();
     check_at(
         &enter,
-        &["Manifold view", "Centre z₀", "z_β"],
+        &["Manifold view", "Slice centre", "z_β"],
         NAV,
         "Enter in interaction mode",
     );
     rejects("an Enter in interaction mode that stays in it", || {
         check_at(
             &(enter.0.clone(), INTERACT),
-            &["Manifold view", "Centre z₀", "z_β"],
+            &["Manifold view", "Slice centre", "z_β"],
             NAV,
             "Enter",
         )
@@ -994,13 +1011,13 @@ fn qa_mock_keyboard_modes_a_slider_needs_enter_and_esc_comes_back_out() {
     rig.key(Key::ArrowDown, NONE);
     check_at(
         &rig.at(),
-        &["Manifold view", "Centre z₀", "z_q0"],
+        &["Manifold view", "Slice centre", "z_q0"],
         NAV,
         "↓ after Enter out",
     );
 }
 
-/// On the Centre z₀ slider z_α, in `mode`: what Ctrl+Z, `?` and Tab do. Returns the focus and the undo depth after
+/// On the Slice centre slider z_α, in `mode`: what Ctrl+Z, `?` and Tab do. Returns the focus and the undo depth after
 /// Ctrl+Z, whether `?` opened the shortcuts, the focus after closing them, and the focus after Tab.
 type Global = (
     (Vec<String>, KeyMode),
@@ -1012,7 +1029,7 @@ type Global = (
 
 fn global_keys(mode: KeyMode) -> Global {
     let mut rig = mock();
-    rig.focus("Centre z₀");
+    rig.focus("Slice centre");
     rig.key(Key::Enter, NONE);
     // An edit to undo.
     rig.key(Key::Enter, NONE);
@@ -1041,7 +1058,7 @@ fn global_keys(mode: KeyMode) -> Global {
 fn qa_mock_keyboard_modes_tab_ctrl_z_and_question_keep_their_meaning_in_interaction_mode() {
     let nav = global_keys(NAV);
     let interact = global_keys(INTERACT);
-    let slider = ["Manifold view", "Centre z₀", "z_α"];
+    let slider = ["Manifold view", "Slice centre", "z_α"];
     check_at(&interact.0, &slider, INTERACT, "Ctrl+Z in interaction mode");
     check_at(
         &interact.3,
@@ -1426,7 +1443,7 @@ fn check_ring_and_crumb_only(a: &Shot, b: &Shot) -> (Rect, usize, usize) {
 #[test]
 fn qa_capture_navigation_and_interaction_differ_only_in_the_colours() {
     let canvas = canvas();
-    // Centre z₀'s first slider, as the 07_keyboard cases reach it: navigation mode, then Enter.
+    // Slice centre's first slider, as the 07_keyboard cases reach it: navigation mode, then Enter.
     let steps = [
         Step::Tab,
         Step::Tab,
@@ -1441,7 +1458,7 @@ fn qa_capture_navigation_and_interaction_differ_only_in_the_colours() {
     let interact = capture::shoot(canvas.clone(), &more);
     let (bbox, ring, _) = check_ring_and_crumb_only(&nav, &interact);
     assert!(ring > 0, "the ring did not change colour");
-    // The ring is around a slider of Centre z₀, in the Manifold view panel.
+    // The ring is around a slider of Slice centre, in the Manifold view panel.
     let mv = layout().manifold_view;
     let p = PIXELS_PER_POINT;
     let panel = Rect::from_min_max(mv.min * p, mv.max * p).expand(4.0 * p);
@@ -1622,13 +1639,15 @@ fn qa_mock_compass_keys_slice_mode_arrows_move_along_the_normal_by_the_slice_ste
         panic!("REQ-GUI-184's step is declared as a fraction of the slice step's range")
     };
     let range = 2.0 * gui::explore::manifold_view::Z0_HALF_RANGE;
-    // The slice step's range, read back: its own ↑ moves z₀ by its base step of that range.
+    // The slice step's range, read back from the slider that took its place, the slice normal's Slice centre slider
+    // (R-457): its own ↑ moves z₀ by its base step of that range.
     let Base::OfRange(slider) = StepKind::Bounded.base() else {
         panic!()
     };
     {
         let mut rig = mock();
-        rig.interact("slice step");
+        let normal = rig.snap().sim.slice.frame.normal as usize;
+        rig.interact(AXES[normal]);
         let before = rig.snap().sim.plane.z0;
         rig.key(Key::ArrowUp, NONE);
         let moved = norm(&add(&rig.snap().sim.plane.z0, -1.0, &before));

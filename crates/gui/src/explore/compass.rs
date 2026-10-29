@@ -42,11 +42,11 @@ use eframe::egui::{
     Vec2,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig};
+use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame};
 use engine::contract::view_ui::{Focus, KeyMode};
 
 use crate::explore::lock::GOLD;
-use crate::explore::manifold_view::slice_tilt::{Angles, TILT_RANGE};
+use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
     about_the_pin, add, axis, basis_edit, chart_coords, plane_s, point, z0_edit, Out, Scratch,
     Touch, View, AXES, Z0_HALF_RANGE,
@@ -627,15 +627,26 @@ pub fn signed(value: f64, decimals: usize) -> String {
     format!("{sign}{value:.decimals$}")
 }
 
-/// The tilt as the readout reads it, as the reference's: "q₁→`<axis>` +30.0° · q₂→`<axis>` +0.0°", q₁'s and q₂'s target
-/// the slice axis (R-451 B1).
+/// An angle in degrees as the readout names it with its target, one decimal: signed as [`signed`], but "0.0" bare, as
+/// R-457 E6's "τ₂ → z_μ1 0.0°" reads.
+pub fn angle_text(degrees: f64) -> String {
+    let text = signed(degrees, 1);
+    match text.as_str() {
+        "+0.0" | "-0.0" => "0.0".to_owned(),
+        _ => text,
+    }
+}
+
+/// The tilt as the readout reads it, both targets named with their angles: "τ₁ → z_q3 +12.0° · τ₂ → z_μ1 0.0°"
+/// (R-457 E6), whatever the compass's mode.
 pub fn tilt_readout(view: &View) -> String {
     let a = Angles::of(view);
-    let axis = AXES[view.d];
     format!(
-        "q₁→{axis} {}° · q₂→{axis} {}°",
-        signed(a.tau1, 1),
-        signed(a.tau2, 1)
+        "τ₁ → {} {}° · τ₂ → {} {}°",
+        AXES[view.x],
+        angle_text(a.tau1),
+        AXES[view.y],
+        angle_text(a.tau2)
     )
 }
 
@@ -644,24 +655,27 @@ pub fn rotation_readout(view: &View) -> String {
     format!("γ {}°", signed(Angles::of(view).gamma, 1))
 }
 
-/// The readout of `mode` for `z₀` and `view` (R-451 B5): slice mode, "mode slice · plane ⟂ `<axis>`" untilted or the
-/// tilt with a tilt set, then "`<axis>` = +0.25 of range"; tilt mode, "mode tilt", the tilt and the rotation. Where
-/// `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" (R-451 B11).
+/// The readout of `mode` for `z₀` and `view` (R-451 B5): slice mode, "mode slice · plane ⟂ `<axis>`" untilted, the
+/// targets on a line of their own, or the tilt with a tilt set, then "`<axis>` = +0.25 of range", `<axis>` the slice
+/// normal; tilt mode, "mode tilt", the tilt and the rotation. Both targets are named with their angles in either mode
+/// (R-457 E6). Where `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" (R-451
+/// B11).
 pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
     let axis = AXES[view.d];
     let tilted = view.tau1 != 0.0 || view.tau2 != 0.0;
     let mut lines = match mode {
-        Touch::Slice => vec![
-            if tilted {
-                format!("mode slice · {}", tilt_readout(view))
+        Touch::Slice => {
+            let mut lines = if tilted {
+                vec![format!("mode slice · {}", tilt_readout(view))]
             } else {
-                format!("mode slice · plane ⟂ {axis}")
-            },
-            format!(
+                vec![format!("mode slice · plane ⟂ {axis}"), tilt_readout(view)]
+            };
+            lines.push(format!(
                 "{axis} = {} of range",
                 signed(z0[view.d] / Z0_HALF_RANGE, 2)
-            ),
-        ],
+            ));
+            lines
+        }
         Touch::Tilt => vec![
             "mode tilt".to_owned(),
             tilt_readout(view),
@@ -850,9 +864,9 @@ pub struct Drag {
 }
 
 impl Drag {
-    /// A drag in `mode` starting on `plane`.
-    pub fn start(mode: Touch, plane: &Plane) -> Self {
-        let a = Angles::of(&View::of(plane));
+    /// A drag in `mode` starting on `plane`, read with the slice frame `frame`.
+    pub fn start(mode: Touch, plane: &Plane, frame: &SliceFrame) -> Self {
+        let a = Angles::of(&View::framed(plane, Some(frame)));
         Self {
             mode,
             from: (a.tau1, a.tau2),
@@ -879,15 +893,16 @@ impl Drag {
     }
 }
 
-/// The one edit `drag` on `plane` makes when it ends: the tilt to its targets, `γ` kept, or the slice along the drawn
-/// plane's normal; none when it moved nothing, or for a slice where the compass draws no plane (R-451 B11).
-pub fn drag_edit(plane: &Plane, drag: &Drag) -> Option<SetField> {
+/// The one edit `drag` on `plane`, read with the slice frame `frame`, makes when it ends: the tilt to its targets, `γ`
+/// kept, or the slice along the drawn plane's normal; none when it moved nothing, or for a slice where the compass
+/// draws no plane (R-451 B11).
+pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetField> {
     match drag.mode {
         Touch::Tilt => {
             if drag.tau == drag.from {
                 return None;
             }
-            let view = View::of(plane);
+            let view = View::framed(plane, Some(frame));
             let angles = Angles {
                 tau1: drag.tau.0,
                 tau2: drag.tau.1,
@@ -899,28 +914,28 @@ pub fn drag_edit(plane: &Plane, drag: &Drag) -> Option<SetField> {
             if drag.amount == 0.0 {
                 return None;
             }
-            slice(plane, drag.amount)
+            slice(plane, frame, drag.amount)
         }
     }
 }
 
 /// The unit normal of `plane` as the compass draws it, in the latent space: [`drawn_normal`] on the preset's
-/// `(e_a, e_b, e_d)` (R-409 A3; R-451 B3); `None` where `s < `[`DRAW_CUT`].
-pub fn latent_normal(plane: &Plane) -> Option<Latent> {
-    let view = View::of(plane);
+/// `(e_a, e_b, e_d)`, `e_d` the slice frame `frame`'s normal (R-409 A3; R-451 B3); `None` where `s < `[`DRAW_CUT`].
+pub fn latent_normal(plane: &Plane, frame: &SliceFrame) -> Option<Latent> {
+    let view = View::framed(plane, Some(frame));
     drawn_normal(&view).map(|n| lift(n, &view))
 }
 
 /// The edit moving `plane`'s centre `z₀` by `amount` along the drawn plane's normal; the basis, so the tilt and `γ`,
-/// unchanged. Locked, `z₀` leaves the anchor along that line: an excursion, as the slice step's is. `None` where the
-/// compass draws no plane (R-451 B11).
-pub fn slice(plane: &Plane, amount: f64) -> Option<SetField> {
-    latent_normal(plane).map(|n| z0_edit(add(&plane.z0, amount, &n)))
+/// unchanged. Locked, `z₀` leaves the anchor along that line: an excursion, as a Slice centre slider's is. `None` where
+/// the compass draws no plane (R-451 B11).
+pub fn slice(plane: &Plane, frame: &SliceFrame, amount: f64) -> Option<SetField> {
+    latent_normal(plane, frame).map(|n| z0_edit(add(&plane.z0, amount, &n)))
 }
 
-/// The tilt edit turning `τ₁` by `d1` and `τ₂` by `d2` degrees, within their span.
-pub fn tilt(plane: &Plane, d1: f64, d2: f64) -> SetField {
-    let view = View::of(plane);
+/// The tilt edit turning `τ₁` by `d1` and `τ₂` by `d2` degrees, within their span, each into its target.
+pub fn tilt(plane: &Plane, frame: &SliceFrame, d1: f64, d2: f64) -> SetField {
+    let view = View::framed(plane, Some(frame));
     let mut angles = Angles::of(&view);
     angles.tau1 = (angles.tau1 + d1).clamp(TILT_RANGE.0, TILT_RANGE.1);
     angles.tau2 = (angles.tau2 + d2).clamp(TILT_RANGE.0, TILT_RANGE.1);
@@ -933,7 +948,13 @@ pub fn after(plane: &Plane, edits: &[SetField]) -> Plane {
     for edit in edits {
         match &edit.edit {
             Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
-            Edit::Sim(SimField::Basis { q1, q2 }) => (plane.q1, plane.q2) = (*q1, *q2),
+            Edit::Sim(
+                SimField::Basis { q1, q2 }
+                | SimField::SliceFrame {
+                    basis: Some((q1, q2)),
+                    ..
+                },
+            ) => (plane.q1, plane.q2) = (*q1, *q2),
             _ => {}
         }
     }
@@ -975,9 +996,9 @@ pub struct Shown {
 }
 
 impl Shown {
-    /// What `plane` shows at rest.
-    pub fn of(plane: &Plane) -> Self {
-        let view = View::of(plane);
+    /// What `plane`, read with the slice frame `frame`, shows at rest.
+    pub fn of(plane: &Plane, frame: &SliceFrame) -> Self {
+        let view = View::framed(plane, Some(frame));
         Self {
             view,
             point: point_of(&plane.z0, &view),
@@ -999,11 +1020,12 @@ impl Shown {
     }
 
     /// `from` eased toward `to` over a frame of `dt` seconds (R-451 B4): the tilts, the rotation the short way round,
-    /// and the point; the frame and the scale are `to`'s. From nothing, or across a change of frame, it is `to`.
+    /// and the point; the frame and the scale are `to`'s. From nothing, or across a change of frame, the targets
+    /// included, it is `to`.
     pub fn eased(from: Option<Self>, to: Self, dt: f64) -> Self {
         let Some(from) = from else { return to };
         let (f, t) = (from.view, to.view);
-        if (f.a, f.b, f.d) != (t.a, t.b, t.d) {
+        if (f.a, f.b, f.d, f.x, f.y) != (t.a, t.b, t.d, t.x, t.y) {
             return to;
         }
         let k = ease_factor(dt);
@@ -1051,7 +1073,8 @@ pub struct Compass {
 /// `SliceNormal` step (REQ-GUI-184), and nothing where the compass draws no plane (R-451 B11). Shift's ×10 and Alt's
 /// ×0.1 are in `adjust.times`, as everywhere (R-409 F3). In the Plücker view they move the cell cursor
 /// ([`views::cursor_moved`]; R-452 C6), editing nothing; in the Jacobi and Shape views, which have no grid yet, nothing.
-pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
+pub fn adjust(adjust: &Adjust, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
+    let (plane, frame) = (&sim.plane, &sim.slice.frame);
     match scratch.compass.view {
         CompassView::Cube => {}
         CompassView::Plucker => {
@@ -1072,14 +1095,14 @@ pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut O
                 Direction::Left | Direction::Right => (degrees, 0.0),
                 Direction::Up | Direction::Down => (0.0, degrees),
             };
-            out.edit(tilt(plane, d1, d2), Some(Touch::Tilt), scratch);
+            out.edit(tilt(plane, frame, d1, d2), Some(Touch::Tilt), scratch);
         }
         Touch::Slice => {
             let Base::OfRange(fraction) = StepKind::SliceNormal.base().times(adjust.times) else {
                 unreachable!("the compass's slice step is a fraction of the slice step's range")
             };
             let amount = fraction * 2.0 * Z0_HALF_RANGE;
-            if let Some(edit) = slice(plane, amount) {
+            if let Some(edit) = slice(plane, frame, amount) {
                 out.edit(edit, Some(Touch::Slice), scratch);
             }
         }
@@ -1125,14 +1148,15 @@ pub fn follow_focus(focus: &Focus, plane: &Plane, compass: &mut Compass) {
 
 /// Space on the compass in the Plücker view's interaction mode: the steer to the cell cursor, as a click on its cell
 /// (R-452 C6). Nothing in navigation mode, or in another view.
-pub fn space(focus: &Focus, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
+pub fn space(focus: &Focus, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
     if !interacting(focus) || scratch.compass.view != CompassView::Plucker {
         return;
     }
+    let scale = View::read(sim).scale;
     if let Some(edit) = scratch
         .compass
         .cursor
-        .and_then(|(i, j)| views::steer(plane, i, j))
+        .and_then(|(i, j)| views::steer(scale, i, j))
     {
         out.edit(edit, None, scratch);
     }
@@ -1153,7 +1177,9 @@ pub fn square(rect: Rect) -> Rect {
 /// What the compass in `rect` draws for `sim`, from what `compass` shows: the drawing [`show`] paints and the capture
 /// records.
 pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
-    let shown = compass.shown.unwrap_or_else(|| Shown::of(&sim.plane));
+    let shown = compass
+        .shown
+        .unwrap_or_else(|| Shown::of(&sim.plane, &sim.slice.frame));
     let plane = shown.plane(&sim.plane);
     drawing(square(rect), &plane, &shown.view, compass.mode, &sim.lock)
 }
@@ -1180,14 +1206,14 @@ pub fn show(
     keyboard.place(COMPASS, rect);
     let square = square(rect);
     keyboard.place(COMPASS_VIEW, square);
-    let plane = &sim.plane;
+    let (plane, frame) = (&sim.plane, &sim.slice.frame);
     let view = scratch.compass.view;
     // In a grid view a drag does nothing (R-452 C1): the cube takes none.
     let mut pending: Vec<SetField> = Vec::new();
     if view == CompassView::Cube {
         let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
         if response.drag_started() {
-            scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane));
+            scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane, frame));
         }
         if let Some(drag) = &mut scratch.compass.drag {
             drag.moved(response.drag_delta(), square);
@@ -1196,12 +1222,12 @@ pub fn show(
         pending = scratch
             .compass
             .drag
-            .and_then(|d| drag_edit(plane, &d))
+            .and_then(|d| drag_edit(plane, frame, &d))
             .map(|edit| about_the_pin(vec![edit], sim))
             .unwrap_or_default();
         if response.drag_stopped() {
             if let Some(drag) = scratch.compass.drag.take() {
-                if let Some(edit) = drag_edit(plane, &drag) {
+                if let Some(edit) = drag_edit(plane, frame, &drag) {
                     out.edit(edit, Some(drag.mode), scratch);
                 }
             }
@@ -1209,7 +1235,7 @@ pub fn show(
     } else {
         scratch.compass.drag = None;
     }
-    let target = Shown::of(&after(plane, &pending));
+    let target = Shown::of(&after(plane, &pending), frame);
     let dt = ui.input(|i| f64::from(i.unstable_dt));
     let shown = Shown::eased(scratch.compass.shown, target, dt);
     scratch.compass.shown = Some(shown);
@@ -1229,9 +1255,11 @@ pub fn show(
             (drawing.readout, hint)
         }
         CompassView::Plucker => {
-            let drawing = views::plucker_drawing(square, plane, scratch.compass.cursor);
+            let read = View::read(sim);
+            let drawing =
+                views::plucker_drawing_with(square, plane, read.d, scratch.compass.cursor);
             views::paint_plucker(&painter, &visuals, &drawing);
-            cells(ui, &drawing, plane, scratch, out);
+            cells(ui, &drawing, read.scale, scratch, out);
             (vec![drawing.readout], views::PLUCKER_HELP)
         }
         CompassView::Jacobi | CompassView::Shape => {
@@ -1287,7 +1315,7 @@ pub fn show(
 fn cells(
     ui: &mut Ui,
     drawing: &views::PluckerDrawing,
-    plane: &Plane,
+    scale: f64,
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
@@ -1300,7 +1328,7 @@ fn cells(
             )
             .on_hover_text(views::hover_text(&drawing.grid, i, j));
         if cell.clicked() {
-            if let Some(edit) = views::steer(plane, i, j) {
+            if let Some(edit) = views::steer(scale, i, j) {
                 out.edit(edit, None, scratch);
             }
         }

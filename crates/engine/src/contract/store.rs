@@ -10,7 +10,7 @@ use crate::contract::legend::Legend;
 use crate::contract::log::{LogEntry, Severity, Source};
 use crate::contract::render_state::{NodeKind, Occupant, Overlays, RenderState, StainGraph};
 use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
-use crate::contract::sim_config::{Latent, SimConfig};
+use crate::contract::sim_config::{Latent, SimConfig, SliceFrame};
 use crate::contract::snapshot::{FrameSummary, History, Precision, Snapshot, Tier};
 
 /// One history entry (R-52): its edits in the order applied, each with the value its field held before it. Undo
@@ -102,6 +102,15 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
         Edit::Sim(SimField::Horizon(horizon)) => {
             Edit::Sim(SimField::Horizon(replace(&mut sim.horizon, horizon)))
         }
+        Edit::Sim(SimField::SliceFrame { frame, basis }) => Edit::Sim(SimField::SliceFrame {
+            frame: replace(&mut sim.slice.frame, frame),
+            basis: basis.map(|(q1, q2)| {
+                (
+                    replace(&mut sim.plane.q1, q1),
+                    replace(&mut sim.plane.q2, q2),
+                )
+            }),
+        }),
         Edit::Render(RenderField::Playhead(playhead)) => Edit::Render(RenderField::Playhead(
             replace(&mut render.playhead, playhead),
         )),
@@ -121,6 +130,14 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
 fn latent(z: &Latent) -> String {
     let parts: Vec<String> = z.iter().map(|v| v.to_string()).collect();
     format!("({})", parts.join(", "))
+}
+
+/// The slice frame as the log writes it: "(normal 5, tilt_x 5, tilt_y 6)", each a latent index.
+fn slice_frame(f: &SliceFrame) -> String {
+    format!(
+        "(normal {}, tilt_x {}, tilt_y {})",
+        f.normal, f.tilt_x, f.tilt_y
+    )
 }
 
 /// The overlay set as the log writes it: the fields that are on, by name, in `[…]`.
@@ -217,6 +234,13 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
             w.centre[0], w.centre[1], w.half[0], w.half[1]
         ),
         Edit::Sim(SimField::Horizon(h)) => h.t.to_string(),
+        Edit::Sim(SimField::SliceFrame { frame, basis }) => {
+            let mut text = slice_frame(frame);
+            if let Some((q1, q2)) = basis {
+                text.push_str(&format!(" {} {}", latent(q1), latent(q2)));
+            }
+            text
+        }
         Edit::Render(RenderField::Playhead(p)) => p.t.to_string(),
         Edit::Render(RenderField::Overlays(o)) => overlays(o),
         Edit::Render(RenderField::Hover(h)) => match h.at {
@@ -232,6 +256,8 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Sim(SimField::Lock(_)) => "Lock",
         Edit::Sim(SimField::Window(_)) => "Chart.window",
         Edit::Sim(SimField::Horizon(_)) => "Horizon.t",
+        Edit::Sim(SimField::SliceFrame { basis: None, .. }) => "Slice.frame",
+        Edit::Sim(SimField::SliceFrame { basis: Some(_), .. }) => "Slice.frame Plane.q1 Plane.q2",
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",
         Edit::Render(RenderField::Overlays(_)) => "Overlays",
         Edit::Render(RenderField::Hover(_)) => "Hover.at",

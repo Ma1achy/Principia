@@ -14,7 +14,7 @@ use super::support::{frame_texts, press, rejects};
 use crate::app::App;
 use crate::explore::compass;
 use crate::explore::compass::views::{plucker, steer, upper, GridPlace};
-use crate::explore::manifold_view::slice_tilt::Angles;
+use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::{about_the_pin, lock_edit, point, View, AXES};
 use crate::headless::Headless;
 use crate::side::MockSide;
@@ -121,11 +121,15 @@ fn mock_compass_steer_latent_the_diagonal_and_the_lower_triangle_steer_nothing()
     let p = start();
     for i in 0..LATENT_DIM {
         for j in 0..=i {
-            assert_eq!(steer(&p, i, j), None, "({i}, {j})");
+            assert_eq!(steer(View::of(&p).scale, i, j), None, "({i}, {j})");
         }
     }
-    assert_eq!(steer(&p, 0, LATENT_DIM), None, "off the grid");
-    assert!(steer(&p, 6, 7).is_some());
+    assert_eq!(
+        steer(View::of(&p).scale, 0, LATENT_DIM),
+        None,
+        "off the grid"
+    );
+    assert!(steer(View::of(&p).scale, 6, 7).is_some());
     let (mut app, mut h) = plucker_app(&p);
     let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
     for (i, j) in [(0, 0), (3, 3), (7, 7), (5, 2), (7, 0)] {
@@ -154,7 +158,7 @@ fn basis_of(edit: &SetField) -> Option<([f64; 8], [f64; 8])> {
 #[test]
 fn mock_compass_steer_latent_is_the_basis_alone() {
     let p = start();
-    let edit = steer(&p, 2, 6).expect("a steer");
+    let edit = steer(View::of(&p).scale, 2, 6).expect("a steer");
     let (q1, q2) = basis_of(&edit).expect("a basis edit");
     let s = View::of(&p).scale;
     let mut want1 = [0.0; 8];
@@ -209,7 +213,7 @@ fn mock_compass_steer_latent_locked_turns_about_the_pin() {
     let v = View::of(&after);
     assert_eq!((v.a, v.b), (0, 4));
     // Control: the steer sent as it is, not about the pin, moves the pin's point.
-    let edit = steer(&p, 0, 4).expect("a steer");
+    let edit = steer(View::of(&p).scale, 0, 4).expect("a steer");
     let free = compass::after(&p, std::slice::from_ref(&edit));
     rejects("a locked steer not about the pin", || check_pin(&free));
     let sim = &app.snapshot().sim;

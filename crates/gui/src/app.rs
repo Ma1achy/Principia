@@ -468,6 +468,10 @@ impl<S: EngineSide> App<S> {
         let mut out = explore::manifold_view::Out::default();
         let mut edits = Vec::new();
         explore::manifold_view::join(self.keyboard.tree_mut(Mode::Explore));
+        explore::manifold_view::join_targets(
+            self.keyboard.tree_mut(Mode::Explore),
+            &explore::manifold_view::View::read(&self.snapshot.sim),
+        );
         explore::trajectory::join_kept(
             self.keyboard.tree_mut(Mode::Explore),
             self.view.kept_orbits.orbits.len(),
@@ -968,7 +972,7 @@ impl<S: EngineSide> App<S> {
                 }
                 Some(explore::COMPASS) => explore::compass::space(
                     &self.view.focus,
-                    &self.snapshot.sim.plane,
+                    &self.snapshot.sim,
                     &mut self.manifold,
                     out,
                 ),

@@ -1,16 +1,18 @@
-//! Slice & tilt (render_gui_spec §G2): the slice step, the tilts `τ₁`, `τ₂` and the rotation `γ`. The slice step is
-//! `z₀`'s component along the hidden slice direction, so moving it slices, a `SetField` on `z₀` (re-based to the anchor
-//! when locked, as Centre z₀'s sliders are); each angle is one `SetField` on the basis, which turns about the centre,
-//! and, locked, about the pin: the app turns every basis edit about it ([`super::about_the_pin`], §G4). The tilts span
-//! `[−90°, 90°]` (chart_decoder_contract Part 4, "Tilt"), the rotation `[−180°, 180°]`. Touching the step switches the
-//! compass to Slice, and touching an angle to Tilt, its buttons following (R-409).
+//! Tilt (render_gui_spec §G2; named "Slice & tilt" before R-457): "tilt `τ₁` into \[X\]" and "tilt `τ₂` into \[Y\]",
+//! each a slider with its number box and, under it, the dropdown of the dimension it tilts into, then the rotation `γ`.
+//! Each angle is one `SetField` on the basis, which turns about the centre, and, locked, about the pin: the app turns
+//! every basis edit about it ([`super::about_the_pin`], §G4). The tilts span `[−90°, 90°]` (chart_decoder_contract
+//! Part 4, "Tilt"), the rotation `[−180°, 180°]`. A dropdown offers the six dimensions not in the plane, by their
+//! names; picking one is one `SetField` on the slice frame, carrying the basis re-tilted into it where its angle is not
+//! 0 ([`super::target_edit`]; R-457 E3, E5). There is no step slider: the move along the slice normal is the Slice
+//! centre slider of that dimension (R-457). Touching an angle switches the compass to Tilt, its buttons following
+//! (R-409).
 
-use eframe::egui::{self, DragValue, Rect, Slider, Ui};
+use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
 
-use super::centre::slider_row;
 use super::{
-    basis_edit, header, row, row_ui, z0_edit, Panel, Touch, View, AXES, GAMMA, SLICE_STEP, TAU1,
-    TAU2,
+    basis_edit, header, row, row_ui, target_choices, target_edit, Panel, Target, Touch, View, AXES,
+    GAMMA, SECTION_TITLES, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y, TILT_Y_ENTRIES,
 };
 
 /// The tilts' span, in degrees.
@@ -68,28 +70,13 @@ impl Angles {
     }
 }
 
-/// Draws Slice & tilt in `section`.
+/// The width of a target dropdown, in points (a look choice, R-390): the longest name, "z_μ1", and its arrow.
+pub const TARGET_W: f32 = 64.0;
+
+/// Draws Tilt in `section`: `τ₁` and its target, `τ₂` and its target, then `γ`, a row each.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    let plane = panel.snapshot.sim.plane.clone();
-    let lock = panel.snapshot.sim.lock.clone();
-    let view = View::of(&plane);
-    header(
-        ui,
-        section,
-        h,
-        "Slice & tilt",
-        &format!("along {}", AXES[view.d]),
-    );
-    let anchor = lock.locked.then_some(lock.z_locked[view.d]);
-    let (moved, response) = slider_row(ui, row(section, h, 1), "step", plane.z0[view.d], anchor);
-    panel.place(SLICE_STEP, &response, clip);
-    if let Some(value) = moved {
-        let mut z0 = plane.z0;
-        z0[view.d] = value;
-        panel
-            .out
-            .edit(z0_edit(z0), Some(Touch::Slice), panel.scratch);
-    }
+    let view = View::read(&panel.snapshot.sim);
+    header(ui, section, h, SECTION_TITLES[3], "");
     let angles = Angles::of(&view);
     for (i, (id, label, value, (lo, hi))) in [
         (TAU1, "τ₁", angles.tau1, TILT_RANGE),
@@ -99,7 +86,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     .into_iter()
     .enumerate()
     {
-        let rect = row(section, h, 2 + i);
+        let rect = row(section, h, 1 + 2 * i);
         let mut line = row_ui(ui, rect);
         line.add_sized([40.0, rect.height()], egui::Label::new(label));
         let gap = line.spacing().item_spacing.x;
@@ -125,6 +112,32 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 Some(Touch::Tilt),
                 panel.scratch,
             );
+        }
+    }
+    for (i, (which, id, entries, label, now)) in [
+        (Target::X, TILT_X, TILT_X_ENTRIES, "tilt τ₁ into", view.x),
+        (Target::Y, TILT_Y, TILT_Y_ENTRIES, "tilt τ₂ into", view.y),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let rect = row(section, h, 2 + 2 * i);
+        let mut line = row_ui(ui, rect);
+        line.add_space(40.0 + line.spacing().item_spacing.x);
+        line.label(label);
+        let mut picked = now;
+        let combo = ComboBox::from_id_salt(id)
+            .selected_text(AXES[now])
+            .width(TARGET_W)
+            .show_ui(&mut line, |ui| {
+                for to in target_choices(view.a, view.b) {
+                    let entry = ui.selectable_value(&mut picked, to, AXES[to]);
+                    panel.keyboard.place_widget(entries[to], &entry);
+                }
+            });
+        panel.place(id, &combo.response, clip);
+        if let Some(edit) = target_edit(&view, which, picked) {
+            panel.out.edit(edit, None, panel.scratch);
         }
     }
 }

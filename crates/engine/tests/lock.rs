@@ -30,7 +30,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::{Edit, HistoryKey, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice,
+    SimConfig, Slice, SliceFrame, Z_Q3,
 };
 use engine::contract::store::StateStore;
 use engine::lock::{
@@ -71,7 +71,9 @@ fn sim(plane: Plane) -> SimConfig {
             window: Window::SQUARE,
         },
         plane,
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

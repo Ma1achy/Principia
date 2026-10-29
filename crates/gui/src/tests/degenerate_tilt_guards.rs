@@ -37,6 +37,8 @@ fn view(tau1: f64, tau2: f64, gamma: f64, sigma: f64) -> View {
         a,
         b,
         d: SLICE_AXIS,
+        x: SLICE_AXIS,
+        y: SLICE_AXIS,
         scale: sigma,
         tau1: tau1.to_radians(),
         tau2: tau2.to_radians(),

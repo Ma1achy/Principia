@@ -3,10 +3,11 @@
 //! (R-69); `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they
 //! name (R-133): the first is the playhead's, `RenderField::Playhead` (RQ-243); the navigation paths, `z₀`, the basis
 //! and the lock, came with the dev GUI's Manifold view, the overlay set and the hover with its Overlays menu and
-//! hover label, the horizon with its Run window, and the stain graph with its Stain editor (R-390, "Contract fields").
+//! hover label, the horizon with its Run window, the stain graph with its Stain editor, and the slice frame with the
+//! Tilt section's target dropdowns (R-390, "Contract fields"; R-457).
 
 use crate::contract::render_state::{Hover, Overlays, Playhead, StainGraph};
-use crate::contract::sim_config::{Horizon, Latent, Lock, Window};
+use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame, Window};
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
@@ -56,6 +57,15 @@ pub enum SimField {
     /// The horizon `T`, a sim key, undoable (R-69): the Run window's `T_horizon`, in `[50, 200]` (render_gui_spec §G5,
     /// R-132; gui_state_contract §2).
     Horizon(Horizon),
+    /// `Slice.frame`, the slice normal and the two tilt targets, undoable (R-69; R-457 E3), with the basis where the
+    /// same pick changes it: a pick that changes both is one edit, so one history entry, and undo restores both
+    /// (gui_state_contract §2).
+    SliceFrame {
+        /// The new slice frame.
+        frame: SliceFrame,
+        /// The new `(q₁, q₂)`, where the pick also changes the basis; `None` where it edits the slice frame alone.
+        basis: Option<(Latent, Latent)>,
+    },
 }
 
 /// A `RenderState` field with its value (gui_state_contract §2; R-133).

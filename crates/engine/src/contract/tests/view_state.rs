@@ -24,7 +24,7 @@ use kernel::generated::links::{
 
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, LinkChoice, Links, Lock, Plane,
-    Quality, SimConfig, Slice, Window,
+    Quality, SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use crate::contract::view_state::{export, restore};
 use crate::lock::point;
@@ -47,7 +47,9 @@ fn config(plane: Plane, window: Window, links: Links) -> SimConfig {
     SimConfig {
         chart: Chart { window },
         plane,
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

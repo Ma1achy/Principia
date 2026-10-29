@@ -180,7 +180,7 @@ fn expected_config_text(frames: u64) -> String {
             "\"kernel_variant\":\"physics\",\"links\":{{\"alpha\":{{\"id\":\"sigmoid_alpha\",\"params\":{{}}}},\"beta\":{{\"id\":\"sigmoid_beta\",\"params\":{{}}}},\"mass\":{{\"id\":\"softmax_tanh\",\"params\":{{\"mu_max\":5}}}},\"momenta\":{{\"id\":\"sigmoid_q\",\"params\":{{\"q_max\":2}}}}}},",
             "\"lock\":{{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]}},",
             "\"plane\":{{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]}},",
-            "\"quality\":{{}},\"slice\":{{}}}}}}"
+            "\"quality\":{{}},\"slice\":{{\"frame\":{{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}}}}}}}}"
         ),
         frames
     )

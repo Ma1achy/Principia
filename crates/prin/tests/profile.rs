@@ -12,7 +12,7 @@ use engine::contract::profile::{self, percentile, SCHEMA_V1};
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, Window,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -135,7 +135,9 @@ fn skeleton() -> (SimConfig, RenderState) {
                 q1: [0.0; 8],
                 q2: [0.0; 8],
             },
-            slice: Slice {},
+            slice: Slice {
+                frame: SliceFrame::along(Z_Q3),
+            },
             lock: Lock {
                 locked: false,
                 z_locked: [0.0; 8],
@@ -406,7 +408,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&sim).unwrap(),
         &canonical::to_string(&sim2).unwrap(),
-        r#"{"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
+        r#"{"chart":{"window":{"centre":[0.5,0.5],"half":[0.5,0.5]}},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{"frame":{"normal":5,"tilt_x":5,"tilt_y":5}}}"#,
     );
     check_same_text(
         &canonical::to_string(&render).unwrap(),

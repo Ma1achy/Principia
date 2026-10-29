@@ -28,7 +28,7 @@ use engine::contract::profile::{
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, Window,
+    Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::telemetry::session;
 use serde_json::{Map, Value};
@@ -222,7 +222,9 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

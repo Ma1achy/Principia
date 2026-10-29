@@ -100,17 +100,17 @@ impl CompassCase {
         }
     }
 
-    /// The edits setting the case on `plane`: `z₀` with its components on `e_a`, `e_b` set to 0 and on `e_d` to the
+    /// The edits setting the case on `sim`'s chart: `z₀` with its components on `e_a`, `e_b` set to 0 and on `e_d` to the
     /// case's, then the basis at the case's angles, its scale and frame kept.
     pub fn edits(
         self,
-        plane: &engine::contract::sim_config::Plane,
+        sim: &engine::contract::sim_config::SimConfig,
     ) -> [engine::contract::set_field::SetField; 2] {
-        use crate::explore::manifold_view::slice_tilt::Angles;
+        use crate::explore::manifold_view::tilt::Angles;
         use crate::explore::manifold_view::{basis_edit, z0_edit, View, Z0_HALF_RANGE};
         let ((tau1, tau2, gamma), depth, _) = self.parameters();
-        let view = View::of(plane);
-        let mut z0 = plane.z0;
+        let view = View::read(sim);
+        let mut z0 = sim.plane.z0;
         z0[view.a] = 0.0;
         z0[view.b] = 0.0;
         z0[view.d] = depth * Z0_HALF_RANGE;
@@ -314,7 +314,7 @@ pub fn shoot_case(
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),
             Step::ClickNode => frames.extend(click(node_point(&layout, PIXELS_PER_POINT))),
             Step::Compass(case) => {
-                for edit in case.edits(&app.snapshot().sim.plane) {
+                for edit in case.edits(&app.snapshot().sim) {
                     app.set_field(edit);
                 }
                 app.manifold.compass.mode = case.parameters().2;

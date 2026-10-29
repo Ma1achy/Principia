@@ -426,7 +426,9 @@ pub fn physics_key() -> engine::contract::sim_config::SimConfig {
             q1: [0.0; 8],
             q2: [0.0; 8],
         },
-        slice: Slice {},
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
         lock: Lock {
             locked: false,
             z_locked: [0.0; 8],

@@ -25,7 +25,7 @@ use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderS
 use engine::contract::set_field::{Edit, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
-    SimConfig, Slice, Window,
+    SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
 use engine::contract::store::{set_field_message, write};
@@ -287,7 +287,9 @@ fn state(t: f64) -> (SimConfig, RenderState) {
                 q1: MOCK_Q1,
                 q2: MOCK_Q2,
             },
-            slice: Slice {},
+            slice: Slice {
+                frame: SliceFrame::along(Z_Q3),
+            },
             lock: Lock {
                 locked: false,
                 z_locked: [0.0; 8],

@@ -94,13 +94,13 @@ fn mock_keyboard_enter_esc_and_arrows_between_siblings() {
         &[mv],
         &[mv, "chart"],
         &[mv, "navigate"],
-        &[mv, "centre_z0"],
-        &[mv, "slice_tilt"],
+        &[mv, "slice_centre"],
+        &[mv, "tilt"],
         // The arrows stop at the last sibling.
-        &[mv, "slice_tilt"],
-        &[mv, "centre_z0"],
+        &[mv, "tilt"],
+        &[mv, "slice_centre"],
         &[mv, "navigate"],
-        &[mv, "centre_z0"],
+        &[mv, "slice_centre"],
         &[mv],
         &[],
         // Esc with nothing focused does nothing.
@@ -108,7 +108,7 @@ fn mock_keyboard_enter_esc_and_arrows_between_siblings() {
     ];
     check_sibling_walk(&paths, &expected);
     assert_eq!(crumbs[3], "Manifold view › Navigate");
-    assert_eq!(crumbs[5], "Manifold view › Slice & tilt");
+    assert_eq!(crumbs[5], "Manifold view › Tilt");
     assert_eq!(crumbs[10], "Manifold view");
     assert_eq!(crumbs[11], "", "a breadcrumb with nothing focused");
     let back_to_chart = [mv, "chart"];
@@ -737,7 +737,7 @@ fn mock_keyboard_ctrl_z_undoes_from_the_contract() {
         assert_eq!(app.snapshot().sim.plane.z0, first);
         assert_eq!(app.view.focus.mode, KeyMode::Navigation);
     }
-    // In interaction mode on Centre z₀'s first slider, as in navigation mode.
+    // In interaction mode on Slice centre's first slider, as in navigation mode.
     let (mut app, mut h, [_, second]) = edited();
     keys(
         &mut h,
@@ -1701,7 +1701,7 @@ fn mock_keyboard_eframe_hook_takes_the_keys() {
 }
 
 /// The Manifold view's four sections: the panel inside a 12-point margin, below a 40-point title, each section as
-/// tall as its rows (5, 9, 9, 5), 6-point gaps between; a row is 22 points where the panel has room, and the panel's
+/// tall as its rows (5, 7, 9, 6), 6-point gaps between; a row is 22 points where the panel has room, and the panel's
 /// share where it has not.
 #[test]
 fn mock_keyboard_manifold_sections() {
@@ -1709,9 +1709,9 @@ fn mock_keyboard_manifold_sections() {
     let got = crate::explore::manifold_sections(panel);
     let want = [
         (52.0, 110.0),
-        (168.0, 198.0),
-        (372.0, 198.0),
-        (576.0, 110.0),
+        (168.0, 154.0),
+        (328.0, 198.0),
+        (532.0, 132.0),
     ]
     .map(|(y, h)| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, h)));
     assert_eq!(got, want);
@@ -1720,10 +1720,10 @@ fn mock_keyboard_manifold_sections() {
         crate::explore::manifold_sections(moved),
         want.map(|r| r.translate(egui::vec2(100.0, 50.0)))
     );
-    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 28 rows.
+    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 27 rows.
     let short = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
     let h = crate::explore::manifold_view::row_height(short);
-    assert_eq!(h, (616.0 - 40.0 - 18.0) / 28.0);
+    assert_eq!(h, (616.0 - 40.0 - 18.0) / 27.0);
     let bottom = crate::explore::manifold_sections(short)[3].max.y;
     assert!(
         (bottom - (12.0 + 616.0)).abs() < 1e-3,
@@ -1843,15 +1843,19 @@ fn mock_keyboard_manifold_view_scopes() {
     let _ = h.frame(&mut app, Vec::new());
     let tree = app.keyboard.tree(Mode::Explore);
     let chart = [mv::PRESET, mv::Q1_EDIT, mv::Q2_EDIT, mv::BUILDER];
-    let mut navigate = vec![mv::CENTRE_U, mv::CENTRE_V, mv::ZOOM];
-    navigate.extend(mv::NAV_Z0);
-    navigate.extend([mv::UNLOCK, mv::OPEN_INSPECTOR]);
-    let slice = [mv::SLICE_STEP, mv::TAU1, mv::TAU2, mv::GAMMA];
+    let navigate = [
+        mv::CENTRE_U,
+        mv::CENTRE_V,
+        mv::ZOOM,
+        mv::UNLOCK,
+        mv::OPEN_INSPECTOR,
+    ];
+    let tilt = [mv::TAU1, mv::TILT_X, mv::TAU2, mv::TILT_Y, mv::GAMMA];
     let check = |tree: &ScopeTree| {
         assert_eq!(tree.children(Some(mv::CHART)), chart);
         assert_eq!(tree.children(Some(mv::NAVIGATE)), navigate);
-        assert_eq!(tree.children(Some(mv::CENTRE_Z0)), mv::SLIDERS);
-        assert_eq!(tree.children(Some(mv::SLICE_TILT)), slice);
+        assert_eq!(tree.children(Some(mv::SLICE_CENTRE)), mv::SLIDERS);
+        assert_eq!(tree.children(Some(mv::TILT)), tilt);
         assert_eq!(tree.children(Some(mv::Q1_EDIT)), mv::Q1_COMPONENTS);
         assert_eq!(tree.children(Some(mv::Q2_EDIT)), mv::Q2_COMPONENTS);
     };

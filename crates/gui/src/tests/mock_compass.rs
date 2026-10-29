@@ -6,6 +6,7 @@
 //! button setting the mode, Enter on the compass starting interaction, its arrows tilting or slicing by the mode,
 //! Shift ×10 and Alt ×0.1. Each check also runs on an input it must reject (R-176, through `rejects`).
 
+use eframe::egui::accesskit::Role;
 use eframe::egui::{self, pos2, Key, Modifiers, Rect};
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane};
@@ -15,13 +16,13 @@ use super::compass_support::{
     app_at, check_painted, compass_rect, compass_shapes, drag, drawing, off_cube, on_slice,
     painted_edges, plane, setfields, settle, square, view,
 };
-use super::support::{focus, headless, mock_app, nodes, press, rejects};
+use super::support::{focus, headless, mock_app, nodes, press, rejects, SLICE_FRAME};
 use crate::app::App;
 use crate::explore::compass::{
     self, after, drag_edit, latent_normal, slice, tilt, Compass, Drag, Iso, DRAG_DEGREES,
     HINT_SLICE, HINT_TILT, MARGIN, SLICE_BUTTON, TILT_BUTTON, TITLE,
 };
-use crate::explore::manifold_view::slice_tilt::Angles;
+use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::{
     add, basis_edit, dot, lock_edit, norm, z0_edit, Out, Scratch, Touch, View, SLICE_AXIS,
     Z0_HALF_RANGE,
@@ -68,18 +69,18 @@ fn check_one(fields: &[&str], field: &str) {
 #[test]
 fn mock_compass_tilt_edit() {
     let p = tilted(0.0, 0.0, 0.0);
-    let (t1, t2) = angles_of(&p, &tilt(&p, 10.0, -5.0));
+    let (t1, t2) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 10.0, -5.0));
     assert!(
         (t1 - 10.0).abs() < 1e-9 && (t2 + 5.0).abs() < 1e-9,
         "({t1}, {t2})"
     );
-    let (t1, t2) = angles_of(&p, &tilt(&p, 120.0, -120.0));
+    let (t1, t2) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 120.0, -120.0));
     assert!(
         (t1 - 90.0).abs() < 1e-9 && (t2 + 90.0).abs() < 1e-9,
         "clamped: ({t1}, {t2})"
     );
     rejects("a tilt the other way", || {
-        let (t1, _) = angles_of(&p, &tilt(&p, 10.0, 0.0));
+        let (t1, _) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 10.0, 0.0));
         assert!((t1 + 10.0).abs() < 1e-9);
     });
 }
@@ -98,7 +99,10 @@ fn along_normal(p: &Plane, edit: &SetField) -> f64 {
         dot(&delta, &unit(&p.q1)).abs() <= 1e-12 && dot(&delta, &unit(&p.q2)).abs() <= 1e-12,
         "Δz₀ {delta:?} has a part in the plane"
     );
-    dot(&delta, &latent_normal(p).expect("a drawn plane"))
+    dot(
+        &delta,
+        &latent_normal(p, &SLICE_FRAME).expect("a drawn plane"),
+    )
 }
 
 /// Asserts [`along_normal`], by `amount` within `tol`.
@@ -113,7 +117,7 @@ fn check_along_normal(p: &Plane, edit: &SetField, amount: f64, tol: f64) {
 #[test]
 fn mock_compass_modes_the_normal_is_the_drawn_planes() {
     // Untilted, the normal is the hidden slice direction: the drag moves the slice step.
-    let n = latent_normal(&tilted(0.0, 0.0, 0.0)).expect("a plane");
+    let n = latent_normal(&tilted(0.0, 0.0, 0.0), &SLICE_FRAME).expect("a plane");
     let mut e_d = [0.0; 8];
     e_d[SLICE_AXIS] = 1.0;
     assert!(
@@ -126,19 +130,29 @@ fn mock_compass_modes_the_normal_is_the_drawn_planes() {
         (-89.0, 0.0, 90.0),
     ] {
         let p = tilted(t1, t2, g);
-        let ln = latent_normal(&p).expect("a plane");
+        let ln = latent_normal(&p, &SLICE_FRAME).expect("a plane");
         assert!((norm(&ln) - 1.0).abs() < 1e-12, "unit");
         // The drawn plane's normal is the basis's own: q₁ and q₂ have no part along it.
         assert!(dot(&ln, &p.q1).abs() < 1e-12 && dot(&ln, &p.q2).abs() < 1e-12);
-        check_along_normal(&p, &slice(&p, 0.3).expect("an edit"), 0.3, 1e-12);
-        check_along_normal(&p, &slice(&p, -0.05).expect("an edit"), -0.05, 1e-12);
+        check_along_normal(
+            &p,
+            &slice(&p, &SLICE_FRAME, 0.3).expect("an edit"),
+            0.3,
+            1e-12,
+        );
+        check_along_normal(
+            &p,
+            &slice(&p, &SLICE_FRAME, -0.05).expect("an edit"),
+            -0.05,
+            1e-12,
+        );
         rejects("a slice along the depth axis on a tilted plane", || {
             let mut z0 = p.z0;
             z0[SLICE_AXIS] += 0.3;
             along_normal(&p, &z0_edit(z0));
         });
         rejects("a slice-mode edit that tilts", || {
-            along_normal(&p, &tilt(&p, 5.0, 0.0));
+            along_normal(&p, &tilt(&p, &SLICE_FRAME, 5.0, 0.0));
         });
     }
 }
@@ -147,32 +161,36 @@ fn mock_compass_modes_the_normal_is_the_drawn_planes() {
 fn mock_compass_modes_a_drag_is_one_edit_by_its_mode() {
     let p = tilted(20.0, -10.0, 15.0);
     let before = Angles::of(&View::of(&p));
-    let mut tilting = Drag::start(Touch::Tilt, &p);
+    let mut tilting = Drag::start(Touch::Tilt, &p, &SLICE_FRAME);
     tilting.moved(egui::vec2(20.0, 10.0), SQUARE);
-    let (t1, t2) = angles_of(&p, &drag_edit(&p, &tilting).expect("an edit"));
+    let (t1, t2) = angles_of(&p, &drag_edit(&p, &SLICE_FRAME, &tilting).expect("an edit"));
     let (w, h) = (f64::from(SQUARE.width()), f64::from(SQUARE.height()));
     assert!(
         (t1 - before.tau1 - 20.0 / w * DRAG_DEGREES).abs() < 1e-9
             && (t2 - before.tau2 + 10.0 / h * DRAG_DEGREES).abs() < 1e-9,
         "right raises τ₁, down lowers τ₂: ({t1}, {t2})"
     );
-    let mut slicing = Drag::start(Touch::Slice, &p);
+    let mut slicing = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
     slicing.moved(egui::vec2(-6.0, 9.0), SQUARE);
-    let edit = drag_edit(&p, &slicing).expect("an edit");
+    let edit = drag_edit(&p, &SLICE_FRAME, &slicing).expect("an edit");
     check_along_normal(&p, &edit, -6.0 / w * 2.0 * Z0_HALF_RANGE, 1e-12);
     for mode in [Touch::Tilt, Touch::Slice] {
-        let still = Drag::start(mode, &p);
-        assert_eq!(drag_edit(&p, &still), None, "no travel, no edit");
+        let still = Drag::start(mode, &p, &SLICE_FRAME);
+        assert_eq!(
+            drag_edit(&p, &SLICE_FRAME, &still),
+            None,
+            "no travel, no edit"
+        );
     }
-    let mut upright = Drag::start(Touch::Slice, &p);
+    let mut upright = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
     upright.moved(egui::vec2(0.0, 30.0), SQUARE);
     assert_eq!(
-        drag_edit(&p, &upright),
+        drag_edit(&p, &SLICE_FRAME, &upright),
         None,
         "a vertical slice drag, no edit"
     );
     rejects("a slice-mode drag that tilts", || {
-        along_normal(&p, &drag_edit(&p, &tilting).expect("an edit"));
+        along_normal(&p, &drag_edit(&p, &SLICE_FRAME, &tilting).expect("an edit"));
     });
     // The plane after the edits, each on what the earlier leave; a lock edit moves no plane.
     let Edit::Sim(SimField::Z0(z0)) = edit.edit else {
@@ -274,7 +292,13 @@ fn check_mode(h: &mut Headless, app: &mut App<MockSide>, want: Touch, what: &str
 
 /// Clicks the button `label`.
 fn click_button(h: &mut Headless, app: &mut App<MockSide>, label: &str) {
-    super::support::click(h, app, label);
+    // By its scope: the Manifold view's section heading "Tilt" reads as the Tilt button does (R-457).
+    let id = if label == TILT_BUTTON {
+        crate::explore::COMPASS_TILT
+    } else {
+        crate::explore::COMPASS_SLICE
+    };
+    super::support::click_scope(h, app, id);
     let _ = h.frame(app, Vec::new());
 }
 
@@ -307,37 +331,40 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
     check_mode(&mut h, &mut app, Touch::Slice, "a click on Slice");
     click_button(&mut h, &mut app, TILT_BUTTON);
     check_mode(&mut h, &mut app, Touch::Tilt, "a click on Tilt");
-    // Touching the slice step (Slice & tilt's first slider) shows Slice; touching τ₁ shows Tilt.
-    keys(
+    // Touching the slice normal's Slice centre slider shows Slice; touching τ₁ (Tilt's first slider) shows Tilt.
+    let mut to_normal = vec![
+        (Key::Tab, NONE),
+        (Key::Tab, NONE),
+        (Key::Enter, NONE),
+        (Key::ArrowDown, NONE),
+        (Key::ArrowDown, NONE),
+        (Key::Enter, NONE),
+    ];
+    to_normal.extend([(Key::ArrowDown, NONE); SLICE_AXIS]);
+    to_normal.extend([(Key::Enter, NONE), (Key::ArrowUp, NONE)]);
+    keys(&mut h, &mut app, &to_normal);
+    assert_eq!(focus(&app).last(), Some(&"slice_centre_5"));
+    check_mode(
         &mut h,
         &mut app,
-        &[
-            (Key::Tab, NONE),
-            (Key::Tab, NONE),
-            (Key::Enter, NONE),
-            (Key::ArrowDown, NONE),
-            (Key::ArrowDown, NONE),
-            (Key::ArrowDown, NONE),
-            (Key::Enter, NONE),
-            (Key::Enter, NONE),
-            (Key::ArrowUp, NONE),
-        ],
+        Touch::Slice,
+        "the normal's slider touched",
     );
-    assert_eq!(focus(&app).last(), Some(&"slice_step"));
-    check_mode(&mut h, &mut app, Touch::Slice, "the slice step touched");
     keys(
         &mut h,
         &mut app,
         &[
             (Key::Escape, NONE),
+            (Key::Escape, NONE),
             (Key::ArrowDown, NONE),
+            (Key::Enter, NONE),
             (Key::Enter, NONE),
             (Key::ArrowUp, NONE),
         ],
     );
     assert_eq!(focus(&app).last(), Some(&"tau1"));
     check_mode(&mut h, &mut app, Touch::Tilt, "τ₁ touched");
-    // A Centre z₀ slider shows Slice too.
+    // Slice centre's first slider shows Slice too.
     keys(
         &mut h,
         &mut app,
@@ -350,7 +377,7 @@ fn mock_compass_modes_open_in_tilt_and_switch_by_buttons_and_sliders() {
             (Key::ArrowUp, NONE),
         ],
     );
-    assert_eq!(focus(&app).last(), Some(&"centre_z0_0"));
+    assert_eq!(focus(&app).last(), Some(&"slice_centre_0"));
     check_mode(&mut h, &mut app, Touch::Slice, "a z₀ slider touched");
     // The controls: buttons that do not follow the slider touched, and buttons that show no mode.
     app.manifold.compass.mode = Touch::Tilt;
@@ -371,12 +398,16 @@ fn mock_compass_modes_read_and_draw() {
     let rect = compass_rect(&h);
     let sq = square(&h);
     let all = nodes(&mut h, &mut app);
-    let text =
-        |all: &[super::support::Node], t: &str| all.iter().find(|n| n.text == t).map(|n| n.rect);
+    // The Tilt section's heading reads "Tilt" too (R-457): the compass's Tilt is the button.
+    let text = |all: &[super::support::Node], t: &str| {
+        all.iter()
+            .find(|n| n.text == t && (t != TILT_BUTTON || n.role == Role::Button))
+            .map(|n| n.rect)
+    };
     let tilt_lines = drawing(&h, &app).readout;
     assert_eq!(
         tilt_lines,
-        ["mode tilt", "q₁→z_q3 +0.0° · q₂→z_q3 +0.0°", "γ +0.0°"]
+        ["mode tilt", "τ₁ → z_q3 0.0° · τ₂ → z_q3 0.0°", "γ +0.0°"]
     );
     for t in [TITLE, TILT_BUTTON, SLICE_BUTTON, HINT_TILT]
         .into_iter()
@@ -399,13 +430,18 @@ fn mock_compass_modes_read_and_draw() {
     let slice_lines = drawing(&h, &app).readout;
     assert_eq!(
         slice_lines,
-        ["mode slice · plane ⟂ z_q3", "z_q3 = +0.31 of range"]
+        [
+            "mode slice · plane ⟂ z_q3",
+            "τ₁ → z_q3 0.0° · τ₂ → z_q3 0.0°",
+            "z_q3 = +0.31 of range"
+        ]
     );
     for t in &slice_lines {
         assert!(text(&all, t).is_some(), "{t:?} read out");
     }
-    rejects("the tilt readout while slicing", || {
-        assert!(text(&all, &tilt_lines[1]).is_some())
+    // Both modes name the targets (R-457 E6); the rotation is tilt mode's alone.
+    rejects("the tilt readout's rotation while slicing", || {
+        assert!(text(&all, &tilt_lines[2]).is_some())
     });
 }
 
@@ -503,7 +539,7 @@ fn mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
         check_along_normal(&before, &z0_edit(after.z0), amount, 1e-6);
         assert_eq!(app.manifold.compass.mode, Touch::Slice);
         rejects("a slice-mode drag that tilts", || {
-            along_normal(&before, &tilt(&before, 5.0, 0.0));
+            along_normal(&before, &tilt(&before, &SLICE_FRAME, 5.0, 0.0));
         });
         rejects(
             "a slice move along the depth axis on a tilted plane",
@@ -540,9 +576,12 @@ fn mock_compass_modes_the_drag_draws_its_plane_until_it_ends() {
     let depth = app.snapshot().history.undo_depth;
     settle(&mut h, &mut app);
     assert_eq!(app.snapshot().history.undo_depth, depth, "no edit yet");
-    let mut d = Drag::start(Touch::Slice, &before);
+    let mut d = Drag::start(Touch::Slice, &before, &SLICE_FRAME);
     d.moved(delta, sq);
-    let shown = after(&before, &[drag_edit(&before, &d).expect("an edit")]);
+    let shown = after(
+        &before,
+        &[drag_edit(&before, &SLICE_FRAME, &d).expect("an edit")],
+    );
     let mid = drawing(&h, &app);
     let want = compass::drawing(sq, &shown, &View::of(&shown), Touch::Slice, &free_lock());
     assert_eq!(mid.slice, want.slice, "the plane the drag leaves");
@@ -579,7 +618,7 @@ fn mock_compass_modes_locked_a_slice_drag_leaves_the_anchor_along_the_normal() {
     assert!(snapshot.sim.lock.locked, "still locked");
     assert_eq!(snapshot.sim.lock.z_locked, anchor, "the anchor kept");
     // The excursion is along the normal through the anchor.
-    let n = latent_normal(&before).expect("a plane");
+    let n = latent_normal(&before, &SLICE_FRAME).expect("a plane");
     let on_line = |z0: &Latent| {
         let offset = add(z0, -1.0, &anchor);
         let along = dot(&offset, &n);
@@ -869,7 +908,9 @@ fn mock_compass_keys_adjust_steps_by_the_mode() {
             times,
             direction,
         };
-        compass::adjust(&a, p, &mut scratch, &mut out);
+        let mut sim = super::support::state(0.0).0;
+        sim.plane = p.clone();
+        compass::adjust(&a, &sim, &mut scratch, &mut out);
         out.edits
     };
     let one = |edits: Vec<SetField>| {
