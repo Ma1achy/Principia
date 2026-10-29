@@ -1168,6 +1168,29 @@ fn stain_custom_stop_ramp() {
     .expect("a hard edge");
     assert_eq!(edge.oklab_at(0.5 - 1e-9), Some(a));
     assert_eq!(edge.oklab_at(0.5), Some(b));
+    // At a shared first position too; and a cyclic ramp from 0 to 1 takes a t a hair below an integer, which rounds to
+    // the integer, to the integer's colour.
+    let shared = |cyclic| {
+        let stop = |position, oklab| Stop { position, oklab };
+        Ramp::new(vec![stop(0.0, a), stop(0.0, b), stop(1.0, a)], cyclic).expect("a ramp")
+    };
+    assert_eq!(shared(false).oklab_at(0.0), Some(b));
+    assert_eq!(shared(true).oklab_at(-1e-20), Some(b));
+    assert_eq!(shared(true).oklab_at(1.0), Some(b));
+    // The conversion to linear sRGB is OKLab's: its published primaries (Ottosson, "A perceptual color space for
+    // image processing", 2020) go to the unit vectors, and white to white.
+    for (lab, rgb) in [
+        ([0.627_955, 0.224_863, 0.125_846], [1.0, 0.0, 0.0]),
+        ([0.866_440, -0.233_888, 0.179_498], [0.0, 1.0, 0.0]),
+        ([0.452_014, -0.032_457, -0.311_528], [0.0, 0.0, 1.0]),
+        ([1.0, 0.0, 0.0], [1.0, 1.0, 1.0]),
+    ] {
+        let got = oklab_to_linear(lab);
+        assert!(
+            (0..3).all(|i| (got[i] - rgb[i]).abs() < 1e-4),
+            "OKLab {lab:?} is linear sRGB {got:?}, not {rgb:?}"
+        );
+    }
     // The stops are checked: two or more, positions in [0, 1] and never decreasing, L in [0, 1], all finite.
     let stop = |position, l| Stop {
         position,
@@ -1205,6 +1228,11 @@ fn stain_custom_stop_ramp() {
     ] {
         assert_eq!(Ramp::new(stops.clone(), false).is_ok(), ok, "{stops:?}");
     }
+    let why = |stops: Vec<Stop>| Ramp::new(stops, false).expect_err("refused").to_string();
+    assert!(why(vec![stop(0.5, 0.5)]).contains("two or more stops"));
+    assert!(why(vec![stop(0.0, 0.5), stop(2.0, 0.5)]).contains("not in [0, 1]"));
+    assert!(why(vec![stop(0.6, 0.5), stop(0.5, 0.5)]).contains("below the stop before it"));
+    assert!(why(vec![stop(0.0, 2.0), stop(1.0, 0.5)]).contains("not an OKLab colour"));
     // A ramp round-trips through RenderState, on its colour node, and a ramp read back is checked.
     let state = render(wired());
     let back = round_trip(&state);
@@ -1282,4 +1310,99 @@ validation::negative_control!(
             check_at(&r, t, at, Space::LinearSrgb);
         }
     }
+);
+
+// ----- the refusals name their reasons -----
+
+/// Checks that `r` reads `want`.
+fn check_reason(r: &Refusal, want: &str) {
+    assert_eq!(r.to_string(), want, "the refusal {r:?} reads otherwise");
+}
+
+/// Each refusal and what it reads.
+fn reasons() -> Vec<(Refusal, &'static str)> {
+    vec![
+        (
+            Refusal::FixedSingleton {
+                kind: NodeKind::Out,
+                action: Action::Delete,
+            },
+            "the OUT is a fixed singleton: it is never deleted",
+        ),
+        (
+            Refusal::FixedSingleton {
+                kind: NodeKind::Combiner,
+                action: Action::Add,
+            },
+            "the combiner is a fixed singleton: it is never added",
+        ),
+        (
+            Refusal::FixedSingleton {
+                kind: NodeKind::Combiner,
+                action: Action::Duplicate,
+            },
+            "the combiner is a fixed singleton: it is never duplicated",
+        ),
+        (Refusal::NoNode(NodeId(7)), "no node 7"),
+        (
+            Refusal::TypeMismatch {
+                from: None,
+                to: PortType::Field,
+            },
+            "a node with no out-port cannot feed an in-port of type field: the types differ",
+        ),
+        (
+            Refusal::NoPort {
+                node: NodeId(3),
+                port: 2,
+                ports: 1,
+            },
+            "node 3 has 1 in-port(s); no port 2",
+        ),
+        (
+            Refusal::TypeMismatch {
+                from: Some(PortType::Vec3),
+                to: PortType::F32,
+            },
+            "a vec3 out-port cannot feed an in-port of type f32: the types differ",
+        ),
+        (
+            Refusal::Cycle {
+                from: NodeId(4),
+                to: NodeId(5),
+            },
+            "node 5 already feeds node 4: the wire would close a cycle",
+        ),
+        (Refusal::Backbone("the backbone".into()), "the backbone"),
+        (
+            Refusal::NotInChain(NodeId(6)),
+            "node 6 is not in the live post chain",
+        ),
+        (
+            Refusal::NoPosition {
+                position: 3,
+                chain: 2,
+            },
+            "the live post chain holds 2 post(s); no position 3",
+        ),
+        (Refusal::NoChange, "the edit leaves the graph as it is"),
+        (
+            Refusal::Graph(crate::contract::stain::graph::GraphError("why".into())),
+            "why",
+        ),
+    ]
+}
+
+#[test]
+fn stain_refusals_name_their_reasons() {
+    for (r, want) in reasons() {
+        check_reason(&r, want);
+    }
+}
+
+validation::negative_control!(
+    stain_refusals_name_their_reasons,
+    "a refusal checked against another's reason must fail",
+    expected = "reads otherwise",
+    check_reason(&reasons()[0].0, reasons()[1].1)
 );

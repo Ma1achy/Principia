@@ -92,18 +92,32 @@ pub enum Refusal {
 impl fmt::Display for Refusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Refusal::FixedSingleton { kind, action } => write!(
-                f,
-                "the {kind:?} is a fixed singleton: {action:?} is refused"
-            ),
+            Refusal::FixedSingleton { kind, action } => {
+                let done = match action {
+                    Action::Add => "added",
+                    Action::Delete => "deleted",
+                    Action::Duplicate => "duplicated",
+                };
+                let kind = match kind {
+                    NodeKind::Out => "OUT",
+                    other => assemble::Kind::from(*other).name(),
+                };
+                write!(f, "the {kind} is a fixed singleton: it is never {done}")
+            }
             Refusal::NoNode(id) => write!(f, "no node {}", id.0),
             Refusal::NoPort { node, port, ports } => {
                 write!(f, "node {} has {ports} in-port(s); no port {port}", node.0)
             }
-            Refusal::TypeMismatch { from, to } => write!(
-                f,
-                "a {from:?} out-port cannot feed a {to:?} in-port: the types differ"
-            ),
+            Refusal::TypeMismatch { from, to } => {
+                let from = from.map_or("a node with no out-port".to_owned(), |t| {
+                    format!("a {} out-port", type_name(t))
+                });
+                write!(
+                    f,
+                    "{from} cannot feed an in-port of type {}: the types differ",
+                    type_name(*to)
+                )
+            }
             Refusal::Cycle { from, to } => write!(
                 f,
                 "node {} already feeds node {}: the wire would close a cycle",
@@ -118,6 +132,15 @@ impl fmt::Display for Refusal {
             Refusal::NoChange => f.write_str("the edit leaves the graph as it is"),
             Refusal::Graph(e) => write!(f, "{e}"),
         }
+    }
+}
+
+/// A wire-carried type as render_gui_spec Part II §3 writes it.
+fn type_name(t: PortType) -> &'static str {
+    match t {
+        PortType::Field => "field",
+        PortType::Vec3 => "vec3",
+        PortType::F32 => "f32",
     }
 }
 
