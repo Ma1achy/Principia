@@ -234,6 +234,7 @@ are listed with no choice made.*
   REQ-VAL-043's `rq: RQ-576`, are the port's next step.
 - **Waits:** REQ-VAL-043's comparison (TASK-M3-30, `word_braid_class`). The rest of TASK-M3-30, and TASK-M3-16's
   convention, do not wait on the equivalence.
+- **27 Oct 2026 (the verification and replication plan, PR #305):** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner), question 5, is this entry's question and is queued here, not as a new entry: "**RQ-576's word equivalence?** Recommended: option (d), conjugacy plus the inverse and the `(a, b) ↔ (A, B)` exchange, with each row recording which symmetry it needed; cite the atlas's `word.js` rule for syzygy sequences. (RQ-576 asked for no recommendation from its author; this one is the plan's.)" Stays queued (the human, 27 Oct 2026: "The other §9 questions stay queued as RQs."). Not applied.
 
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
@@ -300,6 +301,7 @@ here.*
 - **Applied meanwhile:** none. R-265, R-572, R-90, the canonical spec, deep_zoom and the integrator contract stand as
   written; no requirement or task is added from the proposal.
 - **Waits:** nothing built waits; no task builds the ladder. RQ-578 (deep zoom §2's floor) does not wait on this entry.
+- **27 Oct 2026 (the verification and replication plan, PR #305):** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner), question 10, is this entry's question and is queued here, not as a new entry: "**RQ-577, the precision ladder: rule before or after M3 closes?** Recommended: after, as the proposal's own §6 question 1 allows; PL-8's first half runs on R-33's reference at M3 without it." The plan also corrects test 6's row count (PLAN.md § 2.2: 937 Hristov rows, not 1,260; a dated note in the proposal). Stays queued (the human, 27 Oct 2026: "The other §9 questions stay queued as RQs."). Not applied.
 
 ## RQ-578: Deep zoom §2's "Floor moves from ~23 to ~50+" does not hold for an f32 sum on the GPU: the ICs are absolute O(1) numbers, so the integration's precision sets the floor *(conflict: deep_zoom §2 and §4 (iv), scheduler_contract Part 3 and Part 4, dd_refinement_policy §0 against the prin-rs measurement the precision-ladder proposal reports; R-90, R-265, canonical_spec §1 item 3; REQ-DEC-036, REQ-TOOL-159, REQ-SCHED-062; context: TASK-M5-04, TASK-M6-07, TASK-M6-08, TASK-M6-02, TASK-M6-21, TASK-M6-01, TASK-M8-57)*
 
@@ -414,6 +416,7 @@ committed meanwhile.*
 - **Applied meanwhile:** (c). `fetch.sh` downloads all 599 files listed in `sources.tsv` and checks each against its
   recorded sha256, so the reference data is reproducible byte for byte without being committed. Waits: the precision
   proposal's test 6 reference data, in the repo.
+- **27 Oct 2026 (the verification and replication plan, PR #305):** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner), question 6, is this entry's question and is queued here, not as a new entry: "**RQ-579, the high-precision databases' terms?** Recommended: (b), ask the authors, keeping (c) meanwhile." Stays queued (the human, 27 Oct 2026: "The other §9 questions stay queued as RQs."). Not applied; (c) stays.
 
 ## RQ-581: The Cartesian drift latches `dE_max` and `dLz_max` are linear binary16, whose floor sits above the f64 path's drift *(physics; found by physics review 5662346996 of PR #293, a non-blocking note on F1; payload §1, §2; REQ-PAY-012, REQ-PAY-041, REQ-PAY-044, REQ-TOOL-023; context: none in this PR)*
 
@@ -449,3 +452,115 @@ the drift view and the drift fields can show).*
 - **Applied meanwhile:** none; `packed_b` stays as built (TASK-M0-09, TASK-M0-10).
 - **Waits:** nothing in PR #293 waits on it. Raised as a physics question for the human (R-369); no requirement
   carries it yet.
+
+## RQ-582: The Šuvakov plane's labelling: the middle body as the decoder's body 2 (the `α = 0` pole) or as body 1 (`β = 0`, reached exactly, R-417) *(physics; the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 3, and § 2.3; R-417; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes (physics: it fixes which body a Šuvakov-plane import puts at
+the centre).*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 3; § 2.3; `docs/incoming/2026-10-27_papers/README.md` § 5, the Hudomal 2015 labelling item.
+- **The question (verbatim):** "**The Šuvakov plane's labelling: the middle body as the decoder's body 2 (the `α = 0`
+  pole) or as body 1 (`β = 0`, reached exactly, R-417)?**"
+- **Recommended (the plan's):** "body 1, Hudomal eq. (18)'s labelling, queued as a chart question with the physics
+  reviewer (§2.3)."
+- **Applied meanwhile:** nothing.
+
+## RQ-583: Whether to build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart question comes up *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 4; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it adds or does not add a chart.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 4.
+- **The question (verbatim):** "**Build a Šuvakov-plane chart, or keep its targets as Path A closures until a chart
+  question comes up?**"
+- **Recommended (the plan's):** "queue the chart question now; 3,109 orbits and the strongest share-back image wait on
+  it."
+- **Applied meanwhile:** the targets stay Path A closures. Related: RQ-582.
+
+## RQ-584: Whether to fetch Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits) under the same fetch-and-verify rule, for REQ-VAL-042 *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 7; REQ-VAL-042; RQ-579; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it is a fetch of third-party data.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 7; `docs/incoming/2026-10-27_hp_ics/README.md` (the fetch-and-verify rule).
+- **The question (verbatim):** "**Fetch Hristov et al. 2024's free-fall database (24,582 ICs at 80 digits) under the
+  same fetch-and-verify rule, for REQ-VAL-042?**"
+- **Recommended (the plan's):** "yes."
+- **Applied meanwhile:** nothing fetched. Its terms would fall under RQ-579.
+
+## RQ-585: Whether to commit Li & Liao's website pages for the 316 free-fall orbits, or record their URL and sha256 only *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 8, and § 2.1; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it is third-party content.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 8; § 2.1 (the atlas's 311 = 230 of the paper's 234 + 81 of the website's 82 extra).
+- **The question (verbatim):** "**Li & Liao's website pages (§2.1): commit them, or record their URL and sha256
+  only?**"
+- **Recommended (the plan's):** "record only, as `HP27` does, and treat the 81 extra atlas rows as closure tests
+  (LL-5)."
+- **Applied meanwhile:** recorded only (PLAN.md § 2.1 gives both URLs and sha256 prefixes); nothing committed.
+
+## RQ-586: Whether to fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (targets TM-1, LL-3) *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 9; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it is a fetch of third-party papers.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 9; § 3, rows TM-1 and LL-3.
+- **The question (verbatim):** "**Fetch Tanikawa & Mikkola 2021, Standish 1970 and Yasko & Orlov 2015 (TM-1, LL-3)?**"
+- **Recommended (the plan's):** "yes; TM-1 is one of very few exact regularisation targets."
+- **Applied meanwhile:** nothing fetched; TM-1 and LL-3 stay blocked.
+
+## RQ-587: Whether to enumerate the prototype's numbers (tier D) as targets *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 11; R-159, R-560; PR #305; context: none built)*
+
+*Queued by the human (27 Oct 2026). For the human: yes, it decides whether prototype numbers become targets.*
+
+- **File, section:** [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9](docs/incoming/2026-10-27_validation_plan/PLAN.md#9-open-questions-for-the-owner),
+  question 11; § 3, D-1; `docs/reference/prin-rs/FINDINGS.md` (a record, R-159).
+- **The question (verbatim):** "**Tier D: enumerate the prototype's numbers as targets?**"
+- **Recommended (the plan's):** "no blanket list; promote a prototype number by name when a task needs it,
+  re-measured under Heggie × RK4, since several were measured under AZ (§3, D-1)."
+- **Applied meanwhile:** none enumerated.
+
+## RQ-588: A correction to the validation-orbits doc § 1.1: Li & Liao's 234 orbits span six mass sets, 30 of them equal-mass, and Hristov et al. is *CeMDA* 136, 7 (2024) *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, and § 10; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per in-force document. Not applied.*
+
+- **File, section:**
+  - `docs/design/principia_dd_validation_orbits.md` § "1.1 Free-fall periodic orbits — the best fit for this project":
+    "Li & Liao 2018 (234 unequal-mass), Hristov–Hristova–Dmitrašinović–Tanikawa 2023 (**12,409** equal-mass)."
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the `VO` § 1.1 row: "234 over six mass sets, 30 of them equal-mass (`P27/README.md` §4 item 7); Hristov et al. is
+    *CeMDA* 136, 7 (2024), arXiv 2023".
+- **The question (§ 9, question 12, verbatim):** "**Queue the §10 corrections to ruled documents (`VO` §1.1,
+  REQ-VAL-042's citation, `LR` §13's sentence)?**" This entry is the `VO` § 1.1 correction.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the doc is not edited.
+
+## RQ-589: A correction to REQ-VAL-042's citation: "Hristov et al. 2023" is *CeMDA* 136, 7 (2024) *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, and § 10; REQ-VAL-042; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per in-force document. Not applied.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-VAL-042's statement: "Two or three free-fall (brake) periodic orbits from Hristov et
+    al. 2023 or the Three-body Gallery must be added as closure tests …".
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the REQ-VAL-042 row: "*CeMDA* 136, 7 (2024)".
+- **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is REQ-VAL-042's citation.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the requirement is not edited.
+
+## RQ-590: A correction to the literature review § 13: the atlas's 311 free-fall orbits lie on nine planes, one per mass set, not "one plane" *(the human's queued question; `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 9, question 12, § 2.3 and § 10; context: none built)*
+
+*Queued by the human (27 Oct 2026): one entry per document. Not applied; the human considers the lit-review work done
+for now.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-25_lit_review/lit_review_2026-10.tex` § 13 "Periodic-Orbit Catalogues" (lines 698–699):
+    "and 311 lie on the free-fall plane.  Under the scale quotient these are one plane, a stack of planes indexed by
+    mass, and one plane".
+  - [`docs/incoming/2026-10-27_validation_plan/PLAN.md` § 10](docs/incoming/2026-10-27_validation_plan/PLAN.md#10-superseded-or-corrected),
+    the `ATP` § 3, D2; `LR` § 13 row: "nine planes, one per mass set".
+- **The question (§ 9, question 12, verbatim):** as RQ-588. This entry is the lit review's § 13 sentence.
+- **Recommended (the plan's):** "yes, as REVIEW_QUEUE entries; this plan does not edit them."
+- **Applied meanwhile:** nothing; the lit review is not edited.

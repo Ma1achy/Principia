@@ -7736,14 +7736,17 @@
     section: R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's \"Each is read from the decoded `(m, r, p)` alone\" for `rho_angle`; asked directly, no RQ)*"
   verify:
+    detail: "the section gives each field's formula at decode, from (m, r, p) and, for rho_angle, from the configuration block's own (ρ̃, λ̃) (R-628), consistent with the ledger's presentation metadata (log, cyclic); physics reviewer approved"
     method: review checklist
-    detail: "the section gives each field's formula from (m, r, p) at decode, consistent with the ledger's presentation metadata (log, cyclic); physics reviewer approved"
   rulings:
   - R-62
   - R-72
+  - R-628
   milestone: M2
-  note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ."
+  note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ. R-628 (27 Oct 2026, TASK-M2-25): rho_angle is read from the configuration block's own (ρ̃, λ̃), not from the positions. Verify *Was:* \"the section gives each field's formula from (m, r, p) at decode, consistent with …\"."
 - id: REQ-PAY-089
   area: PAY
   statement: "QuadReduction must be sized from its member list, with u32 histogram bins (R-410), and then aligned: 176 B, aligned to 4 (dd_generation_root §3.7's \"Size\" and \"Layout and §3.8 entries\"), the figure TASK-M5-01 measured and wrote into the docs that cite it."
@@ -13956,8 +13959,10 @@
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   - file: decisions.md
     section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
+  - file: decisions.md
+    section: "R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's \"Each is read from the decoded `(m, r, p)` alone\" for `rho_angle`; asked directly, no RQ)*"
   verify:
-    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included; the generated WGSL encode selects β = π̂ on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) and agrees with the CPU there, ±0 operands included (R-438)"
+    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included; the generated WGSL encode selects β = π̂ on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) and agrees with the CPU there, ±0 operands included (R-438); the decoded descriptor's rho_angle, read from the configuration block's own (ρ̃, λ̃) (R-628), is held strictly at and near the shape sphere's λ̃ = 0 pole (n₀ = (+1, ε, 0) and (+1, 0, ε), both signs of ε, φ_f = 0 and a generic phase), the generated fragment decode against the CPU's f32 decode within REQ-DEC-043's factor and both against Φ's f64 angle"
     method: numerical gate
   rulings:
   - R-75
@@ -13968,8 +13973,9 @@
   - R-436
   - R-437
   - R-438
+  - R-628
   milestone: M2
-  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\"."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."

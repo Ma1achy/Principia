@@ -358,7 +358,7 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
             masses,
             config,
             momentum,
-            descriptor: descriptor::describe(&ic),
+            descriptor: descriptor::describe_decoded(&ic, &config),
             degenerate: masses.degenerate,
         }
     }

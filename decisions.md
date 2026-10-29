@@ -26812,3 +26812,45 @@ there", RQ-551's option (a), which R-620 did not take. Applied as the words read
 instruction for the skeleton: the skeleton tries the worker layout and measures it, and v1 web itself (TASK-M8-37) is
 built as R-620 rules. Nothing built changes, so it is not asked. #293's R-615 rewrote REQ-GUI-352's acceptance line
 (`status_pair_warning`) while this port moved it to TASK-M8-95; it moved in its R-615 form, with R-615's references.
+
+## R-628 — The descriptor's `rho_angle` is read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors, not from the Jacobi vectors re-formed from the re-centred positions; the other descriptor fields keep their positional forms *(amends dd_decoder §3.6's "Each is read from the decoded `(m, r, p)` alone" for `rho_angle`; asked directly, no RQ)*
+*27 Oct 2026 · the human's answer to the question put on PR #303 (TASK-M2-25); applied in
+`docs/design/principia_dd_decoder.md` §3.6 and `plan/rule_groups.yaml`; built by TASK-M2-25*
+
+The question: `rho_angle` near `Φ`'s `λ̃ = 0` pole (physics review 5669268864 of PR #303, head 2ffc058b, and the
+measurement in its comment 6445018858). At the `α = 0` pole `Φ`'s `λ̃` is 0, but the descriptor re-forms
+`λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁` from the positions, after `C`'s re-centring, so its `λ` is that re-centring's rounding
+residue, whose size and sign each backend rounds its own way (measured 1.5 to 3.8·10⁻⁹ at f32 at the exact pole, 0 on
+lavapipe). The angle read from it is conditioned as residue/`‖λ̃‖`: backends disagreed beyond REQ-DEC-043's factor out
+to `‖λ̃‖ ≈ 2.8·10⁻⁵`, and at the exact pole read 0 on one and `π̂` on another. Physics offered three options: (A) the
+angle from `Φ`'s vectors, (B) an explicit pole snap with a calibrated tolerance, (C) accept the backend-dependent value.
+
+The human's words, verbatim:
+
+> A: angle from Φ's vectors (Recommended)
+
+The option the human chose, verbatim:
+
+> Take rho_angle from the configuration block's own (ρ̃, λ̃) instead of the re-centred positions. Physics measured a
+> worst error of 1.6e-7 rad against f64 (CPU f32), exactly 0 at the pole, with no tolerance or calibration. It amends
+> dd_decoder §3.6:241-243 ('read from the decoded (m, r, p) alone'). The test goes back to strict.
+
+*What it decides:* option A. Every decode's `rho_angle` is `atan2(ρ̃ × λ̃, ρ̃ · λ̃)` of the configuration block's
+`ρ̃` and `λ̃` (`kernel::decode::config::Config`'s `rho_t` and `lambda_t`, the vectors the reconstruction unweights),
+through §3.6's existing cases, so at the pole, where those operands are `±0`, "Parallel, or the pole" gives 0 on every
+backend. The CPU and the generated fragment and kernel WGSL run the one source (R-116), so they take the same
+operands. No tolerance and no calibration are added. `rho_mag`, `lambda_mag`, `rho_ratio`, `K_0`, `V_0`,
+`virial_ratio` and `r_min_pair_0` keep their positional forms: they describe the integrated IC, and `rho_ratio`'s
+rule at the `α = 0` pole (§3.6, "It reads `+∞` only where `‖λ̃‖` is exactly 0") is unchanged. The shape-pole test of
+TASK-M2-25 holds descriptor word 7 strictly again, with the sweep's near-pole points at `φ_f = 0` and a generic
+phase, against the CPU's f32 decode and `Φ`'s f64 angle.
+
+*Applied per R-369:*
+- The mirror: where `C`'s step 3 mirrors, `rho_angle`'s sign would be negated. No decode mirrors: the shape sphere's
+  `C` does not take step 3 (R-544), and every other chart's configuration is canonical by construction, so `Φ`'s
+  angle is the emitted state's.
+- The descriptor-alone entries (`kernel::stage::fragment::describe`, `kernel::stage::decode::describe`), which take an
+  `(m, r, p)` with no configuration block and serve tests only, keep the positional form: there is no `Φ` to read.
+- An `η_E` rescale moves only the momenta, so the rescaled descriptor reads the same configuration block.
+
+R-628 is in the "physics" group of `plan/rule_groups.yaml`.
