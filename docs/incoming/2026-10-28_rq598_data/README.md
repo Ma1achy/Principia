@@ -169,3 +169,88 @@ The one line #334 quotes that reads as the owner's own, given on seeing the pilo
 
 The probes below ε = 10⁻⁶ in `brutus_run_here/REPORT.md` § 2b are the ones that line approves. Anything further below ε = 10⁻⁶, any
 further probe (such as p_max 8 and 16 at 10⁻²⁰ and 10⁻³⁰), and any scaling of GG-1 or BR-1 waits for the owner's go-ahead.
+
+## 6. The owner's rulings, recorded 29 Oct 2026 (appended; nothing above is changed)
+
+The owner's rulings on RQ-598 and its targets are now in `decisions.md`: R-637 (option (a)), R-638 (routes 2 and 3, the
+BR-1 ensemble, the gates and the labels), R-640 (self-computed ensembles unblock scoring, provisionally), R-641 (Breen's
+own 180 trajectories, and the Brutus the paper used) and R-642, which governs wherever it differs from R-640 and R-641.
+They are recorded here against RQ-598 and the targets BR-1, GG-1 and V-11; the rulings themselves are in
+`decisions.md`, and this file stays a record (R-1, R-159).
+
+**§ 5's quoted instructions.** The first block § 5 quotes as "unverified as the owner's words" is the owner's message of
+28 Oct 2026, verbatim: it is R-638. The second block's substance is the owner's, in R-641 ("brief 5's pilot should
+build THIS, not AMUSE's copy"), R-642 and his "Resume." message of 28 Oct 2026 (evening: "Add to brief 5: build
+NvMgeneration, not AMUSE, and pilot BR-1 from the NVM starting points"); the block's own wording is not confirmed.
+
+### What scores what (R-642, with R-638, R-640 and R-641)
+
+- **The authors' own data scores directly, not provisionally.**
+  - **BR-1** against the 180 trajectories of `github.com/pgbreen/NVM` at `a35c378` (below). They cover 180 of the
+    paper's ~10⁴; the rest is asked of Breen by email. Why 44 of the 180 end early is checked before they are scored
+    (R-641); that is a step of the scoring task, TASK-M3-62, not a result here.
+  - **GG-1** against the Fig. 1 extraction, `transcriptions/gg1_fig1/` (route 2, from branch `data/rq598-gg1-fig1-v2`):
+    all 1212 points per panel, at figure precision, one LUT step (3/256 ≈ 0.0117 dex; "~0.012 dex" in the ruling), the
+    three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000.
+- **Reproductions unblock provisionally.** Each is labelled "vs <source>" ("vs Brutus, run here" for ours), never
+  "replicates the paper", and is re-scored when the authors' full data arrives: theirs governs, and each disagreement
+  is queued. A reproduction qualifies only if it matches the paper's set-up (the same initial-condition distribution,
+  at rest, the same frame) and uses a converged arbitrary-precision integrator. Our own Brutus runs built from
+  `github.com/pgbreen/NvMgeneration` at `98906f4` qualify.
+- **Checked and rejected** (R-642), with the owner's reasons:
+  - `https://github.com/dosier/TBP-Group-39-TrainData`: no data, different initial conditions;
+  - `https://github.com/stipefrkovic/three-body-problem`: non-zero velocities, Verlet.
+- **The emails.** The owner is emailing Breen (the full ~10⁴ set) and Boekholt (GG-1's per-point lifetimes) regardless.
+- **The gates of R-638.** Fig. 1 reconciles to exactly 1212 points per panel (met, § 5 item 2). The measured cost per
+  point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (`brutus_run_here/REPORT.md`); R-640's
+  "unblock now" lifts the wait for data, not this gate.
+
+### BR-1: Breen's own trajectories (R-641)
+
+- **Repository:** `https://github.com/pgbreen/NVM`, commit `a35c378c4f07681e8db679aeacedadd75c48580a` (23 Oct 2019).
+  No licence: the repository has no licence file, and GitHub reports none. Its files are never committed here; the
+  owner keeps a copy at `docs/incoming/_local/pgbreen_NVM/`, gitignored.
+- **The files:** `trainex/data/run10.dat` to `run99.dat` (90) and `validex/data/run9910.dat` to `run9999.dat` (90),
+  each row `x1 y1 x2 y2`, row 1 the initial condition, body 3 from the centre of mass, at a 2⁻⁸ cadence to t = 10. 136
+  have the full 2561 rows; 44 are shorter, the shortest 5, then 9, then 25 rows.
+- **The per-file table:** `nvm_a35c378_sha256.txt`, one line per file, `sha256  rows  path`, sorted by path. Computed
+  on 29 Oct 2026 from a clone at that commit, made outside the repository. The table's own sha256 (the text, a newline
+  ending each line) is `f8cf308932ebbfb4c11adc7ff17fac2be8b09f20ae58dfed8e62dc44f4de6a59`, which matches the
+  orchestrator's check of 28 Oct 2026. Only the table and this citation are committed, never the data.
+- **The full set by email:** `https://github.com/pgbreen/NVM/issues/1` (closed). On 30 Sep 2022 the user `pgbreen`
+  wrote: "Unfortunately, the file which contains all the runs is too large to upload to this repo. If you give me your
+  email address I'll send you a link which you could use to download the data". A comment of 25 Sep 2025 asking for a
+  Zenodo or Figshare upload has no reply. (The thread is cited by URL only: it shows a third party's address.)
+- **The reference code:** `https://github.com/pgbreen/NvMgeneration`, commit
+  `98906f472f66b127bde62f771410b4974d116a3b` (16 Jan 2020), GPL-3.0 (`license.txt`, `copying.txt`): the Brutus the paper
+  used, BR-1's reference code. Not committed.
+
+### GG-1
+
+Nothing new is public (R-641). Route 2 (the Fig. 1 extraction) is the paper's own published values and scores at its
+stated precision (R-640, R-642).
+
+### § 4 task 1: the repo-scoped search, 29 Oct 2026
+
+Run with the GitHub CLI from the owner's Mac.
+- `gh search repos`: "Newton vs the machine"; "Breen Brutus three-body"; "Boekholt gargantuan"; "Gargantuan chaotic
+  gravitational three-body"; "Brutus three-body lifetimes"; "Agekyan-Anosova Brutus"; "three-body problem Brutus";
+  "three body problem neural network dataset"; "TBP-Group"; "three-body-problem breen".
+- `gh search code`: "Newton vs the Machine"; "Breen Foley Boekholt"; "Boekholt Portegies Zwart Valtonen"; "1910.07291";
+  "2002.04029".
+- **Result.** No released data for either paper beyond `pgbreen/NVM`'s 180 trajectories. Nothing for GG-1. Besides
+  the two repositories R-642 rejects, the search found these, none holding BR-1 or GG-1 data (contents as listed on
+  29 Oct 2026): `JavierAM01/Newton-vs-the-machine` (GPL-3.0: code, figures and a PDF), `CosmoQua/NewtonVsMachine` (a
+  README only), `dmichel8/Newton-vs-The-Machine` (a README and one script), `mruijzendaal/python_ann_three_body` (MIT,
+  code only) and `AntitheticalElysium/ThreeBody-JEPA` (MIT, code only). The rest of the hits cite the paper in
+  reading lists and notes. The search is GitHub's index only, not exhaustive.
+
+### § 4 task 5: V-11 from Part I, not done here
+
+R-638's task 5 reads Part I (Mylläri et al. 2018) from the University of Turku repository's version, never the
+publisher's. That version could not be fetched from the Mac on 29 Oct 2026: `www.utupub.fi` answers a script with a
+Cloudflare challenge (HTTP 403), for the item page, its API and the file. Unpaywall lists the file as the **submitted
+version**, `https://www.utupub.fi/bitstreams/61431b55-247e-4d90-bf26-32ff1dea099a/download`, with no licence stated, and
+Crossref lists no licence for doi:10.1093/mnras/sty237. Part I has no arXiv copy. Nothing from Part I is read or
+transcribed here; V-11 proceeds from Part I once the Turku file is in `docs/incoming/_local/`. The comparison of
+versions (stop and queue if what V-11 needs differs) and the twice-transcribed tables (R-594 item 4) are done then.
