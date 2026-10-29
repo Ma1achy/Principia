@@ -86,8 +86,8 @@ def strip(fig, rect, Tm, k, label):
 def draw(k):
     k = int(min(k, NSTEP))
     fig = new_fig(2, "Regularised time: same steps, spent where they matter",
-                  "Same integrator, same number of steps. The regularised clock ticks slowly when the "
-                  "bodies are close (dt = r dτ).")
+                  "Same integrator, same number of steps. Each regularised step covers less physical "
+                  "time when the bodies are close (dt = r dτ).")
     axl = fig.add_axes([0.04, 0.33, 0.44, 0.40])
     axr = fig.add_axes([0.52, 0.33, 0.44, 0.40])
     panel(axl, PF, k, "", "")
