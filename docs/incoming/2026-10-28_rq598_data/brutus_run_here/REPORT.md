@@ -13,7 +13,7 @@ The units conversion, the comparison with Fig. 1 in the paper's units, and the p
 ## Open questions (`REVIEW_QUEUE.md`)
 
 1. **GG-1 lifetime: definition, units and the (3, 43) cell** (RQ-612). In the paper's units, two of the three points where Fig. 1's two
-   panels agree come within 0.3 dex of ours; (3, 43) is still 2.4 dex off. Its neighbours are to be run before any definition ruling (§ 2).
+   panels agree come within 0.3 dex of ours; (3, 43) is still 2.45 dex off. Its neighbours are to be run before any definition ruling (§ 2).
 2. **`p_max`, the word length, and the ε = 10⁻⁷⁰ cost** (RQ-613). The cost is undetermined to orders of magnitude (§ 2c).
 3. **May a self-computed ensemble score a target, or is it a cross-check only?** (RQ-614).
 4. **BR-1's 180 public trajectories**, which have no licence (RQ-615).
@@ -124,7 +124,7 @@ sample: over the whole grid, 242 of 1212 points share a LUT index in both panels
 | 14, 20 | 1.339 | 5.15 | 6.90 | 0.84 | 0.69 | +0.15 dex |
 | 3, 43 | 0.571 | 3.20 | 1.83 | 0.26 | 2.71 | −2.45 dex |
 
-- In HM units, (1, 54) and (14, 20) come within 0.3 dex of Fig. 1. (3, 43) is still off by 2.4 dex.
+- In HM units, (1, 54) and (14, 20) come within 0.3 dex of Fig. 1. (3, 43) is still off by 2.45 dex.
 - At (1, 54), next to the equilateral corner, our T is a close triple approach (minimum separation 0.01) and equals the equilateral free-fall
   collapse time (0.633 against 0.641 ours; 1.72 against 1.71 HM). Fig. 1's 3.3 HM is 1.9 times that collapse time, which points at the
   paper's definition of T rather than at our integration.
