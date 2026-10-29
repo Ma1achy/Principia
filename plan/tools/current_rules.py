@@ -3,8 +3,9 @@
 
 CURRENT_RULES.md lists every ruling in force, grouped, each under its number, with its decisions.md heading. A ruling
 amended in part also gives its "Still in force" line and the rulings that amend it (its forward lines,
-plan/tools/rulings.py). A ruling with a "Superseded by R-n" forward line (not "in part") is left out (R-293). The
-one-off acts are listed last, as history only.
+plan/tools/rulings.py). A ruling with a "Superseded by R-n" forward line (not "in part") is left out (R-293), and so
+is one withdrawn outright by a "Withdrawn …" forward line of its own (not "in part"). The one-off acts are listed last,
+as history only.
 
 Fails if an entry of decisions.md is in no group or in two, if a group names an entry decisions.md lacks, or (with
 --check) if CURRENT_RULES.md differs from what this would write.
@@ -16,7 +17,7 @@ import os, sys
 import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
-from rulings import RULINGS, entries, forward_notes, still_in_force, superseded  # noqa: E402
+from rulings import RULINGS, entries, forward_notes, left_out, still_in_force  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GROUPS = "plan/rule_groups.yaml"
@@ -30,8 +31,9 @@ HEADER = [
     "",
     "Every ruling in force, grouped, each under its number. The line is the ruling's heading in `decisions.md`, which",
     "holds its full text and why it was made. A ruling amended in part says what of it is still in force and names the",
-    "rulings that amend it; read them with it. A ruling superseded outright is left out, and the ruling that supersedes",
-    "it is listed (R-293). The one-off acts, such as a split, an acceptance or a merge, come last, as history only.",
+    "rulings that amend it; read them with it. A ruling superseded or withdrawn outright is left out, and the ruling that",
+    "supersedes it, if any, is listed (R-293). The one-off acts, such as a split, an acceptance or a merge, come last,",
+    "as history only.",
 ]
 
 
@@ -60,7 +62,7 @@ def build():
     for g, body in spec["groups"].items():
         lines += ["", f"## {body['title']}", ""]
         for e in es:  # file order is ruling order, save R-196/R-197 and R-206/R-207, which were recorded out of turn
-            if where.get(e["key"]) != g or superseded(e):
+            if where.get(e["key"]) != g or left_out(e):
                 continue
             label = e["key"] + (" ✱" if e["star"] else "")
             title = e["title"] if e["id"] else e["title"].split(" — ", 1)[-1]

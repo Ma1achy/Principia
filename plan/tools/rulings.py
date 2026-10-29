@@ -9,14 +9,16 @@ extends or withdraws it), R-n carries the matching forward line directly under i
 sit in the entry's heading block, the lines from the heading to the first blank line.
 
 A ruling superseded outright reads `*Superseded by R-m.*` and leaves CURRENT_RULES.md; that line also answers R-m's
-claim, whatever its verb. Every other ruling with a forward line carries one `*Still in force: ….*` line in its heading
-block, saying what of it still stands (R-293).
+claim, whatever its verb. A ruling withdrawn outright, by a forward line of its own that reads `*Withdrawn …*` and not
+`*Withdrawn in part …*` (the owner may withdraw a ruling without a later one, as with R-634), leaves it too. Every
+other ruling with a forward line, the withdrawn outright included, carries one `*Still in force: ….*` line in its
+heading block, saying what of it still stands (R-293).
 
 REVIEW_QUEUE.md holds the open entries only. An entry with a ruling moves, unchanged, to one file per era under
 docs/archive/review_queue/; ids never change.
 
 Usage: python3 plan/tools/rulings.py   (lists the forward lines and "Still in force" lines decisions.md lacks, the
-superseded rulings CURRENT_RULES.md lists, and the references that don't resolve; exits non-zero if there are any)
+superseded or withdrawn rulings CURRENT_RULES.md lists, and the references that don't resolve; exits non-zero if there are any)
 """
 import glob, os, re, sys
 
@@ -47,6 +49,8 @@ SUBJECT = re.compile(r"(R-\d+),?\s*$")  # "R-14 supersedes R-12": the claim is R
 OWN_LINE = re.compile(r"^\*((?:Amended|Superseded|Corrected|Replaced|Reversed|Refined|Extended|Withdrawn)\b.*?)\.?\*$")
 # What of a partly amended ruling still stands; it may wrap, and ends at the first "*" that ends a line (R-293).
 STILL = re.compile(r"^\*Still in force: (.*?)\.?\*$", re.M | re.S)
+# A forward line of its own withdrawing the whole ruling: "*Withdrawn in full, …*" or "*Withdrawn, …*", not "in part".
+WITHDRAWN = re.compile(r"^\*Withdrawn\b(?!\s+in\s+part\b)")
 RQ_HEAD = re.compile(r"^## (RQ-\d+)\b", re.M)
 REF = re.compile(r"\b(RQ?-\d+)\b")
 
@@ -54,8 +58,13 @@ REF = re.compile(r"\b(RQ?-\d+)\b")
 def entries(path=RULINGS):
     """decisions.md's entries, in file order: dicts with key (`R-n`, or the heading's text before " — "), id (`R-n` or
     None), star, title, head (the heading block's lines after the heading) and text (the whole entry)."""
+    return parse(open(path, encoding="utf-8").read())
+
+
+def parse(text):
+    """The entries of a decisions.md text, as entries() gives them."""
     out, cur, fence = [], None, False
-    for line in open(path, encoding="utf-8").read().split("\n"):
+    for line in text.split("\n"):
         if FENCE.match(line):
             fence = not fence
         if line.startswith("## ") and not fence:
@@ -99,6 +108,17 @@ def forward_notes(entry):
 def superseded(entry):
     """True if a later ruling supersedes the entry outright (a "Superseded by R-m" line, not "in part")."""
     return any(v == "superseded" and not part for v, part, _ in forwards(entry))
+
+
+def withdrawn(entry):
+    """True if the entry is withdrawn outright by a forward line of its own ("*Withdrawn in full, …*" or
+    "*Withdrawn, …*"), not in part. A date line's "withdrawn by R-m" is not one: it may name a part ("last bullet")."""
+    return any(WITHDRAWN.match(l.strip()) for l in head_lines(entry))
+
+
+def left_out(entry):
+    """True if CURRENT_RULES.md leaves the entry out: superseded or withdrawn outright."""
+    return superseded(entry) or withdrawn(entry)
 
 
 def ids(text):
@@ -163,13 +183,48 @@ def still_in_force_errors(es=None):
 
 
 def superseded_listed(path="plan/CURRENT_RULES.md", es=None):
-    """One message per ruling superseded outright that the digest still lists (R-293)."""
+    """One message per ruling superseded or withdrawn outright that the digest still lists (R-293)."""
     es = es if es is not None else entries()
-    gone = {e["key"] for e in es if superseded(e)}
     if not os.path.exists(path):
         return []
-    listed = re.findall(r"^- \*\*(R-\d+)", open(path, encoding="utf-8").read(), re.M)
-    return [f"{path}: lists {k}, which is superseded outright" for k in listed if k in gone]
+    return listed_left_out(open(path, encoding="utf-8").read(), es, path)
+
+
+def listed_left_out(digest, es, path="plan/CURRENT_RULES.md"):
+    """One message per ruling superseded or withdrawn outright that the digest's text lists."""
+    gone = {e["key"]: "superseded" if superseded(e) else "withdrawn" for e in es if left_out(e)}
+    listed = re.findall(r"^- \*\*(R-\d+)", digest, re.M)
+    return [f"{path}: lists {k}, which is {gone[k]} outright" for k in listed if k in gone]
+
+
+def self_test():
+    """The negative controls: a ruling withdrawn or superseded outright leaves the digest, so a digest listing it
+    fails, naming it; one withdrawn or amended in part stays, so a digest listing it passes."""
+    fails = []
+    head = "## R-1 — The first\n"
+    cases = [  # (name, R-1's heading block, the fault a digest listing R-1 must name, or None)
+        ("withdrawn in full", "*Withdrawn in full, 28 Oct 2026, by the owner.*\n*Still in force: none of it.*\n",
+         "lists R-1, which is withdrawn outright"),
+        ("withdrawn, plainly", "*Withdrawn, 28 Oct 2026 (the owner): \"no\"; its edits were reverted.*\n"
+         "*Still in force: none of it.*\n", "lists R-1, which is withdrawn outright"),
+        ("superseded outright", "*Superseded by R-2.*\n", "lists R-1, which is superseded outright"),
+        ("withdrawn in part", "*Withdrawn in part, 28 Oct 2026, by the owner: its cloud clause.*\n"
+         "*Still in force: all of it but its cloud clause.*\n", None),
+        ("withdrawn by a later ruling in a date line", "*1 Oct 2026 · last bullet withdrawn by R-2*\n"
+         "*Still in force: all of it but its last bullet.*\n", None),
+        ("superseded in part", "*Superseded in part by R-2.*\n*Still in force: all of it but its first clause.*\n",
+         None),
+        ("amended in part", "*Amended by R-2.*\n*Still in force: all of it but its first clause.*\n", None),
+    ]
+    for name, block, fault in cases:
+        es = parse(head + block + "\nThe text.\n\n## R-2 — The second\n\nThe text.\n")
+        got = listed_left_out("- **R-1** — The first\n- **R-2** — The second\n", es)
+        got += [m for m in still_in_force_errors(es) if "R-1" in m]
+        if fault is None and got:
+            fails.append(f"rulings self-test {name!r}: expected no failure, got {got}")
+        elif fault is not None and (not got or any(fault not in g for g in got)):
+            fails.append(f"rulings self-test {name!r}: expected one failure, naming {fault!r}, got {got}")
+    return fails
 
 
 def queue_files():
@@ -211,7 +266,7 @@ def unresolved_refs():
 
 def main():
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-    errors = missing_forward_lines() + still_in_force_errors() + superseded_listed() + unresolved_refs()
+    errors = self_test() + missing_forward_lines() + still_in_force_errors() + superseded_listed() + unresolved_refs()
     for e in errors:
         print("FAIL:", e)
     sys.exit(1 if errors else 0)
