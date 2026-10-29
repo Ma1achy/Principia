@@ -144,35 +144,13 @@ here.*
 - **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
   questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
   list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim.
-
-## RQ-591: Which replication targets gate their milestone and which are reported only *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5, § 10; REQ-VAL-201 to REQ-VAL-331; context: every task the port adds)*
-
-*Queued by R-594 (25 Oct 2026), ported 27 Oct 2026. For the human: yes, R-594 item 6 asks for it, batched, rather than
-decided.*
-
-- **File, section:**
-  - `decisions.md` § "R-594 — …", item 6: "Queue for me, batched, rather than deciding: which targets gate a milestone
-    and which are reported only".
-  - `docs/design/principia_dd_replication.md` § "5. The targets": every new target's requirement, with its milestone.
-  - `plan/MILESTONES.md`: a milestone's exit gate is every requirement whose `milestone` is that milestone
-    (`plan/tools/milestones.py`).
-- **The question:** R-629 made the seven first-batch drafts M3 requirements (REQ-VAL-201 to REQ-VAL-213). For the other
-  targets — verification targets that must hold, and replication targets compared with another code's numbers, where
-  a disagreement is a finding to queue (rule 4) — which must pass for their milestone's gate, and which are met by
-  being run, recorded beside the published number and any disagreement queued?
-- **Options seen:** (a) every target gates its milestone, as ported; (b) verification targets (layer V) gate, and
-  replication targets (layer R) other than the first batch are reported only; (c) per target, as the human lists them;
-  (d) exact targets gate, statistical and qualitative ones are reported.
-- **Applied meanwhile:** as ported: each requirement sits in its milestone's list, as every requirement does, and the
-  human passes each gate (R-369); a disagreement holds nothing until it is queued and ruled. Nothing is built
-  differently either way: the choice decides only what a failing or disagreeing target does to its gate.
-- **Waits:** nothing; it is ruled at the gates.
-- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
-  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
-  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim. The five-chart
-  build, TASK-M2-36 (and TASK-M2-52 after it), is held until the owner rules on the replication batch, RQ-591 to RQ-598
-  (R-636: "Five-chart build (queue item d): hold until Malachy rules on the replication batch; do not start it.");
-  flagged in R-636: those charts come from R-633's split, not from this batch.
+- **28 Oct 2026 (R-637):** the owner: "RQ-577: still after M3. Record these as Malachy's leanings on the item, not
+  rulings: (1) after M3; (2) Result-only first, live later by choice; (3) Jorba & Zou order rule, order recorded per
+  Result; (4) new field, no "measured equivalent"; (5) events stay where every stepper samples them, dense output
+  optional and reported separately; (6) rounded fields only unless a checkpoint need appears; (7) per-quad precision
+  later, after R-547 covers it, uniform per Result first." Recorded here as the owner's leanings on the seven questions,
+  in their order, **not rulings**: nothing is applied and nothing is built. The census's stage-1 results attach to this
+  entry as evidence only (R-637, closing RQ-599). Stays open until M3 closes (R-630).
 
 ## RQ-593: A binary-plus-single chart, for Trani et al.'s planar row, Manwadkar et al.'s escape probabilities and Stone & Leigh's closed forms *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-318, REQ-VAL-319, REQ-VAL-321; context: TASK-M3-63)*
 
@@ -200,6 +178,9 @@ needs".*
   owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
   rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
   this batch.
+- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
+  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's chart is a replication chart and is not built ahead of
+  its ruling (R-594 item 5). Stays open.
 
 ## RQ-594: A side-ratio chart for Parischewsky et al.'s equilateral-triangle experiment, or a tested remap onto ShapeSphere at rest *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-323; context: TASK-M3-64)*
 
@@ -220,6 +201,9 @@ needs".*
   owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
   rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
   this batch.
+- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
+  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's chart is a replication chart and is not built ahead of
+  its ruling (R-594 item 5). Stays open.
 
 ## RQ-595: A syzygy-symbol field, a fixed-k velocity chart and Chernin et al.'s definitions, for the symbol-sequence and partition maps *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-325, REQ-VAL-326, REQ-VAL-327; context: TASK-M4-24)*
 
@@ -244,6 +228,9 @@ needs".*
   owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
   rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
   this batch.
+- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
+  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. This entry's field and chart are replication work and are not built
+  ahead of its ruling (R-594 item 5). Stays open.
 
 ## RQ-596: The N_scramble and f_col diagnostics *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-318, REQ-VAL-321, REQ-VAL-323; context: TASK-M3-63, TASK-M3-64)*
 
@@ -264,6 +251,8 @@ chart does.*
   owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
   rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
   this batch.
+- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
+  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. Stays open.
 
 ## RQ-597: Periodic-orbit continuation over the mass plane, for Li, Li & Liao 2020's stability map *(the human's queued question, R-594 item 6; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-329; context: TASK-M4-25)*
 
@@ -282,97 +271,8 @@ chart does.*
   owner rules on the replication batch, RQ-591 to RQ-598 (R-636: "Five-chart build (queue item d): hold until Malachy
   rules on the replication batch; do not start it."); flagged in R-636: those charts come from R-633's split, not from
   this batch.
-
-## RQ-598: Data and papers not in the repo: Breen et al. 2020's Brutus runs, Boekholt et al. 2020's per-point lifetimes, and the primaries of the hierarchical stability limits *(the human's queued question, R-594 item 6 and rule 1; `docs/design/principia_dd_replication.md` § 5.10, § 5.12; REQ-VAL-295, REQ-VAL-297, REQ-VAL-330; context: TASK-M3-62, TASK-M3-65)*
-
-*Queued 27 Oct 2026 by R-594's port. For the human: yes, it is a request for third-party data or papers, outside the
-repo (R-369).*
-
-- **File, section:** `docs/design/principia_dd_replication.md`:
-  - § "5.10 Converged-code references": BR-1, Breen et al. 2020's per-trajectory Brutus runs to t = 10, "not
-    released"; GG-1, Boekholt, Portegies Zwart & Valtonen 2020's 1,212 converged points, "figures only; per-point
-    lifetimes not published".
-  - § "5.12 Targets that wait for a chart, a diagnostic or data": V-11, hierarchical stability limits, whose primaries
-    (Valtonen & Karttunen 2006; Mylläri et al. 2018) "are not in the repo".
-  - § "8.1 Carried over from the 25 Oct instruction", rule 1: "The source is in the repo."
-- **The question:** ask the authors for Breen et al.'s and Boekholt et al.'s data, and fetch the two primaries; or leave
-  the three targets waiting. Data received would be committed only under stated terms, otherwise fetched and
-  hash-checked (rule 17, as RQ-579).
-- **Options seen:** (a) ask for both data sets and fetch both papers; (b) fetch the papers only; (c) none: the targets
-  wait. The other fetches the plan names are RQ-584 (Hristov et al.'s free-fall database), RQ-585 (Li & Liao's website)
-  and RQ-586 (Tanikawa & Mikkola 2021, Standish 1970, Yasko & Orlov 2015).
-- **Applied meanwhile:** (c).
-- **Waits:** TASK-M3-62 and TASK-M3-65.
-- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
-  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
-  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim. The five-chart
-  build, TASK-M2-36 (and TASK-M2-52 after it), is held until the owner rules on the replication batch, RQ-591 to RQ-598
-  (R-636: "Five-chart build (queue item d): hold until Malachy rules on the replication batch; do not start it.");
-  flagged in R-636: those charts come from R-633's split, not from this batch.
-
-## RQ-599: The occupant matrix census (DRAFT-VAL-08): its §11, five questions for the owner *(the human's queued questions on PR #314; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 11; R-71, R-159, R-561; RQ-577; R-630; context: none built)*
-
-*Queued by the human (27 Oct 2026): "It is a record, not authority." and "Do not build anything: no harness, CI
-workflow or runner registration until the ruling." For the human: yes, every question changes what is built (a
-harness, CI jobs, a self-hosted runner). No option is recommended here.*
-
-- **File, section:** `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` (sha256
-  `28894031…ccacb1f260`), § "11. For the owner to rule"; its axes in § 3, its stages in § 4, its readings and verdicts
-  in § 5, its CI and runner plan in § 8. Its header: "**Status: proposed, not in force.** … Nothing here changes a
-  default, a gate or a task." Cross-referenced, as dated notes only, from
-  `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 7 and the § 3 rows it extends.
-- **The questions (verbatim, § 11):**
-  1. "Adopt the census as proposed (DRAFT-VAL-08), with stage 0 as the precondition."
-  2. "Agree the CI cadence in §8.1 and the Metal runner in §8.2."
-  3. "Agree that census verdict thresholds are R-71 calibrations, set once and stated, and never gates."
-  4. "Agree that `census/` sits outside `results/`."
-  5. "Decide whether stage-1 results feed the RQ-577 ruling, or that ruling stays after M3 regardless ([PR #310's
-     ruling])." The bracket replaces the proposal's ruling number, which is PR #310's and not yet on `main`, so
-     `plan/check_plan.py` passes on this branch; restore the number once PR #310 (carried by PR #313) has merged.
-- **Options as written:** questions 1 to 4 are each adopt or agree as proposed, or not. Question 5's two: (a)
-  "stage-1 results feed the RQ-577 ruling"; (b) "that ruling stays after M3 regardless".
-- **Found while checking the proposal against the repo (27 Oct 2026), left as questions rather than edits:**
-  6. **The stepper axis.** § 3.1 lists "RK4, KDK leapfrog" as the steppers now. In the prin-rs reference (R-159, not
-     authority) the KDK leapfrog ships only under logH: `docs/reference/prin-rs/src/integrate/logh/step.rs` :26,
-     "`Az + kdk` and `Heggie + kdk` do not exist", and its `Stepper` is `Rk4`, `Kdk`, `Gbs` (:149–157). In the
-     contract it is a general stepper: `docs/contracts/principia_integrator_contract.md` Part 2b, "the stepper (KDK,
-     Yoshida-4, Yoshida-6, RK4; Euler in the debug selection only, Part 2) are selected separately … and every pair
-     runs" (R-561), with Heggie × KDK measured bad. No stepper is built on `main` yet (M3). Does the census cross
-     the contract's steppers (adding Yoshida-4 and Yoshida-6, Euler in debug, and KDK under `none`, AZ and Heggie)
-     or the reference's? Stage 1's "2 × 2 × 4 × 6 × 6 ≈ 600 cells" counts two.
-  7. **GBS.** § 3.2: "Every shipped stepper takes a fixed step in fictitious time … there is no embedded error
-     estimate to set a tolerance on." prin-rs's logH ships `Stepper::Gbs` with `gbs_tol`, "Relative tolerance on the
-     GBS extrapolation error estimate" (`…/logh/driver.rs` :138–143), and it is not a contract occupant. Is GBS a
-     census stepper value, and if so is it in § 3.2's tolerance-ladder group?
-  8. **IAS15.** § 3.2 calls IAS15 "already the drift reference in the logH comparison". The only record of it in the
-     repo says "**IAS15 is not built.** … its only role here is a reference arm"
-     (`docs/reference/prin-rs/docs/NOTES_excerpts.md` :119–121). Is IAS15 to be built for the census, or is that
-     clause to be corrected?
-  9. **The step-limit axis.** prin-rs's `StepLimit` (`None`, `Reject`, `Predictive`, `AbGrowth`, `Global`) is AZ's
-     alone (`…/az/driver.rs` :72–93, its `f` the separate `step_limit_f`, :455); Heggie and logH carry only the
-     predictive limit, through `step_limit_f` (`…/heggie/driver.rs` :64, :364; `…/logh/driver.rs` :114, :376), and
-     the contract fixes the predictive limit at f = 0.02 (Part 2b, R-160). § 3.1 crosses the step limit "fully" and
-     omits `Reject`. Is the step-limit axis AZ-only beyond `None`/`Predictive`, and is `Reject` a value or a
-     control?
-  10. **The escape rule.** § 3.3's names, `Reference`, `Distance(r)`, `Closure`, are prin-rs's
-      `EscapeRule::{Reference, Distance(T), Closure(T)}` (`docs/reference/prin-rs/src/outcome.rs` :225–236). The
-      contract has one escape rule, the closure window with `E_rel > 0` and the total mass (Part 7; R-29), and calls
-      prin-rs's `M_pair`-only `E_rel` "a physics error that biases toward escape" (R-29). Is the escape-rule sweep a
-      harness-only axis over prin-rs's variants, and under which `E_rel`?
-  11. **Time transformations.** § 3.1's regularisation values are "none, AZ, Heggie, logH (TTL)". The contract keeps
-      one cell per pair and time transformation: Heggie's Eq. 20 and Eq. 22, logH's logH and TTL modes (Part 2b,
-      R-161, R-162, R-561). Are these separate values of the axis?
-- **Applied meanwhile:** none. Nothing is built: no harness, CI workflow or runner registration (the human, PR #314).
-  The proposal's two factual corrections made on PR #314 (the `StepLimit` variants' form; PL-7's horizon placed on
-  the precision horizon) change no question here.
-  *28 Oct 2026: the owner keeps the PL-7 edit, "it is correct (PL-7 is the precision horizon)" (R-633); the dated
-  note sits on PLAN.md § 3.1's PL-7 row, the proposal being a record under its sha256. This entry is otherwise
-  unchanged and stays open.*
-- **Waits:** the census harness, its CI jobs (§ 8.1) and the `metal` self-hosted runner (§ 8.2); DRAFT-VAL-08's
-  adoption into PLAN.md; question 5 bears on RQ-577's timing.
-- **28 Oct 2026 (R-636):** the owner: "Still open, paste verbatim to Malachy: the precision-ladder proposal's seven
-  questions with the rulings each would amend; the census draft's five questions; the replication batch's gate/report
-  list and the missing data/papers list." Stays open; the orchestrator puts it to the owner verbatim.
+- **28 Oct 2026 (R-637):** the owner: "Five-chart build: yes, I meant only the replication charts. This morning's
+  five-chart split may go ahead." R-636's hold is lifted for TASK-M2-36 and TASK-M2-52. Stays open.
 
 ## RQ-608: The Šuvakov-plane targets that need a chart, now that no chart is built: OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 *(physics; R-636, closing RQ-583; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316; context: TASK-M4-23, TASK-M8-99)*
 
@@ -396,40 +296,37 @@ harness, CI jobs, a self-hosted runner). No option is recommended here.*
 - **Applied meanwhile:** nothing is built: no chart, and no map. Each requirement carries `rq: RQ-608` beside RQ-583,
   and TASK-M4-23 and TASK-M8-99 wait on it.
 - **Waits:** TASK-M4-23 and TASK-M8-99.
+- **28 Oct 2026 (R-639):** the owner: "(1) Šuvakov plane targets: split each into its closure part (stays in M4/M8,
+  runs now) and its chart part (moves to gate the task that builds the Šuvakov chart; not dropped). Queue it if the
+  split isn't clean for any target." Read target by target in R-639, no split is clean: OC-4 on the plane, AT-D1 and
+  AT-D3 have no closure part, and HU-1's and HU-2's closure parts would test what HU-3 already tests (REQ-VAL-234), with
+  no control of their own. All five are queued as RQ-618 and left as they are; this entry stays open until RQ-618 is
+  answered, and its holds stand.
 
-## RQ-611: Whether to check the Burrau converged reference (proposed SP-2) against the journal's version of record and its supplementary snapshots, which could not be fetched *(the owner's request of 28 Oct 2026, "reconcile against the journal version, queue anything unresolved"; `docs/incoming/2026-10-29_burrau_pzb2018/README.md`; context: none built)*
+## RQ-610: Five committed PDFs whose licence is unclear: the Agekyan–Anosova and Anosova translations, the Belgrade gallery's initial-conditions PDF, and Hudomal's MSc thesis *(the owner's licence-audit ruling of 28 Oct 2026; the read-only audit posted on PR #327; context: none built)*
 
-*Queued 28 Oct 2026 by the agent transcribing Portegies Zwart & Boekholt 2018. For the owner: yes, it is a fetch from a
-paywalled publisher, outside the repo.*
+*Queued by the owner (28 Oct 2026): "The 5 "unclear" ones stay for now; queue them." They stay in the repo until
+ruled. For the owner: yes, it decides whether five files stay in a public repository.*
 
-- **File, section:**
-  - `docs/incoming/2026-10-29_burrau_pzb2018/README.md` § "Sources and licences": the journal version of record
-    (doi:10.1016/j.cnsns.2018.02.002, ScienceDirect PII S1007570418300303) was not fetched: ScienceDirect answered 403 to
-    a plain request, and Crossref lists only Elsevier's TDM user licence, so it is not open access; the supplement is
-    reached only through that page.
-  - The paper, arXiv v1 § 2: "Snapshots of the converged solution are available in the online supplementary material."
-  - The owner's request (28 Oct 2026): "reconcile against the journal version, queue anything unresolved".
-- **What is settled without it:** arXiv has one version (v1); the Leiden repository's copy (hdl 1887/71686) is the same
-  PDF. Table 2 transcribed twice from v1 (text extraction, and OCR of the page image) agrees in all 48 numbers. Table 1
-  against Appendix B ("(-2, 1) for the second") is settled by the table itself: the t = 200 state returns to Table 1's
-  `(-2, -1)` within 1.9×10⁻¹³, and its energy is Table 1's to 2×10⁻²³ relative, 1.5×10⁻² from Appendix B's.
-- **What is not:** whether the version of record prints the same Table 2 digits and the same Appendix B sentence (a
-  proof correction could differ from v1), and what the supplement's snapshots hold (the t = 0 state, times between 0 and
-  200, their precision and format).
-- **Options seen:** (a) the owner fetches the journal PDF and its supplement through his own access into
-  `docs/incoming/_local/burrau_pzb2018/` (never committed: Elsevier's licence), and a task diffs them against the
-  committed transcription; (b) take arXiv v1 as the source, as it stands; (c) ask the authors for the snapshot data, for
-  example under a licence that allows committing it.
-- **Applied meanwhile:** (b). The proposed row SP-2 cites the arXiv v1 transcription; nothing waits, since SP-2 is not
-  ruled and nothing is built on it.
-- **28 Oct 2026 (the owner's ruling, not yet in `decisions.md`):** the owner: "RQ-611: (b) stands. arXiv v1 is the source
-  for SP-2. I'll also try (a): fetching the journal version and its supplementary snapshots through my own access into
-  docs/incoming/_local/burrau_pzb2018/. When they arrive, diff Table 2 against the journal and add any snapshot times as
-  extra checkpoints. No separate author email (c); I'll ask Boekholt in the existing thread if he replies. Note in SP-2
-  that t = 200 is the time-reversed return, so the expected state there is the initial condition, and test it as a
-  reversibility check as well as a trajectory check." (b) stays applied; the reversibility note is added to SP-2's row
-  and its dated note (PLAN.md § 3.2), and the README gains "When the journal files arrive". Ruled, but stays open until
-  the ruling is recorded in `decisions.md` (a later rulings PR); it then moves to the archive.
+- **File, section:** the audit's rows 12 to 16 (PR #327, comment "Read-only licence audit of every committed PDF"):
+  - `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_Ap_4_11_part2.pdf` (sha256 `7d160daf…1c9368`): "No
+    copyright line, stamp or licence text found (text layer is OCR only). Missing: any statement of who holds the
+    rights to the translation."
+  - `docs/incoming/2026-10-24_anosova/papers/agekyan_anosova_1968_SvA_11_1006.pdf` (sha256 `5bb197a9…d2574f8`): "Image
+    only … no copyright line, stamp or licence readable by text search". Its README: "ADS scan".
+  - `docs/incoming/2026-10-25_replication/papers/anosova_1969_Ap_5_81_part3.pdf` (sha256 `be19ced2…88bcf`): "No
+    copyright line, stamp or licence text found. Missing: rights statement."
+  - `docs/incoming/2026-10-26_belgrade_gallery/archive/initial-conditions.pdf` (sha256 `5b76cfd6…3ade5b`): the
+    gallery's "Use and Copyright" page, as its README quotes: "You may copy and use any images or data from this web
+    gallery. Please, credit us by citing this page and our paper [8]." Whether that covers this PDF as a document is
+    not stated.
+  - `docs/incoming/2026-10-26_orbit_catalogues/hudomal_2015_msc_belgrade.pdf` (sha256 `b30dbad2…c2fb0`): "No
+    copyright, stamp or licence in the file (searched all 62 pages)", from https://www.scl.rs/theses/msc_ahudomal.pdf.
+- **The question:** for each file, keep it in the repo or move it to `docs/incoming/_local/` as the ten were.
+- **Options seen:** (a) keep all five; (b) move all five; (c) per file: for example, keep the gallery's PDF under its
+  "copy and use" terms, and move the translations and the thesis.
+- **Applied meanwhile:** all five stay, as the owner ruled.
+- **Waits:** nothing built.
 
 ## RQ-612: GG-1's lifetime T: which definition and which units reproduce the paper's Fig. 1, and whether (3, 43) is a grid offset *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 2; the data-and-papers entry on PR #309; context: TASK-M3-62)*
 
@@ -505,25 +402,6 @@ for the authors, and a decision on whether to spend more probe time before any 1
   becomes a calibration requirement (R-71).
 - **Waits:** any plan to compute the ε = 10⁻⁷⁰ panel.
 
-## RQ-614: May a self-computed Brutus ensemble score a target, or is it a cross-check only *(the owner's open question, `docs/incoming/2026-10-28_rq598_data/README.md` § 3; the data-and-papers entry on PR #309; context: TASK-M3-62, TASK-M3-65)*
-
-*Queued 29 Oct 2026. For the owner: yes, it decides what BR-1 and GG-1 can pass.*
-
-- **File, section:** `docs/incoming/2026-10-28_rq598_data/README.md` § 3: "Earlier, unanswered, and not ruled here: whether a self-computed
-  ensemble may stand in for the authors' data **when scoring the target**, or is a cross-check only. Until it is ruled, label every
-  self-computed number as ours, "Brutus, run here", never as the paper's." `docs/incoming/2026-10-27_validation_plan/PLAN.md` § 3.2's rows
-  for BR-1 and GG-1 list the targets as blocked on data.
-- **What was found** (ours, run here; `brutus_run_here/REPORT.md` § 3): from the authors' own initial conditions at ε = 10⁻⁶, our
-  trajectories track theirs to below 3×10⁻⁵ over t ≤ 1 in 11 of 12 runs, then separate after close encounters, as chaos requires. For
-  GG-1, ours and Fig. 1 disagree point by point (RQ-612).
-- **The question:** whether an ensemble computed here, or the authors' own public BR-1 trajectories (RQ-615), may stand in for the authors'
-  full data when a target is scored.
-- **Options seen:** (a) cross-check only: a target scores only against the authors' own numbers; (b) a self-computed ensemble may score where
-  the target's tolerance is wider than the ε-limited agreement measured; (c) as (b), but only for ensembles whose build reproduces the
-  authors' trajectories.
-- **Applied meanwhile:** (a). Every self-computed number is labelled "Brutus, run here".
-- **Waits:** the scoring requirements for BR-1 and GG-1.
-
 ## RQ-615: Some of the authors' BR-1 trajectories are public, with no licence: how may they be used *(queued by the Brutus pilot; `docs/incoming/2026-10-28_rq598_data/README.md` § 5; the data-and-papers entry on PR #309; context: TASK-M3-62)*
 
 *Queued 29 Oct 2026. For the owner: yes, a licence and process question outside the repo (R-369).*
@@ -545,6 +423,14 @@ for the authors, and a decision on whether to spend more probe time before any 1
   task 4's seeded draw.
 - **Applied meanwhile:** (a), and the seeded draw of § 4 task 4 is not run.
 - **Waits:** a BR-1 ensemble beyond the 12-run pilot.
+- **28 Oct 2026 (R-641, R-642), two of its three questions answered:** the 180 trajectories stay local and are never
+  committed, their per-file sha256 table and citation recorded (`docs/incoming/2026-10-28_rq598_data/README.md` § 6,
+  `nvm_a35c378_sha256.txt`): option (a) as applied; and BR-1 may be graded against them directly, not provisionally,
+  for those 180 (R-641: "these 180 are the paper's own data, so BR-1 may be scored against them directly (not
+  provisional) for those 180"). **Still open:** whether runs from the authors' initial conditions stand in for the
+  seeded draw, which R-638 asks for ("BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed"); the
+  owner's "Resume." message of 28 Oct 2026 names the pilot only ("pilot BR-1 from the NVM starting points"). The seeded
+  draw is still not run.
 
 ## RQ-616: BR-1's convergence criterion: is the "phase distance < 0.1" on δ or on δ² *(a definition requirement, R-72; `docs/incoming/2026-10-28_rq598_data/brutus_run_here/REPORT.md` § 3; the data-and-papers entry on PR #309; context: TASK-M3-62)*
 
@@ -566,3 +452,98 @@ converged fraction BR-1 is scored on.*
   (c) the time-mean of δ; (d) ask Breen.
 - **Applied meanwhile:** none chosen; both (a) and (b) are reported side by side. Once ruled, it becomes a definition requirement (R-72).
 - **Waits:** BR-1's converged-fraction comparison.
+
+## RQ-617: The occupant matrix census's CI cadence: the owner's words and the proposal's § 8.1 and § 8.2 differ *(the owner's request in R-637, "check §8.1 says this; if not, show me the text"; RQ-599's question 2; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 8.1, § 8.2; context: none built)*
+
+*Queued 29 Oct 2026 by R-637's port. For the owner: yes, he asked to be shown the text; it decides what CI and the Mac
+run. No option is recommended here.*
+
+- **File, section:**
+  - `decisions.md` § "R-637 — …", the owner's words: "Metal runner nightly/weekly on the Mac, lavapipe in cloud per PR
+    (check §8.1 says this; if not, show me the text)."
+  - The proposal, § "8.1 Cloud CI", verbatim:
+
+    | job | trigger | contents |
+    |---|---|---|
+    | census-smoke | every PR touching the kernel, stepper or regularisation | stage 0, plus the default's immediate neighbours on stage-1 fixtures |
+    | census-stage1 | nightly | the full stage 1, CPU and lavapipe |
+    | census-stage2 | weekly, sharded by fixture | the corpus and the maps, CPU and lavapipe, cached |
+
+  - The proposal, § "8.2 The owner's Mac", verbatim: "It is registered as a self-hosted runner, labelled `metal`,
+    running the GPU columns weekly or on demand." and "It only runs when the Mac is awake and online. A missed week is
+    recorded as not run, never as a pass."
+- **Where they differ:**
+  1. **Per PR.** The owner's words run lavapipe per PR. § 8.1 runs one job per PR, `census-smoke`, and only on PRs
+     touching the kernel, stepper or regularisation; it does not say whether that job runs lavapipe. Lavapipe runs in
+     `census-stage1`, nightly, and `census-stage2`, weekly.
+  2. **The Metal runner.** The owner's words: "nightly/weekly on the Mac". § 8.2: "weekly or on demand", not nightly.
+  - § 8.1's "Cloud CI" is CI's hosted Linux runners; a cloud session (R-645, R-647, R-648) is not involved either way.
+- **The question:** which cadence the census runs at: per PR, nightly and weekly on CI's runners, and on the Mac.
+- **Options seen:** (a) § 8.1 and § 8.2 as written; (b) the owner's words as written: lavapipe on every PR (the job
+  and the PRs it runs on to be stated), the Metal runner nightly or weekly; (c) § 8.1 as written, with the Metal runner
+  nightly.
+- **Applied meanwhile:** none. Nothing of the census is built: no harness, CI job or runner registration.
+- **Waits:** the census's CI jobs and the `metal` self-hosted runner.
+
+## RQ-618: The Šuvakov-plane targets whose split into a closure part and a chart part isn't clean: all five, OC-4 on the plane, AT-D1, AT-D3, HU-1 and HU-2 *(physics; R-639, "Queue it if the split isn't clean for any target"; RQ-608; `docs/design/principia_dd_replication.md` § 5.12; REQ-VAL-311 to REQ-VAL-314, REQ-VAL-316; context: TASK-M4-23, TASK-M8-99)*
+
+*Queued 29 Oct 2026 by R-639's port. For the owner: yes, R-639 asks for it, and it decides what the M4 and M8 gates
+hold and whether a chart task is added.*
+
+- **File, section:**
+  - `decisions.md` § "R-639 — …", the owner's words: "(1) Šuvakov plane targets: split each into its closure part
+    (stays in M4/M8, runs now) and its chart part (moves to gate the task that builds the Šuvakov chart; not dropped).
+    Queue it if the split isn't clean for any target."
+  - `plan/requirements.yaml`, each target's verify, verbatim:
+    - OC-4 on the Šuvakov plane, REQ-VAL-311 (M8, TASK-M8-99): "as OC-4, on the Šuvakov-plane chart once RQ-583 (and
+      its labelling, RQ-582) is ruled; agreement at OC-4's calibrated level; control as OC-4's". OC-4, REQ-VAL-309:
+      "On a chart through each atlas orbit not on the Šuvakov plane, the payload's leaf decisions, spread and
+      `error_ratio` must place linearly stable orbits inside resolved regular islands and unstable ones on boundaries".
+    - AT-D1, REQ-VAL-312 (M8, TASK-M8-99): "a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's
+      credit line on the figure; control: each marker's IC re-encoded must land on its marker".
+    - AT-D3, REQ-VAL-313 (M8, TASK-M8-99): "as AT-D1, per value of m₃".
+    - HU-1, REQ-VAL-314 (M4, TASK-M4-23): "the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each
+      Table 23 minimum within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not
+      show the equal-mass minima". REQ-VAL-315's evidence: "the map's pixel pitch and Table 23's six digits, measured".
+    - HU-2, REQ-VAL-316 (M4, TASK-M4-23): "as HU-1, zoomed; the middle candidate's position and period within
+      REQ-VAL-317". REQ-VAL-317's evidence: "the zoom's pixel pitch and the printed digits".
+- **Why no split is clean:** OC-4 on the plane, AT-D1 and AT-D3 hold no closure: OC-4 reads an island criterion from
+  the payload on a chart, and AT-D1 and AT-D3 render the plane, so the closure part of each is empty. HU-1's and HU-2's
+  closure parts, Table 23's points and the middle candidate run as closures, would test that each orbit closes, which
+  HU-3 already tests (REQ-VAL-234, TASK-M3-53, M3), while their tolerances are calibrated from a pixel pitch and their
+  only control is a map; dividing them changes what the part tests and leaves it no control.
+- **The question:** what each target becomes under R-639.
+- **Options seen:** (a) each moves whole to gate a new task, "build the Šuvakov-plane chart", which waits on a ruling
+  to start (R-636, RQ-583), its closure part empty or (for HU-1 and HU-2) already HU-3's; (b) as (a) for OC-4 on the
+  plane, AT-D1 and AT-D3, and HU-1 and HU-2 each gain a closure part with a control of its own (Table 23's minima, and
+  the middle candidate at (0.405916, 0.230163), T = 13.866, as Path A closures), kept in M4; (c) leave all five as they
+  are, under RQ-608.
+- **Applied meanwhile:** (c). The five requirements are unchanged and carry `rq: RQ-608`; no chart task is added.
+- **Waits:** TASK-M4-23 and TASK-M8-99.
+
+## RQ-619: The census's code questions the integrator contract doesn't settle: IAS15 as a drift reference, and the step-limit axis beyond the predictive limit *(R-637: "where the contract is silent, queue the question, don't infer from the prototype"; RQ-599's questions 8 and 9; `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md` § 3.1, § 3.2; `docs/contracts/principia_integrator_contract.md` Part 2b; context: none built)*
+
+*Queued 29 Oct 2026 by R-637's port. For the owner: yes, R-637 asks for it, and it decides what the census harness
+builds.*
+
+- **File, section** (RQ-599's questions, now in `docs/archive/review_queue/M0.md`, verbatim):
+  - **8, IAS15:** "§ 3.2 calls IAS15 "already the drift reference in the logH comparison". The only record of it in the
+    repo says "**IAS15 is not built.** … its only role here is a reference arm"
+    (`docs/reference/prin-rs/docs/NOTES_excerpts.md` :119–121). Is IAS15 to be built for the census, or is that clause
+    to be corrected?"
+  - **9, the step-limit axis:** "prin-rs's `StepLimit` (`None`, `Reject`, `Predictive`, `AbGrowth`, `Global`) is AZ's
+    alone …; Heggie and logH carry only the predictive limit, through `step_limit_f` …, and the contract fixes the
+    predictive limit at f = 0.02 (Part 2b, R-160). § 3.1 crosses the step limit "fully" and omits `Reject`. Is the
+    step-limit axis AZ-only beyond `None`/`Predictive`, and is `Reject` a value or a control?"
+  - The contract, Part 2b: "**The predictive step limit:** `dτ ≤ f·d_min / (|v_rel|_max·A·B)`, with f = 0.02 (R-160)."
+    It names no IAS15, no drift reference for a census, and no step limit but that one.
+- **The questions:** (8) whether the census builds IAS15, uses a reference the corpus has, or corrects § 3.2's clause;
+  (9) whether the census sweeps a step limit beyond the contract's one, and if so which values, and whether `Reject` is
+  a value or a control.
+- **Options seen:** for 8, (a) build IAS15 for the census, (b) take the drift reference from what the corpus already
+  has (R-33's convergence reference; the inspector's RK45, contract Part 2), correcting § 3.2's clause, (c) drop the
+  drift reference from the census; for 9, (a) no step-limit axis: every cell runs the contract's predictive limit at
+  f = 0.02, (b) a harness-only axis of the contract's limit and none (`None`), `Reject` a control, (c) another set,
+  stated by the owner.
+- **Applied meanwhile:** none. Nothing of the census is built.
+- **Waits:** the census harness (with RQ-617).

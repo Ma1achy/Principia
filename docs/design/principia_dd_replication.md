@@ -363,6 +363,24 @@ Neither data set is in the repo (RQ-598), and Boekholt et al.'s t = 10⁴ is pas
 over the systems that end before 200 (rule 18; RQ-592).
 *28 Oct 2026:* R-636 closes RQ-592: GG-1's systems that end past 200 are recorded as "not evaluated within cap", never
 as failures, and GG-1 waits on RQ-598 alone.
+*28 Oct 2026:* R-637 closes RQ-598 with option (a), and R-638, R-640, R-641 and R-642 rule how GG-1 and BR-1 are
+scored, R-642 governing where they differ (`docs/incoming/2026-10-28_rq598_data/README.md` § 6 is the record):
+- **The authors' own data scores directly, not provisionally.** BR-1 against the 180 trajectories of
+  `github.com/pgbreen/NVM` at `a35c378`, never committed (no licence; their per-file sha256 table is in the record),
+  which cover 180 of the paper's ~10⁴; why 44 of them end early is checked before they are scored. GG-1 against the
+  Fig. 1 extraction (`transcriptions/gg1_fig1/`), all 1212 points per panel, at one LUT step (3/256 ≈ 0.0117 dex), the
+  three-entry bin (LUT 29–31) at its wider precision, black meaning censored above 1000. Those parts may close on that
+  scoring.
+- **A reproduction unblocks provisionally.** It is labelled "vs <source>" ("vs Brutus, run here" for ours), never
+  "replicates the paper", and qualifies only if it matches the paper's set-up (the same initial-condition distribution,
+  at rest, the same frame) and uses a converged arbitrary-precision integrator: our Brutus built from
+  `github.com/pgbreen/NvMgeneration` at `98906f4` (GPL-3.0), the paper's own, qualifies. Rejected:
+  `dosier/TBP-Group-39-TrainData` and `stipefrkovic/three-body-problem`.
+- **Re-scored when the authors' data arrives:** every result against a reproduction is re-scored against it; where ours
+  and theirs disagree, theirs governs and the disagreement is queued. BR-1 and GG-1 stay open until scored against the
+  authors' data, for what that data covers.
+- R-638's gate stands: the measured cost per point is reported before any Brutus run is scaled or goes below
+  ε = 10⁻⁶.
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -402,6 +420,11 @@ Each waits, with its requirement in place and its RQ named, for what it needs. N
 
 *28 Oct 2026:* R-636 closes RQ-583 with no chart built yet. The Šuvakov-plane row's five targets, and the rows below
 that name RQ-583, wait on RQ-608.
+*28 Oct 2026:* R-639 splits each Šuvakov-plane target into a closure part and a chart part, queuing any target whose
+split isn't clean; none of the five splits cleanly (R-639), so all five are RQ-618's and stay as they are, under
+RQ-608. R-637 closes RQ-598: V-11's primaries are fetched (Part I held locally, never committed; Part II committed,
+CC BY 4.0), and V-11 proceeds from Part I, read from the University of Turku repository's version (R-638). The
+data-not-in-the-repo row above stands for GG-1 and BR-1 only as far as the authors' full data goes (§ 5.10's note).
 
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
@@ -540,6 +563,10 @@ R-631 commits the fetched data (HP27, FF27); RQ-586's three papers are paywalled
 *28 Oct 2026 (R-636):* RQ-583 and RQ-592 are closed. TASK-M4-23 and TASK-M8-99 now wait on RQ-608 (no Šuvakov-plane
 chart is built yet), and TASK-M3-62 on RQ-598 alone (GG-1's systems past 200 are recorded as "not evaluated within
 cap").
+*28 Oct 2026 (R-637, R-640, R-642):* RQ-598 is closed, and TASK-M3-62's and TASK-M3-65's waits on it are lifted: the
+authors' own data scores directly and qualifying reproductions provisionally (§ 5.10's note); V-11 proceeds from Part I.
+R-638's gate stands: no Brutus run is scaled, or goes below ε = 10⁻⁶, before its measured cost per point is reported.
+TASK-M4-23 and TASK-M8-99 still wait on RQ-608, now with RQ-618 (R-639).
 
 ---
 
@@ -694,6 +721,9 @@ batched, not decided.
 *28 Oct 2026:* R-636 rules Q4 (RQ-583: the targets stay closures, no chart is built yet; the five targets that need
 one are RQ-608's) and R-594 item 6's horizon cap (RQ-592: "not evaluated within cap", never a failure; the raised-cap
 run is TASK-M4-26).
+*28 Oct 2026:* R-637 rules R-594 item 6's gate question (RQ-591: option (b), recorded as ruled; this port moves no
+requirement) and the data and papers (RQ-598: option (a), the targets' scoring ruled by R-638 and R-640 to R-642).
+R-639 answers RQ-608; its five targets are RQ-618's.
 
 ---
 

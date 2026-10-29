@@ -4720,11 +4720,14 @@ cloud session on lavapipe; the gui review, the app launch, the owner's look and 
 withdrawn, 28 Oct 2026, before merge, and the build loop stays on the Mac alone).*
 *Amended in part by R-636 (28 Oct 2026: docs agents, qa's test writing and reviews run in cloud sessions; the Mac is
 kept for GPU work, at most two local agents; those clauses are withdrawn, 28 Oct 2026, before merge).*
+*Amended in part by R-645, R-647 and R-648 (28 Oct 2026: no cloud session is used, for any work; its cloud notes,
+"they suit read-and-think work", stay as dormant reference).*
 *Still in force: all of it but its merge rule and its review-post form: "Merge only under the overnight rules whenever
 I'm away" gives way to R-369's, under which a PR merges once its reviews pass and CI is green, whether the human is away
 or not; and reviews still post through REST, but in R-373's one form,
 `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` with a JSON object on standard input, in
-place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`.*
+place of item (2)'s `-f event=COMMENT -f commit_id=<head sha> -F body=@-`; and no cloud session is used (R-645, R-647,
+R-648), its cloud notes kept as dormant reference.*
 *2 Oct 2026 · applied in `plan/OPERATIONS.md`, the five reviewers' files in `.claude/agents/`, CLAUDE.md § "How work
 runs" and § Git, `plan/WORKFLOW.md` § "The review loop", R-345's to R-347's, R-355's and R-356's forward lines, and
 REVIEW_QUEUE.md (RQ-194)*
@@ -27504,11 +27507,10 @@ note), REQ-GUI-200 (statement, rulings, source, note), REQ-GUI-346 (rulings, not
 (statement, verify, rulings, source, note); adds REQ-GUI-410.
 
 ## R-634 — Mock-engine GUI tasks may be built in a cloud session on lavapipe, as a trial on TASK-M8-07 and TASK-M8-13: the implementer and the code and qa reviewers in the cloud; the gui review, the app launch, the owner's look and every merge on the Mac; stopped if a Metal-only finding costs more than one extra round per task or disk forces the agents to run one at a time *(amends R-357)*
+*Superseded by R-648.*
 *Withdrawn in full, 28 Oct 2026, by the owner (its entry in decisions.md quotes the owner).*
-*Still in force: none of it; R-357 stands as it was before this ruling.*
 *Withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud session stuff started"; its workflow edits to
-CLAUDE.md and plan/OPERATIONS.md were reverted to main's text before merge (the owner's ruling of 28 Oct 2026, to be
-ported as a ruling of its own).*
+CLAUDE.md and plan/OPERATIONS.md were reverted to main's text before merge (R-648).*
 *28 Oct 2026 · the owner's ruling on the cloud trial proposal, sent with R-633's revised RQ-603; applied in
 `plan/OPERATIONS.md` § "Where the build loop runs (R-357)" (the cloud sentence reworded, and "The cloud trial (R-634)"
 added), § "Resources" (the cloud's disk for a GUI task) and § "Metal and perf (Mac only)" (the Mac's gui review),
@@ -27693,12 +27695,16 @@ reviews handled as follow-ups. To re-review after fixes, re-request Copilot as a
 
 ## R-636 — The 28 Oct update: the Šuvakov-plane targets stay closures and no chart is built yet; targets past the horizon cap are "not evaluated within cap", never failures, and a raised-cap run is a later task; the weekly consistency audit is adopted, report-only, in the cloud; the session's R-369 decisions stand; #326 merges on the Mac's own GPU check; the five-chart build is held; the Mac keeps GPU work, two local agents at most *(closes RQ-583, RQ-592, RQ-602 and RQ-605; supersedes R-391; amends R-262, R-277 and R-357; refines R-633)*
 *Withdrawn in part, 28 Oct 2026, by the owner: its agent-count clause (two local agents at most) and its cloud clauses (docs agents, qa's test writing and reviews in cloud sessions; the audit as a cloud scheduled task).*
-*Still in force: all of it but its agent-count and cloud clauses; R-262, R-277, R-357 and R-391 stand as they were
-before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on demand when the owner
-asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in decisions.md).*
+*Superseded in part by R-645 (28 Oct 2026: its cloud half, already withdrawn; no cloud session is used at all).*
+*Amended in part by R-637 (28 Oct 2026: the five-chart hold meant only the replication charts; TASK-M2-36's five-chart
+split goes ahead, and TASK-M2-52 after it).*
+*Still in force: all of it but its agent-count and cloud clauses and its five-chart hold; R-262, R-277, R-357 and R-391
+stand as they were before it, and the weekly consistency audit stays adopted, report-only and never blocking, run on
+demand when the owner asks (the owner's ruling of 28 Oct 2026 on its RQ-605 clause, quoted in its entry in
+decisions.md); the hold covers only the replication charts (R-637).*
 *Its agent-count and cloud clauses are withdrawn, 28 Oct 2026 (the owner): "like how it was before this cloud
-session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions (the owner's ruling of
-28 Oct 2026, to be ported as a ruling of its own).*
+session stuff started"; the workflow returns to R-357, R-391 and R-277, with no cloud sessions
+(withdrawn in part by R-648).*
 *Its RQ-605 clause (the weekly consistency audit), 28 Oct 2026, the owner's ruling, verbatim: "RQ-605 weekly audit:
 on demand only for now. No scheduled cloud task and no scheduled local job; run it when I ask (e.g. before a release or
 milestone gate). Record this against R-636's RQ-605 clause as the owner's 28 Oct ruling. If the audit can run as a
@@ -27820,3 +27826,489 @@ R-391's trial (three agents at normal and at warning). It is not edited here: th
 
 Changes REQ-VAL-201, REQ-VAL-218 and REQ-VAL-222 (verify, rulings), REQ-VAL-295 (rq, rulings, note), REQ-VAL-311 to
 REQ-VAL-314 and REQ-VAL-316 (rq, rulings); adds REQ-VAL-332.
+
+## R-637 — The 28 Oct rulings on the replication batch and the census: RQ-598 takes option (a), the authors asked for their data; the occupant matrix census is adopted with stage 0 as its precondition, its thresholds R-71 calibrations and never gates, `census/` outside `results/`, its stage-1 results evidence only for RQ-577, and the integrator contract winning on its code questions, its CI cadence queued; RQ-591 takes option (b); RQ-577 stays after M3, with the owner's leanings recorded; the five-chart hold covers only the replication charts *(closes RQ-591, RQ-598 and RQ-599; amends R-636)*
+*Refined by R-638 (RQ-598's work goes ahead now: GG-1's routes 2 and 3, a BR-1 Brutus ensemble from a fixed recorded
+seed, two gates and the labels).*
+*Amended in part by R-640 and R-642 (its RQ-598 line's wait: the authors' own data scores directly, and qualifying
+reproductions unblock TASK-M3-62 and TASK-M3-65 provisionally).*
+*Still in force: all of it but its RQ-598 line's "TASK-M3-62/65 keep waiting until data arrives; if none comes, they
+stay waiting, no substitute data", which gives way to R-640 and R-642 (R-642 governs where they differ).*
+*28 Oct 2026 · the owner's message of that afternoon; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-591,
+RQ-598 and RQ-599 closed; RQ-617 and RQ-619 new; RQ-577 and RQ-593 to RQ-597 noted), `docs/archive/review_queue/M0.md`
+(the three closed entries, moved with their ruling), R-636's forward line, TASK-M2-36 and TASK-M2-52 (the hold
+lifted), TASK-M3-62 and TASK-M3-65 (notes), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio) and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Rulings from Malachy:
+> - RQ-598: option (a). Malachy is fetching the papers into docs/incoming/ (a record, not authority) and emailing the corresponding authors for BR-1 (Breen et al. 2020 Brutus runs to t=10) and GG-1 (Boekholt et al. 2020's 1,212 per-point lifetimes). TASK-M3-62/65 keep waiting until data arrives; if none comes, they stay waiting, no substitute data.
+> - RQ-599 census: adopt with stage 0 as precondition. Metal runner nightly/weekly on the Mac, lavapipe in cloud per PR (check §8.1 says this; if not, show me the text). Thresholds are R-71 calibrations, never gates. census/ sits outside results/. Stage-1 results attach to RQ-577 as evidence only; RQ-577 stays after M3 (R-630).
+>   Its six code questions: the integrator contract wins over the old prototype in every case; where the contract is silent, queue the question, don't infer from the prototype.
+> - RQ-591: option (b). Layer V targets gate their milestone (statistical ones on their stated tolerance); layer R targets beyond the first batch are run, recorded beside the published number, disagreements queued (rule 4).
+> - RQ-577: still after M3. Record these as Malachy's leanings on the item, not rulings: (1) after M3; (2) Result-only first, live later by choice; (3) Jorba & Zou order rule, order recorded per Result; (4) new field, no "measured equivalent"; (5) events stay where every stepper samples them, dense output optional and reported separately; (6) rounded fields only unless a checkpoint need appears; (7) per-quad precision later, after R-547 covers it, uniform per Result first.
+> - Five-chart build: yes, I meant only the replication charts. This morning's five-chart split may go ahead.
+
+*What it decides:*
+
+- **RQ-598: option (a).** The owner fetches the papers into `docs/incoming/` (a record, not authority) and emails the
+  corresponding authors for BR-1's data (Breen et al. 2020's Brutus runs to t = 10) and GG-1's (Boekholt et al. 2020's
+  1,212 per-point lifetimes). The papers came with PR #327 (`docs/incoming/2026-10-28_rq598_data/`). The line's wait,
+  "TASK-M3-62/65 keep waiting until data arrives; if none comes, they stay waiting, no substitute data", is kept here as
+  ruled; R-640 and R-642 lift it (the forward line above).
+- **RQ-599: the occupant matrix census is adopted, with stage 0 as its precondition** (DRAFT-VAL-08:
+  `docs/incoming/2026-10-27_validation_plan/PROPOSAL_occupant_matrix_census_2026-10-27.md`, a record under its sha256).
+  Its verdict thresholds are R-71 calibrations, never gates. `census/` sits outside `results/`. Stage-1 results attach to
+  RQ-577 as evidence only, and RQ-577 stays after M3 (R-630): the proposal's question 5 takes its option (b).
+- **The census's six code questions (RQ-599's questions 6 to 11): the integrator contract wins over the old prototype in
+  every case; where the contract is silent, the question is queued, never inferred from the prototype.** Read against
+  `docs/contracts/principia_integrator_contract.md`:
+  - **6, the stepper axis:** the contract's steppers. Part 2b (R-561): "The regularisation (`none`, Aarseth–Zare,
+    Heggie, logH) and the stepper (KDK, Yoshida-4, Yoshida-6, RK4; Euler in the debug selection only, Part 2) are
+    selected separately, regularisation off included, and every pair runs." The census crosses those, under every
+    regularisation, not the prototype's `Rk4`, `Kdk` and `Gbs`.
+  - **7, GBS:** not a census stepper value. The contract's occupants (Part 2's table, Part 2b's selection) do not
+    include it; Part 2b names it only as an example of a mismatched comparison ("Comparing a GBS logH against an RK4
+    Heggie scores the *integrator*").
+  - **8, IAS15:** the contract names no IAS15 and no drift reference for a census. Silent: queued, RQ-619.
+  - **9, the step-limit axis:** the contract gives one step limit, the predictive one at f = 0.02 (Part 2b, R-160);
+    the prototype's `StepLimit` variants are not contract values. Whether the census may sweep beyond that one limit,
+    and whether `Reject` is a value or a control, the contract does not say. Silent: queued, RQ-619.
+  - **10, the escape rule:** the contract's one rule, the closure window with `E_rel > 0` on the total mass (Part 7,
+    R-29). The prototype's `EscapeRule` variants and its `M_pair`-only `E_rel` are not census values.
+  - **11, time transformations:** separate values, as the contract keeps each selectable: Heggie's Eq. 22, the
+    default, and Eq. 20, "a selectable time mode" (Part 2b, R-161); logH's logH and TTL modes (Part 2b, R-162).
+- **Not applied: the census's CI cadence.** The owner asked to be shown § 8.1's text if it differs from "Metal runner
+  nightly/weekly on the Mac, lavapipe in cloud per PR", and it does: § 8.1's per-PR job is `census-smoke` alone, on PRs
+  touching the kernel, stepper or regularisation, and lavapipe runs nightly (stage 1) and weekly (stage 2); § 8.2's
+  Metal runner runs "weekly or on demand", not nightly. RQ-617 quotes both texts and waits for the owner's answer. Until
+  then nothing of the census is built: no harness, CI job or runner registration.
+- **RQ-591: option (b).** "Layer V targets gate their milestone (statistical ones on their stated tolerance); layer R
+  targets beyond the first batch are run, recorded beside the published number, disagreements queued (rule 4)."
+  Recorded as ruled. This port moves no requirement and changes no gate: the owner's later rulings of 29 Oct 2026 on
+  how external targets bind, ported next, govern that for external targets.
+- **RQ-577: still after M3** (R-630). The owner's seven leanings are recorded on the entry, as leanings, not rulings.
+- **The five-chart build.** R-636's hold, "until Malachy rules on the replication batch", meant only the replication
+  charts. TASK-M2-36's five charts (R-633's split) go ahead, and TASK-M2-52 after them. The replication charts (a chart
+  over the Šuvakov plane, a binary-plus-single chart, a side-ratio chart, a fixed-k velocity chart: RQ-593 to RQ-595 and
+  RQ-608) are not built ahead of their own rulings, as R-594 item 5 has it.
+
+*Applied per R-369:*
+- The six code questions are read against the contract as above, and the two it doesn't settle are queued together as
+  RQ-619.
+- No requirement or task is written for the census here: the owner's words name none, and its jobs, runner and stepper
+  set wait on RQ-617 and RQ-619. Its port into the plan is flagged to the orchestrator.
+- RQ-598 closes on option (a); its targets' scoring is ruled by R-640 to R-642, and its data questions still open are
+  RQ-612, RQ-613, RQ-615 and RQ-616.
+- R-637 is in the "design" group of `plan/rule_groups.yaml`.
+
+*The numbers:* R-636 is the highest on any branch (every remote branch checked, 29 Oct 2026); R-637 to R-648 are this
+port's, in the order the orchestrator assigned them.
+
+Changes REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (RQ-598's hold removed; rulings; REQ-VAL-330's source).
+
+## R-638 — RQ-598's work starts now: GG-1's routes 2 (Fig. 1 read from its vector paths) and 3 (recomputed with Brutus), and a BR-1 Brutus ensemble on Breen's stated set-up from a fixed recorded seed, while the owner emails the authors; Fig. 1 must reconcile to exactly 1212 points a panel, and the cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶; every self-computed result is labelled ours *(refines R-637)*
+*28 Oct 2026 · the owner's message of that day on PR #327; ported 29 Oct 2026; applied in
+`docs/incoming/2026-10-28_rq598_data/README.md` § 6 (the record), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio),
+TASK-M3-62 and TASK-M3-65 (notes) and `plan/rule_groups.yaml`; its work done by PR #335*
+
+The owner's words, verbatim:
+
+> PR #327 (incoming/2026-10-28-rq598-data) carries the RQ-598 papers and my rulings; read docs/incoming/2026-10-28_rq598_data/README.md in full, then do §4 tasks 1–5. Merge #327 through the normal review. Rulings: GG-1 routes 2 (extract Fig. 1 from the vector paths) and 3 (recompute with Brutus) now; BR-1 Brutus ensemble on Breen's stated set-up now, fixed recorded seed; I'm emailing Breen and Boekholt in parallel. Gates: stop and queue if Fig. 1 doesn't reconcile to exactly 1212 points per panel; report measured cost per point before scaling any Brutus run or going below eps=1e-6. Label all self-computed results as ours, not the papers'. Open question for me: may a self-computed ensemble score a target, or is it cross-check only?
+
+*What it decides*, recorded against RQ-598 and the targets BR-1, GG-1 and V-11:
+- **GG-1, routes 2 and 3, now.** Route 2 is done: `docs/incoming/2026-10-28_rq598_data/transcriptions/gg1_fig1/`
+  (from branch `data/rq598-gg1-fig1-v2`, carried by PR #335) reads Fig. 1 from its vector paths; both panels reconcile
+  to 1212, to one LUT step, 3/256 ≈ 0.0117 dex. Route 3's cost pilot is that folder's `brutus_run_here/REPORT.md`.
+- **BR-1, a Brutus ensemble on Breen's stated set-up, now, from a fixed recorded seed.** PR #335's 12-run pilot ran the
+  authors' own initial conditions instead, on the owner's later words (R-641, R-642, and his "Resume." message of
+  28 Oct 2026: "pilot BR-1 from the NVM starting points"); whether runs from them stand in for the seeded draw is
+  RQ-615's remaining question.
+- **The owner emails Breen and Boekholt in parallel.**
+- **Two gates.** Stop and queue if Fig. 1 does not reconcile to exactly 1212 points per panel (it does). Report the
+  measured cost per point before any Brutus run is scaled or goes below ε = 10⁻⁶ (reported in `REPORT.md`; every
+  further probe and any scaling waits for the owner).
+- **Labels.** Every self-computed result is labelled ours, "Brutus, run here", never the paper's.
+- **The open question**, whether a self-computed ensemble may score a target, is answered by R-640, as R-642 amends it.
+- **§ 4 task 1, the search:** done, recorded in the README's § 6: no released data for either paper beyond
+  `pgbreen/NVM`'s 180 BR-1 trajectories (R-641), and nothing for GG-1.
+- **§ 4 task 5, V-11 from Part I** (Mylläri et al. 2018), read from the University of Turku repository's version, never
+  committing the publisher's PDF; Valtonen & Karttunen's § 10.6 (p. 271) secondary, cited by page; any table
+  transcribed twice and diffed (R-594 item 4); a difference between versions in what V-11 needs stopped and queued.
+  Not done in this port: the Turku file could not be fetched from the Mac (a Cloudflare challenge, recorded in the
+  README's § 6). V-11 proceeds from Part I once that file is held locally.
+
+R-638 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-295 and REQ-VAL-297 (rulings, note) and
+REQ-VAL-330 (rulings, source, note).
+
+## R-639 — The Šuvakov-plane targets split into a closure part, which stays in M4 or M8 and runs now, and a chart part, which moves to gate the task that builds the Šuvakov chart and is not dropped, a target whose split isn't clean being queued; a read-only licence audit of every committed PDF; none of the five targets splits cleanly, so all five are queued *(answers RQ-608)*
+*28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-608 noted, RQ-618
+new), TASK-M4-23 and TASK-M8-99 (notes) and `plan/rule_groups.yaml`; the audit run by the orchestrator (R-643)*
+
+The owner's words, verbatim:
+
+> Rulings: (1) Šuvakov plane targets: split each into its closure part (stays in M4/M8, runs now) and its chart part (moves to gate the task that builds the Šuvakov chart; not dropped). Queue it if the split isn't clean for any target. (2) Yes to a read-only PDF licence audit as a cloud brief: every committed PDF, its licence and the evidence (Crossref, the file's own copyright line, any subscription stamp), no file changes, no history edits; report to me before anything is removed. (3) Briefs 1–3 are being started now; 4 and 5 after #327 merges.
+
+*What it decides:*
+- **Item (1)** answers RQ-608, which asks about five targets: OC-4 on the Šuvakov plane (REQ-VAL-311), AT-D1
+  (REQ-VAL-312), AT-D3 (REQ-VAL-313), HU-1 (REQ-VAL-314) and HU-2 (REQ-VAL-316). Each splits into a closure part, kept
+  in its milestone and its task and run now, and a chart part, which gates the task that builds the Šuvakov-plane
+  chart. A target whose split isn't clean is queued, not forced.
+- **Item (2)**, the licence audit, was run read-only and posted on PR #327; its outcome is R-643. Nothing more to port.
+- **Item (3)** is process; nothing is recorded.
+
+*Applied: no split is clean.* A split is clean when the target's verify text divides into a closure part and a chart
+part without changing what either part tests. Read target by target (`plan/requirements.yaml`):
+- **OC-4 on the plane** (REQ-VAL-311): "as OC-4, on the Šuvakov-plane chart once RQ-583 (and its labelling, RQ-582) is
+  ruled; agreement at OC-4's calibrated level; control as OC-4's". OC-4 (REQ-VAL-309) reads its island criterion from
+  the payload on a chart through each orbit; it holds no closure. The closure part is empty.
+- **AT-D1** (REQ-VAL-312): "a Result (R-572) at f64; reviewed by the physics reviewer; the atlas's credit line on the
+  figure; control: each marker's IC re-encoded must land on its marker". A rendering of the plane: no closure part.
+- **AT-D3** (REQ-VAL-313): "as AT-D1, per value of m₃". The same.
+- **HU-1** (REQ-VAL-314): "the closure field on the Šuvakov-plane chart once RQ-583 is ruled; each Table 23 minimum
+  within REQ-VAL-315; the map reviewed by the physics reviewer; control: a map at m₃ = 2 must not show the equal-mass
+  minima". The minima are positions on the map, their tolerance calibrated from "the map's pixel pitch and Table 23's
+  six digits" (REQ-VAL-315), and the one control is a map. Run as closures, Table 23's points would test that each orbit
+  closes, which HU-3 already tests (REQ-VAL-234, TASK-M3-53), and the text gives that part no control.
+- **HU-2** (REQ-VAL-316): "as HU-1, zoomed; the middle candidate's position and period within REQ-VAL-317". The same:
+  REQ-VAL-317 is calibrated from "the zoom's pixel pitch and the printed digits", and its control is HU-1's map.
+
+So, as the ruling says for a split that isn't clean, all five are queued, as RQ-618, each with its text, and left as they
+are: each keeps `rq: RQ-608`, RQ-608 stays open, and no chart task is added, since no chart part moves.
+
+R-639 is in the "design" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-640 — Self-computed Brutus ensembles ("Brutus, run here") unblock TASK-M3-62 and TASK-M3-65 now, provisionally: recorded "vs Brutus, run here", never as replicating the paper, closing neither BR-1 nor GG-1, and re-scored against the authors' data when it arrives, theirs governing and each disagreement queued; the Fig. 1 extraction is the paper's own values and scores at its stated precision *(amends R-637; answers RQ-614)*
+*Refined by R-641 (BR-1 scores against Breen's own 180 trajectories directly; NvMgeneration at 98906f4 is BR-1's
+reference Brutus).*
+*Amended in part by R-642 (its "provisional" block, where R-642 differs: the authors' own data, BR-1's 180 NVM
+trajectories and GG-1's Fig. 1 extraction, scores directly; a reproduction qualifies only on the paper's set-up with a
+converged arbitrary-precision integrator).*
+*Still in force: the lifted wait, the labels ("vs <source>", never "replicates the paper"), the re-score when the
+authors' data arrives (theirs governs, disagreements queued) and the Fig. 1 extraction scoring at its stated
+precision; where it differs from R-642, R-642 governs.*
+*28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in R-637's forward line, `REVIEW_QUEUE.md`
+(RQ-614 closed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in § 5.10,
+§ 5.12 and § 7), REQ-VAL-295, REQ-VAL-297 and REQ-VAL-330 (reqio), TASK-M3-62 and TASK-M3-65 (notes) and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Ruling (answers the open "score or cross-check" question, RQ-598): self-computed Brutus ensembles ("Brutus, run here") unblock TASK-M3-62/65 now, superseding "no substitute data" in R-637's RQ-598 line. Results against them are provisional: recorded as "vs Brutus, run here", never as replicating the paper, and they do not close BR-1 or GG-1. When the authors' data arrives, re-score against it; where ours and theirs disagree, theirs governs and the disagreement is queued. The Fig. 1 extraction (GG-1 route 2) is the paper's own published values and may be scored as such, at its stated precision (one LUT step, ≈0.012 dex).
+
+*What it decides:*
+- **It answers the owner's open question** (`docs/incoming/2026-10-28_rq598_data/README.md` § 3), queued as RQ-614,
+  which closes. In R-637's RQ-598 line, "no substitute data" gives way to it; R-637's text is kept, with a forward line.
+- **TASK-M3-62's and TASK-M3-65's waits on RQ-598's data are lifted.** They may score against "Brutus, run here"
+  ensembles. Every such result is labelled "vs Brutus, run here", provisional, never replicating the paper.
+- **BR-1 (REQ-VAL-297) and GG-1 (REQ-VAL-295) are not closed by those results:** each stays open until it is scored
+  against the authors' data (as R-642 has it, the authors' own data already in hand scores directly, for what it
+  covers).
+- **A re-score obligation:** when the authors' data arrives, every result scored against a reproduction is re-scored
+  against it; where ours and theirs disagree, theirs governs, and the disagreement is queued. Written into REQ-VAL-295's
+  and REQ-VAL-297's notes.
+- **The GG-1 Fig. 1 extraction** (`transcriptions/gg1_fig1/`, branch `data/rq598-gg1-fig1-v2`) is the paper's own
+  published values. It may score GG-1 at its stated precision, one LUT step (3/256 ≈ 0.0117 dex; "≈0.012 dex"), with
+  the three-entry bin (`jet` entries 29 to 31, one colour) at its wider precision.
+
+*Flagged, recorded rather than resolved:* the ensembles TASK-M3-62 and TASK-M3-65 would score against don't exist yet.
+The Brutus pilot reports cost first, and scaling waits for the owner (R-638's gate). So "unblock now" lifts the wait for
+data; it doesn't skip that gate. And V-11 (TASK-M3-65) needs Part I, not a Brutus ensemble: its wait on RQ-598 is lifted
+with the rest, and it proceeds from Part I once read (R-638).
+
+R-640 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-295 (rq, rulings, source, note),
+REQ-VAL-297 and REQ-VAL-330 (rq, rulings, note).
+
+## R-641 — Breen's own GitHub holds 180 of BR-1's Brutus trajectories (pgbreen/NVM at a35c378): they are the paper's own data, so BR-1 may be scored against them directly, not provisionally, for those 180; they are never committed, only their per-file sha256 table and citation; pgbreen/NvMgeneration at 98906f4 is the exact Brutus the paper used and BR-1's reference code; nothing new is public for GG-1 *(refines R-640)*
+*28 Oct 2026 · the owner's message of that day; ported 29 Oct 2026; applied in
+`docs/incoming/2026-10-28_rq598_data/README.md` § 6 and `nvm_a35c378_sha256.txt` (new), `REVIEW_QUEUE.md` (RQ-615 noted),
+REQ-VAL-297 (reqio), TASK-M3-62 (a step) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> New finding (verified by clone): Breen's own GitHub has BR-1 data. github.com/pgbreen/NVM @ a35c378: trainex/data/run10–99.dat and validex/data/run9910–9999.dat = 180 authors' Brutus trajectories (cols: x1,y1,x2,y2; row 1 = ICs; body 3 from COM; 2^-8 cadence to t=10; 136 full-length at 2561 rows, 44 terminate early, from 5 rows; check why before scoring them). No licence on NVM: keep a copy in docs/incoming/_local/ (gitignored), never commit it; record repo URL, commit and per-file sha256 in the RQ-598 record. github.com/pgbreen/NvMgeneration @ 98906f4 is the exact Brutus used in the paper (GPL-3.0): brief 5's pilot should build THIS, not AMUSE's copy; tell session 5 when it restarts. Ruling: these 180 are the paper's own data, so BR-1 may be scored against them directly (not provisional) for those 180; the full ~10k still comes from the email. GG-1: nothing new public. Also record that the 2022 NVM issue reportedly has Breen offering the full file by email (unverified from the claude.ai session; check it).
+
+*What it decides:*
+- **The RQ-598 record** gains the repository URL, the commit (`a35c378c4f07681e8db679aeacedadd75c48580a`) and a per-file
+  sha256 table of the 180 files, `nvm_a35c378_sha256.txt` (`sha256  rows  path`, sorted by path; its own sha256
+  `f8cf308932ebbfb4c11adc7ff17fac2be8b09f20ae58dfed8e62dc44f4de6a59`, recomputed from a clone outside the repo on
+  29 Oct 2026 and matching the orchestrator's of 28 Oct). The data files are never committed: NVM has no licence, and
+  the owner's copy is at `docs/incoming/_local/pgbreen_NVM/`, gitignored.
+- **BR-1** (REQ-VAL-297) may be scored against those 180 directly, as the paper's own data, not provisionally. Why 44 of
+  them end early (the shortest has 5 rows) is checked before they are scored: a step of TASK-M3-62, written into its
+  notes. The full ~10⁴ still comes from the email, so the requirement records which part is scored against what.
+- **GG-1:** nothing new is public.
+- **The Brutus code:** `github.com/pgbreen/NvMgeneration` at `98906f472f66b127bde62f771410b4974d116a3b`, GPL-3.0, is
+  the exact Brutus the paper used, recorded as BR-1's reference code. A Brutus build here builds it, not AMUSE's copy.
+- **The 2022 issue, checked:** `https://github.com/pgbreen/NVM/issues/1` (closed). On 30 Sep 2022 the user `pgbreen`
+  wrote: "Unfortunately, the file which contains all the runs is too large to upload to this repo. If you give me your
+  email address I'll send you a link which you could use to download the data". A 25 Sep 2025 comment asking for a
+  Zenodo or Figshare upload has no reply. The thread shows a third party's address, so it is cited by URL only.
+- "Tell session 5" is for the orchestrator; nothing to port.
+
+R-641 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-297 (rulings, source, note).
+
+## R-642 — RQ-598's data: the authors' own data unblocks and scores directly, BR-1 against the 180 NVM trajectories and GG-1 against the Fig. 1 extraction at its stated precision; reproductions unblock provisionally, labelled "vs <source>", re-scored when the authors' full data arrives, and qualify only on the paper's set-up with a converged arbitrary-precision integrator; our Brutus from NvMgeneration at 98906f4 qualifies, two third-party sets are rejected; the owner emails both authors *(amends R-637 and R-640; answers RQ-614 and in part RQ-615)*
+*28 Oct 2026 · the owner's message of that day, which governs wherever it differs from R-640 and R-641; ported
+29 Oct 2026 with R-638; applied in `docs/incoming/2026-10-28_rq598_data/README.md` § 6, `REVIEW_QUEUE.md` (RQ-614
+closed, RQ-615 narrowed), `docs/archive/review_queue/M0.md`, `docs/design/principia_dd_replication.md` (dated notes in
+§ 5.10 and § 7), REQ-VAL-295 and REQ-VAL-297 (reqio), TASK-M3-62 (notes) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Ruling on RQ-598 data, superseding the earlier "provisional" block and "no substitute data" in R-637:
+> 1. Authors' own data unblocks and scores directly: BR-1 against the 180 NVM trajectories (pgbreen/NVM @ a35c378; kept in docs/incoming/_local/, never committed, no licence); GG-1 against the Fig. 1 vector extraction at its stated precision (~0.012 dex, black = censored >1000).
+> 2. Reproductions unblock provisionally, labelled "vs <source>", never "replicates the paper", and are re-scored when the authors' full data arrives (theirs governs; disagreements queued). A reproduction qualifies only if it matches the paper's set-up (same IC distribution, at rest, same frame) and uses a converged arbitrary-precision integrator. Our own Brutus runs built from pgbreen/NvMgeneration @ 98906f4 (the paper's exact version, GPL-3.0) qualify. Third-party ones found so far do NOT: dosier/TBP-Group-39-TrainData (no data, different ICs) and stipefrkovic/three-body-problem (non-zero velocities, Verlet). Record them as checked and rejected.
+> 3. I'm emailing Breen (full ~10k set) and Boekholt (GG-1 per-point lifetimes) regardless.
+> Port this into session 4's R-638 work, and tell session 5 to build NvMgeneration, not AMUSE.
+
+*What it decides:*
+- **It governs** R-637's "no substitute data" and R-640's "provisional" block, as forward lines on each; their texts
+  are kept.
+- **Item 1: the authors' own data scores directly, not provisionally.** BR-1 (REQ-VAL-297) against the 180 NVM
+  trajectories (the table and citation as R-641 has them; the data never committed); GG-1 (REQ-VAL-295) against the
+  Fig. 1 extraction at ≈ 0.012 dex (one LUT step, 3/256), black meaning censored above 1000. Those parts may close on
+  that scoring. Which part each covers: for BR-1, 180 of the paper's ~10⁴ trajectories; for GG-1, all 1212 points per
+  panel, at figure precision. The rest of BR-1 waits for the authors' full set.
+- **Item 2: reproductions unblock provisionally.** Each is labelled "vs <source>", never "replicates the paper"; each is
+  re-scored when the authors' full data arrives (theirs governs; disagreements queued); and each qualifies only if it
+  matches the paper's set-up (the same initial-condition distribution, at rest, the same frame) and uses a converged
+  arbitrary-precision integrator. Our runs built from `pgbreen/NvMgeneration` at `98906f4` (GPL-3.0) qualify. Checked
+  and rejected: `https://github.com/dosier/TBP-Group-39-TrainData` (no data, different initial conditions) and
+  `https://github.com/stipefrkovic/three-body-problem` (non-zero velocities, Verlet).
+- **Item 3:** the owner is emailing Breen (the full ~10⁴ set) and Boekholt (GG-1's per-point lifetimes).
+- **RQ-614 closes** (R-640 as this amends it). **RQ-615** is answered on two of its three questions: the 180 are used
+  locally, never committed, and BR-1 may be graded against them. Its third, whether runs from the authors' initial
+  conditions stand in for the seeded draw R-638 asks for, is not answered by these words, and RQ-615 stays open on it.
+- "Tell session 5" is for the orchestrator; nothing to port.
+
+R-642 is in the "design" group of `plan/rule_groups.yaml`. Changes REQ-VAL-295 and REQ-VAL-297 (rulings, source,
+note).
+
+## R-643 — The licence audit: the four subscription-stamped and six all-rights-reserved PDFs leave the tree for `docs/incoming/_local/` in one ordinary commit, with no history rewrite; the five "unclear" PDFs stay and are queued; the 22 arXiv licences are checked, the 19 arXiv-default PDFs kept and the 3 CC-licensed fine; from now on no publisher PDF is committed unless its licence allows redistribution, checked before commit *(no RQ; a standing rule)*
+*Amended in part by R-644 (option 2, the history scrub, is shelved, not scheduled).*
+*Still in force: all of it but the scheduling of option 2, the scrub, which R-644 shelves; its conditions and method
+are kept as ruled, for when it is revisited.*
+*28 Oct 2026 · the owner's licence-audit ruling (a #327 comment), his option-2 ruling the same day, and his answers of
+that late evening; ported 29 Oct 2026; applied by PR #329 (the move), in `REVIEW_QUEUE.md` (RQ-610 new), `CLAUDE.md`
+§ "Papers and licences" (new) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim, the licence-audit ruling:
+
+> Ruling on the licence audit (#327 comment, 28 Oct): move the 4 subscription-stamped and 6 all-rights-reserved PDFs on main out of the tree into docs/incoming/_local/ (gitignored) in one ordinary commit on its own branch and PR. Each record keeps its row with sha256 and gains a dated note "held locally, not in the repo (licence audit, 28 Oct 2026)". No history rewrite, no force-push of main. The 5 "unclear" ones stay for now; queue them. Check the 22 arXiv licences on the abs pages from a session that can reach arxiv.org, and report any that are not redistributable before moving anything else. From now on: no publisher PDF is committed unless its licence allows redistribution, checked before commit.
+
+The owner's ruling on option 2, the same day, verbatim (shelved by R-644):
+
+> Ruling (licence audit, 28 Oct): option 1 is PR #329 (merge after #327). Option 2 = scrub those ten PDFs from main's history, ONLY when all of these hold, and confirm each with me in one message before the force-push:
+> (a) every open PR is merged or closed (no branch may carry the old history back in);
+> (b) #327 and #329 are merged;
+> (c) all ten files are restored to docs/incoming/_local/ from history (git show <old-main>:<path>), sha256-checked against the replication README, and a second copy is backed up outside the repo, since history is about to stop being a copy.
+> Method: git filter-repo --invert-paths on the ten paths (list in docs/incoming/2026-10-25_replication/README.md, "Held locally" section), on a fresh mirror clone. Keep filter-repo's commit-map and commit it as docs/incoming/2026-10-28_history_scrub/commit-map.txt with a README explaining that every commit ID quoted in the records before the scrub maps through it. Then force-push main (this needs branch protection lifted: ask me at that moment; repo settings are mine). Afterwards: re-clone every local worktree, re-verify CI on main, and tell me so I can file a GitHub Support "remove cached views / sensitive data" request for the old commits still reachable via closed PRs' refs.
+>
+> Restore the ten PDFs that #329 removes into the gitignored local folder, so they stay readable on this Mac but are never committed:
+> for each name in the "Held locally, not in the repo" table of docs/incoming/2026-10-25_replication/README.md (on branch incoming/2026-10-28-licence-audit-move, PR #329):
+>   git show origin/main:docs/incoming/2026-10-25_replication/papers/<name>.pdf > docs/incoming/_local/<name>.pdf
+> Then: verify each sha256 against that README's rows; confirm `git check-ignore -v` covers every file and `git status` shows nothing new; keep a second copy outside the repo (e.g. on the X10 Pro outside the working tree), since the history scrub (option 2) will remove the only other copy. Do this now, before #329 or the scrub merge. Report the ten hashes as checked. Don't commit anything under docs/incoming/_local/, ever.
+
+*Shelved by R-644 (28 Oct 2026): not scheduled; revisited after the release, or earlier if a rights-holder asks for
+removal; then the scrub and a GitHub Support purge are done together.* #329 stands.
+
+The owner's answer of 28 Oct 2026 (late evening) on the arXiv check, verbatim: "(1) The 19 arXiv-default PDFs stay in
+the repo; record them as "arXiv default licence, kept; revisit with the shelved scrub after the release". The 3
+CC-licensed are fine as they are."
+
+*What it decides:*
+- **The move.** The ten PDFs (four subscription-stamped, six all rights reserved) left the tree in one ordinary commit,
+  PR #329, now merged; each record keeps its row and sha256 with the dated note, and the list is
+  `docs/incoming/2026-10-25_replication/README.md`'s "Held locally" section. The orchestrator's duplicate, PR #330, was
+  closed unmerged. No history is rewritten and `main` is not force-pushed.
+- **The five "unclear" PDFs** stay in the repo for now and are queued: RQ-610, carried verbatim from PR #330's branch
+  (commit `f1b0046e`).
+- **The 22 arXiv licences** were read from each abstract page's licence link, from the Mac, on 28 Oct 2026 (the
+  orchestrator), and re-read at this port, 29 Oct 2026 20:27 UTC, with the same result for all 22. None is moved:
+
+| arXiv id | committed file (`docs/incoming/…/papers/`) | licence on the abstract page | status |
+|---|---|---|---|
+| 2004.05475 | `2026-10-25_replication/…/manwadkar_trani_leigh_2020_MNRAS_497_3694_arXiv2004.05475.pdf` | CC BY 4.0 | fine as it is |
+| 2101.03661 | `2026-10-25_replication/…/manwadkar_kol_trani_leigh_2021_MNRAS_arXiv2101.03661.pdf` | CC BY 4.0 | fine as it is |
+| 0802.2465 | `2026-10-25_replication/…/tanikawa_mikkola_2008_arXiv0802.2465.pdf` | CC BY-NC-SA 3.0 | fine as it is |
+| 0805.2844 | `2026-10-25_replication/…/lehto_etal_2008_MNRAS_388_965_arXiv0805.2844.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1004.2506 | `2026-10-25_replication/…/orlov_rubinov_shevchenko_2010_MNRAS_408_1623_arXiv1004.2506.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1303.0181 | `2026-10-25_replication/…/suvakov_dmitrasinovic_2013_PRL_110_114301_arXiv1303.0181.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1411.6671 | `2026-10-25_replication/…/boekholt_pz_2015_ComAC_2_2_arXiv1411.6671.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1705.00527 | `2026-10-25_replication/…/li_liao_2017_SciChina_60_129511_arXiv1705.00527.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1705.03728 | `2026-10-25_replication/…/dmitrasinovic_etal_2018_JPhysA_51_315101_arXiv1705.03728.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1805.07980 | `2026-10-24_anosova/…/li_liao_2018_arXiv_1805.07980.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1909.05272 | `2026-10-25_replication/…/stone_leigh_2019_Nature_576_406_arXiv1909.05272.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1910.07291 | `2026-10-25_replication/…/breen_etal_2020_MNRAS_494_2465_arXiv1910.07291.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 1910.08667 | `2026-10-25_replication/…/hernandez_hadden_makino_2020_MNRAS_493_1913_arXiv1910.08667.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2002.04029 | `2026-10-25_replication/…/boekholt_pz_valtonen_2020_MNRAS_493_3932_arXiv2002.04029.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2007.10184 | `2026-10-25_replication/…/li_li_liao_2020_arXiv2007.10184.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2108.06335 | `2026-10-25_replication/…/parischewsky_trani_leigh_2023_SciPostCore_6_016_arXiv2108.06335.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2109.07013 | `2026-10-25_replication/…/boekholt_moerman_pz_2021_PRD_104_083020_arXiv2109.07013.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2308.16159 | `2026-10-25_replication/…/hristov_etal_2024_CeMDA_136_7_arXiv2308.16159.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 2403.03247 | `2026-10-25_replication/…/trani_etal_2024_AA_689_A24_arXiv2403.03247.pdf` | arXiv non-exclusive distribution licence 1.0 | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| astro-ph/0401004 | `2026-10-25_replication/…/fregeau_etal_2004_MNRAS_352_1_arXiv0401004.pdf` | arXiv "assumed 1991–2003" | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| 0704.2671 | `2026-10-25_replication/…/mikkola_tanikawa_2007_MNRAS_379_L21_arXiv0704.2671.pdf` | arXiv "assumed 1991–2003" | arXiv default licence, kept; revisit with the shelved scrub after the release |
+| astro-ph/9906322 | `2026-10-25_replication/…/preto_tremaine_1999_AJ_118_2532_arXiv9906322.pdf` | arXiv "assumed 1991–2003" | arXiv default licence, kept; revisit with the shelved scrub after the release |
+
+  Three are CC licensed (two CC BY 4.0, one CC BY-NC-SA 3.0) and nineteen carry an arXiv default: sixteen the
+  non-exclusive distribution licence, which grants arXiv alone the right to distribute, and three "assumed 1991–2003".
+  The arXiv check ruled that none be moved before the owner saw it; he kept all nineteen.
+- **PR #327's Part II** (Pasechnik, Mylläri, Valtonen & Mikkola 2023, doi:10.1093/mnras/stad2372) has a CC BY 4.0
+  licence for its version of record (Crossref, from 2023-08-04; re-read 29 Oct 2026), so its committed copy stays.
+- **The standing rule:** "no publisher PDF is committed unless its licence allows redistribution, checked before
+  commit." Written in `CLAUDE.md` § "Papers and licences" (new), where every agent reads it. `docs/incoming/` has no
+  README of its own to carry it.
+- **The ten files restored locally** (the option-2 ruling's second part) is the orchestrator's on the Mac; nothing in
+  the repo, and nothing under `docs/incoming/_local/` is ever committed.
+
+R-643 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-644 — The history scrub (R-643's option 2) is shelved, not scheduled: no condition is checked before the release; it is revisited after the release, or earlier if a rights-holder asks for removal, and then the scrub and a GitHub Support purge are done together; #329 stands *(amends R-643)*
+*28 Oct 2026 · the owner's message of that evening and his "Resume." message the same evening; ported 29 Oct 2026;
+applied in R-643's text (a forward line under its option-2 quote and one under its heading) and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Ruling change: the history scrub (option 2) is shelved, not scheduled. #329 (removing the ten PDFs from the tree) stands. Only revisit the scrub if a rights-holder asks for removal; then do the scrub and a GitHub Support purge together. Record this against the licence-audit ruling and drop scrub condition-checking from the queue-draining plan. #330's leftover branch can be deleted once it's confirmed unmerged and unneeded (ask me first, per the branch-deletion rule).
+
+His "Resume." message, later the same evening, verbatim extract: "the history scrub shelved until after the release (no
+condition-checking until then)."
+
+*What it decides:*
+- **The scrub is shelved.** Nothing checks its conditions before the release. It is revisited after the release, or
+  earlier if a rights-holder asks for removal; then the scrub and a GitHub Support purge are done together. #329 stands.
+- **Recorded against the licence-audit ruling:** R-643 keeps its option-2 text as ruled, with this forward line under
+  it: "Shelved by R-644 (28 Oct 2026): not scheduled; revisited after the release, or earlier if a rights-holder asks
+  for removal; then the scrub and a GitHub Support purge are done together."
+- **Nothing else waits on the scrub.**
+- Deleting #330's leftover branch asks the owner first (R-349); that is the orchestrator's.
+
+*Applied per R-369:* the two wordings are read together, "Only revisit the scrub if a rights-holder asks" and "shelved
+until after the release (no condition-checking until then)": shelved; no condition-checking before the release;
+revisited after the release, or earlier on a rights-holder's request. The owner confirmed this combined wording on
+28 Oct 2026 (late evening): "(3) Your merged scrub wording is right."
+
+R-644 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-645 — No more cloud sessions: the six already started are the last; briefs 4 and 5 run on the Mac as local agents, brief 5 a small pilot, the data sweep after them *(amends R-357; supersedes R-636's cloud half)*
+*Amended in part by R-647 (a standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner).*
+*Amended in part by R-648 (its two-agent limit and its CLAUDE.md "Resources" rewrite: the workflow returns to main's,
+R-391's three agents at normal pressure and two if the Mac is swapping; `CLAUDE.md` gains one line only).*
+*Still in force: no cloud sessions; the order of the work (briefs 4 and 5 after #327, brief 5 a small pilot at
+ε = 1e-6 with its cost reported before scaling, the data sweep after them); everything run locally, under R-391's agent
+counts (R-648), not a two-agent limit.*
+*28 Oct 2026 · the owner's message of that late evening; ported 29 Oct 2026; applied in `CLAUDE.md` (one line, with
+R-647 and R-648), `plan/OPERATIONS.md` (a dated line on the cloud notes), R-357's and R-636's forward lines and
+`plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Change ur memory or whatever that I don't want to do a cloud session
+>
+> Ruling: no more cloud sessions. The six already started are the last; 1, 2, 3 and 6 are done, and 4 and 5 stopped early waiting on #327, so don't restart them in the cloud. Once #327 is in main, run briefs 4 and 5 here as local agents, within the two-agent limit, one at a time if the Mac is busy with CI. Brief 5 stays a small pilot (eps = 1e-6, a stated sample, report cost before scaling) so it doesn't swamp the machine. The data sweep for the other data-blocked PLAN.md targets (LLL-1, BZ-1, MK-1, AN-1 and any others) also runs locally, after briefs 4 and 5. Update CLAUDE.md's Resources bullet and the cloud-dispatch notes to say docs, qa, reviews and runs all happen locally under the two-agent limit, and record it as a ruling. Everything else from my last message stands: the 19 arXiv-default PDFs stay; the merged scrub wording is right.
+
+*What it decides:*
+- **No more cloud sessions.** It supersedes R-636's cloud half ("Pace: move non-GPU work (docs agent, qa test writing,
+  reviews) to cloud sessions"), already withdrawn by the owner (R-648); R-636's text is kept, with a forward line.
+- **The work's order:** briefs 4 and 5 after #327, as local agents, one at a time if the Mac is busy with CI; brief 5 a
+  small pilot (ε = 1e-6, a stated sample, its cost reported before scaling); the data sweep for the other data-blocked
+  PLAN.md targets (LLL-1, BZ-1, MK-1, AN-1 and any others) locally, after briefs 4 and 5.
+- **Its "two-agent limit" and its `CLAUDE.md` "Resources" rewrite are not applied:** R-648, later the same night,
+  governs over it there. `CLAUDE.md` gains the one line R-648 asks for; its Resources bullet stays main's (R-391).
+
+R-645 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-646 — The converged Burrau reference: arXiv v1 is SP-2's source, the owner also trying for the journal version and its supplementary snapshots through his own access; no separate author email; SP-2 notes that t = 200 is the time-reversed return and tests it as a reversibility check and a trajectory check *(closes RQ-611)*
+*28 Oct 2026 · the owner's message of that late evening; ported 29 Oct 2026; applied in `REVIEW_QUEUE.md` (RQ-611
+closed), `docs/archive/review_queue/M0.md` (the entry, moved with its ruling),
+`docs/incoming/2026-10-27_validation_plan/PLAN.md` (SP-2's row cites it) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> RQ-611: (b) stands. arXiv v1 is the source for SP-2. I'll also try (a): fetching the journal version and its supplementary snapshots through my own access into docs/incoming/_local/burrau_pzb2018/. When they arrive, diff Table 2 against the journal and add any snapshot times as extra checkpoints. No separate author email (c); I'll ask Boekholt in the existing thread if he replies. Note in SP-2 that t = 200 is the time-reversed return, so the expected state there is the initial condition, and test it as a reversibility check as well as a trajectory check.
+
+*What it decides:*
+- **RQ-611 closes on option (b):** arXiv v1 (`docs/incoming/2026-10-29_burrau_pzb2018/`) is SP-2's source. The owner's
+  attempt at (a), the journal version and its supplement fetched through his own access into
+  `docs/incoming/_local/burrau_pzb2018/` (never committed), is pending; when the files arrive, Table 2 is diffed
+  against the journal and any snapshot times are added as checkpoints. No separate author email (c).
+- **SP-2's row** (PLAN.md § 3.2, proposed) already carries the reversibility note (PR #332): t = 200 is the
+  time-reversed return, its expected state the initial condition, tested as a reversibility check and as a trajectory
+  check. It now cites R-646.
+
+R-646 is in the "design" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-647 — A standing rule, no exceptions: no cloud sessions and no briefs addressed to the owner; the orchestrator never asks him to start, paste into, restart or check a session; every agent is the orchestrator's own, dispatched locally by it; an agent's written instructions are internal task files *(amends R-645)*
+*Amended in part by R-648 (its "under the two-agent limit": R-391's agent counts stand).*
+*Still in force: all of it but "under the two-agent limit", which gives way to R-391's counts, three at normal pressure
+and two if the Mac is swapping (R-648).*
+*28 Oct 2026 · the owner's message of that late evening; ported 29 Oct 2026; applied in `CLAUDE.md` (one line, with
+R-645 and R-648), `plan/OPERATIONS.md` § "Dispatching" (a line) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Standing rule, no exceptions: NO cloud sessions and NO briefs addressed to me. Never ask me to start, paste into, restart or check a session; never write instructions intended for me to hand to another agent. All work runs as your own local agents under the two-agent limit, and you dispatch them yourself. If a local agent needs written instructions, that's an internal task file: move orch/cloud-briefs/ to orch/tasks/, drop "cloud" from every name and heading, and stop calling them briefs to me. Record this as a ruling and in CLAUDE.md/memory so it survives a context reset. Brief 16 as written is approved: run it locally in the order you gave (4 with 15, then 5, then 16, then the data sweep 13), after the PR queue drains.
+
+*What it decides:*
+- **A standing rule, no exceptions:** no cloud sessions, and no briefs or instructions addressed to the owner. The
+  orchestrator never asks him to start, paste into, restart or check a session, and never writes instructions meant for
+  him to hand to another agent. Every agent is the orchestrator's own, dispatched locally by it. An agent's written
+  instructions are an internal task file in the orchestrator's notes (`orch/tasks/`), not a brief to the owner. It
+  strengthens R-645.
+- **`CLAUDE.md`** carries it as one rule, beside R-645's and R-648's line; **`plan/OPERATIONS.md` § "Dispatching"**
+  carries the same line. Neither says anything of a two-agent limit: R-648 restores R-391's three.
+- **The order of work** (task 4 with 15, then 5, then 16, then the data sweep 13, after the PR queue drains) and the
+  move of the orchestrator's notes are the orchestrator's; nothing to port.
+
+R-647 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
+
+## R-648 — The workflow returns to main's, R-357, R-391 and R-277, with one addition, never a cloud session: R-634 is withdrawn, and so are R-636's agent-count and cloud clauses; three agents at normal memory pressure, two if the Mac is swapping; the RQ-605 audit on demand only *(supersedes R-634; withdraws R-636's agent-count and cloud clauses; amends R-645 and R-647)*
+*28 Oct 2026 · the owner's message of that late evening, and his ruling on RQ-605's audit the same night; ported
+29 Oct 2026; applied before merge on PRs #323 and #328 (the strip, by the orchestrator: R-634's and R-636's withdrawal
+lines, and the forward lines on R-357, R-262, R-277 and R-391), and in this port in R-634's and R-636's lines (the
+words "the owner's ruling of 28 Oct 2026, to be ported as a ruling of its own" become "R-648"), R-645's and R-647's
+forward lines, `CLAUDE.md` (one line), `plan/OPERATIONS.md` (a dated line) and `plan/rule_groups.yaml`*
+
+The owner's words, verbatim:
+
+> Restore the workflow to how it was before today's cloud changes, i.e. what main says now (R-357, R-391, R-277), with one addition: never use cloud sessions.
+> 1. Strip the workflow parts of R-634 (cloud trial for GUI tasks, #323) and R-636 (two-agent cap; docs/qa/reviews to cloud, #328) from those PRs before they merge: revert their CLAUDE.md, plan/OPERATIONS.md and plan/WORKFLOW.md edits about cloud sessions and agent counts to main's text. Keep every other ruling in those PRs (R-633, R-635, RQ-583/592/602/605, pace, holds) untouched. Record R-634 as withdrawn and R-636's agent/cloud clauses as withdrawn, with today's date and my words: "like how it was before this cloud session stuff started".
+> 2. Agents: back to R-391: 3 at normal memory pressure, 2 if the Mac is swapping, per main's Resources table and r391-check.sh.
+> 3. Cloud: none. R-647 stands (no cloud sessions, no briefs to me). R-645 needs no CLAUDE.md rewrite beyond one line saying cloud sessions are not used; leave R-357's setup notes as dormant reference.
+> 4. Audit your own memory/notes (~/.claude memory, orch/carry-notes.md, any saved rules) for anything today added about cloud dispatch, the two-agent cap or briefs for me; remove or mark superseded so a context reset comes back to this state. Report what you changed.
+> 5. Tell me exactly what you stopped on the Mac this evening outside Principia (Lima p105 / Four devcontainer, Docker, the codex CLI on ttys003) and whether anything needs restarting. Don't touch other projects' processes again without asking me first.
+
+The owner's ruling on R-636's RQ-605 clause, the same night, verbatim (recorded under R-636's heading, the forward line
+"Its RQ-605 clause"):
+
+> RQ-605 weekly audit: on demand only for now. No scheduled cloud task and no scheduled local job; run it when I ask (e.g. before a release or milestone gate). Record this against R-636's RQ-605 clause as the owner's 28 Oct ruling. If the audit can run as a plain GitHub Actions scheduled workflow (no Claude session, no Mac), tell me and I may switch it to that later.
+
+*What it decides:*
+- **The workflow is main's as it stood before 28 Oct's cloud changes:** R-357 (the build loop on the Mac), R-391 (three
+  agents at normal and at warning unless the Mac is swapping, then two, read by the page-out check) and R-277 (only the
+  running work at critical), with one addition: no cloud session is ever used (R-645, R-647).
+- **R-634 is withdrawn in full and R-636's agent-count and cloud clauses are withdrawn,** 28 Oct 2026, in the owner's
+  words: "like how it was before this cloud session stuff started". Their edits to `CLAUDE.md`, `plan/OPERATIONS.md`
+  and `plan/WORKFLOW.md` about cloud sessions and agent counts were reverted to main's text on PRs #323 and #328 before
+  they merged, by the orchestrator, with the withdrawal lines; this port names R-648 in them, where they said "the
+  owner's ruling of 28 Oct 2026, to be ported as a ruling of its own", and marks R-634 "Superseded by R-648", so
+  `plan/CURRENT_RULES.md` leaves it out. Every other ruling in those PRs stands (R-633, R-635, RQ-583, RQ-592, RQ-602
+  and RQ-605, the pace and the holds).
+- **R-645 needs one line in `CLAUDE.md` only,** saying cloud sessions are not used; its "two-agent limit" and its
+  Resources rewrite are not applied, and the Resources bullet stays main's (R-391). R-357's setup notes and
+  `plan/OPERATIONS.md`'s Linux cloud notes stay as dormant reference, with one dated line where they begin (§ "Where
+  the build loop runs (R-357)"): "Not used: no cloud sessions (R-645, R-647, R-648)."
+- **R-647 stands,** but for its two-agent limit, which gives way to R-391's counts.
+- **The RQ-605 audit** is on demand only, as the forward line under R-636's heading records: no scheduled cloud task and
+  no scheduled local job; run when the owner asks.
+- Items 4 and 5 (the orchestrator's own notes, and what was stopped outside the repo) are the orchestrator's report to
+  the owner; nothing to port.
+
+*Applied per R-369:* the forward lines on R-357, R-262, R-277 and R-391 that the strip wrote say that R-636's clause is
+withdrawn and don't name a ruling still to be ported, so none of their words changes here.
+
+R-648 is in the "process" group of `plan/rule_groups.yaml`. Changes no requirement.
