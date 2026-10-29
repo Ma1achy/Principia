@@ -186,8 +186,9 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
 
 - 2021: Table 2's 11 triple-collision points are TSM 2019's Table 1 (and so Li 2021 GT rows). Table 4's nine
   non-collision controls are TSM point 1 displaced by 10⁻³, 10⁻⁴ and 10⁻⁵ at azimuths 60°, 120° and 180°; their
-  geometry checks to the printed digits (largest residual 5.4e-9, `table4_geometry_check.txt`). They are the negative
-  cases for the Li 2021 target: d_min must stay above zero there.
+  geometry checks to the printed digits (largest residual 5.4e-9, `table4_geometry_check.txt`, written by
+  `scripts/tm21_table4_geometry.py`). They are the negative cases for the Li 2021 target: d_min must stay above zero
+  there.
 - 2023, decoded (`tanikawa_mikkola_2023/decode_check.txt`, `scripts/tm23_decode.py`): unit masses, G = 1; body 1 at
   (x, y), bodies 2 and 3 at (∓0.5, 0); barycentric R1 = (2/3)(x, y), R2 = −(1/3)(x, y) − (0.5, 0),
   R3 = −(1/3)(x, y) + (0.5, 0); V1 = −2α2 R1 + β1 R2, V2 = α2 R1 − 2β1 R2, V3 = −V1 − V2 (eqs. 20–23). All 432 rows
