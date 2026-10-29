@@ -546,8 +546,24 @@ Already ingested in PR #332: `../2026-10-29_burrau_pzb2018/` (proposed SP-2; RQ-
   remap". Two of Tanikawa's papers say otherwise: Tanikawa, Umehara & Abe 1995, eq. (1), and Tanikawa, Saito & Mikkola
   2019, §3, both put the free body in D = {x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1} with the others at (∓0.5, 0), and the
   2019 paper says "D11 corresponds to Anosova's region". Task 15b's record (§ 5.1) finds the same for four more
-  papers, and its § 10.4 leaves TM-1's "D11 mirror remap" as it is until the owner confirms. Whether Tanikawa & Mikkola
-  2008, 2015 and 2021 (TS-1, TS-2, TM-1's sources) use the mirror was not checked here.
+  papers, and its § 10.4 leaves TM-1's "D11 mirror remap" as it is until the owner confirms. Two of Tanikawa &
+  Mikkola's papers, read here:
+  - **Tanikawa & Mikkola 2008** (arXiv:0802.2465, "A trial symbolic dynamics of the planar three-body problem",
+    committed at `../2026-10-25_replication/papers/tanikawa_mikkola_2008_arXiv0802.2465.pdf`), p. 3, quoted: "We
+    want to extend the free fall problem with equal masses (Anosova & Orlov 1986; Tanikawa et al. 1995), in which
+    bodies 2 and 3 initially stand still at (−0.5, 0) and (0.5, 0), respectively, whereas body 1 stands still at
+    (x, y) ∈ D11 = {x ≥ 0, y ≥ 0, (x − 0.5)² + y² ≤ 1}." This is very likely where the repo's "mirror labelling"
+    sentence comes from. It is probably a typo: the paper cites Tanikawa et al. 1995 for the set-up, whose eq. (1)
+    prints (x + 0.5)², and the region as printed does not keep AB the longest side: (1.4, 0.3) lies in it
+    (0.9² + 0.3² = 0.90 ≤ 1) with PA = 1.92 > AB = 1.
+  - **Tanikawa & Mikkola 2015** (PASJ 67, 115; the owner's copy, local-only:
+    `../_local/tanikawa_mikkola_2015_PASJ_67_115.pdf`, see `../2026-10-25_replication/README.md` line 85), p. 115-2,
+    eq. (9), quoted: "Initially, body m2 stands still at (−0.5, 0), and body m3 stands still at (0.5, 0) of the
+    (x, y)-plane. Body m1 stands still at any position in D = {(x, y) : x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1}."; Fig. 1's
+    caption, p. 115-3: "Anosova's D region is equivalent with any of them, say, region D11."
+
+  Tanikawa & Mikkola 2021 (TM-1's source) was not read here. Whether TM2008's (x − 0.5)² is a typo is for the
+  ruling.
 - **Titov 2024:** the copied E and J rows (B2-11, B2-16, T4-03), the inconsistent B2-11 ICs, Tables 2–3's own errors and
   chapter 5's misprints, all listed above.
 - **Tanikawa, Saito & Mikkola 2019:** the p. 25 orientation sentence, "Figs. 8, 11, and 11".
@@ -622,7 +638,7 @@ the time of this commit, `origin/rulings/2026-10-29-r637` had taken RQ-617 to RQ
 **If either is taken when this is applied, renumber to the next free ones**, and the references above with them.
 
 ```
-## RQ-650: Which frame Tanikawa's free-fall papers use: the repo says "the mirror labelling D11 = {(x−0.5)² + y² ≤ 1}", two of the papers say Anosova's region *(physics; `docs/incoming/2026-10-25_replication/catalogue.md` line 13; `docs/design/principia_dd_replication.md` line 564; PLAN.md line 707; context: TM-1, TS-1, TS-2, proposed TSM-1 and TUA-1)*
+## RQ-650: Which frame Tanikawa's free-fall papers use: the repo says "the mirror labelling D11 = {(x−0.5)² + y² ≤ 1}", three of the papers say Anosova's region and one prints the mirror *(physics; `docs/incoming/2026-10-25_replication/catalogue.md` line 13; `docs/design/principia_dd_replication.md` line 564; PLAN.md line 707; context: TM-1, TS-1, TS-2, proposed TSM-1 and TUA-1)*
 
 *Queued 29 Oct 2026 by the agent ingesting the external sources (`docs/incoming/2026-10-28_external_sources/README.md` §
 "Corrections and contradictions").*
@@ -634,14 +650,30 @@ the time of this commit, `origin/rulings/2026-10-29-r637` had taken RQ-617 to RQ
   - Tanikawa, Umehara & Abe 1995, eq. (1): "Let mass points m₂ and m₃ stand still at A(−0.5, 0) and B(+0.5, 0) … m₁
     stand still at a point P(x, y) where (x, y) ∈ D = {(x, y) : x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1}."
   - Tanikawa, Saito & Mikkola 2019, §3: the same D, and "D11 corresponds to Anosova's region".
+  - Tanikawa & Mikkola 2008 (arXiv:0802.2465; committed at
+    `docs/incoming/2026-10-25_replication/papers/tanikawa_mikkola_2008_arXiv0802.2465.pdf`), p. 3: "We want to extend
+    the free fall problem with equal masses (Anosova & Orlov 1986; Tanikawa et al. 1995), in which bodies 2 and 3
+    initially stand still at (−0.5, 0) and (0.5, 0), respectively, whereas body 1 stands still at (x, y) ∈ D11 =
+    {x ≥ 0, y ≥ 0, (x − 0.5)² + y² ≤ 1}."
+  - Tanikawa & Mikkola 2015 (PASJ 67, 115; the owner's copy, local-only, not committed:
+    `docs/incoming/_local/tanikawa_mikkola_2015_PASJ_67_115.pdf`), p. 115-2, eq. (9): "Initially, body m2 stands still
+    at (−0.5, 0), and body m3 stands still at (0.5, 0) of the (x, y)-plane. Body m1 stands still at any position in
+    D = {(x, y) : x ≥ 0, y ≥ 0, (x + 0.5)² + y² ≤ 1}."; Fig. 1's caption, p. 115-3: "Anosova's D region is equivalent
+    with any of them, say, region D11."
 - **What is settled:** the 1995 and 2019 papers use the Agekyan–Anosova frame itself, so TSM-1 and TUA-1 need no remap;
   task 15b's record (`docs/incoming/2026-10-29_research_batches/README.md` § 5.1, unmerged) finds the same for Li et
   al. 2021, Tanikawa & Umehara 1998, Tanikawa 2000 and Martynova & Orlov 2014, and its § 10.4 holds TM-1's remap
   wording for the owner's confirmation; this entry is the question that confirmation answers.
-- **What is not:** whether Tanikawa & Mikkola 2008, 2015 and 2021 (TS-1, TS-2, TM-1) use the mirror, so whether their
-  rows' "D11 mirror remap" and the general sentence stand.
-- **Options seen:** (a) a porter reads the three papers' set-up sections and corrects the sentence to name the papers
-  that use each frame; (b) drop "mirror" and name D11 as TSM 2019 defines it.
+- **Also read:** Tanikawa & Mikkola 2015 uses Anosova's region, (x + 0.5)², like the 1995 and 2019 papers. Tanikawa
+  & Mikkola 2008 prints (x − 0.5)², very likely the source of the repo's "mirror labelling" sentence; it is probably a
+  typo, since the paper cites Tanikawa et al. 1995 (whose eq. (1) prints (x + 0.5)²) for this very set-up, and the
+  printed region does not keep AB the longest side: (1.4, 0.3) is inside it, with PA = 1.92 > AB = 1.
+- **What is not:** whether TM2008's (x − 0.5)² is a typo or the frame its runs used, and which frame Tanikawa &
+  Mikkola 2021 (TM-1's source, not read here) uses; so whether the rows' "D11 mirror remap" and the general sentence
+  stand.
+- **Options seen:** (a) a porter reads Tanikawa & Mikkola 2021's set-up section and corrects the sentence to name the
+  papers that use each frame, with TM2008's (x − 0.5)² recorded as printed; (b) drop "mirror" and name D11 as TSM 2019
+  and TM2015 define it.
 - **Applied meanwhile:** nothing; the proposed rows TSM-1 and TUA-1 state their frame from their own papers.
 
 ## RQ-651: Anosova 1986's time unit τ: eq. (1) as printed is not a time *(physics; `docs/incoming/2026-10-28_external_sources/README.md` § "Anosova 1986"; context: proposed AN-2, AN-1)*
