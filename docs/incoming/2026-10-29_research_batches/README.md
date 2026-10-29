@@ -54,8 +54,9 @@ The ADS scans were therefore not fetched: papers-2 supplied both papers.
   text layer drops minus signs that the page prints, for instance. The second reading is Apple Vision OCR of the same
   page images (`scripts/ocr.swift`); where whole-table OCR returned rotated glyphs it was run cell by cell
   (`scripts/ocr_cells.sh`). Where ChatGPT gave a transcription (`data/*.json`), it is reading A, diffed against
-  reading B (`scripts/diffreadings.py`, cell by cell); every disagreement was resolved against the page and the
-  resolution is written in the diff file. Reconciled CSVs are what the page prints.
+  reading B (`scripts/diffreadings.py`, cell by cell); every disagreement was resolved against the page, and the
+  resolution is written in the diff file or, where the diff file carries none, in § 4's Resolution column. Reconciled
+  CSVs are what the page prints.
 - **Citations and DOIs.** All 33 DOIs were looked up in the Crossref REST API one request at a time
   (`scripts/crossref_check.py` → `doi_check.tsv`): every one resolves, and author, year, volume and pages agree with
   the batch manifests and the papers' first pages, with one note (§ 9). arXiv licences were read from the abstract
@@ -482,7 +483,7 @@ publishers, outside the repo.*
 - `sources.tsv`, `fetch.sh`: the papers kept local, their hashes, verified licence evidence and how to get each back.
 - `doi_check.tsv`, `dois.txt`, `arxiv_licences.tsv`: the citation and licence checks.
 - One folder per source (§ 3's table): `*_eye.csv` reading B, `*_ocr*` the second reading, `*_chatgpt_A.csv` reading
-  A where one exists, `*_diff*.txt` the diffs with resolutions, `*_reconciled.csv` the page's values, and `checks.txt`
-  or similar for the arithmetic.
+  A where one exists, `*_diff*.txt` the diffs (each resolution in the file or in § 4), `*_reconciled.csv` the page's
+  values, and `checks.txt` or similar for the arithmetic.
 - `scripts/`: our scripts, run with `python3 -I`; `ocr.swift` is the OCR helper (Apple Vision), `render.sh` and
   `crop.sh` render page images with `pdftoppm`.
