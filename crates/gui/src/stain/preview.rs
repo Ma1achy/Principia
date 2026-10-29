@@ -4,7 +4,8 @@
 //! (§G1: "Every preview of the slice keeps the viewport's aspect ratio — square for the slice"), the Explore figure's
 //! rect, fitted into its area, never stretched or cropped. Under it the inspector shows the selected node: its title
 //! and what it maps, its choices (a source's field, the combiner's occupant) and its scalar params, each edit one
-//! `SetField` of the graph (a slider's drag one, when it ends, R-96), the outcome palette's swatches, and its shader's
+//! `SetField` of the graph (a slider's drag applied every frame its value changes, one history entry, R-96, R-458 F2),
+//! the outcome palette's swatches, and its shader's
 //! actions; with no node selected, the graph's. The full morphing inspector is TASK-M7-23's and TASK-M8-21's.
 
 use eframe::egui::{
@@ -159,17 +160,12 @@ fn inspector(
     if !ps.is_empty() {
         ui.label(RichText::new("▾ Params").strong());
         for (i, (name, value, lo, hi)) in ps.into_iter().enumerate().take(PARAM_IDS.len()) {
-            let mut v = match &s.param_drag {
-                Some((node, dragged, v)) if *node == id && *dragged == name => *v,
-                _ => value,
-            };
+            let mut v = value;
             let slider = ui.add(Slider::new(&mut v, lo..=hi).text(name.as_str()));
             keys.place(PARAM_IDS[i], &slider);
-            if slider.dragged() {
-                s.param_drag = Some((id, name.clone(), v));
-            }
-            if slider.drag_stopped() || (slider.changed() && !slider.dragged()) {
-                s.param_drag = None;
+            // Live: each frame the value changes, one `SetField` of the graph, the drag's frames one history entry
+            // under the pointer's hold's key (R-458 F2).
+            if slider.changed() {
                 out.edits
                     .extend(edited(g, |g| g.set_param(id, &name, vec![v])));
             }

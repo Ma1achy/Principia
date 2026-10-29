@@ -157,8 +157,20 @@ fn mock_compass_modes_the_normal_is_the_drawn_planes() {
     }
 }
 
+/// How far a slice-mode drag by `delta` over the cube's `square` moves the slice of `p` along its drawn normal (R-465):
+/// its travel along the drawn normal's screen direction, the projection of `n̂` and the cube's centre, over the cube's
+/// screen width `2√3·S`, times the whole range.
+fn along_s(p: &Plane, delta: egui::Vec2, square: Rect) -> f64 {
+    let iso = Iso::fit(square);
+    let n = compass::drawn_normal(&View::of(p)).expect("a drawn plane");
+    let ([nx, ny], [cx, cy]) = (iso.at64(n), iso.at64([0.0; 3]));
+    let len = (nx - cx).hypot(ny - cy);
+    let travel = (f64::from(delta.x) * (nx - cx) + f64::from(delta.y) * (ny - cy)) / len;
+    travel / (2.0 * 3f64.sqrt() * iso.s) * 2.0 * Z0_HALF_RANGE
+}
+
 #[test]
-fn mock_compass_modes_a_drag_is_one_edit_by_its_mode() {
+fn mock_compass_modes_a_drag_edit_by_its_mode() {
     let p = tilted(20.0, -10.0, 15.0);
     let before = Angles::of(&View::of(&p));
     let mut tilting = Drag::start(Touch::Tilt, &p, &SLICE_FRAME);
@@ -173,21 +185,40 @@ fn mock_compass_modes_a_drag_is_one_edit_by_its_mode() {
     let mut slicing = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
     slicing.moved(egui::vec2(-6.0, 9.0), SQUARE);
     let edit = drag_edit(&p, &SLICE_FRAME, &slicing).expect("an edit");
-    check_along_normal(&p, &edit, -6.0 / w * 2.0 * Z0_HALF_RANGE, 1e-12);
+    let amount = along_s(&p, egui::vec2(-6.0, 9.0), SQUARE);
+    check_along_normal(&p, &edit, amount, 1e-12);
+    rejects(
+        "the horizontal travel over the square's width (R-451 B3 as written)",
+        || check_along_normal(&p, &edit, -6.0 / w * 2.0 * Z0_HALF_RANGE, 1e-9),
+    );
+    // A drag with no travel sets the plane it started on: the edit sent every frame is the drag's target.
     for mode in [Touch::Tilt, Touch::Slice] {
         let still = Drag::start(mode, &p, &SLICE_FRAME);
-        assert_eq!(
-            drag_edit(&p, &SLICE_FRAME, &still),
-            None,
-            "no travel, no edit"
+        let moved = after(&p, &[drag_edit(&p, &SLICE_FRAME, &still).expect("an edit")]);
+        let close = |a: &Latent, b: &Latent| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12);
+        assert!(
+            close(&moved.z0, &p.z0) && close(&moved.q1, &p.q1) && close(&moved.q2, &p.q2),
+            "no travel, the plane it started on: {mode:?}"
         );
     }
+    // A drag across the drawn normal's screen direction moves nothing (R-465).
+    let [sx, sy] = match compass::reading(&View::of(&p)) {
+        compass::Reading::Along(s) => s,
+        other => panic!("a tilted plane reads along ŝ, not {other:?}"),
+    };
+    let across = egui::vec2((-sy * 30.0) as f32, (sx * 30.0) as f32);
+    let mut sideways = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
+    sideways.moved(across, SQUARE);
+    assert!(
+        sideways.amount.abs() < 1e-6,
+        "a drag across ŝ: {}",
+        sideways.amount
+    );
     let mut upright = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
     upright.moved(egui::vec2(0.0, 30.0), SQUARE);
-    assert_eq!(
-        drag_edit(&p, &SLICE_FRAME, &upright),
-        None,
-        "a vertical slice drag, no edit"
+    rejects(
+        "a vertical slice drag that moves nothing (R-451 B3 as written)",
+        || assert_eq!(upright.amount, 0.0),
     );
     rejects("a slice-mode drag that tilts", || {
         along_normal(&p, &drag_edit(&p, &SLICE_FRAME, &tilting).expect("an edit"));
@@ -535,8 +566,12 @@ fn mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
             (before.q1, before.q2),
             "the basis unchanged"
         );
-        let amount = -12.0 / f64::from(sq.width()) * 2.0 * Z0_HALF_RANGE;
+        let amount = along_s(&before, egui::vec2(-12.0, 9.0), sq);
         check_along_normal(&before, &z0_edit(after.z0), amount, 1e-6);
+        rejects("the horizontal travel alone (R-451 B3 as written)", || {
+            let horizontal = -12.0 / f64::from(sq.width()) * 2.0 * Z0_HALF_RANGE;
+            check_along_normal(&before, &z0_edit(after.z0), horizontal, 1e-6)
+        });
         assert_eq!(app.manifold.compass.mode, Touch::Slice);
         rejects("a slice-mode drag that tilts", || {
             along_normal(&before, &tilt(&before, &SLICE_FRAME, 5.0, 0.0));
@@ -553,11 +588,12 @@ fn mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
 }
 
 #[test]
-fn mock_compass_modes_the_drag_draws_its_plane_until_it_ends() {
+fn mock_compass_modes_the_drag_applies_its_plane_every_frame() {
     let (mut app, mut h) = tilted_app();
     click_button(&mut h, &mut app, SLICE_BUTTON);
     let sq = square(&h);
     let before = app.snapshot().sim.plane.clone();
+    let depth = app.snapshot().history.undo_depth;
     let from = off_cube(sq);
     let delta = egui::vec2(-12.0, 9.0);
     let button = |pos, pressed| egui::Event::PointerButton {
@@ -573,15 +609,27 @@ fn mock_compass_modes_the_drag_draws_its_plane_until_it_ends() {
     ] {
         let _ = h.frame(&mut app, events);
     }
-    let depth = app.snapshot().history.undo_depth;
-    settle(&mut h, &mut app);
-    assert_eq!(app.snapshot().history.undo_depth, depth, "no edit yet");
+    // The edit is applied while the pointer is held: the contract holds the drag's target (R-458 F1).
     let mut d = Drag::start(Touch::Slice, &before, &SLICE_FRAME);
     d.moved(delta, sq);
     let shown = after(
         &before,
         &[drag_edit(&before, &SLICE_FRAME, &d).expect("an edit")],
     );
+    let held = app.snapshot().clone();
+    assert_eq!(
+        held.history.undo_depth,
+        depth + 1,
+        "the edit applied mid-drag"
+    );
+    assert_eq!(
+        held.sim.plane, shown,
+        "the contract holds the drag's target"
+    );
+    rejects("a drag sent on release", || {
+        assert_eq!(held.history.undo_depth, depth)
+    });
+    settle(&mut h, &mut app);
     let mid = drawing(&h, &app);
     let want = compass::drawing(sq, &shown, &View::of(&shown), Touch::Slice, &free_lock());
     assert_eq!(mid.slice, want.slice, "the plane the drag leaves");
@@ -589,13 +637,15 @@ fn mock_compass_modes_the_drag_draws_its_plane_until_it_ends() {
     rejects("the plane drawn where the drag began", || {
         assert_eq!(mid.slice, at_start.slice)
     });
+    let rows = app.console().len();
     let _ = h.frame(&mut app, vec![button(from + delta, false)]);
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(
         app.snapshot().history.undo_depth,
         depth + 1,
-        "one edit, at the end"
+        "one entry for the drag"
     );
+    check_one(&setfields(&app, rows), "z0");
 }
 
 #[test]

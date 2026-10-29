@@ -299,8 +299,6 @@ pub struct Scratch {
     pub library: library::State,
     /// Whether an edit recompiles at once (the Problems pane's checkbox).
     pub auto_recompile: bool,
-    /// A param's slider being dragged: its node, its name and its value, sent as one `SetField` when the drag ends.
-    pub param_drag: Option<(NodeId, String, f64)>,
     /// The preview's rect as last drawn.
     pub preview: Option<Rect>,
 }
@@ -312,7 +310,6 @@ impl Default for Scratch {
             view: View::Graph,
             library: library::State::default(),
             auto_recompile: true,
-            param_drag: None,
             preview: None,
         }
     }

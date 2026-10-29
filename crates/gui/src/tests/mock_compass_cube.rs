@@ -1,7 +1,8 @@
 //! `mock_compass_cube` (REQ-GUI-193; R-451 B1, B3 to B6; render_gui_spec § "The compass: look and views (R-451,
 //! R-452)"): the cube as the nav-cube reference draws it, in the dev GUI's dark colours: the isometric projection and
 //! its fit, the edges' depth order, opacity and width, the Lambert shade, the grid, the labels, corner numbers and
-//! readout per mode, the drags at the reference's rates, and the easing, in the drawing only, the `SetField` carrying
+//! readout per mode, the drags at the reference's rates (the slice drag read along the drawn normal's screen direction,
+//! R-465), and the easing, in the drawing only, the `SetField` carrying
 //! the target. The drawing is compared with the reference's own records under
 //! `fixtures/screenshot/01_main/compass/reference/` (each record's `made` says how it was made). Each check also runs
 //! on an input it must reject (R-176, through `rejects`).
@@ -504,31 +505,47 @@ fn mock_compass_cube_clip_and_grid() {
 fn mock_compass_cube_drags_at_the_references_rates() {
     let sq = square172();
     let flat = plane(&view(0.0, 0.0, 0.0, 1.0), [0.0, 0.0, 0.1]);
-    // Slice: half the width moves the plane H along its normal, one z₀ edit; the vertical does nothing.
+    // Slice: half the cube's width, √3·S, along the drawn normal's screen direction ŝ = (−√3/2, ½) moves the plane H
+    // along its normal, a z₀ edit; the travel across ŝ does nothing (R-465).
+    let half = 3f64.sqrt() * Iso::fit(sq).s;
+    let s_hat = [-(3f64.sqrt()) / 2.0, 0.5];
+    let along = |k: f64| vec2((s_hat[0] * k) as f32, (s_hat[1] * k) as f32);
     let mut d = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
-    d.moved(vec2(86.0, 0.0), sq);
-    assert_eq!(d.amount, Z0_HALF_RANGE);
+    d.moved(along(half), sq);
+    assert!((d.amount - Z0_HALF_RANGE).abs() < 1e-6, "{}", d.amount);
     let edit = drag_edit(&flat, &SLICE_FRAME, &d).expect("an edit");
     assert!(matches!(edit.edit, Edit::Sim(SimField::Z0(_))));
     let moved = after(&flat, &[edit]);
     let n = latent_normal(&flat, &SLICE_FRAME).expect("a normal");
+    // The drag travels in f32 points, so the move is H to the pointer's precision, and exactly `amount` along the normal.
     for ((m, z), n) in moved.z0.iter().zip(&flat.z0).zip(&n) {
-        assert!((m - z - Z0_HALF_RANGE * n).abs() < 1e-12);
+        assert!((m - z - d.amount * n).abs() < 1e-12);
+        assert!((m - z - Z0_HALF_RANGE * n).abs() < 1e-6);
     }
-    let mut up = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
-    up.moved(vec2(0.0, -80.0), sq);
-    assert_eq!(
-        drag_edit(&flat, &SLICE_FRAME, &up),
-        None,
-        "a vertical slice drag"
+    let mut across = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
+    across.moved(
+        vec2((s_hat[1] * half) as f32, (-s_hat[0] * half) as f32),
+        sq,
     );
-    rejects("a vertical slice drag that moves", || {
-        assert!(drag_edit(&flat, &SLICE_FRAME, &up).is_some())
+    assert!(
+        across.amount.abs() < 1e-6,
+        "a drag across ŝ: {}",
+        across.amount
+    );
+    let mut right = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
+    right.moved(vec2(half as f32, 0.0), sq);
+    assert!(
+        right.amount < 0.0,
+        "a drag to the right moves along −e_d: {}",
+        right.amount
+    );
+    rejects("a drag across ŝ that moves", || {
+        assert!(right.amount.abs() < 1e-6)
     });
     // At a corner point the compass draws no plane, and a slice drag sends nothing.
     let corner = plane(&view(90.0, 90.0, 0.0, 1.0), [0.0; 3]);
     let mut at_corner = Drag::start(Touch::Slice, &corner, &SLICE_FRAME);
-    at_corner.moved(vec2(86.0, 0.0), sq);
+    at_corner.moved(along(half), sq);
     assert_eq!(drag_edit(&corner, &SLICE_FRAME, &at_corner), None);
     // The control: z₀ moved H along the rounding normal of q₁ × q₂, the plane x + y = c.
     let (q1, q2) = compass::frame_basis(&View::of(&corner));
@@ -551,13 +568,17 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     rejects("an unclamped tilt drag", || assert_eq!(t.tau.0, 180.0));
     t.moved(vec2(0.0, -43.0), sq);
     assert_eq!(t.tau, (90.0, 45.0));
-    // Clamped as it moves: back half the width from the clamp is 0°.
+    // Clamped as it moves: back half the width from the clamp is 0°, and the edit sets the plane it started on.
     t.moved(vec2(-86.0, 43.0), sq);
     assert_eq!(t.tau, (0.0, 0.0));
-    assert_eq!(
-        drag_edit(&flat, &SLICE_FRAME, &t),
-        None,
-        "back where it started"
+    let back = after(
+        &flat,
+        &[drag_edit(&flat, &SLICE_FRAME, &t).expect("an edit")],
+    );
+    let a = Angles::of(&View::of(&back));
+    assert!(
+        a.tau1.abs() < 1e-9 && a.tau2.abs() < 1e-9,
+        "back where it started: {a:?}"
     );
     // γ kept through a tilt.
     let turned = plane(&view(0.0, 0.0, 30.0, 1.0), [0.0; 3]);

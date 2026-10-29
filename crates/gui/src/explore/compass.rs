@@ -16,13 +16,18 @@
 //! It has two modes, Tilt (the default) and Slice, with a button for each beside it, which show the current mode; a
 //! click on one switches the mode, and touching a slice slider still switches it to Slice and touching a tilt to Tilt
 //! (R-409). In tilt mode a drag sets `τ₁` by its horizontal travel and `τ₂` by its vertical, up raising it, the full
-//! width or height 180°, each clamped to ±90° as it moves (one `SetField` on the basis); in slice mode its horizontal
-//! travel moves the plane along the drawn plane's normal, the full width the whole range, and its vertical travel does
-//! nothing (one `SetField` on `z₀`; R-451 B3). Each drag is one edit, made when it ends (R-96). The drawing eases toward
-//! its targets by the reference's law ([`ease_factor`]; R-451 B4): the contract holds the target, so the figure, the
-//! sliders and every `SetField` see it, never an eased value. Locked, it carries a gold pin at the anchor, the pivot
-//! every basis edit turns about ([`super::manifold_view::about_the_pin`]), and a slice-mode drag is an excursion along
-//! the normal through the anchor.
+//! width or height 180°, each clamped to ±90° as it moves (a `SetField` on the basis; R-451 B3); in slice mode its
+//! travel along the drawn normal's direction on the screen, `ŝ`, moves the plane along that normal, so the drawn plane
+//! follows the pointer, the cube's full width `2√3·S` the whole range, the travel across `ŝ` doing nothing; where the
+//! drawn normal's screen image is shorter than `0.25·S`, the drag reads its vertical travel instead, up moving the plane
+//! toward the viewer ([`Reading`]; R-465). A drag is live: its edit is applied every frame the pointer moves it, at most
+//! once a frame, so the sliders, the readout and the figure follow it, and the whole drag is one history entry, the app
+//! sending each frame's edit under the pointer's hold's key (R-458 F1). The drawing eases toward its targets by the
+//! reference's law ([`ease_factor`]; R-451 B4): the contract holds the target from the drag's first frame, so the figure,
+//! the sliders, the readout and every `SetField` see it, never an eased value; only the cube's drawing eases (R-465
+//! N1). Locked, it carries a gold pin at the anchor, the pivot every basis edit turns about
+//! ([`super::manifold_view::about_the_pin`]), and a slice-mode drag is an excursion along the normal through the
+//! anchor.
 //!
 //! Its keys (§G3): the compass is one element in navigation mode, beside its Tilt and Slice buttons; Enter on it
 //! starts interaction mode, in which the arrows tilt in tilt mode and move the slice along the normal in slice mode,
@@ -65,8 +70,8 @@ pub const TILT_BUTTON: &str = "Tilt";
 pub const SLICE_BUTTON: &str = "Slice";
 /// The hint under the buttons in tilt mode, reworded for the reference's drags (a look choice, R-390; R-451 B7).
 pub const HINT_TILT: &str = "drag across to tilt q₁, up and down to tilt q₂";
-/// The hint under the buttons in slice mode (a look choice, R-390; R-451 B7).
-pub const HINT_SLICE: &str = "drag across to move the plane along its normal";
+/// The hint under the buttons in slice mode (a look choice, R-390; R-451 B7), the drag along the normal (R-465).
+pub const HINT_SLICE: &str = "drag along the normal to move the plane";
 /// The pin's label, as 08_lock.png's.
 pub const PINNED: &str = "pinned";
 
@@ -112,6 +117,10 @@ pub const LABEL_SIZE: f32 = 11.0;
 pub const NUMBER_SIZE: f32 = 9.0;
 /// The degrees a drag across the cube's full width, or its full height, tilts.
 pub const DRAG_DEGREES: f64 = 180.0;
+/// The shortest the drawn unit normal's screen image is, in units of the cube's scale `S`, for a slice-mode drag to read
+/// its travel along it; shorter, near the view axis, the drag reads its vertical travel (R-465 N3; a look choice under
+/// R-390, the cut of the old compass's `MIN_NORMAL_ON_SCREEN`).
+pub const MIN_NORMAL_ON_SCREEN: f64 = 0.25;
 /// The easing's base: each frame `v ← v + (target − v)·(1 − 0.0016^dt)`.
 pub const EASE_BASE: f64 = 0.0016;
 /// The longest frame the easing takes, in seconds.
@@ -850,6 +859,47 @@ fn paint_slice(painter: &Painter, visuals: &egui::Visuals, iso: &Iso, slice: &Sl
 
 // --- the drags, the easing and the edits -----------------------------------------------------------------------------
 
+/// How a slice-mode drag reads the pointer's travel (R-465): along the drawn normal's screen direction `ŝ`, or, where
+/// that normal points near the viewer, vertically; a plane the compass does not draw reads nothing (R-451 B11).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Reading {
+    /// Along `ŝ`, the unit vector of `P(n̂) − P(0)` on the screen, `y` down.
+    Along([f64; 2]),
+    /// Vertically, up moving the plane along `n̂` times this sign, `+1` where `n̂` faces the viewer (`n̂·(1, 1, 1) > 0`),
+    /// else `−1`, so up moves the plane toward the viewer (R-465 N3).
+    Vertical(f64),
+    /// Nothing: where `s < `[`DRAW_CUT`] the compass draws no normal to move along.
+    Nothing,
+}
+
+/// The screen image of the unit normal `n` of the cube's frame, `(P(n) − P(0))/S`, `y` down, [`Iso`]'s projection.
+pub fn normal_on_screen(n: P3) -> [f64; 2] {
+    [ISO * (n[0] - n[2]), 0.5 * (n[0] + n[2]) - n[1]]
+}
+
+/// How a slice-mode drag on `view`'s plane reads the pointer (R-465): along `ŝ` where the drawn normal's screen image is
+/// at least [`MIN_NORMAL_ON_SCREEN`]`·S` long, else vertically toward the viewer, and nothing where the compass draws no
+/// plane.
+pub fn reading(view: &View) -> Reading {
+    let Some(n) = drawn_normal(view) else {
+        return Reading::Nothing;
+    };
+    let [x, y] = normal_on_screen(n);
+    let len = x.hypot(y);
+    if len < MIN_NORMAL_ON_SCREEN {
+        let facing = dot3(n, VIEW_DIR) > 0.0;
+        Reading::Vertical(if facing { 1.0 } else { -1.0 })
+    } else {
+        Reading::Along([x / len, y / len])
+    }
+}
+
+/// The cube's full screen width at scale `s`, `2√3·S`, the projection of `[−1, 1]³`'s width: a slice-mode drag of it
+/// moves the slice across the whole range (R-451 B3, R-465 N3).
+pub fn cube_width(s: f64) -> f64 {
+    4.0 * ISO * s
+}
+
 /// A drag on the compass in progress: its targets, moved as the pointer moves, as the reference's are.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Drag {
@@ -859,49 +909,69 @@ pub struct Drag {
     pub from: (f64, f64),
     /// The tilt's targets `(τ₁, τ₂)` in degrees, each clamped to ±90° as the pointer moves.
     pub tau: (f64, f64),
-    /// The slice's move along the drawn plane's normal, in `z₀`'s units.
+    /// The slice's move along the drawn plane's normal since it started, in `z₀`'s units.
     pub amount: f64,
+    /// The plane `(z₀, q₁, q₂)` when it started: every frame's edit is made from it, as the one edit of the whole drag
+    /// so far, so a locked drag turns about the pin as it stood when the drag began (R-458 F1; R-451 B11).
+    pub start: (Latent, Latent, Latent),
+    /// How a slice-mode drag reads the pointer, from the plane when it started (R-465).
+    pub reading: Reading,
 }
 
 impl Drag {
     /// A drag in `mode` starting on `plane`, read with the slice frame `frame`.
     pub fn start(mode: Touch, plane: &Plane, frame: &SliceFrame) -> Self {
-        let a = Angles::of(&View::framed(plane, Some(frame)));
+        let view = View::framed(plane, Some(frame));
+        let a = Angles::of(&view);
         Self {
             mode,
             from: (a.tau1, a.tau2),
             tau: (a.tau1, a.tau2),
             amount: 0.0,
+            start: (plane.z0, plane.q1, plane.q2),
+            reading: reading(&view),
         }
     }
 
+    /// The plane when it started.
+    pub fn start_plane(&self) -> Plane {
+        let (z0, q1, q2) = self.start;
+        Plane { z0, q1, q2 }
+    }
+
     /// The pointer moved by `delta` over the cube's `square`: in tilt mode `τ₁` by the horizontal travel over the
-    /// width and `τ₂` by the vertical over the height, up raising it, [`DRAG_DEGREES`] across, each clamped to ±90°;
-    /// in slice mode the horizontal travel moves the slice, the full width the whole range `2·`[`Z0_HALF_RANGE`], and
-    /// the vertical does nothing (R-451 B3).
+    /// width and `τ₂` by the vertical over the height, up raising it, [`DRAG_DEGREES`] across, each clamped to ±90°
+    /// (R-451 B3); in slice mode the travel as [`Reading`] reads it moves the slice, the cube's full width
+    /// ([`cube_width`]) the whole range `2·`[`Z0_HALF_RANGE`] (R-465).
     pub fn moved(&mut self, delta: Vec2, square: Rect) {
-        let dx = f64::from(delta.x) / f64::from(square.width());
-        let dy = f64::from(delta.y) / f64::from(square.height());
+        let (x, y) = (f64::from(delta.x), f64::from(delta.y));
         match self.mode {
             Touch::Tilt => {
+                let dx = x / f64::from(square.width());
+                let dy = y / f64::from(square.height());
                 let (lo, hi) = TILT_RANGE;
                 self.tau.0 = (self.tau.0 + dx * DRAG_DEGREES).clamp(lo, hi);
                 self.tau.1 = (self.tau.1 - dy * DRAG_DEGREES).clamp(lo, hi);
             }
-            Touch::Slice => self.amount += dx * 2.0 * Z0_HALF_RANGE,
+            Touch::Slice => {
+                let travel = match self.reading {
+                    Reading::Along([sx, sy]) => x * sx + y * sy,
+                    Reading::Vertical(sign) => -y * sign,
+                    Reading::Nothing => return,
+                };
+                let width = cube_width(Iso::fit(square).s);
+                self.amount += travel / width * 2.0 * Z0_HALF_RANGE;
+            }
         }
     }
 }
 
-/// The one edit `drag` on `plane`, read with the slice frame `frame`, makes when it ends: the tilt to its targets, `γ`
-/// kept, or the slice along the drawn plane's normal; none when it moved nothing, or for a slice where the compass
-/// draws no plane (R-451 B11).
+/// The edit setting `drag`'s targets on `plane`, the plane it started on, read with the slice frame `frame`, sent each
+/// frame the drag moves them (R-458 F1): the tilt to its targets, `γ` kept, or `z₀` moved along the drawn plane's normal
+/// by its amount; none for a slice where the compass draws no plane (R-451 B11).
 pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetField> {
     match drag.mode {
         Touch::Tilt => {
-            if drag.tau == drag.from {
-                return None;
-            }
             let view = View::framed(plane, Some(frame));
             let angles = Angles {
                 tau1: drag.tau.0,
@@ -911,10 +981,7 @@ pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetFi
             Some(basis_edit(angles.apply(view).basis()))
         }
         Touch::Slice => {
-            if drag.amount == 0.0 {
-                return None;
-            }
-            slice(plane, frame, drag.amount)
+            latent_normal(plane, frame).map(|n| z0_edit(add(&plane.z0, drag.amount, &n)))
         }
     }
 }
@@ -1175,13 +1242,16 @@ pub fn square(rect: Rect) -> Rect {
 }
 
 /// What the compass in `rect` draws for `sim`, from what `compass` shows: the drawing [`show`] paints and the capture
-/// records.
+/// records. The cube eases toward `sim`'s plane; the readout reads `sim`'s, the target the contract holds (R-451 B4,
+/// R-465 N1).
 pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
     let shown = compass
         .shown
         .unwrap_or_else(|| Shown::of(&sim.plane, &sim.slice.frame));
     let plane = shown.plane(&sim.plane);
-    drawing(square(rect), &plane, &shown.view, compass.mode, &sim.lock)
+    let mut drawn = drawing(square(rect), &plane, &shown.view, compass.mode, &sim.lock);
+    drawn.readout = readout(&sim.plane.z0, &View::read(sim), compass.mode);
+    drawn
 }
 
 /// Draws the compass in `rect`, taking its drags and its buttons' clicks: the Cube view's cube and its drags, or the
@@ -1215,22 +1285,25 @@ pub fn show(
         if response.drag_started() {
             scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane, frame));
         }
-        if let Some(drag) = &mut scratch.compass.drag {
+        // The frame's one edit, the pointer's moves this frame summed: sent when they move the drag's targets (R-458
+        // F1, F3). It is the drag's whole edit so far, made from the plane where it began and turned about the pin as
+        // it stood then, so it is sent as it is.
+        if let Some(mut drag) = scratch.compass.drag {
+            let was = drag;
             drag.moved(response.drag_delta(), square);
-        }
-        // The plane as the drag leaves it, turned about the pin while locked, as its edit will be.
-        pending = scratch
-            .compass
-            .drag
-            .and_then(|d| drag_edit(plane, frame, &d))
-            .map(|edit| about_the_pin(vec![edit], sim))
-            .unwrap_or_default();
-        if response.drag_stopped() {
-            if let Some(drag) = scratch.compass.drag.take() {
-                if let Some(edit) = drag_edit(plane, frame, &drag) {
-                    out.edit(edit, Some(drag.mode), scratch);
+            scratch.compass.drag = Some(drag);
+            if drag != was {
+                let start = drag.start_plane();
+                if let Some(edit) = drag_edit(&start, frame, &drag) {
+                    let mut at_start = sim.clone();
+                    at_start.plane = start;
+                    pending = about_the_pin(vec![edit], &at_start);
+                    out.command(pending.clone(), drag.mode, scratch);
                 }
             }
+        }
+        if response.drag_stopped() {
+            scratch.compass.drag = None;
         }
     } else {
         scratch.compass.drag = None;
@@ -1246,7 +1319,10 @@ pub fn show(
     let painter = ui.painter_at(rect);
     let (readout, hint) = match view {
         CompassView::Cube => {
-            let drawing = current(rect, sim, &scratch.compass);
+            // The readout reads the frame's target: the plane as this frame's edit leaves it.
+            let mut targeted = sim.clone();
+            targeted.plane = after(plane, &pending);
+            let drawing = current(rect, &targeted, &scratch.compass);
             paint(&painter, &visuals, &drawing);
             let hint = match scratch.compass.mode {
                 Touch::Tilt => HINT_TILT,

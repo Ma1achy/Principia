@@ -656,14 +656,28 @@ pub fn plane_edit(sim: &SimConfig, basis: (Latent, Latent)) -> SetField {
 /// basis edit `(q₁, q₂) → (q₁', q₂')` is preceded by the `SetField` on `z₀` that moves the centre to
 /// `z₀' = z₀ + (2s−1)(q₁ − q₁') + (2t−1)(q₂ − q₂')` (chart_decoder_contract Part 4: the lock is the pivot). Free, or with
 /// the anchor at the centre, or with a degenerate basis, the edits pass as they are. The edits are read in order, each
-/// against the state the earlier ones leave.
+/// against the state the earlier ones leave. [`commands_about_the_pin`] flattened.
 pub fn about_the_pin(
     edits: Vec<SetField>,
     sim: &engine::contract::sim_config::SimConfig,
 ) -> Vec<SetField> {
+    commands_about_the_pin(edits, sim)
+        .into_iter()
+        .flatten()
+        .collect()
+}
+
+/// [`about_the_pin`]'s edits as commands, one per edit of `edits`: the edit, preceded by its recentring `SetField` on
+/// `z₀` where it has one, so the app sends the two under one history key, one entry (gui_state_contract §2, "A command
+/// of several edits is one history entry"; R-458).
+pub fn commands_about_the_pin(
+    edits: Vec<SetField>,
+    sim: &engine::contract::sim_config::SimConfig,
+) -> Vec<Vec<SetField>> {
     let (mut plane, mut lock) = (sim.plane.clone(), sim.lock.clone());
     let mut out = Vec::with_capacity(edits.len());
     for edit in edits {
+        let mut command = Vec::with_capacity(2);
         match &edit.edit {
             Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
             Edit::Sim(SimField::Lock(l)) => lock = l.clone(),
@@ -685,7 +699,7 @@ pub fn about_the_pin(
                         &add(&plane.q2, -1.0, q2),
                     );
                     if z0 != plane.z0 {
-                        out.push(z0_edit(z0));
+                        command.push(z0_edit(z0));
                         plane.z0 = z0;
                     }
                 }
@@ -700,7 +714,8 @@ pub fn about_the_pin(
             )
             | Edit::Render(_) => {}
         }
-        out.push(edit);
+        command.push(edit);
+        out.push(command);
     }
     out
 }
@@ -741,8 +756,11 @@ pub struct Scratch {
 /// What the panel, the compass and the figure ask for in one frame.
 #[derive(Debug, Default, PartialEq)]
 pub struct Out {
-    /// The edits, in order.
+    /// The edits, in order: the app turns each basis edit about the pin while locked ([`commands_about_the_pin`]).
     pub edits: Vec<SetField>,
+    /// Commands already turned about the pin, each sent as it is, one history entry: a compass drag's edit, made from
+    /// the plane where the drag began, not the frame's (R-458 F1).
+    pub commands: Vec<Vec<SetField>>,
     /// The windows to open.
     pub windows: Vec<Window>,
 }
@@ -755,6 +773,12 @@ impl Out {
         }
         self.edits.push(edit);
     }
+
+    /// A command already turned about the pin, touching `touch`, recorded in `scratch`'s compass.
+    pub fn command(&mut self, command: Vec<SetField>, touch: Touch, scratch: &mut Scratch) {
+        scratch.compass.mode = touch;
+        self.commands.push(command);
+    }
 }
 
 /// Enter on control `id`, as its click: the panel's, a target dropdown's entry picking that target among them, and the
@@ -763,8 +787,10 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
     let view = View::read(&snapshot.sim);
     for (which, entries) in [(Target::X, TILT_X_ENTRIES), (Target::Y, TILT_Y_ENTRIES)] {
         if let Some(to) = entries.iter().position(|e| *e == id) {
+            // A target dropdown is Tilt's: picking from it switches the compass to Tilt (R-458 F4).
+            scratch.compass.mode = Touch::Tilt;
             if let Some(edit) = target_edit(&view, which, to) {
-                out.edit(edit, None, scratch);
+                out.edit(edit, Some(Touch::Tilt), scratch);
             }
             return;
         }

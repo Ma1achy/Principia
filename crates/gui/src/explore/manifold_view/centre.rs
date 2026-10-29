@@ -4,7 +4,9 @@
 //! spans `[−1, 1]`. Locked, the sliders are re-based to the anchor, not frozen (§G4;
 //! chart_decoder_contract Part 4, "Sliders are re-based"): each spans `anchor ± 1`, marks the anchor in gold at its
 //! centre, and reads anchor plus offset, `z_locked + δ`; moving one is an excursion, a `SetField` on `z₀`, the anchor
-//! kept. Touching one switches the compass to Slice, its buttons following (R-409).
+//! kept. Touching one switches the compass to Slice, its buttons following (R-409), on the drag's first frame: the
+//! slider or its box pressed, or the box clicked into to type, whether or not the value changes (R-458 F4). A drag
+//! applies its value every frame it changes, the whole drag one history entry (R-458 F1).
 
 use eframe::egui::{self, DragValue, Rect, RichText, Slider, Stroke, Ui};
 
@@ -31,15 +33,25 @@ pub fn offset_text(value: f64, anchor: f64) -> String {
     format!("{sign} {:.3}", delta.abs())
 }
 
+/// Whether a slider row with `slider` and its number box `field` is touched this frame (R-458 F4): either pressed, the
+/// box clicked into to type, or the value changed, so a press at a slider's end, or a click into the box, counts.
+pub fn touched(slider: &egui::Response, field: &egui::Response) -> bool {
+    slider.is_pointer_button_down_on()
+        || field.is_pointer_button_down_on()
+        || field.gained_focus()
+        || slider.changed()
+        || field.changed()
+}
+
 /// One slider row: the label, the slider over `span`, the value field, and while locked the anchor's mark and the
-/// offset. Returns the new value if the user moved it, and the slider's response.
+/// offset. Returns the new value if the user moved it, the slider's response, and whether the row is [`touched`].
 pub fn slider_row(
     ui: &mut Ui,
     rect: Rect,
     label: &str,
     value: f64,
     anchor: Option<f64>,
-) -> (Option<f64>, egui::Response) {
+) -> (Option<f64>, egui::Response, bool) {
     let mut line = row_ui(ui, rect);
     line.add_sized([40.0, rect.height()], egui::Label::new(label));
     // The slider takes what the field, the offset while locked, and the gaps before them leave.
@@ -89,8 +101,9 @@ pub fn slider_row(
     }
     // Only a change the user made counts: a value the widget clamps for display is not an edit.
     let changed = slider.changed() || field.changed();
+    let touch = touched(&slider, &field);
     let response = slider.union(field);
-    (changed.then_some(moved), response)
+    (changed.then_some(moved), response, touch)
 }
 
 /// Draws Slice centre in `section`.
@@ -105,8 +118,11 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     let z0 = panel.snapshot.sim.plane.z0;
     for (i, name) in AXES.iter().enumerate() {
         let anchor = lock.locked.then_some(lock.z_locked[i]);
-        let (moved, response) = slider_row(ui, row(section, h, 1 + i), name, z0[i], anchor);
+        let (moved, response, touch) = slider_row(ui, row(section, h, 1 + i), name, z0[i], anchor);
         panel.place(SLIDERS[i], &response, clip);
+        if touch {
+            panel.scratch.compass.mode = Touch::Slice;
+        }
         if let Some(value) = moved {
             let mut next = z0;
             next[i] = value;
