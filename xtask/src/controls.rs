@@ -487,6 +487,7 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
     let stdout = succeeded("cargo metadata", output)?;
     let metadata: Metadata =
         serde_json::from_str(&stdout).map_err(|e| format!("cannot parse cargo metadata: {e}"))?;
+    let resolution = Resolution::of(mode, std::env::var_os(IN_RUN).is_some());
     let mut failed = 0;
     for package in &metadata.packages {
         let name = &package.name;
@@ -496,13 +497,13 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
         }
         let listed = parse_list(&succeeded(
             "cargo test -- --list",
-            cargo_test(manifest, mode, name, "--tests", &["--list"])?,
+            cargo_test(manifest, mode, resolution, name, "--tests", &["--list"])?,
         )?);
         // Doctests are tests of the crate that no `negative_control!` can name (applied per R-204).
         let doctests = if package.targets.iter().any(|target| target.doctest) {
             parse_list(&succeeded(
                 "cargo test --doc -- --list",
-                cargo_test(manifest, mode, name, "--doc", &["--list"])?,
+                cargo_test(manifest, mode, resolution, name, "--doc", &["--list"])?,
             )?)
         } else {
             Vec::new()
@@ -532,7 +533,8 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
                 let stdout = if partition == Partition::ALL {
                     // Runs the tests whose names contain `negative_control`: every control, and none when there are
                     // none.
-                    let output = cargo_test(manifest, mode, name, "--tests", &[CONTROL_FN])?;
+                    let output =
+                        cargo_test(manifest, mode, resolution, name, "--tests", &[CONTROL_FN])?;
                     String::from_utf8_lossy(&output.stdout).into_owned()
                 } else if mine.is_empty() {
                     String::new()
@@ -540,7 +542,7 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
                     // This shard's controls by exact name; with no name libtest would run every test.
                     let mut harness = vec!["--exact"];
                     harness.extend(mine.iter().map(|c| c.as_str()));
-                    let output = cargo_test(manifest, mode, name, "--tests", &harness)?;
+                    let output = cargo_test(manifest, mode, resolution, name, "--tests", &harness)?;
                     String::from_utf8_lossy(&output.stdout).into_owned()
                 };
                 results.extend(parse_results(&stdout));
@@ -596,30 +598,61 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
 /// The cargo arguments that resolve the build of whichever package is selected with the features of the whole
 /// workspace: cargo's `workspace` feature unification, an unstable option of the pinned nightly
 /// (`rust-toolchain.toml`, R-169). Without them each package's `cargo test -p <package>` resolves its dependencies'
-/// features over its own graph alone, so a dependency shared by several packages (wgpu, naga, `render`, `engine`,
-/// `validation`) is built once per package; on a cold target, as in a CI shard run from an archive, that build made
+/// features over its own graph alone, so the workspace's crates (`engine`, `render`, `validation`, `kernel`, `xtask`)
+/// are built once per package; on a cold target, as in a CI shard run from an archive, that build made
 /// `xtask ci --list` outlast the 600 s timer on its child (R-214, REQ-VAL-156). Applied per R-369.
-///
-/// Only [`Mode::List`] carries them: it builds and runs nothing else. [`Mode::Run`] resolves each package as before,
-/// so its builds share the target with the rest of the `xtask-ci` shard's; with them too, the shard held a second,
-/// differently featured build of the workspace and ran the runner out of disk.
 pub const WORKSPACE_FEATURES: [&str; 3] = [
     "-Zfeature-unification",
     "--config",
     "resolver.feature-unification=\"workspace\"",
 ];
 
-/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest; in
-/// [`Mode::List`], with the dependencies' features resolved over the whole workspace ([`WORKSPACE_FEATURES`]), so every
-/// package's build shares one build of them.
+/// The variable [`Mode::Run`] sets on every `cargo test` it runs, so that every `cargo xtask controls --list` its tests
+/// spawn inherits it and resolves as the run does ([`Resolution::of`]).
+pub const IN_RUN: &str = "PRIN_XTASK_CONTROLS_RUN";
+
+/// How the builds of the `cargo test`s [`run_partition`] runs resolve their features.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Resolution {
+    /// Each package's dependencies' features over its own graph, cargo's own resolution, as every other cargo run on
+    /// the workspace resolves them.
+    Package,
+    /// The features of the whole workspace ([`WORKSPACE_FEATURES`]): one build of the workspace's crates for every
+    /// package.
+    Workspace,
+}
+
+impl Resolution {
+    /// The resolution of `mode`'s builds; `in_run` is whether [`IN_RUN`] is set, that is whether a listing runs inside
+    /// a [`Mode::Run`], from one of its tests.
+    ///
+    /// A listing on its own resolves over the workspace: it builds and runs nothing else, so it shares its build with
+    /// nothing, and one build of the workspace's crates is the fast way to it. A run resolves each package as cargo
+    /// does, so its builds are the ones its tests' own cargo runs make (`cargo test -p validation --features controls`
+    /// in validation's `qa_TASK-M0-24`). A listing inside a run resolves as the run, so it reuses the run's builds: one
+    /// resolved apart is a second build of every controls crate's tests, and in `xtask-ci (2)`, which runs the control
+    /// of `qa_m0_24_every_registered_control_makes_its_test_fail` (`cargo xtask controls --list` on the workspace),
+    /// that second build ran the runner out of disk (at 04055100); a run resolved over the workspace did the same
+    /// against its tests' per-package builds (at 29111816).
+    pub fn of(mode: Mode, in_run: bool) -> Resolution {
+        match mode {
+            Mode::List if !in_run => Resolution::Workspace,
+            Mode::List | Mode::Run => Resolution::Package,
+        }
+    }
+}
+
+/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest, resolved
+/// by `resolution`; in [`Mode::Run`], with [`IN_RUN`] set for the tests it runs.
 fn cargo_test(
     manifest: &Path,
     mode: Mode,
+    resolution: Resolution,
     package: &str,
     targets: &str,
     harness: &[&str],
 ) -> Result<Output, String> {
-    cargo_test_command(manifest, mode, package, targets, harness)
+    cargo_test_command(manifest, mode, resolution, package, targets, harness)
         .output()
         .map_err(|e| format!("cannot run cargo test: {e}"))
 }
@@ -628,14 +661,18 @@ fn cargo_test(
 fn cargo_test_command(
     manifest: &Path,
     mode: Mode,
+    resolution: Resolution,
     package: &str,
     targets: &str,
     harness: &[&str],
 ) -> Command {
     let mut command = Command::new(cargo());
     command.arg("test");
-    if mode == Mode::List {
+    if resolution == Resolution::Workspace {
         command.args(WORKSPACE_FEATURES);
+    }
+    if mode == Mode::Run {
+        command.env(IN_RUN, "1");
     }
     command
         .arg("--manifest-path")
@@ -773,9 +810,9 @@ mod tests {
             .collect()
     }
 
-    /// The `cargo test` of [`Mode::List`] resolves its features over the whole workspace, so the packages' builds share
-    /// one build of their dependencies: the arguments carry [`WORKSPACE_FEATURES`] as cargo's own, before the `--` that
-    /// starts libtest's.
+    /// The `cargo test` of a [`Mode::List`] on its own resolves its features over the whole workspace, so the packages'
+    /// builds share one build of their dependencies: the arguments carry [`WORKSPACE_FEATURES`] as cargo's own, before
+    /// the `--` that starts libtest's.
     fn check_workspace_features(args: &[String]) {
         let cargo_args = &args[..args.iter().position(|a| a == "--").unwrap_or(args.len())];
         assert!(
@@ -795,15 +832,21 @@ mod tests {
         );
     }
 
-    /// The command of `mode` on a package `p`'s tests, with `harness`.
+    /// The command of `mode` on a package `p`'s tests, with `harness`, run on its own, outside any run.
     fn command_args(mode: Mode, harness: &[&str]) -> Vec<String> {
-        args_of(&cargo_test_command(
+        args_of(&command_of(mode, Resolution::of(mode, false), harness))
+    }
+
+    /// The command of `mode` resolved by `resolution` on a package `p`'s tests, with `harness`.
+    fn command_of(mode: Mode, resolution: Resolution, harness: &[&str]) -> Command {
+        cargo_test_command(
             Path::new("Cargo.toml"),
             mode,
+            resolution,
             "p",
             "--tests",
             harness,
-        ))
+        )
     }
 
     #[test]
@@ -840,6 +883,48 @@ mod tests {
             args.splice(1..1, WORKSPACE_FEATURES.map(str::to_owned));
             check_own_features(&args)
         }
+    );
+
+    /// Whether the environment `command` sets holds [`IN_RUN`].
+    fn sets_in_run(command: &Command) -> bool {
+        command
+            .get_envs()
+            .any(|(key, value)| key == IN_RUN && value.is_some())
+    }
+
+    /// A listing spawned by a test of the run `run` (a control running `cargo xtask controls --list`), whose
+    /// environment holds every variable the run's command sets, resolves as the run: its cargo arguments, up to
+    /// libtest's `--`, are the run's, so it builds nothing the run has not.
+    fn check_listing_in_run_resolves_as_run(run: &Command, listing: fn(bool) -> Resolution) {
+        let cargo_args = |args: Vec<String>| -> Vec<String> {
+            args.into_iter().take_while(|a| a != "--").collect()
+        };
+        let resolution = listing(sets_in_run(run));
+        let listed = cargo_args(args_of(&command_of(Mode::List, resolution, &["--list"])));
+        let ran = cargo_args(args_of(run));
+        assert!(
+            listed == ran,
+            "a listing inside the run resolves apart from it, a second build of the workspace beside the run's: \
+             {listed:?} against {ran:?}"
+        );
+    }
+
+    #[test]
+    fn controls_listing_in_a_run_resolves_as_the_run() {
+        for harness in [&[CONTROL_FN][..], &["--exact", "t::negative_control"]] {
+            let run = command_of(Mode::Run, Resolution::of(Mode::Run, false), harness);
+            check_listing_in_run_resolves_as_run(&run, |in_run| Resolution::of(Mode::List, in_run));
+        }
+    }
+
+    validation::negative_control!(
+        controls_listing_in_a_run_resolves_as_the_run,
+        "a listing that resolves over the workspace wherever it runs, as at 04055100",
+        expected = "a listing inside the run resolves apart from it",
+        check_listing_in_run_resolves_as_run(
+            &command_of(Mode::Run, Resolution::Package, &[CONTROL_FN]),
+            |_| Resolution::Workspace
+        )
     );
 
     #[test]
