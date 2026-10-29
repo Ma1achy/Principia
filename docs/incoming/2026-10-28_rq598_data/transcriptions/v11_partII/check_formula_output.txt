@@ -5,3 +5,12 @@ N, Q(cos i = -0.5, 0, +0.5, +1)
 1000 [6.109, 7.697, 8.811, 9.697]
 10000 [7.401, 9.325, 10.674, 11.749]
 Q(cos i = -1) = 0 for every N, which the paper says cannot be right.
+
+coefficient from Part II's own equations: 2.5 * 0.1^(1/6) = 1.703
+the printed 3.7 matches 2.5 * 10^(1/6) = 3.669 (as if the 0.1 were 10)
+Q with the re-derived coefficient, N, Q(cos i = -0.5, 0, +0.5, +1)
+1 [1.581, 1.992, 2.281, 2.51]
+10 [1.916, 2.414, 2.763, 3.041]
+100 [2.321, 2.924, 3.348, 3.685]
+1000 [2.812, 3.543, 4.056, 4.464]
+10000 [3.407, 4.293, 4.914, 5.408]

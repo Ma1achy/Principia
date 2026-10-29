@@ -10,7 +10,7 @@ reversibility test (log10 delta < -3): {'fail': 15, 'wall_cap': 1}  (MEASURED; a
 energy relative error at escape: median 3.90e-03
 
 == GG-1 full eps = 1e-6 panel, projected (ESTIMATE)
-lifetime weights: the paper's own Fig. 1 left panel (statistically the same as ours, K-S p = 0.72): sum of T over 1212 points = 85690 (the 26 black points counted at the cap of 1000, 26000 of it)
+lifetime weights: the paper's own Fig. 1 left panel, its values read as OUR time units (not converted; hm_units.py gives the Heggie-Mathieu conversion): sum of T over 1212 points = 85690 (the 26 black points counted at 1000, 26000 of it)
 integrated time / lifetime T at escape in our sample (MEASURED): median 1.31  range 1.04-16.03
 reverse leg / forward leg wall (MEASURED, median): 0.82
   low (median rate)  integrated time = 1.0 x T           : forward only    40.4 core-hours; with reversal    73.6 core-hours

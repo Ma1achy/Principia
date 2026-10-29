@@ -1,4 +1,4 @@
-# Install and build record (generated 2026-10-29T15:11Z in the cloud session; nothing here persists on the human's machines)
+# Install and build record (generated 2026-10-29T15:11Z on the Linux machine that ran the pilot; nothing here was installed on the owner's machines)
 
 ## Machine
 CPU(s):                                  4
@@ -14,7 +14,7 @@ Mem:              15           0          15           0           0          15
 kernel: Linux 6.18.44-fc-v185 #1 SMP PREEMPT_DYNAMIC @0
 os: Ubuntu 24.04.5 LTS
 
-## apt packages installed by me in this session (/var/log/dpkg.log, 2026-10-29 only)
+## apt packages installed on that machine for the pilot (/var/log/dpkg.log, 2026-10-29 only)
 (g++ 13.3.0, gcc 13.3.0, make 4.3 and libmpfr6 were already on the image.)
 2026-10-29 libgmpxx4ldbl:amd64 <none> 2:6.3.0+dfsg-2ubuntu6.1
 2026-10-29 libgmp-dev:amd64 <none> 2:6.3.0+dfsg-2ubuntu6.1
@@ -32,4 +32,4 @@ GNU ld (GNU Binutils for Ubuntu) 2.42
 Python 3.13.17
 numpy 2.5.3
 
-## Not installed (not needed by the standalone code): MPI, AMUSE, a Python venv. cloud-setup.sh (R-346) installed cargo-nextest and pyyaml for the repo's own tooling only.
+## Not installed (not needed by the standalone code): MPI, AMUSE, a Python venv. The repo's setup script installed cargo-nextest and pyyaml for the repo's own tooling only.

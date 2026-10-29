@@ -55,8 +55,9 @@ Ts = [1000.0 if r["log10_T"].startswith("censored") else 10 ** float(r["log10_T"
 nblack = sum(1 for r in fl if r["log10_T"].startswith("censored"))
 tsum = sum(Ts)
 print(f"\n== GG-1 full eps = 1e-6 panel, projected (ESTIMATE)")
-print(f"lifetime weights: the paper's own Fig. 1 left panel (statistically the same as ours, K-S p = 0.72): "
-      f"sum of T over 1212 points = {tsum:.0f} (the {nblack} black points counted at the cap of 1000, {1000 * nblack} of it)")
+print(f"lifetime weights: the paper's own Fig. 1 left panel, its values read as OUR time units (not converted; "
+      f"hm_units.py gives the Heggie-Mathieu conversion): "
+      f"sum of T over 1212 points = {tsum:.0f} (the {nblack} black points counted at 1000, {1000 * nblack} of it)")
 ratio = [float(r["t_reached"]) / float(r["T"]) for r in esc if float(r["T"]) > 0]
 print(f"integrated time / lifetime T at escape in our sample (MEASURED): median {st.median(ratio):.2f}  "
       f"range {min(ratio):.2f}-{max(ratio):.2f}")

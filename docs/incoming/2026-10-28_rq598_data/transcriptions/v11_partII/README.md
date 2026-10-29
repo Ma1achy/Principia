@@ -1,23 +1,19 @@
 # V-11, what the repo's own paper says about hierarchical stability: Part II, read from its page images
 
 A record, not authority (R-1, R-159). Target V-11 (`../../../2026-10-27_papers/TARGETS.md`, "V-11. Hierarchical stability
-limits") says the number to compare comes from the primary, Mylläri et al. 2018 (Part I, *MNRAS* 476, 830), which is not in
-the repo and **could not be read in this session** (below). The one hierarchical-stability paper that is in the repo is Part II,
+limits") says the number to compare comes from the primary, Mylläri et al. 2018 (Part I, *MNRAS* 476, 830), which is not
+committed (below) and was not read for this file. The one hierarchical-stability paper that is in the repo is Part II,
 Pasechnik, Mylläri, Valtonen & Mikkola 2023, *MNRAS* 525, 1929 (CC BY 4.0;
 `../../papers/pasechnik_myllari_valtonen_mikkola_2023_MNRAS_525_1929.pdf`, sha256
 `76eab52c4473695e311bb836a53cea1936d53e3d09eb4cc7ba965a573e6662c7`). Part II restates the set-up and the stability
 definition Part I uses and gives a closed-form estimate. This file transcribes those, from the page images (the text layer
 garbles the formulas), with the page of each. It adds nothing from Part I and does not pretend to.
 
-## Why Part I is not here
+## Part I
 
-`docs/incoming/_local/myllari_valtonen_pasechnik_mikkola_2018_MNRAS_476_830.pdf`, the human's copy, is not in this cloud
-session (only the human's machine holds it; `../../README.md` §1). The open copy at the University of Turku repository
-(`utupub.fi`, `oai:utupub.fi:11111/33559`) is blocked by the session's network policy: `getaddrinfo ENOTFOUND www.utupub.fi`,
-and `curl` through the proxy returns `CONNECT tunnel failed, response 403`. The queue entry is RQ-602
-(`REVIEW_QUEUE.md`). **Unverified lead, not a source**: a web search's summary of Part I gave a general criterion of the form
-Q_st = 10^(1/3) · A · [(fg)² / (1 − e_out)]^(1/6), with f and g functions of e_in and cos ι, A ≈ 1 for N-body experiments
-and A = 2.4 for absolute long-term stability. Nothing here depends on it; read it against Part I before anyone uses it.
+The owner's copy of Part I is held locally, gitignored, at
+`docs/incoming/_local/myllari_valtonen_pasechnik_mikkola_2018_MNRAS_476_830.pdf` (`../../README.md` § 1). It was not read for this file.
+**V-11 proceeds from Part I in a later local task**, which reads that copy; this file is only what Part II gives.
 
 ## Definitions (p. 1929–1931)
 
@@ -68,6 +64,16 @@ from Mardling's theory (private communication) dotted, and the numerical Q_max v
 printed formula, evaluated with the Fig. 7 parameters, does not reproduce the dashed curve's end values**; see
 `check_formula.py`. Which N, and which form of the inclination factor, Fig. 7 used is not stated.
 
+**The printed coefficient does not follow from Part II's own equations.** Take the two equations above,
+δε/ε ≈ 0.1 (m₃/(m₁+m₂)) (Q/Q₁)⁻⁷ (1 − 0.5 e_in²) [1 + cos ι]² and δε/ε ≈ −(m₃/(m₁+m₂)) (1 − e_out)/(Q/Q₁) · δE/E, with
+Q₁ = 2.5 (1 + m₃/(m₁+m₂))^(1/3), and set √N |δE/E| = 1. That gives
+
+    Q ≈ 2.5 · 0.1^(1/6) · (√N)^(1/6) · (1 + m₃/(m₁+m₂))^(1/3) · (1 − 0.5 e_in²)^(1/6) · [1 + cos ι]^(1/3) · (1 − e_out)^(−1/6),
+
+a coefficient of 2.5 × 0.1^(1/6) = **1.70**, not 3.7. The printed 3.7 is 2.5 × 10^(1/6) = 3.67, as if the 0.1 were 10. Both forms also give
+**Q = 0 at cos ι = −1**, which the paper itself concedes cannot be right. `check_formula.py` prints both coefficients and Q with each. So the
+closed form, in either coefficient, is **not** V-11's comparison number; that number is Part I's.
+
 ## What the numerical results say (qualitative)
 
 - Q_max depends on Ω as cos 2Ω, "in a doubly periodic manner" (Figs 3–5, p. 1931).
@@ -80,7 +86,7 @@ printed formula, evaluated with the Fig. 7 parameters, does not reproduce the da
 
 The V-11 test (`TARGETS.md`: scan the outer pericentre for prograde and retrograde outer orbits on a hierarchical slice) can take
 its **definitions** from here: Q, Q_max, the stability interval (10,000 outer revolutions), the instability outcomes (escape or
-exchange), the scan protocol and the parameter set above. It cannot take Part I's general Q_max(e_in, e_out, ι, m₃) from here:
-that is the number the target is to compare against, and it stays with RQ-602. The book values on the target's list
+exchange), the scan protocol and the parameter set above. It cannot take Part I's general Q_max(e_in, e_out, ι, m₃) from here, nor Part II's
+closed form (above): the number the target is to compare against comes from Part I, read from the local copy in a later task. The book values on the target's list
 (Harrington 3.5 semi-major axes, Valtonen & Karttunen 4.8 and 2.6, Bohlin 4.7, Innanen 70 % and 144 % of the Hill radius) are
 secondary and unchanged.

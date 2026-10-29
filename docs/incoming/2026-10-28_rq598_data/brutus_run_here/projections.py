@@ -43,5 +43,6 @@ for eps_s, lw in (("1e-11", 128), ("1e-10", 88)):
             lo_h = N * lo * tail * k / 3600
             hi_h = N * hi * tail * k / 3600
             print(f"   N={N:6d}, {lab:50s}: {lo_h:6.1f}-{hi_h:6.1f} core-hours (with the mean/median tail factor {tail:.2f} from our 12 runs)")
-print("\nNOT captured: runs that need many more steps than the 2561-output floor (the authors' 44 of 180 files stop early, at their own failure points);"
+print("\nNOT captured: runs that need many more steps than the 2561-output floor (the authors' truncated files stop early, at their own"
+      " failure points; the pilot counted 44 of 180, a count not verified from committed material);"
       " a 12-run sample cannot show that tail. Treat the figures as the cost of the typical run.")

@@ -1,9 +1,9 @@
 # Install and build record: Brutus, run here
 
-Everything below happened in one disposable cloud session (Ubuntu 24.04.5, Intel Xeon @ 2.80 GHz, 4 cores, 15 GB). Nothing was
-installed on the human's machines. Machine, apt and compiler versions: `install_record_machine.txt`.
+Everything below happened on a disposable Linux machine (Ubuntu 24.04.5, Intel Xeon @ 2.80 GHz, 4 cores, 15 GB). Nothing was
+installed on the owner's machines. Machine, apt and compiler versions: `install_record_machine.txt`.
 
-## Source (pinned, as the human's update directs; not AMUSE's copy)
+## Source (pinned; not AMUSE's copy)
 
 | | |
 |---|---|
@@ -42,10 +42,12 @@ Our driver is compiled the same way and linked to the unmodified `Star.o Cluster
 
 ## Why our own driver
 
-The pinned `main.cpp` **never applies the word length**. It reads `numBits`, echoes it in its header line, and passes it to `Brutus`,
+**Unverified.** The source files are not committed, so the statements in this section about what `main.cpp` and `Brutus.cpp` contain rest on
+the pilot's own reading of them, and stay unverified until the pinned source is read again (`REPORT.md`, "Not verified from committed
+material"). As recorded: the pinned `main.cpp` **never applies the word length**. It reads `numBits`, echoes it in its header line, and passes it to `Brutus`,
 which stores it; nothing calls `mpreal::set_default_prec`. The stock executable therefore runs at MPFR's default 53 bits whatever
 L_w is. Evidence: `stock_lw_test.txt` (identical output for L_w = 20, 53, 128, 1024; 16 significant digits only). It also has no escape
-test, step count or wall cap. `src/pilot.cpp` sets `mpreal::set_default_prec(L_w)` first and copies the six-line `Brutus::evolve` step loop.
+test, step count or wall cap. `src/pilot.cpp` sets `mpreal::set_default_prec(L_w)` first and, as recorded (unverified), copies the six-line `Brutus::evolve` step loop.
 All "L_w = 128 / 1024 bits" in this folder come from that call.
 
 ## Binaries used (sha256 in `binaries.sha256`)

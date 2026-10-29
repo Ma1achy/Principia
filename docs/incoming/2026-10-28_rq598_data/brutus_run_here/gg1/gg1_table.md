@@ -1,4 +1,4 @@
-| (i, j) | x, y | T (ours) | escape detected at | steps | forward wall s | reverse leg: steps, wall s | log10 Δ (pass if < −3) | paper Fig. 1 left, log10 T |
+| (i, j) | x, y | T (ours, our units) | escape detected at | steps | forward wall s | reverse leg: steps, wall s | log10 Δ (pass if < −3) | paper Fig. 1 left (route 2, `../../transcriptions/gg1_fig1/`), log10 T, in HM units |
 |---|---|---|---|---|---|---|---|---|
 | 1, 1 | 0.0156, 0.0156 | 69.42 | 73.03 | 10882 | 139.0 | 9697, 63 | 1.57 | 1.27 |
 | 1, 23 | 0.0156, 0.3594 | 15.33 | 17.56 | 1814 | 13.6 | 1737, 10 | 0.17 | 2.29 |

@@ -17,4 +17,4 @@ ESTIMATE at eps=1e-10, L_w=88: ms/step 1.00 (linear extrapolation); steps 2653-3
    N= 10000, one pair                                          :    9.4-  10.8 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
    N= 10000, both pairs, as the authors' convergence test needs:   18.7-  21.5 core-hours (with the mean/median tail factor 1.28 from our 12 runs)
 
-NOT captured: runs that need many more steps than the 2561-output floor (the authors' 44 of 180 files stop early, at their own failure points); a 12-run sample cannot show that tail. Treat the figures as the cost of the typical run.
+NOT captured: runs that need many more steps than the 2561-output floor (the authors' truncated files stop early, at their own failure points; the pilot counted 44 of 180, a count not verified from committed material); a 12-run sample cannot show that tail. Treat the figures as the cost of the typical run.
