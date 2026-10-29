@@ -424,6 +424,47 @@ signal are dropped, so there is no `divergence_trend` member.
 the quad's unresolved footprints, latched ones included (policy §1's `n_unresolved`). `QuadReduction` stays the sole
 automatic return.
 
+**`running_mean_divergence`'s formula and range (REQ-PAY-109; definition, R-72; R-545).** A footprint's divergence
+at a sim time is the spread the latch reads, the one compared with `eps` (scheduler contract Part 6,
+"Split/keep/merge": `spread_shape > eps`): the footprint's `spread_shape`, `spread(n̂)/2.0` over its `E+1` copies
+(above), whose latched running maximum is `running_max_divergence` (refinement policy §1: "its latched running
+maximum of spread_shape"). It is a time average over the fixed sim-time grid, never over scheduling events: `Δ` is the
+sim key's fixed step `dt`, or the sync quantum `Δ_sync` under a regularised occupant (scheduler contract Part 7,
+R-565), and `t_j = j·Δ`. At sim time `t = n·Δ`, with `d(f, t_j)` footprint `f`'s divergence at `t_j` and
+`D_j = (1/N²)·Σ_f d(f, t_j)` its mean over the quad's N² footprints,
+
+```
+running_mean_divergence(t) = (1/n)·Σ_{j=1..n} D_j       -- updated in place: m_j = m_{j−1} + (D_j − m_{j−1})/j
+```
+
+the mean over the quad's footprints of each footprint's time-averaged spread, the two means commuting. It is a pure
+function of the IC, the sim key and `t`: the live march, catch-up after reveal and a re-boot after eviction reach the
+same `D_j` at the same `t_j` (scheduler contract Part 1, Part 7), however many resolve passes (R-135) or frames fell
+between. A footprint whose copies have ended their march holds its state, so its `d` is its last value. Where the member
+is held and updated is REQ-REF-046's; the formula is indexed by `t_j` alone. *Was (physics review 5679374140
+of PR #318, F1):* "At the quad's `k`-th resolve pass (`k = 1, 2, …`), with `d_k(f)` footprint `f`'s divergence then
+and `D_k = (1/N²)·Σ_f d_k(f)` its mean over the quad's N² footprints, `running_mean_divergence = (1/k)·Σ_{j=1..k}
+D_j`, updated in place: `m_k = m_{k−1} + (D_k − m_{k−1})/k`". The in-place update
+starts from `m_0 = 0`, written before the first update, so `m_1 = D_1` exactly and memory left uninitialised or
+recycled from another quad is never read; with every `D_j` in `[0, 1]`, each f32 update stays in `[0, 1]`. *Was
+(physics review 5679374140 of PR #318, F3):* "The in-place update sets `m_1 = D_1` whatever `m_0` holds, so the member
+needs no initial value", false in floating point (a non-finite `m_0` gives NaN, and a finite `m_0 ≠ 0` rounds).
+**A non-finite spread reads 1.** Where `f`'s
+`spread_shape` is non-finite (the first of refinement policy §1's undetermined footprints), `d(f, t_j) = 1`, the
+contributor's attainable maximum, chosen by a select on the operand's bits (an exponent
+of all ones), never by a float comparison (R-79, R-297, as for `d_min`); the footprint stays in the N² of `D_j`. A
+failure raises the spread and never vanishes from it (the uniformity invariant, "Ensemble spread" above), and one
+NaN can't poison the mean for the rest of the quad's life. A footprint undetermined with a finite `spread_shape`, by
+an unusable copy (policy §1) or by a regularised copy's step budget (R-603, its state latched as it stood), contributes
+that `spread_shape`: the payload carries no predicate for an unusable copy, and R-603's `budget_exhausted` bit is
+placed by TASK-M3-41 (REQ-PAY-110), so neither is read here. *Was (physics review 5679524618 of PR #318, F4):*
+"**An undetermined footprint reads 1.** Where `f`'s `spread_shape` is non-finite (refinement policy §1's "the
+footprint is undetermined (non-finite spread, or an unusable copy)"), `d(f, t_j) = 1`". **Range `[0, 1]`, `lin`**: each `d(f, t_j)`
+lies in `[0, 1]`, a finite one by `spread_shape`'s chord bound (its row, below) and a non-finite one as 1, so every
+mean of them does; *was (physics review 5679374140 of PR #318, F2):* "each `d_k(f)` lies in `[0, 1]` by
+`spread_shape`'s chord bound (its row, below), so every mean of them does"; the range does not
+span zero, so the member is one-signed and on viridis, never on the diverging ramp (R-545, RQ-278 (d)).
+
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.
 
@@ -450,6 +491,21 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
 | `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, `_min` is +∞ (`0x7c00`) and `_max` −∞ (`0xfc00`), and "no escape" reads `_min > _max` (R-418) |
 | `retrograde_fraction` | f16 | tiebreaker |
 | `mean_orbit_count_spread` | f16 | tiebreaker |
+
+**`coherence`'s formula and range (REQ-PAY-109; definition, R-72; R-545).** The priority's complexity term is
+`1 − coherence`, the term that "drives adaptive refinement" (scheduler contract Part 6, "Priority"), and refinement is
+driven by unresolved footprints: a quad splits iff any footprint is unresolved (Part 6, "Split/keep/merge"). So
+complexity is the quad's unresolved share, and
+
+```
+coherence = 1 − n_unresolved / N²
+```
+
+with `n_unresolved` the quad's unresolved footprints, latched ones included (§3.7's "Temporal accumulators"), and N²
+its footprint count. A quad with every footprint resolved reads 1, smooth and cheap to recompute, so evicted first
+(Part 6, "Eviction"); a quad with none resolved reads 0. **Range `[0, 1]`, `lin`**: `0 ≤ n_unresolved ≤ N²` (R-315);
+the range does not span zero, so the member is one-signed and on viridis, never on the diverging ramp (R-545, RQ-278
+(d)). Priority orders work and never changes a payload (Part 1), so the formula decides scheduling order only.
 
 **No escape (R-418).** `escape_time_min` and `escape_time_max` are the min and max reductions of the escape times of
 the quad's copies that escaped, each starting from its reduction's identity: `_min` from +∞ (binary16 `0x7c00`) and
@@ -490,7 +546,7 @@ time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does n
 **The §3.8 entries.** Every member is `provenance: reduction` and `consumers: [scheduler, debug]`; an f16 range lies
 within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
 are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
-at most N² (R-315); each member's range is the one its row in the table below declares, citing §3.7's table: a declaration, not a default for a member given no range (R-545, RQ-278). *Was:* "an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are." `running_mean_divergence` and `coherence` are one-signed: each gets a formula and a declared range that does not span zero, with its citation (R-72, REQ-PAY-109), so both stay `lin` on viridis; until then their rows keep the `(−∞, ∞)` the ledger was built with (PR #208), marked as waiting on it. `alpha_energy`'s range and its placement, centred on its analytic 1.0, are settled with REQ-PAY-093 at the M5 gate. The ranges and
+at most N² (R-315); each member's range is the one its row in the table below declares, citing §3.7's table: a declaration, not a default for a member given no range (R-545, RQ-278). *Was:* "an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are." `running_mean_divergence` and `coherence` are one-signed: each is declared `[0, 1]`, citing its formula in §3.7 ("Temporal accumulators" and "Validity and diagnostics"), a range that does not span zero (R-72, REQ-PAY-109; TASK-M5-32), so both stay `lin` on viridis. *Was:* "each gets a formula and a declared range that does not span zero, with its citation (R-72, REQ-PAY-109), so both stay `lin` on viridis; until then their rows keep the `(−∞, ∞)` the ledger was built with (PR #208), marked as waiting on it." `alpha_energy`'s range and its placement, centred on its analytic 1.0, are settled with REQ-PAY-093 at the M5 gate. The ranges and
 `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
 `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed, R-71 (REQ-PAY-093; R-418 adds the
 last three), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate. The sentinels of
@@ -520,24 +576,27 @@ its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 | `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | sentinel −∞ · overflow saturate |
 | `retrograde_fraction` | (qr_w8, 0, 16) | f16 | lin | [0, 1] | — |
 | `mean_orbit_count_spread` | (qr_w8, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
-| `running_mean_divergence` | scalar-index 41 | f32 | lin | (−∞, ∞) | — |
+| `running_mean_divergence` | scalar-index 41 | f32 | lin | [0, 1] | — |
 | `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
-| `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
+| `coherence` | scalar-index 43 | f32 | lin | [0, 1] | — |
 
 *The three rows as built (R-545, RQ-278).* The `alpha_energy`, `running_mean_divergence` and `coherence` rows above are
-the ledger as built, which `crates/ledger/tests/quad_reduction.rs` parses against this table; they change together with
-the ledger in TASK-M5-32, the task that implements RQ-278's ruling. Under R-545: `running_mean_divergence` and
-`coherence` are one-signed, each declared a range that does not span zero, with its formula and citation (REQ-PAY-109),
-so both stay `lin` on viridis; `alpha_energy` keeps `lin`, centred on its analytic 1.0, its range and that placement
-proposed with REQ-PAY-093 and confirmed at the M5 gate. Until TASK-M5-32 lands, the `(−∞, ∞)` here is the built value,
-not a declaration R-545 makes. *Was (fix round 1 of PR #274):* the three cells read "lin, centred on 1.0 / proposed
+the ledger as built, which `crates/ledger/tests/quad_reduction.rs` parses against this table, so a row and its ledger
+entry change in one commit. TASK-M5-32 conformed the two one-signed rows with the ledger: `running_mean_divergence`
+and `coherence` are declared `[0, 1]`, each citing its formula in §3.7 above (REQ-PAY-109), a range that does not span
+zero, so both stay `lin` on viridis. `alpha_energy` keeps `lin`, centred on its analytic 1.0, its range and that
+placement proposed with REQ-PAY-093 and confirmed at the M5 gate; until then its `(−∞, ∞)` here is the built value,
+not a declaration R-545 makes. *Was (TASK-M5-32):* "they change together with the ledger in TASK-M5-32, the task that
+implements RQ-278's ruling. Under R-545: `running_mean_divergence` and `coherence` are one-signed, each declared a range
+that does not span zero, with its formula and citation (REQ-PAY-109), so both stay `lin` on viridis; […] Until
+TASK-M5-32 lands, the `(−∞, ∞)` here is the built value, not a declaration R-545 makes." *Was (fix round 1 of PR #274):* the three cells read "lin, centred on 1.0 / proposed
 (REQ-PAY-093; M5 gate)" and "one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208)".
 
 **Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
 `categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,
 `roundtrip_error` and `worst_energy_drift` are `log`: each is a magnitude ≥ 0 whose values span decades (`error_ratio`
 reads 1.0 under exact dynamics and 204.8 at 2.9% drift; drift's finite tail spans ten orders of magnitude, above).
-`alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
+`running_mean_divergence` and `coherence` are `lin` over `[0, 1]`, one-signed by their formulas (above; R-545, RQ-278 (d)). `alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
 range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero; its range and that placement are confirmed with REQ-PAY-093 at the M5 gate (R-545, RQ-278 (c)).
 
 #### Open

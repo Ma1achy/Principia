@@ -34,7 +34,7 @@ use spirv_std::num_traits::Float;
 
 use crate::chart::Chart;
 use crate::decode::degenerate::Degenerate;
-use crate::decode::descriptor::{describe, kinetic};
+use crate::decode::descriptor::{config_angle, describe_decoded, kinetic};
 use crate::decode::{decode_with as decode_free_with, Blocks, Decoded, Free, FreeAt, Ic, Latent};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
@@ -137,8 +137,9 @@ pub fn normalise<R: LinkReal>(ic: &Ic<R>, v0: R, r_min: R, e_star: R) -> Normali
 }
 
 /// `η_E` on a decode, under the target `e_star` and the chart's `forbids_energy_normalisation`: the IC's momenta
-/// rescaled where [`Outcome::Scaled`], the descriptor rewritten from the result through `blocks`, and the outcome's tag
-/// added where the decode has none. The decode's `momentum` stays the momentum block's output, before `η_E`.
+/// rescaled where [`Outcome::Scaled`], the descriptor rewritten from the result through `blocks`, its `rho_angle` the
+/// decode's configuration block's ([`config_angle`], R-628; `η_E` moves only the momenta), and the outcome's tag added
+/// where the decode has none. The decode's `momentum` stays the momentum block's output, before `η_E`.
 #[inline]
 pub fn apply<R: LinkReal + PayloadReal, B: Blocks<R>>(
     blocks: &mut B,
@@ -151,16 +152,19 @@ pub fn apply<R: LinkReal + PayloadReal, B: Blocks<R>>(
         _ => return (decoded, Outcome::Off),
     };
     let (ic, n) = rescaled(&decoded, target);
-    let descriptor = blocks.invariants(&ic);
+    let descriptor = ICDescriptorOf {
+        rho_angle: config_angle(&decoded.config),
+        ..blocks.invariants(&ic)
+    };
     joined(decoded, ic, descriptor, n)
 }
 
-/// [`apply`] with the shared derived invariants, [`describe`], as every decoder's blocks write them: the decode stage's
+/// [`apply`] with the shared derived invariants, [`describe_decoded`], as every decode writes them: the decode stage's
 /// form (`crate::stage::decode::sample_with`). It takes no branch on a decode: the rescale is computed whatever the
 /// target, and the switch, a uniform's (`None`, or a chart that forbids it), selects between the rescaled momenta and
 /// the decoded ones, so the kernel's SPIR-V carries no decode as a value across a branch. With the switch off the
-/// momenta are the decode's, and the descriptor `describe` rewrites from them is the decode's, bit for bit, as every
-/// decoder writes its descriptor by `describe` of its `(m, r, p)`.
+/// momenta are the decode's, and the descriptor `describe_decoded` rewrites from them and the decode's configuration
+/// block is the decode's, bit for bit, as every decode writes its descriptor so (R-628).
 #[inline]
 pub fn apply_shared<R: LinkReal + PayloadReal>(
     decoded: Decoded<R>,
@@ -180,7 +184,7 @@ pub fn apply_shared<R: LinkReal + PayloadReal>(
         p: ic.p,
         outcome: select(on, n.outcome, Outcome::Off),
     };
-    let descriptor = describe(&ic);
+    let descriptor = describe_decoded(&ic, &decoded.config);
     joined(decoded, ic, descriptor, n)
 }
 
@@ -200,7 +204,8 @@ fn rescaled<R: LinkReal + PayloadReal>(decoded: &Decoded<R>, target: R) -> (Ic<R
 }
 
 /// `decoded` with `ic` and its `descriptor`, rewritten from the result (unchanged momenta give it back bit for bit, as
-/// `describe` reads only the IC), and the outcome's tag added where the decode has none.
+/// the descriptor reads only the IC and the unchanged configuration block), and the outcome's tag added where the
+/// decode has none.
 #[inline]
 fn joined<R: LinkReal + PayloadReal>(
     decoded: Decoded<R>,
@@ -254,8 +259,8 @@ pub fn decode_at<S: Selection, R: LinkReal + PayloadReal>(
 /// `D ∘ Φ` at `(u, v)` under the selection `S` with `η_E` toward `e_star`, applied only where the chart allows it: its
 /// own [`Chart::forbids_energy_normalisation`] (chart_reference §0.6). The decode is the chart's own
 /// [`Chart::decode`], so a chart that sets its configuration explicitly (the shape sphere) is decoded as it does it,
-/// never from `map`'s latent alone; `η_E` follows on its `ic`, the descriptor rewritten by the shared `describe`
-/// ([`Free`]'s invariants).
+/// never from `map`'s latent alone; `η_E` follows on its `ic`, the descriptor rewritten by the shared
+/// [`describe_decoded`].
 #[inline]
 pub fn decode_chart<S, R, C>(chart: &C, u: R, v: R, e_star: Option<R>) -> (Decoded<R>, Outcome)
 where
