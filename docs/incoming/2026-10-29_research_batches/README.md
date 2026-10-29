@@ -302,10 +302,11 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
   |Δφ| < 0.01, |ΔT| < 0.05 τ), including orbit 19 (i_butterfly_i_5_a), presented as new. Orbit 10's k = 0.418
   disagrees with the paper's own k′ = 0.428396 while φ and T agree with k′: an internal slip, recorded. Approximate
   returns at 2–3 digits; no target.
-- Broucke et al. 2006: the rotating Jacobi variables cannot be decoded from this paper. Read as G = 1, m = 1/3, the
-  Table 1 states have E > 0; no single G fits both rows. The definitions are in its refs. [7] (AIAA 2002-4544) and [10]
-  (Broucke & Boggs 1975), not in the repo. RQ-641. What holds: Table 2's y/r equals Table 1's y to 1e-8; Table 3's f1
-  and f3 follow from a1, a2 as its footnote defines.
+- Broucke et al. 2006 (`broucke_2006/decode_attempt.txt`, written by `scripts/broucke2006_decode.py`): the rotating
+  Jacobi variables cannot be decoded from this paper. Read as G = 1, m = 1/3, the Table 1 states have E > 0; no single
+  G fits both rows. The definitions are in its refs. [7] (AIAA 2002-4544) and [10] (Broucke & Boggs 1975), not in the
+  repo. RQ-641. What holds: Table 2's y/r equals Table 1's y to 1e-8; Table 3's f1 and f3 follow from a1, a2 as its
+  footnote defines.
 
 ## 6. Labels
 
